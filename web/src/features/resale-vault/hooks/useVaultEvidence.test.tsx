@@ -35,7 +35,7 @@ function routeResponse(path: string): unknown {
   if (path.startsWith('/maintenance/records')) return [];
   if (path.startsWith('/maintenance')) return [];
   if (path.startsWith('/software-updates')) return [];
-  if (path === '/tesla/warranty') return { data: { plan: 'Basic' }, fetched_at: '2024-01-01T00:00:00Z' };
+  if (path === '/vehicles/1/warranty') return { data: { plan: 'Basic' }, fetched_at: '2024-01-01T00:00:00Z' };
   if (path.startsWith('/drives/score')) return { overall: 90, efficiency: 90, smoothness: 90, speedDiscipline: 90, grade: 'A', totalDrives: 1, trend: 'up' };
   if (path.startsWith('/drives/stats')) return { totalDrives: 1, totalDistanceKm: 10, totalDurationS: 600, avgEfficiencyWhKm: 150, avgSpeedKmh: 40, topSpeedKmh: 80, regenRatio: 0.1, regenEnergyWh: 100, co2SavedKg: 1 };
   if (path.startsWith('/drives')) return [];

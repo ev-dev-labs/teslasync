@@ -60,12 +60,12 @@ function renderCrumbs({
 }
 
 describe('LayoutBreadcrumbs', () => {
-  it('renders nothing for a top-level route (single-item chain self-suppresses)', () => {
+  it('renders Home and the current page for a top-level route', () => {
     const { container } = renderCrumbs({ url: '/drives', pattern: '/drives' });
-    // <Breadcrumbs> returns null when the chain has <= 1 items, so the whole
-    // row collapses — no nav landmark and no crumb text leaks into the DOM.
-    expect(container.querySelector('nav')).toBeNull();
-    expect(screen.queryByText('Drives')).toBeNull();
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(container.querySelector('a[href="/"]')).toBeInTheDocument();
+    expect(screen.getByText('Drives').closest('a')).toBeNull();
+    expect(screen.getByText('Ctrl+K to jump')).toBeInTheDocument();
   });
 
   it('renders nothing for an unknown / chrome-less route (empty chain)', () => {
@@ -73,6 +73,7 @@ describe('LayoutBreadcrumbs', () => {
     expect(container.querySelector('nav')).toBeNull();
     // Not even the leading Home link renders when there is no matched route.
     expect(container.querySelector('a')).toBeNull();
+    expect(screen.queryByText('Ctrl+K to jump')).toBeNull();
   });
 
   it('resolves and renders the full parent chain for a nested route', () => {

@@ -1,8 +1,14 @@
 import { renderHook, act } from '@testing-library/react';
-import { describe, expect, it, beforeEach, vi } from 'vitest';
-import { MemoryRouter, Routes, Route } from 'react-router-dom';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter, Routes, Route, useSearchParams } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { useRangeState } from '../useRangeState';
+import { SHARED_RANGE_STORAGE_KEY, useRangeState } from '../useRangeState';
+
+const STORED_PREFERENCE_VERSION = 2;
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 function withRouter(initialEntries: string[]) {
   return function Wrapper({ children }: { children: ReactNode }) {
@@ -19,6 +25,20 @@ function withRouter(initialEntries: string[]) {
 describe('useRangeState — initialization precedence', () => {
   beforeEach(() => {
     window.localStorage.clear();
+  });
+
+  it('defaults to the last seven inclusive days when options are omitted', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 12));
+
+    const { result } = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/charging']),
+    });
+
+    expect(result.current.start).toBe('2026-08-21');
+    expect(result.current.end).toBe('2026-08-27');
+    expect(result.current.presetId).toBe('7d');
+    expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBeNull();
   });
 
   it('uses URL params when present and valid', () => {
@@ -76,7 +96,11 @@ describe('useRangeState — localStorage persistence', () => {
   it('restores from localStorage when URL is empty', () => {
     window.localStorage.setItem(
       'charging.list.range',
-      JSON.stringify({ start: '2024-06-01', end: '2024-06-30' }),
+      JSON.stringify({
+        version: STORED_PREFERENCE_VERSION,
+        start: '2024-06-01',
+        end: '2024-06-30',
+      }),
     );
     const { result } = renderHook(
       () => useRangeState({ persistKey: 'charging.list.range', defaultPresetId: '30d' }),
@@ -111,7 +135,11 @@ describe('useRangeState — localStorage persistence', () => {
     const stored = JSON.parse(
       window.localStorage.getItem('charging.list.range') ?? '{}',
     );
-    expect(stored).toEqual({ start: '2025-02-01', end: '2025-02-28' });
+    expect(stored).toEqual({
+      version: STORED_PREFERENCE_VERSION,
+      start: '2025-02-01',
+      end: '2025-02-28',
+    });
   });
 
   it('ignores corrupt localStorage data', () => {
@@ -122,6 +150,188 @@ describe('useRangeState — localStorage persistence', () => {
     );
     // Should fall back to 7d default rather than crash.
     expect(result.current.start).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('inherits a rolling preset across page-specific storage keys', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 12));
+
+    const firstPage = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+    act(() => {
+      firstPage.result.current.setPreset('30d');
+    });
+    expect(firstPage.result.current.start).toBe('2026-07-29');
+    expect(firstPage.result.current.end).toBe('2026-08-27');
+    expect(JSON.parse(
+      window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}',
+    )).toEqual({
+      version: STORED_PREFERENCE_VERSION,
+      start: '2026-07-29',
+      end: '2026-08-27',
+      presetId: '30d',
+    });
+    firstPage.unmount();
+
+    vi.setSystemTime(new Date(2026, 7, 28, 12));
+    const secondPage = renderHook(
+      () => useRangeState({ persistKey: 'drives.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+    expect(secondPage.result.current.start).toBe('2026-07-30');
+    expect(secondPage.result.current.end).toBe('2026-08-28');
+    expect(secondPage.result.current.presetId).toBe('30d');
+  });
+
+  it('keeps a custom calendar range fixed across pages and days', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 12));
+
+    const firstPage = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+    act(() => {
+      firstPage.result.current.setRange({
+        start: '2026-06-03',
+        end: '2026-06-19',
+      });
+    });
+    firstPage.unmount();
+
+    vi.setSystemTime(new Date(2026, 7, 28, 12));
+    const secondPage = renderHook(
+      () => useRangeState({ persistKey: 'drives.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(secondPage.result.current.start).toBe('2026-06-03');
+    expect(secondPage.result.current.end).toBe('2026-06-19');
+    expect(secondPage.result.current.presetId).toBeUndefined();
+  });
+
+  it('uses an explicit URL without replacing the shared selection', () => {
+    const shared = {
+      version: STORED_PREFERENCE_VERSION,
+      start: '2024-06-01',
+      end: '2024-06-30',
+      presetId: '30d',
+    };
+    window.localStorage.setItem(
+      SHARED_RANGE_STORAGE_KEY,
+      JSON.stringify(shared),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'drives.list.range' }),
+      { wrapper: withRouter(['/charging?from=2025-03-01&to=2025-03-31']) },
+    );
+
+    expect(result.current.start).toBe('2025-03-01');
+    expect(result.current.end).toBe('2025-03-31');
+    expect(JSON.parse(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}'))
+      .toEqual(shared);
+  });
+
+  it('prefers shared storage over a legacy page-specific selection', () => {
+    window.localStorage.setItem(
+      SHARED_RANGE_STORAGE_KEY,
+      JSON.stringify({
+        version: STORED_PREFERENCE_VERSION,
+        start: '2025-04-01',
+        end: '2025-04-30',
+      }),
+    );
+    window.localStorage.setItem(
+      'charging.list.range',
+      JSON.stringify({ start: '2024-06-01', end: '2024-06-30' }),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(result.current.start).toBe('2025-04-01');
+    expect(result.current.end).toBe('2025-04-30');
+  });
+
+  it('ignores legacy auto-saved page defaults when shared storage is empty', () => {
+    window.localStorage.setItem(
+      'charging.list.range',
+      JSON.stringify({ start: '2024-06-01', end: '2024-06-30' }),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    const days =
+      Math.round(
+        (new Date(`${result.current.end}T00:00:00`).getTime() -
+          new Date(`${result.current.start}T00:00:00`).getTime()) /
+          86_400_000,
+      ) + 1;
+    expect(days).toBe(7);
+    expect(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY)).toBeNull();
+  });
+
+  it('ignores malformed shared storage and falls back to the page selection', () => {
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, '{not json');
+    window.localStorage.setItem(
+      'charging.list.range',
+      JSON.stringify({
+        version: STORED_PREFERENCE_VERSION,
+        start: '2024-07-01',
+        end: '2024-07-31',
+      }),
+    );
+    const { result } = renderHook(
+      () => useRangeState({ persistKey: 'charging.list.range' }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(result.current.start).toBe('2024-07-01');
+    expect(result.current.end).toBe('2024-07-31');
+  });
+
+  it('clamps the page range without shrinking the shared selection', () => {
+    const shared = {
+      version: STORED_PREFERENCE_VERSION,
+      start: '2020-01-01',
+      end: '2025-01-31',
+    };
+    window.localStorage.setItem(SHARED_RANGE_STORAGE_KEY, JSON.stringify(shared));
+    const { result } = renderHook(
+      () => useRangeState({
+        persistKey: 'limited-data.range',
+        minDate: '2024-01-01',
+      }),
+      { wrapper: withRouter(['/charging']) },
+    );
+
+    expect(result.current.start).toBe('2024-01-01');
+    expect(result.current.end).toBe('2025-01-31');
+    expect(JSON.parse(window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}'))
+      .toEqual(shared);
+  });
+
+  it('stores the page default as the shared range after an explicit reset', () => {
+    const { result } = renderHook(
+      () => useRangeState({ defaultPresetId: '7d' }),
+      { wrapper: withRouter(['/charging?from=2025-01-01&to=2025-01-31']) },
+    );
+    act(() => result.current.reset());
+
+    const stored = JSON.parse(
+      window.localStorage.getItem(SHARED_RANGE_STORAGE_KEY) ?? '{}',
+    );
+    expect(stored).toEqual({
+      version: STORED_PREFERENCE_VERSION,
+      start: result.current.start,
+      end: result.current.end,
+      presetId: '7d',
+    });
   });
 });
 
@@ -234,6 +444,56 @@ describe('useRangeState — atomic updates', () => {
     });
     rerender();
     expect(urlSnap).toMatch(/^\d{4}-\d{2}-\d{2}\|\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it('updates related URL keys in the same navigation as the range', () => {
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter(['/charging?page=4']),
+    });
+
+    act(() => {
+      result.current.range.setRangeWithUrlUpdates(
+        { start: '2025-05-01', end: '2025-05-31' },
+        { page: null, q: 'roadtrip' },
+      );
+    });
+
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('from')).toBe('2025-05-01');
+    expect(params.get('to')).toBe('2025-05-31');
+    expect(params.get('page')).toBeNull();
+    expect(params.get('q')).toBe('roadtrip');
+  });
+
+  it('resets the range and related URL keys in one navigation', () => {
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter([
+        '/charging?from=2025-05-01&to=2025-05-31&compare=true&severity=warn',
+      ]),
+    });
+
+    act(() => {
+      result.current.range.resetWithUrlUpdates({
+        severity: null,
+        q: 'battery',
+      });
+    });
+
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('from')).toBeNull();
+    expect(params.get('to')).toBeNull();
+    expect(params.get('compare')).toBeNull();
+    expect(params.get('severity')).toBeNull();
+    expect(params.get('q')).toBe('battery');
+    expect(result.current.range.presetId).toBe('7d');
   });
 
   it('reset removes from/to/compare from the URL', () => {

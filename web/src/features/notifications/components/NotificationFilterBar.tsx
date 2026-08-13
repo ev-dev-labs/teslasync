@@ -16,8 +16,15 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AlertOctagon, AlertTriangle, Info } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Select } from '@/components/ui';
-import { FilterBar, SearchInput, RangePicker, ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms';
+import { Button, Select } from '@/components/ui';
+import {
+  FilterBar,
+  SearchInput,
+  RangePicker,
+  ActiveFilterChips,
+  type FilterChipDescriptor,
+  type RangePickerProps,
+} from '@/components/forms';
 import type { NotificationFilters } from '@/api/hooks/useNotifications';
 import type { Vehicle, AlertRule } from '@/api/types';
 
@@ -32,6 +39,7 @@ type Severity = (typeof SEVERITY_OPTIONS)[number]['value'];
 export interface NotificationFilterBarProps {
   filters: NotificationFilters;
   onChange: (next: NotificationFilters) => void;
+  onRangeChange: RangePickerProps['onChange'];
   vehicles: Vehicle[];
   rules: AlertRule[];
 }
@@ -39,6 +47,7 @@ export interface NotificationFilterBarProps {
 export function NotificationFilterBar({
   filters,
   onChange,
+  onRangeChange,
   vehicles,
   rules,
 }: NotificationFilterBarProps) {
@@ -74,18 +83,6 @@ export function NotificationFilterBar({
   const setQuery = useCallback(
     (q: string) => {
       onChange({ ...filters, q: q.trim() ? q : undefined });
-    },
-    [filters, onChange],
-  );
-
-  // `from` and `to` are committed together in a single patch. Emitting them
-  // as two sequential onChange calls raced the parent's controlled merge:
-  // the second call, built from the pre-update `filters` closure, overwrote
-  // the first and silently dropped the `from` bound whenever a range (preset
-  // or custom) set both ends at once.
-  const setRange = useCallback(
-    (start: string, end: string) => {
-      onChange({ ...filters, from: start || undefined, to: end || undefined });
     },
     [filters, onChange],
   );
@@ -163,22 +160,6 @@ export function NotificationFilterBar({
         onRemove: () => onChange({ ...filters, q: undefined }),
       });
     }
-    if (filters.from) {
-      chips.push({
-        key: 'from',
-        label: t('notifications.inbox.filter.from', 'From'),
-        value: filters.from.slice(0, 10),
-        onRemove: () => onChange({ ...filters, from: undefined }),
-      });
-    }
-    if (filters.to) {
-      chips.push({
-        key: 'to',
-        label: t('notifications.inbox.filter.to', 'To'),
-        value: filters.to.slice(0, 10),
-        onRemove: () => onChange({ ...filters, to: undefined }),
-      });
-    }
     return chips;
   }, [filters, vehicles, rules, onChange, t]);
 
@@ -189,8 +170,6 @@ export function NotificationFilterBar({
       vehicle_id: undefined,
       rule_id: undefined,
       q: undefined,
-      from: undefined,
-      to: undefined,
     });
   }, [filters, onChange]);
 
@@ -206,13 +185,15 @@ export function NotificationFilterBar({
             const active = selectedSeverities.has(opt.value);
             const Icon = opt.Icon;
             return (
-              <button
+              <Button
                 key={opt.value}
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => toggleSeverity(opt.value)}
                 aria-pressed={active}
                 className={cn(
-                  'inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors',
+                  'h-auto gap-1 rounded-full border px-2.5 py-1',
                   'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
                   active
                     ? cn(opt.bg, opt.text, 'border-transparent ring-1', opt.ring)
@@ -221,7 +202,7 @@ export function NotificationFilterBar({
               >
                 <Icon className="h-3 w-3" aria-hidden="true" />
                 <span>{t(`notifications.inbox.filter.severity.${opt.value}`, opt.label)}</span>
-              </button>
+              </Button>
             );
           })}
         </div>
@@ -253,7 +234,7 @@ export function NotificationFilterBar({
 
       <RangePicker
         value={rangeValue}
-        onChange={(r) => setRange(r.start, r.end)}
+        onChange={onRangeChange}
       />
 
       <ActiveFilterChips filters={activeFilterChips} onClearAll={handleClearAll} />

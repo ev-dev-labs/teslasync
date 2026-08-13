@@ -396,6 +396,15 @@ describe('navSections (data export)', () => {
     expect(navSearchKeywords['/action-center']).toContain('decision inbox')
   })
 
+  it('places Vehicle Management in the Vehicles group', () => {
+    const vehiclesSection = navSections.find((section) => section.title === 'Vehicles')
+    const management = vehiclesSection?.items.find(
+      (item) => item.to === '/vehicle-management',
+    )
+    expect(management?.label).toBe('Vehicle Management')
+    expect(navSearchKeywords['/vehicle-management']).toContain('enterprise roles')
+  })
+
   it('every item has a rooted, unique path and a non-empty label', () => {
     const paths = allItems.map((i) => i.to)
     expect(paths.every((p) => typeof p === 'string' && p.startsWith('/'))).toBe(true)
@@ -426,6 +435,7 @@ describe('navSearchKeywords (data export)', () => {
     expect(navSearchKeywords['/charging']).toContain('charge')
     expect(navSearchKeywords['/battery']).toContain('soh')
     expect(navSearchKeywords['/action-center']).toContain('recommendations')
+    expect(navSearchKeywords['/vehicle-management']).toContain('pricing')
   })
 })
 
@@ -455,6 +465,13 @@ describe('Layout — sidebar style selection', () => {
     expect(screen.queryByTestId('notion-sidebar')).toBeNull()
     // The legacy nav exposes the "Sections" header from NavSectionHeader.
     expect(screen.getByText('Sections')).toBeInTheDocument()
+  })
+})
+
+describe('Layout — global page chrome', () => {
+  it('mounts breadcrumbs for a registered route that is not a sidebar entry', () => {
+    renderLayout('/notifications/archived')
+    expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument()
   })
 })
 

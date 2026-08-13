@@ -174,3 +174,24 @@ var fixedMileDistanceFields = map[string]bool{
 func IsFixedMileDistanceField(field string) bool {
 	return fixedMileDistanceFields[field]
 }
+
+// fixedKiloToBaseFields lists Tesla charging fields whose wire values use
+// kilo-units independent of every Setting*Unit preference. The canonical
+// pipeline stores energy in Wh and power in W, so each value must be scaled
+// by 1000 before it reaches signal.Store, signal_log, or charging_telemetry.
+//
+// Source: Tesla Fleet Telemetry "Available Data" documents
+// AC/DCChargingEnergyIn in kWh and AC/DCChargingPower in kW:
+// https://developer.tesla.com/docs/fleet-api/fleet-telemetry/available-data
+var fixedKiloToBaseFields = map[string]bool{
+	"ACChargingEnergyIn": true,
+	"DCChargingEnergyIn": true,
+	"ACChargingPower":    true,
+	"DCChargingPower":    true,
+}
+
+// IsFixedKiloToBaseField reports whether a Tesla field has a fixed kWh/kW
+// wire unit that must be converted to Wh/W without consulting unit history.
+func IsFixedKiloToBaseField(field string) bool {
+	return fixedKiloToBaseFields[field]
+}

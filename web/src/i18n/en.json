@@ -3474,7 +3474,7 @@
       "apply": "Apply",
       "cancel": "Cancel",
       "trigger": "Date range",
-      "pickRange": "Pick a date range",
+      "pickRange": "Custom range",
       "selectStart": "Select start date",
       "selectEnd": "Select end date",
       "compare": "Compare to previous period",
@@ -3628,6 +3628,7 @@
     "historyAria": "Location history"
   },
   "routes": {
+    "vehicleManagement": "Vehicle Management",
     "twinLab": "Vehicle Twin Lab",
     "firmwareCanary": "Firmware Canary",
     "componentSurvival": "Component Survival",
@@ -4870,6 +4871,42 @@
         "error": "Failed to remove browser push"
       }
     },
+    "geofence": {
+      "archive": {
+        "success": "Place archived",
+        "error": "Failed to archive place"
+      },
+      "unarchive": {
+        "success": "Place restored",
+        "error": "Failed to restore place"
+      },
+      "reviewed": {
+        "success": "Marked reviewed",
+        "error": "Failed to mark reviewed"
+      },
+      "rename": {
+        "success": "Place renamed",
+        "error": "Failed to rename place"
+      },
+      "category": {
+        "success": "Category updated",
+        "error": "Failed to update category"
+      }
+    },
+    "geofenceRate": {
+      "create": {
+        "success": "Rate saved",
+        "error": "Failed to save rate"
+      },
+      "delete": {
+        "success": "Scheduled rate cancelled",
+        "error": "Failed to cancel scheduled rate"
+      },
+      "apply": {
+        "success": "Rate applied to matching sessions",
+        "error": "Failed to apply rate"
+      }
+    },
     "settings": {
       "save": {
         "success": "Settings saved",
@@ -5028,6 +5065,20 @@
           "success": "Warranty details refreshed",
           "error": "Failed to refresh warranty details"
         }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed",
+        "error": "Failed to query Tesla vehicle pricing"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed",
+          "error": "Failed to refresh enterprise roles"
+        }
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated",
+        "error": "Failed to update enterprise payer"
       }
     },
     "ordersRefreshed": "Orders refreshed",
@@ -7446,7 +7497,7 @@
       "chargeSessions": "Charge Sessions",
       "estRangeAdded": "Est. Range Added",
       "chargingSection": "Charging",
-      "dailyEnergyAdded": "Daily Energy Added (kWh)",
+      "dailyEnergyAdded": "Daily Energy Added ({{unit}})",
       "energyAdded": "Energy Added",
       "sessions": "Sessions",
       "totalEnergyAdded": "Total Energy Added",
@@ -7454,7 +7505,7 @@
       "totalCost": "Total Cost",
       "energyVsLastWeek": "Energy vs. Last Week",
       "drivingSection": "Driving",
-      "dailyDistance": "Daily Distance (km)",
+      "dailyDistance": "Daily Distance ({{unit}})",
       "distance": "Distance",
       "noDailyDistance": "No driving distance data is available for this week.",
       "avgEfficiency": "Avg Efficiency",
@@ -13465,33 +13516,523 @@
       "unknown": "Reauthentication failed."
     }
   },
+  "vehicleManagement": {
+    "pageTitle": "Vehicle Management",
+    "pageSubtitle": "Review Tesla account metadata, paid specifications, pricing, and enterprise access separately from physical commands.",
+    "selectVehicle": "Select management vehicle",
+    "vehicle": {
+      "fallbackName": "Vehicle {{id}}"
+    },
+    "roster": {
+      "loadingTitle": "Loading vehicle context",
+      "loading": "Vehicle-scoped management data remains unavailable while the fleet loads.",
+      "errorTitle": "Vehicle context unavailable",
+      "error": "The vehicle list could not be loaded, so vehicle-scoped management data is unavailable.",
+      "emptyTitle": "No vehicles available",
+      "empty": "Connect and sync a Tesla vehicle to enable vehicle-scoped management APIs."
+    },
+    "title": "Vehicle Management workspace",
+    "description": "Account metadata, paid specifications, pricing, and enterprise controls are separate from physical vehicle commands.",
+    "catalogBadge": "8 official endpoints",
+    "noVehicleTitle": "Vehicle selection required",
+    "noVehicle": "All endpoint cards remain visible, but vehicle-scoped reads and mutations stay unavailable until a vehicle is selected.",
+    "prerequisite": {
+      "user": "User access",
+      "partner": "Partner token",
+      "enterprise": "Enterprise"
+    },
+    "summary": {
+      "model": "Model",
+      "trim": "Trim",
+      "status": "Status",
+      "expiry": "Expiry",
+      "items": "Items",
+      "fields": "Fields returned",
+      "roles": "Roles"
+    },
+    "data": {
+      "redacted": "Redacted",
+      "emptyObject": "Empty object",
+      "emptyArray": "Empty list",
+      "noData": "No value",
+      "true": "Yes",
+      "false": "No",
+      "maxDepth": "Additional nested data",
+      "item": "Item {{index}}",
+      "technicalDetails": "Technical response details"
+    },
+    "state": {
+      "vehicleRequired": "Select a vehicle",
+      "vehicleRequiredDetail": "This endpoint is unavailable until a vehicle is selected.",
+      "loading": "Loading cached data",
+      "unavailable": "Capability unavailable",
+      "prerequisiteError": "Tesla did not confirm the required account scope or prerequisite.",
+      "error": "Request failed",
+      "errorDetail": "The request could not be completed.",
+      "success": "Request completed",
+      "successDetail": "Tesla accepted the request. Any returned data is shown below.",
+      "empty": "No cached data",
+      "emptyDetail": "Use refresh to request this information from Tesla when the required access is available.",
+      "emptyResult": "No matching data returned",
+      "emptyResultDetail": "Tesla completed the request but returned no matching data for this vehicle.",
+      "fetchedAt": "Cached {{time}}",
+      "notFetched": "Not cached"
+    },
+    "action": {
+      "refresh": "Refresh from Tesla"
+    },
+    "json": {
+      "schemaTitle": "Tesla-controlled undocumented schema",
+      "label": "JSON object",
+      "invalid": "Enter valid JSON with no trailing content.",
+      "objectRequired": "The payload must be a JSON object, not an array, scalar, or null.",
+      "empty": "The JSON object must contain at least one field."
+    },
+    "options": {
+      "title": "Vehicle options",
+      "description": "Option codes and factory configuration available to the connected Tesla user.",
+      "resultSummary": "{{active}} active of {{total}} options returned",
+      "factoryConfiguration": "Factory configuration",
+      "active": "Active",
+      "inactive": "Inactive",
+      "unknownStatus": "Status unknown",
+      "paintCode": "Paint {{code}}",
+      "unnamed": "Option {{index}}",
+      "emptyTitle": "No vehicle options returned",
+      "emptyDetail": "Tesla returned a response, but it did not contain recognizable option records."
+    },
+    "specs": {
+      "title": "Vehicle specifications",
+      "description": "Partner-scoped vehicle specifications cached for 24 hours by TeslaSync.",
+      "costTitle": "Paid Tesla API result",
+      "costWarning": "Tesla bills $0.10 for each successful specifications result. TeslaSync also enforces a 24-hour refresh guard.",
+      "confirmTitle": "Request paid vehicle specifications?",
+      "confirmMessage": "A successful Tesla response costs $0.10. Continue only if the cached result needs updating.",
+      "confirmAction": "Request $0.10 result",
+      "resultSummary": "{{count}} specification fields returned",
+      "emptyTitle": "No specifications returned",
+      "emptyDetail": "Tesla returned a response, but it did not contain recognizable specification fields."
+    },
+    "warranty": {
+      "title": "Warranty details",
+      "description": "Warranty coverage details for the selected Tesla VIN.",
+      "active": "Active",
+      "upcoming": "Upcoming",
+      "expired": "Expired",
+      "activeCount": "{{count}} active",
+      "upcomingCount": "{{count}} upcoming",
+      "expiredCount": "{{count}} expired",
+      "unnamedCoverage": "Warranty coverage",
+      "coverageTerm": "Coverage term",
+      "odometerLimit": "Odometer limit",
+      "expiration": "Expiration",
+      "years": "{{count}} years",
+      "months": "{{count}} months",
+      "notProvided": "Not provided",
+      "odometerNote": "Odometer limits are shown exactly as Tesla reports them because this response does not identify a unit.",
+      "emptyTitle": "No warranty coverage returned",
+      "emptyDetail": "Tesla returned a response, but it did not include active, upcoming, or expired coverage records."
+    },
+    "subscriptions": {
+      "title": "Subscription eligibility",
+      "description": "Eligibility information for Tesla vehicle subscriptions.",
+      "resultSummary": "{{count}} eligible subscription offers",
+      "market": "Market {{country}}",
+      "unnamedOffer": "Tesla subscription",
+      "eligible": "Eligible",
+      "billingOption": "Billing option",
+      "perPeriod": " / {{period}}",
+      "total": "Total {{amount}}",
+      "noBilling": "Tesla returned no billing options for this offer.",
+      "emptyTitle": "No eligible subscriptions returned",
+      "emptyDetail": "Tesla returned a response, but it did not include any eligible subscription offers.",
+      "period": {
+        "day": "day",
+        "week": "week",
+        "month": "month",
+        "year": "year",
+        "oneTime": "one time"
+      }
+    },
+    "upgrades": {
+      "title": "Upgrade eligibility",
+      "description": "Available or eligible Tesla vehicle upgrades returned for the selected VIN."
+    },
+    "pricing": {
+      "title": "Vehicle pricing",
+      "description": "Read-only partner pricing query sent by POST with a Tesla-defined request object.",
+      "action": "Open pricing query",
+      "empty": "No session result",
+      "emptyDetail": "Pricing payloads are not persisted. Submit a Tesla-controlled JSON object to view a result for this session.",
+      "dialogTitle": "Query vehicle pricing",
+      "schema": "Tesla does not publish this request schema. Submit only an object obtained from a trusted Tesla workflow; TeslaSync forwards it unchanged in meaning.",
+      "submit": "Submit pricing query"
+    },
+    "roles": {
+      "title": "Enterprise roles",
+      "description": "Cached business roles for the selected VIN. Refresh is the only action that contacts Tesla.",
+      "resultSummary": "{{count}} enterprise roles returned",
+      "emptyTitle": "No enterprise roles returned",
+      "emptyDetail": "Tesla returned a response, but it did not include enterprise roles for this vehicle."
+    },
+    "payer": {
+      "title": "Enterprise payer",
+      "description": "State-changing enterprise billing operation for the selected vehicle.",
+      "action": "Configure payer change",
+      "empty": "No payer change submitted",
+      "emptyDetail": "Payer request objects are never cached. A successful response is shown only for the current session.",
+      "warningTitle": "Changes enterprise billing responsibility",
+      "warning": "Only continue with an object supplied by an authorized Tesla enterprise workflow. Access is not assumed.",
+      "dialogTitle": "Prepare payer change",
+      "schema": "Tesla controls this undocumented schema. TeslaSync validates only that the payload is a non-empty JSON object.",
+      "continue": "Continue to confirmation",
+      "confirmTitle": "Confirm enterprise payer change",
+      "confirmMessage": "This changes enterprise billing responsibility for the selected vehicle. TeslaSync will send the staged object only after this confirmation.",
+      "confirmAction": "Change enterprise payer",
+      "typeConfirmation": "Type PAYER to confirm the billing change"
+    }
+  },
   "commands": {
-    "search": {
-      "placeholder": "Search commands...",
-      "noResults": "No commands match your search",
-      "aria": "Search commands"
-    },
-    "toggleFavorite": "Toggle favorite",
-    "cat": {
-      "quickActions": "Quick Actions"
-    },
-    "on": "ON",
-    "off": "OFF",
-    "staleData": "Vehicle data is {{age}} old. The vehicle may be asleep or offline.",
     "title": "Commands",
-    "pageTitle": "Vehicle Commands",
-    "subtitle": "Remote control center for your Tesla fleet",
-    "viewHistory": "View History",
+    "pageTitle": "Vehicle Command Center",
+    "subtitle": "Review vehicle readiness, send remote actions, and verify recent outcomes.",
+    "viewHistory": "View history",
+    "selectVehicle": "Select vehicle",
+    "centerRegion": "Selected vehicle command center",
+    "reachableCount": "{{reachable}}/{{total}} recently reachable",
     "statesError": "Failed to load vehicle states",
     "noVehicles": "No vehicles found",
     "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
+    "search": {
+      "placeholder": "Search commands...",
+      "noResults": "No commands match your search",
+      "aria": "Search commands",
+      "results": "Command search results",
+      "emptyTitle": "No matching commands"
+    },
+    "toggleFavorite": "Toggle favorite",
+    "cat": {
+      "quickActions": "Quick Actions",
+      "alerts": "Alerts & Location",
+      "charging": "Charging",
+      "climate": "Climate & Comfort",
+      "climateProtect": "Climate Protection",
+      "doors": "Doors & Trunk",
+      "drive": "Drive",
+      "media": "Media",
+      "navigation": "Navigation",
+      "schedules": "Schedules",
+      "security": "Security & Access",
+      "software": "Software",
+      "sunroof": "Sunroof",
+      "vehicle": "Vehicle",
+      "windows": "Windows"
+    },
+    "on": "ON",
+    "off": "OFF",
+    "domain": {
+      "aria": "Command domains",
+      "access": {
+        "title": "Access & Security",
+        "description": "Locks, security modes, openings, and drive authorization."
+      },
+      "comfort": {
+        "title": "Climate & Comfort",
+        "description": "Cabin temperature, seats, steering heat, and protection modes."
+      },
+      "charging": {
+        "title": "Charging & Schedules",
+        "description": "Charge controls, limits, and recurring vehicle schedules."
+      },
+      "vehicle": {
+        "title": "Vehicle Controls",
+        "description": "Location, navigation, software, identity, and media controls."
+      }
+    },
+    "status": {
+      "online": "Online",
+      "driving": "Driving",
+      "charging": "Charging",
+      "asleep": "Asleep",
+      "offline": "Offline",
+      "updating": "Updating",
+      "unknown": "Unknown"
+    },
+    "hero": {
+      "title": "Selected vehicle",
+      "selectedVehicle": "Selected vehicle",
+      "vehicleState": "Vehicle state",
+      "loadingState": "Loading vehicle state",
+      "battery": "Battery",
+      "range": "Estimated range",
+      "cabin": "Cabin",
+      "access": "Access state",
+      "noTelemetryTitle": "Live state unavailable",
+      "noTelemetry": "Commands remain available, but state-dependent controls may not reflect the vehicle yet."
+    },
+    "readiness": {
+      "title": "Command readiness",
+      "description": "Connection, telemetry, and motion context before a remote request is sent.",
+      "connection": "Connection",
+      "availability": "Command delivery",
+      "motion": "Motion context",
+      "telemetry": "Telemetry",
+      "checking": "Checking",
+      "stateUnknown": "State unknown",
+      "deliveryUncertain": "Delivery uncertain",
+      "wakeRecommended": "Wake recommended",
+      "ready": "Ready",
+      "motionUnknown": "Motion unknown",
+      "moving": "Vehicle moving",
+      "stationary": "No motion reported",
+      "freshnessUnknown": "Unknown",
+      "outdated": "Outdated",
+      "current": "Current",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "asleepHelp": "The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.",
+      "offlineHelp": "The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns."
+    },
+    "freshness": {
+      "title": "Telemetry may be outdated",
+      "message": "Last vehicle update: {{age}}. Verify the car is awake and reachable before sending a safety-sensitive command."
+    },
+    "workspace": {
+      "title": "Command workspace",
+      "description": "Find an action by domain or search the complete command catalogue.",
+      "count": "{{count}} actions",
+      "domainCount": "{{count}} actions"
+    },
+    "feedback": {
+      "pending": "Sending {{command}}…",
+      "success": "{{command}} request sent to {{vehicle}}.",
+      "failed": "{{command}} was not accepted by {{vehicle}}.",
+      "error": "{{command}} failed: {{message}}",
+      "idle": "No command is currently running. Results will appear here."
+    },
+    "safety": {
+      "title": "Safety & execution",
+      "description": "Remote commands can affect a physical vehicle. Review context before acting.",
+      "requestTitle": "A request is not physical proof",
+      "requestBody": "Confirm the resulting vehicle state after access, charging, or drive-sensitive actions.",
+      "confirmTitle": "Sensitive actions add friction",
+      "confirmBody": "High-impact commands require confirmation, a countdown, or typed acknowledgement.",
+      "contextTitle": "Check the surroundings",
+      "contextBody": "Verify the vehicle is parked and clear before opening panels or enabling drive access.",
+      "contextDisconnected": "Current vehicle context may be unavailable while it is asleep or offline."
+    },
+    "activity": {
+      "title": "Recent command activity",
+      "description": "Latest delivery outcomes for the selected vehicle.",
+      "resource": "Command activity",
+      "loading": "Loading command activity",
+      "emptyTitle": "No commands sent yet",
+      "empty": "Command outcomes will appear here after the first request.",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "pending": "Pending",
+      "failedReason": "{{status}} · {{reason}}",
+      "unknownCommand": "{{command}}",
+      "commands": {
+        "unlock": "Unlock",
+        "sentry_off": "Sentry Off",
+        "valet_off": "Valet Off",
+        "guest_mode_off": "Guest Mode Off",
+        "climate_off": "Climate Off",
+        "bioweapon_off": "Bioweapon Off",
+        "climate_keeper_off": "Climate Keeper Off",
+        "charge_stop": "Stop Charging"
+      }
+    },
+    "fallback": {
+      "unavailable": "Vehicle controls are unavailable until fleet data can be loaded.",
+      "loadingFleet": "Loading your fleet",
+      "fleet": "Vehicle fleet"
+    },
     "confirm": {
-      "typeToConfirm": "Type \"{{word}}\" to confirm:"
+      "default": "Are you sure?",
+      "typeToConfirm": "Type \"{{word}}\" to confirm:",
+      "countdown": "Confirm ({{seconds}}s)"
+    },
+    "input": {
+      "required": "Required",
+      "pin": "Enter a 4-digit PIN",
+      "wholeNumber": "Enter a whole number",
+      "min": "Minimum: {{min}}",
+      "max": "Maximum: {{max}}",
+      "decimal": "Enter a valid number"
+    },
+    "select": {
+      "noOptions": "No options available"
     },
     "toast": {
       "success": "Command sent successfully",
       "failed": "Command failed",
       "error": "Command failed: {{message}}"
+    },
+    "alerts": {
+      "boombox": "Boombox",
+      "findMyCar": "Find my car",
+      "flashLights": "Flash Lights",
+      "horn": "Horn",
+      "locatePing": "Locate Ping",
+      "randomFart": "Random fart"
+    },
+    "charging": {
+      "amperage": "Amperage",
+      "charge": "Charge",
+      "chargePort": "Charge Port",
+      "close": "Close",
+      "dailyMode": "Daily mode",
+      "enterAmps": "Enter charging amps (e.g., 16, 32, 48):",
+      "enterLimit": "Enter charge limit % (50–100):",
+      "maxRange": "Max Range",
+      "open": "Open",
+      "percent": "Charge %",
+      "setAmps": "Set Amps",
+      "setLimit": "Set Limit",
+      "standard": "Standard",
+      "tripMode": "Trip mode"
+    },
+    "climate": {
+      "bioweapon": "Bioweapon",
+      "campMode": "Camp Mode",
+      "climate": "Climate",
+      "climateKeeper": "Climate Keeper",
+      "cop": "Overheat Protect",
+      "copFan": "Overheat Protect",
+      "copHigh": "High",
+      "copHighTemperature": "100°F / 40°C",
+      "copLow": "Low",
+      "copLowTemperature": "90°F / 30°C",
+      "copMedium": "Medium",
+      "copMediumTemperature": "95°F / 35°C",
+      "copOff": "Overheat Protect",
+      "copOn": "On (AC)",
+      "copTemp": "COP Temp",
+      "default": "Default",
+      "defenseMode": "Defense Mode",
+      "dogMode": "Dog Mode",
+      "driver": "Driver",
+      "driverPassenger": "Driver/Passenger",
+      "enterTemp": "Enter temperature in °C (e.g., 21):",
+      "fanOnly": "Fan only",
+      "keepMode": "Keep",
+      "maxPrecondition": "Max Precondition",
+      "off": "OFF",
+      "override": "Override",
+      "resetPrecondition": "Reset Precondition",
+      "seatCool": "Seat Cool",
+      "seatHeat": "Seat Heat",
+      "setLevel": "Low/Med/High",
+      "setTemps": "Set Temps",
+      "steeringHeat": "Steering Heat",
+      "toggle": "Toggle"
+    },
+    "doors": {
+      "frunk": "Frunk",
+      "open": "Open",
+      "trunk": "Trunk"
+    },
+    "drive": {
+      "confirmRemoteStart": "This will enable keyless driving for 2 minutes. Continue?",
+      "keylessDrive": "Keyless drive",
+      "remoteStart": "Remote Start"
+    },
+    "homelink": {
+      "garage": "Garage door",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "trigger": "HomeLink",
+      "triggerTitle": "Enter vehicle coordinates"
+    },
+    "media": {
+      "enterVolume": "Enter volume level (0.0 – 11.0):",
+      "nextFav": "Next Favorite",
+      "nextTrack": "Next Track",
+      "playPause": "Play / Pause",
+      "prevFav": "Prev Favorite",
+      "prevTrack": "Prev Track",
+      "volumeDown": "Volume Down",
+      "volumeUp": "Volume Up"
+    },
+    "nav": {
+      "byId": "By ID",
+      "coordinates": "Lat / Lon",
+      "enterAddress": "Enter destination address:",
+      "enterScId": "Enter Supercharger ID:",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "sendAddress": "Send Address",
+      "sendGPS": "Send GPS",
+      "sendGPSTitle": "Enter GPS coordinates",
+      "supercharger": "Supercharger",
+      "toVehicleNav": "To vehicle nav"
+    },
+    "schedules": {
+      "addCharge": "Add Charge Schedule",
+      "addPrecondition": "Add Precondition",
+      "byId": "By ID",
+      "enterScheduleId": "Enter schedule ID to remove:",
+      "midnight": "Midnight daily",
+      "morning": "7 AM daily",
+      "removeCharge": "Remove Schedule",
+      "removePrecondition": "Remove Precondition"
+    },
+    "security": {
+      "admin": "Admin",
+      "clearPin": "Clear PIN",
+      "clearSpeedPin": "Clear Speed PIN",
+      "confirmClearDrivePin": "Clear PIN to Drive without authentication?",
+      "confirmClearPin": "Clear speed limit PIN without authentication?",
+      "confirmErase": "This will erase all user data from the vehicle touchscreen. Continue?",
+      "enable": "Enable",
+      "enterPin": "Enter 4-digit PIN:",
+      "enterSpeedLimit": "Enter speed limit (50-90 MPH):",
+      "enterSpeedPin": "Enter 4-digit PIN:",
+      "enterValetPin": "Enter 4-digit valet PIN:",
+      "eraseData": "Erase Data",
+      "guestMode": "Guest Mode",
+      "guestOnly": "Guest mode only",
+      "lock": "Lock",
+      "pinToDrive": "PIN to Drive",
+      "requiresPin": "Requires PIN",
+      "resetPin": "Reset PIN",
+      "resetValetPin": "Reset Valet PIN",
+      "sentry": "Sentry",
+      "setMph": "Set MPH",
+      "speedActivate": "Activate",
+      "speedDeactivate": "Deactivate",
+      "speedLimit": "Speed Limit",
+      "speedLimitMode": "Speed Limit",
+      "valetMode": "Valet Mode",
+      "wakeUp": "Wake Up",
+      "wakeVehicle": "Wake vehicle"
+    },
+    "software": {
+      "cancelUpdate": "Cancel Update",
+      "enterDelay": "Install in how many minutes? (0 = now, 120 = 2 hours)",
+      "installNow": "Install now",
+      "scheduleUpdate": "Schedule Update",
+      "stopPending": "Stop pending"
+    },
+    "sunroof": {
+      "close": "Sunroof",
+      "closeMode": "Close",
+      "stop": "Sunroof",
+      "stopMode": "Stop",
+      "vent": "Sunroof",
+      "ventMode": "Vent"
+    },
+    "vehicle": {
+      "fallbackName": "Vehicle {{id}}",
+      "changeName": "Change name",
+      "enterName": "Enter new vehicle name:",
+      "rename": "Rename"
+    },
+    "windows": {
+      "close": "Close Windows",
+      "vent": "Vent Windows"
     }
   },
   "fsm": {
@@ -20380,7 +20921,7 @@
     "warranty": {
       "empty": "No warranty evidence in this report.",
       "fetchedAt": "Fetched at",
-      "scopeNote": "Warranty details are fetched at the Tesla account level, not scoped to an individual vehicle.",
+      "scopeNote": "Warranty details are scoped to the vehicle selected for this report.",
       "title": "Warranty"
     }
   },
@@ -22259,6 +22800,151 @@
     "window": {
       "days": "{{count}} days",
       "label": "Analysis window"
+    }
+  },
+  "chargingPlaces": {
+    "workspace": {
+      "title": "Charging Places",
+      "unifiedTitle": "Places & Charging Zones",
+      "unifiedAria": "Places and charging zones",
+      "unifiedDescription": "Manage zone boundaries, alerts, categories, charging rates, and session history in one place.",
+      "showArchived": "Show archived",
+      "addPlace": "Add Place",
+      "search": "Search places, categories, or origin…",
+      "clearSearch": "Clear search",
+      "noSearchMatches": "No places match this search. Clear the search to see all places."
+    },
+    "needsSetup": {
+      "title": "Needs Setup",
+      "empty": "All caught up — no auto-discovered places need review.",
+      "review": "Review"
+    },
+    "table": {
+      "title": "Place Directory",
+      "name": "Place",
+      "origin": "Origin",
+      "category": "Category",
+      "zone": "Zone",
+      "status": "Status",
+      "alerts": "Alerts",
+      "entry": "Entry",
+      "exit": "Exit",
+      "entryAlertLabel": "Entry alert for {{name}}",
+      "exitAlertLabel": "Exit alert for {{name}}",
+      "rate": "Rate / kWh",
+      "effectiveSince": "Effective since",
+      "manage": "Manage"
+    },
+    "unnamed": "Unnamed place",
+    "archived": "Archived",
+    "origin": {
+      "discovered": "Auto-discovered",
+      "manual": "Manual"
+    },
+    "category": {
+      "unset": "Uncategorized",
+      "home": "Home",
+      "work": "Work",
+      "restricted": "Restricted",
+      "custom": "Custom"
+    },
+    "noRate": "Not set",
+    "empty": "No active places yet. Existing and future confirmed charging locations appear automatically.",
+    "emptyAll": "No places or zones yet. Charge somewhere or add a place to start.",
+    "kwh": "kWh",
+    "discoveredAt": "Discovered",
+    "detail": {
+      "needsReviewBadge": "Needs review",
+      "markReviewed": "Mark reviewed",
+      "unarchive": "Restore",
+      "archive": "Archive",
+      "placeName": "Place name",
+      "category": "Category",
+      "rename": "Rename {{name}}",
+      "pricingTab": "Rates & Pricing",
+      "activityTab": "Charging Activity",
+      "tabsLabel": "Charging place detail sections",
+      "pricingIntro": "Rate changes never rewrite protected actual costs. The rate active today estimates older unpriced sessions automatically; use preview and apply when you have exact historical rates."
+    },
+    "rateForm": {
+      "title": "Add a Rate",
+      "currency": "Currency",
+      "rate": "Rate per kWh",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to (optional)",
+      "effectiveToHint": "Leave blank for an open-ended rate.",
+      "legacyEstimateHint": "If this rate is active today, it also estimates older unpriced sessions at this place. Existing actual costs stay unchanged.",
+      "submit": "Save Rate",
+      "errors": {
+        "rate": "Enter a non-negative rate.",
+        "effectiveFrom": "Enter a valid effective-from date/time.",
+        "effectiveTo": "Effective-to date/time is invalid.",
+        "order": "Effective-to must be after effective-from."
+      }
+    },
+    "rateHistory": {
+      "title": "Rate History",
+      "empty": "No rate configured yet — use the form above to start pricing sessions at this place.",
+      "effectiveFrom": "Effective From",
+      "rate": "Rate / kWh",
+      "currency": "Currency",
+      "effectiveTo": "Effective To",
+      "current": "Current",
+      "scheduled": "Scheduled",
+      "cancelScheduled": "Cancel scheduled rate",
+      "cancel": "Cancel Rate",
+      "previewSessions": "Preview sessions",
+      "previewHelp": "Preview sessions shows which historical charges match a rate and what would change before anything is applied.",
+      "deleteTitle": "Cancel this scheduled rate?",
+      "deleteMessage": "The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted."
+    },
+    "previewApply": {
+      "title": "Session Pricing Preview",
+      "regionLabel": "Session pricing preview",
+      "selectRate": "Choose Preview sessions on a rate to see affected charging sessions and estimated cost.",
+      "help": "This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose Apply.",
+      "metricsHelp": "Matched sessions are in this place and rate period. Eligible sessions can be priced; protected sessions keep their existing cost.",
+      "confirmTitle": "Apply this rate to matching sessions?",
+      "confirmMessage": "This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual, Tesla-reported, and existing costs with unknown provenance are never overwritten.",
+      "confirmAttributionTitle": "Assign matching sessions to this place?",
+      "confirmAttributionMessage": "Matching sessions will be linked to this place. Their protected costs will remain unchanged.",
+      "applyAction": "Apply",
+      "assignAction": "Assign Sessions",
+      "refresh": "Refresh preview",
+      "from": "Narrow from (optional)",
+      "to": "Narrow to (optional)",
+      "matched": "Matched",
+      "eligible": "Eligible",
+      "protected": "Protected",
+      "energy": "Energy",
+      "estimatedCost": "Estimated Cost",
+      "noMatches": "No sessions match this place and rate period. Check the zone location and radius, or broaden the optional date range. Sessions without coordinates can match an identical saved place name.",
+      "attributionOnly": "All matched costs are protected. Apply can still assign unlinked sessions to this place without changing their cost.",
+      "applied": "Processed {{matched}} matched sessions: {{priced}} priced, {{skipped}} protected or unchanged, {{cost}} total."
+    },
+    "summary": {
+      "title": "Charging Summary",
+      "empty": "No priced charging activity at this place yet.",
+      "sessions": "Sessions",
+      "energy": "Energy",
+      "spend": "Spend"
+    },
+    "activity": {
+      "title": "Charging Activity",
+      "empty": "No charging sessions recorded at this place yet.",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "energy": "Energy",
+      "cost": "Cost",
+      "source": "Source",
+      "pageInfo": "Showing {{from}}–{{to}}"
+    },
+    "costSource": {
+      "manual": "Manual",
+      "tesla_actual": "Tesla Reported",
+      "geofence_tariff": "Place Rate",
+      "default_estimate": "Default Estimate",
+      "unknown": "Unknown"
     }
   }
 }

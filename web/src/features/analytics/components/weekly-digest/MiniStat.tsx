@@ -12,7 +12,7 @@ interface MiniStatProps {
 export function MiniStat({ label, value, icon, className }: MiniStatProps) {
   // Guard against a nullish `value` leaking the literal string "undefined" /
   // "null" as the headline figure: callers derive it from optional telemetry
-  // (e.g. `fmtNumber(metrics.avgEfficiency ?? 0)`), and a missing metric that
+  // (e.g. `formatEfficiency(metrics.avgEfficiencyWhPerM ?? 0)`), and a missing metric that
   // slips past those guards would otherwise be stringified verbatim.
   const displayValue = String(value ?? '—');
   return (

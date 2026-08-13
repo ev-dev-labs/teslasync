@@ -29,6 +29,7 @@ const VALID_FORM: GeofenceFormData = {
   latitude: '37.7749',
   longitude: '-122.4194',
   radius: '150',
+  category: 'home',
   alertType: 'both',
   enabled: true,
 }
@@ -188,6 +189,7 @@ describe('geofenceFormSchema — alertType & enabled', () => {
       latitude: '200',
       longitude: 'x',
       radius: '1',
+      category: 'custom',
       alertType: 'both',
       enabled: true,
     })
@@ -221,6 +223,7 @@ describe('toGeofencePayload', () => {
       latitude: '12.5',
       longitude: '-34.25',
       radius: '250',
+      category: 'work',
       alertType: 'entry',
       enabled: false,
     })
@@ -229,6 +232,7 @@ describe('toGeofencePayload', () => {
       latitude: 12.5,
       longitude: -34.25,
       radius: 250,
+      category: 'work',
       alertOnEntry: true,
       alertOnExit: false,
       enabled: false,
@@ -256,6 +260,7 @@ describe('toGeofencePayload', () => {
       latitude: 40,
       longitude: -70,
       radius: 500,
+      category: 'home',
       alertOnEntry: false,
       alertOnExit: false,
       enabled: true,

@@ -260,7 +260,6 @@ export default function TirePressurePage() {
   const { vehicleId: activeVehicleId } = useSelectedVehicle();
   const { start, end, setRange } = useRangeState({
     persistKey: 'tire-pressure.range',
-    defaultPresetId: '30d',
   });
 
   /* ---- API queries ---- */

@@ -30,6 +30,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'Vehicles', load: () => import('../features/vehicles/pages/VehicleListPage') },
   { name: 'VehicleDetail', load: () => import('../features/vehicles/pages/VehicleDetailPage') },
   { name: 'VehicleAccess', load: () => import('../features/vehicles/pages/VehicleAccessPage') },
+  { name: 'VehicleManagement', load: () => import('../features/vehicles/pages/VehicleManagementPage') },
   { name: 'DigitalTwin', load: () => import('../features/vehicles/pages/DigitalTwinPage') },
 
   // Charging

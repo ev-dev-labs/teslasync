@@ -10,7 +10,7 @@
 //                              fallback), default selectedVehicleId, setVehicleId
 //                              re-scoping the domain queries.
 //   • request wiring          — snake_case `vehicle_id` params, no `/api/v1`
-//                              prefix, `/alerts` fired without a vehicle param.
+//                              prefix, and analytical window limits.
 //   • week-scoped metrics     — sums / averages / co2 / battery deltas for the
 //                              current week, previous-week comparison values,
 //                              and topDrive selection.
@@ -93,27 +93,31 @@ function atNoon(base: Date, dayOffset: number): string {
   return d.toISOString();
 }
 
-function makeDrive(over: Partial<Drive> & Pick<Drive, 'id' | 'start_date'>): Drive {
+function makeDrive(over: Partial<Drive> & Pick<Drive, 'id' | 'startTs'>): Drive {
   return {
-    distance: 0,
-    duration_min: 0,
-    efficiency_wh_km: 0,
-    energy_used: 0,
+    distanceM: 0,
+    durationS: 0,
+    energyUsedWh: 0,
     ...over,
   };
 }
 
 function makeCharge(
-  over: Partial<ChargingSession> & Pick<ChargingSession, 'id' | 'start_ts'>,
+  over: Partial<ChargingSession> & Pick<ChargingSession, 'id' | 'started_at'>,
 ): ChargingSession {
   return {
+    ended_at: null,
     total_energy_added_wh: 0,
-    cost: 0,
-    duration_min: 0,
-    start_battery_pct: 0,
-    end_battery_pct: 0,
+    cost_decimal: 0,
+    avg_power_w: null,
+    start_soc_pct: 0,
+    end_soc_pct: 0,
     ...over,
   };
+}
+
+function endAfter(start: string, minutes: number): string {
+  return new Date(Date.parse(start) + minutes * 60_000).toISOString();
 }
 
 const DEFAULT_VEHICLES: Vehicle[] = [
@@ -154,21 +158,25 @@ function seedFullWeek() {
 
   const drives: Drive[] = [
     // current week
-    makeDrive({ id: 1, start_date: atNoon(curStart, 0), distance: 100, duration_min: 60, efficiency_wh_km: 200, energy_used: 20 }),
-    makeDrive({ id: 2, start_date: atNoon(curStart, 2), distance: 50, duration_min: 30, efficiency_wh_km: 180, energy_used: 10 }),
+    makeDrive({ id: 1, startTs: atNoon(curStart, 0), distanceM: 100_000, durationS: 3_600, energyUsedWh: 20_000 }),
+    makeDrive({ id: 2, startTs: atNoon(curStart, 2), distanceM: 50_000, durationS: 1_800, energyUsedWh: 10_000 }),
     // previous week
-    makeDrive({ id: 3, start_date: atNoon(prevStart, 1), distance: 60, duration_min: 40, efficiency_wh_km: 210, energy_used: 12 }),
+    makeDrive({ id: 3, startTs: atNoon(prevStart, 1), distanceM: 60_000, durationS: 2_400, energyUsedWh: 12_000 }),
   ];
+  const charge1Start = atNoon(curStart, 0);
+  const charge2Start = atNoon(curStart, 1);
+  const charge3Start = atNoon(prevStart, 2);
   const charging: ChargingSession[] = [
-    makeCharge({ id: 1, start_ts: atNoon(curStart, 0), total_energy_added_wh: 10000, cost: 5, duration_min: 60, start_battery_pct: 20, end_battery_pct: 80 }),
-    makeCharge({ id: 2, start_ts: atNoon(curStart, 1), total_energy_added_wh: 5000, cost: 2.5, duration_min: 30, start_battery_pct: 50, end_battery_pct: 90 }),
-    makeCharge({ id: 3, start_ts: atNoon(prevStart, 2), total_energy_added_wh: 8000, cost: 4, duration_min: 50, start_battery_pct: 30, end_battery_pct: 70 }),
+    makeCharge({ id: 1, started_at: charge1Start, ended_at: endAfter(charge1Start, 60), total_energy_added_wh: 10_000, cost_decimal: 5, start_soc_pct: 20, end_soc_pct: 80 }),
+    makeCharge({ id: 2, started_at: charge2Start, ended_at: endAfter(charge2Start, 30), total_energy_added_wh: 5_000, cost_decimal: 2.5, start_soc_pct: 50, end_soc_pct: 90 }),
+    makeCharge({ id: 3, started_at: charge3Start, ended_at: endAfter(charge3Start, 50), total_energy_added_wh: 8_000, cost_decimal: 4, start_soc_pct: 30, end_soc_pct: 70 }),
   ];
   const alerts: Alert[] = [
-    { id: 1, severity: 'info', created_at: atNoon(curStart, 0) },
-    { id: 2, severity: 'warning', created_at: atNoon(curStart, 1) },
-    { id: 3, severity: 'critical', created_at: atNoon(curStart, 2) },
-    { id: 4, severity: 'info', created_at: atNoon(prevStart, 0) }, // prev week — excluded
+    { id: 1, vehicle_id: 1, severity: 'info', created_at: atNoon(curStart, 0) },
+    { id: 2, vehicle_id: 1, severity: 'warning', created_at: atNoon(curStart, 1) },
+    { id: 3, vehicle_id: 1, severity: 'critical', created_at: atNoon(curStart, 2) },
+    { id: 4, vehicle_id: 1, severity: 'info', created_at: atNoon(prevStart, 0) }, // prev week — excluded
+    { id: 5, vehicle_id: 2, severity: 'critical', created_at: atNoon(curStart, 3) }, // another vehicle — excluded
   ];
   return { drives, charging, alerts };
 }
@@ -208,28 +216,35 @@ describe('vehicle selection', () => {
     act(() => result.current.setVehicleId('2'));
 
     await waitFor(() =>
-      expect(urlsCalled()).toContain('/drives?vehicle_id=2'),
+      expect(urlsCalled().some((url) => url.startsWith('/drives?vehicle_id=2&'))).toBe(true),
     );
     expect(result.current.selectedVehicleId).toBe('2');
-    expect(urlsCalled()).toContain('/charging?vehicle_id=2');
+    expect(urlsCalled().some((url) => url.startsWith('/charging?vehicle_id=2&'))).toBe(true);
   });
 });
 
 /* ── Request wiring ── */
 describe('request wiring', () => {
-  it('fetches drives + charging with snake_case vehicle_id and alerts unscoped, no /api/v1 prefix', async () => {
+  it('fetches a two-week analytical window with canonical params and no /api/v1 prefix', async () => {
     installRoutes();
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
 
     await waitFor(() => {
       const u = urlsCalled();
-      expect(u).toContain('/drives?vehicle_id=1');
-      expect(u).toContain('/charging?vehicle_id=1');
-      expect(u).toContain('/alerts'); // alerts endpoint is not vehicle-scoped
+      expect(u.some((url) => url.startsWith('/drives?vehicle_id=1&'))).toBe(true);
+      expect(u.some((url) => url.startsWith('/charging?vehicle_id=1&'))).toBe(true);
+      expect(u).toContain('/alerts?limit=1000');
     });
 
     const urls = urlsCalled();
     expect(urls).toContain('/vehicles');
+    for (const url of urls.filter((value) => /^\/(drives|charging)\?/.test(value))) {
+      const params = new URLSearchParams(url.split('?')[1]);
+      expect(params.get('vehicle_id')).toBe('1');
+      expect(params.get('start')).toMatch(/T/);
+      expect(params.get('end')).toMatch(/T/);
+      expect(params.get('limit')).toBe('1000');
+    }
     // The vehicle_id in the drive/charge URLs is the derived default selection.
     expect(result.current.selectedVehicleId).toBe('1');
     // No hook may double-prefix; the client injects /api/v1 itself.
@@ -248,7 +263,7 @@ describe('request wiring', () => {
     expect(result.current.hasData).toBe(false);
     expect(callsFor('/drives')).toBe(0);
     expect(callsFor('/charging')).toBe(0);
-    expect(result.current.metrics.totalDistance).toBe(0);
+    expect(result.current.metrics.totalDistanceM).toBe(0);
   });
 });
 
@@ -263,26 +278,26 @@ describe('aggregated metrics', () => {
     const m = result.current.metrics;
 
     // Drives (current week: 100 + 50).
-    expect(m.totalDistance).toBe(150);
-    expect(m.energyUsed).toBe(30);
-    expect(m.totalDuration).toBe(90);
-    expect(m.avgEfficiency).toBe(190); // (200 + 180) / 2
+    expect(m.totalDistanceM).toBe(150_000);
+    expect(m.energyUsedWh).toBe(30_000);
+    expect(m.totalDurationS).toBe(5_400);
+    expect(m.avgEfficiencyWhPerM).toBe(0.2);
     expect(m.co2Saved).toBeCloseTo(6.3, 5); // 30 * 0.21
     expect(m.topDrive?.id).toBe(1); // the 100 km drive wins
 
     // Previous week comparison (a single 60 km drive).
-    expect(m.prevDistance).toBe(60);
+    expect(m.prevDistanceM).toBe(60_000);
     expect(m.prevDriveCount).toBe(1);
-    expect(m.prevEnergy).toBe(12);
+    expect(m.prevEnergyWh).toBe(12_000);
 
     // Charging (current week: two sessions).
     expect(m.chargingSessionCount).toBe(2);
-    expect(m.chargeEnergyAdded).toBe(15000);
+    expect(m.chargeEnergyAddedWh).toBe(15_000);
     expect(m.chargingCost).toBe(7.5);
-    expect(m.avgChargeRate).toBe(10000); // both sessions == 10000 Wh/h
+    expect(m.avgChargePowerW).toBe(10_000);
     expect(m.batteryStart).toBe(35); // (20 + 50) / 2
     expect(m.batteryEnd).toBe(85); // (80 + 90) / 2
-    expect(m.prevChargeEnergy).toBe(8000);
+    expect(m.prevChargeEnergyWh).toBe(8_000);
 
     // Alerts (prev-week info alert excluded).
     expect(m.alertTotal).toBe(3);
@@ -301,12 +316,12 @@ describe('aggregated metrics', () => {
     await waitFor(() => expect(result.current.isLoading).toBe(false));
     const m = result.current.metrics;
 
-    expect(m.totalDistance).toBe(0);
-    expect(m.avgEfficiency).toBe(0);
-    expect(m.avgChargeRate).toBe(0);
+    expect(m.totalDistanceM).toBe(0);
+    expect(m.avgEfficiencyWhPerM).toBe(0);
+    expect(m.avgChargePowerW).toBe(0);
     expect(m.batteryStart).toBe(0);
     expect(m.topDrive).toBeUndefined();
-    expect(Number.isNaN(m.avgEfficiency)).toBe(false);
+    expect(Number.isNaN(m.avgEfficiencyWhPerM)).toBe(false);
     expect(result.current.hasData).toBe(false);
   });
 });
@@ -315,15 +330,20 @@ describe('aggregated metrics', () => {
 describe('malformed-row hardening', () => {
   it('coerces NaN / undefined numeric fields to 0 instead of poisoning the aggregate', async () => {
     const [curStart] = getWeekRange(0);
-    const good = makeDrive({ id: 1, start_date: atNoon(curStart, 0), distance: 100, duration_min: 60, efficiency_wh_km: 200, energy_used: 20 });
+    const good = makeDrive({
+      id: 1,
+      startTs: atNoon(curStart, 0),
+      distanceM: 100_000,
+      durationS: 3_600,
+      energyUsedWh: 20_000,
+    });
     // A partial telemetry row: typed `number`, but the values are missing.
     const bad = {
       id: 2,
-      start_date: atNoon(curStart, 3),
-      distance: NaN,
-      duration_min: undefined,
-      efficiency_wh_km: NaN,
-      energy_used: undefined,
+      startTs: atNoon(curStart, 3),
+      distanceM: NaN,
+      durationS: undefined,
+      energyUsedWh: undefined,
     } as unknown as Drive;
 
     installRoutes({ drives: [good, bad], charging: [], alerts: [] });
@@ -332,13 +352,13 @@ describe('malformed-row hardening', () => {
     await waitFor(() => expect(result.current.metrics.totalDrives).toBe(2));
     const m = result.current.metrics;
 
-    expect(Number.isNaN(m.totalDistance)).toBe(false);
-    expect(m.totalDistance).toBe(100); // 100 + safeNumber(NaN)
-    expect(m.energyUsed).toBe(20); // 20 + safeNumber(undefined)
-    expect(m.totalDuration).toBe(60);
-    expect(m.avgEfficiency).toBe(100); // (200 + 0) / 2
+    expect(Number.isNaN(m.totalDistanceM)).toBe(false);
+    expect(m.totalDistanceM).toBe(100_000);
+    expect(m.energyUsedWh).toBe(20_000);
+    expect(m.totalDurationS).toBe(3_600);
+    expect(m.avgEfficiencyWhPerM).toBe(0.2);
     // The Thursday bin for the malformed drive stays a real number, not NaN.
-    expect(result.current.dailyDistanceData[3].distance).toBe(0);
+    expect(result.current.dailyDistanceData[3].distanceM).toBe(0);
   });
 });
 
@@ -354,21 +374,21 @@ describe('chart series', () => {
     const dist = result.current.dailyDistanceData;
     expect(dist).toHaveLength(7);
     expect(dist.map((b) => b.day)).toEqual(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']);
-    expect(dist[0].distance).toBe(100); // Monday drive
-    expect(dist[2].distance).toBe(50); // Wednesday drive
-    expect(dist[4].distance).toBe(0); // Friday empty
+    expect(dist[0].distanceM).toBe(100_000);
+    expect(dist[2].distanceM).toBe(50_000);
+    expect(dist[4].distanceM).toBe(0);
 
     const energy = result.current.dailyEnergyData;
-    expect(energy[0].energy).toBe(10000); // Monday charge
-    expect(energy[1].energy).toBe(5000); // Tuesday charge
-    expect(energy[6].energy).toBe(0); // Sunday empty
+    expect(energy[0].energyWh).toBe(10_000);
+    expect(energy[1].energyWh).toBe(5_000);
+    expect(energy[6].energyWh).toBe(0);
   });
 
   it('builds alert pie slices with severity colours and a CHART_COLORS fallback', async () => {
     const [curStart] = getWeekRange(0);
     const alerts: Alert[] = [
-      { id: 1, severity: 'warning', created_at: atNoon(curStart, 0) },
-      { id: 2, severity: 'mystery', created_at: atNoon(curStart, 1) }, // unknown severity
+      { id: 1, vehicle_id: 1, severity: 'warning', created_at: atNoon(curStart, 0) },
+      { id: 2, vehicle_id: 1, severity: 'mystery', created_at: atNoon(curStart, 1) },
     ];
     installRoutes({ drives: [], charging: [], alerts });
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
@@ -404,13 +424,13 @@ describe('fun fact', () => {
   it('suppresses the fun fact below the 10 km floor', async () => {
     const [curStart] = getWeekRange(0);
     installRoutes({
-      drives: [makeDrive({ id: 1, start_date: atNoon(curStart, 0), distance: 3 })],
+      drives: [makeDrive({ id: 1, startTs: atNoon(curStart, 0), distanceM: 3_000 })],
       charging: [],
       alerts: [],
     });
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
 
-    await waitFor(() => expect(result.current.metrics.totalDistance).toBe(3));
+    await waitFor(() => expect(result.current.metrics.totalDistanceM).toBe(3_000));
     expect(result.current.funFact).toBeUndefined();
   });
 });
@@ -422,18 +442,26 @@ describe('week navigation', () => {
     installRoutes({ drives, charging, alerts });
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
 
-    await waitFor(() => expect(result.current.metrics.totalDistance).toBe(150));
+    await waitFor(() => expect(result.current.metrics.totalDistanceM).toBe(150_000));
     expect(result.current.isCurrentWeek).toBe(true);
     const currentLabel = result.current.weekLabel;
+    const currentDriveUrl = urlsCalled().filter((url) => url.startsWith('/drives?')).at(-1);
     expect(currentLabel).toContain('–');
 
     act(() => result.current.goToPrevWeek());
-    await waitFor(() => expect(result.current.metrics.totalDistance).toBe(60));
+    await waitFor(() => expect(result.current.metrics.totalDistanceM).toBe(60_000));
     expect(result.current.isCurrentWeek).toBe(false);
     expect(result.current.weekLabel).not.toBe(currentLabel);
+    const previousDriveUrl = urlsCalled().filter((url) => url.startsWith('/drives?')).at(-1);
+    expect(previousDriveUrl).not.toBe(currentDriveUrl);
+    expect(
+      Date.parse(new URLSearchParams(previousDriveUrl?.split('?')[1]).get('start') ?? ''),
+    ).toBeLessThan(
+      Date.parse(new URLSearchParams(currentDriveUrl?.split('?')[1]).get('start') ?? ''),
+    );
 
     act(() => result.current.goToNextWeek());
-    await waitFor(() => expect(result.current.metrics.totalDistance).toBe(150));
+    await waitFor(() => expect(result.current.metrics.totalDistanceM).toBe(150_000));
     expect(result.current.isCurrentWeek).toBe(true);
   });
 

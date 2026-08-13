@@ -163,13 +163,6 @@ describe('buildVaultReport — limitations', () => {
     expect(without.limitations.some((l) => /fleet-wide backend endpoint/i.test(l))).toBe(false);
   });
 
-  it('includes the warranty account-level-scope limitation only when warranty evidence is present', () => {
-    const withWarranty = emptyEvidence();
-    withWarranty.warranty = { fetched_at: '2024-01-01', data: {} };
-    const report = buildVaultReport({ disclosure: baseSelection, evidence: withWarranty });
-    expect(report.limitations.some((l) => /Tesla account level/i.test(l))).toBe(true);
-  });
-
   it('includes the observed-window limitation when driving OR charging history is present', () => {
     const withDriving = emptyEvidence();
     withDriving.driving_history = {

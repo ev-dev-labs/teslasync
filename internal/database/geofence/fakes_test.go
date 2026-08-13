@@ -125,12 +125,16 @@ var _ geofencePool = (*fakePool)(nil)
 type fakeTx struct {
 	pgx.Tx
 
-	execQueue []execResult
+	execQueue     []execResult
+	queryQueue    []queryResult
+	queryRowQueue []pgx.Row
 
 	commitErr   error
 	rollbackErr error
 
 	execCalls     []recordedCall
+	queryCalls    []recordedCall
+	queryRowCalls []recordedCall
 	commitCalls   int
 	rollbackCalls int
 }
@@ -145,6 +149,26 @@ func (t *fakeTx) Exec(_ context.Context, sql string, args ...any) (pgconn.Comman
 		return r.tag, r.err
 	}
 	return pgconn.CommandTag{}, nil
+}
+
+func (t *fakeTx) Query(_ context.Context, sql string, args ...any) (pgx.Rows, error) {
+	t.queryCalls = append(t.queryCalls, recordedCall{sql: sql, args: cloneArgs(args)})
+	if len(t.queryQueue) > 0 {
+		r := t.queryQueue[0]
+		t.queryQueue = t.queryQueue[1:]
+		return r.rows, r.err
+	}
+	return newFakeRows(nil), nil
+}
+
+func (t *fakeTx) QueryRow(_ context.Context, sql string, args ...any) pgx.Row {
+	t.queryRowCalls = append(t.queryRowCalls, recordedCall{sql: sql, args: cloneArgs(args)})
+	if len(t.queryRowQueue) > 0 {
+		r := t.queryRowQueue[0]
+		t.queryRowQueue = t.queryRowQueue[1:]
+		return r
+	}
+	return fakeRow{}
 }
 
 func (t *fakeTx) Commit(_ context.Context) error {
@@ -263,6 +287,16 @@ func geofenceRowVals(g *systemmodel.Geofence) []any {
 		g.ID, g.Name, g.PolygonWKT, g.Category,
 		g.Enabled, g.AlertOnEntry, g.AlertOnExit,
 		g.CreatedAt, g.UpdatedAt,
+		g.Origin, g.NeedsReview, g.ArchivedAt,
+	}
+}
+
+// geofenceRateRowVals renders a GeofenceRate into the column-ordered []any
+// that scanGeofenceRate expects (see geofenceRateColumns).
+func geofenceRateRowVals(gr *systemmodel.GeofenceRate) []any {
+	return []any{
+		gr.ID, gr.GeofenceID, gr.RatePerWh, gr.Currency,
+		gr.EffectiveFrom, gr.EffectiveTo, gr.CreatedAt,
 	}
 }
 

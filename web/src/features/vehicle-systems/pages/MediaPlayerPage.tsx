@@ -46,6 +46,10 @@ const VOLUME_FALLBACK_MAX = 11;
 
 /* ── Helpers ───────────────────────────────────────────────────── */
 
+function formatVolumeLevel(value: number | null | undefined): string {
+  return typeof value === 'number' && Number.isFinite(value) ? fmtNumber(value) : '—';
+}
+
 /** Milliseconds → `m:ss` play-time label. Non-finite/negative input clamps to
  *  `0:00` so a malformed elapsed/duration never renders `-1:-01`. */
 function fmtPlayTime(ms: number): string {
@@ -240,7 +244,7 @@ export default function MediaPlayerPage() {
         sortable: true,
         render: (row) => (
           <Text as="span" variant="body" className="tabular-nums text-cyan-300">
-            {row.audio_volume ?? '—'}/{row.audio_volume_max ?? '—'}
+            {formatVolumeLevel(row.audio_volume)}/{formatVolumeLevel(row.audio_volume_max)}
           </Text>
         ),
       },

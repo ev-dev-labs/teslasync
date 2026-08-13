@@ -77,35 +77,35 @@ const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
 function assertDriveShape(d: Drive): void {
   expect(typeof d.id).toBe('number');
-  expect(typeof d.start_date).toBe('string');
-  expect(typeof d.distance).toBe('number');
-  expect(typeof d.duration_min).toBe('number');
-  expect(typeof d.efficiency_wh_km).toBe('number');
-  expect(typeof d.energy_used).toBe('number');
+  expect(typeof d.startTs).toBe('string');
+  expect(typeof d.distanceM).toBe('number');
+  expect(typeof d.durationS).toBe('number');
+  expect(typeof d.energyUsedWh).toBe('number');
 }
 
 function assertChargingSessionShape(c: ChargingSession): void {
   expect(typeof c.id).toBe('number');
-  expect(typeof c.start_ts).toBe('string');
+  expect(typeof c.started_at).toBe('string');
+  expect(typeof c.ended_at).toBe('string');
   expect(typeof c.total_energy_added_wh).toBe('number');
-  expect(typeof c.cost).toBe('number');
-  expect(typeof c.duration_min).toBe('number');
-  expect(typeof c.start_battery_pct).toBe('number');
-  expect(typeof c.end_battery_pct).toBe('number');
+  expect(typeof c.cost_decimal).toBe('number');
+  expect(typeof c.start_soc_pct).toBe('number');
+  expect(typeof c.end_soc_pct).toBe('number');
 }
 
 function assertAlertShape(a: Alert): void {
   expect(typeof a.id).toBe('number');
+  expect(typeof a.vehicle_id).toBe('number');
   expect(typeof a.severity).toBe('string');
   expect(typeof a.created_at).toBe('string');
 }
 
 function assertDigestMetricsShape(m: DigestMetrics): void {
   const numericKeys: Array<keyof DigestMetrics> = [
-    'totalDistance', 'prevDistance', 'totalDrives', 'prevDriveCount',
-    'energyUsed', 'prevEnergy', 'chargingCost', 'prevChargingCost',
-    'co2Saved', 'prevCo2', 'avgEfficiency', 'prevAvgEfficiency',
-    'totalDuration', 'chargeEnergyAdded', 'prevChargeEnergy', 'avgChargeRate',
+    'totalDistanceM', 'prevDistanceM', 'totalDrives', 'prevDriveCount',
+    'energyUsedWh', 'prevEnergyWh', 'chargingCost', 'prevChargingCost',
+    'co2Saved', 'prevCo2', 'avgEfficiencyWhPerM', 'prevAvgEfficiencyWhPerM',
+    'totalDurationS', 'chargeEnergyAddedWh', 'prevChargeEnergyWh', 'avgChargePowerW',
     'chargingSessionCount', 'batteryStart', 'batteryEnd', 'alertTotal',
   ];
   for (const key of numericKeys) {
@@ -126,12 +126,12 @@ function assertFunFactShape(f: FunFact): void {
 
 function assertDailyDistanceEntryShape(e: DailyDistanceEntry): void {
   expect(typeof e.day).toBe('string');
-  expect(typeof e.distance).toBe('number');
+  expect(typeof e.distanceM).toBe('number');
 }
 
 function assertDailyEnergyEntryShape(e: DailyEnergyEntry): void {
   expect(typeof e.day).toBe('string');
-  expect(typeof e.energy).toBe('number');
+  expect(typeof e.energyWh).toBe('number');
 }
 
 function assertAlertPieEntryShape(e: AlertPieEntry): void {
@@ -203,21 +203,21 @@ function renderDigest() {
  */
 function populatedNetwork(a: WeekAnchors): Network {
   const drives: Drive[] = [
-    { id: 2, start_date: a.thisWed, distance: 50, duration_min: 30, efficiency_wh_km: 200, energy_used: 10 },
-    { id: 1, start_date: a.thisMon, distance: 100, duration_min: 60, efficiency_wh_km: 150, energy_used: 15 },
-    { id: 3, start_date: a.lastWeek, distance: 80, duration_min: 40, efficiency_wh_km: 180, energy_used: 12 },
-    { id: 4, start_date: a.longAgo, distance: 999, duration_min: 99, efficiency_wh_km: 999, energy_used: 99 },
+    { id: 2, startTs: a.thisWed, distanceM: 50_000, durationS: 1_800, energyUsedWh: 10_000 },
+    { id: 1, startTs: a.thisMon, distanceM: 100_000, durationS: 3_600, energyUsedWh: 15_000 },
+    { id: 3, startTs: a.lastWeek, distanceM: 80_000, durationS: 2_400, energyUsedWh: 12_000 },
+    { id: 4, startTs: a.longAgo, distanceM: 999_000, durationS: 5_940, energyUsedWh: 99_000 },
   ];
   const charging: ChargingSession[] = [
-    { id: 11, start_ts: a.thisMon, total_energy_added_wh: 20, cost: 5, duration_min: 60, start_battery_pct: 20, end_battery_pct: 60 },
-    { id: 12, start_ts: a.thisWed, total_energy_added_wh: 30, cost: 8, duration_min: 30, start_battery_pct: 40, end_battery_pct: 80 },
-    { id: 13, start_ts: a.lastWeek, total_energy_added_wh: 10, cost: 3, duration_min: 20, start_battery_pct: 10, end_battery_pct: 30 },
+    { id: 11, started_at: a.thisMon, ended_at: new Date(Date.parse(a.thisMon) + HOUR_MS).toISOString(), total_energy_added_wh: 20_000, cost_decimal: 5, avg_power_w: null, start_soc_pct: 20, end_soc_pct: 60 },
+    { id: 12, started_at: a.thisWed, ended_at: new Date(Date.parse(a.thisWed) + 30 * 60_000).toISOString(), total_energy_added_wh: 30_000, cost_decimal: 8, avg_power_w: null, start_soc_pct: 40, end_soc_pct: 80 },
+    { id: 13, started_at: a.lastWeek, ended_at: new Date(Date.parse(a.lastWeek) + 20 * 60_000).toISOString(), total_energy_added_wh: 10_000, cost_decimal: 3, avg_power_w: null, start_soc_pct: 10, end_soc_pct: 30 },
   ];
   const alerts: Alert[] = [
-    { id: 21, severity: 'warning', created_at: a.thisMon },
-    { id: 22, severity: 'warning', created_at: a.thisWed },
-    { id: 23, severity: 'critical', created_at: a.thisMon },
-    { id: 24, severity: 'info', created_at: a.lastWeek }, // prior week → excluded
+    { id: 21, vehicle_id: 7, severity: 'warning', created_at: a.thisMon },
+    { id: 22, vehicle_id: 7, severity: 'warning', created_at: a.thisWed },
+    { id: 23, vehicle_id: 7, severity: 'critical', created_at: a.thisMon },
+    { id: 24, vehicle_id: 7, severity: 'info', created_at: a.lastWeek },
   ];
   return { drives, charging, alerts };
 }
@@ -257,29 +257,27 @@ describe('useWeeklyDigest → DigestMetrics (the derived aggregate contract)', (
     assertDigestMetricsShape(m);
 
     // Distance / drives / energy for THIS week (drives 1 + 2).
-    expect(m.totalDistance).toBe(150);
-    expect(m.energyUsed).toBe(25);
-    expect(m.totalDuration).toBe(90);
-    // Efficiency is the simple mean of the two per-drive efficiencies.
-    expect(m.avgEfficiency).toBeCloseTo(175, 6);
+    expect(m.totalDistanceM).toBe(150_000);
+    expect(m.energyUsedWh).toBe(25_000);
+    expect(m.totalDurationS).toBe(5_400);
+    expect(m.avgEfficiencyWhPerM).toBeCloseTo(1 / 6, 6);
     // CO₂ scales linearly with energy via the shared constant.
     expect(m.co2Saved).toBeCloseTo(25 * CO2_PER_KWH_GASOLINE_KG, 6);
 
     // Prior-week baselines (drive 3 / session 13) — never mixed with this week.
-    expect(m.prevDistance).toBe(80);
+    expect(m.prevDistanceM).toBe(80_000);
     expect(m.prevDriveCount).toBe(1);
-    expect(m.prevEnergy).toBe(12);
-    expect(m.prevAvgEfficiency).toBeCloseTo(180, 6);
+    expect(m.prevEnergyWh).toBe(12_000);
+    expect(m.prevAvgEfficiencyWhPerM).toBeCloseTo(0.15, 6);
     expect(m.prevChargingCost).toBe(3);
-    expect(m.prevChargeEnergy).toBe(10);
+    expect(m.prevChargeEnergyWh).toBe(10_000);
 
     // Charging aggregates.
     expect(m.chargingCost).toBe(13);
-    expect(m.chargeEnergyAdded).toBe(50);
+    expect(m.chargeEnergyAddedWh).toBe(50_000);
     expect(m.batteryStart).toBeCloseTo(30, 6); // (20 + 40) / 2
     expect(m.batteryEnd).toBeCloseTo(70, 6); // (60 + 80) / 2
-    // Rate = mean of (energy / minutes * 60): (20 + 60) / 2.
-    expect(m.avgChargeRate).toBeCloseTo(40, 5);
+    expect(m.avgChargePowerW).toBeCloseTo(40_000, 5);
   });
 
   it('selects the longest drive of the week as topDrive (max by distance, not first seen)', async () => {
@@ -294,7 +292,7 @@ describe('useWeeklyDigest → DigestMetrics (the derived aggregate contract)', (
     assertDriveShape(top as Drive);
     // Drive #1 (100 km) is second in the input array but must win over #2 (50 km).
     expect(top?.id).toBe(1);
-    expect(top?.distance).toBe(100);
+    expect(top?.distanceM).toBe(100_000);
   });
 
   it('buckets alerts by severity and totals them (prior-week alerts excluded)', async () => {
@@ -317,7 +315,7 @@ describe('useWeeklyDigest → chart series (Daily* + AlertPieEntry contracts)', 
     primeNetwork(populatedNetwork(a));
     const { result } = renderDigest();
 
-    await waitFor(() => expect(result.current.metrics.totalDistance).toBe(150));
+    await waitFor(() => expect(result.current.metrics.totalDistanceM).toBe(150_000));
 
     const { dailyDistanceData, dailyEnergyData } = result.current;
     // Exactly one bucket per weekday label, in DAY_LABELS order.
@@ -329,13 +327,13 @@ describe('useWeeklyDigest → chart series (Daily* + AlertPieEntry contracts)', 
 
     const monIdx = dayOfWeekIndex(a.thisMon); // 0
     const wedIdx = dayOfWeekIndex(a.thisWed); // 2
-    expect(dailyDistanceData[monIdx].distance).toBe(100);
-    expect(dailyDistanceData[wedIdx].distance).toBe(50);
-    expect(dailyEnergyData[monIdx].energy).toBe(20);
-    expect(dailyEnergyData[wedIdx].energy).toBe(30);
+    expect(dailyDistanceData[monIdx].distanceM).toBe(100_000);
+    expect(dailyDistanceData[wedIdx].distanceM).toBe(50_000);
+    expect(dailyEnergyData[monIdx].energyWh).toBe(20_000);
+    expect(dailyEnergyData[wedIdx].energyWh).toBe(30_000);
     // Series total reconciles with the aggregate metric.
-    expect(dailyDistanceData.reduce((s, e) => s + e.distance, 0)).toBe(150);
-    expect(dailyEnergyData.reduce((s, e) => s + e.energy, 0)).toBe(50);
+    expect(dailyDistanceData.reduce((s, e) => s + e.distanceM, 0)).toBe(150_000);
+    expect(dailyEnergyData.reduce((s, e) => s + e.energyWh, 0)).toBe(50_000);
   });
 
   it('maps alert buckets to labelled, coloured pie slices via ALERT_SEVERITY_COLORS', async () => {
@@ -382,7 +380,7 @@ describe('useWeeklyDigest — empty + null-safety guards', () => {
 
     const m = result.current.metrics;
     assertDigestMetricsShape(m); // includes the "no NaN" invariant
-    expect(m.totalDistance).toBe(0);
+    expect(m.totalDistanceM).toBe(0);
     expect(m.chargingSessionCount).toBe(0);
     expect(m.alertTotal).toBe(0);
     expect(m.topDrive).toBeUndefined();
@@ -390,7 +388,7 @@ describe('useWeeklyDigest — empty + null-safety guards', () => {
 
     // Chart series stay well-formed (seven zeroed distance/energy buckets).
     expect(result.current.dailyDistanceData).toHaveLength(7);
-    expect(result.current.dailyDistanceData.every((e) => e.distance === 0)).toBe(true);
+    expect(result.current.dailyDistanceData.every((e) => e.distanceM === 0)).toBe(true);
     expect(result.current.alertPieData).toEqual([]);
     // Below the 10 km floor → no headline.
     expect(result.current.funFact).toBeUndefined();
@@ -407,7 +405,7 @@ describe('useWeeklyDigest — empty + null-safety guards', () => {
     const m = result.current.metrics;
     assertDigestMetricsShape(m);
     expect(m.totalDrives).toBe(0);
-    expect(m.chargeEnergyAdded).toBe(0);
+    expect(m.chargeEnergyAddedWh).toBe(0);
     expect(m.alertTotal).toBe(0);
     expect(result.current.dailyEnergyData).toHaveLength(7);
     expect(result.current.hasData).toBe(false);

@@ -180,7 +180,9 @@ function makeGeofence(o: Partial<Geofence> & { id: string; name: string }): Geof
     alertOnEntry: false,
     alertOnExit: false,
     enabled: true,
-    costPerKwh: null,
+    category: 'custom',
+    origin: 'manual',
+    needsReview: false,
     createdAt: '2024-01-01T00:00:00Z',
     ...o,
   };
@@ -228,13 +230,27 @@ function installRequest() {
     if (u === '/geofences' && method === 'GET') {
       if (store.mode === 'pending') return new Promise(() => {});
       if (store.mode === 'reject') return Promise.reject(store.error ?? new Error('boom'));
-      return Promise.resolve(store.geofences);
+      return Promise.resolve(
+        store.geofences.map((geofence) => ({
+          ...geofence,
+          id: Number(geofence.id),
+          polygon_wkt: 'POLYGON((0 0,0 0,0 0,0 0))',
+          alert_on_entry: geofence.alertOnEntry,
+          alert_on_exit: geofence.alertOnExit,
+          needs_review: geofence.needsReview,
+          archived_at: geofence.archivedAt ?? null,
+          created_at: geofence.createdAt,
+          updated_at: geofence.createdAt,
+        })),
+      );
     }
     if (u === '/geofences' && method === 'POST') {
       return Promise.resolve(
         makeGeofence({ id: '99', name: 'Created', latitude: 1, longitude: 2, radius: 100 }),
       );
     }
+    if (u === '/geofences/needs-review' && method === 'GET') return Promise.resolve([]);
+    if (u === '/geofences/rates/current' && method === 'GET') return Promise.resolve([]);
     if (u === '/geofences/bulk' && method === 'POST') {
       return Promise.resolve({ deleted: 1, failed: [] });
     }
@@ -290,7 +306,7 @@ function renderPage() {
 }
 
 const summary = () => within(screen.getByRole('region', { name: 'Geofence summary' }));
-const zones = () => within(screen.getByRole('region', { name: 'Geofence zones' }));
+const zones = () => within(screen.getByRole('region', { name: 'Places and charging zones' }));
 
 // Read a KPI card's value <p> by its label text.
 function kpiValue(label: string): string {
@@ -363,16 +379,24 @@ describe('GeofencesPage — KPI band', () => {
 
 // ── Zones panel states ───────────────────────────────────────────────────────
 describe('GeofencesPage — zones panel states', () => {
-  it('renders one card per geofence with the correct alert-type badge', async () => {
+  it('renders every place with its entry and exit alert controls', async () => {
     renderPage();
     await zones().findByText('Home');
 
     expect(zones().getByText('Work')).toBeInTheDocument();
     expect(zones().getByText('Gym')).toBeInTheDocument();
-    // alertBadgeLabel: both → "Entry & Exit", entry → "Entry", none → "None".
-    expect(zones().getByText('Entry & Exit')).toBeInTheDocument();
-    expect(zones().getByText('Entry')).toBeInTheDocument();
-    expect(zones().getByText('None')).toBeInTheDocument();
+    expect(
+      zones().getByRole('switch', { name: 'Entry alert for Home' }),
+    ).toHaveAttribute('aria-checked', 'true');
+    expect(
+      zones().getByRole('switch', { name: 'Exit alert for Home' }),
+    ).toHaveAttribute('aria-checked', 'true');
+    expect(
+      zones().getByRole('switch', { name: 'Entry alert for Work' }),
+    ).toHaveAttribute('aria-checked', 'true');
+    expect(
+      zones().getByRole('switch', { name: 'Exit alert for Work' }),
+    ).toHaveAttribute('aria-checked', 'false');
   });
 
   it('renders a retry-able QueryError (not cards) when the feed fails', async () => {
@@ -393,44 +417,45 @@ describe('GeofencesPage — zones panel states', () => {
     store.geofences = [];
     renderPage();
 
-    expect(await zones().findByText('No geofences defined')).toBeInTheDocument();
-    // The empty state offers its own "Add Geofence" action (plus the header one).
-    expect(screen.getAllByRole('button', { name: 'Add Geofence' }).length).toBeGreaterThanOrEqual(1);
+    expect(
+      await zones().findByText(
+        'No active places yet. Existing and future confirmed charging locations appear automatically.',
+      ),
+    ).toBeInTheDocument();
+    expect(zones().getByRole('button', { name: 'Add Place' })).toBeInTheDocument();
     expect(zones().queryByText('Home')).toBeNull();
   });
 });
 
 // ── Search + filters ─────────────────────────────────────────────────────────
 describe('GeofencesPage — search and filtering', () => {
-  it('filters the visible cards by name and surfaces an active-filter chip', async () => {
+  it('filters the unified place directory by name', async () => {
     renderPage();
     await zones().findByText('Home');
 
-    fireEvent.change(screen.getByPlaceholderText(/Search by name/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Search places, categories, or origin/i), {
       target: { value: 'Work' },
     });
 
     // Debounced — wait for the non-matching cards to drop out.
     await waitFor(() => expect(zones().queryByText('Home')).toBeNull());
-    // The Work card survives (identified by its rename control, which is
-    // unambiguous even though the filter chip also echoes "Work").
-    expect(zones().getByRole('button', { name: 'Rename geofence Work' })).toBeInTheDocument();
+    expect(zones().getByRole('button', { name: 'Edit geofence Work' })).toBeInTheDocument();
     expect(zones().queryByText('Gym')).toBeNull();
-    // The active-filter chip echoes the query.
-    expect(
-      within(screen.getByTestId('active-filter-chips')).getByText('Work'),
-    ).toBeInTheDocument();
   });
 
   it('shows a "no matches" empty state with a clear action for an unmatched query', async () => {
     renderPage();
     await zones().findByText('Home');
 
-    fireEvent.change(screen.getByPlaceholderText(/Search by name/i), {
+    fireEvent.change(screen.getByPlaceholderText(/Search places, categories, or origin/i), {
       target: { value: 'zzz-nothing' },
     });
 
-    expect(await zones().findByText('No geofences match your search.')).toBeInTheDocument();
+    expect(
+      await zones().findByText(
+        'No places match this search. Clear the search to see all places.',
+      ),
+    ).toBeInTheDocument();
     expect(zones().getByRole('button', { name: 'Clear search' })).toBeInTheDocument();
   });
 });
@@ -470,23 +495,25 @@ describe('GeofencesPage — card mutations', () => {
     );
   });
 
-  it('renames a geofence inline via a full-payload PUT', async () => {
+  it('updates a place category through the shared edit modal', async () => {
     renderPage();
     await zones().findByText('Home');
 
-    fireEvent.click(screen.getByRole('button', { name: 'Rename geofence Home' }));
-    const input = await screen.findByTestId('editable-text-input');
-    fireEvent.change(input, { target: { value: 'Casa' } });
-    fireEvent.keyDown(input, { key: 'Enter' });
+    fireEvent.click(screen.getByRole('button', { name: 'Edit geofence Home' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Edit Geofence' });
+    fireEvent.change(within(dialog).getByLabelText('Category'), {
+      target: { value: 'work' },
+    });
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Update' }));
 
     await waitFor(() => {
       expect(callsMatching('PUT', (u) => u === '/geofences/1').length).toBeGreaterThan(0);
     });
     const put = callsMatching('PUT', (u) => u === '/geofences/1')[0];
     const body = JSON.parse((put[1] as { body: string }).body);
-    // Full merged payload — name plus the untouched fields (never a bare {name}).
-    expect(body.name).toBe('Casa');
+    expect(body.name).toBe('Home');
     expect(body.radius).toBe(100);
+    expect(body.category).toBe('work');
     expect(body).not.toHaveProperty('id');
   });
 });
@@ -494,17 +521,19 @@ describe('GeofencesPage — card mutations', () => {
 // ── Bulk selection ───────────────────────────────────────────────────────────
 describe('GeofencesPage — bulk selection', () => {
   it('reveals the bulk toolbar on selection and bulk-deletes after confirmation', async () => {
-    const { container } = renderPage();
+    renderPage();
     await zones().findByText('Home');
 
     // No toolbar until something is selected.
-    expect(screen.queryByRole('region', { name: 'Bulk actions for selected items' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'Bulk actions' })).toBeNull();
 
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Select geofence Home' }));
-    const toolbar = await screen.findByRole('region', { name: 'Bulk actions for selected items' });
+    const homeRow = zones().getByText('Home').closest('tr');
+    expect(homeRow).not.toBeNull();
+    fireEvent.click(within(homeRow as HTMLElement).getByRole('checkbox', { name: 'Select row' }));
+    const toolbar = await screen.findByRole('region', { name: 'Bulk actions' });
     expect(within(toolbar).getByText('1 selected')).toBeInTheDocument();
 
-    fireEvent.click(container.querySelector('[data-bulk-action="delete"]') as HTMLElement);
+    fireEvent.click(within(toolbar).getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog', { name: 'Delete geofences?' });
     fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
 
@@ -562,11 +591,12 @@ describe('GeofencesPage — create modal', () => {
       latitude: 37.5,
       longitude: -122.5,
       radius: 150,
+      category: 'custom',
       alertOnEntry: true,
       alertOnExit: true,
       enabled: true,
-      costPerKwh: null,
     });
+    expect(body).not.toHaveProperty('costPerKwh');
     expect(toastMock.success).toHaveBeenCalledWith('Geofence created');
   });
 
@@ -721,7 +751,7 @@ describe('GeofencesPage — a11y & data contract', () => {
     await zones().findByText('Home');
 
     expect(screen.getByRole('region', { name: 'Geofence summary' })).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Geofence zones' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Places and charging zones' })).toBeInTheDocument();
     // The switch's accessible name must live ON the switch button, not the wrapper.
     expect(screen.getByRole('switch', { name: 'Toggle geofence Home' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Edit geofence Gym' })).toBeInTheDocument();

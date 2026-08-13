@@ -73,9 +73,14 @@ export function CommandSelectDialog({
                 <Text size="sm" weight="medium" color="primary">
                   {t(opt.labelKey, opt.labelFallback)}
                 </Text>
-                {opt.description && (
+                {(opt.descriptionKey || opt.descriptionFallback || opt.description) && (
                   <Caption className="block mt-0.5">
-                    {opt.description}
+                    {opt.descriptionKey
+                      ? t(
+                          opt.descriptionKey,
+                          opt.descriptionFallback ?? opt.description ?? '—',
+                        )
+                      : opt.descriptionFallback ?? opt.description}
                   </Caption>
                 )}
               </ControlButton>

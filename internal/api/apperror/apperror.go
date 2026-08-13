@@ -129,6 +129,15 @@ var (
 	ErrGeofenceNotFound      = &AppError{"GEOFENCE_NOT_FOUND", "geofence not found", http.StatusNotFound, ErrCatGeofence}
 	ErrGeofenceInvalidCoords = &AppError{"GEOFENCE_INVALID_COORDINATES", "invalid geofence coordinates", http.StatusBadRequest, ErrCatGeofence}
 	ErrGeofenceInvalidRadius = &AppError{"GEOFENCE_INVALID_RADIUS", "geofence radius must be positive", http.StatusBadRequest, ErrCatGeofence}
+
+	// Charging-place pricing (migration 000228_geofence_charging_place_pricing).
+	ErrGeofenceRateNotFound  = &AppError{"GEOFENCE_RATE_NOT_FOUND", "geofence rate not found", http.StatusNotFound, ErrCatGeofence}
+	ErrGeofenceRateConflict  = &AppError{"GEOFENCE_RATE_CONFLICT", "rate interval overlaps an existing rate for this geofence", http.StatusConflict, ErrCatGeofence}
+	ErrGeofenceRateInvalid   = &AppError{"GEOFENCE_RATE_INVALID", "invalid geofence rate", http.StatusBadRequest, ErrCatGeofence}
+	ErrGeofenceRateInUse     = &AppError{"GEOFENCE_RATE_IN_USE", "rate is already referenced by charging history", http.StatusConflict, ErrCatGeofence}
+	ErrGeofenceRateImmutable = &AppError{"GEOFENCE_RATE_IMMUTABLE", "effective rates are immutable; add a new dated rate instead", http.StatusConflict, ErrCatGeofence}
+	ErrGeofenceArchived      = &AppError{"GEOFENCE_ARCHIVED", "geofence is archived", http.StatusConflict, ErrCatGeofence}
+	ErrGeofenceHasHistory    = &AppError{"GEOFENCE_HAS_HISTORY", "geofence has associated charging/drive history; archive instead of deleting", http.StatusConflict, ErrCatGeofence}
 )
 
 // --- Commands ---
@@ -198,6 +207,8 @@ func ErrorCatalog() []*AppError {
 		ErrInvalidInput, ErrInvalidJSON, ErrMissingField, ErrInvalidRange,
 		ErrInvalidID, ErrPayloadTooLarge,
 		ErrGeofenceNotFound, ErrGeofenceInvalidCoords, ErrGeofenceInvalidRadius,
+		ErrGeofenceRateNotFound, ErrGeofenceRateConflict, ErrGeofenceRateInvalid,
+		ErrGeofenceRateInUse, ErrGeofenceRateImmutable, ErrGeofenceArchived, ErrGeofenceHasHistory,
 		ErrCommandNotSupported, ErrCommandFailed, ErrCommandTimeout,
 		ErrBackupConfigNotFound, ErrBackupRunNotFound, ErrBackupFailed,
 		ErrBackupStorageError, ErrRestoreFailed,

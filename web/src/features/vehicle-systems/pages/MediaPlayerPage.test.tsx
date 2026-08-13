@@ -44,6 +44,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { MediaSnapshot } from '@/api/types';
+import { setGlobalPrecision } from '@/lib/numberFormat';
 
 // ── i18n stub: resolve the string fallback (or an options-bag defaultValue) and
 //    interpolate {{var}} placeholders so assertions read on human copy. ────────
@@ -259,6 +260,7 @@ beforeEach(() => {
   mockHistory.mockReset();
   mockSelected.mockReset();
   mockRange.mockReset();
+  setGlobalPrecision(2);
 
   mockRange.mockReturnValue({ start: RANGE.start, end: RANGE.end, setRange: vi.fn() });
   mockSelected.mockReturnValue(selected(7));
@@ -398,6 +400,32 @@ describe('MediaPlayerPage — populated happy path', () => {
 
     // Volume gauge Y-axis ceiling matches the known max (peak 8, latest max 10).
     expect(JSON.parse(screen.getByTestId('volume-yaxis').getAttribute('data-domain') ?? 'null')).toEqual([0, 10]);
+  });
+
+  it('formats history volume levels with the configured precision and preserves missing values', () => {
+    setGlobalPrecision(1);
+    mockHistory.mockReturnValue(
+      makeQuery({
+        data: [
+          snapshot({
+            id: 1,
+            audio_volume: 5.666666507720947,
+            audio_volume_max: 10.333333015441895,
+          }),
+          snapshot({
+            id: 2,
+            audio_volume: undefined,
+            audio_volume_max: undefined,
+          }),
+        ],
+      }),
+    );
+
+    renderPage();
+
+    expect(screen.getByText('5.7/10.3')).toBeInTheDocument();
+    expect(screen.getByText('—/—')).toBeInTheDocument();
+    expect(screen.queryByText('5.666666507720947/10.333333015441895')).not.toBeInTheDocument();
   });
 });
 

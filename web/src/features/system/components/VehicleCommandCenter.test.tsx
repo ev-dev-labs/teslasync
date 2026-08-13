@@ -1,402 +1,445 @@
-/**
- * VehicleCommandCenter tests (Project Apex elevation).
- *
- * VehicleCommandCenter is the single-vehicle command surface. Its one export
- * orchestrates a lot of behaviour that these tests exercise end-to-end:
- *   - a header that prefers `display_name`, falls back to the VIN, shows a
- *     state Badge + FreshnessIndicator, and renders live battery / rated-range /
- *     cabin-temperature read from `state` at the operator's units (SI → display
- *     at the render boundary via `useUnits()`);
- *   - null-safety on the live metrics (a null `battery_level` must read `0%`,
- *     never a bare `%`; a null `rated_range` must read `0 <unit>`);
- *   - an "asleep / offline" callout and a separate "stale data" banner, gated so
- *     the stale banner never shows while the vehicle is asleep;
- *   - a favourites bar seeded from `localStorage` (or the `defaultFavorite`
- *     commands) plus a search box that flattens results and shows an empty
- *     state for no matches;
- *   - command execution: a plain action POSTs `/vehicles/{id}/command/{cmd}`,
- *     `wake_up` routes through the dedicated wake mutation, failures surface an
- *     error banner, and the latest-status query annotates each tile
- *     (`✓ 2m ago` / `✗ …`), degrading a malformed timestamp to an em dash
- *     rather than `NaN`;
- *   - the three centralised dialogs — confirm (dangerous), select, and input —
- *     open from the right tile and, for select/input, feed the chosen params
- *     back through the same POST.
- *
- * The shared `request` client is stubbed so the real TanStack Query hooks run
- * without a network. `useSettings` is left to the global test-setup stub
- * (metric / SI units, decimal_precision=2) so SI values format as km / °C.
- * i18n is stubbed to echo the English `defaultValue` with `{{var}}`
- * interpolation (and to echo the key when no default is given) so visible copy
- * is deterministic. user-event is not installed in this repo (see
- * DriveRepairForm.test.tsx); interactions go through `fireEvent`.
- */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { ToastProvider } from '@/components/feedback';
+import type { CommandLogEntry } from '@/api/hooks/useCommands';
+import type { Vehicle, VehicleState } from '../commands';
+import {
+  CATEGORY_META,
+  COMMANDS,
+} from '../commands';
 
-// Stub the resilient fetch client while preserving the rest of the module so
-// transitive consumers keep working.
 vi.mock('@/api/client', async () => {
-  const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
+  const actual = await vi.importActual<typeof import('@/api/client')>(
+    '@/api/client',
+  );
   return { ...actual, request: vi.fn() };
 });
 
-// Deterministic i18n: return the English defaultValue (interpolating {{vars}}),
-// fall back to a nested `defaultValue`, and otherwise echo the key so the
-// component's key-only `t('Vehicle is')` calls render stable copy.
 vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
-  const interpolate = (tpl: string, vars?: Record<string, unknown>): string =>
-    vars
-      ? tpl.replace(/\{\{\s*(\w+)\s*\}\}/g, (_, k: string) =>
-          k in vars ? String(vars[k]) : `{{${k}}}`,
+  const actual = await vi.importActual<typeof import('react-i18next')>(
+    'react-i18next',
+  );
+  const interpolate = (
+    template: string,
+    values?: Record<string, unknown>,
+  ): string =>
+    values
+      ? template.replace(/\{\{\s*(\w+)\s*\}\}/g, (_match, key: string) =>
+          String(values[key] ?? `{{${key}}}`),
         )
-      : tpl;
+      : template;
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, dflt?: unknown, opts?: unknown) => {
-        if (typeof dflt === 'string') {
-          const vars = opts && typeof opts === 'object' ? (opts as Record<string, unknown>) : undefined;
-          return interpolate(dflt, vars);
+      t: (key: string, fallback?: unknown, options?: unknown) => {
+        if (typeof fallback === 'string') {
+          return interpolate(
+            fallback,
+            options && typeof options === 'object'
+              ? options as Record<string, unknown>
+              : undefined,
+          );
         }
-        if (dflt && typeof dflt === 'object') {
-          const o = dflt as Record<string, unknown>;
-          if (typeof o.defaultValue === 'string') return interpolate(o.defaultValue, o);
+        if (fallback && typeof fallback === 'object') {
+          const values = fallback as Record<string, unknown>;
+          return typeof values.defaultValue === 'string'
+            ? interpolate(values.defaultValue, values)
+            : key;
         }
         return key;
       },
-      i18n: { language: 'en', changeLanguage: vi.fn() },
+      i18n: { language: 'en' },
     }),
     Trans: ({ children }: { children?: ReactNode }) => <>{children}</>,
   };
 });
 
 import { request } from '@/api/client';
-import { ToastProvider } from '@/components/feedback/Toast';
 import { VehicleCommandCenter } from './VehicleCommandCenter';
-import type { Vehicle, VehicleState, CommandLogEntry } from '../commands';
 
-const mockRequest = request as unknown as ReturnType<typeof vi.fn>;
-
-type RequestArgs = [string, RequestInit?];
-
+const requestMock = request as unknown as ReturnType<typeof vi.fn>;
 const VEHICLE_ID = 42;
-const FAV_KEY = `teslasync-cmd-favorites-${VEHICLE_ID}`;
 
-// Per-test-configurable responses, read lazily by the request router below.
-let latestEntries: CommandLogEntry[] = [];
-let commandResponse: () => Promise<unknown> = () =>
-  Promise.resolve({ success: true, message: 'OK' });
+type RequestCall = [string, RequestInit?];
 
-function buildVehicle(overrides?: Partial<Vehicle>): Vehicle {
+let stateResponse: unknown;
+let stateError: Error | null;
+let latestEntries: CommandLogEntry[];
+let historyEntries: CommandLogEntry[];
+let commandResponse: () => Promise<unknown>;
+
+function makeVehicle(overrides: Partial<Vehicle> = {}): Vehicle {
   return {
     id: VEHICLE_ID,
     vin: '5YJ3E1EA7KF000000',
     display_name: 'My Tesla',
     model: 'Model 3',
     state: 'online',
-    battery_level: 85,
-    battery_range: 400000,
     updated_at: new Date().toISOString(),
     ...overrides,
   };
 }
 
-function buildState(overrides?: Partial<VehicleState>): VehicleState {
+function makeState(overrides: Partial<VehicleState> = {}): VehicleState {
   return {
+    vehicle_id: VEHICLE_ID,
+    state: 'online',
     battery_level: 85,
-    rated_range: 400000, // 400 km
-    is_locked: false,
+    rated_range: 400_000,
+    is_locked: true,
     is_charging: false,
     is_climate_on: false,
     sentry_mode: false,
-    inside_temp: 21, // 21 °C
+    inside_temp: 21,
     speed: 0,
     ...overrides,
   };
 }
 
-function renderCenter(
-  vehicle: Vehicle = buildVehicle(),
-  state: VehicleState | null = buildState(),
-) {
-  const qc = new QueryClient({
+function makeEntry(
+  id: number,
+  overrides: Partial<CommandLogEntry> = {},
+): CommandLogEntry {
+  return {
+    id,
+    vehicle_id: VEHICLE_ID,
+    command: 'flash_lights',
+    params: '{}',
+    status: 'success',
+    error: '',
+    created_at: new Date(Date.now() - 120_000).toISOString(),
+    ...overrides,
+  };
+}
+
+function installRequestRouter() {
+  requestMock.mockImplementation((url: string, options?: RequestInit) => {
+    if (url === `/vehicles/${VEHICLE_ID}/state`) {
+      return stateError ? Promise.reject(stateError) : Promise.resolve(stateResponse);
+    }
+    if (url === `/vehicles/${VEHICLE_ID}/commands/latest`) {
+      return Promise.resolve(latestEntries);
+    }
+    if (url === `/vehicles/${VEHICLE_ID}/commands/history?limit=200`) {
+      return Promise.resolve(historyEntries);
+    }
+    if (
+      url === `/vehicles/${VEHICLE_ID}/command` &&
+      options?.method === 'POST'
+    ) {
+      return commandResponse();
+    }
+    return Promise.reject(new Error(`Unexpected request: ${url}`));
+  });
+}
+
+function renderCenter(vehicle: Vehicle = makeVehicle()) {
+  const queryClient = new QueryClient({
     defaultOptions: {
       queries: { retry: false },
       mutations: { retry: false },
     },
   });
-  const utils = render(
-    <QueryClientProvider client={qc}>
-      <ToastProvider>
-        <VehicleCommandCenter vehicle={vehicle} state={state} />
-      </ToastProvider>
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={['/commands']}>
+        <ToastProvider>
+          <VehicleCommandCenter vehicle={vehicle} />
+        </ToastProvider>
+      </MemoryRouter>
     </QueryClientProvider>,
   );
-  return { qc, ...utils };
 }
 
-/** First stubbed request issued with the given HTTP method. */
-function findCall(method: string): RequestArgs | undefined {
-  return (mockRequest.mock.calls as RequestArgs[]).find((c) => c[1]?.method === method);
+function searchFor(value: string) {
+  fireEvent.change(screen.getByLabelText('Search commands'), {
+    target: { value },
+  });
 }
 
-function bodyOf(call: RequestArgs | undefined): Record<string, unknown> {
+function postCalls(): RequestCall[] {
+  return (requestMock.mock.calls as RequestCall[]).filter(
+    ([, options]) => options?.method === 'POST',
+  );
+}
+
+function lastPostBody(): Record<string, unknown> {
+  const call = postCalls().at(-1);
   return JSON.parse(String(call?.[1]?.body ?? '{}')) as Record<string, unknown>;
 }
-
-const typeSearch = (value: string) =>
-  fireEvent.change(screen.getByPlaceholderText('Search commands...'), { target: { value } });
 
 beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
+  requestMock.mockReset();
+  stateResponse = { state: makeState(), live: true };
+  stateError = null;
   latestEntries = [];
-  commandResponse = () => Promise.resolve({ success: true, message: 'OK' });
-  mockRequest.mockReset();
-  mockRequest.mockImplementation((url: string) => {
-    if (url.endsWith('/commands/latest')) return Promise.resolve(latestEntries);
-    if (url.includes('/command/')) return commandResponse();
-    return Promise.resolve({});
-  });
+  historyEntries = [];
+  commandResponse = () => Promise.resolve({ success: true, result: 'success' });
+  installRequestRouter();
 });
 
-describe('VehicleCommandCenter — header + live state', () => {
-  it('renders the vehicle name, model · VIN caption, and state badge', () => {
+describe('VehicleCommandCenter — summary and readiness', () => {
+  it('renders selected vehicle identity, converted telemetry, and all major sections', async () => {
     renderCenter();
+
     expect(screen.getByText('My Tesla')).toBeInTheDocument();
     expect(screen.getByText(/Model 3/)).toBeInTheDocument();
     expect(screen.getByText(/5YJ3E1EA7KF000000/)).toBeInTheDocument();
-    expect(screen.getByText('online')).toBeInTheDocument();
+    expect(await screen.findByText('85')).toBeInTheDocument();
+    expect(screen.getByText('400')).toBeInTheDocument();
+    expect(screen.getByText('21')).toBeInTheDocument();
+    expect(screen.getByTestId('command-readiness')).toBeInTheDocument();
+    expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
+    expect(screen.getByTestId('command-safety')).toBeInTheDocument();
+    expect(screen.getByTestId('command-activity')).toBeInTheDocument();
   });
 
-  it('falls back to the VIN as the display name when display_name is blank', () => {
-    renderCenter(buildVehicle({ display_name: '' }));
-    // The VIN now appears twice: as the header name AND inside the caption.
-    expect(screen.getAllByText(/5YJ3E1EA7KF000000/).length).toBeGreaterThanOrEqual(2);
-  });
+  it('keeps commands usable when live state is unavailable and shows an honest error', async () => {
+    stateError = new Error('state endpoint unavailable');
+    installRequestRouter();
 
-  it('renders battery, rated range, and cabin temperature at the operator SI units', () => {
     renderCenter();
-    expect(screen.getByText('85%')).toBeInTheDocument();
-    expect(screen.getByText('400 km')).toBeInTheDocument();
-    expect(screen.getByText('21°C')).toBeInTheDocument();
-    // Decorative metric icons must be hidden from assistive tech.
-    expect(document.querySelectorAll('svg[aria-hidden="true"]').length).toBeGreaterThanOrEqual(3);
+
+    expect(
+      await screen.findByText("Can't reach server"),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('command-workspace')).toBeInTheDocument();
+    expect(screen.getAllByText('Wake Up').length).toBeGreaterThan(0);
   });
 
-  it('is null-safe: a null battery_level reads 0% (never a bare %) and null range reads 0 km', () => {
-    renderCenter(
-      buildVehicle(),
-      buildState({
-        battery_level: null as unknown as number,
-        rated_range: null as unknown as number,
-        inside_temp: null as unknown as number,
-      }),
-    );
-    expect(screen.getByText('0%')).toBeInTheDocument();
-    expect(screen.getByText('0 km')).toBeInTheDocument();
-    // The pre-hardening bug rendered a stranded "%" for a null battery_level.
-    expect(screen.queryByText('%')).toBeNull();
-    // A null cabin temperature suppresses the whole temperature chip.
-    expect(screen.queryByText(/°C/)).toBeNull();
+  it('shows the stale warning exactly once for extremely old telemetry', () => {
+    const veryOld = new Date(Date.now() - 2_501 * 60 * 60 * 1000).toISOString();
+
+    renderCenter(makeVehicle({ updated_at: veryOld }));
+
+    expect(screen.getAllByTestId('command-freshness-warning')).toHaveLength(1);
+    expect(
+      within(screen.getByTestId('command-freshness-warning')).getByText(
+        /Last vehicle update: 2501h ago\./,
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/ago old/i)).not.toBeInTheDocument();
   });
 
-  it('omits the entire live-metric row when no state is available', () => {
-    renderCenter(buildVehicle(), null);
-    expect(screen.queryByText('85%')).toBeNull();
-    expect(screen.queryByText(/km/)).toBeNull();
-    // Commands still render — the surface is not gated behind state.
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
+  it('still renders one stale warning when the last-known vehicle state is asleep', () => {
+    const stale = new Date(Date.now() - 30 * 60_000).toISOString();
+    stateResponse = { state: makeState({ state: 'asleep' }), live: false };
+    installRequestRouter();
+
+    renderCenter(makeVehicle({ state: 'asleep', updated_at: stale }));
+
+    expect(screen.getAllByTestId('command-freshness-warning')).toHaveLength(1);
+    expect(
+      screen.getByText(/The vehicle is asleep\. Commands remain selectable/i),
+    ).toBeInTheDocument();
+    searchFor('flash_lights');
+    expect(
+      screen.getByRole('button', { name: 'Flash Lights' }),
+    ).not.toHaveAttribute('aria-disabled');
   });
 });
 
-describe('VehicleCommandCenter — asleep + stale banners', () => {
-  it('shows the wake-up callout when asleep and suppresses the stale banner', () => {
-    // Asleep AND stale: only the asleep callout should show.
-    renderCenter(
-      buildVehicle({ state: 'asleep', updated_at: new Date(Date.now() - 20 * 60_000).toISOString() }),
-      null,
-    );
-    expect(screen.getByText(/Wake it up first to send commands/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Vehicle data is/i)).toBeNull();
-  });
-
-  it('shows the stale-data banner for an online vehicle with an old timestamp', () => {
-    renderCenter(
-      buildVehicle({ state: 'online', updated_at: new Date(Date.now() - 20 * 60_000).toISOString() }),
-      buildState(),
-    );
-    expect(screen.getByText(/Vehicle data is .* old/i)).toBeInTheDocument();
-    expect(screen.queryByText(/Wake it up first/i)).toBeNull();
-  });
-});
-
-describe('VehicleCommandCenter — favourites + search', () => {
-  it('seeds the Quick Actions bar from the defaultFavorite commands', () => {
+describe('VehicleCommandCenter — complete command catalogue', () => {
+  it('keeps every domain, category, and configured action reachable', () => {
     renderCenter();
-    expect(screen.getByText('Quick Actions')).toBeInTheDocument();
-    expect(screen.getByText('Wake Up')).toBeInTheDocument();
-    expect(screen.getByText('Lock')).toBeInTheDocument();
-  });
 
-  it('hydrates favourites from localStorage when present', () => {
-    localStorage.setItem(FAV_KEY, JSON.stringify(['lock']));
-    renderCenter();
-    // Only the persisted favourite is shown; other defaults are not favourites.
-    expect(screen.getByText('Lock')).toBeInTheDocument();
-    expect(screen.queryByText('Wake Up')).toBeNull();
-  });
+    for (const domain of ['Access & Security', 'Climate & Comfort', 'Charging & Schedules', 'Vehicle Controls']) {
+      expect(screen.getByRole('tab', { name: domain })).toBeInTheDocument();
+    }
 
-  it('persists a favourite toggle to localStorage', () => {
-    renderCenter();
-    typeSearch('flash_lights'); // isolate a single, non-favourite tile
-    fireEvent.click(screen.getByRole('button', { name: 'Toggle favorite' }));
-    const stored = JSON.parse(localStorage.getItem(FAV_KEY) ?? '[]') as string[];
-    expect(Array.isArray(stored)).toBe(true);
-    expect(stored).toContain('flash_lights');
-  });
+    const domainCategories = [
+      ['Access & Security', ['security', 'doors', 'drive', 'windows', 'sunroof']],
+      ['Climate & Comfort', ['climate', 'climate_protection']],
+      ['Charging & Schedules', ['charging', 'schedules']],
+      ['Vehicle Controls', ['alerts', 'navigation', 'software', 'vehicle', 'media']],
+    ] as const;
 
-  it('flattens search results and shows an empty state for no matches', () => {
-    renderCenter();
-    typeSearch('flash_lights');
-    expect(screen.getByText('Flash Lights')).toBeInTheDocument();
-    // The favourites bar collapses while searching.
-    expect(screen.queryByText('Quick Actions')).toBeNull();
+    for (const [domain, categories] of domainCategories) {
+      fireEvent.click(screen.getByRole('tab', { name: domain }));
+      for (const category of categories) {
+        const escaped = CATEGORY_META[category].fallback.replace(
+          /[.*+?^${}()|[\]\\]/g,
+          '\\$&',
+        );
+        expect(
+          screen.getByRole('button', {
+            name: new RegExp(`^${escaped}\\s*\\(`, 'i'),
+          }),
+        ).toBeInTheDocument();
+      }
+    }
 
-    typeSearch('zzzznope');
-    expect(screen.getByText('No commands match your search')).toBeInTheDocument();
-    expect(screen.queryByText('Flash Lights')).toBeNull();
+    for (const command of COMMANDS) {
+      searchFor(command.command);
+      expect(screen.getAllByText(command.labelFallback).length).toBeGreaterThan(0);
+    }
   });
 });
 
 describe('VehicleCommandCenter — command execution', () => {
-  it('POSTs a plain action to the command route and surfaces the success banner', async () => {
+  it('preserves wake-up as a reachable command on the supported endpoint', async () => {
     renderCenter();
-    typeSearch('flash_lights');
-    fireEvent.click(screen.getByText('Flash Lights'));
 
-    await screen.findByText('OK'); // lastResult banner
-    const post = findCall('POST');
-    expect(post?.[0]).toBe('/vehicles/42/command/flash_lights');
-    expect(bodyOf(post)).toEqual({}); // no params for a bare action
+    fireEvent.click(screen.getAllByRole('button', { name: 'Wake Up' })[0]);
+
+    await waitFor(() => expect(postCalls()).toHaveLength(1));
+    expect(postCalls()[0][0]).toBe('/vehicles/42/command');
+    expect(lastPostBody()).toEqual({ command: 'wake_up' });
   });
 
-  it('routes wake_up through the dedicated wake mutation', async () => {
+  it('sends a direct command through the supported endpoint and payload', async () => {
     renderCenter();
-    fireEvent.click(screen.getByText('Wake Up'));
+    searchFor('flash_lights');
 
-    await waitFor(() =>
-      expect(mockRequest).toHaveBeenCalledWith(
-        '/vehicles/42/command/wake_up',
-        expect.objectContaining({ method: 'POST' }),
-      ),
+    fireEvent.click(screen.getByRole('button', { name: 'Flash Lights' }));
+
+    await waitFor(() => expect(postCalls()).toHaveLength(1));
+    expect(postCalls()[0][0]).toBe('/vehicles/42/command');
+    expect(lastPostBody()).toEqual({ command: 'flash_lights' });
+    expect(
+      await screen.findByText('Flash Lights request sent to My Tesla.'),
+    ).toBeInTheDocument();
+  });
+
+  it('requires confirmation before sending a dangerous command', async () => {
+    renderCenter();
+    searchFor('speed_limit_clear_pin_admin');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Clear Speed PIN' }));
+
+    const dialog = screen.getByRole('dialog');
+    expect(
+      within(dialog).getByText(/without authentication/i),
+    ).toBeInTheDocument();
+    expect(postCalls()).toHaveLength(0);
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
+
+    await waitFor(() => expect(postCalls()).toHaveLength(1));
+    expect(lastPostBody()).toEqual({
+      command: 'speed_limit_clear_pin_admin',
+    });
+  });
+
+  it('preserves input and select command payloads', async () => {
+    renderCenter();
+    searchFor('set_charge_limit');
+    fireEvent.click(screen.getByRole('button', { name: 'Set Limit' }));
+
+    const inputDialog = screen.getByRole('dialog');
+    fireEvent.change(within(inputDialog).getByDisplayValue('80'), {
+      target: { value: '90' },
+    });
+    fireEvent.click(within(inputDialog).getByRole('button', { name: 'Send' }));
+
+    await waitFor(() => expect(postCalls()).toHaveLength(1));
+    expect(lastPostBody()).toEqual({
+      command: 'set_charge_limit',
+      params: { percent: '90' },
+    });
+
+    searchFor('set_cop_temp');
+    fireEvent.click(screen.getByRole('button', { name: 'COP Temp' }));
+    const selectDialog = screen.getByRole('dialog');
+    fireEvent.click(within(selectDialog).getByRole('button', { name: /Low/ }));
+
+    await waitFor(() => expect(postCalls()).toHaveLength(2));
+    expect(lastPostBody()).toEqual({
+      command: 'set_cop_temp',
+      params: { cop_temp: '0' },
+    });
+  });
+
+  it('shows pending progress and disables command activation until settled', async () => {
+    let resolveCommand: ((value: unknown) => void) | undefined;
+    commandResponse = () =>
+      new Promise((resolve) => {
+        resolveCommand = resolve;
+      });
+    installRequestRouter();
+    renderCenter();
+    searchFor('flash_lights');
+
+    const tile = screen.getByRole('button', { name: 'Flash Lights' });
+    fireEvent.click(tile);
+
+    expect(await screen.findByTestId('command-pending-feedback')).toHaveTextContent(
+      'Sending Flash Lights…',
     );
-    // wake_up is a stamp-only POST with no JSON body.
-    expect(bodyOf(findCall('POST'))).toEqual({});
+    expect(tile).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(tile);
+    expect(postCalls()).toHaveLength(1);
+
+    await act(async () => {
+      resolveCommand?.({ success: true, result: 'success' });
+    });
+    expect(
+      await screen.findByText('Flash Lights request sent to My Tesla.'),
+    ).toBeInTheDocument();
   });
 
-  it('surfaces an error banner when a command fails', async () => {
-    commandResponse = () => Promise.reject(new Error('boom'));
+  it('surfaces the backend reason for a soft failure', async () => {
+    commandResponse = () =>
+      Promise.resolve({ success: false, error: 'vehicle is offline' });
+    installRequestRouter();
     renderCenter();
-    typeSearch('flash_lights');
-    fireEvent.click(screen.getByText('Flash Lights'));
+    searchFor('flash_lights');
 
-    expect(await screen.findByText('boom')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Flash Lights' }));
+
+    expect(await screen.findByTestId('command-result-feedback')).toHaveTextContent(
+      'vehicle is offline',
+    );
   });
 
-  it('annotates a tile with the latest command status (✓ + relative age)', async () => {
-    latestEntries = [
-      {
-        id: 1,
-        vehicle_id: VEHICLE_ID,
-        command: 'flash_lights',
-        params: '',
-        status: 'success',
-        error: '',
-        created_at: new Date(Date.now() - 125_000).toISOString(), // ~2 minutes
-      },
-    ];
+  it('surfaces a hard request error without claiming success', async () => {
+    commandResponse = () => Promise.reject(new Error('network down'));
+    installRequestRouter();
     renderCenter();
-    typeSearch('flash_lights');
+    searchFor('flash_lights');
 
-    expect(await screen.findByText('✓ 2m ago')).toBeInTheDocument();
-  });
+    fireEvent.click(screen.getByRole('button', { name: 'Flash Lights' }));
 
-  it('degrades a malformed command timestamp to an em dash instead of NaN', async () => {
-    latestEntries = [
-      {
-        id: 2,
-        vehicle_id: VEHICLE_ID,
-        command: 'flash_lights',
-        params: '',
-        status: 'success',
-        error: '',
-        created_at: 'not-a-real-date',
-      },
-    ];
-    renderCenter();
-    typeSearch('flash_lights');
-
-    expect(await screen.findByText('✓ —')).toBeInTheDocument();
-    expect(screen.queryByText(/NaN/)).toBeNull();
+    expect(await screen.findByTestId('command-result-feedback')).toHaveTextContent(
+      'Flash Lights failed: network down',
+    );
+    expect(
+      screen.queryByText('Flash Lights request sent to My Tesla.'),
+    ).not.toBeInTheDocument();
   });
 });
 
-describe('VehicleCommandCenter — centralised dialogs', () => {
-  it('opens the confirm dialog for a dangerous command and cancels without executing', () => {
+describe('VehicleCommandCenter — recent activity', () => {
+  it('renders recent success and failure outcomes from command history', async () => {
+    historyEntries = [
+      makeEntry(1, { command: 'lock', status: 'success' }),
+      makeEntry(2, {
+        command: 'climate_on',
+        status: 'failed',
+        error: 'vehicle asleep',
+      }),
+    ];
+    installRequestRouter();
+
     renderCenter();
-    typeSearch('remote_start_drive');
-    fireEvent.click(screen.getByText('Remote Start'));
 
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText(/keyless driving for 2 minutes/i)).toBeInTheDocument();
-
-    fireEvent.click(within(dialog).getByRole('button', { name: /cancel/i }));
-    expect(screen.queryByRole('dialog')).toBeNull();
-    expect(mockRequest).not.toHaveBeenCalledWith(
-      '/vehicles/42/command/remote_start_drive',
-      expect.anything(),
-    );
-  });
-
-  it('opens the select dialog and POSTs the chosen option as a param', async () => {
-    renderCenter();
-    typeSearch('set_cop_temp');
-    fireEvent.click(screen.getByText('COP Temp'));
-
-    const dialog = screen.getByRole('dialog');
-    fireEvent.click(within(dialog).getByRole('button', { name: /Low/ }));
-
-    await waitFor(() =>
-      expect(mockRequest).toHaveBeenCalledWith(
-        '/vehicles/42/command/set_cop_temp',
-        expect.objectContaining({ method: 'POST' }),
-      ),
-    );
-    expect(bodyOf(findCall('POST'))).toEqual({ cop_temp: '0' });
-    expect(screen.queryByRole('dialog')).toBeNull();
-  });
-
-  it('opens the input dialog and POSTs the edited value as a param', async () => {
-    renderCenter();
-    typeSearch('set_charge_limit');
-    fireEvent.click(screen.getByText('Set Limit'));
-
-    const dialog = screen.getByRole('dialog');
-    const field = within(dialog).getByDisplayValue('80'); // seeded default
-    fireEvent.change(field, { target: { value: '90' } });
-    fireEvent.click(within(dialog).getByRole('button', { name: /send/i }));
-
-    await waitFor(() =>
-      expect(mockRequest).toHaveBeenCalledWith(
-        '/vehicles/42/command/set_charge_limit',
-        expect.objectContaining({ method: 'POST' }),
-      ),
-    );
-    expect(bodyOf(findCall('POST'))).toEqual({ percent: '90' });
+    const activity = screen.getByTestId('command-activity');
+    expect(await within(activity).findByText('Lock')).toBeInTheDocument();
+    expect(within(activity).getByText('Climate')).toBeInTheDocument();
+    expect(
+      within(activity).getByText(/Failed · vehicle asleep/),
+    ).toBeInTheDocument();
   });
 });

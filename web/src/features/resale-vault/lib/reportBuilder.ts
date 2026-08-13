@@ -14,7 +14,7 @@
  *     dates survived filtering/redaction.
  *   - Attaches the fixed, honest limitations that apply given which
  *     sections are present (e.g. the fleet-wide, non-vehicle-scoped
- *     maintenance/warranty backend endpoints), plus the general
+ *     maintenance backend endpoint), plus the general
  *     "observed window, not lifetime" caveat already documented on the
  *     underlying `useDriveHistory`/`useChargingHistory` hooks.
  *   - Is fully deterministic given an injected `now`/`reportId` (both
@@ -82,10 +82,6 @@ const MAINTENANCE_SCOPE_LIMITATION =
   'vehicle. If this TeslaSync account has more than one vehicle, some entries may not belong to the vehicle this ' +
   'report is otherwise about.';
 
-const WARRANTY_SCOPE_LIMITATION =
-  'Warranty details are fetched at the Tesla account level, not scoped to an individual vehicle. If this account ' +
-  'has more than one vehicle, this data may not correspond 1:1 with the vehicle this report is otherwise about.';
-
 const OBSERVED_WINDOW_LIMITATION =
   'Driving and charging history reflect an observed window of up to the most recent 1,000 records per category, ' +
   'as returned by the backend — not a guaranteed complete lifetime history of the vehicle.';
@@ -97,7 +93,6 @@ const LOCAL_ONLY_LIMITATION =
 function buildLimitations(evidence: VaultEvidence): string[] {
   const limitations = [LOCAL_ONLY_LIMITATION];
   if (evidence.maintenance) limitations.push(MAINTENANCE_SCOPE_LIMITATION);
-  if (evidence.warranty) limitations.push(WARRANTY_SCOPE_LIMITATION);
   if (evidence.driving_history || evidence.charging_history) limitations.push(OBSERVED_WINDOW_LIMITATION);
   return limitations;
 }

@@ -107,12 +107,11 @@ var defaultMetrics = &Metrics{
 	}, []string{"field"}),
 }
 
-// toSI converts a unit-bearing atomic to canonical SI given the
-// active unit at the atomic's EmittedAt. For atomics whose Field is
-// dimensionless (UnitKindNone and not on the speed-override list)
-// or whose Field is UnitKindCharge (SoC scalars are always %), the
-// function returns the atomic unchanged — these flow through the
-// router with the producer-original Value.
+// toSI converts a unit-bearing atomic to canonical SI given the active unit
+// at the atomic's EmittedAt. Fixed-wire charging fields bypass unit history
+// and convert kWh/kW to Wh/W directly. For atomics whose Field is dimensionless
+// (UnitKindNone and not on an override list) or whose Field is UnitKindCharge
+// (SoC scalars are always %), the function returns the atomic unchanged.
 //
 // Errors:
 //
@@ -145,23 +144,19 @@ func (p *Pipeline) toSI(ctx context.Context, atomic codec.Atomic, vehicleIntID i
 		return atomic, nil
 	}
 
-	// Fixed-wire-unit fields (Odometer, RatedRange, etc.) bypass the
-	// unit-history lookup entirely: their wire value is always in
-	// miles regardless of SettingDistanceUnit, so units.ToSI applies
-	// the miles conversion with active="" and the atomic MUST NOT be
-	// dropped on unithistory.ErrNotFound. Without this bypass a
-	// fresh vehicle with no unit_history rows would silently drop
-	// every Odometer / range sample. See units.IsFixedMileDistanceField
-	// and the empirical evidence in conversions.go for why these
-	// fields do not follow the user setting.
-	if units.IsFixedMileDistanceField(atomic.Field) {
+	// Fixed-wire-unit fields bypass unit history entirely. Distance/range
+	// fields are always miles; charging energy/power fields are always
+	// kWh/kW. Neither family may be dropped because a vehicle has no
+	// unit_history row.
+	if units.IsFixedMileDistanceField(atomic.Field) ||
+		units.IsFixedKiloToBaseField(atomic.Field) {
 		raw, ok := coerceFloat(atomic.Value)
 		if !ok {
 			return codec.Atomic{}, fmt.Errorf("%w: %s value of type %T not coercible to float64", units.ErrUnsupportedField, atomic.Field, atomic.Value)
 		}
 		siValue, err := units.ToSI(atomic.Field, raw, "")
 		if err != nil {
-			return codec.Atomic{}, fmt.Errorf("normalize: units.ToSI(%s, %v, fixed-mile): %w", atomic.Field, raw, err)
+			return codec.Atomic{}, fmt.Errorf("normalize: units.ToSI(%s, %v, fixed-wire): %w", atomic.Field, raw, err)
 		}
 		atomic.Value = siValue
 		return atomic, nil
@@ -202,8 +197,8 @@ func (p *Pipeline) toSI(ctx context.Context, atomic codec.Atomic, vehicleIntID i
 	return atomic, nil
 }
 
-// needsConversion reports whether toSI should perform a unit lookup
-// + conversion for the field. The two cases that DO need conversion:
+// needsConversion reports whether toSI should perform a conversion for the
+// field. The cases that DO need conversion:
 //
 //   - UnitKindDistance / UnitKindTemperature / UnitKindPressure: the
 //     value is in the wire-format unit and must be converted to SI
@@ -215,12 +210,15 @@ func (p *Pipeline) toSI(ctx context.Context, atomic codec.Atomic, vehicleIntID i
 //     overloading), but units.ToSI handles them via an internal
 //     speed-conversions table given the active distance unit.
 //
+//   - fixed kWh/kW charging fields: UnitKindNone metadata, but Tesla's
+//     documented wire unit must be scaled to Wh/W without unit history.
+//
 // UnitKindCharge is intentionally a pass-through: SoC scalars are
 // always emitted in % and units.ToSI returns ErrUnsupportedUnit for
 // them. The SettingChargeUnit signal is recorded for UI display
 // preference only.
 func needsConversion(field string, meta *protomodel.SignalMeta) bool {
-	if isSpeedField(field) {
+	if isSpeedField(field) || units.IsFixedKiloToBaseField(field) {
 		return true
 	}
 	if meta == nil {

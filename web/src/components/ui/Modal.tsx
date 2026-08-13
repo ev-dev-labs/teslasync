@@ -186,7 +186,10 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
                 </button>
               </div>
             )}
-            <div className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom">
+            <div
+              data-modal-scroll-body="true"
+              className="flex-1 overflow-y-auto px-4 pb-4 pt-3 sm:px-6 sm:pb-6 safe-bottom"
+            >
               {children}
             </div>
           </div>

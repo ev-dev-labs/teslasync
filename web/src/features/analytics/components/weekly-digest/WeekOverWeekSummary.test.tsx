@@ -24,13 +24,7 @@
  *   - a11y: the `<section>` is exposed as a labelled region and the six leading
  *     stat icons are decorative (`aria-hidden`).
  *
- * Deliberately NOT tested here: SI→display unit conversion. `totalDistance`
- * (m), `energyUsed` (Wh) and `avgEfficiency` are rendered with the SAME raw
- * "km" / "kWh" / "Wh/km" labels by the (still-untested) sibling components
- * SummaryHeroCards and DrivingSection. Converting them in this file alone would
- * make the same page disagree with itself, so the driving-metrics SI port is a
- * cross-component effort left to its own slice — this elevation preserves the
- * shared display contract.
+ * SI values are converted through `useUnits()` at the render boundary.
  *
  * Conventions (mirror ChargingSection.test.tsx in this folder):
  *   - `react-i18next` is stubbed to echo the inline English fallback;
@@ -65,23 +59,23 @@ vi.mock('react-i18next', async () => {
 /* ── Fixtures ─────────────────────────────────────────────────────────────── */
 function baseMetrics(overrides: Partial<DigestMetrics> = {}): DigestMetrics {
   return {
-    totalDistance: 0,
-    prevDistance: 0,
+    totalDistanceM: 0,
+    prevDistanceM: 0,
     totalDrives: 0,
     prevDriveCount: 0,
-    energyUsed: 0,
-    prevEnergy: 0,
+    energyUsedWh: 0,
+    prevEnergyWh: 0,
     chargingCost: 0,
     prevChargingCost: 0,
     co2Saved: 0,
     prevCo2: 0,
-    avgEfficiency: 0,
-    prevAvgEfficiency: 0,
-    totalDuration: 0,
+    avgEfficiencyWhPerM: 0,
+    prevAvgEfficiencyWhPerM: 0,
+    totalDurationS: 0,
     topDrive: undefined,
-    chargeEnergyAdded: 0,
-    prevChargeEnergy: 0,
-    avgChargeRate: 0,
+    chargeEnergyAddedWh: 0,
+    prevChargeEnergyWh: 0,
+    avgChargePowerW: 0,
     chargingSessionCount: 0,
     batteryStart: 0,
     batteryEnd: 0,
@@ -94,16 +88,16 @@ function baseMetrics(overrides: Partial<DigestMetrics> = {}): DigestMetrics {
 // A populated week whose six trend percentages are all distinct, so each card's
 // trend badge can be selected unambiguously by its signed-percentage text.
 const POPULATED: Partial<DigestMetrics> = {
-  totalDistance: 130,
-  prevDistance: 100, // +30.0% — up, not inverted → green ↑
+  totalDistanceM: 130_000,
+  prevDistanceM: 100_000, // +30.0% — up, not inverted → green ↑
   totalDrives: 10,
   prevDriveCount: 8, // +25.0% — up → green ↑
-  energyUsed: 55,
-  prevEnergy: 40, // +37.5% — up, inverted → red ↑
+  energyUsedWh: 55_000,
+  prevEnergyWh: 40_000, // +37.5% — up, inverted → red ↑
   chargingCost: 12,
   prevChargingCost: 10, // +20.0% — up, inverted → red ↑
-  avgEfficiency: 140,
-  prevAvgEfficiency: 160, // -12.5% — down, inverted → green ↓
+  avgEfficiencyWhPerM: 0.14,
+  prevAvgEfficiencyWhPerM: 0.16, // -12.5% — down, inverted → green ↓
   co2Saved: 8,
   prevCo2: 5, // +60.0% — up → green ↑
 };
@@ -154,12 +148,9 @@ describe('WeekOverWeekSummary — populated rendering', () => {
   it('formats each metric value with its unit suffix', () => {
     renderSummary({ metrics: POPULATED });
 
-    expect(screen.getByText('130.0')).toBeInTheDocument();
-    expect(screen.getByText('km')).toBeInTheDocument();
-    expect(screen.getByText('55.0')).toBeInTheDocument();
-    expect(screen.getByText('kWh')).toBeInTheDocument();
-    expect(screen.getByText('140.0')).toBeInTheDocument();
-    expect(screen.getByText('Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('130.0 km')).toBeInTheDocument();
+    expect(screen.getByText('55.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('140.0 Wh/km')).toBeInTheDocument();
     expect(screen.getByText('8.0')).toBeInTheDocument();
     expect(screen.getByText('kg')).toBeInTheDocument();
   });
@@ -215,9 +206,9 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
 
   it('renders a flat 0% trend with an em-dash arrow for an unchanged metric', () => {
     // Distance is unchanged (100 vs 100); every other metric is 0 vs 0 — all flat.
-    renderSummary({ metrics: { totalDistance: 100, prevDistance: 100 } });
+    renderSummary({ metrics: { totalDistanceM: 100_000, prevDistanceM: 100_000 } });
 
-    expect(screen.getByText('100.0')).toBeInTheDocument();
+    expect(screen.getByText('100.0 km')).toBeInTheDocument();
     expect(screen.getAllByText('0%')).toHaveLength(6);
     expect(screen.getAllByText('\u2014')).toHaveLength(6); // — flat arrows
   });
@@ -227,16 +218,16 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
 describe('WeekOverWeekSummary — null-safety', () => {
   it('defaults undefined metric fields to zeroed values without crashing', () => {
     const undefinedMetrics: Partial<DigestMetrics> = {
-      totalDistance: undefined,
-      prevDistance: undefined,
+      totalDistanceM: undefined,
+      prevDistanceM: undefined,
       totalDrives: undefined,
       prevDriveCount: undefined,
-      energyUsed: undefined,
-      prevEnergy: undefined,
+      energyUsedWh: undefined,
+      prevEnergyWh: undefined,
       chargingCost: undefined,
       prevChargingCost: undefined,
-      avgEfficiency: undefined,
-      prevAvgEfficiency: undefined,
+      avgEfficiencyWhPerM: undefined,
+      prevAvgEfficiencyWhPerM: undefined,
       co2Saved: undefined,
       prevCo2: undefined,
     };
@@ -245,8 +236,10 @@ describe('WeekOverWeekSummary — null-safety', () => {
 
     // Labels still render — the panel is never blank.
     expect(screen.getByText('Distance')).toBeInTheDocument();
-    // Distance / Energy / Efficiency / CO₂ all degrade to "0.0".
-    expect(screen.getAllByText('0.0')).toHaveLength(4);
+    expect(screen.getByText('0.0 km')).toBeInTheDocument();
+    expect(screen.getByText('0.0 kWh')).toBeInTheDocument();
+    expect(screen.getByText('0.0 Wh/km')).toBeInTheDocument();
+    expect(screen.getByText('0.0')).toBeInTheDocument();
     // Drives → fmtInt(0) → "0"; Cost → formatCurrency(0) → "$0.00".
     expect(screen.getByText('0')).toBeInTheDocument();
     expect(screen.getByText('$0.00')).toBeInTheDocument();

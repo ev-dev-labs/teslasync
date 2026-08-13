@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
-import { STALE_TIMES } from '@/lib/constants';
+import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 
 export interface CommandLogEntry {
   id: number;
@@ -64,5 +64,6 @@ export function useCommandLatest(vehicleId: string | number | undefined) {
     },
     enabled: !!vehicleId,
     staleTime: STALE_TIMES.MODERATE,
+    refetchInterval: INTERVALS.STANDARD,
   });
 }

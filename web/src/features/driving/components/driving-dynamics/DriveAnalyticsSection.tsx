@@ -54,8 +54,10 @@ interface DriveAnalyticsSectionProps {
   filteredDrives: Drive[];
   startDate: string;
   endDate: string;
-  onStartDateChange: (d: string) => void;
-  onEndDateChange: (d: string) => void;
+  onRangeChange: (
+    range: { start: string; end: string },
+    presetId?: string,
+  ) => void;
   toDistanceDisplay: (v: number) => number;
   toSpeedDisplay: (v: number) => number;
   distanceUnit: string;
@@ -66,8 +68,7 @@ export default function DriveAnalyticsSection({
   filteredDrives,
   startDate,
   endDate,
-  onStartDateChange,
-  onEndDateChange,
+  onRangeChange,
   toDistanceDisplay,
   toSpeedDisplay,
   distanceUnit,
@@ -145,10 +146,7 @@ export default function DriveAnalyticsSection({
         </div>
         <RangePicker
           value={{ start: startDate, end: endDate }}
-          onChange={(r) => {
-            onStartDateChange(r.start);
-            onEndDateChange(r.end);
-          }}
+          onChange={onRangeChange}
         />
       </FadeIn>
 

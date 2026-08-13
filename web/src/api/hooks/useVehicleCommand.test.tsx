@@ -47,9 +47,9 @@ vi.mock('../client', async () => {
   return { ...actual, request: vi.fn() };
 });
 
-vi.mock('@/components/feedback/Toast', async () => {
-  const actual = await vi.importActual<typeof import('@/components/feedback/Toast')>(
-    '@/components/feedback/Toast',
+vi.mock('@/components/feedback', async () => {
+  const actual = await vi.importActual<typeof import('@/components/feedback')>(
+    '@/components/feedback',
   );
   return {
     ...actual,
@@ -178,9 +178,9 @@ describe('useVehicleCommand — success', () => {
     const keys = invalidatedKeys(invalidateSpy);
     expect(invalidateSpy).toHaveBeenCalledTimes(4);
     expect(keys).toContainEqual(['vehicle-state', 7]);
-    expect(keys).toContainEqual(['command-latest', 7]);
-    // The command-history key is stringified so a numeric id invalidation still
-    // hits a query primed with the string route param.
+    // Both command query keys are normalized so numeric ids invalidate
+    // consumers initialized from string route params (and vice versa).
+    expect(keys).toContainEqual(['command-latest', '7']);
     expect(keys).toContainEqual(['command-history', '7']);
     expect(keys).toContainEqual(['vehicles']);
   });

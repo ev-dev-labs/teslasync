@@ -153,11 +153,9 @@ export default function ChargingDetailPage() {
   const sessionId = Number(id);
 
   // ChargingSession distance delta comes through the repo adapter as miles.
-  // Live ChargingTelemetry fields with misleading suffixes are SI values. Keep
-  // these conversions at the display boundary until the backend fields are
-  // renamed — the exact expressions below are preserved from the prior page so
-  // displayed values do not change during this layout redesign.
-  const { unitPrefs, formatEnergy } = useUnits();
+  // Live charging telemetry is canonical SI and is converted only at the
+  // display boundary.
+  const { unitPrefs, formatEnergy, formatPower } = useUnits();
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
 
   const distanceUnit = unitPrefs.distance;
@@ -959,7 +957,7 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.chargerPowerKw', 'Charger Power'),
                       value:
                         liveCharging.charger_power_w != null
-                          ? fmtWithUnit(liveCharging.charger_power_w, 'kW', 1)
+                          ? formatPower(liveCharging.charger_power_w, { precision: 1 })
                           : '—',
                     },
                     {
@@ -987,7 +985,7 @@ export default function ChargingDetailPage() {
                       label: t('charging.detail.chargeEnergyAdded', 'Energy Added'),
                       value:
                         liveCharging.charge_energy_added_wh != null
-                          ? fmtWithUnit(liveCharging.charge_energy_added_wh, 'kWh', 2)
+                          ? formatEnergy(liveCharging.charge_energy_added_wh, { precision: 2 })
                           : '—',
                     },
                     {

@@ -91,27 +91,27 @@ import { formatDate } from '@/lib/dateFormat';
 import { ApiError } from '@/lib/resilience';
 
 // A fully-zeroed DigestMetrics so each test overrides only the fields the
-// driving section actually reads (avgEfficiency, prevAvgEfficiency,
-// totalDuration, totalDrives, topDrive) — the prop type demands the whole shape.
+// driving section actually reads (avgEfficiencyWhPerM,
+// prevAvgEfficiencyWhPerM, totalDurationS, totalDrives, topDrive).
 function makeMetrics(over: Partial<DigestMetrics> = {}): DigestMetrics {
   return {
-    totalDistance: 0,
-    prevDistance: 0,
+    totalDistanceM: 0,
+    prevDistanceM: 0,
     totalDrives: 0,
     prevDriveCount: 0,
-    energyUsed: 0,
-    prevEnergy: 0,
+    energyUsedWh: 0,
+    prevEnergyWh: 0,
     chargingCost: 0,
     prevChargingCost: 0,
     co2Saved: 0,
     prevCo2: 0,
-    avgEfficiency: 0,
-    prevAvgEfficiency: 0,
-    totalDuration: 0,
+    avgEfficiencyWhPerM: 0,
+    prevAvgEfficiencyWhPerM: 0,
+    totalDurationS: 0,
     topDrive: undefined,
-    chargeEnergyAdded: 0,
-    prevChargeEnergy: 0,
-    avgChargeRate: 0,
+    chargeEnergyAddedWh: 0,
+    prevChargeEnergyWh: 0,
+    avgChargePowerW: 0,
     chargingSessionCount: 0,
     batteryStart: 0,
     batteryEnd: 0,
@@ -124,11 +124,10 @@ function makeMetrics(over: Partial<DigestMetrics> = {}): DigestMetrics {
 function makeTopDrive(over: Partial<Drive> = {}): Drive {
   return {
     id: 1,
-    start_date: '2026-04-04T12:00:00Z',
-    distance: 120.6,
-    duration_min: 87,
-    efficiency_wh_km: 158.2,
-    energy_used: 19.1,
+    startTs: '2026-04-04T12:00:00Z',
+    distanceM: 120_600,
+    durationS: 5_220,
+    energyUsedWh: 19_078.92,
     ...over,
   };
 }
@@ -136,13 +135,13 @@ function makeTopDrive(over: Partial<Drive> = {}): Drive {
 // Seven weekday bins is the real shape (see useWeeklyDigest.dailyDistanceData);
 // only the total-across-days matters to `hasChart`, so a short array is enough.
 const CHART_DATA: DailyDistanceEntry[] = [
-  { day: 'Mon', distance: 10 },
-  { day: 'Tue', distance: 25 },
-  { day: 'Wed', distance: 0 },
+  { day: 'Mon', distanceM: 10_000 },
+  { day: 'Tue', distanceM: 25_000 },
+  { day: 'Wed', distanceM: 0 },
 ];
 const ZERO_CHART_DATA: DailyDistanceEntry[] = [
-  { day: 'Mon', distance: 0 },
-  { day: 'Tue', distance: 0 },
+  { day: 'Mon', distanceM: 0 },
+  { day: 'Tue', distanceM: 0 },
 ];
 
 interface RenderOverrides {
@@ -208,9 +207,9 @@ describe('DrivingSection — populated', () => {
   it('renders the labelled chart region and pins every derived stat + the top-drive card', () => {
     const { container } = renderSection(
       makeMetrics({
-        avgEfficiency: 152.4,
-        prevAvgEfficiency: 190.5, // (152.4 − 190.5) / 190.5 × 100 = −20.0
-        totalDuration: 150, // 150 min → 2h 30m
+        avgEfficiencyWhPerM: 0.1524,
+        prevAvgEfficiencyWhPerM: 0.1905,
+        totalDurationS: 9_000,
         totalDrives: 42,
         topDrive: makeTopDrive(),
       }),
@@ -226,7 +225,7 @@ describe('DrivingSection — populated', () => {
 
     // MiniStats: efficiency, h/m split, pctChange (sign preserved), fmtInt count.
     expect(screen.getByText('152.4 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('2h 30m')).toBeInTheDocument();
+    expect(screen.getByText('2.5 h')).toBeInTheDocument();
     expect(screen.getByText('-20.0%')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
 
@@ -234,14 +233,14 @@ describe('DrivingSection — populated', () => {
     expect(screen.getByText('Top Drive')).toBeInTheDocument();
     expect(screen.getByText(formatDate('2026-04-04T12:00:00Z'))).toBeInTheDocument();
     expect(screen.getByText('120.6 km')).toBeInTheDocument();
-    expect(screen.getByText('87 min')).toBeInTheDocument();
+    expect(screen.getByText('1.5 h')).toBeInTheDocument();
     expect(screen.getByText('158.2 Wh/km')).toBeInTheDocument();
   });
 
   it('shows a green TrendingDown glyph when efficiency improved (lower Wh/km than last week)', () => {
-    // avgEfficiency <= prevAvgEfficiency → efficiency got better (less energy/km).
+    // Lower Wh/m means efficiency improved.
     const { container } = renderSection(
-      makeMetrics({ avgEfficiency: 150, prevAvgEfficiency: 200 }),
+      makeMetrics({ avgEfficiencyWhPerM: 0.15, prevAvgEfficiencyWhPerM: 0.2 }),
     );
 
     // pctChange((150−200)/200) = −25 → "-25.0%".
@@ -253,7 +252,7 @@ describe('DrivingSection — populated', () => {
 
   it('shows a rose TrendingUp glyph when efficiency worsened (higher Wh/km than last week)', () => {
     const { container } = renderSection(
-      makeMetrics({ avgEfficiency: 220, prevAvgEfficiency: 200 }),
+      makeMetrics({ avgEfficiencyWhPerM: 0.22, prevAvgEfficiencyWhPerM: 0.2 }),
     );
 
     // pctChange((220−200)/200) = +10 → "10.0%".
@@ -263,8 +262,7 @@ describe('DrivingSection — populated', () => {
   });
 
   it('renders an em-dash for efficiency change when there is no prior-week baseline', () => {
-    renderSection(makeMetrics({ avgEfficiency: 175, prevAvgEfficiency: 0 }));
-    // prevAvgEfficiency <= 0 → the pctChange is not meaningful, so "—".
+    renderSection(makeMetrics({ avgEfficiencyWhPerM: 0.175, prevAvgEfficiencyWhPerM: 0 }));
     expect(screen.getByText('—')).toBeInTheDocument();
     expect(screen.queryByText('0.0%')).toBeNull();
   });
@@ -319,7 +317,7 @@ describe('DrivingSection — daily-distance chart branch', () => {
 describe('DrivingSection — loading', () => {
   it('shows a skeleton (no chart, no empty copy) but keeps the title + mini-stats mounted', () => {
     const { container } = renderSection(
-      makeMetrics({ avgEfficiency: 152.4, totalDrives: 42 }),
+      makeMetrics({ avgEfficiencyWhPerM: 0.1524, totalDrives: 42 }),
       { isLoading: true },
     );
 
@@ -350,7 +348,7 @@ describe('DrivingSection — loading', () => {
 describe('DrivingSection — error + retry', () => {
   it('surfaces a retryable 5xx error in the chart slot and wires Retry to onRetry', () => {
     const onRetry = vi.fn();
-    renderSection(makeMetrics({ avgEfficiency: 152.4 }), {
+    renderSection(makeMetrics({ avgEfficiencyWhPerM: 0.1524 }), {
       isError: true,
       error: new ApiError('drives feed exploded', 500),
       onRetry,
@@ -367,7 +365,7 @@ describe('DrivingSection — error + retry', () => {
   });
 
   it('keeps the title + always-on mini-stats mounted through the error branch', () => {
-    renderSection(makeMetrics({ avgEfficiency: 152.4 }), {
+    renderSection(makeMetrics({ avgEfficiencyWhPerM: 0.1524 }), {
       isError: true,
       error: new ApiError('down', 503),
     });
@@ -390,7 +388,11 @@ describe('DrivingSection — top-drive card', () => {
   it('renders each top-drive field with its unit label when a drive is present', () => {
     renderSection(
       makeMetrics({
-        topDrive: makeTopDrive({ distance: 88.4, duration_min: 61, efficiency_wh_km: 141.7 }),
+        topDrive: makeTopDrive({
+          distanceM: 88_400,
+          durationS: 3_660,
+          energyUsedWh: 12_526.28,
+        }),
       }),
     );
 
@@ -398,7 +400,7 @@ describe('DrivingSection — top-drive card', () => {
     expect(screen.getByText('Date')).toBeInTheDocument();
     expect(screen.getByText('Duration')).toBeInTheDocument();
     expect(screen.getByText('88.4 km')).toBeInTheDocument();
-    expect(screen.getByText('61 min')).toBeInTheDocument();
+    expect(screen.getByText('1.0 h')).toBeInTheDocument();
     expect(screen.getByText('141.7 Wh/km')).toBeInTheDocument();
   });
 });
@@ -407,16 +409,15 @@ describe('DrivingSection — null safety', () => {
   it('renders zeroed stats without crashing when the numeric metric fields are undefined', () => {
     const sparse = makeMetrics();
     const holes = sparse as Record<string, unknown>;
-    holes.avgEfficiency = undefined;
-    holes.prevAvgEfficiency = undefined;
-    holes.totalDuration = undefined;
+    holes.avgEfficiencyWhPerM = undefined;
+    holes.prevAvgEfficiencyWhPerM = undefined;
+    holes.totalDurationS = undefined;
     holes.totalDrives = undefined;
 
     renderSection(sparse, { dailyDistanceData: ZERO_CHART_DATA });
 
-    // avgEfficiency ?? 0 → "0.0 Wh/km"; totalDuration ?? 0 → "0h 0m"; count → "0".
     expect(screen.getByText('0.0 Wh/km')).toBeInTheDocument();
-    expect(screen.getByText('0h 0m')).toBeInTheDocument();
+    expect(screen.getByText('0.0 h')).toBeInTheDocument();
     expect(screen.getByText('0')).toBeInTheDocument();
     // prevAvgEfficiency ?? 0 = 0 → efficiency change collapses to "—".
     expect(screen.getByText('—')).toBeInTheDocument();
@@ -425,17 +426,15 @@ describe('DrivingSection — null safety', () => {
   it('guards a present top drive whose numeric fields are undefined (zeros + em-dash date)', () => {
     const drive = makeTopDrive();
     const holes = drive as Record<string, unknown>;
-    holes.distance = undefined;
-    holes.duration_min = undefined;
-    holes.efficiency_wh_km = undefined;
-    holes.start_date = undefined;
+    holes.distanceM = undefined;
+    holes.durationS = undefined;
+    holes.energyUsedWh = undefined;
+    holes.startTs = undefined;
 
-    renderSection(makeMetrics({ topDrive: drive, avgEfficiency: 200 }));
+    renderSection(makeMetrics({ topDrive: drive, avgEfficiencyWhPerM: 0.2 }));
 
-    // distance ?? 0 → "0.0 km"; duration_min ?? 0 → "0 min"; eff ?? 0 → "0.0 Wh/km".
-    // avgEfficiency=200 keeps the stat row's "200.0 Wh/km" distinct from the card.
     expect(screen.getByText('0.0 km')).toBeInTheDocument();
-    expect(screen.getByText('0 min')).toBeInTheDocument();
+    expect(screen.getAllByText('0.0 h')).toHaveLength(2);
     expect(screen.getByText('0.0 Wh/km')).toBeInTheDocument();
     // formatDate(undefined) → "—" placeholder, never "Invalid Date".
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(1);

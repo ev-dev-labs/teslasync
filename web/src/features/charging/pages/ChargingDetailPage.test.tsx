@@ -310,7 +310,7 @@ const unitReturn = (distance: 'km' | 'mi' = 'km') => ({
   formatTemperature: (v: number) => String(v),
   formatPressure: (v: number) => String(v),
   formatDuration: (v: number) => String(v),
-  formatPower: (v: number) => String(v),
+  formatPower: (w: number | null | undefined) => `${(Number(w ?? 0) / 1000).toFixed(1)} kW`,
 });
 
 function renderPage() {
@@ -333,7 +333,8 @@ function cardValue(scope: HTMLElement, label: string): string {
 
 /** The <dd> paired with a KVList <dt> label. */
 function kvValue(label: string): string {
-  return screen.getByText(label).closest('div')?.querySelector('dd')?.textContent ?? '';
+  const term = screen.getAllByText(label).find((element) => element.tagName === 'DT');
+  return term?.closest('div')?.querySelector('dd')?.textContent ?? '';
 }
 
 /** The LinearGauge double carrying a given label. */
@@ -460,6 +461,8 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(kvValue('Charger Voltage')).toBe('240 V');
     expect(kvValue('Active Charge Current')).toBe('24.5 A');
     expect(kvValue('Pilot Current')).toBe('32.0 A');
+    expect(kvValue('Charger Power')).toBe('11.0 kW');
+    expect(kvValue('Energy Added')).toBe('12.0 kWh');
     expect(kvValue('Phases')).toBe('3');
     // battery_range_mi is SI meters despite the suffix → 320 km.
     expect(kvValue('Battery Range')).toBe('320 km');

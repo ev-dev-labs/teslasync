@@ -132,7 +132,7 @@ func TestChargeTracking_StartSnapshot_UsesState(t *testing.T) {
 	startTime := time.Date(2026, 4, 30, 12, 0, 0, 0, time.UTC)
 	wantSnap := signal.State{
 		"BatteryLevel":       18.0,
-		"ACChargingEnergyIn": 100.0,
+		"ACChargingEnergyIn": 100000.0,
 		"BatteryRange":       95.0,
 	}
 
@@ -201,9 +201,9 @@ func TestChargeTracking_EndSnapshot_UsesState(t *testing.T) {
 			// Distinct payloads so the test can confirm the test-side
 			// caller plumbed each at-anchor through to the right call.
 			if at.Equal(startTime) {
-				return signal.State{"ACChargingEnergyIn": 100.0, "BatteryRange": 95.0}, nil
+				return signal.State{"ACChargingEnergyIn": 100000.0, "BatteryRange": 95.0}, nil
 			}
-			return signal.State{"ACChargingEnergyIn": 130.5, "BatteryRange": 215.0}, nil
+			return signal.State{"ACChargingEnergyIn": 130500.0, "BatteryRange": 215.0}, nil
 		},
 	}
 	tracker := &TelemetrySessionTracker{}
@@ -247,8 +247,8 @@ func TestChargeTracking_EndSnapshot_UsesState(t *testing.T) {
 	// would yield a negative delta the production code drops.
 	startEnergy, _ := snapFloat(stateToLegacyMap(startSnap), "ACChargingEnergyIn")
 	endEnergy, _ := snapFloat(stateToLegacyMap(endSnap), "ACChargingEnergyIn")
-	if delta := endEnergy - startEnergy; delta != 30.5 {
-		t.Fatalf("energy delta from snapshots = %v, want 30.5", delta)
+	if delta := endEnergy - startEnergy; delta != 30500 {
+		t.Fatalf("energy delta from snapshots = %v, want 30500 Wh", delta)
 	}
 }
 

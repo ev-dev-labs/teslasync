@@ -24,7 +24,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlBatch, useUrlString } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getErrorMessage } from '@/lib/errorMessage';
@@ -123,14 +123,9 @@ export default function EfficiencyPage() {
     [unitPrefs.speed],
   );
 
-  const defaultStartDate = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStartDate);
-  const [endDate] = useUrlString('to', defaultEndDate);
-  const setRangeBatch = useUrlBatch();
+  const { start: startDate, end: endDate, setRange } = useRangeState({
+    persistKey: 'efficiency.range',
+  });
 
   /* ---- Filtered drives ---- */
   const filteredDrives = useMemo(() => {
@@ -282,7 +277,7 @@ export default function EfficiencyPage() {
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
-            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            onChange={setRange}
             align="end"
             triggerTestId="efficiency-range"
           />

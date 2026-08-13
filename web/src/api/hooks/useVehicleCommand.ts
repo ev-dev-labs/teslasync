@@ -1,8 +1,9 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { request } from '../client';
-import { useToast } from '@/components/feedback/Toast';
+import { useToast } from '@/components/feedback';
 import { vehicleKeys } from './useVehicles';
+import { commandKeys } from './useCommands';
 import { isTeslaAuthExpiredError } from '@/lib/resilience';
 import { queueTeslaMutation } from '@/lib/teslaAuthRecovery';
 
@@ -19,7 +20,7 @@ import { queueTeslaMutation } from '@/lib/teslaAuthRecovery';
  * forward-compatibility with a future handler revision that returns a
  * friendlier human string; today the failure reason lives in `error`.
  */
-interface CommandResult {
+export interface CommandResult {
   success?: boolean;
   /** Present on the success path (currently the literal `"success"`). */
   result?: string;
@@ -29,7 +30,7 @@ interface CommandResult {
   message?: string;
 }
 
-interface SendCommandParams {
+export interface SendCommandParams {
   vehicleId: number;
   command: string;
   params?: Record<string, unknown>;
@@ -60,8 +61,8 @@ export function useVehicleCommand() {
       }),
     onSuccess: (data, { vehicleId }) => {
       queryClient.invalidateQueries({ queryKey: vehicleKeys.state(vehicleId) });
-      queryClient.invalidateQueries({ queryKey: ['command-latest', vehicleId] });
-      queryClient.invalidateQueries({ queryKey: ['command-history', String(vehicleId)] });
+      queryClient.invalidateQueries({ queryKey: commandKeys.latest(vehicleId) });
+      queryClient.invalidateQueries({ queryKey: commandKeys.history(vehicleId) });
       queryClient.invalidateQueries({ queryKey: vehicleKeys.all });
       if (data?.success) {
         toast.success(data.message || t('commands.toast.success', 'Command sent successfully'));

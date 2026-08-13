@@ -89,6 +89,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/action-center': ['action center', 'decision inbox', 'recommendations', 'priorities', 'findings', 'snooze'],
   '/live': ['map', 'location', 'tracking', 'realtime', 'vehicle position'],
   '/vehicles': ['cars', 'fleet', 'garage', 'vehicle list'],
+  '/vehicle-management': ['vehicle management', 'fleet api management', 'options', 'specs', 'warranty', 'pricing', 'enterprise roles', 'payer'],
   '/period-compare': ['comparison', 'period', 'time', 'this month vs last month', 'trends'],
   '/weekly-digest': ['digest', 'weekly', 'summary', 'report'],
   '/navigation': ['route', 'directions', 'map', 'nav'],
@@ -311,6 +312,7 @@ export const navSections = [
     title: 'Vehicles',
     items: [
       { to: '/vehicles', icon: Icons.vehicle, label: 'My Vehicles', color: 'text-sky-400', dataTour: 'vehicle-section' },
+      { to: '/vehicle-management', icon: Icons.database, label: 'Vehicle Management', color: 'text-violet-400' },
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle Live View', color: 'text-cyan-400' },
       { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Compare Vehicles', color: 'text-orange-400', minVehicles: 2 },
       { to: '/locations', icon: Icons.location, label: 'Saved Locations', color: 'text-emerald-400' },
@@ -1667,14 +1669,7 @@ export default function Layout() {
           )}
         >
           <div className="w-full px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8 2xl:px-10 3xl:px-12">
-            {activeNavEntry && (
-              <div className="mb-3 flex min-h-8 items-center justify-between gap-3 border-b border-white/[0.06] pb-2">
-                <LayoutBreadcrumbs className="min-w-0 text-xs" />
-                <p className="hidden shrink-0 text-2xs text-[var(--text-muted)] lg:block">
-                  {t('nav.quickSearchHint', 'Ctrl+K to jump')}
-                </p>
-              </div>
-            )}
+            <LayoutBreadcrumbs className="min-w-0 text-xs" />
             <RouteTransition>
               <Outlet />
             </RouteTransition>

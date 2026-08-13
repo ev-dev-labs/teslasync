@@ -149,7 +149,7 @@ export function normalizeSoftwareUpdates(updates: SoftwareUpdate[] | undefined):
   };
 }
 
-/** Opaque, untyped Tesla warranty payload → scrubbed `WarrantyEvidence`. Account-level (not vehicle-scoped) per `/tesla/warranty` — surfaced as a limitation by `reportBuilder.ts`. */
+/** Opaque, untyped Tesla warranty payload for the selected vehicle → scrubbed `WarrantyEvidence`. */
 export function normalizeWarranty(
   envelope: { data: Record<string, unknown> | null; fetched_at: string | null } | null | undefined,
   precision: DatePrecision,

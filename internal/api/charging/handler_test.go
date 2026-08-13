@@ -186,6 +186,46 @@ func TestChargingHandler_Latest_UsesNowSnapshot(t *testing.T) {
 	}
 }
 
+func TestChargingHandler_LiveDCSessionUsesCanonicalWhAndW(t *testing.T) {
+	startTs := time.Date(2026, 8, 9, 9, 30, 0, 0, time.UTC)
+	session := inProgressChargingSession(11, 42, startTs)
+	fake := &fakeStateReader{
+		stateFn: func(_ context.Context, _ int64, at time.Time) (signal.State, error) {
+			if at.Equal(startTs) {
+				return signal.State{
+					"DCChargingEnergyIn": 100000.0,
+					"BatteryLevel":       40.0,
+				}, nil
+			}
+			return signal.State{
+				"DCChargingEnergyIn": 112000.0,
+				"DCChargingPower":    150000.0,
+				"ACChargingPower":    7200.0,
+				"BatteryLevel":       55.0,
+			}, nil
+		},
+	}
+	charging := &fakeChargingByIDFetcher{session: session}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
+
+	rec := httptest.NewRecorder()
+	h.Get(rec, newChargingRequest(t, "11", ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var got chargingmodel.ChargingSession
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got.TotalEnergyAddedWh == nil || *got.TotalEnergyAddedWh != 12000 {
+		t.Fatalf("total_energy_added_wh = %v, want 12000", got.TotalEnergyAddedWh)
+	}
+	if got.PeakPowerW == nil || *got.PeakPowerW != 150000 {
+		t.Fatalf("peak_power_w = %v, want 150000", got.PeakPowerW)
+	}
+}
+
 // TestChargingHandler_Telemetry_ChartMode locks in the chart-mode contract:
 // TelemetryReadings MUST call Timeline with an empty CollapseBy slice so
 // every change-feed emission becomes one row (forward-folded values appear
@@ -220,6 +260,46 @@ func TestChargingHandler_Telemetry_ChartMode(t *testing.T) {
 	// preserved.
 	if len(fake.gotTimelineFields) != len(chargeTelemetryFieldMappings) {
 		t.Fatalf("Timeline fields count = %d, want %d", len(fake.gotTimelineFields), len(chargeTelemetryFieldMappings))
+	}
+}
+
+func TestChargingHandler_Telemetry_ConvertsCanonicalSIToLegacyChartUnits(t *testing.T) {
+	t0 := time.Date(2026, 8, 9, 10, 0, 0, 0, time.UTC)
+	t1 := t0.Add(15 * time.Minute)
+	fake := &fakeStateReader{
+		timelineFn: func(_ context.Context, _ int64, _ []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			return []signal.TimelineRow{{
+				Timestamp: t0,
+				Fields: map[string]signal.SignalValue{
+					"power_kw":      7200.0,
+					"dc_power_w":    0.0,
+					"energy_added":  15089.164733886719,
+					"battery_level": 65.0,
+				},
+			}}, nil
+		},
+	}
+	charging := &fakeChargingByIDFetcher{session: completedChargingSession(7, 42, t0, t1)}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
+
+	rec := httptest.NewRecorder()
+	h.TelemetryReadings(rec, newChargingRequest(t, "7", "/charging/7/telemetry"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var rows []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &rows); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("row count = %d, want 1", len(rows))
+	}
+	if got := rows[0]["power_kw"]; got != 7.2 {
+		t.Fatalf("power_kw = %v, want 7.2", got)
+	}
+	if got := rows[0]["energy_added"]; got != 15.089164733886718 {
+		t.Fatalf("energy_added = %v, want 15.089164733886718", got)
 	}
 }
 

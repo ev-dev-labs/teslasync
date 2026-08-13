@@ -34,6 +34,16 @@ slos:
     owner: platform
     tags: [http, latency]
 
+  - name: vehicle_management_availability
+    description: "Tesla Vehicle Management metadata and enterprise operations must complete without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, vehicle-management, upstream]
+
   - name: service_intelligence_availability
     description: "Recall and service-intelligence requests must return without a server or upstream-gateway failure."
     sli:
@@ -213,3 +223,23 @@ slos:
     window: 30d
     owner: analytics
     tags: [http, privacy, benchmarks]
+
+  - name: geofence_pricing_read_availability
+    description: "Charging-place rate history, preview, and activity reads must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, geofences, pricing]
+
+  - name: geofence_pricing_write_availability
+    description: "Charging-place rate creation, apply/backfill, and lifecycle writes must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, geofences, pricing, writes]

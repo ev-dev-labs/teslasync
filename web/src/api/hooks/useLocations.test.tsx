@@ -46,11 +46,34 @@ vi.mock('./_toastHelpers', () => ({
 import { request } from '@/api/client';
 import { __flushQueryBroadcastForTests } from '@/lib/queryBroadcast';
 import type { Location, Geofence } from '@/types/location';
+import type {
+  Geofence as ApiGeofence,
+  GeofenceRate,
+  GeofenceRateImpactPreview,
+  GeofenceRateApplyResult,
+  GeofenceChargingSummary,
+  GeofenceChargingActivity,
+} from '@/api/types';
 import {
   locationKeys,
   useLocations,
   useGeofences,
+  useGeofencesFull,
   useBulkGeofencesDelete,
+  useGeofenceNeedsReview,
+  useGeofenceCurrentRates,
+  useArchiveGeofence,
+  useUnarchiveGeofence,
+  useMarkGeofenceReviewed,
+  useRenameGeofence,
+  useUpdateGeofenceCategory,
+  useGeofenceRates,
+  useCreateGeofenceRate,
+  useDeleteGeofenceRate,
+  useGeofenceRatePreview,
+  useApplyGeofenceRate,
+  useGeofenceChargingSummary,
+  useGeofenceChargingActivity,
   type GeofenceBulkResult,
 } from './useLocations';
 
@@ -92,8 +115,41 @@ function makeGeofence(overrides: Partial<Geofence> = {}): Geofence {
     alertOnEntry: true,
     alertOnExit: false,
     enabled: true,
-    costPerKwh: null,
+    origin: 'manual',
+    needsReview: false,
     createdAt: '2026-06-01T00:00:00Z',
+    ...overrides,
+  };
+}
+
+function makeApiGeofence(overrides: Partial<ApiGeofence> = {}): ApiGeofence {
+  return {
+    id: 1,
+    name: 'Home',
+    polygon_wkt: 'POLYGON((-122.2 37.5, -122.2 37.5, -122.2 37.5, -122.2 37.5))',
+    enabled: true,
+    alert_on_entry: true,
+    alert_on_exit: false,
+    origin: 'manual',
+    needs_review: false,
+    created_at: '2026-06-01T00:00:00Z',
+    updated_at: '2026-06-01T00:00:00Z',
+    latitude: 37.5,
+    longitude: -122.2,
+    radius: 20,
+    ...overrides,
+  };
+}
+
+function makeGeofenceRate(overrides: Partial<GeofenceRate> = {}): GeofenceRate {
+  return {
+    id: 10,
+    geofence_id: 1,
+    rate_per_wh: 0.0001,
+    currency: 'USD',
+    effective_from: '2026-01-01T00:00:00Z',
+    effective_to: null,
+    created_at: '2026-01-01T00:00:00Z',
     ...overrides,
   };
 }
@@ -303,5 +359,508 @@ describe('useBulkGeofencesDelete', () => {
     );
     expect(successToast).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Charging Places — geofence-based charging-place pricing feature
+// ---------------------------------------------------------------------------
+
+describe('useGeofencesFull', () => {
+  it('GETs /geofences (shares the useGeofences query key) and returns the canonical snake_case shape', async () => {
+    const payload = [makeApiGeofence({ id: 1 }), makeApiGeofence({ id: 2, name: 'Office' })];
+    mockedRequest.mockResolvedValueOnce(payload);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofencesFull(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(result.current.data?.[0].needs_review).toBe(false);
+
+    const [url] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences');
+    expect(url).not.toContain('/api/v1');
+  });
+
+  it('coerces a non-array response to [] via the safeArray select guard', async () => {
+    mockedRequest.mockResolvedValueOnce(null);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofencesFull(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([]);
+  });
+
+  it('requests archived rows explicitly when includeArchived is true', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofencesFull(true), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences?include_archived=true');
+  });
+});
+
+describe('useGeofenceNeedsReview', () => {
+  it('GETs /geofences/needs-review and returns the provisional-place queue', async () => {
+    const payload = [
+      makeApiGeofence({ id: 5, origin: 'charging_discovery', needs_review: true, name: '' }),
+    ];
+    mockedRequest.mockResolvedValueOnce(payload);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceNeedsReview(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/needs-review');
+  });
+
+  it('coerces a non-array response to []', async () => {
+    mockedRequest.mockResolvedValueOnce(null);
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceNeedsReview(), { wrapper: Wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([]);
+  });
+});
+
+describe('useGeofenceCurrentRates', () => {
+  it('GETs /geofences/rates/current — the bulk current-rate lookup for every geofence', async () => {
+    const payload = [makeGeofenceRate({ geofence_id: 1 }), makeGeofenceRate({ geofence_id: 2, id: 11 })];
+    mockedRequest.mockResolvedValueOnce(payload);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceCurrentRates(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/rates/current');
+  });
+});
+
+describe('useRenameGeofence', () => {
+  it('PUTs the new name and invalidates place lifecycle queries', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 7, name: 'Office Charger' }));
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useRenameGeofence(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({ geofenceId: 7, name: 'Office Charger' });
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7');
+    expect(opts.method).toBe('PUT');
+    expect(JSON.parse(opts.body as string)).toEqual({ name: 'Office Charger' });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.geofence.rename.success',
+      'Place renamed',
+    );
+  });
+});
+
+describe('useUpdateGeofenceCategory', () => {
+  it('PUTs the category and invalidates place lifecycle queries', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 7, category: 'work' }));
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useUpdateGeofenceCategory(), {
+      wrapper: Wrapper,
+    });
+
+    await result.current.mutateAsync({ geofenceId: 7, category: 'work' });
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7');
+    expect(opts.method).toBe('PUT');
+    expect(JSON.parse(opts.body as string)).toEqual({ category: 'work' });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.geofence.category.success',
+      'Category updated',
+    );
+  });
+});
+
+describe('useArchiveGeofence', () => {
+  it('POSTs /geofences/{id}/archive, invalidates the lifecycle caches, and toasts success', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 3, archived_at: '2026-08-01T00:00:00Z' }));
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useArchiveGeofence(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync(3);
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/3/archive');
+    expect(opts.method).toBe('POST');
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRatesCurrent });
+    expect(successToast).toHaveBeenCalledWith('toast.geofence.archive.success', 'Place archived');
+  });
+
+  it('toasts the error and does not invalidate when the archive POST fails', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('archive boom'));
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useArchiveGeofence(), { wrapper: Wrapper });
+
+    await expect(result.current.mutateAsync(3)).rejects.toThrow('archive boom');
+    expect(errorToast).toHaveBeenCalledWith(expect.any(Error), 'toast.geofence.archive.error', 'Failed to archive place');
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useUnarchiveGeofence', () => {
+  it('POSTs /geofences/{id}/unarchive, invalidates the lifecycle caches, and toasts success', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 3, archived_at: null }));
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useUnarchiveGeofence(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync(3);
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/3/unarchive');
+    expect(opts.method).toBe('POST');
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(successToast).toHaveBeenCalledWith('toast.geofence.unarchive.success', 'Place restored');
+  });
+});
+
+describe('useMarkGeofenceReviewed', () => {
+  it('POSTs /geofences/{id}/reviewed, invalidates the needs-review queue, and toasts success', async () => {
+    mockedRequest.mockResolvedValueOnce(makeApiGeofence({ id: 3, needs_review: false }));
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useMarkGeofenceReviewed(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync(3);
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/3/reviewed');
+    expect(opts.method).toBe('POST');
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
+    expect(successToast).toHaveBeenCalledWith('toast.geofence.reviewed.success', 'Marked reviewed');
+  });
+});
+
+describe('useGeofenceRates', () => {
+  it('GETs /geofences/{id}/rates and returns every time-versioned row', async () => {
+    const payload = [makeGeofenceRate({ id: 1 }), makeGeofenceRate({ id: 2, effective_from: '2025-01-01T00:00:00Z' })];
+    mockedRequest.mockResolvedValueOnce(payload);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceRates(7), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/7/rates');
+  });
+
+  it('is disabled (no fetch) when geofenceId is undefined', async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceRates(undefined), { wrapper: Wrapper });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+describe('useCreateGeofenceRate', () => {
+  it('POSTs the canonical rate_per_wh body to /geofences/{id}/rates and invalidates rates + current + geofences', async () => {
+    const created = makeGeofenceRate({ id: 99 });
+    mockedRequest.mockResolvedValueOnce(created);
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useCreateGeofenceRate(), { wrapper: Wrapper });
+
+    const resolved = await result.current.mutateAsync({
+      geofenceId: 7,
+      rate_per_wh: 0.00012,
+      currency: 'USD',
+      effective_from: '2026-08-27T00:00:00.000Z',
+    });
+
+    expect(resolved).toEqual(created);
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7/rates');
+    expect(opts.method).toBe('POST');
+    // The body must carry rate_per_wh (SI canonical), never a *_kwh field,
+    // and must NOT include geofenceId (a path param, not a body field).
+    const body = JSON.parse(opts.body as string);
+    expect(body).toEqual({
+      rate_per_wh: 0.00012,
+      currency: 'USD',
+      effective_from: '2026-08-27T00:00:00.000Z',
+    });
+    expect(body).not.toHaveProperty('geofenceId');
+    expect(Object.keys(body).some((k) => /kwh/i.test(k))).toBe(false);
+
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRates(7) });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRatesCurrent });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
+    expect(successToast).toHaveBeenCalledWith('toast.geofenceRate.create.success', 'Rate saved');
+  });
+
+  it('includes effective_to in the body only when provided', async () => {
+    mockedRequest.mockResolvedValueOnce(makeGeofenceRate());
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useCreateGeofenceRate(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({
+      geofenceId: 7,
+      rate_per_wh: 0.0001,
+      currency: 'USD',
+      effective_from: '2025-01-01T00:00:00.000Z',
+      effective_to: '2026-08-27T00:00:00.000Z',
+    });
+
+    const body = JSON.parse(mockedRequest.mock.calls[0][1].body as string);
+    expect(body.effective_to).toBe('2026-08-27T00:00:00.000Z');
+  });
+
+  it('toasts the error and does not invalidate when the create POST fails', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('create rate boom'));
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useCreateGeofenceRate(), { wrapper: Wrapper });
+
+    await expect(
+      result.current.mutateAsync({
+        geofenceId: 7,
+        rate_per_wh: 0.0001,
+        currency: 'USD',
+        effective_from: '2026-01-01T00:00:00.000Z',
+      }),
+    ).rejects.toThrow('create rate boom');
+
+    expect(errorToast).toHaveBeenCalledWith(expect.any(Error), 'toast.geofenceRate.create.error', 'Failed to save rate');
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useDeleteGeofenceRate', () => {
+  it('DELETEs /geofences/{id}/rates/{rateId}, invalidates rates + current, and toasts success', async () => {
+    mockedRequest.mockResolvedValueOnce(undefined);
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useDeleteGeofenceRate(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({ geofenceId: 7, rateId: 99 });
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7/rates/99');
+    expect(opts.method).toBe('DELETE');
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRates(7) });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRatesCurrent });
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.geofenceRate.delete.success',
+      'Scheduled rate cancelled',
+    );
+  });
+});
+
+describe('useGeofenceRatePreview', () => {
+  it('GETs the preview endpoint with no query string when from/to are omitted', async () => {
+    const preview: GeofenceRateImpactPreview = {
+      matched_sessions: 10,
+      eligible_sessions: 6,
+      protected_sessions: 4,
+      total_energy_wh: 50_000,
+      estimated_cost_decimal: 5.5,
+      currency: 'USD',
+    };
+    mockedRequest.mockResolvedValueOnce(preview);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceRatePreview(7, 99), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(preview);
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/7/rates/99/preview');
+  });
+
+  it('appends from/to as query params when narrowing the window', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      matched_sessions: 1,
+      eligible_sessions: 1,
+      protected_sessions: 0,
+      total_energy_wh: 1000,
+      estimated_cost_decimal: 0.1,
+      currency: 'USD',
+    });
+
+    const { Wrapper } = makeWrapper();
+    renderHook(
+      () => useGeofenceRatePreview(7, 99, { from: '2026-01-01T00:00:00.000Z', to: '2026-02-01T00:00:00.000Z' }),
+      { wrapper: Wrapper },
+    );
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    const url = mockedRequest.mock.calls[0][0] as string;
+    expect(url).toBe('/geofences/7/rates/99/preview?from=2026-01-01T00%3A00%3A00.000Z&to=2026-02-01T00%3A00%3A00.000Z');
+  });
+
+  it('is disabled until both geofenceId and rateId are known', async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceRatePreview(7, undefined), { wrapper: Wrapper });
+
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+describe('useApplyGeofenceRate', () => {
+  it('POSTs the apply endpoint and invalidates this place\'s summary/activity AND the global charging-sessions cache', async () => {
+    const applyResult: GeofenceRateApplyResult = {
+      geofence_id: 7,
+      rate_id: 99,
+      matched_sessions: 10,
+      priced_sessions: 6,
+      skipped_sessions: 4,
+      total_energy_wh: 55_000,
+      total_cost_decimal: 5.5,
+      currency: 'USD',
+    };
+    mockedRequest.mockResolvedValueOnce(applyResult);
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useApplyGeofenceRate(), { wrapper: Wrapper });
+
+    const resolved = await result.current.mutateAsync({ geofenceId: 7, rateId: 99 });
+
+    expect(resolved).toEqual(applyResult);
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/geofences/7/rates/99/apply');
+    expect(opts.method).toBe('POST');
+
+    expect(invalidate).toHaveBeenCalledWith({
+      queryKey: ['geofences', 7, 'rates', 99, 'preview'],
+    });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceChargingSummary(7) });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['geofences', 7, 'charging-activity'] });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['charging-sessions'] });
+    expect(successToast).toHaveBeenCalledWith('toast.geofenceRate.apply.success', 'Rate applied to matching sessions');
+  });
+
+  it('appends from/to as query params when narrowing the applied interval', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      priced_sessions: 1,
+      skipped_sessions: 0,
+      total_cost_decimal: 1,
+      currency: 'USD',
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useApplyGeofenceRate(), { wrapper: Wrapper });
+
+    await result.current.mutateAsync({
+      geofenceId: 7,
+      rateId: 99,
+      from: '2026-01-01T00:00:00.000Z',
+      to: '2026-02-01T00:00:00.000Z',
+    });
+
+    const url = mockedRequest.mock.calls[0][0] as string;
+    expect(url).toBe('/geofences/7/rates/99/apply?from=2026-01-01T00%3A00%3A00.000Z&to=2026-02-01T00%3A00%3A00.000Z');
+  });
+
+  it('toasts the error and does not invalidate when the apply POST fails', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('apply boom'));
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useApplyGeofenceRate(), { wrapper: Wrapper });
+
+    await expect(result.current.mutateAsync({ geofenceId: 7, rateId: 99 })).rejects.toThrow('apply boom');
+    expect(errorToast).toHaveBeenCalledWith(expect.any(Error), 'toast.geofenceRate.apply.error', 'Failed to apply rate');
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+});
+
+describe('useGeofenceChargingSummary', () => {
+  it('GETs /geofences/{id}/charging-summary and returns the per-currency rows', async () => {
+    const payload: GeofenceChargingSummary[] = [
+      { currency: 'USD', session_count: 5, total_energy_wh: 40_000, total_cost_decimal: 4.4 },
+      { currency: 'EUR', session_count: 2, total_energy_wh: 10_000, total_cost_decimal: 1.1 },
+    ];
+    mockedRequest.mockResolvedValueOnce(payload);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceChargingSummary(7), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    // Multiple currencies must stay as separate rows, never summed together.
+    expect(result.current.data).toEqual(payload);
+    expect(result.current.data).toHaveLength(2);
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/7/charging-summary');
+  });
+
+  it('is disabled (no fetch) when geofenceId is undefined', async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceChargingSummary(undefined), { wrapper: Wrapper });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+describe('useGeofenceChargingActivity', () => {
+  it('GETs /geofences/{id}/charging-activity with default limit=50 & offset=0', async () => {
+    const payload: GeofenceChargingActivity[] = [
+      {
+        session_id: 1,
+        started_at: '2026-08-01T00:00:00Z',
+        ended_at: '2026-08-01T01:00:00Z',
+        energy_wh: 10_000,
+        cost_decimal: 1.2,
+        cost_currency: 'USD',
+        cost_source: 'geofence_tariff',
+        rate_id: 99,
+      },
+    ];
+    mockedRequest.mockResolvedValueOnce(payload);
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceChargingActivity(7), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual(payload);
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/7/charging-activity?limit=50&offset=0');
+  });
+
+  it('threads a custom limit/offset through to the query string', async () => {
+    mockedRequest.mockResolvedValueOnce([]);
+    const { Wrapper } = makeWrapper();
+    renderHook(() => useGeofenceChargingActivity(7, 25, 25), { wrapper: Wrapper });
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    expect(mockedRequest.mock.calls[0][0]).toBe('/geofences/7/charging-activity?limit=25&offset=25');
+  });
+
+  it('is disabled (no fetch) when geofenceId is undefined', async () => {
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useGeofenceChargingActivity(undefined), { wrapper: Wrapper });
+    await new Promise((r) => setTimeout(r, 10));
+    expect(mockedRequest).not.toHaveBeenCalled();
+    expect(result.current.fetchStatus).toBe('idle');
   });
 });

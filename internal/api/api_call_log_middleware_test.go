@@ -149,6 +149,8 @@ func newTestRouterWithLogger(t *testing.T, store APICallLogger, captureBodies bo
 		r.Get("/events", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
 		r.Get("/system/status", func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusOK) })
+		r.Post("/tesla/vehicle-pricing", echoBody)
+		r.Post("/vehicles/{vehicleID}/enterprise-payer", echoBody)
 
 		// Recorded paths
 		r.Get("/vehicles", func(w http.ResponseWriter, r *http.Request) {
@@ -349,6 +351,7 @@ func TestT04_SkippedPaths_NoRowsEnqueued(t *testing.T) {
 		"/api/v1/sse-token",
 		"/api/v1/system/status",
 	}
+
 	for _, p := range skipPaths {
 		resp, err := http.Get(srv.URL + p)
 		if err != nil {
@@ -358,6 +361,39 @@ func TestT04_SkippedPaths_NoRowsEnqueued(t *testing.T) {
 	}
 	if got := len(store.Entries()); got != 0 {
 		t.Fatalf("entries=%d, want 0 (skipped paths)", got)
+	}
+}
+
+func TestOpaqueVehicleManagementBodiesAreNeverCaptured(t *testing.T) {
+	store := &fakeAPILogStore{}
+	srv := httptest.NewServer(newTestRouterWithLogger(t, store, true))
+	defer srv.Close()
+
+	tests := []string{
+		"/api/v1/tesla/vehicle-pricing",
+		"/api/v1/tesla/vehicle-pricing/",
+		"/api/v1/vehicles/42/enterprise-payer",
+		"/api/v1/vehicles/42/enterprise-payer/",
+	}
+	for _, path := range tests {
+		req, err := http.NewRequest(
+			http.MethodPost,
+			srv.URL+path,
+			strings.NewReader(`{"payload":{"possible_pii":"must-not-persist"}}`),
+		)
+		if err != nil {
+			t.Fatalf("build request for %s: %v", path, err)
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Fatalf("POST %s: %v", path, err)
+		}
+		resp.Body.Close()
+	}
+
+	if got := len(store.Entries()); got != 0 {
+		t.Fatalf("opaque management requests enqueued %d audit row(s), want 0", got)
 	}
 }
 

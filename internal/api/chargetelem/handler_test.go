@@ -27,27 +27,30 @@ func newChargingTelemetryRequest(vehicleID string, target string) *http.Request 
 // the charging-detail page depends on consecutive emissions surviving even
 // when their projected fields are identical to the previous row — collapsing
 // would drop "still 200V, still 65%" tuples and break the time-series
-// rendering. Also asserts the canonical 16-mapping field set is forwarded
-// so the wire shape (charger_voltage, charger_power_kw, ...) stays stable.
+// rendering. Also asserts the canonical mapping set is forwarded so the wire
+// shape (charger_voltage, charger_power_w, ...) stays stable.
 func TestChargingTelemetry_Chart_NoCollapse(t *testing.T) {
 	t0 := time.Date(2026, 4, 30, 10, 0, 0, 0, time.UTC)
 	rows := []signal.TimelineRow{
 		{Timestamp: t0, Fields: map[string]signal.SignalValue{
-			"charger_voltage":        240.0,
-			"charger_actual_current": 32.0,
-			"charger_power_kw":       7.7,
-			"battery_level":          55.0,
+			"charger_voltage":           240.0,
+			"charger_actual_current":    32.0,
+			"charger_power_w":           7700.0,
+			"dc_charger_power_w":        150000.0,
+			"charge_energy_added_wh":    10000.0,
+			"dc_charge_energy_added_wh": 12000.0,
+			"battery_level":             55.0,
 		}},
 		{Timestamp: t0.Add(30 * time.Second), Fields: map[string]signal.SignalValue{
 			"charger_voltage":        240.0,
 			"charger_actual_current": 32.0,
-			"charger_power_kw":       7.7,
+			"charger_power_w":        7700.0,
 			"battery_level":          55.0,
 		}},
 		{Timestamp: t0.Add(60 * time.Second), Fields: map[string]signal.SignalValue{
 			"charger_voltage":        240.0,
 			"charger_actual_current": 32.0,
-			"charger_power_kw":       7.7,
+			"charger_power_w":        7700.0,
 			"battery_level":          56.0,
 		}},
 	}
@@ -86,6 +89,15 @@ func TestChargingTelemetry_Chart_NoCollapse(t *testing.T) {
 			t.Fatalf("row[%d] missing ts key; got %v", i, row)
 		}
 	}
+	if got[0]["charger_power_w"] != 150000.0 || got[0]["charge_energy_added_wh"] != 12000.0 {
+		t.Fatalf("DC values were not merged into canonical fields: %v", got[0])
+	}
+	if _, ok := got[0]["dc_charger_power_w"]; ok {
+		t.Fatalf("temporary DC power field leaked into response: %v", got[0])
+	}
+	if _, ok := got[0]["dc_charge_energy_added_wh"]; ok {
+		t.Fatalf("temporary DC energy field leaked into response: %v", got[0])
+	}
 }
 
 // TestChargingTelemetry_Latest_UsesNow verifies that Latest derives the
@@ -94,7 +106,7 @@ func TestChargingTelemetry_Chart_NoCollapse(t *testing.T) {
 // signal under its JSON field name; the special DCChargingPower override
 // stays in this handler (DC fast-charge sessions report DCChargingPower
 // instead of ACChargingPower, and the frontend exposes a single
-// charger_power_kw field).
+// charger_power_w field).
 func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 	var gotAt time.Time
 	var gotVehicleID int64
@@ -107,8 +119,10 @@ func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 			return signal.State{
 				"ChargerVoltage":       240.0,
 				"ChargerActualCurrent": 32.0,
-				"ACChargingPower":      7.7,
-				"DCChargingPower":      150.0, // active DC charge — must override AC
+				"ACChargingPower":      7700.0,
+				"DCChargingPower":      150000.0, // active DC charge — must override AC
+				"ACChargingEnergyIn":   10000.0,
+				"DCChargingEnergyIn":   12000.0,
 				"BatteryLevel":         65.0,
 				"ChargeState":          "Charging",
 				"IdealBatteryRange":    250.0,
@@ -145,9 +159,12 @@ func TestChargingTelemetry_Latest_UsesNow(t *testing.T) {
 	if v, ok := got["charging_state"].(string); !ok || v != "Charging" {
 		t.Fatalf("charging_state = %v, want Charging", got["charging_state"])
 	}
-	// DCChargingPower=150 must override AC power and be returned under the SI key.
-	if v, ok := got["charger_power_w"].(float64); !ok || v != 150.0 {
-		t.Fatalf("charger_power_w = %v, want 150 (DC override active)", got["charger_power_w"])
+	// DCChargingPower=150000 W must override AC power under the SI key.
+	if v, ok := got["charger_power_w"].(float64); !ok || v != 150000.0 {
+		t.Fatalf("charger_power_w = %v, want 150000 (DC override active)", got["charger_power_w"])
+	}
+	if v, ok := got["charge_energy_added_wh"].(float64); !ok || v != 12000.0 {
+		t.Fatalf("charge_energy_added_wh = %v, want 12000 (DC override active)", got["charge_energy_added_wh"])
 	}
 }
 

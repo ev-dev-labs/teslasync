@@ -16,7 +16,7 @@ import {
 import { AIRouteEfficiencySuggestions } from '@/components/ai/AIRouteEfficiencySuggestions';
 import { useRouteEfficiency } from '@/api/hooks/useDriving';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useUrlString, useUrlBatch } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtInt } from '@/lib/numberFormat';
@@ -31,15 +31,9 @@ export default function RouteEfficiencyPage() {
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
 
-  const defaultStartDate = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStartDate);
-  const [endDate] = useUrlString('to', defaultEndDate);
-  const setRangeBatch = useUrlBatch();
+  const { start: startDate, end: endDate, setRange } = useRangeState({
+    persistKey: 'route-efficiency.range',
+  });
 
   const routeQuery = useRouteEfficiency(vehicleIdStr, startDate, endDate);
   const { data, isLoading, error, refetch } = routeQuery;
@@ -97,7 +91,7 @@ export default function RouteEfficiencyPage() {
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
-            onChange={(r) => setRangeBatch({ from: r.start, to: r.end })}
+            onChange={setRange}
             align="end"
             triggerTestId="route-efficiency-range-picker"
           />

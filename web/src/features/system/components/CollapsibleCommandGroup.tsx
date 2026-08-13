@@ -8,7 +8,7 @@ import { CATEGORY_META, type CommandCategory } from '../commands';
 
 interface CollapsibleCommandGroupProps {
   category: CommandCategory;
-  vehicleId: number;
+  vehicleKey: number;
   children: ReactNode;
   count: number;
   defaultOpen?: boolean;
@@ -16,14 +16,14 @@ interface CollapsibleCommandGroupProps {
 
 export function CollapsibleCommandGroup({
   category,
-  vehicleId,
+  vehicleKey,
   children,
   count,
   defaultOpen = false,
 }: CollapsibleCommandGroupProps) {
   const { t } = useTranslation();
-  const storageKey = `teslasync-cat-${vehicleId}-${category}`;
-  const panelId = `teslasync-cmdgroup-${vehicleId}-${category}`;
+  const storageKey = `teslasync-cat-${vehicleKey}-${category}`;
+  const panelId = `teslasync-cmdgroup-${vehicleKey}-${category}`;
 
   const [open, setOpen] = useState(() => {
     try {
@@ -57,7 +57,7 @@ export function CollapsibleCommandGroup({
         onClick={toggle}
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className="group h-auto w-full justify-start py-2 text-left font-normal hover:bg-transparent"
+        className="group h-auto min-h-11 w-full justify-start py-2 text-left font-normal hover:bg-transparent"
       >
         <Icon aria-hidden="true" className="h-4 w-4 text-[var(--text-muted)]" />
         <Text size="xs" weight="medium" className="uppercase tracking-wider text-[var(--text-secondary)]">
@@ -71,7 +71,7 @@ export function CollapsibleCommandGroup({
       </ControlButton>
       {open && (
         <FadeIn>
-          <div id={panelId} className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 mt-2">
+          <div id={panelId} className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-5">
             {children}
           </div>
         </FadeIn>

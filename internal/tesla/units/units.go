@@ -12,12 +12,14 @@ import (
 // callers (signal.Store writers, signal_log inserts, analytics) consume
 // SI values exclusively.
 //
-// Canonical SI forms by UnitKind (and the speed-override list):
+// Canonical SI forms by UnitKind (and the fixed-wire override lists):
 //
 //	UnitKindDistance       -> meters
 //	UnitKindTemperature    -> Celsius
 //	UnitKindPressure       -> Pascals
 //	{VehicleSpeed,CruiseSetSpeed} -> meters per second
+//	{AC,DC}ChargingEnergyIn       -> Watt-hours
+//	{AC,DC}ChargingPower          -> Watts
 //
 // Errors:
 //
@@ -74,6 +76,13 @@ func ToSI(field string, raw float64, active ActiveUnit) (float64, error) {
 	// fixedMileDistanceFields comment for the empirical evidence.
 	if IsFixedMileDistanceField(field) {
 		return raw * 1609.344, nil
+	}
+
+	// Tesla reports charging energy in kWh and charging power in kW over
+	// Fleet Telemetry. These wire units are fixed and do not depend on any
+	// Setting*Unit signal, so convert directly to canonical Wh/W.
+	if IsFixedKiloToBaseField(field) {
+		return raw * 1000.0, nil
 	}
 
 	if meta.UnitKind == protomodel.UnitKindNone {

@@ -1,11 +1,13 @@
 import { useTranslation } from 'react-i18next';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useUnits } from '@/hooks/useUnits';
 import { Car, Activity, Zap, Fuel, BarChart3, Leaf } from 'lucide-react';
 import { SectionTitle, GlassPanel } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { QueryError } from '@/components/feedback';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { trendFor } from './helpers';
+import { formatEfficiencyFromSI } from './display';
 import type { DigestMetrics } from './types';
 
 interface WeekOverWeekSummaryProps {
@@ -25,6 +27,7 @@ export function WeekOverWeekSummary({
 }: WeekOverWeekSummaryProps) {
   const { t } = useTranslation();
   const { formatCurrency } = useFormatting();
+  const { unitPrefs, formatDistance, formatEnergy } = useUnits();
 
   return (
     <section
@@ -43,10 +46,9 @@ export function WeekOverWeekSummary({
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.distance', 'Distance')}
-            value={fmtNumber(metrics.totalDistance ?? 0, 1)}
-            unit="km"
+            value={formatDistance(metrics.totalDistanceM ?? 0, { precision: 1 })}
             icon={<Car className="h-4 w-4" aria-hidden="true" />}
-            trend={trendFor(metrics.totalDistance ?? 0, metrics.prevDistance ?? 0)}
+            trend={trendFor(metrics.totalDistanceM ?? 0, metrics.prevDistanceM ?? 0)}
           />
           <StatCard
             loading={isLoading}
@@ -58,10 +60,9 @@ export function WeekOverWeekSummary({
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.energy', 'Energy')}
-            value={fmtNumber(metrics.energyUsed ?? 0, 1)}
-            unit="kWh"
+            value={formatEnergy(metrics.energyUsedWh ?? 0, { precision: 1 })}
             icon={<Zap className="h-4 w-4" aria-hidden="true" />}
-            trend={trendFor(metrics.energyUsed ?? 0, metrics.prevEnergy ?? 0, true)}
+            trend={trendFor(metrics.energyUsedWh ?? 0, metrics.prevEnergyWh ?? 0, true)}
           />
           <StatCard
             loading={isLoading}
@@ -73,10 +74,13 @@ export function WeekOverWeekSummary({
           <StatCard
             loading={isLoading}
             label={t('analytics.weeklyDigest.efficiency', 'Efficiency')}
-            value={fmtNumber(metrics.avgEfficiency ?? 0, 1)}
-            unit="Wh/km"
+            value={formatEfficiencyFromSI(metrics.avgEfficiencyWhPerM ?? 0, unitPrefs)}
             icon={<BarChart3 className="h-4 w-4" aria-hidden="true" />}
-            trend={trendFor(metrics.avgEfficiency ?? 0, metrics.prevAvgEfficiency ?? 0, true)}
+            trend={trendFor(
+              metrics.avgEfficiencyWhPerM ?? 0,
+              metrics.prevAvgEfficiencyWhPerM ?? 0,
+              true,
+            )}
           />
           <StatCard
             loading={isLoading}

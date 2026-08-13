@@ -18,8 +18,7 @@
  * Also covered: null-speed drives are skipped (not coerced into 0–30),
  * every panel shows a "No data available" placeholder instead of a blank
  * axis-only chart, the Power Profile fallback table renders the recent-20
- * window, and the date-range filter wires BOTH `onStartDateChange` and
- * `onEndDateChange`.
+ * window, and the date-range filter commits both bounds atomically.
  *
  * The chart annotation hooks are stubbed (the real ones hit `/annotations`)
  * and i18n falls back to the `defaultValue` argument, matching the
@@ -100,8 +99,7 @@ function baseProps(overrides: Partial<Props> = {}): Props {
     filteredDrives: [],
     startDate: '2026-05-01',
     endDate: '2026-05-31',
-    onStartDateChange: vi.fn(),
-    onEndDateChange: vi.fn(),
+    onRangeChange: vi.fn(),
     toDistanceDisplay: (m: number) => m / 1000,
     toSpeedDisplay: toMph,
     distanceUnit: 'mi',
@@ -253,19 +251,22 @@ describe('DriveAnalyticsSection — power profile', () => {
 })
 
 describe('DriveAnalyticsSection — date range filter', () => {
-  it('forwards a preset selection to BOTH date-change callbacks', () => {
-    const onStartDateChange = vi.fn()
-    const onEndDateChange = vi.fn()
-    renderSection({ onStartDateChange, onEndDateChange })
+  it('forwards a preset selection as one atomic range change', () => {
+    const onRangeChange = vi.fn()
+    renderSection({ onRangeChange })
 
     fireEvent.click(screen.getByRole('button', { name: /date range/i }))
     const dialog = screen.getByRole('dialog')
     fireEvent.click(within(dialog).getByRole('option', { name: /last 7 days/i }))
 
-    expect(onStartDateChange).toHaveBeenCalledTimes(1)
-    expect(onEndDateChange).toHaveBeenCalledTimes(1)
-    expect(onStartDateChange.mock.calls[0][0]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
-    expect(onEndDateChange.mock.calls[0][0]).toMatch(/^\d{4}-\d{2}-\d{2}$/)
+    expect(onRangeChange).toHaveBeenCalledTimes(1)
+    expect(onRangeChange).toHaveBeenCalledWith(
+      {
+        start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+        end: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      },
+      '7d',
+    )
   })
 
   it('toggles the range popover open and closed', () => {

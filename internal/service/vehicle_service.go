@@ -222,10 +222,12 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		}
 	}
 	if f, ok := signal.Float64Value(all["ACChargingPower"]); ok {
-		state.ChargerPower = f
+		// VehicleState's established JSON contract exposes charger_power in
+		// kW; signal.Store is canonical W after telemetry normalization.
+		state.ChargerPower = f / 1000.0
 	}
 	if f, ok := signal.Float64Value(all["DCChargingPower"]); ok && f > 0 {
-		state.ChargerPower = f
+		state.ChargerPower = f / 1000.0
 	}
 	if f, ok := signal.Float64Value(all["ChargeRateMilePerHour"]); ok {
 		state.ChargeRate = f

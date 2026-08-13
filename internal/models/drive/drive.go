@@ -42,6 +42,18 @@ type Drive struct {
 	EndLat       *float64 `db:"end_lat"       json:"end_lat,omitempty"`
 	EndLon       *float64 `db:"end_lon"       json:"end_lon,omitempty"`
 
+	// StartGeofenceID / EndGeofenceID identify the charging-place geofence
+	// (if any) matched at each drive endpoint (migration
+	// 000228_geofence_charging_place_pricing). Match-only — a drive never
+	// auto-creates a geofence. No DB-level FK, for the same hot-path-adjacent
+	// reason as StartAddress/EndAddress resolution: written from
+	// resolveAndUpdateAddress, which must not be blocked by a synchronous FK
+	// check. Renaming the geofence later improves historical display because
+	// readers resolve the CURRENT geofence name at read time, falling back to
+	// the stored StartAddress/EndAddress text when no geofence matched.
+	StartGeofenceID *int64 `db:"start_geofence_id" json:"start_geofence_id,omitempty"`
+	EndGeofenceID   *int64 `db:"end_geofence_id"   json:"end_geofence_id,omitempty"`
+
 	StartBatteryPct *int16 `db:"start_battery_pct" json:"start_battery_pct,omitempty"`
 	EndBatteryPct   *int16 `db:"end_battery_pct"   json:"end_battery_pct,omitempty"`
 

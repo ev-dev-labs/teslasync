@@ -110,11 +110,18 @@ function WidgetChrome({
 interface FullscreenOverlayProps {
   widget: WidgetInstance;
   def: WidgetDef;
+  dashboardVehicleId?: number;
   onClose: () => void;
   getWidgetSize: (id: string) => { cols: number; rows: number };
 }
 
-function FullscreenOverlay({ widget, def, onClose, getWidgetSize }: FullscreenOverlayProps) {
+function FullscreenOverlay({
+  widget,
+  def,
+  dashboardVehicleId,
+  onClose,
+  getWidgetSize,
+}: FullscreenOverlayProps) {
   const Component = def.component;
   const size = getWidgetSize(widget.id);
   const { t } = useTranslation();
@@ -130,7 +137,7 @@ function FullscreenOverlay({ widget, def, onClose, getWidgetSize }: FullscreenOv
       <GlassPanel className="flex-1 overflow-hidden">
         <Suspense fallback={<Skeleton className="h-full" />}>
           <Component
-            vehicleId={widget.config?.vehicleId}
+            vehicleId={widget.config?.vehicleId ?? dashboardVehicleId}
             config={widget.config}
             size={{ cols: size.cols, rows: Math.max(size.rows, 4) }}
           />
@@ -479,6 +486,7 @@ export function DashboardGrid({
         <FullscreenOverlay
           widget={fullscreenInstance}
           def={fullscreenDef}
+          dashboardVehicleId={dashboardVehicleId}
           onClose={() => setFullscreenWidget(null)}
           getWidgetSize={getWidgetSizeLive}
         />

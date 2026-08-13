@@ -285,6 +285,61 @@ func TestPipeline_FixedMileNoUnitHistory(t *testing.T) {
 	}
 }
 
+// TestPipeline_FixedChargingKiloUnits verifies that Tesla's fixed kWh/kW
+// charging fields bypass unit history and reach every downstream writer as
+// canonical Wh/W values. This is the regression net for charging sessions
+// that previously displayed 0.02 kWh for a real 15.09 kWh charge.
+func TestPipeline_FixedChargingKiloUnits(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID int64 = 102
+	tNow := time.Date(2026, 8, 9, 12, 0, 0, 0, time.UTC)
+	cases := []struct {
+		field string
+		raw   float32
+		want  float64
+	}{
+		{field: "ACChargingEnergyIn", raw: 15.089165, want: float64(float32(15.089165)) * 1000},
+		{field: "DCChargingEnergyIn", raw: 42.5, want: 42500},
+		{field: "ACChargingPower", raw: 7.2, want: float64(float32(7.2)) * 1000},
+		{field: "DCChargingPower", raw: 250, want: 250000},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.field, func(t *testing.T) {
+			t.Parallel()
+			repo := &fakeRepo{}
+			rt := &fakeRouter{}
+			p := New(repo, rt, zerolog.Nop())
+
+			err := p.processAtomics(context.Background(), []codec.Atomic{{
+				Field: tc.field, Value: tc.raw, EmittedAt: tNow, VehicleID: "VIN-CHARGE-SI",
+			}}, vehicleID)
+			if err != nil {
+				t.Fatalf("processAtomics returned error: %v", err)
+			}
+
+			for _, op := range repo.opsCopy() {
+				if op.kind == "at" {
+					t.Fatalf("histRepo.At called for fixed-wire field %s", tc.field)
+				}
+			}
+			routes := rt.routesCopy()
+			if len(routes) != 1 {
+				t.Fatalf("router received %d routes, want 1: %+v", len(routes), routes)
+			}
+			got, ok := routes[0].Value.(float64)
+			if !ok {
+				t.Fatalf("routed value type = %T, want float64", routes[0].Value)
+			}
+			if math.Abs(got-tc.want) > 1e-6 {
+				t.Fatalf("%s SI value = %v, want %v", tc.field, got, tc.want)
+			}
+		})
+	}
+}
+
 // TestPipelineHappyPath exercises the three primary dispatch arms in
 // one payload:
 //

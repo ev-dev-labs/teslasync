@@ -50,7 +50,7 @@ export function useVaultEvidence(vehicleId: string | null, sensitive: SensitiveF
   const maintenanceQuery = useMaintenance();
   const serviceRecordsQuery = useServiceRecords();
   const softwareUpdatesQuery = useSoftwareUpdates(vehicleId ?? '');
-  const warrantyQuery = useWarrantyDetails();
+  const warrantyQuery = useWarrantyDetails(vehicleId ?? undefined);
   const driveHistoryQuery = useDriveHistory(vehicleId ?? undefined);
   const drivingStatsQuery = useDrivingStats(vehicleId ?? undefined);
   const driveScoreQuery = useDriveScore(vehicleId ?? undefined);

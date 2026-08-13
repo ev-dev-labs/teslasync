@@ -67,3 +67,5 @@ func DriveID(id int64) attribute.KeyValue      { return attribute.Int64("drive.i
 func ChargeID(id int64) attribute.KeyValue     { return attribute.Int64("charge.id", id) }
 func TableName(t string) attribute.KeyValue    { return attribute.String("db.sql.table", t) }
 func RowCount(n int) attribute.KeyValue        { return attribute.Int("db.row_count", n) }
+func GeofenceID(id int64) attribute.KeyValue   { return attribute.Int64("geofence.id", id) }
+func RateID(id int64) attribute.KeyValue       { return attribute.Int64("geofence.rate_id", id) }

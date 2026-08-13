@@ -183,19 +183,21 @@ var flows = []flow{
 	},
 	{
 		Name:        "in_api_workers",
-		Description: "Per-iteration spans for in-API background tickers",
+		Description: "Spans for in-API background workers",
 		GlobPatterns: []string{
 			"internal/worker/gas_price_worker.go",
 			"internal/worker/maintenance_worker.go",
 			"internal/worker/unit_drift_validator.go",
 			"internal/app/new.go",
+			"internal/api/telemetry/telemetry_sessions_charge_geofence_pricing.go",
 		},
-		MinSpanFiles: 4,
+		MinSpanFiles: 5,
 		RequiredFiles: []string{
 			"internal/worker/gas_price_worker.go",
 			"internal/worker/maintenance_worker.go",
 			"internal/worker/unit_drift_validator.go",
 			"internal/app/new.go",
+			"internal/api/telemetry/telemetry_sessions_charge_geofence_pricing.go",
 		},
 	},
 	{

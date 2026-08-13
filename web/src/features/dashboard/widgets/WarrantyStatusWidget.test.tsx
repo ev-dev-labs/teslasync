@@ -51,14 +51,18 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-const { warrantyMock, unitsMock, dateFormatMock } = vi.hoisted(() => ({
+const { warrantyMock, warrantyVehicleIdMock, unitsMock, dateFormatMock } = vi.hoisted(() => ({
   warrantyMock: vi.fn(),
+  warrantyVehicleIdMock: vi.fn(),
   unitsMock: vi.fn(),
   dateFormatMock: vi.fn(),
 }));
 
 vi.mock('@/api/hooks/useVehicles', () => ({
-  useWarrantyDetails: () => warrantyMock(),
+  useWarrantyDetails: (vehicleId?: string) => {
+    warrantyVehicleIdMock(vehicleId);
+    return warrantyMock();
+  },
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -114,13 +118,14 @@ function makeResult(over: Partial<QueryResult> = {}): QueryResult {
 function renderWidget(size: WidgetSize = { cols: 2, rows: 2 }) {
   return render(
     <MemoryRouter>
-      <WarrantyStatusWidget size={size} />
+      <WarrantyStatusWidget size={size} vehicleId={7} />
     </MemoryRouter>,
   );
 }
 
 beforeEach(() => {
   warrantyMock.mockReset();
+  warrantyVehicleIdMock.mockReset();
   unitsMock.mockReset();
   dateFormatMock.mockReset();
   warrantyMock.mockReturnValue(makeResult());
@@ -243,6 +248,7 @@ describe('WarrantyStatusWidget — states', () => {
   it('renders a loading skeleton while the query is pending', () => {
     warrantyMock.mockReturnValue(makeResult({ isLoading: true, data: undefined }));
     const { container } = renderWidget();
+    expect(warrantyVehicleIdMock).toHaveBeenCalledWith('7');
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Warranty Status')).toBeNull();
     expect(screen.queryByText('No warranty data')).toBeNull();

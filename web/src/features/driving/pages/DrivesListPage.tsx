@@ -26,6 +26,7 @@ import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
 import { ActiveFilterChips, type FilterChipDescriptor } from '@/components/forms/ActiveFilterChips';
 import { useUrlBatch, useUrlEnum, useUrlString, useUrlNumber } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { parseSearchQuery, matchesTokens, compareNumeric } from '@/lib/searchQuery';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
@@ -79,13 +80,13 @@ export default function DrivesListPage() {
    * the API applies a 50-row default page, so filtering client-side alone
    * capped this page at the 50 newest drives regardless of the chosen range
    * or page size. */
-  const defaultStart = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStart);
-  const [endDate] = useUrlString('to', defaultEnd);
+  const {
+    start: startDate,
+    end: endDate,
+    setRangeWithUrlUpdates,
+  } = useRangeState({
+    persistKey: 'drives.list.range',
+  });
   const priorRange = useMemo(() => priorPeriod(startDate, endDate), [startDate, endDate]);
 
   /* Fetch window. It has to reach back over the prior period as well, because
@@ -532,7 +533,7 @@ export default function DrivesListPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {
-              setUrlBatch({ from: r.start, to: r.end, page: null });
+              setRangeWithUrlUpdates(r, { page: null });
             }}
             align="end"
             triggerTestId="drives-range-picker"

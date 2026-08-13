@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
@@ -11,6 +11,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useRangeState } from '@/hooks/useRangeState';
 import { INTERVALS } from '@/lib/constants';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import {
@@ -122,15 +123,14 @@ export default function DrivingDynamicsPage() {
     [tempUnit],
   );
 
-  /* ---- date filter (page-scoped: used by SpeedGear + DriveAnalytics) ---- */
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 30);
-    return d.toISOString().slice(0, 10);
+  /* ---- shared date filter (used by SpeedGear + DriveAnalytics) ---- */
+  const {
+    start: startDate,
+    end: endDate,
+    setRange,
+  } = useRangeState({
+    persistKey: 'driving-dynamics.range',
   });
-  const [endDate, setEndDate] = useState(
-    () => new Date().toISOString().slice(0, 10),
-  );
 
   /* ---- filtered drives ---- */
   const filteredDrives = useMemo(() => {
@@ -226,8 +226,7 @@ export default function DrivingDynamicsPage() {
             filteredDrives={filteredDrives}
             startDate={startDate}
             endDate={endDate}
-            onStartDateChange={setStartDate}
-            onEndDateChange={setEndDate}
+            onRangeChange={setRange}
             toDistanceDisplay={toDistanceDisplay}
             toSpeedDisplay={toSpeedDisplay}
             distanceUnit={distanceUnit}

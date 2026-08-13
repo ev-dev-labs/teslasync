@@ -30,6 +30,7 @@ import {
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useUrlBatch, useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { parseSearchQuery, matchesTokens, compareNumeric, parseDurationToken, matchesYmdPrefix } from '@/lib/searchQuery';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
 import { useUnits } from '@/hooks/useUnits';
@@ -102,13 +103,13 @@ export default function ChargingListPage() {
   const { formatCurrency, currencySymbol } = useFormatting();
 
   /* ── URL state ───────────────────────────────────────────────── */
-  const defaultStartDate = useMemo(() => {
-    const d = new Date(); d.setDate(d.getDate() - 30);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEndDate = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStartDate);
-  const [endDate] = useUrlString('to', defaultEndDate);
+  const {
+    start: startDate,
+    end: endDate,
+    setRangeWithUrlUpdates,
+  } = useRangeState({
+    persistKey: 'charging.list.range',
+  });
   const [search] = useUrlString('q', '');
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<ChargingTrendMetric>('trend', TREND_METRICS, 'sessions');
@@ -570,7 +571,7 @@ export default function ChargingListPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {
-              setUrlBatch({ from: r.start, to: r.end, page: null });
+              setRangeWithUrlUpdates(r, { page: null });
             }}
             align="end"
             triggerTestId="charging-list-range"

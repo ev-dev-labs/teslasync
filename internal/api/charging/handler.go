@@ -68,15 +68,16 @@ func (h *ChargingHandler) WithForwardAuthHeader(name string) *ChargingHandler {
 // chargeTelemetryFieldMappings projects the signal_log change feed into the
 // legacy ChargeTelemetryReading JSON shape. Field names match the old
 // pivot-mapping signal/field pairs so the wire contract is unchanged.
-// AC/DC power is merged into a canonical "power_kw" by the
+// AC/DC power is merged into the existing "power_kw" chart field by the
 // TelemetryReadings handler post-processing.
 var chargeTelemetryFieldMappings = []signal.FieldMapping{
 	{Signal: "BatteryLevel", Field: "battery_level"},
 	{Signal: "ChargerVoltage", Field: "voltage"},
 	{Signal: "ChargerActualCurrent", Field: "current_amps"},
 	{Signal: "ACChargingPower", Field: "power_kw"},
-	{Signal: "DCChargingPower", Field: "dc_power_kw"},
+	{Signal: "DCChargingPower", Field: "dc_power_w"},
 	{Signal: "ACChargingEnergyIn", Field: "energy_added"},
+	{Signal: "DCChargingEnergyIn", Field: "dc_energy_wh"},
 	{Signal: "ChargeRateMilePerHour", Field: "range_added_meters_per_hour"},
 	{Signal: "BatteryHeaterOn", Field: "battery_heater_on"},
 	{Signal: "InsideTemp", Field: "inside_temp"},
@@ -206,14 +207,20 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargin
 		}
 	}
 
-	startEnergy, startOk := signalFloat(startSnap, "ACChargingEnergyIn")
-	currentEnergy, currentOk := signalFloat(currentSnap, "ACChargingEnergyIn")
-	if startOk && currentOk && currentEnergy > startEnergy {
-		delta := safeFloat(currentEnergy - startEnergy)
-		session.TotalEnergyAddedWh = &delta
+	for _, field := range []string{"DCChargingEnergyIn", "ACChargingEnergyIn"} {
+		startEnergy, startOK := signalFloat(startSnap, field)
+		currentEnergy, currentOK := signalFloat(currentSnap, field)
+		if startOK && currentOK && currentEnergy > startEnergy {
+			delta := safeFloat(currentEnergy - startEnergy)
+			session.TotalEnergyAddedWh = &delta
+			break
+		}
 	}
 
-	if power, ok := signalFloat(currentSnap, "ACChargingPower"); ok {
+	if power, ok := signalFloat(currentSnap, "DCChargingPower"); ok && power > 0 {
+		v := safeFloat(power)
+		session.PeakPowerW = &v
+	} else if power, ok := signalFloat(currentSnap, "ACChargingPower"); ok {
 		v := safeFloat(power)
 		session.PeakPowerW = &v
 	}
@@ -269,18 +276,27 @@ func (h *ChargingHandler) TelemetryReadings(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	rows := timelineRowsToFlat(timelineRows)
-	// Merge AC/DC power into a canonical power_kw field.
-	// DC fast-charging sessions report DCChargingPower, not ACChargingPower.
-	// Per ADR-002: if neither is present, leave power_kw as nil (not zero).
+	// The signal change feed is canonical W/Wh. Preserve this endpoint's
+	// established legacy chart contract (power_kw / energy_added in kW/kWh)
+	// strictly at the HTTP boundary; session summaries remain Wh/W.
 	for _, row := range rows {
-		ac, acOk := signal.Float64(row["power_kw"])
-		dc, dcOk := signal.Float64(row["dc_power_kw"])
-		if dcOk && dc > 0 {
-			row["power_kw"] = dc
-		} else if !acOk || ac == 0 {
-			// Neither AC nor DC has a positive value — leave power_kw as-is (nil)
+		acPowerW, acPowerOK := signal.Float64(row["power_kw"])
+		dcPowerW, dcPowerOK := signal.Float64(row["dc_power_w"])
+		if dcPowerOK && dcPowerW > 0 {
+			row["power_kw"] = safeFloat(dcPowerW / 1000.0)
+		} else if acPowerOK {
+			row["power_kw"] = safeFloat(acPowerW / 1000.0)
 		}
-		delete(row, "dc_power_kw")
+
+		acEnergyWh, acEnergyOK := signal.Float64(row["energy_added"])
+		dcEnergyWh, dcEnergyOK := signal.Float64(row["dc_energy_wh"])
+		if dcEnergyOK && dcEnergyWh > 0 {
+			row["energy_added"] = safeFloat(dcEnergyWh / 1000.0)
+		} else if acEnergyOK {
+			row["energy_added"] = safeFloat(acEnergyWh / 1000.0)
+		}
+		delete(row, "dc_power_w")
+		delete(row, "dc_energy_wh")
 	}
 	// Rename "ts" → "created_at" to match old ChargeTelemetryReading JSON shape
 	for _, row := range rows {

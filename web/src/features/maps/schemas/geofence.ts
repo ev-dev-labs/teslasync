@@ -7,6 +7,7 @@
  */
 
 import { z } from 'zod'
+import { GEOFENCE_CATEGORY_VALUES } from '../geofenceCategories'
 
 export const GEOFENCE_ALERT_TYPES = ['entry', 'exit', 'both', 'none'] as const
 
@@ -51,6 +52,7 @@ export const geofenceFormSchema = z.object({
   latitude: numericString('Latitude', { min: -90, max: 90 }),
   longitude: numericString('Longitude', { min: -180, max: 180 }),
   radius: numericString('Radius', { min: 10, max: 50000 }),
+  category: z.enum(GEOFENCE_CATEGORY_VALUES),
   alertType: z.enum(GEOFENCE_ALERT_TYPES),
   enabled: z.boolean(),
 })
@@ -63,6 +65,7 @@ export interface GeofencePayload {
   latitude: number
   longitude: number
   radius: number
+  category: (typeof GEOFENCE_CATEGORY_VALUES)[number]
   alertOnEntry: boolean
   alertOnExit: boolean
   enabled: boolean
@@ -77,6 +80,7 @@ export function toGeofencePayload(form: GeofenceFormData): GeofencePayload {
     latitude: Number(form.latitude),
     longitude: Number(form.longitude),
     radius: Number(form.radius),
+    category: form.category,
     alertOnEntry,
     alertOnExit,
     enabled: form.enabled,

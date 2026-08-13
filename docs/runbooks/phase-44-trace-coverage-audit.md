@@ -89,11 +89,12 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Matched files:
   - `internal/tracing/fsmtracer.go`
 
-## Per-iteration spans for in-API background tickers — `in_api_workers`
+## Spans for in-API background workers — `in_api_workers`
 
 - Status: **OK**
-- Instrumented files matched: 4 (threshold ≥ 4)
+- Instrumented files matched: 5 (threshold ≥ 5)
 - Matched files:
+  - `internal/api/telemetry/telemetry_sessions_charge_geofence_pricing.go`
   - `internal/app/new.go`
   - `internal/worker/gas_price_worker.go`
   - `internal/worker/maintenance_worker.go`

@@ -67,6 +67,14 @@ func TestToSI(t *testing.T) {
 		{name: "SelfDrivingMilesSinceReset/active=mi_treated_as_mi", field: "SelfDrivingMilesSinceReset", raw: 25, active: ActiveUnitMiles, want: 25 * 1609.344, eps: epsTight},
 		{name: "SelfDrivingMilesSinceReset/active=km_treated_as_mi", field: "SelfDrivingMilesSinceReset", raw: 25, active: ActiveUnitKilometers, want: 25 * 1609.344, eps: epsTight},
 
+		// Fixed charging kilo-units: Tesla emits energy in kWh and power in
+		// kW regardless of vehicle unit preferences. They bypass unit
+		// history and land in the canonical pipeline as Wh/W.
+		{name: "ACChargingEnergyIn/kWh_to_Wh", field: "ACChargingEnergyIn", raw: 15.089164733886719, active: "", want: 15089.164733886719, eps: epsLoose},
+		{name: "DCChargingEnergyIn/kWh_to_Wh", field: "DCChargingEnergyIn", raw: 42.5, active: ActiveUnitMiles, want: 42500, eps: epsTight},
+		{name: "ACChargingPower/kW_to_W", field: "ACChargingPower", raw: 7.2, active: "", want: 7200, eps: epsTight},
+		{name: "DCChargingPower/kW_to_W", field: "DCChargingPower", raw: 250, active: ActiveUnitPSI, want: 250000, eps: epsTight},
+
 		// Temperature fields.
 		{name: "DiHeatsinkTR/F", field: "DiHeatsinkTR", raw: 32, active: ActiveUnitFahrenheit, want: 0, eps: epsTight},
 		{name: "DiHeatsinkTR/C", field: "DiHeatsinkTR", raw: 25, active: ActiveUnitCelsius, want: 25, eps: epsTight},

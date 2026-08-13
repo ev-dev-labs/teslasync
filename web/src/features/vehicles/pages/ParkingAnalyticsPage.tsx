@@ -39,7 +39,6 @@ export default function ParkingAnalyticsPage() {
   const [pageNowMs] = useState(() => Date.now());
   const { start, end, setRange } = useRangeState({
     persistKey: 'parking-analytics.range',
-    defaultPresetId: '30d',
   });
 
   const drivesQuery = useDrives(vehicleIdStr, {

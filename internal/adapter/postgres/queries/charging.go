@@ -58,12 +58,13 @@ const (
 		INSERT INTO charging_sessions (
 			id, vehicle_id, charger_type, start_soc_pct, end_soc_pct,
 			total_energy_added_wh, peak_power_w, cost_decimal,
-			started_at, ended_at
+			cost_source, started_at, ended_at
 		) VALUES (
 			$1::bigint, $2::bigint, $3,
 			$4::double precision, $5::double precision,
 			$6::double precision, $7::double precision,
 			$8::numeric / 100.0,
+			'unknown',
 			$9, $10
 		)
 		ON CONFLICT (id) DO UPDATE SET
@@ -72,6 +73,11 @@ const (
 			end_soc_pct = EXCLUDED.end_soc_pct,
 			total_energy_added_wh = EXCLUDED.total_energy_added_wh,
 			peak_power_w = EXCLUDED.peak_power_w,
-			cost_decimal = EXCLUDED.cost_decimal,
+			cost_decimal = CASE
+				WHEN charging_sessions.cost_source IS NULL
+					THEN EXCLUDED.cost_decimal
+				ELSE charging_sessions.cost_decimal
+			END,
+			cost_source = COALESCE(charging_sessions.cost_source, EXCLUDED.cost_source),
 			ended_at = EXCLUDED.ended_at`
 )

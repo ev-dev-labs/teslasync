@@ -33,8 +33,8 @@ func (c *Client) GetChargingHistory(ctx context.Context, vin string, startTime, 
 	}
 	params.Set("pageNo", strconv.Itoa(pageNo))
 	params.Set("pageSize", strconv.Itoa(pageSize))
-	params.Set("sortBy", "chargeStartDateTime")
-	params.Set("sortOrder", "DESC")
+	// Tesla's sort-field allowlist is not stable; omit optional server-side
+	// sorting and let the repository/page order the persisted results.
 
 	path := "/api/1/dx/charging/history?" + params.Encode()
 	return c.doRequest(ctx, http.MethodGet, path, nil)

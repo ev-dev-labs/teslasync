@@ -3,9 +3,8 @@
 // Single source of truth for breadcrumb hierarchy. Every entry in
 // `routeRegistry.ts` MUST have a matching entry here (enforced by the unit
 // test in `__tests__/routeMeta.test.ts`). Most top-level pages have NO
-// `parent` — their breadcrumb chain is a single item, so `<Breadcrumbs>`
-// suppresses itself (length <= 1). Only nested / detail routes declare a
-// parent; those produce a >=2-item chain that actually renders.
+// `parent` and render as Home > Current Page. Nested/detail routes declare a
+// parent and render the complete hierarchy.
 
 // Pages can supply per-render label overrides (e.g. "Drive #4421" → "Trip to
 // office") via the `breadcrumbLabels` prop on `<PageContainer>`, which
@@ -23,7 +22,7 @@ export interface RouteMeta {
   defaultLabel: string;
   /**
  * Parent route pattern. The breadcrumb hook walks this chain to compose
- * the trail. Omit for top-level routes (no breadcrumb is rendered).
+ * the trail. Omit for top-level routes.
  */
   parent?: string;
 }

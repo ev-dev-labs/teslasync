@@ -57,10 +57,14 @@ func (h *EnergyFlowHandler) Get(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if v, ok := signal.Float64(snap["DCChargingPower"]); ok {
-		dcPower = &v
+		// Preserve this endpoint's established kW response contract while
+		// live signal state remains canonical W.
+		kw := v / 1000.0
+		dcPower = &kw
 	}
 	if v, ok := signal.Float64(snap["ACChargingPower"]); ok {
-		acPower = &v
+		kw := v / 1000.0
+		acPower = &kw
 	}
 	if v, ok := signal.Float64(snap["EnergyRemaining"]); ok {
 		energyRemaining = &v

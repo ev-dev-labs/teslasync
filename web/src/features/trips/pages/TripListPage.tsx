@@ -26,7 +26,8 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlBatch, useUrlNumber, useUrlString } from '@/hooks/useUrlState';
+import { useUrlBatch, useUrlNumber } from '@/hooks/useUrlState';
+import { useRangeState } from '@/hooks/useRangeState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtInt } from '@/lib/numberFormat';
@@ -84,15 +85,15 @@ export default function TripListPage() {
 
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
-  const defaultStart = useMemo(() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 365);
-    return d.toISOString().split('T')[0];
-  }, []);
-  const defaultEnd = useMemo(() => new Date().toISOString().split('T')[0], []);
-  const [startDate] = useUrlString('from', defaultStart);
-  const [endDate] = useUrlString('to', defaultEnd);
-  const setRangeBatch = useUrlBatch();
+  const {
+    start: startDate,
+    end: endDate,
+    setRangeWithUrlUpdates,
+  } = useRangeState({
+    persistKey: 'trips.list.range',
+    defaultPresetId: '1y',
+  });
+  const setUrlBatch = useUrlBatch();
 
   const tripsQuery = useTrips({
     vehicle_id: vehicleId ?? undefined,
@@ -128,7 +129,7 @@ export default function TripListPage() {
           <RangePicker
             value={{ start: startDate, end: endDate }}
             onChange={(r) => {
-              setRangeBatch({ from: r.start, to: r.end, page: null });
+              setRangeWithUrlUpdates(r, { page: null });
             }}
             align="end"
             triggerTestId="trip-list-range"
@@ -207,7 +208,7 @@ export default function TripListPage() {
               total={estimatedTotal}
               onPageChange={setPage}
               onPageSizeChange={(s) => {
-                setRangeBatch({ size: String(s), page: null });
+                setUrlBatch({ size: String(s), page: null });
               }}
             />
           </FadeIn>

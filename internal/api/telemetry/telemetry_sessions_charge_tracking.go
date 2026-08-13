@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
-	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -92,8 +91,9 @@ type streamingCharge struct {
 	lastTelemetryWrite time.Time
 
 	// Location
-	Latitude  *float64
-	Longitude *float64
+	Latitude      *float64
+	Longitude     *float64
+	LocationFresh bool
 
 	// Temperature accumulators
 	InsideTempSum, OutsideTempSum float64
@@ -120,6 +120,64 @@ type streamingCharge struct {
 	// was installed via SetChargeStateReader — the enrichment code path
 	// then degrades gracefully to empty snapshot maps.
 	state signal.StateReader
+}
+
+func freshChargeCoordinateValue(v *signal.Value, at time.Time) bool {
+	if at.IsZero() {
+		at = time.Now().UTC()
+	}
+	return signal.IsLiveSignalFresh(v, at) &&
+		!v.Timestamp.After(at.Add(signal.LiveSignalFreshnessThreshold))
+}
+
+func firstStoredSignal(store *signal.Store, vehicleID int64, keys ...string) *signal.Value {
+	if store == nil {
+		return nil
+	}
+	for _, key := range keys {
+		if value := store.Get(vehicleID, key); value != nil {
+			return value
+		}
+	}
+	return nil
+}
+
+// chargeLocationIsFresh confirms that the coordinates resolved for a charge
+// came from the current telemetry window. Auto-discovery must never act on a
+// forward-folded location from a prior drive.
+func (t *TelemetrySessionTracker) chargeLocationIsFresh(
+	vehicleID int64,
+	signals map[string]interface{},
+	fieldTs map[string]time.Time,
+	payloadTs, at time.Time,
+) bool {
+	if _, _, ok := signalLatLon(signals); ok {
+		observedAt := time.Time{}
+		for _, key := range []string{
+			"Location",
+			"LocationLatitude",
+			"LocationLongitude",
+			"Latitude",
+			"Longitude",
+		} {
+			if ts := fieldTs[key]; !ts.IsZero() &&
+				(observedAt.IsZero() || ts.Before(observedAt)) {
+				observedAt = ts
+			}
+		}
+		if observedAt.IsZero() {
+			observedAt = payloadTs
+		}
+		if observedAt.IsZero() {
+			observedAt = at
+		}
+		return freshChargeCoordinateValue(&signal.Value{Timestamp: observedAt}, at)
+	}
+
+	latValue := firstStoredSignal(t.localSignals, vehicleID, "LocationLatitude", "Latitude")
+	lonValue := firstStoredSignal(t.localSignals, vehicleID, "LocationLongitude", "Longitude")
+	return freshChargeCoordinateValue(latValue, at) &&
+		freshChargeCoordinateValue(lonValue, at)
 }
 
 func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID int64, vin string, signals map[string]interface{}, accumulatedSignals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
@@ -165,11 +223,17 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			startTs = payloadTs
 		}
 		startTs = eventTimeOrNow(startTs)
+		locationFresh := hasLoc &&
+			t.chargeLocationIsFresh(vehicleID, signals, fieldTs, payloadTs, startTs)
 
 		session := &chargingmodel.ChargingSession{
 			VehicleID:   vehicleID,
 			StartedAt:   startTs,
 			StartSocPct: floatPtr(float64(batteryLevel)),
+		}
+		if locationFresh {
+			session.StartLat = floatPtr(lat)
+			session.StartLng = floatPtr(lon)
 		}
 
 		if err := t.chargeRepo.Create(ctx, session); err != nil {
@@ -190,6 +254,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		if hasLoc {
 			sc.Latitude = floatPtr(lat)
 			sc.Longitude = floatPtr(lon)
+			sc.LocationFresh = locationFresh
 		}
 		if startRange > 0 {
 			sc.StartRangeKm = floatPtr(startRange)
@@ -197,6 +262,23 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 		t.activeCharges[vehicleID] = sc
 		metrics.ChargeSessionsActive.Inc()
+
+		// Surface a newly discovered charging place as soon as a confirmed
+		// charge starts. The same idempotent routine runs again at completion
+		// once energy is known, when it can also calculate the session cost.
+		if sc.LocationFresh && t.geofenceRepo != nil {
+			sessionID, startLat, startLon := sc.SessionID, *sc.Latitude, *sc.Longitude
+			safeGo("charge_geofence_discovery", func() {
+				t.applyGeofencePricingAsync(
+					sessionID,
+					vehicleID,
+					startLat,
+					startLon,
+					startTs,
+					map[string]interface{}{},
+				)
+			})
+		}
 
 		// Accumulate and flush first reading immediately
 		sc.accumulatedSignals = accumulateSignals(sc.accumulatedSignals, signals)
@@ -211,6 +293,18 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 	} else if isCharging && hasCharge {
 		// === UPDATE ACTIVE CHARGE ===
 		active.LastSeen = time.Now().UTC()
+		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok &&
+			t.chargeLocationIsFresh(
+				vehicleID,
+				signals,
+				fieldTs,
+				payloadTs,
+				eventTimeOrNow(payloadTs),
+			) {
+			active.Latitude = floatPtr(lat)
+			active.Longitude = floatPtr(lon)
+			active.LocationFresh = true
+		}
 
 		// Track energy
 		if ea, ok := signalFloat(signals, "DCChargingEnergyIn"); ok {
@@ -265,6 +359,18 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	} else if !isCharging && hasCharge {
 		// === CHARGE ENDED ===
+		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok &&
+			t.chargeLocationIsFresh(
+				vehicleID,
+				signals,
+				fieldTs,
+				payloadTs,
+				eventTimeOrNow(payloadTs),
+			) {
+			active.Latitude = floatPtr(lat)
+			active.Longitude = floatPtr(lon)
+			active.LocationFresh = true
+		}
 		t.completeChargeLocked(ctx, vehicleID, active, signals, payloadTs)
 	}
 }
@@ -511,9 +617,16 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		}
 	}
 
-	// Default cost_currency — will be overridden when geofence electricity pricing is implemented
-	// TODO: Set from geofence.ElectricityCurrency when Geofence model gains that field
-	enhancedFields["cost_currency"] = "USD"
+	// cost_currency / cost_decimal / geofence_id / rate_id / cost_source are
+	// intentionally NOT defaulted here. Charging-place pricing (see
+	// applyGeofencePricingAsync below) resolves/creates the session's
+	// geofence and looks up its rate keyed on StartTime — that can only
+	// happen after this function knows a location, and per the hot-path
+	// rule it must never block synchronous charge completion, so it always
+	// runs in the async leg alongside the existing place-name resolution. A
+	// session with no location, or a geofence with no rate configured yet,
+	// is left with cost_source unset (implicitly "unknown") rather than a
+	// fabricated currency — see repriceEligibleCostSources precedence.
 
 	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
 		var endSocPct *float64
@@ -590,57 +703,31 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			}
 		}
 
-		// TODO: Auto-calculate charge cost from geofence electricity rate.
-		// Geofence model does not yet have ElectricityRate/ElectricityCurrency fields.
-		// When added, compute: cost_decimal = energyAddedWh * ratePerWh, cost_currency = geofence.ElectricityCurrency.
+		// Geofence attribution + rate-based cost calculation happen in the
+		// async leg below (applyGeofencePricingAsync) — never inside this
+		// transaction: discovery involves an advisory-lock round trip and
+		// must not add latency/failure surface to charge completion itself.
 
 		return nil
 	}); err != nil {
 		log.Error().Err(err).Int64("session_id", active.SessionID).Msg("telemetry: failed to complete charge")
 	}
 
-	// Resolve location name async — geocoding stays outside the transaction
-	if len(enhancedFields) > 0 && active.Latitude != nil && active.Longitude != nil {
+	// Resolve place name + charging-place geofence/rate attribution async —
+	// geocoding, discovery, and pricing all stay outside the completion
+	// transaction. Guarded on location alone (NOT len(enhancedFields) > 0 —
+	// removing the old blanket cost_currency default made enhancedFields
+	// legitimately empty on many sessions, and we must still attempt place
+	// resolution + geofence pricing whenever coordinates are available).
+	if active.LocationFresh && active.Latitude != nil && active.Longitude != nil {
 		fieldsCopy := make(map[string]interface{}, len(enhancedFields)+1)
 		for k, v := range enhancedFields {
 			fieldsCopy[k] = v
 		}
-		go func(sessionID int64, lat, lon float64, fields map[string]interface{}) {
-			gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
-			defer cancel()
-
-			// 1. Check geofences first (user-defined name)
-			if geofences, err := t.geofenceRepo.FindByCoordinates(gctx, lat, lon); err == nil && len(geofences) > 0 {
-				fields["start_place"] = geofences[0].Name
-				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
-				return
-			}
-
-			// 2. Check places cache (previously resolved, within 50m)
-			if cached, err := t.placesCache.FindNearby(gctx, lat, lon, 50); err == nil && cached != nil {
-				_ = t.placesCache.IncrementHitCount(gctx, cached.ID)
-				fields["start_place"] = cached.DisplayName
-				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
-				return
-			}
-
-			// 3. Reverse geocode and cache the result
-			result, err := t.geocoder.ReverseGeocode(gctx, lat, lon)
-			if err != nil {
-				_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
-				return
-			}
-			name := result.ShortName()
-			fields["start_place"] = name
-			_ = t.chargeRepo.PartialUpdate(gctx, sessionID, fields)
-
-			// Save to cache
-			_ = t.placesCache.Upsert(gctx, &dbadmin.PlaceCacheEntry{
-				Latitude: lat, Longitude: lon, DisplayName: name, Source: "geocoding",
-				City: ptrStrOrNil(result.City), State: ptrStrOrNil(result.State),
-				Country: ptrStrOrNil(result.Country), Postcode: ptrStrOrNil(result.PostCode),
-			})
-		}(active.SessionID, *active.Latitude, *active.Longitude, fieldsCopy)
+		sessionID, lat, lon, startedAt := active.SessionID, *active.Latitude, *active.Longitude, active.StartTime
+		safeGo("charge_geofence_pricing", func() {
+			t.applyGeofencePricingAsync(sessionID, vehicleID, lat, lon, startedAt, fieldsCopy)
+		})
 	}
 
 	log.Info().Int64("vehicle_id", vehicleID).Int64("session_id", active.SessionID).

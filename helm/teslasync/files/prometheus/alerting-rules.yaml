@@ -242,3 +242,63 @@ groups:
           summary: "SLO frontend_lcp slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
           description: "Error budget for SLO \"frontend_lcp\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_geofence_pricing_read_availability_burn
+    rules:
+      - alert: SLOGeofencePricingReadAvailabilityFastBurn
+        expr: "(1 - slo:geofence_pricing_read_availability:ratio_rate1h) > 0.072000 and (1 - slo:geofence_pricing_read_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "geofence_pricing_read_availability"
+          owner: "platform"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO geofence_pricing_read_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"geofence_pricing_read_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOGeofencePricingReadAvailabilitySlowBurn
+        expr: "(1 - slo:geofence_pricing_read_availability:ratio_rate6h) > 0.030000 and (1 - (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[30m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[30m]))), 1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "geofence_pricing_read_availability"
+          owner: "platform"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO geofence_pricing_read_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"geofence_pricing_read_availability\" (objective 99.5%, owner platform) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_geofence_pricing_write_availability_burn
+    rules:
+      - alert: SLOGeofencePricingWriteAvailabilityFastBurn
+        expr: "(1 - slo:geofence_pricing_write_availability:ratio_rate1h) > 0.144000 and (1 - slo:geofence_pricing_write_availability:ratio_rate5m) > 0.144000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "geofence_pricing_write_availability"
+          owner: "platform"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO geofence_pricing_write_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"geofence_pricing_write_availability\" (objective 99%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOGeofencePricingWriteAvailabilitySlowBurn
+        expr: "(1 - slo:geofence_pricing_write_availability:ratio_rate6h) > 0.060000 and (1 - (sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[30m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[30m]))), 1)) > 0.060000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "geofence_pricing_write_availability"
+          owner: "platform"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO geofence_pricing_write_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"geofence_pricing_write_availability\" (objective 99%, owner platform) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"

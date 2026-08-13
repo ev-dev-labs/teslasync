@@ -504,6 +504,29 @@ describe('InboxBody — mark all read', () => {
 /* ── 8. URL-backed filters ────────────────────────────── */
 
 describe('InboxBody — URL filters', () => {
+  it('applies a visible seven-day range when the URL has no dates', async () => {
+    installRequest({ logs: () => Promise.resolve([]) });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+
+    await waitFor(() => expect(flatCalls().length).toBeGreaterThanOrEqual(1));
+    const params = new URL(
+      String(flatCalls()[0][0]),
+      'http://teslasync.local',
+    ).searchParams;
+    const from = params.get('from');
+    const to = params.get('to');
+
+    expect(from).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(to).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    const inclusiveDays =
+      Math.round(
+        (Date.parse(`${to}T00:00:00Z`) - Date.parse(`${from}T00:00:00Z`)) /
+          86_400_000,
+      ) + 1;
+    expect(inclusiveDays).toBe(7);
+    expect(screen.getByText('Last 7 days')).toBeInTheDocument();
+  });
+
   it('threads URL filters into the request as snake_case params without the /api/v1 prefix', async () => {
     installRequest({ logs: () => Promise.resolve([]) });
     renderInbox({ route: '/notifications/inbox?view=flat&severity=critical&vehicle_id=1' });

@@ -12,6 +12,7 @@ describe('<RangePicker /> trigger', () => {
     render(<RangePicker {...baseProps} onChange={vi.fn()} />);
     const trigger = screen.getByRole('button', { name: /date range/i });
     expect(trigger).toBeInTheDocument();
+    expect(trigger).toHaveTextContent('Custom range');
     // The readout always renders the resolved dates.
     expect(trigger).toHaveTextContent(/jan/i);
   });

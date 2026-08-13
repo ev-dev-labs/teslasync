@@ -61,7 +61,7 @@ export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, is
       onClick={handleActivate}
       onKeyDown={handleKeyDown}
       className={cn(
-        'p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[100px] justify-center cursor-pointer relative group select-none',
+        'p-3 sm:p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[116px] justify-center cursor-pointer relative group select-none',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
         hoverStyles[variant] ?? hoverStyles.default,
         loading && 'opacity-50 cursor-not-allowed',
@@ -74,12 +74,14 @@ export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, is
         onClick={handleToggleFavorite}
         aria-pressed={isFavorite}
         className={cn(
-          'absolute left-1.5 top-1.5 h-auto rounded p-0.5 transition-opacity hover:bg-transparent',
-          isFavorite ? 'opacity-100 text-amber-300' : 'opacity-0 group-hover:opacity-50 text-[var(--text-muted)]',
+          'absolute left-0 top-0 min-h-11 min-w-11 rounded p-0 transition-opacity hover:bg-transparent',
+          isFavorite
+            ? 'opacity-100 text-amber-300'
+            : 'opacity-60 text-[var(--text-muted)] focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-60',
         )}
         aria-label={t('commands.toggleFavorite', 'Toggle favorite')}
       >
-        <Star className={cn('h-3 w-3', isFavorite && 'fill-current')} aria-hidden="true" />
+        <Star className={cn('h-3.5 w-3.5', isFavorite && 'fill-current')} aria-hidden="true" />
       </ControlButton>
 
       <div className="rounded-xl p-2.5 transition-colors bg-[var(--surface-2)] text-[var(--text-muted)]">

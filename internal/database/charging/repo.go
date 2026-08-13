@@ -9,6 +9,7 @@ import (
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/rs/zerolog/log"
 )
 
 // ChargingRepo provides charging session data access against the SI canonical
@@ -26,7 +27,8 @@ const chargingColumns = `id, vehicle_id, started_at, ended_at,
 start_soc_pct, end_soc_pct, delta_soc_pct,
 start_odometer_m, end_odometer_m, start_lat, start_lng,
 start_place, total_energy_added_wh, peak_power_w, avg_power_w,
-cost_decimal, cost_currency, cable_type, charger_type`
+cost_decimal, cost_currency, cable_type, charger_type,
+geofence_id, rate_id, cost_source`
 
 func scanChargingSession(row interface{ Scan(dest ...any) error }) (*chargingmodel.ChargingSession, error) {
 	c := &chargingmodel.ChargingSession{}
@@ -36,6 +38,7 @@ func scanChargingSession(row interface{ Scan(dest ...any) error }) (*chargingmod
 		&c.StartOdometerM, &c.EndOdometerM, &c.StartLat, &c.StartLng,
 		&c.StartPlace, &c.TotalEnergyAddedWh, &c.PeakPowerW, &c.AvgPowerW,
 		&c.CostDecimal, &c.CostCurrency, &c.CableType, &c.ChargerType,
+		&c.GeofenceID, &c.RateID, &c.CostSource,
 	)
 	if err != nil {
 		return nil, err
@@ -61,7 +64,8 @@ UPDATE charging_sessions SET
 ended_at=$2, total_energy_added_wh=$3, end_soc_pct=$4,
 delta_soc_pct = CASE WHEN start_soc_pct IS NOT NULL AND $4::double precision IS NOT NULL THEN $4::double precision - start_soc_pct ELSE delta_soc_pct END,
 peak_power_w=$5, avg_power_w=$6,
-cost_decimal=$7, cost_currency=$8
+cost_decimal=COALESCE($7, cost_decimal),
+cost_currency=COALESCE($8, cost_currency)
 WHERE id=$1`
 	_, err := r.db.Pool.Exec(ctx, query, id, endTs,
 		totalEnergyAddedWh, endSocPct, peakPowerW, avgPowerW, costDecimal, costCurrency)
@@ -98,7 +102,14 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 		}
 		sessions = append(sessions, c)
 	}
-	return sessions, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := r.resolveCurrentGeofenceNames(ctx, sessions); err != nil {
+		log.Warn().Err(err).Int64("vehicle_id", vehicleID).
+			Msg("charging sessions: failed to resolve current geofence names")
+	}
+	return sessions, nil
 }
 
 func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error) {
@@ -109,6 +120,10 @@ func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*chargingmodel.Ch
 	}
 	if err != nil {
 		return nil, err
+	}
+	if err := r.resolveCurrentGeofenceNames(ctx, []*chargingmodel.ChargingSession{c}); err != nil {
+		log.Warn().Err(err).Int64("session_id", id).
+			Msg("charging session: failed to resolve current geofence name")
 	}
 	return c, nil
 }
@@ -131,7 +146,62 @@ ORDER BY started_at DESC`
 		}
 		sessions = append(sessions, c)
 	}
-	return sessions, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if err := r.resolveCurrentGeofenceNames(ctx, sessions); err != nil {
+		log.Warn().Err(err).Msg("stale charging sessions: failed to resolve current geofence names")
+	}
+	return sessions, nil
+}
+
+// resolveCurrentGeofenceNames overlays the latest user-defined geofence name
+// onto a session's stored start_place fallback. Renaming an auto-discovered
+// place therefore improves historical charging labels without rewriting
+// session rows; if the geofence cannot be resolved, the original text stays.
+func (r *ChargingRepo) resolveCurrentGeofenceNames(ctx context.Context, sessions []*chargingmodel.ChargingSession) error {
+	ids := make(map[int64]struct{})
+	for _, session := range sessions {
+		if session != nil && session.GeofenceID != nil {
+			ids[*session.GeofenceID] = struct{}{}
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	idList := make([]int64, 0, len(ids))
+	for id := range ids {
+		idList = append(idList, id)
+	}
+	rows, err := r.db.Pool.Query(ctx, `SELECT id, name FROM geofences WHERE id = ANY($1)`, idList)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+
+	names := make(map[int64]string, len(ids))
+	for rows.Next() {
+		var id int64
+		var name string
+		if err := rows.Scan(&id, &name); err != nil {
+			return err
+		}
+		names[id] = name
+	}
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	for _, session := range sessions {
+		if session == nil || session.GeofenceID == nil {
+			continue
+		}
+		if name, ok := names[*session.GeofenceID]; ok {
+			session.StartPlace = &name
+		}
+	}
+	return nil
 }
 
 var ChargingPartialAllowed = map[string]string{
@@ -151,6 +221,9 @@ var ChargingPartialAllowed = map[string]string{
 	"start_lng":             "start_lng",
 	"start_odometer_m":      "start_odometer_m",
 	"end_odometer_m":        "end_odometer_m",
+	"geofence_id":           "geofence_id",
+	"rate_id":               "rate_id",
+	"cost_source":           "cost_source",
 }
 
 func filterChargingPartialFields(in map[string]interface{}) map[string]interface{} {
@@ -225,7 +298,8 @@ UPDATE charging_sessions SET
 ended_at=$2, total_energy_added_wh=$3, end_soc_pct=$4,
 delta_soc_pct = CASE WHEN start_soc_pct IS NOT NULL AND $4::double precision IS NOT NULL THEN $4::double precision - start_soc_pct ELSE delta_soc_pct END,
 peak_power_w=$5, avg_power_w=$6,
-cost_decimal=$7, cost_currency=$8
+cost_decimal=COALESCE($7, cost_decimal),
+cost_currency=COALESCE($8, cost_currency)
 WHERE id=$1`
 	_, err := tx.Exec(ctx, query, id, endTs,
 		totalEnergyAddedWh, endSocPct, peakPowerW, avgPowerW, costDecimal, costCurrency)
@@ -255,4 +329,43 @@ UPDATE charging_telemetry
 		return 0, err
 	}
 	return tag.RowsAffected(), nil
+}
+
+// ApplyGeofenceTariff prices a single completed charging session using one
+// specific geofence rate version, computing cost_decimal via PostgreSQL
+// NUMERIC arithmetic (never Go float64 multiplication) per the SI /
+// no-binary-float-money design rule. total_energy_added_wh is already SI
+// watt-hours, so no unit conversion is needed — only a currency-safe decimal
+// multiply.
+//
+// It is idempotent and safe to call repeatedly (e.g. from the async
+// post-completion telemetry leg, which may retry): the WHERE clause can
+// replace a default estimate and reapply the SAME pinned geofence rate, while
+// NULL/unknown provenance is only eligible when cost_decimal is also NULL.
+// A different geofence rate can only replace history through the explicit
+// preview/apply flow. It never touches manual, Tesla-actual, or pre-feature
+// costs with unknown provenance. Returns whether a row was actually updated
+// (false means the session already has a protected cost, is missing energy
+// data, or does not exist).
+func (r *ChargingRepo) ApplyGeofenceTariff(ctx context.Context, sessionID, geofenceID, rateID int64, ratePerWh float64, currency string) (bool, error) {
+	const query = `
+UPDATE charging_sessions
+   SET cost_decimal  = ROUND((COALESCE(total_energy_added_wh, 0)::numeric * $4::numeric), 6),
+       cost_currency = $5,
+       geofence_id   = $2,
+       rate_id       = $3,
+       cost_source   = 'geofence_tariff'
+ WHERE id = $1
+   AND total_energy_added_wh IS NOT NULL
+   AND (
+       cost_source = 'default_estimate'
+       OR (cost_source = 'geofence_tariff' AND rate_id = $3)
+       OR (cost_source IS NULL AND cost_decimal IS NULL)
+       OR (cost_source = 'unknown' AND cost_decimal IS NULL)
+   )`
+	tag, err := r.db.Pool.Exec(ctx, query, sessionID, geofenceID, rateID, ratePerWh, currency)
+	if err != nil {
+		return false, fmt.Errorf("apply geofence tariff to session %d: %w", sessionID, err)
+	}
+	return tag.RowsAffected() > 0, nil
 }
