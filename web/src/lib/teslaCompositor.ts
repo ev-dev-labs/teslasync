@@ -84,6 +84,11 @@ export const COMPOSITOR_METRICS = {
     front: { x: 441.3, y: 458.5 },
     rear: { x: 982.3, y: 457.9 },
   },
-  /** Circular crop kept inside the rim face, in compositor-image pixels. */
-  wheelCropRadius: 44.81,
+  /**
+   * Rim crop in compositor-image pixels. The final four pixels are only a
+   * blend band: the fully rotating area still ends inside the alloy face,
+   * while the transparent outer edge lands on the natural rim/tire boundary.
+   */
+  wheelCropRadius: 54,
+  wheelCropFeather: 4,
 } as const;

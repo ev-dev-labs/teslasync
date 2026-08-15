@@ -1244,18 +1244,19 @@ function PhotoWheelSpinner({
 }) {
   const { x: cx, y: cy } = COMPOSITOR_METRICS.wheels[wheel];
 
-  // Crop radius stays strictly on the rim face:
-  // anything larger drags the tire's baked-in lighting — and, on the front
-  // wheel, the dark aero deflector ahead of the tire — around the hub,
-  // which reads as a wobbling second wheel.
+  // Keep the fully opaque crop inside the alloy face. A narrow transparent
+  // annulus reaches the natural rim/tire boundary, blending the rotation into
+  // the static photo without pulling baked-in tire lighting around the hub.
   const radius = COMPOSITOR_METRICS.wheelCropRadius;
+  const featherStart = ((radius - COMPOSITOR_METRICS.wheelCropFeather) / radius) * 100;
+  const edgeMask = `radial-gradient(circle closest-side at 50% 50%, #000 0 ${featherStart.toFixed(2)}%, transparent 100%)`;
   const size = 2 * radius * imgScale;
   const left = imgLeft + (cx - radius) * imgScale;
   const top = imgTop + (cy - radius) * imgScale;
   const shouldSpin = driveIn || driving;
 
   return (
-    <motion.div
+    <div
       aria-hidden="true"
       data-wheel-spinner={wheel}
       style={{
@@ -1266,34 +1267,47 @@ function PhotoWheelSpinner({
         height: size,
         borderRadius: '50%',
         overflow: 'hidden',
+        maskImage: edgeMask,
+        WebkitMaskImage: edgeMask,
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
         pointerEvents: 'none',
-        transformOrigin: '50% 50%',
       }}
-      initial={shouldSpin ? { rotate: 0 } : false}
-      animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
-      transition={
-        shouldSpin
-          ? {
-            duration: driving ? 0.9 : DRIVE_IN_DURATION,
-            repeat: driving ? Infinity : 0,
-            ease: 'linear',
-          }
-          : { duration: 0 }
-      }
     >
-      <img
-        src={photoUrl}
-        alt=""
-        draggable={false}
+      <motion.div
+        data-wheel-rotor={wheel}
         style={{
           position: 'absolute',
-          maxWidth: 'none',
-          width: imgWidth,
-          left: imgLeft - left,
-          top: imgTop - top,
+          inset: 0,
+          overflow: 'hidden',
+          transformOrigin: '50% 50%',
         }}
-      />
-    </motion.div>
+        initial={shouldSpin ? { rotate: 0 } : false}
+        animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
+        transition={
+          shouldSpin
+            ? {
+              duration: driving ? 0.9 : DRIVE_IN_DURATION,
+              repeat: driving ? Infinity : 0,
+              ease: 'linear',
+            }
+            : { duration: 0 }
+        }
+      >
+        <img
+          src={photoUrl}
+          alt=""
+          draggable={false}
+          style={{
+            position: 'absolute',
+            maxWidth: 'none',
+            width: imgWidth,
+            left: imgLeft - left,
+            top: imgTop - top,
+          }}
+        />
+      </motion.div>
+    </div>
   );
 }
 

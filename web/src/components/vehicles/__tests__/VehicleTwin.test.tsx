@@ -65,11 +65,16 @@ describe('VehicleTwin', () => {
 
     const cropCenter = (wheel: 'front' | 'rear') => {
       const spinner = container.querySelector<HTMLElement>(`[data-wheel-spinner="${wheel}"]`);
+      const rotor = container.querySelector<HTMLElement>(`[data-wheel-rotor="${wheel}"]`);
       expect(spinner).not.toBeNull();
+      expect(rotor).not.toBeNull();
       return {
         x: Number.parseFloat(spinner!.style.left) + Number.parseFloat(spinner!.style.width) / 2,
         y: Number.parseFloat(spinner!.style.top) + Number.parseFloat(spinner!.style.height) / 2,
-        transformOrigin: spinner!.style.transformOrigin,
+        width: Number.parseFloat(spinner!.style.width),
+        maskImage: spinner!.style.maskImage,
+        webkitMaskImage: spinner!.style.webkitMaskImage,
+        transformOrigin: rotor!.style.transformOrigin,
       };
     };
 
@@ -79,11 +84,19 @@ describe('VehicleTwin', () => {
     const front = cropCenter('front');
     expect(front.x).toBeCloseTo(126.29, 2);
     expect(front.y).toBeCloseTo(174.45, 2);
+    expect(front.width).toBeCloseTo(67.48, 2);
+    expect(front.maskImage).toContain('circle closest-side at 50% 50%');
+    expect(front.maskImage).toContain('92.59%');
+    expect(front.maskImage).toContain('transparent 100%');
+    expect(front.webkitMaskImage).toBe(front.maskImage);
     expect(front.transformOrigin).toBe('50% 50%');
 
     const rear = cropCenter('rear');
     expect(rear.x).toBeCloseTo(464.33, 2);
     expect(rear.y).toBeCloseTo(174.07, 2);
+    expect(rear.width).toBeCloseTo(67.48, 2);
+    expect(rear.maskImage).toBe(front.maskImage);
+    expect(rear.webkitMaskImage).toBe(front.maskImage);
     expect(rear.transformOrigin).toBe('50% 50%');
   });
 });
