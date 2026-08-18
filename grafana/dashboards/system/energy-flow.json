@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BatteryLevel') AS \"🔋 Avg SOC\",\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackVoltage') AS \"⚡ Avg Pack V\",\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackCurrent') AS \"🔌 Avg Pack A\",\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'EnergyRemaining') AS \"🔋 Energy kWh\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DCChargingPower') AS \"⚡ Peak DC kW\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ACChargingPower') AS \"🔌 Peak AC kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('BatteryLevel', 'PackVoltage', 'PackCurrent', 'EnergyRemaining', 'DCChargingPower', 'ACChargingPower')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "WITH battery AS (\n  SELECT\n    AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'BatteryLevel') AS avg_soc,\n    AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackVoltage') AS avg_pack_v,\n    AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PackCurrent') AS avg_pack_a,\n    AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'EnergyRemaining') AS avg_energy_kwh\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('BatteryLevel', 'PackVoltage', 'PackCurrent', 'EnergyRemaining')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n), charging AS (\n  SELECT\n    MAX(dc_charging_power_w) / 1000.0 AS peak_dc_kw,\n    MAX(ac_charging_power_w) / 1000.0 AS peak_ac_kw\n  FROM charging_telemetry\n  WHERE vehicle_id = ${vehicle_id}\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  battery.avg_soc AS \"🔋 Avg SOC\",\n  battery.avg_pack_v AS \"⚡ Avg Pack V\",\n  battery.avg_pack_a AS \"🔌 Avg Pack A\",\n  battery.avg_energy_kwh AS \"🔋 Energy kWh\",\n  charging.peak_dc_kw AS \"⚡ Peak DC kW\",\n  charging.peak_ac_kw AS \"🔌 Peak AC kW\"\nFROM battery CROSS JOIN charging",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DCChargingPower') AS \"DC Power (kW)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ACChargingPower') AS \"AC Power (kW)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DCChargingPower', 'ACChargingPower')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  dc_charging_power_w / 1000.0 AS \"DC Power (kW)\",\n  ac_charging_power_w / 1000.0 AS \"AC Power (kW)\"\nFROM charging_telemetry\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND (dc_charging_power_w IS NOT NULL OR ac_charging_power_w IS NOT NULL)\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -568,7 +568,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'BMSState'), 'N/A') AS \"BMS State\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'BmsFullchargecomplete') THEN 'Yes' ELSE 'No' END AS \"Full Charge\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'BatteryHeaterOn') THEN 'On' ELSE 'Off' END AS \"Battery Heater\",\n  ROUND(last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'IsolationResistance')::numeric) AS \"Isolation Ω\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('BMSState', 'BmsFullchargecomplete', 'BatteryHeaterOn', 'IsolationResistance')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "WITH latest AS (\n  SELECT\n    (SELECT sl.int_value\n     FROM signal_log sl\n     WHERE sl.vehicle_id = ${vehicle_id}\n       AND sl.field = 'BMSState'\n       AND sl.int_value IS NOT NULL\n       AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n     ORDER BY sl.ts DESC LIMIT 1) AS bms_state_code,\n    (SELECT sl.bool_value\n     FROM signal_log sl\n     WHERE sl.vehicle_id = ${vehicle_id}\n       AND sl.field = 'BmsFullchargecomplete'\n       AND sl.bool_value IS NOT NULL\n       AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n     ORDER BY sl.ts DESC LIMIT 1) AS full_charge,\n    (SELECT ct.battery_heater_on\n     FROM charging_telemetry ct\n     WHERE ct.vehicle_id = ${vehicle_id}\n       AND ct.battery_heater_on IS NOT NULL\n       AND ct.ts BETWEEN $__timeFrom() AND $__timeTo()\n     ORDER BY ct.ts DESC LIMIT 1) AS battery_heater_on,\n    (SELECT ms.isolation_resistance_ohm\n     FROM motor_snapshots ms\n     WHERE ms.vehicle_id = ${vehicle_id}\n       AND ms.isolation_resistance_ohm IS NOT NULL\n       AND ms.ts BETWEEN $__timeFrom() AND $__timeTo()\n     ORDER BY ms.ts DESC LIMIT 1) AS isolation_ohm\n)\nSELECT\n  CASE bms_state_code\n    WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Standby' WHEN 2 THEN 'Drive'\n    WHEN 3 THEN 'Support' WHEN 4 THEN 'Charge' WHEN 5 THEN 'FEIM'\n    WHEN 6 THEN 'Clear Fault' WHEN 7 THEN 'Fault' WHEN 8 THEN 'Weld'\n    WHEN 9 THEN 'Test' WHEN 10 THEN 'SNA'\n    ELSE CASE WHEN bms_state_code IS NULL THEN 'N/A' ELSE 'Code ' || bms_state_code::text END\n  END AS \"BMS State\",\n  CASE full_charge WHEN TRUE THEN 'Yes' WHEN FALSE THEN 'No' ELSE 'N/A' END AS \"Full Charge\",\n  CASE battery_heater_on WHEN TRUE THEN 'On' WHEN FALSE THEN 'Off' ELSE 'N/A' END AS \"Battery Heater\",\n  ROUND(isolation_ohm::numeric) AS \"Isolation Ω\"\nFROM latest",
           "refId": "A"
         }
       ],
@@ -627,7 +627,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'PowershareStatus'), 'N/A') AS \"Status\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'PowershareType'), 'N/A') AS \"Type\",\n  last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'PowershareHoursLeft') AS \"Hours Left\",\n  ROUND(last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'PowershareInstantaneousPowerKW')::numeric, 1) AS \"Power kW\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('PowershareStatus', 'PowershareType', 'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nHAVING last(str_value, ts) FILTER (WHERE field = 'PowershareStatus') IS NOT NULL",
+          "rawSql": "WITH latest AS (\n  SELECT\n    last(int_value, ts) FILTER (WHERE field = 'PowershareStatus') AS status_code,\n    last(int_value, ts) FILTER (WHERE field = 'PowershareType') AS type_code,\n    last(COALESCE(float_value, int_value::float8), ts)\n      FILTER (WHERE field = 'PowershareHoursLeft') AS hours_left,\n    last(COALESCE(float_value, int_value::float8), ts)\n      FILTER (WHERE field = 'PowershareInstantaneousPowerKW') AS power_kw\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('PowershareStatus', 'PowershareType',\n                  'PowershareHoursLeft', 'PowershareInstantaneousPowerKW')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  CASE status_code\n    WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Inactive' WHEN 2 THEN 'Handshaking'\n    WHEN 3 THEN 'Initializing' WHEN 4 THEN 'Enabled'\n    WHEN 5 THEN 'Enabled (reconnecting soon)' WHEN 6 THEN 'Stopped'\n    ELSE CASE WHEN status_code IS NULL THEN 'N/A' ELSE 'Code ' || status_code::text END\n  END AS \"Status\",\n  CASE type_code\n    WHEN 0 THEN 'Unknown' WHEN 1 THEN 'None' WHEN 2 THEN 'Load' WHEN 3 THEN 'Home'\n    ELSE CASE WHEN type_code IS NULL THEN 'N/A' ELSE 'Code ' || type_code::text END\n  END AS \"Type\",\n  hours_left AS \"Hours Left\",\n  ROUND(power_kw::numeric, 1) AS \"Power kW\"\nFROM latest\nWHERE status_code IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -643,22 +643,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

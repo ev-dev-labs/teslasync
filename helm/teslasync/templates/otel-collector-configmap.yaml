@@ -8,5 +8,5 @@ metadata:
     app.kubernetes.io/component: otel-collector
 data:
   config.yaml: |-
-{{ .Files.Get "files/otel-collector/config.yaml" | indent 4 }}
+{{ tpl (.Files.Get "files/otel-collector/config.yaml") . | indent 4 }}
 {{- end }}

@@ -23,7 +23,7 @@
       "description": "Current good/valid ratio.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,
@@ -55,7 +55,7 @@
       "description": "SLO target.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 6,
@@ -87,7 +87,7 @@
       "description": "1 - (1 - SLI_30d) / (1 - objective). Negative = budget blown.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 12,
@@ -118,7 +118,7 @@
       "title": "SLI over time (5m / 1h / 6h)",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,
@@ -160,7 +160,7 @@
       "description": "Bad-event ratio multiplied so the y-axis is in 'budgets per hour' units.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,
@@ -194,7 +194,7 @@
       "description": "Histogram of the underlying SLI denominator. Exemplars link to Tempo for trace IDs that touched the latency bucket.",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,

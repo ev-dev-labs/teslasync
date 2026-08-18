@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-critical-flows",
   "title": "TeslaSync - Critical Flow Latency (Phase-44 instrumented)",
+  "description": "Requires OTEL_ENABLED=true and docker compose --profile tracing up.",
   "tags": [
     "teslasync",
     "infra",
@@ -80,7 +81,7 @@
     {
       "id": 200,
       "type": "row",
-      "title": "Flow 2: POST /commands/{vehicleId}/wake — wake_command",
+      "title": "Flow 2: POST /vehicles/{vehicleId}/wake — wake_command",
       "gridPos": { "x": 0, "y": 17, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
@@ -93,7 +94,7 @@
       "gridPos": { "x": 0, "y": 18, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "reqps" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/vehicles/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -104,7 +105,7 @@
       "gridPos": { "x": 4, "y": 18, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] }, "unit": "percent" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/vehicles/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=~\".*/vehicles/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -116,9 +117,9 @@
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
       "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
       "targets": [
-        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.50, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P50", "refId": "A", "exemplar": true },
-        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P95", "refId": "B", "exemplar": true },
-        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/commands/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P99", "refId": "C", "exemplar": true }
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.50, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/vehicles/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P50", "refId": "A", "exemplar": true },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/vehicles/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P95", "refId": "B", "exemplar": true },
+        { "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.99, sum by (le) (rate(traces_spanmetrics_latency_bucket{http_route=~\".*/vehicles/.*/wake.*\", span_kind=\"SPAN_KIND_SERVER\"}[5m])))", "legendFormat": "P99", "refId": "C", "exemplar": true }
       ],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
@@ -129,7 +130,7 @@
       "description": "Failed wake commands. Always-sampled (status=error policy).",
       "gridPos": { "x": 0, "y": 26, "w": 24, "h": 8 },
       "options": {},
-      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route =~ \".*/commands/.*/wake.*\" && status = error }", "limit": 30, "refId": "A" }],
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route =~ \".*/vehicles/.*/wake.*\" && status = error }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     },
 

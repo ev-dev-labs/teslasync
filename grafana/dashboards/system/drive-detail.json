@@ -151,7 +151,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '10s') AS time,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'Latitude') AS latitude,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'Longitude') AS longitude,\n  convert_speed_mps(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS speed,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'BatteryLevel') AS battery_level\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('Latitude', 'Longitude', 'VehicleSpeed', 'BatteryLevel')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(p.ts, '10s') AS time,\n  last(p.lat, p.ts) AS latitude,\n  last(p.lng, p.ts) AS longitude,\n  convert_speed_mps(last(dt.speed_mps, p.ts)) AS speed,\n  last(bl.battery_level, p.ts) AS battery_level\nFROM positions p\nJOIN drives d ON d.vehicle_id = p.vehicle_id\n  AND p.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nLEFT JOIN LATERAL (\n  SELECT sample.speed_mps\n  FROM drive_telemetry sample\n  WHERE sample.vehicle_id = p.vehicle_id\n    AND sample.ts BETWEEN d.started_at AND p.ts\n    AND sample.speed_mps IS NOT NULL\n  ORDER BY sample.ts DESC\n  LIMIT 1\n) dt ON TRUE\nLEFT JOIN LATERAL (\n  SELECT COALESCE(sample.float_value, sample.int_value::float8) AS battery_level\n  FROM signal_log sample\n  WHERE sample.vehicle_id = p.vehicle_id\n    AND sample.field = 'BatteryLevel'\n    AND sample.ts BETWEEN d.started_at AND p.ts\n  ORDER BY sample.ts DESC\n  LIMIT 1\n) bl ON TRUE\nWHERE d.id = ${drive_id}\n  AND p.ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -257,7 +257,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_speed_mps(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(dt.ts, '30s') AS time,\n  convert_speed_mps(MAX(dt.speed_mps)) AS \"Speed\"\nFROM drive_telemetry dt\nJOIN drives d ON d.vehicle_id = dt.vehicle_id\n  AND dt.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND dt.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND dt.speed_mps IS NOT NULL\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -355,7 +355,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  convert_temp(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'InsideTemp')) AS \"Cabin\",\n  convert_temp(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'OutsideTemp')) AS \"Outside\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('InsideTemp', 'OutsideTemp')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(cs.ts, '30s') AS time,\n  convert_temp(MAX(cs.inside_temp_c)) AS \"Cabin\",\n  convert_temp(MAX(cs.outside_temp_c)) AS \"Outside\"\nFROM climate_snapshots cs\nJOIN drives d ON d.vehicle_id = cs.vehicle_id\n  AND cs.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND cs.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND (cs.inside_temp_c IS NOT NULL OR cs.outside_temp_c IS NOT NULL)\nGROUP BY 1\nORDER BY 1",
           "refId": "A"
         }
       ],
@@ -403,7 +403,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(sl.ts, '30s') AS time,\n  MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'DiTorqueActualF') AS \"Torque (Nm)\",\n  convert_speed_mps(MAX(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE sl.field = 'VehicleSpeed')) AS \"Speed\"\nFROM signal_log sl\nJOIN drives d ON d.vehicle_id = sl.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\nWHERE d.id = ${drive_id}\n  AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND sl.field IN ('DiTorqueActualF', 'VehicleSpeed')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "WITH samples AS (\n  SELECT\n    $__timeGroup(ms.ts, '30s') AS time,\n    MAX(ms.front_torque_nm) AS torque_nm,\n    NULL::double precision AS speed_mps\n  FROM motor_snapshots ms\n  JOIN drives d ON d.vehicle_id = ms.vehicle_id\n    AND ms.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\n  WHERE d.id = ${drive_id}\n    AND ms.ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND ms.front_torque_nm IS NOT NULL\n  GROUP BY 1\n\n  UNION ALL\n\n  SELECT\n    $__timeGroup(dt.ts, '30s') AS time,\n    NULL::double precision AS torque_nm,\n    MAX(dt.speed_mps) AS speed_mps\n  FROM drive_telemetry dt\n  JOIN drives d ON d.vehicle_id = dt.vehicle_id\n    AND dt.ts BETWEEN d.started_at AND COALESCE(d.ended_at, NOW())\n  WHERE d.id = ${drive_id}\n    AND dt.ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND dt.speed_mps IS NOT NULL\n  GROUP BY 1\n)\nSELECT\n  time,\n  MAX(torque_nm) AS \"Torque (Nm)\",\n  convert_speed_mps(MAX(speed_mps)) AS \"Speed\"\nFROM samples\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -419,22 +419,44 @@
   "templating": {
     "list": [
       {
-        "name": "drive_id",
-        "type": "textbox",
-        "current": {
-          "text": "1",
-          "value": "1"
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "label": "Drive ID"
+        "definition": "SELECT d.id AS __value, CONCAT(COALESCE(v.display_name, 'Vehicle'), ' — ', TO_CHAR(d.started_at, 'YYYY-MM-DD HH24:MI'), ' — ', COALESCE(d.start_place, 'Unknown'), ' → ', COALESCE(d.end_place, 'Unknown')) AS __text FROM drives d JOIN vehicles v ON v.id = d.vehicle_id UNION ALL SELECT 0 AS __value, 'No drives' AS __text WHERE NOT EXISTS (SELECT 1 FROM drives) ORDER BY __value DESC LIMIT 200",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "drive_id",
+        "options": [],
+        "query": "SELECT d.id AS __value, CONCAT(COALESCE(v.display_name, 'Vehicle'), ' — ', TO_CHAR(d.started_at, 'YYYY-MM-DD HH24:MI'), ' — ', COALESCE(d.start_place, 'Unknown'), ' → ', COALESCE(d.end_place, 'Unknown')) AS __text FROM drives d JOIN vehicles v ON v.id = d.vehicle_id UNION ALL SELECT 0 AS __value, 'No drives' AS __text WHERE NOT EXISTS (SELECT 1 FROM drives) ORDER BY __value DESC LIMIT 200",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query",
+        "label": "Drive"
       },
       {
-        "name": "vehicle_id",
-        "type": "textbox",
-        "current": {
-          "text": "1",
-          "value": "1"
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "label": "Vehicle ID"
+        "definition": "SELECT d.vehicle_id AS __value, COALESCE(v.display_name, d.vehicle_id::text) AS __text FROM drives d JOIN vehicles v ON v.id = d.vehicle_id WHERE d.id = ${drive_id} UNION ALL SELECT 0 AS __value, 'No drive selected' AS __text WHERE NOT EXISTS (SELECT 1 FROM drives WHERE id = ${drive_id})",
+        "hide": 2,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT d.vehicle_id AS __value, COALESCE(v.display_name, d.vehicle_id::text) AS __text FROM drives d JOIN vehicles v ON v.id = d.vehicle_id WHERE d.id = ${drive_id} UNION ALL SELECT 0 AS __value, 'No drive selected' AS __text WHERE NOT EXISTS (SELECT 1 FROM drives WHERE id = ${drive_id})",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query",
+        "label": "Vehicle"
       }
     ]
   },

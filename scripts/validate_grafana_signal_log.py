@@ -22,7 +22,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-DASHBOARD_DIR = Path("D:/repos/teslasync/grafana/dashboards/system")
+DASHBOARD_DIR = Path(__file__).resolve().parent.parent / "grafana" / "dashboards" / "system"
 PSQL = ["docker", "exec", "-i", "teslasync-postgres",
         "psql", "-U", "teslasync", "-d", "teslasync",
         "-v", "ON_ERROR_STOP=1", "-X", "-q", "-f", "-"]
@@ -32,6 +32,10 @@ def substitute_macros(sql: str) -> str:
     sql = re.sub(r"\$\{vehicle_id(?::[^}]*)?\}", "1", sql)
     sql = re.sub(r"\$\{drive_id(?::[^}]*)?\}", "1", sql)
     sql = re.sub(r"\$\{session_id(?::[^}]*)?\}", "1", sql)
+    sql = re.sub(r"\$\{unit_length(?::[^}]*)?\}", "mi", sql)
+    sql = re.sub(r"\$\{unit_temp(?::[^}]*)?\}", "°F", sql)
+    sql = re.sub(r"\$\{route_start(?::[^}]*)?\}", "'Home'", sql)
+    sql = re.sub(r"\$\{route_end(?::[^}]*)?\}", "'Work'", sql)
     sql = re.sub(r"\$\{__from(?::[^}]*)?\}", "(NOW() - INTERVAL '7 day')", sql)
     sql = re.sub(r"\$\{__to(?::[^}]*)?\}", "(NOW())", sql)
     sql = re.sub(r"\$__timeFrom\(\)", "(NOW() - INTERVAL '7 day')", sql)
@@ -54,6 +58,7 @@ def substitute_macros(sql: str) -> str:
             return f"date_trunc('{dt_unit}', {col})"
         return f"time_bucket('{bucket_map.get(unit, '1 hour')}', {col})"
     sql = re.sub(r"\$__timeGroup\(([^,]+),\s*([^)]+)\)", tg, sql)
+    sql = sql.replace("$__interval", "'5 minutes'")
 
     return sql
 
@@ -106,7 +111,7 @@ def main() -> int:
                 if not ok:
                     failures.append((jf.name, f"$var:{var.get('name','?')}", key, err, sql))
 
-    print(f"Validated {total} signal_log queries")
+    print(f"Validated {total} dashboard SQL queries")
     print(f"Failures  : {len(failures)}")
     print()
     for fname, title, ref, err, sql in failures:

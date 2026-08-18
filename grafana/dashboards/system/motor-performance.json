@@ -130,7 +130,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  COALESCE(float_value, int_value::float8) AS \"Torque (Nm)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'DiTorqueActualF'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  front_torque_nm AS \"Torque (Nm)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND front_torque_nm IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'LateralAcceleration') AS \"Lateral G\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'LongitudinalAcceleration') AS \"Longitudinal G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  lateral_acceleration_mps2 / 9.80665 AS \"Lateral G\",\n  longitudinal_acceleration_mps2 / 9.80665 AS \"Longitudinal G\"\nFROM drive_telemetry\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND (lateral_acceleration_mps2 IS NOT NULL OR longitudinal_acceleration_mps2 IS NOT NULL)\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -291,7 +291,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_temp(COALESCE(float_value, int_value::float8)) AS \"Stator Temp\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'DiStatorTempR'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_temp(rear_stator_c) AS \"Stator Temp\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND rear_stator_c IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  COALESCE(float_value, int_value::float8) AS \"Axle Speed (RPM)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'DiAxleSpeedF'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  front_axle_speed_rpm AS \"Axle Speed (RPM)\"\nFROM motor_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND front_axle_speed_rpm IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -452,7 +452,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  COALESCE(float_value, int_value::float8) AS \"Throttle (%)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'PedalPosition'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  pedal_position_pct AS \"Throttle (%)\"\nFROM drive_telemetry\nWHERE vehicle_id = ${vehicle_id}\n  AND pedal_position_pct IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -533,7 +533,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_speed_mps(COALESCE(float_value, int_value::float8)) AS \"Speed\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_speed_mps(speed_mps) AS \"Speed\"\nFROM drive_telemetry\nWHERE vehicle_id = ${vehicle_id}\n  AND speed_mps IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -598,7 +598,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT str_value AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'Gear'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND str_value IS NOT NULL\nGROUP BY str_value\nORDER BY 2 DESC",
+          "rawSql": "SELECT gear AS \"Gear\", COUNT(*) AS \"📊 Count\"\nFROM drive_telemetry\nWHERE vehicle_id = ${vehicle_id}\n  AND gear IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY gear\nORDER BY 2 DESC",
           "refId": "A"
         }
       ],
@@ -657,7 +657,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiTorqueActualF') AS \"Avg Torque (Nm)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiTorqueActualF') AS \"Peak Torque (Nm)\",\n  convert_temp(AVG(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'DiStatorTempR')) AS \"Avg Stator Temp\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'LateralAcceleration') AS \"Peak Lateral G\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DiTorqueActualF', 'DiStatorTempR', 'LateralAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "WITH motor AS (\n  SELECT\n    AVG(front_torque_nm) AS avg_torque_nm,\n    MAX(front_torque_nm) AS peak_torque_nm,\n    AVG(rear_stator_c) AS avg_stator_c\n  FROM motor_snapshots\n  WHERE vehicle_id = ${vehicle_id}\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n), dynamics AS (\n  SELECT MAX(ABS(lateral_acceleration_mps2)) / 9.80665 AS peak_lateral_g\n  FROM drive_telemetry\n  WHERE vehicle_id = ${vehicle_id}\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n)\nSELECT\n  motor.avg_torque_nm AS \"Avg Torque (Nm)\",\n  motor.peak_torque_nm AS \"Peak Torque (Nm)\",\n  convert_temp(motor.avg_stator_c) AS \"Avg Stator Temp\",\n  dynamics.peak_lateral_g AS \"Peak Lateral G\"\nFROM motor CROSS JOIN dynamics",
           "refId": "A"
         }
       ],
@@ -675,21 +675,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id FROM vehicles ORDER BY id",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id FROM vehicles ORDER BY id",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

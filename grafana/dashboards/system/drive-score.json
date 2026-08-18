@@ -63,7 +63,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Overall drive score trending over time. Each point is one drive's composite score.\nShows whether driving habits are improving or degrading.\nOrange line is the 7-drive rolling average.",
+      "description": "Composite score using TeslaSync's documented 40-point efficiency, 30-point smoothness, and 30-point speed-discipline formula. Only completed drives with all measured inputs are scored. Orange is the 7-drive rolling average.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -179,7 +179,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  (NULL::float8)::integer AS \"Score\",\n  ROUND(AVG((NULL::float8)) OVER (ORDER BY started_at ROWS BETWEEN 6 PRECEDING AND CURRENT ROW))::int AS \"7-Drive Avg\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (NULL::float8) IS NOT NULL\nORDER BY started_at",
+          "rawSql": "WITH components AS (\n  SELECT\n    started_at,\n    distance_m,\n    avg_speed_mps,\n    energy_used_wh / (distance_m / 1000.0) AS wh_per_km,\n    GREATEST(0.0, LEAST(40.0,\n      40.0 - ((energy_used_wh / (distance_m / 1000.0)) - 130.0) / 3.0\n    )) AS efficiency_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - (avg_power_w / 1000.0) / 3.0\n    )) AS smoothness_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - GREATEST(0.0, max_speed_mps * 2.2369362920544 - 90.0) / 2.0\n    )) AS speed_points\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND ended_at IS NOT NULL\n    AND distance_m > 1609.344\n    AND energy_used_wh > 0\n    AND avg_power_w IS NOT NULL\n    AND max_speed_mps IS NOT NULL\n),\nscored AS (\n  SELECT *,\n    ROUND(efficiency_points + smoothness_points + speed_points)::integer AS score\n  FROM components\n)\nSELECT\n  started_at AS time,\n  score AS \"Score\",\n  ROUND(AVG(score) OVER (\n    ORDER BY started_at ROWS BETWEEN 6 PRECEDING AND CURRENT ROW\n  ))::integer AS \"7-Drive Avg\"\nFROM scored\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -192,7 +192,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Sortable table of recent drives with computed efficiency scores, distance, average speed, and letter grade. Score is relative to the best efficiency in the time window (100 = best drive).",
+      "description": "Recent completed drives scored with TeslaSync's documented 40/30/30 efficiency, smoothness, and speed-discipline formula. Rows lacking a measured scoring input are omitted.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -341,7 +341,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH scored AS (\n  SELECT\n    started_at AS date,\n    (distance_m / 1609.344) AS distance_mi,\n    (avg_speed_mps * 2.2369362920544) AS avg_speed,\n    (NULL::float8)::integer AS score,\n    CASE\n      WHEN (NULL::float8) >= 90 THEN 'A'\n      WHEN (NULL::float8) >= 80 THEN 'B'\n      WHEN (NULL::float8) >= 70 THEN 'C'\n      WHEN (NULL::float8) >= 60 THEN 'D'\n      ELSE 'F'\n    END AS grade,\n    CASE WHEN (distance_m / 1609.344) > 0 AND (energy_used_wh / 1000.0) IS NOT NULL\n      THEN (energy_used_wh / 1000.0) * 1000 / (distance_m / 1609.344)\n      ELSE NULL END AS wh_per_mi\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND (distance_m / 1609.344) > 1\n    AND (NULL::float8) IS NOT NULL\n  ORDER BY started_at DESC\n  LIMIT 30\n)\nSELECT\n  date AS \"📅 Date\",\n  ROUND(convert_distance(scored.distance_mi)::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(scored.avg_speed)::numeric, 1) AS \"🚗 Avg Speed\",\n  (NULL::float8) AS \"⭐ Score\",\n  scored.grade AS \"🏅 Grade\",\n  CASE WHEN scored.wh_per_mi IS NOT NULL\n    THEN ROUND(convert_efficiency(scored.wh_per_mi)::numeric, 0)\n    ELSE NULL\n  END AS \"⚡ Efficiency\"\nFROM scored",
+          "rawSql": "WITH components AS (\n  SELECT\n    started_at,\n    distance_m,\n    avg_speed_mps,\n    energy_used_wh / (distance_m / 1000.0) AS wh_per_km,\n    GREATEST(0.0, LEAST(40.0,\n      40.0 - ((energy_used_wh / (distance_m / 1000.0)) - 130.0) / 3.0\n    )) AS efficiency_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - (avg_power_w / 1000.0) / 3.0\n    )) AS smoothness_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - GREATEST(0.0, max_speed_mps * 2.2369362920544 - 90.0) / 2.0\n    )) AS speed_points\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND ended_at IS NOT NULL\n    AND distance_m > 1609.344\n    AND energy_used_wh > 0\n    AND avg_power_w IS NOT NULL\n    AND max_speed_mps IS NOT NULL\n),\nscored AS (\n  SELECT *,\n    ROUND(efficiency_points + smoothness_points + speed_points)::integer AS score\n  FROM components\n)\nSELECT\n  started_at AS \"📅 Date\",\n  ROUND(convert_distance(distance_m / 1609.344)::numeric, 1) AS \"📏 Distance\",\n  ROUND(convert_speed(avg_speed_mps * 2.2369362920544)::numeric, 1) AS \"🚗 Avg Speed\",\n  score AS \"⭐ Score\",\n  CASE\n    WHEN score >= 90 THEN 'A+'\n    WHEN score >= 80 THEN 'A'\n    WHEN score >= 70 THEN 'B'\n    WHEN score >= 60 THEN 'C'\n    WHEN score >= 50 THEN 'D'\n    ELSE 'F'\n  END AS \"🏅 Grade\",\n  ROUND(convert_efficiency(wh_per_km * 1.609344)::numeric, 0) AS \"⚡ Efficiency\"\nFROM scored\nORDER BY started_at DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
@@ -354,7 +354,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Breakdown of average score by category: efficiency, smoothness, speed compliance. Shows which areas need improvement.",
+      "description": "Average normalized category scores from the same measured 40/30/30 formula used by the composite drive score.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -415,7 +415,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT 'Efficiency'::text AS \"Category\",\n  ROUND(AVG((NULL::float8))::numeric, 0) AS \"Score\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (NULL::float8) IS NOT NULL\nUNION ALL\nSELECT 'Smoothness'::text,\n  ROUND(AVG(\n    CASE WHEN (max_speed_mps * 2.2369362920544) > 0 AND (avg_speed_mps * 2.2369362920544) > 0\n      THEN LEAST(100.0, 100.0 * (avg_speed_mps * 2.2369362920544) / (max_speed_mps * 2.2369362920544))\n      ELSE NULL END\n  )::numeric, 0)\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nUNION ALL\nSELECT 'Speed'::text,\n  ROUND(AVG(\n    CASE WHEN (duration_s / 60.0) > 0 AND (distance_m / 1609.344) > 0\n      THEN LEAST(100.0, ((distance_m / 1609.344) * 1.60934 / (duration_s / 60.0) * 60.0) / 1.2)\n      ELSE NULL END\n  )::numeric, 0)\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)",
+          "rawSql": "WITH components AS (\n  SELECT\n    started_at,\n    distance_m,\n    avg_speed_mps,\n    energy_used_wh / (distance_m / 1000.0) AS wh_per_km,\n    GREATEST(0.0, LEAST(40.0,\n      40.0 - ((energy_used_wh / (distance_m / 1000.0)) - 130.0) / 3.0\n    )) AS efficiency_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - (avg_power_w / 1000.0) / 3.0\n    )) AS smoothness_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - GREATEST(0.0, max_speed_mps * 2.2369362920544 - 90.0) / 2.0\n    )) AS speed_points\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND ended_at IS NOT NULL\n    AND distance_m > 1609.344\n    AND energy_used_wh > 0\n    AND avg_power_w IS NOT NULL\n    AND max_speed_mps IS NOT NULL\n),\nscored AS (\n  SELECT *,\n    ROUND(efficiency_points + smoothness_points + speed_points)::integer AS score\n  FROM components\n)\nSELECT category AS \"Category\", ROUND(AVG(value)::numeric, 0) AS \"Score\"\nFROM scored\nCROSS JOIN LATERAL (VALUES\n  ('Efficiency'::text, efficiency_points / 40.0 * 100.0),\n  ('Smoothness'::text, smoothness_points / 30.0 * 100.0),\n  ('Speed'::text, speed_points / 30.0 * 100.0)\n) category_scores(category, value)\nGROUP BY category\nORDER BY category",
           "refId": "A"
         }
       ],
@@ -489,7 +489,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT (NULL::float8)::integer AS \"Score\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (NULL::float8) IS NOT NULL",
+          "rawSql": "WITH components AS (\n  SELECT\n    started_at,\n    distance_m,\n    avg_speed_mps,\n    energy_used_wh / (distance_m / 1000.0) AS wh_per_km,\n    GREATEST(0.0, LEAST(40.0,\n      40.0 - ((energy_used_wh / (distance_m / 1000.0)) - 130.0) / 3.0\n    )) AS efficiency_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - (avg_power_w / 1000.0) / 3.0\n    )) AS smoothness_points,\n    GREATEST(0.0, LEAST(30.0,\n      30.0 - GREATEST(0.0, max_speed_mps * 2.2369362920544 - 90.0) / 2.0\n    )) AS speed_points\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND ended_at IS NOT NULL\n    AND distance_m > 1609.344\n    AND energy_used_wh > 0\n    AND avg_power_w IS NOT NULL\n    AND max_speed_mps IS NOT NULL\n),\nscored AS (\n  SELECT *,\n    ROUND(efficiency_points + smoothness_points + speed_points)::integer AS score\n  FROM components\n)\nSELECT score AS \"Score\"\nFROM scored\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -505,22 +505,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('VehicleName','Version','Trim','ExteriorColor','RoofColor')\n    AND str_value IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT field AS \"Setting\", str_value AS \"Value\", ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
+          "rawSql": "SELECT \"Setting\", \"Value\", \"Last Updated\"\nFROM (\n  SELECT cfg.setting AS \"Setting\", cfg.value AS \"Value\", v.updated_at AS \"Last Updated\"\n  FROM vehicles v\n  CROSS JOIN LATERAL (VALUES\n    ('Vehicle Name'::text, v.display_name),\n    ('Model'::text, v.model),\n    ('Trim'::text, v.trim_level),\n    ('Exterior Color'::text, v.color)\n  ) AS cfg(setting, value)\n  WHERE v.id = ${vehicle_id}\n  UNION ALL\n  SELECT 'Software Version', su.version::text, COALESCE(su.installed_at, su.scheduled_at, su.created_at)\n  FROM software_updates su\n  WHERE su.id = (SELECT id FROM software_updates WHERE vehicle_id = ${vehicle_id} ORDER BY (status = 'installed') DESC, COALESCE(installed_at, scheduled_at, created_at) DESC LIMIT 1)\n) config\nWHERE \"Value\" IS NOT NULL AND \"Value\" <> ''\nORDER BY \"Setting\";",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, str_value AS \"Version\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'Version'\n  AND str_value IS NOT NULL\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts DESC\nLIMIT 1;",
+          "rawSql": "SELECT COALESCE(installed_at, scheduled_at, created_at) AS time, version AS \"Version\"\nFROM software_updates\nWHERE vehicle_id = ${vehicle_id}\n  AND version IS NOT NULL\nORDER BY (status = 'installed') DESC, COALESCE(installed_at, scheduled_at, created_at) DESC\nLIMIT 1;",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, bool_value, int_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('Locked','PinToDriveEnabled','ValetModeEnabled','SentryMode','SpeedLimitMode')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT\n  field AS \"Setting\",\n  COALESCE(str_value, bool_value::text, int_value::text) AS \"Value\",\n  ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
+          "rawSql": "WITH latest_valet AS (\n  SELECT to_state, ts\n  FROM security_events\n  WHERE vehicle_id = ${vehicle_id} AND event_type = 'valet_mode_enabled'\n  ORDER BY ts DESC\n  LIMIT 1\n), latest_cold AS (\n  SELECT DISTINCT ON (field) field, str_value, bool_value, int_value, float_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field IN ('PinToDriveEnabled', 'SpeedLimitMode')\n  ORDER BY field, ts DESC\n)\nSELECT 'Locked'::text AS \"Setting\", locked::text AS \"Value\", updated_at AS \"Last Updated\"\nFROM vehicle_live_state WHERE vehicle_id = ${vehicle_id} AND locked IS NOT NULL\nUNION ALL\nSELECT 'Sentry Mode', sentry_mode::text, updated_at\nFROM vehicle_live_state WHERE vehicle_id = ${vehicle_id} AND sentry_mode IS NOT NULL\nUNION ALL\nSELECT 'Valet Mode', to_state, ts FROM latest_valet\nUNION ALL\nSELECT\n  CASE field WHEN 'PinToDriveEnabled' THEN 'PIN to Drive' WHEN 'SpeedLimitMode' THEN 'Speed Limit Mode' END,\n  COALESCE(str_value, bool_value::text, int_value::text, float_value::text),\n  ts\nFROM latest_cold\nORDER BY \"Setting\";",
           "refId": "A"
         }
       ],
@@ -286,7 +286,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('DestinationName','RouteLastUpdated','RouteTrafficMinutesDelay')\n    AND str_value IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT field AS \"Setting\", str_value AS \"Value\", ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
+          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, bool_value, int_value, float_value, time_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('DestinationName', 'RouteLastUpdated', 'RouteTrafficMinutesDelay')\n  ORDER BY field, ts DESC\n)\nSELECT field AS \"Setting\",\n  COALESCE(str_value, bool_value::text, int_value::text, float_value::text, time_value::text) AS \"Value\",\n  ts AS \"Last Updated\"\nFROM latest\nWHERE COALESCE(str_value, bool_value::text, int_value::text, float_value::text, time_value::text) IS NOT NULL\nORDER BY field;",
           "refId": "A"
         }
       ],
@@ -345,7 +345,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field, str_value, bool_value, int_value, ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('Setting24HourTime','Gui24HourTime','GuiDistanceUnits',\n                  'GuiTemperatureUnits','GuiChargeRateUnits','GuiRangeDisplay')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT\n  field AS \"Setting\",\n  COALESCE(str_value, bool_value::text, int_value::text) AS \"Value\",\n  ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
+          "rawSql": "SELECT \"Setting\", \"Value\", \"Last Updated\"\nFROM (\n  SELECT '24-Hour Time'::text AS \"Setting\", COALESCE(str_value, bool_value::text, int_value::text) AS \"Value\", ts AS \"Last Updated\"\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'Setting24HourTime'\n  ORDER BY ts DESC\n  LIMIT 1\n) clock_pref\nUNION ALL\nSELECT\n  CASE unit_kind WHEN 'distance' THEN 'Distance Unit' WHEN 'temperature' THEN 'Temperature Unit' WHEN 'pressure' THEN 'Tire Pressure Unit' WHEN 'charge' THEN 'Charge Display Unit' END AS \"Setting\",\n  unit_value AS \"Value\",\n  effective_from AS \"Last Updated\"\nFROM (\n  SELECT DISTINCT ON (unit_kind) unit_kind, unit_value, effective_from\n  FROM vehicle_unit_history\n  WHERE vehicle_id = ${vehicle_id} AND unit_kind IN ('distance', 'temperature', 'pressure', 'charge')\n  ORDER BY unit_kind, effective_from DESC\n) latest_units\nORDER BY \"Setting\";",
           "refId": "A"
         }
       ],
@@ -601,22 +601,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

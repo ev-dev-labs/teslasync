@@ -102,8 +102,14 @@ data:
   GAS_PRICE_POLL_INTERVAL: {{ .Values.gasPrice.pollInterval | default "7d" | quote }}
   {{- end }}
   {{- if .Values.config.openTelemetry.enabled }}
+  {{- $otelEndpoint := tpl .Values.config.openTelemetry.endpoint . }}
+  {{- if and .Values.observability.otelCollector.enabled (eq .Values.config.openTelemetry.endpoint "jaeger:4317") }}
+  {{- $otelEndpoint = printf "%s-otel-collector:4317" (include "teslasync.fullname" .) }}
+  {{- else if and .Values.jaeger.enabled (eq .Values.config.openTelemetry.endpoint "jaeger:4317") }}
+  {{- $otelEndpoint = printf "%s-jaeger:4317" (include "teslasync.fullname" .) }}
+  {{- end }}
   OTEL_ENABLED: "true"
-  OTEL_ENDPOINT: {{ .Values.config.openTelemetry.endpoint | quote }}
+  OTEL_ENDPOINT: {{ $otelEndpoint | quote }}
   OTEL_SERVICE_NAME: {{ .Values.config.openTelemetry.serviceName | quote }}
   OTEL_INSECURE: {{ .Values.config.openTelemetry.insecure | quote }}
   {{- end }}

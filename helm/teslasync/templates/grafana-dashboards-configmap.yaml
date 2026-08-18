@@ -12,6 +12,18 @@ metadata:
     # different label.
     grafana_dashboard: "1"
 data:
+  dashboardproviders.yaml: |
+    apiVersion: 1
+    providers:
+      - name: TeslaSync SLOs
+        orgId: 1
+        folder: TeslaSync SLOs
+        type: file
+        disableDeletion: true
+        editable: false
+        updateIntervalSeconds: 30
+        options:
+          path: /var/lib/grafana/dashboards/slo
 {{- range $path, $_ := .Files.Glob "files/grafana/dashboards/*.json" }}
   {{ base $path }}: |-
 {{ $.Files.Get $path | indent 4 }}

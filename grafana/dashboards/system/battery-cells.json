@@ -343,7 +343,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT DISTINCT ON (field) field,\n    COALESCE(float_value, int_value::float8) AS val,\n    ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('PackVoltage','PackCurrent',\n                  'BrickVoltageMin','BrickVoltageMax',\n                  'NumBrickVoltageMin','NumBrickVoltageMax',\n                  'ModuleTempMin','ModuleTempMax',\n                  'NumModuleTempMin','NumModuleTempMax',\n                  'IsolationResistance')\n    AND COALESCE(float_value, int_value::float8) IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n)\nSELECT\n  field AS \"Metric\",\n  ROUND(\n    CASE\n      WHEN field LIKE 'ModuleTemp%' THEN convert_temp(val)\n      ELSE val\n    END::numeric, 4\n  ) AS \"Value\",\n  CASE\n    WHEN field LIKE 'ModuleTemp%' THEN '${unit_temp}'\n    WHEN field LIKE 'NumModule%' THEN '#'\n    WHEN field LIKE 'NumBrick%' THEN '#'\n    WHEN field LIKE '%Voltage%' THEN 'V'\n    WHEN field = 'PackCurrent' THEN 'A'\n    WHEN field = 'IsolationResistance' THEN 'Ω'\n    ELSE ''\n  END AS \"Unit\",\n  ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
+          "rawSql": "WITH latest_signal AS (\n  SELECT DISTINCT ON (field) field,\n    COALESCE(float_value, int_value::float8) AS val,\n    ts\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('PackVoltage','PackCurrent',\n                  'BrickVoltageMin','BrickVoltageMax',\n                  'NumBrickVoltageMin','NumBrickVoltageMax',\n                  'ModuleTempMin','ModuleTempMax',\n                  'NumModuleTempMin','NumModuleTempMax')\n    AND COALESCE(float_value, int_value::float8) IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY field, ts DESC\n), latest_isolation AS (\n  SELECT\n    'IsolationResistance'::text AS field,\n    isolation_resistance_ohm AS val,\n    ts\n  FROM motor_snapshots\n  WHERE vehicle_id = ${vehicle_id}\n    AND isolation_resistance_ohm IS NOT NULL\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  ORDER BY ts DESC\n  LIMIT 1\n), latest AS (\n  SELECT * FROM latest_signal\n  UNION ALL\n  SELECT * FROM latest_isolation\n)\nSELECT\n  field AS \"Metric\",\n  ROUND(\n    CASE\n      WHEN field LIKE 'ModuleTemp%' THEN convert_temp(val)\n      ELSE val\n    END::numeric, 4\n  ) AS \"Value\",\n  CASE\n    WHEN field LIKE 'ModuleTemp%' THEN '${unit_temp}'\n    WHEN field LIKE 'NumModule%' THEN '#'\n    WHEN field LIKE 'NumBrick%' THEN '#'\n    WHEN field LIKE '%Voltage%' THEN 'V'\n    WHEN field = 'PackCurrent' THEN 'A'\n    WHEN field = 'IsolationResistance' THEN 'Ω'\n    ELSE ''\n  END AS \"Unit\",\n  ts AS \"Last Updated\"\nFROM latest\nORDER BY field;",
           "refId": "A"
         }
       ],
@@ -439,13 +439,13 @@
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

@@ -21,7 +21,7 @@
       "description": "Objective: 99.5%; owner: platform",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,
@@ -64,7 +64,7 @@
       "description": "Objective: 99%; owner: platform",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 6,
@@ -107,7 +107,7 @@
       "description": "Objective: 99%; owner: ingest",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 12,
@@ -150,7 +150,7 @@
       "description": "Objective: 95%; owner: ingest",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 18,
@@ -193,7 +193,7 @@
       "description": "Objective: 99%; owner: ingest",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,
@@ -236,7 +236,7 @@
       "description": "Objective: 99%; owner: platform",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 6,
@@ -279,7 +279,7 @@
       "description": "Objective: 95%; owner: realtime",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 12,
@@ -322,7 +322,7 @@
       "description": "Objective: 90%; owner: frontend",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 18,
@@ -365,7 +365,7 @@
       "description": "Objective: 99.5%; owner: platform",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 0,
@@ -408,7 +408,7 @@
       "description": "Objective: 99%; owner: platform",
       "datasource": {
         "type": "prometheus",
-        "uid": "prometheus"
+        "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
         "x": 6,

@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-auth-deep-dive",
-  "title": "TeslaSync - Auth Login Deep-Dive (always-sampled)",
+  "title": "TeslaSync - OAuth Initiation Deep-Dive (always-sampled)",
+  "description": "GET /api/v1/auth/login creates an OAuth state and returns the Tesla authorization URL; it does not validate user credentials. Requires OTEL_ENABLED=true and the tracing stack.",
   "tags": [
     "teslasync",
     "infra",
@@ -25,7 +26,7 @@
     {
       "id": 100,
       "type": "row",
-      "title": "Headline — POST /api/v1/auth/login (100% sampled)",
+      "title": "Headline — GET /api/v1/auth/login (100% sampled)",
       "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 },
       "collapsed": false,
       "panels": []
@@ -33,30 +34,30 @@
     {
       "id": 1,
       "type": "stat",
-      "title": "Login attempts/s",
-      "description": "POST /auth/login server-span rate. The OTel collector's `auth-login-always` policy keeps 100% of these traces — distribution numbers are exact, not sampled estimates.",
+      "title": "OAuth initiations/s",
+      "description": "GET /api/v1/auth/login server-span rate. The Helm collector's `auth-login-always` policy keeps 100% of these traces; the compose collector exports every trace.",
       "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 5 }, { "color": "red", "value": 50 }] }, "unit": "reqps" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[5m])) or vector(0)", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 2,
       "type": "stat",
-      "title": "Failure rate %",
-      "description": "Failed-login fraction. Sustained > 30% during normal hours suggests credential stuffing.",
+      "title": "Non-2xx rate %",
+      "description": "Fraction of OAuth-initiation requests returning non-2xx responses. Investigate state-generation, middleware, rate-limit, or server failures.",
       "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 10 }, { "color": "red", "value": 30 }] }, "unit": "percent" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\", http_status_code!~\"2..\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * (sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\", http_response_status_code!~\"2..\"}[5m])) or vector(0)) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[5m])), 0.001)", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 3,
       "type": "stat",
-      "title": "Login P50",
-      "description": "Median login latency. Most of this is bcrypt cost.",
+      "title": "OAuth initiation P50",
+      "description": "Median time to create OAuth state and build the Tesla authorization URL, including request middleware.",
       "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "s" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
@@ -66,8 +67,8 @@
     {
       "id": 4,
       "type": "stat",
-      "title": "Login P99",
-      "description": "Tail latency. Spike here without P50 movement = slow code path (e.g., user not found → still doing bcrypt; or DB lookup blocked).",
+      "title": "OAuth initiation P99",
+      "description": "Tail latency for OAuth state creation, authorization-URL generation, and request middleware.",
       "gridPos": { "x": 12, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 3 }] }, "unit": "s" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
@@ -77,12 +78,12 @@
     {
       "id": 5,
       "type": "stat",
-      "title": "Distinct trace IDs (1h)",
-      "description": "Unique attempts in the last hour. Useful baseline for detecting bursts.",
+      "title": "Requests (1h)",
+      "description": "Estimated OAuth-initiation server calls in the last hour. This span-metrics counter does not count distinct trace IDs.",
       "gridPos": { "x": 16, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "none" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(increase(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[1h]))", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(increase(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[1h])) or vector(0)", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -96,19 +97,19 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "Login attempts vs failures over time",
-      "description": "Stacked: green=success (2xx), red=4xx (bad credentials / rate-limited), yellow=5xx (server error).",
+      "title": "OAuth initiation responses over time",
+      "description": "Stacked by response class: green=2xx, red=4xx client or rate-limit response, yellow=5xx server error.",
       "gridPos": { "x": 0, "y": 6, "w": 12, "h": 8 },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 30, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "normal" } }, "unit": "reqps" }, "overrides": [{ "matcher": { "id": "byRegexp", "options": "^2..$" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "green" } }] }, { "matcher": { "id": "byRegexp", "options": "^4..$" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "red" } }] }, { "matcher": { "id": "byRegexp", "options": "^5..$" }, "properties": [{ "id": "color", "value": { "mode": "fixed", "fixedColor": "yellow" } }] }] },
       "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum by (http_status_code) (rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "legendFormat": "{{http_status_code}}", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum by (http_response_status_code) (rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", span_kind=\"SPAN_KIND_SERVER\"}[5m]))", "legendFormat": "{{http_response_status_code}}", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 7,
       "type": "timeseries",
-      "title": "Login latency P50 / P95 / P99 (with exemplars)",
-      "description": "Click an exemplar dot to jump to that specific login trace in Tempo. Useful for inspecting outlier failures.",
+      "title": "OAuth initiation latency P50 / P95 / P99 (with exemplars)",
+      "description": "Click an exemplar dot to inspect a slow or failed OAuth-initiation trace in Tempo.",
       "gridPos": { "x": 12, "y": 6, "w": 12, "h": 8 },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
       "options": { "legend": { "calcs": ["mean", "max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
@@ -130,12 +131,12 @@
     {
       "id": 8,
       "type": "timeseries",
-      "title": "Failed-login burst rate (5m vs 1h baseline)",
-      "description": "Ratio of 5-minute failed-login rate to 1-hour baseline. Sustained > 5 = something abnormal (deploy, bot, leak).",
+      "title": "4xx burst ratio (5m vs 1h baseline)",
+      "description": "Ratio of the 5-minute 4xx rate to its 1-hour baseline. A sustained increase can indicate rate limiting, invalid clients, or a deployment regression.",
       "gridPos": { "x": 0, "y": 15, "w": 24, "h": 8 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "custom": { "drawStyle": "line", "fillOpacity": 20, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "thresholdsStyle": { "mode": "line+area" } }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 3 }, { "color": "red", "value": 5 }] }, "unit": "none" } },
       "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "bottom" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "(sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", http_status_code=~\"4..\"}[5m]))) / clamp_min(sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", http_status_code=~\"4..\"}[1h])), 0.001)", "legendFormat": "burst ratio", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "(sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", http_response_status_code=~\"4..\"}[5m])) or vector(0)) / clamp_min((sum(rate(traces_spanmetrics_calls_total{http_route=\"/api/v1/auth/login\", http_response_status_code=~\"4..\"}[1h])) or vector(0)), 0.001)", "legendFormat": "burst ratio", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -149,18 +150,18 @@
     {
       "id": 9,
       "type": "traces",
-      "title": "Recent failed-login traces (4xx)",
-      "description": "All 4xx login attempts. Inspect headers / IP / user-agent in the trace tags to spot bot patterns.",
+      "title": "Recent OAuth-initiation 4xx traces",
+      "description": "OAuth-initiation traces ending in 4xx. Inspect middleware and response attributes to distinguish invalid requests from rate limiting.",
       "gridPos": { "x": 0, "y": 24, "w": 24, "h": 10 },
       "options": {},
-      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route = \"/api/v1/auth/login\" && span.http.status_code >= 400 && span.http.status_code < 500 }", "limit": 50, "refId": "A" }],
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route = \"/api/v1/auth/login\" && span.http.response.status_code >= 400 && span.http.response.status_code < 500 }", "limit": 50, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     },
     {
       "id": 10,
       "type": "traces",
-      "title": "Slow login traces (>1s)",
-      "description": "Slow logins. P99 spike investigation starts here — typical cause is the user-not-found path doing dummy bcrypt to prevent timing attacks.",
+      "title": "Slow OAuth-initiation traces (>1s)",
+      "description": "Trace-level starting point for OAuth state generation, authorization-URL construction, or middleware taking longer than one second.",
       "gridPos": { "x": 0, "y": 34, "w": 24, "h": 10 },
       "options": {},
       "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.http.route = \"/api/v1/auth/login\" && duration > 1s }", "limit": 30, "refId": "A" }],

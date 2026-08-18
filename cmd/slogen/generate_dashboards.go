@@ -145,7 +145,7 @@ func runGenerateDashboards(args []string) error {
 	return nil
 }
 
-var prometheusDS = datasource{Type: "prometheus", UID: "prometheus"}
+var prometheusDS = datasource{Type: "prometheus", UID: "DS_TESLASYNC_PROMETHEUS"}
 
 func renderSLODashboard(s SLO) (string, error) {
 	var min0 float64 = 0

@@ -317,7 +317,7 @@
       "id": 5,
       "type": "timeseries",
       "title": "DB Query Duration P95",
-      "description": "95th percentile of database query durations",
+      "description": "95th percentile of PostgreSQL client-span durations emitted by Tempo span metrics",
       "gridPos": {
         "x": 0,
         "y": 6,
@@ -383,7 +383,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "histogram_quantile(0.95, sum by (le) (rate(teslasync_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{span_kind=\"SPAN_KIND_CLIENT\", db_system=\"postgresql\"}[5m]))) or vector(0)",
           "legendFormat": "P95 Query Duration",
           "refId": "A",
           "range": true,
@@ -399,7 +399,7 @@
       "id": 6,
       "type": "timeseries",
       "title": "HTTP Request Rate by Method",
-      "description": "Rate of database queries grouped by operation type",
+      "description": "Rate of HTTP requests grouped by request method",
       "gridPos": {
         "x": 12,
         "y": 6,
@@ -414,7 +414,7 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisLabel": "queries/s",
+          "axisLabel": "requests/s",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -481,7 +481,7 @@
       "id": 7,
       "type": "timeseries",
       "title": "Signal Store Entries",
-      "description": "Database connection pool usage by state",
+      "description": "Current number of entries retained in the live signal store",
       "gridPos": {
         "x": 0,
         "y": 14,
@@ -496,7 +496,7 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisLabel": "connections",
+          "axisLabel": "entries",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -563,7 +563,7 @@
       "id": 8,
       "type": "timeseries",
       "title": "HTTP Requests by Status",
-      "description": "Rate of database transactions by result",
+      "description": "Rate of HTTP requests grouped by response status",
       "gridPos": {
         "x": 12,
         "y": 14,
@@ -578,7 +578,7 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisLabel": "tx/s",
+          "axisLabel": "requests/s",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -741,7 +741,7 @@
       "id": 10,
       "type": "timeseries",
       "title": "Telemetry Messages Rate",
-      "description": "Rate of polls grouped by result (stacked)",
+      "description": "Rate of Fleet Telemetry MQTT messages received",
       "gridPos": {
         "x": 8,
         "y": 23,
@@ -756,7 +756,7 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisLabel": "polls/s",
+          "axisLabel": "messages/s",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -823,7 +823,7 @@
       "id": 11,
       "type": "piechart",
       "title": "Streaming Vehicles Active",
-      "description": "Distribution of saved polls by reason",
+      "description": "Number of vehicles currently streaming Fleet Telemetry",
       "gridPos": {
         "x": 16,
         "y": 23,
@@ -896,7 +896,7 @@
       "id": 12,
       "type": "timeseries",
       "title": "SSE Connections Active",
-      "description": "Ratio of cache hits to total cache operations",
+      "description": "Number of active Server-Sent Events client connections",
       "gridPos": {
         "x": 0,
         "y": 32,
@@ -939,9 +939,8 @@
               "mode": "off"
             }
           },
-          "unit": "percentunit",
-          "min": 0,
-          "max": 1
+        "unit": "short",
+        "min": 0
         },
         "overrides": []
       },
@@ -966,7 +965,7 @@
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
           "expr": "teslasync_sse_connections_active",
-          "legendFormat": "Cache Hit Rate",
+          "legendFormat": "Active connections",
           "refId": "A",
           "range": true,
           "instant": false
@@ -1048,7 +1047,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "rate(teslasync_alerts_evaluated_total[5m])",
+          "expr": "rate(teslasync_cep_rules_evaluated_total[5m])",
           "legendFormat": "Alerts Evaluated",
           "refId": "A",
           "range": true,
@@ -1063,8 +1062,8 @@
     {
       "id": 14,
       "type": "timeseries",
-      "title": "Alerts Evaluation Rate",
-      "description": "Rate of alerts fired by severity",
+      "title": "Alerts Fired Rate",
+      "description": "Rate of alert rules fired, grouped by severity",
       "gridPos": {
         "x": 16,
         "y": 32,
@@ -1130,8 +1129,8 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "rate(teslasync_alerts_evaluated_total[5m])",
-          "legendFormat": "Evaluations/s",
+          "expr": "sum by (severity) (rate(teslasync_cep_rules_fired_total[5m])) or label_replace(vector(0), \"severity\", \"none\", \"\", \"\")",
+          "legendFormat": "{{severity}}",
           "refId": "A",
           "range": true,
           "instant": false
@@ -1159,7 +1158,7 @@
       "id": 15,
       "type": "timeseries",
       "title": "MQTT Messages Published",
-      "description": "Rate of notifications sent by channel type and result",
+      "description": "Rate of MQTT messages published by TeslaSync",
       "gridPos": {
         "x": 0,
         "y": 41,
@@ -1174,7 +1173,7 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisLabel": "notifs/s",
+          "axisLabel": "messages/s",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -1241,7 +1240,7 @@
       "id": 18,
       "type": "timeseries",
       "title": "MQTT Connected",
-      "description": "Rate of OAuth token refresh operations by result",
+      "description": "MQTT broker connection state (1 connected, 0 disconnected)",
       "gridPos": {
         "x": 12,
         "y": 41,
@@ -1256,7 +1255,7 @@
           "custom": {
             "axisBorderShow": false,
             "axisCenteredZero": false,
-            "axisLabel": "refreshes/s",
+          "axisLabel": "connected",
             "axisPlacement": "auto",
             "barAlignment": 0,
             "drawStyle": "line",
@@ -1322,7 +1321,7 @@
     {
       "id": 16,
       "type": "stat",
-      "title": "Maintenance Runs",
+      "title": "Backup Runs",
       "description": "Total number of backup runs completed",
       "gridPos": {
         "x": 0,
@@ -1370,7 +1369,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "teslasync_maintenance_runs_total",
+          "expr": "sum(teslasync_backup_runs_total) or vector(0)",
           "legendFormat": "Backups",
           "refId": "A",
           "instant": true,

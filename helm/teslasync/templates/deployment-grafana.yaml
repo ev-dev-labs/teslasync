@@ -55,13 +55,40 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.grafana.persistence.enabled }}
           volumeMounts:
+            - name: grafana-datasources
+              mountPath: /etc/grafana/provisioning/datasources
+              readOnly: true
+            - name: grafana-dashboard-provider
+              mountPath: /etc/grafana/provisioning/dashboards/dashboardproviders.yaml
+              subPath: dashboardproviders.yaml
+              readOnly: true
+            - name: grafana-dashboards
+              mountPath: /var/lib/grafana/dashboards/slo
+              readOnly: true
+          {{- if .Values.grafana.persistence.enabled }}
             - name: grafana-data
               mountPath: /var/lib/grafana
           {{- end }}
-      {{- if .Values.grafana.persistence.enabled }}
       volumes:
+        - name: grafana-datasources
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-grafana-datasources
+        - name: grafana-dashboard-provider
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-grafana-dashboards-slo
+            items:
+              - key: dashboardproviders.yaml
+                path: dashboardproviders.yaml
+        - name: grafana-dashboards
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-grafana-dashboards-slo
+            items:
+              {{- range $path, $_ := .Files.Glob "files/grafana/dashboards/*.json" }}
+              - key: {{ base $path }}
+                path: {{ base $path }}
+              {{- end }}
+      {{- if .Values.grafana.persistence.enabled }}
         - name: grafana-data
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-grafana-data

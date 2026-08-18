@@ -119,11 +119,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT soh_pct AS \"Health %\"\nFROM tesla_battery_passport_ledger\nWHERE vehicle_id = ${vehicle_id}\n  AND soh_pct IS NOT NULL\nORDER BY issued_at DESC\nLIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Battery Health Score (Unavailable)",
+      "title": "Battery Health Score",
       "type": "gauge",
       "transparent": false
     },
@@ -179,11 +179,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT ROUND((100.0 - soh_pct)::numeric, 2) AS \"%\"\nFROM tesla_battery_passport_ledger\nWHERE vehicle_id = ${vehicle_id}\n  AND soh_pct IS NOT NULL\nORDER BY issued_at DESC\nLIMIT 1",
           "refId": "A"
         }
       ],
-      "title": "Degradation (Unavailable)",
+      "title": "Degradation",
       "type": "stat",
       "transparent": false
     },
@@ -239,11 +239,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "WITH recent AS (\n  SELECT\n    (COALESCE(ac_energy_added_wh, 0) + COALESCE(dc_energy_added_wh, 0))\n      / NULLIF((max_soc - min_soc) / 100.0, 0) AS capacity_wh\n  FROM cagg_battery_daily\n  WHERE vehicle_id = ${vehicle_id}\n    AND max_soc IS NOT NULL\n    AND min_soc IS NOT NULL\n    AND (max_soc - min_soc) >= 20\n    AND (COALESCE(ac_energy_added_wh, 0) + COALESCE(dc_energy_added_wh, 0)) > 0\n  ORDER BY bucket DESC\n  LIMIT 8\n)\nSELECT ROUND((PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY capacity_wh) / 1000.0)::numeric, 1) AS \"⚡ kWh\"\nFROM recent\nHAVING COUNT(*) > 0",
           "refId": "A"
         }
       ],
-      "title": "Capacity (Unavailable)",
+      "title": "Estimated Usable Capacity",
       "type": "stat",
       "transparent": false
     },
@@ -298,11 +298,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT FLOOR(COALESCE(SUM(GREATEST(end_soc_pct - start_soc_pct, 0)), 0) / 100.0)::bigint AS \"Cycles\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}\n  AND end_soc_pct > start_soc_pct",
           "refId": "A"
         }
       ],
-      "title": "Cycle Count (Unavailable)",
+      "title": "Equivalent Charge Cycles",
       "type": "stat",
       "transparent": false
     },
@@ -507,11 +507,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT\n  bucket AS time,\n  ROUND((((COALESCE(ac_energy_added_wh, 0) + COALESCE(dc_energy_added_wh, 0))\n    / NULLIF((max_soc - min_soc) / 100.0, 0)) / 1000.0)::numeric, 1) AS \"Capacity kWh\"\nFROM cagg_battery_daily\nWHERE vehicle_id = ${vehicle_id}\n  AND bucket BETWEEN $__timeFrom() AND $__timeTo()\n  AND max_soc IS NOT NULL\n  AND min_soc IS NOT NULL\n  AND (max_soc - min_soc) >= 20\n  AND (COALESCE(ac_energy_added_wh, 0) + COALESCE(dc_energy_added_wh, 0)) > 0\nORDER BY bucket",
           "refId": "A"
         }
       ],
-      "title": "Battery Capacity Over Time (Unavailable)",
+      "title": "Usable Capacity Estimate Over Time",
       "type": "timeseries",
       "transparent": false
     },
@@ -587,11 +587,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT issued_at AS time,\n  100.0 - soh_pct AS \"Degradation %\"\nFROM tesla_battery_passport_ledger\nWHERE vehicle_id = ${vehicle_id}\n  AND soh_pct IS NOT NULL\n  AND issued_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY issued_at",
           "refId": "A"
         }
       ],
-      "title": "Degradation % Over Time (Unavailable)",
+      "title": "Degradation % Over Time",
       "type": "timeseries",
       "transparent": false
     },
@@ -667,11 +667,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "SELECT issued_at AS time,\n  soh_pct AS \"Health %\"\nFROM tesla_battery_passport_ledger\nWHERE vehicle_id = ${vehicle_id}\n  AND soh_pct IS NOT NULL\n  AND issued_at BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY issued_at",
           "refId": "A"
         }
       ],
-      "title": "Health Score Over Time (Unavailable)",
+      "title": "Health Score Over Time",
       "type": "timeseries",
       "transparent": false
     },
@@ -798,7 +798,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  $__timeGroup(ts, '1h') AS time,\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMax')) AS \"Max Module (${unit_temp})\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMin')) AS \"Min Module (${unit_temp})\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMax'))\n    - convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMin')) AS \"Delta (\\)\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND field IN ('ModuleTempMax', 'ModuleTempMin')\nGROUP BY 1\nORDER BY 1",
+          "rawSql": "SELECT\n  $__timeGroup(ts, '1h') AS time,\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMax')) AS \"Max Module (${unit_temp})\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMin')) AS \"Min Module (${unit_temp})\",\n  convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMax'))\n    - convert_temp(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'ModuleTempMin')) AS \"Delta (${unit_temp})\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND field IN ('ModuleTempMax', 'ModuleTempMin')\nGROUP BY 1\nORDER BY 1",
           "format": "time_series",
           "refId": "A",
           "datasource": {
@@ -876,7 +876,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  $__timeGroup(ts, '5m') AS \"Time\",\n  last(str_value, ts) FILTER (WHERE field = 'BMSState') AS \"BMS State\",\n  last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'IsolationResistance') AS \"Isolation (Ω)\",\n  last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'LifetimeEnergyUsed') AS \"Lifetime Energy (kWh)\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'BatteryHeaterOn') THEN 'ON' ELSE 'Off' END AS \"Battery Heater\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND field IN ('BMSState', 'IsolationResistance', 'LifetimeEnergyUsed', 'BatteryHeaterOn')\nGROUP BY 1\nORDER BY 1 DESC\nLIMIT 20",
+          "rawSql": "WITH samples AS (\n  SELECT\n    $__timeGroup(sl.ts, '5m') AS time,\n    last(sl.int_value, sl.ts) FILTER (WHERE sl.field = 'BMSState') AS bms_state_code,\n    NULL::double precision AS isolation_ohm,\n    last(COALESCE(sl.float_value, sl.int_value::float8), sl.ts)\n      FILTER (WHERE sl.field = 'LifetimeEnergyUsed') AS lifetime_energy,\n    NULL::boolean AS battery_heater_on\n  FROM signal_log sl\n  WHERE sl.vehicle_id = ${vehicle_id}\n    AND sl.ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND sl.field IN ('BMSState', 'LifetimeEnergyUsed')\n  GROUP BY 1\n\n  UNION ALL\n\n  SELECT\n    $__timeGroup(ms.ts, '5m') AS time,\n    NULL::bigint AS bms_state_code,\n    last(ms.isolation_resistance_ohm, ms.ts) AS isolation_ohm,\n    NULL::double precision AS lifetime_energy,\n    NULL::boolean AS battery_heater_on\n  FROM motor_snapshots ms\n  WHERE ms.vehicle_id = ${vehicle_id}\n    AND ms.ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND ms.isolation_resistance_ohm IS NOT NULL\n  GROUP BY 1\n\n  UNION ALL\n\n  SELECT\n    $__timeGroup(ct.ts, '5m') AS time,\n    NULL::bigint AS bms_state_code,\n    NULL::double precision AS isolation_ohm,\n    NULL::double precision AS lifetime_energy,\n    last(ct.battery_heater_on, ct.ts) AS battery_heater_on\n  FROM charging_telemetry ct\n  WHERE ct.vehicle_id = ${vehicle_id}\n    AND ct.ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND ct.battery_heater_on IS NOT NULL\n  GROUP BY 1\n), combined AS (\n  SELECT\n    time,\n    MAX(bms_state_code) AS bms_state_code,\n    MAX(isolation_ohm) AS isolation_ohm,\n    MAX(lifetime_energy) AS lifetime_energy,\n    COUNT(battery_heater_on) AS heater_samples,\n    BOOL_OR(battery_heater_on) AS battery_heater_on\n  FROM samples\n  GROUP BY time\n)\nSELECT\n  time AS \"Time\",\n  CASE bms_state_code\n    WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Standby' WHEN 2 THEN 'Drive'\n    WHEN 3 THEN 'Support' WHEN 4 THEN 'Charge' WHEN 5 THEN 'FEIM'\n    WHEN 6 THEN 'Clear Fault' WHEN 7 THEN 'Fault' WHEN 8 THEN 'Weld'\n    WHEN 9 THEN 'Test' WHEN 10 THEN 'SNA'\n    ELSE CASE WHEN bms_state_code IS NULL THEN NULL ELSE 'Code ' || bms_state_code::text END\n  END AS \"BMS State\",\n  isolation_ohm AS \"Isolation (Ω)\",\n  lifetime_energy AS \"Lifetime Energy (kWh)\",\n  CASE WHEN heater_samples = 0 THEN 'Unknown'\n       WHEN battery_heater_on THEN 'ON' ELSE 'Off' END AS \"Battery Heater\"\nFROM combined\nORDER BY time DESC\nLIMIT 20",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -907,7 +907,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT\n  $__timeGroup(ts, '5m') AS \"Time\",\n  last(str_value, ts) FILTER (WHERE field = 'PowershareStatus') AS \"Status\",\n  last(str_value, ts) FILTER (WHERE field = 'PowershareType') AS \"Type\",\n  last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'PowershareInstantaneousPowerKW') AS \"Power (kW)\",\n  last(COALESCE(float_value, int_value::float8), ts) FILTER (WHERE field = 'PowershareHoursLeft') AS \"Hours Left\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND field IN ('PowershareStatus', 'PowershareType', 'PowershareInstantaneousPowerKW', 'PowershareHoursLeft')\nGROUP BY 1\nHAVING last(str_value, ts) FILTER (WHERE field = 'PowershareStatus') IS NOT NULL\n  AND last(str_value, ts) FILTER (WHERE field = 'PowershareStatus') != ''\nORDER BY 1 DESC\nLIMIT 20",
+          "rawSql": "WITH buckets AS (\n  SELECT\n    $__timeGroup(ts, '5m') AS time,\n    last(int_value, ts) FILTER (WHERE field = 'PowershareStatus') AS status_code,\n    last(int_value, ts) FILTER (WHERE field = 'PowershareType') AS type_code,\n    last(COALESCE(float_value, int_value::float8), ts)\n      FILTER (WHERE field = 'PowershareInstantaneousPowerKW') AS power_kw,\n    last(COALESCE(float_value, int_value::float8), ts)\n      FILTER (WHERE field = 'PowershareHoursLeft') AS hours_left\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND field IN ('PowershareStatus', 'PowershareType',\n                  'PowershareInstantaneousPowerKW', 'PowershareHoursLeft')\n  GROUP BY 1\n)\nSELECT\n  time AS \"Time\",\n  CASE status_code\n    WHEN 0 THEN 'Unknown' WHEN 1 THEN 'Inactive' WHEN 2 THEN 'Handshaking'\n    WHEN 3 THEN 'Initializing' WHEN 4 THEN 'Enabled'\n    WHEN 5 THEN 'Enabled (reconnecting soon)' WHEN 6 THEN 'Stopped'\n    ELSE 'Code ' || status_code::text\n  END AS \"Status\",\n  CASE type_code\n    WHEN 0 THEN 'Unknown' WHEN 1 THEN 'None' WHEN 2 THEN 'Load' WHEN 3 THEN 'Home'\n    ELSE CASE WHEN type_code IS NULL THEN NULL ELSE 'Code ' || type_code::text END\n  END AS \"Type\",\n  power_kw AS \"Power (kW)\",\n  hours_left AS \"Hours Left\"\nFROM buckets\nWHERE status_code IS NOT NULL\nORDER BY time DESC\nLIMIT 20",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -1142,22 +1142,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

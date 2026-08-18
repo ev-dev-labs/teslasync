@@ -12,14 +12,13 @@
 #      http://localhost:4318/v1/traces. Without CORS the browser blocks the
 #      export and the SPA -> API trace chain silently fails.
 #
-#   3. Trace exporter targets the in-network Jaeger container instead of
-#      Tempo. Dev compose has no Tempo deployment; Jaeger 1.57's all-in-one
-#      image accepts OTLP/gRPC on 4317.
+#   3. Traces are fanned out to both Tempo (the Grafana dashboard backend)
+#      and Jaeger (the standalone developer UI).
 #
 # Pipeline:
 #   receivers (otlp gRPC :4317, otlp HTTP :4318 with CORS)
 #     -> processors (memory_limiter, batch)
-#     -> exporters (otlp/jaeger -> jaeger:4317, prometheus :9464)
+#     -> exporters (otlp/tempo + otlp/jaeger, prometheus :9464)
 #
 # Promotion criteria for any change here: update helm/.../otel-collector/config.yaml
 # in lockstep when the change is policy-relevant (receivers, processors), and
@@ -68,6 +67,12 @@ processors:
         action: upsert
 
 exporters:
+  # Tempo backs Grafana's TraceQL, service-map, and span-metrics panels.
+  otlp/tempo:
+    endpoint: tempo:4317
+    tls:
+      insecure: true
+
   # Jaeger 1.57 all-in-one accepts OTLP/gRPC directly on 4317 — no jaeger
   # exporter needed (the legacy exporter was removed in collector contrib v0.85).
   otlp/jaeger:
@@ -93,7 +98,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource/dev, batch]
-      exporters: [otlp/jaeger]
+      exporters: [otlp/tempo, otlp/jaeger]
     metrics:
       receivers: [otlp]
       processors: [memory_limiter, batch]

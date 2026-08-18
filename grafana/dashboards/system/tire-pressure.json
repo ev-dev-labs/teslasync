@@ -131,7 +131,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureFl')) AS \"Front Left\",\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureFr')) AS \"Front Right\",\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureRl')) AS \"Rear Left\",\n  convert_pressure_pa(MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsPressureRr')) AS \"Rear Right\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('TpmsPressureFl', 'TpmsPressureFr', 'TpmsPressureRl', 'TpmsPressureRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  convert_pressure_pa(front_left_pa) AS \"Front Left\",\n  convert_pressure_pa(front_right_pa) AS \"Front Right\",\n  convert_pressure_pa(rear_left_pa) AS \"Rear Left\",\n  convert_pressure_pa(rear_right_pa) AS \"Rear Right\"\nFROM tire_pressure_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND (front_left_pa IS NOT NULL OR front_right_pa IS NOT NULL OR rear_left_pa IS NOT NULL OR rear_right_pa IS NOT NULL)\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -191,7 +191,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Front Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureFl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(front_left_pa) AS \"Front Left\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} AND front_left_pa IS NOT NULL AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -251,7 +251,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Front Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureFr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(front_right_pa) AS \"Front Right\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} AND front_right_pa IS NOT NULL AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -311,7 +311,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Rear Left\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureRl' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(rear_left_pa) AS \"Rear Left\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} AND rear_left_pa IS NOT NULL AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -371,7 +371,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT convert_pressure_pa(COALESCE(float_value, int_value::float8)) AS \"Rear Right\" FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'TpmsPressureRr' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
+          "rawSql": "SELECT convert_pressure_pa(rear_right_pa) AS \"Rear Right\" FROM tire_pressure_snapshots WHERE vehicle_id = ${vehicle_id} AND rear_right_pa IS NOT NULL AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -382,7 +382,7 @@
     {
       "id": 6,
       "type": "table",
-      "title": "TPMS Warnings History",
+      "title": "TPMS Warning Changes",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
@@ -395,7 +395,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'TpmsHardWarnings'), 'None') AS \"Hard Warnings\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'TpmsSoftWarnings'), 'None') AS \"Soft Warnings\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsLastSeenPressureTimeFl') AS \"FL Last Seen\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsLastSeenPressureTimeFr') AS \"FR Last Seen\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsLastSeenPressureTimeRl') AS \"RL Last Seen\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsLastSeenPressureTimeRr') AS \"RR Last Seen\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('TpmsHardWarnings', 'TpmsSoftWarnings', 'TpmsLastSeenPressureTimeFl', 'TpmsLastSeenPressureTimeFr', 'TpmsLastSeenPressureTimeRl', 'TpmsLastSeenPressureTimeRr')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nHAVING last(str_value, ts) FILTER (WHERE field = 'TpmsHardWarnings') IS NOT NULL\n   OR last(str_value, ts) FILTER (WHERE field = 'TpmsSoftWarnings') IS NOT NULL\n   OR MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'TpmsLastSeenPressureTimeFl') IS NOT NULL\nORDER BY ts DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  ts AS \"Time\",\n  CASE\n    WHEN field LIKE '%FrontLeft' THEN 'Front Left'\n    WHEN field LIKE '%FrontRight' THEN 'Front Right'\n    WHEN field LIKE '%RearLeft' THEN 'Rear Left'\n    WHEN field LIKE '%RearRight' THEN 'Rear Right'\n  END AS \"Tire\",\n  CASE\n    WHEN field LIKE 'TpmsHardWarnings%' THEN 'Hard'\n    ELSE 'Soft'\n  END AS \"Severity\",\n  CASE WHEN bool_value THEN 'Active' ELSE 'Cleared' END AS \"State\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND field IN (\n    'TpmsHardWarningsFrontLeft', 'TpmsHardWarningsFrontRight',\n    'TpmsHardWarningsRearLeft', 'TpmsHardWarningsRearRight',\n    'TpmsSoftWarningsFrontLeft', 'TpmsSoftWarningsFrontRight',\n    'TpmsSoftWarningsRearLeft', 'TpmsSoftWarningsRearRight'\n  )\n  AND bool_value IS NOT NULL\nORDER BY ts DESC\nLIMIT 100",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -418,22 +418,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

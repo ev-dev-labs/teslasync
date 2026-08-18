@@ -20,8 +20,8 @@ scrape_configs:
         labels:
           service: "teslasync-api"
 
-  # Workers expose /metrics on their health-port (HEALTH_PORT=8081 by
-  # convention). Their RED middleware histograms feed the worker-availability
+  # Workers expose /metrics on their per-process health port. Their RED
+  # middleware histograms feed the worker-availability
   # SLOs and the queue-status panel (see internal/api/queue_status_handler.go).
   - job_name: "teslasync-notification-worker"
     static_configs:
@@ -31,15 +31,24 @@ scrape_configs:
 
   - job_name: "teslasync-export-worker"
     static_configs:
-      - targets: ["export-worker:8081"]
+      - targets: ["export-worker:8082"]
         labels:
           service: "teslasync-export-worker"
 
   - job_name: "teslasync-automation-worker"
     static_configs:
-      - targets: ["automation-worker:8081"]
+      - targets: ["automation-worker:8083"]
         labels:
           service: "teslasync-automation-worker"
+
+  # The upstream Fleet Telemetry server exposes its own Prometheus registry
+  # on the monitoring port configured in fleet-telemetry-config.json. This
+  # target is expected to be down unless the telemetry compose profile runs.
+  - job_name: "fleet-telemetry"
+    static_configs:
+      - targets: ["fleet-telemetry:9090"]
+        labels:
+          service: "fleet-telemetry"
 
   # OpenTelemetry Collector exposition — gives us span-rate, dropped-spans,
   # exporter-queue-depth, and the collector's own pipeline health. Only
@@ -50,3 +59,12 @@ scrape_configs:
       - targets: ["otel-collector:9464", "otel-collector:8888"]
         labels:
           service: "otel-collector"
+
+  # Tempo exposes its distributor, ingester, compactor, and metrics-generator
+  # health on the same HTTP port used by Grafana. This target is available
+  # with the optional `tracing` compose profile.
+  - job_name: "tempo"
+    static_configs:
+      - targets: ["tempo:3200"]
+        labels:
+          service: "tempo"

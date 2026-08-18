@@ -27,7 +27,7 @@ The rest of this page is the longer story — what each service does, when to en
 
 ## What's in `docker-compose.yml`
 
-The Compose file defines **13 services** across five concerns. By default, 10 come up; 3 are opt-in via profiles plus Ollama in the `ai` profile.
+The Compose file defines the core application and data services plus optional profile-gated sidecars.
 
 ### Always-on (10 services)
 
@@ -44,7 +44,7 @@ The Compose file defines **13 services** across five concerns. By default, 10 co
 | `grafana`              | Provisioned dashboards (admin/admin default)     | 3001         |
 | `prometheus`           | Metrics scrape + retention                       | 9099         |
 
-### Profile-gated (3 services)
+### Profile-gated services
 
 Profiles let you opt into heavier sidecars only when you need them. Bring a profile up alongside the default stack:
 
@@ -54,12 +54,23 @@ docker compose --profile <name> up -d
 
 | Profile     | Service                  | What it adds                                                     |
 | ----------- | ------------------------ | ---------------------------------------------------------------- |
-| `tracing`   | `jaeger`                 | OpenTelemetry trace collector + UI on `:16686`                   |
+| `tracing`   | `otel-collector`, `tempo`, `jaeger` | OTLP ingest, TraceQL storage/span metrics, and Jaeger UI on `:16686` |
 | `telemetry` | `fleet-telemetry`        | Tesla Fleet Telemetry server on `:4443`; HTTPS endpoint required |
 | `commands`  | `vehicle-command-proxy`  | Signs commands for vehicles that require it; on `:4443`          |
 | `ai`        | `ollama`                 | Local LLM inference for Helix AI on `:11434`                     |
 
 You can stack profiles: `docker compose --profile telemetry --profile commands --profile ai up -d`.
+
+The tracing dashboards also require the application processes to emit spans. Set
+`OTEL_ENABLED=true` in `.env` before starting the profile, then run:
+
+```bash
+docker compose --profile tracing up -d --build
+```
+
+Changing `OTEL_ENABLED` causes Compose to recreate the API and workers with
+tracing enabled. Starting the profile without that setting only starts the
+backends; it cannot create application traces or span-derived metrics.
 
 ## When to use which profile
 

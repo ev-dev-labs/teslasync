@@ -556,8 +556,9 @@ config:
   # Supports any OTLP-compatible backend: Jaeger, Tempo, Datadog, New Relic, etc.
   openTelemetry:
     enabled: false
-    # For built-in Jaeger (jaeger.enabled=true): use "{{ .Release.Name }}-jaeger:4317"
-    # For external Jaeger/collector: use your endpoint, e.g. "jaeger.monitoring:4317"
+    # The default resolves to the release-scoped bundled collector or Jaeger
+    # service when either backend is enabled. For an external collector, set
+    # its endpoint explicitly, e.g. "jaeger.monitoring:4317".
     endpoint: "jaeger:4317"
     serviceName: "teslasync"
     insecure: true
@@ -1079,6 +1080,10 @@ grafana:
   adminUser: admin
   adminPassword: teslasync
 
+  # This chart does not bundle Prometheus. Point the provisioned datasource
+  # at the Prometheus service already present in the cluster.
+  prometheusUrl: "http://prometheus-operated.monitoring.svc.cluster.local:9090"
+
   service:
     type: ClusterIP
     port: 3000
@@ -1206,12 +1211,12 @@ observability:
         # / status_code. These let dashboards split RED metrics by HTTP
         # method, route, DB system, etc. Keep cardinality reasonable.
         dimensions:
-          - http.method
+          - http.request.method
           - http.route
-          - http.status_code
+          - http.response.status_code
           - db.system
           - messaging.system
-          - messaging.destination
+          - messaging.destination.name
         # Latency histogram bucket edges in seconds. Tempo's defaults
         # (0.002 → 15s) are reasonable for most APIs; this list mirrors
         # the prom-default exponential ladder so existing alert rules
@@ -1224,12 +1229,12 @@ observability:
           - 0.032
           - 0.064
           - 0.128
-          - 0.256
-          - 0.512
-          - 1.024
-          - 2.048
-          - 4.096
-          - 8.192
+          - 0.25
+          - 0.5
+          - 1.0
+          - 2.5
+          - 5.0
+          - 10.0
           - 15.0
       # Where to ship the generated series. Disabled by default so the
       # chart installs clean on a stock cluster; enable + set url= once

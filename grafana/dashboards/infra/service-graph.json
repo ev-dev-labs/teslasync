@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-service-graph",
   "title": "TeslaSync - Service Graph & Dependencies (Tempo)",
+  "description": "Requires OTEL_ENABLED=true and docker compose --profile tracing up.",
   "tags": [
     "teslasync",
     "infra",

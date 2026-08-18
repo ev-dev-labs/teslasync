@@ -760,6 +760,8 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 		"mqtt.consume",
 		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(
+			attribute.String("messaging.system", "mqtt"),
+			attribute.String("messaging.destination.name", msg.Topic()),
 			attribute.String("mqtt.topic", msg.Topic()),
 			attribute.Int("mqtt.message_size", len(msg.Payload())),
 			attribute.Int("mqtt.message_id", int(msg.MessageID())),

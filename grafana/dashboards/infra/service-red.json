@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-service-red",
   "title": "TeslaSync - Service RED (Tempo span-metrics)",
+  "description": "Requires OTEL_ENABLED=true and docker compose --profile tracing up.",
   "tags": [
     "teslasync",
     "infra",

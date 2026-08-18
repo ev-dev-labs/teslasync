@@ -134,7 +134,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (FLOOR(COALESCE(float_value, int_value::float8) / 10) * 10 || '-' || (FLOOR(COALESCE(float_value, int_value::float8) / 10) * 10 + 10))::text AS speed_band,\n  COUNT(*)::bigint AS reading_count\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'VehicleSpeed'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND COALESCE(float_value, int_value::float8) > 0\nGROUP BY FLOOR(COALESCE(float_value, int_value::float8) / 10)\nORDER BY FLOOR(COALESCE(float_value, int_value::float8) / 10)",
+          "rawSql": "WITH samples AS (\n  SELECT speed_mps * 3.6 AS speed_kmh\n  FROM drive_telemetry\n  WHERE vehicle_id = ${vehicle_id}\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND speed_mps > 0\n)\nSELECT\n  (FLOOR(speed_kmh / 10) * 10 || '-' || (FLOOR(speed_kmh / 10) * 10 + 10))::text AS speed_band,\n  COUNT(*)::bigint AS reading_count\nFROM samples\nGROUP BY FLOOR(speed_kmh / 10)\nORDER BY FLOOR(speed_kmh / 10)",
           "refId": "A"
         }
       ],
@@ -232,22 +232,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
