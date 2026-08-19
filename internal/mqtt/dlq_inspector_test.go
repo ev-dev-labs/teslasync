@@ -95,12 +95,12 @@ func TestDLQInspector_Start_Subscribes(t *testing.T) {
 func TestDLQInspector_HandleMessage_ParsesEnvelope(t *testing.T) {
 	ins, fc := newTestInspector(t, DLQInspectorConfig{Capacity: 5})
 	body := encodeDLQEnvelope(t, DLQEntry{
-		Reason:       "codec_drop_max_redeliveries",
+		Reason:       "codec_drop",
 		VehicleID:    42,
 		VIN:          "TEST00000000000VIN",
 		Topic:        "telemetry/TEST00000000000VIN/v/VehicleSpeed",
 		Payload:      []byte("inner-bytes"),
-		Redeliveries: 3,
+		Redeliveries: 0,
 		Timestamp:    time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC),
 	})
 	deliverDLQ(fc, "telemetry/dlq/42", body)
@@ -113,7 +113,7 @@ func TestDLQInspector_HandleMessage_ParsesEnvelope(t *testing.T) {
 	if got.ParseError != "" {
 		t.Errorf("ParseError = %q, want empty", got.ParseError)
 	}
-	if got.ParsedReason != "codec_drop_max_redeliveries" {
+	if got.ParsedReason != "codec_drop" {
 		t.Errorf("ParsedReason = %q", got.ParsedReason)
 	}
 	if got.ParsedVehicleID != 42 {
@@ -125,8 +125,8 @@ func TestDLQInspector_HandleMessage_ParsesEnvelope(t *testing.T) {
 	if got.ParsedSourceTopic != "telemetry/TEST00000000000VIN/v/VehicleSpeed" {
 		t.Errorf("ParsedSourceTopic = %q", got.ParsedSourceTopic)
 	}
-	if got.ParsedRedeliveries != 3 {
-		t.Errorf("ParsedRedeliveries = %d, want 3", got.ParsedRedeliveries)
+	if got.ParsedRedeliveries != 0 {
+		t.Errorf("ParsedRedeliveries = %d, want 0", got.ParsedRedeliveries)
 	}
 	if !bytes.Equal(got.ParsedInnerPayload, []byte("inner-bytes")) {
 		t.Errorf("ParsedInnerPayload = %q, want %q", got.ParsedInnerPayload, "inner-bytes")

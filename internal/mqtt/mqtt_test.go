@@ -135,6 +135,12 @@ type fakePipelineCall struct {
 	VehicleID int64
 }
 
+type panickingPipeline struct{}
+
+func (panickingPipeline) ProcessAtomics(context.Context, []codec.Atomic, int64) error {
+	panic("simulated pipeline panic")
+}
+
 func (f *fakePipeline) ProcessAtomics(_ context.Context, atomics []codec.Atomic, vehicleID int64) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -170,6 +176,12 @@ type fakeDLQ struct {
 	entries  []DLQEntry
 }
 
+type panickingDLQ struct{}
+
+func (panickingDLQ) Publish(context.Context, DLQEntry) error {
+	panic("simulated DLQ panic")
+}
+
 func (f *fakeDLQ) Publish(_ context.Context, entry DLQEntry) error {
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -196,9 +208,7 @@ func (f *fakeDLQ) Entries() []DLQEntry {
 func newTestSubscriber(t *testing.T, pipeline Pipeline, dlq DLQPublisher, resolver VINResolver) *PipelineSubscriber {
 	t.Helper()
 	cfg := PipelineSubscriberConfig{
-		TopicBase:       "telemetry",
-		MaxRedeliveries: 3,
-		TrackerCapacity: 16,
+		TopicBase: "telemetry",
 	}
 	cfg.withDefaults()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -207,7 +217,6 @@ func newTestSubscriber(t *testing.T, pipeline Pipeline, dlq DLQPublisher, resolv
 		client:     nil,
 		pipeline:   pipeline,
 		dlq:        dlq,
-		tracker:    NewRedeliveryTracker(cfg.TrackerCapacity),
 		resolveVIN: resolver,
 		cfg:        cfg,
 		logger:     zerolog.New(zerolog.NewTestWriter(t)),
@@ -260,141 +269,156 @@ func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 	}
 }
 
-// TestPipelineSubscriber_TransientCodecError_NoAck_IncrementsRedeliveries
-// asserts that a malformed JSON body for a known field (causing
-// codec.DecodeJSONField to wrap codec.ErrPayloadDrop) does NOT ack and the
-// tracker count grows with each redelivery while the count stays below
-// MaxRedeliveries.
-func TestPipelineSubscriber_TransientCodecError_NoAck_IncrementsRedeliveries(t *testing.T) {
+// TestPipelineSubscriber_CodecError_ImmediateDLQAndAck pins the terminal
+// poison-payload contract. MQTT 3.1.1 cannot NACK a live QoS 1 delivery, so a
+// malformed payload must be quarantined and acknowledged on its first pass.
+func TestPipelineSubscriber_CodecError_ImmediateDLQAndAck(t *testing.T) {
 	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(7))
 
 	var ackCalls atomic.Int32
-	deliver := func() {
-		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/5YJ3E1EA1LF000007/v/Soc",
-			Payload:   []byte("garbage"), // not valid JSON for Soc (a float)
-			MessageID: 1234,
-			Ack:       func() { ackCalls.Add(1) },
-		})
-	}
-
-	deliver()
-	if got := sub.tracker.Len(); got != 1 {
-		t.Fatalf("tracker.Len() = %d after first redeliver, want 1", got)
-	}
-	deliver()
-	if got := sub.tracker.Len(); got != 1 {
-		t.Fatalf("tracker.Len() = %d after second redeliver (same MessageID), want 1", got)
-	}
-
-	if got := ackCalls.Load(); got != 0 {
-		t.Errorf("ack called %d times during transient redeliveries, want 0", got)
-	}
-	if got := len(dlq.Entries()); got != 0 {
-		t.Errorf("DLQ entries = %d, want 0 (below MaxRedeliveries)", got)
-	}
-	if got := len(pipe.Calls()); got != 0 {
-		t.Errorf("ProcessAtomics called %d times for codec drop, want 0", got)
-	}
-}
-
-// TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck asserts
-// that once the redelivery counter reaches MaxRedeliveries the payload is
-// published to the DLQ and acked.
-func TestPipelineSubscriber_PoisonPill_ReachesMaxRedeliveries_DLQAndAck(t *testing.T) {
-	pipe := &fakePipeline{}
-	dlq := &fakeDLQ{}
-	sub := newTestSubscriber(t, pipe, dlq, staticResolver(13))
-	// MaxRedeliveries = 3 from newTestSubscriber.
-
-	var ackCalls atomic.Int32
-	deliver := func() {
-		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/5YJ3E1EA1LF000013/v/Soc",
-			Payload:   []byte("garbage"),
-			MessageID: 9999,
-			Ack:       func() { ackCalls.Add(1) },
-		})
-	}
-
-	deliver() // count=1, no ack
-	deliver() // count=2, no ack
-	if got := ackCalls.Load(); got != 0 {
-		t.Fatalf("ack called %d times before MaxRedeliveries, want 0", got)
-	}
-	deliver() // count=3 == MaxRedeliveries, DLQ + ack
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:     "telemetry/5YJ3E1EA1LF000007/v/Soc",
+		Payload:   []byte("garbage"),
+		MessageID: 1234,
+		Ack:       func() { ackCalls.Add(1) },
+	})
 
 	entries := dlq.Entries()
 	if len(entries) != 1 {
 		t.Fatalf("DLQ entries = %d, want 1", len(entries))
 	}
-	if entries[0].VehicleID != 13 {
-		t.Errorf("DLQ VehicleID = %d, want 13", entries[0].VehicleID)
+	if entries[0].VehicleID != 7 {
+		t.Errorf("DLQ VehicleID = %d, want 7", entries[0].VehicleID)
 	}
-	if entries[0].Redeliveries != 3 {
-		t.Errorf("DLQ Redeliveries = %d, want 3", entries[0].Redeliveries)
+	if entries[0].Redeliveries != 0 {
+		t.Errorf("DLQ Redeliveries = %d, want 0 for immediate quarantine", entries[0].Redeliveries)
 	}
-	if entries[0].Topic != "telemetry/5YJ3E1EA1LF000013/v/Soc" {
+	if entries[0].Topic != "telemetry/5YJ3E1EA1LF000007/v/Soc" {
 		t.Errorf("DLQ Topic = %q", entries[0].Topic)
 	}
 	if !bytesEq(entries[0].Payload, []byte("garbage")) {
 		t.Errorf("DLQ Payload mismatch: %v", entries[0].Payload)
 	}
 	if got := ackCalls.Load(); got != 1 {
-		t.Errorf("ack called %d times at MaxRedeliveries, want 1", got)
+		t.Errorf("ack called %d times for codec drop, want 1", got)
 	}
-
-	// Tracker forgets the entry once DLQ succeeds, so a subsequent unrelated
-	// message reusing MessageID=9999 starts at count=1.
-	if got := sub.tracker.Len(); got != 0 {
-		t.Errorf("tracker.Len() = %d after DLQ ack, want 0", got)
+	if got := len(pipe.Calls()); got != 0 {
+		t.Errorf("ProcessAtomics called %d times for codec drop, want 0", got)
 	}
 }
 
-// TestPipelineSubscriber_PoisonPill_DLQPublishFails_NoAck asserts that a DLQ
-// publish failure does NOT ack the message — leaving it for the broker to
-// redeliver and retry the DLQ write on the next pass.
-func TestPipelineSubscriber_PoisonPill_DLQPublishFails_NoAck(t *testing.T) {
+// TestPipelineSubscriber_CodecError_DLQPublishFails_StillAcks asserts that a
+// broken quarantine sink cannot consume a broker in-flight slot forever.
+func TestPipelineSubscriber_CodecError_DLQPublishFails_StillAcks(t *testing.T) {
 	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{failNext: []error{errors.New("broker timeout")}}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(99))
 
 	var ackCalls atomic.Int32
-	deliver := func() {
-		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/5YJ3E1EA1LF000099/v/Soc",
-			Payload:   []byte("xx"),
-			MessageID: 55,
-			Ack:       func() { ackCalls.Add(1) },
-		})
-	}
-	deliver() // 1
-	deliver() // 2
-	deliver() // 3 (== MaxRedeliveries) → DLQ.Publish fails
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:     "telemetry/5YJ3E1EA1LF000099/v/Soc",
+		Payload:   []byte("xx"),
+		MessageID: 55,
+		Ack:       func() { ackCalls.Add(1) },
+	})
 
 	if got := len(dlq.Entries()); got != 1 {
 		t.Fatalf("DLQ Publish attempts = %d, want 1", got)
 	}
-	if got := ackCalls.Load(); got != 0 {
-		t.Errorf("ack called %d times after DLQ publish failure, want 0", got)
-	}
-	// Tracker still holds the entry because the DLQ write failed — the
-	// next redelivery will retry the DLQ write.
-	if got := sub.tracker.Len(); got != 1 {
-		t.Errorf("tracker.Len() = %d after DLQ failure, want 1", got)
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times after DLQ publish failure, want 1", got)
 	}
 }
 
-// TestPipelineSubscriber_NonPayloadDropError_NoAck_NoDLQ asserts that a
-// non-ErrPayloadDrop pipeline error (e.g. context.Canceled per ADR-004 #8)
-// does NOT ack and does NOT enter the DLQ flow — it is reserved for
-// shutdown / non-retriable infra failures. The codec decode succeeds (so we
-// reach ProcessAtomics) and the queued ProcessAtomics error drives the
-// classification.
-func TestPipelineSubscriber_NonPayloadDropError_NoAck_NoDLQ(t *testing.T) {
+// TestPipelineSubscriber_CodecBurst_AcksEntireBrokerWindow reproduces the
+// production EMQX failure signature: 32 malformed QoS 1 messages used to fill
+// the default receive window (inflight=32/32) and stop all subsequent
+// delivery. Every terminal poison payload must now release its slot.
+func TestPipelineSubscriber_CodecBurst_AcksEntireBrokerWindow(t *testing.T) {
+	pipe := &fakePipeline{}
+	dlq := &fakeDLQ{}
+	sub := newTestSubscriber(t, pipe, dlq, staticResolver(7))
+
+	var ackCalls atomic.Int32
+	const brokerReceiveMaximum = 32
+	for i := 0; i < brokerReceiveMaximum; i++ {
+		sub.handlePayload(context.Background(), mqttPayload{
+			Topic:     "telemetry/V7/v/Soc",
+			Payload:   []byte("garbage"),
+			MessageID: uint16(i + 1),
+			Ack:       func() { ackCalls.Add(1) },
+		})
+	}
+
+	if got := ackCalls.Load(); got != brokerReceiveMaximum {
+		t.Errorf("ack calls = %d, want %d", got, brokerReceiveMaximum)
+	}
+	if got := len(dlq.Entries()); got != brokerReceiveMaximum {
+		t.Errorf("DLQ entries = %d, want %d", got, brokerReceiveMaximum)
+	}
+}
+
+func TestPipelineSubscriber_Panic_AcksMessage(t *testing.T) {
+	sub := newTestSubscriber(t, panickingPipeline{}, &fakeDLQ{}, staticResolver(7))
+	msg := &fakePahoMessage{
+		topic:     "telemetry/V7/v/Soc",
+		payload:   []byte("75.5"),
+		messageID: 1,
+		qos:       1,
+	}
+
+	sub.onPipelineMessage(nil, msg)
+
+	if got := msg.acked.Load(); got != 1 {
+		t.Errorf("ack calls after recovered panic = %d, want 1", got)
+	}
+}
+
+func TestPipelineSubscriber_DLQPanic_AcksExactlyOnce(t *testing.T) {
+	sub := newTestSubscriber(t, &fakePipeline{}, panickingDLQ{}, staticResolver(7))
+	msg := &fakePahoMessage{
+		topic:     "telemetry/V7/v/Soc",
+		payload:   []byte("garbage"),
+		messageID: 1,
+		qos:       1,
+	}
+
+	sub.onPipelineMessage(nil, msg)
+
+	if got := msg.acked.Load(); got != 1 {
+		t.Errorf("ack calls after recovered DLQ panic = %d, want 1", got)
+	}
+}
+
+// TestPipelineSubscriber_ShutdownCancellation_NoAck_NoDLQ asserts that a
+// cancellation caused by PipelineSubscriber.Stop preserves the broker-side
+// QoS 1 message for the next connection.
+func TestPipelineSubscriber_ShutdownCancellation_NoAck_NoDLQ(t *testing.T) {
 	pipe := &fakePipeline{errs: []error{context.Canceled}}
+	dlq := &fakeDLQ{}
+	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
+	sub.cancel()
+
+	var ackCalls atomic.Int32
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:     "telemetry/V1/v/Soc",
+		Payload:   []byte("0.5"),
+		MessageID: 1,
+		Ack:       func() { ackCalls.Add(1) },
+	})
+
+	if got := ackCalls.Load(); got != 0 {
+		t.Errorf("ack called %d times for shutdown cancellation, want 0", got)
+	}
+	if got := len(dlq.Entries()); got != 0 {
+		t.Errorf("DLQ entries = %d for shutdown cancellation, want 0", got)
+	}
+}
+
+func TestPipelineSubscriber_DeadlineOutsideShutdown_DLQAndAck(t *testing.T) {
+	pipe := &fakePipeline{errs: []error{context.DeadlineExceeded}}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
 
@@ -406,21 +430,17 @@ func TestPipelineSubscriber_NonPayloadDropError_NoAck_NoDLQ(t *testing.T) {
 		Ack:       func() { ackCalls.Add(1) },
 	})
 
-	if got := ackCalls.Load(); got != 0 {
-		t.Errorf("ack called %d times for non-ErrPayloadDrop error, want 0", got)
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times for non-shutdown deadline, want 1", got)
 	}
-	if got := len(dlq.Entries()); got != 0 {
-		t.Errorf("DLQ entries = %d for non-ErrPayloadDrop error, want 0", got)
-	}
-	if got := sub.tracker.Len(); got != 0 {
-		t.Errorf("tracker.Len() = %d for non-ErrPayloadDrop error, want 0", got)
+	if got := len(dlq.Entries()); got != 1 {
+		t.Errorf("DLQ entries = %d for non-shutdown deadline, want 1", got)
 	}
 }
 
-// TestPipelineSubscriber_GenericError_NoAck_NoDLQ asserts the same for an
-// arbitrary non-codec error returned from ProcessAtomics (e.g. unrecoverable
-// infra failure).
-func TestPipelineSubscriber_GenericError_NoAck_NoDLQ(t *testing.T) {
+// TestPipelineSubscriber_GenericError_DLQAndAck asserts that an unexpected
+// non-codec error cannot pin the broker receive window.
+func TestPipelineSubscriber_GenericError_DLQAndAck(t *testing.T) {
 	pipe := &fakePipeline{errs: []error{errors.New("totally unexpected")}}
 	dlq := &fakeDLQ{}
 	sub := newTestSubscriber(t, pipe, dlq, staticResolver(1))
@@ -433,54 +453,11 @@ func TestPipelineSubscriber_GenericError_NoAck_NoDLQ(t *testing.T) {
 		Ack:       func() { ackCalls.Add(1) },
 	})
 
-	if got := ackCalls.Load(); got != 0 {
-		t.Errorf("ack called %d times for non-codec generic error, want 0", got)
-	}
-	if got := len(dlq.Entries()); got != 0 {
-		t.Errorf("DLQ entries = %d for generic error, want 0", got)
-	}
-}
-
-// TestPipelineSubscriber_SuccessAfterRetry_ForgetsTracker exercises the
-// happy-path-after-retry scenario: the first delivery fails with codec drop
-// (malformed body), the second succeeds (replayed body is well-formed), and
-// the tracker entry for that MessageID is forgotten.
-func TestPipelineSubscriber_SuccessAfterRetry_ForgetsTracker(t *testing.T) {
-	pipe := &fakePipeline{}
-	dlq := &fakeDLQ{}
-	sub := newTestSubscriber(t, pipe, dlq, staticResolver(7))
-
-	var ackCalls atomic.Int32
-	bodies := [][]byte{[]byte("garbage"), []byte("12.5")}
-	cursor := 0
-	deliver := func() {
-		body := bodies[cursor]
-		cursor++
-		sub.handlePayload(context.Background(), mqttPayload{
-			Topic:     "telemetry/V7/v/Soc",
-			Payload:   body,
-			MessageID: 77,
-			Ack:       func() { ackCalls.Add(1) },
-		})
-	}
-
-	deliver() // 1st delivery → codec drop, no ack, tracker count = 1
-	if got := sub.tracker.Len(); got != 1 {
-		t.Fatalf("tracker.Len() after first redeliver = %d, want 1", got)
-	}
-	if got := ackCalls.Load(); got != 0 {
-		t.Fatalf("ack called %d times after first redeliver, want 0", got)
-	}
-
-	deliver() // 2nd delivery → success, ack, tracker forgotten
 	if got := ackCalls.Load(); got != 1 {
-		t.Errorf("ack called %d times after success-after-retry, want 1", got)
+		t.Errorf("ack called %d times for non-codec generic error, want 1", got)
 	}
-	if got := sub.tracker.Len(); got != 0 {
-		t.Errorf("tracker.Len() after success-after-retry = %d, want 0", got)
-	}
-	if got := len(dlq.Entries()); got != 0 {
-		t.Errorf("DLQ entries after success-after-retry = %d, want 0", got)
+	if got := len(dlq.Entries()); got != 1 {
+		t.Errorf("DLQ entries = %d for generic error, want 1", got)
 	}
 }
 
@@ -512,10 +489,10 @@ func TestPipelineSubscriber_VINNotFound_AckAndDrop_NoDLQ(t *testing.T) {
 	}
 }
 
-// TestPipelineSubscriber_VINResolverInfraError_NoAck asserts that a transient
-// VIN resolver failure (not ErrUnknownVIN) does NOT ack — the broker will
-// redeliver and the next attempt may succeed once the resolver recovers.
-func TestPipelineSubscriber_VINResolverInfraError_NoAck(t *testing.T) {
+// TestPipelineSubscriber_VINResolverInfraError_DLQAndAck asserts that a
+// resolver outage is quarantined rather than permanently consuming an
+// in-flight slot.
+func TestPipelineSubscriber_VINResolverInfraError_DLQAndAck(t *testing.T) {
 	pipe := &fakePipeline{}
 	dlq := &fakeDLQ{}
 	resolver := func(_ context.Context, _ string) (int64, error) {
@@ -531,14 +508,39 @@ func TestPipelineSubscriber_VINResolverInfraError_NoAck(t *testing.T) {
 		Ack:       func() { ackCalls.Add(1) },
 	})
 
-	if got := ackCalls.Load(); got != 0 {
-		t.Errorf("ack called %d times for resolver infra error, want 0", got)
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times for resolver infra error, want 1", got)
 	}
 	if got := len(pipe.Calls()); got != 0 {
 		t.Errorf("Pipeline.ProcessAtomics called %d times for resolver infra error, want 0", got)
 	}
+	if got := len(dlq.Entries()); got != 1 {
+		t.Errorf("DLQ entries for resolver infra error = %d, want 1", got)
+	}
+}
+
+func TestPipelineSubscriber_VINResolverCancellationDuringShutdown_NoAck(t *testing.T) {
+	pipe := &fakePipeline{}
+	dlq := &fakeDLQ{}
+	resolver := func(_ context.Context, _ string) (int64, error) {
+		return 0, context.Canceled
+	}
+	sub := newTestSubscriber(t, pipe, dlq, resolver)
+	sub.cancel()
+
+	var ackCalls atomic.Int32
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:     "telemetry/V42/v/Soc",
+		Payload:   []byte("0.5"),
+		MessageID: 22,
+		Ack:       func() { ackCalls.Add(1) },
+	})
+
+	if got := ackCalls.Load(); got != 0 {
+		t.Errorf("ack called %d times for resolver cancellation during shutdown, want 0", got)
+	}
 	if got := len(dlq.Entries()); got != 0 {
-		t.Errorf("DLQ entries for resolver infra error = %d, want 0", got)
+		t.Errorf("DLQ entries for resolver cancellation during shutdown = %d, want 0", got)
 	}
 }
 
@@ -607,9 +609,6 @@ func TestPipelineSubscriber_UnknownField_AckAndDropSilently(t *testing.T) {
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries for unknown field = %d, want 0", got)
 	}
-	if got := sub.tracker.Len(); got != 0 {
-		t.Errorf("tracker.Len() for unknown field = %d, want 0", got)
-	}
 }
 
 // TestPipelineSubscriber_NullBody_AckAndDropSilently asserts that a null
@@ -635,67 +634,6 @@ func TestPipelineSubscriber_NullBody_AckAndDropSilently(t *testing.T) {
 	}
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries for null body = %d, want 0", got)
-	}
-}
-
-// TestRedeliveryTracker_BoundedLRU asserts the tracker evicts the oldest
-// entry when capacity is exceeded.
-func TestRedeliveryTracker_BoundedLRU(t *testing.T) {
-	tr := NewRedeliveryTracker(3)
-
-	if got := tr.Increment(1); got != 1 {
-		t.Errorf("Increment(1) = %d, want 1", got)
-	}
-	if got := tr.Increment(2); got != 1 {
-		t.Errorf("Increment(2) = %d, want 1", got)
-	}
-	if got := tr.Increment(1); got != 2 {
-		t.Errorf("second Increment(1) = %d, want 2", got)
-	}
-	if got := tr.Increment(3); got != 1 {
-		t.Errorf("Increment(3) = %d, want 1", got)
-	}
-	// Tracker holds {2, 1, 3} (1 most-recently-touched). Adding a 4th evicts
-	// the least-recently-touched, which is 2.
-	if got := tr.Increment(4); got != 1 {
-		t.Errorf("Increment(4) = %d, want 1", got)
-	}
-	if got := tr.Len(); got != 3 {
-		t.Errorf("tracker.Len() = %d, want 3", got)
-	}
-	// MessageID 2 was evicted, so a fresh Increment(2) starts at 1 again.
-	if got := tr.Increment(2); got != 1 {
-		t.Errorf("post-eviction Increment(2) = %d, want 1", got)
-	}
-}
-
-func TestRedeliveryTracker_Forget(t *testing.T) {
-	tr := NewRedeliveryTracker(4)
-	tr.Increment(7)
-	tr.Increment(7)
-	if got := tr.Len(); got != 1 {
-		t.Fatalf("tracker.Len() = %d before Forget, want 1", got)
-	}
-	tr.Forget(7)
-	if got := tr.Len(); got != 0 {
-		t.Errorf("tracker.Len() = %d after Forget, want 0", got)
-	}
-	if got := tr.Increment(7); got != 1 {
-		t.Errorf("post-Forget Increment(7) = %d, want 1", got)
-	}
-}
-
-func TestRedeliveryTracker_Reset(t *testing.T) {
-	tr := NewRedeliveryTracker(4)
-	tr.Increment(1)
-	tr.Increment(2)
-	tr.Increment(3)
-	tr.Reset()
-	if got := tr.Len(); got != 0 {
-		t.Errorf("tracker.Len() = %d after Reset, want 0", got)
-	}
-	if got := tr.Increment(1); got != 1 {
-		t.Errorf("post-Reset Increment(1) = %d, want 1", got)
 	}
 }
 
@@ -778,12 +716,6 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 		PipelineSubscriberConfig{TopicBase: "x"},
 		zerolog.Nop(),
 	)
-	if sub.cfg.MaxRedeliveries != 5 {
-		t.Errorf("MaxRedeliveries default = %d, want 5", sub.cfg.MaxRedeliveries)
-	}
-	if sub.cfg.TrackerCapacity != 4096 {
-		t.Errorf("TrackerCapacity default = %d, want 4096", sub.cfg.TrackerCapacity)
-	}
 	if sub.cfg.SubscribeQoS != 1 {
 		t.Errorf("SubscribeQoS default = %d, want 1", sub.cfg.SubscribeQoS)
 	}
@@ -849,8 +781,7 @@ func mustPanic(t *testing.T, name string, fn func()) {
 //
 // Pin the contract documented on PipelineSubscriber.OnBrokerReconnect:
 // (a) pre-Start invocations are no-ops (initial Subscribe is owned by Start);
-// (b) post-Start invocations re-issue Subscribe + reset the redelivery
-//     tracker;
+// (b) post-Start invocations re-issue Subscribe;
 // (c) post-Stop invocations are no-ops (reconnect during shutdown must not
 //     re-establish the subscription);
 // (d) a non-nil client argument overrides the embedded client (paho passes
@@ -927,8 +858,7 @@ func (immediatePahoToken) Done() <-chan struct{} {
 func (immediatePahoToken) Error() error { return nil }
 
 // erroringPahoToken simulates a SUBACK that arrives but with a server-side
-// error (e.g. ACL rejection). OnBrokerReconnect must NOT reset the tracker
-// in this case — the subscription was not actually re-established.
+// error (e.g. ACL rejection).
 type erroringPahoToken struct{ err error }
 
 func (e erroringPahoToken) Wait() bool                       { return true }
@@ -940,8 +870,7 @@ func (e erroringPahoToken) Done() <-chan struct{} {
 }
 func (e erroringPahoToken) Error() error { return e.err }
 
-// timeoutPahoToken simulates a SUBACK that never arrives. OnBrokerReconnect
-// must NOT reset the tracker — same reasoning as erroringPahoToken.
+// timeoutPahoToken simulates a SUBACK that never arrives.
 type timeoutPahoToken struct{}
 
 func (timeoutPahoToken) Wait() bool                       { return false }
@@ -956,16 +885,10 @@ func TestOnBrokerReconnect_PreStart_NoSubscribe(t *testing.T) {
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
 	fc := &fakePahoClient{}
 
-	// Seed the tracker so we can assert it was NOT reset.
-	sub.tracker.Increment(7)
-
 	sub.OnBrokerReconnect(fc)
 
 	if got := fc.Calls(); got != 0 {
 		t.Errorf("Subscribe calls = %d, want 0 (pre-start invocation must be a no-op)", got)
-	}
-	if got := sub.tracker.Len(); got != 1 {
-		t.Errorf("tracker.Len = %d, want 1 (pre-start invocation must NOT reset the tracker)", got)
 	}
 }
 
@@ -979,28 +902,21 @@ func TestOnBrokerReconnect_PostStop_NoSubscribe(t *testing.T) {
 	sub.mu.Unlock()
 
 	fc := &fakePahoClient{}
-	sub.tracker.Increment(7)
 
 	sub.OnBrokerReconnect(fc)
 
 	if got := fc.Calls(); got != 0 {
 		t.Errorf("Subscribe calls = %d, want 0 (post-stop invocation must be a no-op)", got)
 	}
-	if got := sub.tracker.Len(); got != 1 {
-		t.Errorf("tracker.Len = %d, want 1 (post-stop invocation must NOT reset the tracker)", got)
-	}
 }
 
-func TestOnBrokerReconnect_PostStart_ReSubscribesAndResetsTracker(t *testing.T) {
+func TestOnBrokerReconnect_PostStart_ReSubscribes(t *testing.T) {
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
 	sub.mu.Lock()
 	sub.started = true
 	sub.mu.Unlock()
 
 	fc := &fakePahoClient{}
-	// Seed the tracker so we can assert it WAS reset.
-	sub.tracker.Increment(7)
-	sub.tracker.Increment(11)
 
 	sub.OnBrokerReconnect(fc)
 
@@ -1012,9 +928,6 @@ func TestOnBrokerReconnect_PostStart_ReSubscribesAndResetsTracker(t *testing.T) 
 	}
 	if got, want := fc.LastQoS(), sub.cfg.SubscribeQoS; got != want {
 		t.Errorf("Subscribe QoS = %d, want %d", got, want)
-	}
-	if got := sub.tracker.Len(); got != 0 {
-		t.Errorf("tracker.Len = %d, want 0 (re-subscribe success must reset the tracker — broker-side bookkeeping is gone after a session-expired reconnect)", got)
 	}
 }
 
@@ -1033,7 +946,7 @@ func TestOnBrokerReconnect_NilClientArg_FallsBackToEmbeddedClient(t *testing.T) 
 	}
 }
 
-func TestOnBrokerReconnect_SubscribeError_DoesNotResetTracker(t *testing.T) {
+func TestOnBrokerReconnect_SubscribeError_Returns(t *testing.T) {
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
 	sub.mu.Lock()
 	sub.started = true
@@ -1041,16 +954,15 @@ func TestOnBrokerReconnect_SubscribeError_DoesNotResetTracker(t *testing.T) {
 
 	// Inject a fake whose Subscribe returns an error token.
 	fc := &erroringPahoSubscribeClient{err: errors.New("acl: not authorized")}
-	sub.tracker.Increment(7)
 
 	sub.OnBrokerReconnect(fc)
 
-	if got := sub.tracker.Len(); got != 1 {
-		t.Errorf("tracker.Len = %d, want 1 (Subscribe error must NOT reset the tracker — the subscription is not actually live)", got)
+	if got := fc.Calls(); got != 1 {
+		t.Errorf("Subscribe calls = %d, want 1", got)
 	}
 }
 
-func TestOnBrokerReconnect_SubscribeTimeout_DoesNotResetTracker(t *testing.T) {
+func TestOnBrokerReconnect_SubscribeTimeout_Returns(t *testing.T) {
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
 	sub.mu.Lock()
 	sub.started = true
@@ -1058,14 +970,12 @@ func TestOnBrokerReconnect_SubscribeTimeout_DoesNotResetTracker(t *testing.T) {
 
 	// Tighten the timeout so the test runs quickly.
 	sub.cfg.SubscribeTimeout = 5 * time.Millisecond
-
 	fc := &timeoutPahoSubscribeClient{}
-	sub.tracker.Increment(7)
 
 	sub.OnBrokerReconnect(fc)
 
-	if got := sub.tracker.Len(); got != 1 {
-		t.Errorf("tracker.Len = %d, want 1 (Subscribe timeout must NOT reset the tracker — the subscription is not actually live)", got)
+	if got := fc.Calls(); got != 1 {
+		t.Errorf("Subscribe calls = %d, want 1", got)
 	}
 }
 

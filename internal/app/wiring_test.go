@@ -136,7 +136,7 @@ func TestCutover_SideEffectsObserverWired(t *testing.T) {
 // The PipelineSubscriber's manual-ack +
 // DLQ contract assumes the underlying client honours
 // SetAutoAckDisabled(true); using a different constructor would
-// silently break the redelivery semantics.
+// silently break process-or-quarantine ordering before PUBACK.
 func TestCutover_ProductionMQTTHelperWired(t *testing.T) {
 	src := readAppSources(t)
 	if !strings.Contains(src, "mqtt.NewProductionPipelineMQTT(") {

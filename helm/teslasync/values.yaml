@@ -946,13 +946,6 @@ mqtt:
     host: ""
     port: 1883
 
-  # ─── Phase-42 / ADR-004 #8 ───────────────────────────────────────────────
-  # Surfaced as TESLA_MQTT_MAX_REDELIVERIES in the configmap. Read by
-  # cmd/teslasync once the PipelineSubscriber is wired in (see
-  # internal/mqtt.PipelineSubscriberConfig). Default 5 matches the
-  # in-code default in `withDefaults()`.
-  maxRedeliveries: 5
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Phase-42 operator surface
 #

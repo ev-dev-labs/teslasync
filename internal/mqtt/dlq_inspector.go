@@ -3,7 +3,8 @@
 // The PipelineSubscriber publishes any message that fails codec decode
 // (wraps codec.ErrPayloadDrop) to {dlqTopic}/{vehicleID} as a JSON
 // envelope (see DLQEntry in mqtt.go) containing reason + original topic +
-// original payload + redeliveries. Until this file, those messages were
+// original payload + the legacy redelivery count (zero for immediate
+// quarantine). Until this file, those messages were
 // opaque to operators — no UI surfaced what was dropped or replayed it
 // after a codec fix.
 //

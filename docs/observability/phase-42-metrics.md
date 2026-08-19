@@ -160,16 +160,17 @@ exhaustive.
 ### 10. `tesla_mqtt_dlq_writes_total`
 
 - **Source:** `internal/mqtt/mqtt.go` (`DLQWrites` field)
-- **Labels:** `reason` — closed set: `codec_drop_max_redeliveries`,
-  `dlq_max_redeliveries`, `dlq_publish_failure`
-- **Meaning:** MQTT poison-pill payloads written to the DLQ. Once a payload
-  hits `TESLA_MQTT_MAX_REDELIVERIES` (default 5, configurable via Helm
-  `mqtt.maxRedeliveries`), it is published to the DLQ topic and acked so
-  the broker stops re-delivering it.
+- **Labels:** `reason` — closed set: `codec_drop`, `vin_resolver_error`,
+  `other`, `dlq_publish_failure`
+- **Meaning:** MQTT payloads quarantined to the DLQ after a terminal ingest
+  failure. The subscriber makes one bounded DLQ publish attempt and then ACKs
+  the original QoS 1 delivery; MQTT 3.1.1 has no live NACK, so retaining an
+  unacknowledged poison payload would eventually exhaust the broker's in-flight
+  receive window.
 - **Why it matters:** Every increment is a payload Tesla sent us that we
-  cannot decode after `MaxRedeliveries` attempts. A spike here means either
-  (a) the codec has a bug for some Tesla field, or (b) the proto needs to
-  be re-vendored.
+  could not process. A spike in `codec_drop` means either (a) the codec has a
+  bug for some Tesla field, or (b) the proto needs to be re-vendored; other
+  labels identify resolver or unexpected pipeline failures.
 - **Suggested alert:** PAGE on `rate() > 0` (per the inline `mqtt.go`
   governance comment).
 
