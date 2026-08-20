@@ -11,6 +11,9 @@ import {
   useUnarchiveNotifications,
   useDeleteNotifications,
   useNotificationLogs,
+  useNotificationEventTypes,
+  useNotificationPreferences,
+  useUpdateNotificationPreference,
 } from '../useNotifications';
 
 vi.mock('../_toastHelpers', () => ({
@@ -102,6 +105,82 @@ describe('useNotificationLogs', () => {
     const { result } = renderHook(() => useNotificationLogs({}), { wrapper: makeWrapper() });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(requestMock.mock.calls[0]?.[0]).toBe('/notifications/logs');
+  });
+});
+
+describe('notification preferences', () => {
+  beforeEach(() => {
+    requestMock.mockReset();
+  });
+
+  it('loads the stable component-health event catalog', async () => {
+    requestMock.mockResolvedValue([
+      {
+        event_type: 'system.telemetry.outage',
+        component: 'telemetry',
+        transition: 'outage',
+        default_enabled: true,
+        description: 'Telemetry is stale.',
+      },
+    ]);
+    const { result } = renderHook(() => useNotificationEventTypes(), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(requestMock).toHaveBeenCalledWith(
+      '/notifications/event-types',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(result.current.data?.[0]?.event_type).toBe('system.telemetry.outage');
+  });
+
+  it('loads the selected channel preferences through the versioned client path', async () => {
+    requestMock.mockResolvedValue([
+      { id: 1, channel_id: 7, event_type: 'health.database.outage', enabled: true },
+    ]);
+    const { result } = renderHook(() => useNotificationPreferences(7), {
+      wrapper: makeWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(requestMock).toHaveBeenCalledWith(
+      '/notifications/7/preferences',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+    expect(result.current.data?.[0]?.event_type).toBe('health.database.outage');
+  });
+
+  it('does not request preferences until a channel is selected', () => {
+    const { result } = renderHook(() => useNotificationPreferences(null), {
+      wrapper: makeWrapper(),
+    });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(requestMock).not.toHaveBeenCalled();
+  });
+
+  it('updates one event preference with a snake_case request body', async () => {
+    requestMock.mockResolvedValue({ status: 'updated' });
+    const { result } = renderHook(() => useUpdateNotificationPreference(), {
+      wrapper: makeWrapper(),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        channel_id: 7,
+        event_type: 'health.telemetry.recovered',
+        enabled: false,
+      });
+    });
+
+    expect(requestMock).toHaveBeenCalledWith('/notifications/7/preferences', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        event_type: 'health.telemetry.recovered',
+        enabled: false,
+      }),
+    });
   });
 });
 

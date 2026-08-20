@@ -108,7 +108,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
   }
 
   return (
-    <ol className="flex flex-col gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
+    <ol className="flex flex-col gap-5 sm:gap-6" aria-label={t('onboarding.stepper.label', 'Onboarding steps')}>
       {items.map((step, idx) => {
         const state = stepStateFor(step.done, idx, currentIndex);
         const showCta = state === 'current' && step.cta;
@@ -117,7 +117,7 @@ export function Stepper({ steps, renderCta }: StepperProps) {
           <li
             key={step.key}
             id={`onboarding-step-${step.key}`}
-            className="flex gap-4"
+            className="flex gap-3 sm:gap-4"
             aria-current={state === 'current' ? 'step' : undefined}
           >
             <div className="relative flex flex-col items-center">

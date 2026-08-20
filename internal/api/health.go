@@ -2,7 +2,6 @@ package api
 
 import (
 	"context"
-	"fmt"
 	"math"
 	"net/http"
 	"runtime"
@@ -89,6 +88,31 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 // client. Keep in sync with internal/tesla/client.go.
 const teslaBreakerTimeout = 60 * time.Second
 
+type systemStatusComponent struct {
+	Status      string `json:"status"`
+	ConsecFails int    `json:"consecutive_failures"`
+	LastError   string `json:"last_error,omitempty"`
+}
+
+func mqttSystemStatus(mqttClient *mqtt.Client, components map[string]*resilience.Component) systemStatusComponent {
+	if component, ok := components["mqtt"]; ok {
+		return systemStatusComponent{
+			Status:      component.Status.String(),
+			ConsecFails: component.ConsecFails,
+			LastError:   component.LastError,
+		}
+	}
+
+	status := "disabled"
+	if mqttClient != nil {
+		status = "disconnected"
+		if mqttClient.IsConnected() {
+			status = "connected"
+		}
+	}
+	return systemStatusComponent{Status: status}
+}
+
 // teslaBreakerObserver tracks the last open transition time of the Tesla
 // circuit breaker so /system/status can compute an accurate
 // breaker_reset_at without instrumenting the (vendored) gobreaker
@@ -159,16 +183,7 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 		}
 		cbState := tc.CircuitBreakerState()
 		cbCounts := tc.CircuitBreakerCounts()
-		mqttStatus := "disabled"
-		if mqttClient != nil {
-			if mqttClient.IsConnected() {
-				mqttStatus = "connected"
-				health.RecordSuccess("mqtt")
-			} else {
-				mqttStatus = "disconnected"
-				health.RecordFailure("mqtt", fmt.Errorf("MQTT broker not connected"))
-			}
-		}
+		mqttStatus := mqttSystemStatus(mqttClient, components)
 		ftStatus := "disabled"
 		ftDetails := map[string]interface{}{
 			"enabled": false,
@@ -183,12 +198,6 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 				"protocol":          "HTTP POST (JSON)",
 				"supported_signals": apisignal.SubscribedSignals,
 			}
-		}
-
-		type componentInfo struct {
-			Status      string `json:"status"`
-			ConsecFails int    `json:"consecutive_failures"`
-			LastError   string `json:"last_error,omitempty"`
 		}
 
 		// Surface breaker state and the reset window inside tesla_api so
@@ -207,13 +216,11 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 
 		result := map[string]interface{}{
 			"overall": overall.String(),
-			"database": componentInfo{
+			"database": systemStatusComponent{
 				Status: dbStatus,
 			},
 			"tesla_api": teslaInfo,
-			"mqtt": componentInfo{
-				Status: mqttStatus,
-			},
+			"mqtt":      mqttStatus,
 			"fleet_telemetry": map[string]interface{}{
 				"status":  ftStatus,
 				"details": ftDetails,
@@ -226,7 +233,7 @@ func SystemStatusHandler(db *database.DB, tc *tesla.Client, mqttClient *mqtt.Cli
 
 		for name, comp := range components {
 			if _, exists := result[name]; !exists {
-				result[name] = componentInfo{
+				result[name] = systemStatusComponent{
 					Status:      comp.Status.String(),
 					ConsecFails: comp.ConsecFails,
 					LastError:   comp.LastError,

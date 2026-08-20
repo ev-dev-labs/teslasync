@@ -8,6 +8,7 @@ import type {
   SystemHealth, AuditLogEntry, SecurityEvent, DBStats, MigrationStatus,
   ConnectionPool, ExportJob, VehicleState, StateTransition,
   WebErrorsSummary, MaintenanceState, MaintenanceUpdateInput,
+  RuntimeStatusSnapshot,
 } from '@/types/admin';
 
 export const adminKeys = {
@@ -17,6 +18,7 @@ export const adminKeys = {
   backupConfigs: ['backup-configs'] as const,
   backupRuns: ['backup-runs'] as const,
   systemHealth: ['system-health'] as const,
+  runtimeStatus: ['runtime-status'] as const,
   auditLogs: ['audit-logs'] as const,
   securityEvents: (vehicleId: string) => ['security-events', vehicleId] as const,
   dbStats: ['db-stats'] as const,
@@ -118,6 +120,16 @@ export function useSystemHealth() {
   return useQuery({
     queryKey: adminKeys.systemHealth,
     queryFn: ({ signal }) => request<SystemHealth>('/system/health', { signal }),
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/** In-memory component status snapshot. Always returns HTTP 200, including
+ * degraded/down states, so global reliability UI can render the failure body. */
+export function useRuntimeStatus() {
+  return useQuery({
+    queryKey: adminKeys.runtimeStatus,
+    queryFn: ({ signal }) => request<RuntimeStatusSnapshot>('/status/', { signal }),
     refetchInterval: INTERVALS.STANDARD,
   });
 }

@@ -35,6 +35,7 @@ import type { ReactNode } from 'react';
 
 import type { NotificationChannel, NotificationStats } from '@/api/types';
 import { ToastProvider } from '@/components/feedback/Toast';
+import { Button } from '@/components/ui';
 import ChannelsPage from './ChannelsPage';
 
 // <FadeIn> → framer-motion's useReducedMotion reads matchMedia, which jsdom
@@ -174,6 +175,22 @@ vi.mock('../components/channels/ChannelProvidersPanel', () => ({
     channels: NotificationChannel[];
   }) {
     return <div data-testid="providers-panel" data-count={String(channels.length)} />;
+  },
+}));
+
+vi.mock('../components/channels/HealthAlertPreferencesPanel', () => ({
+  HealthAlertPreferencesPanel: function HealthAlertPreferencesPanelMock({
+    channels,
+    onAddChannel,
+  }: {
+    channels: NotificationChannel[];
+    onAddChannel: () => void;
+  }) {
+    return (
+      <div data-testid="health-alert-preferences" data-count={String(channels.length)}>
+        <Button onClick={onAddChannel}>health-add</Button>
+      </div>
+    );
   },
 }));
 
@@ -320,7 +337,7 @@ beforeEach(() => {
 
 // ── 1. Structure & prop wiring ────────────────────────────────────────────────
 describe('ChannelsPage — structure', () => {
-  it('renders the page title, subtitle, and all four content surfaces', () => {
+  it('renders the page title, subtitle, and all five content surfaces', () => {
     renderPage();
     expect(
       screen.getByRole('heading', { level: 1, name: 'Notification channels' }),
@@ -330,12 +347,14 @@ describe('ChannelsPage — structure', () => {
     expect(screen.getByTestId('channels-grid')).toBeInTheDocument();
     expect(screen.getByTestId('providers-panel')).toBeInTheDocument();
     expect(screen.getByTestId('browser-push')).toBeInTheDocument();
+    expect(screen.getByTestId('health-alert-preferences')).toBeInTheDocument();
   });
 
   it('passes the configured channels to both the grid and the providers panel', () => {
     renderPage();
     expect(screen.getByTestId('channels-grid')).toHaveAttribute('data-count', '2');
     expect(screen.getByTestId('providers-panel')).toHaveAttribute('data-count', '2');
+    expect(screen.getByTestId('health-alert-preferences')).toHaveAttribute('data-count', '2');
   });
 
   it('feeds the stats query and its loading flag into the stats band', () => {

@@ -194,6 +194,54 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  # ─── Onboarding ─────────────────────────────────────────────────────
+  /onboarding/status:
+    get:
+      operationId: onboardingStatus
+      summary: First-run onboarding gate status
+      description: >
+        Reports the durable setup contract plus live, informational
+        runtime anchors. `setup_complete` (and its backward-compatible
+        alias `is_complete`) is persisted once tesla_connected,
+        vehicle_count>0, and data_flowing were all observed true at
+        least once; after that it is NEVER recomputed back to false by
+        a later Fleet Telemetry outage or an expired Tesla token —
+        `setup_required` is simply `!setup_complete`. `data_flowing`,
+        `last_telemetry_at`, and `telemetry_health` remain live/
+        informational fields for the onboarding UI and do not gate
+        setup completeness.
+      tags: [System]
+      responses:
+        "200":
+          description: Onboarding status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tesla_connected:
+                    type: boolean
+                  vehicle_count:
+                    type: integer
+                  data_flowing:
+                    type: boolean
+                  last_telemetry_at:
+                    type: string
+                    format: date-time
+                    nullable: true
+                  telemetry_health:
+                    type: string
+                    enum: [healthy, stale, unknown]
+                  setup_required:
+                    type: boolean
+                  setup_complete:
+                    type: boolean
+                  is_complete:
+                    type: boolean
+                    description: Backward-compatible alias of setup_complete.
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   # ─── Vehicles ───────────────────────────────────────────────────────
   /vehicles:
     get:
@@ -1314,6 +1362,46 @@ paths:
                 type: object
         "500":
           $ref: "#/components/responses/InternalError"
+
+  /notifications/event-types:
+    get:
+      operationId: listNotificationEventTypes
+      summary: List the stable component-health notification event-type catalog
+      description: >
+        Returns the complete, stable catalog of component-health
+        notification event types (system.<component>.<outage|recovery>
+        — telemetry, mqtt, database, redis, tesla_api, worker) a channel
+        can opt in or out of via
+        GET/PUT /notifications/{channelID}/preferences. Static and
+        DB-free — the Channels UI should fetch this once to render one
+        toggle per event_type without hardcoding or guessing the
+        strings, then read/write the per-channel enabled state via the
+        preferences endpoints, defaulting an absent preference row to
+        each entry's default_enabled.
+      tags: [Notifications]
+      responses:
+        "200":
+          description: Event-type catalog
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    event_type:
+                      type: string
+                      example: system.mqtt.outage
+                    component:
+                      type: string
+                      example: mqtt
+                    transition:
+                      type: string
+                      enum: [outage, recovery]
+                    default_enabled:
+                      type: boolean
+                    description:
+                      type: string
 
   /notifications/schedules:
     get:

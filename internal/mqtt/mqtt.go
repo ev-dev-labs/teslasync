@@ -459,9 +459,10 @@ type PipelineSubscriber struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu      sync.Mutex
-	started bool
-	stopped bool
+	mu         sync.Mutex
+	started    bool
+	stopped    bool
+	subscribed bool
 }
 
 // NewPipelineSubscriber constructs a PipelineSubscriber. All non-config
@@ -535,6 +536,11 @@ func (s *PipelineSubscriber) Start() error {
 	if err := token.Error(); err != nil {
 		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe %s: %w", topic, err)
 	}
+	s.mu.Lock()
+	if !s.stopped {
+		s.subscribed = true
+	}
+	s.mu.Unlock()
 
 	s.logger.Info().
 		Str("topic", topic).
@@ -552,6 +558,7 @@ func (s *PipelineSubscriber) Stop() {
 		return
 	}
 	s.stopped = true
+	s.subscribed = false
 	s.mu.Unlock()
 
 	s.cancel()
@@ -583,6 +590,7 @@ func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 	s.mu.Lock()
 	started := s.started
 	stopped := s.stopped
+	s.subscribed = false
 	s.mu.Unlock()
 	if !started || stopped {
 		// First OnConnect during initial Connect, or post-Stop reconnect:
@@ -609,10 +617,32 @@ func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 			Msg("mqtt: PipelineSubscriber: re-subscribe failed on broker reconnect; telemetry stream will be silent until next reconnect")
 		return
 	}
+	s.mu.Lock()
+	if !s.stopped {
+		s.subscribed = true
+	}
+	s.mu.Unlock()
 	s.logger.Info().
 		Str("topic", topic).
 		Str("codec_failure_disposition", "dlq_ack").
 		Msg("phase-42 PipelineSubscriber re-subscribed on broker reconnect")
+}
+
+// IsHealthy reports whether the Fleet Telemetry subscriber is started,
+// subscribed, not stopped, and connected to its broker. The application
+// watchdog uses this instead of inferring ingest health from the separate
+// auxiliary MQTT client.
+func (s *PipelineSubscriber) IsHealthy() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	started := s.started
+	stopped := s.stopped
+	subscribed := s.subscribed
+	client := s.client
+	s.mu.Unlock()
+	return started && !stopped && subscribed && client != nil && client.IsConnected()
 }
 
 // mqttPayload is the test-friendly seam for the Paho-specific

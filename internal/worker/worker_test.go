@@ -192,3 +192,73 @@ func TestMultipleVehiclesIndependentBackoff(t *testing.T) {
 		t.Errorf("vehicle 2 should be unaffected: consecFails = %d, want 1", vh2.consecFails)
 	}
 }
+
+func TestHealthSnapshot_NilWorker(t *testing.T) {
+	var w *Worker
+	tracked, degraded := w.HealthSnapshot(3)
+	if tracked != 0 || degraded != 0 {
+		t.Errorf("HealthSnapshot on nil *Worker = (%d, %d), want (0, 0)", tracked, degraded)
+	}
+}
+
+func TestHealthSnapshot_NoTrackedVehicles(t *testing.T) {
+	// A fresh install (or a fleet fully covered by Fleet Telemetry
+	// streaming, so the worker never polls anyone) has an empty
+	// vehicleHealth map — tracked must be 0 so the caller skips the
+	// health check entirely rather than reporting success or failure.
+	w := &Worker{vehicleHealth: make(map[int64]*vehicleHealth)}
+	tracked, degraded := w.HealthSnapshot(3)
+	if tracked != 0 || degraded != 0 {
+		t.Errorf("HealthSnapshot on empty map = (%d, %d), want (0, 0)", tracked, degraded)
+	}
+}
+
+func TestHealthSnapshot_OneFlakyVehicleDoesNotDegradeWhole(t *testing.T) {
+	w := &Worker{vehicleHealth: make(map[int64]*vehicleHealth)}
+	w.recordVehicleFailure(1)
+	w.recordVehicleFailure(1)
+	w.recordVehicleFailure(1)             // consecFails=3, at the degraded threshold
+	w.vehicleHealth[2] = &vehicleHealth{} // vehicle 2 is tracked and healthy (0 fails)
+
+	tracked, degraded := w.HealthSnapshot(3)
+	if tracked != 2 {
+		t.Errorf("tracked = %d, want 2", tracked)
+	}
+	if degraded != 1 {
+		t.Errorf("degraded = %d, want 1 (only vehicle 1 crossed the threshold)", degraded)
+	}
+}
+
+func TestHealthSnapshot_AllVehiclesDegraded(t *testing.T) {
+	w := &Worker{vehicleHealth: make(map[int64]*vehicleHealth)}
+	w.recordVehicleFailure(1)
+	w.recordVehicleFailure(1)
+	w.recordVehicleFailure(1)
+	w.recordVehicleFailure(2)
+	w.recordVehicleFailure(2)
+	w.recordVehicleFailure(2)
+
+	tracked, degraded := w.HealthSnapshot(3)
+	if tracked != 2 || degraded != 2 {
+		t.Errorf("HealthSnapshot = (%d, %d), want (2, 2) — every tracked vehicle is degraded", tracked, degraded)
+	}
+	// Caller contract: degraded == tracked is exactly the "fail the
+	// worker component" signal (see internal/app.checkWorkerHealth).
+	if degraded != tracked {
+		t.Errorf("expected degraded == tracked to signal a fleet-wide worker failure")
+	}
+}
+
+func TestHealthSnapshot_BelowThresholdNotCountedDegraded(t *testing.T) {
+	w := &Worker{vehicleHealth: make(map[int64]*vehicleHealth)}
+	w.recordVehicleFailure(1)
+	w.recordVehicleFailure(1) // only 2 consecutive fails, below threshold=3
+
+	tracked, degraded := w.HealthSnapshot(3)
+	if tracked != 1 {
+		t.Errorf("tracked = %d, want 1", tracked)
+	}
+	if degraded != 0 {
+		t.Errorf("degraded = %d, want 0 (below the degraded threshold)", degraded)
+	}
+}

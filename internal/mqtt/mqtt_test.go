@@ -797,6 +797,7 @@ type fakePahoClient struct {
 	subscribeCalls   int
 	lastSubscribeTop string
 	lastSubscribeQoS byte
+	connected        bool
 }
 
 func (f *fakePahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
@@ -828,8 +829,8 @@ func (f *fakePahoClient) LastQoS() byte {
 
 // Unused pahomqtt.Client methods. They panic so that an accidental
 // dependency on broker-side behaviour in a test surfaces immediately.
-func (f *fakePahoClient) IsConnected() bool      { return true }
-func (f *fakePahoClient) IsConnectionOpen() bool { return true }
+func (f *fakePahoClient) IsConnected() bool      { return f.connected }
+func (f *fakePahoClient) IsConnectionOpen() bool { return f.connected }
 func (f *fakePahoClient) Connect() pahoToken     { panic("Connect not used") }
 func (f *fakePahoClient) Disconnect(_ uint)      { panic("Disconnect not used") }
 func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoToken {
@@ -976,6 +977,31 @@ func TestOnBrokerReconnect_SubscribeTimeout_Returns(t *testing.T) {
 
 	if got := fc.Calls(); got != 1 {
 		t.Errorf("Subscribe calls = %d, want 1", got)
+	}
+}
+
+func TestPipelineSubscriber_IsHealthy(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.mu.Lock()
+	sub.started = true
+	sub.subscribed = true
+	sub.mu.Unlock()
+
+	if !sub.IsHealthy() {
+		t.Fatal("IsHealthy() = false for active connected subscription")
+	}
+	client.connected = false
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true after broker disconnect")
+	}
+	client.connected = true
+	sub.mu.Lock()
+	sub.subscribed = false
+	sub.mu.Unlock()
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true without an active subscription")
 	}
 }
 

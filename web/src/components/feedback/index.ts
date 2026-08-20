@@ -22,6 +22,7 @@ export { DraftRecoveryBanner, type DraftRecoveryBannerProps } from './DraftRecov
 export { DraftRestorePrompt } from './DraftRestorePrompt';
 export { OfflineBanner } from './OfflineBanner';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
+export { RuntimeHealthBanner } from './RuntimeHealthBanner';
 export { TeslaReauthBanner } from './TeslaReauthBanner';
 export { RateLimitBanner } from './RateLimitBanner';
 export { MaintenanceBanner } from './MaintenanceBanner';

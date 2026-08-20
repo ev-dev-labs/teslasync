@@ -32,6 +32,7 @@ import (
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
@@ -85,16 +86,26 @@ func appBackgroundTracer() oteltrace.Tracer { return otel.Tracer(appBackgroundTr
 // tracer) before exiting.
 func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error) {
 	a := &App{
-		Cfg:             cfg,
-		Build:           build,
-		Health:          resilience.NewHealthMonitor(),
-		startupStart:    time.Now(),
-		prevHealthState: make(map[string]resilience.ComponentStatus),
+		Cfg:           cfg,
+		Build:         build,
+		Health:        resilience.NewHealthMonitor(),
+		startupStart:  time.Now(),
+		healthTracker: newComponentHealthTracker(componentNotifyCooldown),
 	}
 	a.Health.Register("database")
 	a.Health.Register("mqtt")
 	a.Health.Register("tesla_api")
 	a.Health.Register("worker")
+	// redis: only meaningfully checked when REDIS_ENABLED=true (see
+	// runHealthWatchdogTick) — registered unconditionally so it always
+	// shows up in /system/status, staying "unknown" (never "healthy")
+	// when Redis isn't configured, per the "don't pretend a component
+	// is healthy" rule.
+	a.Health.Register("redis")
+	// telemetry: pipeline/global Fleet Telemetry ingest freshness (NOT
+	// per-vehicle sleep-aware) — see runHealthWatchdogTick for the exact
+	// conservative semantics documented there.
+	a.Health.Register("telemetry")
 
 	a.initTracing(ctx)
 
@@ -1286,6 +1297,13 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *se
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
 	a.notifRepo = dbnotif.NewNotificationRepo(a.DB)
+	a.prefRepo = dbnotif.NewNotificationPreferenceRepo(a.DB)
+	a.onboardingRepo = dbuser.NewOnboardingRepo(a.DB)
+	a.onboardingStateRepo = dbuser.NewOnboardingStateRepo(a.DB)
+	a.healthNotifications = newComponentNotificationCache(a.notifRepo, a.prefRepo)
+	if err := a.healthNotifications.Refresh(ctx); err != nil {
+		log.Warn().Err(err).Msg("health watchdog: initial notification target cache load failed")
+	}
 	resilience.SafeGo("health-watchdog", func() {
 		ticker := time.NewTicker(60 * time.Second)
 		defer ticker.Stop()
@@ -1300,66 +1318,76 @@ func (a *App) initHealthWatchdog(ctx context.Context) {
 	})
 }
 
+// workerDegradedThreshold mirrors resilience.HealthMonitor's own
+// consecutive-failure bar for StatusDegraded so the "worker" component
+// probe (Worker.HealthSnapshot) and the generic HealthMonitor agree on
+// what "degraded" means for a single vehicle.
+const workerDegradedThreshold = 3
+
+// telemetryPipelineStaleAfter is the conservative, GLOBAL (fleet-wide)
+// Fleet Telemetry ingest freshness threshold used by the "telemetry"
+// health component. It is intentionally NOT the same as
+// OnboardingRepo.Get's 24h onboarding-gate window.
+//
+// Semantics: this checks whether ANY vehicle in the fleet has written a
+// signal_log row within the window — not any single vehicle's expected
+// online/driving/charging state. A single sleeping vehicle in a
+// multi-vehicle fleet never trips this (any other vehicle reporting
+// resets it), and normal single-vehicle overnight sleep does not either
+// as long as it's under this window. A TOTAL, sustained fleet-wide
+// silence beyond this window is treated as a pipeline/ingest problem
+// (MQTT/Fleet Telemetry connectivity) rather than "the car is asleep".
+//
+// This is deliberately conservative per the explicit requirement to
+// avoid false alerts for sleeping vehicles — per-vehicle expected-
+// reporting state (online/driving/charging) is NOT implemented in this
+// slice; see .github/ARCHITECTURE.md and the task notes for why a
+// pipeline/global check is used instead.
+const telemetryPipelineStaleAfter = 6 * time.Hour
+
 func (a *App) runHealthWatchdogTick(ctx context.Context) {
 	tickCtx, span := appBackgroundTracer().Start(ctx, "health_watchdog.tick",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
 	defer span.End()
 
-	checkCtx, checkCancel := context.WithTimeout(tickCtx, 5*time.Second)
-	if dbErr := a.DB.Health(checkCtx); dbErr != nil {
-		a.Health.RecordFailure("database", dbErr)
-		span.RecordError(dbErr)
-		log.Warn().Err(dbErr).Msg("database health check failed")
-	} else {
-		a.Health.RecordSuccess("database")
-	}
-	checkCancel()
-
-	if a.MQTT != nil {
-		if a.MQTT.IsConnected() {
-			a.Health.RecordSuccess("mqtt")
-		} else {
-			err := fmt.Errorf("MQTT broker not connected")
-			a.Health.RecordFailure("mqtt", err)
-			span.RecordError(err)
+	databaseHealthy := a.checkDatabaseHealth(tickCtx, span)
+	if databaseHealthy && a.healthNotifications != nil {
+		if err := a.healthNotifications.Refresh(tickCtx); err != nil {
+			log.Warn().Err(err).Msg("health watchdog: notification target cache refresh failed")
 		}
 	}
-
-	if a.TeslaClient.HasValidToken() {
-		a.Health.RecordSuccess("tesla_api")
-	}
-
-	a.Health.RecordSuccess("worker")
+	a.checkMQTTHealth(span)
+	a.checkRedisHealth(tickCtx)
+	a.checkTeslaAuthHealth()
+	a.checkWorkerHealth()
+	a.checkTelemetryHealth(tickCtx)
 
 	components := a.Health.GetStatus()
+	setupComplete := a.onboardingCompleteForHealthNotifications(tickCtx)
 	degradedCount := 0
 	for name, comp := range components {
-		prev, seen := a.prevHealthState[name]
-		if !seen {
-			a.prevHealthState[name] = comp.Status
-			continue
-		}
-
-		if prev == resilience.StatusHealthy && comp.Status >= resilience.StatusDegraded {
-			severity := "warning"
-			if comp.Status == resilience.StatusUnhealthy {
-				severity = "critical"
+		initialOutageEligible := name != "tesla_api" || setupComplete
+		if evt, fire := a.healthTracker.Observe(name, *comp, initialOutageEligible); fire {
+			icon := "⚠️"
+			if evt.Severity == "info" {
+				icon = "✅"
 			}
-			title := fmt.Sprintf("%s is %s", componentDisplayName(name), comp.Status.String())
-			message := fmt.Sprintf("Component %s has %d consecutive failures. Last error: %s", name, comp.ConsecFails, comp.LastError)
-			_ = severity
-			sendSystemNotification(tickCtx, a.notifRepo, a.MQTT, "⚠️ "+title, message)
-			log.Warn().Str("component", name).Str("status", comp.Status.String()).Str("severity", severity).Msg("system alert: component degraded")
+			dispatchComponentNotification(tickCtx, a.healthNotifications, a.healthNotifications, mqttTransport(a.MQTT),
+				notification.PublishCtx, componentTransitionEvent{
+					Component: evt.Component,
+					EventType: evt.EventType,
+					Severity:  evt.Severity,
+					Title:     icon + " " + evt.Title,
+					Message:   evt.Message,
+				})
+			logEvt := log.Warn()
+			if evt.Severity == "info" {
+				logEvt = log.Info()
+			}
+			logEvt.Str("component", name).Str("status", comp.Status.String()).
+				Str("event_type", evt.EventType).Str("severity", evt.Severity).
+				Msg("system alert: component health transition")
 		}
-
-		if prev >= resilience.StatusDegraded && comp.Status == resilience.StatusHealthy {
-			title := fmt.Sprintf("%s recovered", componentDisplayName(name))
-			message := fmt.Sprintf("Component %s is healthy again", name)
-			sendSystemNotification(tickCtx, a.notifRepo, a.MQTT, "✅ "+title, message)
-			log.Info().Str("component", name).Msg("system alert: component recovered")
-		}
-
-		a.prevHealthState[name] = comp.Status
 		if comp.Status != resilience.StatusHealthy {
 			degradedCount++
 		}
@@ -1379,6 +1407,184 @@ func (a *App) runHealthWatchdogTick(ctx context.Context) {
 			}
 		}
 	}
+}
+
+// mqttTransport returns the underlying paho client for the direct-
+// dispatch fallback path, or nil (a valid, nil-safe value for
+// notification.PublishCtx) when MQTT was never constructed.
+func mqttTransport(c *mqtt.Client) pahomqtt.Client {
+	if c == nil {
+		return nil
+	}
+	return c.Underlying()
+}
+
+// checkDatabaseHealth is unchanged from the pre-existing watchdog: a
+// bounded ping against the shared pgx pool.
+func (a *App) checkDatabaseHealth(tickCtx context.Context, span oteltrace.Span) bool {
+	checkCtx, cancel := context.WithTimeout(tickCtx, 5*time.Second)
+	defer cancel()
+	if dbErr := a.DB.Health(checkCtx); dbErr != nil {
+		a.Health.RecordFailure("database", dbErr)
+		span.RecordError(dbErr)
+		log.Warn().Err(dbErr).Msg("database health check failed")
+		return false
+	}
+	a.Health.RecordSuccess("database")
+	return true
+}
+
+// checkMQTTHealth records a failure every tick that MQTT is either
+// disconnected OR was never constructed at all (a.MQTT == nil, e.g. the
+// broker was unreachable through all of initMQTT's startup retries).
+// The pre-existing watchdog only checked `a.MQTT != nil`, so a
+// startup-time MQTT failure recorded exactly one failure and then never
+// got re-observed — ConsecFails could never cross the Degraded/
+// Unhealthy bar and no outage notification would ever fire for the
+// most common "MQTT down" case. Recording a failure every tick when nil
+// fixes that; the direct-dispatch fallback in dispatchComponentNotification
+// (via notification.PublishCtx) is exactly what makes the resulting
+// "MQTT is down" notification deliverable in that state.
+func (a *App) checkMQTTHealth(span oteltrace.Span) {
+	baseConnected := a.MQTT != nil && a.MQTT.IsConnected()
+	pipelineRequired := a.Cfg != nil && a.Cfg.FleetTelemetry.Enabled
+	pipelineHealthy := a.pipelineSubscriber != nil && a.pipelineSubscriber.IsHealthy()
+	if err := mqttHealthError(baseConnected, pipelineRequired, pipelineHealthy); err != nil {
+		a.Health.RecordFailure("mqtt", err)
+		span.RecordError(err)
+		return
+	}
+	a.Health.RecordSuccess("mqtt")
+}
+
+func mqttHealthError(baseConnected, pipelineRequired, pipelineHealthy bool) error {
+	if !baseConnected {
+		return fmt.Errorf("MQTT broker not connected")
+	}
+	if pipelineRequired && !pipelineHealthy {
+		return fmt.Errorf("Fleet Telemetry MQTT subscriber is not connected and subscribed")
+	}
+	return nil
+}
+
+func (a *App) onboardingCompleteForHealthNotifications(ctx context.Context) bool {
+	if a.onboardingStateRepo == nil {
+		return false
+	}
+	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	state, err := a.onboardingStateRepo.Get(checkCtx)
+	if err != nil {
+		log.Warn().Err(err).Msg("health watchdog: durable onboarding state query failed")
+		return false
+	}
+	return state.Completed
+}
+
+// checkRedisHealth only feeds the "redis" component when Redis is
+// actually configured (REDIS_ENABLED=true) — an install that never
+// enabled Redis must see "redis" stay unknown forever, never
+// "healthy" (there's nothing to be healthy about) and never "degraded"
+// (nothing broke). When Redis IS enabled but internal/cache.Store
+// never connected (Underlying() == nil — Store falls back to in-memory
+// permanently after a failed startup Ping), that is a real, ongoing
+// failure and is reported as such every tick.
+func (a *App) checkRedisHealth(tickCtx context.Context) {
+	if a.Cfg == nil || !a.Cfg.Redis.Enabled {
+		return
+	}
+	rdb := a.Cache.Underlying()
+	if rdb == nil {
+		a.Health.RecordFailure("redis", fmt.Errorf("redis enabled but not connected"))
+		return
+	}
+	pingCtx, cancel := context.WithTimeout(tickCtx, 3*time.Second)
+	defer cancel()
+	if err := rdb.Ping(pingCtx).Err(); err != nil {
+		a.Health.RecordFailure("redis", err)
+		return
+	}
+	a.Health.RecordSuccess("redis")
+}
+
+// checkTeslaAuthHealth is the fixed version of the pre-existing check:
+// the original watchdog only ever called RecordSuccess, never
+// RecordFailure, so an expired/missing Tesla token could never surface
+// as a degraded/unhealthy "tesla_api" component or trigger an outage
+// notification.
+func (a *App) checkTeslaAuthHealth() {
+	if a.TeslaClient == nil {
+		return
+	}
+	if a.TeslaClient.HasValidToken() {
+		a.Health.RecordSuccess("tesla_api")
+		return
+	}
+	a.Health.RecordFailure("tesla_api", fmt.Errorf("Tesla API token missing or expired"))
+}
+
+// checkWorkerHealth replaces the pre-existing unconditional
+// RecordSuccess("worker") with a real probe: Worker.HealthSnapshot
+// reports how many vehicles the worker has ever recorded a polling
+// outcome for and how many of those are currently degraded. tracked==0
+// (fresh install, or every known vehicle is fully covered by Fleet
+// Telemetry streaming so the worker never polls it) means "no signal
+// yet" — the check is skipped entirely rather than lying that the
+// worker is healthy. Failure requires EVERY tracked vehicle to be
+// degraded, so one flaky vehicle can't flip the whole component.
+func (a *App) checkWorkerHealth() {
+	if a.Worker == nil {
+		return
+	}
+	tracked, degraded := a.Worker.HealthSnapshot(workerDegradedThreshold)
+	if tracked == 0 {
+		return
+	}
+	if degraded == tracked {
+		a.Health.RecordFailure("worker", fmt.Errorf("%d/%d polled vehicles have %d+ consecutive failures", degraded, tracked, workerDegradedThreshold))
+		return
+	}
+	a.Health.RecordSuccess("worker")
+}
+
+// checkTelemetryHealth implements the conservative pipeline/global
+// Fleet Telemetry freshness check documented on
+// telemetryPipelineStaleAfter. It is skipped (no Record* call at all)
+// when Fleet Telemetry ingestion is disabled in config — signal_log is
+// populated ONLY by the Fleet Telemetry MQTT ingest path (see
+// .github/instructions/telemetry-pipeline.instructions.md); a
+// REST-polling-only deployment would otherwise see a permanent false
+// "telemetry down" alert since signal_log would never receive rows at
+// all — and when there are zero vehicles registered yet (an onboarding
+// concern, not a runtime health concern; see GET /onboarding/status).
+func (a *App) checkTelemetryHealth(tickCtx context.Context) {
+	if a.Cfg == nil || !a.Cfg.FleetTelemetry.Enabled || a.onboardingRepo == nil {
+		return
+	}
+	checkCtx, cancel := context.WithTimeout(tickCtx, 5*time.Second)
+	defer cancel()
+	status, err := a.onboardingRepo.Get(checkCtx)
+	if err != nil {
+		log.Warn().Err(err).Msg("telemetry health check: onboarding repo query failed")
+		return
+	}
+	if status.VehicleCount == 0 {
+		return
+	}
+	if status.LastSignalAt == nil {
+		// No signal has EVER been recorded for any vehicle yet even
+		// though vehicles exist and Fleet Telemetry is enabled — this is
+		// still "no signal yet" rather than "outage": a freshly synced
+		// vehicle may not have connected to Fleet Telemetry for the
+		// first time. Skip until the first signal ever lands.
+		return
+	}
+	if time.Since(*status.LastSignalAt) > telemetryPipelineStaleAfter {
+		a.Health.RecordFailure("telemetry", fmt.Errorf("no signal_log activity across %d vehicle(s) in over %s (last seen %s)",
+			status.VehicleCount, telemetryPipelineStaleAfter, status.LastSignalAt.Format(time.RFC3339)))
+		return
+	}
+	a.Health.RecordSuccess("telemetry")
 }
 
 func (a *App) loadOpenAPISpec() {

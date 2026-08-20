@@ -50,6 +50,7 @@ import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
+import { RuntimeHealthBanner } from '@/components/feedback'
 import Logo from '../ui/Logo'
 import { Button, ThemePicker } from '@/components/ui'
 import {
@@ -1652,6 +1653,7 @@ export default function Layout() {
             and service status notices. */}
         <TimeMachineBanner />
         <ServiceStatusBanner />
+        <RuntimeHealthBanner />
         <main
           id="main-content"
           data-role="main-content"

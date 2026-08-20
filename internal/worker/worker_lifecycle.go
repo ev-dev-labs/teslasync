@@ -270,6 +270,41 @@ func (w *Worker) pollVehicleSafe(ctx context.Context, vehicle *vehiclemodel.Vehi
 	w.pollVehicle(ctx, vehicle)
 }
 
+// HealthSnapshot reports how many vehicles the worker has ever recorded a
+// polling outcome for ("tracked") and how many of those currently have at
+// least degradedThreshold consecutive failures ("degraded"). It is the
+// probe the API server's health watchdog (internal/app) uses for the
+// "worker" component — see runHealthWatchdogTick.
+//
+// Semantics are deliberately conservative:
+//   - A vehicle fully covered by Fleet Telemetry streaming (so the
+//     worker never polls it — see IsVehicleStreaming/FleetTelemetryEnabled)
+//     never appears in vehicleHealth, so tracked stays 0 for an
+//     all-streaming fleet. tracked==0 means "no signal", not "healthy" —
+//     callers must NOT call RecordSuccess in that case.
+//   - degraded only counts vehicles at or above degradedThreshold
+//     consecutive failures, matching resilience.HealthMonitor's own
+//     degraded bar so the two layers agree on what "degraded" means.
+//   - Failure is reported only when EVERY tracked vehicle is degraded —
+//     a single flaky vehicle must not flip the whole worker component
+//     unhealthy; a fleet-wide failure (e.g. Tesla API outage, invalid
+//     token) degrades every polled vehicle at once and IS worth
+//     surfacing.
+func (w *Worker) HealthSnapshot(degradedThreshold int) (tracked, degraded int) {
+	if w == nil {
+		return 0, 0
+	}
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, vh := range w.vehicleHealth {
+		tracked++
+		if vh.consecFails >= degradedThreshold {
+			degraded++
+		}
+	}
+	return tracked, degraded
+}
+
 // recordVehicleFailure applies exponential backoff for a repeatedly failing vehicle.
 func (w *Worker) recordVehicleFailure(vehicleID int64) {
 	w.mu.Lock()

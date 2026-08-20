@@ -37,6 +37,15 @@ type OnboardingStatus struct {
 	// DataFlowing is true when at least one row has been written to
 	// `signal_log` within the last 24 hours.
 	DataFlowing bool
+	// LastSignalAt is the most recent signal_log timestamp across every
+	// vehicle, or nil if no signal has ever been recorded. Populated by
+	// the same Get() call (via LastSignalAt) so callers get a single
+	// round-trip bundle of "is data flowing right now" (DataFlowing,
+	// bounded to a 24h window — cheap/sargable) plus the exact instant
+	// for display and for the runtime health watchdog's own (shorter,
+	// conservative) staleness threshold. See internal/app's health
+	// watchdog telemetry component check for that separate consumer.
+	LastSignalAt *time.Time
 }
 
 // Get returns the current onboarding status. It runs two cheap
@@ -47,6 +56,8 @@ type OnboardingStatus struct {
 //     — the constraint is critical because `signal_log` is a
 //     TimescaleDB hypertable and an unbounded scan would touch every
 //     chunk.
+//  3. LastSignalAt() — an indexed ORDER BY ts DESC LIMIT 1, so
+//     "no rows in 24h" and "exact last-seen instant" are both cheap.
 //
 // Errors from either query are wrapped with context so the caller can
 // distinguish which dependency failed.
@@ -75,6 +86,12 @@ func (r *OnboardingRepo) Get(ctx context.Context) (*OnboardingStatus, error) {
 		return nil, fmt.Errorf("check signal_log freshness: %w", err)
 	}
 	status.DataFlowing = dataFlowing
+
+	lastSignalAt, err := r.LastSignalAt(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("last signal timestamp: %w", err)
+	}
+	status.LastSignalAt = lastSignalAt
 
 	return &status, nil
 }

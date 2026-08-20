@@ -2999,9 +2999,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Onboarding: first-run gate status.
 		// Reports whether the install has connected a Tesla account,
-		// has any vehicles, and has received recent telemetry. The
-		// frontend polls this endpoint and routes the user to
-		// <OnboardingPage> until is_complete flips to true.
+		// has any vehicles, and has received recent telemetry, PLUS the
+		// durable setup_required/setup_complete contract: once an
+		// install is durably configured (persisted in the
+		// onboarding_state table — see internal/database/user's
+		// OnboardingStateRepo and migration 000230), a later Fleet
+		// Telemetry outage or an expired Tesla token does NOT flip it
+		// back to setup_required. is_complete is kept as a
+		// backward-compatible alias of setup_complete. The frontend
+		// polls this endpoint and routes the user to <OnboardingPage>
+		// until is_complete flips to true.
 		r.Get("/onboarding/status", onboardingHandler.Status)
 		r.Route("/vehicles", func(r chi.Router) {
 			r.Get("/", vehicleHandler.List)
@@ -3592,6 +3599,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Post("/unarchive", notificationHandler.Unarchive)
 			r.Delete("/logs", notificationHandler.DeleteBulk)
 			r.Get("/analytics", notifScheduleHandler.GetAnalytics)
+			// Stable component-health notification event-type catalog
+			// (event_type, component, transition, default_enabled,
+			// description) — lets the Channels UI render toggles for
+			// system.<component>.<outage|recovery> event types without
+			// hardcoding or guessing the strings. Static/DB-free; mounted
+			// before /{channelID} so chi does not treat "event-types" as
+			// a channel id (same reasoning as /quiet-hours and
+			// /webhooks/preview-signature below).
+			r.Get("/event-types", apinotif.EventTypesHandler)
 			r.Route("/schedules", func(r chi.Router) {
 				r.Get("/", notifScheduleHandler.ListSchedules)
 				r.Post("/", notifScheduleHandler.CreateSchedule)

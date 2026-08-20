@@ -4,8 +4,36 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/sony/gobreaker"
 )
+
+func TestMQTTSystemStatusPrefersWatchdogState(t *testing.T) {
+	got := mqttSystemStatus(nil, map[string]*resilience.Component{
+		"mqtt": {
+			Status:      resilience.StatusDegraded,
+			ConsecFails: 4,
+			LastError:   "Fleet Telemetry MQTT subscriber is not connected and subscribed",
+		},
+	})
+
+	if got.Status != "degraded" {
+		t.Errorf("status = %q, want degraded", got.Status)
+	}
+	if got.ConsecFails != 4 {
+		t.Errorf("consecutive failures = %d, want 4", got.ConsecFails)
+	}
+	if got.LastError != "Fleet Telemetry MQTT subscriber is not connected and subscribed" {
+		t.Errorf("last error = %q, want subscriber health error", got.LastError)
+	}
+}
+
+func TestMQTTSystemStatusWithoutWatchdogOrClientIsDisabled(t *testing.T) {
+	got := mqttSystemStatus(nil, nil)
+	if got.Status != "disabled" {
+		t.Errorf("status = %q, want disabled", got.Status)
+	}
+}
 
 // TestUpstreamBreaker_ResetAt_TracksOpenTransition asserts that the
 // observer pins the open timestamp on the first call where the breaker
