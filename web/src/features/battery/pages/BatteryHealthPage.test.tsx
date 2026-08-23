@@ -53,8 +53,6 @@ vi.hoisted(() => {
 const {
   tImpl,
   healthMock,
-  degradationMock,
-  sessionsMock,
   chargingLiveMock,
   selectedVehicleMock,
   alertContextMock,
@@ -80,8 +78,6 @@ const {
   return {
     tImpl,
     healthMock: vi.fn(),
-    degradationMock: vi.fn(),
-    sessionsMock: vi.fn(),
     chargingLiveMock: vi.fn(),
     selectedVehicleMock: vi.fn(),
     alertContextMock: vi.fn(),
@@ -105,15 +101,6 @@ vi.mock('@/api/hooks/useEnergy', async () => {
   return {
     ...actual,
     useBatteryHealthAnalytics: (...args: unknown[]) => healthMock(...args),
-    useBatteryDegradation: (...args: unknown[]) => degradationMock(...args),
-  };
-});
-
-vi.mock('@/api/hooks/useCharging', async () => {
-  const actual = await vi.importActual<typeof import('@/api/hooks/useCharging')>('@/api/hooks/useCharging');
-  return {
-    ...actual,
-    useChargingSessionsPaginated: (...args: unknown[]) => sessionsMock(...args),
   };
 });
 
@@ -159,61 +146,103 @@ import BatteryHealthPage, {
   computeEnergyBreakdown,
 } from './BatteryHealthPage';
 import { CHART_COLORS } from '@/components/charts';
-import type { BatteryHealthAnalytics } from '@/types/energy';
-import type { ChargingSession } from '@/api/types';
+import type { BatteryChargingAnalysis, BatteryHealthAnalytics } from '@/types/energy';
 
 const t = tImpl as unknown as TFunction;
 
 /* ── Fixtures ─────────────────────────────────────────────────────── */
 
+const TRUSTWORTHY_PREDICTION = {
+  has_enough_data: true,
+  slope_per_year: 2,
+  years_to_80_pct: 8.5,
+  predicted_date: '2033-01-01',
+  projection_points: [
+    { month: '2025-01-01', health: 95 },
+    { month: '2026-01-01', health: 93 },
+  ],
+};
+
+function makeChargeLevelDistribution() {
+  return Array.from({ length: 10 }, (_, index) => ({
+    min_soc_pct: index * 10,
+    max_soc_pct: index * 10 + 9,
+    start_count: 0,
+    end_count: 0,
+  }));
+}
+
+const EMPTY_CHARGING_ANALYSIS: BatteryChargingAnalysis = {
+  charge_level_distribution: makeChargeLevelDistribution(),
+  avg_start_soc_pct: null,
+  avg_end_soc_pct: null,
+  ac_session_count: 0,
+  dc_session_count: 0,
+  supercharger_count: 0,
+  dc_fast_count: 0,
+  deep_discharge_count: 0,
+  ac_energy_wh: 0,
+  dc_energy_wh: 0,
+  total_sessions: 0,
+};
+
+const MIXED_CHARGING_ANALYSIS: BatteryChargingAnalysis = {
+  charge_level_distribution: makeChargeLevelDistribution().map((bucket, index) => ({
+    ...bucket,
+    start_count: index === 1 ? 1 : index === 2 ? 2 : 0,
+    end_count: index === 8 ? 2 : index === 9 ? 1 : 0,
+  })),
+  avg_start_soc_pct: 21.7,
+  avg_end_soc_pct: 85,
+  ac_session_count: 2,
+  dc_session_count: 1,
+  supercharger_count: 1,
+  dc_fast_count: 0,
+  deep_discharge_count: 0,
+  ac_energy_wh: 70_000,
+  dc_energy_wh: 50_000,
+  total_sessions: 3,
+};
+
 const HEALTH_DEFAULTS: BatteryHealthAnalytics = {
+  vehicle_id: 42,
   current_soh: 96,
-  estimated_capacity: 72.5,
-  original_capacity: 75,
-  degradation_rate_yr: 2.1,
+  estimated_capacity_wh: 72_500,
+  original_capacity_wh: 75_000,
+  degradation_rate_pct_per_year: 2.1,
   battery_age_months: 18,
   total_cycles: 320,
-  avg_depth_of_discharge: 55,
+  avg_depth_of_discharge_pct: 55,
   fast_charge_pct: 20,
   full_charge_pct: 10,
   charge_habits_score: 88,
+  stress_level: 'Low',
   temp_exposure_score: 90,
+  temp_exposure_reason: null,
   history: [
-    { date: '2024-01-01', odometer: 1000, soh_pct: 99, capacity_wh: 74000, range_km: 500 },
-    { date: '2024-06-01', odometer: 8000, soh_pct: 97, capacity_wh: 73000, range_km: 480 },
-    { date: '2024-12-01', odometer: 15000, soh_pct: 96, capacity_wh: 72500, range_km: 470 },
+    { date: '2024-01-01', odometer_m: 1_000_000, soh_pct: 99, capacity_wh: 74000, range_m: 500_000 },
+    { date: '2024-06-01', odometer_m: 8_000_000, soh_pct: 97, capacity_wh: 73000, range_m: 480_000 },
+    { date: '2024-12-01', odometer_m: 15_000_000, soh_pct: 96, capacity_wh: 72500, range_m: 470_000 },
   ],
+  prediction: TRUSTWORTHY_PREDICTION,
+  projections: [],
+  charging_habits: {
+    fast_charge_count: 1,
+    slow_charge_count: 4,
+    deep_discharge_count: 0,
+    charge_to_full_count: 1,
+    high_soc_count: 1,
+    avg_energy_per_session: 35,
+    total_count: 5,
+  },
+  risk_factors: [],
+  recommendations: [],
+  charging_analysis: EMPTY_CHARGING_ANALYSIS,
+  capacity_source: 'model_estimate',
 };
 
 function makeHealth(overrides: Partial<BatteryHealthAnalytics> = {}): BatteryHealthAnalytics {
   return { ...HEALTH_DEFAULTS, ...overrides };
-}
-
-function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession {
-  return {
-    id: 1,
-    vehicle_id: 42,
-    started_at: '2024-01-01T00:00:00Z',
-    ended_at: '2024-01-01T01:00:00Z',
-    start_soc_pct: 30,
-    end_soc_pct: 80,
-    delta_soc_pct: 50,
-    start_odometer_m: null,
-    end_odometer_m: null,
-    start_lat: null,
-    start_lng: null,
-    start_place: null,
-    total_energy_added_wh: 20000,
-    peak_power_w: 7000,
-    avg_power_w: 5000,
-    cost_decimal: null,
-    cost_currency: null,
-    charger_type: null,
-    cable_type: null,
-    startedAt: '2024-01-01T00:00:00Z',
-    duration_min: 60,
-    ...overrides,
-  };
 }
 
 interface QueryOverrides {
@@ -233,25 +262,6 @@ function makeQuery(overrides: QueryOverrides = {}) {
     refetch: vi.fn(),
   };
 }
-
-// A trustworthy degradation prediction (finite slope, positive years-to-80).
-const TRUSTWORTHY_PREDICTION = {
-  has_enough_data: true,
-  slope_per_year: 2,
-  years_to_80_pct: 8.5,
-  predicted_date: '2033-01-01',
-  projection_points: [
-    { month: '2025-01-01', health: 95 },
-    { month: '2026-01-01', health: 93 },
-  ],
-};
-
-// Three sessions: two AC (charger null, low peak) + one DC Supercharger.
-const MIXED_SESSIONS: ChargingSession[] = [
-  makeSession({ id: 1, start_soc_pct: 20, end_soc_pct: 80, total_energy_added_wh: 30000, charger_type: null, peak_power_w: 7000 }),
-  makeSession({ id: 2, start_soc_pct: 15, end_soc_pct: 90, total_energy_added_wh: 50000, charger_type: 'Tesla Supercharger', peak_power_w: 120000 }),
-  makeSession({ id: 3, start_soc_pct: 30, end_soc_pct: 85, total_energy_added_wh: 40000, charger_type: null, peak_power_w: 6000 }),
-];
 
 function renderPage() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -282,8 +292,6 @@ beforeEach(() => {
   });
   alertContextMock.mockReturnValue({ timestamp: null, signal: null, window: null, hasContext: false });
   healthMock.mockReturnValue(makeQuery({ data: makeHealth() }));
-  degradationMock.mockReturnValue(makeQuery({ data: { prediction: null } }));
-  sessionsMock.mockReturnValue(makeQuery({ data: [] }));
   chargingLiveMock.mockReturnValue(makeQuery({ data: null }));
 });
 
@@ -335,25 +343,28 @@ describe('BatteryHealthPage · pure helpers', () => {
     const fastOnly = buildInsights(makeHealth({ fast_charge_pct: 60 }), null, t);
     expect(fastOnly.map((i) => i.title)).toContain('High Fast-Charge Usage');
 
-    const deepSessions: ChargingSession[] = Array.from({ length: 4 }, (_, i) =>
-      makeSession({ id: i + 1, start_soc_pct: 5 }),
-    );
-    const deep = buildInsights(makeHealth(), deepSessions, t);
+    const deep = buildInsights(makeHealth(), {
+      ...EMPTY_CHARGING_ANALYSIS,
+      deep_discharge_count: 4,
+      total_sessions: 4,
+    }, t);
     expect(deep.map((i) => i.title)).toContain('Deep Discharges Detected');
 
-    const scSessions: ChargingSession[] = Array.from({ length: 5 }, (_, i) =>
-      makeSession({ id: i + 1, start_soc_pct: 40, charger_type: 'Tesla Supercharger' }),
-    );
-    const sc = buildInsights(makeHealth(), scSessions, t);
+    const sc = buildInsights(makeHealth(), {
+      ...EMPTY_CHARGING_ANALYSIS,
+      supercharger_count: 5,
+      dc_session_count: 5,
+      total_sessions: 5,
+    }, t);
     expect(sc.map((i) => i.title)).toContain('High Supercharger Usage');
   });
 
   it('buildRecommendations returns the positive tip when habits are healthy and specific tips otherwise', () => {
-    const healthy = buildRecommendations(makeHealth({ fast_charge_pct: 10, full_charge_pct: 10, avg_depth_of_discharge: 40, degradation_rate_yr: 2 }), t);
+    const healthy = buildRecommendations(makeHealth({ fast_charge_pct: 10, full_charge_pct: 10, avg_depth_of_discharge_pct: 40, degradation_rate_pct_per_year: 2 }), t);
     expect(healthy).toEqual(['Your battery health looks great — keep up the good habits!']);
 
     const risky = buildRecommendations(
-      makeHealth({ fast_charge_pct: 40, full_charge_pct: 50, avg_depth_of_discharge: 75, degradation_rate_yr: 6 }),
+      makeHealth({ fast_charge_pct: 40, full_charge_pct: 50, avg_depth_of_discharge_pct: 75, degradation_rate_pct_per_year: 6 }),
       t,
     );
     expect(risky.length).toBe(4);
@@ -362,9 +373,9 @@ describe('BatteryHealthPage · pure helpers', () => {
   });
 
   it('computeEnergyBreakdown splits AC vs DC, returns null when empty, and stays finite for large totals', () => {
-    expect(computeEnergyBreakdown([])).toBeNull();
+    expect(computeEnergyBreakdown(EMPTY_CHARGING_ANALYSIS)).toBeNull();
 
-    const mix = computeEnergyBreakdown(MIXED_SESSIONS);
+    const mix = computeEnergyBreakdown(MIXED_CHARGING_ANALYSIS);
     expect(mix).not.toBeNull();
     expect(mix?.acCount).toBe(2);
     expect(mix?.dcCount).toBe(1);
@@ -376,9 +387,12 @@ describe('BatteryHealthPage · pure helpers', () => {
     // Regression guard: 20 AC sessions × 60 kWh = 1200 kWh. The previous
     // `+(fmtNumber(x, 1))` path turned "1,200.0" into NaN once totals crossed
     // 1000. Numeric rounding keeps it finite.
-    const big = computeEnergyBreakdown(
-      Array.from({ length: 20 }, (_, i) => makeSession({ id: i + 1, total_energy_added_wh: 60000, charger_type: null, peak_power_w: 7000 })),
-    );
+    const big = computeEnergyBreakdown({
+      ...EMPTY_CHARGING_ANALYSIS,
+      ac_energy_wh: 1_200_000,
+      ac_session_count: 20,
+      total_sessions: 20,
+    });
     expect(Number.isNaN(big?.pieData[0].value)).toBe(false);
     expect(big?.pieData[0].value).toBeCloseTo(1200, 1);
   });
@@ -404,6 +418,8 @@ describe('BatteryHealthPage · states', () => {
     renderPage();
 
     expect(screen.getByTestId('battery-health-skeleton')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox')).toBeInTheDocument();
     expect(screen.queryByText('State of Health')).not.toBeInTheDocument();
   });
 
@@ -419,9 +435,10 @@ describe('BatteryHealthPage · states', () => {
 /* ── Component: happy-path render ─────────────────────────────────── */
 
 describe('BatteryHealthPage · dashboard render', () => {
-  it('renders the full dashboard for a healthy battery and wires hooks with the selected vehicle', () => {
-    degradationMock.mockReturnValue(makeQuery({ data: { prediction: TRUSTWORTHY_PREDICTION } }));
-    sessionsMock.mockReturnValue(makeQuery({ data: MIXED_SESSIONS }));
+  it('renders the full dashboard for a healthy battery and wires hooks with the selected vehicle', async () => {
+    healthMock.mockReturnValue(makeQuery({
+      data: makeHealth({ charging_analysis: MIXED_CHARGING_ANALYSIS }),
+    }));
     renderPage();
 
     // Page title (h1) + KPI band accessible name.
@@ -440,26 +457,25 @@ describe('BatteryHealthPage · dashboard render', () => {
     expect(screen.getByText('8.5')).toBeInTheDocument();
 
     // Every chart section title is present (no gutted panels).
-    expect(screen.getByText('Capacity Trend & Prediction')).toBeInTheDocument();
+    expect(await screen.findByText('Capacity Trend & Prediction')).toBeInTheDocument();
     expect(screen.getByText('Estimated Range Over Time')).toBeInTheDocument();
-    expect(screen.getByText('Charge Level Distribution')).toBeInTheDocument();
+    expect(await screen.findByText('Charge Level Distribution')).toBeInTheDocument();
     expect(screen.getByText('AC / DC Energy Breakdown')).toBeInTheDocument();
 
     // Quick-links navigation is keyboard/screen-reader labelled and linked.
     const nav = screen.getByRole('navigation', { name: 'Explore More' });
     expect(within(nav).getByText('Battery Cells').closest('a')).toHaveAttribute('href', '/battery-cells');
 
-    // Hooks received the correctly-typed vehicle id (string for analytics,
-    // number for the paginated/live queries — snake_case option keys).
+    // One consolidated analytics request plus the lightweight live snapshot.
     expect(healthMock).toHaveBeenCalledWith('42');
-    expect(sessionsMock).toHaveBeenCalledWith(42, { limit: 100 });
+    expect(healthMock).toHaveBeenCalledTimes(1);
     expect(chargingLiveMock).toHaveBeenCalledWith(42);
   });
 
   it('renders the degraded verdict and the matching recommendations for a worn battery', () => {
     healthMock.mockReturnValue(
       makeQuery({
-        data: makeHealth({ current_soh: 65, degradation_rate_yr: 6, fast_charge_pct: 40, full_charge_pct: 50, avg_depth_of_discharge: 75 }),
+        data: makeHealth({ current_soh: 65, degradation_rate_pct_per_year: 6, fast_charge_pct: 40, full_charge_pct: 50, avg_depth_of_discharge_pct: 75 }),
       }),
     );
     renderPage();
@@ -470,11 +486,13 @@ describe('BatteryHealthPage · dashboard render', () => {
     expect(screen.getByText('Reduce fast charging frequency to slow degradation.')).toBeInTheDocument();
   });
 
-  it('feeds the charging-statistics panel with real AC/DC session counts', () => {
-    sessionsMock.mockReturnValue(makeQuery({ data: MIXED_SESSIONS }));
+  it('feeds the charging-statistics panel with real AC/DC session counts', async () => {
+    healthMock.mockReturnValue(makeQuery({
+      data: makeHealth({ charging_analysis: MIXED_CHARGING_ANALYSIS }),
+    }));
     renderPage();
 
-    const acRow = screen.getByText('AC Sessions').closest('div') as HTMLElement;
+    const acRow = (await screen.findByText('AC Sessions')).closest('div') as HTMLElement;
     expect(within(acRow).getByText('2')).toBeInTheDocument();
     const dcRow = screen.getByText('DC / Supercharger').closest('div') as HTMLElement;
     expect(within(dcRow).getByText('1')).toBeInTheDocument();
@@ -488,11 +506,10 @@ describe('BatteryHealthPage · dashboard render', () => {
 /* ── Component: data-source branches & null safety ────────────────── */
 
 describe('BatteryHealthPage · branches & resilience', () => {
-  it('renders calm empty states (not blank panels) when there are no charging sessions', () => {
-    sessionsMock.mockReturnValue(makeQuery({ data: [] }));
+  it('renders calm empty states (not blank panels) when there are no charging sessions', async () => {
     renderPage();
 
-    expect(screen.getByText('No charging session data yet')).toBeInTheDocument();
+    expect(await screen.findByText('No charging session data yet')).toBeInTheDocument();
     expect(screen.getByText('No charging data for breakdown')).toBeInTheDocument();
     expect(screen.getByText('No charging statistics yet')).toBeInTheDocument();
   });
@@ -541,29 +558,31 @@ describe('BatteryHealthPage · branches & resilience', () => {
     expect(screen.queryByText('Capacity & range comparison failed to load')).not.toBeInTheDocument();
   });
 
-  it('clamps out-of-range state-of-charge so the distribution chart never throws', () => {
-    // start_soc_pct = -5 and end_soc_pct = 150 would index buckets[-1]/[15]
-    // and crash before the Math.max/Math.min clamp was added.
-    sessionsMock.mockReturnValue(
-      makeQuery({
-        data: [
-          makeSession({ id: 1, start_soc_pct: -5, end_soc_pct: 150 }),
-          makeSession({ id: 2, start_soc_pct: 40, end_soc_pct: 80 }),
-        ],
+  it('clamps out-of-range state-of-charge so the distribution chart never throws', async () => {
+    healthMock.mockReturnValue(makeQuery({
+      data: makeHealth({
+        charging_analysis: {
+          ...MIXED_CHARGING_ANALYSIS,
+          charge_level_distribution: [
+            { min_soc_pct: -10, max_soc_pct: 149, start_count: 1, end_count: 1 },
+          ],
+        },
       }),
-    );
+    }));
     renderPage();
 
-    expect(screen.getByText('Charge Level Distribution')).toBeInTheDocument();
+    expect(await screen.findByText('Charge Level Distribution')).toBeInTheDocument();
     expect(screen.queryByText('Charge level distribution failed to load')).not.toBeInTheDocument();
   });
 
   it('hides the years-to-80 projection when the regression is untrustworthy', () => {
     // Absurd slope → projectionTrustworthy=false → hero shows the em-dash and
     // the projected value never renders.
-    degradationMock.mockReturnValue(
-      makeQuery({ data: { prediction: { ...TRUSTWORTHY_PREDICTION, slope_per_year: 999 } } }),
-    );
+    healthMock.mockReturnValue(makeQuery({
+      data: makeHealth({
+        prediction: { ...TRUSTWORTHY_PREDICTION, slope_per_year: 999 },
+      }),
+    }));
     renderPage();
 
     expect(screen.getByText('Years to 80%')).toBeInTheDocument();

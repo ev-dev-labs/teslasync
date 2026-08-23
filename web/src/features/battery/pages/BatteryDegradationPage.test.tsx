@@ -36,7 +36,7 @@ import type { ReactNode } from 'react';
 import { ApiError } from '@/lib/resilience';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
-import type { BatteryHealthAnalytics, DegradationData } from '@/types/energy';
+import type { BatteryHealthAnalytics } from '@/types/energy';
 
 // ── i18n stub: resolve the fallback (or the key when it IS the template) and
 //    interpolate any {{var}} placeholders from the options bag. ──────────────
@@ -103,7 +103,6 @@ vi.mock('framer-motion', () => {
 // ── Data + environment hooks, driven per test. ──
 vi.mock('@/api/hooks/useEnergy', () => ({
   useBatteryHealthAnalytics: vi.fn(),
-  useBatteryDegradation: vi.fn(),
 }));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
@@ -117,13 +116,12 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
 }));
 
-import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
+import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import BatteryDegradationPage from './BatteryDegradationPage';
 
 const mockHealth = useBatteryHealthAnalytics as unknown as ReturnType<typeof vi.fn>;
-const mockDeg = useBatteryDegradation as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
 
@@ -143,34 +141,25 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 }
 
 const HEALTH: BatteryHealthAnalytics = {
+  vehicle_id: 7,
   current_soh: 91,
-  estimated_capacity: 72.5,
-  original_capacity: 78,
-  degradation_rate_yr: 2.1,
+  estimated_capacity_wh: 72_500,
+  original_capacity_wh: 78_000,
+  degradation_rate_pct_per_year: 2.1,
   battery_age_months: 30, // → "2y 6m"
   total_cycles: 412,
-  avg_depth_of_discharge: 40, // cycle-depth score = round(100 - 40) = 60
+  avg_depth_of_discharge_pct: 40, // cycle-depth score = round(100 - 40) = 60
   fast_charge_pct: 35,
   full_charge_pct: 10,
   charge_habits_score: 82,
-  temp_exposure_score: 70,
-  history: [
-    { date: '2023-01-01', odometer: 10000, soh_pct: 99, capacity_wh: 78000, range_km: 500 },
-    { date: '2023-06-01', odometer: 20000, soh_pct: 95, capacity_wh: 75000, range_km: 480 },
-    { date: '2024-01-01', odometer: 30000, soh_pct: 91, capacity_wh: 72500, range_km: 455 },
-  ],
-};
-
-const DEG: DegradationData = {
-  current_health: 91,
-  current_capacity: 72.5,
-  current_cycles: 412,
-  current_range: 455,
-  current_temp: 22,
   stress_level: 'Medium',
-  fast_charge_ratio: 0.4,
-  snapshots: [],
-  monthly_trend: [],
+  temp_exposure_score: 70,
+  temp_exposure_reason: null,
+  history: [
+    { date: '2023-01-01', odometer_m: 10_000_000, soh_pct: 99, capacity_wh: 78000, range_m: 500_000 },
+    { date: '2023-06-01', odometer_m: 20_000_000, soh_pct: 95, capacity_wh: 75000, range_m: 480_000 },
+    { date: '2024-01-01', odometer_m: 30_000_000, soh_pct: 91, capacity_wh: 72500, range_m: 455_000 },
+  ],
   prediction: {
     has_enough_data: true,
     slope_per_year: -2.1,
@@ -184,11 +173,9 @@ const DEG: DegradationData = {
     deep_discharge_count: 5,
     charge_to_full_count: 3,
     high_soc_count: 8,
+    avg_energy_per_session: 38,
     total_count: 100,
   },
-  current_health_pct: 91,
-  degradation_rate_pct_per_month: 0.17,
-  projected_80pct_date: '2029-06-01',
   projections: [
     { date: '2025-01-01', health_pct: 89, confidence_low: 87, confidence_high: 91 },
     { date: '2026-01-01', health_pct: 87, confidence_low: 84, confidence_high: 90 },
@@ -198,6 +185,20 @@ const DEG: DegradationData = {
     { name: 'high_soc_charging', score: 20, label: 'Low', detail: 'Rarely charges above 90%' },
   ],
   recommendations: ['Charge to 80% for daily use', 'Avoid Superchargers when possible'],
+  charging_analysis: {
+    charge_level_distribution: [],
+    avg_start_soc_pct: 30,
+    avg_end_soc_pct: 80,
+    ac_session_count: 60,
+    dc_session_count: 40,
+    supercharger_count: 30,
+    dc_fast_count: 10,
+    deep_discharge_count: 5,
+    ac_energy_wh: 2_000_000,
+    dc_energy_wh: 1_000_000,
+    total_sessions: 100,
+  },
+  capacity_source: 'model_estimate',
 };
 
 const FLEET = [
@@ -254,7 +255,6 @@ function metricValue(region: HTMLElement, label: string): string {
 
 beforeEach(() => {
   mockHealth.mockReset();
-  mockDeg.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
   setVehicleId.mockReset();
@@ -262,13 +262,11 @@ beforeEach(() => {
   mockUnits.mockReturnValue(unitReturn('km'));
   mockSelected.mockReturnValue(selected(7));
   mockHealth.mockReturnValue(makeQuery({ data: HEALTH }));
-  mockDeg.mockReturnValue(makeQuery({ data: DEG }));
 });
 
 describe('BatteryDegradationPage — loading', () => {
   it('keeps the page shell but withholds KPI values, gauge, prediction, and table', () => {
     mockHealth.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
-    mockDeg.mockReturnValue(makeQuery({ data: undefined, isLoading: true }));
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Battery Degradation', level: 1 })).toBeInTheDocument();
@@ -289,7 +287,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     const kpi = kpiRegion();
 
     expect(metricValue(kpi, 'Current SOH')).toBe('91.00%');
-    expect(metricValue(kpi, 'Estimated Capacity')).toBe('72.50 kWh');
+    expect(metricValue(kpi, 'Estimated Capacity')).toBe('72.5 kWh');
     expect(metricValue(kpi, 'Degradation Rate')).toBe('2.10%/yr');
     // battery_age_months 30 → 2 years, 6 months.
     expect(metricValue(kpi, 'Battery Age')).toBe('2y 6m');
@@ -348,7 +346,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
     expect(within(table).getByText('75.0 kWh')).toBeInTheDocument();
 
     expect(mockHealth).toHaveBeenCalledWith('7');
-    expect(mockDeg).toHaveBeenCalledWith('7');
+    expect(mockHealth).toHaveBeenCalledTimes(1);
   });
 });
 
@@ -398,19 +396,23 @@ describe('BatteryDegradationPage — unit boundary (miles)', () => {
 
 describe('BatteryDegradationPage — empty states', () => {
   it('shows a dedicated placeholder for every empty data source', () => {
-    mockHealth.mockReturnValue(makeQuery({ data: { ...HEALTH, history: [] } }));
-    mockDeg.mockReturnValue(
-      makeQuery({
-        data: {
-          ...DEG,
-          prediction: null,
-          charging_habits: null,
-          projections: [],
-          risk_factors: [],
-          recommendations: [],
+    mockHealth.mockReturnValue(makeQuery({
+      data: {
+        ...HEALTH,
+        history: [],
+        prediction: { ...HEALTH.prediction, has_enough_data: false },
+        charging_habits: {
+          ...HEALTH.charging_habits,
+          fast_charge_count: 0,
+          slow_charge_count: 0,
+          deep_discharge_count: 0,
+          total_count: 0,
         },
-      }),
-    );
+        projections: [],
+        risk_factors: [],
+        recommendations: [],
+      },
+    }));
     renderPage();
 
     // Projection chart (ChartContainer) empties to its shared placeholder.
@@ -425,48 +427,41 @@ describe('BatteryDegradationPage — empty states', () => {
     expect(screen.getByText(/0% fast charges/)).toBeInTheDocument();
   });
 
-  it('falls back per-panel when the degradation query has no data', () => {
-    mockDeg.mockReturnValue(makeQuery({ data: undefined }));
+  it('keeps summary metrics when consolidated prediction details are empty', () => {
+    mockHealth.mockReturnValue(makeQuery({
+      data: {
+        ...HEALTH,
+        prediction: { ...HEALTH.prediction, has_enough_data: false },
+        charging_habits: {
+          ...HEALTH.charging_habits,
+          fast_charge_count: 0,
+          slow_charge_count: 0,
+          deep_discharge_count: 0,
+          total_count: 0,
+        },
+        projections: [],
+        risk_factors: [],
+        recommendations: [],
+      },
+    }));
     renderPage();
 
-    // Degradation-driven panels each show their own empty state...
     expect(screen.getByText(/Need more data points/)).toBeInTheDocument();
-    expect(screen.getByText(/Charging impact will appear/)).toBeInTheDocument();
     expect(screen.getByText(/Risk data will appear/)).toBeInTheDocument();
     expect(screen.getByText(/Recommendations will appear/)).toBeInTheDocument();
-
-    // ...while the health-driven KPIs stay intact.
     expect(metricValue(kpiRegion(), 'Current SOH')).toBe('91.00%');
   });
 });
 
-describe('BatteryDegradationPage — per-query error isolation', () => {
-  it('surfaces the health error in every health panel (incl. the gauge) but not the prediction', () => {
+describe('BatteryDegradationPage — consolidated query errors', () => {
+  it('surfaces the analytics error in every data panel, including the gauge and prediction', () => {
     mockHealth.mockReturnValue(
       makeQuery({ data: undefined, error: new ApiError('boom', 500), isError: true }),
     );
     renderPage();
 
-    // KPI band, gauge, range-loss, health-factors, history, and the trend panel
-    // all render QueryError → several "Server error" titles.
     expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(3);
-    // The hardened gauge shows the error instead of a misleading 0% verdict.
     expect(within(heroRegion()).queryByText('Degraded')).toBeNull();
-    // Degradation panels are healthy — the prediction copy still renders.
-    expect(screen.getByText(/in approximately/)).toBeInTheDocument();
-  });
-
-  it('surfaces the degradation error in its panels but leaves the health KPIs intact', () => {
-    mockDeg.mockReturnValue(
-      makeQuery({ data: undefined, error: new ApiError('down', 500), isError: true }),
-    );
-    renderPage();
-
-    expect(screen.getAllByText('Server error').length).toBeGreaterThanOrEqual(3);
-    // Health-driven KPIs + gauge verdict remain.
-    expect(metricValue(kpiRegion(), 'Current SOH')).toBe('91.00%');
-    expect(within(heroRegion()).getByText('Excellent')).toBeInTheDocument();
-    // The prediction copy is replaced by the error, so it must be gone.
     expect(screen.queryByText(/in approximately/)).toBeNull();
   });
 });

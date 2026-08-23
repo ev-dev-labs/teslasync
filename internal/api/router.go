@@ -882,7 +882,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupHandler := apibackup.NewHandler(db)
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := apiregen.NewRegenHandler(db)
-	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader, signalLogReader)
+	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader)
 	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
 	carbonHandler := apicarbon.NewCarbonHandler(db)
 	rulHandler := apirul.NewRULHandler(db)

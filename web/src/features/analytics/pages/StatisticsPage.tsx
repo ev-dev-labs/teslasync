@@ -63,7 +63,7 @@ const STATE_COLORS: Record<string, string> = {
 export default function StatisticsPage() {
   const { t } = useTranslation();
   usePageTitle(t('statistics.title', 'Statistics'));
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
@@ -270,8 +270,8 @@ export default function StatisticsPage() {
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-3">
-                  <MetricCard label={t('statistics.capacity', 'Capacity')} value={`${fmtNumber(batteryHealth.estimated_capacity ?? 0, 1)} kWh`} icon={<Battery className="h-4 w-4" />} color="cyan" />
-                  <MetricCard label={t('statistics.degradation', 'Degradation')} value={`${fmtNumber(batteryHealth.degradation_rate_yr ?? 0, 2)}%/yr`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
+                  <MetricCard label={t('statistics.capacity', 'Capacity')} value={formatEnergy(batteryHealth.estimated_capacity_wh ?? 0, { precision: 1 })} icon={<Battery className="h-4 w-4" />} color="cyan" />
+                  <MetricCard label={t('statistics.degradation', 'Degradation')} value={`${fmtNumber(batteryHealth.degradation_rate_pct_per_year ?? 0, 2)}%/yr`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
                   <MetricCard label={t('statistics.cycles', 'Cycles')} value={fmtInt(batteryHealth.total_cycles ?? 0)} icon={<RefreshCw className="h-4 w-4" />} color="purple" />
                   <MetricCard label={t('statistics.age', 'Age')} value={`${batteryHealth.battery_age_months ?? 0} mo`} icon={<Clock className="h-4 w-4" />} color="green" />
                 </div>

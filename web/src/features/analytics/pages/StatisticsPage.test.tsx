@@ -204,12 +204,12 @@ function makeStats(over: Record<string, unknown> = {}) {
 function makeBattery(over: Record<string, unknown> = {}) {
   return {
     current_soh: 92,
-    estimated_capacity: 71.5,
-    original_capacity: 75,
-    degradation_rate_yr: 2.34,
+    estimated_capacity_wh: 71_500,
+    original_capacity_wh: 75_000,
+    degradation_rate_pct_per_year: 2.34,
     battery_age_months: 30,
     total_cycles: 412,
-    avg_depth_of_discharge: 0,
+    avg_depth_of_discharge_pct: 0,
     fast_charge_pct: 0,
     full_charge_pct: 0,
     charge_habits_score: 0,

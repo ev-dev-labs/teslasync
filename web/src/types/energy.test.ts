@@ -39,6 +39,8 @@ import type {
   RiskFactorData,
   BatteryHealthAnalytics,
   BatteryHealthSnapshot,
+  BatteryChargingAnalysis,
+  ChargeLevelBucket,
   EnergyFlowData,
   VampireDrainStats,
   VampireDrainEvent,
@@ -246,6 +248,7 @@ describe('DegradationData & its nested view-models', () => {
     deep_discharge_count: 3,
     charge_to_full_count: 8,
     high_soc_count: 5,
+    avg_energy_per_session: 32,
     total_count: 52,
   };
   const trend: DegradationTrend[] = [
@@ -339,6 +342,7 @@ describe('DegradationData & its nested view-models', () => {
       deep_discharge_count: number;
       charge_to_full_count: number;
       high_soc_count: number;
+      avg_energy_per_session: number;
       total_count: number;
     }>();
   });
@@ -392,27 +396,68 @@ describe('DegradationData & its nested view-models', () => {
 
 describe('BatteryHealthAnalytics & BatteryHealthSnapshot', () => {
   const history: BatteryHealthSnapshot[] = [
-    { date: '2023-01-01', odometer: 10_000, soh_pct: 99, capacity_wh: 74_250, range_km: 495 },
-    { date: '2024-01-01', odometer: 30_000, soh_pct: 95, capacity_wh: 71_250, range_km: 475 },
+    { date: '2023-01-01', odometer_m: 10_000_000, soh_pct: 99, capacity_wh: 74_250, range_m: 495_000 },
+    { date: '2024-01-01', odometer_m: 30_000_000, soh_pct: 95, capacity_wh: 71_250, range_m: 475_000 },
   ];
+  const chargeLevelDistribution: ChargeLevelBucket[] = [
+    { min_soc_pct: 0, max_soc_pct: 9, start_count: 2, end_count: 0 },
+    { min_soc_pct: 80, max_soc_pct: 89, start_count: 0, end_count: 2 },
+  ];
+  const chargingAnalysis: BatteryChargingAnalysis = {
+    charge_level_distribution: chargeLevelDistribution,
+    avg_start_soc_pct: 24,
+    avg_end_soc_pct: 82,
+    ac_session_count: 40,
+    dc_session_count: 12,
+    supercharger_count: 8,
+    dc_fast_count: 4,
+    deep_discharge_count: 2,
+    ac_energy_wh: 1_200_000,
+    dc_energy_wh: 500_000,
+    total_sessions: 52,
+  };
   const analytics: BatteryHealthAnalytics = {
+    vehicle_id: 42,
     current_soh: 95,
-    estimated_capacity: 71_250,
-    original_capacity: 75_000,
-    degradation_rate_yr: 4,
+    estimated_capacity_wh: 71_250,
+    original_capacity_wh: 75_000,
+    degradation_rate_pct_per_year: 4,
     battery_age_months: 12,
     total_cycles: 320,
-    avg_depth_of_discharge: 55,
+    avg_depth_of_discharge_pct: 55,
     fast_charge_pct: 23,
     full_charge_pct: 8,
     charge_habits_score: 82,
+    stress_level: 'Low',
     temp_exposure_score: 90,
+    temp_exposure_reason: null,
     history,
+    prediction: {
+      has_enough_data: false,
+      slope_per_year: 0,
+      years_to_80_pct: 0,
+      predicted_date: null,
+      projection_points: [],
+    },
+    projections: [],
+    charging_habits: {
+      fast_charge_count: 12,
+      slow_charge_count: 40,
+      deep_discharge_count: 2,
+      charge_to_full_count: 4,
+      high_soc_count: 6,
+      avg_energy_per_session: 32,
+      total_count: 52,
+    },
+    risk_factors: [],
+    recommendations: [],
+    charging_analysis: chargingAnalysis,
+    capacity_source: 'model_estimate',
   };
 
   it('keeps estimated capacity below original and SOH ≈ their ratio', () => {
-    expect(analytics.estimated_capacity).toBeLessThan(analytics.original_capacity);
-    const ratioPct = (analytics.estimated_capacity / analytics.original_capacity) * 100;
+    expect(analytics.estimated_capacity_wh).toBeLessThan(analytics.original_capacity_wh);
+    const ratioPct = (analytics.estimated_capacity_wh / analytics.original_capacity_wh) * 100;
     expect(analytics.current_soh).toBeCloseTo(ratioPct, 0); // 71250/75000 = 95%
   });
 
@@ -424,25 +469,27 @@ describe('BatteryHealthAnalytics & BatteryHealthSnapshot', () => {
     expect(analytics.history).toHaveLength(2);
     // SOH declines while odometer climbs across the history window.
     expect(analytics.history[1].soh_pct).toBeLessThan(analytics.history[0].soh_pct);
-    expect(analytics.history[1].odometer).toBeGreaterThan(analytics.history[0].odometer);
+    expect(analytics.history[1].odometer_m).toBeGreaterThan(analytics.history[0].odometer_m);
+    expect(analytics.charging_analysis.total_sessions).toBe(52);
   });
 
   it('locks the BatteryHealthSnapshot element shape', () => {
     expect(Object.keys(history[0]).sort()).toEqual([
       'capacity_wh',
       'date',
-      'odometer',
-      'range_km',
+      'odometer_m',
+      'range_m',
       'soh_pct',
     ]);
     expectTypeOf<BatteryHealthSnapshot>().toEqualTypeOf<{
       date: string;
-      odometer: number;
+      odometer_m: number;
       soh_pct: number;
       capacity_wh: number;
-      range_km: number;
+      range_m: number;
     }>();
     expectTypeOf<BatteryHealthAnalytics['history']>().toEqualTypeOf<BatteryHealthSnapshot[]>();
+    expectTypeOf<BatteryHealthAnalytics['charging_analysis']>().toEqualTypeOf<BatteryChargingAnalysis>();
   });
 });
 
