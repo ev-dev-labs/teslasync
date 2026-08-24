@@ -48,10 +48,10 @@ describe('AlertBanner', () => {
 
   it('maps each variant to theme-safe border, title, and body colours', () => {
     const cases: Array<[AlertVariant, RegExp, string, string, string, string]> = [
-      ['info', /border-neon-cyan/, 'text-cyan-800', 'dark:text-cyan-300', 'text-cyan-800', 'dark:text-cyan-200'],
-      ['success', /border-neon-green/, 'text-emerald-800', 'dark:text-emerald-300', 'text-emerald-800', 'dark:text-emerald-200'],
-      ['warning', /border-neon-amber/, 'text-amber-800', 'dark:text-amber-300', 'text-amber-800', 'dark:text-amber-200'],
-      ['danger', /border-neon-red/, 'text-rose-800', 'dark:text-rose-300', 'text-rose-800', 'dark:text-rose-200'],
+      ['info', /border-neon-cyan/, 'text-cyan-900', 'dark:text-cyan-200', 'text-cyan-800', 'dark:text-cyan-100'],
+      ['success', /border-neon-green/, 'text-emerald-900', 'dark:text-emerald-200', 'text-emerald-800', 'dark:text-emerald-100'],
+      ['warning', /border-neon-amber/, 'text-amber-900', 'dark:text-amber-200', 'text-amber-800', 'dark:text-amber-100'],
+      ['danger', /border-neon-red/, 'text-rose-900', 'dark:text-rose-200', 'text-rose-800', 'dark:text-rose-100'],
     ]
     for (const [variant, borderRe, lightTitle, darkTitle, lightBody, darkBody] of cases) {
       const { container, unmount } = render(

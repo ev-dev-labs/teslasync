@@ -524,10 +524,11 @@ describe('MaintenancePage', () => {
 
     // (39000 - 20000) / 20000 = 95% → derived status "overdue".
     expect(screen.getByText('95%')).toBeInTheDocument();
-    const bars = screen.getAllByRole('progressbar');
-    expect(bars).toHaveLength(1); // completed item renders no bar
-    expect(bars[0]).toHaveAttribute('aria-valuenow', '95');
-    expect(bars[0]).toHaveAttribute('aria-label', 'Tire Rotation service progress');
+    const bar = screen.getByRole('progressbar', { name: 'Tire Rotation service progress' });
+    expect(bar).toHaveAttribute('aria-valuenow', '95');
+    expect(
+      screen.queryByRole('progressbar', { name: 'Tire Balance service progress' }),
+    ).toBeNull();
     // The derived "Overdue" badge shows on the card even though raw status is "soon".
     expect(screen.getAllByText('Overdue').length).toBeGreaterThanOrEqual(1);
   });
@@ -557,7 +558,7 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar');
+    const bar = screen.getByRole('progressbar', { name: 'Air Filter service progress' });
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     expect(bar).not.toHaveAttribute('aria-valuenow', 'NaN');
     expect(screen.getByText('0%')).toBeInTheDocument();

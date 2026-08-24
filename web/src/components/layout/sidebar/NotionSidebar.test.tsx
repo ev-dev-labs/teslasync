@@ -102,7 +102,7 @@ function renderSidebar(overrides: Partial<NotionSidebarProps> = {}) {
 
 // The component's own deterministic active marker (from isActiveNotionPath),
 // independent of react-router NavLink's own aria-current route matching.
-const ACTIVE_CLASS = 'bg-white/[0.05]'
+const ACTIVE_CLASS = 'bg-[var(--surface-2)]'
 
 afterEach(() => cleanup())
 
@@ -230,6 +230,18 @@ describe('NotionSidebar', () => {
     expect(screen.queryByRole('button', { name: 'Pin Vehicles' })).toBeNull()
     // A sibling that is NOT pinned still offers a Pin action.
     expect(screen.getByRole('button', { name: 'Pin Home' })).toBeInTheDocument()
+  })
+
+  it('keeps one canonical active row when the current page is also a favorite', () => {
+    renderSidebar({
+      pinnedItems: [vehiclesItem],
+      activeSectionTitle: 'Overview',
+      pathname: '/vehicles',
+    })
+
+    const vehicleLinks = screen.getAllByRole('link', { name: 'Vehicles' })
+    expect(vehicleLinks).toHaveLength(2)
+    expect(vehicleLinks.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   })
 
   it('renders a vehicle-count chip on /vehicles and caps large counts at 99+', () => {

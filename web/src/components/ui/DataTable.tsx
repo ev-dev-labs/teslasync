@@ -787,7 +787,7 @@ export function DataTable<T>({
   const wrapperClass = cn(
     effectiveStickyHeader || effectiveMaxHeight != null
       ? tableTokens.scrollContainer
-      : 'overflow-x-auto rounded-xl',
+      : 'overflow-x-auto rounded-panel border border-[var(--border-default)]',
     className,
   )
 

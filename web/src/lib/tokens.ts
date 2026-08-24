@@ -65,13 +65,13 @@ export const glassCardClasses = {
 
 export const tableTokens = {
   wrapper: 'w-full text-sm',
-  head: 'border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider',
-  headCell: 'px-4 py-3 text-left font-medium',
-  body: 'divide-y divide-white/[0.03]',
-  row: 'hover:bg-white/[0.02] transition-colors',
-  cell: 'px-4 py-3',
+  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-muted)] text-xs uppercase tracking-wider',
+  headCell: 'px-4 py-3.5 text-left font-semibold',
+  body: 'divide-y divide-[var(--border-subtle)]',
+  row: 'hover:bg-[var(--surface-2)] transition-colors duration-fast',
+  cell: 'px-4 py-3.5',
   /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */
-  scrollContainer: 'relative overflow-auto rounded-xl',
+  scrollContainer: 'relative overflow-auto rounded-panel border border-[var(--border-default)]',
   /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel
    *  surface so rows scrolling underneath don't bleed through. z-20 keeps the
    *  sticky thead above selected-row z-10 hover states. */
@@ -213,16 +213,16 @@ export const typography = {
    * Use these via <Heading level="..."> / <Text variant="..."> in components/ui.
    */
   role: {
-    pageTitle: 'text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[var(--text-primary)]',
-    sectionTitle: 'text-lg font-semibold tracking-tight text-[var(--text-primary)]',
-    panelTitle: 'text-base font-semibold text-[var(--text-primary)]',
+    pageTitle: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]',
+    sectionTitle: 'text-xl font-semibold tracking-tight text-[var(--text-primary)]',
+    panelTitle: 'text-lg font-semibold tracking-tight text-[var(--text-primary)]',
     subhead: 'text-sm font-medium text-[var(--text-secondary)]',
     body: 'text-sm text-[var(--text-primary)]',
-    bodySm: 'text-xs text-[var(--text-secondary)]',
+    bodySm: 'text-sm text-[var(--text-secondary)]',
     caption: 'text-xs text-[var(--text-muted)]',
     label: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
     metricValue: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums',
-    metricLabel: 'text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    metricLabel: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
     code: 'text-xs font-mono text-[var(--text-primary)]',
     helper: 'text-xs text-[var(--text-muted)]',
     error: 'text-xs text-rose-300',

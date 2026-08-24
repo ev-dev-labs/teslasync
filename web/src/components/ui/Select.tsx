@@ -30,9 +30,9 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
 }
 
 const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
-  sm: 'px-2 py-1.5 text-xs',
-  md: 'px-3 py-2 text-sm',
-  lg: 'px-4 py-2.5 text-base',
+  sm: 'min-h-9 px-3 py-1.5 text-sm',
+  md: 'min-h-10 px-3 py-2 text-sm',
+  lg: 'min-h-12 px-4 py-2.5 text-base',
   auto: 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row',
 };
 

@@ -179,13 +179,13 @@ describe('PageHeader', () => {
   it('uses the shared sober heading treatment instead of gradient text', () => {
     renderHeader(<PageHeader title="Fleet Overview" />)
     const heading = screen.getByRole('heading', { level: 1 })
-    expect(heading.className).toContain('font-semibold')
+    expect(heading.className).toContain('font-bold')
     expect(heading.className).not.toContain('bg-clip-text')
   })
 
   it('uses the shared subtle divider and omits the decorative underline', () => {
     const { container } = renderHeader(<PageHeader title="Fleet Overview" />)
-    expect(container.querySelector('header')?.className).toContain('border-[var(--border-subtle)]')
+    expect(container.querySelector('header')?.className).toContain('border-[var(--border-default)]')
     expect(container.querySelector('.from-neon-cyan')).toBeNull()
   })
 })

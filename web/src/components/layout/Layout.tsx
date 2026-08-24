@@ -39,7 +39,7 @@ import {
 } from '@/lib/tourRegistry'
 import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { RouteTransition } from '@/components/motion'
@@ -1678,7 +1678,7 @@ export default function Layout() {
             data-role="page-viewport"
             className="w-full px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-8 2xl:px-10"
           >
-            <LayoutBreadcrumbs className="min-w-0 text-xs" />
+            <LayoutBreadcrumbs className="min-w-0 text-sm" />
             <RouteTransition>
               <Outlet />
             </RouteTransition>

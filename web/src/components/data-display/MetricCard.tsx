@@ -2,8 +2,7 @@ import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
 import { type NeonColor, neonColorMap } from '../../lib/tokens'
-import { Card } from '../ui/Card'
-import { HelpTooltip, type HelpTooltipProps } from '../ui/HelpTooltip'
+import { Card, HelpTooltip, Text, type HelpTooltipProps } from '@/components/ui'
 import { Delta, type DeltaProps } from './Delta'
 
 /**
@@ -52,13 +51,17 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
     <Card
       padding="none"
       data-role="metric-card"
-      className={cn('min-h-24 p-4', className)}
+      className={cn('min-h-28 p-5', className)}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p
+          <Text
+            as="p"
+            size="sm"
+            weight="medium"
+            color="secondary"
             data-role="metric-label"
-            className="flex items-center gap-1 truncate text-xs font-medium leading-snug text-[var(--text-secondary)]"
+            className="flex items-center gap-1.5 truncate leading-snug"
           >
             <span className="truncate">{label}</span>
             {help && (
@@ -68,22 +71,26 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
                 ariaLabel={help.ariaLabel ?? t('metricCard.moreInfoAbout', 'More info about {{label}}', { label })}
               />
             )}
-          </p>
-          <p
+          </Text>
+          <Text
+            as="p"
+            size="3xl"
+            weight="semibold"
+            color="primary"
             data-role="metric-value"
-            className="mt-3 text-2xl font-semibold leading-tight tracking-[-0.025em] text-[var(--text-primary)]"
+            className="mt-3 leading-tight tracking-[-0.025em] tabular-nums"
           >
             {value}
-          </p>
+          </Text>
           {subtitle && (
-            <p data-role="metric-subtitle" className="mt-1.5 truncate text-2xs text-[var(--text-muted)]">
+            <Text as="p" variant="caption" data-role="metric-subtitle" className="mt-1.5 truncate">
               {subtitle}
-            </p>
+            </Text>
           )}
           {change && !delta && (
-            <p className={cn('mt-1 text-2xs font-medium', change.positive ? 'text-emerald-300' : 'text-rose-300')}>
+            <Text as="p" size="xs" weight="medium" className={cn('mt-1.5', change.positive ? 'text-emerald-300' : 'text-rose-300')}>
               {change.positive ? '↑' : '↓'} {change.value}
-            </p>
+            </Text>
           )}
           {delta && (
             <div className="mt-1">
@@ -95,7 +102,7 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
           <div
             data-role="metric-icon"
             data-color={color}
-            className="flex shrink-0 items-center justify-center rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-2"
+            className="flex shrink-0 items-center justify-center rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-2.5 shadow-e1"
           >
             <div className={c.text}>{icon}</div>
           </div>

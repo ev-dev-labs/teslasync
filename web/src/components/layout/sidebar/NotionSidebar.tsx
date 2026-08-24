@@ -9,8 +9,8 @@
  *   lives above this in Layout).
  * - Quick links group: Inbox / Settings — single-row entries with a tiny
  *   muted icon, no decoration.
- * - "Favorites" and "Pages" group labels — sentence case, NOT uppercase,
- *   small muted text. Notion never shouts.
+ * - "Favorites" and "Pages" group labels establish a clear hierarchy above
+ *   the complete route catalog.
  * - Each section row is itself a clickable line with caret-on-left + icon
  *   + label + count. Click anywhere on the row to toggle. Caret rotates.
  * - Sub-items indent under the parent icon (ps-6) — Notion's nested-page
@@ -18,14 +18,14 @@
  *   "documents", not "folders").
  * - Hover-only actions: "+" to pin to favorites, "×" to unpin, all
  *   right-aligned and revealed on row hover (like Notion's "•••" menu).
- * - Active state: just bg-white/[0.05] — NO accent bar, NO bold weight.
- *   Notion is the quietest possible.
- * - Row height: 28px (h-7) — denser than Linear's 32px.
+ * - Active state: restrained surface fill + accent rail + medium weight.
+ * - Row height: 36px — compact enough for the complete catalog without
+ *   reducing navigation to developer-tool-sized controls.
  *
  * Shared with LinearSidebar
  * - Same data contract (LinearSidebarSectionInput + props), so the parent
  *   wiring in Layout.tsx is one switch statement away from each other.
- * - Same inline tree filter at the top.
+ * - Navigation search is owned by the command palette above the tree.
  * - Same favorites group powered by pinnedItems.
  */
 
@@ -86,26 +86,32 @@ function NotionRow({
 }: NotionRowProps) {
   return (
     <div className="group relative flex items-center">
+      {active && (
+        <span
+          aria-hidden
+          className="absolute inset-y-1 start-0 z-10 w-[3px] rounded-r-sm bg-[var(--theme-primary)]"
+        />
+      )}
       <GuardedNavLink
         to={to}
         onClick={onSelect}
-        aria-current={active ? 'page' : undefined}
+        aria-current={active ? 'page' : false}
         data-tour={dataTour}
         className={cn(
-          'flex min-h-7 min-w-0 flex-1 items-center gap-2 rounded py-0.5 pe-1.5 text-sm transition-colors',
+          'flex min-h-9 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-1.5 pe-2 text-sm transition-colors',
           indent,
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           active
-            ? 'bg-white/[0.05] text-[var(--text-primary)]'
-            : 'text-[var(--text-secondary)] hover:bg-white/[0.03] hover:text-[var(--text-primary)]',
+            ? 'bg-[var(--surface-2)] font-medium text-[var(--text-primary)]'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         )}
       >
         <Icon
           className={cn(
-            'h-3.5 w-3.5 shrink-0 transition-colors',
+            'h-4 w-4 shrink-0 transition-colors',
             iconColor && !active && 'opacity-90',
             active
-              ? 'text-[var(--text-primary)]'
+              ? 'text-[var(--theme-primary)]'
               : iconColor ?? 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
           )}
           aria-hidden
@@ -145,30 +151,34 @@ function NotionSectionRow({
   count,
 }: NotionSectionRowProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={onToggle}
       aria-expanded={expanded}
       className={cn(
-        'group flex w-full min-h-7 items-center gap-1 rounded px-1.5 py-0.5 text-left text-sm text-[var(--text-secondary)]',
-        'transition-colors hover:bg-white/[0.03] hover:text-[var(--text-primary)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+        'group h-auto min-h-9 w-full justify-start gap-2 rounded-shape-md px-2 py-1.5 text-left text-sm font-medium text-[var(--text-secondary)]',
+        'transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+        'focus-visible:ring-[var(--focus-ring)]',
       )}
     >
       <Icons.next
         className={cn(
-          'h-3 w-3 shrink-0 text-[var(--text-muted)] transition-transform duration-fast ease-out',
+          'h-3.5 w-3.5 shrink-0 text-[var(--text-muted)] transition-transform duration-fast ease-out',
           expanded ? 'rotate-90' : 'rotate-0',
         )}
         aria-hidden
       />
       <Icon
-        className={cn('h-3.5 w-3.5 shrink-0', iconColor ?? 'text-[var(--text-muted)]')}
+        className={cn('h-4 w-4 shrink-0', iconColor ?? 'text-[var(--text-muted)]')}
         aria-hidden
       />
       <span className="min-w-0 flex-1 truncate">{title}</span>
-      <span className="text-2xs tabular-nums text-[var(--text-muted)]/80">{count}</span>
-    </button>
+      <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-2)] px-1 text-xs font-medium tabular-nums text-[var(--text-muted)]">
+        {count}
+      </span>
+    </Button>
   )
 }
 
@@ -184,7 +194,7 @@ function GroupLabel({
   return (
     <div
       id={id}
-      className="group flex items-center gap-1 px-2 pb-0.5 pt-2 text-xs font-medium text-[var(--text-muted)]"
+      className="group flex items-center gap-1 px-2 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
     >
       <span className="flex-1 truncate">{children}</span>
       {action && (
@@ -212,7 +222,7 @@ function CountChip({ value, label }: { value: number; label: string }) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded bg-white/[0.05] px-1 text-2xs font-medium tabular-nums text-[var(--text-secondary)]"
+      className="inline-flex h-5 min-w-5 items-center justify-center rounded-shape-sm bg-[var(--surface-3)] px-1.5 text-xs font-medium tabular-nums text-[var(--text-secondary)]"
     >
       {value > 99 ? '99+' : value}
     </span>
@@ -274,34 +284,7 @@ export function NotionSidebar({
     })
   }
 
-  // ── Tree filter ────────────────────────────────────────────────────────
-  const [filter, setFilter] = useState('')
-  const filterTokens = useMemo(
-    () => filter.trim().toLowerCase().split(/\s+/).filter(Boolean),
-    [filter],
-  )
-  const matchesFilter = (label: string) => {
-    if (filterTokens.length === 0) return true
-    const haystack = label.toLowerCase()
-    return filterTokens.every(token => haystack.includes(token))
-  }
-
-  const filteredSections = useMemo(
-    () =>
-      safeSections.map(section => ({
-        ...section,
-        items: (section.items ?? []).filter(item => matchesFilter(navLabel(item.label))),
-      })),
-    [safeSections, filterTokens, navLabel],
-  )
-
-  const isExpanded = (title: string) => {
-    if (filterTokens.length > 0) {
-      const sec = filteredSections.find(s => s.title === title)
-      return Boolean(sec && sec.items.length > 0)
-    }
-    return !collapsed.has(title)
-  }
+  const isExpanded = (title: string) => !collapsed.has(title)
 
   // ── Per-section icon (first item's icon as the section glyph) ─────────
   // Sections don't have their own icon definition, but Notion shows one
@@ -364,39 +347,37 @@ export function NotionSidebar({
         }}
         className="touch-target-overlay h-5 w-5 rounded p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
       >
-        {pinned ? <Icons.close className="h-3 w-3" /> : <Icons.star className="h-3 w-3" />}
+        {pinned ? <Icons.close className="h-3.5 w-3.5" /> : <Icons.star className="h-3.5 w-3.5" />}
       </Button>
     )
   }
 
   // ── Render ─────────────────────────────────────────────────────────────
-  const expandedSections = filteredSections.filter(s => s.items.length > 0)
+  const expandedSections = safeSections.filter(s => s.items.length > 0)
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-role="notion-sidebar">
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-1.5 pb-3 scrollbar-thin"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 pb-4 scrollbar-thin"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Favorites group — only when there's at least one pin. */}
         {safePinnedItems.length > 0 && (
-          <div className="mb-1">
+          <div className="mb-3">
             <GroupLabel id="notion-favorites-label">
               {t('nav.favorites', 'Favorites')}
             </GroupLabel>
-            <div className="space-y-px" aria-labelledby="notion-favorites-label">
-              {safePinnedItems
-                .filter(item => matchesFilter(navLabel(item.label)))
-                .map(item => (
+            <div className="space-y-1" aria-labelledby="notion-favorites-label">
+              {safePinnedItems.map(item => (
                   <NotionRow
                     key={`fav-${item.to}`}
                     to={item.to}
                     label={navLabel(item.label)}
                     icon={item.icon}
                     iconColor={item.color}
-                    active={isActiveNotionPath(effectivePath, item.to)}
+                    active={false}
                     onSelect={onItemSelect}
                     trailing={trailingFor(item.to)}
                     hoverAction={
@@ -412,9 +393,9 @@ export function NotionSidebar({
                           e.preventDefault()
                           onUnpin(item.to)
                         }}
-                        className="touch-target-overlay h-5 w-5 rounded p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
+                        className="touch-target-overlay h-7 w-7 rounded-shape-md p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)]"
                       >
-                        <Icons.close className="h-3 w-3" />
+                        <Icons.close className="h-3.5 w-3.5" />
                       </Button>
                     }
                   />
@@ -425,12 +406,12 @@ export function NotionSidebar({
 
         {/* Pages group — Notion calls everything below "Workspace"/"Private". */}
         <GroupLabel id="notion-pages-label">{t('nav.pages', 'Pages')}</GroupLabel>
-        <div className="space-y-px" aria-labelledby="notion-pages-label">
+        <div className="space-y-1" aria-labelledby="notion-pages-label">
           {expandedSections.map(section => {
             const expanded = isExpanded(section.title)
             const glyph = sectionGlyph(section)
             return (
-              <div key={section.title}>
+              <div key={section.title} className="space-y-0.5">
                 <NotionSectionRow
                   title={section.title}
                   icon={glyph.icon}
@@ -440,7 +421,7 @@ export function NotionSidebar({
                   count={section.items.length}
                 />
                 {expanded && (
-                  <div className="space-y-px" role="group" aria-label={section.title}>
+                  <div className="space-y-0.5" role="group" aria-label={section.title}>
                     {section.items.map(item => (
                       <NotionRow
                         key={item.to}
@@ -462,30 +443,13 @@ export function NotionSidebar({
             )
           })}
 
-          {filterTokens.length === 0 && expandedSections.length === 0 && (
+          {expandedSections.length === 0 && (
             <div
               className="rounded px-3 py-4 text-center text-xs text-[var(--text-muted)]"
               role="status"
               data-testid="notion-sidebar-empty"
             >
               <p>{t('nav.empty', 'No pages yet.')}</p>
-            </div>
-          )}
-
-          {filterTokens.length > 0 && expandedSections.length === 0 && (
-            <div
-              className="rounded px-3 py-4 text-center text-xs text-[var(--text-muted)]"
-              role="status"
-              data-testid="notion-sidebar-empty-filter"
-            >
-              <p>{t('nav.filterNoMatch', 'No matches.')}</p>
-              <button
-                type="button"
-                onClick={() => setFilter('')}
-                className="mt-2 rounded px-2 py-1 text-xs text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
-              >
-                {t('nav.filterClear', 'Clear filter')}
-              </button>
             </div>
           )}
         </div>

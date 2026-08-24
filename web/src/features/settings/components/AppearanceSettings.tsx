@@ -125,10 +125,10 @@ export function AppearanceSettings() {
     },
     {
       id: 'notion',
-      label: t('theme.sidebarStyle.notion', 'Compact'),
+      label: t('theme.sidebarStyle.notion', 'All groups'),
       help: t(
         'theme.sidebarStyle.notionHelp',
-        'Tighter rows with collapsible sections. Best for fitting many pages on screen.',
+        'Complete navigation catalog with collapsible sections. Best when you want every group available in the sidebar.',
       ),
     },
     {

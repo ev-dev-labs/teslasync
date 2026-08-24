@@ -173,7 +173,7 @@ describe('Select — size variants', () => {
   });
 
   const sizeCases: Array<['sm' | 'lg' | 'auto', string]> = [
-    ['sm', 'text-xs'],
+    ['sm', 'min-h-9'],
     ['lg', 'text-base'],
     ['auto', 'min-h-d-row'],
   ];

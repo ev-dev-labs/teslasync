@@ -12,10 +12,12 @@ import { Select, type SelectOption } from '@/components/ui';
 import type { Vehicle } from '@/types/vehicle';
 
 interface LiveSignalToolbarProps {
-  vehicles: Vehicle[];
+  vehicles?: Vehicle[];
   vehicleId: number | null;
   onChange: (id: number | null) => void;
 }
+
+const EMPTY_VEHICLES: Vehicle[] = [];
 
 export function LiveSignalToolbar({
   vehicles,
@@ -23,20 +25,19 @@ export function LiveSignalToolbar({
   onChange,
 }: LiveSignalToolbarProps) {
   const { t } = useTranslation();
+  const vehicleList = vehicles ?? EMPTY_VEHICLES;
 
-  // Show the placeholder only for an empty fleet. Once vehicles exist the
-  // canonical selection always resolves one, so a clearable option would just
-  // snap back to the first vehicle. Memoisation avoids rebuilding options on
-  // every one-second live snapshot poll.
+  // Keep a placeholder while canonical selection is unresolved, but remove it
+  // once a vehicle is active so the local control cannot clear global scope.
   const options = useMemo<SelectOption[]>(
     () => [
-      ...(vehicles.length === 0
+      ...(vehicleId === null || vehicleList.length === 0
         ? [{
             value: '',
             label: t('admin.liveSignals.controls.selectVehicle', 'Select vehicle…'),
           }]
         : []),
-      ...vehicles.map((v) => ({
+      ...vehicleList.map((v) => ({
         value: String(v.id),
         label:
           v.display_name ||
@@ -44,7 +45,7 @@ export function LiveSignalToolbar({
           `${t('common.vehicle', 'Vehicle')} ${v.id}`,
       })),
     ],
-    [vehicles, t],
+    [vehicleId, vehicleList, t],
   );
 
   // An empty value exists only for the empty-fleet placeholder.

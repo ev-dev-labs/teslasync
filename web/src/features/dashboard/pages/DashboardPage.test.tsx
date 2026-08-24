@@ -15,7 +15,7 @@
  *                   populated grid.
  *   5. SETTINGS   — opening a widget's settings modal + saving persists config.
  *   6. BANNERS    — load-error + Tesla-not-connected warnings.
- *   7. ALERTS     — unread badge count, 99+ cap, hidden in edit mode.
+ *   7. STATUS     — global alert/live status is not duplicated in page chrome.
  *   8. THEME NAG  — first-run prompt shows/hides on the right conditions and
  *                   both dismiss paths persist + fire the picker event.
  *   9. HINT       — the customize hint appears after its delay and opens the
@@ -111,7 +111,6 @@ const h = vi.hoisted(() => {
     layout,
     kiosk,
     vehicles: undefined as unknown,
-    alerts: { data: [] as unknown[], error: undefined } as unknown,
     auth: { authenticated: true } as unknown,
     themeId: 'aurora' as string,
     syncMutate: vi.fn(),
@@ -157,14 +156,9 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   };
 });
 
-vi.mock('@/api/hooks/useAlerts', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useAlerts: () => h.alerts };
-});
-
 vi.mock('@/api/hooks/useSettings', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useAuthStatus: () => ({ data: h.auth }) };
+  return { ...actual, useAuthStatus: () => ({ data: h.auth, isLoading: false }) };
 });
 
 // ── App-level hooks ───────────────────────────────────────────────────
@@ -307,11 +301,6 @@ function makeQuery(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeAlerts(unread: number) {
-  const data = Array.from({ length: unread }, (_, i) => ({ id: i + 1, is_read: false }));
-  return { data, error: undefined };
-}
-
 function setDashboard(overrides: Record<string, unknown> = {}) {
   h.layout.activeDashboard = {
     id: 'd1',
@@ -353,7 +342,6 @@ beforeEach(() => {
   (h.kiosk as Record<string, unknown>).isKiosk = false;
   (h.kiosk as Record<string, unknown>).validIds = ['d1'];
   h.vehicles = makeQuery({ data: [{ id: 1, display_name: 'Model 3', vin: 'VIN1' }] });
-  h.alerts = { data: [], error: undefined };
   h.auth = { authenticated: true };
   h.themeId = 'aurora';
   h.syncPending = false;
@@ -390,11 +378,15 @@ describe('DashboardPage — shell', () => {
 });
 
 describe('DashboardPage — view-mode header actions', () => {
-  it('exposes accessible names on the icon-only header buttons', () => {
+  it('keeps primary actions visible and groups secondary tools', () => {
     renderPage();
     expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Customize' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export dashboard' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     expect(screen.getByRole('button', { name: 'Export dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kiosk mode' })).toBeInTheDocument();
   });
 
   it('refresh invalidates the core query caches', async () => {
@@ -416,8 +408,10 @@ describe('DashboardPage — view-mode header actions', () => {
   it('opens the export and import modals from the header', () => {
     renderPage();
     expect(screen.queryByTestId('export-modal')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     fireEvent.click(screen.getByRole('button', { name: 'Export dashboard' }));
     expect(screen.getByTestId('export-modal')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     fireEvent.click(screen.getByRole('button', { name: 'Import dashboard' }));
     expect(screen.getByTestId('import-modal')).toBeInTheDocument();
   });
@@ -464,17 +458,18 @@ describe('DashboardPage — data states', () => {
     const { container } = renderPage();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
-    expect(screen.queryByText('Sync Your Vehicles')).toBeNull();
-    expect(screen.queryByText('Welcome to TeslaSync')).toBeNull();
+    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
+    expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
   });
 
   it('shows onboarding with a connect link when unauthenticated and no vehicles', () => {
     h.vehicles = makeQuery({ data: [] });
     h.auth = { authenticated: false };
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Welcome to TeslaSync' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Build a live operating picture of your Tesla fleet' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Connect Tesla Account/i });
     expect(link.getAttribute('href')).toBe('/settings');
+    expect(screen.getByText('Workspace setup')).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
   });
 
@@ -482,7 +477,7 @@ describe('DashboardPage — data states', () => {
     h.vehicles = makeQuery({ data: [] });
     h.auth = { authenticated: true };
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Sync Your Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Bring your vehicles into TeslaSync' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Sync Vehicles/i }));
     expect(h.syncMutate).toHaveBeenCalledTimes(1);
   });
@@ -490,7 +485,7 @@ describe('DashboardPage — data states', () => {
   it('renders the dashboard grid when vehicles exist', () => {
     renderPage();
     expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
-    expect(screen.queryByText('Welcome to TeslaSync')).toBeNull();
+    expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
   });
 });
 
@@ -516,10 +511,12 @@ describe('DashboardPage — widget settings flow', () => {
 });
 
 describe('DashboardPage — banners', () => {
-  it('surfaces a load error banner with the error message', () => {
+  it('uses the shared safe error state without exposing backend details', () => {
     h.vehicles = makeQuery({ data: undefined, error: new Error('Boom'), isError: true });
     renderPage();
-    expect(screen.getByText(/Failed to load data: Boom/)).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText(/Boom/)).toBeNull();
+    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
   });
 
   it('warns and links to settings when the Tesla account is not connected', () => {
@@ -536,28 +533,12 @@ describe('DashboardPage — banners', () => {
   });
 });
 
-describe('DashboardPage — unread alerts badge', () => {
-  it('renders the badge with the unread count and an aria-label', () => {
-    h.alerts = makeAlerts(5);
-    renderPage();
-    const badge = screen.getByRole('link', { name: '5 unread alerts' });
-    expect(badge).toBeInTheDocument();
-    expect(badge.getAttribute('href')).toBe('/notifications/alerts');
-    expect(badge.textContent).toContain('5');
-  });
-
-  it('caps the badge at 99+ for large unread counts', () => {
-    h.alerts = makeAlerts(100);
-    renderPage();
-    const badge = screen.getByRole('link', { name: '100 unread alerts' });
-    expect(badge.textContent).toContain('99+');
-  });
-
-  it('hides the unread badge in edit mode', () => {
-    h.alerts = makeAlerts(5);
+describe('DashboardPage — status ownership', () => {
+  it('does not duplicate the global alert or live status controls in the page header', () => {
     h.layout.editMode = true;
     renderPage();
-    expect(screen.queryByRole('link', { name: '5 unread alerts' })).toBeNull();
+    expect(screen.queryByRole('link', { name: /unread alerts/i })).toBeNull();
+    expect(screen.queryByText('Live')).toBeNull();
   });
 });
 

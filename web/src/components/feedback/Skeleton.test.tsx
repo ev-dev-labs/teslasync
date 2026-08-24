@@ -32,9 +32,9 @@ describe('Skeleton — single-bar mode', () => {
     const el = bars(container);
 
     expect(el).toHaveLength(1);
-    expect(el[0]).toHaveClass('animate-pulse', 'bg-[var(--skeleton-bg)]', 'rounded');
+    expect(el[0]).toHaveClass('h-4', 'w-full', 'animate-pulse', 'bg-[var(--skeleton-bg)]', 'rounded');
     expect(el[0]).not.toHaveClass('rounded-full');
-    expect(el[0]).toHaveStyle({ width: '100%', height: '16px' });
+    expect(el[0].getAttribute('style')).toBeNull();
     // The single-bar root is the placeholder itself, not a stacking wrapper.
     expect(container.firstElementChild).not.toHaveClass('space-y-2');
   });
@@ -63,6 +63,7 @@ describe('Skeleton — single-bar mode', () => {
     const el = bars(container)[0];
 
     expect(el).toHaveClass('animate-pulse', 'h-64', 'rounded-xl', 'custom-token');
+    expect(el).not.toHaveClass('h-4');
     // twMerge resolves the `rounded` vs `rounded-xl` conflict in favour of the caller.
     expect(el.classList.contains('rounded')).toBe(false);
   });

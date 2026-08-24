@@ -5,9 +5,7 @@ import { cn } from '@/lib/cn';
 import { Spinner } from '@/components/feedback/Spinner';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
-import { Button } from '@/components/ui/Button';
-import { Text } from '@/components/ui/Typography';
-import { FullscreenButton } from '@/components/ui/FullscreenButton';
+import { Button, FullscreenButton, Heading, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
@@ -363,7 +361,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // ignored the active theme entirely — on all 140 presets a chart
           // frame rendered generic white/near-black instead of the palette's
           // own surface, so charts never matched the panels beside them.
-          'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-4 shadow-panel',
+          'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-panel',
           // Tailwind preflight already removes default <figure> margins;
           // re-state `m-0` defensively so any consumer override of preflight
           // doesn't shift the chart vertical rhythm.
@@ -379,19 +377,13 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           className,
         )}
       >
-        <div className="mb-4 flex items-start justify-between border-b border-[var(--border-subtle)] pb-3">
-          <div>
-            <Text
-              as="h3"
-              id={titleId}
-              size="sm"
-              weight="semibold"
-              color="primary"
-            >
+        <div className="mb-5 flex items-start justify-between gap-4 border-b border-[var(--border-subtle)] pb-4">
+          <div className="min-w-0">
+            <Heading level="panel" id={titleId}>
               {title}
-            </Text>
+            </Heading>
             {subtitle && (
-              <Text as="p" variant="caption">{subtitle}</Text>
+              <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
             )}
           </div>
           <div

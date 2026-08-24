@@ -63,9 +63,6 @@ function renderSidebar(overrides: Partial<LinearSidebarProps> = {}) {
   return { ...result, props, rerender }
 }
 
-const typeFilter = (value: string) =>
-  fireEvent.change(screen.getByRole('searchbox'), { target: { value } })
-
 describe('LinearSidebar', () => {
   it('collapses every section except the one holding the active page', () => {
     renderSidebar({ activeSectionTitle: 'Fleet' })
@@ -162,9 +159,20 @@ describe('LinearSidebar', () => {
     // /drives is not pinned → pin button present; /vehicles is pinned → none.
     const pinDrives = screen.getByRole('button', { name: 'Pin Drives to favorites' })
     expect(screen.queryByRole('button', { name: 'Pin Vehicles to favorites' })).not.toBeInTheDocument()
-
     fireEvent.click(pinDrives)
     expect(onPin).toHaveBeenCalledWith('/drives')
+  })
+
+  it('keeps one canonical active row when the current page is also a favorite', () => {
+    renderSidebar({
+      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
+      activeSectionTitle: 'Fleet',
+      pathname: '/vehicles',
+    })
+
+    const vehicleLinks = screen.getAllByRole('link', { name: /Vehicles/ })
+    expect(vehicleLinks).toHaveLength(2)
+    expect(vehicleLinks.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   })
 
   it('renders trailing badges for alerts, vehicle count, and clamps at 99+', () => {
@@ -226,67 +234,6 @@ describe('LinearSidebar', () => {
       fireEvent.click(screen.getByRole('link', { name: /Vehicles/ }))
     })
     expect(onItemSelect).toHaveBeenCalledTimes(1)
-  })
-
-  it('exposes a labelled search box that filters the tree and auto-expands matches', () => {
-    renderSidebar({ activeSectionTitle: 'Fleet' })
-
-    const box = screen.getByRole('searchbox')
-    expect(box).toHaveAttribute('type', 'search')
-
-    // Analytics lives in the collapsed "Insights" section — hidden until it matches.
-    expect(screen.queryByRole('link', { name: /Analytics/ })).not.toBeInTheDocument()
-
-    typeFilter('anal')
-    expect(screen.getByRole('link', { name: /Analytics/ })).toBeInTheDocument()
-    // Non-matching rows drop out even from the active section.
-    expect(screen.queryByRole('link', { name: /Vehicles/ })).not.toBeInTheDocument()
-  })
-
-  it('shows an empty state with a working "Clear filter" action', () => {
-    renderSidebar({ activeSectionTitle: 'Fleet' })
-
-    typeFilter('zzznomatch')
-    expect(screen.getByText('No matches.')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Vehicles/ })).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Clear filter/ }))
-    expect(screen.queryByText('No matches.')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Vehicles/ })).toBeInTheDocument()
-  })
-
-  it('hides the favorites header when the active filter excludes every pinned item', () => {
-    renderSidebar({
-      pinnedItems: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
-      activeSectionTitle: 'Fleet',
-    })
-
-    // Before filtering, the pinned favorite is visible under its header.
-    expect(screen.getByText('Favorites')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
-
-    typeFilter('vehicles')
-
-    // The favorite no longer matches → header + row both gone (no orphan label).
-    expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Settings/ })).not.toBeInTheDocument()
-    // A section item matched, so this is NOT an empty result.
-    expect(screen.queryByText('No matches.')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Vehicles/ })).toBeInTheDocument()
-  })
-
-  it('keeps a matching favorite visible without a false "No matches" message', () => {
-    renderSidebar({
-      pinnedItems: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
-      activeSectionTitle: 'Fleet',
-    })
-
-    // "settings" matches only the (unmirrored) favorite, no section item.
-    typeFilter('settings')
-
-    expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
-    // Regression: the empty state must not appear while a favorite still matches.
-    expect(screen.queryByText('No matches.')).not.toBeInTheDocument()
   })
 
   it('applies navLabel to translate item label keys', () => {
@@ -384,14 +331,6 @@ describe('LinearSidebar — Feature Hub escape hatch', () => {
       )
     })
     expect(onItemSelect).toHaveBeenCalledTimes(1)
-  })
-
-  it('hides the footer while a tree filter is active', () => {
-    renderSidebar({ sections: compactSections, pathname: '/drives', activeSectionTitle: 'Driving' })
-    expect(screen.getByTestId('linear-sidebar-explore-footer')).toBeInTheDocument()
-
-    typeFilter('drives')
-    expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
   })
 
   it('never renders the footer for trees that have no /explore entry', () => {

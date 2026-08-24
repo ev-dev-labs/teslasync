@@ -143,7 +143,7 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     });
   });
 
-  it('PageHeader stacks vertically on mobile, row on ≥ sm', () => {
+  it('PageHeader stacks vertically until the large-screen action layout', () => {
     patchMatchMedia(() => false);
     const { container } = render(
       <I18nextProvider i18n={i18n}>
@@ -151,7 +151,7 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
       </I18nextProvider>,
     );
     // The flex container is the first descendant of the FadeIn wrapper.
-    const flex = container.querySelector('.flex.flex-col.sm\\:flex-row') as HTMLElement | null;
+    const flex = container.querySelector('.flex.flex-col.lg\\:flex-row') as HTMLElement | null;
     expect(flex).not.toBeNull();
     // Subtitle uses a readable text-sm size regardless of viewport (no
     // shrunken text-xs on mobile — PageHeader subtitles stay legible).

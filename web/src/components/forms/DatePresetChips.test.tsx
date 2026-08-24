@@ -216,9 +216,9 @@ describe('DatePresetChips — accessibility & prop passthrough', () => {
     const { rerender } = render(
       <DatePresetChips presetIds={['today']} onSelect={vi.fn()} />,
     );
-    // Default size is "sm" → Button applies h-8.
+    // Default size is "sm" → Button applies the production 36px control height.
     expect(screen.getByRole('button', { name: 'Today' }).className).toContain(
-      'h-8',
+      'h-9',
     );
     rerender(
       <DatePresetChips presetIds={['today']} size="md" onSelect={vi.fn()} />,

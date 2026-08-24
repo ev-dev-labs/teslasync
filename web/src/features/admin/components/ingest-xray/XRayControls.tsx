@@ -19,7 +19,7 @@ import type {
 } from '@/types/admin-diagnostics';
 
 interface XRayControlsProps {
-  vehicles: Vehicle[];
+  vehicles?: Vehicle[];
   vehicleId: number | null;
   windowSel: IngestXRayWindow;
   bucketSel: IngestXRayBucket;
@@ -46,6 +46,7 @@ const BUCKET_SECS: Record<IngestXRayBucket, number> = {
 
 const ALL_WINDOWS: IngestXRayWindow[] = ['5m', '15m', '1h', '6h', '24h'];
 const ALL_BUCKETS: IngestXRayBucket[] = ['30s', '1m', '5m', '15m', '1h'];
+const EMPTY_VEHICLES: Vehicle[] = [];
 
 /**
  * Coarsest bucket that is strictly smaller than `windowSel` — the widest
@@ -72,16 +73,17 @@ export function XRayControls({
   onBucketChange,
 }: XRayControlsProps) {
   const { t } = useTranslation();
+  const vehicleList = vehicles ?? EMPTY_VEHICLES;
 
   const vehicleOptions = useMemo<SelectOption[]>(
     () => [
-      ...(vehicles.length === 0
+      ...(vehicleId === null || vehicleList.length === 0
         ? [{
             value: '',
             label: t('admin.xray.controls.selectVehicle', 'Select vehicle…'),
           }]
         : []),
-      ...vehicles.map((v) => ({
+      ...vehicleList.map((v) => ({
         value: String(v.id),
         label:
           v.display_name ||
@@ -89,7 +91,7 @@ export function XRayControls({
           t('admin.xray.controls.vehicleFallback', 'Vehicle {{id}}', { id: v.id }),
       })),
     ],
-    [vehicles, t],
+    [vehicleId, vehicleList, t],
   );
 
   const windowOptions = useMemo<SelectOption[]>(

@@ -20,9 +20,9 @@ export function LayoutBreadcrumbs({ className }: { className?: string }) {
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-4 flex min-h-6 items-center justify-between gap-3">
+    <div className="mb-5 flex min-h-8 items-center justify-between gap-3">
       <Breadcrumbs items={items} className={className} />
-      <p className="hidden shrink-0 rounded-shape-sm border border-[var(--border-subtle)] bg-[var(--surface-1)] px-2 py-1 text-2xs text-[var(--text-muted)] lg:block">
+      <p className="hidden shrink-0 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)] px-2.5 py-1 text-xs text-[var(--text-muted)] shadow-e1 xl:block">
         {t('nav.quickSearchHint', 'Ctrl+K to jump')}
       </p>
     </div>

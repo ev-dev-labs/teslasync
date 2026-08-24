@@ -80,7 +80,7 @@ describe('Button', () => {
 
   it('applies the distinctive class for every size', () => {
     const expected: Record<Size, string> = {
-      sm: 'h-8',
+      sm: 'h-9',
       md: 'h-10',
       lg: 'h-12',
       auto: 'min-h-d-row',

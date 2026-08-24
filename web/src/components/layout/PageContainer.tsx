@@ -98,23 +98,29 @@ export function PageContainer({
 
   return (
     <div
-      className={cn('min-w-0 space-y-7', className)}
+      className={cn('min-w-0 space-y-8', className)}
       data-role="page-container"
       aria-busy={loading || undefined}
     >
-      <header className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 sm:flex-1">
-          <Heading level="page" className="font-semibold tracking-[-0.025em]">
+      <header
+        className="flex flex-col gap-5 border-b border-[var(--border-default)] pb-6 lg:flex-row lg:items-center lg:justify-between"
+        data-role="page-header"
+      >
+        <div className="min-w-0 max-w-4xl lg:flex-1">
+          <Heading level="page" className="font-bold tracking-[-0.025em]">
             {title}
           </Heading>
           {subtitle && (
-            <Text as="p" size="sm" color="secondary" className="mt-1.5 max-w-3xl leading-relaxed">
+            <Text as="p" variant="bodySm" className="mt-2 max-w-3xl leading-relaxed">
               {subtitle}
             </Text>
           )}
         </div>
         {(actions || copyLink || resolvedQuery) && (
-          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-start gap-2.5 sm:justify-end">
+          <div
+            className="flex min-w-0 max-w-full flex-wrap items-center gap-2 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-1.5 shadow-e1 lg:justify-end"
+            data-role="page-actions"
+          >
             {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
             {copyLink && <CopyLinkButton />}
             {actions}

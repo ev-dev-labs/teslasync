@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Card } from '@/components/ui/Card';
+import { Card, MetricValue, Text } from '@/components/ui';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { cn } from '@/lib/cn';
 import { VisuallyHidden } from '@/components/a11y';
@@ -74,38 +74,44 @@ export function StatCard({ label, value, unit, icon, trend, sublabel, loading, c
         : t('statCard.trend.unchanged', 'no change');
 
   return (
-    <Card className={cn('flex flex-col gap-1', className)}>
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-[var(--text-muted)]">{label}</span>
+    <Card className={cn('flex min-h-28 flex-col gap-2 p-5', className)}>
+      <div className="flex items-center justify-between gap-3">
+        <Text as="span" size="sm" weight="medium" color="secondary">{label}</Text>
         {icon ? (
-          <span aria-hidden="true" className="text-[var(--text-muted)]">
+          <span
+            aria-hidden="true"
+            className="rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-2 text-[var(--text-muted)]"
+          >
             {icon}
           </span>
         ) : null}
       </div>
       <div className="flex items-baseline gap-1">
-        <span className="text-2xl font-bold">{displayValue}</span>
+        <MetricValue>{displayValue}</MetricValue>
         {unit && valueIsPresent ? (
-          <span className="text-sm text-[var(--text-muted)]">{unit}</span>
+          <Text as="span" size="sm" color="muted">{unit}</Text>
         ) : null}
       </div>
       {trend ? (
-        <div
+        <Text
+          as="div"
+          size="xs"
+          weight="medium"
           className={cn(
-            'flex items-center gap-1 text-xs',
+            'flex items-center gap-1',
             trend.positive
-              ? 'text-green-600'
+              ? 'text-emerald-700 dark:text-emerald-300'
               : direction === 'flat'
                 ? 'text-[var(--text-muted)]'
-                : 'text-red-600',
+                : 'text-rose-700 dark:text-rose-300',
           )}
         >
           <span aria-hidden="true">{TREND_GLYPH[direction]}</span>
           <VisuallyHidden>{trendDescription}</VisuallyHidden>
           <span>{trend.value ?? ''}</span>
-        </div>
+        </Text>
       ) : null}
-      {sublabel ? <span className="text-xs text-[var(--text-muted)]">{sublabel}</span> : null}
+      {sublabel ? <Text as="span" variant="caption">{sublabel}</Text> : null}
     </Card>
   );
 }
