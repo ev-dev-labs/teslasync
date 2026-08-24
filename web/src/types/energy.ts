@@ -115,6 +115,7 @@ export interface ChargingHabits {
   deep_discharge_count: number;
   charge_to_full_count: number;
   high_soc_count: number;
+  avg_energy_per_session: number;
   total_count: number;
 }
 
@@ -133,26 +134,57 @@ export interface RiskFactorData {
 }
 
 export interface BatteryHealthAnalytics {
+  vehicle_id: number;
   current_soh: number;
-  estimated_capacity: number;
-  original_capacity: number;
-  degradation_rate_yr: number;
+  estimated_capacity_wh: number;
+  original_capacity_wh: number;
+  degradation_rate_pct_per_year: number;
   battery_age_months: number;
   total_cycles: number;
-  avg_depth_of_discharge: number;
+  avg_depth_of_discharge_pct: number;
   fast_charge_pct: number;
   full_charge_pct: number;
   charge_habits_score: number;
-  temp_exposure_score: number;
+  stress_level: 'Low' | 'Medium' | 'High';
+  temp_exposure_score: number | null;
+  temp_exposure_reason: string | null;
   history: BatteryHealthSnapshot[];
+  prediction: DegradationPrediction;
+  projections: PredictiveProjection[];
+  charging_habits: ChargingHabits;
+  risk_factors: RiskFactorData[];
+  recommendations: string[];
+  charging_analysis: BatteryChargingAnalysis;
+  capacity_source: string;
 }
 
 export interface BatteryHealthSnapshot {
   date: string;
-  odometer: number;
+  odometer_m: number;
   soh_pct: number;
   capacity_wh: number;
-  range_km: number;
+  range_m: number;
+}
+
+export interface ChargeLevelBucket {
+  min_soc_pct: number;
+  max_soc_pct: number;
+  start_count: number;
+  end_count: number;
+}
+
+export interface BatteryChargingAnalysis {
+  charge_level_distribution: ChargeLevelBucket[];
+  avg_start_soc_pct: number | null;
+  avg_end_soc_pct: number | null;
+  ac_session_count: number;
+  dc_session_count: number;
+  supercharger_count: number;
+  dc_fast_count: number;
+  deep_discharge_count: number;
+  ac_energy_wh: number;
+  dc_energy_wh: number;
+  total_sessions: number;
 }
 
 export interface EnergyFlowData {

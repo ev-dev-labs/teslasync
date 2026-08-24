@@ -2,6 +2,19 @@
 
 All notable changes to TeslaSync are documented here.
 
+## [Unreleased] — MQTT ingest liveness
+
+- Fixed Fleet Telemetry ingestion stalling when malformed QoS 1 payloads filled
+  the broker's in-flight receive window. Failed payloads now receive one
+  bounded DLQ publish attempt and a terminal ACK instead of waiting for a
+  same-connection redelivery that MQTT 3.1.1 cannot provide.
+- Removed the unused `TESLA_MQTT_MAX_REDELIVERIES` Helm setting and the
+  process-local redelivery tracker.
+- **Observability label change:** `tesla_mqtt_dlq_writes_total{reason}` now
+  uses `codec_drop`, `vin_resolver_error`, `other`, and
+  `dlq_publish_failure`; dashboards filtering on `dlq_max_redeliveries` must
+  update their selector.
+
 ## [Unreleased] — System Status polish + /admin removal
 
 System Status (`/system-status`) is now the single operator-facing

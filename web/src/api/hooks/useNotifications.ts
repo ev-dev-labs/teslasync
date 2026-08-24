@@ -21,6 +21,8 @@ import type {
   NotificationChannel,
   NotificationLog,
   NotificationLogGroup,
+  NotificationEventType,
+  NotificationPreference,
   NotificationStats,
   QuietHoursWindow,
   QuietHoursWindowInput,
@@ -42,6 +44,8 @@ export type {
   NotificationChannel,
   NotificationLog,
   NotificationLogGroup,
+  NotificationEventType,
+  NotificationPreference,
   NotificationStats,
   QuietHoursWindow,
   QuietHoursWindowInput,
@@ -73,6 +77,8 @@ export const notificationKeys = {
   alertRules: ['alert-rules'] as const,
   alertMetrics: ['alert-metrics'] as const,
   channels: ['notification-channels'] as const,
+  eventTypes: ['notification-event-types'] as const,
+  preferences: (channelId: number) => ['notification-preferences', channelId] as const,
   logs: ['notification-logs'] as const,
   logsFiltered: (filters?: NotificationFilters) =>
     ['notification-logs', 'filtered', filters ?? {}] as const,
@@ -549,6 +555,94 @@ export function useNotificationChannels() {
     queryKey: notificationKeys.channels,
     queryFn: ({ signal }) => request<NotificationChannel[]>('/notifications', { signal }),
     select: safeArray,
+  });
+}
+
+export function useNotificationEventTypes() {
+  return useQuery({
+    queryKey: notificationKeys.eventTypes,
+    queryFn: ({ signal }) =>
+      request<NotificationEventType[]>('/notifications/event-types', { signal }),
+    select: safeArray,
+    staleTime: INTERVALS.STATIC,
+  });
+}
+
+export function useNotificationPreferences(channelId: number | null) {
+  const enabled = channelId !== null && Number.isInteger(channelId) && channelId > 0;
+  return useQuery({
+    queryKey: enabled
+      ? notificationKeys.preferences(channelId)
+      : ['notification-preferences', 'disabled'],
+    queryFn: ({ signal }) =>
+      request<NotificationPreference[]>(`/notifications/${channelId}/preferences`, { signal }),
+    enabled,
+    select: safeArray,
+  });
+}
+
+export interface UpdateNotificationPreferenceInput {
+  channel_id: number;
+  event_type: string;
+  enabled: boolean;
+}
+
+export function useUpdateNotificationPreference() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ channel_id, event_type, enabled }: UpdateNotificationPreferenceInput) =>
+      request<void>(`/notifications/${channel_id}/preferences`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event_type, enabled }),
+      }),
+    onMutate: async (vars) => {
+      const queryKey = notificationKeys.preferences(vars.channel_id);
+      await qc.cancelQueries({ queryKey });
+      const previous = qc.getQueryData<NotificationPreference[]>(queryKey);
+      qc.setQueryData<NotificationPreference[]>(queryKey, (current = []) => {
+        const exists = current.some((item) => item.event_type === vars.event_type);
+        if (exists) {
+          return current.map((item) =>
+            item.event_type === vars.event_type
+              ? { ...item, enabled: vars.enabled }
+              : item,
+          );
+        }
+        return [
+          ...current,
+          {
+            id: 0,
+            channel_id: vars.channel_id,
+            event_type: vars.event_type,
+            enabled: vars.enabled,
+          },
+        ];
+      });
+      return { previous };
+    },
+    onSuccess: () => {
+      success(
+        'toast.notifications.preferences.saved',
+        'Notification preference updated',
+      );
+    },
+    onError: (e, vars, context) => {
+      if (context) {
+        qc.setQueryData(notificationKeys.preferences(vars.channel_id), context.previous);
+      }
+      error(
+        e,
+        'toast.notifications.preferences.error',
+        'Failed to update notification preference',
+      );
+    },
+    onSettled: (_data, _mutationError, vars) => {
+      invalidateAndBroadcast(qc, {
+        queryKey: notificationKeys.preferences(vars.channel_id),
+      });
+    },
   });
 }
 

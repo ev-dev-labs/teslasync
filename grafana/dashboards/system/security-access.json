@@ -130,7 +130,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  CASE WHEN bool_value THEN 1 ELSE 0 END AS \"Locked\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'Locked'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  CASE WHEN lower(to_state) = 'true' THEN 1 ELSE 0 END AS \"Locked\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id}\n  AND event_type = 'locked'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS time,\n  CASE WHEN bool_value THEN 1 ELSE 0 END AS \"🛡️ Sentry\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'SentryMode'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
+          "rawSql": "SELECT ts AS time,\n  CASE WHEN lower(to_state) ~ '(true|on|active)$' THEN 1 ELSE 0 END AS \"🛡️ Sentry\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id}\n  AND event_type = 'sentry_mode'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -269,7 +269,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COUNT(DISTINCT ts) FILTER (WHERE field = 'Locked') AS \"Total Events\",\n  COUNT(*) FILTER (WHERE field = 'Locked' AND bool_value = true) AS \"Locked Events\",\n  COUNT(*) FILTER (WHERE field = 'SentryMode' AND bool_value = true) AS \"Sentry Active\",\n  COUNT(*) FILTER (WHERE field = 'DoorState' AND str_value LIKE '%Open%') AS \"Door Opens\",\n  COUNT(DISTINCT DATE(ts)) AS \"Days Tracked\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('Locked', 'SentryMode', 'DoorState')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "SELECT\n  COUNT(*) AS \"Total Events\",\n  COUNT(*) FILTER (WHERE event_type = 'locked') AS \"Lock Changes\",\n  COUNT(*) FILTER (WHERE event_type = 'sentry_mode' AND lower(to_state) ~ '(true|on|active)$') AS \"Sentry Activations\",\n  COUNT(*) FILTER (WHERE event_type = 'valet_mode_enabled') AS \"Valet Mode Changes\",\n  COUNT(DISTINCT DATE(ts)) AS \"Days Tracked\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
           "refId": "A"
         }
       ],
@@ -435,7 +435,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT DATE(ts) AS time,\n  COUNT(*) AS \"Events\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'Locked'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY DATE(ts)\nORDER BY DATE(ts)",
+          "rawSql": "SELECT DATE(ts) AS time,\n  COUNT(*) AS \"Events\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY DATE(ts)\nORDER BY DATE(ts)",
           "refId": "A"
         }
       ],
@@ -501,7 +501,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(100.0 * COUNT(*) FILTER (WHERE bool_value = true) / NULLIF(COUNT(*), 0), 1) AS \"Sentry Uptime %\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'SentryMode'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "WITH events AS (\n  (SELECT ts, to_state\n   FROM security_events\n   WHERE vehicle_id = ${vehicle_id}\n     AND event_type = 'sentry_mode'\n     AND ts < $__timeFrom()\n   ORDER BY ts DESC\n   LIMIT 1)\n  UNION ALL\n  SELECT ts, to_state\n  FROM security_events\n  WHERE vehicle_id = ${vehicle_id}\n    AND event_type = 'sentry_mode'\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n), segments AS (\n  SELECT GREATEST(ts, $__timeFrom()) AS start_ts,\n    LEAST(LEAD(ts, 1, $__timeTo()) OVER (ORDER BY ts), $__timeTo()) AS end_ts,\n    lower(to_state) AS state\n  FROM events\n)\nSELECT ROUND((100.0 * SUM(EXTRACT(EPOCH FROM (end_ts - start_ts))) FILTER (WHERE state ~ '(true|on|active)$') / NULLIF(SUM(EXTRACT(EPOCH FROM (end_ts - start_ts))), 0))::numeric, 1) AS \"Sentry Uptime %\"\nFROM segments\nWHERE end_ts > start_ts",
           "refId": "A"
         }
       ],
@@ -552,7 +552,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS \"🕐 Time\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'Locked') THEN '🔒 Locked' ELSE '🔓 Unlocked' END AS \"🔒 Lock\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'SentryMode') THEN '🛡️ Active' ELSE '⬜ Off' END AS \"🛡️ Sentry\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'DoorState'), '-') AS \"🚪 Doors\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'FdWindow'), '-') AS \"🪟 FD\",\n  COALESCE(last(str_value, ts) FILTER (WHERE field = 'FpWindow'), '-') AS \"🪟 FP\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('Locked', 'SentryMode', 'DoorState', 'FdWindow', 'FpWindow')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT ts AS \"🕐 Time\",\n  CASE event_type\n    WHEN 'locked' THEN '🔒 Lock'\n    WHEN 'sentry_mode' THEN '🛡️ Sentry'\n    WHEN 'valet_mode_enabled' THEN '🔑 Valet Mode'\n    ELSE event_type\n  END AS \"Event\",\n  COALESCE(from_state, '—') AS \"Previous\",\n  COALESCE(to_state, '—') AS \"New State\",\n  CASE WHEN acknowledged_at IS NULL THEN 'No' ELSE 'Yes' END AS \"Acknowledged\"\nFROM security_events\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nORDER BY ts DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
@@ -607,7 +607,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'ValetModeEnabled') THEN 'ON' ELSE 'Off' END AS \"Valet\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'ServiceMode') THEN 'ON' ELSE 'Off' END AS \"Service\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'SpeedLimitMode') THEN 'ON' ELSE 'Off' END AS \"Speed Limit\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'GuestModeEnabled') THEN 'ON' ELSE 'Off' END AS \"Guest\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'CurrentLimitMph') AS \"Speed Limit (mph)\",\n  MAX(COALESCE(float_value, int_value::float8)) FILTER (WHERE field = 'PairedPhoneKeyAndKeyFobQty') AS \"Paired Keys\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('ValetModeEnabled', 'ServiceMode', 'SpeedLimitMode', 'GuestModeEnabled', 'CurrentLimitMph', 'PairedPhoneKeyAndKeyFobQty')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT \"Time\", \"Mode\", \"State\"\nFROM (\n  SELECT ts AS \"Time\", 'Valet Mode'::text AS \"Mode\", COALESCE(to_state, 'Unknown') AS \"State\"\n  FROM security_events\n  WHERE vehicle_id = ${vehicle_id} AND event_type = 'valet_mode_enabled' AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  UNION ALL\n  SELECT ts, 'Service Mode', CASE WHEN service_mode THEN 'On' ELSE 'Off' END\n  FROM safety_snapshots\n  WHERE vehicle_id = ${vehicle_id} AND service_mode IS NOT NULL AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  UNION ALL\n  SELECT ts,\n    CASE field WHEN 'SpeedLimitMode' THEN 'Speed Limit Mode' WHEN 'GuestModeEnabled' THEN 'Guest Mode' WHEN 'CurrentLimitMph' THEN 'Speed Limit' WHEN 'PairedPhoneKeyAndKeyFobQty' THEN 'Paired Keys' END,\n    CASE WHEN field = 'CurrentLimitMph' THEN\n      ROUND(convert_distance_m(COALESCE(float_value, int_value::float8))::numeric, 1)::text || ' ${unit_length}/h'\n    ELSE COALESCE(str_value, bool_value::text, int_value::text, float_value::text, 'Unknown') END\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('SpeedLimitMode', 'GuestModeEnabled', 'CurrentLimitMph', 'PairedPhoneKeyAndKeyFobQty')\n    AND ts BETWEEN $__timeFrom() AND $__timeTo()\n) modes\nORDER BY \"Time\" DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -638,7 +638,7 @@
       },
       "targets": [
         {
-          "rawSql": "SELECT ts AS \"Time\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'DriverSeatOccupied') THEN 'Occupied' ELSE 'Empty' END AS \"Driver Seat\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'DriverSeatBelt') THEN 'Buckled' ELSE 'Unbuckled' END AS \"Driver Belt\",\n  CASE WHEN last(bool_value, ts) FILTER (WHERE field = 'PassengerSeatBelt') THEN 'Buckled' ELSE 'Unbuckled' END AS \"Passenger Belt\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('DriverSeatOccupied', 'DriverSeatBelt', 'PassengerSeatBelt')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\nGROUP BY ts\nORDER BY ts DESC\nLIMIT 50",
+          "rawSql": "SELECT ts AS \"Time\",\n  CASE WHEN driver_seat_occupied THEN 'Occupied' WHEN driver_seat_occupied = false THEN 'Empty' ELSE 'Unknown' END AS \"Driver Seat\",\n  CASE WHEN driver_seat_belt THEN 'Buckled' WHEN driver_seat_belt = false THEN 'Unbuckled' ELSE 'Unknown' END AS \"Driver Belt\",\n  CASE WHEN passenger_seat_belt THEN 'Buckled' WHEN passenger_seat_belt = false THEN 'Unbuckled' ELSE 'Unknown' END AS \"Passenger Belt\"\nFROM climate_snapshots\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND (driver_seat_occupied IS NOT NULL OR driver_seat_belt IS NOT NULL OR passenger_seat_belt IS NOT NULL)\nORDER BY ts DESC\nLIMIT 50",
           "format": "table",
           "refId": "A",
           "datasource": {
@@ -663,22 +663,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles WHERE archived_at IS NULL) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

@@ -245,6 +245,31 @@ describe('useBatteryHealthAnalytics', () => {
     expect(calledUrl()).toBe('/analytics/battery-health?vehicle_id=42');
     expect(calledUrl()).not.toContain('vehicleId');
   });
+
+  it('reuses fresh analytics for fifteen minutes instead of refetching on a second observer', async () => {
+    mockedRequest.mockResolvedValue({ current_soh: 95 });
+    const client = makeClient();
+    const wrapper = makeWrapper(client);
+    const first = renderHook(() => useBatteryHealthAnalytics('42'), { wrapper });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+
+    const second = renderHook(() => useBatteryHealthAnalytics('42'), { wrapper });
+    await waitFor(() => expect(second.result.current.isSuccess).toBe(true));
+
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(STALE_TIMES.ANALYTICS).toBe(15 * 60_000);
+  });
+
+  it('surfaces an analytics failure without a delayed retry cycle', async () => {
+    mockedRequest.mockRejectedValue(new Error('analytics timeout'));
+    const { result } = renderHook(
+      () => useBatteryHealthAnalytics('42'),
+      { wrapper: makeWrapper(makeRetryingClient()) },
+    );
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe('useBatteryDegradation', () => {

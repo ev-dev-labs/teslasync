@@ -63,7 +63,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Monthly trend of regenerative braking energy recovered. Bar = kWh recovered per month, line = regen efficiency percentage. Regen kWh is estimated from negative power_min readings (braking power \u00d7 drive duration).",
+      "description": "Monthly measured regenerative energy returned to the pack. The line is regen energy as a share of traction plus regen energy.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -229,7 +229,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  CASE WHEN COALESCE((energy_used_wh / 1000.0), 0) + COALESCE((regen_energy_wh / 1000.0), 0) > 0\n    THEN ROUND((COALESCE((regen_energy_wh / 1000.0), 0) / (COALESCE((energy_used_wh / 1000.0), 0) + COALESCE((regen_energy_wh / 1000.0), 0)) * 100)::numeric, 1)\n    ELSE NULL END AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (regen_energy_wh / 1000.0) IS NOT NULL\nORDER BY started_at",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1M') AS time,\n  ROUND((SUM(regen_energy_wh) / 1000.0)::numeric, 1) AS \"Regen kWh\",\n  ROUND((\n    100.0 * SUM(regen_energy_wh)\n      / NULLIF(SUM(energy_used_wh) + SUM(regen_energy_wh), 0)\n  )::numeric, 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND energy_used_wh >= 0\n  AND regen_energy_wh >= 0\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -241,7 +241,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Overall regen efficiency \u2014 percentage of total braking energy recovered via regen.",
+      "description": "Measured regenerative energy as a percentage of traction energy used plus energy returned to the pack.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -302,11 +302,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND((100.0 * SUM(ABS(LEAST(COALESCE(NULL, 0), 0))) / NULLIF(SUM(GREATEST(COALESCE(NULL, 0), 0)), 0))::numeric, 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND NULL IS NOT NULL",
+          "rawSql": "SELECT ROUND((\n  100.0 * SUM(regen_energy_wh)\n    / NULLIF(SUM(energy_used_wh) + SUM(regen_energy_wh), 0)\n)::numeric, 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND energy_used_wh >= 0\n  AND regen_energy_wh >= 0",
           "refId": "A"
         }
       ],
-      "title": "Regen Efficiency %",
+      "title": "Recovered Energy Share",
       "type": "gauge"
     },
     {
@@ -314,7 +314,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Recent drives with regen stats: energy recovered, percentage, and regen score.",
+      "description": "Recent drives with measured energy returned to the pack, total traction-plus-regen energy, and the recovered-energy share.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -501,7 +501,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS \"Date\",\n  ROUND((distance_m / 1609.344)::numeric, 1) AS \"Distance (${unit_length})\",\n  ROUND(COALESCE((avg_speed_mps * 2.2369362920544), 0)::numeric, 0) AS \"Avg Speed\",\n  ROUND(ABS(LEAST(COALESCE(NULL, 0), 0))::numeric, 1) AS \"Peak Regen kW\",\n  ROUND(COALESCE(NULL, 0)::numeric, 1) AS \"Peak Power kW\",\n  CASE WHEN COALESCE(NULL, 0) > 0\n    THEN ROUND((100.0 * ABS(LEAST(COALESCE(NULL, 0), 0)) / NULL)::numeric, 1)\n    ELSE 0 END AS \"Regen Ratio %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\nORDER BY started_at DESC\nLIMIT 30",
+          "rawSql": "SELECT\n  started_at AS \"Date\",\n  ROUND(convert_distance(distance_m / 1609.344)::numeric, 1) AS \"Distance (${unit_length})\",\n  ROUND(convert_speed(avg_speed_mps * 2.2369362920544)::numeric, 0) AS \"Avg Speed\",\n  ROUND((regen_energy_wh / 1000.0)::numeric, 2) AS \"Regen kWh\",\n  ROUND(((energy_used_wh + regen_energy_wh) / 1000.0)::numeric, 2) AS \"Total kWh\",\n  ROUND((\n    100.0 * regen_energy_wh / NULLIF(energy_used_wh + regen_energy_wh, 0)\n  )::numeric, 1) AS \"Regen %\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND energy_used_wh >= 0\n  AND regen_energy_wh >= 0\nORDER BY started_at DESC\nLIMIT 30",
           "refId": "A"
         }
       ],
@@ -516,22 +516,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

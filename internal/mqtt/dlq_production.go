@@ -2,16 +2,16 @@ package mqtt
 
 // Production wiring helper for the PipelineSubscriber MQTT client and DLQ publisher.
 //
-// Per ADR-004 #8 and the manual-ack contract documented at
-// internal/mqtt/mqtt.go:224-236, PipelineSubscriber requires a paho client
-// constructed with SetAutoAckDisabled(true) so messages are acked only AFTER
-// pipeline.Process returns. Without manual ack:
+// Per ADR-004 #8 and the manual-ack contract documented in mqtt.go,
+// PipelineSubscriber requires a paho client constructed with
+// SetAutoAckDisabled(true) so messages are acked only AFTER pipeline.Process
+// returns or the payload has received a terminal DLQ disposition. Without
+// manual ack:
 //
 //   - A successful Process is acked at message-arrival time (default paho
 //     behavior), so a crash mid-Process loses the message.
-//   - An ErrPayloadDrop cannot be NACKed — the broker would never redeliver,
-//     so poison pills would be silently dropped on the floor instead of
-//     captured for forensic analysis in the DLQ.
+//   - An ErrPayloadDrop is acked before the bounded DLQ publish attempt,
+//     so poison pills can be silently dropped instead of quarantined.
 //
 // SCOPE — what this file does NOT do:
 //   - It does NOT implement ack/nack logic. Ack/nack lives in
@@ -57,7 +57,7 @@ const (
 // manual-ack contract + session-persistence + concurrency-tolerant settings
 // per Decision #2:
 //
-//   - SetAutoAckDisabled(true)        — pipeline.Process owns ack timing.
+//   - SetAutoAckDisabled(true)        — PipelineSubscriber owns ack timing.
 //   - SetCleanSession(false)          — broker-side queue persists across
 //     reconnects so in-flight messages survive a pod restart.
 //   - SetKeepAlive(30s)               — matches legacy + mosquitto default.
@@ -66,8 +66,8 @@ const (
 //   - SetMaxReconnectInterval(5min)   — backoff cap between reconnects.
 //   - SetOrderMatters(false)          — writers are idempotent so concurrent
 //     message handling is safe and lets paho fan out across goroutines.
-//   - SetAutoReconnect(true)          — broker reconnect is mandatory; the
-//     PipelineSubscriber explicitly relies on broker redelivery.
+//   - SetAutoReconnect(true)          — reconnect after transport failures;
+//     the persistent broker queue then resumes delivery.
 //
 // We deliberately leave SetResumeSubs at its default (false). Combining it
 // with the explicit re-Subscribe path in PipelineSubscriber.OnBrokerReconnect

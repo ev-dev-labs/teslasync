@@ -24,7 +24,7 @@ datasources:
     uid: DS_TESLASYNC_PROMETHEUS
     type: prometheus
     access: proxy
-    url: http://prometheus:9090
+    url: ${PROMETHEUS_URL}
     isDefault: false
     editable: true
     jsonData:
@@ -43,11 +43,9 @@ datasources:
   # ─────────────────────────────────────────────────────────────────
   # Tempo — distributed tracing backend.
   #
-  # In dev (docker-compose) tracing currently flows through Jaeger;
-  # this datasource entry is kept so dashboards that reference Tempo
-  # by uid `DS_TESLASYNC_TEMPO` load without errors. To actually
-  # populate trace panels in dev, run a Tempo container reachable at
-  # `tempo:3200` (e.g., via a future `--profile observability` add).
+  # In docker-compose, Tempo and the OTel collector are enabled with the
+  # `tracing` profile. Tempo's metrics generator feeds span metrics and the
+  # service graph back to Prometheus.
   # In prod (Helm) Tempo is deployed as a StatefulSet and reachable
   # via the chart-name service; the same uid is wired in
   # helm/teslasync/templates/grafana-datasources-configmap.yaml.
@@ -60,10 +58,6 @@ datasources:
     isDefault: false
     editable: true
     jsonData:
-      tracesToLogsV2:
-        datasourceUid: DS_TESLASYNC_LOKI
-        spanStartTimeShift: -1m
-        spanEndTimeShift: 1m
       tracesToMetrics:
         datasourceUid: DS_TESLASYNC_PROMETHEUS
         spanStartTimeShift: -1m

@@ -685,7 +685,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT 'Drive' AS \"Type\", started_at AS \"Start\", start_place AS \"From\", end_place AS \"To\",\n  convert_distance((distance_m / 1609.344)) AS \"Distance\", (duration_s / 60.0) AS \"Duration (min)\", NULL::float8 AS \"Energy Added\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'\nUNION ALL\nSELECT 'Charge' AS \"Type\", started_at AS \"Start\", (NULL::text) AS \"From\", (NULL::text) AS \"To\",\n  NULL::float8 AS \"Distance\", (EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0) AS \"Duration (min)\", (total_energy_added_wh / 1000.0) AS \"Energy Added\"\nFROM charging_sessions WHERE vehicle_id = ${vehicle_id} AND started_at >= NOW() - INTERVAL '7 days'\nORDER BY \"Start\" DESC",
+          "rawSql": "SELECT\n  'Drive' AS \"Type\",\n  started_at AS \"Start\",\n  COALESCE(NULLIF(BTRIM(start_place), ''), 'Unknown') || ' → '\n    || COALESCE(NULLIF(BTRIM(end_place), ''), 'Unknown') AS \"Activity\",\n  ROUND((duration_s / 60.0)::numeric, 0) AS \"Duration (min)\",\n  ROUND(convert_distance(distance_m / 1609.344)::numeric, 1)::text\n    || ' ${unit_length}' AS \"Details\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND started_at >= NOW() - INTERVAL '7 days'\nUNION ALL\nSELECT\n  'Charge' AS \"Type\",\n  cs.started_at AS \"Start\",\n  COALESCE(NULLIF(BTRIM(cs.start_place), ''), g.name, 'Unknown') AS \"Activity\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric, 0)\n    AS \"Duration (min)\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1)::text || ' kWh'\n    AS \"Details\"\nFROM charging_sessions cs\nLEFT JOIN geofences g ON g.id = cs.geofence_id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND cs.started_at >= NOW() - INTERVAL '7 days'\nORDER BY \"Start\" DESC",
           "refId": "A"
         }
       ],
@@ -701,22 +701,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

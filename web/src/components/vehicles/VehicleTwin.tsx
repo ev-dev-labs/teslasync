@@ -1224,8 +1224,8 @@ function DriverSeatIndicator({ occupied }: { occupied: boolean | null }) {
  * pixel-identical to the photo.
  */
 function PhotoWheelSpinner({
-  cx,
-  u,
+  wheel,
+  imgScale,
   imgWidth,
   imgLeft,
   imgTop,
@@ -1233,8 +1233,8 @@ function PhotoWheelSpinner({
   driveIn,
   driving,
 }: {
-  cx: number;
-  u: number;
+  wheel: keyof typeof COMPOSITOR_METRICS.wheels;
+  imgScale: number;
   imgWidth: number;
   imgLeft: number;
   imgTop: number;
@@ -1242,19 +1242,23 @@ function PhotoWheelSpinner({
   driveIn: boolean;
   driving: boolean;
 }) {
-  // Crop radius in viewBox units. Must stay strictly on the rim face:
-  // anything larger drags the tire's baked-in lighting — and, on the front
-  // wheel, the dark aero deflector ahead of the tire — around the hub,
-  // which reads as a wobbling second wheel.
-  const R = 28;
-  const size = 2 * R * u;
-  const left = (cx - R) * u;
-  const top = (WHEEL_CY - R - VIEWBOX_MIN_Y) * u;
+  const { x: cx, y: cy } = COMPOSITOR_METRICS.wheels[wheel];
+
+  // Keep the fully opaque crop inside the alloy face. A narrow transparent
+  // annulus reaches the natural rim/tire boundary, blending the rotation into
+  // the static photo without pulling baked-in tire lighting around the hub.
+  const radius = COMPOSITOR_METRICS.wheelCropRadius;
+  const featherStart = ((radius - COMPOSITOR_METRICS.wheelCropFeather) / radius) * 100;
+  const edgeMask = `radial-gradient(circle closest-side at 50% 50%, #000 0 ${featherStart.toFixed(2)}%, transparent 100%)`;
+  const size = 2 * radius * imgScale;
+  const left = imgLeft + (cx - radius) * imgScale;
+  const top = imgTop + (cy - radius) * imgScale;
   const shouldSpin = driveIn || driving;
 
   return (
-    <motion.div
+    <div
       aria-hidden="true"
+      data-wheel-spinner={wheel}
       style={{
         position: 'absolute',
         left,
@@ -1263,33 +1267,47 @@ function PhotoWheelSpinner({
         height: size,
         borderRadius: '50%',
         overflow: 'hidden',
+        maskImage: edgeMask,
+        WebkitMaskImage: edgeMask,
+        maskRepeat: 'no-repeat',
+        WebkitMaskRepeat: 'no-repeat',
         pointerEvents: 'none',
       }}
-      initial={shouldSpin ? { rotate: 0 } : false}
-      animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
-      transition={
-        shouldSpin
-          ? {
-            duration: driving ? 0.9 : DRIVE_IN_DURATION,
-            repeat: driving ? Infinity : 0,
-            ease: 'linear',
-          }
-          : { duration: 0 }
-      }
     >
-      <img
-        src={photoUrl}
-        alt=""
-        draggable={false}
+      <motion.div
+        data-wheel-rotor={wheel}
         style={{
           position: 'absolute',
-          maxWidth: 'none',
-          width: imgWidth,
-          left: imgLeft - left,
-          top: imgTop - top,
+          inset: 0,
+          overflow: 'hidden',
+          transformOrigin: '50% 50%',
         }}
-      />
-    </motion.div>
+        initial={shouldSpin ? { rotate: 0 } : false}
+        animate={{ rotate: shouldSpin ? (driving ? -360 : -1080) : 0 }}
+        transition={
+          shouldSpin
+            ? {
+              duration: driving ? 0.9 : DRIVE_IN_DURATION,
+              repeat: driving ? Infinity : 0,
+              ease: 'linear',
+            }
+            : { duration: 0 }
+        }
+      >
+        <img
+          src={photoUrl}
+          alt=""
+          draggable={false}
+          style={{
+            position: 'absolute',
+            maxWidth: 'none',
+            width: imgWidth,
+            left: imgLeft - left,
+            top: imgTop - top,
+          }}
+        />
+      </motion.div>
+    </div>
   );
 }
 
@@ -1446,7 +1464,8 @@ export function VehicleTwin({
   // image ground ↔ viewBox y 263 (viewBox min-y 52).
   const u = width / VIEWBOX_WIDTH; // CSS px per viewBox unit
   const unitsPerImgPx = (556 - 43) / (COMPOSITOR_METRICS.carRight - COMPOSITOR_METRICS.carLeft);
-  const imgWidth = COMPOSITOR_METRICS.imgWidth * unitsPerImgPx * u;
+  const imgScale = unitsPerImgPx * u;
+  const imgWidth = COMPOSITOR_METRICS.imgWidth * imgScale;
   const imgLeft = (43 - COMPOSITOR_METRICS.carLeft * unitsPerImgPx) * u;
   const imgTop = ((263 - VIEWBOX_MIN_Y) - COMPOSITOR_METRICS.ground * unitsPerImgPx) * u;
   const imgStyle = {
@@ -1508,8 +1527,8 @@ export function VehicleTwin({
         {photoOn && (
           <>
             <PhotoWheelSpinner
-              cx={FRONT_WHEEL_CX}
-              u={u}
+              wheel="front"
+              imgScale={imgScale}
               imgWidth={imgWidth}
               imgLeft={imgLeft}
               imgTop={imgTop}
@@ -1518,8 +1537,8 @@ export function VehicleTwin({
               driving={isDriving}
             />
             <PhotoWheelSpinner
-              cx={REAR_WHEEL_CX}
-              u={u}
+              wheel="rear"
+              imgScale={imgScale}
               imgWidth={imgWidth}
               imgLeft={imgLeft}
               imgTop={imgTop}

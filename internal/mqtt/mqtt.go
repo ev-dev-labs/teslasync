@@ -1,7 +1,6 @@
 package mqtt
 
 import (
-	"container/list"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -11,6 +10,7 @@ import (
 	"runtime/debug"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
@@ -209,21 +209,13 @@ func randomSuffix(n int) string {
 // Tesla Fleet Telemetry subscriber: MQTT payloads -> normalize.Pipeline.
 // =============================================================================
 //
-// This subscriber implements ADR-004 #2: every Tesla Fleet Telemetry payload
-// flows through THE ONE entry, normalize.Pipeline.Process. The MQTT layer is
-// a dumb bytes-and-acks pipe; it MUST NOT decode, parse, flatten, or otherwise
-// inspect payload content. Decode/flatten lives in internal/tesla/codec, unit
-// conversion in internal/tesla/units, dispatch in internal/tesla/router, and
-// orchestration in internal/tesla/normalize. Forbidden-import checks prevent
-// legacy decode packages from re-entering this file.
-//
-// Why a new subscriber alongside the legacy NewSubscriber in subscriber.go:
-// The legacy subscriber consumes per-field JSON values on
-// {topicBase}/{VIN}/v/{fieldName}. The fleet-telemetry path produces full
-// proto-encoded payloads that the codec layer flattens internally. Mixing the
-// two formats inside one subscriber would entangle decode logic in the MQTT
-// layer; instead proto bytes use a distinct topic ({topicBase}/payload/{VIN})
-// and this PipelineSubscriber subscribes to it.
+// This subscriber implements ADR-004 #2: every Tesla Fleet Telemetry
+// per-field JSON value is decoded exactly once by codec.DecodeJSONFieldCtx and
+// then flows through THE ONE atomics entry,
+// normalize.Pipeline.ProcessAtomics. Unit conversion lives in
+// internal/tesla/units, dispatch in internal/tesla/router, and orchestration
+// in internal/tesla/normalize. The deleted proto-batch
+// {topicBase}/payload/{VIN} path must not be reintroduced.
 //
 // === DLQ governance (LOCKED) ============================================
 //
@@ -242,7 +234,8 @@ func randomSuffix(n int) string {
 //	Alerting.
 //	  Any non-zero DLQ rate raises a WARN alert; > 10/min for 5min raises a
 //	  PAGE alert. Metric: tesla_mqtt_dlq_writes_total{reason}. Labels are
-//	  drawn from a closed reason set (codec_drop, dlq_max_redeliveries) so
+//	  drawn from a closed reason set (codec_drop, vin_resolver_error,
+//	  other, dlq_publish_failure) so
 //	  the Prometheus index stays bounded.
 //
 //	Triage SLO.
@@ -261,18 +254,21 @@ func randomSuffix(n int) string {
 // =========================================================================
 //
 // IMPORTANT — manual ack contract.
-// PipelineSubscriber relies on bounded MQTT redelivery: when the pipeline
-// returns ErrPayloadDrop AND the message has not yet hit MaxRedeliveries, the
-// handler returns WITHOUT calling msg.Ack(), expecting the broker to redeliver
-// at the next retry. For this to work the underlying paho client MUST be
-// constructed with SetAutoAckDisabled(true) (Paho v3 wire-default is auto-ack
-// AFTER the handler returns, which would silently break the redelivery
-// contract). The legacy NewClient constructor in this package does NOT set
-// that option because the legacy subscriber depends on auto-ack semantics; the
-// caller wiring PipelineSubscriber into cmd/<server>/main.go is responsible
-// for constructing a separate paho client with SetAutoAckDisabled(true) before
-// passing it in. NewPipelineSubscriber documents but does not validate this
-// requirement (paho exposes no read-back for the option).
+// MQTT 3.1.1 has no negative acknowledgement. A QoS 1 PUBLISH left unacked
+// remains in the broker's in-flight window until the connection is replaced;
+// returning from the handler does NOT make the broker redeliver it on the same
+// live connection. Enough unacked messages therefore stop all delivery.
+//
+// PipelineSubscriber uses manual ack only to delay acknowledgement until the
+// payload has reached a terminal disposition:
+//   - accepted by the pipeline; or
+//   - quarantined to the DLQ (one bounded attempt).
+//
+// Even when the DLQ publish fails, the original message is acknowledged after
+// the failed attempt is logged and counted. Sacrificing one malformed payload
+// is preferable to pinning the broker's entire receive window and dropping all
+// subsequent telemetry. The underlying paho client MUST be constructed with
+// SetAutoAckDisabled(true) so this ordering remains under subscriber control.
 
 // Pipeline is the subset of *normalize.Pipeline that PipelineSubscriber
 // depends on. Production wiring passes a *normalize.Pipeline; tests pass a
@@ -301,34 +297,35 @@ type Pipeline interface {
 // well-formed but not registered to this deployment (foreign tenant, untracked
 // vehicle, etc). The PipelineSubscriber treats this as a permanent ack-and-drop
 // outcome — the message is not ours, so it is NOT a poison pill and MUST NOT
-// be sent to the DLQ. Any other error from a VINResolver is treated as
-// transient (DB outage, cache miss with timeout) and triggers redelivery
-// without DLQ involvement.
+// be sent to the DLQ. Any other resolver error is quarantined and acknowledged
+// so an infrastructure failure cannot exhaust the broker's in-flight window.
 var ErrUnknownVIN = errors.New("mqtt: VIN not registered to this deployment")
 
 // VINResolver maps a Tesla VIN to the internal numeric vehicle ID expected by
 // normalize.Pipeline.Process. Implementations MUST return ErrUnknownVIN for
 // "VIN not registered" and a wrapped infrastructure error for transient
-// failures so the subscriber can distinguish ack-and-drop from no-ack-retry.
+// failures so the subscriber can distinguish ack-and-drop from quarantine.
 type VINResolver func(ctx context.Context, vin string) (int64, error)
 
 // DLQEntry captures the forensic envelope written to the DLQ when a payload
-// is dropped after exhausting redeliveries. Fields are intentionally minimal:
+// cannot be processed. Fields are intentionally minimal:
 // no decoded telemetry, no Tesla credentials, just enough context for the
 // on-call rotation to identify the stuck pattern.
 type DLQEntry struct {
-	Reason       string    `json:"reason"`
-	VehicleID    int64     `json:"vehicle_id,omitempty"`
-	VIN          string    `json:"vin,omitempty"`
-	Topic        string    `json:"topic"`
-	Payload      []byte    `json:"payload"`
+	Reason    string `json:"reason"`
+	VehicleID int64  `json:"vehicle_id,omitempty"`
+	VIN       string `json:"vin,omitempty"`
+	Topic     string `json:"topic"`
+	Payload   []byte `json:"payload"`
+	// Redeliveries is retained for DLQ wire/API compatibility. Immediate
+	// quarantine sets it to zero because the original delivery is not retried.
 	Redeliveries int       `json:"redeliveries"`
 	Timestamp    time.Time `json:"timestamp"`
 }
 
 // DLQPublisher writes a DLQEntry to the dead-letter sink. Implementations MUST
-// be idempotent on (VehicleID, Topic, Timestamp) so a redelivery of the same
-// poison pill produces a stable forensic trail. The default
+// be idempotent on (VehicleID, Topic, Timestamp) so replaying an identical
+// poison payload produces a stable forensic trail. The default
 // implementation (newMQTTDLQPublisher) writes JSON to the broker; an
 // alternative Postgres-backed implementation may be wired in a future ADR.
 type DLQPublisher interface {
@@ -337,7 +334,8 @@ type DLQPublisher interface {
 
 // dlqWritesTotal is the LOCKED public metric from ADR-004 #8 governance:
 // tesla_mqtt_dlq_writes_total{reason}. The reason label is drawn from a
-// closed set (codec_drop_max_redeliveries, dlq_publish_failure) so the
+// closed set (codec_drop, vin_resolver_error, other,
+// dlq_publish_failure) so the
 // Prometheus index is bounded regardless of payload content.
 var dlqWritesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 	Namespace: "tesla",
@@ -374,13 +372,12 @@ var dlqPublishesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 // Reason labels for normalizeFailuresTotal and dlqWritesTotal. Declared as
 // package constants so a typo in a call site is a compile-time error.
 const (
-	reasonCodecDrop          = "codec_drop"
-	reasonContextCanceled    = "context_canceled"
-	reasonVINUnknown         = "vin_unknown"
-	reasonVINResolverError   = "vin_resolver_error"
-	reasonOther              = "other"
-	reasonDLQMaxRedeliveries = "dlq_max_redeliveries"
-	reasonDLQPublishFailure  = "dlq_publish_failure"
+	reasonCodecDrop         = "codec_drop"
+	reasonContextCanceled   = "context_canceled"
+	reasonVINUnknown        = "vin_unknown"
+	reasonVINResolverError  = "vin_resolver_error"
+	reasonOther             = "other"
+	reasonDLQPublishFailure = "dlq_publish_failure"
 )
 
 // errPayloadDrop is the local sentinel that marks a per-message payload
@@ -391,97 +388,6 @@ const (
 // pipeline-side ErrPayloadDrop wraps. Kept package-private so nothing
 // outside this package can synthesise a false poison pill.
 var errPayloadDrop = errors.New("mqtt: payload-level failure")
-
-// RedeliveryTracker is a process-local bounded LRU keyed by paho MessageID
-// (uint16). A QoS 1 redelivery from the broker reuses the same MessageID as
-// the original, so a counter keyed by MessageID provides best-effort
-// deduplication of retry attempts within a single MQTT session.
-//
-// Limitations (documented in mqtt.go top-of-file IMPORTANT block):
-//   - MessageID wraps at 65k; cap > 4k can collide if the broker pipelines
-//     deeply. Use a capacity well below 65k so the LRU evicts before wrap.
-//   - On reconnect with CleanSession=true the broker discards the in-flight
-//     queue; tracker entries become stale but harmless (eventually evicted).
-//   - On reconnect with CleanSession=false the broker resumes IDs; tracker
-//     state is still valid because the IDs are continuous.
-//   - A poison pill that survives a process restart will be retried up to
-//     MaxRedeliveries again, then DLQ'd — this is acceptable per ADR-004 #8.
-type RedeliveryTracker struct {
-	mu       sync.Mutex
-	capacity int
-	entries  map[uint16]*list.Element
-	order    *list.List // front = most recent
-}
-
-type trackerEntry struct {
-	key   uint16
-	count int
-}
-
-// NewRedeliveryTracker constructs a bounded LRU tracker. Capacity must be
-// positive; passing <= 0 panics (constructor invariant).
-func NewRedeliveryTracker(capacity int) *RedeliveryTracker {
-	if capacity <= 0 {
-		panic("mqtt: NewRedeliveryTracker: capacity must be > 0")
-	}
-	return &RedeliveryTracker{
-		capacity: capacity,
-		entries:  make(map[uint16]*list.Element, capacity),
-		order:    list.New(),
-	}
-}
-
-// Increment raises the redelivery count for messageID by one and returns the
-// new count. The entry is moved to the front of the LRU order; if the entry
-// is new and the tracker is at capacity, the oldest entry is evicted first.
-func (t *RedeliveryTracker) Increment(messageID uint16) int {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if el, ok := t.entries[messageID]; ok {
-		entry := el.Value.(*trackerEntry)
-		entry.count++
-		t.order.MoveToFront(el)
-		return entry.count
-	}
-	if t.order.Len() >= t.capacity {
-		oldest := t.order.Back()
-		if oldest != nil {
-			delete(t.entries, oldest.Value.(*trackerEntry).key)
-			t.order.Remove(oldest)
-		}
-	}
-	entry := &trackerEntry{key: messageID, count: 1}
-	t.entries[messageID] = t.order.PushFront(entry)
-	return 1
-}
-
-// Forget removes the entry for messageID. Called after a successful pipeline
-// processing so a future packet ID reuse starts at zero.
-func (t *RedeliveryTracker) Forget(messageID uint16) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if el, ok := t.entries[messageID]; ok {
-		t.order.Remove(el)
-		delete(t.entries, messageID)
-	}
-}
-
-// Reset clears all tracked redeliveries. Production wiring calls this from
-// the paho OnConnect handler so a fresh broker session does not inherit
-// stale counts from the previous session.
-func (t *RedeliveryTracker) Reset() {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	t.entries = make(map[uint16]*list.Element, t.capacity)
-	t.order.Init()
-}
-
-// Len returns the current number of tracked messageIDs. Exposed for tests.
-func (t *RedeliveryTracker) Len() int {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	return t.order.Len()
-}
 
 // PipelineSubscriberConfig captures the runtime knobs of PipelineSubscriber.
 // Zero values fall back to defaults documented per field.
@@ -495,17 +401,9 @@ type PipelineSubscriberConfig struct {
 	// proto-batch shape removed by the per-field cutover.
 	TopicBase string
 
-	// MaxRedeliveries caps how many times the broker may re-deliver a single
-	// payload before the subscriber writes it to the DLQ and acks. Default 5.
-	MaxRedeliveries int
-
-	// TrackerCapacity is the bounded LRU size for the redelivery tracker.
-	// Default 4096. Must be < 65536 (paho MessageID is uint16).
-	TrackerCapacity int
-
 	// SubscribeQoS is the QoS level for the .Subscribe call. Default 1
-	// (at-least-once); 0 disables retries entirely and 2 is unnecessary
-	// because the codec is idempotent on (vehicle_id, ts, field).
+	// (at-least-once). The subscriber still gives each delivery a terminal
+	// ACK; QoS 1 protects messages queued during disconnects.
 	SubscribeQoS byte
 
 	// SubscribeTimeout caps how long Start waits for the SUBACK. Default 10s.
@@ -532,12 +430,6 @@ type StreamingHealthRecorder interface {
 }
 
 func (c *PipelineSubscriberConfig) withDefaults() {
-	if c.MaxRedeliveries <= 0 {
-		c.MaxRedeliveries = 5
-	}
-	if c.TrackerCapacity <= 0 {
-		c.TrackerCapacity = 4096
-	}
 	if c.SubscribeQoS == 0 {
 		c.SubscribeQoS = 1
 	}
@@ -560,7 +452,6 @@ type PipelineSubscriber struct {
 	client     pahomqtt.Client
 	pipeline   Pipeline
 	dlq        DLQPublisher
-	tracker    *RedeliveryTracker
 	resolveVIN VINResolver
 	cfg        PipelineSubscriberConfig
 	logger     zerolog.Logger
@@ -568,9 +459,10 @@ type PipelineSubscriber struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu      sync.Mutex
-	started bool
-	stopped bool
+	mu         sync.Mutex
+	started    bool
+	stopped    bool
+	subscribed bool
 }
 
 // NewPipelineSubscriber constructs a PipelineSubscriber. All non-config
@@ -602,15 +494,11 @@ func NewPipelineSubscriber(
 		panic("mqtt: NewPipelineSubscriber: resolveVIN must be non-nil")
 	}
 	cfg.withDefaults()
-	if cfg.TrackerCapacity >= 65536 {
-		panic("mqtt: NewPipelineSubscriber: TrackerCapacity must be < 65536")
-	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &PipelineSubscriber{
 		client:     client,
 		pipeline:   pipeline,
 		dlq:        dlq,
-		tracker:    NewRedeliveryTracker(cfg.TrackerCapacity),
 		resolveVIN: resolveVIN,
 		cfg:        cfg,
 		logger:     withHotPathSampling(logger),
@@ -628,7 +516,7 @@ func (s *PipelineSubscriber) pipelineTopicFilter() string {
 	return fmt.Sprintf("%s/+/v/+", s.cfg.TopicBase)
 }
 
-// Start subscribes to {TopicBase}/payload/+. Returns a non-nil error if the
+// Start subscribes to {TopicBase}/+/v/+. Returns a non-nil error if the
 // SUBACK does not arrive within cfg.SubscribeTimeout or the broker rejects
 // the subscription.
 func (s *PipelineSubscriber) Start() error {
@@ -641,8 +529,6 @@ func (s *PipelineSubscriber) Start() error {
 	s.mu.Unlock()
 
 	topic := s.pipelineTopicFilter()
-	s.client.AddRoute(topic, s.onPipelineMessage)
-
 	token := s.client.Subscribe(topic, s.cfg.SubscribeQoS, s.onPipelineMessage)
 	if !token.WaitTimeout(s.cfg.SubscribeTimeout) {
 		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe timeout for topic %s", topic)
@@ -650,11 +536,15 @@ func (s *PipelineSubscriber) Start() error {
 	if err := token.Error(); err != nil {
 		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe %s: %w", topic, err)
 	}
+	s.mu.Lock()
+	if !s.stopped {
+		s.subscribed = true
+	}
+	s.mu.Unlock()
 
 	s.logger.Info().
 		Str("topic", topic).
-		Int("max_redeliveries", s.cfg.MaxRedeliveries).
-		Int("tracker_capacity", s.cfg.TrackerCapacity).
+		Str("codec_failure_disposition", "dlq_ack").
 		Msg("phase-42 PipelineSubscriber started")
 
 	return nil
@@ -668,12 +558,12 @@ func (s *PipelineSubscriber) Stop() {
 		return
 	}
 	s.stopped = true
+	s.subscribed = false
 	s.mu.Unlock()
 
 	s.cancel()
 	topic := s.pipelineTopicFilter()
 	s.client.Unsubscribe(topic)
-	s.tracker.Reset()
 	s.logger.Info().Str("topic", topic).Msg("phase-42 PipelineSubscriber stopped")
 }
 
@@ -695,14 +585,12 @@ func (s *PipelineSubscriber) Stop() {
 // guards against the first OnConnect (which may fire before or
 // concurrently with Start in pathological cases) by requiring started==true
 // && stopped==false; the initial Subscribe is owned by Start. Subsequent
-// reconnect-driven invocations re-issue SUBSCRIBE and reset the redelivery
-// tracker because the broker's prior in-flight bookkeeping is gone after a
-// session-expired reconnect — keeping stale counts would skew the
-// poison-pill DLQ threshold.
+// reconnect-driven invocations only re-issue SUBSCRIBE.
 func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 	s.mu.Lock()
 	started := s.started
 	stopped := s.stopped
+	s.subscribed = false
 	s.mu.Unlock()
 	if !started || stopped {
 		// First OnConnect during initial Connect, or post-Stop reconnect:
@@ -729,16 +617,32 @@ func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 			Msg("mqtt: PipelineSubscriber: re-subscribe failed on broker reconnect; telemetry stream will be silent until next reconnect")
 		return
 	}
-	// Broker-side bookkeeping (in-flight, awaiting_rel, redelivery counters)
-	// is gone after a session-expired reconnect. Reset our local tracker so
-	// the MaxRedeliveries DLQ threshold restarts at zero for any messages
-	// the broker may still re-deliver from its queue (or the new session's
-	// queue going forward).
-	s.tracker.Reset()
+	s.mu.Lock()
+	if !s.stopped {
+		s.subscribed = true
+	}
+	s.mu.Unlock()
 	s.logger.Info().
 		Str("topic", topic).
-		Int("max_redeliveries", s.cfg.MaxRedeliveries).
+		Str("codec_failure_disposition", "dlq_ack").
 		Msg("phase-42 PipelineSubscriber re-subscribed on broker reconnect")
+}
+
+// IsHealthy reports whether the Fleet Telemetry subscriber is started,
+// subscribed, not stopped, and connected to its broker. The application
+// watchdog uses this instead of inferring ingest health from the separate
+// auxiliary MQTT client.
+func (s *PipelineSubscriber) IsHealthy() bool {
+	if s == nil {
+		return false
+	}
+	s.mu.Lock()
+	started := s.started
+	stopped := s.stopped
+	subscribed := s.subscribed
+	client := s.client
+	s.mu.Unlock()
+	return started && !stopped && subscribed && client != nil && client.IsConnected()
 }
 
 // mqttPayload is the test-friendly seam for the Paho-specific
@@ -752,6 +656,13 @@ type mqttPayload struct {
 }
 
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
+	var acked atomic.Bool
+	ack := func() {
+		if acked.CompareAndSwap(false, true) {
+			msg.Ack()
+		}
+	}
+
 	// Open the receive-boundary span. The ctx returned here MUST be threaded
 	// through handlePayload → pipeline.Process so all
 	// normalize / router / writer spans become children of mqtt.consume.
@@ -760,6 +671,8 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 		"mqtt.consume",
 		trace.WithSpanKind(trace.SpanKindConsumer),
 		trace.WithAttributes(
+			attribute.String("messaging.system", "mqtt"),
+			attribute.String("messaging.destination.name", msg.Topic()),
 			attribute.String("mqtt.topic", msg.Topic()),
 			attribute.Int("mqtt.message_size", len(msg.Payload())),
 			attribute.Int("mqtt.message_id", int(msg.MessageID())),
@@ -775,19 +688,21 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 		if r := recover(); r != nil {
 			span.RecordError(fmt.Errorf("panic: %v", r))
 			span.SetStatus(codes.Error, "panic in onPipelineMessage")
+			span.SetAttributes(attribute.String("mqtt.disposition", "ack-panic"))
 			metrics.PanicsRecovered.WithLabelValues("mqtt-pipeline-subscriber").Inc()
 			s.logger.Error().
 				Interface("panic", r).
 				Str("topic", msg.Topic()).
 				Bytes("stack", debug.Stack()).
-				Msg("mqtt: PipelineSubscriber panic in onPipelineMessage")
+				Msg("mqtt: PipelineSubscriber panic in onPipelineMessage; acking to preserve consumer liveness")
+			ack()
 		}
 	}()
 	s.handlePayload(ctx, mqttPayload{
 		Topic:     msg.Topic(),
 		Payload:   msg.Payload(),
 		MessageID: msg.MessageID(),
-		Ack:       msg.Ack,
+		Ack:       ack,
 	})
 }
 
@@ -802,23 +717,21 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 //     (malformed topic publishes are not poison pills, they are deployment
 //     misconfiguration).
 //  2. Resolve VIN -> vehicleID. ErrUnknownVIN: ack-and-drop. Other resolver
-//     errors: do NOT ack, increment normalize_failures_total{vin_resolver_error},
-//     let MQTT redeliver. A transient DB outage during VIN lookup MUST NOT
-//     lose data.
+//     errors: quarantine once and ack. MQTT 3.1.1 cannot NACK a live
+//     delivery, so leaving it unacked would permanently consume an in-flight
+//     slot rather than retrying it.
 //  3. codec.DecodeJSONField(field, body, vin, receivedAt). Three outcomes:
 //     a. (nil, nil)        Producer flagged Value.invalid (body=null) OR
 //     field is unknown to SignalsByName. Counter
-//     incremented inside the codec. Forget tracker, ack.
+//     incremented inside the codec. Ack.
 //     b. (atomics, nil)    Forward to pipeline.ProcessAtomics. The
 //     pipeline contract says ProcessAtomics returns
 //     nil for per-atomic failures (visible only via
 //     metrics) so the disposition mirrors 3a:
-//     forget tracker, ack.
-//     c. (nil, err)        errors.Is(err, errPayloadDrop). Increment
-//     tracker. If count >= MaxRedeliveries publish
-//     to DLQ; if DLQ.Publish succeeds ack, else do
-//     NOT ack. If count <
-//     MaxRedeliveries do NOT ack, let MQTT redeliver.
+//     ack.
+//     c. (nil, err)        errors.Is(err, errPayloadDrop). Publish once to
+//     the DLQ, then ack the original even if the DLQ publish fails so one
+//     poison payload cannot pin the broker receive window.
 //  4. Defensive: pipeline.ProcessAtomics may itself return an error for
 //     unrecoverable infra failures (e.g. context cancelled mid-batch). We
 //     surface it through handlePipelineError using the same context-cancel /
@@ -850,6 +763,17 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 
 	vehicleID, err := s.resolveVIN(ctx, vin)
 	if err != nil {
+		if s.ctx.Err() != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "VIN resolve cancelled during shutdown")
+			span.SetAttributes(attribute.String("mqtt.disposition", "no-ack-shutdown"))
+			normalizeFailuresTotal.WithLabelValues(reasonContextCanceled).Inc()
+			s.logger.Warn().
+				Err(err).
+				Str("vin_prefix", redactVIN(vin)).
+				Msg("mqtt: PipelineSubscriber: VIN resolve cancelled during shutdown; not acking")
+			return
+		}
 		if errors.Is(err, ErrUnknownVIN) {
 			span.SetAttributes(attribute.String("mqtt.disposition", "ack-drop-unknown-vin"))
 			normalizeFailuresTotal.WithLabelValues(reasonVINUnknown).Inc()
@@ -861,13 +785,13 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 		}
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "vin resolver error")
-		span.SetAttributes(attribute.String("mqtt.disposition", "no-ack-vin-resolver-error"))
+		span.SetAttributes(attribute.String("mqtt.disposition", "quarantine-vin-resolver-error"))
 		normalizeFailuresTotal.WithLabelValues(reasonVINResolverError).Inc()
 		s.logger.Error().
 			Err(err).
 			Str("vin_prefix", redactVIN(vin)).
-			Msg("mqtt: PipelineSubscriber: VIN resolver infra failure; not acking, will redeliver")
-		// Do NOT ack — broker will redeliver per QoS settings.
+			Msg("mqtt: PipelineSubscriber: VIN resolver infra failure; quarantining")
+		s.quarantineAndAck(ctx, msg, 0, vin, err, reasonVINResolverError)
 		return
 	}
 
@@ -895,11 +819,9 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	}
 	if len(atomics) == 0 {
 		// Codec drop (Value.invalid OR unknown field). Counter already
-		// incremented inside the codec. Forget tracker, ack — this
-		// is the same disposition as a successful empty batch in the
-		// proto-batch era.
+		// incremented inside the codec. Ack — this is the same disposition
+		// as a successful empty batch in the proto-batch era.
 		span.SetAttributes(attribute.String("mqtt.disposition", "ack-codec-drop"))
-		s.tracker.Forget(msg.MessageID)
 		msg.Ack()
 		return
 	}
@@ -917,13 +839,12 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	}
 
 	span.SetAttributes(attribute.String("mqtt.disposition", "ack"))
-	s.tracker.Forget(msg.MessageID)
 	msg.Ack()
 }
 
 // handlePipelineError applies the ADR-004 #8 classification to a non-nil
-// pipeline error and decides ack vs no-ack vs
-// DLQ. Split out from handlePayload so the decision tree stays readable.
+// pipeline error and decides ack vs shutdown-preserved no-ack vs DLQ. Split
+// out from handlePayload so the decision tree stays readable.
 func (s *PipelineSubscriber) handlePipelineError(
 	ctx context.Context,
 	msg mqttPayload,
@@ -933,6 +854,15 @@ func (s *PipelineSubscriber) handlePipelineError(
 ) {
 	switch {
 	case errors.Is(err, context.Canceled), errors.Is(err, context.DeadlineExceeded):
+		if s.ctx.Err() == nil {
+			normalizeFailuresTotal.WithLabelValues(reasonOther).Inc()
+			s.logger.Error().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Msg("mqtt: PipelineSubscriber: operation timed out outside shutdown; quarantining")
+			s.quarantineAndAck(ctx, msg, vehicleID, vin, err, reasonOther)
+			return
+		}
 		normalizeFailuresTotal.WithLabelValues(reasonContextCanceled).Inc()
 		s.logger.Warn().
 			Err(err).
@@ -941,21 +871,8 @@ func (s *PipelineSubscriber) handlePipelineError(
 		return
 
 	case errors.Is(err, errPayloadDrop):
-		// Poison-pill candidate. Bounded redelivery + DLQ apply.
 		normalizeFailuresTotal.WithLabelValues(reasonCodecDrop).Inc()
-		redeliveries := s.tracker.Increment(msg.MessageID)
-		if redeliveries >= s.cfg.MaxRedeliveries {
-			s.dlqPublishAndMaybeAck(ctx, msg, vehicleID, vin, err, redeliveries)
-			return
-		}
-		s.logger.Error().
-			Err(err).
-			Str("topic", msg.Topic).
-			Int64("vehicle_id", vehicleID).
-			Int("redeliveries", redeliveries).
-			Int("max_redeliveries", s.cfg.MaxRedeliveries).
-			Msg("mqtt: PipelineSubscriber: codec drop; not acking, will redeliver")
-		// Intentionally NOT acking — let MQTT redeliver up to MaxRedeliveries.
+		s.quarantineAndAck(ctx, msg, vehicleID, vin, err, reasonCodecDrop)
 		return
 
 	default:
@@ -963,59 +880,57 @@ func (s *PipelineSubscriber) handlePipelineError(
 		s.logger.Error().
 			Err(err).
 			Int64("vehicle_id", vehicleID).
-			Msg("mqtt: PipelineSubscriber: non-retriable pipeline error; not acking, not DLQing")
-		// Per ADR-004 #8: any other error is reserved for unrecoverable
-		// infrastructure failures. Caller should NOT retry — the surrounding
-		// shutdown path drains in-flight work.
+			Msg("mqtt: PipelineSubscriber: unexpected pipeline error; quarantining")
+		s.quarantineAndAck(ctx, msg, vehicleID, vin, err, reasonOther)
 		return
 	}
 }
 
-// dlqPublishAndMaybeAck handles the terminal poison-pill outcome. Per
-// rubber-duck #3, we ONLY ack after DLQ publish succeeds; a DLQ publish
-// failure leaves the message unacked so the broker re-attempts delivery and
-// our next pass through gets another chance to write to the DLQ.
-func (s *PipelineSubscriber) dlqPublishAndMaybeAck(
+// quarantineAndAck makes one bounded DLQ publish attempt and always
+// acknowledges the original message. MQTT 3.1.1 offers no NACK; an unacked
+// QoS 1 delivery remains in-flight for the life of the connection and enough
+// such deliveries stop the stream. The defer also preserves liveness if a
+// custom DLQPublisher panics.
+func (s *PipelineSubscriber) quarantineAndAck(
 	ctx context.Context,
 	msg mqttPayload,
 	vehicleID int64,
 	vin string,
 	cause error,
-	redeliveries int,
+	reason string,
 ) {
+	defer msg.Ack()
+	span := trace.SpanFromContext(ctx)
 	entry := DLQEntry{
 		Reason:       cause.Error(),
 		VehicleID:    vehicleID,
 		VIN:          vin,
 		Topic:        msg.Topic,
 		Payload:      msg.Payload,
-		Redeliveries: redeliveries,
+		Redeliveries: 0,
 		Timestamp:    time.Now().UTC(),
 	}
 	if err := s.dlq.Publish(ctx, entry); err != nil {
 		dlqPublishesTotal.WithLabelValues("error").Inc()
 		dlqWritesTotal.WithLabelValues(reasonDLQPublishFailure).Inc()
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "dlq publish failed")
+		span.SetAttributes(attribute.String("mqtt.disposition", "ack-dlq-publish-failed"))
 		s.logger.Error().
 			Err(err).
 			Int64("vehicle_id", vehicleID).
-			Int("redeliveries", redeliveries).
-			Msg("mqtt: PipelineSubscriber: DLQ publish failed; not acking, will redeliver and retry DLQ")
-		// Intentionally NOT acking. The broker redelivers, and the next pass
-		// will re-attempt the DLQ write. The tracker count keeps climbing,
-		// which is fine — the alert fires either way.
+			Str("failure_reason", reason).
+			Msg("mqtt: PipelineSubscriber: DLQ publish failed; acking original to preserve consumer liveness")
 		return
 	}
 	dlqPublishesTotal.WithLabelValues("ok").Inc()
-	dlqWritesTotal.WithLabelValues(reasonDLQMaxRedeliveries).Inc()
-	// Forget the tracker entry once the payload is durably in the DLQ; the
-	// MessageID slot is now safe to reuse for an unrelated future packet.
-	s.tracker.Forget(msg.MessageID)
+	dlqWritesTotal.WithLabelValues(reason).Inc()
+	span.SetAttributes(attribute.String("mqtt.disposition", "ack-dlq"))
 	s.logger.Warn().
 		Err(cause).
 		Int64("vehicle_id", vehicleID).
-		Int("redeliveries", redeliveries).
-		Msg("mqtt: PipelineSubscriber: poison-pill payload sent to DLQ; acking")
-	msg.Ack()
+		Str("failure_reason", reason).
+		Msg("mqtt: PipelineSubscriber: payload sent to DLQ; acking")
 }
 
 // parsePipelineTopic extracts the VIN AND signal field name from a topic of

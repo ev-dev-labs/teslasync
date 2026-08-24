@@ -4,6 +4,11 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+
+	"github.com/go-chi/chi/v5"
+	"go.opentelemetry.io/otel"
+	sdktrace "go.opentelemetry.io/otel/sdk/trace"
+	"go.opentelemetry.io/otel/sdk/trace/tracetest"
 )
 
 // Tests that complement the metrics_test.go middleware coverage.
@@ -97,4 +102,39 @@ func TestLoggerMiddlewareCallsNext(t *testing.T) {
 	if !called {
 		t.Error("inner handler was not called")
 	}
+}
+
+func TestTracingAddsMatchedRoute(t *testing.T) {
+	previous := otel.GetTracerProvider()
+	recorder := tracetest.NewSpanRecorder()
+	provider := sdktrace.NewTracerProvider(sdktrace.WithSpanProcessor(recorder))
+	otel.SetTracerProvider(provider)
+	t.Cleanup(func() {
+		_ = provider.Shutdown(t.Context())
+		otel.SetTracerProvider(previous)
+	})
+
+	router := chi.NewRouter()
+	router.Use(Tracing)
+	router.Get("/api/v1/widgets/{widgetID}", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNoContent)
+	})
+
+	request := httptest.NewRequest(http.MethodGet, "/api/v1/widgets/42", nil)
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, request)
+
+	spans := recorder.Ended()
+	if len(spans) != 1 {
+		t.Fatalf("ended spans = %d, want 1", len(spans))
+	}
+	if got := spans[0].Name(); got != "GET /api/v1/widgets/{widgetID}" {
+		t.Errorf("span name = %q, want matched route", got)
+	}
+	for _, attr := range spans[0].Attributes() {
+		if string(attr.Key) == "http.route" && attr.Value.AsString() == "/api/v1/widgets/{widgetID}" {
+			return
+		}
+	}
+	t.Error("span is missing the matched http.route attribute")
 }

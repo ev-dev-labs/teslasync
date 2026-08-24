@@ -1,8 +1,8 @@
 # docker-compose.dev.yml — Development stack with ALL components enabled.
 # Usage:  docker compose -f docker-compose.dev.yml up --build
 #
-# Includes: API, Web (Nginx), Notification Worker, Export Worker,
-#           PostgreSQL, Redis, Mosquitto, Grafana, Jaeger (tracing).
+# Includes: API, Web (Nginx), Notification Worker, Export Worker, Automation Worker,
+#           PostgreSQL, Redis, Mosquitto, Grafana, Tempo + Jaeger (tracing).
 # All tracing and telemetry features are enabled by default.
 #
 # ⚠️  TimescaleDB-HA migration (ADR-007):
@@ -51,7 +51,7 @@ services:
       - FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL=5m
       # Tracing enabled by default in dev
       - OTEL_ENABLED=true
-      - OTEL_ENDPOINT=jaeger:4317
+      - OTEL_ENDPOINT=otel-collector:4317
       - OTEL_SERVICE_NAME=teslasync-api
       - OTEL_INSECURE=true
       - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY:-}
@@ -63,7 +63,7 @@ services:
         condition: service_started
       redis:
         condition: service_healthy
-      jaeger:
+      otel-collector:
         condition: service_started
     healthcheck:
       test: ["CMD", "/usr/local/bin/teslasync", "healthcheck"]
@@ -104,13 +104,15 @@ services:
       - LOG_LEVEL=error
       - HEALTH_PORT=8081
       - OTEL_ENABLED=true
-      - OTEL_ENDPOINT=jaeger:4317
+      - OTEL_ENDPOINT=otel-collector:4317
       - OTEL_SERVICE_NAME=teslasync-notification-worker
       - OTEL_INSECURE=true
     depends_on:
       postgres:
         condition: service_healthy
       mosquitto:
+        condition: service_started
+      otel-collector:
         condition: service_started
     healthcheck:
       test: ["CMD", "/usr/local/bin/notification-worker", "healthcheck"]
@@ -139,7 +141,7 @@ services:
       - LOG_LEVEL=error
       - HEALTH_PORT=8082
       - OTEL_ENABLED=true
-      - OTEL_ENDPOINT=jaeger:4317
+      - OTEL_ENDPOINT=otel-collector:4317
       - OTEL_SERVICE_NAME=teslasync-export-worker
       - OTEL_INSECURE=true
     depends_on:
@@ -147,8 +149,50 @@ services:
         condition: service_healthy
       mosquitto:
         condition: service_started
+      otel-collector:
+        condition: service_started
     healthcheck:
       test: ["CMD", "/usr/local/bin/export-worker", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  automation-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.automation
+      args:
+        VERSION: dev
+    container_name: teslasync-automation-worker-dev
+    restart: unless-stopped
+    environment:
+      - DATABASE_HOST=postgres
+      - DATABASE_PORT=5432
+      - DATABASE_USER=teslasync
+      - DATABASE_PASSWORD=teslasync
+      - DATABASE_NAME=teslasync
+      - DATABASE_SSL_MODE=disable
+      - MQTT_HOST=mosquitto
+      - MQTT_PORT=1883
+      - TESLA_CLIENT_ID=${TESLA_CLIENT_ID:-dev-client-id}
+      - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET:-dev-client-secret}
+      - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - LOG_LEVEL=error
+      - HEALTH_PORT=8083
+      - OTEL_ENABLED=true
+      - OTEL_ENDPOINT=otel-collector:4317
+      - OTEL_SERVICE_NAME=teslasync-automation-worker
+      - OTEL_INSECURE=true
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mosquitto:
+        condition: service_started
+      otel-collector:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "/usr/local/bin/automation-worker", "healthcheck"]
       interval: 15s
       timeout: 5s
       retries: 3
@@ -229,13 +273,35 @@ services:
       - POSTGRES_USER=teslasync
       - POSTGRES_PASSWORD=teslasync
       - POSTGRES_DB=teslasync
+      - PROMETHEUS_URL=http://prometheus:9090
     volumes:
       - dev_grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/custom.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       postgres:
         condition: service_healthy
+      prometheus:
+        condition: service_started
+
+  prometheus:
+    image: prom/prometheus:v2.51.0
+    container_name: teslasync-prometheus-dev
+    restart: unless-stopped
+    ports:
+      - "9099:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./helm/teslasync/files/prometheus/recording-rules.yaml:/etc/prometheus/rules/recording-rules.yaml:ro
+      - ./helm/teslasync/files/prometheus/alerting-rules.yaml:/etc/prometheus/rules/alerting-rules.yaml:ro
+      - dev_prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.retention.time=15d'
+      - '--web.enable-remote-write-receiver'
+      - '--enable-feature=exemplar-storage'
 
   # ── Observability ─────────────────────────────────────────
 
@@ -245,13 +311,46 @@ services:
     restart: unless-stopped
     ports:
       - "16686:16686"   # Jaeger UI
-      - "4317:4317"     # OTLP gRPC
-      - "4318:4318"     # OTLP HTTP
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+
+  tempo:
+    image: grafana/tempo:2.7.0
+    container_name: teslasync-tempo-dev
+    restart: unless-stopped
+    command:
+      - "-config.file=/etc/tempo/config.yaml"
+    ports:
+      - "3200:3200"
+    volumes:
+      - ./observability/tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - dev_tempo_data:/var/tempo
+    depends_on:
+      prometheus:
+        condition: service_started
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.103.1
+    container_name: teslasync-otel-collector-dev
+    restart: unless-stopped
+    command:
+      - "--config=/etc/otelcol/config.yaml"
+    volumes:
+      - ./observability/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "9464:9464"
+    depends_on:
+      jaeger:
+        condition: service_started
+      tempo:
+        condition: service_started
 
 volumes:
   dev_postgres_data:
   dev_redis_data:
   dev_mosquitto_data:
   dev_grafana_data:
+  dev_prometheus_data:
+  dev_tempo_data:

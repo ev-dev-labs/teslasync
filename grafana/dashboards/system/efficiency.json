@@ -109,7 +109,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 1",
+          "rawSql": "SELECT ROUND((\n  SUM(energy_used_wh) / NULLIF(SUM(distance_m) / 1000.0, 0)\n)::numeric, 0) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 1609.344\n  AND energy_used_wh > 0",
           "refId": "A"
         }
       ],
@@ -168,7 +168,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5",
+          "rawSql": "SELECT ROUND(MIN(\n  energy_used_wh / NULLIF(distance_m / 1000.0, 0)\n)::numeric, 0) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 8046.72\n  AND energy_used_wh > 0",
           "refId": "A"
         }
       ],
@@ -227,7 +227,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"⚡ Efficiency\"\nFROM drives WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5",
+          "rawSql": "SELECT ROUND(MAX(\n  energy_used_wh / NULLIF(distance_m / 1000.0, 0)\n)::numeric, 0) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 8046.72\n  AND energy_used_wh > 0",
           "refId": "A"
         }
       ],
@@ -367,7 +367,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  $__timeGroup(started_at, '1d') AS time,\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 1\nGROUP BY time ORDER BY time",
+          "rawSql": "SELECT\n  $__timeGroup(started_at, '1d') AS time,\n  ROUND((\n    SUM(energy_used_wh) / NULLIF(SUM(distance_m) / 1000.0, 0)\n  )::numeric, 0) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 1609.344\n  AND energy_used_wh > 0\nGROUP BY time\nORDER BY time",
           "refId": "A"
         }
       ],
@@ -447,7 +447,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_speed((distance_m / 1609.344) / NULLIF((duration_s / 60.0), 0) * 60)::numeric, 1) AS \"🚗 Avg Speed\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5\nORDER BY started_at",
+          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_speed(avg_speed_mps * 2.2369362920544)::numeric, 1) AS \"🚗 Avg Speed\",\n  ROUND((energy_used_wh / NULLIF(distance_m / 1000.0, 0))::numeric, 0) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 8046.72\n  AND energy_used_wh > 0\n  AND avg_speed_mps IS NOT NULL\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -527,7 +527,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_temp(ambient_temp_c_avg)::numeric, 1) AS \"🌡️ Temp\",\n  NULL::float8 AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at) AND (distance_m / 1609.344) > 5 AND ambient_temp_c_avg IS NOT NULL\nORDER BY started_at",
+          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(convert_temp(ambient_temp_c_avg)::numeric, 1) AS \"🌡️ Temp\",\n  ROUND((energy_used_wh / NULLIF(distance_m / 1000.0, 0))::numeric, 0) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 8046.72\n  AND energy_used_wh > 0\n  AND ambient_temp_c_avg IS NOT NULL\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -543,22 +543,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

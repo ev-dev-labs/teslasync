@@ -75,4 +75,20 @@ export const COMPOSITOR_METRICS = {
   carLeft: 308,
   carRight: 1129,
   ground: 517,
+  /**
+   * Hub centers measured directly in the 1440×810 Model Y compositor image.
+   * Keep these in image space so the photo and rotating crop share one
+   * coordinate system; fallback-SVG geometry cannot move the photo pivots.
+  */
+  wheels: {
+    front: { x: 441.3, y: 458.5 },
+    rear: { x: 982.3, y: 457.9 },
+  },
+  /**
+   * Rim crop in compositor-image pixels. The final four pixels are only a
+   * blend band: the fully rotating area still ends inside the alloy face,
+   * while the transparent outer edge lands on the natural rim/tire boundary.
+   */
+  wheelCropRadius: 54,
+  wheelCropFeather: 4,
 } as const;

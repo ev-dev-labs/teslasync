@@ -176,7 +176,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  cs.id AS \"🔗 ID\",\n  cs.started_at AS \"📅 Date\",\n  CASE\n    WHEN cs.charger_type IS NOT NULL AND cs.charger_type != '' THEN '⚡ ' || cs.charger_type\n    WHEN (cs.peak_power_w / 1000.0) > 20 THEN '🔌 DC Fast'\n    ELSE '🏠 AC Level 2'\n  END AS \"🏷️ Type\",\n  cs.start_soc_pct AS \"🔋 Start\",\n  cs.end_soc_pct AS \"🔋 End\",\n  (cs.end_soc_pct - cs.start_soc_pct) AS \"📈 Gained\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh\",\n  ROUND((cs.peak_power_w / 1000.0)::numeric, 1) AS \"🔌 kW\",\n  (NULL::float8) AS \"⚡ V\",\n  (NULL::int) AS \"🔌 Ph\",\n  COALESCE(cs.cable_type, '-') AS \"🔌 Cable\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Min\",\n  ROUND(CASE WHEN cs.cost_decimal > 0 THEN cs.cost_decimal ELSE (cs.total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END::numeric, 2) AS \"💰 $\",\n  NULL AS \"📏 Range+\",\n  COALESCE((NULL::text), '-') AS \"📍 Location\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id} AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
+          "rawSql": "SELECT\n  cs.id AS \"🔗 ID\",\n  cs.started_at AS \"📅 Date\",\n  CASE\n    WHEN NULLIF(BTRIM(cs.charger_type), '') IS NOT NULL THEN '⚡ ' || cs.charger_type\n    WHEN cs.peak_power_w > 20000 THEN '🔌 DC Fast'\n    WHEN cs.peak_power_w IS NOT NULL THEN '🏠 AC Level 2'\n    ELSE '❔ Unknown'\n  END AS \"🏷️ Type\",\n  cs.start_soc_pct AS \"🔋 Start\",\n  cs.end_soc_pct AS \"🔋 End\",\n  cs.delta_soc_pct AS \"📈 Gained\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh\",\n  ROUND((cs.peak_power_w / 1000.0)::numeric, 1) AS \"🔌 kW\",\n  COALESCE(NULLIF(BTRIM(cs.cable_type), ''), '-') AS \"🔌 Cable\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Min\",\n  ROUND(cs.cost_decimal::numeric, 2) AS \"💰 Cost\",\n  NULLIF(BTRIM(cs.cost_currency::text), '') AS \"Currency\",\n  COALESCE(NULLIF(BTRIM(cs.start_place), ''), g.name, 'Unknown') AS \"📍 Location\"\nFROM charging_sessions cs\nLEFT JOIN geofences g ON g.id = cs.geofence_id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
           "refId": "A"
         }
       ],
@@ -447,11 +447,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: geofences table has no cost_per_kwh column (ADR-002)",
+          "rawSql": "WITH priced AS (\n  SELECT\n    COALESCE(NULLIF(BTRIM(cs.start_place), ''), g.name, 'Unknown') AS location,\n    cs.total_energy_added_wh AS energy_wh,\n    CASE\n      WHEN cs.cost_decimal IS NOT NULL\n       AND NULLIF(BTRIM(cs.cost_currency::text), '') IS NOT NULL\n        THEN cs.cost_decimal\n      WHEN rate.rate_per_wh IS NOT NULL\n        THEN cs.total_energy_added_wh * rate.rate_per_wh\n      ELSE NULL\n    END AS cost,\n    CASE\n      WHEN cs.cost_decimal IS NOT NULL\n       AND NULLIF(BTRIM(cs.cost_currency::text), '') IS NOT NULL\n        THEN BTRIM(cs.cost_currency::text)\n      WHEN rate.rate_per_wh IS NOT NULL THEN rate.currency\n      ELSE NULL\n    END AS currency\n  FROM charging_sessions cs\n  LEFT JOIN geofences g ON g.id = cs.geofence_id\n  LEFT JOIN LATERAL (\n    SELECT gr.rate_per_wh, BTRIM(gr.currency::text) AS currency\n    FROM geofence_rates gr\n    WHERE gr.id = cs.rate_id\n       OR (\n         gr.geofence_id = cs.geofence_id\n         AND cs.started_at >= gr.effective_from\n         AND (gr.effective_to IS NULL OR cs.started_at < gr.effective_to)\n       )\n    ORDER BY (gr.id = cs.rate_id) DESC, gr.effective_from DESC\n    LIMIT 1\n  ) rate ON TRUE\n  WHERE cs.vehicle_id = ${vehicle_id}\n    AND $__timeFilter(cs.started_at)\n    AND cs.total_energy_added_wh > 0\n)\nSELECT\n  location || ' · ' || currency AS \"Location\",\n  ROUND((SUM(cost) / NULLIF(SUM(energy_wh) / 1000.0, 0))::numeric, 3)\n    AS \"Cost / kWh\"\nFROM priced\nWHERE cost IS NOT NULL AND currency IS NOT NULL\nGROUP BY location, currency\nORDER BY \"Cost / kWh\" DESC",
           "refId": "A"
         }
       ],
-      "title": "Cost per kWh by Location",
+      "title": "Cost per kWh by Location and Currency",
       "type": "barchart",
       "transparent": false
     },
@@ -635,7 +635,7 @@
         "cellHeight": "sm",
         "sortBy": [
           {
-            "displayName": "💲 Rate ($/kWh)",
+            "displayName": "Rate / kWh",
             "desc": false
           }
         ]
@@ -649,7 +649,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: geofences table has no cost_per_kwh/radius/lat/lon columns (ADR-002)",
+          "rawSql": "SELECT\n  g.name AS \"Location\",\n  ROUND((gr.rate_per_wh * 1000.0)::numeric, 4) AS \"Rate / kWh\",\n  BTRIM(gr.currency::text) AS \"Currency\",\n  gr.effective_from AS \"Effective From\",\n  gr.effective_to AS \"Effective To\"\nFROM geofence_rates gr\nJOIN geofences g ON g.id = gr.geofence_id\nORDER BY g.name, gr.effective_from DESC",
           "refId": "A"
         }
       ],
@@ -700,11 +700,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(AVG(CASE WHEN NULL > 0 AND (total_energy_added_wh / 1000.0) > 0 THEN (total_energy_added_wh / 1000.0) / NULL * 100 ELSE NULL END)::numeric, 1) AS \"⚡ Avg Efficiency %\",\n  ROUND(MAX((peak_power_w / 1000.0))::numeric, 1) AS \"🔌 Peak Power (kW)\",\n  ROUND(AVG(CASE WHEN cost_decimal > 0 THEN cost_decimal ELSE (total_energy_added_wh / 1000.0) * (SELECT COALESCE(value_num, 0.12) FROM settings WHERE key = 'base_cost_per_kwh') END / NULLIF((total_energy_added_wh / 1000.0), 0))::numeric, 3) AS \"💲 Avg $/kWh\",\n  ROUND(MIN(CASE WHEN cost_decimal > 0 THEN cost_decimal / NULLIF((total_energy_added_wh / 1000.0), 0) ELSE NULL END)::numeric, 3) AS \"💲 Best $/kWh\",\n  ROUND(MAX(CASE WHEN cost_decimal > 0 THEN cost_decimal / NULLIF((total_energy_added_wh / 1000.0), 0) ELSE NULL END)::numeric, 3) AS \"💲 Worst $/kWh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
+          "rawSql": "SELECT\n  ROUND((MAX(peak_power_w) / 1000.0)::numeric, 1) AS \"🔌 Peak Power (kW)\",\n  ROUND((AVG(total_energy_added_wh) / 1000.0)::numeric, 1)\n    AS \"⚡ Avg Session Energy (kWh)\",\n  ROUND(AVG(EXTRACT(EPOCH FROM (ended_at - started_at)) / 60.0)::numeric, 0)\n    AS \"⏱️ Avg Session (min)\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
-      "title": "Charging Efficiency",
+      "title": "Charging Power & Energy",
+      "description": "Measured session power, pack energy added, and duration. Charging efficiency is omitted because wall-input energy is not recorded in the current schema.",
       "type": "stat",
       "transparent": false
     }
@@ -716,22 +717,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

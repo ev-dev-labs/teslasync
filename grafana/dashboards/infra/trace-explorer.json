@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-trace-explorer",
   "title": "TeslaSync - Trace Explorer (Tempo TraceQL)",
+  "description": "Requires OTEL_ENABLED=true and docker compose --profile tracing up.",
   "tags": [
     "teslasync",
     "infra",
@@ -35,30 +36,29 @@
         "skipUrlSync": false
       },
       {
-        "name": "service",
-        "label": "Service",
-        "type": "textbox",
-        "current": {
-          "text": "",
-          "value": ""
-        },
-        "query": "",
-        "hide": 0,
-        "skipUrlSync": false,
-        "description": "Optional service.name filter — leave blank for all services. e.g., teslasync-api"
-      },
-      {
         "name": "vehicle_id",
-        "label": "Vehicle ID",
-        "type": "textbox",
+        "label": "Vehicle",
+        "type": "query",
         "current": {
-          "text": "",
-          "value": ""
+          "selected": true,
+          "text": "(none)",
+          "value": "0"
         },
-        "query": "",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0::bigint, '(none)'::text ORDER BY __text",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles WHERE archived_at IS NULL UNION ALL SELECT 0::bigint, '(none)'::text ORDER BY __text",
+        "options": [],
+        "refresh": 1,
+        "regex": "",
+        "multi": false,
+        "includeAll": false,
         "hide": 0,
         "skipUrlSync": false,
-        "description": "Optional vehicle_id filter for vehicle-specific trace search."
+        "sort": 0,
+        "description": "Vehicle filter for spans carrying vehicle_id or vehicle.id."
       }
     ]
   },
@@ -136,8 +136,8 @@
     {
       "id": 2,
       "type": "stat",
-      "title": "Sampled (kept) Spans/s",
-      "description": "Spans that survived the tail_sampling decision and were forwarded to Tempo.",
+      "title": "Spans Forwarded to Tempo/s",
+      "description": "Spans successfully exported to Tempo. This works with both the unsampled compose collector and the tail-sampled Helm collector.",
       "gridPos": {
         "x": 6,
         "y": 1,
@@ -181,7 +181,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum(rate(otelcol_processor_tail_sampling_count_traces_sampled[5m]))",
+          "expr": "sum(rate(otelcol_exporter_sent_spans{exporter=~\"otlp(/tempo|http/tempo)\"}[5m])) or vector(0)",
           "refId": "A"
         }
       ],
@@ -193,8 +193,8 @@
     {
       "id": 3,
       "type": "stat",
-      "title": "Sampling Decision Wait",
-      "description": "How long the tail_sampling processor is buffering before deciding (configured `decision_wait`, default 30s). Sustained backlog growth means the buffer is not draining fast enough — bump `num_traces` or shorten `decision_wait`.",
+      "title": "Tempo Export Queue Depth",
+      "description": "Spans waiting in the Tempo export queue. A sustained increase indicates that Tempo or the collector-to-Tempo path cannot keep up.",
       "gridPos": {
         "x": 12,
         "y": 1,
@@ -215,7 +215,7 @@
               },
               {
                 "color": "yellow",
-                "value": 40000
+                "value": 500
               }
             ]
           },
@@ -242,7 +242,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum(otelcol_processor_tail_sampling_count_traces_buffered)",
+          "expr": "sum(otelcol_exporter_queue_size{exporter=~\"otlp(/tempo|http/tempo)\"}) or vector(0)",
           "refId": "A"
         }
       ],
@@ -354,7 +354,7 @@
       "id": 6,
       "type": "traces",
       "title": "Error Traces",
-      "description": "All traces whose root span finished with status=error. Always-sampled per the OTel collector tail_sampling policy.",
+      "description": "All traces whose root span finished with status=error. Helm tail sampling retains errors; the compose collector exports every trace.",
       "gridPos": {
         "x": 0,
         "y": 16,
@@ -398,7 +398,7 @@
             "uid": "DS_TESLASYNC_TEMPO"
           },
           "queryType": "traceql",
-          "query": "{ resource.vehicle_id = \"${vehicle_id}\" || .vehicle_id = \"${vehicle_id}\" }",
+          "query": "{ span.vehicle_id = ${vehicle_id} || span.vehicle.id = ${vehicle_id} }",
           "limit": 50,
           "refId": "A"
         }
@@ -424,8 +424,8 @@
     {
       "id": 8,
       "type": "traces",
-      "title": "Auth Login Traces",
-      "description": "All POST /api/v1/auth/login traces. Always-sampled (100%) so the distribution is exact, not estimated. Spike in count = bot burst or credential-stuffing attempt.",
+      "title": "OAuth Initiation Traces",
+      "description": "GET /api/v1/auth/login traces for OAuth state creation and Tesla authorization-URL generation. Helm retains these via its always-sample policy; compose exports every trace.",
       "gridPos": {
         "x": 0,
         "y": 37,
@@ -454,7 +454,7 @@
       "id": 9,
       "type": "traces",
       "title": "Wake-Command Traces",
-      "description": "POST /commands/{vehicleId}/wake — Phase-44 critical flow with full instrumentation. Useful for diagnosing slow wakes (Tesla API + auth + retry).",
+      "description": "POST /vehicles/{vehicleID}/wake — critical flow with full instrumentation. Useful for diagnosing slow wakes (Tesla API + auth + retry).",
       "gridPos": {
         "x": 12,
         "y": 37,
@@ -469,7 +469,7 @@
             "uid": "DS_TESLASYNC_TEMPO"
           },
           "queryType": "traceql",
-          "query": "{ span.http.route =~ \".*/commands/.*/wake.*\" }",
+          "query": "{ span.http.route =~ \".*/vehicles/.*/wake.*\" }",
           "limit": 50,
           "refId": "A"
         }

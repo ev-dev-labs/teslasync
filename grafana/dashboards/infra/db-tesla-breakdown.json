@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-db-tesla-breakdown",
   "title": "TeslaSync - DB & Tesla API Span Breakdown (Tempo)",
+  "description": "Requires OTEL_ENABLED=true and docker compose --profile tracing up.",
   "tags": [
     "teslasync",
     "infra",
@@ -105,7 +106,7 @@
       "description": "Native TraceQL drill-in. Click a trace to see which upstream request triggered the slow query and the SQL statement attribute.",
       "gridPos": { "x": 0, "y": 19, "w": 24, "h": 8 },
       "options": {},
-      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.db.system != nil && span.duration > 200ms }", "limit": 30, "refId": "A" }],
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.db.system != nil && duration > 200ms }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     },
 
@@ -153,12 +154,12 @@
     {
       "id": 11,
       "type": "timeseries",
-      "title": "Tesla API latency by HTTP route (P95)",
-      "description": "Per-endpoint P95. Endpoints get split via the http.route span attribute (copied onto the metric by the configured dimensions list).",
+      "title": "Tesla API latency by span (P95)",
+      "description": "Per-operation P95 for outbound Tesla client spans, grouped by the span_name label emitted by Tempo span metrics.",
       "gridPos": { "x": 12, "y": 28, "w": 12, "h": 8 },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "s" } },
       "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(8, histogram_quantile(0.95, sum by (http_route, le) (rate(traces_spanmetrics_latency_bucket{span_kind=\"SPAN_KIND_CLIENT\", span_name=~\"(?i)tesla.*|.*fleet.*|.*tesla-api.*\", http_route!=\"\"}[5m]))))", "legendFormat": "{{http_route}}", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(8, histogram_quantile(0.95, sum by (span_name, le) (rate(traces_spanmetrics_latency_bucket{span_kind=\"SPAN_KIND_CLIENT\", span_name=~\"(?i)tesla.*|.*fleet.*|.*tesla-api.*\"}[5m]))))", "legendFormat": "{{span_name}}", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -169,7 +170,7 @@
       "gridPos": { "x": 0, "y": 36, "w": 12, "h": 8 },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 30, "lineWidth": 2, "showPoints": "never", "spanNulls": true, "stacking": { "group": "A", "mode": "normal" } }, "unit": "ops" } },
       "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum by (http_status_code) (rate(traces_spanmetrics_calls_total{span_kind=\"SPAN_KIND_CLIENT\", span_name=~\"(?i)tesla.*|.*fleet.*|.*tesla-api.*\", http_status_code!~\"2..|^$\"}[5m]))", "legendFormat": "{{http_status_code}}", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum by (http_response_status_code) (rate(traces_spanmetrics_calls_total{span_kind=\"SPAN_KIND_CLIENT\", span_name=~\"(?i)tesla.*|.*fleet.*|.*tesla-api.*\", http_response_status_code!~\"2..|^$\"}[5m]))", "legendFormat": "{{http_response_status_code}}", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -179,7 +180,7 @@
       "description": "Native Tempo TraceQL — slow Tesla CLIENT spans with full request context.",
       "gridPos": { "x": 12, "y": 36, "w": 12, "h": 8 },
       "options": {},
-      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.kind = \"client\" && span.http.url =~ \".*tesla.*\" && span.duration > 2s }", "limit": 30, "refId": "A" }],
+      "targets": [{ "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }, "queryType": "traceql", "query": "{ span.kind = \"client\" && span.url.full =~ \".*tesla.*\" && duration > 2s }", "limit": 30, "refId": "A" }],
       "datasource": { "type": "tempo", "uid": "DS_TESLASYNC_TEMPO" }
     }
   ],

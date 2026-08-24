@@ -100,7 +100,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  cs.started_at AS \"📅 Date\",\n  COALESCE((NULL::text), '-') AS \"📍 Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh Added\",\n  ROUND(cs.cost_decimal::numeric, 2) AS \"💰 Cost\",\n  cs.start_soc_pct AS \"🔋 Start %\",\n  cs.end_soc_pct AS \"🔋 End %\",\n  ROUND((cs.peak_power_w / 1000.0)::numeric) AS \"🔌 Power\",\n  COALESCE(cs.charger_type, 'AC') AS \"🏷️ Type\",\n  COALESCE(cs.charger_type, '-') AS \"🏷️ Brand\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
+          "rawSql": "SELECT\n  cs.started_at AS \"📅 Date\",\n  COALESCE(NULLIF(BTRIM(cs.start_place), ''), g.name, 'Unknown') AS \"📍 Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh Added\",\n  ROUND(cs.cost_decimal::numeric, 2) AS \"💰 Cost\",\n  NULLIF(BTRIM(cs.cost_currency::text), '') AS \"Currency\",\n  cs.start_soc_pct AS \"🔋 Start %\",\n  cs.end_soc_pct AS \"🔋 End %\",\n  ROUND((cs.peak_power_w / 1000.0)::numeric, 1) AS \"🔌 Power (kW)\",\n  COALESCE(NULLIF(BTRIM(cs.charger_type), ''), 'Unknown') AS \"🏷️ Type\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric)\n    AS \"⏱️ Duration (min)\"\nFROM charging_sessions cs\nLEFT JOIN geofences g ON g.id = cs.geofence_id\nWHERE cs.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(cs.started_at)\nORDER BY cs.started_at DESC\nLIMIT 200",
           "refId": "A"
         }
       ],
@@ -116,22 +116,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

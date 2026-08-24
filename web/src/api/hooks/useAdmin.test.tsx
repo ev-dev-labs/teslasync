@@ -42,6 +42,7 @@ import {
   useBackupConfigs,
   useBackupRuns,
   useSystemHealth,
+  useRuntimeStatus,
   useMaintenanceState,
   useUpdateMaintenance,
   useAuditLogs,
@@ -100,6 +101,7 @@ describe('adminKeys', () => {
     expect(adminKeys.apiKeys).toEqual(['api-keys']);
     expect(adminKeys.apiLogStats).toEqual(['api-log-stats']);
     expect(adminKeys.systemHealth).toEqual(['system-health']);
+    expect(adminKeys.runtimeStatus).toEqual(['runtime-status']);
     expect(adminKeys.webErrorsSummary).toEqual(['admin', 'web-errors-summary']);
     expect(adminKeys.maintenance).toEqual(['admin', 'maintenance']);
   });
@@ -291,6 +293,7 @@ describe('useSystemHealth', () => {
       databaseSize: '1 GB',
       tableCount: 12,
     });
+
     const { wrapper } = makeWrapper();
     const { result } = renderHook(() => useSystemHealth(), { wrapper });
 
@@ -307,6 +310,31 @@ describe('useSystemHealth', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as ApiError).status).toBe(503);
+  });
+});
+
+describe('useRuntimeStatus', () => {
+  it('GETs the always-200 component snapshot used by global degraded-mode UI', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      status: 'degraded',
+      generated_at: '2026-01-01T00:00:00Z',
+      components: [
+        { name: 'telemetry', status: 'degraded', consecutive_failures: 3 },
+      ],
+      counts: {
+        components_total: 1,
+        components_healthy: 0,
+        components_degraded: 1,
+        components_unhealthy: 0,
+      },
+    });
+    const { wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRuntimeStatus(), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/status/');
+    expect(callArgs()[1]).toMatchObject({ signal: expect.any(AbortSignal) });
+    expect(result.current.data?.components[0].name).toBe('telemetry');
   });
 });
 

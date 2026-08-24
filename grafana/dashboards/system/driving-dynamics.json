@@ -140,7 +140,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COALESCE(float_value, int_value::float8) AS acceleration_gs\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field = 'LongitudinalAcceleration'\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND COALESCE(float_value, int_value::float8) IS NOT NULL",
+          "rawSql": "SELECT longitudinal_acceleration_mps2 / 9.80665 AS acceleration_gs\nFROM drive_telemetry\nWHERE vehicle_id = ${vehicle_id}\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()\n  AND longitudinal_acceleration_mps2 IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -210,7 +210,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  ROUND(AVG(ABS(COALESCE(float_value, int_value::float8)))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(COALESCE(float_value, int_value::float8))::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(COALESCE(float_value, int_value::float8)))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(COALESCE(float_value, int_value::float8)))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id}\n  AND field IN ('LateralAcceleration', 'LongitudinalAcceleration')\n  AND ts BETWEEN $__timeFrom() AND $__timeTo()",
+          "rawSql": "WITH accelerations AS (\n  SELECT sample.acceleration_mps2 / 9.80665 AS acceleration_g\n  FROM drive_telemetry dt\n  CROSS JOIN LATERAL (\n    VALUES (dt.lateral_acceleration_mps2),\n           (dt.longitudinal_acceleration_mps2)\n  ) AS sample(acceleration_mps2)\n  WHERE dt.vehicle_id = ${vehicle_id}\n    AND dt.ts BETWEEN $__timeFrom() AND $__timeTo()\n    AND sample.acceleration_mps2 IS NOT NULL\n)\nSELECT\n  ROUND(AVG(ABS(acceleration_g))::numeric, 3) AS \"Mean |g|\",\n  ROUND(STDDEV(acceleration_g)::numeric, 3) AS \"Std Dev (g)\",\n  ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY ABS(acceleration_g))::numeric, 3) AS \"P95 |g|\",\n  ROUND(MAX(ABS(acceleration_g))::numeric, 3) AS \"Peak |g|\",\n  COUNT(*) AS \"Samples\"\nFROM accelerations",
           "refId": "A"
         }
       ],
@@ -343,7 +343,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  d.started_at AS time,\n  COUNT(*) FILTER (WHERE COALESCE(sl.float_value, sl.int_value::float8) < -0.3)::bigint AS \"Hard Brakes\",\n  COUNT(*) FILTER (WHERE COALESCE(sl.float_value, sl.int_value::float8) < -0.2 AND COALESCE(sl.float_value, sl.int_value::float8) >= -0.3)::bigint AS \"Moderate Brakes\",\n  ROUND(AVG(COALESCE(sl.float_value, sl.int_value::float8)) FILTER (WHERE COALESCE(sl.float_value, sl.int_value::float8) < 0)::numeric, 3) AS \"Avg Decel (g)\"\nFROM signal_log sl\nJOIN drives d ON sl.vehicle_id = d.vehicle_id\n  AND sl.ts BETWEEN d.started_at AND d.ended_at\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.started_at)\n  AND sl.field = 'LongitudinalAcceleration'\n  AND COALESCE(sl.float_value, sl.int_value::float8) IS NOT NULL\nGROUP BY d.id, d.started_at\nORDER BY d.started_at",
+          "rawSql": "SELECT\n  d.started_at AS time,\n  COUNT(*) FILTER (WHERE dt.longitudinal_acceleration_mps2 / 9.80665 < -0.3)::bigint AS \"Hard Brakes\",\n  COUNT(*) FILTER (\n    WHERE dt.longitudinal_acceleration_mps2 / 9.80665 < -0.2\n      AND dt.longitudinal_acceleration_mps2 / 9.80665 >= -0.3\n  )::bigint AS \"Moderate Brakes\",\n  ROUND(AVG(dt.longitudinal_acceleration_mps2 / 9.80665)\n    FILTER (WHERE dt.longitudinal_acceleration_mps2 < 0)::numeric, 3) AS \"Avg Decel (g)\"\nFROM drive_telemetry dt\nJOIN drives d ON dt.vehicle_id = d.vehicle_id\n  AND dt.ts BETWEEN d.started_at AND d.ended_at\nWHERE d.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(d.started_at)\n  AND dt.longitudinal_acceleration_mps2 IS NOT NULL\nGROUP BY d.id, d.started_at\nORDER BY d.started_at",
           "refId": "A"
         }
       ],
@@ -593,22 +593,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

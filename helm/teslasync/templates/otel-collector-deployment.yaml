@@ -37,6 +37,9 @@ spec:
             - name: prometheus
               containerPort: 9464
               protocol: TCP
+            - name: health-check
+              containerPort: 13133
+              protocol: TCP
           readinessProbe:
             httpGet:
               path: /

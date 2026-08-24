@@ -22,7 +22,7 @@ import {
 import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 
-import { useBatteryHealthAnalytics, useBatteryDegradation } from '@/api/hooks/useEnergy';
+import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
@@ -31,17 +31,11 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
-import type { RiskFactorData } from '@/types/energy';
+import type { BatteryHealthSnapshot, RiskFactorData } from '@/types/energy';
 
 /* ── Types ─────────────────────────────────────────────── */
 
-interface DegradationEntry {
-  date: string;
-  odometer: number;
-  soh_pct: number;
-  capacity_wh: number;
-  range_km: number;
-}
+type DegradationEntry = BatteryHealthSnapshot;
 
 /* ── Helpers ───────────────────────────────────────────── */
 
@@ -120,35 +114,27 @@ export default function BatteryDegradationPage() {
   const healthQuery = useBatteryHealthAnalytics(activeIdStr);
   const { data } = healthQuery;
 
-  /* Degradation data (prediction, risk factors, projection band). */
-  const degQuery = useBatteryDegradation(activeIdStr);
-  const { data: degradation } = degQuery;
-
   /* URL-persisted hidden-series state lets users declutter and share
      the projection view. */
   const trendHidden = useHiddenSeries('battery-degradation-trend');
 
-  /* Backend `range_km` and `odometer` fields are derived SI in km.
-     Convert km → metres → user-pref display via the SI-canonical helper
-     so users with `unit_of_length=mi` see miles (the legacy
-     useSettings.toDistanceDisplay helper expected miles input and would
-     silently double-convert here). */
+  /* Capacity, range, and odometer values remain SI until this display boundary. */
   const { unitPrefs, formatEnergy } = useUnits();
-  const fromKm = useCallback(
-    (km: number): number => convertDistanceFromSI(km * 1000, unitPrefs.distance),
+  const fromMeters = useCallback(
+    (meters: number): number => convertDistanceFromSI(meters, unitPrefs.distance),
     [unitPrefs.distance],
   );
 
   /* Range-loss chart data */
   const rangeData = useMemo(() => {
     if (!data?.history || data.history.length === 0) return [];
-    const originalRange = data.history[0].range_km;
+    const originalRange = fromMeters(data.history[0].range_m);
     return data.history.map((h) => ({
       date: formatDate(h.date),
       original: originalRange,
-      current: h.range_km,
+      current: fromMeters(h.range_m),
     }));
-  }, [data]);
+  }, [data, fromMeters]);
 
   /* Projection chart: actual history + predicted future with confidence band */
   const projectionChartData = useMemo(() => {
@@ -159,7 +145,7 @@ export default function BatteryDegradationPage() {
       confidence_low: undefined as number | undefined,
       confidence_band: undefined as number | undefined,
     }));
-    const projections = degradation?.projections ?? [];
+    const projections = data?.projections ?? [];
     const proj = projections.map((p) => ({
       label: p.date,
       health: undefined as number | undefined,
@@ -171,21 +157,21 @@ export default function BatteryDegradationPage() {
       proj[0] = { ...proj[0], health: hist[hist.length - 1].health };
     }
     return [...hist, ...proj];
-  }, [data, degradation]);
+  }, [data]);
 
-  /* Risk factors from degradation data */
-  const habits = degradation?.charging_habits;
+  const habits = data?.charging_habits;
   const totalCharges = (habits?.fast_charge_count ?? 0) + (habits?.slow_charge_count ?? 0);
   const fastChargePct = fmtInt(totalCharges > 0
     ? ((habits?.fast_charge_count ?? 0) / totalCharges) * 100
     : 0);
 
   const cycleDepthScore = data
-    ? Math.max(0, Math.round(100 - data.avg_depth_of_discharge))
+    ? Math.max(0, Math.round(100 - data.avg_depth_of_discharge_pct))
     : 0;
 
-  const riskFactors = degradation?.risk_factors ?? [];
-  const recommendations = degradation?.recommendations ?? [];
+  const riskFactors = data?.risk_factors ?? [];
+  const recommendations = data?.recommendations ?? [];
+  const stressLevel = data?.stress_level ?? 'Low';
   const soh = data?.current_soh ?? 0;
 
   /* Table columns */
@@ -198,9 +184,9 @@ export default function BatteryDegradationPage() {
         sortable: true,
       },
       {
-        key: 'odometer',
+        key: 'odometer_m',
         header: t('Odometer'),
-        render: (row: DegradationEntry) => `${fmtNumber(fromKm(row.odometer))} ${unitPrefs.distance}`,
+        render: (row: DegradationEntry) => `${fmtNumber(fromMeters(row.odometer_m))} ${unitPrefs.distance}`,
         sortable: true,
       },
       {
@@ -229,13 +215,13 @@ export default function BatteryDegradationPage() {
         sortable: true,
       },
       {
-        key: 'range_km',
+        key: 'range_m',
         header: t('Range'),
-        render: (row: DegradationEntry) => `${fmtNumber(fromKm(row.range_km))} ${unitPrefs.distance}`,
+        render: (row: DegradationEntry) => `${fmtNumber(fromMeters(row.range_m))} ${unitPrefs.distance}`,
         sortable: true,
       },
     ],
-    [t, fromKm, unitPrefs.distance, formatEnergy],
+    [t, fromMeters, unitPrefs.distance, formatEnergy],
   );
 
   /* ── Render ──────────────────────────────────────────── */
@@ -278,7 +264,7 @@ export default function BatteryDegradationPage() {
                   />
                   <MetricCard
                     label={t('Estimated Capacity')}
-                    value={`${fmtNumber(data?.estimated_capacity ?? 0)} kWh`}
+                    value={formatEnergy(data?.estimated_capacity_wh ?? 0, { precision: 1 })}
                     icon={<Zap className="h-4 w-4" />}
                     color="cyan"
                     help={{
@@ -289,7 +275,7 @@ export default function BatteryDegradationPage() {
                   />
                   <MetricCard
                     label={t('Degradation Rate')}
-                    value={`${fmtNumber(data?.degradation_rate_yr ?? 0)}%/yr`}
+                    value={`${fmtNumber(data?.degradation_rate_pct_per_year ?? 0)}%/yr`}
                     icon={<TrendingDown className="h-4 w-4" />}
                     color="purple"
                     help={{
@@ -352,12 +338,12 @@ export default function BatteryDegradationPage() {
           </GlassPanel>
 
           {/* Trend & projection chart (hero — spans 2 cols on wide screens) */}
-          {healthQuery.error || degQuery.error ? (
+          {healthQuery.error ? (
             <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
               <PanelTitle className="mb-3">
                 {t('battery.degradation.trendTitle', 'Health Trend & Projection')}
               </PanelTitle>
-              <QueryError error={healthQuery.error ?? degQuery.error} />
+              <QueryError error={healthQuery.error} />
             </GlassPanel>
           ) : (
             /* chart-a11y:no-table composed projection chart with confidence band; SR users get summary metrics in the cards above */
@@ -367,7 +353,7 @@ export default function BatteryDegradationPage() {
               height={300}
               className="xl:col-span-2"
               chartKey="battery-degradation-trend"
-              loading={healthQuery.isLoading || degQuery.isLoading}
+              loading={healthQuery.isLoading}
               empty={projectionChartData.length === 0}
               annotations={{ vehicleId: activeId, scope: 'battery', chartId: 'battery-degradation-trend' }}
             >
@@ -457,11 +443,11 @@ export default function BatteryDegradationPage() {
               <TrendingDown className="h-4 w-4 text-purple-300" aria-hidden="true" />
               {t('battery.degradation.prediction', 'Prediction')}
             </PanelTitle>
-            {degQuery.isLoading ? (
+            {healthQuery.isLoading ? (
               <Skeleton height={220} />
-            ) : degQuery.error ? (
-              <QueryError error={degQuery.error} />
-            ) : degradation?.prediction?.has_enough_data ? (
+            ) : healthQuery.error ? (
+              <QueryError error={healthQuery.error} />
+            ) : data?.prediction?.has_enough_data ? (
               <div className="space-y-4">
                 <div className="rounded-xl border border-neon-purple/15 bg-neon-purple/[0.08] p-4">
                   <Text as="p" variant="bodySm">
@@ -469,17 +455,17 @@ export default function BatteryDegradationPage() {
                     <Text weight="semibold" className="text-amber-300">80%</Text>{' '}
                     {t('battery.degradation.inApprox', 'in approximately')}{' '}
                     <Text weight="semibold" className="text-purple-300">
-                      ~{fmtNumber(degradation.prediction.years_to_80_pct ?? 0)} {t('battery.degradation.years', 'years')}
+                      ~{fmtNumber(data.prediction.years_to_80_pct ?? 0)} {t('battery.degradation.years', 'years')}
                     </Text>
-                    {degradation.prediction.predicted_date && (
-                      <> ({degradation.prediction.predicted_date})</>
+                    {data.prediction.predicted_date && (
+                      <> ({data.prediction.predicted_date})</>
                     )}
                   </Text>
                 </div>
                 <div className="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
                   <MetricCard
                     label={t('battery.degradation.rate', 'Degradation Rate')}
-                    value={`${fmtNumber(Math.abs(degradation.prediction.slope_per_year))}%/yr`}
+                    value={`${fmtNumber(Math.abs(data.prediction.slope_per_year))}%/yr`}
                     color="red"
                     help={{
                       i18nKey: 'help.battery.degradationRate',
@@ -489,15 +475,15 @@ export default function BatteryDegradationPage() {
                   />
                   <MetricCard
                     label={t('battery.degradation.stress', 'Stress Level')}
-                    value={degradation.stress_level ?? '—'}
+                    value={stressLevel}
                     color={
-                      degradation.stress_level === 'Low' ? 'green' :
-                      degradation.stress_level === 'Medium' ? 'amber' : 'red'
+                      stressLevel === 'Low' ? 'green' :
+                      stressLevel === 'Medium' ? 'amber' : 'red'
                     }
                   />
                   <MetricCard
                     label={t('battery.degradation.totalCycles', 'Total Cycles')}
-                    value={fmtNumber(data?.total_cycles ?? degradation.current_cycles ?? 0)}
+                    value={fmtNumber(data.total_cycles)}
                     color="cyan"
                     help={{
                       i18nKey: 'help.battery.totalCycles',
@@ -507,7 +493,7 @@ export default function BatteryDegradationPage() {
                   />
                   <MetricCard
                     label={t('battery.degradation.avgDoD', 'Avg Depth of Discharge')}
-                    value={`${fmtNumber(data?.avg_depth_of_discharge ?? 0)}%`}
+                    value={`${fmtNumber(data.avg_depth_of_discharge_pct)}%`}
                     color="purple"
                     help={{
                       i18nKey: 'help.battery.avgDoD',
@@ -531,22 +517,22 @@ export default function BatteryDegradationPage() {
               <Zap className="h-4 w-4 text-emerald-300" aria-hidden="true" />
               {t('battery.degradation.chargingImpact', 'Charging Habits Impact')}
             </PanelTitle>
-            {degQuery.isLoading ? (
+            {healthQuery.isLoading ? (
               <Skeleton height={120} />
-            ) : degQuery.error ? (
-              <QueryError error={degQuery.error} />
-            ) : degradation ? (
+            ) : healthQuery.error ? (
+              <QueryError error={healthQuery.error} />
+            ) : data ? (
               <AlertBanner
                 variant={
-                  degradation.stress_level === 'Low' ? 'success' :
-                  degradation.stress_level === 'Medium' ? 'warning' : 'danger'
+                  stressLevel === 'Low' ? 'success' :
+                  stressLevel === 'Medium' ? 'warning' : 'danger'
                 }
                 icon={<Thermometer className="h-5 w-5" aria-hidden="true" />}
-                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${habits?.deep_discharge_count ?? 0} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${degradation.stress_level ?? t('battery.degradation.unknown', 'Unknown')} ${t('battery.degradation.stressLabel', 'stress')}`}
+                title={`${fastChargePct}% ${t('battery.degradation.fastCharges', 'fast charges')}, ${habits?.deep_discharge_count ?? 0} ${t('battery.degradation.deepDischarges', 'deep discharges')} — ${stressLevel} ${t('battery.degradation.stressLabel', 'stress')}`}
               >
-                {degradation.stress_level === 'Low'
+                {stressLevel === 'Low'
                   ? t('battery.degradation.stressLow', 'Your charging habits are optimal for battery longevity.')
-                  : degradation.stress_level === 'Medium'
+                  : stressLevel === 'Medium'
                     ? t('battery.degradation.stressMedium', 'Consider reducing fast charging frequency and avoiding full charges when possible.')
                     : t('battery.degradation.stressHigh', 'High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.')}
               </AlertBanner>
@@ -615,10 +601,10 @@ export default function BatteryDegradationPage() {
               <Shield className="h-4 w-4 text-amber-300" aria-hidden="true" />
               {t('battery.degradation.riskFactors', 'Risk Factors')}
             </PanelTitle>
-            {degQuery.isLoading ? (
+            {healthQuery.isLoading ? (
               <Skeleton height={200} />
-            ) : degQuery.error ? (
-              <QueryError error={degQuery.error} />
+            ) : healthQuery.error ? (
+              <QueryError error={healthQuery.error} />
             ) : riskFactors.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2">
                 {riskFactors.map((rf: RiskFactorData) => {
@@ -667,10 +653,10 @@ export default function BatteryDegradationPage() {
               <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
               {t('battery.degradation.recommendations', 'Recommendations')}
             </PanelTitle>
-            {degQuery.isLoading ? (
+            {healthQuery.isLoading ? (
               <Skeleton height={120} />
-            ) : degQuery.error ? (
-              <QueryError error={degQuery.error} />
+            ) : healthQuery.error ? (
+              <QueryError error={healthQuery.error} />
             ) : recommendations.length > 0 ? (
               <ul className="space-y-3">
                 {recommendations.map((rec, i) => (
@@ -746,7 +732,7 @@ export default function BatteryDegradationPage() {
                     <div className="flex justify-between gap-2">
                       <Caption>{t('Avg DoD')}</Caption>
                       <Caption className="font-medium">
-                        {fmtNumber(data?.avg_depth_of_discharge ?? 0)}%
+                        {fmtNumber(data?.avg_depth_of_discharge_pct ?? 0)}%
                       </Caption>
                     </div>
                   </div>
@@ -774,7 +760,7 @@ export default function BatteryDegradationPage() {
               columns={columns}
               data={data?.history ?? []}
               keyExtractor={(row: DegradationEntry) =>
-                `${row.date}-${row.odometer}`
+                `${row.date}-${row.odometer_m}`
               }
               emptyMessage={t('No degradation records found.')}
               compact

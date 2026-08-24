@@ -40,6 +40,10 @@ const COMPLETE: OnboardingStatus = {
   tesla_connected: true,
   vehicle_count: 1,
   data_flowing: true,
+  last_telemetry_at: '2026-01-01T00:00:00Z',
+  telemetry_health: 'healthy',
+  setup_required: false,
+  setup_complete: true,
   is_complete: true,
 };
 
@@ -47,6 +51,10 @@ const INCOMPLETE: OnboardingStatus = {
   tesla_connected: false,
   vehicle_count: 0,
   data_flowing: false,
+  last_telemetry_at: null,
+  telemetry_health: 'unknown',
+  setup_required: true,
+  setup_complete: false,
   is_complete: false,
 };
 
@@ -101,6 +109,17 @@ describe('OnboardingGate', () => {
 
     it('does not redirect once onboarding is complete', () => {
       mockData = COMPLETE;
+      renderGate('/dashboard');
+      expect(navigateMock).not.toHaveBeenCalled();
+    });
+
+    it('does not redirect a configured installation when telemetry is stale', () => {
+      mockData = {
+        ...COMPLETE,
+        data_flowing: false,
+        telemetry_health: 'stale',
+        last_telemetry_at: '2025-12-31T12:00:00Z',
+      };
       renderGate('/dashboard');
       expect(navigateMock).not.toHaveBeenCalled();
     });

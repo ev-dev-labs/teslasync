@@ -15,6 +15,7 @@ import (
 
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -384,6 +385,7 @@ func main() {
 	}
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", healthzHandler(db))
+	healthMux.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Info().Str("port", healthPort).Msg("health endpoint listening")
 		if err := http.ListenAndServe(":"+healthPort, healthMux); err != nil && err != http.ErrServerClosed {

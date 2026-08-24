@@ -43,12 +43,22 @@ function filterMotionProps(props: Record<string, unknown>): Record<string, unkno
 }
 
 const refetchSpy = vi.fn(() => Promise.resolve({} as unknown));
-let mockStatus: OnboardingStatus = {
-  tesla_connected: false,
-  vehicle_count: 0,
-  data_flowing: false,
-  is_complete: false,
-};
+
+function status(overrides: Partial<OnboardingStatus> = {}): OnboardingStatus {
+  return {
+    tesla_connected: false,
+    vehicle_count: 0,
+    data_flowing: false,
+    last_telemetry_at: null,
+    telemetry_health: 'unknown',
+    setup_required: true,
+    setup_complete: false,
+    is_complete: false,
+    ...overrides,
+  };
+}
+
+let mockStatus: OnboardingStatus = status();
 let mockIsLoading = false;
 let mockIsFetching = false;
 
@@ -58,6 +68,12 @@ vi.mock('@/api/hooks/useOnboarding', () => ({
     isLoading: mockIsLoading,
     isFetching: mockIsFetching,
     refetch: refetchSpy,
+  }),
+}));
+
+vi.mock('@/hooks/useDateFormat', () => ({
+  useDateFormat: () => ({
+    formatDateTime: (value: string | null | undefined) => value ?? '—',
   }),
 }));
 
@@ -89,12 +105,7 @@ describe('OnboardingPage', () => {
     navigateMock.mockClear();
     mockIsLoading = false;
     mockIsFetching = false;
-    mockStatus = {
-      tesla_connected: false,
-      vehicle_count: 0,
-      data_flowing: false,
-      is_complete: false,
-    };
+    mockStatus = status();
     try {
       window.localStorage.removeItem('teslasync:onboarding:skipped:v1');
     } catch {
@@ -110,18 +121,30 @@ describe('OnboardingPage', () => {
     expect(screen.getByText(/Wait for telemetry data/i)).toBeInTheDocument();
   });
 
+  it('owns a touch-friendly viewport scroller because the global body is non-scrolling', () => {
+    renderPage();
+    const scroller = screen.getByRole('main');
+    expect(scroller).toHaveAttribute('data-testid', 'onboarding-scroll-container');
+    expect(scroller).toHaveClass('h-dvh', 'overflow-y-auto', 'overscroll-y-contain');
+    expect(scroller.className).toContain('[touch-action:pan-y]');
+  });
+
   it('shows the Continue button only when onboarding is complete', () => {
     renderPage();
     expect(screen.queryByRole('button', { name: /Continue to dashboard/i })).toBeNull();
   });
 
   it('shows the Continue button once is_complete is true', async () => {
-    mockStatus = {
+    mockStatus = status({
       tesla_connected: true,
       vehicle_count: 1,
       data_flowing: true,
+      last_telemetry_at: '2026-01-01T00:00:00Z',
+      telemetry_health: 'healthy',
+      setup_required: false,
+      setup_complete: true,
       is_complete: true,
-    };
+    });
     renderPage();
     const cta = await screen.findByRole('button', { name: /Continue to dashboard/i });
     expect(cta).toBeInTheDocument();
@@ -158,27 +181,50 @@ describe('OnboardingPage', () => {
   });
 
   it('hides the Skip for now button once onboarding is complete', () => {
-    mockStatus = {
+    mockStatus = status({
       tesla_connected: true,
       vehicle_count: 1,
       data_flowing: true,
+      last_telemetry_at: '2026-01-01T00:00:00Z',
+      telemetry_health: 'healthy',
+      setup_required: false,
+      setup_complete: true,
       is_complete: true,
-    };
+    });
     renderPage();
     expect(screen.queryByRole('button', { name: /Skip for now/i })).toBeNull();
   });
 
   it('advances the in-progress indicator when the first anchor is satisfied', () => {
-    mockStatus = {
+    mockStatus = status({
       tesla_connected: true,
       vehicle_count: 0,
       data_flowing: false,
-      is_complete: false,
-    };
+    });
     renderPage();
     // The first step should be done (no more "Connect Tesla account" button)
     expect(screen.queryByRole('button', { name: /Connect Tesla account/i })).toBeNull();
     // The second step should now show its Refresh CTA.
     expect(screen.getByRole('button', { name: /^Refresh$/i })).toBeInTheDocument();
+  });
+
+  it('keeps configured users complete and explains a telemetry outage', () => {
+    mockStatus = status({
+      tesla_connected: true,
+      vehicle_count: 1,
+      data_flowing: false,
+      last_telemetry_at: '2026-01-01T00:00:00Z',
+      telemetry_health: 'stale',
+      setup_required: false,
+      setup_complete: true,
+      is_complete: true,
+    });
+
+    renderPage();
+
+    expect(screen.getByTestId('onboarding-runtime-health')).toBeInTheDocument();
+    expect(screen.getByText(/keep using TeslaSync and viewing stored history/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Continue to dashboard/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Skip for now/i })).toBeNull();
   });
 });

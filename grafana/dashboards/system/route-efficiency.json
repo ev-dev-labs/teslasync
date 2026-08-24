@@ -170,7 +170,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH routes AS (\n  SELECT\n    (COALESCE(start_place, '?') || ' → ' || COALESCE(end_place, '?'))::text AS route,\n    COUNT(*)::bigint AS trips,\n    ROUND(AVG(CASE WHEN (distance_m / 1609.344) > 0 AND (energy_used_wh / 1000.0) IS NOT NULL\n      THEN (energy_used_wh / 1000.0) * 1000 / ((distance_m / 1609.344) * 1.60934)\n      ELSE NULL END)::numeric, 0) AS avg_wh_per_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND (distance_m / 1609.344) > 1\n    AND (energy_used_wh / 1000.0) IS NOT NULL\n  GROUP BY start_place, end_place\n  HAVING COUNT(*) >= 3\n)\nSELECT route AS \"Route\", avg_wh_per_km AS \"Avg Wh/km\", trips AS \"Trips\"\nFROM routes\nORDER BY avg_wh_per_km\nLIMIT 15",
+          "rawSql": "WITH routes AS (\n  SELECT\n    start_place || ' → ' || end_place AS route,\n    COUNT(*) AS trips,\n    AVG(energy_used_wh / (distance_m / 1000.0)) AS avg_wh_per_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND distance_m > 1609.344\n    AND energy_used_wh > 0\n    AND NULLIF(BTRIM(start_place), '') IS NOT NULL\n    AND NULLIF(BTRIM(end_place), '') IS NOT NULL\n  GROUP BY start_place, end_place\n  HAVING COUNT(*) >= 3\n)\nSELECT\n  route AS \"Route\",\n  ROUND(avg_wh_per_km::numeric, 0) AS \"Avg Wh/km\",\n  trips AS \"Trips\"\nFROM routes\nORDER BY avg_wh_per_km\nLIMIT 15",
           "refId": "A"
         }
       ],
@@ -314,7 +314,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  COALESCE(start_place, '?') || ' → ' || COALESCE(end_place, '?') AS \"Route\",\n  COUNT(*) AS \"Trips\",\n  ROUND(AVG((distance_m / 1609.344))::numeric, 1) AS \"Avg Dist (km)\",\n  ROUND(MIN(CASE WHEN (distance_m / 1609.344) > 0 THEN (COALESCE(NULL,0) - COALESCE(NULL,0)) * 1000 / (distance_m / 1609.344) END)::numeric, 0) AS \"Best Wh/km\",\n  ROUND(AVG(CASE WHEN (distance_m / 1609.344) > 0 THEN (COALESCE(NULL,0) - COALESCE(NULL,0)) * 1000 / (distance_m / 1609.344) END)::numeric, 0) AS \"Avg Wh/km\",\n  ROUND(MAX(CASE WHEN (distance_m / 1609.344) > 0 THEN (COALESCE(NULL,0) - COALESCE(NULL,0)) * 1000 / (distance_m / 1609.344) END)::numeric, 0) AS \"Worst Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND (distance_m / 1609.344) > 1\n  AND NULL IS NOT NULL AND NULL IS NOT NULL\nGROUP BY start_place, end_place\nHAVING COUNT(*) >= 2\nORDER BY COUNT(*) DESC",
+          "rawSql": "SELECT\n  start_place || ' → ' || end_place AS \"Route\",\n  COUNT(*) AS \"Trips\",\n  ROUND(AVG(distance_m / 1000.0)::numeric, 1) AS \"Avg Dist (km)\",\n  ROUND(MIN(energy_used_wh / (distance_m / 1000.0))::numeric, 0) AS \"Best Wh/km\",\n  ROUND(AVG(energy_used_wh / (distance_m / 1000.0))::numeric, 0) AS \"Avg Wh/km\",\n  ROUND(MAX(energy_used_wh / (distance_m / 1000.0))::numeric, 0) AS \"Worst Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND distance_m > 1609.344\n  AND energy_used_wh > 0\n  AND NULLIF(BTRIM(start_place), '') IS NOT NULL\n  AND NULLIF(BTRIM(end_place), '') IS NOT NULL\nGROUP BY start_place, end_place\nHAVING COUNT(*) >= 2\nORDER BY COUNT(*) DESC",
           "refId": "A"
         }
       ],
@@ -437,7 +437,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH routes AS (\n  SELECT\n    COALESCE(start_place, '?') || ' → ' || COALESCE(end_place, '?') AS route,\n    CASE WHEN (distance_m / 1609.344) > 0 THEN (COALESCE(NULL,0) - COALESCE(NULL,0)) * 1000 / (distance_m / 1609.344) ELSE NULL END AS whkm\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND (distance_m / 1609.344) > 1\n    AND NULL IS NOT NULL AND NULL IS NOT NULL\n)\nSELECT\n  route AS \"Route\",\n  ROUND(MIN(whkm)::numeric, 0) AS \"Best\",\n  ROUND(AVG(whkm)::numeric, 0) AS \"Average\",\n  ROUND(MAX(whkm)::numeric, 0) AS \"Worst\"\nFROM routes\nGROUP BY route\nHAVING COUNT(*) >= 3\nORDER BY COUNT(*) DESC\nLIMIT 10",
+          "rawSql": "WITH routes AS (\n  SELECT\n    start_place || ' → ' || end_place AS route,\n    energy_used_wh / (distance_m / 1000.0) AS wh_per_km\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id}\n    AND $__timeFilter(started_at)\n    AND distance_m > 1609.344\n    AND energy_used_wh > 0\n    AND NULLIF(BTRIM(start_place), '') IS NOT NULL\n    AND NULLIF(BTRIM(end_place), '') IS NOT NULL\n)\nSELECT\n  route AS \"Route\",\n  ROUND(MIN(wh_per_km)::numeric, 0) AS \"Best\",\n  ROUND(AVG(wh_per_km)::numeric, 0) AS \"Average\",\n  ROUND(MAX(wh_per_km)::numeric, 0) AS \"Worst\"\nFROM routes\nGROUP BY route\nHAVING COUNT(*) >= 3\nORDER BY COUNT(*) DESC\nLIMIT 10",
           "refId": "A"
         }
       ],
@@ -524,7 +524,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  started_at AS time,\n  ROUND(((COALESCE(NULL,0) - COALESCE(NULL,0)) * 1000 / NULLIF((distance_m / 1609.344), 0))::numeric, 0) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND start_place = '${route_start}'\n  AND end_place = '${route_end}'\n  AND (distance_m / 1609.344) > 1\n  AND NULL IS NOT NULL AND NULL IS NOT NULL\nORDER BY started_at",
+          "rawSql": "SELECT\n  started_at AS time,\n  ROUND((energy_used_wh / (distance_m / 1000.0))::numeric, 0) AS \"Wh/km\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND start_place = ${route_start:sqlstring}\n  AND end_place = ${route_end:sqlstring}\n  AND distance_m > 1609.344\n  AND energy_used_wh > 0\nORDER BY started_at",
           "refId": "A"
         }
       ],
@@ -542,22 +542,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,
@@ -570,14 +566,14 @@
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT DISTINCT start_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place IS NOT NULL ORDER BY start_place",
+        "definition": "SELECT DISTINCT start_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place IS NOT NULL UNION ALL SELECT '(no routes)' AS __value WHERE NOT EXISTS (SELECT 1 FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place IS NOT NULL) ORDER BY __value",
         "hide": 0,
         "includeAll": false,
         "label": "Route Start",
         "multi": false,
         "name": "route_start",
         "options": [],
-        "query": "SELECT DISTINCT start_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place IS NOT NULL ORDER BY start_place",
+        "query": "SELECT DISTINCT start_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place IS NOT NULL UNION ALL SELECT '(no routes)' AS __value WHERE NOT EXISTS (SELECT 1 FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place IS NOT NULL) ORDER BY __value",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,
@@ -590,14 +586,14 @@
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT DISTINCT end_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place = '${route_start}' AND end_place IS NOT NULL ORDER BY end_place",
+        "definition": "SELECT DISTINCT end_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place = ${route_start:sqlstring} AND end_place IS NOT NULL UNION ALL SELECT '(no routes)' AS __value WHERE NOT EXISTS (SELECT 1 FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place = ${route_start:sqlstring} AND end_place IS NOT NULL) ORDER BY __value",
         "hide": 0,
         "includeAll": false,
         "label": "Route End",
         "multi": false,
         "name": "route_end",
         "options": [],
-        "query": "SELECT DISTINCT end_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place = '${route_start}' AND end_place IS NOT NULL ORDER BY end_place",
+        "query": "SELECT DISTINCT end_place AS __value FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place = ${route_start:sqlstring} AND end_place IS NOT NULL UNION ALL SELECT '(no routes)' AS __value WHERE NOT EXISTS (SELECT 1 FROM drives WHERE vehicle_id = ${vehicle_id} AND start_place = ${route_start:sqlstring} AND end_place IS NOT NULL) ORDER BY __value",
         "refresh": 2,
         "regex": "",
         "skipUrlSync": false,

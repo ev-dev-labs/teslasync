@@ -15,7 +15,7 @@ data:
         uid: DS_TESLASYNC_PROMETHEUS
         type: prometheus
         access: proxy
-        url: http://{{ include "teslasync.fullname" . }}-prometheus:9090
+        url: {{ .Values.grafana.prometheusUrl | quote }}
         isDefault: true
         jsonData:
           # Trace ID exemplars are emitted as `trace_id` labels by the Go SDK
@@ -33,13 +33,6 @@ data:
         access: proxy
         url: http://{{ include "teslasync.fullname" . }}-tempo:3200
         jsonData:
-          # tracesToLogsV2 lets us jump from a span to the matching log
-          # window. Loki is not part of this chart yet — the panel will be
-          # disabled by Grafana when the Loki datasource isn't present.
-          tracesToLogsV2:
-            datasourceUid: loki
-            spanStartTimeShift: -1m
-            spanEndTimeShift: 1m
           tracesToMetrics:
             datasourceUid: DS_TESLASYNC_PROMETHEUS
             spanStartTimeShift: -1m
@@ -55,6 +48,4 @@ data:
             enabled: true
           search:
             hide: false
-          lokiSearch:
-            datasourceUid: loki
 {{- end }}

@@ -1770,6 +1770,14 @@ export interface NotificationPreference {
   enabled: boolean
 }
 
+export interface NotificationEventType {
+  event_type: string
+  component: string
+  transition: 'outage' | 'recovery'
+  default_enabled: boolean
+  description: string
+}
+
 // === Notification Analytics ===
 
 export interface NotificationAnalytics {

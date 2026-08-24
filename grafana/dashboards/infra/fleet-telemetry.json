@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-fleet-telemetry",
   "title": "TeslaSync - Fleet Telemetry Server",
+  "description": "Requires docker compose --profile telemetry up; the Prometheus target is expected to be down when that optional profile is disabled.",
   "tags": [
     "teslasync",
     "infra",
@@ -58,7 +59,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 2,
@@ -91,7 +92,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 3,
@@ -123,7 +124,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 4,
@@ -155,7 +156,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 5,
@@ -189,7 +190,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 6,
@@ -223,7 +224,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 200,
@@ -268,7 +269,7 @@
           "refId": "B"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 8,
@@ -300,7 +301,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 9,
@@ -337,7 +338,7 @@
           "refId": "B"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 10,
@@ -369,7 +370,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 300,
@@ -414,7 +415,7 @@
           "refId": "B"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 12,
@@ -446,7 +447,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 400,
@@ -496,7 +497,7 @@
           "refId": "C"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 14,
@@ -528,7 +529,7 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
       "id": 15,
@@ -560,18 +561,11 @@
           "refId": "A"
         }
       ],
-      "datasource": { "type": "prometheus", "uid": "${DS_PROMETHEUS}" }
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     }
   ],
   "templating": {
-    "list": [
-      {
-        "name": "DS_PROMETHEUS",
-        "type": "datasource",
-        "query": "prometheus",
-        "current": { "text": "Prometheus", "value": "prometheus" }
-      }
-    ]
+    "list": []
   },
   "links": [
     {

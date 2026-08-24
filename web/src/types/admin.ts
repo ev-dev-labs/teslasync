@@ -102,6 +102,26 @@ export interface SystemHealth {
   source?: 'env' | 'db' | 'default';
 }
 
+export interface RuntimeStatusComponent {
+  name: string;
+  status: ComponentStatus;
+  consecutive_failures: number;
+  last_check_at?: string;
+  error?: string;
+}
+
+export interface RuntimeStatusSnapshot {
+  status: 'operational' | 'degraded' | 'down' | 'maintenance';
+  generated_at: string;
+  components: RuntimeStatusComponent[];
+  counts: {
+    components_total: number;
+    components_healthy: number;
+    components_degraded: number;
+    components_unhealthy: number;
+  };
+}
+
 /**
  * Persisted system_state row + env-override marker for the admin
  * Maintenance Mode panel. Returned by GET /api/v1/admin/maintenance

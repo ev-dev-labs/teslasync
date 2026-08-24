@@ -775,7 +775,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND((convert_efficiency(SUM((total_energy_added_wh / 1000.0)) * 1000 / NULLIF(SUM((d.distance_m / 1609.344)), 0)))::numeric, 1) AS \"⚡ Efficiency\" FROM charging_sessions cs JOIN drives d ON d.vehicle_id = cs.vehicle_id WHERE cs.vehicle_id = ${vehicle_id}",
+          "rawSql": "SELECT ROUND(convert_efficiency(\n  SUM(energy_used_wh) / NULLIF(SUM(distance_m / 1609.344), 0)\n)::numeric, 1) AS \"⚡ Efficiency\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND distance_m > 0\n  AND energy_used_wh > 0",
           "refId": "A"
         }
       ],
@@ -825,7 +825,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_level AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  color AS \"🎨 Color\", NULL::text AS \"🛞 Wheels\", (SELECT vs.to_state FROM fsm_transitions vs WHERE vs.vehicle_id = vehicles.id AND vs.fsm_name = 'vehicle' ORDER BY vs.ts DESC LIMIT 1) AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
+          "rawSql": "SELECT display_name AS \"🚗 Name\", model AS \"🚗 Model\", trim_level AS \"✨ Trim\", vin AS \"🔑 VIN\",\n  color AS \"🎨 Color\",\n  COALESCE((SELECT sl.str_value FROM signal_log sl WHERE sl.vehicle_id = vehicles.id AND sl.field = 'WheelType' AND sl.str_value IS NOT NULL ORDER BY sl.ts DESC LIMIT 1), 'Unknown') AS \"🛞 Wheels\",\n  (SELECT vs.to_state FROM fsm_transitions vs WHERE vs.vehicle_id = vehicles.id AND vs.fsm_name = 'vehicle' ORDER BY vs.ts DESC LIMIT 1) AS \"📊 State\",\n  created_at AS \"📅 Added\"\nFROM vehicles WHERE id = ${vehicle_id}",
           "refId": "A"
         }
       ],
@@ -925,7 +925,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT cs.started_at AS \"📅 Date\",\n  COALESCE((NULL::text), 'Unknown') AS \"📍 Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh\",\n  cs.start_soc_pct AS \"🔋 Start %\",\n  cs.end_soc_pct AS \"🔋 End %\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.started_at DESC LIMIT 1",
+          "rawSql": "SELECT cs.started_at AS \"📅 Date\",\n  COALESCE(cs.start_place, 'Unknown') AS \"📍 Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"⚡ kWh\",\n  cs.start_soc_pct AS \"🔋 Start %\",\n  cs.end_soc_pct AS \"🔋 End %\",\n  ROUND((EXTRACT(EPOCH FROM (cs.ended_at - cs.started_at)) / 60.0)::numeric) AS \"⏱️ Duration\"\nFROM charging_sessions cs\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.started_at DESC LIMIT 1",
           "refId": "A"
         }
       ],
@@ -984,7 +984,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DiTorqueActualF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DiStatorTempF' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed_mps((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Speed\",\n  (SELECT str_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'Gear' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Gear\"",
+          "rawSql": "SELECT\n  (SELECT ms.front_torque_nm\n   FROM motor_snapshots ms\n   WHERE ms.vehicle_id = ${vehicle_id}\n     AND ms.front_torque_nm IS NOT NULL\n     AND ms.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY ms.ts DESC LIMIT 1) AS \"Torque (Nm)\",\n  convert_temp((SELECT ms.front_stator_c\n   FROM motor_snapshots ms\n   WHERE ms.vehicle_id = ${vehicle_id}\n     AND ms.front_stator_c IS NOT NULL\n     AND ms.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY ms.ts DESC LIMIT 1)) AS \"Stator Temp\",\n  convert_speed_mps((SELECT dt.speed_mps\n   FROM drive_telemetry dt\n   WHERE dt.vehicle_id = ${vehicle_id}\n     AND dt.speed_mps IS NOT NULL\n     AND dt.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY dt.ts DESC LIMIT 1)) AS \"Speed\",\n  (SELECT dt.gear\n   FROM drive_telemetry dt\n   WHERE dt.vehicle_id = ${vehicle_id}\n     AND dt.gear IS NOT NULL\n     AND dt.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY dt.ts DESC LIMIT 1) AS \"Gear\"",
           "refId": "A"
         }
       ],
@@ -1043,7 +1043,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  convert_temp((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'InsideTemp' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Cabin\",\n  convert_temp((SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'OutsideTemp' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1)) AS \"Outside\",\n  (SELECT str_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'HvacPower' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"HVAC State\",\n  (SELECT COALESCE(float_value, int_value::float8) FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'HvacFanSpeed' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) AS \"Fan Speed\"",
+          "rawSql": "SELECT\n  convert_temp((SELECT cs.inside_temp_c\n   FROM climate_snapshots cs\n   WHERE cs.vehicle_id = ${vehicle_id}\n     AND cs.inside_temp_c IS NOT NULL\n     AND cs.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY cs.ts DESC LIMIT 1)) AS \"Cabin\",\n  convert_temp((SELECT cs.outside_temp_c\n   FROM climate_snapshots cs\n   WHERE cs.vehicle_id = ${vehicle_id}\n     AND cs.outside_temp_c IS NOT NULL\n     AND cs.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY cs.ts DESC LIMIT 1)) AS \"Outside\",\n  CASE (SELECT cs.hvac_power\n   FROM climate_snapshots cs\n   WHERE cs.vehicle_id = ${vehicle_id}\n     AND cs.hvac_power IS NOT NULL\n     AND cs.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY cs.ts DESC LIMIT 1)\n    WHEN TRUE THEN 'On' WHEN FALSE THEN 'Off' ELSE 'Unknown'\n  END AS \"HVAC State\",\n  (SELECT cs.hvac_fan_speed\n   FROM climate_snapshots cs\n   WHERE cs.vehicle_id = ${vehicle_id}\n     AND cs.hvac_fan_speed IS NOT NULL\n     AND cs.ts BETWEEN $__timeFrom() AND $__timeTo()\n   ORDER BY cs.ts DESC LIMIT 1) AS \"Fan Speed\"",
           "refId": "A"
         }
       ],
@@ -1102,7 +1102,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  CASE WHEN (SELECT bool_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'Locked' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) THEN 'Locked' ELSE 'Unlocked' END AS \"🔒 Lock\",\n  CASE WHEN (SELECT bool_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'SentryMode' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1) THEN 'Active' ELSE 'Off' END AS \"🛡️ Sentry\",\n  COALESCE((SELECT str_value FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'DoorState' AND ts BETWEEN $__timeFrom() AND $__timeTo() ORDER BY ts DESC LIMIT 1), 'Unknown') AS \"🚪 Doors\"",
+          "rawSql": "WITH live AS (\n  SELECT locked, sentry_mode\n  FROM vehicle_live_state\n  WHERE vehicle_id = ${vehicle_id}\n  LIMIT 1\n), latest_doors AS (\n  SELECT DISTINCT ON (field) field, bool_value\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('DoorStateDriverFront', 'DoorStateDriverRear',\n                  'DoorStatePassengerFront', 'DoorStatePassengerRear',\n                  'DoorStateFrontTrunk', 'DoorStateRearTrunk')\n    AND bool_value IS NOT NULL\n  ORDER BY field, ts DESC\n), doors AS (\n  SELECT CASE\n    WHEN COUNT(*) = 0 THEN 'Unknown'\n    WHEN BOOL_OR(bool_value) THEN 'Open'\n    WHEN COUNT(*) = 6 THEN 'Closed'\n    ELSE 'Unknown (partial)'\n  END AS door_status\n  FROM latest_doors\n)\nSELECT\n  COALESCE((SELECT CASE locked WHEN TRUE THEN 'Locked' WHEN FALSE THEN 'Unlocked' ELSE 'Unknown' END FROM live), 'Unknown') AS \"🔒 Lock\",\n  COALESCE((SELECT CASE sentry_mode WHEN TRUE THEN 'Active' WHEN FALSE THEN 'Off' ELSE 'Unknown' END FROM live), 'Unknown') AS \"🛡️ Sentry\",\n  (SELECT door_status FROM doors) AS \"🚪 Doors\"",
           "refId": "A"
         }
       ],
@@ -1118,22 +1118,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

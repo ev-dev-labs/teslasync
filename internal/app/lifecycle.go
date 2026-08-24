@@ -1,18 +1,20 @@
 package app
 
-import (
-	"context"
-
-	"github.com/rs/zerolog/log"
-
-	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
-	"github.com/ev-dev-labs/teslasync/internal/mqtt"
-	"github.com/ev-dev-labs/teslasync/internal/notification"
-)
-
 // componentDisplayName maps internal health-monitor IDs to
 // user-facing component names used in system notification titles.
 // Mirrors the legacy cmd/teslasync/lifecycle.go helper.
+//
+// The generalized component-health notification fan-out itself lives
+// in health_notify.go (componentHealthTracker.Observe builds the
+// title/message, dispatchComponentNotification fans it out through
+// every enabled, preference-matching channel with the MQTT-unavailable
+// direct-dispatch fallback baked into notification.PublishCtx). The
+// prior version of this file also held sendSystemNotification, which
+// fanned out to EVERY enabled channel unconditionally (bypassing
+// NotificationPreferenceRepo) and returned immediately without
+// dispatching anything at all when the *mqtt.Client wrapper was nil
+// (e.g. MQTT failed to connect at startup) — exactly backwards for an
+// "MQTT is down" alert. dispatchComponentNotification fixes both.
 func componentDisplayName(name string) string {
 	switch name {
 	case "database":
@@ -25,36 +27,9 @@ func componentDisplayName(name string) string {
 		return "Vehicle Poller"
 	case "redis":
 		return "Redis Cache"
+	case "telemetry":
+		return "Fleet Telemetry Pipeline"
 	default:
 		return name
-	}
-}
-
-// sendSystemNotification fans a status-change message out to every
-// enabled notification channel via MQTT. Best-effort: a missing MQTT
-// client or a per-channel publish failure does not propagate.
-// Mirrors the legacy cmd/teslasync/lifecycle.go helper.
-func sendSystemNotification(ctx context.Context, notifRepo *dbnotif.NotificationRepo, mqttClient *mqtt.Client, title, message string) {
-	if mqttClient == nil {
-		return
-	}
-	channels, err := notifRepo.GetAllChannels(ctx)
-	if err != nil {
-		return
-	}
-	for _, ch := range channels {
-		if !ch.Enabled {
-			continue
-		}
-		req := &notification.Request{
-			ChannelType: ch.Type,
-			Config:      ch.Config,
-			Title:       title,
-			Message:     message,
-			ChannelID:   ch.ID,
-		}
-		if err := notification.PublishCtx(ctx, mqttClient.Underlying(), req); err != nil {
-			log.Warn().Err(err).Int64("channel_id", ch.ID).Msg("failed to send system notification")
-		}
 	}
 }

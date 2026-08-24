@@ -182,6 +182,7 @@ func (h *StatusV1Handler) snapshot(ctx context.Context) StatusSnapshot {
 				Name:                name,
 				Status:              comp.Status.String(),
 				ConsecutiveFailures: int64(comp.ConsecFails),
+				Error:               comp.LastError,
 			}
 			if !comp.LastCheck.IsZero() {
 				ts := comp.LastCheck.UTC().Format(time.RFC3339)

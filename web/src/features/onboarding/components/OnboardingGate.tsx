@@ -5,11 +5,9 @@ import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
 
 /**
  * Onboarding gate.
- * First-run redirect guard. While the install has not completed all
- * three onboarding anchors (tesla_connected + vehicle_count > 0 +
- * data_flowing), this component routes the user to /onboarding so
- * they're not dropped into a dashboard that can only render empty
- * states.
+ * First-run redirect guard. The backend persists setup completion once; live
+ * telemetry or Tesla-account health can later degrade without sending an
+ * established installation back through setup.
  * Allow-listed paths bypass the gate so the user can reach the
  * Tesla account setup page, settings, public share links, the
  * watch face, the login/auth screen, and onboarding itself.
@@ -52,7 +50,7 @@ export function OnboardingGate() {
     // a flash redirect, and never trap them on /onboarding when the
     // backend is briefly unreachable.
     if (isLoading || isError || !data) return;
-    if (data.is_complete) return;
+    if (!data.setup_required) return;
     // The user explicitly chose "Skip for now" on the onboarding
     // page. Honour that across reloads and tabs.
     if (isSkipped) return;

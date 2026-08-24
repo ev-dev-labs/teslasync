@@ -64,6 +64,8 @@ export function useBatteryHealthAnalytics(vehicleId: string | null) {
     queryKey: ['battery-health-analytics', vehicleId],
     queryFn: ({ signal }) => request<BatteryHealthAnalytics>(`/analytics/battery-health?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId !== null,
+    staleTime: STALE_TIMES.ANALYTICS,
+    retry: false,
   });
 }
 

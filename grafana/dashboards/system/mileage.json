@@ -110,7 +110,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(SUM(distance_km))::numeric, 1) AS \"Distance\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT ROUND(convert_distance_m(SUM(distance_m))::numeric, 1) AS \"Distance\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) AS distance_m FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
           "refId": "A"
         }
       ],
@@ -170,7 +170,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(AVG(distance_km))::numeric, 1) AS \"Distance\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date) AND distance_km > 0",
+          "rawSql": "SELECT ROUND(convert_distance_m(AVG(distance_m))::numeric, 1) AS \"Distance\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) AS distance_m FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date) AND distance_m > 0",
           "refId": "A"
         }
       ],
@@ -230,7 +230,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(convert_distance(MAX(distance_km))::numeric, 1) AS \"Distance\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT ROUND(convert_distance_m(MAX(distance_m))::numeric, 1) AS \"Distance\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) AS distance_m FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
           "refId": "A"
         }
       ],
@@ -289,7 +289,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NULL::float8 AS \"🛣️ Drives\" FROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2) WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)",
+          "rawSql": "SELECT COUNT(*) AS \"🛣️ Drives\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id}\n  AND $__timeFilter(started_at)\n  AND ended_at IS NOT NULL",
           "refId": "A"
         }
       ],
@@ -370,7 +370,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date::timestamptz AS time,\n  ROUND(convert_distance(distance_km)::numeric, 1) AS \"📏 Distance\"\nFROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
+          "rawSql": "SELECT\n  date::timestamptz AS time,\n  ROUND(convert_distance_m(distance_m)::numeric, 1) AS \"📏 Distance\"\nFROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) AS distance_m FROM drives GROUP BY 1, 2)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
           "refId": "A"
         }
       ],
@@ -451,7 +451,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT\n  date::timestamptz AS time,\n  ROUND(convert_distance(SUM(distance_km) OVER (ORDER BY date))::numeric, 1) AS \"Cumulative\"\nFROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
+          "rawSql": "SELECT\n  date::timestamptz AS time,\n  ROUND(convert_distance_m(SUM(distance_m) OVER (ORDER BY date))::numeric, 1) AS \"Cumulative\"\nFROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) AS distance_m FROM drives GROUP BY 1, 2)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nORDER BY date",
           "refId": "A"
         }
       ],
@@ -520,7 +520,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS \"📅 Month\",\n  ROUND(convert_distance(SUM(distance_km))::numeric, 1) AS \"📏 Distance\"\nFROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) / 1000.0 AS distance_km FROM drives GROUP BY 1, 2)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nGROUP BY DATE_TRUNC('month', date)\nORDER BY DATE_TRUNC('month', date)",
+          "rawSql": "SELECT\n  TO_CHAR(DATE_TRUNC('month', date), 'YYYY-MM') AS \"📅 Month\",\n  ROUND(convert_distance_m(SUM(distance_m))::numeric, 1) AS \"📏 Distance\"\nFROM (SELECT DATE(started_at) AS date, vehicle_id, SUM(distance_m) AS distance_m FROM drives GROUP BY 1, 2)\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(date)\nGROUP BY DATE_TRUNC('month', date)\nORDER BY DATE_TRUNC('month', date)",
           "refId": "A"
         }
       ],
@@ -536,22 +536,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

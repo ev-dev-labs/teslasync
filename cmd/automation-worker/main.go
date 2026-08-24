@@ -11,6 +11,7 @@ import (
 	"time"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
@@ -295,6 +296,7 @@ func main() {
 	port := healthPort()
 	healthMux := http.NewServeMux()
 	healthMux.HandleFunc("/healthz", healthHandler(db))
+	healthMux.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Info().Str("port", port).Msg("health endpoint listening")
 		if err := http.ListenAndServe(":"+port, healthMux); err != nil && err != http.ErrServerClosed {

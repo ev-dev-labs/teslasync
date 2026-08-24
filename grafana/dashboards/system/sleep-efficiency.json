@@ -121,12 +121,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "WITH ordered_states AS (\n  SELECT\n    ts AS started_at,\n    LEAD(ts, 1, $__timeTo()) OVER (ORDER BY ts) AS ended_at,\n    to_state\n  FROM fsm_transitions\n  WHERE vehicle_id = ${vehicle_id}\n    AND fsm_name = 'vehicle'\n    AND ts <= $__timeTo()\n),\nstate_durations AS (\n  SELECT\n    to_state,\n    EXTRACT(EPOCH FROM (\n      LEAST(ended_at, $__timeTo()) - GREATEST(started_at, $__timeFrom())\n    )) / 3600.0 AS hours\n  FROM ordered_states\n  WHERE ended_at > $__timeFrom()\n    AND started_at < $__timeTo()\n)\nSELECT ROUND((\n  100.0 * SUM(hours) FILTER (WHERE to_state = 'asleep')\n    / NULLIF(SUM(hours) FILTER (\n        WHERE to_state IN ('asleep', 'online', 'offline')\n      ), 0)\n)::numeric, 1) AS \"Sleep %\"\nFROM state_durations",
           "refId": "A"
         }
       ],
       "title": "Sleep Efficiency Score",
-      "description": "Overall sleep efficiency — ratio of time truly asleep vs total parked idle time",
+      "description": "Share of recorded non-driving, non-charging idle time spent in the asleep state, derived from consecutive vehicle-FSM transitions.",
       "type": "gauge",
       "transparent": false
     },
@@ -197,12 +197,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "WITH ordered_transitions AS (\n  SELECT\n    ts,\n    to_state,\n    LEAD(ts) OVER (ORDER BY ts) AS next_ts\n  FROM fsm_transitions\n  WHERE vehicle_id = ${vehicle_id}\n    AND fsm_name = 'vehicle'\n    AND ts >= $__timeFrom()\n),\nparked_windows AS (\n  SELECT ts AS started_at, next_ts AS ended_at\n  FROM ordered_transitions\n  WHERE to_state = 'parked'\n    AND next_ts IS NOT NULL\n),\nnon_charging_windows AS (\n  SELECT pw.started_at, pw.ended_at\n  FROM parked_windows pw\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM signal_log sl\n    WHERE sl.vehicle_id = ${vehicle_id}\n      AND sl.field = 'ChargeState'\n      AND sl.value_kind = 7\n      AND sl.ts >= pw.started_at\n      AND sl.ts <= pw.ended_at\n      AND sl.int_value > 1\n  )\n),\nbattery_samples AS (\n  SELECT\n    pw.started_at,\n    pw.ended_at,\n    sl.float_value AS battery_level,\n    ROW_NUMBER() OVER (\n      PARTITION BY pw.started_at, pw.ended_at ORDER BY sl.ts ASC\n    ) AS rn_first,\n    ROW_NUMBER() OVER (\n      PARTITION BY pw.started_at, pw.ended_at ORDER BY sl.ts DESC\n    ) AS rn_last\n  FROM non_charging_windows pw\n  JOIN signal_log sl\n    ON sl.vehicle_id = ${vehicle_id}\n   AND sl.field = 'BatteryLevel'\n   AND sl.value_kind = 5\n   AND sl.ts >= pw.started_at\n   AND sl.ts <= pw.ended_at\n   AND sl.float_value IS NOT NULL\n),\nraw_events AS (\n  SELECT\n    started_at,\n    ended_at,\n    MAX(CASE WHEN rn_first = 1 THEN battery_level END) AS start_battery_pct,\n    MAX(CASE WHEN rn_last = 1 THEN battery_level END) AS end_battery_pct\n  FROM battery_samples\n  GROUP BY started_at, ended_at\n  HAVING MAX(CASE WHEN rn_first = 1 THEN battery_level END) IS NOT NULL\n     AND MAX(CASE WHEN rn_last = 1 THEN battery_level END) IS NOT NULL\n     AND MAX(CASE WHEN rn_first = 1 THEN battery_level END)\n         - MAX(CASE WHEN rn_last = 1 THEN battery_level END) >= 0\n),\nvampire_events AS (\n  SELECT\n    started_at,\n    ended_at,\n    start_battery_pct,\n    end_battery_pct,\n    start_battery_pct - end_battery_pct AS drain_pct,\n    EXTRACT(EPOCH FROM (ended_at - started_at)) / 3600.0 AS duration_hours,\n    (start_battery_pct - end_battery_pct)\n      / NULLIF(EXTRACT(EPOCH FROM (ended_at - started_at)) / 3600.0, 0)\n      AS drain_pct_per_hour\n  FROM raw_events\n  WHERE ended_at > started_at\n)\nSELECT ROUND(AVG(drain_pct_per_hour)::numeric, 2) AS \"Drain %/hr\"\nFROM vampire_events\nWHERE $__timeFilter(started_at)",
           "refId": "A"
         }
       ],
       "title": "Phantom Drain Rate",
-      "description": "Average battery percentage lost per hour during sleep/park periods",
+      "description": "Average battery percentage lost per hour in completed, unplugged parked windows with battery samples at both endpoints.",
       "type": "stat",
       "transparent": false
     },
@@ -352,12 +352,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "WITH ordered_states AS (\n  SELECT\n    ts AS started_at,\n    LEAD(ts, 1, $__timeTo()) OVER (ORDER BY ts) AS ended_at,\n    to_state\n  FROM fsm_transitions\n  WHERE vehicle_id = ${vehicle_id}\n    AND fsm_name = 'vehicle'\n    AND ts <= $__timeTo()\n),\nstate_durations AS (\n  SELECT\n    to_state,\n    EXTRACT(EPOCH FROM (\n      LEAST(ended_at, $__timeTo()) - GREATEST(started_at, $__timeFrom())\n    )) / 3600.0 AS hours\n  FROM ordered_states\n  WHERE ended_at > $__timeFrom()\n    AND started_at < $__timeTo()\n)\nSELECT to_state AS \"State\", ROUND(SUM(hours)::numeric, 1) AS \"Hours\"\nFROM state_durations\nWHERE hours > 0\nGROUP BY to_state\nORDER BY \"Hours\" DESC",
           "refId": "A"
         }
       ],
       "title": "Vehicle State Distribution",
-      "description": "Time distribution across vehicle states (asleep, parked, driving, charging, online, offline)",
+      "description": "Recorded time in each vehicle-FSM state, reconstructed from consecutive transitions and clipped to the dashboard time range.",
       "type": "piechart",
       "transparent": false
     },
@@ -445,7 +445,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT vd.start_date AS \"time\",\n  ROUND(vd.duration_hours::numeric, 1) AS duration_hours,\n  ROUND(vd.battery_lost::numeric, 1) AS soc_loss\nFROM (SELECT NULL::timestamptz AS start_date, NULL::timestamptz AS end_date, NULL::float8 AS duration_hours, NULL::float8 AS battery_lost, NULL::float8 AS start_battery, NULL::float8 AS end_battery, NULL::float8 AS drain_rate_pct_per_hour, NULL::float8 AS range_lost_km, NULL::float8 AS outside_temp_avg, NULL::bool AS sentry_mode, NULL::bigint AS vehicle_id WHERE FALSE) vd\nWHERE vd.vehicle_id = ${vehicle_id}\n  AND vd.start_date >= $__timeFrom()::timestamptz\n  AND vd.start_date <= $__timeTo()::timestamptz\nORDER BY vd.start_date",
+          "rawSql": "WITH ordered_transitions AS (\n  SELECT\n    ts,\n    to_state,\n    LEAD(ts) OVER (ORDER BY ts) AS next_ts\n  FROM fsm_transitions\n  WHERE vehicle_id = ${vehicle_id}\n    AND fsm_name = 'vehicle'\n    AND ts >= $__timeFrom()\n),\nparked_windows AS (\n  SELECT ts AS started_at, next_ts AS ended_at\n  FROM ordered_transitions\n  WHERE to_state = 'parked'\n    AND next_ts IS NOT NULL\n),\nnon_charging_windows AS (\n  SELECT pw.started_at, pw.ended_at\n  FROM parked_windows pw\n  WHERE NOT EXISTS (\n    SELECT 1\n    FROM signal_log sl\n    WHERE sl.vehicle_id = ${vehicle_id}\n      AND sl.field = 'ChargeState'\n      AND sl.value_kind = 7\n      AND sl.ts >= pw.started_at\n      AND sl.ts <= pw.ended_at\n      AND sl.int_value > 1\n  )\n),\nbattery_samples AS (\n  SELECT\n    pw.started_at,\n    pw.ended_at,\n    sl.float_value AS battery_level,\n    ROW_NUMBER() OVER (\n      PARTITION BY pw.started_at, pw.ended_at ORDER BY sl.ts ASC\n    ) AS rn_first,\n    ROW_NUMBER() OVER (\n      PARTITION BY pw.started_at, pw.ended_at ORDER BY sl.ts DESC\n    ) AS rn_last\n  FROM non_charging_windows pw\n  JOIN signal_log sl\n    ON sl.vehicle_id = ${vehicle_id}\n   AND sl.field = 'BatteryLevel'\n   AND sl.value_kind = 5\n   AND sl.ts >= pw.started_at\n   AND sl.ts <= pw.ended_at\n   AND sl.float_value IS NOT NULL\n),\nraw_events AS (\n  SELECT\n    started_at,\n    ended_at,\n    MAX(CASE WHEN rn_first = 1 THEN battery_level END) AS start_battery_pct,\n    MAX(CASE WHEN rn_last = 1 THEN battery_level END) AS end_battery_pct\n  FROM battery_samples\n  GROUP BY started_at, ended_at\n  HAVING MAX(CASE WHEN rn_first = 1 THEN battery_level END) IS NOT NULL\n     AND MAX(CASE WHEN rn_last = 1 THEN battery_level END) IS NOT NULL\n     AND MAX(CASE WHEN rn_first = 1 THEN battery_level END)\n         - MAX(CASE WHEN rn_last = 1 THEN battery_level END) >= 0\n),\nvampire_events AS (\n  SELECT\n    started_at,\n    ended_at,\n    start_battery_pct,\n    end_battery_pct,\n    start_battery_pct - end_battery_pct AS drain_pct,\n    EXTRACT(EPOCH FROM (ended_at - started_at)) / 3600.0 AS duration_hours,\n    (start_battery_pct - end_battery_pct)\n      / NULLIF(EXTRACT(EPOCH FROM (ended_at - started_at)) / 3600.0, 0)\n      AS drain_pct_per_hour\n  FROM raw_events\n  WHERE ended_at > started_at\n)\nSELECT\n  started_at AS \"Start\",\n  ended_at AS \"End\",\n  ROUND(duration_hours::numeric, 1) AS \"Hours\",\n  ROUND(start_battery_pct::numeric, 1) AS \"Start SOC %\",\n  ROUND(end_battery_pct::numeric, 1) AS \"End SOC %\",\n  ROUND(drain_pct::numeric, 1) AS \"Lost %\",\n  ROUND(drain_pct_per_hour::numeric, 2) AS \"Drain %/hr\"\nFROM vampire_events\nWHERE $__timeFilter(started_at)\nORDER BY started_at DESC\nLIMIT 100",
           "refId": "A"
         }
       ],
@@ -461,22 +461,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

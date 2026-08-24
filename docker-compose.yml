@@ -295,7 +295,9 @@ services:
       - PROMETHEUS_URL=http://prometheus:9090
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/custom.ini:/etc/grafana/grafana.ini:ro
+      - ./grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
       - ./grafana/dashboards:/var/lib/grafana/dashboards
     depends_on:
       postgres:
@@ -329,6 +331,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.retention.time=15d'
       - '--web.enable-lifecycle'
+      - '--web.enable-remote-write-receiver'
       # exemplar-storage retains the trace_id/span_id labels attached to
       # histogram observations by internal/api/middleware.go +
       # internal/metrics/exemplar.go so Grafana can render the "View trace"
@@ -503,6 +506,33 @@ services:
         limits:
           memory: 256M
 
+  # Tempo (optional — docker compose --profile tracing up)
+  # Grafana's TraceQL, service-map, and span-metrics dashboards use this
+  # backend. Its metrics generator remote-writes RED and service-graph series
+  # to the Prometheus service above.
+  tempo:
+    image: grafana/tempo:2.7.0
+    container_name: teslasync-tempo
+    restart: unless-stopped
+    profiles:
+      - tracing
+    command:
+      - "-config.file=/etc/tempo/config.yaml"
+    ports:
+      - "${TEMPO_PORT:-3200}:3200"
+    volumes:
+      - ./observability/tempo/config.yaml:/etc/tempo/config.yaml:ro
+      - tempo_data:/var/tempo
+    depends_on:
+      prometheus:
+        condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 128M
+
   # OpenTelemetry Collector (optional — docker compose --profile tracing up)
   # Dev variant of helm/teslasync/files/otel-collector/config.yaml — 100%
   # sampling (no tail policy), CORS-enabled OTLP HTTP receiver for browser
@@ -531,6 +561,8 @@ services:
       - "${OTEL_COLLECTOR_METRICS_PORT:-9464}:9464"
     depends_on:
       jaeger:
+        condition: service_started
+      tempo:
         condition: service_started
     deploy:
       resources:
@@ -697,5 +729,6 @@ volumes:
   mosquitto_data:
   redis_data:
   prometheus_data:
+  tempo_data:
   pyroscope_data:
   vehicle_photos:

@@ -13,6 +13,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -208,9 +209,21 @@ func Recovery(next http.Handler) http.Handler {
 // Tracing adds OpenTelemetry spans to HTTP requests.
 // When tracing is not initialized, otelhttp uses the noop provider with zero overhead.
 func Tracing(next http.Handler) http.Handler {
-	return otelhttp.NewHandler(next, "http.request",
+	// otelhttp cannot know chi's matched route until the downstream handler has
+	// returned. Add it here after routing so Tempo's span-metrics generator gets
+	// a bounded http.route dimension instead of a high-cardinality URL path.
+	routeAware := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, r)
+
+		route := routeLabel(r)
+		span := trace.SpanFromContext(r.Context())
+		span.SetName(fmt.Sprintf("%s %s", r.Method, route))
+		span.SetAttributes(attribute.String("http.route", route))
+	})
+
+	return otelhttp.NewHandler(routeAware, "http.request",
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-			return fmt.Sprintf("%s %s", r.Method, r.URL.Path)
+			return fmt.Sprintf("%s %s", r.Method, normalizePath(r.URL.Path))
 		}),
 	)
 }

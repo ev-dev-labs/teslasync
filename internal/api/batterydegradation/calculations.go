@@ -4,9 +4,6 @@ import (
 	"fmt"
 	"math"
 	"sort"
-	"time"
-
-	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 )
 
 func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
@@ -66,16 +63,16 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 
 	if slope < 0 {
 		yearsTo80 := (80 - intercept) / slope
-		currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
+		currentYears := h.currentTime().Sub(firstTime).Hours() / (24 * 365.25)
 		remainingYears := yearsTo80 - currentYears
 		if remainingYears > 0 {
 			pred.YearsTo80Pct = math.Round(remainingYears*10) / 10
-			predictedTime := time.Now().AddDate(0, int(remainingYears*12), 0)
+			predictedTime := h.currentTime().AddDate(0, int(remainingYears*12), 0)
 			pred.PredictedDate = predictedTime.Format("2006-01")
 		}
 	}
 
-	currentYears := time.Since(firstTime).Hours() / (24 * 365.25)
+	currentYears := h.currentTime().Sub(firstTime).Hours() / (24 * 365.25)
 
 	type projPoint struct {
 		Month  string  `json:"month"`
@@ -93,7 +90,7 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 		if health > 100 {
 			health = 100
 		}
-		month := time.Now().AddDate(0, i, 0).Format("2006-01")
+		month := h.currentTime().AddDate(0, i, 0).Format("2006-01")
 
 		oldProjections = append(oldProjections, projPoint{
 			Month:  month,
@@ -234,84 +231,7 @@ func generateRecommendations(factors []riskFactor) []string {
 	return recs
 }
 
-// synthesizeBatterySnapshots converts signal trace entries into the legacy
-// batterySnapshotData shape expected by the prediction and display code.
-// Entries are grouped by timestamp; each unique timestamp yields one snapshot.
-// nominalCapacity is the vehicle-specific estimated capacity in Wh.
-func synthesizeBatterySnapshots(entries []signaldb.SignalTraceEntry, nominalCapacity float64) []batterySnapshotData {
-	if len(entries) == 0 {
-		return nil
-	}
-
-	type group struct {
-		ts              time.Time
-		batteryLevel    *float64
-		energyRemain    *float64
-		estBatteryRange *float64
-	}
-	groupMap := make(map[int64]*group) // unix seconds → group
-	var orderedKeys []int64
-
-	for _, e := range entries {
-		key := e.Timestamp.Unix()
-		g, ok := groupMap[key]
-		if !ok {
-			g = &group{ts: e.Timestamp}
-			groupMap[key] = g
-			orderedKeys = append(orderedKeys, key)
-		}
-		if e.ValueNum == nil {
-			continue
-		}
-		switch e.Signal {
-		case "BatteryLevel":
-			v := *e.ValueNum
-			g.batteryLevel = &v
-		case "EnergyRemaining":
-			v := *e.ValueNum
-			g.energyRemain = &v
-		case "EstBatteryRange":
-			v := *e.ValueNum
-			g.estBatteryRange = &v
-		}
-	}
-
-	sort.Slice(orderedKeys, func(i, j int) bool { return orderedKeys[i] < orderedKeys[j] })
-
-	var result []batterySnapshotData
-	var idCounter int64
-	for _, key := range orderedKeys {
-		g := groupMap[key]
-		idCounter++
-
-		capacityWh := nominalCapacity
-		healthScore := 100.0
-		if g.energyRemain != nil && *g.energyRemain > 0 {
-			capacityWh = *g.energyRemain
-			healthScore = (capacityWh / nominalCapacity) * 100
-			if healthScore > 100 {
-				healthScore = 100
-			}
-		}
-
-		estRangeKm := 0.0
-		if g.estBatteryRange != nil {
-			estRangeKm = *g.estBatteryRange
-		}
-
-		result = append(result, batterySnapshotData{
-			ID:             idCounter,
-			HealthScore:    healthScore,
-			CapacityWh:     capacityWh,
-			DegradationPct: 100 - healthScore,
-			EstRangeKm:     estRangeKm,
-			CreatedAt:      g.ts,
-		})
-	}
-	return result
-}
-
-// aggregateMonthlyTrends groups synthesized snapshots by month and computes averages.
+// aggregateMonthlyTrends groups bounded daily snapshots by month and computes averages.
 func aggregateMonthlyTrends(snapshots []batterySnapshotData) []monthlyTrend {
 	if len(snapshots) == 0 {
 		return []monthlyTrend{}

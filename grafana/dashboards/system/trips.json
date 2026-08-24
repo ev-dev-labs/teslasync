@@ -100,7 +100,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT\n  t.name AS \"✈️ Trip\",\n  t.started_at AS \"📅 Start\",\n  t.ended_at AS \"📅 End\",\n  ROUND(convert_distance(COALESCE(SUM(d.distance_m) / 1609.344, 0))::numeric, 1) AS \"📏 Distance\",\n  ROUND(COALESCE(SUM(d.energy_used_wh) / 1000.0, 0)::numeric, 1) AS \"⚡ Energy\",\n  ROUND(NULL::numeric, 2) AS \"💰 Cost\",\n  COUNT(d.id) AS \"🛣️ Drives\",\n  NULL AS \"⚡ Charges\",\n  ROUND((convert_efficiency(COALESCE(SUM(d.energy_used_wh), 0) / NULLIF(SUM(d.distance_m) / 1609.344, 0)))::numeric, 1) AS \"⚡ Efficiency\"\nFROM trips t\nLEFT JOIN drives d ON d.vehicle_id = t.vehicle_id\n  AND d.started_at >= t.started_at AND d.ended_at <= t.ended_at\nWHERE t.vehicle_id = ${vehicle_id}\nGROUP BY t.id, t.name, t.started_at, t.ended_at\nORDER BY t.started_at DESC\nLIMIT 50",
+          "rawSql": "SELECT\n  COALESCE(NULLIF(BTRIM(t.name), ''), 'Untitled') AS \"✈️ Trip\",\n  t.started_at AS \"📅 Start\",\n  t.ended_at AS \"📅 End\",\n  ROUND(convert_distance(d.distance_m / 1609.344)::numeric, 1) AS \"📏 Distance\",\n  ROUND((d.energy_used_wh / 1000.0)::numeric, 1) AS \"⚡ Drive Energy\",\n  ROUND((c.energy_added_wh / 1000.0)::numeric, 1) AS \"🔌 Charged Energy\",\n  ROUND(c.cost_decimal::numeric, 2) AS \"💰 Charge Cost\",\n  c.currency AS \"Currency\",\n  d.drive_count AS \"🛣️ Drives\",\n  c.charge_count AS \"⚡ Charges\",\n  ROUND(convert_efficiency(\n    d.energy_used_wh / NULLIF(d.distance_m / 1609.344, 0)\n  )::numeric, 1) AS \"⚡ Efficiency\"\nFROM trips t\nLEFT JOIN LATERAL (\n  SELECT\n    COUNT(*) AS drive_count,\n    SUM(dr.distance_m) AS distance_m,\n    SUM(dr.energy_used_wh) AS energy_used_wh\n  FROM trip_drives td\n  JOIN drives dr ON dr.id = td.drive_id\n  WHERE td.trip_id = t.id\n) d ON TRUE\nLEFT JOIN LATERAL (\n  SELECT\n    COUNT(*) AS charge_count,\n    SUM(cs.total_energy_added_wh) AS energy_added_wh,\n    CASE\n      WHEN COUNT(*) FILTER (\n        WHERE cs.cost_decimal IS NOT NULL\n          AND NULLIF(BTRIM(cs.cost_currency::text), '') IS NULL\n      ) = 0\n       AND COUNT(DISTINCT NULLIF(BTRIM(cs.cost_currency::text), '')) = 1\n        THEN SUM(cs.cost_decimal)\n      ELSE NULL\n    END AS cost_decimal,\n    CASE\n      WHEN COUNT(DISTINCT NULLIF(BTRIM(cs.cost_currency::text), '')) = 1\n        THEN MIN(NULLIF(BTRIM(cs.cost_currency::text), ''))\n      WHEN COUNT(DISTINCT NULLIF(BTRIM(cs.cost_currency::text), '')) > 1\n        THEN 'Mixed'\n      ELSE NULL\n    END AS currency\n  FROM charging_sessions cs\n  WHERE cs.vehicle_id = t.vehicle_id\n    AND cs.started_at >= t.started_at\n    AND cs.started_at <= COALESCE(t.ended_at, NOW())\n) c ON TRUE\nWHERE t.vehicle_id = ${vehicle_id}\n  AND $__timeFilter(t.started_at)\nORDER BY t.started_at DESC\nLIMIT 50",
           "refId": "A"
         }
       ],
@@ -116,22 +116,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

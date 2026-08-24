@@ -467,7 +467,7 @@ Vehicle ─mTLS▶ Fleet Telemetry ─MQTT▶ PipelineSubscriber ─▶ Codec �
 
 **Boot-time sanity** (look for these lines in `docker logs teslasync-api`):
 ```
-"phase-42 PipelineSubscriber started" topic=telemetry/+/v/+ max_redeliveries=5
+"phase-42 PipelineSubscriber started" topic=telemetry/+/v/+ codec_failure_disposition=dlq_ack
 "phase-42a: fleet-telemetry PipelineSubscriber active" writer_count=12
 "signal store hydrated from signal_log via stateReader"
 "FSM vehicle state engine active — declarative transition table with 20 transitions"

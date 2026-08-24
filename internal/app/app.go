@@ -22,6 +22,7 @@ import (
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	"github.com/ev-dev-labs/teslasync/internal/dataquality"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/flags"
@@ -125,9 +126,17 @@ type App struct {
 	GasPriceWorker *worker.GasPriceWorker
 
 	// Health watchdog state — kept on App so the watchdog goroutine
-	// can mutate it without an unbounded closure capture.
-	prevHealthState map[string]resilience.ComponentStatus
-	notifRepo       *dbnotif.NotificationRepo
+	// can mutate it without an unbounded closure capture. healthTracker
+	// converts raw HealthMonitor snapshots into edge-triggered,
+	// cooldown-debounced outage/recovery notification events (see
+	// health_notify.go); notifRepo/prefRepo are reused to fan those
+	// events out to enabled, preference-matching channels.
+	healthTracker       *componentHealthTracker
+	notifRepo           *dbnotif.NotificationRepo
+	prefRepo            *dbnotif.NotificationPreferenceRepo
+	onboardingRepo      *dbuser.OnboardingRepo
+	onboardingStateRepo *dbuser.OnboardingStateRepo
+	healthNotifications *componentNotificationCache
 
 	// OpenAPI spec (best-effort; nil if not found at startup)
 	openAPISpec []byte

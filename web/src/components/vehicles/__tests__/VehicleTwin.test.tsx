@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/react';
+import { fireEvent, render, waitFor } from '@testing-library/react';
 import { VehicleTwin } from '../VehicleTwin';
 
 const baseTwinState = {
@@ -26,7 +26,7 @@ const baseTwinState = {
   driverSeatOccupied: false,
 };
 
-describe('VehicleTwin paint isolation', () => {
+describe('VehicleTwin', () => {
   it('two twins on the same page get distinct gradient ids', () => {
     const { container } = render(
       <div>
@@ -48,5 +48,55 @@ describe('VehicleTwin paint isolation', () => {
   it('renders without error when vehicleId is missing', () => {
     const { container } = render(<VehicleTwin {...baseTwinState} />);
     expect(container.querySelector('svg')).not.toBeNull();
+  });
+
+  it('centres spinning photo crops on the compositor wheel hubs', async () => {
+    const { container } = render(
+      <VehicleTwin {...baseTwinState} size="lg" isDriving />,
+    );
+
+    const basePhoto = container.querySelector<HTMLImageElement>('img[aria-hidden="true"]');
+    expect(basePhoto).not.toBeNull();
+    fireEvent.load(basePhoto!);
+
+    await waitFor(() => {
+      expect(container.querySelectorAll('[data-wheel-spinner]')).toHaveLength(2);
+    });
+
+    const cropCenter = (wheel: 'front' | 'rear') => {
+      const spinner = container.querySelector<HTMLElement>(`[data-wheel-spinner="${wheel}"]`);
+      const rotor = container.querySelector<HTMLElement>(`[data-wheel-rotor="${wheel}"]`);
+      expect(spinner).not.toBeNull();
+      expect(rotor).not.toBeNull();
+      return {
+        x: Number.parseFloat(spinner!.style.left) + Number.parseFloat(spinner!.style.width) / 2,
+        y: Number.parseFloat(spinner!.style.top) + Number.parseFloat(spinner!.style.height) / 2,
+        width: Number.parseFloat(spinner!.style.width),
+        maskImage: spinner!.style.maskImage,
+        webkitMaskImage: spinner!.style.webkitMaskImage,
+        transformOrigin: rotor!.style.transformOrigin,
+      };
+    };
+
+    // Asset-calibrated hub positions in the lg (560 px / 1 viewBox unit)
+    // wrapper. The old SVG-derived centers were (132, 169) and (464, 169),
+    // visibly pulling both rotating crops above their photo wheels.
+    const front = cropCenter('front');
+    expect(front.x).toBeCloseTo(126.29, 2);
+    expect(front.y).toBeCloseTo(174.45, 2);
+    expect(front.width).toBeCloseTo(67.48, 2);
+    expect(front.maskImage).toContain('circle closest-side at 50% 50%');
+    expect(front.maskImage).toContain('92.59%');
+    expect(front.maskImage).toContain('transparent 100%');
+    expect(front.webkitMaskImage).toBe(front.maskImage);
+    expect(front.transformOrigin).toBe('50% 50%');
+
+    const rear = cropCenter('rear');
+    expect(rear.x).toBeCloseTo(464.33, 2);
+    expect(rear.y).toBeCloseTo(174.07, 2);
+    expect(rear.width).toBeCloseTo(67.48, 2);
+    expect(rear.maskImage).toBe(front.maskImage);
+    expect(rear.webkitMaskImage).toBe(front.maskImage);
+    expect(rear.transformOrigin).toBe('50% 50%');
   });
 });

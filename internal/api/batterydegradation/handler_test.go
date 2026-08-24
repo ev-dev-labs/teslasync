@@ -6,6 +6,9 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -39,14 +42,15 @@ func newBatteryDegradationRequest(t *testing.T, vehicleID string) *http.Request 
 // Degradation panel and is caught here.
 func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 	const (
-		energyRemaining = 60000.0 // capacity_wh
-		estBatteryRange = 410.5   // est_range_km
+		energyRemaining  = 60000.0 // capacity_wh
+		estBatteryRangeM = 410500.0
+		expectedRangeKm  = 410.5
 	)
 	vid := int64(42)
 
 	carried := map[string]float64{
 		"EnergyRemaining": energyRemaining,
-		"EstBatteryRange": estBatteryRange,
+		"EstBatteryRange": estBatteryRangeM,
 	}
 
 	var calls []signalAtCallRecord
@@ -59,12 +63,7 @@ func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 			return nil, nil
 		},
 	}
-	// db: nil → the handler short-circuits lookupVehicleCapacity to
-	// (75.0, "default"), the same fallback lookupVehicleCapacity itself
-	// uses on lookup error; charging-habit / cycle-delta queries are
-	// nil-guarded below. signalLogReader: nil → the SignalTrace path is
-	// skipped, snapshots stay empty, and the Predict fallback enters
-	// the state.SignalAt branch under test.
+	// db: nil skips the daily aggregate and enters the StateReader fallback.
 	h := &Handler{state: fake}
 
 	before := time.Now()
@@ -75,7 +74,6 @@ func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-
 	wantNames := map[string]bool{
 		"EnergyRemaining": false,
 		"EstBatteryRange": false,
@@ -106,8 +104,8 @@ func TestBatteryDegradation_AllSignalsCarryForward(t *testing.T) {
 	if got, _ := body["current_capacity"].(float64); got != energyRemaining {
 		t.Fatalf("current_capacity = %#v, want %v (carried forward from EnergyRemaining)", body["current_capacity"], energyRemaining)
 	}
-	if got, _ := body["current_range"].(float64); got != estBatteryRange {
-		t.Fatalf("current_range = %#v, want %v (carried forward from EstBatteryRange)", body["current_range"], estBatteryRange)
+	if got, _ := body["current_range"].(float64); got != expectedRangeKm {
+		t.Fatalf("current_range = %#v, want %v km (converted from SI EstBatteryRange)", body["current_range"], expectedRangeKm)
 	}
 }
 
@@ -197,5 +195,209 @@ func TestBatteryDegradation_PropagatesError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestBatteryHealthQueryUsesBoundedDailyAggregate(t *testing.T) {
+	for _, clause := range []string{
+		"FROM cagg_battery_daily",
+		"max_soc - min_soc >= $2",
+		"LIMIT $3",
+		"field = 'EstBatteryRange'",
+		"field = 'Odometer'",
+		"ORDER BY ts DESC",
+	} {
+		if !strings.Contains(batteryHealthHistoryQuery, clause) {
+			t.Fatalf("batteryHealthHistoryQuery missing %q", clause)
+		}
+	}
+	if batteryHistoryLimit != 180 {
+		t.Fatalf("batteryHistoryLimit = %d, want 180", batteryHistoryLimit)
+	}
+}
+
+func TestBatteryHealthCoalescesConcurrentColdLoads(t *testing.T) {
+	fixedNow := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	h := &Handler{
+		now:         func() time.Time { return fixedNow },
+		healthCache: make(map[int64]batteryHealthCacheEntry),
+	}
+	var loadCount atomic.Int32
+	h.healthLoader = func(context.Context, int64) (*batteryHealthResponse, batteryHealthTimings, error) {
+		loadCount.Add(1)
+		time.Sleep(25 * time.Millisecond)
+		return &batteryHealthResponse{
+			VehicleID:       42,
+			History:         []batteryHealthHistoryPoint{},
+			Projections:     []predictiveProjection{},
+			RiskFactors:     []riskFactor{},
+			Recommendations: []string{},
+			ChargingAnalysis: batteryChargingAnalysis{
+				ChargeLevelDistribution: []chargeLevelBucket{},
+			},
+		}, batteryHealthTimings{}, nil
+	}
+
+	const callers = 12
+	var requests sync.WaitGroup
+	requests.Add(callers)
+	statuses := make(chan int, callers)
+	for range callers {
+		go func() {
+			defer requests.Done()
+			rec := httptest.NewRecorder()
+			h.Health(rec, httptest.NewRequest(http.MethodGet, "/analytics/battery-health?vehicle_id=42", nil))
+			statuses <- rec.Code
+		}()
+	}
+	requests.Wait()
+	close(statuses)
+
+	for status := range statuses {
+		if status != http.StatusOK {
+			t.Fatalf("status = %d, want 200", status)
+		}
+	}
+	if got := loadCount.Load(); got != 1 {
+		t.Fatalf("health loader calls = %d, want 1", got)
+	}
+	h.healthLoadLocksMu.Lock()
+	defer h.healthLoadLocksMu.Unlock()
+	if got := len(h.healthLoadLocks); got != 0 {
+		t.Fatalf("retained load locks = %d, want 0", got)
+	}
+}
+
+func TestBatteryHealthResponseUsesCanonicalSIFields(t *testing.T) {
+	h := &Handler{
+		now:         time.Now,
+		healthCache: make(map[int64]batteryHealthCacheEntry),
+	}
+	h.healthLoader = func(context.Context, int64) (*batteryHealthResponse, batteryHealthTimings, error) {
+		return &batteryHealthResponse{
+			VehicleID:           42,
+			EstimatedCapacityWh: 72_500,
+			OriginalCapacityWh:  75_000,
+			History: []batteryHealthHistoryPoint{{
+				Date:       "2026-08-23",
+				OdometerM:  20_000,
+				CapacityWh: 72_500,
+				RangeM:     410_000,
+			}},
+			Projections:     []predictiveProjection{},
+			RiskFactors:     []riskFactor{},
+			Recommendations: []string{},
+			ChargingAnalysis: batteryChargingAnalysis{
+				ChargeLevelDistribution: []chargeLevelBucket{},
+			},
+		}, batteryHealthTimings{}, nil
+	}
+
+	rec := httptest.NewRecorder()
+	h.Health(rec, httptest.NewRequest(http.MethodGet, "/analytics/battery-health?vehicle_id=42", nil))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := rec.Header().Get("Cache-Control"); got != "private, max-age=300" {
+		t.Fatalf("Cache-Control = %q, want private max-age", got)
+	}
+	if got := rec.Header().Get("Server-Timing"); !strings.Contains(got, `cache;desc="miss"`) {
+		t.Fatalf("Server-Timing = %q, want cache miss timing", got)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	for _, field := range []string{"estimated_capacity_wh", "original_capacity_wh"} {
+		if _, ok := body[field]; !ok {
+			t.Fatalf("response missing %q: %s", field, rec.Body.String())
+		}
+	}
+	for _, legacyField := range []string{"estimated_capacity", "original_capacity"} {
+		if _, ok := body[legacyField]; ok {
+			t.Fatalf("response unexpectedly contains legacy field %q", legacyField)
+		}
+	}
+	history := body["history"].([]any)
+	point := history[0].(map[string]any)
+	for _, field := range []string{"capacity_wh", "range_m", "odometer_m"} {
+		if _, ok := point[field]; !ok {
+			t.Fatalf("history point missing %q: %v", field, point)
+		}
+	}
+	for _, legacyField := range []string{"range_km", "odometer"} {
+		if _, ok := point[legacyField]; ok {
+			t.Fatalf("history point unexpectedly contains legacy field %q", legacyField)
+		}
+	}
+}
+
+func TestBatteryHealthLiveCapacityNormalizesEnergyBySOC(t *testing.T) {
+	values := map[string]float64{
+		"EnergyRemaining": 30000,
+		"BatteryLevel":    50,
+		"EstBatteryRange": 400000,
+	}
+	h := &Handler{
+		state: &fakeStateReader{
+			signalAtFn: func(_ context.Context, _ int64, name string, _ time.Time) (signal.SignalValue, error) {
+				return values[name], nil
+			},
+		},
+		now: time.Now,
+	}
+
+	capacityWh, rangeM, err := h.loadLiveBatteryCapacity(context.Background(), 42, 75000)
+	if err != nil {
+		t.Fatalf("loadLiveBatteryCapacity() error = %v", err)
+	}
+	if capacityWh != 60000 {
+		t.Fatalf("capacityWh = %v, want 60000", capacityWh)
+	}
+	if rangeM != 400000 {
+		t.Fatalf("rangeM = %v, want 400000", rangeM)
+	}
+}
+
+func TestCalculateStressLevelMatchesPredictiveContract(t *testing.T) {
+	tests := []struct {
+		name               string
+		fastChargePct      float64
+		deepDischargeCount int
+		fullChargeCount    int
+		totalCount         int
+		want               string
+	}{
+		{name: "low", fastChargePct: 20, deepDischargeCount: 2, fullChargeCount: 2, totalCount: 20, want: "Low"},
+		{name: "medium fast charging", fastChargePct: 30, totalCount: 20, want: "Medium"},
+		{name: "high deep discharge", deepDischargeCount: 21, totalCount: 40, want: "High"},
+		{name: "high full charging", fullChargeCount: 6, totalCount: 10, want: "High"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := calculateStressLevel(
+				tt.fastChargePct,
+				tt.deepDischargeCount,
+				tt.fullChargeCount,
+				tt.totalCount,
+			)
+			if got != tt.want {
+				t.Fatalf("calculateStressLevel() = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestBatteryHealthCacheIsBounded(t *testing.T) {
+	fixedNow := time.Date(2026, time.August, 23, 12, 0, 0, 0, time.UTC)
+	h := &Handler{
+		now:         func() time.Time { return fixedNow },
+		healthCache: make(map[int64]batteryHealthCacheEntry),
+	}
+	for vehicleID := int64(1); vehicleID <= batteryHealthCacheMaxSize+10; vehicleID++ {
+		h.cacheBatteryHealth(vehicleID, &batteryHealthResponse{VehicleID: vehicleID})
+	}
+	if got := len(h.healthCache); got != batteryHealthCacheMaxSize {
+		t.Fatalf("cache size = %d, want %d", got, batteryHealthCacheMaxSize)
 	}
 }

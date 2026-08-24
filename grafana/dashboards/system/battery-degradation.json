@@ -454,7 +454,7 @@
         "type": "grafana-postgresql-datasource",
         "uid": "DS_TESLASYNC_POSTGRESQL"
       },
-      "description": "Shows risk factors that accelerate degradation: fast-charge ratio, high-SoC charging frequency, temperature exposure score, deep discharge frequency. Each scored 0–100.",
+      "description": "Observed record shares for measurable battery-stress proxies: fast charging, high charge-end SOC, hot drives, and deep discharge. These are exposure rates, not causal degradation scores.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -518,11 +518,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: risk factor computation requires complex business logic not available from raw signals (ADR-002)",
+          "rawSql": "WITH exposure_rates AS (\n  SELECT\n    'Fast charging (>20 kW)'::text AS factor,\n    100.0 * COUNT(*) FILTER (\n      WHERE peak_power_w > 20000\n         OR charger_type ILIKE '%supercharger%'\n         OR charger_type ILIKE '%dc%'\n    ) / NULLIF(COUNT(*) FILTER (\n      WHERE peak_power_w IS NOT NULL\n         OR NULLIF(BTRIM(charger_type), '') IS NOT NULL\n    ), 0) AS observed_pct\n  FROM charging_sessions\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n\n  UNION ALL\n\n  SELECT\n    'Charges ending ≥90% SOC'::text,\n    100.0 * COUNT(*) FILTER (WHERE end_soc_pct >= 90)\n      / NULLIF(COUNT(end_soc_pct), 0)\n  FROM charging_sessions\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n\n  UNION ALL\n\n  SELECT\n    'Drives above 35 °C'::text,\n    100.0 * COUNT(*) FILTER (WHERE ambient_temp_c_avg > 35)\n      / NULLIF(COUNT(ambient_temp_c_avg), 0)\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n\n  UNION ALL\n\n  SELECT\n    'Drives ending ≤10% SOC'::text,\n    100.0 * COUNT(*) FILTER (WHERE end_soc_pct <= 10)\n      / NULLIF(COUNT(end_soc_pct), 0)\n  FROM drives\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n)\nSELECT factor AS \"Observed Exposure\", ROUND(observed_pct::numeric, 1) AS \"Percent\"\nFROM exposure_rates\nWHERE observed_pct IS NOT NULL\nORDER BY factor",
           "refId": "A"
         }
       ],
-      "title": "Battery Risk Factors (Unavailable)",
+      "title": "Observed Battery Stress Exposures",
       "type": "bargauge",
       "transparent": false
     }
@@ -534,22 +534,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

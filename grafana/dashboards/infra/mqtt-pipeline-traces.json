@@ -1,6 +1,7 @@
 {
   "uid": "teslasync-infra-mqtt-pipeline-traces",
   "title": "TeslaSync - MQTT Pipeline Trace View (Tempo)",
+  "description": "Requires OTEL_ENABLED=true and docker compose --profile tracing up.",
   "tags": [
     "teslasync",
     "infra",
@@ -27,7 +28,7 @@
         "label": "MQTT topic / destination",
         "type": "query",
         "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
-        "query": { "qryType": 1, "query": "label_values(traces_spanmetrics_calls_total{messaging_destination!=\"\"}, messaging_destination)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
+        "query": { "qryType": 1, "query": "label_values(traces_spanmetrics_calls_total{messaging_destination_name!=\"\"}, messaging_destination_name)", "refId": "PrometheusVariableQueryEditor-VariableQuery" },
         "current": { "text": "All", "value": "$__all" },
         "includeAll": true, "multi": true, "refresh": 2, "sort": 1, "regex": "", "hide": 0, "skipUrlSync": false, "allValue": ".+"
       }
@@ -50,7 +51,7 @@
       "gridPos": { "x": 0, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] }, "unit": "ops" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\"}[5m]))", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination_name=~\"$destination\"}[5m]))", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -61,7 +62,7 @@
       "gridPos": { "x": 4, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] }, "unit": "percent" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\"}[5m])), 0.001)", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "100 * sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination_name=~\"$destination\", status_code=\"STATUS_CODE_ERROR\"}[5m])) / clamp_min(sum(rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination_name=~\"$destination\"}[5m])), 0.001)", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -72,7 +73,7 @@
       "gridPos": { "x": 8, "y": 1, "w": 4, "h": 4 },
       "fieldConfig": { "defaults": { "color": { "mode": "thresholds" }, "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 0.5 }, { "color": "red", "value": 2 }] }, "unit": "s" } },
       "options": { "reduceOptions": { "values": false, "calcs": ["lastNotNull"], "fields": "" }, "orientation": "auto", "textMode": "auto", "colorMode": "value", "graphMode": "area", "justifyMode": "auto" },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{messaging_system=\"mqtt\", messaging_destination=~\"$destination\", span_kind=\"SPAN_KIND_CONSUMER\"}[5m])))", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "histogram_quantile(0.95, sum by (le) (rate(traces_spanmetrics_latency_bucket{messaging_system=\"mqtt\", messaging_destination_name=~\"$destination\", span_kind=\"SPAN_KIND_CONSUMER\"}[5m])))", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {
@@ -83,7 +84,7 @@
       "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 },
       "fieldConfig": { "defaults": { "color": { "mode": "palette-classic" }, "custom": { "drawStyle": "line", "fillOpacity": 10, "lineWidth": 2, "showPoints": "never", "spanNulls": true }, "unit": "ops" } },
       "options": { "legend": { "calcs": ["max"], "displayMode": "table", "placement": "right" }, "tooltip": { "mode": "multi", "sort": "desc" } },
-      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(10, sum by (messaging_destination) (rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination=~\"$destination\"}[5m])))", "legendFormat": "{{messaging_destination}}", "refId": "A" }],
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }, "expr": "topk(10, sum by (messaging_destination_name) (rate(traces_spanmetrics_calls_total{messaging_system=\"mqtt\", messaging_destination_name=~\"$destination\"}[5m])))", "legendFormat": "{{messaging_destination_name}}", "refId": "A" }],
       "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" }
     },
     {

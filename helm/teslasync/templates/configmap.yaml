@@ -102,8 +102,14 @@ data:
   GAS_PRICE_POLL_INTERVAL: {{ .Values.gasPrice.pollInterval | default "7d" | quote }}
   {{- end }}
   {{- if .Values.config.openTelemetry.enabled }}
+  {{- $otelEndpoint := tpl .Values.config.openTelemetry.endpoint . }}
+  {{- if and .Values.observability.otelCollector.enabled (eq .Values.config.openTelemetry.endpoint "jaeger:4317") }}
+  {{- $otelEndpoint = printf "%s-otel-collector:4317" (include "teslasync.fullname" .) }}
+  {{- else if and .Values.jaeger.enabled (eq .Values.config.openTelemetry.endpoint "jaeger:4317") }}
+  {{- $otelEndpoint = printf "%s-jaeger:4317" (include "teslasync.fullname" .) }}
+  {{- end }}
   OTEL_ENABLED: "true"
-  OTEL_ENDPOINT: {{ .Values.config.openTelemetry.endpoint | quote }}
+  OTEL_ENDPOINT: {{ $otelEndpoint | quote }}
   OTEL_SERVICE_NAME: {{ .Values.config.openTelemetry.serviceName | quote }}
   OTEL_INSECURE: {{ .Values.config.openTelemetry.insecure | quote }}
   {{- end }}
@@ -180,12 +186,3 @@ data:
   # first visit and gates optional client-side reporting (web
   # vitals, error reporter) on the user's stored consent.
   TESLASYNC_REQUIRE_COOKIE_CONSENT: {{ default false (and .Values.config .Values.config.requireCookieConsent) | quote }}
-  # Tesla Fleet Telemetry MQTT poison-pill threshold — Phase-42 / ADR-004 #8.
-  # Caps how many times the broker may re-deliver a single payload before the
-  # PipelineSubscriber writes it to the DLQ and acks. Default 5 matches
-  # internal/mqtt.PipelineSubscriberConfig.withDefaults(). Lower this if your
-  # broker keeps re-delivering codec failures faster than the alert window;
-  # raise it if transient deserialization races are masquerading as poison.
-  # Read by cmd/teslasync once the PipelineSubscriber is wired into main.go;
-  # surfaced now so operators don't have to chase a chart change at that point.
-  TESLA_MQTT_MAX_REDELIVERIES: {{ .Values.mqtt.maxRedeliveries | default 5 | quote }}

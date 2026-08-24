@@ -60,7 +60,7 @@ export default function BatteryHealthAnalyticsWidget({ vehicleId, size }: Widget
     },
     {
       label: t('widget.batteryHealthAnalytics.avgDischargeDepth', 'Discharge'),
-      value: fmtNumber((data?.avg_depth_of_discharge ?? 0), 0),
+      value: fmtNumber((data?.avg_depth_of_discharge_pct ?? 0), 0),
       unit: '%',
     },
     {

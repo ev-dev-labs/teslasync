@@ -4,22 +4,30 @@ import { request } from '../client';
 /**
  * useOnboarding.
  *
- * Hook against `GET /api/v1/onboarding/status` to drive the first-run
- * gate. The backend reports three independent anchors that all must be
- * true before TeslaSync considers an install "set up":
+ * Hook against `GET /api/v1/onboarding/status` to drive the first-run gate
+ * and surface live Fleet Telemetry health. The backend reports three setup
+ * anchors:
  *
  *   1. tesla_connected — a Tesla OAuth token has been stored
  *   2. vehicle_count   — at least one vehicle row exists locally
  *   3. data_flowing    — telemetry within the last 24 hours
  *
- * `is_complete` is the AND of all three — clients should prefer it
- * over re-implementing the gate logic on the frontend.
+ * Once all three have been observed, `setup_complete` is persisted and never
+ * regresses because of a later token or telemetry outage. `setup_required`
+ * alone drives routing; the live fields remain informational.
  */
+
+export type TelemetryHealth = 'healthy' | 'stale' | 'unknown';
 
 export interface OnboardingStatus {
   tesla_connected: boolean;
   vehicle_count: number;
   data_flowing: boolean;
+  last_telemetry_at: string | null;
+  telemetry_health: TelemetryHealth;
+  setup_required: boolean;
+  setup_complete: boolean;
+  /** Backward-compatible alias of setup_complete. */
   is_complete: boolean;
 }
 
@@ -44,10 +52,9 @@ export const ONBOARDING_POLL_INTERVAL_MS = 30_000;
  * states. Every anchor therefore defaults to the pessimistic "not set
  * up yet" value when absent.
  *
- * `is_complete` is preferred verbatim from the backend when present — it
- * owns the gate logic (see the module doc). Only when the field is
- * missing do we fall back to recomputing it as the AND of the three
- * anchors, matching the documented contract.
+ * New servers own the durable gate through `setup_complete`. During a rolling
+ * upgrade, an older payload can still supply only `is_complete`; only when
+ * both fields are missing do we fall back to the legacy three-anchor AND.
  */
 export function normalizeOnboardingStatus(
   raw: Partial<OnboardingStatus> | null | undefined,
@@ -55,14 +62,32 @@ export function normalizeOnboardingStatus(
   const teslaConnected = raw?.tesla_connected ?? false;
   const vehicleCount = raw?.vehicle_count ?? 0;
   const dataFlowing = raw?.data_flowing ?? false;
-  const isComplete =
-    raw?.is_complete ?? (teslaConnected && vehicleCount > 0 && dataFlowing);
+  const legacyComplete = teslaConnected && vehicleCount > 0 && dataFlowing;
+  const setupComplete = raw?.setup_complete ?? raw?.is_complete ?? legacyComplete;
+  const lastTelemetryAt =
+    typeof raw?.last_telemetry_at === 'string' && raw.last_telemetry_at.trim()
+      ? raw.last_telemetry_at
+      : null;
+  const telemetryHealth: TelemetryHealth =
+    raw?.telemetry_health === 'healthy' ||
+    raw?.telemetry_health === 'stale' ||
+    raw?.telemetry_health === 'unknown'
+      ? raw.telemetry_health
+      : vehicleCount === 0 || lastTelemetryAt === null
+        ? 'unknown'
+        : dataFlowing
+          ? 'healthy'
+          : 'stale';
 
   return {
     tesla_connected: teslaConnected,
     vehicle_count: vehicleCount,
     data_flowing: dataFlowing,
-    is_complete: isComplete,
+    last_telemetry_at: lastTelemetryAt,
+    telemetry_health: telemetryHealth,
+    setup_required: !setupComplete,
+    setup_complete: setupComplete,
+    is_complete: setupComplete,
   };
 }
 
@@ -76,30 +101,30 @@ export function normalizeOnboardingStatus(
 export function onboardingRefetchInterval(
   raw: Partial<OnboardingStatus> | null | undefined,
 ): number | false {
-  return normalizeOnboardingStatus(raw).is_complete
+  return normalizeOnboardingStatus(raw).setup_complete
     ? false
     : ONBOARDING_POLL_INTERVAL_MS;
 }
 
+export interface UseOnboardingStatusOptions {
+  /** Keep polling live health after durable setup completes. */
+  pollAfterSetup?: boolean;
+}
+
 /**
- * Polls onboarding status while the user is being onboarded, then stops
- * polling once `is_complete` flips to true. The response is normalised
- * so consumers always receive a fully-formed, null-safe status even when
- * the backend omits a field during a first-boot race.
+ * Polls while onboarding is incomplete. Runtime-health consumers can opt into
+ * continued polling after setup so a telemetry outage clears automatically.
  */
-export function useOnboardingStatus() {
+export function useOnboardingStatus(options: UseOnboardingStatusOptions = {}) {
   return useQuery<OnboardingStatus>({
     queryKey: onboardingKeys.status,
     queryFn: ({ signal }) => request<OnboardingStatus>('/onboarding/status', { signal }),
-    // Null-safe shape for every consumer + the poll decision below.
     select: normalizeOnboardingStatus,
-    // Stop polling once setup is complete; the gate flips to "pass"
-    // and re-checks only on full app reload.
-    refetchInterval: (query) => onboardingRefetchInterval(query.state.data),
+    refetchInterval: (query) =>
+      options.pollAfterSetup
+        ? ONBOARDING_POLL_INTERVAL_MS
+        : onboardingRefetchInterval(query.state.data),
     staleTime: 15_000,
-    // Treat the gate as pessimistic — if the request fails (e.g. on
-    // first boot before the API is up), assume not complete so the
-    // user sees the onboarding page rather than a broken dashboard.
     retry: 2,
   });
 }

@@ -63,6 +63,10 @@ const completePayload: OnboardingStatus = {
   tesla_connected: true,
   vehicle_count: 2,
   data_flowing: true,
+  last_telemetry_at: '2026-01-01T00:00:00Z',
+  telemetry_health: 'healthy',
+  setup_required: false,
+  setup_complete: true,
   is_complete: true,
 };
 
@@ -88,33 +92,45 @@ describe('normalizeOnboardingStatus', () => {
   });
 
   it('keeps is_complete=true from the backend even if anchors disagree', () => {
-    // The backend owns the gate logic; a present is_complete wins.
-    const inconsistent: OnboardingStatus = {
+    const rollingUpgradePayload: Partial<OnboardingStatus> = {
       tesla_connected: false,
       vehicle_count: 0,
       data_flowing: false,
       is_complete: true,
     };
-    expect(normalizeOnboardingStatus(inconsistent).is_complete).toBe(true);
+    expect(normalizeOnboardingStatus(rollingUpgradePayload)).toMatchObject({
+      setup_complete: true,
+      setup_required: false,
+      is_complete: true,
+    });
   });
 
-  it('keeps an explicit is_complete=false from the backend', () => {
-    const notDone: OnboardingStatus = {
+  it('prefers durable setup_complete over a conflicting compatibility alias', () => {
+    const inconsistent: Partial<OnboardingStatus> = {
       tesla_connected: true,
       vehicle_count: 3,
       data_flowing: true,
       is_complete: false,
+      setup_complete: true,
     };
-    expect(normalizeOnboardingStatus(notDone).is_complete).toBe(false);
+    expect(normalizeOnboardingStatus(inconsistent)).toMatchObject({
+      setup_complete: true,
+      setup_required: false,
+      is_complete: true,
+    });
   });
 
-  it('recomputes is_complete=true from the three anchors when omitted', () => {
+  it('recomputes setup completion from the three anchors for a legacy payload', () => {
     const withoutFlag: Partial<OnboardingStatus> = {
       tesla_connected: true,
       vehicle_count: 1,
       data_flowing: true,
     };
-    expect(normalizeOnboardingStatus(withoutFlag).is_complete).toBe(true);
+    expect(normalizeOnboardingStatus(withoutFlag)).toMatchObject({
+      setup_complete: true,
+      setup_required: false,
+      is_complete: true,
+    });
   });
 
   it('recomputes is_complete=false when a vehicle is missing and flag omitted', () => {
@@ -131,6 +147,10 @@ describe('normalizeOnboardingStatus', () => {
       tesla_connected: true,
       vehicle_count: 0,
       data_flowing: false,
+      last_telemetry_at: null,
+      telemetry_health: 'unknown',
+      setup_required: true,
+      setup_complete: false,
       is_complete: false,
     });
   });
@@ -140,6 +160,10 @@ describe('normalizeOnboardingStatus', () => {
       tesla_connected: false,
       vehicle_count: 0,
       data_flowing: false,
+      last_telemetry_at: null,
+      telemetry_health: 'unknown',
+      setup_required: true,
+      setup_complete: false,
       is_complete: false,
     });
   });
@@ -149,7 +173,29 @@ describe('normalizeOnboardingStatus', () => {
       tesla_connected: false,
       vehicle_count: 0,
       data_flowing: false,
+      last_telemetry_at: null,
+      telemetry_health: 'unknown',
+      setup_required: true,
+      setup_complete: false,
       is_complete: false,
+    });
+  });
+
+  it('keeps a configured installation complete when live telemetry is stale', () => {
+    expect(
+      normalizeOnboardingStatus({
+        tesla_connected: true,
+        vehicle_count: 1,
+        data_flowing: false,
+        last_telemetry_at: '2025-12-31T00:00:00Z',
+        telemetry_health: 'stale',
+        setup_complete: true,
+      }),
+    ).toMatchObject({
+      telemetry_health: 'stale',
+      setup_complete: true,
+      setup_required: false,
+      is_complete: true,
     });
   });
 });
@@ -160,7 +206,12 @@ describe('onboardingRefetchInterval', () => {
   });
 
   it('keeps polling at the 30s cadence while incomplete', () => {
-    expect(onboardingRefetchInterval({ ...completePayload, is_complete: false })).toBe(
+    expect(onboardingRefetchInterval({
+      ...completePayload,
+      setup_complete: false,
+      setup_required: true,
+      is_complete: false,
+    })).toBe(
       ONBOARDING_POLL_INTERVAL_MS,
     );
   });
@@ -212,8 +263,23 @@ describe('useOnboardingStatus', () => {
       tesla_connected: true,
       vehicle_count: 0,
       data_flowing: false,
+      last_telemetry_at: null,
+      telemetry_health: 'unknown',
+      setup_required: true,
+      setup_complete: false,
       is_complete: false,
     });
+  });
+
+  it('continues polling after setup when requested by a runtime-health consumer', async () => {
+    mockedRequest.mockResolvedValue(completePayload);
+    const { result } = renderHook(
+      () => useOnboardingStatus({ pollAfterSetup: true }),
+      { wrapper: createWrapper() },
+    );
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.setup_complete).toBe(true);
   });
 
   it('surfaces transport failures as ApiError so the gate stays pessimistic', async () => {

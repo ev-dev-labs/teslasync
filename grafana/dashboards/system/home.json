@@ -303,11 +303,12 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT NOW() AS time, NULL AS value -- Panel disabled: metric unavailable after signal_log migration (ADR-002)",
+          "rawSql": "WITH daily_capacity AS (\n  SELECT\n    time_bucket('1 day', ts) AS day,\n    AVG(COALESCE(float_value, int_value::float8))\n      FILTER (WHERE field = 'EnergyRemaining')\n      / NULLIF(\n          AVG(COALESCE(float_value, int_value::float8))\n            FILTER (WHERE field = 'BatteryLevel'),\n          0\n        ) * 100.0 AS estimated_capacity\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('EnergyRemaining', 'BatteryLevel')\n    AND COALESCE(float_value, int_value::float8) > 0\n  GROUP BY 1\n),\nindexed AS (\n  SELECT\n    day,\n    estimated_capacity,\n    MAX(estimated_capacity) OVER () AS best_observed_capacity,\n    ROW_NUMBER() OVER (ORDER BY day DESC) AS recency\n  FROM daily_capacity\n  WHERE estimated_capacity IS NOT NULL\n)\nSELECT\n  day AS time,\n  ROUND((\n    100.0 * estimated_capacity / NULLIF(best_observed_capacity, 0)\n  )::numeric, 1) AS value\nFROM indexed\nWHERE recency = 1",
           "refId": "A"
         }
       ],
-      "title": "Battery Health (Unavailable)",
+      "title": "Observed Capacity Index",
+      "description": "Latest EnergyRemaining/BatteryLevel capacity estimate normalized to the best observed daily estimate. This is a relative index, not an absolute battery State of Health measurement.",
       "type": "stat",
       "transparent": false
     },
@@ -677,7 +678,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT started_at AS \"Date\", COALESCE((NULL::text), '?') AS \"Location\", ROUND(COALESCE((total_energy_added_wh / 1000.0), 0)::numeric, 1) AS \"kWh\", ROUND(COALESCE(cost_decimal, 0)::numeric, 2) AS \"Cost\" FROM charging_sessions WHERE vehicle_id = ${vehicle_id} ORDER BY started_at DESC LIMIT 10",
+          "rawSql": "SELECT\n  cs.started_at AS \"Date\",\n  COALESCE(NULLIF(BTRIM(cs.start_place), ''), g.name, 'Unknown') AS \"Location\",\n  ROUND((cs.total_energy_added_wh / 1000.0)::numeric, 1) AS \"kWh\",\n  ROUND(cs.cost_decimal::numeric, 2) AS \"Cost\",\n  NULLIF(BTRIM(cs.cost_currency::text), '') AS \"Currency\"\nFROM charging_sessions cs\nLEFT JOIN geofences g ON g.id = cs.geofence_id\nWHERE cs.vehicle_id = ${vehicle_id}\nORDER BY cs.started_at DESC\nLIMIT 10",
           "refId": "A"
         }
       ],
@@ -838,22 +839,18 @@
   "templating": {
     "list": [
       {
-        "current": {
-          "selected": true,
-          "text": "1",
-          "value": "1"
-        },
+        "current": {},
         "datasource": {
           "type": "grafana-postgresql-datasource",
           "uid": "DS_TESLASYNC_POSTGRESQL"
         },
-        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "hide": 0,
         "includeAll": false,
         "multi": false,
         "name": "vehicle_id",
         "options": [],
-        "query": "SELECT id AS __value, display_name AS __text FROM vehicles ORDER BY display_name",
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
         "refresh": 1,
         "regex": "",
         "skipUrlSync": false,

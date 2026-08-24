@@ -35,15 +35,14 @@ import (
 // =============================================================================
 
 // TestProductionPipelineOptions_ManualAckContract pins the manual-ack and
-// persistence settings. This catches a future refactor accidentally
-// dropping SetAutoAckDisabled(true) — without manual ack the PipelineSubscriber
-// would silently lose data on crash + silently drop poison pills (see the
-// manual-ack contract block at mqtt.go:224-236).
+// persistence settings. This catches a future refactor accidentally dropping
+// SetAutoAckDisabled(true) — without manual ack the PipelineSubscriber cannot
+// guarantee process-or-quarantine ordering before PUBACK.
 func TestProductionPipelineOptions_ManualAckContract(t *testing.T) {
 	opts := productionPipelineOptions("tcp://broker.example:1883", "teslasync-pipeline-1", "u", "p")
 
 	if !opts.AutoAckDisabled {
-		t.Errorf("AutoAckDisabled = false, want true (manual-ack contract requires this for ack/nack to work)")
+		t.Errorf("AutoAckDisabled = false, want true (manual-ack contract requires terminal disposition before PUBACK)")
 	}
 	if opts.CleanSession {
 		t.Errorf("CleanSession = true, want false (broker-side queue must persist across reconnects)")
@@ -65,7 +64,7 @@ func TestProductionPipelineOptions_ManualAckContract(t *testing.T) {
 		t.Errorf("Order = true (SetOrderMatters), want false (writers are idempotent — concurrent fan-out is intentional)")
 	}
 	if !opts.AutoReconnect {
-		t.Errorf("AutoReconnect = false, want true (PipelineSubscriber relies on broker redelivery)")
+		t.Errorf("AutoReconnect = false, want true (transport failures must reconnect and resume the persistent queue)")
 	}
 	if got, want := opts.ClientID, "teslasync-pipeline-1"; got != want {
 		t.Errorf("ClientID = %q, want %q", got, want)
