@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
 import { Spinner } from '@/components/feedback';
 import { Badge, Button as ControlButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import {
   convertDistanceFromSI,
@@ -38,9 +38,8 @@ import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
  */
 export default function WatchFacePage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const vehicleIdParam = searchParams.get('vehicle_id');
-  const vehicleId = vehicleIdParam ? Number(vehicleIdParam) : undefined;
+  const { vehicleId: selectedVehicleId } = useSelectedVehicle();
+  const vehicleId = selectedVehicleId ?? undefined;
   const { data, isLoading, error } = useWatchSummary(vehicleId);
   const commandMutation = useWatchCommand();
   const { unitPrefs } = useUnits();

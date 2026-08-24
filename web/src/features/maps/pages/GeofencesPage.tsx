@@ -39,7 +39,7 @@ import {
 } from '@/components/maps';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { request } from '@/api/client';
@@ -148,7 +148,6 @@ export default function GeofencesPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<ApiGeofence | null>(null);
   const [locationSource, setLocationSource] = useState<LocationSource>('vehicle');
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number>(0);
   const [locationLoading, setLocationLoading] = useState(false);
   // The AI geofence suggestion panel needs a candidate visited-location ID.
   // We expose
@@ -193,7 +192,12 @@ export default function GeofencesPage() {
   const geofences = geofencesQuery.data;
   const isLoading = geofencesQuery.isLoading;
 
-  const { data: vehicles } = useVehicles();
+  const {
+    vehicleId,
+    vehicles,
+    setVehicleId,
+  } = useSelectedVehicle();
+  const selectedVehicleId = vehicleId ?? 0;
 
   const createMut = useMutation({
     // origin/needsReview are server-managed (defaulted on create, untouched
@@ -678,14 +682,22 @@ export default function GeofencesPage() {
                 <Select
                   label={t('geofences.selectVehicle', 'Select Vehicle')}
                   options={[
-                    { value: '0', label: t('geofences.chooseVehicle', '— Choose vehicle —') },
-                    ...(vehicles ?? []).map((v) => ({
+                    ...(vehicles.length === 0
+                      ? [{
+                          value: '0',
+                          label: t('geofences.chooseVehicle', '— Choose vehicle —'),
+                        }]
+                      : []),
+                    ...vehicles.map((v) => ({
                       value: String(v.id),
                       label: v.display_name || v.vin,
                     })),
                   ]}
                   value={String(selectedVehicleId)}
-                  onChange={(e) => setSelectedVehicleId(Number(e.target.value))}
+                  onChange={(e) => {
+                    const next = Number(e.target.value);
+                    setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
+                  }}
                 />
               )}
 

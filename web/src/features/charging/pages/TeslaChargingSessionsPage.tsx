@@ -21,6 +21,10 @@ import {
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import {
+  ALL_VEHICLES_VIN,
+  useVehicleVinFilter,
+} from '@/hooks/useVehicleVinFilter';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
@@ -98,9 +102,21 @@ export default function TeslaChargingSessionsPage() {
   const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_sessions.title', 'Fleet Charging Sessions'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVin, setSelectedVin] = useState<string>('');
-  const { data: response, isLoading, error } = useTeslaChargingSessions(selectedVin || undefined);
+  const { isLoading: vehiclesLoading } = useVehicles();
+  const {
+    queryVin,
+    selectedVin,
+    setSelectedVin,
+    vehicles,
+  } = useVehicleVinFilter();
+  const {
+    data: response,
+    isLoading: sessionsLoading,
+    error,
+  } = useTeslaChargingSessions(queryVin, {
+    enabled: !vehiclesLoading,
+  });
+  const isLoading = vehiclesLoading || sessionsLoading;
   const refreshMutation = useRefreshTeslaChargingSessions();
 
   const allSessions = response?.sessions ?? [];
@@ -124,8 +140,11 @@ export default function TeslaChargingSessionsPage() {
   };
 
   const vehicleOptions = useMemo(() => {
-    const opts = [{ value: '', label: t('tesla_sessions.allVehicles', 'All Vehicles') }];
-    for (const v of vehicles ?? []) {
+    const opts = [{
+      value: ALL_VEHICLES_VIN,
+      label: t('tesla_sessions.allVehicles', 'All Vehicles'),
+    }];
+    for (const v of vehicles) {
       opts.push({ value: v.vin, label: `${v.display_name} (${v.vin.slice(-6)})` });
     }
     return opts;
@@ -164,7 +183,7 @@ export default function TeslaChargingSessionsPage() {
   const lastSync = response && sessions.length > 0 ? sessions[0]?.fetched_at : null;
 
   const handleRefresh = () => {
-    refreshMutation.mutate(selectedVin ? { vin: selectedVin } : undefined);
+    refreshMutation.mutate(queryVin ? { vin: queryVin } : undefined);
   };
 
   const is403 = refreshMutation.error

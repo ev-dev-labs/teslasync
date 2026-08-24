@@ -602,6 +602,14 @@ describe('Layout — global page chrome', () => {
     renderLayout('/notifications/archived')
     expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument()
   })
+
+  it('lets pages use the full main-column width without a centered max-width cap', () => {
+    const { container } = renderLayout('/')
+    const viewport = container.querySelector('[data-role="page-viewport"]')
+
+    expect(viewport).toHaveClass('w-full')
+    expect(viewport).not.toHaveClass('mx-auto', 'max-w-[1920px]')
+  })
 })
 
 // ══════════════════════════════════════════════════════════════════════

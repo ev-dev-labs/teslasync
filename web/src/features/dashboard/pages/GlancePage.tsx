@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Battery,
   BatteryCharging,
@@ -46,6 +46,7 @@ import {
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 import { cn } from '@/lib/cn';
@@ -145,26 +146,17 @@ export default function GlancePage() {
   const title = t('glance.title', 'Quick Glance');
   usePageTitle(title);
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const vehicleIdParam = searchParams.get('vehicle_id');
-
   const {
-    data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
   } = useVehicles();
-
-  // Support ?vehicle_id= query param; fall back to first vehicle.
-  const vehicle = useMemo(() => {
-    if (!vehicles?.length) return null;
-    if (vehicleIdParam) {
-      const found = vehicles.find((v) => String(v.id) === vehicleIdParam);
-      if (found) return found;
-    }
-    return vehicles[0];
-  }, [vehicles, vehicleIdParam]);
-
-  const vehicleId = vehicle?.id ?? 0;
+  const {
+    vehicle,
+    vehicleId: selectedVehicleId,
+    vehicles,
+    setVehicleId,
+  } = useSelectedVehicle();
+  const vehicleId = selectedVehicleId ?? 0;
 
   const stateQuery = useVehicleState(vehicleId, { refetchInterval: 10_000 });
   const {
@@ -204,9 +196,8 @@ export default function GlancePage() {
   );
 
   const onPickVehicle = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('vehicle_id', id);
-    setSearchParams(next, { replace: true });
+    const next = Number(id);
+    setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
   };
 
   const actions = (

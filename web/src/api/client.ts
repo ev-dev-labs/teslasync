@@ -34,6 +34,12 @@ export interface ApiRequestOptions extends RequestInit {
   responseType?: 'json' | 'text'
   skipAuthRefresh?: boolean
   /**
+   * Non-2xx response codes whose JSON body is still a successful domain
+   * response. Use only for endpoints such as `/system/health`, where a
+   * generated degraded snapshot intentionally carries HTTP 503.
+   */
+  acceptedStatuses?: readonly number[]
+  /**
    * Optional. If provided, the fetch + retry loop honors cancellation:
    * the underlying fetch is wired to an abort signal that is the merge of
    * this signal and the internal timeout signal. When this signal is the
@@ -222,6 +228,7 @@ async function directRequest<T>(
   path: string,
   options: RequestInit,
   responseType: 'json' | 'text',
+  acceptedStatuses: readonly number[],
 ): Promise<T> {
   const { headers, body, ...rest } = options
   const res = await fetch(apiUrl(path), {
@@ -230,7 +237,7 @@ async function directRequest<T>(
     headers: buildHeaders(headers, body != null),
   })
 
-  if (!res.ok) {
+  if (!res.ok && !acceptedStatuses.includes(res.status)) {
     const { message, code } = await parseError(res)
     throw new ApiError(message, res.status, code)
   }
@@ -328,7 +335,13 @@ function expiresAtMsFromCredential(cred: SudoCredential): number {
  * @returns Parsed JSON response of type T
  */
 export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { responseType = 'json', skipAuthRefresh = false, headers, ...fetchOptions } = options
+  const {
+    responseType = 'json',
+    skipAuthRefresh = false,
+    acceptedStatuses = [],
+    headers,
+    ...fetchOptions
+  } = options
 
   // Normalise once at the entry point: ensures a leading slash AND
   // defensively strips any stray `/api/v1` prefix the caller passed.
@@ -351,6 +364,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       normalisedPath,
       { ...fetchOptions, headers: headersWithToken },
       directResponseType,
+      acceptedStatuses,
     )
   } catch (err) {
     // Caller-initiated cancellation (route change / unmount via the
@@ -382,6 +396,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
           normalisedPath,
           { ...fetchOptions, headers: withSudoToken(headers, null) },
           directResponseType,
+          acceptedStatuses,
         )
       }
 
@@ -398,6 +413,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
         normalisedPath,
         { ...fetchOptions, headers: withSudoToken(headers, cred.token) },
         directResponseType,
+        acceptedStatuses,
       )
     }
 
@@ -412,6 +428,10 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     // Fall through: rerun via resilientFetch so the original retry,
     // circuit-breaker, and 401-refresh policies still apply for
     // transient or non-sudo failures.
-    return resilientFetch<T>(normalisedPath, { ...fetchOptions, headers: headersWithToken })
+    return resilientFetch<T>(normalisedPath, {
+      ...fetchOptions,
+      headers: headersWithToken,
+      acceptedStatuses,
+    })
   }
 }

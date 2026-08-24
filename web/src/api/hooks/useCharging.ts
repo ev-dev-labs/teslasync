@@ -184,13 +184,14 @@ export const teslaChargingHistoryKeys = {
 };
 
 /** Fetches Tesla Supercharger/DC charging history from the local DB. */
-export function useTeslaChargingHistory(vin?: string) {
+export function useTeslaChargingHistory(vin?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: vin ? teslaChargingHistoryKeys.byVin(vin) : teslaChargingHistoryKeys.all,
     queryFn: ({ signal }) => request<TeslaChargingHistoryResponse>(
       `/tesla/charging/history${vin ? `?vin=${vin}` : ''}`, { signal }
     ),
     staleTime: STALE_TIMES.SLOW,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -275,13 +276,14 @@ export const teslaChargingSessionKeys = {
 };
 
 /** Fetches Tesla fleet charging sessions from the local DB (business accounts only). */
-export function useTeslaChargingSessions(vin?: string) {
+export function useTeslaChargingSessions(vin?: string, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: vin ? teslaChargingSessionKeys.byVin(vin) : teslaChargingSessionKeys.all,
     queryFn: ({ signal }) => request<TeslaChargingSessionResponse>(
       `/tesla/charging/sessions${vin ? `?vin=${vin}` : ''}`, { signal }
     ),
     staleTime: STALE_TIMES.SLOW,
+    enabled: options?.enabled ?? true,
   });
 }
 

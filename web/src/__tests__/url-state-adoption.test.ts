@@ -10,6 +10,8 @@ import { describe, it, expect } from 'vitest'
  * component-local `useState`, or the bookmark/share contract silently regresses.
  *
  * Static-source guard: each listed file must import or call a `useUrl*` helper.
+ * Statistics uses the URL-aware canonical vehicle hook instead so it does not
+ * create a second owner for `vehicle_id`.
  */
 const FILTER_PAGES = [
   'src/features/driving/pages/DrivesListPage.tsx',
@@ -29,13 +31,21 @@ const FILTER_PAGES = [
 ] as const
 
 const URL_HOOK_RE = /useUrl(State|String|Boolean|Number|Enum|Array)/
+const CANONICAL_VEHICLE_FILTER_PAGES = new Set([
+  'src/features/analytics/pages/StatisticsPage.tsx',
+])
 
 describe('URL state adoption (phase-45/17)', () => {
   for (const rel of FILTER_PAGES) {
-    it(`${rel} uses a useUrl* helper for filter state`, () => {
+    it(`${rel} uses a URL-aware helper for filter state`, () => {
       const abs = path.resolve(process.cwd(), rel)
       const src = fs.readFileSync(abs, 'utf8')
-      expect(src).toMatch(URL_HOOK_RE)
+      if (CANONICAL_VEHICLE_FILTER_PAGES.has(rel)) {
+        expect(src).toMatch(/useSelectedVehicle/)
+        expect(src).toMatch(/useRangeState/)
+      } else {
+        expect(src).toMatch(URL_HOOK_RE)
+      }
     })
   }
 })

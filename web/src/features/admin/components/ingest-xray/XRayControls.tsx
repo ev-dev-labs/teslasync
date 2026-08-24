@@ -75,8 +75,13 @@ export function XRayControls({
 
   const vehicleOptions = useMemo<SelectOption[]>(
     () => [
-      { value: '', label: t('admin.xray.controls.selectVehicle', 'Select vehicle…') },
-      ...(vehicles ?? []).map((v) => ({
+      ...(vehicles.length === 0
+        ? [{
+            value: '',
+            label: t('admin.xray.controls.selectVehicle', 'Select vehicle…'),
+          }]
+        : []),
+      ...vehicles.map((v) => ({
         value: String(v.id),
         label:
           v.display_name ||

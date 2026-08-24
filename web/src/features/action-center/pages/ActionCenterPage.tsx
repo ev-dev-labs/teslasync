@@ -1,16 +1,16 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   useActionCenter,
   useApplyActionCenterAction,
 } from '@/api/hooks/useActionCenter';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useToast } from '@/components/feedback';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Pagination } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { Icons } from '@/lib/icons';
 import type {
   ActionCenterFilter,
@@ -32,12 +32,33 @@ export default function ActionCenterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
-  const [filter, setFilter] = useState<ActionCenterFilter>(initialFilter);
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const [filter, setFilter] = useState<ActionCenterFilter>(() => ({
+    ...initialFilter,
+    vehicle_id: vehicleId ?? undefined,
+  }));
   const [pending, setPending] = useState<PendingAction | null>(null);
   const query = useActionCenter(filter);
-  const vehiclesQuery = useVehicles();
   const applyAction = useApplyActionCenterAction();
   usePageTitle(t('actionCenter.page.title', 'Action Center'));
+
+  useEffect(() => {
+    setFilter((current) =>
+      current.vehicle_id === (vehicleId ?? undefined)
+        ? current
+        : { ...current, vehicle_id: vehicleId ?? undefined, offset: 0 },
+    );
+  }, [vehicleId]);
+
+  const handleFilterChange = useCallback(
+    (next: ActionCenterFilter) => {
+      setFilter(next);
+      if (next.vehicle_id != null && next.vehicle_id !== vehicleId) {
+        setVehicleId(next.vehicle_id);
+      }
+    },
+    [setVehicleId, vehicleId],
+  );
 
   const handleAction = useCallback(
     (
@@ -119,8 +140,8 @@ export default function ActionCenterPage() {
       <FadeIn delay={0.04}>
         <ActionCenterFilters
           filter={filter}
-          vehicles={vehiclesQuery.data ?? []}
-          onChange={setFilter}
+          vehicles={vehicles}
+          onChange={handleFilterChange}
         />
       </FadeIn>
       <FadeIn delay={0.08}>

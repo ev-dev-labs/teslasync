@@ -129,7 +129,10 @@ export const getAPIUsage = () => request<APIUsage>('/system/api-usage')
 
 export const getCompressionStats = () => request<CompressionStats>('/system/compression-stats')
 
-export const getExtendedHealth = () => request<ExtendedHealthResponse>('/system/health')
+export const getExtendedHealth = () =>
+  request<ExtendedHealthResponse>('/system/health', {
+    acceptedStatuses: [503],
+  })
 
 export const getBackupStats = () => request<BackupStats>('/system/backup/stats')
 

@@ -70,10 +70,13 @@ vi.mock('framer-motion', () => {
   };
 });
 
-// ── Vehicle hook: one vehicle, statically returned ─────────────────────
+// ── Vehicle hook: mutable so the empty-fleet safety state stays covered ─
+const vehicleHook = vi.hoisted(() => ({
+  data: [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }],
+}));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({
-    data: [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }],
+    data: vehicleHook.data,
     isLoading: false,
   }),
 }));
@@ -99,6 +102,10 @@ import RedisSignalViewerPage from '../RedisSignalViewerPage';
 const mockedGetSignals = getRedisSignals as unknown as ReturnType<typeof vi.fn>;
 const mockedPurge = purgeRedisSignals as unknown as ReturnType<typeof vi.fn>;
 const mockedPurgeAll = purgeAllRedisSignals as unknown as ReturnType<typeof vi.fn>;
+
+beforeEach(() => {
+  vehicleHook.data = [{ id: 1, display_name: 'Falcon', vin: 'TESLA1234567890' }];
+});
 
 function renderPage() {
   const client = new QueryClient({
@@ -227,7 +234,8 @@ describe('RedisSignalViewerPage — Purge cache controls', () => {
     await waitFor(() => expect(mockedPurgeAll).toHaveBeenCalledTimes(1));
   });
 
-  it('per-vehicle Purge button stays disabled until a vehicle is selected', () => {
+  it('per-vehicle Purge button stays disabled when the fleet is empty', () => {
+    vehicleHook.data = [];
     mockedGetSignals.mockResolvedValue({
       vehicle_id: 1,
       signal_count: 0,

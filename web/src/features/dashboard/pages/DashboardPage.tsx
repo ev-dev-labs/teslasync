@@ -13,6 +13,7 @@ import { AlertBanner, LiveStaleDataBanner, Skeleton } from '@/components/feedbac
 import { LiveIndicator, DataFreshnessAuto } from '@/components/data-display';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { Palette } from 'lucide-react';
 import { DashboardGrid } from '../components/DashboardGrid';
@@ -214,9 +215,12 @@ export default function DashboardPage() {
   const vehiclesQuery = useVehicles();
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
   const { data: alerts, error: alertsError } = useAlerts();
+  const { vehicleId: selectedVehicleId } = useSelectedVehicle();
 
   /* ——— Derived values ——— */
   const vehicleList = vehicles ?? [];
+  const dashboardVehicleId =
+    activeDashboard.settings?.vehicleId ?? selectedVehicleId ?? undefined;
   const unreadAlerts = (alerts ?? []).filter((a) => !a.is_read).length;
   const anyError = [vehiclesError, alertsError].find(Boolean) as Error | undefined;
 
@@ -555,7 +559,7 @@ export default function DashboardPage() {
                   onRemoveWidget={removeWidget}
                   onOpenSettings={setSettingsWidgetId}
                   getWidgetSize={getWidgetSize}
-                  dashboardVehicleId={activeDashboard.settings?.vehicleId}
+                  dashboardVehicleId={dashboardVehicleId}
                   compactMode={activeDashboard.settings?.compactMode}
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                 />
@@ -672,7 +676,7 @@ export default function DashboardPage() {
             onRemoveWidget={() => {}}
             onOpenSettings={() => {}}
             getWidgetSize={getWidgetSize}
-            dashboardVehicleId={activeDashboard.settings?.vehicleId}
+            dashboardVehicleId={dashboardVehicleId}
             compactMode={activeDashboard.settings?.compactMode}
             showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
             kioskWidgetOpacity={kioskConfig.widgetOpacity ?? 1}

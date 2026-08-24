@@ -16,7 +16,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { fireEvent, render, screen, cleanup, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import type { ApiHealthState, ApiHealthStatus } from '@/api/hooks/useApiHealth';
 import '../../../i18n';
@@ -24,6 +24,20 @@ import '../../../i18n';
 // Controllable stand-in for the /healthz poll so we can exercise each status
 // branch synchronously without any real fetch.
 let healthMock: ApiHealthState;
+let rbacMock: {
+  data?: {
+    mode: 'session';
+    my_roles: string[];
+    effective_for_me: Record<string, boolean>;
+  };
+};
+let diagnosticsMock: {
+  data?: {
+    status: string;
+    components: Record<string, Record<string, unknown>>;
+  };
+  isError: boolean;
+};
 
 vi.mock('@/api/hooks/useApiHealth', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useApiHealth')>(
@@ -32,12 +46,23 @@ vi.mock('@/api/hooks/useApiHealth', async () => {
   return { ...actual, useApiHealth: () => healthMock };
 });
 
+vi.mock('@/api/hooks/useRbacMatrix', () => ({
+  useRbacMatrix: () => rbacMock,
+}));
+
+vi.mock('@/api/hooks/useAdmin', () => ({
+  useExtendedSystemHealth: () => diagnosticsMock,
+}));
+
 // Imported AFTER the mock so the component binds the stubbed hook.
 import { ConnectionSegment } from './ConnectionSegment';
 
 const AT = '2026-07-05T00:00:00.000Z';
 
-function renderSegment(state: ApiHealthState, props: { iconOnly?: boolean } = {}) {
+function renderSegment(
+  state: ApiHealthState,
+  props: { iconOnly?: boolean; enableAdminDiagnostics?: boolean } = {},
+) {
   healthMock = state;
   return render(
     <MemoryRouter>
@@ -56,6 +81,8 @@ function getDot(link: HTMLElement): HTMLElement {
 describe('ConnectionSegment', () => {
   beforeEach(() => {
     cleanup();
+    rbacMock = { data: undefined };
+    diagnosticsMock = { data: undefined, isError: false };
   });
 
   it('renders the online state with latency, emerald accent, and a link to system status', () => {
@@ -154,5 +181,67 @@ describe('ConnectionSegment', () => {
     expect(link).toHaveAttribute('aria-label', 'API connection status: Online');
     expect(link.className).toContain('text-emerald-300');
     expect(link.textContent).toBe('API');
+  });
+
+  it('keeps direct system-status navigation for non-admin users', () => {
+    rbacMock = {
+      data: {
+        mode: 'session',
+        my_roles: ['user'],
+        effective_for_me: { 'fleet.read': true },
+      },
+    };
+    renderSegment(
+      { status: 'ok', latencyMs: 42, lastCheckedAt: AT },
+      { enableAdminDiagnostics: true },
+    );
+
+    expect(screen.getByRole('link')).toHaveAttribute('href', '/system-status');
+    expect(screen.queryByRole('button')).toBeNull();
+  });
+
+  it('opens existing health diagnostics only for admins', () => {
+    rbacMock = {
+      data: {
+        mode: 'session',
+        my_roles: ['admin'],
+        effective_for_me: { 'admin.audit': true },
+      },
+    };
+    diagnosticsMock = {
+      data: {
+        status: 'healthy',
+        components: {
+          database: { status: 'healthy', latency_ms: 8 },
+          database_pool: { acquired_conns: 4 },
+          telemetry_buffers: { drive_buffered: 2, charge_buffered: 3 },
+          fleet_telemetry: { status: 'healthy' },
+        },
+      },
+      isError: false,
+    };
+    renderSegment(
+      { status: 'ok', latencyMs: 42, lastCheckedAt: AT },
+      { enableAdminDiagnostics: true },
+    );
+
+    const trigger = screen.getByRole('button', {
+      name: /open connection diagnostics/i,
+    });
+    fireEvent.click(trigger);
+
+    const dialog = screen.getByRole('dialog', {
+      name: 'Connection diagnostics',
+    });
+    expect(dialog).toHaveTextContent('Database latency');
+    expect(dialog).toHaveTextContent('8ms');
+    expect(dialog).toHaveTextContent('Active DB connections');
+    expect(dialog).toHaveTextContent('4');
+    expect(dialog).toHaveTextContent('Buffered events');
+    expect(dialog).toHaveTextContent('5');
+    expect(within(dialog).getByRole('link')).toHaveAttribute(
+      'href',
+      '/system-status',
+    );
   });
 });

@@ -21,7 +21,6 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUrlString } from '@/hooks/useUrlState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -118,11 +117,7 @@ export default function TimelinePage() {
   const { t } = useTranslation();
   usePageTitle(t('timeline.title', 'Timeline'));
 
-  // Vehicle selection: useSelectedVehicle reads ?vehicle_id from the URL
-  // (alert deep-links), persists across pages via localStorage, and falls
-  // back to the first vehicle. We additionally mirror the picker's value
-  // to the URL on change so the page URL stays bookmarkable.
-  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
+  // Vehicle selection is global, persistent, URL-aware, and bookmarkable.
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
@@ -131,7 +126,6 @@ export default function TimelinePage() {
     const n = Number(id);
     if (Number.isFinite(n) && n > 0) {
       setVehicleId(n);
-      setUrlVehicleId(id);
     }
   };
 

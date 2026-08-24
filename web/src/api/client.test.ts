@@ -171,6 +171,21 @@ describe('request() — success paths', () => {
 
     expect(urlOf(0)).toBe(`${getApiBase()}/api/v1/vehicles`)
   })
+
+  it('returns JSON from an explicitly accepted non-2xx domain status', async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ status: 'degraded', database_pool: { acquired_conns: 4 } }, 503),
+    )
+
+    const res = await request<Record<string, unknown>>('/system/health', {
+      acceptedStatuses: [503],
+    })
+
+    expect(res.status).toBe('degraded')
+    expect(res.databasePool).toEqual({ acquired_conns: 4, acquiredConns: 4 })
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('acceptedStatuses')
+  })
 })
 
 describe('request() — header construction', () => {
@@ -233,6 +248,17 @@ describe('request() — resilient fall-through', () => {
     expect(res).toEqual({ recovered: true })
     expect(resilientFetchMock).toHaveBeenCalledTimes(1)
     expect(resilientFetchMock.mock.calls[0][0]).toBe('/x')
+  })
+
+  it('forwards accepted domain statuses to the resilient fallback', async () => {
+    fetchMock.mockRejectedValueOnce(new TypeError('network transition'))
+    resilientFetchMock.mockResolvedValueOnce({ status: 'degraded' })
+
+    await request('/system/health', { acceptedStatuses: [503] })
+
+    expect(resilientFetchMock.mock.calls[0][1]).toMatchObject({
+      acceptedStatuses: [503],
+    })
   })
 
   it('does NOT fall through when skipAuthRefresh is set', async () => {

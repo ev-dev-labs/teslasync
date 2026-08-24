@@ -1,12 +1,12 @@
 /**
  * StatusBar behaviour + hardening tests.
  *
- * StatusBar is the always-on footer that composes seven independent status
+ * StatusBar is the always-on footer that composes prioritized status
  * segments and is driven by a persisted preference store. The suite locks the
  * pieces that a silent regression would break for every user:
  *
  *   - Visibility contract: hidden when `prefs.enabled` is false, otherwise a
- *     `role="status"` / `aria-live="polite"` landmark that announces updates.
+ *     footer landmark with a separate hidden live region.
  *   - Icon-only propagation: forced by the `compact` prop, by `prefs.iconOnly`,
  *     and by a narrow (`<lg`) viewport — each independently collapses every
  *     segment to its icon variant.
@@ -18,7 +18,7 @@
  *     reads, partial merges, localStorage persistence (and graceful failure),
  *     and cross-tab `storage`-event sync including malformed-JSON fallback.
  *
- * The seven segments are mocked to tiny probes that echo the `iconOnly` prop, so
+ * The segments are mocked to tiny probes that echo the `iconOnly` prop, so
  * the suite exercises StatusBar's own orchestration without booting the whole
  * telemetry / query dependency tree.
  */
@@ -40,6 +40,21 @@ import {
 } from '@testing-library/react';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
+
+const backgroundMock = vi.hoisted(() => ({
+  current: {
+    jobs: [] as Array<{
+      id: string;
+      label: string;
+      kind: 'export' | 'mutation' | 'custom';
+      status: 'running' | 'success' | 'error';
+      description?: string;
+      startedAt: string;
+    }>,
+    hasJobs: false,
+    count: 0,
+  },
+}));
 
 // react-i18next → fallback-aware `t` so we can assert the English defaults
 // without booting the i18n runtime. Mirrors the pattern in PageContainer.test.
@@ -68,14 +83,29 @@ vi.mock('./status-bar/LiveTelemetrySegment', () => ({
     <div data-testid="seg-live" data-icon-only={String(!!iconOnly)} />
   ),
 }));
+vi.mock('./status-bar/AlertsSegment', () => ({
+  AlertsSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
+    <div data-testid="seg-alerts" data-icon-only={String(!!iconOnly)} />
+  ),
+}));
 vi.mock('./status-bar/ActiveVehicleSegment', () => ({
   ActiveVehicleSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
     <div data-testid="seg-vehicle" data-icon-only={String(!!iconOnly)} />
   ),
 }));
 vi.mock('./status-bar/BackgroundWorkSegment', () => ({
-  BackgroundWorkSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
-    <div data-testid="seg-background" data-icon-only={String(!!iconOnly)} />
+  BackgroundWorkSegment: ({
+    iconOnly,
+    backgroundJobs,
+  }: {
+    iconOnly?: boolean;
+    backgroundJobs: { count: number };
+  }) => (
+    <div
+      data-testid="seg-background"
+      data-icon-only={String(!!iconOnly)}
+      data-count={backgroundJobs.count}
+    />
   ),
 }));
 vi.mock('./status-bar/RecentPagesSegment', () => ({
@@ -83,15 +113,22 @@ vi.mock('./status-bar/RecentPagesSegment', () => ({
     <div data-testid="seg-recent" data-icon-only={String(!!iconOnly)} />
   ),
 }));
-vi.mock('./status-bar/VersionSegment', () => ({
-  VersionSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
-    <div data-testid="seg-version" data-icon-only={String(!!iconOnly)} />
-  ),
-}));
 vi.mock('./status-bar/HelpSegment', () => ({
   HelpSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
     <div data-testid="seg-help" data-icon-only={String(!!iconOnly)} />
   ),
+}));
+vi.mock('./status-bar/MoreSegment', () => ({
+  MoreSegment: ({
+    backgroundJobs,
+  }: {
+    backgroundJobs: { count: number };
+  }) => (
+    <div data-testid="seg-more" data-count={backgroundJobs.count} />
+  ),
+}));
+vi.mock('@/hooks/useBackgroundJobs', () => ({
+  useBackgroundJobs: () => backgroundMock.current,
 }));
 
 // Imported AFTER the mock blocks so the mocked segments are wired before the
@@ -109,10 +146,10 @@ const STORAGE_KEY = 'teslasync-status-bar-prefs';
 const SEGMENT_TESTIDS = [
   'seg-connection',
   'seg-live',
+  'seg-alerts',
   'seg-vehicle',
   'seg-background',
   'seg-recent',
-  'seg-version',
   'seg-help',
 ] as const;
 
@@ -157,6 +194,11 @@ beforeEach(() => {
   // Reset the module-scoped preference store + storage to a known baseline.
   window.localStorage.clear();
   setStatusBarPrefs({ enabled: true, iconOnly: false });
+  backgroundMock.current = {
+    jobs: [],
+    hasJobs: false,
+    count: 0,
+  };
   removeMatchMedia();
 });
 
@@ -169,28 +211,63 @@ afterEach(() => {
 // ── StatusBar: visibility + a11y ─────────────────────────────────────────────
 
 describe('StatusBar :: visibility & accessibility', () => {
-  it('renders a role="status" landmark that announces updates politely', () => {
+  it('renders a normal footer landmark with a separate polite live region', () => {
     render(<StatusBar />);
-    const bar = screen.getByRole('status');
+    const bar = screen.getByRole('contentinfo', { name: 'Application status' });
     expect(bar.tagName.toLowerCase()).toBe('footer');
-    expect(bar).toHaveAttribute('aria-live', 'polite');
+    expect(bar).not.toHaveAttribute('aria-live');
+    expect(bar).not.toHaveAttribute('role');
     expect(bar).toHaveAttribute('aria-label', 'Application status');
+    const liveRegion = screen.getByRole('status', {
+      name: 'Application status announcements',
+    });
+    expect(liveRegion).toHaveAttribute('aria-live', 'polite');
+    expect(liveRegion).not.toContainElement(bar);
     // Print + layout hooks the surrounding shell / stylesheet depend on.
     expect(bar).toHaveAttribute('data-role', 'status-bar');
     expect(bar).toHaveAttribute('data-print-hide');
   });
 
-  it('renders all seven status segments', () => {
+  it('renders all wide-screen status segments without More', () => {
     render(<StatusBar />);
     for (const id of SEGMENT_TESTIDS) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
+    expect(screen.queryByTestId('seg-more')).toBeNull();
   });
 
-  it('renders exactly four non-semantic dividers, hidden from a11y', () => {
+  it('announces a new background failure even when work is inside More', () => {
+    patchMatchMedia((query) => query.includes('1279'));
+    const { rerender } = render(<StatusBar />);
+
+    backgroundMock.current = {
+      jobs: [
+        {
+          id: 'mutation:failed',
+          label: 'Sync failed',
+          kind: 'mutation',
+          status: 'error',
+          description: 'Gateway unavailable',
+          startedAt: '2026-07-05T12:00:00.000Z',
+        },
+      ],
+      hasJobs: true,
+      count: 1,
+    };
+    rerender(<StatusBar />);
+
+    expect(screen.getByTestId('seg-more')).toHaveAttribute('data-count', '1');
+    expect(
+      screen.getByRole('status', {
+        name: 'Application status announcements',
+      }),
+    ).toHaveTextContent('Sync failed: Gateway unavailable');
+  });
+
+  it('renders exactly two non-semantic dividers, hidden from a11y', () => {
     const { container } = render(<StatusBar />);
     const dividers = container.querySelectorAll('span.w-px');
-    expect(dividers.length).toBe(4);
+    expect(dividers.length).toBe(2);
     dividers.forEach((d) => expect(d).toHaveAttribute('aria-hidden'));
   });
 
@@ -198,13 +275,14 @@ describe('StatusBar :: visibility & accessibility', () => {
     act(() => setStatusBarPrefs({ enabled: false }));
     const { container } = render(<StatusBar />);
     expect(container).toBeEmptyDOMElement();
+    expect(screen.queryByRole('contentinfo')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByTestId('seg-connection')).toBeNull();
   });
 
   it('merges a custom className onto the footer without dropping the base classes', () => {
     render(<StatusBar className="custom-marker-xyz" />);
-    const bar = screen.getByRole('status');
+    const bar = screen.getByRole('contentinfo', { name: 'Application status' });
     expect(bar.className).toContain('custom-marker-xyz');
     // A representative base class survives the merge.
     expect(bar.className).toContain('fixed');
@@ -232,20 +310,37 @@ describe('StatusBar :: icon-only propagation', () => {
     act(() => setStatusBarPrefs({ iconOnly: true }));
     render(<StatusBar />);
     expect(iconOnlyOf('seg-connection')).toBe('true');
-    expect(iconOnlyOf('seg-version')).toBe('true');
+    expect(iconOnlyOf('seg-recent')).toBe('true');
   });
 
   it('forces icon-only when the viewport is narrower than lg (max-width: 1023px)', () => {
-    patchMatchMedia((q) => q.includes('1023'));
+    patchMatchMedia((q) => q.includes('1023') || q.includes('1279'));
     render(<StatusBar />);
-    for (const id of SEGMENT_TESTIDS) {
+    for (const id of ['seg-connection', 'seg-live', 'seg-alerts', 'seg-recent']) {
       expect(iconOnlyOf(id)).toBe('true');
     }
+    expect(screen.getByTestId('seg-more')).toBeInTheDocument();
+    expect(screen.queryByTestId('seg-background')).toBeNull();
   });
 
   it('stays expanded on a wide viewport even when matchMedia is present', () => {
     patchMatchMedia(() => false);
     render(<StatusBar />);
+    expect(iconOnlyOf('seg-connection')).toBe('false');
+  });
+
+  it('moves lower-priority segments into More below xl while keeping priorities visible', () => {
+    patchMatchMedia((query) => query.includes('1279'));
+    render(<StatusBar />);
+
+    expect(screen.getByTestId('seg-connection')).toBeInTheDocument();
+    expect(screen.getByTestId('seg-live')).toBeInTheDocument();
+    expect(screen.getByTestId('seg-alerts')).toBeInTheDocument();
+    expect(screen.getByTestId('seg-recent')).toBeInTheDocument();
+    expect(screen.getByTestId('seg-more')).toBeInTheDocument();
+    expect(screen.queryByTestId('seg-background')).toBeNull();
+    expect(screen.queryByTestId('seg-vehicle')).toBeNull();
+    expect(screen.queryByTestId('seg-help')).toBeNull();
     expect(iconOnlyOf('seg-connection')).toBe('false');
   });
 });
@@ -257,7 +352,9 @@ describe('StatusBar :: matchMedia safety', () => {
     // jsdom has no matchMedia by default; removeMatchMedia() in beforeEach
     // guarantees it. The pre-hardening code called it unguarded and threw.
     expect(() => render(<StatusBar />)).not.toThrow();
-    expect(screen.getByRole('status')).toBeInTheDocument();
+    expect(
+      screen.getByRole('contentinfo', { name: 'Application status' }),
+    ).toBeInTheDocument();
     // No matchMedia ⇒ treated as "not narrow" ⇒ expanded segments.
     expect(iconOnlyOf('seg-connection')).toBe('false');
   });

@@ -24,18 +24,19 @@ export function LiveSignalToolbar({
 }: LiveSignalToolbarProps) {
   const { t } = useTranslation();
 
-  // Placeholder + one option per vehicle. Memoised because the page polls the
-  // live snapshot every second, so the parent re-renders constantly; without
-  // this the option list (and every `<option>`) is rebuilt on each tick even
-  // when the fleet is unchanged. `vehicles ?? []` guards the `.map` so a
-  // not-yet-resolved vehicles query can never crash the header.
+  // Show the placeholder only for an empty fleet. Once vehicles exist the
+  // canonical selection always resolves one, so a clearable option would just
+  // snap back to the first vehicle. Memoisation avoids rebuilding options on
+  // every one-second live snapshot poll.
   const options = useMemo<SelectOption[]>(
     () => [
-      {
-        value: '',
-        label: t('admin.liveSignals.controls.selectVehicle', 'Select vehicle…'),
-      },
-      ...(vehicles ?? []).map((v) => ({
+      ...(vehicles.length === 0
+        ? [{
+            value: '',
+            label: t('admin.liveSignals.controls.selectVehicle', 'Select vehicle…'),
+          }]
+        : []),
+      ...vehicles.map((v) => ({
         value: String(v.id),
         label:
           v.display_name ||
@@ -46,9 +47,7 @@ export function LiveSignalToolbar({
     [vehicles, t],
   );
 
-  // An empty value is the placeholder (→ `null`); any other value is a real
-  // vehicle id. Comparing against `''` rather than truthiness keeps id `0`
-  // (a valid, if unusual, primary key) distinct from "no selection".
+  // An empty value exists only for the empty-fleet placeholder.
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLSelectElement>) => {
       const raw = e.target.value;

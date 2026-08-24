@@ -27,7 +27,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlString } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -81,7 +80,6 @@ export default function StatisticsPage() {
   );
   const savedView = useSavedViewUrl();
 
-  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
 
@@ -89,7 +87,6 @@ export default function StatisticsPage() {
     const n = Number(id);
     if (Number.isFinite(n) && n > 0) {
       setVehicleId(n);
-      setUrlVehicleId(id);
     }
   };
 

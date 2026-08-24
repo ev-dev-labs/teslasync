@@ -31,7 +31,7 @@ import {
   SectionErrorBoundary,
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useIngestXRay } from '@/api/hooks/useIngestXRay';
 import type {
   IngestXRayBucket,
@@ -50,11 +50,10 @@ export default function IngestXRayPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.xray.pageTitle', 'Ingest X-Ray'));
 
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [windowSel, setWindowSel] = useState<IngestXRayWindow>('1h');
   const [bucketSel, setBucketSel] = useState<IngestXRayBucket>('1m');
 
-  const vehicles = useVehicles();
   const xray = useIngestXRay({
     vehicleId,
     window: windowSel,
@@ -83,7 +82,7 @@ export default function IngestXRayPage() {
   const actions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       <XRayControls
-        vehicles={vehicles.data ?? []}
+        vehicles={vehicles}
         vehicleId={vehicleId}
         windowSel={windowSel}
         bucketSel={bucketSel}

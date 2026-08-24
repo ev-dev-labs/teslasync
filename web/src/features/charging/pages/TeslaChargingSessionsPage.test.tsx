@@ -412,7 +412,7 @@ describe('TeslaChargingSessionsPage', () => {
 
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith(
-        '/tesla/charging/sessions/refresh',
+        '/tesla/charging/sessions/refresh?vin=VIN00000000000007',
         expect.objectContaining({ method: 'POST' }),
       )
     })

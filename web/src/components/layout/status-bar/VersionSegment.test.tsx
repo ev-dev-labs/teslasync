@@ -188,6 +188,20 @@ afterEach(() => {
 
 // ── Trigger chip ──────────────────────────────────────────────────────
 describe('VersionSegment — trigger chip', () => {
+  it('renders the same About dialog from the Help menu variant', async () => {
+    renderSegment(<VersionSegment variant="menu" />);
+
+    const trigger = await screen.findByTestId('status-bar-about-trigger');
+    await waitFor(() => expect(trigger).toHaveTextContent('v2.3.4'));
+    expect(trigger).toHaveTextContent('About TeslaSync');
+
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog', { name: 'About this build' });
+    expect(dialog).toBeInTheDocument();
+    expect(within(dialog).getByText('App version')).toBeInTheDocument();
+    expect(within(dialog).getByText('v2.3.4')).toBeInTheDocument();
+  });
+
   it('renders an accessible chip that advertises a collapsed dialog', async () => {
     const trigger = await findResolvedTrigger();
 
@@ -206,7 +220,10 @@ describe('VersionSegment — trigger chip', () => {
     });
     await waitFor(() => expect(trigger).toHaveTextContent('v5.6.7'));
     expect(trigger).toHaveAccessibleName(/v5\.6\.7/);
-    expect(mockRequest).toHaveBeenCalledWith(VERSION_URL);
+    expect(mockRequest).toHaveBeenCalledWith(
+      VERSION_URL,
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
   });
 
   it('falls back to the build version when the server reports "unknown"', async () => {
@@ -217,7 +234,10 @@ describe('VersionSegment — trigger chip', () => {
       name: /TeslaSync version/i,
     });
     await waitFor(() =>
-      expect(mockRequest).toHaveBeenCalledWith(VERSION_URL),
+      expect(mockRequest).toHaveBeenCalledWith(
+        VERSION_URL,
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      ),
     );
     // The build fallback is used instead of the 'unknown' sentinel.
     expect(trigger).toHaveTextContent(`v${BUILD_VERSION}`);

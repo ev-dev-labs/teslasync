@@ -11,7 +11,7 @@
  * (`refetchIntervalInBackground:false` on the underlying hook), so leaving
  * the page open in a background tab does not flood the API.
  */
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, RefreshCw, Radio } from 'lucide-react';
 
@@ -23,7 +23,7 @@ import { SectionErrorBoundary } from '@/components/feedback';
 import { LiveIndicator } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useVehicles } from '@/api/hooks/useVehicles';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry';
 
 import {
@@ -42,9 +42,7 @@ export default function LiveSignalInspectorPage() {
   const { t } = useTranslation();
   usePageTitle(t('admin.liveSignals.pageTitle', 'Live Signal Inspector'));
 
-  const [vehicleId, setVehicleId] = useState<number | null>(null);
-
-  const vehicles = useVehicles();
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const live = useVehicleLiveSignals(vehicleId ?? undefined, {
     refetchInterval: 1_000,
     enabled: vehicleId !== null,
@@ -84,7 +82,7 @@ export default function LiveSignalInspectorPage() {
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
       <LiveSignalToolbar
-        vehicles={vehicles.data ?? []}
+        vehicles={vehicles}
         vehicleId={vehicleId}
         onChange={setVehicleId}
       />

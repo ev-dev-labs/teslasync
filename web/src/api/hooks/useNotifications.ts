@@ -72,6 +72,7 @@ export type NotificationChannelInput =
 
 export const notificationKeys = {
   alerts: ['alerts'] as const,
+  priorityAlerts: ['alerts', 'priority'] as const,
   alertHistory: (limit: number) => ['alerts', 'history', limit] as const,
   alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
@@ -142,6 +143,43 @@ export function useAlerts() {
     queryFn: ({ signal }) => request<Alert[]>('/alerts', { signal }),
     refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
+  });
+}
+
+const PRIORITY_ALERT_PREVIEW_CAP = 50;
+
+export interface PriorityAlertsSnapshot {
+  alerts: Alert[];
+  count: number;
+  hasMore: boolean;
+}
+
+export function usePriorityAlerts() {
+  return useQuery({
+    queryKey: notificationKeys.priorityAlerts,
+    queryFn: async ({ signal }): Promise<PriorityAlertsSnapshot> => {
+      const limit = PRIORITY_ALERT_PREVIEW_CAP + 1;
+      const base = `read=false&archived=false&limit=${limit}`;
+      const [criticalResponse, warningResponse] = await Promise.all([
+        request<Alert[]>(`/alerts?severity=critical&${base}`, { signal }),
+        request<Alert[]>(`/alerts?severity=warn&${base}`, { signal }),
+      ]);
+      const critical = safeArray(criticalResponse);
+      const warnings = safeArray(warningResponse);
+      const hasMore =
+        critical.length > PRIORITY_ALERT_PREVIEW_CAP ||
+        warnings.length > PRIORITY_ALERT_PREVIEW_CAP;
+      const alerts = [
+        ...critical.slice(0, PRIORITY_ALERT_PREVIEW_CAP),
+        ...warnings.slice(0, PRIORITY_ALERT_PREVIEW_CAP),
+      ];
+      return {
+        alerts,
+        count: critical.length + warnings.length,
+        hasMore,
+      };
+    },
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 

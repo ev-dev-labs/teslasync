@@ -20,6 +20,7 @@ import {
   type RecentPageKind,
 } from '@/lib/recentPages';
 import { cn } from '@/lib/cn';
+import { useStatusBarPopover } from './StatusBarContext';
 
 const DISPLAY_LIMIT = 5;
 
@@ -72,7 +73,7 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
   const { t } = useTranslation();
   const entries = useRecentPages();
   const visibleEntries = entries.slice(0, DISPLAY_LIMIT);
-  const [open, setOpen] = useState(false);
+  const { open, toggle, close } = useStatusBarPopover('recent');
   const triggerRef = useRef<HTMLButtonElement>(null);
   const contentId = useId();
   const now = Date.now();
@@ -105,7 +106,7 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
           aria-haspopup="dialog"
           aria-expanded={open}
           aria-controls={open ? contentId : undefined}
-          onClick={() => setOpen((current) => !current)}
+          onClick={toggle}
           className={cn(
             'h-5 min-h-0 gap-1 px-1.5 py-0 text-xs leading-none',
             'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
@@ -114,23 +115,16 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
         >
           <Clock className="h-3 w-3 shrink-0" aria-hidden />
           {!iconOnly && (
-            <>
-              <Text as="span" size="xs" weight="medium" color="secondary">
-                {t('statusBar.recent.short', 'Recent')}
-              </Text>
-              {entries.length > 0 && (
-                <Text as="span" size="2xs" color="muted" className="tabular-nums">
-                  {entries.length}
-                </Text>
-              )}
-            </>
+            <Text as="span" size="xs" weight="medium" color="secondary">
+              {t('statusBar.recent.short', 'Recent')}
+            </Text>
           )}
         </Button>
       </Tooltip>
 
       <Popover
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         anchorRef={triggerRef}
         side="top"
         align="end"
@@ -170,7 +164,7 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
                 <li key={entry.path}>
                   <Link
                     to={entry.path}
-                    onClick={() => setOpen(false)}
+                    onClick={close}
                     className={cn(
                       'flex min-h-10 items-center gap-2 rounded-md px-2 py-2',
                       'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',

@@ -1635,12 +1635,39 @@ export interface CompressionStats {
   estimated_saved_bytes: number
 }
 
+export interface ExtendedHealthComponent {
+  status: string
+  latency_ms?: number
+  last_check?: string
+  consecutive_failures?: number
+  [key: string]: unknown
+}
+
+export type ExtendedHealthComponents = Record<string, ExtendedHealthComponent> & {
+  database?: ExtendedHealthComponent & {
+    latency_ms: number
+  }
+  database_pool?: ExtendedHealthComponent & {
+    total_conns: number
+    idle_conns: number
+    acquired_conns: number
+  }
+  system?: ExtendedHealthComponent & {
+    goroutines: number
+    go_version: string
+    uptime_seconds: number
+  }
+}
+
 export interface ExtendedHealthResponse {
   status: string
-  components: Record<string, { status: string; latency_ms?: number; last_check?: string; consecutive_failures?: number }>
-  database: { status: string; latency_ms: number }
-  database_pool: { total_conns: number; idle_conns: number; acquired_conns: number }
-  system: { goroutines: number; go_version: string; uptime_seconds: number }
+  components: ExtendedHealthComponents
+  checked_at?: string
+  mode?: 'ok' | 'degraded' | 'maintenance'
+  source?: 'env' | 'db' | 'default'
+  maintenance_message?: string
+  maintenance_until?: string
+  maintenance_updated_at?: string
 }
 
 // === Aggregated diagnostic / self-test ===
@@ -1730,7 +1757,8 @@ export interface VersionInfo {
   arch: string
   uptime_seconds: number
   goroutines: number
-  endpoints?: {
+  require_cookie_consent?: boolean
+  endpoints?: Record<string, string | undefined> & {
     api?: string
     web?: string
     oauth_callback?: string

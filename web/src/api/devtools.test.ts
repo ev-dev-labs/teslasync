@@ -109,7 +109,6 @@ describe.each([
   ['getAPICallLogStats', getAPICallLogStats, '/api-logs/stats'],
   ['getAPIUsage', getAPIUsage, '/system/api-usage'],
   ['getCompressionStats', getCompressionStats, '/system/compression-stats'],
-  ['getExtendedHealth', getExtendedHealth, '/system/health'],
   ['getBackupStats', getBackupStats, '/system/backup/stats'],
   ['getErrorStats', getErrorStats, '/system/errors/stats'],
   ['getWorkersHealth', getWorkersHealth, '/system/workers'],
@@ -131,6 +130,21 @@ describe.each([
     // Bare GET — no verb / body / options are attached.
     expect(opts).toBeUndefined()
     expect(res).toBe(payload)
+  })
+})
+
+describe('getExtendedHealth', () => {
+  it('accepts the endpoint health snapshot when degraded state uses HTTP 503', async () => {
+    const payload = { status: 'degraded', components: {} }
+    mockedRequest.mockResolvedValueOnce(payload)
+
+    const result = await getExtendedHealth()
+
+    expect(call()).toEqual([
+      '/system/health',
+      { acceptedStatuses: [503] },
+    ])
+    expect(result).toBe(payload)
   })
 })
 

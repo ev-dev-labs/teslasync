@@ -441,30 +441,35 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
 
 // ── Component — data contract & toolbar ─────────────────────────────────────
 describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
-  it('requests /tesla/charging/history with no /api/v1 prefix and no camelCase params', async () => {
+  it('requests the globally selected VIN with no /api/v1 prefix or camelCase params', async () => {
     installRequest();
     renderPage();
     await screen.findByText('Total Sessions');
 
     const calls = historyCalls();
     expect(calls.length).toBeGreaterThan(0);
-    // First (unscoped) call carries no query string.
-    expect(calls).toContain('/tesla/charging/history');
+    expect(calls).toContain(
+      '/tesla/charging/history?vin=5YJ3E1EA1KF000001',
+    );
     expect(calls.every((u) => !u.includes('/api/v1'))).toBe(true);
     expect(calls.every((u) => !/vehicleId=/.test(u))).toBe(true);
   });
 
-  it('re-scopes the feed to the selected vehicle via a ?vin= query', async () => {
+  it('re-scopes the feed when a different vehicle is selected', async () => {
     installRequest();
     renderPage();
     await screen.findByText('Total Sessions');
 
-    expect(historyCalls().some((u) => u.includes('vin=5YJ3E1EA1KF000001'))).toBe(false);
+    expect(historyCalls()).toContain(
+      '/tesla/charging/history?vin=5YJ3E1EA1KF000001',
+    );
     fireEvent.change(screen.getByRole('combobox', { name: 'Select vehicle' }), {
-      target: { value: '5YJ3E1EA1KF000001' },
+      target: { value: '5YJYGDEE5MF000002' },
     });
     await waitFor(() =>
-      expect(historyCalls().some((u) => u.includes('vin=5YJ3E1EA1KF000001'))).toBe(true),
+      expect(historyCalls()).toContain(
+        '/tesla/charging/history?vin=5YJYGDEE5MF000002',
+      ),
     );
   });
 

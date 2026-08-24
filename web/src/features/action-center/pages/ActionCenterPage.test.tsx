@@ -11,6 +11,7 @@ const useHistoryMock = vi.fn();
 const mutateAsyncMock = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
+const setVehicleIdMock = vi.fn();
 
 vi.mock('@/api/hooks/useActionCenter', () => ({
   useActionCenter: (...args: unknown[]) => useActionCenterMock(...args),
@@ -20,8 +21,13 @@ vi.mock('@/api/hooks/useActionCenter', () => ({
     isPending: false,
   }),
 }));
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: () => ({ data: [{ id: 7, display_name: 'Orion' }] }),
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({
+    vehicleId: 7,
+    vehicle: { id: 7, display_name: 'Orion' },
+    vehicles: [{ id: 7, display_name: 'Orion' }],
+    setVehicleId: setVehicleIdMock,
+  }),
 }));
 vi.mock('@/components/feedback', async () => {
   const actual = await vi.importActual<typeof import('@/components/feedback')>(
@@ -109,6 +115,7 @@ beforeEach(() => {
   mutateAsyncMock.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
+  setVehicleIdMock.mockReset();
   useHistoryMock.mockReset();
   useActionCenterMock.mockReturnValue(queryResult());
   useHistoryMock.mockReturnValue({

@@ -37,10 +37,21 @@ const EM_DASH = '\u2014'
 function makeHealth(overrides: Partial<ExtendedHealthResponse> = {}): ExtendedHealthResponse {
   return {
     status: 'ok',
-    components: {},
-    database: { status: 'connected', latency_ms: 4.2 },
-    database_pool: { total_conns: 12, idle_conns: 8, acquired_conns: 4 },
-    system: { goroutines: 148, go_version: 'go1.25.0', uptime_seconds: 93784 },
+    components: {
+      database: { status: 'connected', latency_ms: 4.2 },
+      database_pool: {
+        status: 'healthy',
+        total_conns: 12,
+        idle_conns: 8,
+        acquired_conns: 4,
+      },
+      system: {
+        status: 'healthy',
+        goroutines: 148,
+        go_version: 'go1.25.0',
+        uptime_seconds: 93784,
+      },
+    },
     ...overrides,
   }
 }
@@ -113,7 +124,12 @@ describe('HealthProbesSection', () => {
 
   it('treats a zero latency as a real reading rather than a missing value', async () => {
     mockGetExtendedHealth.mockResolvedValue(
-      makeHealth({ database: { status: 'connected', latency_ms: 0 } }),
+      makeHealth({
+        components: {
+          ...makeHealth().components,
+          database: { status: 'connected', latency_ms: 0 },
+        },
+      }),
     )
     renderSection()
 

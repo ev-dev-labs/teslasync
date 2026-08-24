@@ -1,99 +1,167 @@
-import { useCallback } from 'react';
+import { useRef } from 'react';
+import { Bug, CircleHelp, Compass, Keyboard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Bug, HelpCircle, Keyboard } from 'lucide-react';
-import { Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry';
 import { cn } from '@/lib/cn';
-
-/**
- * HelpSegment — footer status-bar segment that consolidates the three
- * "always available" help affordances that used to live at the bottom of
- * the sidebar:
- *
- *   • Press `?` for shortcuts → opens the keyboard cheat sheet
- *   • Take a tour              → opens the tour launcher
- *   • Report bug               → opens the in-app feedback modal
- *
- * Each action stays decoupled from the React tree by dispatching the same
- * window events the sidebar previously used (`toggle-keyboard-shortcuts`,
- * `dispatchTourLauncherOpen()`, and `open-feedback-modal`), so the Cmd+K
- * palette and any other surface continue to work unchanged.
- *
- * Visibility:
- *   - Full label + icon when the bar is in expanded mode.
- *   - Icon-only with tooltips when the bar is compact / on narrow screens.
- */
+import { VersionSegment } from './VersionSegment';
+import { useStatusBarPopover } from './StatusBarContext';
+import { useBuildNews } from './useAboutBuild';
 
 export interface HelpSegmentProps {
+  onOpenAbout: () => void;
   iconOnly?: boolean;
+  embedded?: boolean;
+  onAction?: () => void;
 }
 
-const buttonClass = cn(
-  'inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-xs leading-none',
-  'text-[var(--text-muted)] hover:bg-white/[0.04] hover:text-[var(--text-secondary)]',
-  'focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
-);
-
-export function HelpSegment({ iconOnly = false }: HelpSegmentProps) {
+export function HelpSegment({
+  onOpenAbout,
+  iconOnly = false,
+  embedded = false,
+  onAction,
+}: HelpSegmentProps) {
   const { t } = useTranslation();
+  const { open, toggle, close } = useStatusBarPopover('help');
+  const triggerRef = useRef<HTMLButtonElement | null>(null);
+  const { hasBuildNews } = useBuildNews();
 
-  // Stable dispatchers — each fires the same decoupled window event Layout
-  // listens for and never depends on props/state, so we memoise once per mount
-  // rather than recreating a closure on every status-bar re-render.
-  const openShortcuts = useCallback(
-    () => window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts')),
-    [],
+  const runAndClose = (action: () => void) => {
+    close();
+    onAction?.();
+    action();
+  };
+
+  const menu = (
+    <div className="p-1" data-testid="status-bar-help-menu">
+      <PanelTitle className="px-3 pb-1 pt-2">
+        {t('statusBar.help.title', 'Help & support')}
+      </PanelTitle>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label={t('help.shortcuts', 'Open keyboard shortcuts')}
+        onClick={() =>
+          runAndClose(() =>
+            window.dispatchEvent(new CustomEvent('toggle-keyboard-shortcuts')),
+          )
+        }
+        className="h-auto min-h-9 w-full justify-start px-3 py-2 text-[var(--text-secondary)]"
+      >
+        <Keyboard className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <Text as="span" size="xs" weight="medium">
+          {t('help.shortcutsLabel', 'Keyboard shortcuts')}
+        </Text>
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label={t('help.tour', 'Open tour launcher')}
+        onClick={() => runAndClose(dispatchTourLauncherOpen)}
+        className="h-auto min-h-9 w-full justify-start px-3 py-2 text-[var(--text-secondary)]"
+        data-tour-launcher-trigger
+      >
+        <Compass className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <Text as="span" size="xs" weight="medium">
+          {t('help.tourLabel', 'Take a tour')}
+        </Text>
+      </Button>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        aria-label={t('help.feedback', 'Open feedback / bug report form')}
+        onClick={() =>
+          runAndClose(() =>
+            window.dispatchEvent(new CustomEvent('open-feedback-modal')),
+          )
+        }
+        className="h-auto min-h-9 w-full justify-start px-3 py-2 text-[var(--text-secondary)]"
+        data-testid="status-bar-feedback-trigger"
+      >
+        <Bug className="h-3.5 w-3.5 shrink-0" aria-hidden />
+        <Text as="span" size="xs" weight="medium">
+          {t('help.feedbackLabel', 'Report a problem')}
+        </Text>
+      </Button>
+      <div className="mt-1 border-t border-[var(--border-subtle)] pt-1">
+        <VersionSegment
+          variant="menu"
+          aboutOpen={false}
+          onOpenAbout={() => runAndClose(onOpenAbout)}
+        />
+      </div>
+    </div>
   );
-  const openTour = useCallback(() => dispatchTourLauncherOpen(), []);
-  const openFeedback = useCallback(
-    () => window.dispatchEvent(new CustomEvent('open-feedback-modal')),
-    [],
+
+  if (embedded) {
+    return (
+      <section data-testid="status-bar-help-embedded">
+        {menu}
+      </section>
+    );
+  }
+
+  const openLabel = t('statusBar.help.open', 'Open help and about');
+  const tooltipLabel = t('statusBar.help.tooltip', 'Help and about');
+  const buildNewsLabel = t(
+    'statusBar.help.buildNews',
+    'Update or release notes available',
   );
 
   return (
-    <div className="flex items-center gap-1" data-tour="keyboard-hint">
-      <Tooltip content={t('shortcuts.tooltip', 'Keyboard shortcuts')} side="top">
-        <button
+    <>
+      <Tooltip
+        content={
+          hasBuildNews ? `${tooltipLabel} · ${buildNewsLabel}` : tooltipLabel
+        }
+        side="top"
+      >
+        <Button
+          ref={triggerRef}
           type="button"
-          onClick={openShortcuts}
-          className={buttonClass}
-          aria-label={t('shortcuts.openAria', 'Open keyboard shortcuts')}
-        >
-          <Keyboard className="h-3 w-3 shrink-0" aria-hidden />
-          {!iconOnly && (
-            <>
-              <kbd className="rounded bg-[var(--surface-2)] px-1 text-2xs text-[var(--text-secondary)]">?</kbd>
-              <span className="hidden xl:inline">{t('shortcuts.hintSuffix', 'for shortcuts')}</span>
-            </>
+          variant="ghost"
+          size="sm"
+          aria-label={
+            hasBuildNews ? `${openLabel}. ${buildNewsLabel}` : openLabel
+          }
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          onClick={toggle}
+          className={cn(
+            'relative h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
+            'text-[var(--text-muted)]',
           )}
-        </button>
+          data-tour="keyboard-hint"
+        >
+          <CircleHelp className="h-3 w-3 shrink-0" aria-hidden />
+          {!iconOnly && (
+            <Text as="span" size="xs" weight="medium" color="secondary">
+              {t('statusBar.help.short', 'Help')}
+            </Text>
+          )}
+          {hasBuildNews && (
+            <span
+              className="absolute right-0.5 top-0.5 h-1.5 w-1.5 rounded-full bg-amber-400"
+              aria-hidden
+            />
+          )}
+        </Button>
       </Tooltip>
 
-      <Tooltip content={t('tour.launcher.openShort', 'Take a tour')} side="top">
-        <button
-          type="button"
-          onClick={openTour}
-          className={buttonClass}
-          aria-label={t('tour.launcher.openAria', 'Open tour launcher')}
-          data-tour-launcher-trigger
-        >
-          <HelpCircle className="h-3 w-3 shrink-0" aria-hidden />
-          {!iconOnly && <span className="hidden xl:inline">{t('tour.launcher.openShort', 'Take a tour')}</span>}
-        </button>
-      </Tooltip>
-
-      <Tooltip content={t('feedback.openShort', 'Report bug')} side="top">
-        <button
-          type="button"
-          onClick={openFeedback}
-          className={buttonClass}
-          aria-label={t('feedback.openAria', 'Open feedback / bug report form')}
-          data-testid="status-bar-feedback-trigger"
-        >
-          <Bug className="h-3 w-3 shrink-0" aria-hidden />
-          {!iconOnly && <span className="hidden xl:inline">{t('feedback.openShort', 'Report bug')}</span>}
-        </button>
-      </Tooltip>
-    </div>
+      <Popover
+        open={open}
+        onClose={close}
+        anchorRef={triggerRef}
+        side="top"
+        align="end"
+        ariaLabel={t('statusBar.help.title', 'Help & support')}
+        className="w-[min(92vw,260px)]"
+      >
+        {menu}
+      </Popover>
+    </>
   );
 }

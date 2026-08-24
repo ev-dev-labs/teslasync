@@ -27,6 +27,7 @@ import {
   alertKeys,
   alertMessageKeys,
   useAlerts,
+  usePriorityAlerts,
   useAlertRules,
   useAlertMetrics,
   useAlertDetail,
@@ -139,6 +140,7 @@ describe('useAlerts shim re-export surface', () => {
   it('re-exports every alert hook as a callable', () => {
     const hooks = [
       useAlerts,
+      usePriorityAlerts,
       useAlertRules,
       useAlertMetrics,
       useAlertDetail,
@@ -158,7 +160,7 @@ describe('useAlerts shim re-export surface', () => {
       useAlertMessagePlaceholders,
       useAlertMessagePreview,
     ];
-    expect(hooks).toHaveLength(19);
+    expect(hooks).toHaveLength(20);
     for (const hook of hooks) {
       expect(typeof hook).toBe('function');
     }
@@ -217,6 +219,41 @@ describe('useAlerts', () => {
     expect(calledUrl()).toBe('/alerts');
     expect(calledOpts()).toEqual(expect.objectContaining({ signal: expect.anything() }));
     expect(result.current.data).toEqual([makeAlert()]);
+  });
+
+  describe('usePriorityAlerts', () => {
+    it('server-filters unread critical and warning alerts before applying its preview cap', async () => {
+      const critical = Array.from({ length: 51 }, (_, index) =>
+        makeAlert({
+          id: index + 1,
+          severity: 'critical',
+        }),
+      );
+      const warnings = [makeAlert({ id: 100, severity: 'warning' })];
+      requestMock
+        .mockResolvedValueOnce(critical)
+        .mockResolvedValueOnce(warnings);
+
+      const { result } = renderHook(() => usePriorityAlerts(), {
+        wrapper: wrapperFor(makeClient()),
+      });
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+      expect(calledUrl(0)).toBe(
+        '/alerts?severity=critical&read=false&archived=false&limit=51',
+      );
+      expect(calledUrl(1)).toBe(
+        '/alerts?severity=warn&read=false&archived=false&limit=51',
+      );
+      expect(calledOpts(0)).toEqual(
+        expect.objectContaining({ signal: expect.anything() }),
+      );
+      expect(result.current.data).toMatchObject({
+        count: 52,
+        hasMore: true,
+      });
+      expect(result.current.data?.alerts).toHaveLength(51);
+    });
   });
 
   it('coerces a non-array payload to [] via the safeArray select', async () => {

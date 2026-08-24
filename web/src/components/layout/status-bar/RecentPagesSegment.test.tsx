@@ -64,11 +64,12 @@ describe('RecentPagesSegment', () => {
     recordPageView({ path: '/charging/7', title: 'Charge 7', kind: 'charging' });
     renderSegment();
 
-    fireEvent.click(
-      screen.getByRole('button', {
-        name: 'Open recently viewed pages, 3 saved',
-      }),
-    );
+    const trigger = screen.getByRole('button', {
+      name: 'Open recently viewed pages, 3 saved',
+    });
+    expect(trigger).toHaveTextContent('Recent');
+    expect(trigger).not.toHaveTextContent('3');
+    fireEvent.click(trigger);
 
     const list = screen.getByTestId('status-bar-recent-list');
     const rows = within(list).getAllByRole('link');

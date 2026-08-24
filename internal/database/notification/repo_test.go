@@ -166,6 +166,44 @@ func TestBuildNotificationLogWhere_RuleJoinFlagSetByVehicleOrSeverity(t *testing
 	}
 }
 
+func TestBuildNotificationLogWhere_UsesEffectiveAlertWarningSeverity(t *testing.T) {
+	effective := buildNotificationLogWhere(NotificationLogFilters{
+		Severities:                 []string{"warn"},
+		IncludeFailedInfoAsWarning: true,
+	})
+	if len(effective.clauses) != 1 {
+		t.Fatalf("effective severity clauses = %v, want one clause", effective.clauses)
+	}
+	if !strings.Contains(effective.clauses[0], "nl.status = 'failed'") {
+		t.Fatalf("effective warning clause = %q, want failed-delivery promotion", effective.clauses[0])
+	}
+	if !strings.Contains(effective.clauses[0], "CASE WHEN") {
+		t.Fatalf("effective warning clause = %q, want computed DTO severity", effective.clauses[0])
+	}
+	if len(effective.args) != 1 {
+		t.Fatalf("effective warning args = %v, want one severity array", effective.args)
+	}
+
+	effectiveInfo := buildNotificationLogWhere(NotificationLogFilters{
+		Severities:                 []string{"info"},
+		IncludeFailedInfoAsWarning: true,
+	})
+	if len(effectiveInfo.clauses) != 1 ||
+		!strings.Contains(effectiveInfo.clauses[0], "CASE WHEN") {
+		t.Fatalf("effective info clause = %v, want computed DTO severity", effectiveInfo.clauses)
+	}
+
+	raw := buildNotificationLogWhere(NotificationLogFilters{
+		Severities: []string{"warn"},
+	})
+	if len(raw.clauses) != 1 {
+		t.Fatalf("raw severity clauses = %v, want one clause", raw.clauses)
+	}
+	if strings.Contains(raw.clauses[0], "nl.status = 'failed'") {
+		t.Fatalf("raw notification severity unexpectedly promoted failures: %q", raw.clauses[0])
+	}
+}
+
 func TestBuildNotificationLogWhere_PlaceholderOrdering(t *testing.T) {
 	// All clauses below add at least one placeholder; verify the
 	// numbering walks $1..$N in clause-emit order so the bind values

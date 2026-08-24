@@ -46,6 +46,7 @@ import {
   ScrollText,
   Trash2,
 } from 'lucide-react';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import { PageContainer } from '@/components/layout';
 import {
@@ -329,9 +330,27 @@ export default function LiveLogsPage({
   const [grep, setGrep] = useState('');
   const [grepDraft, setGrepDraft] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('');
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [paused, setPaused] = useState(false);
   const [autoscroll, setAutoscroll] = useState(true);
   const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    setVehicleFilter(vehicleId == null ? '' : String(vehicleId));
+  }, [vehicleId]);
+
+  const commitVehicleFilter = useCallback(() => {
+    const parsed = Number(vehicleFilter.trim());
+    const isKnownVehicle = vehicles.some((candidate) => candidate.id === parsed);
+    if (
+      Number.isInteger(parsed)
+      && parsed > 0
+      && isKnownVehicle
+      && parsed !== vehicleId
+    ) {
+      setVehicleId(parsed);
+    }
+  }, [setVehicleId, vehicleFilter, vehicleId, vehicles]);
 
   const stream = useLogStream({
     level,
@@ -681,6 +700,13 @@ export default function LiveLogsPage({
           label={t('liveLogs.filters.vehicleId', 'Vehicle ID')}
           value={vehicleFilter}
           onChange={(e) => setVehicleFilter(e.target.value.trim())}
+          onBlur={commitVehicleFilter}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitVehicleFilter();
+            }
+          }}
           placeholder={t(
             'liveLogs.filters.vehicleIdPlaceholder',
             'Numeric — applied client-side',

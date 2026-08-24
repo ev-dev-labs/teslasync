@@ -3,6 +3,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDrives } from '@/api/hooks/useDriving';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useAlertHistory } from '@/api/hooks/useNotifications';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, safeNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
@@ -62,7 +63,6 @@ function chargingPowerW(session: ChargingSession): number {
 
 export function useWeeklyDigest() {
   const [weekOffset, setWeekOffset] = useState(0);
-  const [vehicleId, setVehicleId] = useState<string>('');
 
   const [weekStart, weekEnd] = useMemo(() => getWeekRange(weekOffset), [weekOffset]);
   const [prevStart, prevEnd] = useMemo(() => getWeekRange(weekOffset - 1), [weekOffset]);
@@ -75,22 +75,31 @@ export function useWeeklyDigest() {
   const isCurrentWeek = weekOffset === 0;
 
   /* ── Vehicle query ── */
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
+  const { isLoading: vehiclesLoading } = useVehicles();
+  const {
+    vehicleId,
+    vehicles,
+    setVehicleId: setSelectedVehicleId,
+  } = useSelectedVehicle();
 
   const vehicleOptions = useMemo(
     () =>
-      (vehicles ?? []).map((v) => ({
+      vehicles.map((v) => ({
         value: String(v.id),
         label: v.display_name || v.vin,
       })),
     [vehicles],
   );
 
-  const selectedVehicleId = vehicleId || String(vehicles?.[0]?.id ?? '');
-  const selectedVehicleNumber = useMemo(() => {
-    const parsed = Number(selectedVehicleId);
-    return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-  }, [selectedVehicleId]);
+  const selectedVehicleId = vehicleId == null ? '' : String(vehicleId);
+  const selectedVehicleNumber = vehicleId;
+  const setVehicleId = useCallback(
+    (nextId: string) => {
+      const parsed = Number(nextId);
+      setSelectedVehicleId(Number.isInteger(parsed) && parsed > 0 ? parsed : null);
+    },
+    [setSelectedVehicleId],
+  );
 
   const queryStart = useMemo(() => prevStart.toISOString(), [prevStart]);
   const queryEndExclusive = useMemo(

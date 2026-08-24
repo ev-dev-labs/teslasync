@@ -10,6 +10,7 @@ import type {
   WebErrorsSummary, MaintenanceState, MaintenanceUpdateInput,
   RuntimeStatusSnapshot,
 } from '@/types/admin';
+import type { ExtendedHealthResponse } from '@/api/types';
 
 export const adminKeys = {
   apiKeys: ['api-keys'] as const,
@@ -18,6 +19,7 @@ export const adminKeys = {
   backupConfigs: ['backup-configs'] as const,
   backupRuns: ['backup-runs'] as const,
   systemHealth: ['system-health'] as const,
+  extendedHealth: ['system-status', 'extended-health'] as const,
   runtimeStatus: ['runtime-status'] as const,
   auditLogs: ['audit-logs'] as const,
   securityEvents: (vehicleId: string) => ['security-events', vehicleId] as const,
@@ -119,8 +121,25 @@ export function useBackupRuns() {
 export function useSystemHealth() {
   return useQuery({
     queryKey: adminKeys.systemHealth,
-    queryFn: ({ signal }) => request<SystemHealth>('/system/health', { signal }),
+    queryFn: ({ signal }) =>
+      request<SystemHealth>('/system/health', {
+        signal,
+        acceptedStatuses: [503],
+      }),
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useExtendedSystemHealth(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: adminKeys.extendedHealth,
+    queryFn: ({ signal }) =>
+      request<ExtendedHealthResponse>('/system/health', {
+        signal,
+        acceptedStatuses: [503],
+      }),
+    enabled: options?.enabled ?? true,
+    refetchInterval: options?.enabled === false ? false : INTERVALS.STANDARD,
   });
 }
 

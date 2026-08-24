@@ -46,6 +46,16 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+const selectedVehicleState = vi.hoisted(() => ({
+  vehicleId: null as number | null,
+  vehicles: [] as Array<{ id: number }>,
+  setVehicleId: vi.fn(),
+}));
+
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => selectedVehicleState,
+}));
+
 import LiveLogsPage from './LiveLogsPage';
 import { ToastProvider } from '@/components/feedback/Toast';
 
@@ -117,6 +127,9 @@ function renderPage(fetchImpl?: typeof fetch) {
 
 beforeEach(() => {
   vi.useRealTimers();
+  selectedVehicleState.vehicleId = null;
+  selectedVehicleState.vehicles = [];
+  selectedVehicleState.setVehicleId.mockReset();
 });
 
 afterEach(() => {
@@ -124,6 +137,31 @@ afterEach(() => {
 });
 
 describe('LiveLogsPage', () => {
+  it('commits a known vehicle to global scope only on blur or Enter', async () => {
+    selectedVehicleState.vehicleId = 12;
+    selectedVehicleState.vehicles = [{ id: 1 }, { id: 12 }];
+    const { fetchImpl, stream } = makeControlledFetch();
+    renderPage(fetchImpl);
+
+    const input = screen.getByTestId('livelogs-vehicle-input');
+    await waitFor(() => expect(input).toHaveValue('12'));
+
+    fireEvent.change(input, { target: { value: '1' } });
+    expect(selectedVehicleState.setVehicleId).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '999' } });
+    fireEvent.blur(input);
+    expect(selectedVehicleState.setVehicleId).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: '1' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(selectedVehicleState.setVehicleId).toHaveBeenCalledWith(1);
+
+    await act(async () => {
+      await stream.close();
+    });
+  });
+
   it('renders header, filters, and empty state on first mount', async () => {
     const { fetchImpl, stream } = makeControlledFetch();
     renderPage(fetchImpl);

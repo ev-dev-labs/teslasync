@@ -3209,6 +3209,12 @@
   },
   "help": {
     "title": "Help",
+    "shortcuts": "Open keyboard shortcuts",
+    "shortcutsLabel": "Keyboard shortcuts",
+    "tour": "Open tour launcher",
+    "tourLabel": "Take a tour",
+    "feedback": "Open feedback / bug report form",
+    "feedbackLabel": "Report a problem",
     "intro": "Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.",
     "baseline": {
       "links": {
@@ -3659,6 +3665,7 @@
   },
   "statusBar": {
     "aria": "Application status",
+    "announcements": "Application status announcements",
     "connection": {
       "short": "API",
       "ok": "Online",
@@ -3668,14 +3675,52 @@
       "tooltip": "API connection",
       "aria": "API connection status"
     },
+    "connectionDiagnostics": {
+      "open": "Open connection diagnostics",
+      "title": "Connection diagnostics",
+      "unknown": "Unknown",
+      "checking": "Checking",
+      "status": {
+        "healthy": "Healthy",
+        "degraded": "Degraded",
+        "unhealthy": "Unhealthy",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "unavailable": "Diagnostics are temporarily unavailable.",
+      "database": "Database latency",
+      "pool": "Active DB connections",
+      "telemetry": "Telemetry stream",
+      "queue": "Buffered events",
+      "fullStatus": "Open system status"
+    },
     "live": {
       "short": "Live",
+      "stale": "Stale",
       "reconnecting": "Reconnecting",
       "offline": "Offline",
       "unknown": "Idle",
       "tooltip": "Live telemetry stream",
       "lastMessage": "Last message {{age}} ago",
       "aria": "Live telemetry status"
+    },
+    "alerts": {
+      "short": "Alerts",
+      "title": "Priority alerts",
+      "count": "{{count}} unread alerts",
+      "countMore": "{{count}}+ unread alerts",
+      "open": "Open {{count}} unread alerts",
+      "openWithSeverity": "Open {{count}} unread alerts. Highest severity: {{severity}}",
+      "openMoreWithSeverity": "Open {{count}}+ unread alerts. Highest severity: {{severity}}",
+      "newCritical": "Critical alert: {{title}}",
+      "unavailable": "Alerts unavailable",
+      "unavailableAria": "Priority alert monitoring is unavailable",
+      "unavailableDetail": "The latest priority alerts could not be refreshed.",
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning"
+      },
+      "viewAll": "View all alerts"
     },
     "vehicle": {
       "tooltip": "Active vehicle",
@@ -3688,13 +3733,20 @@
       "one": "1 task",
       "many": "{{count}} tasks",
       "tooltip": "Background work in progress",
+      "recentTooltip": "Recent background activity",
       "aria": "Background tasks",
       "heading": "Running",
       "queued": "Queued",
       "processing": "Processing",
       "exportLabel": "{{type}} export",
       "saving": "Saving…",
-      "savingMany": "Saving {{count}} changes…"
+      "savingMany": "Saving {{count}} changes…",
+      "recentHeading": "Recent activity",
+      "exportFailed": "{{type}} export failed",
+      "exportReady": "{{type}} export ready",
+      "syncFailed": "Sync failed",
+      "saved": "Changes saved",
+      "tryAgain": "Please try again"
     },
     "recent": {
       "short": "Recent",
@@ -3705,6 +3757,21 @@
       "count_other": "{{count}} pages",
       "count": "{{count}} pages",
       "empty": "Pages you visit will appear here for quick access."
+    },
+    "more": {
+      "label": "More",
+      "tooltip": "More status and help",
+      "open": "Open more status options",
+      "backgroundError": "Background work needs attention",
+      "backgroundComplete": "Background work completed"
+    },
+    "help": {
+      "short": "Help",
+      "title": "Help & support",
+      "tooltip": "Help and about",
+      "open": "Open help and about",
+      "buildNews": "Update or release notes available",
+      "about": "About TeslaSync"
     },
     "version": {
       "tooltip": "TeslaSync version",
@@ -13067,9 +13134,9 @@
     "statusBar": {
       "label": "Status bar",
       "show": "Show status bar",
-      "showHelp": "Always-on footer with API health, live telemetry, vehicle, and version.",
+      "showHelp": "Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.",
       "iconOnly": "Always icon-only",
-      "iconOnlyHelp": "Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.",
+      "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into More on constrained screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
     },

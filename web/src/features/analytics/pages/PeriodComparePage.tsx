@@ -24,8 +24,9 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useChartPalette } from '@/hooks/useChartPalette';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
-import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
+import { useUrlEnum } from '@/hooks/useUrlState';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -84,7 +85,7 @@ export default function PeriodComparePage() {
   const distanceUnit = unitPrefs.distance;
   const efficiencyUnit = distanceUnit === 'mi' ? 'Wh/mi' : 'Wh/km';
 
-  const [vehicleId, setVehicleId] = useUrlString('vehicle_id', '');
+  const { vehicleId, setVehicleId } = useSelectedVehicle();
   const [periodA, setPeriodA] = useUrlEnum<PeriodValue>('period_a', PERIOD_VALUES, '30');
   const [periodB, setPeriodB] = useUrlEnum<PeriodValue>('period_b', PERIOD_VALUES, '90');
 
@@ -112,7 +113,7 @@ export default function PeriodComparePage() {
 
   const { data: vehicles } = useVehicles();
 
-  const activeVehicle = vehicleId || String(vehicles?.[0]?.id ?? '');
+  const activeVehicle = vehicleId == null ? '' : String(vehicleId);
   const daysA = PERIOD_DAYS[periodA] ?? 30;
   const daysB = PERIOD_DAYS[periodB] ?? 90;
 
@@ -293,7 +294,10 @@ export default function PeriodComparePage() {
         aria-label={t('compare.vehicle', 'Vehicle')}
         options={vehicleOptions}
         value={activeVehicle}
-        onChange={(e) => setVehicleId(e.target.value)}
+        onChange={(e) => {
+          const next = Number(e.target.value);
+          setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
+        }}
         placeholder={t('compare.selectVehicle', 'Select vehicle')}
         className="w-full sm:w-44"
       />

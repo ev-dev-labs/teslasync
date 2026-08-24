@@ -11,6 +11,7 @@
 export {
   notificationKeys as alertKeys,
   useAlerts,
+  usePriorityAlerts,
   useMarkAlertRead,
   useAlertRules,
   useAlertMetrics,
@@ -39,6 +40,7 @@ export type {
   AlertRuleSnoozeRequest,
   AlertRuleTriggerMode,
   AlertRuleUpdate,
+  PriorityAlertsSnapshot,
   AlertTestRequest,
   AlertTestTarget,
   ComputedMetricPreview,

@@ -38,7 +38,7 @@ export function InfrastructureSection() {
   // blank.
   const displayMode = connectionMode.trim() ? connectionMode : DASH;
   const speed = telemetry?.speed_comparison;
-  const pool = extHealth?.database_pool;
+  const pool = extHealth?.components?.database_pool;
 
   // Honest header status: don't claim "Disconnected" before the first fetch
   // resolves (that misleads operators into thinking streaming is down), and

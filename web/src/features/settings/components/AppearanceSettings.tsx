@@ -439,7 +439,10 @@ export function AppearanceSettings() {
                   {t('theme.statusBar.show', 'Show status bar')}
                 </Text>
                 <HelperText>
-                  {t('theme.statusBar.showHelp', 'Always-on footer with API health, live telemetry, vehicle, and version.')}
+                  {t(
+                    'theme.statusBar.showHelp',
+                    'Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.',
+                  )}
                 </HelperText>
               </div>
               <Toggle
@@ -461,7 +464,10 @@ export function AppearanceSettings() {
                   {t('theme.statusBar.iconOnly', 'Always icon-only')}
                 </Text>
                 <HelperText className={cn(!statusBarPrefs.enabled && 'opacity-50')}>
-                  {t('theme.statusBar.iconOnlyHelp', 'Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.')}
+                  {t(
+                    'theme.statusBar.iconOnlyHelp',
+                    'Hide labels at all widths. Lower-priority tools move into More on constrained screens.',
+                  )}
                 </HelperText>
               </div>
               <Toggle

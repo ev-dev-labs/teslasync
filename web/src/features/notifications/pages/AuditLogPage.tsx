@@ -84,7 +84,6 @@ export default function AuditLogPage() {
     <PageContainer
       title={t('Audit Log')}
       subtitle={t('Recent system-level changes recorded by the audit subsystem')}
-      className="max-w-5xl mx-auto"
     >
       <FadeIn>
         <GlassPanel className="p-6">

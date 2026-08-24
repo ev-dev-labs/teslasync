@@ -74,6 +74,7 @@ import {
   useUpdatePollingConfig,
   useCaptureStats,
   useVersionInfo,
+  useUpdateCheck,
   type DashboardLayoutsPayload,
   type PollingConfig,
 } from './useSettings';
@@ -897,5 +898,23 @@ describe('useVersionInfo', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
+  });
+});
+
+describe('useUpdateCheck', () => {
+  it('GETs /system/update-check and exposes update availability', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      current: '2.3.4',
+      latest: '2.4.0',
+      update_available: true,
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useUpdateCheck(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.update_available).toBe(true);
+    expect(callAt(0)[0]).toBe('/system/update-check');
+    expect(callAt(0)[1].signal).toBeInstanceOf(AbortSignal);
   });
 });

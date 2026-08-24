@@ -1,7 +1,7 @@
 import { describe, expect, it, beforeEach, vi } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import {
   SelectedVehicleProvider,
@@ -102,7 +102,11 @@ describe('useSelectedVehicle', () => {
   });
 
   it('setVehicleId updates both state and persistence', async () => {
-    const { result } = renderHook(() => useSelectedVehicle(), {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
       wrapper: makeWrapper(['/dashboard']),
     });
     await waitFor(() => expect(result.current.vehicleId).toBe(1));
@@ -111,15 +115,17 @@ describe('useSelectedVehicle', () => {
     });
     await waitFor(() => expect(result.current.vehicleId).toBe(2));
     expect(window.localStorage.getItem(STORAGE_KEY)).toBe('2');
+    expect(result.current.location.search).toBe('?vehicle_id=2');
   });
 
-  it('returns null vehicle when the id is not in the fleet', async () => {
+  it('repairs a persisted id that is no longer in the fleet', async () => {
     window.localStorage.setItem(STORAGE_KEY, '999');
     const { result } = renderHook(() => useSelectedVehicle(), {
       wrapper: makeWrapper(['/dashboard']),
     });
-    await waitFor(() => expect(result.current.vehicleId).toBe(999));
-    expect(result.current.vehicle).toBeNull();
+    await waitFor(() => expect(result.current.vehicleId).toBe(1));
+    expect(result.current.vehicle?.display_name).toBe('Roadster');
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('1');
   });
 
   it('ignores malformed ?vehicle_id values', async () => {
@@ -127,5 +133,106 @@ describe('useSelectedVehicle', () => {
       wrapper: makeWrapper(['/battery?vehicle_id=oops']),
     });
     await waitFor(() => expect(result.current.vehicleId).toBe(1));
+  });
+
+  it('preserves unrelated query params when a global selection changes', async () => {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper(['/period-compare?period_a=30&period_b=90']),
+    });
+
+    act(() => {
+      result.current.setVehicleId(2);
+    });
+
+    await waitFor(() => expect(result.current.vehicleId).toBe(2));
+    const params = new URLSearchParams(result.current.location.search);
+    expect(params.get('vehicle_id')).toBe('2');
+    expect(params.get('period_a')).toBe('30');
+    expect(params.get('period_b')).toBe('90');
+  });
+
+  it('updates an existing URL-backed vehicle filter instead of being overwritten by it', async () => {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper(['/battery?vehicle_id=1&t=2026-04-30T13:00:00Z']),
+    });
+
+    act(() => {
+      result.current.setVehicleId(2);
+    });
+
+    await waitFor(() => expect(result.current.vehicleId).toBe(2));
+    const params = new URLSearchParams(result.current.location.search);
+    expect(params.get('vehicle_id')).toBe('2');
+    expect(params.get('t')).toBe('2026-04-30T13:00:00Z');
+    expect(window.localStorage.getItem(STORAGE_KEY)).toBe('2');
+  });
+
+  it('rewrites vehicle detail paths when the global selection changes', async () => {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper(['/vehicles/1/access?tab=keys']),
+    });
+
+    act(() => {
+      result.current.setVehicleId(2);
+    });
+
+    await waitFor(() => expect(result.current.location.pathname).toBe('/vehicles/2/access'));
+    expect(result.current.location.search).toBe('?tab=keys');
+    expect(result.current.vehicleId).toBe(2);
+  });
+
+  it('repairs a deleted vehicle id in the URL while retaining the rest of the query', async () => {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper(['/battery?vehicle_id=999&signal=BatteryLevel']),
+    });
+
+    await waitFor(() => expect(result.current.vehicleId).toBe(1));
+    const params = new URLSearchParams(result.current.location.search);
+    expect(params.get('vehicle_id')).toBe('1');
+    expect(params.get('signal')).toBe('BatteryLevel');
+  });
+
+  it('repairs a deleted vehicle detail path while retaining its query', async () => {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper(['/vehicles/999?tab=overview']),
+    });
+
+    await waitFor(() => expect(result.current.location.pathname).toBe('/vehicles/1'));
+    expect(result.current.location.search).toBe('?tab=overview');
+    expect(result.current.vehicleId).toBe(1);
+  });
+
+  it('does not reinterpret multi-vehicle URL filters as the global selection', async () => {
+    window.localStorage.setItem(STORAGE_KEY, '2');
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper(['/notifications/inbox?vehicle_id=1,2']),
+    });
+
+    await waitFor(() => expect(result.current.vehicleId).toBe(2));
+    expect(result.current.location.search).toBe('?vehicle_id=1,2');
   });
 });

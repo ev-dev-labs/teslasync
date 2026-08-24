@@ -89,11 +89,9 @@ export default function LocationsPage() {
   usePageTitle(t('locations.title', 'Visited Locations'));
   const { formatDuration } = useUnits();
 
-  const [, setUrlVehicleId] = useUrlNumber('vehicle_id', 0);
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const onPickVehicle = (id: number) => {
     setVehicleId(id);
-    setUrlVehicleId(id);
   };
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;

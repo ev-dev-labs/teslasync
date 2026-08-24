@@ -1674,7 +1674,10 @@ export default function Layout() {
             statusBarPrefs.enabled && 'lg:pb-7 pb-20',
           )}
         >
-          <div className="mx-auto w-full max-w-[1920px] px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-8 2xl:px-10">
+          <div
+            data-role="page-viewport"
+            className="w-full px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-8 2xl:px-10"
+          >
             <LayoutBreadcrumbs className="min-w-0 text-xs" />
             <RouteTransition>
               <Outlet />

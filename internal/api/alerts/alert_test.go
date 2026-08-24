@@ -12,6 +12,7 @@ import (
 
 	notificationmodel "github.com/ev-dev-labs/teslasync/internal/models/notification"
 
+	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	alertmodel "github.com/ev-dev-labs/teslasync/internal/models/alert"
 
 	"github.com/go-chi/chi/v5"
@@ -631,7 +632,8 @@ func cloneAlertRuleForTest(rule *alertmodel.AlertRule) *alertmodel.AlertRule {
 }
 
 type fakeNotificationRepo struct {
-	logs []*notificationmodel.NotificationLog
+	logs            []*notificationmodel.NotificationLog
+	lastListFilters *dbnotif.NotificationLogFilters
 
 	// Alert ack and audit timeline state.
 	logsByID    map[int64]*notificationmodel.NotificationLog
@@ -643,10 +645,12 @@ type fakeNotificationRepo struct {
 	reopenErr        error
 	commentErr       error
 	listLogEventsErr error
+	bulkSetReadErr   error
 
 	ackCalls     []ackCall
 	reopenCalls  []reopenCall
 	commentCalls []commentCall
+	readCalls    []readCall
 }
 
 type ackCall struct {
@@ -666,11 +670,32 @@ type commentCall struct {
 	note  string
 }
 
+type readCall struct {
+	ids  []int64
+	read bool
+}
+
 func (f *fakeNotificationRepo) GetLogs(context.Context, int, int) ([]*notificationmodel.NotificationLog, error) {
 	if f.logs == nil {
 		return []*notificationmodel.NotificationLog{}, nil
 	}
 	return f.logs, nil
+}
+
+func (f *fakeNotificationRepo) GetLogsFiltered(_ context.Context, filters dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error) {
+	f.lastListFilters = &filters
+	if f.logs == nil {
+		return []*notificationmodel.NotificationLog{}, nil
+	}
+	return f.logs, nil
+}
+
+func (f *fakeNotificationRepo) BulkSetRead(_ context.Context, ids []int64, read bool) (int64, error) {
+	if f.bulkSetReadErr != nil {
+		return 0, f.bulkSetReadErr
+	}
+	f.readCalls = append(f.readCalls, readCall{ids: append([]int64(nil), ids...), read: read})
+	return int64(len(ids)), nil
 }
 
 func (f *fakeNotificationRepo) CreateLog(_ context.Context, log *notificationmodel.NotificationLog) error {
@@ -832,9 +857,10 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	}
 
 	now := time.Now().UTC()
+	readAt := now.Add(time.Second)
 	logs := []*notificationmodel.NotificationLog{
 		{ID: 1001, AlertID: &ruleCritID, Title: "Battery is low", Message: "5%", Status: "sent", CreatedAt: now},
-		{ID: 1002, AlertID: &ruleInfoID, Title: "Door unlocked", Message: "front-left", Status: "failed", CreatedAt: now},
+		{ID: 1002, AlertID: &ruleInfoID, Title: "Door unlocked", Message: "front-left", Status: "failed", CreatedAt: now, ReadAt: &readAt},
 		{ID: 1003, AlertID: nil, Title: "Test notification", Message: "hello", Status: "sent", CreatedAt: now},
 	}
 
@@ -898,6 +924,9 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[1].VehicleID != 0 {
 		t.Errorf("resp[1].VehicleID = %d, want 0 (rule had no vehicle)", resp[1].VehicleID)
 	}
+	if !resp[1].IsRead {
+		t.Errorf("resp[1].IsRead = false, want true")
+	}
 	// Drill-through metadata still propagates even when vehicle is nil.
 	if resp[1].RuleID == nil || *resp[1].RuleID != ruleInfoID {
 		t.Errorf("resp[1].RuleID = %v, want pointer to %d", resp[1].RuleID, ruleInfoID)
@@ -946,6 +975,94 @@ func TestAlertHandler_List_EmptyReturnsEmptyArray(t *testing.T) {
 	body := strings.TrimSpace(rec.Body.String())
 	if body != "[]" {
 		t.Fatalf("body = %q, want %q (must be empty array, not null)", body, "[]")
+	}
+}
+
+func TestAlertHandler_List_AppliesPriorityFilters(t *testing.T) {
+	notifRepo := &fakeNotificationRepo{}
+	handler := &AlertHandler{
+		alertRuleRepo: &fakeAlertRuleRepo{},
+		notifRepo:     notifRepo,
+	}
+
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(
+		http.MethodGet,
+		"/alerts?severity=warning,critical&read=false&archived=false&limit=51&offset=3",
+		nil,
+	)
+	handler.List(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if notifRepo.lastListFilters == nil {
+		t.Fatal("filtered repository was not called")
+	}
+	got := notifRepo.lastListFilters
+	if strings.Join(got.Severities, ",") != "warn,critical" {
+		t.Fatalf("severities = %v, want [warn critical]", got.Severities)
+	}
+	if !got.IncludeFailedInfoAsWarning {
+		t.Fatal("effective failed-info warning promotion was not requested")
+	}
+	if got.Read == nil || *got.Read {
+		t.Fatalf("read = %v, want false", got.Read)
+	}
+	if got.Archived == nil || *got.Archived {
+		t.Fatalf("archived = %v, want false", got.Archived)
+	}
+	if got.Limit != 51 || got.Offset != 3 {
+		t.Fatalf("pagination = (%d, %d), want (51, 3)", got.Limit, got.Offset)
+	}
+}
+
+func TestAlertHandler_List_RejectsInvalidFilters(t *testing.T) {
+	handler := &AlertHandler{
+		alertRuleRepo: &fakeAlertRuleRepo{},
+		notifRepo:     &fakeNotificationRepo{},
+	}
+
+	for _, rawQuery := range []string{
+		"severity=emergency",
+		"read=sometimes",
+		"archived=perhaps",
+	} {
+		t.Run(rawQuery, func(t *testing.T) {
+			rec := httptest.NewRecorder()
+			handler.List(
+				rec,
+				httptest.NewRequest(http.MethodGet, "/alerts?"+rawQuery, nil),
+			)
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusBadRequest, rec.Body.String())
+			}
+		})
+	}
+}
+
+func TestAlertHandler_MarkReadPersistsCanonicalReadState(t *testing.T) {
+	notifRepo := &fakeNotificationRepo{}
+	handler := &AlertHandler{notifRepo: notifRepo}
+	request := httptest.NewRequest(http.MethodPost, "/alerts/42/read", nil)
+	routeContext := chi.NewRouteContext()
+	routeContext.URLParams.Add("alertID", "42")
+	request = request.WithContext(
+		context.WithValue(request.Context(), chi.RouteCtxKey, routeContext),
+	)
+	rec := httptest.NewRecorder()
+
+	handler.MarkRead(rec, request)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d, body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	if len(notifRepo.readCalls) != 1 {
+		t.Fatalf("read calls = %d, want 1", len(notifRepo.readCalls))
+	}
+	call := notifRepo.readCalls[0]
+	if len(call.ids) != 1 || call.ids[0] != 42 || !call.read {
+		t.Fatalf("read call = %+v, want ids [42] and read=true", call)
 	}
 }
 

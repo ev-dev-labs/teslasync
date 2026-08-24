@@ -4,7 +4,13 @@ import { useMutationToast } from './_toastHelpers';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
-import type { AppSettings, GasPriceStatus, GasPriceHistory } from '@/api/types';
+import type {
+  AppSettings,
+  GasPriceStatus,
+  GasPriceHistory,
+  UpdateCheckResult,
+  VersionInfo,
+} from '@/api/types';
 
 export const settingsKeys = {
   settings: ['settings'] as const,
@@ -335,24 +341,21 @@ export function useCaptureStats() {
   });
 }
 
-interface VersionInfo {
-  chart_version: string;
-  go_version: string;
-  os: string;
-  arch: string;
-  endpoints: Record<string, string>;
-  // Server-declared GDPR / ePrivacy gate.
-  // When true, the SPA mounts the cookie consent banner on first
-  // visit and gates optional client-side reporting (web vitals,
-  // error reporter) on the user's stored consent. Default false on
-  // every existing self-hosted install.
-  require_cookie_consent?: boolean;
-}
-
-export function useVersionInfo() {
+export function useVersionInfo(options?: { refetchInterval?: number | false }) {
   return useQuery({
     queryKey: ['version'] as const,
     queryFn: ({ signal }) => request<VersionInfo>('/system/version', { signal }),
     staleTime: STALE_TIMES.STANDARD,
+    refetchInterval: options?.refetchInterval,
+  });
+}
+
+export function useUpdateCheck() {
+  return useQuery({
+    queryKey: ['update-check'] as const,
+    queryFn: ({ signal }) =>
+      request<UpdateCheckResult>('/system/update-check', { signal }),
+    staleTime: 3_600_000,
+    refetchInterval: 3_600_000,
   });
 }

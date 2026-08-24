@@ -42,6 +42,7 @@ import {
   useBackupConfigs,
   useBackupRuns,
   useSystemHealth,
+  useExtendedSystemHealth,
   useRuntimeStatus,
   useMaintenanceState,
   useUpdateMaintenance,
@@ -83,7 +84,15 @@ function makeWrapper() {
 }
 
 /** Reads back the [path, options] pair from the Nth request() call. */
-function callArgs(n = 0): [string, { method?: string; body?: unknown; signal?: unknown }] {
+function callArgs(n = 0): [
+  string,
+  {
+    method?: string;
+    body?: unknown;
+    signal?: unknown;
+    acceptedStatuses?: readonly number[];
+  },
+] {
   const call = mockedRequest.mock.calls[n];
   return call as [string, { method?: string; body?: unknown; signal?: unknown }];
 }
@@ -299,6 +308,10 @@ describe('useSystemHealth', () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(callArgs()[0]).toBe('/system/health');
+    expect(callArgs()[1]).toMatchObject({
+      signal: expect.any(AbortSignal),
+      acceptedStatuses: [503],
+    });
     expect(result.current.data?.status).toBe('degraded');
     expect(result.current.data?.tableCount).toBe(12);
   });
@@ -310,6 +323,33 @@ describe('useSystemHealth', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect((result.current.error as ApiError).status).toBe(503);
+  });
+});
+
+describe('useExtendedSystemHealth', () => {
+  it('does not request diagnostics until the admin surface enables it', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      status: 'healthy',
+      components: {
+        database: { status: 'healthy', latency_ms: 7 },
+      },
+    });
+    const { wrapper } = makeWrapper();
+    const { result, rerender } = renderHook(
+      ({ enabled }) => useExtendedSystemHealth({ enabled }),
+      { wrapper, initialProps: { enabled: false } },
+    );
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(mockedRequest).not.toHaveBeenCalled();
+
+    rerender({ enabled: true });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(callArgs()[0]).toBe('/system/health');
+    expect(callArgs()[1]).toMatchObject({
+      signal: expect.any(AbortSignal),
+      acceptedStatuses: [503],
+    });
   });
 });
 

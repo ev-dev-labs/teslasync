@@ -266,6 +266,7 @@ interface ResilientOptions extends RequestInit {
   retryDelay?: number     // initial delay ms (default 1000)
   timeout?: number        // request timeout ms (default 15000)
   dedupKey?: string       // dedup key for GET requests
+  acceptedStatuses?: readonly number[]
 }
 
 // The retry loop uses `abortableSleep` so retries respond immediately
@@ -528,6 +529,7 @@ export async function resilientFetch<T>(
     retryDelay = 1000,
     timeout = 15000,
     dedupKey,
+    acceptedStatuses = [],
     ...fetchOpts
   } = options
 
@@ -540,10 +542,28 @@ export async function resilientFetch<T>(
     ? (dedupKey || ((!fetchOpts.method || fetchOpts.method === 'GET') ? path : ''))
     : ''
   if (key) {
-    return dedup(key, () => _doFetch<T>(path, fetchOpts, retries, retryDelay, timeout))
+    return dedup(
+      key,
+      () =>
+        _doFetch<T>(
+          path,
+          fetchOpts,
+          retries,
+          retryDelay,
+          timeout,
+          acceptedStatuses,
+        ),
+    )
   }
 
-  return _doFetch<T>(path, fetchOpts, retries, retryDelay, timeout)
+  return _doFetch<T>(
+    path,
+    fetchOpts,
+    retries,
+    retryDelay,
+    timeout,
+    acceptedStatuses,
+  )
 }
 
 /**
@@ -645,6 +665,7 @@ async function _doFetch<T>(
   retries: number,
   retryDelay: number,
   timeout: number,
+  acceptedStatuses: readonly number[],
 ): Promise<T> {
   let lastError: Error | null = null
 
@@ -716,7 +737,7 @@ async function _doFetch<T>(
         throw new ApiError('Authentication session expired', 401)
       }
 
-      if (!res.ok) {
+      if (!res.ok && !acceptedStatuses.includes(res.status)) {
         const err = await res.json().catch(() => ({ error: res.statusText }))
         const errCode = typeof err.code === 'string' ? err.code : undefined
         const apiErr = new ApiError(err.error || `HTTP ${res.status}`, res.status, errCode)

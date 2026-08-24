@@ -40,6 +40,7 @@ export function BackendStatusSection() {
   });
 
   const isLoading = extLoading || poolLoading;
+  const system = extHealth?.components?.system;
 
   const componentRows: ComponentRow[] = useMemo(
     () =>
@@ -151,15 +152,15 @@ export function BackendStatusSection() {
             </div>
           )}
 
-          {(extHealth?.system || version) && (
+          {(system || version) && (
             <div>
               <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-3">{t('System Runtime')}</h4>
               <KVList
                 columns={2}
                 items={[
-                  { label: t('Go Version'), value: version?.go_version ?? extHealth?.system?.go_version ?? '—' },
-                  { label: t('Uptime'), value: formatUptime(version?.uptime_seconds ?? extHealth?.system?.uptime_seconds ?? 0) },
-                  { label: t('Goroutines'), value: fmtInt(version?.goroutines ?? extHealth?.system?.goroutines ?? 0) },
+                  { label: t('Go Version'), value: version?.go_version ?? system?.go_version ?? '—' },
+                  { label: t('Uptime'), value: formatUptime(version?.uptime_seconds ?? system?.uptime_seconds ?? 0) },
+                  { label: t('Goroutines'), value: fmtInt(version?.goroutines ?? system?.goroutines ?? 0) },
                   { label: t('OS / Arch'), value: version ? `${version.os} / ${version.arch}` : '—' },
                 ]}
               />

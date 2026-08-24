@@ -203,10 +203,21 @@ function systemHealth(over: Record<string, unknown> = {}) {
 function extHealth(over: Record<string, unknown> = {}) {
   return {
     status: 'healthy',
-    components: {},
-    database: { status: 'ok', latency_ms: 12.4 },
-    database_pool: { total_conns: 25, idle_conns: 20, acquired_conns: 5 },
-    system: { goroutines: 150, go_version: 'go1.25', uptime_seconds: 3600 },
+    components: {
+      database: { status: 'ok', latency_ms: 12.4 },
+      database_pool: {
+        status: 'healthy',
+        total_conns: 25,
+        idle_conns: 20,
+        acquired_conns: 5,
+      },
+      system: {
+        status: 'healthy',
+        goroutines: 150,
+        go_version: 'go1.25',
+        uptime_seconds: 3600,
+      },
+    },
     ...over,
   }
 }
@@ -464,6 +475,18 @@ describe('SystemStatusPage — healthy populated view', () => {
     expect(screen.getByText('App version')).toBeInTheDocument()
     expect(screen.getByText('1.2.3')).toBeInTheDocument()
     expect(screen.getByText('linux/amd64')).toBeInTheDocument()
+  })
+
+  it('reports an unhealthy database as down rather than degraded', () => {
+    const unhealthy = extHealth()
+    unhealthy.components.database.status = 'unhealthy'
+    inline['extended-health'] = unhealthy
+
+    renderPage()
+
+    const databaseSection = document.querySelector('#database')
+    expect(databaseSection).not.toBeNull()
+    expect(within(databaseSection as HTMLElement).getByText('down')).toBeInTheDocument()
   })
 
   it('renders the reliability band: 30-day uptime, clean errors, empty action items', () => {

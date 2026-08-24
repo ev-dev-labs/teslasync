@@ -176,8 +176,9 @@ function selectVehicle(id = '1') {
   });
 }
 
-describe('LiveSignalInspectorPage — no vehicle selected', () => {
+describe('LiveSignalInspectorPage — empty fleet', () => {
   it('shows a per-section "pick a vehicle" affordance in every data panel and disables refresh', () => {
+    mockedUseVehicles.mockReturnValue({ data: [], isLoading: false });
     renderPage();
 
     expect(screen.getByText(NO_VEHICLE_TABLE_MSG)).toBeInTheDocument();
@@ -199,7 +200,8 @@ describe('LiveSignalInspectorPage — no vehicle selected', () => {
     expect(kpi.getByText('—')).toBeInTheDocument();
   });
 
-  it('leaves the live query disabled while no vehicle is picked', () => {
+  it('leaves the live query disabled when no vehicle exists', () => {
+    mockedUseVehicles.mockReturnValue({ data: [], isLoading: false });
     renderPage();
     expect(mockedUseLive).toHaveBeenCalledWith(
       undefined,
@@ -209,16 +211,15 @@ describe('LiveSignalInspectorPage — no vehicle selected', () => {
 });
 
 describe('LiveSignalInspectorPage — vehicle selection wiring', () => {
-  it('enables the 1 s poll for the chosen vehicle and surfaces the live indicator + refresh', () => {
+  it('defaults to the global vehicle and enables the 1 s poll immediately', () => {
     setLive({ data: readyData(), dataUpdatedAt: Date.now() });
     renderPage();
-
-    selectVehicle('1');
 
     expect(mockedUseLive).toHaveBeenCalledWith(
       1,
       expect.objectContaining({ enabled: true, refetchInterval: 1000 }),
     );
+    expect(screen.getByRole('combobox', { name: 'Vehicle' })).toHaveValue('1');
     expect(screen.getByRole('button', { name: 'Refresh live snapshot' })).toBeEnabled();
     expect(screen.getByRole('status', { name: 'Live' })).toBeInTheDocument();
   });

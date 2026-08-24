@@ -141,7 +141,7 @@ export default function CommandHistoryPage() {
   // (deep-links from notifications), persists across pages via localStorage,
   // and falls back to the first vehicle. We mirror picker changes back to
   // the URL so /command-history?vehicle_id=N stays bookmarkable.
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles } = useSelectedVehicle();
   const activeVehicleId = vehicleId != null ? String(vehicleId) : undefined;
   const noVehicle = !activeVehicleId;
 
@@ -195,7 +195,6 @@ export default function CommandHistoryPage() {
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const n = Number(e.target.value);
     if (Number.isFinite(n) && n > 0) {
-      setVehicleId(n);
       setUrl({ vehicle_id: e.target.value, page: null });
     }
   };

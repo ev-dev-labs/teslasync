@@ -1,197 +1,203 @@
-/**
- * HelpSegment behaviour tests.
- *
- * HelpSegment is the footer status-bar cluster of the three "always available"
- * help affordances (keyboard shortcuts, tour launcher, bug report). Each button
- * stays decoupled from the React tree and fires a window CustomEvent (or the
- * tourRegistry dispatcher) that Layout listens for. These tests lock:
- *   - the three buttons render as real, typed <button>s with icon-only-safe
- *     accessible names (the aria-label is load-bearing when labels collapse),
- *   - each click fires exactly the event/dispatcher Layout wires up,
- *   - keyboard activation (Enter) works — they are genuine buttons,
- *   - expanded vs icon-only progressive label disclosure,
- *   - decorative icons are hidden from assistive tech,
- *   - the integration hooks other surfaces depend on (data-tour target that the
- *     onboarding tour aims at, the launcher trigger attr, the feedback testid).
- */
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, cleanup, fireEvent } from '@testing-library/react'
+const mocks = vi.hoisted(() => ({
+  dispatchTourLauncherOpen: vi.fn(),
+  onOpenAbout: vi.fn(),
+  updateAvailable: false,
+  hasUnseen: false,
+}));
 
-// Deterministic i18n: t(key, fallback) resolves to the English fallback so the
-// assertions read the shipped copy without coupling to the translation JSON.
-vi.mock('react-i18next', async () => {
-  const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
-  return {
-    ...actual,
-    useTranslation: () => ({
-      t: (_key: string, fallback?: string) => fallback ?? _key,
-      i18n: { language: 'en', changeLanguage: vi.fn() },
-    }),
-  }
-})
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({
+    t: (_key: string, fallback?: string) => fallback ?? _key,
+  }),
+}));
 
-// Isolate the tour dispatcher — importing the real module pulls the entire tour
-// registry (every tour definition + useTour). We only need to observe that the
-// tour button invokes it. Hoisted so the mock factory can reference the spy.
-const mocks = vi.hoisted(() => ({ dispatchTourLauncherOpen: vi.fn() }))
 vi.mock('@/lib/tourRegistry', () => ({
   dispatchTourLauncherOpen: mocks.dispatchTourLauncherOpen,
-}))
+}));
 
-import { HelpSegment } from './HelpSegment'
+vi.mock('@/api/hooks/useSettings', () => ({
+  useUpdateCheck: () => ({
+    data: { update_available: mocks.updateAvailable },
+  }),
+}));
 
-const SHORTCUTS_LABEL = 'Open keyboard shortcuts'
-const TOUR_LABEL = 'Open tour launcher'
-const FEEDBACK_LABEL = 'Open feedback / bug report form'
+vi.mock('@/hooks/useChangelog', () => ({
+  useChangelog: () => ({ hasUnseen: mocks.hasUnseen }),
+}));
+
+vi.mock('./VersionSegment', async () => {
+  const { Button } = await vi.importActual<typeof import('@/components/ui')>(
+    '@/components/ui',
+  );
+
+  return {
+    VersionSegment: ({
+      onOpenAbout,
+    }: {
+      onOpenAbout?: () => void;
+    }) => (
+      <Button
+        type="button"
+        data-testid="status-bar-about-trigger"
+        onClick={onOpenAbout}
+      >
+        About TeslaSync
+      </Button>
+    ),
+  };
+});
+
+import { HelpSegment } from './HelpSegment';
+
+beforeEach(() => {
+  mocks.updateAvailable = false;
+  mocks.hasUnseen = false;
+});
 
 afterEach(() => {
-  cleanup()
-  vi.clearAllMocks()
-})
+  cleanup();
+  vi.clearAllMocks();
+});
+
+function openHelp() {
+  fireEvent.click(screen.getByRole('button', { name: 'Open help and about' }));
+}
 
 describe('HelpSegment', () => {
-  it('renders the three help buttons as typed buttons with icon-only-safe names', () => {
-    render(<HelpSegment />)
+  it('renders one coordinated Help/About trigger', () => {
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
 
-    const shortcuts = screen.getByRole('button', { name: SHORTCUTS_LABEL })
-    const tour = screen.getByRole('button', { name: TOUR_LABEL })
-    const feedback = screen.getByRole('button', { name: FEEDBACK_LABEL })
+    const trigger = screen.getByRole('button', { name: 'Open help and about' });
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog');
+    expect(trigger).toHaveAttribute('aria-expanded', 'false');
+    expect(trigger).toHaveTextContent('Help');
+  });
 
-    expect(screen.getAllByRole('button')).toHaveLength(3)
-    expect(shortcuts).toHaveAttribute('type', 'button')
-    expect(tour).toHaveAttribute('type', 'button')
-    expect(feedback).toHaveAttribute('type', 'button')
-  })
+  it('opens a menu containing help actions and About TeslaSync', () => {
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+    openHelp();
 
-  it('hides the decorative icons from assistive tech (button has the a11y name)', () => {
-    const { container } = render(<HelpSegment />)
+    expect(screen.getByRole('dialog', { name: 'Help & support' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open keyboard shortcuts' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open tour launcher' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Open feedback / bug report form' }),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('status-bar-about-trigger')).toHaveTextContent(
+      'About TeslaSync',
+    );
+  });
 
-    // Every icon is aria-hidden; the accessible name comes from aria-label so
-    // the buttons stay announced even when their visible labels collapse.
-    expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(3)
-    expect(screen.getByRole('button', { name: SHORTCUTS_LABEL })).toHaveAccessibleName(
-      SHORTCUTS_LABEL,
-    )
-  })
-
-  it('clicking the shortcuts button dispatches a toggle-keyboard-shortcuts CustomEvent', () => {
-    const listener = vi.fn()
-    window.addEventListener('toggle-keyboard-shortcuts', listener)
+  it('dispatches the shortcuts event and closes the menu', () => {
+    const listener = vi.fn();
+    window.addEventListener('toggle-keyboard-shortcuts', listener);
     try {
-      render(<HelpSegment />)
-      fireEvent.click(screen.getByRole('button', { name: SHORTCUTS_LABEL }))
+      render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+      openHelp();
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Open keyboard shortcuts' }),
+      );
 
-      expect(listener).toHaveBeenCalledTimes(1)
-      const evt = listener.mock.calls[0][0] as Event
-      expect(evt).toBeInstanceOf(CustomEvent)
-      expect(evt.type).toBe('toggle-keyboard-shortcuts')
+      expect(listener).toHaveBeenCalledTimes(1);
+      expect(screen.queryByRole('dialog', { name: 'Help & support' })).toBeNull();
     } finally {
-      window.removeEventListener('toggle-keyboard-shortcuts', listener)
+      window.removeEventListener('toggle-keyboard-shortcuts', listener);
     }
-  })
+  });
 
-  it('clicking the feedback button dispatches an open-feedback-modal CustomEvent', () => {
-    const listener = vi.fn()
-    window.addEventListener('open-feedback-modal', listener)
+  it('dispatches the feedback event and tour launcher', () => {
+    const listener = vi.fn();
+    window.addEventListener('open-feedback-modal', listener);
     try {
-      render(<HelpSegment />)
-      fireEvent.click(screen.getByRole('button', { name: FEEDBACK_LABEL }))
+      const { rerender } = render(
+        <HelpSegment onOpenAbout={mocks.onOpenAbout} />,
+      );
+      openHelp();
+      fireEvent.click(
+        screen.getByRole('button', {
+          name: 'Open feedback / bug report form',
+        }),
+      );
+      expect(listener).toHaveBeenCalledTimes(1);
 
-      expect(listener).toHaveBeenCalledTimes(1)
-      expect((listener.mock.calls[0][0] as Event).type).toBe('open-feedback-modal')
+      rerender(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+      openHelp();
+      fireEvent.click(screen.getByRole('button', { name: 'Open tour launcher' }));
+      expect(mocks.dispatchTourLauncherOpen).toHaveBeenCalledTimes(1);
     } finally {
-      window.removeEventListener('open-feedback-modal', listener)
+      window.removeEventListener('open-feedback-modal', listener);
     }
-  })
+  });
 
-  it('clicking the tour button invokes the tour launcher dispatcher exactly once', () => {
-    render(<HelpSegment />)
+  it('keeps action integration attributes in the menu', () => {
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+    openHelp();
 
-    fireEvent.click(screen.getByRole('button', { name: TOUR_LABEL }))
-
-    expect(mocks.dispatchTourLauncherOpen).toHaveBeenCalledTimes(1)
-  })
-
-  it('each control is a focusable native button (keyboard operable) that fires its action', () => {
-    const listener = vi.fn()
-    window.addEventListener('toggle-keyboard-shortcuts', listener)
-    try {
-      render(<HelpSegment />)
-      const btn = screen.getByRole('button', { name: SHORTCUTS_LABEL })
-
-      // Native <button> ⇒ inherent Enter/Space activation + tab focusability.
-      expect(btn.tagName).toBe('BUTTON')
-      btn.focus()
-      expect(btn).toHaveFocus()
-
-      fireEvent.click(btn)
-      expect(listener).toHaveBeenCalledTimes(1)
-    } finally {
-      window.removeEventListener('toggle-keyboard-shortcuts', listener)
-    }
-  })
-
-  it('does not fire any action on mount (only on interaction)', () => {
-    const shortcutsListener = vi.fn()
-    const feedbackListener = vi.fn()
-    window.addEventListener('toggle-keyboard-shortcuts', shortcutsListener)
-    window.addEventListener('open-feedback-modal', feedbackListener)
-    try {
-      render(<HelpSegment />)
-
-      expect(shortcutsListener).not.toHaveBeenCalled()
-      expect(feedbackListener).not.toHaveBeenCalled()
-      expect(mocks.dispatchTourLauncherOpen).not.toHaveBeenCalled()
-    } finally {
-      window.removeEventListener('toggle-keyboard-shortcuts', shortcutsListener)
-      window.removeEventListener('open-feedback-modal', feedbackListener)
-    }
-  })
-
-  it('expanded mode (default) shows the ? hint and the inline label copy', () => {
-    render(<HelpSegment />)
-
-    expect(screen.getByText('?')).toBeInTheDocument()
-    expect(screen.getByText('for shortcuts')).toBeInTheDocument()
-    // Each of these labels appears twice: the tooltip body + the inline span.
-    expect(screen.getAllByText('Take a tour')).toHaveLength(2)
-    expect(screen.getAllByText('Report bug')).toHaveLength(2)
-  })
-
-  it('icon-only mode hides the ? hint and every inline label (tooltip copy remains)', () => {
-    render(<HelpSegment iconOnly />)
-
-    expect(screen.queryByText('?')).not.toBeInTheDocument()
-    expect(screen.queryByText('for shortcuts')).not.toBeInTheDocument()
-    // Only the tooltip body survives now — the inline visible spans are gone.
-    expect(screen.getAllByText('Take a tour')).toHaveLength(1)
-    expect(screen.getAllByText('Report bug')).toHaveLength(1)
-    // ...but the buttons and their accessible names still work.
-    expect(screen.getByRole('button', { name: SHORTCUTS_LABEL })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: TOUR_LABEL })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: FEEDBACK_LABEL })).toBeInTheDocument()
-  })
-
-  it('preserves the integration hooks other surfaces depend on', () => {
-    const { container } = render(<HelpSegment />)
-
-    // The main onboarding tour aims at [data-tour="keyboard-hint"].
-    expect(container.querySelector('[data-tour="keyboard-hint"]')).not.toBeNull()
-    // Tour launcher trigger attribute + feedback test id both stay wired.
-    expect(screen.getByRole('button', { name: TOUR_LABEL })).toHaveAttribute(
+    expect(
+      screen.getByRole('button', { name: 'Open keyboard shortcuts' }),
+    ).not.toHaveAttribute('data-tour');
+    expect(
+      screen.getByRole('button', { name: 'Open help and about' }),
+    ).toHaveAttribute('data-tour', 'keyboard-hint');
+    expect(screen.getByRole('button', { name: 'Open tour launcher' })).toHaveAttribute(
       'data-tour-launcher-trigger',
-    )
-    expect(screen.getByTestId('status-bar-feedback-trigger')).toBe(
-      screen.getByRole('button', { name: FEEDBACK_LABEL }),
-    )
-  })
+    );
+    expect(screen.getByTestId('status-bar-feedback-trigger')).toBeInTheDocument();
+  });
 
-  it('defaults to expanded mode when iconOnly is omitted', () => {
-    const { rerender } = render(<HelpSegment iconOnly={false} />)
-    expect(screen.getByText('for shortcuts')).toBeInTheDocument()
+  it('supports icon-only mode without losing its accessible name', () => {
+    render(
+      <HelpSegment
+        iconOnly
+        onOpenAbout={mocks.onOpenAbout}
+      />,
+    );
 
-    rerender(<HelpSegment />)
-    expect(screen.getByText('for shortcuts')).toBeInTheDocument()
-  })
-})
+    expect(screen.queryByText('Help')).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Open help and about' }),
+    ).toBeInTheDocument();
+  });
+
+  it('renders menu content directly when embedded in More', () => {
+    render(
+      <HelpSegment
+        embedded
+        onOpenAbout={mocks.onOpenAbout}
+      />,
+    );
+
+    expect(screen.queryByRole('button', { name: 'Open help and about' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Open keyboard shortcuts' })).toBeInTheDocument();
+    expect(screen.getByTestId('status-bar-about-trigger')).toBeInTheDocument();
+  });
+
+  it('shows a build-news indicator for updates or unseen release notes', () => {
+    mocks.updateAvailable = true;
+    const { container } = render(
+      <HelpSegment onOpenAbout={mocks.onOpenAbout} />,
+    );
+
+    expect(container.querySelector('.bg-amber-400')).not.toBeNull();
+    expect(
+      screen.getByRole('button', {
+        name: 'Open help and about. Update or release notes available',
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('closes the menu before handing About to its persistent owner', () => {
+    render(<HelpSegment onOpenAbout={mocks.onOpenAbout} />);
+    openHelp();
+
+    fireEvent.click(screen.getByTestId('status-bar-about-trigger'));
+
+    expect(mocks.onOpenAbout).toHaveBeenCalledTimes(1);
+    expect(
+      screen.queryByRole('dialog', { name: 'Help & support' }),
+    ).toBeNull();
+  });
+});

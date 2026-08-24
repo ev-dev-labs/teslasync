@@ -30,6 +30,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createElement, type ReactNode } from 'react';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
 // jsdom lacks matchMedia; install a benign stub before the shared UI barrel that
 // useWeeklyDigest pulls in (via @/components/charts) can read it at import time.
@@ -191,7 +192,11 @@ function renderDigest() {
   });
   return renderHook(() => useWeeklyDigest(), {
     wrapper: ({ children }: { children: ReactNode }) =>
-      createElement(QueryClientProvider, { client }, children),
+      createElement(
+        MemoryRouter,
+        null,
+        createElement(QueryClientProvider, { client }, children),
+      ),
   });
 }
 
