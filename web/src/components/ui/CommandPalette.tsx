@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Search, Command, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
+  Search, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
   Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
   FileText, CalendarDays, X,
 } from 'lucide-react'
@@ -248,11 +248,13 @@ function formatRecentVisitedAgo(t: TFunction, visitedAt: number, now: number): s
 interface CommandPaletteProps {
   /** Called when the palette opens — Layout uses this to close the mobile sidebar */
   onOpen?: () => void
+  /** Used by the lazy host so the invocation that loaded the chunk is not lost. */
+  initialOpen?: boolean
 }
 
-export function CommandPalette({ onOpen }: CommandPaletteProps) {
+export function CommandPalette({ onOpen, initialOpen = false }: CommandPaletteProps) {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(false)
+  const [open, setOpen] = useState(initialOpen)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const [mode, setMode] = useState<'search' | 'vehicle-select'>('search')
@@ -1027,25 +1029,5 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
         </>
       )}
     </AnimatePresence>
-  )
-}
-
-// ─── Trigger button for the sidebar ─────────────────────────────────────────
-
-export function CommandPaletteTrigger() {
-  const { t } = useTranslation()
-  return (
-    <button
-      type="button"
-      onClick={() => window.dispatchEvent(new CustomEvent('toggle-command-palette'))}
-      aria-label={t('palette.placeholder', 'Search pages, commands…')}
-      className="flex w-full items-center gap-3 rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 py-2 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
-    >
-      <Search className="h-4 w-4" />
-      <span className="min-w-0 flex-1 truncate text-left">{t('palette.placeholder', 'Search pages, commands…')}</span>
-      <kbd className="hidden items-center gap-0.5 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:flex">
-        <Command className="h-2.5 w-2.5" />K
-      </kbd>
-    </button>
   )
 }

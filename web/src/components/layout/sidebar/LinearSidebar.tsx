@@ -32,7 +32,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GuardedNavLink } from '../../feedback/GuardedLink'
+import { PrefetchNavLink } from '../PrefetchLink'
 import { Button } from '@/components/ui'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -129,7 +129,7 @@ function LinearNavLink({
           className="absolute start-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-e-sm bg-[var(--theme-primary)]"
         />
       )}
-      <GuardedNavLink
+      <PrefetchNavLink
         to={to}
         onClick={onSelect}
         aria-current={active ? 'page' : false}
@@ -151,7 +151,7 @@ function LinearNavLink({
         />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {trailing}
-      </GuardedNavLink>
+      </PrefetchNavLink>
       {hoverAction && (
         <div className="ms-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           {hoverAction}

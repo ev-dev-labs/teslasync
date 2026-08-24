@@ -1,6 +1,6 @@
 import type { MouseEvent, FocusEvent } from 'react'
-import type { LinkProps } from 'react-router-dom'
-import { GuardedLink } from '../feedback/GuardedLink'
+import type { LinkProps, NavLinkProps } from 'react-router-dom'
+import { GuardedLink, GuardedNavLink } from '../feedback/GuardedLink'
 import { prefetchRoute } from '@/lib/routePrefetch'
 
 /**
@@ -28,6 +28,7 @@ import { prefetchRoute } from '@/lib/routePrefetch'
  * require an `<a>` ref.
  */
 export type PrefetchLinkProps = LinkProps
+export type PrefetchNavLinkProps = NavLinkProps
 
 function pathFromTo(to: LinkProps['to']): string {
   if (typeof to === 'string') return to
@@ -43,6 +44,30 @@ export function PrefetchLink({
   const path = pathFromTo(to)
   return (
     <GuardedLink
+      to={to}
+      {...rest}
+      onMouseEnter={(e: MouseEvent<HTMLAnchorElement>) => {
+        prefetchRoute(path)
+        onMouseEnter?.(e)
+      }}
+      onFocus={(e: FocusEvent<HTMLAnchorElement>) => {
+        prefetchRoute(path)
+        onFocus?.(e)
+      }}
+    />
+  )
+}
+
+/** Active-state variant of {@link PrefetchLink} for primary navigation. */
+export function PrefetchNavLink({
+  to,
+  onMouseEnter,
+  onFocus,
+  ...rest
+}: PrefetchNavLinkProps) {
+  const path = pathFromTo(to)
+  return (
+    <GuardedNavLink
       to={to}
       {...rest}
       onMouseEnter={(e: MouseEvent<HTMLAnchorElement>) => {

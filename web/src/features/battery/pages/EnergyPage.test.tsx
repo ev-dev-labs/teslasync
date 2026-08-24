@@ -158,9 +158,12 @@ const defaultStats: EnergyStats = {
   daily_breakdown: [
     { date: '2025-06-01', energy_wh: 10000, cost: 3, distance_m: 50000, efficiency_wh_per_m: 0.2 },
     { date: '2025-06-02', energy_wh: 12000, cost: 4, distance_m: 60000, efficiency_wh_per_m: 0.19 },
-    { date: '2025-06-03', energy_wh: 8000, cost: 2, distance_m: 40000, efficiency_wh_per_m: 0.21 },
+    { date: '2025-06-03', energy_wh: 14000, cost: 2, distance_m: 90000, efficiency_wh_per_m: 0.16 },
+    // The start-bounded endpoint can include rows after a historical range's
+    // selected end. The page must filter these before deriving its metrics.
+    { date: '2025-07-01', energy_wh: 100000, cost: 20, distance_m: 1000000, efficiency_wh_per_m: 0.1 },
   ],
-}
+};
 
 // One session per charger family so the breakdown resolves all three labels:
 //   Tesla → Supercharger, non-Tesla type (CCS) → DC Fast, null → Home/AC.
@@ -218,7 +221,7 @@ function install(opts: InstallOpts = {}) {
 
   mockedRequest.mockImplementation((path: string) => {
     if (path === '/vehicles') return Promise.resolve(vehicles)
-    if (path.includes('/energy?days=')) {
+    if (path.includes('/energy?start=')) {
       if (statsPending) return never()
       if (statsError) return Promise.reject(new Error('energy boom'))
       return Promise.resolve(stats)
@@ -232,7 +235,7 @@ function install(opts: InstallOpts = {}) {
 }
 
 const energyCallCount = () =>
-  mockedRequest.mock.calls.filter((c) => String(c[0]).includes('/energy?days=')).length
+  mockedRequest.mock.calls.filter((c) => String(c[0]).includes('/energy?start=')).length
 
 function renderPage(initialEntries: string[] = ['/energy']) {
   const client = new QueryClient({

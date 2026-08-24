@@ -110,25 +110,11 @@ export function HistoryListRow({
       data-testid={testId ? `${testId}-panel` : undefined}
       className={cn(
         'p-3 sm:p-4 transition-all duration-normal group cursor-pointer relative',
+        actions && actions.length > 0 && 'pe-14',
         selected && 'border-cyan-400/40 ring-1 ring-cyan-400/20',
         className,
       )}
     >
-      {actions && actions.length > 0 && (
-        <div
-          className={cn(
-            'absolute right-2 top-2 z-10 flex items-center gap-1',
-            'opacity-0 transition-opacity duration-fast',
-            'group-hover:opacity-100 group-focus-within:opacity-100',
-          )}
-          onClick={stop}
-        >
-          {actions.map((node, i) => (
-            <span key={i}>{node}</span>
-          ))}
-        </div>
-      )}
-
       <div className="flex items-center gap-3">
         {leading != null && (
           <div className="shrink-0 w-9 text-center">{leading}</div>
@@ -154,7 +140,7 @@ export function HistoryListRow({
 
   return (
     <div
-      className="flex items-stretch gap-2"
+      className="group/row relative flex items-stretch gap-2"
       data-testid={testId}
     >
       {checkbox != null && (
@@ -168,6 +154,19 @@ export function HistoryListRow({
         </Link>
       ) : (
         <div className="flex-1 min-w-0">{body}</div>
+      )}
+      {actions && actions.length > 0 && (
+        <div
+          className={cn(
+            'absolute end-2 top-2 z-10 flex items-center gap-1',
+            'opacity-100 transition-opacity duration-fast sm:opacity-0',
+            'sm:group-hover/row:opacity-100 sm:group-focus-within/row:opacity-100',
+          )}
+        >
+          {actions.map((node, i) => (
+            <span key={i}>{node}</span>
+          ))}
+        </div>
       )}
     </div>
   );

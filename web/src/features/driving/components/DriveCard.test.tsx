@@ -203,6 +203,17 @@ describe('DriveCard — primary line + status badge', () => {
     renderCard({ isAnomaly: false });
     expect(screen.queryByText('Low efficiency')).toBeNull();
   });
+
+  it('opens the quick preview without nesting the action in the detail link', () => {
+    const onPreview = vi.fn();
+    renderCard({ onPreview });
+
+    const action = screen.getByRole('button', { name: 'Quick view drive' });
+    fireEvent.click(action);
+
+    expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    expect(screen.getByRole('link')).not.toContainElement(action);
+  });
 });
 
 describe('DriveCard — metric chips', () => {

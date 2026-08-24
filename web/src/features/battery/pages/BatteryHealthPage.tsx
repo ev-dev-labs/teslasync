@@ -16,7 +16,14 @@ import {
 } from '@/components/ui';
 import { gaugeTone, severityTokens, type GaugeTone, type Severity } from '@/lib/tokens';
 import { LinearGauge } from '@/components/charts';
-import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
+import {
+  DataFreshnessAuto,
+  MetricCard,
+  MetricBar,
+  LiveIndicator,
+  OperationalBrief,
+  type OperationalTone,
+} from '@/components/data-display';
 import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AIBatteryHealthForecastNarrative } from '@/components/ai/AIBatteryHealthForecastNarrative';
@@ -178,8 +185,8 @@ export default function BatteryHealthPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
   /* ── Data fetching ─────────────────────────────────────────────── */
-  const { data: health, isLoading: healthLoading, error: healthError } =
-    useBatteryHealthAnalytics(vehicleIdStr);
+  const healthQuery = useBatteryHealthAnalytics(vehicleIdStr);
+  const { data: health, isLoading: healthLoading, error: healthError } = healthQuery;
   const { data: chargingLive } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived: insights & recommendations ───────────────────────── */
@@ -249,6 +256,24 @@ export default function BatteryHealthPage() {
   // access so the "New vs Now" range cells degrade to a placeholder instead
   // of throwing on `.length` / `[0]`.
   const history = health.history ?? [];
+  const healthOperationalTone: OperationalTone =
+    health.current_soh >= 90
+      ? 'success'
+      : health.current_soh >= 70
+        ? 'warning'
+        : 'danger';
+  const healthAttention = insights.slice(0, 4).map((item, index) => ({
+    key: `battery-insight-${index}`,
+    title: t('operations.battery.signalTitle', 'Signal: {{title}}', {
+      title: item.title,
+    }),
+    description: item.description,
+    tone: item.status === 'good'
+      ? 'success' as const
+      : item.status === 'warning'
+        ? 'warning' as const
+        : 'danger' as const,
+  }));
 
   /* ── Main render ───────────────────────────────────────────────── */
   return (
@@ -258,6 +283,84 @@ export default function BatteryHealthPage() {
       actions={pageActions}
     >
       <LiveStaleDataBanner />
+
+      <OperationalBrief
+        testId="battery-operational-brief"
+        eyebrow={t('operations.battery.eyebrow', 'Battery posture')}
+        title={t('operations.battery.title', 'Long-term pack health remains measurable and actionable')}
+        description={t(
+          'operations.battery.description',
+          'Health, degradation, charge-cycle exposure, and projection confidence are summarized before the deeper evidence.',
+        )}
+        statusLabel={
+          health.current_soh >= 90
+            ? t('operations.battery.statusHealthy', 'Healthy')
+            : health.current_soh >= 70
+              ? t('operations.battery.statusMonitor', 'Monitor')
+              : t('operations.battery.statusService', 'Service review')
+        }
+        statusTone={healthOperationalTone}
+        freshness={<DataFreshnessAuto query={healthQuery} />}
+        scope={
+          <Badge variant="neutral" size="sm">
+            {t('operations.scope.lifetime', 'Lifetime model')}
+          </Badge>
+        }
+        metrics={[
+          {
+            key: 'health',
+            label: t('operations.battery.packScore', 'Pack score'),
+            value: fmtPercent(health.current_soh),
+            detail: t(
+              'operations.battery.healthDetail',
+              'Current modeled health relative to the original usable pack.',
+            ),
+            tone: healthOperationalTone,
+          },
+          {
+            key: 'degradation',
+            label: t('operations.battery.degradationPace', 'Degradation pace'),
+            value: `${fmtNumber(health.degradation_rate_pct_per_year, 2)}%/${t('battery.yr', 'yr')}`,
+            detail: t(
+              'operations.battery.degradationDetail',
+              'Annualized capacity change inferred from available history.',
+            ),
+            tone: health.degradation_rate_pct_per_year <= 5 ? 'success' : 'warning',
+          },
+          {
+            key: 'projection',
+            label: t('operations.battery.projectionHorizon', 'Projection horizon'),
+            value: projectionTrustworthy
+              ? `${yearsTo80} ${t('battery.yr', 'yr')}`
+              : yearsTo80,
+            detail: projectionTrustworthy
+              ? t(
+                  'operations.battery.projectionDetail',
+                  'Projected time to the common warranty-health threshold.',
+                )
+              : t(
+                  'operations.battery.projectionUnavailable',
+                  'More stable history is required for a trustworthy projection.',
+                ),
+            tone: projectionTrustworthy ? 'info' : 'warning',
+          },
+          {
+            key: 'cycles',
+            label: t('operations.battery.cycleExposure', 'Cycle exposure'),
+            value: fmtNumber(health.total_cycles, 0),
+            detail: t(
+              'operations.battery.cyclesDetail',
+              'Equivalent full cycles accumulated across charging activity.',
+            ),
+            tone: 'neutral',
+          },
+        ]}
+        attention={healthAttention}
+        provenance={t(
+          'operations.battery.provenance',
+          'Calculated from battery-health snapshots, charging history, and the latest available BMS telemetry.',
+        )}
+      />
 
       {/* AI battery-health forecast narrator. Hidden when ai_mode='off' or
           the per-feature toggle is off; baseline chart remains. */}

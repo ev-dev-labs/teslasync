@@ -6,6 +6,7 @@ import { ToastProvider } from '@/components/feedback/Toast'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
 import { SelectedVehicleProvider } from '@/store/selectedVehicle'
 import { CommandPalette, addRecentCommand, getRecentCommands } from '../CommandPalette'
+import { CommandPaletteHost } from '@/components/layout/CommandPaletteHost'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { recordCommandUse, _resetFrecency } from '@/lib/commandFrecency'
@@ -123,6 +124,20 @@ describe('CommandPalette recent storage', () => {
 // ─── Cmd+K behavior ─────────────────────────────────────────────────────────
 
 describe('CommandPalette keyboard shortcut', () => {
+  it('opens the deferred palette on its first invocation', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    const onOpen = vi.fn()
+    render(<CommandPaletteHost onOpen={onOpen} />, { wrapper: Wrapper })
+    expect(screen.queryByPlaceholderText(/Search pages/i)).toBeNull()
+
+    act(() => { window.dispatchEvent(new CustomEvent('toggle-command-palette')) })
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Search pages/i)).toBeInTheDocument()
+      expect(onOpen).toHaveBeenCalledTimes(1)
+    })
+  })
+
   it('opens on Ctrl+K when focus is on the body', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(

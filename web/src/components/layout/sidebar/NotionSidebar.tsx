@@ -32,7 +32,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GuardedNavLink } from '../../feedback/GuardedLink'
+import { PrefetchNavLink } from '../PrefetchLink'
 import { Button } from '@/components/ui'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -92,7 +92,7 @@ function NotionRow({
           className="absolute inset-y-1 start-0 z-10 w-[3px] rounded-r-sm bg-[var(--theme-primary)]"
         />
       )}
-      <GuardedNavLink
+      <PrefetchNavLink
         to={to}
         onClick={onSelect}
         aria-current={active ? 'page' : false}
@@ -118,7 +118,7 @@ function NotionRow({
         />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {trailing}
-      </GuardedNavLink>
+      </PrefetchNavLink>
       {hoverAction && (
         <div className="ms-0.5 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           {hoverAction}

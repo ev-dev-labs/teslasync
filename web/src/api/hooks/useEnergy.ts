@@ -25,11 +25,22 @@ import type {
   TOUSettingsPayload,
 } from '@/types/energy';
 
-export function useEnergyStats(vehicleId: string | null, days = 30) {
+export type EnergyStatsWindow = number | { start: string };
+
+export function useEnergyStats(
+  vehicleId: string | null,
+  window: EnergyStatsWindow = 30,
+) {
+  const windowKey = typeof window === 'number' ? `days:${window}` : `start:${window.start}`;
+  const query = typeof window === 'number'
+    ? `days=${window}`
+    : `start=${encodeURIComponent(window.start)}`;
+
   return useQuery({
-    queryKey: ['energy-stats', vehicleId, days],
-    queryFn: ({ signal }) => request<EnergyStats>(`/vehicles/${vehicleId}/energy?days=${days}`, { signal }),
+    queryKey: ['energy-stats', vehicleId, windowKey],
+    queryFn: ({ signal }) => request<EnergyStats>(`/vehicles/${vehicleId}/energy?${query}`, { signal }),
     enabled: vehicleId !== null,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 

@@ -28,6 +28,12 @@ vi.mock('./VehiclePicker', () => ({
   ),
 }))
 
+vi.mock('./WorkspaceContextControl', () => ({
+  WorkspaceContextControl: () => (
+    <button type="button">Analysis window</button>
+  ),
+}))
+
 describe('WorkspaceHeader', () => {
   it('groups context, discovery, vehicle scope, and utilities in one desktop command plane', () => {
     render(
@@ -45,6 +51,7 @@ describe('WorkspaceHeader', () => {
       'workspace',
     )
     expect(within(header).getByRole('button', { name: 'Search workspace' })).toBeInTheDocument()
+    expect(within(header).getByRole('button', { name: 'Analysis window' })).toBeInTheDocument()
     expect(within(header).getByTestId('workspace-vehicle-picker')).toBeInTheDocument()
     expect(within(header).getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
     expect(within(header).getByRole('button', { name: 'Theme' })).toBeInTheDocument()

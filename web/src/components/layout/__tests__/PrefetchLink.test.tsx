@@ -6,7 +6,7 @@ vi.mock('@/lib/routePrefetch', () => ({
   prefetchRoute: vi.fn(),
 }))
 
-import { PrefetchLink } from '../PrefetchLink'
+import { PrefetchLink, PrefetchNavLink } from '../PrefetchLink'
 import { prefetchRoute } from '@/lib/routePrefetch'
 
 const mockedPrefetch = vi.mocked(prefetchRoute)
@@ -89,5 +89,26 @@ describe('PrefetchLink', () => {
     const link = screen.getByRole('link')
     expect(link).toHaveAttribute('aria-label', 'Battery health')
     expect(link).toHaveClass('custom-class')
+  })
+})
+
+describe('PrefetchNavLink', () => {
+  beforeEach(() => {
+    mockedPrefetch.mockClear()
+  })
+
+  it('prefetches active-state navigation destinations on intent', () => {
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <PrefetchNavLink to="/battery">Battery</PrefetchNavLink>
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Battery' })
+    fireEvent.mouseEnter(link)
+    fireEvent.focus(link)
+
+    expect(mockedPrefetch).toHaveBeenNthCalledWith(1, '/battery')
+    expect(mockedPrefetch).toHaveBeenNthCalledWith(2, '/battery')
   })
 })

@@ -218,6 +218,19 @@ describe('ChargingSessionCard — primary line + badges', () => {
     expect(screen.getByText('Charger')).toBeInTheDocument();
     expect(screen.getByText('Expensive charge ($0.75/kWh)')).toBeInTheDocument();
   });
+
+  it('opens the quick preview without nesting the action in the detail link', () => {
+    const onPreview = vi.fn();
+    renderCard({ onPreview });
+
+    const action = screen.getByRole('button', {
+      name: 'Quick view charging session',
+    });
+    fireEvent.click(action);
+
+    expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    expect(screen.getByRole('link')).not.toContainElement(action);
+  });
 });
 
 describe('ChargingSessionCard — metric chips', () => {

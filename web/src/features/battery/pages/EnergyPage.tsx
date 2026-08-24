@@ -21,7 +21,16 @@ import {
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
-import { Currency, SavedViewMenu, MetricCard, MetricTile } from '@/components/data-display';
+import {
+  Currency,
+  DataFreshnessAuto,
+  SavedViewMenu,
+  MetricCard,
+  MetricTile,
+  OperationalBrief,
+  type OperationalAttention,
+  type OperationalTone,
+} from '@/components/data-display';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useEnergyStats } from '@/api/hooks/useEnergy';
@@ -57,6 +66,16 @@ const EFFICIENCY_EXCELLENT_WH_PER_M = 0.14;
 const EFFICIENCY_GOOD_WH_PER_M = 0.18;
 const EFFICIENCY_AVERAGE_WH_PER_M = 0.22;
 const EFFICIENCY_MAX_WH_PER_M = 0.3;
+const CO2_SAVED_KG_PER_KWH = 0.4;
+
+function inclusiveDayCount(start: string, end: string, fallback = 30): number {
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs > endMs) {
+    return fallback;
+  }
+  return Math.max(1, Math.floor((endMs - startMs) / 86_400_000) + 1);
+}
 
 function CostComparisonCard({
   label, evCost, gasCost, icon,
@@ -197,15 +216,20 @@ export default function EnergyPage() {
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'energy.range',
   });
+  const periodDays = inclusiveDayCount(startDate, endDate);
 
   /* URL-persisted hidden-series state for the two-series
      energy/efficiency composed chart. */
   const energyCostHidden = useHiddenSeries('energy-cost-daily');
 
   /* ── Data fetching ────────────────────────────────────────────── */
+  const statsQuery = useEnergyStats(
+    vehicleId != null ? String(vehicleId) : null,
+    { start: startDate },
+  );
   const {
     data: stats, isLoading, error: statsError, refetch,
-  } = useEnergyStats(vehicleId != null ? String(vehicleId) : null, 30);
+  } = statsQuery;
 
   const { data: sessions } = useChargingSessionsPaginated(vehicleId, {
     limit: 100, start: startDate, end: endDate,
@@ -216,9 +240,25 @@ export default function EnergyPage() {
   /* ── Derived metrics ──────────────────────────────────────────── */
   const totalEnergy = sessions?.reduce((s, c) => s + (c.total_energy_added_wh ?? 0), 0) ?? 0;
   const totalCost = sessions?.reduce((s, c) => s + (c.cost_decimal ?? 0), 0) ?? 0;
-  const avgEfficiency = stats?.avg_efficiency_wh_per_m ?? 0;
-  const totalDistance = stats?.total_distance_m ?? 0;
-  const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
+  const dailyEnergy = useMemo(
+    () =>
+      (stats?.daily_breakdown ?? []).filter(
+        (day) => day.date >= startDate && day.date <= endDate,
+      ),
+    [endDate, startDate, stats?.daily_breakdown],
+  );
+  const scopedDriveEnergyWh = dailyEnergy.reduce(
+    (sum, day) => sum + (day.energy_wh ?? 0),
+    0,
+  );
+  const totalDistance = dailyEnergy.reduce(
+    (sum, day) => sum + (day.distance_m ?? 0),
+    0,
+  );
+  const avgEfficiency = totalDistance > 0
+    ? scopedDriveEnergyWh / totalDistance
+    : 0;
+  const co2Saved = (scopedDriveEnergyWh / 1000) * CO2_SAVED_KG_PER_KWH;
 
   // Qualitative efficiency regions, converted to whichever display unit the
   // reading itself uses so the bands never disagree with the number.
@@ -251,15 +291,6 @@ export default function EnergyPage() {
     ],
     [unitPrefs.distance, t],
   );
-  // Guard against hand-edited / malformed `from`/`to` URL params: an invalid
-  // Date yields NaN which `Math.max(1, NaN)` propagates (NaN), corrupting every
-  // downstream projection and the "Last {days} Days" labels. Fall back to the
-  // 30-day default window instead.
-  const startMs = new Date(startDate).getTime();
-  const endMs = new Date(endDate).getTime();
-  const periodDays = Number.isFinite(startMs) && Number.isFinite(endMs)
-    ? Math.max(1, Math.floor((endMs - startMs) / 86400000) + 1)
-    : 30;
   const costPerKm = totalDistance > 0 ? totalCost / totalDistance : 0;
   const costPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
   // `total_distance_m` is SI meters post phase-42; convert to the user's display
@@ -268,8 +299,6 @@ export default function EnergyPage() {
   const gasEquivalent = toDistanceDisplay(totalDistance) * 0.12;
   const monthlyProjectedCost = costPerKm > 0 ? costPerKm * (totalDistance / periodDays) * 30 : 0;
   const yearlyProjectedCost = monthlyProjectedCost * 12;
-
-  const dailyEnergy = stats?.daily_breakdown ?? [];
 
   /* The API daily breakdown is SI (Wh, Wh/m, m). Convert once to the user's
      display units so both synced daily charts plot values that match their
@@ -293,13 +322,49 @@ export default function EnergyPage() {
    */
   const hasNoEnergyData = useMemo(() => {
     const noSessions = !sessions || sessions.length === 0;
-    const noStats = !stats || (
-      (stats.total_wh ?? 0) === 0 &&
-      (stats.total_energy_used_wh ?? 0) === 0 &&
-      (stats.total_distance_m ?? 0) === 0
-    );
+    const noStats = scopedDriveEnergyWh === 0 && totalDistance === 0;
     return noSessions && noStats;
-  }, [sessions, stats]);
+  }, [scopedDriveEnergyWh, sessions, totalDistance]);
+
+  const efficiencyTone: OperationalTone =
+    avgEfficiency <= 0
+      ? 'neutral'
+      : avgEfficiency <= EFFICIENCY_GOOD_WH_PER_M
+        ? 'success'
+        : avgEfficiency <= EFFICIENCY_AVERAGE_WH_PER_M
+          ? 'warning'
+          : 'danger';
+  const savings = gasEquivalent - totalCost;
+  const energyAttention: OperationalAttention[] = hasNoEnergyData
+    ? [{
+        key: 'energy-data',
+        title: t('operations.energy.noDataTitle', 'Energy evidence is still building'),
+        description: t(
+          'operations.energy.noDataDescription',
+          'Complete a drive or charging session to establish efficiency and cost baselines.',
+        ),
+        tone: 'info',
+      }]
+    : avgEfficiency > EFFICIENCY_AVERAGE_WH_PER_M
+      ? [{
+          key: 'energy-efficiency',
+          title: t('operations.energy.efficiencyAttention', 'Efficiency is outside the preferred band'),
+          description: t(
+            'operations.energy.efficiencyAttentionDescription',
+            'Review temperature, speed, and charging patterns for the selected window.',
+          ),
+          tone: 'warning',
+        }]
+      : [{
+          key: 'energy-savings',
+          title: t('operations.energy.savingsTitle', 'Electric operation remains cost-favorable'),
+          description: t(
+            'operations.energy.savingsDescription',
+            'Estimated savings versus the configured gas-equivalent model are {{value}}.',
+            { value: formatCurrency(Math.max(0, savings)) },
+          ),
+          tone: savings >= 0 ? 'success' : 'warning',
+        }];
 
   /* ── Time-of-day analysis ─────────────────────────────────────── */
   const timeOfDayData = useMemo(() => {
@@ -488,6 +553,79 @@ export default function EnergyPage() {
       }
     >
       {statsError && <QueryError error={statsError} onRetry={refetch} />}
+
+      <OperationalBrief
+        testId="energy-operational-brief"
+        eyebrow={t('operations.energy.eyebrow', 'Energy posture')}
+        title={t('operations.energy.title', 'Consumption, efficiency, and cost in one operating view')}
+        description={t(
+          'operations.energy.description',
+          'The selected analysis window drives session evidence, aggregate energy statistics, and projected operating cost.',
+        )}
+        statusLabel={
+          hasNoEnergyData
+            ? t('operations.status.awaitingData', 'Awaiting data')
+            : efficiencyTone === 'success'
+              ? t('operations.status.onTrack', 'On track')
+              : t('operations.status.review', 'Review recommended')
+        }
+        statusTone={hasNoEnergyData ? 'neutral' : efficiencyTone}
+        scope={
+          <Badge variant="neutral" size="sm">
+            {t('operations.scope.days', '{{count}} days', { count: periodDays })}
+          </Badge>
+        }
+        freshness={<DataFreshnessAuto query={statsQuery} />}
+        metrics={[
+          {
+            key: 'efficiency',
+            label: t('energy.gauge.efficiency', 'Efficiency'),
+            value: avgEfficiency > 0
+              ? `${fmtInt(toEfficiencyDisplay(avgEfficiency))} ${efficiencyUnit}`
+              : '—',
+            detail: t(
+              'operations.energy.efficiencyDetail',
+              'Average energy consumed per display-distance unit.',
+            ),
+            tone: efficiencyTone,
+          },
+          {
+            key: 'energy',
+            label: t('energy.gauge.energyUsed', 'Energy Used'),
+            value: `${fmtNumber(toEnergyDisplay(totalEnergy))} ${energyUnit}`,
+            detail: t(
+              'operations.energy.energyDetail',
+              'Energy recorded across charging sessions in the selected window.',
+            ),
+            tone: 'info',
+          },
+          {
+            key: 'cost',
+            label: t('energy.gauge.totalCost', 'Total Cost'),
+            value: formatCurrency(totalCost),
+            detail: t(
+              'operations.energy.costDetail',
+              'Recorded charging cost for the active analysis window.',
+            ),
+            tone: totalCost > gasEquivalent && gasEquivalent > 0 ? 'warning' : 'neutral',
+          },
+          {
+            key: 'savings',
+            label: t('energy.cost.saving', 'Saving'),
+            value: `${savings >= 0 ? '+' : ''}${formatCurrency(savings)}`,
+            detail: t(
+              'operations.energy.savingsDetail',
+              'Modeled difference from equivalent gasoline travel.',
+            ),
+            tone: savings >= 0 ? 'success' : 'warning',
+          },
+        ]}
+        attention={energyAttention}
+        provenance={t(
+          'operations.energy.provenance',
+          'Derived from SI energy aggregates, charging sessions, configured rates, and the active display-unit preferences.',
+        )}
+      />
 
       {/* ── KPI band ────────────────────────────────────────────── */}
       <section aria-label={t('energy.kpis', 'Key energy metrics')}>

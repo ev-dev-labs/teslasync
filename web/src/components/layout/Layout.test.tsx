@@ -301,6 +301,9 @@ vi.mock('./VehiclePicker', () => ({
     <div data-testid="vehicle-picker" className={className} />
   ),
 }))
+vi.mock('./WorkspaceContextControl', () => ({
+  WorkspaceContextControl: () => <div data-testid="workspace-context-control" />,
+}))
 vi.mock('./NotificationBellPopover', () => ({ NotificationBellPopover: () => null }))
 vi.mock('./sidebar/NavSectionHeader', () => ({
   NavSectionHeader: ({ label, action, id }: { label: string; action?: React.ReactNode; id?: string }) => (

@@ -1,5 +1,5 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { GuardedNavLink } from '../feedback/GuardedLink'
+import { PrefetchNavLink } from './PrefetchLink'
 import InstallPrompt from '../feedback/InstallPrompt'
 import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
@@ -52,7 +52,6 @@ import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { RuntimeHealthBanner } from '@/components/feedback'
 import {
   Button,
-  CommandPalette,
   CommandPaletteTrigger,
   Logo,
   ThemePicker,
@@ -62,6 +61,8 @@ import {
 } from './BreadcrumbOverridesContext'
 import { VehiclePicker } from './VehiclePicker'
 import { WorkspaceHeader } from './WorkspaceHeader'
+import { WorkspaceContextControl } from './WorkspaceContextControl'
+import { CommandPaletteHost } from './CommandPaletteHost'
 import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
@@ -1223,7 +1224,7 @@ export default function Layout() {
     const isActive = isActiveNavPath(location.pathname, to)
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
     return (
-      <GuardedNavLink
+      <PrefetchNavLink
         key={to}
         to={to}
         onClick={() => setSidebarOpen(false)}
@@ -1277,7 +1278,7 @@ export default function Layout() {
             {staleCount > 9 ? '9+' : staleCount}
           </span>
         )}
-      </GuardedNavLink>
+      </PrefetchNavLink>
     )
   }
 
@@ -1336,9 +1337,9 @@ export default function Layout() {
         {/* Mobile sidebar brand. Build version intentionally not rendered
             here; canonical provenance lives in the footer <VersionSegment>. */}
         <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0 xl:hidden">
-          <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
+          <PrefetchNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-          </GuardedNavLink>
+          </PrefetchNavLink>
           <Button
             type="button"
             variant="ghost"
@@ -1356,9 +1357,9 @@ export default function Layout() {
             rendered here; canonical provenance lives in the footer
             <VersionSegment>. */}
         <div className="hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] px-5 xl:flex">
-          <GuardedNavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90" onClick={() => setSidebarOpen(false)}>
+          <PrefetchNavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-          </GuardedNavLink>
+          </PrefetchNavLink>
         </div>
 
         {/* Mobile drawer search; desktop discovery lives in WorkspaceHeader. */}
@@ -1369,6 +1370,12 @@ export default function Layout() {
         {/* Mobile drawer vehicle scope; desktop scope lives in WorkspaceHeader
         and remains mirrored by ActiveVehicleSegment in the status line. */}
         <VehiclePicker className="xl:hidden" />
+        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
+          <WorkspaceContextControl
+            className="w-full max-w-none"
+            listenForCommands={false}
+          />
+        </div>
 
         {/* Navigation */}
         {sidebarStyle === 'linear' ? (
@@ -1702,7 +1709,7 @@ export default function Layout() {
       <StatusBar />
 
       {/* Command Palette */}
-      <CommandPalette onOpen={() => setSidebarOpen(false)} />
+      <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
 
       {/* PWA Install Prompt */}
       <InstallPrompt />

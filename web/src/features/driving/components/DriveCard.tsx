@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Gauge, TrendingUp, Zap, AlertTriangle, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Text } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { InlineMetric } from '@/components/data-display/InlineMetric';
 import {
   HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay,
@@ -12,6 +12,7 @@ import { formatDateTime, formatTime, formatDurationMinutes } from '@/lib/dateFor
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
+import { Icons } from '@/lib/icons';
 
 export interface DriveCardProps {
   drive: Drive;
@@ -24,6 +25,7 @@ export interface DriveCardProps {
   formatEnergyCost?: (kwh: number) => string;
   selected?: boolean;
   onToggleSelect?: (id: number, on: boolean) => void;
+  onPreview?: (drive: Drive) => void;
   /** IANA timezone for time-of-day rendering. Defaults to browser local. */
   tz?: string;
   /** When true, render an inline `⚠ Low efficiency` badge to mark this row
@@ -34,7 +36,7 @@ export interface DriveCardProps {
 function DriveCardImpl({
   drive, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
-  selected, onToggleSelect, tz, isAnomaly,
+  selected, onToggleSelect, onPreview, tz, isAnomaly,
 }: DriveCardProps) {
   const { t } = useTranslation();
   const actualDistance = drive.distanceM;
@@ -138,6 +140,24 @@ function DriveCardImpl({
       primary={primary}
       route={route}
       metrics={metrics}
+      actions={
+        onPreview
+          ? [
+              <Button
+                key="preview"
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label={t('drives.quickView', 'Quick view drive')}
+                title={t('drives.quickView', 'Quick view drive')}
+                onClick={() => onPreview(drive)}
+              >
+                <Icons.show className="h-4 w-4" aria-hidden="true" />
+              </Button>,
+            ]
+          : undefined
+      }
       href={`/drives/${drive.id}`}
       selected={selected}
     />
@@ -159,4 +179,5 @@ export const DriveCard = memo(DriveCardImpl, (prev, next) =>
   prev.efficiencyUnit === next.efficiencyUnit &&
   prev.tz === next.tz &&
   prev.isAnomaly === next.isAnomaly &&
-  prev.onToggleSelect === next.onToggleSelect, );
+  prev.onToggleSelect === next.onToggleSelect &&
+  prev.onPreview === next.onPreview, );

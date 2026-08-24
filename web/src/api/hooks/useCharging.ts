@@ -117,6 +117,7 @@ export function useChargingSessionsPaginated(
     queryKey: ['charging', vehicleId, start, end, limit, offset] as const,
     queryFn: ({ signal }) => getChargingSessions(vehicleId!, limit, offset, start, end, { signal }),
     enabled: vehicleId !== null,
+    staleTime: STALE_TIMES.FAST,
     select: safeArray,
   });
 }

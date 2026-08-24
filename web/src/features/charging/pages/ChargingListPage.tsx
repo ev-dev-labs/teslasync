@@ -1,12 +1,13 @@
 import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Zap, AlertTriangle, Star, Plug, Sun, Tag, List as ListIcon,
   Trash2, Battery, Home, Bolt,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
-import { GlassPanel, Pagination, SectionTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, Pagination, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
@@ -25,7 +26,8 @@ import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu, DataFreshnessAuto,
   KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
-  BulkActionsToolbar, type BulkAction,
+  BulkActionsToolbar, OperationalBrief, type BulkAction,
+  EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -41,7 +43,7 @@ import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDayKey, formatDurationMinutes, formatRelativeDays } from '@/lib/dateFormat';
+import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDays } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import type { ChargingSession } from '@/api/types';
@@ -85,6 +87,7 @@ const THRESHOLD_AC_DC = 1;
 
 export default function ChargingListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('charging.list.title', 'Charging Sessions'));
   const savedView = useSavedViewUrl();
 
@@ -128,6 +131,7 @@ export default function ChargingListPage() {
     end: endDate,
   });
   const { data: sessions, isLoading, error, refetch } = chargingQuery;
+  const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const { data: optimizer } = useChargingOptimizer(vehicleIdStr);
 
@@ -554,6 +558,29 @@ export default function ChargingListPage() {
   const startLevelDist = useMemo(() => sessions ? computeStartLevelDist(sessions) : [], [sessions]);
   const efficiencyStats = useMemo(() => sessions ? computeEfficiencyStats(sessions) : null, [sessions]);
   const chargerSpecs = useMemo(() => sessions ? computeChargerSpecs(sessions) : null, [sessions]);
+  const chargingAttention: OperationalAttention[] = anomalies.length > 0
+    ? anomalies.slice(0, 4).map((anomaly) => ({
+        key: `charging-${anomaly.session.id}-${anomaly.kind}`,
+        title: anomaly.message,
+        description: t(
+          'operations.charging.anomalyDescription',
+          'Review the session evidence and charger conditions before the pattern repeats.',
+        ),
+        tone: anomaly.kind === 'telemetry_gap' || anomaly.kind === 'bad_power'
+          ? 'danger'
+          : 'warning',
+      }))
+    : currentStats.count === 0
+      ? [{
+          key: 'charging-empty',
+          title: t('operations.charging.noDataTitle', 'No charging activity in this window'),
+          description: t(
+            'operations.charging.noDataDescription',
+            'Choose a wider analysis window or complete a charging session.',
+          ),
+          tone: 'info',
+        }]
+      : [];
 
   /* ── Defensive: no vehicle ──────────────────────────────────── */
   if (vehicleId == null) {
@@ -595,6 +622,78 @@ export default function ChargingListPage() {
         </PageHeaderSticky>
 
         <QueryError error={error as Error} onRetry={refetch} />
+
+        <OperationalBrief
+          testId="charging-operational-brief"
+          eyebrow={t('operations.charging.eyebrow', 'Charging posture')}
+          title={t('operations.charging.title', 'Cost, reliability, and battery-friendly behavior')}
+          description={t(
+            'operations.charging.description',
+            'Session volume, delivered energy, spend, and detected exceptions use the same selected vehicle and analysis window.',
+          )}
+          statusLabel={
+            currentStats.count === 0
+              ? t('operations.status.awaitingData', 'Awaiting data')
+              : anomalies.length > 0
+                ? t('operations.status.review', 'Review recommended')
+                : t('operations.status.onTrack', 'On track')
+          }
+          statusTone={
+            currentStats.count === 0
+              ? 'neutral'
+              : anomalies.length > 0
+                ? 'warning'
+                : 'success'
+          }
+          scope={<Badge variant="neutral" size="sm">{periodLabel}</Badge>}
+          metrics={[
+            {
+              key: 'sessions',
+              label: t('charging.totalSessions', 'Sessions'),
+              value: fmtCompact(currentStats.count),
+              detail: t(
+                'operations.charging.sessionsDetail',
+                'Completed and active sessions in the selected period.',
+              ),
+              tone: 'info',
+            },
+            {
+              key: 'energy',
+              label: t('operations.charging.deliveredEnergy', 'Delivered energy'),
+              value: fmtCompact(currentStats.totalEnergyWh / 1000, 10_000),
+              detail: t(
+                'operations.charging.energyDetail',
+                'Total energy added across the selected sessions.',
+              ),
+              tone: 'success',
+            },
+            {
+              key: 'cost',
+              label: t('charging.totalCost', 'Cost'),
+              value: formatCurrency(currentStats.totalCost),
+              detail: t(
+                'operations.charging.costDetail',
+                'Recorded charging spend in the active period.',
+              ),
+              tone: 'neutral',
+            },
+            {
+              key: 'exceptions',
+              label: t('operations.charging.exceptions', 'Exceptions'),
+              value: anomalies.length,
+              detail: t(
+                'operations.charging.exceptionsDetail',
+                'Sessions with missing telemetry, unusual cost, power, or duration.',
+              ),
+              tone: anomalies.length > 0 ? 'warning' : 'success',
+            },
+          ]}
+          attention={chargingAttention}
+          provenance={t(
+            'operations.charging.provenance',
+            'Derived from charging-session telemetry, configured cost data, and vehicle-local day boundaries.',
+          )}
+        />
 
         {/* Search + active filter chips */}
         <FadeIn>
@@ -919,6 +1018,7 @@ export default function ChargingListPage() {
                           onToggleSelect={toggleSessionSelected}
                           anomaly={anomalyById.get(s.id)}
                           density={density === 'compact' ? 'compact' : 'comfortable'}
+                          onPreview={setPreviewSession}
                         />
                       </StaggerItem>
                     )}
@@ -956,6 +1056,85 @@ export default function ChargingListPage() {
           </section>
         </FadeIn>
 
+        <EntityPreviewDrawer
+          open={previewSession !== null}
+          onClose={() => setPreviewSession(null)}
+          eyebrow={t('charging.preview.eyebrow', 'Charging session')}
+          title={
+            previewSession?.start_place
+            ?? t('charging.preview.title', 'Session #{{id}}', {
+              id: previewSession?.id ?? '',
+            })
+          }
+          description={
+            previewSession
+              ? t('charging.preview.description', 'Started {{time}}', {
+                  time: formatDateTime(previewSession.started_at, { tz }),
+                })
+              : undefined
+          }
+          statusLabel={
+            previewSession?.live
+              ? t('charging.preview.active', 'Active')
+              : t('charging.preview.completed', 'Completed')
+          }
+          statusTone={previewSession?.live ? 'info' : 'success'}
+          fields={
+            previewSession
+              ? [
+                  {
+                    key: 'duration',
+                    label: t('charging.duration', 'Duration'),
+                    value: durationMinutes(previewSession) > 0
+                      ? formatDurationMinutes(durationMinutes(previewSession))
+                      : '—',
+                  },
+                  {
+                    key: 'energy',
+                    label: t('operations.charging.deliveredEnergy', 'Delivered energy'),
+                    value: `${fmtNumber(previewSession.total_energy_added_wh / 1000)} kWh`,
+                  },
+                  {
+                    key: 'battery',
+                    label: t('charging.batteryChange', 'Battery change'),
+                    value: `${fmtNumber(previewSession.start_soc_pct)}% → ${
+                      previewSession.end_soc_pct != null
+                        ? `${fmtNumber(previewSession.end_soc_pct)}%`
+                        : '—'
+                    }`,
+                  },
+                  {
+                    key: 'cost',
+                    label: t('charging.totalCost', 'Cost'),
+                    value: previewSession.cost_decimal != null
+                      ? formatCurrency(previewSession.cost_decimal)
+                      : '—',
+                  },
+                  {
+                    key: 'peak-power',
+                    label: t('charging.preview.peakPower', 'Peak power'),
+                    value: previewSession.peak_power_w != null
+                      ? `${fmtNumber(previewSession.peak_power_w / 1000)} kW`
+                      : '—',
+                  },
+                  {
+                    key: 'charger',
+                    label: t('charging.preview.charger', 'Charger'),
+                    value: previewSession.charger_type
+                      ?? t('charging.chargerTypes.unknown', 'Unknown'),
+                  },
+                ]
+              : []
+          }
+          primaryAction={
+            previewSession
+              ? {
+                  label: t('charging.preview.openDetails', 'Open session details'),
+                  onClick: () => navigate(`/charging/${previewSession.id}`),
+                }
+              : undefined
+          }
+        />
       </PullToRefresh>
     </PageContainer>
   );

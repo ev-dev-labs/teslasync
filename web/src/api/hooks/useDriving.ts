@@ -106,6 +106,7 @@ export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
     enabled: !!vehicleId,
     select: safeArray,
     refetchInterval: opts.refetchInterval,
+    staleTime: STALE_TIMES.FAST,
   });
 }
 

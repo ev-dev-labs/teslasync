@@ -408,6 +408,23 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(within(grid).getAllByRole('link', { name: /^Open .+ details$/ })).toHaveLength(3);
   });
 
+  it('opens a contextual vehicle preview and continues to full details', async () => {
+    renderPage();
+    const grid = cardGrid();
+
+    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+
+    const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
+    expect(within(drawer).getByText('Vehicle preview')).toBeInTheDocument();
+    expect(within(drawer).getByText('80.00%')).toBeInTheDocument();
+    expect(within(drawer).getByText('400.00 km')).toBeInTheDocument();
+
+    fireEvent.click(within(drawer).getByRole('button', { name: 'Open vehicle details' }));
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveAttribute('data-pathname', '/vehicles/1');
+    });
+  });
+
   it('shows the no-live-data placeholder and offline badge for a stateless vehicle', async () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
@@ -573,8 +590,11 @@ describe('VehicleListPage — loading, error & empty states', () => {
     mockFleetStates.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
     const { container } = renderPage();
 
-    // No resolved states ⇒ zero charging / online in the KPI band.
-    expect(screen.getByText('0 / 0')).toBeInTheDocument();
+    // Pending live state stays neutral instead of briefly classifying every
+    // registered vehicle as offline or reporting zero-valued fleet KPIs.
+    expect(screen.getByText('Resolving live state')).toBeInTheDocument();
+    expect(screen.queryByText('3 vehicle unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText('0 / 0')).not.toBeInTheDocument();
     // Every card still renders, each with the null-safe no-live-data placeholder.
     expect(screen.getAllByText('No live data')).toHaveLength(3);
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);

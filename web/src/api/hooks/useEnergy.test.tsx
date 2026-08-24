@@ -155,6 +155,39 @@ describe('useEnergyStats', () => {
     expect(calledUrl()).toBe('/vehicles/7/energy?days=90');
   });
 
+  it('forwards a start date for an exact historical-window breakdown', async () => {
+    mockedRequest.mockResolvedValueOnce({ total_wh: 0, daily_breakdown: [] });
+    renderHook(
+      () => useEnergyStats('7', { start: '2025-06-01' }),
+      { wrapper: makeWrapper(makeClient()) },
+    );
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+    expect(calledUrl()).toBe('/vehicles/7/energy?start=2025-06-01');
+  });
+
+  it('does not present a previous window as current while a new range loads', async () => {
+    mockedRequest
+      .mockResolvedValueOnce({
+        total_wh: 1000,
+        daily_breakdown: [{ date: '2025-06-01', energy_wh: 1000 }],
+      })
+      .mockImplementationOnce(() => new Promise(() => {}));
+    const { result, rerender } = renderHook(
+      ({ start }) => useEnergyStats('7', { start }),
+      {
+        initialProps: { start: '2025-06-01' },
+        wrapper: makeWrapper(makeClient()),
+      },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    rerender({ start: '2025-08-01' });
+
+    await waitFor(() => expect(result.current.isFetching).toBe(true));
+    expect(result.current.isPlaceholderData).toBe(false);
+    expect(result.current.data).toBeUndefined();
+  });
+
   it('is disabled (no request) when vehicleId is null', async () => {
     const { result } = renderHook(() => useEnergyStats(null), { wrapper: makeWrapper(makeClient()) });
     await new Promise((r) => setTimeout(r, 10));

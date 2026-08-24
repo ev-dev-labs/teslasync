@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Route, Gauge, TrendingUp, Clock, Sparkles,
   ArrowUpDown, ArrowDown, Download, Activity,
@@ -8,13 +9,14 @@ import {
 import { PageContainer } from '@/components/layout/PageContainer';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { PanelTitle, SectionTitle, Text } from '@/components/ui';
+import { Badge, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   BulkActionsToolbar, type BulkAction, DataFreshnessAuto,
-  KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
+  KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
+  EntityPreviewDrawer, type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
@@ -41,7 +43,7 @@ import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { AINLDriveSearch } from '@/components/ai/AINLDriveSearch';
-import { formatRelativeDays, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
+import { formatDateTime, formatRelativeDays, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -69,6 +71,7 @@ const DRIVES_FETCH_LIMIT = 1000;
 
 export default function DrivesListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('drives.title', 'Drive History'));
   const savedView = useSavedViewUrl();
 
@@ -102,6 +105,7 @@ export default function DrivesListPage() {
 
   const drivesQuery = useDrives(vehicleIdStr, fetchWindow);
   const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
+  const [previewDrive, setPreviewDrive] = useState<Drive | null>(null);
 
   /* A full page back means the range almost certainly holds more drives than
    * one request can carry. Say so rather than silently showing a subset. */
@@ -433,6 +437,29 @@ export default function DrivesListPage() {
     : null;
   const totalCost = currentStats.totalEnergyKwh * costPerKwh;
   const priorTotalCost = priorStats ? priorStats.totalEnergyKwh * costPerKwh : null;
+  const driveAttention: OperationalAttention[] = anomalyDrives.length > 0
+    ? [{
+        key: 'drive-anomalies',
+        title: t('operations.drives.anomalyTitle', '{{count}} efficiency exception', {
+          count: anomalyDrives.length,
+        }),
+        description: t(
+          'operations.drives.anomalyDescription',
+          'Review low-efficiency drives against route, speed, temperature, and battery context.',
+        ),
+        tone: 'warning',
+      }]
+    : currentStats.count === 0
+      ? [{
+          key: 'drives-empty',
+          title: t('operations.drives.noDataTitle', 'No drives in this analysis window'),
+          description: t(
+            'operations.drives.noDataDescription',
+            'Choose a wider window or complete a drive to build an operating baseline.',
+          ),
+          tone: 'info',
+        }]
+      : [];
 
   /* ---- Highlights rows — "fold-down" period stats (top speed, longest,
  * avg trip, avg duration) surfaced beside the trend chart. Real period
@@ -559,6 +586,82 @@ export default function DrivesListPage() {
         >
           {stickySummary}
         </PageHeaderSticky>
+
+        <OperationalBrief
+          testId="drives-operational-brief"
+          eyebrow={t('operations.drives.eyebrow', 'Driving posture')}
+          title={t('operations.drives.title', 'Activity, efficiency, and exceptions in context')}
+          description={t(
+            'operations.drives.description',
+            'Driving volume, distance, score, and efficiency use one vehicle-aware period with direct access to supporting evidence.',
+          )}
+          statusLabel={
+            currentStats.count === 0
+              ? t('operations.status.awaitingData', 'Awaiting data')
+              : anomalyDrives.length > 0
+                ? t('operations.status.review', 'Review recommended')
+                : t('operations.status.onTrack', 'On track')
+          }
+          statusTone={
+            currentStats.count === 0
+              ? 'neutral'
+              : anomalyDrives.length > 0
+                ? 'warning'
+                : 'success'
+          }
+          scope={
+            <Badge variant="neutral" size="sm">
+              {datePresetLabel ?? `${startDate} → ${endDate}`}
+            </Badge>
+          }
+          metrics={[
+            {
+              key: 'drives',
+              label: t('drives.totalDrives', 'Drives'),
+              value: fmtCompact(currentStats.count),
+              detail: t(
+                'operations.drives.countDetail',
+                'Completed drives in the selected analysis window.',
+              ),
+              tone: 'info',
+            },
+            {
+              key: 'distance',
+              label: `${t('drives.distance', 'Distance')} (${distanceUnit})`,
+              value: fmtCompact(distMi, 10_000),
+              detail: t(
+                'operations.drives.distanceDetail',
+                'Total distance traveled using the current display unit.',
+              ),
+              tone: 'success',
+            },
+            {
+              key: 'score',
+              label: t('drives.avgScore', 'Avg score'),
+              value: avgGrade.label,
+              detail: t(
+                'operations.drives.scoreDetail',
+                'Efficiency-derived grade across drives with usable telemetry.',
+              ),
+              tone: anomalyDrives.length > 0 ? 'warning' : 'success',
+            },
+            {
+              key: 'efficiency',
+              label: `${t('drives.efficiency', 'Efficiency')} (${efficiencyUnit})`,
+              value: avgEffDisp != null ? fmtInt(avgEffDisp) : '—',
+              detail: t(
+                'operations.drives.efficiencyDetail',
+                'Average energy intensity at the selected display boundary.',
+              ),
+              tone: avgEffDisp == null ? 'neutral' : anomalyDrives.length > 0 ? 'warning' : 'success',
+            },
+          ]}
+          attention={driveAttention}
+          provenance={t(
+            'operations.drives.provenance',
+            'Derived from completed drive telemetry, vehicle-local day boundaries, and current energy-cost preferences.',
+          )}
+        />
 
         {/* Opt-in natural-language drive search.
             Hidden when ai_mode='off' or the nl-drive-search-replay toggle
@@ -909,6 +1012,7 @@ export default function DrivesListPage() {
                       isAnomaly={anomalyDriveIds.has(d.id)}
                       selected={bulkSelected.has(d.id)}
                       onToggleSelect={toggleDriveSelected}
+                      onPreview={setPreviewDrive}
                     />
                   </StaggerItem>
                 )}
@@ -944,6 +1048,87 @@ export default function DrivesListPage() {
           />
         )}
         </section>
+        <EntityPreviewDrawer
+          open={previewDrive !== null}
+          onClose={() => setPreviewDrive(null)}
+          eyebrow={t('drives.preview.eyebrow', 'Drive preview')}
+          title={
+            previewDrive
+              ? `${previewDrive.startAddress ?? t('drives.unknownStart', 'Unknown start')} → ${
+                  previewDrive.endAddress ?? t('drives.unknownEnd', 'Unknown destination')
+                }`
+              : t('drives.preview.title', 'Drive details')
+          }
+          description={
+            previewDrive
+              ? formatDateTime(previewDrive.startTs, { tz })
+              : undefined
+          }
+          statusLabel={
+            previewDrive?.endTs
+              ? t('drives.preview.completed', 'Completed')
+              : t('drives.inProgress', 'In progress')
+          }
+          statusTone={previewDrive?.endTs ? 'success' : 'info'}
+          fields={
+            previewDrive
+              ? [
+                  {
+                    key: 'duration',
+                    label: t('drives.duration', 'Duration'),
+                    value: formatDurationMinutes(previewDrive.durationS / 60),
+                  },
+                  {
+                    key: 'distance',
+                    label: t('drives.distance', 'Distance'),
+                    value: `${fmtNumber(toDistanceDisplay(previewDrive.distanceM))} ${distanceUnit}`,
+                  },
+                  {
+                    key: 'energy',
+                    label: t('drives.energyUsed', 'Energy used'),
+                    value: previewDrive.energyUsedWh != null
+                      ? `${fmtNumber(previewDrive.energyUsedWh / 1000)} kWh`
+                      : '—',
+                  },
+                  {
+                    key: 'battery',
+                    label: t('drives.batteryChange', 'Battery change'),
+                    value: `${
+                      previewDrive.startBatteryPct != null
+                        ? `${fmtNumber(previewDrive.startBatteryPct)}%`
+                        : '—'
+                    } → ${
+                      previewDrive.endBatteryPct != null
+                        ? `${fmtNumber(previewDrive.endBatteryPct)}%`
+                        : '—'
+                    }`,
+                  },
+                  {
+                    key: 'efficiency',
+                    label: t('drives.efficiency', 'Efficiency'),
+                    value: getEfficiency(previewDrive) != null
+                      ? `${fmtInt(
+                          toEfficiencyDisplay(getEfficiency(previewDrive) ?? 0),
+                        )} ${efficiencyUnit}`
+                      : '—',
+                  },
+                  {
+                    key: 'score',
+                    label: t('drives.avgScore', 'Score'),
+                    value: gradeFromEfficiency(getEfficiency(previewDrive)).label,
+                  },
+                ]
+              : []
+          }
+          primaryAction={
+            previewDrive
+              ? {
+                  label: t('drives.preview.openDetails', 'Open drive details'),
+                  onClick: () => navigate(`/drives/${previewDrive.id}`),
+                }
+              : undefined
+          }
+        />
         </div>
       </PullToRefresh>
     </PageContainer>

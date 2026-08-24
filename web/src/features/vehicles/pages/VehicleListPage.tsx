@@ -12,7 +12,15 @@ import {
   GlassPanel, Badge, Button, ConfirmDialog, PinButton,
   SectionTitle, PanelTitle, Text,
 } from '@/components/ui';
-import { MetricCard, MetricBar, AnimatedNumber } from '@/components/data-display';
+import {
+  AnimatedNumber,
+  DataFreshnessAuto,
+  MetricBar,
+  MetricCard,
+  OperationalBrief,
+  EntityPreviewDrawer,
+  type OperationalAttention,
+} from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError, AlertBanner, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
@@ -32,6 +40,7 @@ import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 import { VisuallyHidden } from '@/components/a11y';
+import { Icons } from '@/lib/icons';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -261,10 +270,11 @@ interface VehicleCardProps {
   vehicle: Vehicle;
   state: VehicleState | null;
   onDelete: (vehicle: Vehicle) => void;
+  onPreview: () => void;
 }
 
 /** One vehicle in the responsive fleet grid — all data + row actions. */
-function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
+function VehicleCard({ vehicle, state, onDelete, onPreview }: VehicleCardProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
 
@@ -395,15 +405,28 @@ function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
             {t('vehicles.viewDetails', 'View details')}
           </Link>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => onDelete(vehicle)}
-            aria-label={t('vehicles.removeAria', 'Remove {{name}}', { name })}
-            className="min-h-11 text-[var(--text-muted)] hover:bg-rose-500/10 hover:text-rose-300"
-          >
-            <Trash2 className="h-4 w-4" aria-hidden="true" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onPreview}
+              aria-label={t('vehicles.quickViewAria', 'Quick view {{name}}', { name })}
+              title={t('common.quickView', 'Quick view')}
+              className="min-h-11 min-w-11 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+            >
+              <Icons.show className="h-4 w-4" aria-hidden="true" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDelete(vehicle)}
+              aria-label={t('vehicles.removeAria', 'Remove {{name}}', { name })}
+              className="min-h-11 min-w-11 p-0 text-[var(--text-muted)] hover:bg-rose-500/10 hover:text-rose-300"
+            >
+              <Trash2 className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
         </div>
       </div>
     </GlassPanel>
@@ -414,6 +437,7 @@ function VehicleCard({ vehicle, state, onDelete }: VehicleCardProps) {
 
 export default function VehicleListPage() {
   const { t } = useTranslation();
+  const { formatDistance } = useUnits();
   usePageTitle(t('nav.vehicles', 'Fleet'));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -485,11 +509,50 @@ export default function VehicleListPage() {
       .map(([status, count]) => ({ status, count }))
       .sort((a, b) => b.count - a.count);
   }, [stateById, vehicleList]);
+  const fleetStatePending = statesQuery.isLoading;
+  const offlineCount = fleetStatePending
+    ? 0
+    : Math.max(0, vehicleList.length - fleet.onlineCount);
+  const lowBatteryCount = fleet.entries.filter(
+    ({ state }) => (state.battery_level ?? 100) < 20,
+  ).length;
+  const fleetAttention: OperationalAttention[] = [
+    ...(!fleetStatePending && offlineCount > 0
+      ? [{
+          key: 'offline',
+          title: t('operations.vehicles.offlineTitle', '{{count}} vehicle unavailable', {
+            count: offlineCount,
+          }),
+          description: t(
+            'operations.vehicles.offlineDescription',
+            'Live state could not be resolved. Verify connectivity before issuing commands.',
+          ),
+          tone: 'warning' as const,
+        }]
+      : []),
+    ...(lowBatteryCount > 0
+      ? [{
+          key: 'low-battery',
+          title: t('operations.vehicles.lowBatteryTitle', '{{count}} vehicle below 20%', {
+            count: lowBatteryCount,
+          }),
+          description: t(
+            'operations.vehicles.lowBatteryDescription',
+            'Review charging readiness before the next scheduled departure.',
+          ),
+          tone: 'warning' as const,
+        }]
+      : []),
+  ];
 
   /* ── Mutations ── */
   const syncMut = useSyncVehicles();
   const deleteMut = useDeleteVehicle();
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
+  const [previewTarget, setPreviewTarget] = useState<{
+    vehicle: Vehicle;
+    state: VehicleState | null;
+  } | null>(null);
 
   const handleSync = () => {
     syncMut.mutate(undefined, {
@@ -604,15 +667,101 @@ export default function VehicleListPage() {
         />
       ) : (
         <>
+          <OperationalBrief
+            testId="fleet-operational-brief"
+            eyebrow={t('operations.vehicles.eyebrow', 'Fleet posture')}
+            title={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
+            description={t(
+              'operations.vehicles.description',
+              'Live connectivity, battery readiness, and charging activity are consolidated before vehicle-level detail.',
+            )}
+            statusLabel={
+              fleetStatePending
+                ? t('operations.status.loading', 'Resolving live state')
+                : fleetAttention.length > 0
+                ? t('operations.status.review', 'Review recommended')
+                : t('operations.status.ready', 'Fleet ready')
+            }
+            statusTone={
+              fleetStatePending
+                ? 'neutral'
+                : fleetAttention.length > 0
+                  ? 'warning'
+                  : 'success'
+            }
+            freshness={<DataFreshnessAuto query={statesQuery} />}
+            metrics={[
+              {
+                key: 'vehicles',
+                label: t('vehicles.totalVehicles', 'Total Vehicles'),
+                value: vehicleList.length,
+                detail: t(
+                  'operations.vehicles.totalDetail',
+                  'Vehicles currently registered in this TeslaSync workspace.',
+                ),
+                tone: 'info',
+              },
+              {
+                key: 'online',
+                label: t('operations.vehicles.online', 'Live state available'),
+                value: fleetStatePending ? '—' : `${fleet.onlineCount}/${vehicleList.length}`,
+                detail: t(
+                  'operations.vehicles.onlineDetail',
+                  'Vehicles with a current state response available.',
+                ),
+                tone: fleetStatePending
+                  ? 'neutral'
+                  : offlineCount > 0
+                    ? 'warning'
+                    : 'success',
+              },
+              {
+                key: 'battery',
+                label: t('vehicles.avgBattery', 'Avg Battery'),
+                value: fleetStatePending ? '—' : `${fmtNumber(fleet.avgBattery)}%`,
+                detail: t(
+                  'operations.vehicles.batteryDetail',
+                  'Mean state of charge across vehicles with live state.',
+                ),
+                tone: fleetStatePending
+                  ? 'neutral'
+                  : fleet.avgBattery < 20
+                    ? 'danger'
+                    : fleet.avgBattery < 40
+                      ? 'warning'
+                      : 'success',
+              },
+              {
+                key: 'charging',
+                label: t('operations.vehicles.charging', 'Charging now'),
+                value: fleetStatePending ? '—' : fleet.chargingCount,
+                detail: t(
+                  'operations.vehicles.chargingDetail',
+                  'Vehicles actively reporting a charging state.',
+                ),
+                tone: 'neutral',
+              },
+            ]}
+            attention={fleetAttention}
+            provenance={t(
+              'operations.vehicles.provenance',
+              'Based on the registered fleet and the latest independently resolved live state for each vehicle.',
+            )}
+          />
+
           {/* 1 — KPI band */}
           <FadeIn delay={0.05}>
-            <FleetKpis
-              totalVehicles={vehicleList.length}
-              avgBattery={fleet.avgBattery}
-              totalRange={fleet.totalRange}
-              chargingCount={fleet.chargingCount}
-              onlineCount={fleet.onlineCount}
-            />
+            {fleetStatePending ? (
+              <StatGridSkeleton cards={4} />
+            ) : (
+              <FleetKpis
+                totalVehicles={vehicleList.length}
+                avgBattery={fleet.avgBattery}
+                totalRange={fleet.totalRange}
+                chargingCount={fleet.chargingCount}
+                onlineCount={fleet.onlineCount}
+              />
+            )}
           </FadeIn>
 
           {/* 2 — Overview bento: hero battery (2/3) + status breakdown (1/3) */}
@@ -657,6 +806,12 @@ export default function VehicleListPage() {
                     vehicle={vehicle}
                     state={stateById.get(vehicle.id) ?? null}
                     onDelete={setDeleteTarget}
+                    onPreview={() => {
+                      setPreviewTarget({
+                        vehicle,
+                        state: stateById.get(vehicle.id) ?? null,
+                      });
+                    }}
                   />
                 </StaggerItem>
               ))}
@@ -682,6 +837,87 @@ export default function VehicleListPage() {
         variant="danger"
         onConfirm={handleDeleteConfirm}
         onCancel={() => setDeleteTarget(null)}
+      />
+      <EntityPreviewDrawer
+        open={previewTarget !== null}
+        onClose={() => setPreviewTarget(null)}
+        eyebrow={t('vehicles.preview.eyebrow', 'Vehicle preview')}
+        title={
+          previewTarget?.vehicle.display_name
+          || previewTarget?.vehicle.vin
+          || t('vehicles.preview.title', 'Vehicle details')
+        }
+        description={
+          previewTarget
+            ? [previewTarget.vehicle.model, previewTarget.vehicle.trim_badging]
+                .filter(Boolean)
+                .join(' ') || t('vehicles.unknownModel', 'Unknown model')
+            : undefined
+        }
+        statusLabel={
+          previewTarget
+            ? deriveVehicleStatus(previewTarget.state)
+            : undefined
+        }
+        statusTone={
+          previewTarget
+            ? statusVariant(deriveVehicleStatus(previewTarget.state))
+            : 'neutral'
+        }
+        fields={
+          previewTarget
+            ? [
+                {
+                  key: 'battery',
+                  label: t('vehicles.battery', 'Battery'),
+                  value: previewTarget.state?.battery_level != null
+                    ? `${fmtNumber(previewTarget.state.battery_level)}%`
+                    : '—',
+                },
+                {
+                  key: 'range',
+                  label: t('vehicles.range', 'Range'),
+                  value: previewTarget.state?.rated_range != null
+                    ? formatDistance(previewTarget.state.rated_range)
+                    : '—',
+                },
+                {
+                  key: 'odometer',
+                  label: t('vehicles.odometer', 'Odometer'),
+                  value: previewTarget.state?.odometer != null
+                    ? formatDistance(previewTarget.state.odometer)
+                    : '—',
+                },
+                {
+                  key: 'software',
+                  label: t('vehicles.software', 'Software'),
+                  value: previewTarget.state?.software_version || '—',
+                },
+                {
+                  key: 'security',
+                  label: t('vehicles.preview.security', 'Security'),
+                  value: previewTarget.state?.is_locked
+                    ? t('vehicles.locked', 'Locked')
+                    : t('vehicles.unlocked', 'Unlocked'),
+                },
+                {
+                  key: 'charging',
+                  label: t('vehicles.preview.charging', 'Charging'),
+                  value: previewTarget.state?.is_charging
+                    ? t('common.active', 'Active')
+                    : t('common.inactive', 'Inactive'),
+                },
+              ]
+            : []
+        }
+        primaryAction={
+          previewTarget
+            ? {
+                label: t('vehicles.preview.openDetails', 'Open vehicle details'),
+                onClick: () => navigate(`/vehicles/${previewTarget.vehicle.id}`),
+              }
+            : undefined
+        }
       />
     </PageContainer>
   );

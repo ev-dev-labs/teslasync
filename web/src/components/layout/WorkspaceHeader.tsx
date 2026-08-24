@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Caption, CommandPaletteTrigger } from '@/components/ui'
 import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
+import { WorkspaceContextControl } from './WorkspaceContextControl'
 
 interface WorkspaceHeaderProps {
   notifications?: ReactNode
@@ -36,14 +37,15 @@ export function WorkspaceHeader({
       </div>
 
       <div
-        className="w-[min(30vw,28rem)] shrink-0"
+        className="w-[min(24vw,22rem)] shrink-0"
         data-role="workspace-search"
       >
         <CommandPaletteTrigger />
       </div>
 
       <div className="flex shrink-0 items-center gap-2 border-s border-[var(--border-default)] ps-4">
-        <VehiclePicker className="min-w-56 border-b-0 px-0 py-0 xl:px-0 xl:py-0" />
+        <WorkspaceContextControl />
+        <VehiclePicker className="min-w-52 border-b-0 px-0 py-0 xl:px-0 xl:py-0" />
         {notifications}
         {themeControl}
       </div>
