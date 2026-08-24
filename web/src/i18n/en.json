@@ -3491,6 +3491,10 @@
     }
   },
   "nav": {
+    "workspaceContext": "Fleet operations",
+    "workspaceHeader": "Workspace command bar",
+    "quickAccess": "Quick access",
+    "workspacePages": "Workspace",
     "dashboard": "Dashboard",
     "liveMap": "Live Map",
     "vehicles": "Fleet",
@@ -4238,8 +4242,43 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Fleet overview and real-time analytics",
+    "title": "Fleet Operations",
+    "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
+    "personalWorkspace": "Personal workspace",
+    "personalWorkspaceHelp": "Arrange the live modules your team checks most often.",
+    "operations": {
+      "eyebrow": "Operational brief",
+      "title": "Fleet posture",
+      "unnamedVehicle": "Selected vehicle",
+      "attention": "{{count}} need attention",
+      "ready": "No active exceptions",
+      "activeScope": "Active vehicle scope",
+      "scopeHealthy": "Vehicle data is reporting normally. Global pages and filters follow this selection.",
+      "scopeAttention": "This vehicle is degraded or unreachable. Review live state before issuing commands.",
+      "openVehicle": "Open vehicle",
+      "workflows": "Primary workflows",
+      "metric": {
+        "fleet": "Fleet",
+        "fleetHelp": "registered",
+        "reporting": "Reporting",
+        "reportingHelp": "reachable now",
+        "attention": "Attention",
+        "attentionHelp": "exceptions",
+        "scope": "Scope",
+        "scopeVehicle": "selected vehicle",
+        "scopeFleet": "entire fleet"
+      },
+      "workflow": {
+        "live": "Live map",
+        "liveHelp": "Position and movement",
+        "alerts": "Review alerts",
+        "alertsHelp": "Exceptions requiring attention",
+        "charging": "Charging",
+        "chargingHelp": "Sessions, cost, and readiness",
+        "battery": "Battery",
+        "batteryHelp": "Capacity and health evidence"
+      }
+    },
     "vehicles": "Vehicles",
     "distance": "Distance",
     "drives": "Drives",

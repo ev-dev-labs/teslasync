@@ -50,13 +50,21 @@ function renderWith(ui: React.ReactNode, route = '/drives') {
 
 describe('PageContainer', () => {
   it('renders the page title', () => {
-    renderWith(
+    const { container } = renderWith(
       <PageContainer title="Drives">
         <div>body</div>
       </PageContainer>,
     );
     expect(screen.getByRole('heading', { level: 1, name: 'Drives' })).toBeInTheDocument();
     expect(screen.getByText('body')).toBeInTheDocument();
+    expect(container.querySelector('[data-role="page-header"]')).toHaveClass(
+      'rounded-panel',
+      'shadow-e1',
+    );
+    expect(container.querySelector('[data-role="page-header"] span[aria-hidden="true"]')).toHaveClass(
+      'w-1',
+      'bg-[var(--theme-primary)]',
+    );
   });
 
   // ── page-tier DataFreshnessAuto wiring ───────

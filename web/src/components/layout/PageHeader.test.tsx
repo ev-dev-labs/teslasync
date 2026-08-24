@@ -185,7 +185,15 @@ describe('PageHeader', () => {
 
   it('uses the shared subtle divider and omits the decorative underline', () => {
     const { container } = renderHeader(<PageHeader title="Fleet Overview" />)
-    expect(container.querySelector('header')?.className).toContain('border-[var(--border-default)]')
+    expect(container.querySelector('header')).toHaveClass(
+      'rounded-panel',
+      'border-[var(--border-default)]',
+      'shadow-e1',
+    )
+    expect(container.querySelector('header span[aria-hidden="true"]')).toHaveClass(
+      'w-1',
+      'bg-[var(--theme-primary)]',
+    )
     expect(container.querySelector('.from-neon-cyan')).toBeNull()
   })
 })

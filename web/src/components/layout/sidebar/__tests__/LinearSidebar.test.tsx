@@ -129,7 +129,7 @@ describe('LinearSidebar', () => {
     expect(screen.getByRole('link', { name: /Analytics/ })).toBeInTheDocument()
   })
 
-  it('renders the favorites group with an accessible unpin action', () => {
+  it('renders the Quick access group with an accessible unpin action', () => {
     const onUnpin = vi.fn()
     renderSidebar({
       pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
@@ -137,14 +137,14 @@ describe('LinearSidebar', () => {
       activeSectionTitle: 'Fleet',
     })
 
-    expect(screen.getByText('Favorites')).toBeInTheDocument()
+    expect(screen.getByText('Quick access')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Unpin Vehicles' }))
     expect(onUnpin).toHaveBeenCalledWith('/vehicles')
   })
 
-  it('omits the favorites group entirely when nothing is pinned', () => {
+  it('omits the Quick access group entirely when nothing is pinned', () => {
     renderSidebar({ pinnedItems: [], activeSectionTitle: 'Fleet' })
-    expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
+    expect(screen.queryByText('Quick access')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Unpin/ })).not.toBeInTheDocument()
   })
 
@@ -275,7 +275,7 @@ describe('LinearSidebar', () => {
       </MemoryRouter>,
     )
     expect(screen.getByRole('navigation', { name: 'Sidebar navigation' })).toBeInTheDocument()
-    expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
+    expect(screen.queryByText('Quick access')).not.toBeInTheDocument()
   })
 })
 

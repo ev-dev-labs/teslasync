@@ -98,7 +98,7 @@ function NotionRow({
         aria-current={active ? 'page' : false}
         data-tour={dataTour}
         className={cn(
-          'flex min-h-9 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-1.5 pe-2 text-sm transition-colors',
+          'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 text-sm transition-colors',
           indent,
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
           active
@@ -133,6 +133,7 @@ interface NotionSectionRowProps {
   icon: typeof Icons.home
   iconColor?: string
   expanded: boolean
+  active: boolean
   onToggle: () => void
   count: number
 }
@@ -147,6 +148,7 @@ function NotionSectionRow({
   icon: Icon,
   iconColor,
   expanded,
+  active,
   onToggle,
   count,
 }: NotionSectionRowProps) {
@@ -158,8 +160,10 @@ function NotionSectionRow({
       onClick={onToggle}
       aria-expanded={expanded}
       className={cn(
-        'group h-auto min-h-9 w-full justify-start gap-2 rounded-shape-md px-2 py-1.5 text-left text-sm font-medium text-[var(--text-secondary)]',
-        'transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+        'group h-auto min-h-10 w-full justify-start gap-2.5 rounded-shape-md px-2.5 py-2 text-left text-sm font-medium',
+        active
+          ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
+          : 'text-[var(--text-secondary)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         'focus-visible:ring-[var(--focus-ring)]',
       )}
     >
@@ -171,7 +175,12 @@ function NotionSectionRow({
         aria-hidden
       />
       <Icon
-        className={cn('h-4 w-4 shrink-0', iconColor ?? 'text-[var(--text-muted)]')}
+        className={cn(
+          'h-4 w-4 shrink-0',
+          active
+            ? 'text-[var(--theme-primary)]'
+            : (iconColor ?? 'text-[var(--text-muted)]'),
+        )}
         aria-hidden
       />
       <span className="min-w-0 flex-1 truncate">{title}</span>
@@ -194,7 +203,7 @@ function GroupLabel({
   return (
     <div
       id={id}
-      className="group flex items-center gap-1 px-2 pb-1.5 pt-4 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+      className="group flex items-center gap-1 px-2 pb-2 pt-4 text-xs font-semibold text-[var(--text-secondary)]"
     >
       <span className="flex-1 truncate">{children}</span>
       {action && (
@@ -360,14 +369,14 @@ export function NotionSidebar({
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 pb-4 scrollbar-thin"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 pb-5 scrollbar-thin"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Favorites group — only when there's at least one pin. */}
         {safePinnedItems.length > 0 && (
-          <div className="mb-3">
+          <div className="mb-4 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)]/60 p-2">
             <GroupLabel id="notion-favorites-label">
-              {t('nav.favorites', 'Favorites')}
+              {t('nav.quickAccess', 'Quick access')}
             </GroupLabel>
             <div className="space-y-1" aria-labelledby="notion-favorites-label">
               {safePinnedItems.map(item => (
@@ -405,7 +414,7 @@ export function NotionSidebar({
         )}
 
         {/* Pages group — Notion calls everything below "Workspace"/"Private". */}
-        <GroupLabel id="notion-pages-label">{t('nav.pages', 'Pages')}</GroupLabel>
+        <GroupLabel id="notion-pages-label">{t('nav.workspacePages', 'Workspace')}</GroupLabel>
         <div className="space-y-1" aria-labelledby="notion-pages-label">
           {expandedSections.map(section => {
             const expanded = isExpanded(section.title)
@@ -417,6 +426,7 @@ export function NotionSidebar({
                   icon={glyph.icon}
                   iconColor={glyph.color}
                   expanded={expanded}
+                  active={section.title === activeSectionTitle}
                   onToggle={() => toggleSection(section.title)}
                   count={section.items.length}
                 />

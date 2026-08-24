@@ -251,6 +251,20 @@ vi.mock('@/components/a11y', () => ({ AnnouncerRegion: () => null }))
 vi.mock('@/lib/globalShortcuts', () => ({ GlobalShortcuts: () => null }))
 vi.mock('@/features/onboarding/TourLauncher', () => ({ TourLauncher: () => null }))
 vi.mock('@/components/motion', () => ({
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({
+      children,
+      layoutId: _layoutId,
+      initial: _initial,
+      animate: _animate,
+      exit: _exit,
+      transition: _transition,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) => (
+      <div {...props}>{children}</div>
+    ),
+  },
   RouteTransition: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
 vi.mock('./BottomTabBar', () => ({
@@ -273,17 +287,20 @@ vi.mock('./StatusBar', () => ({
   StatusBar: () => null,
   useStatusBarPrefs: () => ({ enabled: true, iconOnly: false }),
 }))
-vi.mock('../ui/CommandPalette', () => ({
-  CommandPalette: () => null,
-  CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
-}))
 vi.mock('../data-display/ServiceStatus', () => ({ ServiceStatusBanner: () => null }))
-vi.mock('../ui/Logo', () => ({ default: () => <div data-testid="logo" /> }))
 vi.mock('./BreadcrumbOverridesContext', () => ({
   BreadcrumbOverridesProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
-vi.mock('./LayoutBreadcrumbs', () => ({ LayoutBreadcrumbs: () => <div data-testid="breadcrumbs" /> }))
-vi.mock('./VehiclePicker', () => ({ VehiclePicker: () => null }))
+vi.mock('./LayoutBreadcrumbs', () => ({
+  LayoutBreadcrumbs: ({ variant }: { variant?: string }) => (
+    <div data-testid="breadcrumbs" data-variant={variant ?? 'page'} />
+  ),
+}))
+vi.mock('./VehiclePicker', () => ({
+  VehiclePicker: ({ className }: { className?: string }) => (
+    <div data-testid="vehicle-picker" className={className} />
+  ),
+}))
 vi.mock('./NotificationBellPopover', () => ({ NotificationBellPopover: () => null }))
 vi.mock('./sidebar/NavSectionHeader', () => ({
   NavSectionHeader: ({ label, action, id }: { label: string; action?: React.ReactNode; id?: string }) => (
@@ -312,6 +329,12 @@ vi.mock('@/components/ui', async () => {
   Button.displayName = 'Button'
   return {
     Button,
+    Caption: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <span {...props}>{children}</span>
+    ),
+    CommandPalette: () => null,
+    CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
+    Logo: () => <div data-testid="logo" />,
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
@@ -598,9 +621,36 @@ describe('Layout — compact Linear sidebar wiring', () => {
 })
 
 describe('Layout — global page chrome', () => {
-  it('mounts breadcrumbs for a registered route that is not a sidebar entry', () => {
+  it('mounts the persistent workspace command header with compact breadcrumbs', () => {
     renderLayout('/notifications/archived')
-    expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument()
+    const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(workspaceHeader).toBeInTheDocument()
+    expect(within(workspaceHeader as HTMLElement).getByTestId('breadcrumbs')).toHaveAttribute(
+      'data-variant',
+      'workspace',
+    )
+    expect(within(workspaceHeader as HTMLElement).getByTestId('cmd-trigger')).toBeInTheDocument()
+  })
+
+  it('keeps page breadcrumbs available below the desktop workspace breakpoint', () => {
+    renderLayout('/notifications/archived')
+    const compactBreadcrumbs = document.querySelector('[data-role="compact-breadcrumbs"]')
+
+    expect(compactBreadcrumbs).toHaveClass('xl:hidden')
+    expect(
+      within(compactBreadcrumbs as HTMLElement).getByTestId('breadcrumbs'),
+    ).toHaveAttribute('data-variant', 'page')
+  })
+
+  it('keeps desktop scope in the command header and mobile scope in the drawer', () => {
+    renderLayout('/')
+    const pickers = screen.getAllByTestId('vehicle-picker')
+    expect(pickers).toHaveLength(2)
+    expect(pickers.filter(picker => picker.classList.contains('xl:hidden'))).toHaveLength(1)
+    const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(within(workspaceHeader as HTMLElement).getByTestId('vehicle-picker')).not.toHaveClass(
+      'xl:hidden',
+    )
   })
 
   it('lets pages use the full main-column width without a centered max-width cap', () => {

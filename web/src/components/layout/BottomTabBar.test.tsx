@@ -220,7 +220,7 @@ describe('BottomTabBar', () => {
   it('is a mobile-only bar with iOS safe-area padding and ≥44px touch targets', () => {
     renderBar()
     const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
-    expect(nav.className).toContain('lg:hidden')
+    expect(nav.className).toContain('xl:hidden')
     expect(nav.className).toContain('safe-bottom')
     screen.getAllByRole('link').forEach((link) => {
       expect(link.className).toContain('min-h-[44px]')

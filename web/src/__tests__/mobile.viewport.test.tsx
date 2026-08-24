@@ -132,8 +132,8 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     const nav = document.querySelector('nav[aria-label]') as HTMLElement | null;
     expect(nav).not.toBeNull();
     expect(nav!.className).toMatch(/safe-bottom/);
-    // Hidden on `lg`+ — it's a mobile-only bar.
-    expect(nav!.className).toMatch(/lg:hidden/);
+    // Hidden once the full desktop workspace shell takes over.
+    expect(nav!.className).toMatch(/xl:hidden/);
     // Every tab link must satisfy WCAG 2.5.5 minimum touch-target size.
     const tabs = nav!.querySelectorAll('a[aria-label]');
     expect(tabs.length).toBeGreaterThanOrEqual(5);
@@ -151,7 +151,7 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
       </I18nextProvider>,
     );
     // The flex container is the first descendant of the FadeIn wrapper.
-    const flex = container.querySelector('.flex.flex-col.lg\\:flex-row') as HTMLElement | null;
+    const flex = container.querySelector('.flex.flex-col.xl\\:flex-row') as HTMLElement | null;
     expect(flex).not.toBeNull();
     // Subtitle uses a readable text-sm size regardless of viewport (no
     // shrunken text-xs on mobile — PageHeader subtitles stay legible).

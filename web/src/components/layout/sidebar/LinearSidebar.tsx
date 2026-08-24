@@ -126,7 +126,7 @@ function LinearNavLink({
       {active && (
         <span
           aria-hidden
-          className="absolute left-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-r-sm bg-[var(--theme-primary)]"
+          className="absolute start-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-e-sm bg-[var(--theme-primary)]"
         />
       )}
       <GuardedNavLink
@@ -135,7 +135,7 @@ function LinearNavLink({
         aria-current={active ? 'page' : false}
         data-tour={dataTour}
         className={cn(
-          'flex min-h-9 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-1.5 pe-2 ps-3 text-sm transition-colors',
+          'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
           'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0',
           active
             ? 'bg-[var(--surface-2)] font-medium text-[var(--text-primary)]'
@@ -163,12 +163,21 @@ function LinearNavLink({
 
 interface SectionHeaderProps {
   title: string
+  icon: typeof Icons.home
   expanded: boolean
+  active: boolean
   onToggle: () => void
   count?: number
 }
 
-function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeaderProps) {
+function LinearSectionHeader({
+  title,
+  icon: Icon,
+  expanded,
+  active,
+  onToggle,
+  count,
+}: SectionHeaderProps) {
   return (
     <Button
       type="button"
@@ -177,9 +186,11 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
       onClick={onToggle}
       aria-expanded={expanded}
       className={cn(
-        'group h-auto min-h-8 w-full justify-start gap-1.5 rounded-shape-md px-2 py-1 text-left',
-        'text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]',
-        'transition-colors hover:text-[var(--text-secondary)]',
+        'group h-auto min-h-10 w-full justify-start gap-2.5 rounded-shape-md px-2.5 py-2 text-left',
+        'text-sm font-medium transition-colors',
+        active
+          ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
+          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
       )}
     >
@@ -190,9 +201,16 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
         )}
         aria-hidden
       />
+      <Icon
+        className={cn(
+          'h-4 w-4 shrink-0',
+          active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]',
+        )}
+        aria-hidden
+      />
       <span className="min-w-0 flex-1 truncate">{title}</span>
       {typeof count === 'number' && count > 0 && (
-        <span className="tabular-nums text-xs font-medium text-[var(--text-muted)]/80">
+        <span className="rounded-shape-sm bg-[var(--surface-3)] px-1.5 py-0.5 text-xs font-medium tabular-nums text-[var(--text-muted)]">
           {count}
         </span>
       )}
@@ -356,19 +374,19 @@ export function LinearSidebar({
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2.5 pb-4 scrollbar-thin"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 pb-5 scrollbar-thin"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Favorites — only when there is at least one pinned item.
             Never collapses (Linear style: favorites are always visible). */}
         {visiblePinned.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)]/60 p-2">
             <div
-              className="flex items-center gap-1.5 rounded-shape-md px-2 py-1.5 text-xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+              className="flex items-center gap-2 rounded-shape-md px-2 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
               id="linear-nav-favorites-label"
             >
               <Icons.star className="h-3 w-3 shrink-0" aria-hidden />
-              <span>{t('nav.favorites', 'Favorites')}</span>
+              <span>{t('nav.quickAccess', 'Quick access')}</span>
             </div>
             <div className="mt-0.5 space-y-px" aria-labelledby="linear-nav-favorites-label">
               {visiblePinned
@@ -402,19 +420,23 @@ export function LinearSidebar({
         )}
 
         {/* Sections */}
-        <div className="space-y-2.5">
+        <div className="space-y-1.5">
           {expandedSections.map(section => {
             const expanded = isExpanded(section.title)
+            const active = section.title === activeSectionTitle
+            const sectionIcon = section.items[0]?.icon ?? Icons.home
             return (
               <div key={section.title} className="space-y-0.5">
                 <LinearSectionHeader
                   title={sectionLabel(section.title)}
+                  icon={sectionIcon}
                   expanded={expanded}
+                  active={active}
                   onToggle={() => toggleSection(section.title)}
                   count={section.items.length}
                 />
                 {expanded && (
-                  <div className="space-y-px ps-2" role="group" aria-label={sectionLabel(section.title)}>
+                  <div className="ms-4 space-y-px border-s border-[var(--border-default)] ps-2.5" role="group" aria-label={sectionLabel(section.title)}>
                     {section.items.map(item => (
                       <LinearNavLink
                         key={item.to}

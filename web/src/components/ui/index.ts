@@ -30,7 +30,7 @@ export { DataTableBulkBar } from './DataTableBulkBar';
 export { DataTableResizer } from './DataTableResizer';
 export { DensityApplier } from './DensityApplier';
 export { Drawer } from './Drawer';
-export { CommandPalette } from './CommandPalette';
+export { CommandPalette, CommandPaletteTrigger } from './CommandPalette';
 export {
   ContextMenuRoot,
   useContextMenu,

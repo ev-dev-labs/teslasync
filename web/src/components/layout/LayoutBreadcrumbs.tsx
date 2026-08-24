@@ -2,6 +2,7 @@ import { Breadcrumbs } from './Breadcrumbs';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { useBreadcrumbOverrides } from './BreadcrumbOverridesContext';
 import { useTranslation } from 'react-i18next';
+import { cn } from '@/lib/cn';
 
 /**
  * Single canonical breadcrumb row mounted in the global Layout chrome.
@@ -13,18 +14,34 @@ import { useTranslation } from 'react-i18next';
  * pages. This component owns the complete top bar so routes that are not
  * sidebar entries still receive the same breadcrumb and quick-jump hint.
  */
-export function LayoutBreadcrumbs({ className }: { className?: string }) {
+interface LayoutBreadcrumbsProps {
+  className?: string;
+  variant?: 'page' | 'workspace';
+}
+
+export function LayoutBreadcrumbs({
+  className,
+  variant = 'page',
+}: LayoutBreadcrumbsProps) {
   const { t } = useTranslation();
   const overrides = useBreadcrumbOverrides();
   const items = useBreadcrumbs(overrides);
   if (items.length === 0) return null;
+  const workspace = variant === 'workspace';
 
   return (
-    <div className="mb-5 flex min-h-8 items-center justify-between gap-3">
+    <div
+      className={cn(
+        'flex items-center justify-between gap-3',
+        workspace ? 'min-h-5' : 'mb-5 min-h-8',
+      )}
+    >
       <Breadcrumbs items={items} className={className} />
-      <p className="hidden shrink-0 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)] px-2.5 py-1 text-xs text-[var(--text-muted)] shadow-e1 xl:block">
-        {t('nav.quickSearchHint', 'Ctrl+K to jump')}
-      </p>
+      {!workspace && (
+        <p className="hidden shrink-0 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-1)] px-2.5 py-1 text-xs text-[var(--text-muted)] shadow-e1 xl:block">
+          {t('nav.quickSearchHint', 'Ctrl+K to jump')}
+        </p>
+      )}
     </div>
   );
 }

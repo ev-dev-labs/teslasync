@@ -39,26 +39,30 @@ import {
 } from '@/lib/tourRegistry'
 import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AnimatePresence, motion } from 'framer-motion'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { RouteTransition } from '@/components/motion'
+import { AnimatePresence, motion, RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { LinearSidebar } from './sidebar/LinearSidebar'
 import { buildCompactNavTree } from './sidebar/compactNav'
 import { NotionSidebar } from './sidebar/NotionSidebar'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
-import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
 import { RuntimeHealthBanner } from '@/components/feedback'
-import Logo from '../ui/Logo'
-import { Button, ThemePicker } from '@/components/ui'
+import {
+  Button,
+  CommandPalette,
+  CommandPaletteTrigger,
+  Logo,
+  ThemePicker,
+} from '@/components/ui'
 import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
-import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
+import { WorkspaceHeader } from './WorkspaceHeader'
+import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
@@ -1304,7 +1308,7 @@ export default function Layout() {
             // with the <aside> sidebar (drawer pattern), not a dialog. New
             // interactive dialogs MUST use <Modal>.
             // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] lg:hidden"
+            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] xl:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -1318,20 +1322,20 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
-          'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 lg:shadow-none',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[17rem] xl:translate-x-0',
+          'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
           // Reserve space for the fixed footer StatusBar
           // so the bottom "Take a tour / Report bug" row never slides under
           // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
           // StatusBar z-55), so the reservation only matters on desktop where
-          // the sidebar is `lg:static` and shares layout space with <main>.
-          statusBarPrefs.enabled && 'lg:pb-7'
+          // the sidebar is `xl:static` and shares layout space with <main>.
+          statusBarPrefs.enabled && 'xl:pb-7'
         )}
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
             here; canonical provenance lives in the footer <VersionSegment>. */}
-        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0 lg:hidden">
+        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0 xl:hidden">
           <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </GuardedNavLink>
@@ -1351,23 +1355,20 @@ export default function Layout() {
         {/* Logo — desktop sidebar header. Build version intentionally not
             rendered here; canonical provenance lives in the footer
             <VersionSegment>. */}
-        <div className="hidden lg:flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0">
-          <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
+        <div className="hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] px-5 xl:flex">
+          <GuardedNavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </GuardedNavLink>
-          <ThemeQuickSwitcher placement="left" />
-          <NotificationBellPopover />
         </div>
 
-        {/* Sticky search trigger */}
-        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 lg:px-4 lg:py-3">
+        {/* Mobile drawer search; desktop discovery lives in WorkspaceHeader. */}
+        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
           <CommandPaletteTrigger />
         </div>
 
-        {/* Persistent vehicle scope picker.
-            Renders its own bordered wrapper; returns null for single-vehicle
-            owners so no empty padding is visible. */}
-        <VehiclePicker />
+        {/* Mobile drawer vehicle scope; desktop scope lives in WorkspaceHeader
+        and remains mirrored by ActiveVehicleSegment in the status line. */}
+        <VehiclePicker className="xl:hidden" />
 
         {/* Navigation */}
         {sidebarStyle === 'linear' ? (
@@ -1400,7 +1401,7 @@ export default function Layout() {
           />
         ) : (
         <nav
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 lg:py-4 px-3 space-y-3 scrollbar-thin"
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 xl:py-4 px-3 space-y-3 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
         >
           {activeNavEntry && (
@@ -1618,7 +1619,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 py-3 xl:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1641,7 +1642,11 @@ export default function Layout() {
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Spacer for fixed mobile header */}
-        <div className="h-14 shrink-0 lg:hidden" />
+        <div className="h-14 shrink-0 xl:hidden" />
+        <WorkspaceHeader
+          notifications={<NotificationBellPopover />}
+          themeControl={<ThemeQuickSwitcher />}
+        />
 
         {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
@@ -1665,20 +1670,22 @@ export default function Layout() {
           role="main"
           tabIndex={-1}
           className={cn(
-            'flex-1 overflow-y-auto outline-none pb-16 lg:pb-0',
+            'flex-1 overflow-y-auto outline-none pb-16 xl:pb-0',
             // Reserve space for the footer status bar
             // so it never overlaps page content. On mobile it stacks ABOVE
             // the BottomTabBar (which already adds 56px via pb-16), so we
             // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
             // single 28px reservation is enough.
-            statusBarPrefs.enabled && 'lg:pb-7 pb-20',
+            statusBarPrefs.enabled && 'xl:pb-7 pb-20',
           )}
         >
           <div
             data-role="page-viewport"
-            className="w-full px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-8 2xl:px-10"
+            className="w-full px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-6 2xl:px-10"
           >
-            <LayoutBreadcrumbs className="min-w-0 text-sm" />
+            <div data-role="compact-breadcrumbs" className="xl:hidden">
+              <LayoutBreadcrumbs className="min-w-0 text-sm" />
+            </div>
             <RouteTransition>
               <Outlet />
             </RouteTransition>

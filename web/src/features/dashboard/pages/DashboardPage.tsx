@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuthStatus } from '@/api/hooks/useSettings';
 import { useSyncVehicles, useVehicles } from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout';
+import { VisuallyHidden } from '@/components/a11y';
 import {
   Badge,
   Button,
@@ -39,6 +40,7 @@ import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { AddWidgetButton } from '../components/AddWidgetButton';
 import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
+import { FleetOperationsBrief } from '../components/FleetOperationsBrief';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
@@ -119,9 +121,9 @@ function ThemeFirstRunBanner() {
       title={t('theme.firstRunTitle', 'Personalize TeslaSync')}
       onClose={persistDismiss}
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex-1 min-w-0">{t('theme.firstRunBody', 'Pick a color theme that fits your style.')}</span>
-        <div className="flex gap-2 shrink-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="min-w-0 sm:flex-1">{t('theme.firstRunBody', 'Pick a color theme that fits your style.')}</span>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
           <Button variant="primary" size="sm" onClick={openPicker}>
             {t('theme.firstRunOpen', 'Open theme picker')}
           </Button>
@@ -224,7 +226,7 @@ function DashboardMoreMenu({
 
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
-  usePageTitle(t('title', 'Command Center'));
+  usePageTitle(t('title', 'Fleet Operations'));
   const queryClient = useQueryClient();
 
   /* ——— Dashboard layout state ——— */
@@ -312,7 +314,10 @@ export default function DashboardPage() {
   /* ——— Core data queries (shared TanStack hooks) ——— */
   const vehiclesQuery = useVehicles();
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
-  const { vehicleId: selectedVehicleId } = useSelectedVehicle();
+  const {
+    vehicleId: selectedVehicleId,
+    vehicle: selectedVehicle,
+  } = useSelectedVehicle();
 
   /* ——— Derived values ——— */
   const vehicleList = vehicles ?? [];
@@ -414,7 +419,7 @@ export default function DashboardPage() {
 
   /* ——— Header actions ——— */
   const headerActions = (
-    <div data-print-hide className="flex items-center gap-2 flex-wrap">
+    <div data-print-hide className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       {editMode ? (
         <>
           <div className="flex items-center gap-1 me-1">
@@ -504,8 +509,11 @@ export default function DashboardPage() {
 
   return (
     <PageContainer
-      title={t('title', 'Command Center')}
-      subtitle={t('subtitle', 'Real-time fleet intelligence and control')}
+      title={t('title', 'Fleet Operations')}
+      subtitle={t(
+        'subtitle',
+        'Monitor readiness, investigate exceptions, and act from one workspace',
+      )}
       actions={headerActions}
       query={vehiclesQuery}
       error={!authLoading && auth?.authenticated !== false ? vehiclesError : null}
@@ -528,8 +536,8 @@ export default function DashboardPage() {
                 icon={<Icons.add className="h-4 w-4" />}
                 onClose={dismissHint}
               >
-                <div className="flex flex-wrap items-center gap-3">
-                  <span className="min-w-0 flex-1">
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <span className="min-w-0 sm:flex-1">
                     {t(
                       'dashboard.customizeHint',
                       'You can customize this dashboard. Add the signals and workflows your team uses most.',
@@ -565,13 +573,33 @@ export default function DashboardPage() {
           </div>
         )}
 
+        {!vehiclesLoading && vehicleList.length > 0 && (
+          <FadeIn delay={0.025}>
+            <FleetOperationsBrief
+              vehicles={vehicleList}
+              selectedVehicle={selectedVehicle}
+            />
+          </FadeIn>
+        )}
+
         {/* Layout switcher + manager — shown whenever saved dashboards exist. */}
         {dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading && (
           <FadeIn delay={0.05}>
             <section
               aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')}
-              className="space-y-2"
+              className="space-y-3 border-t border-[var(--border-default)] pt-5"
             >
+              <div>
+                <Caption className="font-semibold uppercase tracking-[0.1em]">
+                  {t('dashboard.personalWorkspace', 'Personal workspace')}
+                </Caption>
+                <Text as="p" variant="caption" className="mt-1">
+                  {t(
+                    'dashboard.personalWorkspaceHelp',
+                    'Arrange the live modules your team checks most often.',
+                  )}
+                </Text>
+              </div>
               <LayoutSwitcher
                 dashboards={dashboards}
                 activeId={activeId}
@@ -881,7 +909,7 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
 
         <aside className="border-t border-[var(--border-default)] bg-[var(--surface-2)] p-6 sm:p-8 xl:border-s xl:border-t-0">
           <Caption className="font-semibold uppercase tracking-[0.08em]">
-            {t('onboarding.progress', 'Setup progress')}
+            {t('onboarding.progress.label', 'Setup progress')}
           </Caption>
           <ol className="mt-5 space-y-5">
             {setupSteps.map((step, index) => {
@@ -947,7 +975,7 @@ function LoadingSkeleton() {
       aria-label={loadingLabel}
       data-testid="dashboard-loading-skeleton"
     >
-      <span className="sr-only">{loadingLabel}</span>
+      <VisuallyHidden>{loadingLabel}</VisuallyHidden>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Skeleton className="h-10 w-full rounded-shape-lg sm:w-72" />
         <Skeleton className="h-10 w-40 rounded-shape-lg" />

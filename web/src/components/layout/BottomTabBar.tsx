@@ -35,7 +35,7 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label={t('nav.quickNav', 'Quick navigation')}
-      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden
+      className="fixed inset-x-0 bottom-0 z-50 xl:hidden
         bg-[var(--surface-overlay)] backdrop-blur-xl border-t border-white/[0.06]
         flex items-center justify-around px-2 h-14 safe-bottom"
     >

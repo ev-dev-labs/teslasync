@@ -1,7 +1,7 @@
 /**
  * DashboardPage — behaviour + hardening coverage.
  *
- * DashboardPage is the fleet "Command Center" orchestrator. Its only export is
+ * DashboardPage is the fleet operations orchestrator. Its only export is
  * the default page component; the file-local helpers (`ThemeFirstRunBanner`,
  * `EmptyOnboarding`, `LoadingSkeleton`) are exercised transitively through the
  * page render. The page wires together a large surface, so these tests focus on
@@ -353,10 +353,15 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
-  it('renders the Command Center title and subtitle without a page-level recent panel', () => {
+  it('renders the Fleet Operations identity and command brief without a page-level recent panel', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Command Center' })).toBeInTheDocument();
-    expect(screen.getByText('Real-time fleet intelligence and control')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Fleet Operations' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Monitor readiness, investigate exceptions, and act from one workspace'),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-operations-brief')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet posture' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Primary workflows' })).toBeInTheDocument();
     expect(screen.queryByText('Recently Viewed')).toBeNull();
   });
 
