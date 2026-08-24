@@ -428,9 +428,9 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       title: t('search.entries.privacy.recentPagesClear.title', 'Clear recently viewed pages'),
       description: t(
         'search.entries.privacy.recentPagesClear.desc',
-        'Wipe the local list of pages used by the dashboard widget and the Recent section in the command palette.',
+        'Wipe the local list of pages used by the status bar and the Recent section in the command palette.',
       ),
-      keywords: ['recent', 'history', 'clear', 'wipe', 'pages', 'palette', 'dashboard'],
+      keywords: ['recent', 'history', 'clear', 'wipe', 'pages', 'palette', 'status bar', 'footer'],
     },
     {
       id: 'privacy.consent.manage',

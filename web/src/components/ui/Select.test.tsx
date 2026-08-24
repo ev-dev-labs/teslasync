@@ -138,7 +138,7 @@ describe('Select — error state', () => {
   it('applies the red border class when in error', () => {
     const { container } = render(<Select options={OPTIONS} label="Model" error="x" />);
     const select = container.querySelector('select') as HTMLSelectElement;
-    expect(select.className).toContain('border-red-500');
+    expect(select.className).toContain('border-rose-500');
   });
 });
 

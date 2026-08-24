@@ -153,10 +153,11 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     // The flex container is the first descendant of the FadeIn wrapper.
     const flex = container.querySelector('.flex.flex-col.sm\\:flex-row') as HTMLElement | null;
     expect(flex).not.toBeNull();
-    // Subtitle should use small text scaling at < sm (`text-xs sm:text-sm`).
+    // Subtitle uses a readable text-sm size regardless of viewport (no
+    // shrunken text-xs on mobile — PageHeader subtitles stay legible).
     const subtitle = container.querySelector('p');
-    expect(subtitle?.className).toMatch(/text-xs/);
-    expect(subtitle?.className).toMatch(/sm:text-sm/);
+    expect(subtitle?.className).toMatch(/text-sm/);
+    expect(subtitle?.className).not.toMatch(/text-xs/);
   });
 
   it('DataTable with mobileColumns hides non-essential columns at < md', () => {

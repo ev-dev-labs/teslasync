@@ -1,8 +1,12 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { CopyLinkButton } from './CopyLinkButton';
-import { Spinner } from '@/components/feedback/Spinner';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { ErrorDisplay } from '@/components/feedback/ErrorDisplay';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
+import { PageLoadSkeleton } from '@/components/feedback/PageLoadSkeleton';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { Heading, Text } from '@/components/ui/Typography';
 import { useSetBreadcrumbOverrides } from './BreadcrumbOverridesContext';
 import {
   DataFreshnessAuto,
@@ -93,33 +97,39 @@ export function PageContainer({
   })();
 
   return (
-    <div className={cn('space-y-6', className)}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+    <div
+      className={cn('min-w-0 space-y-7', className)}
+      data-role="page-container"
+      aria-busy={loading || undefined}
+    >
+      <header className="flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 sm:flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{subtitle}</p>}
+          <Heading level="page" className="font-semibold tracking-[-0.025em]">
+            {title}
+          </Heading>
+          {subtitle && (
+            <Text as="p" size="sm" color="secondary" className="mt-1.5 max-w-3xl leading-relaxed">
+              {subtitle}
+            </Text>
+          )}
         </div>
         {(actions || copyLink || resolvedQuery) && (
-          <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full justify-start sm:justify-end">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-start gap-2.5 sm:justify-end">
             {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
             {copyLink && <CopyLinkButton />}
             {actions}
           </div>
         )}
-      </div>
+      </header>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Spinner size="lg" />
-        </div>
+        <PageLoadSkeleton panels={2} showHeader={false} />
       ) : error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-sm text-red-700 dark:text-red-300">{error.message}</p>
-        </div>
+        <ErrorDisplay error={error} />
       ) : empty ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm text-[var(--text-muted)]">{emptyMessage ?? `No ${title.toLowerCase()} found.`}</p>
-        </div>
+        <GlassPanel>
+          <EmptyState message={emptyMessage ?? `No ${title.toLowerCase()} found.`} />
+        </GlassPanel>
       ) : (
         <PageErrorBoundary pageName={title}>{children}</PageErrorBoundary>
       )}

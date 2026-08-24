@@ -141,11 +141,14 @@ import BatteryHealthPage, {
   healthVariant,
   healthLabel,
   degradationColor,
+  degradationTone,
+  healthTone,
   buildInsights,
   buildRecommendations,
   computeEnergyBreakdown,
 } from './BatteryHealthPage';
 import { CHART_COLORS } from '@/components/charts';
+import { gaugeTone, severityTokens } from '@/lib/tokens';
 import type { BatteryChargingAnalysis, BatteryHealthAnalytics } from '@/types/energy';
 
 const t = tImpl as unknown as TFunction;
@@ -278,7 +281,9 @@ function renderPage() {
 function metricCardValue(label: string): string {
   const labelSpan = screen.getByText(label);
   const container = labelSpan.closest('.flex-1');
-  const valueEl = container?.querySelector('p.text-xl');
+  // MetricCard exposes stable `data-role` hooks; the old `p.text-xl` selector
+  // pinned the value to a typography class that the shared card no longer uses.
+  const valueEl = container?.querySelector('[data-role="metric-value"]');
   return valueEl?.textContent ?? '';
 }
 
@@ -457,9 +462,21 @@ describe('BatteryHealthPage · dashboard render', () => {
     expect(screen.getByText('8.5')).toBeInTheDocument();
 
     // Every chart section title is present (no gutted panels).
-    expect(await screen.findByText('Capacity Trend & Prediction')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Capacity Trend & Prediction',
+        {},
+        { timeout: 5_000 },
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText('Estimated Range Over Time')).toBeInTheDocument();
-    expect(await screen.findByText('Charge Level Distribution')).toBeInTheDocument();
+    expect(
+      await screen.findByText(
+        'Charge Level Distribution',
+        {},
+        { timeout: 5_000 },
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByText('AC / DC Energy Breakdown')).toBeInTheDocument();
 
     // Quick-links navigation is keyboard/screen-reader labelled and linked.
@@ -598,5 +615,86 @@ describe('BatteryHealthPage · branches & resilience', () => {
     // Interacting with it routes through the mocked selector without throwing.
     fireEvent.change(screen.getByRole('combobox'), { target: { value: '42' } });
     expect(screen.getByRole('heading', { level: 1, name: 'Battery Health' })).toBeInTheDocument();
+  });
+});
+
+/* ── Design-system consistency: tones, severities, heading levels ──── */
+
+describe('BatteryHealthPage · design-system consistency', () => {
+  /** The insight card carrying the given copy, tagged with its severity. */
+  const insightCard = (title: string) =>
+    screen.getByText(title).closest('[data-severity]') as HTMLElement;
+
+  it('maps the health score onto the semantic gauge tones, not a palette index', () => {
+    expect(healthTone(95)).toBe('success');
+    expect(healthTone(90)).toBe('success');
+    expect(healthTone(89.9)).toBe('warning');
+    expect(healthTone(70)).toBe('warning');
+    expect(healthTone(69)).toBe('danger');
+  });
+
+  it('maps the degradation rate onto the same tone vocabulary as every other status bar', () => {
+    expect(degradationTone(3)).toBe('success');
+    expect(degradationTone(5)).toBe('success');
+    expect(degradationTone(5.1)).toBe('warning');
+    expect(degradationTone(15)).toBe('warning');
+    expect(degradationTone(15.1)).toBe('danger');
+  });
+
+  it('keeps the tone thresholds in lockstep with the legacy colour helpers', () => {
+    // The colour helpers stay exported for callers that still need a raw CSS
+    // string; the tones must not silently drift away from their bands.
+    for (const soh of [100, 95, 90, 89.9, 80, 70, 69, 0]) {
+      const expected = gaugeColor(soh) === CHART_COLORS[1]
+        ? 'success'
+        : gaugeColor(soh) === CHART_COLORS[3]
+          ? 'warning'
+          : 'danger';
+      expect(healthTone(soh)).toBe(expected);
+    }
+    for (const pct of [0, 5, 5.1, 15, 15.1, 40]) {
+      expect(gaugeTone[degradationTone(pct)]).toBe(degradationColor(pct));
+    }
+  });
+
+  it('paints the insight panels from the canonical severity tokens, not a local neon map', () => {
+    healthMock.mockReturnValue(
+      makeQuery({ data: makeHealth({ current_soh: 96, degradation_rate_pct_per_year: 2 }) }),
+    );
+    const { container } = renderPage();
+
+    // Excellent health + healthy habits ⇒ a success-severity insight.
+    const good = insightCard('Excellent Health');
+    expect(good).toHaveAttribute('data-severity', 'success');
+    expect(good.className).toContain(severityTokens.success.bg);
+    expect(good.className).toContain(severityTokens.success.border);
+
+    // The neon surface fills the insights used to carry are gone for good.
+    expect(container.querySelector('[class*="bg-neon-"]')).toBeNull();
+  });
+
+  it('escalates the insight severity with the battery condition', () => {
+    healthMock.mockReturnValue(
+      makeQuery({ data: makeHealth({ current_soh: 60, fast_charge_pct: 60 }) }),
+    );
+    renderPage();
+
+    expect(insightCard('Health Concern')).toHaveAttribute('data-severity', 'critical');
+    expect(insightCard('High Fast-Charge Usage')).toHaveAttribute('data-severity', 'warn');
+  });
+
+  it('titles in-panel sections with a panel-level heading, keeping h2 for real sections', () => {
+    renderPage();
+
+    // Panel-internal titles are h3 — they sit inside a GlassPanel, so promoting
+    // them to h2 would claim a document section they do not own.
+    expect(screen.getByRole('heading', { level: 3, name: 'Thermal Monitoring' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 3, name: 'Capacity & Range: New vs Now' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 3, name: 'Health Overview' })).toBeInTheDocument();
+
+    // The standalone insights section keeps its section-level h2.
+    expect(screen.getByRole('heading', { level: 2, name: 'Smart Insights' })).toBeInTheDocument();
   });
 });

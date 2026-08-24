@@ -48,10 +48,10 @@ export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
  * language stays consistent across the app.
  */
 export const FRESHNESS_COLORS = {
-  fresh: { dot: 'bg-emerald-400', text: 'text-emerald-400/60' },
-  fetching: { dot: 'bg-sky-400', text: 'text-sky-400/60' },
-  stale: { dot: 'bg-amber-400', text: 'text-amber-400/60' },
-  error: { dot: 'bg-red-400', text: 'text-red-400/60' },
+  fresh: { dot: 'bg-emerald-400', text: 'text-[var(--text-secondary)]' },
+  fetching: { dot: 'bg-sky-400', text: 'text-sky-300' },
+  stale: { dot: 'bg-amber-400', text: 'text-amber-300' },
+  error: { dot: 'bg-red-400', text: 'text-rose-300' },
 } as const;
 
 const STATUS_CONFIG = {
@@ -175,8 +175,10 @@ export function DataFreshness({
   return (
     <span
       className={cn(
-        'inline-flex items-center text-2xs leading-none transition-colors',
-        compact ? 'gap-0.5' : 'gap-1',
+        'inline-flex items-center leading-none transition-colors',
+        compact
+          ? 'gap-0.5 text-2xs'
+          : 'gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-1.5 text-xs',
         cfg.color,
         onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
       )}

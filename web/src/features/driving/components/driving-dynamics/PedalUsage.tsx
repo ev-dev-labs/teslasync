@@ -70,7 +70,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
             max={100}
             label={t('dynamics.throttle', 'Throttle')}
             unit={throttle != null ? '%' : '—'}
-            color="#06b6d4"
+            tone="info"
             size={120}
           />
           <Caption>{t('dynamics.throttlePosition', 'Throttle Position')}</Caption>
@@ -81,7 +81,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
             max={100}
             label={t('dynamics.brake', 'Brake')}
             unit={brakePos != null ? '%' : '—'}
-            color="#ef4444"
+            tone="danger"
             size={120}
           />
           <Caption>{t('dynamics.brakePedalPosition', 'Brake Pedal Position')}</Caption>

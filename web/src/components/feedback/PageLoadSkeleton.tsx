@@ -5,6 +5,8 @@ interface PageLoadSkeletonProps {
   /** How many GlassPanel-shaped skeleton blocks to render below the header. Defaults to 3. */
   panels?: number;
   className?: string;
+  /** Hide the placeholder title when the real page header is already visible. */
+  showHeader?: boolean;
 }
 
 /**
@@ -13,23 +15,28 @@ interface PageLoadSkeletonProps {
  * so the UI doesn't reflow when the real page mounts, keeping CLS low while
  * route chunks stream in.
  */
-export function PageLoadSkeleton({ panels = 3, className }: PageLoadSkeletonProps) {
+export function PageLoadSkeleton({
+  panels = 3,
+  className,
+  showHeader = true,
+}: PageLoadSkeletonProps) {
   return (
     <div
-      className={cn('space-y-6 animate-pulse', className)}
+      className={cn('space-y-5 animate-pulse', className)}
       role="status"
       aria-busy="true"
-      aria-label="Loading page"
+      aria-label="Loading"
       data-testid="page-load-skeleton"
     >
-      {/* Header bar — matches PageContainer title + subtitle */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div className="min-w-0 space-y-2">
-          <div className="h-7 w-48 rounded bg-[var(--surface-2)]" />
-          <div className="h-3 w-72 rounded bg-[var(--surface-2)]" />
+      {showHeader && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="min-w-0 space-y-2">
+            <div className="h-7 w-48 rounded bg-[var(--surface-2)]" />
+            <div className="h-3 w-72 max-w-full rounded bg-[var(--surface-2)]" />
+          </div>
+          <div className="h-9 w-32 rounded bg-[var(--surface-2)]" />
         </div>
-        <div className="h-9 w-32 rounded bg-[var(--surface-2)]" />
-      </div>
+      )}
 
       {/* Body panels */}
       {Array.from({ length: panels }).map((_, i) => (

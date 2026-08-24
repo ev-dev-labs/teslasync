@@ -59,7 +59,7 @@ describe('RecentPagesPanel — populated', () => {
     expect(screen.getByTestId('privacy-recent-section')).toBeInTheDocument()
     expect(screen.getByText('Recently viewed pages')).toBeInTheDocument()
     expect(
-      screen.getByText(/Wipe the list of pages used by the dashboard widget/),
+      screen.getByText(/Wipe the list of pages used by the status bar/),
     ).toBeInTheDocument()
     expect(screen.getByTestId('privacy-recent-count')).toHaveTextContent('3 entries stored')
 

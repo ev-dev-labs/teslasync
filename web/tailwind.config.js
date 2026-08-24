@@ -17,12 +17,12 @@ export default {
         tesla: {
           red: '#e31937',
           blue: '#3e6ae1',
-          dark: '#0a0a0f',
-          darker: '#050508',
+          dark: '#0b0d12',
+          darker: '#07090d',
           gray: '#393c49',
         },
         neon: {
-          cyan: '#00f0ff',
+          cyan: '#22d3ee',
           blue: '#4f46e5',
           purple: '#a855f7',
           pink: '#ec4899',
@@ -37,10 +37,10 @@ export default {
           border: 'rgba(255, 255, 255, 0.10)',
         },
         surface: {
-          1: '#0f1019',
-          2: '#151621',
-          3: '#1a1b2e',
-          4: '#1f2037',
+          1: '#11151c',
+          2: '#171c25',
+          3: '#202733',
+          4: '#293240',
         },
       },
       backgroundImage: {

@@ -456,7 +456,7 @@ export default function App() {
           readers on every SPA navigation. WCAG 2.4.2. */}
       <RouteAnnouncer />
       {/* Phase-46 / Prompt 51 — records every route the user visits so
-          the command palette and dashboard widget can surface them. */}
+          the command palette and global recent-page surfaces can show them. */}
       <RecentPagesRecorder />
       {/* Phase-46 / Prompt 30 — single portal host for the shared
           right-click ContextMenu primitive. Subscribes to a module-level

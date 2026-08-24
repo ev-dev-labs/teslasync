@@ -262,7 +262,7 @@ function kpiRegion(): HTMLElement {
 
 function metricValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('div.p-3') as HTMLElement;
+  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
   return within(card).getByText(/^\d+$/).textContent ?? '';
 }
 

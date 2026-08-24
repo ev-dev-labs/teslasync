@@ -99,11 +99,11 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
             onClick={() => onChange(tab.key)}
             onKeyDown={(e) => handleKeyDown(e, tab.key)}
             className={cn(
-              'px-4 py-2 text-sm font-medium transition-colors',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500',
+              '-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium transition-colors',
+              'focus-visible:rounded-shape-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
               selected
-                ? 'border-b-2 border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                ? 'border-[var(--theme-primary)] text-[var(--text-primary)]'
+                : 'text-[var(--text-muted)] hover:border-[var(--border-default)] hover:text-[var(--text-primary)]',
               tab.disabled && 'cursor-not-allowed opacity-50',
             )}
           >

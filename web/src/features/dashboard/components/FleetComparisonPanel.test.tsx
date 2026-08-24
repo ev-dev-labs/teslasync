@@ -15,8 +15,7 @@
  *
  * `useUnits` / `useChartPalette` are mocked via `vi.hoisted` so a single file
  * can flip km <-> mi deterministically without a QueryClient / SettingsProvider,
- * and `react-i18next` is stubbed to a passthrough `t(key, default)` (repo
- * convention — see RecentlyViewedWidget.test). Renders are wrapped in
+ * and `react-i18next` is stubbed to a passthrough `t(key, default)`. Renders are wrapped in
  * <MemoryRouter> because the real QueryError / EmptyState reach for
  * react-router navigation hooks. No network is touched.
  */

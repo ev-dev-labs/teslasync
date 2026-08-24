@@ -2,6 +2,7 @@ import { forwardRef } from 'react';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
 import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
+import { resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
 
 export interface LinearGaugeProps {
   value: number;
@@ -29,6 +30,24 @@ export interface LinearGaugeProps {
    */
   ariaLabel?: string;
   unit?: string;
+  /**
+   * Semantic fill colour, resolved through the central `gaugeTone` map in
+   * `@/lib/tokens`.
+   *
+   * Prefer this over {@link color} for anything that carries MEANING —
+   * `success` / `warning` / `danger` for status readings, `primary` /
+   * `accent` for headline brand gauges. The theme tones resolve through the
+   * CSS variables the ThemeProvider rewrites, so warm / light / custom presets
+   * re-tint the bar instead of leaving a hardcoded blue behind.
+   *
+   * Takes precedence over {@link color} when both are supplied.
+   */
+  tone?: GaugeTone;
+  /**
+   * Raw CSS colour escape hatch, kept for genuinely caller-defined series
+   * colours (a per-series bar matching its chart line) and for backwards
+   * compatibility. Ignored when {@link tone} is set.
+   */
   color?: string;
   /**
    * Visual weight, carried over from the radial gauge this replaced, where it
@@ -80,9 +99,13 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  */
 export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
   function LinearGauge(
-    { value, max, min = 0, label, ariaLabel, unit, color = '#3b82f6', size = 120, decimals, hideScale, marker, markerLabel, className },
+    { value, max, min = 0, label, ariaLabel, unit, tone, color, size = 120, decimals, hideScale, marker, markerLabel, className },
     ref,
   ) {
+    // Semantic tone wins over the raw colour escape hatch (see
+    // `resolveGaugeColor`), and an unspecified gauge falls back to the theme
+    // primary rather than a hardcoded blue.
+    const fillColor = resolveGaugeColor(tone, color);
     // Null-safety: callers routinely forward optional API values (e.g.
     // `state.battery_level`) that can be undefined / null / NaN at runtime
     // despite the `number` type. Sanitising here keeps the fill geometry finite
@@ -150,7 +173,7 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
         <div className={cn('relative w-full overflow-hidden rounded-full bg-[var(--surface-2)]', trackHeight)}>
           <div
             className="h-full rounded-full transition-[width] duration-500 ease-out"
-            style={{ width: `${ratio * 100}%`, backgroundColor: color }}
+            style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
           />
           {markerRatio !== null && (
             <span

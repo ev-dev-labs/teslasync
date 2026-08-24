@@ -163,7 +163,7 @@ export default function PrivacyPage() {
         title={tt('recentPages.clearConfirmTitle', 'Clear recent pages?')}
         message={tt(
           'recentPages.clearConfirmBody',
-          'This will wipe the list immediately. The dashboard widget and palette Recent section will be empty until you visit new pages.',
+          'This will wipe the list immediately. The status bar and palette Recent section will be empty until you visit new pages.',
         )}
         confirmLabel={tt('recentPages.clearConfirmCta', 'Clear pages')}
         cancelLabel={tt('common.cancel', 'Cancel')}

@@ -274,7 +274,7 @@ function renderPage() {
 
 /** Scope a MetricCard by its (unique) label. */
 function card(label: string): HTMLElement {
-  const wrapper = screen.getByText(label).closest('div.p-3');
+  const wrapper = screen.getByText(label).closest('[data-role="metric-card"]');
   if (!wrapper) throw new Error(`MetricCard wrapper not found for "${label}"`);
   return wrapper as HTMLElement;
 }

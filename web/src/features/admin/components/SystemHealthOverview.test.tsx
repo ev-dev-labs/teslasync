@@ -129,29 +129,29 @@ function renderOverview(rate: RateQuery, queue: QueueQuery) {
   return render(<SystemHealthOverview rateLimit={rate} queue={queue} />)
 }
 
-/** The MetricCard root (`.rounded-xl`) that owns the given headline label. */
+/** The MetricCard root (`[data-role="metric-card"]`) that owns the given headline label. */
 function card(label: string): HTMLElement {
   const labelNode = screen.getByText(label)
-  const root = labelNode.closest('div.rounded-xl')
+  const root = labelNode.closest('[data-role="metric-card"]')
   if (!(root instanceof HTMLElement)) {
     throw new Error(`MetricCard root not found for "${label}"`)
   }
   return root
 }
 
-/** The rendered headline value text for a card (the `p.text-xl` node). */
+/** The rendered headline value text for a card (the `[data-role="metric-value"]` node). */
 function cardValue(label: string): string {
-  const node = card(label).querySelector('p.text-xl')
+  const node = card(label).querySelector('[data-role="metric-value"]')
   return node?.textContent ?? ''
 }
 
-/** The icon-chip className, which carries the NeonColor tone (`bg-neon-*`). */
+/** The icon wrapper's `data-color`, which carries the semantic NeonColor tone. */
 function cardTone(label: string): string {
-  const chip = card(label).querySelector('.rounded-lg')
+  const chip = card(label).querySelector('[data-role="metric-icon"]')
   if (!(chip instanceof HTMLElement)) {
     throw new Error(`icon tone chip not found for "${label}"`)
   }
-  return chip.className
+  return chip.dataset.color ?? ''
 }
 
 describe('SystemHealthOverview — first paint', () => {
@@ -203,9 +203,9 @@ describe('SystemHealthOverview — empty feeds', () => {
     expect(cardValue(LABELS.succeeded)).toBe('0')
     expect(cardValue(LABELS.failed)).toBe('0')
     // No budgets / no workers → neutral cyan; no failures → green.
-    expect(cardTone(LABELS.budgets)).toContain('bg-neon-cyan')
-    expect(cardTone(LABELS.workers)).toContain('bg-neon-cyan')
-    expect(cardTone(LABELS.failed)).toContain('bg-neon-green')
+    expect(cardTone(LABELS.budgets)).toBe('cyan')
+    expect(cardTone(LABELS.workers)).toBe('cyan')
+    expect(cardTone(LABELS.failed)).toBe('green')
   })
 })
 
@@ -225,9 +225,9 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
 
     expect(cardValue(LABELS.budgets)).toBe('3')
     expect(within(card(LABELS.budgets)).getByText('critical')).toBeInTheDocument()
-    expect(cardTone(LABELS.budgets)).toContain('bg-neon-red') // worst severity → red
+    expect(cardTone(LABELS.budgets)).toBe('red') // worst severity → red
     expect(cardValue(LABELS.peak)).toBe('90%') // tightest window
-    expect(cardTone(LABELS.peak)).toContain('bg-neon-red') // 90% ≥ 80 → red
+    expect(cardTone(LABELS.peak)).toBe('red') // 90% ≥ 80 → red
   })
 
   it('colours peak usage amber in the 50–80% band and green below 50%', () => {
@@ -239,7 +239,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
       makeQuery<QueueStatusResponse>({ isSuccess: true, data: queueData([]) }),
     )
     expect(cardValue(LABELS.peak)).toBe('60%')
-    expect(cardTone(LABELS.peak)).toContain('bg-neon-amber')
+    expect(cardTone(LABELS.peak)).toBe('amber')
 
     rerender(
       <SystemHealthOverview
@@ -251,7 +251,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
       />,
     )
     expect(cardValue(LABELS.peak)).toBe('30%')
-    expect(cardTone(LABELS.peak)).toContain('bg-neon-green')
+    expect(cardTone(LABELS.peak)).toBe('green')
   })
 
   it('does not clamp usage above 100% for an over-budget window', () => {
@@ -264,7 +264,7 @@ describe('SystemHealthOverview — rate-limit rollups', () => {
     )
 
     expect(cardValue(LABELS.peak)).toBe('150%')
-    expect(cardTone(LABELS.peak)).toContain('bg-neon-red')
+    expect(cardTone(LABELS.peak)).toBe('red')
   })
 
   it('ignores token-bucket windows (limit 0) when computing peak usage', () => {
@@ -299,7 +299,7 @@ describe('SystemHealthOverview — queue rollups', () => {
     )
 
     expect(cardValue(LABELS.workers)).toBe('2 / 2')
-    expect(cardTone(LABELS.workers)).toContain('bg-neon-green')
+    expect(cardTone(LABELS.workers)).toBe('green')
   })
 
   it('reports amber and counts only ok heartbeats when a worker is unhealthy', () => {
@@ -316,7 +316,7 @@ describe('SystemHealthOverview — queue rollups', () => {
     )
 
     expect(cardValue(LABELS.workers)).toBe('1 / 3')
-    expect(cardTone(LABELS.workers)).toContain('bg-neon-amber')
+    expect(cardTone(LABELS.workers)).toBe('amber')
   })
 
   it('aggregates backlog, successes and failures across workers', () => {
@@ -334,7 +334,7 @@ describe('SystemHealthOverview — queue rollups', () => {
     expect(cardValue(LABELS.backlog)).toBe('18') // 5+2+10+1
     expect(cardValue(LABELS.succeeded)).toBe('1,500') // locale grouping
     expect(cardValue(LABELS.failed)).toBe('7') // 3+4
-    expect(cardTone(LABELS.failed)).toContain('bg-neon-red') // failures > 0 → red
+    expect(cardTone(LABELS.failed)).toBe('red') // failures > 0 → red
   })
 
   it('keeps the failed tile green when there are zero terminal failures', () => {
@@ -347,7 +347,7 @@ describe('SystemHealthOverview — queue rollups', () => {
     )
 
     expect(cardValue(LABELS.failed)).toBe('0')
-    expect(cardTone(LABELS.failed)).toContain('bg-neon-green')
+    expect(cardTone(LABELS.failed)).toBe('green')
     expect(cardValue(LABELS.succeeded)).toBe('42')
   })
 })

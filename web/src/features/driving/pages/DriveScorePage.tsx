@@ -1463,7 +1463,7 @@ export default function DriveScorePage() {
                       value={bestDrive.score.total}
                       max={100}
                       label={t('driveScore.score', 'Score')}
-                      color="#4ade80"
+                      tone="success"
                       size={72}
                       className="w-28 shrink-0"
                     />
@@ -1528,7 +1528,7 @@ export default function DriveScorePage() {
                       value={worstDrive.score.total}
                       max={100}
                       label={t('driveScore.score', 'Score')}
-                      color="#f87171"
+                      tone="danger"
                       size={72}
                       className="w-28 shrink-0"
                     />

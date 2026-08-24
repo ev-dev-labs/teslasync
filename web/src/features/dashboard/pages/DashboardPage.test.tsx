@@ -7,7 +7,7 @@
  * page render. The page wires together a large surface, so these tests focus on
  * the branches and interactions the component actually owns:
  *
- *   1. SHELL      — title/subtitle, recently-viewed, layout region gating.
+ *   1. SHELL      — title/subtitle and layout region gating.
  *   2. HEADER     — view-mode actions expose accessible names (the a11y fix),
  *                   refresh invalidates caches, Customize enters edit mode.
  *   3. EDIT MODE  — undo/redo labels + wiring + counter, add-widget picker, Done.
@@ -273,10 +273,6 @@ vi.mock('../components/WidgetCatalogueDialog', () => ({
       </div>
     ) : null,
 }));
-vi.mock('../components/RecentlyViewedWidget', () => ({
-  RecentlyViewedWidget: () => <div data-testid="recently-viewed" />,
-}));
-
 import DashboardPage from './DashboardPage';
 import { toUrlSafeBase64 } from '../hooks/validateImport';
 
@@ -369,11 +365,11 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
-  it('renders the Command Center title, subtitle and recently-viewed region', () => {
+  it('renders the Command Center title and subtitle without a page-level recent panel', () => {
     renderPage();
     expect(screen.getByRole('heading', { level: 1, name: 'Command Center' })).toBeInTheDocument();
     expect(screen.getByText('Real-time fleet intelligence and control')).toBeInTheDocument();
-    expect(screen.getByTestId('recently-viewed')).toBeInTheDocument();
+    expect(screen.queryByText('Recently Viewed')).toBeNull();
   });
 
   it('hides the layout region when there are no saved dashboards', () => {

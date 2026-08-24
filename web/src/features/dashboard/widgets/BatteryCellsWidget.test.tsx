@@ -8,8 +8,8 @@
  *     variant (compact / medium / wide), plus loading / error / empty /
  *     null-data branches and the manual-refresh interaction.
  *
- * Strategy (mirrors the repo convention, e.g. RecentlyViewedWidget.test.tsx
- * and BatteryHealthPage.test.tsx):
+ * Strategy (mirrors the focused component-test convention used by
+ * BatteryHealthPage.test.tsx):
  *   - The two data hooks (`useBatteryCells`, `useVehicles`) are replaced with
  *     hoisted `vi.fn()` doubles so the network is never touched and each
  *     render is deterministic.

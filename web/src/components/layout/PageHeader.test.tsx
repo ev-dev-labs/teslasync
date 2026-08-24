@@ -9,9 +9,9 @@
  *   - `copyLink` mounts the real CopyLinkButton — clicking copies the current
  *     URL to the clipboard, flips to "Copied", and surfaces a success toast;
  *     a rejected clipboard write surfaces an error toast (failure path)
- *   - the gradient page title keeps a `forced-colors:` fallback so it stays
- *     legible in Windows High Contrast mode (the bug this elevation fixed)
- *   - the decorative underline is hidden from assistive tech (aria-hidden)
+ *   - the page title uses the shared typography role without decorative
+ *     gradient treatment
+ *   - the header uses the shared subtle divider for consistent hierarchy
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
@@ -176,19 +176,16 @@ describe('PageHeader', () => {
     expect(screen.queryByText('Link copied to clipboard')).toBeNull()
   })
 
-  it('keeps a forced-colors fallback on the gradient title so it stays legible in high-contrast mode', () => {
+  it('uses the shared sober heading treatment instead of gradient text', () => {
     renderHeader(<PageHeader title="Fleet Overview" />)
     const heading = screen.getByRole('heading', { level: 1 })
-    // Regression guard for the invisible-in-High-Contrast bug: the gradient
-    // clip-text title must restore a system text colour under forced-colors.
-    expect(heading.className).toContain('forced-colors:text-[CanvasText]')
-    expect(heading.className).toContain('bg-clip-text')
+    expect(heading.className).toContain('font-semibold')
+    expect(heading.className).not.toContain('bg-clip-text')
   })
 
-  it('hides the decorative underline from assistive technology', () => {
+  it('uses the shared subtle divider and omits the decorative underline', () => {
     const { container } = renderHeader(<PageHeader title="Fleet Overview" />)
-    const underline = container.querySelector('.from-neon-cyan')
-    expect(underline).not.toBeNull()
-    expect(underline).toHaveAttribute('aria-hidden', 'true')
+    expect(container.querySelector('header')?.className).toContain('border-[var(--border-subtle)]')
+    expect(container.querySelector('.from-neon-cyan')).toBeNull()
   })
 })

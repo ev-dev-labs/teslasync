@@ -314,7 +314,7 @@ export default function SpeedProfilePage() {
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.avgSpeed', 'Avg Speed')}
                   unit={speedUnit}
-                  color="#00f0ff"
+                  tone="info"
                   size={96}
                 />
                 <LinearGauge
@@ -322,7 +322,7 @@ export default function SpeedProfilePage() {
                   max={Math.max(1, Math.round(toSpeedDisplay(69.44)))}
                   label={t('speedProfile.peakSpeed', 'Peak Speed')}
                   unit={speedUnit}
-                  color="#ef4444"
+                  tone="danger"
                   size={96}
                 />
                 <LinearGauge
@@ -330,7 +330,7 @@ export default function SpeedProfilePage() {
                   max={Math.max(1, Math.round(toSpeedDisplay(55.56)))}
                   label={t('speedProfile.optimalSpeed', 'Optimal Speed')}
                   unit={speedUnit}
-                  color="#10b981"
+                  tone="success"
                   size={96}
                 />
               </div>

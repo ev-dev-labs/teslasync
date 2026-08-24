@@ -36,7 +36,6 @@ import { request } from '@/api/client';
 
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
-const BATTERY_GAUGE_COLOR = '#10b981';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -264,7 +263,7 @@ export default function StatisticsPage() {
                     max={100}
                     label={t('statistics.health', 'Health')}
                     unit="%"
-                    color={BATTERY_GAUGE_COLOR}
+                    tone="success"
                     size={140}
                     className="max-w-xs"
                   />

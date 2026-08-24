@@ -27,7 +27,7 @@ export function TabNav({ tabs, active, onChange, ariaLabel, className }: TabNavP
       role="group"
       aria-label={ariaLabel}
       className={cn(
-        'flex items-center gap-1 rounded-xl bg-white/[0.02] p-1 border border-white/[0.06] overflow-x-auto scrollbar-thin',
+        'flex items-center gap-1 overflow-x-auto rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-1)] p-1 scrollbar-thin',
         className,
       )}
     >
@@ -45,11 +45,11 @@ export function TabNav({ tabs, active, onChange, ariaLabel, className }: TabNavP
             // programmatically so assistive tech announces the selected state.
             aria-pressed={selected}
             className={cn(
-              'flex items-center gap-1.5 sm:gap-2 rounded-lg px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium transition-all duration-normal whitespace-nowrap shrink-0',
-              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
+              'flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-shape-md px-2.5 py-1.5 text-xs font-medium transition-colors duration-fast sm:gap-2 sm:px-4 sm:py-2 sm:text-sm',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
               selected
-                ? 'bg-white/[0.08] text-[var(--text-primary)] shadow-sm'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
+                ? 'bg-[var(--surface-3)] text-[var(--text-primary)] shadow-sm'
+                : 'text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)]',
             )}
           >
             {t.icon}

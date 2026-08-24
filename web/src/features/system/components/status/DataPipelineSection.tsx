@@ -112,7 +112,7 @@ export function DataPipelineSection() {
                   <MetricCard label={t('Compressed')} value={fmtInt(compression.compressed_positions)} icon={<Archive className="h-4 w-4" />} color="cyan" />
                 </Grid>
                 <div className="mt-4 flex justify-center">
-                  <LinearGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" color="#22c55e" size={140} className="max-w-xs" />
+                  <LinearGauge value={compression.savings_percent} max={100} label={t('Savings')} unit="%" tone="success" size={140} className="max-w-xs" />
                 </div>
               </>
             ) : (

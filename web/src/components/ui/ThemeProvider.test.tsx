@@ -198,12 +198,13 @@ describe('initial state resolution', () => {
     await renderSettled()
     expect(screen.getByTestId('themeId')).toHaveTextContent('neon-cyan')
     expect(screen.getByTestId('modeId')).toHaveTextContent('dark')
-    expect(screen.getByTestId('theme-primary')).toHaveTextContent('#00f0ff')
-    expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0a0a0f')
+    expect(screen.getByTestId('theme-primary')).toHaveTextContent('#3b82f6')
+    expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0b0d12')
 
     const root = document.documentElement
-    expect(root.style.getPropertyValue('--theme-primary')).toBe('#00f0ff')
-    expect(root.style.getPropertyValue('--bg')).toBe('#0a0a0f')
+    expect(root.style.getPropertyValue('--theme-primary')).toBe('#3b82f6')
+    expect(root.style.getPropertyValue('--bg')).toBe('#0b0d12')
+    expect(root.style.getPropertyValue('--bg-app')).toBe('#0b0d12')
     expect(root.classList.contains('dark')).toBe(true)
     expect(root.classList.contains('light-mode')).toBe(false)
   })
@@ -378,7 +379,7 @@ describe('auto mode + system preference', () => {
 
     expect(screen.getByTestId('modeId')).toHaveTextContent('auto')
     expect(screen.getByTestId('mode-scheme')).toHaveTextContent('dark')
-    expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0a0a0f')
+    expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0b0d12')
     expect(document.documentElement.classList.contains('dark')).toBe(true)
   })
 
@@ -401,7 +402,7 @@ describe('auto mode + system preference', () => {
     emitSystemPreference(true)
 
     expect(screen.getByTestId('mode-scheme')).toHaveTextContent('dark')
-    expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0a0a0f')
+    expect(screen.getByTestId('mode-bg')).toHaveTextContent('#0b0d12')
   })
 })
 

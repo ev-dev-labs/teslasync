@@ -179,7 +179,7 @@ describe('TripKpiBand — km preference', () => {
     const { container } = render(<TripKpiBand trip={makeTrip()} isLoading={false} />);
 
     // One metric label + one hidden icon per tile — no section is dropped.
-    expect(container.querySelectorAll('.metric-label')).toHaveLength(6);
+    expect(container.querySelectorAll('[data-role="metric-label"]')).toHaveLength(6);
     expect(container.querySelectorAll('svg[aria-hidden="true"]')).toHaveLength(6);
   });
 

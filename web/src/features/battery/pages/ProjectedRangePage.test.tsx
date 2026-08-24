@@ -207,8 +207,8 @@ function renderPage() {
 /** Read a MetricCard's value text by its (unique) label. */
 function metricValue(label: string): string {
   const labelSpan = screen.getByText(label);
-  const container = labelSpan.closest('.flex-1');
-  return container?.querySelector('p.text-xl')?.textContent ?? '';
+  const card = labelSpan.closest('[data-role="metric-card"]');
+  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
 }
 
 beforeEach(() => {

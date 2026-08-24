@@ -331,3 +331,71 @@ describe('LinearSidebar', () => {
     expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
   })
 })
+
+// ══════════════════════════════════════════════════════════════════════
+// "Browse all features" escape hatch (compact IA)
+// ══════════════════════════════════════════════════════════════════════
+
+describe('LinearSidebar — Feature Hub escape hatch', () => {
+  const compactSections: LinearSidebarSectionInput[] = [
+    {
+      title: 'Overview',
+      items: [
+        { to: '/', icon: Icons.home, label: 'Dashboard' },
+        { to: '/explore', icon: Icons.sparkles, label: 'Explore Features' },
+      ],
+    },
+    {
+      title: 'Driving',
+      items: [{ to: '/drives', icon: Icons.drive, label: 'Drives' }],
+    },
+  ]
+
+  it('omits the footer link while the Overview /explore row is on screen', () => {
+    renderSidebar({ sections: compactSections, pathname: '/', activeSectionTitle: 'Overview' })
+
+    expect(screen.getByRole('link', { name: /Explore Features/ })).toBeInTheDocument()
+    // No duplicate: the footer stays out of the way when the row is visible.
+    expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
+  })
+
+  it('surfaces a footer link to /explore when Overview is collapsed', () => {
+    renderSidebar({ sections: compactSections, pathname: '/drives', activeSectionTitle: 'Driving' })
+
+    // Overview is collapsed, so its /explore row is not rendered…
+    expect(screen.getByRole('button', { name: /Overview/ })).toHaveAttribute('aria-expanded', 'false')
+    const footer = screen.getByTestId('linear-sidebar-explore-footer')
+    const link = within(footer).getByRole('link', { name: /Browse all features/ })
+    expect(link).toHaveAttribute('href', '/explore')
+  })
+
+  it('closes the mobile drawer when the footer link is followed', async () => {
+    const onItemSelect = vi.fn()
+    renderSidebar({
+      sections: compactSections,
+      pathname: '/drives',
+      activeSectionTitle: 'Driving',
+      onItemSelect,
+    })
+
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByTestId('linear-sidebar-explore-footer')).getByRole('link'),
+      )
+    })
+    expect(onItemSelect).toHaveBeenCalledTimes(1)
+  })
+
+  it('hides the footer while a tree filter is active', () => {
+    renderSidebar({ sections: compactSections, pathname: '/drives', activeSectionTitle: 'Driving' })
+    expect(screen.getByTestId('linear-sidebar-explore-footer')).toBeInTheDocument()
+
+    typeFilter('drives')
+    expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
+  })
+
+  it('never renders the footer for trees that have no /explore entry', () => {
+    renderSidebar({ activeSectionTitle: 'Fleet' })
+    expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
+  })
+})

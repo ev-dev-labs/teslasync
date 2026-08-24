@@ -87,10 +87,10 @@ describe('TabNav — active state (aria-pressed)', () => {
     render(<TabNav tabs={TABS} active="overview" onChange={() => {}} />);
     const active = screen.getByRole('button', { name: 'Overview' });
     const inactive = screen.getByRole('button', { name: 'Driving' });
-    expect(active.className).toContain('bg-white/[0.08]');
+    expect(active.className).toContain('bg-[var(--surface-3)]');
     expect(active.className).toContain('text-[var(--text-primary)]');
     expect(inactive.className).toContain('text-[var(--text-muted)]');
-    expect(inactive.className).not.toContain('bg-white/[0.08]');
+    expect(inactive.className).not.toContain('bg-[var(--surface-3)]');
   });
 });
 
@@ -142,7 +142,7 @@ describe('TabNav — container, a11y label, focus + className', () => {
     render(<TabNav tabs={TABS} active="overview" onChange={() => {}} />);
     const group = screen.getByRole('group');
     expect(group.tagName).toBe('DIV');
-    expect(group.className).toContain('rounded-xl');
+    expect(group.className).toContain('rounded-shape-lg');
   });
 
   it('labels the group when ariaLabel is provided', () => {
@@ -161,7 +161,7 @@ describe('TabNav — container, a11y label, focus + className', () => {
     render(<TabNav tabs={TABS} active="overview" onChange={() => {}} />);
     for (const button of screen.getAllByRole('button')) {
       expect(button.className).toContain('focus-visible:ring-2');
-      expect(button.className).toContain('focus-visible:ring-cyan-500');
+      expect(button.className).toContain('focus-visible:ring-[var(--focus-ring)]');
     }
   });
 
@@ -172,7 +172,7 @@ describe('TabNav — container, a11y label, focus + className', () => {
     const group = screen.getByRole('group');
     expect(group.className).toContain('mt-4');
     expect(group.className).toContain('w-full');
-    expect(group.className).toContain('rounded-xl');
+    expect(group.className).toContain('rounded-shape-lg');
     expect(group.className).not.toContain('undefined');
   });
 });

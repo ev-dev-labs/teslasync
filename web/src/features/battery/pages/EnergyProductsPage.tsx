@@ -165,7 +165,7 @@ function SiteInfoSection({ siteId, touCapable }: { siteId: number; touCapable: b
                   ariaLabel={t('energy.siteInfo.backupReserve', 'Backup Reserve')}
                   unit="%"
                   decimals={0}
-                  color="#06b6d4"
+                  tone="info"
                 />
               ) : (
                 <Text size="sm" color="muted">—</Text>

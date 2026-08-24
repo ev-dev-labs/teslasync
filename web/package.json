@@ -1,6 +1,6 @@
 {
   "name": "teslasync-web",
-  "description": "TeslaSync frontend — glassmorphism React dashboard for Tesla fleet monitoring",
+  "description": "TeslaSync fleet intelligence web application",
   "private": true,
   "version": "2.0.0",
   "type": "module",

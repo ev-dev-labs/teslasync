@@ -322,7 +322,9 @@ describe('AlertsListPage — rendering branches', () => {
       qr({ isLoading: false, isError: true, error: new Error('Failed to load alerts'), data: undefined }),
     );
     renderPage();
-    expect(screen.getByText('Failed to load alerts')).toBeInTheDocument();
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByTestId('alert-card-1')).not.toBeInTheDocument();
   });
 

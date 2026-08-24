@@ -143,7 +143,7 @@ export function OperationsSection() {
                     max={100}
                     label={t('Success')}
                     unit="%"
-                    color={successRate >= 95 ? '#22c55e' : successRate >= 80 ? '#f59e0b' : '#ef4444'}
+                    tone={successRate >= 95 ? 'success' : successRate >= 80 ? 'warning' : 'danger'}
                     size={120}
                     className="max-w-xs"
                   />

@@ -4,6 +4,7 @@ import { ConnectionSegment } from './status-bar/ConnectionSegment';
 import { LiveTelemetrySegment } from './status-bar/LiveTelemetrySegment';
 import { ActiveVehicleSegment } from './status-bar/ActiveVehicleSegment';
 import { BackgroundWorkSegment } from './status-bar/BackgroundWorkSegment';
+import { RecentPagesSegment } from './status-bar/RecentPagesSegment';
 import { VersionSegment } from './status-bar/VersionSegment';
 import { HelpSegment } from './status-bar/HelpSegment';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
@@ -12,10 +13,10 @@ import { cn } from '@/lib/cn';
 /**
  * StatusBar.
  *
- * Always-on 28px footer pinned to the bottom of the viewport with five
+ * Always-on 28px footer pinned to the bottom of the viewport with seven
  * consolidated status segments:
  *
- *   API · Live telemetry · Active vehicle · Background jobs · Version
+ *   API · Live telemetry · Background jobs · Active vehicle · Recent pages · Help · Version
  *
  * Each segment is its own component (in `./status-bar/`) and is fed by a
  * dedicated hook so subscribers don't pay for the whole bar.
@@ -96,6 +97,8 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
             vehicles. We always render the dividers around segments that
             unconditionally render to keep the layout stable. */}
         <ActiveVehicleSegment iconOnly={iconOnly} />
+        <Divider />
+        <RecentPagesSegment iconOnly={iconOnly} />
         <Divider />
         <HelpSegment iconOnly={iconOnly} />
         <Divider />

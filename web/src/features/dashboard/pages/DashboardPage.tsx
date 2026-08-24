@@ -28,7 +28,6 @@ import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { AddWidgetButton } from '../components/AddWidgetButton';
 import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
-import { RecentlyViewedWidget } from '../components/RecentlyViewedWidget';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
@@ -494,14 +493,6 @@ export default function DashboardPage() {
             </AlertBanner>
           )}
         </div>
-
-        {/* Recently viewed — renders an empty placeholder for first-run
-            users so they still discover the affordance. */}
-        <FadeIn>
-          <section aria-label={t('dashboard.recentlyViewed', 'Recently viewed')}>
-            <RecentlyViewedWidget />
-          </section>
-        </FadeIn>
 
         {/* Layout switcher + manager — shown whenever saved dashboards exist. */}
         {dashboards.length > 0 && (

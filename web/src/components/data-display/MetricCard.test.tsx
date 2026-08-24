@@ -77,17 +77,19 @@ describe('MetricCard — label + value', () => {
     const { container } = render(<MetricCard label="X" value="1" className="my-custom-card" />)
     const root = container.firstChild as HTMLElement
     expect(root).toHaveClass('my-custom-card')
-    expect(root).toHaveClass('rounded-xl')
+    expect(root).toHaveAttribute('data-role', 'metric-card')
   })
 })
 
 describe('MetricCard — icon + colour', () => {
-  it('renders the icon inside a cyan box by default', () => {
+  it('renders the icon inside a neutral surface with the cyan semantic color', () => {
     render(<MetricCard label="X" value="1" icon={<svg data-testid="ic" />} />)
     const inner = screen.getByTestId('ic').parentElement as HTMLElement
     const box = inner.parentElement as HTMLElement
-    expect(box.className).toContain('bg-neon-cyan/10')
-    expect(box.className).toContain('ring-neon-cyan/20')
+    expect(box).toHaveAttribute('data-role', 'metric-icon')
+    expect(box).toHaveAttribute('data-color', 'cyan')
+    expect(box.className).toContain('bg-[var(--surface-2)]')
+    expect(box.className).toContain('border-[var(--border-default)]')
     expect(inner).toHaveClass('text-cyan-300')
   })
 
@@ -95,7 +97,8 @@ describe('MetricCard — icon + colour', () => {
     render(<MetricCard label="X" value="1" color="green" icon={<svg data-testid="ic" />} />)
     const inner = screen.getByTestId('ic').parentElement as HTMLElement
     const box = inner.parentElement as HTMLElement
-    expect(box.className).toContain('bg-neon-green/10')
+    expect(box).toHaveAttribute('data-color', 'green')
+    expect(box.className).toContain('bg-[var(--surface-2)]')
     expect(inner).toHaveClass('text-emerald-300')
   })
 
@@ -108,14 +111,13 @@ describe('MetricCard — icon + colour', () => {
         icon={<svg data-testid="ic" />}
       />,
     )
-    const box = (screen.getByTestId('ic').parentElement as HTMLElement).parentElement as HTMLElement
-    expect(box.className).toContain('bg-neon-cyan/10')
+    const inner = screen.getByTestId('ic').parentElement as HTMLElement
+    expect(inner.className).toContain('text-cyan-300')
   })
 
   it('omits the icon box when no icon is passed', () => {
     const { container } = render(<MetricCard label="X" value="1" />)
-    // The icon box is the only element using rounded-lg (the root is rounded-xl).
-    expect(container.querySelector('.rounded-lg')).toBeNull()
+    expect(container.querySelector('svg')).toBeNull()
   })
 })
 

@@ -45,6 +45,7 @@ import { cn } from '@/lib/cn'
 import { RouteTransition } from '@/components/motion'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { LinearSidebar } from './sidebar/LinearSidebar'
+import { buildCompactNavTree } from './sidebar/compactNav'
 import { NotionSidebar } from './sidebar/NotionSidebar'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
@@ -281,7 +282,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
  * Used + canonical section added noise). Code is kept in place so we
  * can re-enable it by flipping this flag back to `true` without a diff.
  * Recent-page tracking itself still runs (it's wired into the command
- * palette + the dashboard widget) — only the sidebar render is muted.
+ * palette + the global status bar) — only the sidebar render is muted.
  */
 const SHOW_RECENTLY_USED_NAV = false;
 
@@ -744,7 +745,7 @@ function ThemeQuickSwitcher({
         aria-expanded={open}
         aria-label={t('theme.openPicker', 'Open theme picker')}
         onClick={() => setOpen(v => !v)}
-        className="h-9 w-9 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
+        className="h-9 w-9 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)]"
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
       </Button>
@@ -759,10 +760,10 @@ function ThemeQuickSwitcher({
             ...(coords.left !== undefined ? { left: coords.left } : {}),
             ...(coords.right !== undefined ? { right: coords.right } : {}),
           }}
-          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4 shadow-2xl"
+          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e3"
         >
           <ThemePicker compact showMode showCustom={false} onChange={() => setOpen(false)} onModeChange={() => setOpen(false)} />
-          <div className="mt-3 flex justify-end border-t border-[var(--glass-border)] pt-3">
+          <div className="mt-3 flex justify-end border-t border-[var(--border-subtle)] pt-3">
             <Button
               type="button"
               variant="ghost"
@@ -770,7 +771,7 @@ function ThemeQuickSwitcher({
                 setOpen(false)
                 navigate('/settings#appearance')
               }}
-              className="h-auto px-2 py-1 text-xs font-medium text-cyan-300 hover:bg-transparent hover:text-cyan-200"
+              className="h-auto px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-transparent hover:brightness-110"
             >
               {t('theme.customize', 'Customize…')}
             </Button>
@@ -1080,6 +1081,21 @@ export default function Layout() {
     [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
+  // Progressive disclosure for the DEFAULT (Linear) sidebar only.
+  //
+  // `visibleNavSections` is the complete 20-group catalog — it still feeds
+  // the `notion` and `legacy` styles (explicit user choice to see
+  // everything), the `/explore` Feature Hub, and the command palette. The
+  // Linear style instead renders a curated nine-group tree; long-tail routes
+  // stay reachable through the always-visible command-palette trigger and
+  // `/explore` (pinned into Overview), and the exact active item is injected
+  // when the current route is outside the curated set so location context is
+  // never lost. See `sidebar/compactNav.ts`.
+  const compactNav = useMemo(
+    () => buildCompactNavTree(visibleNavSections, location.pathname),
+    [visibleNavSections, location.pathname],
+  )
+
   useEffect(() => {
     if (!activeSectionTitle) return
     setExpandedSections(prev => {
@@ -1198,11 +1214,10 @@ export default function Layout() {
   }, [])
   const mainRef = useRef<HTMLElement>(null)
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
-    const { to, icon: Icon, label, color, ...rest } = item
+    const { to, icon: Icon, label, ...rest } = item
     const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
     const isActive = isActiveNavPath(location.pathname, to)
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
-    const sectionStyle = SECTION_ICON_STYLES[findNavItemByExactPath(to)?.section.title ?? '']
     return (
       <GuardedNavLink
         key={to}
@@ -1212,50 +1227,51 @@ export default function Layout() {
         aria-current={isActive ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-all duration-normal',
+          'group relative flex min-h-9 items-center gap-2.5 rounded-shape-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-fast',
           isInTabBar && 'opacity-50 lg:opacity-100'
         )}
       >
         {isActive && (
           <motion.div
             layoutId={compact ? `nav-active-${activeScope}-${to}` : 'nav-active'}
-            className="absolute inset-0 rounded-xl bg-white/[0.06] border border-white/[0.08]"
-            style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.05)' }}
-            transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
+            className="absolute inset-0 rounded-shape-md border border-[rgba(var(--theme-primary-rgb),0.2)] bg-[rgba(var(--theme-primary-rgb),0.09)]"
+            transition={{ duration: 0.16, ease: 'easeOut' }}
           />
         )}
         <span
           className={cn(
-            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-normal',
-            'h-7 w-7 rounded-lg',
-            sectionStyle?.surface ?? 'bg-white/[0.035]',
-            sectionStyle?.ring && 'ring-1',
-            sectionStyle?.ring,
-            isActive ? 'bg-white/[0.09] ring-white/20' : 'group-hover:bg-white/[0.07] group-hover:ring-white/15'
+            'relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-shape-sm border transition-colors duration-fast',
+            isActive
+              ? 'border-[rgba(var(--theme-primary-rgb),0.24)] bg-[rgba(var(--theme-primary-rgb),0.12)]'
+              : 'border-[var(--border-subtle)] bg-[var(--surface-2)] group-hover:border-[var(--border-default)]'
           )}
         >
-          <Icon className={cn('h-4 w-4 transition-all duration-normal', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
+          <Icon
+            className={cn(
+              'h-4 w-4 transition-colors duration-fast',
+              isActive
+                ? 'text-[var(--theme-primary)]'
+                : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+            )}
+          />
         </span>
         <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(label)}
         </span>
         {to === '/notifications/alerts' && unreadAlerts > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-2xs font-bold text-neon-red ring-1 ring-neon-red/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-rose-500/20 bg-rose-500/10 px-1.5 text-2xs font-semibold text-rose-300">
             {unreadAlerts > 9 ? '9+' : unreadAlerts}
           </span>
         )}
         {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-2xs font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-[var(--border-default)] bg-[var(--surface-3)] px-1.5 text-2xs font-semibold text-[var(--text-secondary)]">
             {vehicles.length}
           </span>
         )}
         {to === '/data-repair' && staleCount > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-2xs font-bold text-neon-amber ring-1 ring-neon-amber/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 text-2xs font-semibold text-amber-300">
             {staleCount > 9 ? '9+' : staleCount}
           </span>
-        )}
-        {isActive && !compact && (
-          <span className="absolute end-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
         )}
       </GuardedNavLink>
     )
@@ -1270,18 +1286,11 @@ export default function Layout() {
           Audit anchor: skipToContent|skip.to.content */}
       <SkipToContent />
       <BreadcrumbOverridesProvider>
-      <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
+      <div className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]">
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
-
-      {/* Ambient background effects */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-neon-cyan/[0.02] blur-[100px]" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-neon-purple/[0.02] blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-neon-blue/[0.01] blur-[120px]" />
-      </div>
 
       {/* Mobile overlay */}
       <AnimatePresence>
@@ -1310,7 +1319,7 @@ export default function Layout() {
         data-sidebar-open={sidebarOpen}
         className={cn(
           'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
-          'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
+          'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 lg:shadow-none',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
           // Reserve space for the fixed footer StatusBar
           // so the bottom "Take a tour / Report bug" row never slides under
@@ -1322,8 +1331,8 @@ export default function Layout() {
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
             here; canonical provenance lives in the footer <VersionSegment>. */}
-        <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
-          <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
+        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0 lg:hidden">
+          <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </GuardedNavLink>
           <Button
@@ -1333,7 +1342,7 @@ export default function Layout() {
             aria-label={t('nav.closeSidebar', 'Close sidebar')}
             aria-expanded={sidebarOpen}
             onClick={() => setSidebarOpen(false)}
-            className="h-10 w-10 shrink-0 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+            className="h-10 w-10 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
             <Icons.close className="h-5 w-5" />
           </Button>
@@ -1342,7 +1351,7 @@ export default function Layout() {
         {/* Logo — desktop sidebar header. Build version intentionally not
             rendered here; canonical provenance lives in the footer
             <VersionSegment>. */}
-        <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
+        <div className="hidden lg:flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0">
           <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
           </GuardedNavLink>
@@ -1351,7 +1360,7 @@ export default function Layout() {
         </div>
 
         {/* Sticky search trigger */}
-        <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-[var(--glass-border)] shrink-0">
+        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 lg:px-4 lg:py-3">
           <CommandPaletteTrigger />
         </div>
 
@@ -1363,14 +1372,14 @@ export default function Layout() {
         {/* Navigation */}
         {sidebarStyle === 'linear' ? (
           <LinearSidebar
-            sections={visibleNavSections}
+            sections={compactNav.sections}
             pinnedItems={pinnedNavItems}
             pathname={location.pathname}
             navLabel={navLabel}
             onPin={pinNavPath}
             onUnpin={unpinNavPath}
             onItemSelect={() => setSidebarOpen(false)}
-            activeSectionTitle={activeSectionTitle}
+            activeSectionTitle={compactNav.activeSectionTitle}
             alertCount={unreadAlerts}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
@@ -1525,26 +1534,21 @@ export default function Layout() {
                     {isActiveSection && (
                       <span
                         aria-hidden="true"
-                        className={cn(
-                          'pointer-events-none absolute inset-x-0 -inset-y-0.5 rounded-md bg-gradient-to-r opacity-80',
-                          sectionStyle?.gradient ?? 'from-[rgba(var(--theme-primary-rgb),0.18)] via-[rgba(var(--theme-primary-rgb),0.05)] to-transparent'
-                        )}
+                        className="pointer-events-none absolute inset-x-0 -inset-y-0.5 rounded-shape-sm bg-[var(--surface-2)]"
                       />
                     )}
                     <span className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
                       <SectionIcon
                         className={cn(
-                          'h-3 w-3 shrink-0 transition-all duration-normal',
-                          sectionStyle?.accent ?? 'text-neon-cyan',
-                          isActiveSection && 'drop-shadow-[0_0_6px_currentColor]'
+                          'h-3.5 w-3.5 shrink-0 transition-colors duration-fast',
+                          isActiveSection ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
                         )}
                         aria-hidden="true"
                       />
                       <span
                         className={cn(
-                          'truncate text-2xs font-bold uppercase tracking-[0.16em] transition-colors',
-                          sectionStyle?.accent ?? 'text-[var(--text-secondary)]',
-                          isActiveSection ? 'opacity-100' : 'opacity-85 group-hover/section:opacity-100'
+                          'truncate text-xs font-semibold tracking-[0.035em] transition-colors',
+                          isActiveSection ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover/section:text-[var(--text-primary)]'
                         )}
                         title={section.title}
                       >
@@ -1553,8 +1557,8 @@ export default function Layout() {
                       <span
                         aria-hidden="true"
                         className={cn(
-                          'ms-1 h-px flex-1 bg-gradient-to-r from-black/15 to-transparent transition-opacity dark:from-white/15',
-                          isActiveSection ? 'opacity-60' : 'opacity-25 group-hover/section:opacity-40'
+                          'ms-1 h-px flex-1 bg-[var(--border-subtle)] transition-opacity',
+                          isActiveSection ? 'opacity-100' : 'opacity-60 group-hover/section:opacity-100'
                         )}
                       />
                     </span>
@@ -1563,8 +1567,8 @@ export default function Layout() {
                         className={cn(
                           'flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums',
                           isActiveSection
-                            ? cn(sectionStyle?.surface ?? 'bg-white/[0.08]', sectionStyle?.accent ?? 'text-[var(--text-primary)]')
-                            : 'bg-black/[0.05] text-[var(--text-muted)] dark:bg-white/[0.04]'
+                            ? 'bg-[var(--surface-3)] text-[var(--text-secondary)]'
+                            : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                         )}
                       >
                         {section.items.length}
@@ -1572,7 +1576,7 @@ export default function Layout() {
                       <Icons.expand
                         className={cn(
                           'h-3 w-3 transition-transform',
-                          isActiveSection ? (sectionStyle?.accent ?? 'text-[var(--text-primary)]') : 'text-[var(--text-muted)]',
+                          isActiveSection ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]',
                           isExpanded && 'rotate-180'
                         )}
                       />
@@ -1614,7 +1618,7 @@ export default function Layout() {
 
       {/* Mobile top bar */}
       {!sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 py-3 lg:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1622,7 +1626,7 @@ export default function Layout() {
             size="sm"
             aria-label={t('nav.openSidebar', 'Open sidebar')}
             aria-expanded={false}
-            className="relative z-10 h-11 w-11 -ml-1 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+            className="relative z-10 -ml-1 h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
             <Icons.menu className="h-6 w-6" />
           </Button>
@@ -1670,7 +1674,7 @@ export default function Layout() {
             statusBarPrefs.enabled && 'lg:pb-7 pb-20',
           )}
         >
-          <div className="w-full px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8 2xl:px-10 3xl:px-12">
+          <div className="mx-auto w-full max-w-[1920px] px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-8 2xl:px-10">
             <LayoutBreadcrumbs className="min-w-0 text-xs" />
             <RouteTransition>
               <Outlet />

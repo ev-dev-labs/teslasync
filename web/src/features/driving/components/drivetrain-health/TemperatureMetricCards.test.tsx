@@ -12,7 +12,7 @@
  *     and its "% of max" subtitle, including the hardening branch where a
  *     non-finite reading or a non-positive ceiling shows "No data" (mirroring
  *     the '—' value) rather than a misleading "0% of max",
- *   - the Health Score tile's status→neon-colour branch (good/warning/critical)
+ *   - the Health Score tile's semantic status colour (good/warning/critical)
  *     and its NaN guard (never "NaN%"),
  *   - the Peak Power tile's `> 0` gate (formatted kW vs '—'), and
  *   - a11y: the two component-owned decorative icons (Heart, Zap) are
@@ -232,20 +232,26 @@ describe('TemperatureMetricCards — subtitle hardening', () => {
 });
 
 describe('TemperatureMetricCards — Health Score tile', () => {
-  const bgClass: Record<HealthStatus, string> = {
-    good: 'bg-neon-green/10',
-    warning: 'bg-neon-amber/10',
-    critical: 'bg-neon-red/10',
+  const colorByHealth: Record<HealthStatus, string> = {
+    good: 'green',
+    warning: 'amber',
+    critical: 'red',
   };
 
   it.each(['good', 'warning', 'critical'] as const)(
-    'maps overallHealth=%s to its neon accent on the Health Score tile',
+    'maps overallHealth=%s to its semantic accent on the Health Score tile',
     (overallHealth) => {
       const { unmount } = renderCards({ overallHealth });
 
-      const card = screen.getByText('Health Score').closest('.rounded-xl');
+      const card = screen
+        .getByText('Health Score')
+        .closest('[data-role="metric-card"]');
       expect(card).not.toBeNull();
-      expect(card?.querySelector(`[class*="${bgClass[overallHealth]}"]`)).not.toBeNull();
+      expect(
+        card?.querySelector(
+          `[data-role="metric-icon"][data-color="${colorByHealth[overallHealth]}"]`,
+        ),
+      ).not.toBeNull();
       unmount();
     },
   );

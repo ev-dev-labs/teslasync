@@ -20,10 +20,10 @@
 // records the exact key/fallback each string wires to (mirrors the sibling
 // ClimateSection test). useUnits is mocked with echo formatters so the precise
 // SI value + options routed to each formatter is provable, with no unit maths in
-// the test. The real MetricCard renders, proving the tiles + their colour rings
-// mount. Nothing here touches the network — QuickStatsGrid receives its data as
-// props. The pure helpers (batteryColor / formatBatteryLevel) are also unit
-// tested directly so every export is covered.
+// the test. The real MetricCard renders, proving the tiles and semantic colour
+// metadata mount. Nothing here touches the network — QuickStatsGrid receives
+// its data as props. The pure helpers (batteryColor / formatBatteryLevel) are
+// also unit tested directly so every export is covered.
 
 import type { ReactNode } from 'react'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -89,6 +89,20 @@ function renderGrid(
 ) {
   const state = { ...fullState, ...overrides } as VehicleState
   return render(<QuickStatsGrid state={state} status={status} />)
+}
+
+function metricCard(label: string): HTMLElement {
+  const card = screen
+    .getByText(label)
+    .closest<HTMLElement>('[data-role="metric-card"]')
+  expect(card).not.toBeNull()
+  return card as HTMLElement
+}
+
+function metricColor(label: string): string | null {
+  return metricCard(label)
+    .querySelector('[data-role="metric-icon"]')
+    ?.getAttribute('data-color') ?? null
 }
 
 beforeEach(() => {
@@ -206,17 +220,14 @@ describe('QuickStatsGrid', () => {
   })
 
   it('applies the red accent ring only when the battery is critical (<=20%)', () => {
-    const { container } = renderGrid({ battery_level: 12 })
-    // Battery is the only tile that can go red, so its presence pins the accent.
-    expect(container.querySelector('[class*="bg-neon-red"]')).not.toBeNull()
+    renderGrid({ battery_level: 12 })
+    expect(metricColor('Battery')).toBe('red')
     expect(screen.getByText('12%')).toBeInTheDocument()
 
     cleanup()
 
-    const healthy = renderGrid({ battery_level: 88 })
-    expect(healthy.container.querySelector('[class*="bg-neon-red"]')).toBeNull()
-    // A healthy pack lights the green accent instead.
-    expect(healthy.container.querySelector('[class*="bg-neon-green"]')).not.toBeNull()
+    renderGrid({ battery_level: 88 })
+    expect(metricColor('Battery')).toBe('green')
   })
 
   it('degrades missing numeric readings to an em-dash instead of "null%" / "0.00 kW" / a blank tile', () => {
@@ -229,14 +240,14 @@ describe('QuickStatsGrid', () => {
     // …never the literal broken strings.
     expect(screen.queryByText('null%')).toBeNull()
     expect(screen.queryByText('0.00 kW')).toBeNull()
-    // The battery tile with an unknown level uses the neutral (non-red) accent.
-    expect(document.querySelector('[class*="bg-neon-red"]')).toBeNull()
+    // The battery tile with an unknown level uses the neutral cyan accent.
+    expect(metricColor('Battery')).toBe('cyan')
   })
 
   it('renders a 0% battery verbatim with the red critical accent (not an em-dash)', () => {
-    const { container } = renderGrid({ battery_level: 0 })
+    renderGrid({ battery_level: 0 })
     expect(screen.getByText('0%')).toBeInTheDocument()
-    expect(container.querySelector('[class*="bg-neon-red"]')).not.toBeNull()
+    expect(metricColor('Battery')).toBe('red')
   })
 
   it('falls back to an em-dash when the status is blank (never a blank State tile)', () => {

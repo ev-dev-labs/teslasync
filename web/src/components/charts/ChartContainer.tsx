@@ -379,7 +379,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           className,
         )}
       >
-        <div className="mb-3 flex items-start justify-between">
+        <div className="mb-4 flex items-start justify-between border-b border-[var(--border-subtle)] pb-3">
           <div>
             <Text
               as="h3"

@@ -56,11 +56,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             required={required}
             aria-required={required ? 'true' : undefined}
             className={cn(
-              'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
+              'w-full rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] text-[var(--text-primary)] transition-colors',
               sizeClasses[size],
-              'placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
+              'placeholder:text-[var(--text-muted)] focus-visible:border-[var(--theme-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-app)]',
               'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-              error && 'border-red-500',
+              error && 'border-rose-500',
               icon && 'pl-10',
               suffix && 'pr-10',
               className,

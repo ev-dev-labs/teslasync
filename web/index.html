@@ -50,7 +50,7 @@
     <link rel="icon" type="image/svg+xml" sizes="192x192" href="/icons/icon-192.svg" />
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#0a0a0f" />
+    <meta name="theme-color" content="#0b0d12" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="TeslaSync — Next-gen Tesla Fleet Intelligence Platform" />
@@ -65,84 +65,56 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:wght@400;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <style>
-      /* Splash screen — brand reveal animation */
+      /* Minimal first-paint shell. Keep startup calm and product-focused. */
       #splash {
         position: fixed; inset: 0; z-index: 9999;
         display: flex; flex-direction: column;
         align-items: center; justify-content: center;
-        background: #0a0a0f;
-        transition: opacity 0.6s ease;
+        background: #0b0d12;
+        transition: opacity 180ms ease;
       }
       #splash.fade-out { opacity: 0; pointer-events: none; }
       #splash .brand-logo {
-        width: 120px; height: 120px;
-        animation: logo-appear 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        opacity: 0; transform: scale(0.5);
-        filter: drop-shadow(0 0 30px rgba(0,240,255,0.4)) drop-shadow(0 0 60px rgba(16,185,129,0.2));
+        width: 48px; height: 48px;
       }
       #splash .brand-logo svg { width: 100%; height: 100%; }
       #splash .logo-text {
         font-family: 'Inter', sans-serif;
-        font-size: 28px; font-weight: 800;
-        background: linear-gradient(135deg, #00f0ff, #10b981);
-        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-        background-clip: text;
-        letter-spacing: -0.03em; margin-top: 20px;
-        animation: text-appear 0.6s cubic-bezier(0.16, 1, 0.3, 1) 0.3s forwards;
-        opacity: 0; transform: translateY(10px);
+        font-size: 19px; font-weight: 600; color: #f4f7fb;
+        letter-spacing: -0.02em; margin-top: 14px;
       }
       #splash .logo-sub {
-        font-family: 'JetBrains Mono', monospace;
-        font-size: 10px; color: rgba(255,255,255,0.25);
-        margin-top: 12px; letter-spacing: 0.2em; text-transform: uppercase;
-        animation: text-appear 0.5s ease 0.5s forwards;
-        opacity: 0; transform: translateY(5px);
+        font-family: 'Inter', sans-serif;
+        font-size: 11px; color: #758195;
+        margin-top: 5px; letter-spacing: 0.04em;
       }
       #splash .loading-bar {
-        width: 120px; height: 2px; margin-top: 24px;
-        background: rgba(255,255,255,0.06); border-radius: 1px; overflow: hidden;
-        animation: text-appear 0.4s ease 0.6s forwards; opacity: 0;
+        width: 144px; height: 2px; margin-top: 22px;
+        background: rgba(255,255,255,0.08); border-radius: 1px; overflow: hidden;
       }
       #splash .loading-bar::after {
         content: ''; display: block; width: 40%; height: 100%;
-        background: linear-gradient(90deg, #00f0ff, #10b981);
+        background: #3b82f6;
         border-radius: 1px;
         animation: loading-slide 1.2s ease-in-out infinite;
-      }
-      @keyframes logo-appear {
-        0% { opacity: 0; transform: scale(0.5) rotate(-20deg); }
-        100% { opacity: 1; transform: scale(1) rotate(0deg); }
-      }
-      @keyframes text-appear {
-        to { opacity: 1; transform: translateY(0); }
       }
       @keyframes loading-slide {
         0% { transform: translateX(-100%); }
         50% { transform: translateX(200%); }
         100% { transform: translateX(-100%); }
       }
-      @keyframes bolt-pulse {
-        0% { opacity: 0.75; }
-        100% { opacity: 1; }
-      }
-      @keyframes carGlow {
-        0% { stroke-opacity: 0.65; }
-        100% { stroke-opacity: 1; }
+      @media (prefers-reduced-motion: reduce) {
+        #splash,
+        #splash .loading-bar::after { animation: none; transition: none; }
       }
     </style>
   </head>
-  <body class="bg-tesla-dark text-white antialiased">
+  <body class="antialiased">
     <div id="splash">
       <div class="brand-logo">
         <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:100%">
-          <defs>
-            <linearGradient id="sg" x1="0" y1="0" x2="200" y2="200" gradientUnits="userSpaceOnUse">
-              <stop stop-color="#00f0ff"/>
-              <stop offset="1" stop-color="#10b981"/>
-            </linearGradient>
-          </defs>
-          <rect x="8" y="8" width="184" height="184" rx="40" fill="url(#sg)"/>
-          <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="white" style="animation: bolt-pulse 2s ease-in-out infinite alternate"/>
+          <rect x="8" y="8" width="184" height="184" rx="38" fill="#171c25" stroke="#2a3441" stroke-width="8"/>
+          <path d="M112 30L62 108h34L78 170l58-82h-34z" fill="#3b82f6"/>
         </svg>
       </div>
       <div class="logo-text">TeslaSync</div>
@@ -156,7 +128,7 @@
       window.addEventListener('load', function() {
         setTimeout(function() {
           var s = document.getElementById('splash');
-          if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 500); }
+          if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 200); }
         }, 300);
       });
     </script>

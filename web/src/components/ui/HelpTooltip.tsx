@@ -70,8 +70,8 @@ export function HelpTooltip({
   const label = ariaLabel ?? t('help.tooltip.iconLabel', { defaultValue: 'More info' });
 
   const tooltipBody = (
-    <div className="text-2xs leading-snug">
-      <p className="text-[var(--text-primary)]">{resolved}</p>
+    <span className="block text-2xs leading-snug">
+      <span className="block text-[var(--text-primary)]">{resolved}</span>
       {learnMore && (
         <a
           href={learnMore.url}
@@ -88,7 +88,7 @@ export function HelpTooltip({
           <ExternalLink className="h-3 w-3" aria-hidden />
         </a>
       )}
-    </div>
+    </span>
   );
 
   return (

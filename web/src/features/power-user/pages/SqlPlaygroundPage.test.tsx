@@ -217,7 +217,7 @@ describe('SqlPlaygroundPage', () => {
     renderPage();
 
     const tablesCard = (await screen.findByText('Catalog tables')).closest(
-      '.p-3',
+      '[data-role="metric-card"]',
     ) as HTMLElement;
     expect(tablesCard).not.toBeNull();
     expect(
@@ -226,7 +226,7 @@ describe('SqlPlaygroundPage', () => {
 
     const columnsCard = screen
       .getByText('Documented columns')
-      .closest('.p-3') as HTMLElement;
+      .closest('[data-role="metric-card"]') as HTMLElement;
     expect(
       within(columnsCard).getByText(String(expectedColumns)),
     ).toBeInTheDocument();

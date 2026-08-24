@@ -61,7 +61,7 @@ const EXPECTED_SIGNAL_COUNT = TELEMETRY_FIELDS.reduce(
 /** Return the MetricCard root element that owns the given label text. */
 function getCard(label: string): HTMLElement {
   const labelNode = screen.getByText(label)
-  const card = labelNode.closest('.rounded-xl')
+  const card = labelNode.closest('[data-role="metric-card"]')
   if (!card) throw new Error(`no MetricCard found for label "${label}"`)
   return card as HTMLElement
 }
@@ -150,16 +150,16 @@ describe('DevToolsOverview', () => {
     render(<DevToolsOverview errorVinCount={3} vehicleCount={9} />)
 
     const card = getCard('Telemetry Errors')
-    expect(card.querySelector('[class*="bg-neon-red"]')).not.toBeNull()
-    expect(card.querySelector('[class*="bg-neon-green"]')).toBeNull()
+    const icon = card.querySelector('[data-role="metric-icon"]')
+    expect(icon).toHaveAttribute('data-color', 'red')
   })
 
   it('tones the Telemetry Errors icon green when there are zero errors', () => {
     render(<DevToolsOverview errorVinCount={0} vehicleCount={9} />)
 
     const card = getCard('Telemetry Errors')
-    expect(card.querySelector('[class*="bg-neon-green"]')).not.toBeNull()
-    expect(card.querySelector('[class*="bg-neon-red"]')).toBeNull()
+    const icon = card.querySelector('[data-role="metric-icon"]')
+    expect(icon).toHaveAttribute('data-color', 'green')
   })
 
   it('uses a neutral icon tone while the error count is unknown', () => {
@@ -168,9 +168,8 @@ describe('DevToolsOverview', () => {
     render(<DevToolsOverview errorVinCount={4} vehicleCount={9} loading />)
 
     const card = getCard('Telemetry Errors')
-    expect(card.querySelector('[class*="bg-neon-cyan"]')).not.toBeNull()
-    expect(card.querySelector('[class*="bg-neon-red"]')).toBeNull()
-    expect(card.querySelector('[class*="bg-neon-green"]')).toBeNull()
+    const icon = card.querySelector('[data-role="metric-icon"]')
+    expect(icon).toHaveAttribute('data-color', 'cyan')
   })
 
   it('coerces undefined live counts to 0 instead of rendering NaN', () => {

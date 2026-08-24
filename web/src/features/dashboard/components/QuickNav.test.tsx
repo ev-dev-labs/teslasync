@@ -16,8 +16,7 @@
  *   6. Keyboard operability — links are native, focusable anchors.
  *   7. The export is a memoised component (perf hardening) with a displayName.
  *
- * react-i18next is stubbed with a passthrough `t(key, fallback)` spy (the same
- * convention as RecentlyViewedWidget.test.tsx) so the component renders English
+ * react-i18next is stubbed with a passthrough `t(key, fallback)` spy so the component renders English
  * defaults without the full i18n bootstrap AND we can assert on the exact
  * (key, fallback) pairs. A <MemoryRouter> supplies the router context the
  * <Link>s need. No network is touched.

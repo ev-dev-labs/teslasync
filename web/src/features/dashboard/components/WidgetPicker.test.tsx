@@ -21,7 +21,7 @@
  *
  * i18n is stubbed with an interpolating passthrough `t(key, default, opts)` so
  * assertions run against deterministic English defaults (matching the sibling
- * DashboardSettingsModal / RecentlyViewedWidget convention). No network is
+ * DashboardSettingsModal convention). No network is
  * touched — the component is pure presentation over the static registry.
  */
 import { afterEach, describe, it, expect, vi } from 'vitest';

@@ -132,13 +132,13 @@ export const commandRegistry: CommandDefinition[] = [
   {
     id: 'pref.theme.neonCyan',
     labelKey: 'palette.cmd.themeNeonCyan',
-    labelFallback: 'Switch to Neon Cyan',
+    labelFallback: 'Switch to Signal Blue',
     icon: Icons.palette,
     section: 'preferences',
-    keywords: ['theme', 'switch', 'neon', 'cyan', 'color'],
+    keywords: ['theme', 'switch', 'signal', 'blue', 'neon', 'cyan', 'color'],
     perform: (ctx) => {
       ctx.setTheme('neon-cyan')
-      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Neon Cyan', defaultValue: 'Switched to Neon Cyan' }))
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Signal Blue', defaultValue: 'Switched to Signal Blue' }))
     },
   },
   {

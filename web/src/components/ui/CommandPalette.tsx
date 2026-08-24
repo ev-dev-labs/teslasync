@@ -1033,18 +1033,19 @@ export function CommandPalette({ onOpen }: CommandPaletteProps) {
 // ─── Trigger button for the sidebar ─────────────────────────────────────────
 
 export function CommandPaletteTrigger() {
+  const { t } = useTranslation()
   return (
     <button
       type="button"
       onClick={() => window.dispatchEvent(new CustomEvent('toggle-command-palette'))}
-      className="flex w-full items-center gap-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] px-4 py-2.5 text-sm text-[var(--text-muted)] transition-all hover:border-[var(--theme-primary)] hover:text-[var(--text-secondary)]"
+      aria-label={t('palette.placeholder', 'Search pages, commands…')}
+      className="flex w-full items-center gap-3 rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] px-3 py-2 text-sm text-[var(--text-muted)] transition-colors hover:border-[var(--control-border-hover)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-secondary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
     >
       <Search className="h-4 w-4" />
-      <span className="flex-1 text-left">Search...</span>
-      <kbd className="hidden items-center gap-0.5 rounded-md border border-[var(--glass-border)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:flex">
+      <span className="min-w-0 flex-1 truncate text-left">{t('palette.placeholder', 'Search pages, commands…')}</span>
+      <kbd className="hidden items-center gap-0.5 rounded-shape-sm border border-[var(--border-default)] bg-[var(--surface-2)] px-1.5 py-0.5 font-mono text-2xs text-[var(--text-muted)] sm:flex">
         <Command className="h-2.5 w-2.5" />K
       </kbd>
     </button>
   )
 }
-

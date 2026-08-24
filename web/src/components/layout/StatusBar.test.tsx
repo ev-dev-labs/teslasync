@@ -1,7 +1,7 @@
 /**
  * StatusBar behaviour + hardening tests.
  *
- * StatusBar is the always-on footer that composes six independent status
+ * StatusBar is the always-on footer that composes seven independent status
  * segments and is driven by a persisted preference store. The suite locks the
  * pieces that a silent regression would break for every user:
  *
@@ -18,7 +18,7 @@
  *     reads, partial merges, localStorage persistence (and graceful failure),
  *     and cross-tab `storage`-event sync including malformed-JSON fallback.
  *
- * The six segments are mocked to tiny probes that echo the `iconOnly` prop, so
+ * The seven segments are mocked to tiny probes that echo the `iconOnly` prop, so
  * the suite exercises StatusBar's own orchestration without booting the whole
  * telemetry / query dependency tree.
  */
@@ -78,6 +78,11 @@ vi.mock('./status-bar/BackgroundWorkSegment', () => ({
     <div data-testid="seg-background" data-icon-only={String(!!iconOnly)} />
   ),
 }));
+vi.mock('./status-bar/RecentPagesSegment', () => ({
+  RecentPagesSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
+    <div data-testid="seg-recent" data-icon-only={String(!!iconOnly)} />
+  ),
+}));
 vi.mock('./status-bar/VersionSegment', () => ({
   VersionSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
     <div data-testid="seg-version" data-icon-only={String(!!iconOnly)} />
@@ -106,6 +111,7 @@ const SEGMENT_TESTIDS = [
   'seg-live',
   'seg-vehicle',
   'seg-background',
+  'seg-recent',
   'seg-version',
   'seg-help',
 ] as const;
@@ -174,17 +180,17 @@ describe('StatusBar :: visibility & accessibility', () => {
     expect(bar).toHaveAttribute('data-print-hide');
   });
 
-  it('renders all six status segments', () => {
+  it('renders all seven status segments', () => {
     render(<StatusBar />);
     for (const id of SEGMENT_TESTIDS) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
     }
   });
 
-  it('renders exactly three non-semantic dividers, hidden from a11y', () => {
+  it('renders exactly four non-semantic dividers, hidden from a11y', () => {
     const { container } = render(<StatusBar />);
     const dividers = container.querySelectorAll('span.w-px');
-    expect(dividers.length).toBe(3);
+    expect(dividers.length).toBe(4);
     dividers.forEach((d) => expect(d).toHaveAttribute('aria-hidden'));
   });
 

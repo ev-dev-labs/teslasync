@@ -142,15 +142,15 @@ describe('FleetCostKpis', () => {
       const { container } = renderKpis({ totals: { ...TOTALS, total_failures_24h: 3 } });
 
       expect(screen.getByText('3')).toBeInTheDocument();
-      // Only the failures card uses the red neon palette, so its presence
-      // proves the `failures > 0 ? 'red' : 'green'` branch resolved to red.
-      expect(container.querySelector('[class*="bg-neon-red"]')).not.toBeNull();
+      // Only the failures card resolves to the red semantic tone, so its
+      // presence proves the `failures > 0 ? 'red' : 'green'` branch fired.
+      expect(container.querySelector('[data-role="metric-icon"][data-color="red"]')).not.toBeNull();
     });
 
     it('keeps the DLQ card non-red when there are zero failures', () => {
       const { container } = renderKpis({ totals: { ...TOTALS, total_failures_24h: 0 } });
 
-      expect(container.querySelector('[class*="bg-neon-red"]')).toBeNull();
+      expect(container.querySelector('[data-role="metric-icon"][data-color="red"]')).toBeNull();
     });
   });
 

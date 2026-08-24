@@ -7,7 +7,7 @@ import { cn } from '@/lib/cn';
 // every one of the 140 presets, so a Dracula or Solarized user got buttons
 // that did not belong to their palette. They now track the active theme.
 export const BUTTON_VARIANTS = {
-  primary: 'bg-[var(--theme-primary)] text-[var(--theme-on-primary)] hover:brightness-110 forced-colors:border forced-colors:border-[ButtonBorder]',
+  primary: 'border border-transparent bg-[var(--theme-primary)] text-[var(--theme-on-primary)] shadow-sm hover:brightness-105 forced-colors:border forced-colors:border-[ButtonBorder]',
   secondary: 'bg-[var(--control-bg)] text-[var(--text-primary)] border border-[var(--control-border)] hover:bg-[var(--control-bg-hover)] hover:border-[var(--control-border-hover)] forced-colors:border forced-colors:border-[ButtonBorder]',
   outline: 'border border-[var(--control-border)] bg-transparent text-[var(--text-primary)] hover:bg-[var(--control-bg)] hover:border-[var(--control-border-hover)] forced-colors:border-[ButtonBorder]',
   danger: 'bg-red-600 text-[var(--text-on-accent)] hover:bg-red-700 focus-visible:ring-red-500 forced-colors:border forced-colors:border-[ButtonBorder]',
@@ -24,7 +24,7 @@ export const BUTTON_VARIANTS = {
  * this constant instead of re-deriving it.
  */
 export const BUTTON_BASE =
-  'inline-flex items-center justify-center gap-2 rounded-shape-sm font-medium transition-all duration-fast ' +
+  'inline-flex items-center justify-center gap-2 rounded-shape-sm font-medium transition-colors duration-fast ' +
   // Unified focus ring: always the active accent, so it stays visible on
   // every preset instead of inheriting whatever the variant happened to
   // set. Offset colour is pinned to the app background so the ring reads

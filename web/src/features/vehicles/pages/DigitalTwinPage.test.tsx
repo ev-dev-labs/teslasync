@@ -409,7 +409,11 @@ describe('DigitalTwinPage', () => {
     const { container } = renderPage();
 
     expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
-    expect(container.querySelector('.py-20')).not.toBeNull(); // PageContainer loading branch
+    // PageContainer keeps the real header visible and renders the
+    // accessible PageLoadSkeleton (role=status, name="Loading") instead of
+    // a centered spinner while the vehicles list is loading.
+    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(container.querySelector('[data-testid="page-load-skeleton"]')).not.toBeNull();
     expect(screen.queryByText('Live Overview')).not.toBeInTheDocument();
     expect(
       screen.queryByText('No vehicles found. Add a vehicle to see its digital twin.'),

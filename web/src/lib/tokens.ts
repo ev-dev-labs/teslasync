@@ -301,6 +301,70 @@ export function normalizeSeverity(s: string | null | undefined): Severity {
   return 'info'
 }
 
+// ── Gauge / bar tone tokens — one map for every semantic fill colour ──
+//
+// Before this existed, every gauge call site picked its own hex
+// (`color="#10b981"`, `color="#f59e0b"`, `color={pct > 80 ? '#ef4444' : …}`),
+// which meant (a) "good" was three different greens depending on the page and
+// (b) the brand-coloured gauges stayed hard-blue on warm / light / custom
+// themes because a hex literal cannot follow `--theme-primary`.
+//
+// `gaugeTone` is the single source of truth. Two families live in it:
+//
+//   - THEME tones (`primary`, `accent`) resolve through the CSS variables the
+//     ThemeProvider rewrites, so a gauge that means "this vehicle's headline
+//     number" re-tints with the active preset.
+//   - STATUS tones (`success`…`neutral`) are deliberately FIXED colours. A
+//     danger bar must read as danger on all 140 presets, so it cannot inherit
+//     an arbitrary accent. They are the same hues the chart series palette and
+//     severity tokens use, chosen for contrast against both dark and light
+//     surfaces.
+//
+// Callers with a legitimately caller-defined series colour (a chart legend
+// swatch, a per-series bar) keep using the raw `color` escape hatch.
+
+export type GaugeTone =
+  | 'primary'
+  | 'accent'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
+  | 'purple'
+  | 'neutral'
+
+export const gaugeTone: Record<GaugeTone, string> = {
+  /** The active theme's primary brand colour — follows warm/light/custom presets. */
+  primary: 'var(--theme-primary)',
+  /** The active theme's secondary accent — follows warm/light/custom presets. */
+  accent: 'var(--theme-accent)',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#0ea5e9',
+  purple: '#8b5cf6',
+  /** Theme-aware muted grey for "no signal" / de-emphasised readings. */
+  neutral: 'var(--text-muted)',
+}
+
+/** Default tone applied when a gauge names neither a tone nor a raw colour. */
+export const DEFAULT_GAUGE_TONE: GaugeTone = 'primary'
+
+/**
+ * Resolve a gauge fill to a CSS colour string.
+ *
+ * Precedence is deliberate and pinned by tests: **an explicit `tone` always
+ * wins over a raw `color`**. `color` is the legacy/escape-hatch input, so a
+ * call site that has been migrated to a semantic tone cannot be silently
+ * overridden by a stale `color` prop left behind next to it. When neither is
+ * given the gauge falls back to {@link DEFAULT_GAUGE_TONE}.
+ */
+export function resolveGaugeColor(tone?: GaugeTone, color?: string): string {
+  if (tone && tone in gaugeTone) return gaugeTone[tone]
+  if (color) return color
+  return gaugeTone[DEFAULT_GAUGE_TONE]
+}
+
 // ── Chart tokens — single source of truth for theme-aware chart styling ──
 //
 // Recharts components historically hardcode hex colors that look correct in

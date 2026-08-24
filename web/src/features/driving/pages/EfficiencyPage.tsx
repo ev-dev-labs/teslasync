@@ -123,21 +123,33 @@ export default function EfficiencyPage() {
     [unitPrefs.speed],
   );
 
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const {
+    start: startDate, end: endDate, startInstant, endInstantExclusive, setRange,
+  } = useRangeState({
     persistKey: 'efficiency.range',
   });
 
   /* ---- Filtered drives ---- */
+  // Compare against the half-open [startInstant, endInstantExclusive) API
+  // window rather than a naive `d.startTs.split('T')[0]` vs. calendar-day
+  // string comparison. `startTs` is a UTC ISO instant while `startDate`/
+  // `endDate` are calendar days resolved in the local timezone — for any
+  // vehicle west of UTC, a drive that started "today" locally can carry a
+  // UTC date component one day ahead, which the naive string compare
+  // dropped as being past `endDate`. See src/lib/dateRange.ts.
   const filteredDrives = useMemo(() => {
     if (!drives) return [];
+    const startMs = startInstant ? new Date(startInstant).getTime() : undefined;
+    const endMs = endInstantExclusive ? new Date(endInstantExclusive).getTime() : undefined;
     return drives.filter((d) => {
-      const driveDate = d.startTs?.split('T')[0];
-      if (!driveDate) return true;
-      if (startDate && driveDate < startDate) return false;
-      if (endDate && driveDate > endDate) return false;
+      if (!d.startTs) return true;
+      const t = new Date(d.startTs).getTime();
+      if (Number.isNaN(t)) return true;
+      if (startMs !== undefined && t < startMs) return false;
+      if (endMs !== undefined && t >= endMs) return false;
       return true;
     });
-  }, [drives, startDate, endDate]);
+  }, [drives, startInstant, endInstantExclusive]);
 
   /* ---- Daily efficiency trend ---- */
   const dailyTrend = useMemo(() => {

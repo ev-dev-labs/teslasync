@@ -54,6 +54,7 @@ const H = vi.hoisted(() => {
     defaultReq,
     request: vi.fn(defaultReq),
     sidebarStyle: { value: 'legacy' as string },
+    sidebarProps: { linear: null as Record<string, unknown> | null, notion: null as Record<string, unknown> | null },
     forwardAuth: { value: false },
     toast: {
       toast: vi.fn(),
@@ -257,10 +258,16 @@ vi.mock('./BottomTabBar', () => ({
   BOTTOM_TAB_PATHS: new Set(['/', '/vehicles', '/charging', '/drives']),
 }))
 vi.mock('./sidebar/LinearSidebar', () => ({
-  LinearSidebar: () => <div data-testid="linear-sidebar" />,
+  LinearSidebar: (props: Record<string, unknown>) => {
+    H.sidebarProps.linear = props
+    return <div data-testid="linear-sidebar" />
+  },
 }))
 vi.mock('./sidebar/NotionSidebar', () => ({
-  NotionSidebar: () => <div data-testid="notion-sidebar" />,
+  NotionSidebar: (props: Record<string, unknown>) => {
+    H.sidebarProps.notion = props
+    return <div data-testid="notion-sidebar" />
+  },
 }))
 vi.mock('./StatusBar', () => ({
   StatusBar: () => null,
@@ -311,6 +318,13 @@ vi.mock('@/components/ui', async () => {
 
 // Import AFTER the mocks so the shell wires the stubs.
 import Layout, { navSections, navSearchKeywords } from './Layout'
+import {
+  CANONICAL_SECTION_TO_COMPACT_GROUP,
+  COMPACT_GROUP_TITLES,
+  COMPACT_NAV_BLUEPRINT,
+  EXPLORE_PATH,
+  MAX_COMPACT_GROUPS,
+} from './sidebar/compactNav'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -344,6 +358,8 @@ beforeEach(() => {
   cleanup()
   localStorage.clear()
   H.sidebarStyle.value = 'legacy'
+  H.sidebarProps.linear = null
+  H.sidebarProps.notion = null
   H.forwardAuth.value = false
   H.request.mockReset()
   H.request.mockImplementation(H.defaultReq)
@@ -465,6 +481,119 @@ describe('Layout — sidebar style selection', () => {
     expect(screen.queryByTestId('notion-sidebar')).toBeNull()
     // The legacy nav exposes the "Sections" header from NavSectionHeader.
     expect(screen.getByText('Sections')).toBeInTheDocument()
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════
+// Compact (progressive-disclosure) IA for the default Linear sidebar
+// ══════════════════════════════════════════════════════════════════════
+
+describe('compact nav blueprint ↔ navSections catalog', () => {
+  const catalogPaths = new Set(navSections.flatMap((s) => s.items).map((i) => i.to))
+  const blueprintPaths = COMPACT_NAV_BLUEPRINT.flatMap((g) => g.paths)
+
+  it('declares at most nine product-oriented groups in the canonical order', () => {
+    expect(COMPACT_GROUP_TITLES.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
+    expect(COMPACT_NAV_BLUEPRINT.map((g) => g.title)).toEqual([...COMPACT_GROUP_TITLES])
+    expect([...COMPACT_GROUP_TITLES]).toEqual([
+      'Overview',
+      'Fleet',
+      'Driving',
+      'Charging & Energy',
+      'Battery',
+      'Reports & Analytics',
+      'Automation & Alerts',
+      'System & Developer',
+      'Settings & Account',
+    ])
+  })
+
+  it('never repeats a path across the curated groups', () => {
+    expect(new Set(blueprintPaths).size).toBe(blueprintPaths.length)
+  })
+
+  it('only curates paths that really exist in the canonical catalog', () => {
+    const orphans = blueprintPaths.filter((p) => !catalogPaths.has(p))
+    expect(orphans).toEqual([])
+  })
+
+  it('keeps the required core destinations reachable from the compact tree', () => {
+    for (const required of ['/', EXPLORE_PATH, '/vehicles', '/drives', '/charging', '/battery', '/settings']) {
+      expect(blueprintPaths).toContain(required)
+    }
+    const overview = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Overview')
+    // The Feature Hub is a first-class Overview row — it is the escape hatch
+    // to the complete catalog for every long-tail route.
+    expect(overview?.paths).toContain(EXPLORE_PATH)
+  })
+
+  it('maps every canonical section title onto a compact group', () => {
+    for (const section of navSections) {
+      const mapped = CANONICAL_SECTION_TO_COMPACT_GROUP[section.title]
+      expect(mapped, `no compact group mapped for "${section.title}"`).toBeTruthy()
+      expect(COMPACT_GROUP_TITLES).toContain(mapped)
+    }
+  })
+
+  it('leaves the canonical catalog itself untouched (still the full route list)', () => {
+    expect(navSections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
+    expect(navSections.flatMap((s) => s.items).length).toBeGreaterThan(blueprintPaths.length * 2)
+  })
+})
+
+describe('Layout — compact Linear sidebar wiring', () => {
+  const linearProps = () =>
+    H.sidebarProps.linear as unknown as {
+      sections: Array<{ title: string; items: Array<{ to: string }> }>
+      activeSectionTitle?: string
+    }
+
+  it('feeds the Linear sidebar the compact nine-group tree, not the full catalog', () => {
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/')
+
+    const { sections } = linearProps()
+    expect(sections.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
+    expect(sections.map((s) => s.title)).toEqual([...COMPACT_GROUP_TITLES])
+
+    const paths = sections.flatMap((s) => s.items.map((i) => i.to))
+    expect(new Set(paths).size).toBe(paths.length)
+    expect(paths).toContain(EXPLORE_PATH)
+    expect(paths.length).toBeLessThan(navSections.flatMap((s) => s.items).length / 2)
+  })
+
+  it('reports the compact group as the active section for a curated route', () => {
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/drives')
+    expect(linearProps().activeSectionTitle).toBe('Driving')
+  })
+
+  it('injects a long-tail active route into its mapped compact group', () => {
+    H.sidebarStyle.value = 'linear'
+    // /dashcam lives in the canonical "Diagnostics" section and is NOT part
+    // of the curated set — it must still light up under System & Developer.
+    renderLayout('/dashcam')
+
+    const { sections, activeSectionTitle } = linearProps()
+    expect(activeSectionTitle).toBe('System & Developer')
+    const group = sections.find((s) => s.title === 'System & Developer')
+    expect(group?.items.map((i) => i.to)).toContain('/dashcam')
+    // Injection must not duplicate anything elsewhere in the tree.
+    const paths = sections.flatMap((s) => s.items.map((i) => i.to))
+    expect(paths.filter((p) => p === '/dashcam')).toHaveLength(1)
+  })
+
+  it('keeps the complete catalog for the Notion style (explicit user choice)', () => {
+    H.sidebarStyle.value = 'notion'
+    renderLayout('/dashcam')
+
+    const props = H.sidebarProps.notion as unknown as {
+      sections: Array<{ title: string }>
+      activeSectionTitle?: string
+    }
+    expect(props.sections.map((s) => s.title)).toContain('Diagnostics')
+    expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
+    expect(props.activeSectionTitle).toBe('Diagnostics')
   })
 })
 

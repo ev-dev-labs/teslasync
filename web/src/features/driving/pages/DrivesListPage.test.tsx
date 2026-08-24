@@ -351,7 +351,9 @@ describe('DrivesListPage — primary error', () => {
     mockDrives.mockReturnValue(makeQuery({ data: undefined, error: new Error('Drives request failed'), isError: true }));
     renderPage();
 
-    expect(screen.getByText('Drives request failed')).toBeInTheDocument();
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     // PageContainer replaces its children with the error box.
     expect(screen.queryByRole('region', { name: 'Drive list' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Overview', level: 3 })).toBeNull();

@@ -100,27 +100,28 @@ function renderKpis(overrides: Partial<Props> = {}) {
 }
 
 /**
- * Read the value MetricCard renders for a label. MetricCard emits
- * `<p class="metric-label"><span>{label}</span></p>` immediately followed by
- * `<p class="text-xl">{value}</p>`, so we hop label span → parent → next
- * sibling without coupling to brittle value-node selectors.
+ * Read the value MetricCard renders for a label. MetricCard tags its label
+ * and value nodes with `data-role="metric-label"` / `data-role="metric-value"`
+ * inside a `[data-role="metric-card"]` root, so we scope by that stable
+ * semantic contract instead of coupling to utility classes or DOM order.
  */
-function metricValue(label: string): string {
-  const labelSpan = screen.getByText(label);
-  return labelSpan.parentElement?.nextElementSibling?.textContent ?? '';
+function metricCard(label: string): HTMLElement {
+  return screen.getByText(label).closest('[data-role="metric-card"]') as HTMLElement;
 }
 
-/** The subtitle node (if any) sits after the value node; null when absent. */
+function metricValue(label: string): string {
+  return metricCard(label).querySelector('[data-role="metric-value"]')?.textContent ?? '';
+}
+
+/** The subtitle node (if any) is tagged `data-role="metric-subtitle"`; null when absent. */
 function metricSubtitle(label: string): string | null {
-  const labelSpan = screen.getByText(label);
-  const valueEl = labelSpan.parentElement?.nextElementSibling;
-  return valueEl?.nextElementSibling?.textContent ?? null;
+  return metricCard(label).querySelector('[data-role="metric-subtitle"]')?.textContent ?? null;
 }
 
 /** className of the div wrapping a card's icon glyph — carries the neon text hue. */
 function iconTextClass(label: string): string {
-  const card = screen.getByText(label).closest('.p-3');
-  return card?.querySelector('svg')?.parentElement?.className ?? '';
+  const card = metricCard(label);
+  return card.querySelector('svg')?.parentElement?.className ?? '';
 }
 
 beforeEach(() => {

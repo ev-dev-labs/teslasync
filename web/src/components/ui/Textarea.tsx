@@ -56,7 +56,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           required={required}
           aria-required={required ? 'true' : undefined}
           className={cn(
-            'w-full rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]',
+            'w-full rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)]',
             // Colour base MUST precede sizeClasses: tailwind-merge classifies
             // the custom density utility `text-d-base` in the same group as
             // the arbitrary colour `text-[var(--text-primary)]`, so whichever
@@ -65,9 +65,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             // silently drop its density font-size.
             'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
             sizeClasses[size],
-            'focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30',
+            'focus-visible:border-[var(--theme-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-app)]',
             'resize-y transition-colors disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-            error && 'border-red-500/50',
+            error && 'border-rose-500',
             className,
           )}
           aria-invalid={error ? 'true' : undefined}

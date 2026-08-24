@@ -214,8 +214,8 @@ function kpiRegion() {
 // Read a MetricCard's value by its label so numeric assertions never collide.
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('.flex-1') as HTMLElement;
-  return card.querySelector('p.text-xl')?.textContent ?? '';
+  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
+  return card.querySelector('[data-role="metric-value"]')?.textContent ?? '';
 }
 
 beforeEach(() => {

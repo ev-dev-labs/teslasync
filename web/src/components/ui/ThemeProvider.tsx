@@ -52,7 +52,7 @@ function readableForeground(hex: string): string {
   const g = parseInt(hex.slice(3, 5), 16)
   const b = parseInt(hex.slice(5, 7), 16)
   const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-  return luminance > 0.6 ? '#0a0a0f' : '#ffffff'
+  return luminance > 0.6 ? '#0b0d12' : '#ffffff'
 }
 
 const defaultCustomPrimary = '#00b4d8'
@@ -77,12 +77,14 @@ function buildCustomTheme(primary: string, accent: string): ColorTheme {
 
 const themes: Record<ThemeId, ColorTheme> = {
   'neon-cyan': {
+    // Keep the legacy id for persisted settings/API compatibility, but use a
+    // restrained product-blue palette as the default brand treatment.
     id: 'neon-cyan',
-    name: 'Neon Cyan',
-    primary: '#00f0ff',
-    primaryRGB: '0, 240, 255',
-    accent: '#4f46e5',
-    accentRGB: '79, 70, 229',
+    name: 'Signal Blue',
+    primary: '#3b82f6',
+    primaryRGB: '59, 130, 246',
+    accent: '#06b6d4',
+    accentRGB: '6, 182, 212',
   },
   'tesla-red': {
     id: 'tesla-red',
@@ -123,15 +125,15 @@ const builtinModes: Record<string, ModeTheme> = {
   dark: {
     id: 'dark',
     name: 'Dark',
-    bg: '#0a0a0f',
-    surface1: '#0f1019',
-    surface2: '#151621',
-    surface3: '#1a1b2e',
-    glassBg: 'rgba(255, 255, 255, 0.04)',
+    bg: '#0b0d12',
+    surface1: '#11151c',
+    surface2: '#171c25',
+    surface3: '#202733',
+    glassBg: 'rgba(255, 255, 255, 0.025)',
     glassBorder: 'rgba(255, 255, 255, 0.08)',
-    textPrimary: '#ffffff',
-    textSecondary: '#9ca3af',
-    textMuted: '#6b7280',
+    textPrimary: '#f4f7fb',
+    textSecondary: '#aab4c3',
+    textMuted: '#758195',
     colorScheme: 'dark',
   },
   light: {
@@ -179,15 +181,15 @@ const builtinModes: Record<string, ModeTheme> = {
   auto: {
     id: 'auto',
     name: 'Auto (System)',
-    bg: '#0a0a0f',
-    surface1: '#0f1019',
-    surface2: '#151621',
-    surface3: '#1a1b2e',
-    glassBg: 'rgba(255, 255, 255, 0.04)',
+    bg: '#0b0d12',
+    surface1: '#11151c',
+    surface2: '#171c25',
+    surface3: '#202733',
+    glassBg: 'rgba(255, 255, 255, 0.025)',
     glassBorder: 'rgba(255, 255, 255, 0.08)',
-    textPrimary: '#ffffff',
-    textSecondary: '#9ca3af',
-    textMuted: '#6b7280',
+    textPrimary: '#f4f7fb',
+    textSecondary: '#aab4c3',
+    textMuted: '#758195',
     colorScheme: 'dark',
   },
   sunset: {
@@ -262,6 +264,7 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.style.setProperty('--theme-on-primary', readableForeground(theme.primary))
   root.style.setProperty('--theme-on-accent', readableForeground(theme.accent))
   root.style.setProperty('--bg', mode.bg)
+  root.style.setProperty('--bg-app', mode.bg)
   root.style.setProperty('--surface-1', mode.surface1)
   root.style.setProperty('--surface-2', mode.surface2)
   root.style.setProperty('--surface-3', mode.surface3)

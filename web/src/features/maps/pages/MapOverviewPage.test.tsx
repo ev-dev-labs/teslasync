@@ -458,7 +458,9 @@ describe('MapOverviewPage — fleet gate hardening', () => {
     install({ vehiclesError: true })
     renderPage()
 
-    expect(await screen.findByText('vehicles boom')).toBeInTheDocument()
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
     expect(screen.queryByText('Set up TeslaSync')).toBeNull()
   })
 })

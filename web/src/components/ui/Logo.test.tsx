@@ -33,7 +33,7 @@ describe('Logo', () => {
     expect(paths.length).toBeGreaterThan(0)
   })
 
-  it('has a gradient rect background', () => {
+  it('has a framed rect background', () => {
     const { container } = render(<Logo />)
     const rect = container.querySelector('rect')
     expect(rect).toBeInTheDocument()

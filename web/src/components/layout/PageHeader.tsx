@@ -1,9 +1,9 @@
 import { type ReactNode } from 'react'
 import { FadeIn } from '../motion/FadeIn'
-import { Heading } from '../ui/Typography'
+import { Heading, Text } from '../ui/Typography'
 import { CopyLinkButton } from './CopyLinkButton'
 
-/** Standard page header with gradient title, decorative underline, optional subtitle and action buttons. */
+/** Standard page header with optional subtitle and action buttons. */
 export function PageHeader({
   title,
   subtitle,
@@ -25,30 +25,34 @@ export function PageHeader({
 }) {
   return (
     <FadeIn>
-      <div className="mb-6 sm:mb-8 flex flex-col gap-3 sm:gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="flex items-start gap-3">
-          {icon && <div className="mt-1">{icon}</div>}
-          <div>
+      <header className="mb-7 flex flex-col gap-4 border-b border-[var(--border-subtle)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div className="min-w-0">
+          <div className="flex items-center gap-3.5">
+            {icon && (
+              <div className="shrink-0 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] p-2 text-[var(--theme-primary)]">
+                {icon}
+              </div>
+            )}
             <Heading
               level="page"
-              className="bg-gradient-to-r from-white via-white to-gray-400 bg-clip-text text-transparent forced-colors:text-[CanvasText]"
+              className="font-semibold tracking-[-0.025em]"
             >
               {title}
             </Heading>
-            <div
-              aria-hidden="true"
-              className="mt-1.5 sm:mt-2 h-0.5 w-12 sm:w-16 rounded-full bg-gradient-to-r from-neon-cyan to-neon-purple opacity-60"
-            />
-            {subtitle && <p className="mt-1.5 sm:mt-2 text-xs sm:text-sm text-[var(--text-secondary)]">{subtitle}</p>}
           </div>
+          {subtitle && (
+            <Text as="p" size="sm" color="secondary" className="mt-1.5 max-w-3xl leading-relaxed">
+              {subtitle}
+            </Text>
+          )}
         </div>
         {(actions || copyLink) && (
-          <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3 min-w-0 max-w-full">
+          <div className="flex min-w-0 max-w-full flex-wrap items-center justify-end gap-2.5">
             {copyLink && <CopyLinkButton />}
             {actions}
           </div>
         )}
-      </div>
+      </header>
     </FadeIn>
   )
 }

@@ -145,13 +145,14 @@ describe('PageContainer', () => {
     expect(container.querySelector('.bg-sky-400')).toBeNull();
   });
 
-  it('renders the loading spinner instead of children when loading=true', () => {
+  it('renders a layout skeleton instead of children when loading=true', () => {
     renderWith(
       <PageContainer title="Drives" loading>
         <div data-testid="hidden-body">body</div>
       </PageContainer>,
     );
     expect(screen.queryByTestId('hidden-body')).toBeNull();
+    expect(screen.getByTestId('page-load-skeleton')).toBeInTheDocument();
   });
 
   it('renders the error banner when error is provided', () => {
@@ -160,7 +161,7 @@ describe('PageContainer', () => {
         <div data-testid="hidden-body">body</div>
       </PageContainer>,
     );
-    expect(screen.getByText('Boom')).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByTestId('hidden-body')).toBeNull();
   });
 });

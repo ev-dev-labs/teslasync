@@ -323,7 +323,9 @@ describe('DriveDetailPage', () => {
     hookState.current = { ...emptyState(), error: new Error('drive fetch exploded') }
     renderPage()
 
-    expect(screen.getByText('drive fetch exploded')).toBeInTheDocument()
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument()
     // The generic title still anchors the page…
     expect(screen.getByRole('heading', { level: 1, name: 'Drive Detail' })).toBeInTheDocument()
     // …but the error surface replaces the sections, and the empty state is NOT

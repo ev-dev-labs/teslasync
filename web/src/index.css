@@ -29,22 +29,22 @@
   letter-spacing: var(--tracking);
   font-weight: var(--font-weight-normal);
   color-scheme: dark;
-  --neon-cyan: #00f0ff;
+  --neon-cyan: #22d3ee;
   --neon-blue: #4f46e5;
   --neon-purple: #a855f7;
   --tesla-red: #e31937;
   /* Mode-aware vars — overridden by ThemeProvider */
-  --bg: #0a0a0f;
-  --bg-app: #0a0a0f;
-  --surface-1: #0f1019;
-  --surface-2: #151621;
-  --surface-3: #1a1b2e;
+  --bg: #0b0d12;
+  --bg-app: #0b0d12;
+  --surface-1: #11151c;
+  --surface-2: #171c25;
+  --surface-3: #202733;
   --surface-overlay: rgba(0, 0, 0, 0.6);
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --text-muted: #8a95a6;
+  --glass-bg: rgba(255, 255, 255, 0.025);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f4f7fb;
+  --text-secondary: #aab4c3;
+  --text-muted: #758195;
   /* Text on an inverted surface (flipped tooltip / accent fill). Dark in
    * dark themes, overridden light under :root.light-mode below. */
   --text-inverse: #0f172a;
@@ -58,19 +58,19 @@
    * Defaults below are dark-mode values; :root.light-mode (further down in
    * this file) overrides them for light themes.
    */
-  --surface-elevated: rgba(255, 255, 255, 0.04);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.2);
+  --surface-elevated: var(--surface-2);
+  --border-subtle: rgba(255, 255, 255, 0.055);
+  --border-default: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
   /* Dynamic color theme vars — overridden by ThemeProvider */
-  --theme-primary: #00f0ff;
-  --theme-primary-rgb: 0, 240, 255;
-  --theme-accent: #4f46e5;
-  --theme-accent-rgb: 79, 70, 229;
+  --theme-primary: #3b82f6;
+  --theme-primary-rgb: 59, 130, 246;
+  --theme-accent: #06b6d4;
+  --theme-accent-rgb: 6, 182, 212;
   /* Contrasting foreground for solid accent fills (primary buttons, FAB…).
      Recomputed per-accent in ThemeProvider.applyThemeCSS; these are the
      defaults for the neon-cyan/indigo starting palette. */
-  --theme-on-primary: #0a0a0f;
+  --theme-on-primary: #ffffff;
   --theme-on-accent: #ffffff;
   /*
    * Density tokens (Phase 40 / Prompt 44).
@@ -118,8 +118,8 @@
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-pill: 9999px;
 
   /*
@@ -221,6 +221,9 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
@@ -322,27 +325,29 @@ select option:checked {
   }
 
   .neon-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 cursor-pointer;
-    background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
-    color: white;
-    box-shadow: 0 0 20px rgba(var(--theme-primary-rgb), 0.2);
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
+      transition-colors duration-fast cursor-pointer;
+    border-radius: var(--radius-sm);
+    background: var(--theme-primary);
+    color: var(--theme-on-primary);
+    border: 1px solid transparent;
+    box-shadow: var(--elevation-1);
   }
   .neon-button:hover {
-    box-shadow: 0 0 30px rgba(var(--theme-primary-rgb), 0.35);
-    transform: translateY(-1px);
+    filter: brightness(1.06);
   }
 
   .neon-button-red {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 cursor-pointer;
-    background: linear-gradient(135deg, #e31937, #ff4060);
-    color: white;
-    box-shadow: 0 0 20px rgba(227, 25, 55, 0.2);
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
+      transition-colors duration-fast cursor-pointer;
+    border-radius: var(--radius-sm);
+    background: #dc2626;
+    color: var(--text-on-accent);
+    border: 1px solid transparent;
+    box-shadow: var(--elevation-1);
   }
   .neon-button-red:hover {
-    box-shadow: 0 0 30px rgba(227, 25, 55, 0.35);
-    transform: translateY(-1px);
+    background: #b91c1c;
   }
 
   .stat-value {
@@ -352,17 +357,14 @@ select option:checked {
 
   .neon-text-cyan {
     color: var(--neon-cyan);
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
   }
 
   .neon-text-red {
     color: var(--tesla-red);
-    text-shadow: 0 0 10px rgba(227, 25, 55, 0.3);
   }
 
   .neon-dot {
     @apply h-2 w-2 rounded-full;
-    box-shadow: 0 0 8px currentColor;
   }
 
   .section-title {
@@ -512,11 +514,11 @@ select option:checked {
 }
 
 /* Glass panel glow on active states */
-.glass-glow-cyan { box-shadow: 0 0 20px rgba(0, 240, 255, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-amber { box-shadow: 0 0 20px rgba(245, 158, 11, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+.glass-glow-cyan,
+.glass-glow-green,
+.glass-glow-purple,
+.glass-glow-amber,
+.glass-glow-red { box-shadow: var(--panel-shadow); }
 
 /* ========================================
    LIGHT MODE GLOBAL OVERRIDES

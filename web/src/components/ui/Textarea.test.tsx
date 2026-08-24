@@ -141,9 +141,9 @@ describe('Textarea — sizing', () => {
   it('merges a caller className and resolves conflicts via cn() (tailwind-merge)', () => {
     render(<Textarea aria-label="C" className="rounded-none" />);
     const className = screen.getByRole('textbox', { name: 'C' }).className;
-    // caller's rounded-none must win over the base rounded-lg.
+    // caller's rounded-none must win over the shared control shape.
     expect(className).toContain('rounded-none');
-    expect(className).not.toContain('rounded-lg');
+    expect(className).not.toContain('rounded-shape-md');
   });
 });
 
@@ -185,9 +185,7 @@ describe('Textarea — error a11y wiring', () => {
 
   it('applies the error border utility when an error is present', () => {
     render(<Textarea label="Notes" error="bad" />);
-    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain(
-      'border-red-500/50',
-    );
+    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain('border-rose-500');
   });
 
   it('associates the error even for an aria-label-only textarea (useId fallback)', () => {

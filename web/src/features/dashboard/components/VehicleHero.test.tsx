@@ -40,7 +40,14 @@ import type { ComponentProps } from 'react';
 
 import { VehicleHero } from './VehicleHero';
 import type { Vehicle, VehicleState } from '../types';
-import { hasGaugeColor } from '@/test/gaugeTestUtils';
+import { gaugeColors, hasGaugeColor } from '@/test/gaugeTestUtils';
+import { gaugeTone, severityTokens } from '@/lib/tokens';
+
+/** jsdom serialises an inline hex colour as `rgb(r, g, b)`. */
+function hexToRgb(hex: string): string {
+  const n = Number.parseInt(hex.slice(1), 16);
+  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+}
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -304,5 +311,58 @@ describe('VehicleHero', () => {
     const high = renderHero({ state: { ...baseState, battery_level: 90 } });
     // Green fill — only the battery gauge uses it when idle (not charging).
     expect(hasGaugeColor(high.container as HTMLElement, '#10b981')).toBe(true);
+  });
+});
+
+describe('VehicleHero — design-system consistency', () => {
+  it('draws every gauge from the central tone map instead of ad-hoc hex', () => {
+    const { container } = renderHero({ state: { ...baseState, battery_level: 90 } });
+
+    const fills = gaugeColors(container as HTMLElement);
+    expect(fills.length).toBeGreaterThan(0);
+    // The theme tones resolve through CSS variables so warm / light / custom
+    // presets re-tint the bar; the status tones stay on the canonical palette.
+    const allowed = new Set(Object.values(gaugeTone).map((c) => c.toLowerCase()));
+    for (const c of fills) expect(allowed).toContain(c);
+    // The range gauge specifically follows the theme accent now (was #00f0ff).
+    expect(fills).toContain(gaugeTone.accent.toLowerCase());
+  });
+
+  it('titles the hero with a real section heading rather than a hand-styled h2', () => {
+    renderHero();
+
+    const heading = screen.getByRole('heading', { name: 'My Model 3' });
+    expect(heading.tagName).toBe('H2');
+    // Typography comes from the shared role token, not from an inline class soup.
+    expect(heading.className).toContain('text-[var(--text-primary)]');
+  });
+
+  it('paints the charging panel from severity tokens, not a neon surface fill', () => {
+    const { container } = renderHero({
+      state: { ...baseState, is_charging: true, charger_power: 11, time_to_full_charge: 2 },
+    });
+
+    expect(screen.getByText('Charging')).toBeInTheDocument();
+    const panel = screen.getByText('Charging').closest('div')?.parentElement as HTMLElement;
+    expect(panel.className).toContain(severityTokens.success.bg);
+    expect(panel.className).toContain(severityTokens.success.border);
+    // No neon fills anywhere, and no fixed white-alpha tile treatment that
+    // would disappear against a light theme.
+    expect(container.querySelector('[class*="bg-neon-"]')).toBeNull();
+    expect(container.querySelector('[class*="bg-white/["]')).toBeNull();
+  });
+
+  it('tints the stat tiles from the same token map as the gauges', () => {
+    const { container } = renderHero();
+
+    const iconColors = Array.from(container.querySelectorAll<SVGElement>('svg[style]'))
+      .map((el) => el.style.color)
+      .filter(Boolean);
+    expect(iconColors.length).toBeGreaterThan(0);
+
+    const allowed = new Set(
+      Object.values(gaugeTone).map((c) => (c.startsWith('#') ? hexToRgb(c) : c)),
+    );
+    for (const c of iconColors) expect(allowed).toContain(c);
   });
 });
