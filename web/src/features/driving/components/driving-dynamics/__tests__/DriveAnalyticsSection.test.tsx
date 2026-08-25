@@ -28,6 +28,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
 
 vi.mock('react-i18next', async () => {
@@ -114,7 +115,9 @@ function renderSection(overrides: Partial<Props> = {}) {
   })
   return render(
     <QueryClientProvider client={qc}>
-      <DriveAnalyticsSection {...baseProps(overrides)} />
+      <MemoryRouter>
+        <DriveAnalyticsSection {...baseProps(overrides)} />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }

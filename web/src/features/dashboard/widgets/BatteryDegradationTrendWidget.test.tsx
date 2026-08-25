@@ -106,6 +106,12 @@ vi.mock('@/api/hooks/useVehicles', async () => {
   return { ...actual, useVehicles: () => vehiclesMock() };
 });
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // useThemeChartPalette() calls useTheme(), which throws outside a
 // <ThemeProvider>. Stub useTheme with a fixed theme/mode so the REAL
 // buildChartPalette runs and yields a genuine series palette. Mocking the
@@ -383,7 +389,7 @@ describe('BatteryDegradationTrendWidget', () => {
     expect(screen.queryByText('No degradation data')).not.toBeInTheDocument();
     expect(screen.queryByText('SoH')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('drops the title and chart in the compact 1×1 layout, keeping the stat row', () => {
@@ -401,7 +407,7 @@ describe('BatteryDegradationTrendWidget', () => {
     degradationMock.mockReturnValue(q);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);

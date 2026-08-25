@@ -1,4 +1,4 @@
-import { Bar, BarChart, ChartContainer, ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis, axisTick, chartGrid, CHART_COLORS } from '@/components/charts';
+import { Bar, BarChart, ChartContainer, ChartLegend, ChartTooltip, ResponsiveContainer, Tooltip, XAxis, YAxis, axisTick, chartGrid, CHART_COLORS } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { useTranslation } from 'react-i18next';
 
@@ -28,19 +28,22 @@ export function ThresholdSensitivityChart({ result, loading = false }: JourneyFr
       chartKey="journey-fragmentation-threshold-sensitivity"
       height={280}
     >
-      {result.includedDrives === 0 ? (
-        <EmptyState message={t('journeyFragmentation.chart.noData', 'No included journey data is available yet.')} />
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data}>
-            {chartGrid}
-            <XAxis dataKey="threshold" tick={axisTick} />
-            <YAxis allowDecimals={false} tick={axisTick} />
-            <Tooltip content={<ChartTooltip />} />
-            <Bar dataKey="journeys" name={t('journeyFragmentation.sensitivity.journeys', 'Journeys')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-            <Bar dataKey="linkedPairs" name={t('journeyFragmentation.sensitivity.pairs', 'Linked pairs')} fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
+      {({ hiddenSeries }) => (
+        result.includedDrives === 0 ? (
+          <EmptyState message={t('journeyFragmentation.chart.noData', 'No included journey data is available yet.')} />
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={data}>
+              {chartGrid}
+              <XAxis dataKey="threshold" tick={axisTick} />
+              <YAxis allowDecimals={false} tick={axisTick} />
+              <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
+              <Bar dataKey="journeys" name={t('journeyFragmentation.sensitivity.journeys', 'Journeys')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('journeys')} />
+              <Bar dataKey="linkedPairs" name={t('journeyFragmentation.sensitivity.pairs', 'Linked pairs')} fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('linkedPairs')} />
+            </BarChart>
+          </ResponsiveContainer>
+        )
       )}
     </ChartContainer>
   );

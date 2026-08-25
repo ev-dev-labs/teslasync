@@ -7,16 +7,15 @@ import { Sparkline } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useVampireDrainStats, useVampireDrainEvents } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
+import { cn } from '@/lib/cn';
 import { WidgetShell } from './WidgetShell';
 import { WidgetEventFeed, type EventFeedItem } from './shared';
 import type { WidgetProps } from './types';
 
 /**
  * Idle-drain severity colour ramp (hex, for inline SVG/icon fills):
- * `<1%/day` green, `1–3%/day` amber, `>=3%/day` red. A non-finite input (e.g.
- * a NaN drain rate from a malformed payload, or `avg_drain_rate * 24` where the
- * rate is NaN) is treated as 0 so it renders "safe" green rather than falsely
- * alarming red.
+ * `<1%/day` green, `1–3%/day` amber, `>=3%/day` red. A non-finite input is
+ * treated as 0 so it renders "safe" green rather than falsely alarming red.
  */
 export function drainColor(pctPerDay: number): string {
   const p = Number.isFinite(pctPerDay) ? pctPerDay : 0;
@@ -70,19 +69,25 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
 
-  const avgDrainPctPerDay = (stats?.avg_drain_rate ?? 0) * 24;
+  const avgDrainPctPerDay = stats?.avg_drain_pct_per_day ?? null;
+  const measuredAverage =
+    avgDrainPctPerDay != null
+    && Number.isFinite(avgDrainPctPerDay)
+    && (stats?.event_count ?? 0) > 0
+      ? avgDrainPctPerDay
+      : null;
 
   // Map drain events → EventFeedItem[] for shared feed
   const eventItems: EventFeedItem[] = useMemo(
     () =>
       events.map((ev) => {
-        const drainDay = (ev.drain_rate_pct_per_hour ?? 0) * 24;
+        const drainDay = ev.drain_pct_per_day ?? 0;
         return {
-          id: ev.id,
+          id: ev.started_at,
           icon: <BatteryWarning className="h-3.5 w-3.5" style={{ color: drainColor(drainDay) }} />,
-          title: `${fmtNumber(ev.battery_lost ?? 0, 1)}% · ${formatDuration(ev.duration_hours ?? 0, t)}${ev.sentry_mode ? ` · ${t('widget.vampireDrain.sentry', 'Sentry')}` : ''}`,
+          title: `${fmtNumber(ev.drain_pct ?? 0, 1)}% · ${formatDuration(ev.duration_hours ?? 0, t)}`,
           subtitle: `${fmtNumber(drainDay, 1)}%/${t('widget.vampireDrain.perDay', '/day').replace('/', '')}`,
-          timestamp: ev.start_date,
+          timestamp: ev.started_at,
           color: drainColor(drainDay),
           severity: drainDay >= 3 ? 'critical' as const : drainDay >= 1 ? 'warning' as const : 'info' as const,
         };
@@ -96,7 +101,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
     return events
       .slice()
       .reverse()
-      .map((e) => (e.drain_rate_pct_per_hour ?? 0) * 24);
+      .map((e) => e.drain_pct_per_day ?? 0);
   }, [events]);
 
   const updatedAt = Math.max(statsUpdatedAt ?? 0, eventsUpdatedAt ?? 0);
@@ -106,7 +111,13 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
     refetchEvents();
   };
 
-  const hasData = stats != null || events.length > 0;
+  const hasMeasuredAverage = measuredAverage != null;
+  const hasData = hasMeasuredAverage || events.length > 0;
+  const sparklineColorRate =
+    measuredAverage
+    ?? (sparklineData.length > 0
+      ? sparklineData.reduce((sum, value) => sum + value, 0) / sparklineData.length
+      : 0);
 
   return (
     <WidgetShell
@@ -115,7 +126,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
       help={isCompact ? undefined : {
         i18nKey: 'help.vampireDrain.body',
         defaultValue:
-          'Idle energy lost while the car is parked and not charging. We compute it as the % of battery used per hour while the vehicle reports gear=Park and is not in motion.',
+          'Battery percentage lost per day while the vehicle is parked and not charging, derived from observed parked windows.',
       }}
       loading={isLoading}
       updatedAt={updatedAt}
@@ -129,13 +140,18 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
           /* ── Compact (1×2): single stat ── */
           <div className="h-full flex flex-col items-center justify-center min-h-[44px]">
             <p
-              className="text-2xl font-bold"
-              style={{ color: drainColor(avgDrainPctPerDay) }}
+              className={cn(
+                'text-2xl font-bold',
+                !hasMeasuredAverage && 'text-[var(--text-muted)]',
+              )}
+              style={hasMeasuredAverage ? { color: drainColor(measuredAverage) } : undefined}
             >
-              {fmtNumber(avgDrainPctPerDay, 1)}%
+              {hasMeasuredAverage ? `${fmtNumber(measuredAverage, 1)}%` : '—'}
             </p>
             <p className="text-2xs text-[var(--text-muted)]">
-              {t('widget.vampireDrain.perDay', '/day')}
+              {hasMeasuredAverage
+                ? t('widget.vampireDrain.perDay', '/day')
+                : t('widget.vampireDrain.averageUnavailable', 'Average unavailable')}
             </p>
           </div>
         ) : (
@@ -144,13 +160,13 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
             {/* Stat card row */}
             <StatCard
               label={t('widget.vampireDrain.avgDrain', 'Avg Drain')}
-              value={`${fmtNumber(avgDrainPctPerDay, 1)}%/day`}
-              icon={<BatteryWarning className="h-4 w-4" style={{ color: drainColor(avgDrainPctPerDay) }} />}
+              value={hasMeasuredAverage ? `${fmtNumber(measuredAverage, 1)}%/day` : '—'}
+              icon={<BatteryWarning className="h-4 w-4" style={{ color: drainColor(sparklineColorRate) }} />}
               sublabel={
                 stats
                   ? t('widget.vampireDrain.eventCount', '{{count}} events · {{hours}}h total', {
                       count: stats.event_count ?? 0,
-                      hours: fmtNumber(stats.total_hours ?? 0, 0),
+                      hours: fmtNumber(stats.total_observed_hours ?? 0, 0),
                     })
                   : undefined
               }
@@ -164,7 +180,7 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
                 </p>
                 <Sparkline
                   data={sparklineData}
-                  color={drainColor(avgDrainPctPerDay)}
+                  color={drainColor(sparklineColorRate)}
                   width={260}
                   height={36}
                 />

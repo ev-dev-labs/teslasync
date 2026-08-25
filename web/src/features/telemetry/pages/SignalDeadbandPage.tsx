@@ -31,6 +31,23 @@ export default function SignalDeadbandPage() {
   const [signal, setSignal] = useState('');
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalHistory(id, signal, HISTORY_HOURS);
+  const signalChosen = signal !== '';
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'signal-catalog',
+        label: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+        query: signalsQuery,
+      },
+      {
+        id: 'signal-history',
+        label: t('dataSources.labels.selectedSignalHistory', 'Selected signal history'),
+        query: historyQuery,
+        enabled: signalChosen,
+      },
+    ],
+    [historyQuery, signalChosen, signalsQuery, t],
+  );
   const options = useMemo(
     () => (signalsQuery.data ?? []).map((name) => ({ value: name, label: name })),
     [signalsQuery.data],
@@ -55,8 +72,9 @@ export default function SignalDeadbandPage() {
     return <NoVehicleSelected pageTitle={t('signalDeadband.title', 'Signal Deadband')} />;
   }
 
-  const historyLoading = signal !== '' && historyQuery.isLoading;
-  const historyError = signal !== '' && historyQuery.isError;
+  const historyHasData = historyQuery.data !== undefined;
+  const historyLoading = signalChosen && !historyHasData && historyQuery.isLoading;
+  const historyError = signalChosen && historyQuery.isError && !historyHasData;
   const recommended = analysis?.recommended;
 
   return (
@@ -68,6 +86,7 @@ export default function SignalDeadbandPage() {
       )}
       actions={<VehicleSelect />}
       query={[signalsQuery, historyQuery]}
+      dataSources={dataSources}
     >
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">

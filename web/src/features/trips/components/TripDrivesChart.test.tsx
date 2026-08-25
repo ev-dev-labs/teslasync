@@ -346,9 +346,10 @@ describe('TripDrivesChart — empty state (never a blank panel)', () => {
     renderChart({ trip: makeTrip({ drives: [] }) });
 
     expect(screen.getByText('No data available')).toBeInTheDocument();
-    // Title + accessible frame stay mounted (the panel is never truly blank).
+    // Title + accessible figure stay mounted (the panel is never truly blank).
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: CHART_ARIA })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: TITLE })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: CHART_ARIA })).toBeNull();
     // No fallback data table when there is nothing to show.
     expect(screen.queryByText(TABLE_CAPTION)).toBeNull();
   });
@@ -364,8 +365,7 @@ describe('TripDrivesChart — loading state', () => {
   it('shows the spinner (not empty, not a table) while the first load is pending', () => {
     renderChart({ trip: undefined, isLoading: true });
 
-    // Spinner exposes role="status" aria-label="Loading".
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading chart…' })).toBeInTheDocument();
     // Loading is distinct from empty and from a populated table.
     expect(screen.queryByText('No data available')).toBeNull();
     expect(screen.queryByText(TABLE_CAPTION)).toBeNull();

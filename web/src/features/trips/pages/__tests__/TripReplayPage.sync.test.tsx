@@ -23,6 +23,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { act, render, cleanup } from '@testing-library/react';
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 
 import {
@@ -132,7 +133,9 @@ function withQuery(node: React.ReactNode): React.ReactElement {
   });
   return (
     <QueryClientProvider client={client}>
-      <ToastProvider>{node}</ToastProvider>
+      <MemoryRouter>
+        <ToastProvider>{node}</ToastProvider>
+      </MemoryRouter>
     </QueryClientProvider>
   );
 }

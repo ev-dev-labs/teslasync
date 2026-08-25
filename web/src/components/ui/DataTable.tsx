@@ -121,7 +121,7 @@ interface DataTableProps<T> {
    *  `tableId`. The
    *  `audit:datatable-tableid` script (chained from `npm run lint`) fails
    *  the build if a new caller forgets it. Without `tableId`, column
-   *  visibility / widths / sort / page-size silently reset on every
+   *  visibility / widths / page-size silently reset on every
    *  reload — which is the single biggest "the app forgot what I was
    *  doing" complaint.
    *
@@ -353,11 +353,30 @@ export function DataTable<T>({
           : 'px-d-pad-x py-d-pad-y text-d-base'
   const paginationEnabled = !!pagination
   const paginationConfig: PaginationConfig = typeof pagination === 'object' ? pagination : {}
-  const defaultPageSize = paginationConfig.defaultPageSize ?? 25
-  const pageSizeOptions = paginationConfig.pageSizeOptions ?? [20, 50, 100]
+  const defaultPageSize =
+    paginationConfig.defaultPageSize ?? paginationConfig.pageSizeOptions?.[0] ?? 25
+  const pageSizeOptions = paginationConfig.pageSizeOptions ?? [25, 50, 100]
+  const pageSizeStorageKey =
+    paginationEnabled && tableId ? `${STORAGE_PREFIX}.${tableId}.page-size` : null
 
   const [page, setPage] = useState(1)
-  const [pageSize, setPageSize] = useState(defaultPageSize)
+  const [pageSize, setPageSize] = useState(() => {
+    if (!pageSizeStorageKey) return defaultPageSize
+    const stored = readStored<unknown>(pageSizeStorageKey)
+    return typeof stored === 'number' &&
+      Number.isInteger(stored) &&
+      stored > 0 &&
+      pageSizeOptions.includes(stored)
+      ? stored
+      : defaultPageSize
+  })
+
+  const handlePageSizeChange = useCallback((size: number) => {
+    if (!Number.isInteger(size) || size <= 0 || !pageSizeOptions.includes(size)) return
+    setPageSize(size)
+    setPage(1)
+    if (pageSizeStorageKey) writeStored(pageSizeStorageKey, size)
+  }, [pageSizeOptions, pageSizeStorageKey])
 
   // Reset to page 1 when data length changes (e.g. filters applied).
   useEffect(() => { setPage(1) }, [data.length])
@@ -1087,7 +1106,7 @@ export function DataTable<T>({
           pageSize={pageSize}
           total={data.length}
           onPageChange={setPage}
-          onPageSizeChange={(size) => { setPageSize(size); setPage(1) }}
+          onPageSizeChange={handlePageSizeChange}
           pageSizeOptions={pageSizeOptions}
         />
       )}

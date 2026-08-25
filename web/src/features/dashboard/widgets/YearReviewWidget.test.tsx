@@ -419,7 +419,7 @@ describe('YearReviewWidget refresh', () => {
   it('re-issues the year-review read when the freshness control is activated', async () => {
     renderWidget(2, 1);
 
-    const refresh = await screen.findByRole('button', { name: 'Refresh' });
+    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     const before = yrCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

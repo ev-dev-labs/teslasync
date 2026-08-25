@@ -271,7 +271,7 @@ describe('AnalyticsSummaryWidget', () => {
     expect(screen.queryByText('Total Distance')).not.toBeInTheDocument();
     // The freshness/refresh control lives in the header, which the error
     // branch replaces entirely.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('shows the no-data empty state (standard) while keeping the titled shell', () => {
@@ -304,7 +304,7 @@ describe('AnalyticsSummaryWidget', () => {
     analyticsMock.mockReturnValue(q);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);

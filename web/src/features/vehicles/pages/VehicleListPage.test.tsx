@@ -700,6 +700,25 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(refetch).toHaveBeenCalled();
   });
 
+  it('explains a successful battery-state gap and refreshes without presenting an error retry', () => {
+    const refetch = vi.fn();
+    mockFleetStates.mockReturnValue(qr({ data: [], refetch }));
+    renderPage();
+
+    expect(
+      screen.getByText('Live battery readings have not arrived for the registered fleet.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Readings appear after vehicles reconnect/)).toBeInTheDocument();
+    // The status breakdown remains a truthful all-offline classification.
+    expect(screen.getByText('Offline')).toBeInTheDocument();
+
+    const refreshButtons = screen.getAllByRole('button', { name: 'Refresh live state' });
+    expect(refreshButtons).toHaveLength(1);
+    expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
+    fireEvent.click(refreshButtons[0]);
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
   it('keeps live fleet content visible when service attention is unavailable', async () => {
     mockFleetWorkOrders.mockReturnValue(
       qr({ isError: true, error: new Error('work orders unavailable'), data: undefined }),

@@ -7,7 +7,7 @@
  *      `bucketAccent` (green/cyan/amber/red bands), `bucketIcon`
  *      (Car/TrendingUp/Gauge), `efficiencyClass` (emerald/amber/rose
  *      thresholds incl. boundaries) and `getEfficiency` (measured-energy
- *      path, battery-delta estimate, zero/null-distance and no-signal
+ *      path, missing-energy exclusion, zero/null-distance and no-signal
  *      → null). These carry the real branch logic behind the page.
  *
  *   2. The page's OWN behaviour: the KPI band + envelope gauges + the
@@ -173,12 +173,14 @@ vi.mock('@/components/forms', async () => {
 // prints value+unit; everything else is inert.
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Null = () => null;
   const pass = (testid: string) =>
     function Pass({ children }: { children?: ReactNode }) {
       return React.createElement('div', { 'data-testid': testid }, children);
     };
   return {
+    ...chartTestDoubles,
     ChartTooltip: Null,
     Tooltip: Null,
     XAxis: Null,
@@ -337,15 +339,13 @@ describe('SpeedProfilePage helpers', () => {
     expect(efficiencyClass(300)).toBe('text-rose-300');
   });
 
-  it('getEfficiency prefers measured energy, then a battery-delta estimate', () => {
-    // Measured-energy path: 1500 Wh / 10 km = 150 Wh/km.
+  it('getEfficiency uses measured energy and never fabricates a battery estimate', () => {
     expect(getEfficiency(makeDrive({ distanceM: 10000, energyUsedWh: 1500 }))).toBe(150);
-    // Battery-delta estimate: (10% · 0.75 kWh · 1000) / 10 km = 750 Wh/km.
     expect(
       getEfficiency(
         makeDrive({ distanceM: 10000, energyUsedWh: null, startBatteryPct: 80, endBatteryPct: 70 }),
       ),
-    ).toBe(750);
+    ).toBeNull();
   });
 
   it('getEfficiency returns null when it cannot compute a value', () => {
@@ -469,7 +469,7 @@ describe('SpeedProfilePage', () => {
     drivesMock.mockReturnValue(makeQuery<Drive[]>({ data: [] }));
     renderPage();
 
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     // Panels are gated behind the container spinner.
     expect(screen.queryByText('Speed Distribution')).not.toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: 'Speed Profile' })).toBeInTheDocument();

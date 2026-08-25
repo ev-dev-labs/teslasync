@@ -88,7 +88,7 @@ const toDistanceDisplay = (m: number) => m / 1000; // SI metres → km
 const toSpeedDisplay = (mps: number) => mps * 3.6; // SI m/s → km/h
 const toEfficiencyDisplay = (whPerKm: number) => whPerKm; // km identity
 
-/** A completed 50 km / 30 min drive: 80 → 70 % battery ⇒ 150 Wh/km ⇒ grade A. */
+/** A completed 50 km / 30 min drive with 7.5 kWh measured energy: 150 Wh/km. */
 function makeDrive(over: Partial<Drive> = {}): Drive {
   return {
     id: 1,
@@ -105,7 +105,7 @@ function makeDrive(over: Partial<Drive> = {}): Drive {
     endLon: -121.8,
     startBatteryPct: 80,
     endBatteryPct: 70,
-    energyUsedWh: 11000,
+    energyUsedWh: 7500,
     regenEnergyWh: 2000,
     avgSpeedMps: 25, // ×3.6 = 90 km/h
     maxSpeedMps: 40, // ×3.6 = 144 km/h (< 58.1152 m/s high-speed threshold)
@@ -151,8 +151,7 @@ describe('DriveCard — primary line + status badge', () => {
     // 1800 s → "30m"; 50 000 m → 50 km.
     expect(screen.getByText('30m')).toBeInTheDocument();
     expect(screen.getByText('50.00 km')).toBeInTheDocument();
-    // 80 → 70 % over 50 km ⇒ 150 Wh/km ⇒ grade A, exposed via aria-label.
-    expect(screen.getByLabelText('Score A')).toHaveTextContent('A');
+    expect(screen.getByLabelText('Efficiency grade A')).toHaveTextContent('A');
     // The whole row is a single navigable link.
     expect(screen.getByRole('link')).toHaveAttribute('href', '/drives/1');
   });
@@ -195,13 +194,13 @@ describe('DriveCard — primary line + status badge', () => {
     expect(within(under.container).queryByText('High speed')).toBeNull();
   });
 
-  it('renders the anomaly "Low efficiency" badge when isAnomaly is set, and omits it otherwise', () => {
+  it('renders the anomaly badge when isAnomaly is set, and omits it otherwise', () => {
     const { unmount } = renderCard({ isAnomaly: true });
-    expect(screen.getByText('Low efficiency')).toBeInTheDocument();
+    expect(screen.getByText('High energy use')).toBeInTheDocument();
     unmount();
 
     renderCard({ isAnomaly: false });
-    expect(screen.queryByText('Low efficiency')).toBeNull();
+    expect(screen.queryByText('High energy use')).toBeNull();
   });
 
   it('opens the quick preview without nesting the action in the detail link', () => {
@@ -247,21 +246,24 @@ describe('DriveCard — metric chips', () => {
     expect(within(zeroed.container).queryByLabelText(/^Battery /)).toBeNull();
   });
 
-  it('renders the efficiency chip with its Wh/km value, and omits it when there is no battery delta', () => {
+  it('renders measured Wh/km and omits the chip when measured energy is unavailable', () => {
     const graded = renderCard();
     expect(within(graded.container).getByText('150 Wh/km')).toBeInTheDocument();
     graded.unmount();
 
-    // No usable battery delta ⇒ getEfficiency returns null ⇒ no chip.
-    const ungraded = renderCard({ drive: makeDrive({ startBatteryPct: null, endBatteryPct: null }) });
+    const ungraded = renderCard({
+      drive: makeDrive({ energyUsedWh: null, startBatteryPct: 80, endBatteryPct: 60 }),
+    });
     expect(within(ungraded.container).queryByText(/Wh\/km$/)).toBeNull();
   });
 
-  it('renders the cost chip and calls formatEnergyCost with the derived kWh', () => {
+  it('renders the cost chip from measured energy without requiring battery endpoints', () => {
     const formatEnergyCost = costSpy();
-    renderCard({ formatEnergyCost });
+    renderCard({
+      drive: makeDrive({ startBatteryPct: null, endBatteryPct: null }),
+      formatEnergyCost,
+    });
 
-    // (80 − 70) % × 0.75 kWh/% = 7.5 kWh ⇒ $0.90.
     expect(formatEnergyCost).toHaveBeenCalledWith(7.5);
     expect(screen.getByText('~$0.90')).toBeInTheDocument();
   });
@@ -347,7 +349,7 @@ describe('DriveCard — accessibility', () => {
     const onToggleSelect = vi.fn();
     renderCard({ onToggleSelect });
 
-    expect(screen.getByLabelText('Score A')).toBeInTheDocument();
+    expect(screen.getByLabelText('Efficiency grade A')).toBeInTheDocument();
     expect(screen.getByRole('checkbox').getAttribute('aria-label')).toMatch(/^Select drive on /);
   });
 

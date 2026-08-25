@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { GitBranch } from 'lucide-react';
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from '@/components/charts';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, EmbeddedChart, type ChartDataRow } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { TimeStamp } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -34,7 +34,7 @@ function fmtDuration(ms: number, t: (k: string, d: string) => string): string {
 }
 
 /* ── Donut segment data ────────────────────────────────────────── */
-interface DonutSegment {
+interface DonutSegment extends ChartDataRow {
   state: string;
   value: number;
   pct: number;
@@ -232,7 +232,28 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
       {hasData ? (
         <div className="flex flex-col gap-3 h-full">
           {/* Donut chart */}
-          <div className="flex-1 min-h-0">
+          <EmbeddedChart
+            title={t('widget.fsmDistribution.title', 'State Distribution')}
+            ariaLabel={t(
+              'widget.fsmDistribution.chartAria',
+              'Time spent in each vehicle state',
+            )}
+            data={segments}
+            dataColumns={[
+              { key: 'state', label: t('widget.fsmDistribution.stateLabel', 'State') },
+              {
+                key: 'value',
+                label: t('widget.fsmDistribution.duration', 'Duration'),
+                format: (value) => fmtDuration(Number(value ?? 0), t),
+              },
+              {
+                key: 'pct',
+                label: t('widget.fsmDistribution.share', 'Share'),
+                format: (value) => `${fmtNumber(Number(value ?? 0), 1)}%`,
+              },
+            ]}
+            className="flex-1 min-h-0"
+          >
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
@@ -256,7 +277,7 @@ export default function FSMDistributionWidget({ vehicleId, size }: WidgetProps) 
                 />
               </PieChart>
             </ResponsiveContainer>
-          </div>
+          </EmbeddedChart>
 
           {/* Legend */}
           <div className="flex flex-wrap gap-x-3 gap-y-1 justify-center">

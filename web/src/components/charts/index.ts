@@ -12,9 +12,17 @@ export { MiniChart } from './MiniChart';
 export { SmallMultiplesChart, type SmallMultiplesChartProps } from './SmallMultiplesChart';
 export {
   ChartContainer,
+  type ChartContainerProps,
   type ChartDataColumn,
   type ChartDataRow,
 } from './ChartContainer';
+export { EmbeddedChart, type EmbeddedChartProps } from './EmbeddedChart';
+export {
+  chartSizeHeights,
+  resolveChartHeights,
+  type ChartSize,
+  type ResolvedChartHeights,
+} from './chartSizing';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';

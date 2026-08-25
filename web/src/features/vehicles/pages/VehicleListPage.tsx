@@ -193,8 +193,18 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
       ) : entries.length === 0 ? (
         <EmptyState
           icon={<Activity className="h-8 w-8" />}
-          message={t('common.noData', 'No data available')}
-          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
+          message={t(
+            'vehicles.noBatteryReadings',
+            'Live battery readings have not arrived for the registered fleet.',
+          )}
+          description={t(
+            'vehicles.noBatteryReadingsDescription',
+            'Readings appear after vehicles reconnect and send a telemetry update.',
+          )}
+          action={{
+            label: t('vehicles.refreshLiveState', 'Refresh live state'),
+            onClick: onRetry,
+          }}
           className="py-8"
         />
       ) : (
@@ -253,7 +263,14 @@ function FleetStatusPanel({ counts, total, isLoading, isError, error, onRetry }:
         <EmptyState
           icon={<ListChecks className="h-8 w-8" />}
           message={t('vehicles.noStatusData', 'No fleet status data yet')}
-          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
+          description={t(
+            'vehicles.noStatusDataDescription',
+            'Availability and readiness appear after at least one registered vehicle reports live state.',
+          )}
+          action={{
+            label: t('vehicles.refreshLiveState', 'Refresh live state'),
+            onClick: onRetry,
+          }}
           className="py-8"
         />
       ) : (

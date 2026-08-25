@@ -32,8 +32,8 @@ function makeDrive(overrides: Partial<Drive> = {}): Drive {
     endLat: null,
     endLon: null,
     startBatteryPct: 80,
-    endBatteryPct: 76, // 4% delta → 3 kWh → 187.5 Wh/km
-    energyUsedWh: null,
+    endBatteryPct: 76,
+    energyUsedWh: 3_000, // 187.5 Wh/km
     regenEnergyWh: null,
     avgSpeedMps: null,
     maxSpeedMps: 30,
@@ -49,22 +49,24 @@ function makeDrive(overrides: Partial<Drive> = {}): Drive {
 }
 
 describe('getEfficiency', () => {
-  it('returns Wh/km when battery delta and distance are positive', () => {
+  it('returns measured Wh/km from canonical energy and distance', () => {
     const eff = getEfficiency(makeDrive());
-    // (4 * 0.75 * 1000) = 187.5
     expect(eff).toBeCloseTo(187.5, 1);
   });
 
-  it('returns null when no battery delta', () => {
-    expect(getEfficiency(makeDrive({ startBatteryPct: 80, endBatteryPct: 80 }))).toBeNull();
+  it('does not require battery percentage evidence', () => {
+    expect(
+      getEfficiency(makeDrive({ startBatteryPct: null, endBatteryPct: null })),
+    ).toBeCloseTo(187.5, 1);
   });
 
-  it('returns null when distance is zero', () => {
-    expect(getEfficiency(makeDrive({ distanceM: 0 }))).toBeNull();
+  it('returns null when measured energy is missing or non-positive', () => {
+    expect(getEfficiency(makeDrive({ energyUsedWh: null }))).toBeNull();
+    expect(getEfficiency(makeDrive({ energyUsedWh: 0 }))).toBeNull();
   });
 
-  it('returns null when battery values missing', () => {
-    expect(getEfficiency(makeDrive({ startBatteryPct: null }))).toBeNull();
+  it('returns null for drives shorter than the 1 km quality floor', () => {
+    expect(getEfficiency(makeDrive({ distanceM: 999 }))).toBeNull();
   });
 });
 
@@ -106,13 +108,12 @@ describe('gradeFromNumeric', () => {
 });
 
 describe('avgGrade', () => {
-  it('averages mixed-grade drives', () => {
+  it('grades the distance-weighted measured intensity', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 75 }), // Wh/km → D
-      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 78 }), // 93.75 → A+
+      makeDrive({ id: 1, energyUsedWh: 4_000 }), // 250 Wh/km → D
+      makeDrive({ id: 2, energyUsedWh: 1_600 }), // 100 Wh/km → A+
     ];
-    const g = avgGrade(drives);
-    expect(['B', 'C']).toContain(g.label); // mid-range
+    expect(avgGrade(drives).label).toBe('B');
   });
 
   it('returns — for empty list', () => {
@@ -121,8 +122,8 @@ describe('avgGrade', () => {
 
   it('skips ungraded drives', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: null }), // skipped
-      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 78 }), // A+
+      makeDrive({ id: 1, energyUsedWh: null }),
+      makeDrive({ id: 2, energyUsedWh: 1_600 }), // A+
     ];
     expect(avgGrade(drives).label).toBe('A+');
   });
@@ -142,8 +143,8 @@ describe('computePeriodStats', () => {
 
   it('reports best (lowest) efficiency', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 75 }), 
-      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 78 }), // 93.75
+      makeDrive({ id: 1, energyUsedWh: 4_000 }),
+      makeDrive({ id: 2, energyUsedWh: 1_500 }), // 93.75
     ];
     const stats = computePeriodStats(drives);
     expect(stats.bestEfficiencyWhKm).toBeCloseTo(93.75, 1);
@@ -167,12 +168,24 @@ describe('computePeriodStats', () => {
     expect(computePeriodStats(drives).longest?.id).toBe(2);
   });
 
-  it('sums total energy from battery delta', () => {
+  it('sums measured energy in canonical watt-hours', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 76 }), // 3 kWh
-      makeDrive({ id: 2, startBatteryPct: 70, endBatteryPct: 68 }), // 1.5 kWh
+      makeDrive({ id: 1, energyUsedWh: 3_000 }),
+      makeDrive({ id: 2, energyUsedWh: 1_500 }),
     ];
-    expect(computePeriodStats(drives).totalEnergyKwh).toBeCloseTo(4.5, 2);
+    expect(computePeriodStats(drives).totalEnergyWh).toBe(4_500);
+  });
+
+  it('weights average efficiency by measured distance and reports coverage', () => {
+    const stats = computePeriodStats([
+      makeDrive({ id: 1, distanceM: 10_000, energyUsedWh: 1_000 }), // 100 Wh/km
+      makeDrive({ id: 2, distanceM: 30_000, energyUsedWh: 6_000 }), // 200 Wh/km
+      makeDrive({ id: 3, distanceM: 15_000, energyUsedWh: null }),
+    ]);
+
+    expect(stats.avgEfficiencyWhKm).toBe(175);
+    expect(stats.energyMeasuredCount).toBe(2);
+    expect(stats.efficiencyMeasuredCount).toBe(2);
   });
 
   it('honours date range', () => {
@@ -230,8 +243,8 @@ describe('shiftDayKey', () => {
 describe('detectAnomalies', () => {
   it('finds drives with grade D', () => {
     const drives = [
-      makeDrive({ id: 1, startBatteryPct: 80, endBatteryPct: 78 }), // A+
-      makeDrive({ id: 2, startBatteryPct: 80, endBatteryPct: 75 }), // D 
+      makeDrive({ id: 1, energyUsedWh: 1_600 }), // A+
+      makeDrive({ id: 2, energyUsedWh: 4_000 }), // D
     ];
     const out = detectAnomalies(drives);
     expect(out).toHaveLength(1);
@@ -253,16 +266,11 @@ describe('detectNotable', () => {
 
   it('also includes A+ drives outside the top decile', () => {
     const drives = [
-      makeDrive({ id: 1, distanceM: 100 }),
-      makeDrive({ id: 2, distanceM: 200 }),
-      makeDrive({
-        id: 3,
-        distanceM: 300,
-        startBatteryPct: 80,
-        endBatteryPct: 78, // A+
-      }),
+      makeDrive({ id: 1, distanceM: 1_000, energyUsedWh: 100 }), // A+
+      makeDrive({ id: 2, distanceM: 2_000, energyUsedWh: null }),
+      makeDrive({ id: 3, distanceM: 3_000, energyUsedWh: null }),
     ];
-    expect(detectNotable(drives).map((d) => d.id)).toContain(3);
+    expect(detectNotable(drives).map((d) => d.id)).toContain(1);
   });
 
   it('returns empty for empty input', () => {
@@ -343,22 +351,50 @@ describe('dailyTrend', () => {
     expect(trend[0]).toEqual({ date: '2026-05-10', value: 3000 });
   });
 
-  it('averages efficiency per day', () => {
+  it('weights efficiency by measured distance per day', () => {
     const drives = [
-      makeDrive({ id: 1, startTs: '2026-05-10T10:00Z', startBatteryPct: 80, endBatteryPct: 78 }),
-      makeDrive({ id: 2, startTs: '2026-05-10T11:00Z', startBatteryPct: 80, endBatteryPct: 76 }),
+      makeDrive({
+        id: 1,
+        startTs: '2026-05-10T10:00Z',
+        distanceM: 10_000,
+        energyUsedWh: 1_000,
+      }),
+      makeDrive({
+        id: 2,
+        startTs: '2026-05-10T11:00Z',
+        distanceM: 30_000,
+        energyUsedWh: 6_000,
+      }),
     ];
     const trend = dailyTrend(drives, 'efficiency');
-    // mean of (93.75 + 187.5) / 2
-    expect(trend[0].value).toBeCloseTo(140.625, 1);
+    expect(trend[0].value).toBe(175);
   });
 
-  it('sums cost (kWh) per day', () => {
+  it('sums canonical watt-hours for cost conversion at the page boundary', () => {
     const drives = [
-      makeDrive({ id: 1, startTs: '2026-05-10T10:00Z', startBatteryPct: 80, endBatteryPct: 76 }), // 3 kWh
+      makeDrive({ id: 1, startTs: '2026-05-10T10:00Z', energyUsedWh: 3_000 }),
     ];
     const trend = dailyTrend(drives, 'cost');
-    expect(trend[0].value).toBeCloseTo(3, 2);
+    expect(trend[0].value).toBe(3_000);
+  });
+
+  it('omits days without measured efficiency instead of emitting zero', () => {
+    const drives = [
+      makeDrive({
+        id: 1,
+        startTs: '2026-05-10T10:00Z',
+        energyUsedWh: null,
+      }),
+      makeDrive({
+        id: 2,
+        startTs: '2026-05-11T10:00Z',
+        energyUsedWh: 3_000,
+      }),
+    ];
+
+    expect(dailyTrend(drives, 'efficiency')).toEqual([
+      { date: '2026-05-11', value: 187.5 },
+    ]);
   });
 
   it('emits points sorted ascending by date', () => {

@@ -12,7 +12,7 @@ import { Badge, GlassPanel, Pagination, SectionTitle, Text } from '@/components/
 import { FadeIn } from '@/components/motion';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { QueryError } from '@/components/feedback';
+import { DataStateNotice, QueryError } from '@/components/feedback';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { EmptyStateThreshold } from '@/components/feedback/EmptyStateThreshold';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
@@ -27,7 +27,7 @@ import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu,
   KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
-  BulkActionsToolbar, OperationalBrief, type BulkAction,
+  BulkActionsToolbar, DataFreshnessAuto, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
@@ -36,6 +36,7 @@ import { useUrlBatch, useUrlBoolean, useUrlEnum, useUrlNumber, useUrlString } fr
 import { useRangeState } from '@/hooks/useRangeState';
 import { parseSearchQuery, matchesTokens, compareNumeric, parseDurationToken, matchesYmdPrefix } from '@/lib/searchQuery';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
+import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -59,12 +60,12 @@ import {
 import {
   AcDcStatsPanel,
   BatteryLevelChart,
-  EfficiencyPanel,
+  ChargeRatePanel,
   ChargerSpecsPanel,
   OptimizerSection,
   computeAcDcBreakdown,
   computeStartLevelDist,
-  computeEfficiencyStats,
+  computeChargeRateStats,
   computeChargerSpecs,
 } from '../components/charging-list';
 
@@ -99,10 +100,7 @@ export default function ChargingListPage() {
   const { unitPrefs } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(
-    // convertDistanceFromSI expects metres (SI canonical); callers pass km, so
-    // scale up before converting — otherwise the per-session "range added" badge
-    // renders 1000× too small (e.g. a 50 km charge showed as "+0 km").
-    (km: number) => convertDistanceFromSI(km * 1000, unitPrefs.distance),
+    (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),
     [unitPrefs.distance],
   );
   const { formatCurrency, currencySymbol } = useFormatting();
@@ -133,6 +131,8 @@ export default function ChargingListPage() {
     end: endDate,
   });
   const { data: sessions, isLoading, error, refetch } = chargingQuery;
+  const vehicleStateQuery = useVehicleState(vehicleId ?? 0);
+  const liveState = vehicleStateQuery.data?.state;
   const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
   const { data: optimizer } = useChargingOptimizer(vehicleIdStr);
@@ -558,10 +558,49 @@ export default function ChargingListPage() {
   /* ── Conditional sections ─ pre-computed inputs ──────────────── */
   const acDcBreakdown = useMemo(() => sessions ? computeAcDcBreakdown(sessions) : null, [sessions]);
   const startLevelDist = useMemo(() => sessions ? computeStartLevelDist(sessions) : [], [sessions]);
-  const efficiencyStats = useMemo(() => sessions ? computeEfficiencyStats(sessions) : null, [sessions]);
+  const chargeRateStats = useMemo(() => sessions ? computeChargeRateStats(sessions) : null, [sessions]);
   const chargerSpecs = useMemo(() => sessions ? computeChargerSpecs(sessions) : null, [sessions]);
-  const chargingAttention: OperationalAttention[] = anomalies.length > 0
-    ? anomalies.slice(0, 4).map((anomaly) => ({
+  const interruptionAnomalies = anomalies.filter(
+    (anomaly) => anomaly.kind === 'telemetry_gap' || anomaly.kind === 'bad_power',
+  );
+  const reliabilityAnomalies = anomalies.filter(
+    (anomaly) =>
+      anomaly.kind === 'telemetry_gap'
+      || anomaly.kind === 'bad_power'
+      || anomaly.kind === 'trickle',
+  );
+  const reliabilityIssueSessions = new Set(
+    reliabilityAnomalies.map((anomaly) => anomaly.session.id),
+  ).size;
+  const reliabilityPct = currentStats.count > 0
+    ? Math.max(0, Math.round(
+        ((currentStats.count - reliabilityIssueSessions) / currentStats.count) * 100,
+      ))
+    : null;
+  const blendedCostPerKwh = currentStats.totalEnergyWh > 0
+    ? currentStats.totalCost / (currentStats.totalEnergyWh / 1000)
+    : null;
+  const isChargingNow = liveState?.is_charging === true;
+  const departureBatteryPct = liveState?.battery_level;
+  const timeToTarget = isChargingNow && (liveState?.time_to_full_charge ?? 0) > 0
+    ? formatDurationMinutes((liveState?.time_to_full_charge ?? 0) * 60)
+    : null;
+  const chargingAttention: OperationalAttention[] = [
+    ...(liveState && !isChargingNow && liveState.battery_level < 20
+      ? [{
+          key: 'departure-readiness',
+          title: t(
+            'operations.charging.departureAttentionTitle',
+            'Departure charge is below 20%',
+          ),
+          description: t(
+            'operations.charging.departureAttentionDescription',
+            'Charge before the next departure or confirm that the planned route is within the available range.',
+          ),
+          tone: 'danger' as const,
+        }]
+      : []),
+    ...anomalies.slice(0, 4).map((anomaly): OperationalAttention => ({
         key: `charging-${anomaly.session.id}-${anomaly.kind}`,
         title: anomaly.message,
         description: t(
@@ -571,8 +610,8 @@ export default function ChargingListPage() {
         tone: anomaly.kind === 'telemetry_gap' || anomaly.kind === 'bad_power'
           ? 'danger'
           : 'warning',
-      }))
-    : currentStats.count === 0
+      })),
+    ...(currentStats.count === 0
       ? [{
           key: 'charging-empty',
           title: t('operations.charging.noDataTitle', 'No charging activity in this window'),
@@ -580,9 +619,10 @@ export default function ChargingListPage() {
             'operations.charging.noDataDescription',
             'Choose a wider analysis window or complete a charging session.',
           ),
-          tone: 'info',
+          tone: 'info' as const,
         }]
-      : [];
+      : []),
+  ];
 
   /* ── Defensive: no vehicle ──────────────────────────────────── */
   if (vehicleId == null) {
@@ -598,9 +638,12 @@ export default function ChargingListPage() {
   return (
     <PageContainer
       title={t('charging.list.title', 'Charging Sessions')}
-      subtitle={t('charging.list.subtitle', 'Cost, charger type, energy patterns, and battery-friendly scoring')}
+      subtitle={t(
+        'charging.list.subtitle',
+        'Live readiness, cost exposure, charger behavior, and charging history',
+      )}
       copyLink
-      query={chargingQuery}
+      query={[chargingQuery, vehicleStateQuery]}
       contextActions={
         <>
           <VehicleSelect />
@@ -632,6 +675,20 @@ export default function ChargingListPage() {
         </PageHeaderSticky>
 
         <QueryError error={error as Error} onRetry={refetch} />
+        {vehicleStateQuery.isError && (
+          <DataStateNotice
+            state="partial"
+            title={t(
+              'operations.charging.liveStateUnavailableTitle',
+              'Live charging and departure state are unavailable',
+            )}
+          >
+            {t(
+              'operations.charging.liveStateUnavailableDescription',
+              'Charging history and cost analysis remain available, but current battery and charging posture could not be resolved.',
+            )}
+          </DataStateNotice>
+        )}
 
         <OperationalBrief
           testId="charging-operational-brief"
@@ -639,69 +696,182 @@ export default function ChargingListPage() {
           title={t('operations.charging.title', 'Cost, reliability, and battery-friendly behavior')}
           description={t(
             'operations.charging.description',
-            'Session volume, delivered energy, spend, and detected exceptions use the same selected vehicle and analysis window.',
+            'Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.',
           )}
           statusLabel={
-            currentStats.count === 0
+            isChargingNow
+              ? t('operations.charging.statusCharging', 'Charging now')
+              : currentStats.count === 0
               ? t('operations.status.awaitingData', 'Awaiting data')
-              : anomalies.length > 0
+              : anomalies.length > 0 || vehicleStateQuery.isError
                 ? t('operations.status.review', 'Review recommended')
                 : t('operations.status.onTrack', 'On track')
           }
           statusTone={
-            currentStats.count === 0
+            isChargingNow
+              ? 'info'
+              : currentStats.count === 0
               ? 'neutral'
-              : anomalies.length > 0
+              : anomalies.length > 0 || vehicleStateQuery.isError
                 ? 'warning'
                 : 'success'
           }
           scope={<Badge variant="neutral" size="sm">{periodLabel}</Badge>}
+          freshness={
+            <div className="flex flex-wrap items-center gap-2">
+              <DataFreshnessAuto
+                query={vehicleStateQuery}
+                source={t('operations.charging.liveStateSource', 'Live vehicle state')}
+              />
+              <DataFreshnessAuto
+                query={chargingQuery}
+                source={t('operations.charging.sessionsSource', 'Charging sessions')}
+              />
+            </div>
+          }
+          metricColumns={3}
           metrics={[
             {
-              key: 'sessions',
-              label: t('charging.totalSessions', 'Sessions'),
-              value: fmtCompact(currentStats.count),
-              detail: t(
-                'operations.charging.sessionsDetail',
-                'Completed and active sessions in the selected period.',
-              ),
-              tone: 'info',
+              key: 'posture',
+              label: t('operations.charging.currentPosture', 'Current posture'),
+              value: vehicleStateQuery.isLoading
+                ? t('operations.charging.checkingLiveState', 'Checking')
+                : vehicleStateQuery.isError || !liveState
+                  ? t('common.unavailable', 'Unavailable')
+                  : isChargingNow
+                    ? t('operations.charging.chargingNow', 'Charging')
+                    : t('operations.charging.notCharging', 'Not charging'),
+              detail: vehicleStateQuery.isError
+                ? t(
+                    'operations.charging.currentPostureUnavailable',
+                    'Live state could not be resolved; session history remains available.',
+                  )
+                : isChargingNow
+                  ? t(
+                      'operations.charging.currentPostureCharging',
+                      'Battery is at {{battery}}%{{eta}}.',
+                      {
+                        battery: fmtInt(departureBatteryPct ?? 0),
+                        eta: timeToTarget
+                          ? t(
+                              'operations.charging.currentPostureEta',
+                              ' with {{duration}} to target',
+                              { duration: timeToTarget },
+                            )
+                          : '',
+                      },
+                    )
+                  : liveState
+                    ? t(
+                        'operations.charging.currentPostureIdle',
+                        'Latest battery state is {{battery}}%; the vehicle is not drawing charge.',
+                        { battery: fmtInt(departureBatteryPct ?? 0) },
+                      )
+                    : t(
+                        'operations.charging.currentPostureMissing',
+                        'Live state has not arrived; session history remains available.',
+                      ),
+              tone: vehicleStateQuery.isLoading || vehicleStateQuery.isError || !liveState
+                ? 'neutral'
+                : isChargingNow
+                  ? 'info'
+                  : 'success',
             },
             {
-              key: 'energy',
-              label: t('operations.charging.deliveredEnergy', 'Delivered energy'),
-              value: fmtCompact(currentStats.totalEnergyWh / 1000, 10_000),
-              detail: t(
-                'operations.charging.energyDetail',
-                'Total energy added across the selected sessions.',
-              ),
-              tone: 'success',
+              key: 'departure',
+              label: t('operations.charging.departureReadiness', 'Departure readiness'),
+              value: liveState ? `${fmtInt(departureBatteryPct ?? 0)}%` : '—',
+              detail: !liveState
+                ? t(
+                    'operations.charging.departureUnavailable',
+                    'Current battery state is required to assess near-term departure readiness.',
+                  )
+                : timeToTarget
+                  ? t(
+                      'operations.charging.departureEta',
+                      'Estimated {{duration}} to the configured charge target.',
+                      { duration: timeToTarget },
+                    )
+                  : (departureBatteryPct ?? 0) >= 40
+                    ? t(
+                        'operations.charging.departureReady',
+                        'Battery state supports near-term departure; confirm route range before leaving.',
+                      )
+                    : t(
+                        'operations.charging.departureLow',
+                        'Additional charging is recommended before the next departure.',
+                      ),
+              tone: !liveState
+                ? 'neutral'
+                : (departureBatteryPct ?? 0) < 20
+                  ? 'danger'
+                  : (departureBatteryPct ?? 0) < 40
+                    ? 'warning'
+                    : 'success',
             },
             {
               key: 'cost',
-              label: t('charging.totalCost', 'Cost'),
+              label: t('operations.charging.costExposure', 'Cost exposure'),
               value: formatCurrency(currentStats.totalCost),
+              detail: blendedCostPerKwh != null
+                ? t(
+                    'operations.charging.costExposureDetail',
+                    '{{rate}}/kWh blended across recorded charging energy.',
+                    { rate: formatCurrency(blendedCostPerKwh) },
+                  )
+                : t(
+                    'operations.charging.costExposureUnavailable',
+                    'A blended rate requires both recorded energy and cost.',
+                  ),
+              tone: 'neutral',
+            },
+            {
+              key: 'efficiency',
+              label: t('operations.charging.efficiency', 'Charging efficiency'),
+              value: t('operations.charging.efficiencyNotMeasured', 'Not measured'),
               detail: t(
-                'operations.charging.costDetail',
-                'Recorded charging spend in the active period.',
+                'operations.charging.efficiencyNotMeasuredDetail',
+                'Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.',
               ),
               tone: 'neutral',
             },
             {
-              key: 'exceptions',
-              label: t('operations.charging.exceptions', 'Exceptions'),
-              value: anomalies.length,
+              key: 'interruptions',
+              label: t('operations.charging.interruptions', 'Potential interruptions'),
+              value: interruptionAnomalies.length,
               detail: t(
-                'operations.charging.exceptionsDetail',
-                'Sessions with missing telemetry, unusual cost, power, or duration.',
+                'operations.charging.interruptionsDetail',
+                'Sessions with a telemetry gap or sustained unexpectedly low DC power.',
               ),
-              tone: anomalies.length > 0 ? 'warning' : 'success',
+              tone: interruptionAnomalies.length > 0 ? 'danger' : 'success',
+            },
+            {
+              key: 'reliability',
+              label: t('operations.charging.reliability', 'Charger reliability'),
+              value: reliabilityPct == null
+                ? '—'
+                : t(
+                    'operations.charging.reliabilityValue',
+                    '{{value}}% clear',
+                    { value: fmtInt(reliabilityPct) },
+                  ),
+              detail: t(
+                'operations.charging.reliabilityDetail',
+                'Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.',
+              ),
+              tone: reliabilityPct == null
+                ? 'neutral'
+                : reliabilityPct >= 95
+                  ? 'success'
+                  : reliabilityPct >= 80
+                    ? 'warning'
+                    : 'danger',
             },
           ]}
           attention={chargingAttention}
           provenance={t(
             'operations.charging.provenance',
-            'Derived from charging-session telemetry, configured cost data, and vehicle-local day boundaries.',
+            'Derived from live vehicle state, charging-session telemetry, configured cost data, and vehicle-local day boundaries.',
           )}
         />
 
@@ -889,6 +1059,24 @@ export default function ChargingListPage() {
             >
               <SectionTitle>{t('charging.insights.title', 'Charging Insights')}</SectionTitle>
 
+              {sessions.length === 0 && (
+                <GlassPanel className="p-6">
+                  {/* no-action: recovery uses the vehicle, period, and collection filters above. */}
+                  <EmptyState
+                    icon={<Plug className="h-8 w-8" aria-hidden="true" />}
+                    message={t(
+                      'charging.insights.emptyMessage',
+                      'Charging insights need completed sessions in the selected range.',
+                    )}
+                    description={t(
+                      'charging.insights.emptyDescription',
+                      'Battery-start patterns, charger comparisons, and scheduling guidance appear as session history accumulates.',
+                    )}
+                    className="py-8"
+                  />
+                </GlassPanel>
+              )}
+
               <div className="grid grid-cols-1 gap-4 xl:gap-5 2xl:grid-cols-6">
                 {/* AC vs DC — wide table, spans the majority of the row on wide screens */}
                 {acDcBreakdown && (acDcBreakdown.ac.count + acDcBreakdown.dc.count >= THRESHOLD_AC_DC) ? (
@@ -914,20 +1102,20 @@ export default function ChargingListPage() {
                   </div>
                 ) : null}
 
-                {/* Efficiency panel — always renders when present (lifetime stats) */}
-                {efficiencyStats ? (
-                  <div className="min-w-0 2xl:col-span-3">
-                    <EfficiencyPanel stats={efficiencyStats} />
+                {/* Delivery rate is measurable from session energy and elapsed time. */}
+                {chargeRateStats ? (
+                  <div className="min-w-0 2xl:col-span-6">
+                    <ChargeRatePanel stats={chargeRateStats} />
                   </div>
                 ) : null}
 
                 {/* Charger specs — needs ≥ 5 to compare */}
                 {chargerSpecs && sessions.length >= THRESHOLD_SPECS ? (
-                  <div className="min-w-0 2xl:col-span-3">
+                  <div className="min-w-0 2xl:col-span-6">
                     <ChargerSpecsPanel specs={chargerSpecs} />
                   </div>
                 ) : sessions.length > 0 && sessions.length < THRESHOLD_SPECS ? (
-                  <div className="min-w-0 2xl:col-span-3">
+                  <div className="min-w-0 2xl:col-span-6">
                     <EmptyStateThreshold
                       currentCount={sessions.length}
                       threshold={THRESHOLD_SPECS}

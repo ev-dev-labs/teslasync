@@ -2,11 +2,10 @@
 // DataTable export adoption audit.
 //
 // Long-tail list pages (charging, drives, trips, automation, alerts,
-// notifications, api-logs, audit) MUST opt their <DataTable/> into
-// client-side CSV export by setting the `exportable` prop. Users
-// routinely export to spreadsheets for tax records, insurance, and
-// fleet reporting — DataTable already supports it (/
-//), but most pages forget to flip the flag.
+// notifications, api-logs, audit) MUST expose a deliberate export
+// contract. DataTables use the shared `exportable` prop. Rich lists
+// may keep their more suitable interaction model, but must expose
+// explicit CSV and JSON actions (or a server export for large data).
 //
 // This audit:
 // 1. Walks src/features/**/pages/*.tsx looking for files whose name
@@ -14,10 +13,9 @@
 // 2. For every <DataTable.../> JSX block in those files, requires
 // either `exportable` or a `// export-audit:skip <reason>`
 // file-level waiver.
-// 3. Surfaces a separate informational warning for files that
-// match the pattern but render rows via raw `.map()` /
-// `<table>` instead of <DataTable/>. These can't be enforced
-// yet — they belong on the migration backlog.
+// 3. Checks approved non-DataTable surfaces for their explicit export
+// contract so rich list/card interactions do not have to regress merely
+// to satisfy a textual audit.
 //
 // Recognised exemptions on a target page's <DataTable/>:
 // • `exportable` — the prop is set.
@@ -33,7 +31,7 @@
 // Exit 0 when every <DataTable/> in a target page satisfies one of
 // the above; exit 1 with a per-table report otherwise.
 
-import { readFileSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import process from 'node:process';
 
@@ -55,29 +53,53 @@ const TARGET_FRAGMENTS = [
   'trips',
   'automation',
   'alerts',
+  'alertrules',
   'notifications',
   'api-logs',
   'apilogs',
   'audit',
 ];
 
-// Pages that match the target pattern but don't actually use
-// <DataTable/>. They render long lists via raw `.map()` /
-// `<table>` (or, in TripListPage's case, a hand-rolled CSV export
-// outside DataTable). We surface them as warnings so the migration
-// backlog stays visible. NOT a failure — there's nothing to enforce
-// `exportable` on if there's no <DataTable/>.
-const PENDING_MIGRATION = [
-  // Successor to the deleted NotificationsPage.tsx (renamed in #64
-  // "Refactor/filters"). InboxPage is a thin shell; rows are mapped into
-  // <NotificationRow> inside InboxBody, so that is what must migrate.
-  'features/notifications/components/InboxBody.tsx',
-  'features/notifications/pages/AlertRulesPage.tsx',
-  'features/admin/pages/ApiLogsPage.tsx',
-  'features/driving/pages/DrivesListPage.tsx',
-  'features/charging/pages/ChargingListPage.tsx',
-  'features/trips/pages/TripListPage.tsx',
-  'features/automations/pages/AutomationListPage.tsx',
+// Rich operational surfaces whose row expansion, grouping, responsive cards,
+// or server-sized datasets make DataTable an inappropriate replacement.
+// Each marker is part of the production contract and its absence is a failure.
+const ALTERNATIVE_EXPORT_SURFACES = [
+  {
+    file: 'features/notifications/components/InboxBody.tsx',
+    label: 'Notification inbox',
+    markers: [
+      'ListExportMenu',
+      'onExportCsv=',
+      'onExportJson=',
+      'selectedCount=',
+      'thread_count',
+    ],
+  },
+  {
+    file: 'features/admin/pages/ApiLogsPage.tsx',
+    label: 'API logs',
+    markers: ['ListExportMenu', 'onExportCsv=', 'onExportJson='],
+  },
+  {
+    file: 'features/driving/pages/DrivesListPage.tsx',
+    label: 'Drive history',
+    markers: ['/export/drives?format=csv', '/export/drives?format=json'],
+  },
+  {
+    file: 'features/charging/pages/ChargingListPage.tsx',
+    label: 'Charging history',
+    markers: ['ListExportMenu', 'onExportCsv=', 'onExportJson='],
+  },
+  {
+    file: 'features/trips/pages/TripListPage.tsx',
+    label: 'Trips',
+    markers: ['exportAsCSV', 'exportAsJSON'],
+  },
+  {
+    file: 'features/automations/pages/AutomationListPage.tsx',
+    label: 'Automation rules',
+    markers: ['AutomationListTable'],
+  },
 ];
 
 const WAIVER_RE = /\/\/\s*export-audit:skip\b/;
@@ -210,6 +232,7 @@ const failures = [];
 const passes = [];
 const exemptedWaiver = [];
 const skippedNoDataTable = [];
+const alternativePasses = [];
 
 const pageFiles = walk(PAGES_ROOT).filter(isPagesPath);
 
@@ -260,42 +283,39 @@ if (exemptedWaiver.length > 0) {
 }
 if (skippedNoDataTable.length > 0) {
   console.log(
-    '[audit:export-adoption] skipped (target page name but no <DataTable/> found):',
+    '[audit:export-adoption] target page name with no direct <DataTable/>:',
   );
   for (const s of skippedNoDataTable) console.log(`  - ${s}`);
 }
 
-// PENDING_MIGRATION — informational only. Mirror the pattern used by
-// audit-virtualization.mjs: surface backlog so future sweeps can
-// migrate raw `.map()` / `<table>` rows to <DataTable/> + exportable.
-//
-// A *stale* entry is a hard failure, not a warning: a path that no longer
-// exists silently stops auditing the surface it was meant to track, which
-// is how NotificationsPage.tsx rotted through #64.
-const pendingMissing = [];
-for (const rel of PENDING_MIGRATION) {
-  const full = path.join(ROOT, rel);
-  if (!existsSync(full)) {
-    pendingMissing.push(rel);
+for (const surface of ALTERNATIVE_EXPORT_SURFACES) {
+  const full = path.join(ROOT, surface.file);
+  let source;
+  try {
+    source = readFileSync(full, 'utf8');
+  } catch {
     failures.push({
-      file: rel,
-      reason: 'file not found (PENDING_MIGRATION is stale — repoint it at the renamed file or drop the entry)',
+      file: surface.file,
+      reason: 'approved alternative export surface is missing or unreadable',
     });
+    continue;
   }
+
+  const missingMarkers = surface.markers.filter((marker) => !source.includes(marker));
+  if (missingMarkers.length > 0) {
+    failures.push({
+      file: surface.file,
+      reason: `missing alternative export contract marker(s): ${missingMarkers.join(', ')}`,
+    });
+    continue;
+  }
+  alternativePasses.push(`${surface.label} (${surface.file})`);
 }
-if (PENDING_MIGRATION.length > 0) {
+
+if (alternativePasses.length > 0) {
   console.log('');
-  console.log(
-    `[audit:export-adoption] WARN — ${PENDING_MIGRATION.length} page(s) ` +
-    `match the long-tail list pattern but render rows outside <DataTable/>:`,
-  );
-  for (const rel of PENDING_MIGRATION) {
-    const tag = pendingMissing.includes(rel) ? '(file missing)' : '';
-    console.log(`  · ${rel} ${tag}`);
-  }
-  console.log(
-    '  These should migrate to <DataTable exportable .../> in a follow-up sweep.',
-  );
+  console.log('[audit:export-adoption] explicit non-DataTable export contracts OK:');
+  for (const p of alternativePasses) console.log(`  ✓ ${p}`);
 }
 
 if (failures.length > 0) {
@@ -315,5 +335,7 @@ if (failures.length > 0) {
 }
 
 console.log('');
-console.log('[audit:export-adoption] OK — every long-tail list page enables exportable.');
+console.log(
+  '[audit:export-adoption] OK — every long-tail list uses an exportable DataTable or an approved explicit export surface.',
+);
 process.exit(0);

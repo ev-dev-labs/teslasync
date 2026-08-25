@@ -4,7 +4,7 @@ export { ChartsRow } from './ChartsRow';
 export { AcDcStatsPanel } from './AcDcStatsPanel';
 export { BatteryLevelChart } from './BatteryLevelChart';
 export { DetailedStatistics } from './DetailedStatistics';
-export { EfficiencyPanel } from './EfficiencyPanel';
+export { ChargeRatePanel } from './ChargeRatePanel';
 export { ChargerSpecsPanel } from './ChargerSpecsPanel';
 export { OptimizerSection } from './OptimizerSection';
 export { SessionListSection } from './SessionListSection';
@@ -15,7 +15,7 @@ export {
   computeCostByType,
   computeStartLevelDist,
   computeAcDcBreakdown,
-  computeEfficiencyStats,
+  computeChargeRateStats,
   computeChargerSpecs,
   computeEnhancedStats,
   filterAndSortSessions,
@@ -25,7 +25,7 @@ export type {
   ChargerFilter,
   ChargingStats,
   AcDcBreakdown,
-  EfficiencyStats,
+  ChargeRateStats,
   ChargerSpecsData,
   EnhancedStats,
 } from './helpers';

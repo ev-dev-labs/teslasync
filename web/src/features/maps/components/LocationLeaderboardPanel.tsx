@@ -4,7 +4,7 @@ import { GlassPanel, PanelTitle } from '@/components/ui';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ChartTooltip, chartGrid, axisTickSm,
+  ChartTooltip, EmbeddedChart, type ChartDataColumn, chartGrid, axisTickSm,
 } from '@/components/charts';
 
 /** A single leaderboard datum — a labelled bar value. */
@@ -84,6 +84,18 @@ export function LocationLeaderboardPanel({
   // Horizontal bars need vertical room per entry; grow with the row count but
   // keep a sensible floor so a short list still fills the panel.
   const chartHeight = Math.max(240, Math.min(rows.length, 15) * 34);
+  const chartRows = useMemo(
+    () => rows.map(({ name, value }) => ({ name, value })),
+    [rows],
+  );
+
+  const dataColumns = useMemo<ChartDataColumn[]>(
+    () => [
+      { key: 'name', label: title },
+      { key: 'value', label: seriesLabel, format: (v) => String(v ?? 0) },
+    ],
+    [title, seriesLabel],
+  );
 
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -105,7 +117,15 @@ export function LocationLeaderboardPanel({
           }
         />
       ) : (
-        <div style={{ height: chartHeight }} aria-label={ariaLabel} role="img">
+        // chart-a11y:no-table accessible fallback table provided via EmbeddedChart data/dataColumns
+        <EmbeddedChart
+          title={title}
+          ariaLabel={ariaLabel}
+          height={chartHeight}
+          fluid={false}
+          data={chartRows}
+          dataColumns={dataColumns}
+        >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} layout="vertical" margin={BAR_MARGIN}>
               {chartGrid}
@@ -115,7 +135,7 @@ export function LocationLeaderboardPanel({
               <Bar dataKey="value" name={seriesLabel} fill={color} radius={BAR_RADIUS} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </EmbeddedChart>
       )}
     </GlassPanel>
   );

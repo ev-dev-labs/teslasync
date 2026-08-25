@@ -4,7 +4,9 @@ import { useTranslation } from 'react-i18next';
 
 import {
   CartesianGrid,
+  ChartLegend,
   ChartTooltip,
+  EmbeddedChart,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -213,8 +215,32 @@ export function PackCapacityFitDiagnostics({
           className="h-72"
           skeletonHeight={288}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows}>
+          <EmbeddedChart
+            title={t(
+              'packCapacity.fitDiagnostics.title',
+              'Descriptive linear-fit diagnostics',
+            )}
+            ariaLabel={t(
+              'packCapacity.fitDiagnostics.chartAria',
+              'Filtered pack-capacity estimates and descriptive linear fit',
+            )}
+            data={rows}
+            dataColumns={[
+              { key: 'date', label: t('packCapacity.columns.date', 'Date') },
+              {
+                key: 'filtered',
+                label: t('packCapacity.series.filtered', 'Filtered estimate'),
+              },
+              {
+                key: 'fit',
+                label: t('packCapacity.series.linearFit', 'Descriptive linear fit'),
+              },
+            ]}
+            chartKey="pack-capacity-fit-diagnostics"
+          >
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -235,6 +261,7 @@ export function PackCapacityFitDiagnostics({
                 width={72}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Line
                 dataKey="filtered"
                 name={t(
@@ -244,6 +271,7 @@ export function PackCapacityFitDiagnostics({
                 stroke="var(--chart-1)"
                 strokeWidth={2}
                 dot={{ r: 2 }}
+                hide={hiddenSeries?.isHidden('filtered')}
               />
               <Line
                 dataKey="fit"
@@ -255,9 +283,12 @@ export function PackCapacityFitDiagnostics({
                 strokeWidth={2.5}
                 strokeDasharray="6 4"
                 dot={false}
+                hide={hiddenSeries?.isHidden('fit')}
               />
-            </LineChart>
-          </ResponsiveContainer>
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </EmbeddedChart>
         </PackCapacitySectionBody>
       </GlassPanel>
     </section>

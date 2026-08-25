@@ -11,6 +11,7 @@ import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip, CHART_COLORS,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -54,6 +55,14 @@ export default function AnomalyDashboardPage() {
 
   const anomalies = data?.anomalies ?? [];
   const healthEntries = Object.entries(data?.health_summary ?? {});
+
+  const signalFrequencyColumns = useMemo<ChartDataColumn[]>(
+    () => [
+      { key: 'signal', label: t('anomaly.colSignal', 'Signal') },
+      { key: 'count', label: t('anomaly.count', 'Anomalies'), format: (v) => String(v ?? 0) },
+    ],
+    [t],
+  );
 
   const emptyMessage = noVehicle
     ? t('anomaly.selectVehicle', 'Select a vehicle to view its anomaly analysis.')
@@ -139,20 +148,24 @@ export default function AnomalyDashboardPage() {
                 message={noVehicle ? emptyMessage : t('anomaly.noFrequency', 'Anomaly frequency data will appear after detection runs.')}
               />
             ) : (
-              <div
-                role="img"
-                aria-label={t('anomaly.frequencyAria', 'Bar chart of the most frequently anomalous signals')}
-                className="h-72 sm:h-80"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={signalFrequency} layout="vertical" margin={{ left: 8, right: 16 }}>
-                    <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
-                    <YAxis dataKey="signal" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} width={140} />
-                    <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
-                    <Bar dataKey="count" fill={CHART_COLORS[3]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="h-72 sm:h-80">
+                <EmbeddedChart
+                  title={t('anomaly.frequency', 'Most Frequent Anomalies')}
+                  ariaLabel={t('anomaly.frequencyAria', 'Bar chart of the most frequently anomalous signals')}
+                  data={signalFrequency}
+                  dataColumns={signalFrequencyColumns}
+                  fluid
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={signalFrequency} layout="vertical" margin={{ left: 8, right: 16 }}>
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} allowDecimals={false} />
+                      <YAxis dataKey="signal" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} tickLine={false} axisLine={false} width={140} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: 'rgba(255,255,255,0.04)' }} />
+                      <Bar dataKey="count" fill={CHART_COLORS[3]} radius={[0, 4, 4, 0]} name={t('anomaly.count', 'Anomalies')} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>

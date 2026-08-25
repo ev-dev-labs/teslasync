@@ -196,8 +196,10 @@ vi.mock('@/api/client', async (importOriginal) => {
 // (sort + null-safety) are directly assertable without recharts.
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
@@ -413,7 +415,7 @@ describe('NavigationRoutePage — shell gating', () => {
     expect(
       screen.getByRole('heading', { level: 1, name: /Navigation & Route/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument();
     // Body regions are gated out behind the spinner.
     expect(screen.queryByRole('region', { name: 'Route metrics' })).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Navigation status' })).not.toBeInTheDocument();
@@ -571,6 +573,18 @@ describe('NavigationRoutePage — degraded route/data states', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(3);
     expect(screen.getByText(/No active navigation/)).toBeInTheDocument();
     expect(screen.getByText('No active route selected')).toBeInTheDocument();
+  });
+
+  it('explains when an active route omits waypoint metadata', () => {
+    h.latest = { ...baseLatest(), destination_name: '' };
+    h.historyMode = 'pending';
+
+    renderPage();
+
+    expect(
+      screen.getByText('The active route does not include waypoint details.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/vehicle navigation supplies waypoint metadata/)).toBeInTheDocument();
   });
 
   it('surfaces the GPS-unavailable banner and card when coordinates are zeroed', () => {

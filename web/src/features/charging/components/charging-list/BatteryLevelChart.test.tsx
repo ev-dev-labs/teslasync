@@ -45,9 +45,11 @@ vi.mock('react-i18next', () => {
 //    the series/axis bindings for direct assertion. `chartGrid` is a renderable
 //    node in the real barrel (a <CartesianGrid/> element) — the component drops
 //    it in as a child, so the double must be a valid node too. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Inert = () => null;
   return {
+    ...chartTestDoubles,
     chartGrid: null,
     axisTickSm: { fontSize: 10 },
     ChartTooltip: Inert,

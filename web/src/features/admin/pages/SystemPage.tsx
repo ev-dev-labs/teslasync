@@ -18,7 +18,7 @@
  * pattern as the Diagnostic page when adding new system panels.
  */
 
-import { useCallback } from 'react'
+import { useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 
@@ -43,6 +43,21 @@ export default function SystemPage() {
 
   const rateLimit = useRateLimitStatus()
   const queue = useQueueStatus()
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'rate-limits',
+        label: t('dataSources.labels.rateLimits', 'Rate-limit budgets'),
+        query: rateLimit,
+      },
+      {
+        id: 'worker-queues',
+        label: t('dataSources.labels.workerQueues', 'Worker queues'),
+        query: queue,
+      },
+    ],
+    [queue, rateLimit, t],
+  )
 
   const refreshing = rateLimit.isFetching || queue.isFetching
 
@@ -78,6 +93,7 @@ export default function SystemPage() {
       )}
       actions={actions}
       query={[rateLimit, queue]}
+      dataSources={dataSources}
     >
       <FadeIn>
         <section aria-labelledby="system-overview-heading" data-testid="system-page-overview">

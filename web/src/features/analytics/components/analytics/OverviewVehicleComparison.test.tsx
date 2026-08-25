@@ -41,6 +41,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import { OverviewVehicleComparison } from './OverviewVehicleComparison';
@@ -94,7 +96,8 @@ vi.mock('@/hooks/useSettings', async () => {
 //    chart surfaces its `data` prop (as JSON), each series surfaces its dataKey
 //    binding, and the donut surfaces its projected `data` array + one <Cell>
 //    per slice so the page-computed conversions are directly assertable. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
   const Inert = () => null;
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const makeChart =
@@ -131,6 +134,7 @@ vi.mock('@/components/charts', () => {
     <span data-testid="pie-cell" data-fill={String(fill ?? '')} />
   );
   return {
+    ...actual,
     ChartTooltip: Inert,
     chartGrid: null,
     axisTick: {},
@@ -195,10 +199,15 @@ function makeQuery(over: QueryOverride = {}): FleetAnalyticsQuery {
 }
 
 function renderCmp(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <OverviewVehicleComparison query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <OverviewVehicleComparison query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -218,7 +227,7 @@ function barRows(): Row[] {
 }
 /** Inline widths of every leaderboard fill bar, in render (ranked) order. */
 function leaderboardWidths(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll<HTMLElement>('.bg-neon-cyan')).map(
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-testid="efficiency-leader-fill"]')).map(
     (el) => el.style.width,
   );
 }

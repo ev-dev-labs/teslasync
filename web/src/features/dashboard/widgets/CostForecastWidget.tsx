@@ -4,6 +4,8 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart,
+  type ChartDataRow,
 } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useCostForecast } from '@/api/hooks/useCharging';
@@ -13,10 +15,10 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { CostHistoricalMonth, CostForecastMonth } from '@/types/charging';
 
-interface BarDatum {
+interface BarDatum extends ChartDataRow {
   month: string;
   cost: number;
-  isForecast: boolean;
+  period: 'actual' | 'forecast';
 }
 
 function buildChartData(
@@ -30,12 +32,12 @@ function buildChartData(
   const hist: BarDatum[] = histArr.map((h) => ({
     month: h?.month ?? '—',
     cost: h?.cost ?? 0,
-    isForecast: false,
+    period: 'actual',
   }));
   const fore: BarDatum[] = foreArr.map((f) => ({
     month: f?.month ?? '—',
     cost: f?.cost ?? 0,
-    isForecast: true,
+    period: 'forecast',
   }));
   return [...hist, ...fore].slice(-6);
 }
@@ -153,12 +155,28 @@ export default function CostForecastWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<TrendingUp className="h-5 w-5" />}
         stats={stats}
         chart={
-          <div
-            role="img"
-            aria-label={t(
+          <EmbeddedChart
+            title={t('widget.costForecast.title', 'Cost Forecast')}
+            ariaLabel={t(
               'widget.costForecast.chartLabel',
               'Monthly charging cost history and forecast',
             )}
+            data={chartData}
+            dataColumns={[
+              { key: 'month', label: t('widget.costForecast.month', 'Month') },
+              {
+                key: 'cost',
+                label: t('widget.costForecast.costLabel', 'Cost'),
+                format: (value) => formatCurrency(Number(value ?? 0)),
+              },
+              {
+                key: 'period',
+                label: t('widget.costForecast.periodType', 'Period type'),
+                format: (value) => value === 'forecast'
+                  ? t('widget.costForecast.forecast', 'Forecast')
+                  : t('widget.costForecast.actual', 'Actual'),
+              },
+            ]}
             className="h-full w-full"
           >
             <ResponsiveContainer width="100%" height="100%">
@@ -173,12 +191,7 @@ export default function CostForecastWidget({ vehicleId, size }: WidgetProps) {
                   tickFormatter={(v: number) => `${currencySymbol}${fmt(v, 0)}`}
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: 'rgba(0,0,0,0.85)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
+                  content={<ChartTooltip />}
                   formatter={(value: number) => [
                     formatCurrency(value),
                     t('widget.costForecast.costLabel', 'Cost'),
@@ -194,7 +207,7 @@ export default function CostForecastWidget({ vehicleId, size }: WidgetProps) {
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

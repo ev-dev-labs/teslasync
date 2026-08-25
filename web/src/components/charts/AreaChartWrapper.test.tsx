@@ -95,12 +95,28 @@ describe('AreaChartWrapper', () => {
     const ids = Array.from(container.querySelectorAll('linearGradient')).map((g) =>
       g.getAttribute('id'),
     )
-    expect(ids).toEqual(['gradient-energy', 'gradient-power'])
+    expect(ids).toHaveLength(2)
+    expect(ids[0]).toMatch(/^gradient-.+-energy$/)
+    expect(ids[1]).toMatch(/^gradient-.+-power$/)
 
     const areaFills = Array.from(container.querySelectorAll('.recharts-area-area')).map((p) =>
       p.getAttribute('fill'),
     )
-    expect(areaFills).toEqual(['url(#gradient-energy)', 'url(#gradient-power)'])
+    expect(areaFills).toEqual(ids.map((id) => `url(#${id})`))
+  })
+
+  it('names gradients uniquely across wrapper instances', () => {
+    const { container } = render(
+      <>
+        <AreaChartWrapper data={data} xKey="i" series={series} />
+        <AreaChartWrapper data={data} xKey="i" series={series} />
+      </>,
+    )
+
+    const ids = Array.from(container.querySelectorAll('linearGradient')).map((gradient) =>
+      gradient.getAttribute('id'),
+    )
+    expect(new Set(ids).size).toBe(ids.length)
   })
 
   it('renders both X and Y axes for the provided keys', () => {

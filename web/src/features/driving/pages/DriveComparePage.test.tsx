@@ -1,6 +1,7 @@
 import type { ChangeEvent, ReactNode } from 'react';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { MemoryRouter } from 'react-router-dom';
 
 import type { DriveDetail } from '@/types/driving';
 
@@ -129,6 +130,14 @@ vi.mock('../components/drive-compare', () => {
 
 import DriveComparePage from './DriveComparePage';
 
+function renderPage(initialEntry = '/drive-compare') {
+  return render(
+    <MemoryRouter initialEntries={[initialEntry]}>
+      <DriveComparePage />
+    </MemoryRouter>,
+  );
+}
+
 function query(overrides: Record<string, unknown> = {}) {
   return {
     data: undefined,
@@ -194,7 +203,7 @@ beforeEach(() => {
 
 describe('DriveComparePage', () => {
   it('mounts the complete workspace and requests the API maximum history', () => {
-    render(<DriveComparePage />);
+    renderPage();
 
     expect(screen.getByRole('heading', { name: 'Drive Compare' })).toBeInTheDocument();
     for (const id of SECTION_IDS) {
@@ -205,13 +214,22 @@ describe('DriveComparePage', () => {
     expect(useDriveMock).toHaveBeenCalledWith('2');
   });
 
+  it('initializes both detail queries from list preselection parameters', () => {
+    renderPage('/drive-compare?drive_a=2&drive_b=1');
+
+    expect(useDriveMock).toHaveBeenCalledWith('2');
+    expect(useDriveMock).toHaveBeenCalledWith('1');
+    expect(screen.getByLabelText('Choose drive A')).toHaveValue('2');
+    expect(screen.getByLabelText('Choose drive B')).toHaveValue('1');
+  });
+
   it('surfaces a detail-query error instead of leaving comparison sections loading', () => {
     useDriveMock.mockImplementation((id: string) =>
       id === '1'
         ? query({ isError: true, error: new Error('detail failed') })
         : query({ data: driveB }));
 
-    render(<DriveComparePage />);
+    renderPage();
 
     expect(screen.getByTestId('compare-identity-a')).toHaveTextContent('error');
     expect(screen.getByTestId('compare-identity-b')).toHaveTextContent('ready');
@@ -222,7 +240,7 @@ describe('DriveComparePage', () => {
   });
 
   it('keeps every section mounted with clear recovery copy for the same drive', () => {
-    render(<DriveComparePage />);
+    renderPage();
     fireEvent.change(screen.getByLabelText('Choose drive B'), { target: { value: '1' } });
 
     for (const id of SECTION_IDS) {
@@ -236,7 +254,7 @@ describe('DriveComparePage', () => {
     useDrivesMock.mockReturnValue(query({ isError: true, error: new Error('list failed') }));
     useDriveMock.mockReturnValue(query());
 
-    render(<DriveComparePage />);
+    renderPage();
 
     for (const id of SECTION_IDS) {
       expect(screen.getByTestId(id)).toHaveTextContent('error');
@@ -246,7 +264,7 @@ describe('DriveComparePage', () => {
   it('preserves the no-vehicle recovery state', () => {
     selectedVehicleMock.mockReturnValue({ vehicleId: null });
 
-    render(<DriveComparePage />);
+    renderPage();
 
     expect(screen.getByTestId('no-vehicle')).toHaveTextContent('Drive Compare');
     expect(screen.queryByTestId('compare-verdict')).not.toBeInTheDocument();

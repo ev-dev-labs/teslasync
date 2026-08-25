@@ -38,6 +38,12 @@ import type {
 } from '@/types/analytics';
 import type { Vehicle } from '@/types/vehicle';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -238,7 +244,7 @@ describe('MileagePage — loading', () => {
     ).toBeInTheDocument();
     // Skeletons stand in for the real content: no metric values, no chart image.
     expect(within(kpiRegion()).queryByText('Total Distance')).toBeNull();
-    expect(screen.queryByRole('img', { name: 'Odometer Over Time' })).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Odometer readings over time' })).toBeNull();
     // Loading is not "empty": the empty-state copy must not show yet.
     expect(screen.queryByText('No odometer readings yet')).toBeNull();
   });
@@ -278,9 +284,9 @@ describe('MileagePage — populated (km)', () => {
   it('mounts the three chart surfaces and the monthly summary table', () => {
     renderPage();
 
-    expect(within(windowsRegion()).getByRole('img', { name: 'Odometer Over Time' })).toBeInTheDocument();
-    expect(within(chartsRegion()).getByRole('img', { name: 'Daily Distance' })).toBeInTheDocument();
-    expect(within(chartsRegion()).getByRole('img', { name: 'Monthly Distance' })).toBeInTheDocument();
+    expect(within(windowsRegion()).getByRole('img', { name: 'Odometer readings over time' })).toBeInTheDocument();
+    expect(within(chartsRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
+    expect(within(chartsRegion()).getByRole('img', { name: 'Monthly distance traveled over time' })).toBeInTheDocument();
 
     // Monthly summary table: unit-suffixed headers + a data row.
     const table = screen.getByRole('table');
@@ -333,7 +339,7 @@ describe('MileagePage — empty states', () => {
     // Odometer filter removed every point → empty state.
     expect(screen.getByText('No odometer readings yet')).toBeInTheDocument();
     // But total_km is unaffected → the daily-distance chart still renders.
-    expect(within(chartsRegion()).getByRole('img', { name: 'Daily Distance' })).toBeInTheDocument();
+    expect(within(chartsRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
     expect(screen.queryByText('No daily distance yet')).toBeNull();
   });
 });
@@ -347,7 +353,7 @@ describe('MileagePage — per-query error + retry', () => {
     const kpi = kpiRegion();
     expect(within(kpi).getByText('Server error')).toBeInTheDocument();
     // Healthy panels are unaffected — the daily chart still renders.
-    expect(within(chartsRegion()).getByRole('img', { name: 'Daily Distance' })).toBeInTheDocument();
+    expect(within(chartsRegion()).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
 
     fireEvent.click(within(kpi).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(q.refetch).toHaveBeenCalled());
@@ -375,7 +381,7 @@ describe('MileagePage — per-query error + retry', () => {
     const charts = chartsRegion();
     // Only the monthly chart errors; the daily chart still renders alongside it.
     expect(within(charts).getByText('Server error')).toBeInTheDocument();
-    expect(within(charts).getByRole('img', { name: 'Daily Distance' })).toBeInTheDocument();
+    expect(within(charts).getByRole('img', { name: 'Daily distance traveled over time' })).toBeInTheDocument();
 
     fireEvent.click(within(charts).getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(q.refetch).toHaveBeenCalled());

@@ -36,6 +36,7 @@ vi.mock('@/api/client', async () => {
 
 vi.mock('./_toastHelpers', () => ({
   useMutationToast: () => ({ success: toastSuccess, error: toastError }),
+  useDeferredMutationToast: () => ({ success: toastSuccess, error: toastError }),
 }));
 
 vi.mock('@/lib/queryBroadcast', () => ({
@@ -170,6 +171,16 @@ describe('useChartAnnotations', () => {
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
     expect(result.current.data).toBeUndefined();
+  });
+
+  it('does not request annotations when explicitly disabled', () => {
+    const { result } = renderHook(
+      () => useChartAnnotations({ enabled: false }),
+      { wrapper: makeWrapper() },
+    );
+
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(requestMock).not.toHaveBeenCalled();
   });
 });
 

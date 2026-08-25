@@ -20,17 +20,22 @@ describe('routePrefetch', () => {
       expect(isPrefetchablePath('/live')).toBe(true)
     })
 
-    it('returns true for known parameterized routes (matched by literal pattern)', () => {
-      // Parameterized routes appear in PRELOADERS keyed by their pattern,
-      // not by a concrete value. The pattern match is intentional —
-      // hovers never produce literal `/vehicles/:id` strings, so this
-      // entry is mostly for completeness and audit symmetry.
+    it('resolves both parameterized patterns and concrete detail paths', () => {
       expect(isPrefetchablePath('/vehicles/:id')).toBe(true)
+      expect(isPrefetchablePath('/vehicles/123')).toBe(true)
+      expect(isPrefetchablePath('/drives/42/replay')).toBe(true)
+      expect(isPrefetchablePath('/year-review/2025')).toBe(true)
+    })
+
+    it('ignores query strings, hashes, and trailing slashes', () => {
+      expect(isPrefetchablePath('/battery?vehicle_id=7')).toBe(true)
+      expect(isPrefetchablePath('/drives/42#telemetry')).toBe(true)
+      expect(isPrefetchablePath('/charging/')).toBe(true)
     })
 
     it('returns false for unknown routes', () => {
       expect(isPrefetchablePath('/totally-not-a-route')).toBe(false)
-      expect(isPrefetchablePath('/vehicles/123')).toBe(false)
+      expect(isPrefetchablePath('/vehicles/123/missing')).toBe(false)
     })
 
     it('returns false for empty / falsy paths', () => {
@@ -50,6 +55,17 @@ describe('routePrefetch', () => {
       prefetchRoute('/drives')
       const matches = __getPrefetchedForTests().filter((p) => p === '/drives')
       expect(matches.length).toBe(1)
+    })
+
+    it('deduplicates concrete detail URLs by their shared lazy route chunk', () => {
+      prefetchRoute('/vehicles/123')
+      prefetchRoute('/vehicles/456?tab=access')
+      expect(__getPrefetchedForTests()).toEqual(['/vehicles/:id'])
+    })
+
+    it('prefetches known routes when navigation state adds a query or hash', () => {
+      prefetchRoute('/battery?vehicle_id=7#health')
+      expect(__getPrefetchedForTests()).toEqual(['/battery'])
     })
 
     it('is a no-op for unknown paths', () => {

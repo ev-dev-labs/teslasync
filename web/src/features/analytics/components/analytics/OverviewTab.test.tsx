@@ -48,6 +48,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, within, fireEvent, cleanup } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import type { FleetAnalyticsQuery } from './constants';
@@ -169,10 +171,15 @@ function makeQuery(over: Partial<FleetAnalyticsQuery> = {}): FleetAnalyticsQuery
 }
 
 function renderTab(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <OverviewTab query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <OverviewTab query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -225,7 +232,7 @@ describe('OverviewTab — loading state', () => {
     expect(panelByTitle(/Monthly Cost Comparison/i)).toBeInTheDocument();
 
     // Three own panels each render a loading skeleton and are announced busy.
-    expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThanOrEqual(3);
+    expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(container.querySelectorAll('[data-print-card][aria-busy="true"]').length).toBe(3);
 
     // No chart series leak while loading.
@@ -284,7 +291,7 @@ describe('OverviewTab — ready state (metric)', () => {
     expect(within(panel).getByTestId('x-axis')).toHaveAttribute('data-key', 'name');
     const bar = within(panel).getByTestId('bar');
     expect(bar).toHaveAttribute('data-key', 'distance');
-    expect(bar).toHaveAttribute('data-name', 'km');
+    expect(bar).toHaveAttribute('data-name', 'Distance (km)');
   });
 
   it('feeds the Day of Week chart its payload verbatim with a drives bar + avg-distance line', () => {
@@ -323,7 +330,7 @@ describe('OverviewTab — ready state (imperial)', () => {
     expect(data[0].distance as number).toBeCloseTo(62.137, 2);
     expect(data[1].distance as number).toBeCloseTo(31.069, 2);
 
-    expect(within(panel).getByTestId('bar')).toHaveAttribute('data-name', 'mi');
+    expect(within(panel).getByTestId('bar')).toHaveAttribute('data-name', 'Distance (mi)');
   });
 });
 

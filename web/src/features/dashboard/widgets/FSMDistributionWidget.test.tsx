@@ -127,7 +127,9 @@ vi.mock('@/api/hooks/useVehicles', async () => {
 // payload so that render path (fmtDuration + percentage) is genuinely exercised.
 vi.mock('@/components/charts', async () => {
   const { cloneElement, isValidElement } = await import('react');
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
+    ...chartTestDoubles,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),
@@ -407,7 +409,7 @@ describe('FSMDistributionWidget', () => {
     // and the error branch replaces the header (so there is no refresh control).
     expect(screen.queryByText('No state data available')).not.toBeInTheDocument();
     expect(screen.queryByText('State Distribution')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('shows the empty state (keeping the titled shell) when there is no distribution', () => {
@@ -440,7 +442,7 @@ describe('FSMDistributionWidget', () => {
     );
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
     expect(refetchStats).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(refetchStats).toHaveBeenCalledTimes(1);

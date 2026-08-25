@@ -42,6 +42,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import { DrivingTab } from './DrivingTab';
@@ -103,7 +105,8 @@ vi.mock('@/hooks/useSettings', async () => {
 //    chart surfaces its `data` prop (as JSON), each cartesian series surfaces
 //    its dataKey binding, and Scatter surfaces its projected `data` array so
 //    the page-computed conversions are directly assertable. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
   const Inert = () => null;
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const makeChart =
@@ -136,6 +139,7 @@ vi.mock('@/components/charts', () => {
     </span>
   );
   return {
+    ...actual,
     ChartTooltip: Inert,
     ChartGradient: Inert,
     chartGrid: null,
@@ -222,10 +226,15 @@ function makeQuery(over: QueryOverride = {}): FleetAnalyticsQuery {
 }
 
 function renderTab(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <DrivingTab query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <DrivingTab query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 

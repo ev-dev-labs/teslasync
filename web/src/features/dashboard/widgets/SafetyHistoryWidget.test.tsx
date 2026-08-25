@@ -445,7 +445,7 @@ describe('SafetyHistoryWidget — refresh wiring', () => {
     );
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

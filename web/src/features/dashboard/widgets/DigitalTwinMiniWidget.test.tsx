@@ -314,7 +314,7 @@ describe('DigitalTwinMiniWidget — refresh + error resilience', () => {
     );
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

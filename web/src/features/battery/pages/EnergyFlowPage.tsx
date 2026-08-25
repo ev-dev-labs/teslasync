@@ -15,10 +15,10 @@ import {
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
 import {
-  LinearGauge, ChartTooltip, ChartGradient,
+  LinearGauge, ChartTooltip, ChartGradient, EmbeddedChart,
   chartGrid, axisTick, chartMarginLabeled, chartAnimation, CHART_COLORS,
   AreaChart, Area, BarChart, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -336,6 +336,23 @@ export default function EnergyFlowPage() {
   // Real-time flow — GET /vehicles/{id}/energy/flow
   const flowQuery = useEnergyFlow(activeId);
   const { data: flow, isLoading: flowLoading, error: flowError, refetch: refetchFlow } = flowQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'vehicle-energy-summary',
+        label: t('dataSources.labels.vehicleEnergySummary', 'Vehicle energy summary'),
+        query: statsQuery,
+        enabled: !noVehicle,
+      },
+      {
+        id: 'vehicle-energy-flow',
+        label: t('dataSources.labels.vehicleEnergyFlow', 'Vehicle energy flow'),
+        query: flowQuery,
+        enabled: !noVehicle,
+      },
+    ],
+    [flowQuery, noVehicle, statsQuery, t],
+  );
 
   /* ─── Derived: real-time flow ─── */
   const chargePower = computeChargePower(flow);
@@ -353,6 +370,18 @@ export default function EnergyFlowPage() {
   const efficiencyChartData = useMemo(
     () => buildEfficiencyChartData(dailyBreakdown, distanceUnit),
     [dailyBreakdown, distanceUnit],
+  );
+  const dailyEnergyTableData = useMemo(
+    () => dailyChartData.map(({ date, energy }) => ({ date, energy })),
+    [dailyChartData],
+  );
+  const dailyDistanceTableData = useMemo(
+    () => dailyChartData.map(({ date, distance }) => ({ date, distance })),
+    [dailyChartData],
+  );
+  const dailyEfficiencyTableData = useMemo(
+    () => efficiencyChartData.map(({ date, efficiency }) => ({ date, efficiency })),
+    [efficiencyChartData],
   );
 
   /* ─── Derived: stat values with unit conversion ─── */
@@ -462,6 +491,7 @@ export default function EnergyFlowPage() {
       subtitle={t('energyFlow.subtitle', 'Power distribution and energy analysis')}
       actions={actions}
       query={[statsQuery, flowQuery]}
+      dataSources={dataSources}
     >
       {/* ── 1 — KPI band: full-width responsive metric grid ── */}
       <FadeIn>
@@ -655,7 +685,22 @@ export default function EnergyFlowPage() {
               emptyMessage={t('energyFlow.usage.noData', 'No daily energy data available.')}
               onRetry={() => refetchStats()}
             >
-              <div className="h-64 sm:h-72">
+              <EmbeddedChart
+                title={t('energyFlow.usage.title', 'Daily Energy Usage')}
+                ariaLabel={t('energyFlow.usage.aria', 'Daily energy usage over time')}
+                data={dailyEnergyTableData}
+                dataColumns={[
+                  { key: 'date', label: t('energyFlow.table.date', 'Date') },
+                  {
+                    key: 'energy',
+                    label: `${t('energyFlow.table.energy', 'Energy')} (${t('energyFlow.units.kwh', 'kWh')})`,
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={256}
+                chartKey="energy-flow-daily-energy-usage"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
                     <defs>
@@ -665,7 +710,6 @@ export default function EnergyFlowPage() {
                     <XAxis dataKey="date" tick={axisTick} />
                     <YAxis tick={axisTick} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend />
                     <Area
                       {...AREA_DEFAULTS}
                       dataKey="energy"
@@ -675,7 +719,7 @@ export default function EnergyFlowPage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             </SectionState>
           </GlassPanel>
 
@@ -737,14 +781,28 @@ export default function EnergyFlowPage() {
               emptyMessage={t('energyFlow.distance.noData', 'No daily distance data available.')}
               onRetry={() => refetchStats()}
             >
-              <div className="h-64 sm:h-72">
+              <EmbeddedChart
+                title={t('energyFlow.distance.title', 'Daily Distance')}
+                ariaLabel={t('energyFlow.distance.aria', 'Daily driving distance over time')}
+                data={dailyDistanceTableData}
+                dataColumns={[
+                  { key: 'date', label: t('energyFlow.table.date', 'Date') },
+                  {
+                    key: 'distance',
+                    label: `${t('energyFlow.table.distance', 'Distance')} (${distanceUnit})`,
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={256}
+                chartKey="energy-flow-daily-distance"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyChartData} margin={chartMarginLabeled} {...chartAnimation}>
                     {chartGrid}
                     <XAxis dataKey="date" tick={axisTick} />
                     <YAxis tick={axisTick} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend />
                     <Bar
                       dataKey="distance"
                       name={`${t('energyFlow.table.distance', 'Distance')} (${distanceUnit})`}
@@ -753,7 +811,7 @@ export default function EnergyFlowPage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             </SectionState>
           </GlassPanel>
 
@@ -771,14 +829,28 @@ export default function EnergyFlowPage() {
               emptyMessage={t('energyFlow.dailyEfficiency.noData', 'No efficiency data available.')}
               onRetry={() => refetchStats()}
             >
-              <div className="h-64 sm:h-72">
+              <EmbeddedChart
+                title={t('energyFlow.dailyEfficiency.title', 'Daily Efficiency')}
+                ariaLabel={t('energyFlow.dailyEfficiency.aria', 'Daily driving efficiency over time')}
+                data={dailyEfficiencyTableData}
+                dataColumns={[
+                  { key: 'date', label: t('energyFlow.table.date', 'Date') },
+                  {
+                    key: 'efficiency',
+                    label: efficiencyUnit,
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={256}
+                chartKey="energy-flow-daily-efficiency"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={efficiencyChartData} margin={chartMarginLabeled} {...chartAnimation}>
                     {chartGrid}
                     <XAxis dataKey="date" tick={axisTick} />
                     <YAxis tick={axisTick} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend />
                     <Bar
                       dataKey="efficiency"
                       name={efficiencyUnit}
@@ -787,7 +859,7 @@ export default function EnergyFlowPage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             </SectionState>
           </GlassPanel>
         </section>

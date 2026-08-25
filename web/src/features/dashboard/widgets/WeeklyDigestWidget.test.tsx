@@ -389,7 +389,7 @@ describe('WeeklyDigestWidget — interactions & a11y', () => {
     const q = setDigest({ data: makeDigest() });
     renderWidget(FULL);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     expect(q.refetch).toHaveBeenCalledTimes(1);

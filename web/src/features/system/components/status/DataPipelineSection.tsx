@@ -116,7 +116,17 @@ export function DataPipelineSection() {
                 </div>
               </>
             ) : (
-              <EmptyState /* no-action: transient empty state - surfaces when compression stats are unavailable; no specific recovery action applies */ message={t('No compression statistics available')} />
+              // no-action: compression statistics appear after background policies process data.
+              <EmptyState
+                message={t(
+                  'system.empty.compression',
+                  'No compression statistics are available yet.',
+                )}
+                description={t(
+                  'system.empty.compressionDescription',
+                  'Storage savings appear after TimescaleDB compression policies process eligible telemetry chunks.',
+                )}
+              />
             )}
           </div>
 
@@ -143,7 +153,14 @@ export function DataPipelineSection() {
                 />
               </>
             ) : (
-              <EmptyState /* no-action: transient empty state - surfaces when source data is missing; no specific recovery action available */ message={t('No export jobs in queue')} />
+              // no-action: the queue populates when a user submits an export request.
+              <EmptyState
+                message={t('system.empty.exportQueue', 'No export jobs are queued.')}
+                description={t(
+                  'system.empty.exportQueueDescription',
+                  'New export requests will appear here while they are pending, processing, or completing.',
+                )}
+              />
             )}
           </div>
         </div>

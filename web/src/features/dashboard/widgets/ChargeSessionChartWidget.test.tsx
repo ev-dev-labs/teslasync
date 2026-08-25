@@ -55,6 +55,12 @@ vi.mock('@/api/client', async () => {
   return { ...actual, request: vi.fn() };
 });
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import ChargeSessionChartWidget, { classifyChargerType } from './ChargeSessionChartWidget';
 import { request } from '@/api/client';
 import type { ChargingSession } from '@/api/types';
@@ -308,7 +314,7 @@ describe('ChargeSessionChartWidget refresh', () => {
     routeCharging([makeSession()]);
     renderWidget(STANDARD);
 
-    const refresh = await screen.findByRole('button', { name: 'Refresh' });
+    const refresh = await screen.findByRole('button', { name: /Refresh data/ });
     const before = chargingCallCount();
     expect(before).toBeGreaterThanOrEqual(1);
 

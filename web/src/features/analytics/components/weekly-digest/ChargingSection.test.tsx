@@ -71,7 +71,10 @@ const H = vi.hoisted(() => ({
   barProps: null as Record<string, unknown> | null,
 }));
 
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+  ...chartTestDoubles,
   ChartTooltip: () => null,
   // Distinct sentinel palette so we can prove the Bar reads slot [1].
   CHART_COLORS: ['#c0', '#c1', '#c2', '#c3', '#c4'],
@@ -109,7 +112,8 @@ vi.mock('@/components/charts', () => ({
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive">{children}</div>
   ),
-}));
+  };
+});
 
 /* ── Fixtures ─────────────────────────────────────────────────────────────── */
 function baseMetrics(overrides: Partial<DigestMetrics> = {}): DigestMetrics {

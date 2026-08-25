@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -60,6 +61,7 @@ export function CycleStressMonthTrend({
           'cycleStress.month.aria',
           'Monthly chart of equivalent full cycles, depth-weighted index, and mean cycle depth',
         )}
+        chartKey="cycle-stress-month-trend"
         height={320}
         loading={state.isLoading}
         empty={false}
@@ -100,14 +102,15 @@ export function CycleStressMonthTrend({
           },
         ]}
       >
-        <CycleStressSectionBody
-          result={result}
-          state={state}
-          requirement="cycles"
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows}>
+        {({ hiddenSeries }) => (
+          <CycleStressSectionBody
+            result={result}
+            state={state}
+            requirement="cycles"
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -135,6 +138,7 @@ export function CycleStressMonthTrend({
                 unit="%"
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 yAxisId="index"
                 dataKey="equivalentFullCycles"
@@ -145,6 +149,7 @@ export function CycleStressMonthTrend({
                 fill={chartTokens.series[1]}
                 fillOpacity={0.72}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('equivalentFullCycles')}
               />
               <Line
                 yAxisId="index"
@@ -158,6 +163,7 @@ export function CycleStressMonthTrend({
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 connectNulls
+                hide={hiddenSeries?.isHidden('depthWeightedIndex')}
               />
               <Line
                 yAxisId="percent"
@@ -171,10 +177,12 @@ export function CycleStressMonthTrend({
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 connectNulls
+                hide={hiddenSeries?.isHidden('meanDepthPct')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CycleStressSectionBody>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CycleStressSectionBody>
+        )}
       </ChartContainer>
     </section>
   );

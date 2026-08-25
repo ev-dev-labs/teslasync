@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
@@ -51,6 +52,29 @@ export default function WeeklyDigestPage() {
   // domains, so they share those two domains' loading / error state.
   const summaryLoading = drivesLoading || chargingLoading;
   const summaryError = drivesError ?? chargingError ?? null;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'drive-history',
+        label: t('dataSources.labels.driveHistory', 'Drive history'),
+        query: freshnessQueries[0] ?? {},
+        enabled: freshnessQueries[0] != null,
+      },
+      {
+        id: 'charging-history',
+        label: t('dataSources.labels.chargingHistory', 'Charging history'),
+        query: freshnessQueries[1] ?? {},
+        enabled: freshnessQueries[1] != null,
+      },
+      {
+        id: 'alert-history',
+        label: t('dataSources.labels.alertHistory', 'Alert history'),
+        query: freshnessQueries[2] ?? {},
+        enabled: freshnessQueries[2] != null,
+      },
+    ],
+    [freshnessQueries, t],
+  );
 
   // AIDigestNarration feeds this id into a POST body (`vehicle_id`), so coerce
   // it to a finite number at the boundary and drop anything non-numeric —
@@ -77,6 +101,7 @@ export default function WeeklyDigestPage() {
       subtitle={t('analytics.weeklyDigest.subtitle', 'Your driving and charging summary for the week')}
       actions={actions}
       query={freshnessQueries}
+      dataSources={dataSources}
     >
       {/* Week navigation band */}
       <FadeIn>

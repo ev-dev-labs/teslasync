@@ -219,6 +219,21 @@ export default function BackupRestorePage() {
       return 30000;
     },
   });
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'backup-configurations',
+        label: t('dataSources.labels.backupConfigurations', 'Backup configurations'),
+        query: configsQuery,
+      },
+      {
+        id: 'backup-runs',
+        label: t('dataSources.labels.backupRuns', 'Backup runs'),
+        query: runsQuery,
+      },
+    ],
+    [configsQuery, runsQuery, t],
+  );
 
   const configs = configsQuery.data ?? [];
   const runs = runsQuery.data ?? [];
@@ -653,6 +668,7 @@ export default function BackupRestorePage() {
       title={t('backup.title', 'Backup & Restore')}
       subtitle={t('backup.subtitle', 'Manage automated backups and restore points')}
       query={[configsQuery, runsQuery]}
+      dataSources={dataSources}
       actions={
         <div className="flex flex-wrap gap-2">
           <Button

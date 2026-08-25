@@ -4,6 +4,7 @@ import { Zap, BatteryCharging, Leaf, DollarSign, Route, TrendingUp } from 'lucid
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { AnimatedNumber } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -19,7 +20,7 @@ import type { DailyEnergy } from '@/types/energy';
 const GRADIENT_ID = 'energy-stats-area-grad';
 
 /** A single point on the daily-energy area chart. */
-export interface EnergyChartPoint {
+export interface EnergyChartPoint extends ChartDataRow {
   date: string;
   /** Daily energy in kWh, converted from the SI watt-hour source. */
   energy: number;
@@ -169,7 +170,19 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
         <div className="flex h-full flex-col gap-3">
           {/* Area chart: daily energy usage */}
           {hasChartData && (
-            <div className="min-h-0 flex-1">
+            <EmbeddedChart
+              title={t('widget.energyStats.title', 'Energy Stats')}
+              ariaLabel={t(
+                'widget.energyStats.chartAria',
+                'Daily driving energy usage',
+              )}
+              data={chartData}
+              dataColumns={[
+                { key: 'date', label: t('widget.energyStats.date', 'Date') },
+                { key: 'energy', label: t('widget.energyStats.energyKwh', 'Energy (kWh)') },
+              ]}
+              className="min-h-0 flex-1"
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
                   {chartGrid}
@@ -187,12 +200,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
                     tickFormatter={(v: number) => fmt(v, 1)}
                   />
                   <Tooltip
-                    contentStyle={{
-                      background: 'rgba(0,0,0,0.85)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
+                    content={<ChartTooltip />}
                     formatter={(value: number) => [
                       `${fmtNumber(value, 2)} kWh`,
                       t('widget.energyStats.dailyUsage', 'Daily Usage'),
@@ -215,7 +223,7 @@ export default function EnergyStatsWidget({ vehicleId, size }: WidgetProps) {
                   />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
+            </EmbeddedChart>
           )}
 
           {/* Stat cards grid */}

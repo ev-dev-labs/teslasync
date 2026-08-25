@@ -141,7 +141,37 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/year-review/:year': () => import('../features/analytics/pages/YearReviewPage'),
 }
 
+const DYNAMIC_PRELOADER_PATTERNS = Object.keys(PRELOADERS).filter((path) =>
+  path.split('/').some((segment) => segment.startsWith(':')),
+)
+
 const prefetched = new Set<string>()
+
+function normalizePath(path: string): string {
+  const pathname = path.split(/[?#]/, 1)[0] ?? ''
+  return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
+}
+
+function matchesPattern(pattern: string, path: string): boolean {
+  const patternSegments = pattern.split('/')
+  const pathSegments = path.split('/')
+  if (patternSegments.length !== pathSegments.length) return false
+
+  return patternSegments.every((segment, index) =>
+    segment.startsWith(':')
+      ? (pathSegments[index]?.length ?? 0) > 0
+      : segment === pathSegments[index],
+  )
+}
+
+function resolvePreloaderPath(path: string): string | null {
+  const normalized = normalizePath(path)
+  if (!normalized) return null
+  if (PRELOADERS[normalized]) return normalized
+  return DYNAMIC_PRELOADER_PATTERNS.find((pattern) =>
+    matchesPattern(pattern, normalized),
+  ) ?? null
+}
 
 /**
  * Eagerly download the lazy chunk for `path`. Called by `<PrefetchLink>`
@@ -149,25 +179,28 @@ const prefetched = new Set<string>()
  * calls are no-ops once the chunk is in flight or resolved).
  *
  * - Empty / missing path → no-op (defensive).
+ * - Query strings, hashes, and trailing slashes are ignored.
+ * - Concrete detail paths resolve to their parameterized route entry.
  * - Path with no PRELOADERS entry → no-op (silent; not all routes are
  *   listed, e.g. dynamic links computed at click time).
  * - Failed download → evicted from the prefetched set so the next hover
  *   retries; the click itself will also trigger the import via React.lazy.
  */
 export function prefetchRoute(path: string): void {
-  if (!path) return
-  if (prefetched.has(path)) return
-  const preload = PRELOADERS[path]
+  const preloaderPath = resolvePreloaderPath(path)
+  if (!preloaderPath) return
+  if (prefetched.has(preloaderPath)) return
+  const preload = PRELOADERS[preloaderPath]
   if (!preload) return
-  prefetched.add(path)
+  prefetched.add(preloaderPath)
   void preload().catch(() => {
-    prefetched.delete(path)
+    prefetched.delete(preloaderPath)
   })
 }
 
 /** Returns true when `path` has at least one matching PRELOADERS entry. */
 export function isPrefetchablePath(path: string): boolean {
-  return path in PRELOADERS
+  return resolvePreloaderPath(path) != null
 }
 
 /** Test helper: clear the prefetched set so each test starts fresh. */

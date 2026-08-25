@@ -102,7 +102,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 
 // Shared chart primitives → prop-echoing stubs. The chart wrappers echo their
 // `data` array as JSON so the merge + band derivations are inspectable.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+  ...chartTestDoubles,
   ChartTooltip: () => null,
   chartGrid: {},
   axisTickSm: {},
@@ -141,7 +144,8 @@ vi.mock('@/components/charts', () => ({
   Tooltip: () => null,
   Legend: () => null,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-}));
+  };
+});
 
 // Faithful <CostSection> gate: renders its chart children ONLY when the section
 // is active (not loading / errored / empty) — mirroring the real shell — and
@@ -289,7 +293,13 @@ describe('CostForecastSection — forecast chart data merge', () => {
 
     // Projection rows carry the forecast + a stacked band: base `ci_low` and
     // height `ci_band = cost_high - cost_low` (150 - 110 = 40).
-    expect(rows[3]).toEqual({ month: '2024-04', forecast: 130, ci_low: 110, ci_band: 40 });
+    expect(rows[3]).toEqual({
+      month: '2024-04',
+      forecast: 130,
+      ci_low: 110,
+      ci_band: 40,
+      ci_high: 150,
+    });
     expect(rows[3]).not.toHaveProperty('actual');
     // 170 - 115 = 55.
     expect(rows[4].ci_band).toBe(55);

@@ -29,6 +29,12 @@ import { act, render, screen, fireEvent, waitFor, within } from '@testing-librar
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // i18n echo mock: returns the fallback string (or key when none), interpolating
 // {{var}} tokens from the options object so assertions target rendered English.
 vi.mock('react-i18next', () => ({
@@ -454,6 +460,8 @@ describe('AlertsListPage — rendering branches', () => {
     expect(
       screen.getByText('No alerts in this range. Your fleet is running smoothly.'),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Alert rules continue monitoring new telemetry/)).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Manage rules' }).length).toBeGreaterThan(0);
     expect(screen.queryByTestId('alert-card-1')).not.toBeInTheDocument();
   });
 });
@@ -478,6 +486,18 @@ describe('AlertsListPage — filtering', () => {
     await waitFor(() => expect(screen.queryByTestId('alert-card-1')).not.toBeInTheDocument());
     expect(screen.getByTestId('alert-card-2')).toBeInTheDocument();
     expect(screen.queryByTestId('alert-card-3')).not.toBeInTheDocument();
+  });
+
+  it('explains an unmatched search and clears it from the empty-state action', async () => {
+    renderPage();
+    const input = screen.getByPlaceholderText('Search by title or message…');
+    fireEvent.change(input, { target: { value: 'not-a-real-alert' } });
+
+    expect(await screen.findByText('No alerts match your search.')).toBeInTheDocument();
+    expect(screen.getByText(/Try a broader title or message search/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Clear search' }));
+
+    await waitFor(() => expect(screen.getByTestId('alert-card-1')).toBeInTheDocument());
   });
 
   it('filters by acknowledgement lifecycle without conflating read state', async () => {

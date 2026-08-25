@@ -336,7 +336,7 @@ describe('ChargePlansWidget', () => {
     });
     render(<ChargePlansWidget vehicleId={42} size={STANDARD} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetchPlans).toHaveBeenCalledTimes(1);
     expect(refetchRates).toHaveBeenCalledTimes(1);
   });

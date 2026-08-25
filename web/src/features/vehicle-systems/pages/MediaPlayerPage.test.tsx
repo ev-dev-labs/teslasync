@@ -83,10 +83,12 @@ vi.mock('@/components/motion', () => ({
 // ── charts barrel: recharts primitives are inert, but the containers pass their
 //    children through so YAxis (echoing `domain`) still mounts, and the two
 //    data constants the page relies on are real-shaped. ───────────────────────
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Passthrough = ({ children }: { children?: ReactNode }) => <>{children}</>;
   const Null = () => null;
   return {
+    ...chartTestDoubles,
     CHART_COLORS: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
     chartGrid: {},
     axisTickSm: {},

@@ -8,11 +8,11 @@
  * so the panel is always visible.
  */
 
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Radio, WifiOff } from 'lucide-react';
+import { Radio } from 'lucide-react';
 
 import { GlassPanel, PanelTitle, Caption } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
 import { VisuallyHidden } from '@/components/a11y';
 import {
   AreaChart,
@@ -23,6 +23,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ChartTooltip,
+  EmbeddedChart,
+  areaGradient,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { formatTime } from '@/lib/dateFormat';
@@ -56,6 +58,10 @@ export function LiveThroughputPanel({
   const { t } = useTranslation();
   const points = history ?? [];
   const hasData = points.length >= 2;
+  const chartRows = useMemo(
+    () => points.map(({ ts, rate: pointRate }) => ({ ts, rate: pointRate })),
+    [points],
+  );
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
@@ -80,67 +86,52 @@ export function LiveThroughputPanel({
         </VisuallyHidden>
       </div>
 
-      <div className="h-56 sm:h-64 xl:h-72">
-        {!hasData ? (
-          // no-action: transient — SSE auto-reconnects and the page-level banner already surfaces disconnect state; nothing to trigger here.
-          <EmptyState
-            icon={
-              connected ? (
-                <Radio className="h-8 w-8" aria-hidden="true" />
-              ) : (
-                <WifiOff className="h-8 w-8" aria-hidden="true" />
-              )
-            }
-            message={
-              connected
-                ? t('liveMonitor.throughputWaiting', 'Waiting for live throughput…')
-                : t('liveMonitor.throughputOffline', 'Stream disconnected — no live throughput')
-            }
-          />
-        ) : (
-          <div
-            className="h-full"
-            role="img"
-            aria-label={t(
-              'liveMonitor.throughputAria',
-              'Live signals per second over the recent window',
-            )}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={points} margin={CHART_MARGIN}>
-                <defs>
-                  <linearGradient id={GRADIENT_ID} x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor={LINE_COLOR} stopOpacity={0.35} />
-                    <stop offset="100%" stopColor={LINE_COLOR} stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.4} />
-                <XAxis
-                  dataKey="ts"
-                  tickFormatter={formatTs}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                  minTickGap={40}
-                />
-                <YAxis
-                  width={32}
-                  allowDecimals={false}
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                />
-                <Tooltip content={<ChartTooltip />} labelFormatter={formatTs} />
-                <Area
-                  type="monotone"
-                  dataKey="rate"
-                  name={t('liveMonitor.sigPerSec', 'Signals / sec')}
-                  stroke={LINE_COLOR}
-                  strokeWidth={2}
-                  fill={`url(#${GRADIENT_ID})`}
-                  isAnimationActive={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
+      <EmbeddedChart
+        title={t('liveMonitor.throughputTitle', 'Signal Throughput')}
+        ariaLabel={t(
+          'liveMonitor.throughputAria',
+          'Live signals per second over the recent window',
         )}
-      </div>
+        empty={!hasData}
+        emptyMessage={
+          connected
+            ? t('liveMonitor.throughputWaiting', 'Waiting for live throughput…')
+            : t('liveMonitor.throughputOffline', 'Stream disconnected — no live throughput')
+        }
+        data={chartRows}
+        dataColumns={[
+          { key: 'ts', label: t('liveMonitor.time', 'Time') },
+          { key: 'rate', label: t('liveMonitor.sigPerSec', 'Signals / sec') },
+        ]}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={points} margin={CHART_MARGIN}>
+            {areaGradient(GRADIENT_ID, LINE_COLOR)}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.4} />
+            <XAxis
+              dataKey="ts"
+              tickFormatter={formatTs}
+              tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+              minTickGap={40}
+            />
+            <YAxis
+              width={32}
+              allowDecimals={false}
+              tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+            />
+            <Tooltip content={<ChartTooltip />} labelFormatter={formatTs} />
+            <Area
+              type="monotone"
+              dataKey="rate"
+              name={t('liveMonitor.sigPerSec', 'Signals / sec')}
+              stroke={LINE_COLOR}
+              strokeWidth={2}
+              fill={`url(#${GRADIENT_ID})`}
+              isAnimationActive={false}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

@@ -106,6 +106,17 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
 
+// TemperatureSection calls useHiddenSeries at component scope; stub it to avoid
+// needing a <Router> wrapper in every test (the hook calls useSearchParams).
+vi.mock('@/hooks/useHiddenSeries', () => ({
+  useHiddenSeries: () => ({
+    hidden: new Set<string>(),
+    toggle: () => undefined,
+    isHidden: () => false,
+    reset: () => undefined,
+  }),
+}));
+
 import { TemperatureSection } from './TemperatureSection';
 
 /** A minimal chart sample; only `chartData.length` gates the chart branch. */

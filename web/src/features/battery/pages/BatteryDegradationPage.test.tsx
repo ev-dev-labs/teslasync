@@ -38,6 +38,12 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { BatteryHealthAnalytics } from '@/types/energy';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // ── i18n stub: resolve the fallback (or the key when it IS the template) and
 //    interpolate any {{var}} placeholders from the options bag. ──────────────
 vi.mock('react-i18next', () => {
@@ -422,6 +428,7 @@ describe('BatteryDegradationPage — empty states', () => {
     expect(screen.getByText(/Risk data will appear/)).toBeInTheDocument();
     expect(screen.getByText(/Recommendations will appear/)).toBeInTheDocument();
     expect(screen.getByText('No degradation records found.')).toBeInTheDocument();
+    expect(screen.getByText(/Capacity estimates appear after enough charging/)).toBeInTheDocument();
 
     // Charging banner survives a null habits object: 0 fast, 0 deep discharges.
     expect(screen.getByText(/0% fast charges/)).toBeInTheDocument();

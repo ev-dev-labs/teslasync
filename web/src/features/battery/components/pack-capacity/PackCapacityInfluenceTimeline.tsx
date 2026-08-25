@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   Line,
   LineChart,
@@ -67,7 +68,7 @@ export function PackCapacityInfluenceTimeline({
           'packCapacity.influence.aria',
           'Timeline of measurement influence and filter uncertainty',
         )}
-        height={340}
+        size="detail"
         loading={state.isLoading}
         empty={false}
         exportable={
@@ -75,14 +76,28 @@ export function PackCapacityInfluenceTimeline({
         }
         exportData={rows}
         data={rows}
+        dataColumns={[
+          { key: 'date', label: t('chart.col.date', 'Date') },
+          { key: 'gain', label: t('packCapacity.series.gain', 'Measurement gain (%)') },
+          {
+            key: 'innovation',
+            label: t('packCapacity.series.innovation', 'Standardized innovation'),
+          },
+          {
+            key: 'sigma',
+            label: `${t('packCapacity.series.sigma', 'Posterior sigma')} (${energyUnit})`,
+          },
+        ]}
+        chartKey="pack-capacity-influence-timeline"
       >
-        <PackCapacitySectionBody
-          result={result}
-          state={state}
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows}>
+        {({ hiddenSeries }) => (
+          <PackCapacitySectionBody
+            result={result}
+            state={state}
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -111,6 +126,7 @@ export function PackCapacityInfluenceTimeline({
                 width={72}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Line
                 yAxisId="score"
                 dataKey="gain"
@@ -121,6 +137,7 @@ export function PackCapacityInfluenceTimeline({
                 stroke={chartTokens.series[0]}
                 strokeWidth={2}
                 dot={{ r: 2 }}
+                hide={hiddenSeries?.isHidden('gain')}
               />
               <Line
                 yAxisId="score"
@@ -132,6 +149,7 @@ export function PackCapacityInfluenceTimeline({
                 stroke={chartTokens.series[3]}
                 strokeWidth={2}
                 dot={{ r: 2 }}
+                hide={hiddenSeries?.isHidden('innovation')}
               />
               <Line
                 yAxisId="energy"
@@ -143,10 +161,12 @@ export function PackCapacityInfluenceTimeline({
                 stroke={chartTokens.series[4]}
                 strokeWidth={2.5}
                 dot={{ r: 2 }}
+                hide={hiddenSeries?.isHidden('sigma')}
               />
-            </LineChart>
-          </ResponsiveContainer>
-        </PackCapacitySectionBody>
+              </LineChart>
+            </ResponsiveContainer>
+          </PackCapacitySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

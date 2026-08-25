@@ -3,15 +3,17 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   AREA_DEFAULTS,
-  LineChart, Line, Legend, ReferenceLine,
+  LineChart, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
@@ -53,6 +55,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
   const tempUnit = unitPrefs.temperature;
   const syncProps = useSyncedCursor();
   const syncedX = useSyncedReferenceLineX();
+  const hidden = useHiddenSeries('drive-detail-temperature');
 
   const points = chartData ?? [];
   const outsideTemps = stats.outsideTemps ?? [];
@@ -73,6 +76,7 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
         ariaLabel={t('driveDetail.temperatures.aria', 'Inside, outside, driver and passenger temperature lines over the drive timeline')}
         height={310}
         className="h-full"
+        chartKey="drive-detail-temperature"
       >
         {hasChart ? (
           <>
@@ -119,18 +123,18 @@ export function TemperatureSection({ chartData, stats }: TemperatureSectionProps
                 <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} interval="preserveStartEnd" />
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={LEGEND_STYLE} />
+                <ChartLegend state={hidden} wrapperStyle={LEGEND_STYLE} />
                 {outsideTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke="#3b82f6" name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} />
+                  <Line {...AREA_DEFAULTS} dataKey="outsideTemp" stroke="#3b82f6" name={`${t('driveDetail.outside', 'Outside')} ${tempUnit}`} hide={hidden.isHidden('outsideTemp')} />
                 ) : null}
                 {insideTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke="#f97316" name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} />
+                  <Line {...AREA_DEFAULTS} dataKey="insideTemp" stroke="#f97316" name={`${t('driveDetail.inside', 'Inside')} ${tempUnit}`} hide={hidden.isHidden('insideTemp')} />
                 ) : null}
                 {driverTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke="#fb7185" name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} />
+                  <Line {...AREA_DEFAULTS} dataKey="driverTemp" stroke="#fb7185" name={`${t('driveDetail.driver', 'Driver')} ${tempUnit}`} hide={hidden.isHidden('driverTemp')} />
                 ) : null}
                 {passengerTemps.length > 0 ? (
-                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke="#a855f7" name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} />
+                  <Line {...AREA_DEFAULTS} dataKey="passengerTemp" stroke="#a855f7" name={`${t('driveDetail.passenger', 'Passenger')} ${tempUnit}`} hide={hidden.isHidden('passengerTemp')} />
                 ) : null}
                 {syncedX != null && (
                   <ReferenceLine

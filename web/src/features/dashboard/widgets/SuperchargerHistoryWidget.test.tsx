@@ -394,7 +394,7 @@ describe('SuperchargerHistoryWidget — refresh', () => {
     expect(await screen.findByText('Supercharger History')).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
   });

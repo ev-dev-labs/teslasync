@@ -127,7 +127,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 // echoes its `data` array as JSON so the fold + windowing math are inspectable;
 // the axis/tooltip doubles invoke the widget's real formatters so the currency
 // wiring is exercised.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+  ...chartTestDoubles,
   chartGrid: null,
   chartMargin: {},
   chartAnimation: {},
@@ -170,7 +173,8 @@ vi.mock('@/components/charts', () => ({
       data-fmt={typeof formatter === 'function' ? JSON.stringify(formatter(130)) : ''}
     />
   ),
-}));
+  };
+});
 
 import CostForecastWidget from './CostForecastWidget';
 import type { WidgetSize } from './types';
@@ -285,8 +289,8 @@ describe('CostForecastWidget', () => {
     expect(rows).toHaveLength(5); // 3 historical + 2 forecast
     expect(rows.map((r) => r.month)).toEqual(['Jan', 'Feb', 'Mar', 'Apr', 'May']);
     // Only the two projected months are flagged as forecast.
-    expect(rows.filter((r) => r.isForecast)).toHaveLength(2);
-    expect(rows[3]).toEqual({ month: 'Apr', cost: 130, isForecast: true });
+    expect(rows.filter((r) => r.period === 'forecast')).toHaveLength(2);
+    expect(rows[3]).toEqual({ month: 'Apr', cost: 130, period: 'forecast' });
   });
 
   it('windows a long history + forecast to the trailing 6 months', () => {
@@ -312,7 +316,7 @@ describe('CostForecastWidget', () => {
     expect(rows).toHaveLength(6);
     expect(rows[0].month).toBe('H2');
     // All three forecast months survive the trailing window.
-    expect(rows.filter((r) => r.isForecast)).toHaveLength(3);
+    expect(rows.filter((r) => r.period === 'forecast')).toHaveLength(3);
   });
 
   it('flips to the TrendingDown glyph and a negative delta when cost is falling', () => {
@@ -418,7 +422,7 @@ describe('CostForecastWidget', () => {
     expect(screen.queryByText('No forecast data')).not.toBeInTheDocument();
     expect(screen.queryByText('Cost Forecast')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Refresh data/ })).not.toBeInTheDocument();
   });
 
   it('refreshes the forecast when the freshness control is activated', () => {
@@ -426,7 +430,7 @@ describe('CostForecastWidget', () => {
     forecastMock.mockReturnValue(q);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);
@@ -453,7 +457,7 @@ describe('CostForecastWidget', () => {
     // The null forecast entry coerces to a single zero-cost em-dash bar.
     const rows = chartRows();
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toEqual({ month: '—', cost: 0, isForecast: true });
+    expect(rows[0]).toEqual({ month: '—', cost: 0, period: 'forecast' });
   });
 
   it('falls back to the first vehicle when no vehicleId prop is supplied', () => {

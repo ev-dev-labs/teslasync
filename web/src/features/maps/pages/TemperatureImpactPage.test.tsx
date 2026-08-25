@@ -87,9 +87,11 @@ vi.mock('@/components/motion', () => ({
 //    draws OUTSIDE the chart (the bucket-colour legend, KPI band, badges, table)
 //    still renders and stays assertable. The two data constants the page indexes
 //    into (`CHART_COLORS[n]`) / spreads (`AREA_DEFAULTS`) are real-shaped. ──────
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Null = () => null;
   return {
+    ...chartTestDoubles,
     ChartTooltip: Null,
     CHART_COLORS: ['#06b6d4', '#8b5cf6', '#10b981', '#f59e0b', '#ef4444'],
     AREA_DEFAULTS: {},

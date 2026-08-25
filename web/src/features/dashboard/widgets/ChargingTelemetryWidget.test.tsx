@@ -337,7 +337,7 @@ describe('ChargingTelemetryWidget — refresh + vehicle resolution', () => {
     mockLive.mockReturnValue(makeQuery({ data: makeTelemetry(), refetch }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

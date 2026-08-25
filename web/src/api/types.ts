@@ -1454,30 +1454,29 @@ export interface SoftwareUpdate {
 }
 
 export interface VampireDrainEvent {
-  id: number
-  vehicle_id: number
-  start_date: string
-  end_date: string | null
-  start_battery: number
-  end_battery: number | null
-  battery_lost: number
-  /** Range lost in kilometers (km, derived SI). */
-  range_lost_km: number
+  started_at: string
+  ended_at: string
   duration_hours: number
-  drain_rate_pct_per_hour: number
-  outside_temp_avg: number | null
-  sentry_mode: boolean
-  created_at: string
+  start_battery_pct: number
+  end_battery_pct: number
+  drain_pct: number
+  drain_pct_per_day: number
+  /** SI degrees Celsius; nullable when the parked window has no ambient join. */
+  ambient_temp_c_avg: number | null
+}
+
+export interface VampireDrainEventsResponse {
+  vehicle_id: number
+  events: VampireDrainEvent[]
 }
 
 export interface VampireDrainStats {
-  avg_drain_rate: number
-  max_drain_rate: number
-  total_range_lost: number
-  total_hours: number
   event_count: number
-  avg_sentry_drain: number
-  avg_nosentry_drain: number
+  total_observed_hours: number
+  avg_drain_pct_per_day: number | null
+  median_drain_pct_per_day: number | null
+  p95_drain_pct_per_day: number | null
+  sample_window_days: number
 }
 
 export interface DailyMileage {

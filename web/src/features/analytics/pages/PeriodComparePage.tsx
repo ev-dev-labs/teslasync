@@ -16,9 +16,9 @@ import { MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip,
+  ChartTooltip, ChartLegend, EmbeddedChart,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, chartMarginLabeled, axisTick, chartAnimation,
+  ResponsiveContainer, chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -428,35 +428,59 @@ export default function PeriodComparePage() {
                 message={t('compare.empty', 'Select a vehicle and two periods to compare.')}
               />
             ) : (
-              <div className="h-64 sm:h-72 xl:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={chartData} margin={chartMarginLabeled}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--glass-border)"
-                      strokeOpacity={0.4}
-                    />
-                    <XAxis dataKey="name" tick={axisTick} />
-                    <YAxis tick={axisTick} />
-                    <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar
-                      dataKey="A"
-                      name={t('compare.periodA', 'Period A')}
-                      fill={palette[0]}
-                      radius={[4, 4, 0, 0]}
-                      {...chartAnimation}
-                    />
-                    <Bar
-                      dataKey="B"
-                      name={t('compare.periodB', 'Period B')}
-                      fill={palette[1]}
-                      radius={[4, 4, 0, 0]}
-                      {...chartAnimation}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <EmbeddedChart
+                title={t('compare.chartTitle', 'Side-by-Side Comparison')}
+                ariaLabel={t('compare.chartAria', 'Comparison of selected metrics between two periods')}
+                data={chartData}
+                dataColumns={[
+                  { key: 'name', label: t('compare.metric', 'Metric') },
+                  {
+                    key: 'A',
+                    label: t('compare.periodA', 'Period A'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                  {
+                    key: 'B',
+                    label: t('compare.periodB', 'Period B'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={320}
+                mobileHeight={256}
+                chartKey="period-compare-side-by-side"
+              >
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={chartData} margin={chartMarginLabeled}>
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="var(--glass-border)"
+                        strokeOpacity={0.4}
+                      />
+                      <XAxis dataKey="name" tick={axisTick} />
+                      <YAxis tick={axisTick} />
+                      <Tooltip content={({ active, payload, label }) => <ChartTooltip active={active} payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]} label={label as string} />} />
+                      <ChartLegend />
+                      <Bar
+                        dataKey="A"
+                        name={t('compare.periodA', 'Period A')}
+                        fill={palette[0]}
+                        radius={[4, 4, 0, 0]}
+                        hide={hiddenSeries?.isHidden('A')}
+                        {...chartAnimation}
+                      />
+                      <Bar
+                        dataKey="B"
+                        name={t('compare.periodB', 'Period B')}
+                        fill={palette[1]}
+                        radius={[4, 4, 0, 0]}
+                        hide={hiddenSeries?.isHidden('B')}
+                        {...chartAnimation}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </EmbeddedChart>
             )}
           </GlassPanel>
 

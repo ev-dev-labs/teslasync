@@ -144,7 +144,7 @@ describe('XRayBucketChart', () => {
   it('shows a loading spinner instead of the empty state while loading', () => {
     renderChart({ buckets: [], loading: true });
 
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /Loading/i })).toBeInTheDocument();
     expect(screen.queryByText('No data available')).not.toBeInTheDocument();
   });
 

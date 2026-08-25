@@ -37,6 +37,23 @@ export default function SignalTrendPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const chosen = signalName !== '';
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'signal-catalog',
+        label: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+        query: signalsQuery,
+      },
+      {
+        id: 'signal-history',
+        label: t('dataSources.labels.selectedSignalHistory', 'Selected signal history'),
+        query: historyQuery,
+        enabled: chosen,
+      },
+    ],
+    [chosen, historyQuery, signalsQuery, t],
+  );
 
   const options = useMemo(
     () => (signalsQuery.data ?? []).map((name) => ({ value: name, label: name })),
@@ -79,10 +96,10 @@ export default function SignalTrendPage() {
     return <NoVehicleSelected pageTitle={t('signalTrend.title', 'Signal Trend')} />;
   }
 
-  const chosen = signalName !== '';
-  const isLoading = signalsQuery.isLoading || (chosen && historyQuery.isLoading);
-  const isError = signalsQuery.isError || historyQuery.isError;
-  const error = signalsQuery.error ?? historyQuery.error;
+  const historyHasData = historyQuery.data !== undefined;
+  const isLoading = chosen && !historyHasData && historyQuery.isLoading;
+  const isError = chosen && historyQuery.isError && !historyHasData;
+  const error = historyQuery.error;
   const hasData = chosen && summary.samples > 0;
   const mk = summary.mannKendall;
 
@@ -93,7 +110,8 @@ export default function SignalTrendPage() {
         'signalTrend.subtitle',
         'Robust slope and significance for slow, monotonic drift in a numeric signal — distinct from abrupt change points, anomaly scoring, or cross-signal correlation',
       )}
-      query={signalsQuery}
+      query={[signalsQuery, historyQuery]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* 1 — Signal picker */}

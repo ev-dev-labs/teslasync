@@ -34,6 +34,7 @@ import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
   CHART_COLORS,
+  EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
@@ -355,52 +356,50 @@ export default function SlowQueriesPage() {
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('admin.slowQueries.chartTitle', 'Top queries by {{metric}}', { metric: activeMetricLabel })}
             </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={320} />
-            ) : showError ? (
-              <QueryError error={query.error} onRetry={retry} />
-            ) : chartRows.length === 0 ? (
-              <EmptyState /* no-action: pg_stat_statements populates as the system serves load */
-                icon={<BarChart3 className="h-8 w-8" />}
-                message={t('admin.slowQueries.noChart', 'No queries to chart yet.')}
-              />
-            ) : (
-              <div
-                className="h-72 sm:h-80"
-                role="img"
-                aria-label={t(
-                  'admin.slowQueries.chartAria',
-                  'Horizontal bar chart ranking the top queries by {{metric}}',
-                  { metric: activeMetricLabel },
-                )}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart layout="vertical" data={chartRows} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      tickFormatter={(v) => axisFormat(Number(v))}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="label"
-                      width={150}
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                    />
-                    <Tooltip
-                      content={<ChartTooltip valueFormatter={(v) => formatMetric(Number(v))} />}
-                      cursor={{ fill: 'var(--surface-2)', fillOpacity: 0.3 }}
-                    />
-                    <Bar dataKey="value" name={activeMetricLabel} radius={[0, 4, 4, 0]}>
-                      {chartRows.map((d, i) => (
-                        <Cell key={d.key} fill={CHART_COLORS[i % CHART_COLORS.length]} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            <EmbeddedChart
+              title={t('admin.slowQueries.chartTitle', 'Top queries by {{metric}}', { metric: activeMetricLabel })}
+              ariaLabel={t(
+                'admin.slowQueries.chartAria',
+                'Horizontal bar chart ranking the top queries by {{metric}}',
+                { metric: activeMetricLabel },
+              )}
+              loading={isLoading}
+              error={showError ? (query.error ?? undefined) : undefined}
+              onRetry={retry}
+              empty={!isLoading && !showError && chartRows.length === 0}
+              emptyMessage={t('admin.slowQueries.noChart', 'No queries to chart yet.')}
+              data={chartRows}
+              dataColumns={[
+                { key: 'label', label: t('admin.slowQueries.colQuery', 'Query') },
+                { key: 'value', label: activeMetricLabel, format: (v) => formatMetric(Number(v)) },
+              ]}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart layout="vertical" data={chartRows} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tickFormatter={(v) => axisFormat(Number(v))}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={150}
+                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip valueFormatter={(v) => formatMetric(Number(v))} />}
+                    cursor={{ fill: 'var(--surface-2)', fillOpacity: 0.3 }}
+                  />
+                  <Bar dataKey="value" name={activeMetricLabel} radius={[0, 4, 4, 0]}>
+                    {chartRows.map((d, i) => (
+                      <Cell key={d.key} fill={CHART_COLORS[i % CHART_COLORS.length]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </EmbeddedChart>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5">

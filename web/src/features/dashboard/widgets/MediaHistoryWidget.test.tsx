@@ -322,7 +322,7 @@ describe('MediaHistoryWidget', () => {
     expect(screen.queryByText('No tracks played')).not.toBeInTheDocument();
     expect(screen.queryByText('Media History')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('refetches when the freshness control is activated', () => {
@@ -330,7 +330,7 @@ describe('MediaHistoryWidget', () => {
     mediaMock.mockReturnValue(q);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);

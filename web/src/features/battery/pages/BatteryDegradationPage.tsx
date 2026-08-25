@@ -12,10 +12,10 @@ import {
 } from '@/components/ui';
 import { MetricCard, MetricBar, DataFreshnessAuto } from '@/components/data-display';
 import {
-  LinearGauge, ChartContainer, ChartLegend, ChartTooltip, renderAnnotationLines,
+  LinearGauge, ChartContainer, ChartLegend, ChartTooltip, EmbeddedChart, renderAnnotationLines,
   chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, ComposedChart, Line,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, ReferenceLine,
   AREA_DEFAULTS, areaGradient,
   ChartBrush,
 } from '@/components/charts';
@@ -560,14 +560,31 @@ export default function BatteryDegradationPage() {
             ) : healthQuery.error ? (
               <QueryError error={healthQuery.error} />
             ) : rangeData.length > 0 ? (
-              <div className="h-56 sm:h-64 xl:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={rangeData}>
+              <EmbeddedChart
+                title={t('battery.degradation.rangeLoss', 'Range Loss Over Time')}
+                ariaLabel={t(
+                  'battery.degradation.rangeLossAria',
+                  'Original and current estimated driving range over time',
+                )}
+                data={rangeData}
+                dataColumns={[
+                  { key: 'date', label: t('battery.degradation.date', 'Date') },
+                  { key: 'original', label: t('Original Range') },
+                  { key: 'current', label: t('Current Range') },
+                ]}
+                chartKey="battery-degradation-range-loss"
+                fluid={false}
+                mobileHeight={224}
+                height={288}
+              >
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={rangeData}>
                     {chartGrid}
                     <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
                     <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend />
+                    <ChartLegend />
                     {areaGradient('origRange', CHART_COLORS[0], 0.25)}
                     {areaGradient('curRange', CHART_COLORS[2])}
                     <Area
@@ -576,6 +593,7 @@ export default function BatteryDegradationPage() {
                       name={t('Original Range')}
                       stroke={CHART_COLORS[0]}
                       fill="url(#origRange)"
+                      hide={hiddenSeries?.isHidden('original')}
                     />
                     <Area
                       {...AREA_DEFAULTS}
@@ -583,10 +601,12 @@ export default function BatteryDegradationPage() {
                       name={t('Current Range')}
                       stroke={CHART_COLORS[2]}
                       fill="url(#curRange)"
+                      hide={hiddenSeries?.isHidden('current')}
                     />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </EmbeddedChart>
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
                 icon={<Battery className="h-8 w-8" />}
@@ -767,9 +787,14 @@ export default function BatteryDegradationPage() {
               pagination
             />
           ) : (
-            <EmptyState /* no-action: transient empty state — surfaces when no snapshots exist yet */
+            // no-action: degradation history appears automatically after sufficient telemetry.
+            <EmptyState
               icon={<Activity className="h-8 w-8" />}
               message={t('battery.degradation.noHistory', 'No degradation records found.')}
+              description={t(
+                'battery.degradation.noHistoryDescription',
+                'Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.',
+              )}
               className="py-8"
             />
           )}

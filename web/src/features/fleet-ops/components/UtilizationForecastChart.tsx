@@ -52,6 +52,7 @@ export function UtilizationForecastChart({
       {error ? (
         <QueryError error={error} onRetry={onRetry} resourceName={t('fleetOps.forecast.resource', 'Utilization forecast')} />
       ) : (
+        // chart-legend-audit:skip transparent lower offset and uncertainty width form one forecast band around the expected line
         <ChartContainer
           title={t('fleetOps.forecast.title', 'Utilization forecast')}
           subtitle={t('fleetOps.forecast.subtitle', 'Expected daily fleet utilization with uncertainty band')}

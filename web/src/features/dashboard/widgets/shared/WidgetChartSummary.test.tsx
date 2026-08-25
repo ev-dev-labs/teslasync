@@ -16,11 +16,12 @@
  *     is preserved (never silently blanked).
  *   - colliding stat labels both render (keys are index-disambiguated).
  *
- * The component uses no hooks or network, so a bare render() suffices — the
- * <EmptyState> path renders shared typography primitives that need no provider.
+ * The component uses only the local i18n instance and no network, so a bare
+ * render suffices.
  */
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import '@/i18n';
 import { WidgetChartSummary, type ChartSummaryStat } from './WidgetChartSummary';
 
 const chartNode = <div data-testid="chart">chart-body</div>;
@@ -35,7 +36,8 @@ describe('WidgetChartSummary — empty state', () => {
     render(<WidgetChartSummary isEmpty stats={sampleStats} chart={chartNode} />);
 
     const status = screen.getByRole('status');
-    expect(status).toHaveTextContent('No data available');
+    expect(status).toHaveTextContent('This widget has no qualifying data yet.');
+    expect(status).toHaveTextContent('It will populate after the source records relevant activity.');
     expect(screen.queryByText('Most Common')).not.toBeInTheDocument();
     expect(screen.queryByTestId('chart')).not.toBeInTheDocument();
   });
@@ -54,7 +56,7 @@ describe('WidgetChartSummary — empty state', () => {
     expect(screen.getByText('No speed data')).toBeInTheDocument();
     expect(screen.getByTestId('empty-icon')).toBeInTheDocument();
     // Custom message replaces the default fallback entirely.
-    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByText('This widget has no qualifying data yet.')).not.toBeInTheDocument();
   });
 });
 

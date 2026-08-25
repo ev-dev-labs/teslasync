@@ -84,30 +84,36 @@ vi.mock('@/components/charts', () => ({
     empty?: boolean;
     height?: number;
     className?: string;
-    children?: ReactNode;
-  }) => (
-    <section
-      data-testid="chart-container"
-      data-loading={String(!!loading)}
-      data-empty={String(!!empty)}
-      data-height={String(height ?? '')}
-      className={className}
-    >
-      <h3>{title}</h3>
-      {subtitle ? <p data-testid="chart-subtitle">{subtitle}</p> : null}
-      {/* Mirror the real container: a labelled img region that swaps in a
-          spinner / empty marker before ever rendering the chart body. */}
-      <div role="img" aria-label={ariaLabel}>
-        {loading ? (
-          <div data-testid="chart-loading" />
-        ) : empty ? (
-          <div data-testid="chart-empty" />
-        ) : (
-          children
-        )}
-      </div>
-    </section>
-  ),
+    children?: ReactNode | ((context: {
+      hiddenSeries: { isHidden: (key: string) => boolean };
+    }) => ReactNode);
+  }) => {
+    const content = typeof children === 'function'
+      ? children({ hiddenSeries: { isHidden: () => false } })
+      : children;
+    return (
+      <section
+        data-testid="chart-container"
+        data-loading={String(!!loading)}
+        data-empty={String(!!empty)}
+        data-height={String(height ?? '')}
+        className={className}
+      >
+        <h3>{title}</h3>
+        {subtitle ? <p data-testid="chart-subtitle">{subtitle}</p> : null}
+        <div role="img" aria-label={ariaLabel}>
+          {loading ? (
+            <div data-testid="chart-loading" />
+          ) : empty ? (
+            <div data-testid="chart-empty" />
+          ) : (
+            content
+          )}
+        </div>
+      </section>
+    );
+  },
+  ChartLegend: () => <div data-testid="chart-legend" />,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
@@ -349,7 +355,7 @@ describe('PowerHistoryChart — ready state', () => {
     renderChart({ data: [point()] });
 
     expect(screen.getByTestId('tooltip')).toBeInTheDocument();
-    expect(screen.getByTestId('legend')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-legend')).toBeInTheDocument();
   });
 });
 

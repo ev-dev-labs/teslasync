@@ -1,5 +1,4 @@
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import {
@@ -20,6 +19,7 @@ import {
   type RecentPageKind,
 } from '@/lib/recentPages';
 import { cn } from '@/lib/cn';
+import { PrefetchLink } from '../PrefetchLink';
 import { useStatusBarPopover } from './StatusBarContext';
 
 const DISPLAY_LIMIT = 5;
@@ -162,7 +162,7 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
             >
               {visibleEntries.map((entry) => (
                 <li key={entry.path}>
-                  <Link
+                  <PrefetchLink
                     to={entry.path}
                     onClick={close}
                     className={cn(
@@ -191,7 +191,7 @@ export function RecentPagesSegment({ iconOnly = false }: RecentPagesSegmentProps
                     <Text as="span" size="2xs" color="muted" className="shrink-0 tabular-nums">
                       {formatRelative(entry.visited_at, now, t)}
                     </Text>
-                  </Link>
+                  </PrefetchLink>
                 </li>
               ))}
             </ul>

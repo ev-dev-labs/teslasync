@@ -8,7 +8,7 @@ import {
   ChartTooltip,
   BarChart, Bar, ScatterChart, Scatter,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell,
-  LinearGauge,
+  LinearGauge, EmbeddedChart,
 } from '@/components/charts';
 import { MetricCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -22,9 +22,9 @@ import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
+import { getEfficiency } from '@/lib/drivesAggregation';
 import { neonColorMap, type NeonColor } from '@/lib/tokens';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
-import type { Drive } from '@/types/driving';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                           */
@@ -51,16 +51,7 @@ export function efficiencyClass(eff: number): string {
   return 'text-rose-300';
 }
 
-/** Wh per km for a drive, from measured energy or a battery-delta estimate. */
-export function getEfficiency(drive: Drive): number | null {
-  if (!(drive.distanceM > 0)) return null;
-  if (drive.energyUsedWh != null && drive.energyUsedWh > 0) {
-    return drive.energyUsedWh / (drive.distanceM / 1000);
-  }
-  const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
-  return null;
-}
+export { getEfficiency };
 
 /* ------------------------------------------------------------------ */
 /*  SpeedProfilePage                                                  */
@@ -270,24 +261,27 @@ export default function SpeedProfilePage() {
                 actionTo={{ label: t('speedProfile.browseDrives', 'Browse drives'), to: '/drives' }}
               />
             ) : (
-              <div
-                className="h-64 sm:h-72 xl:h-80"
-                role="img"
-                aria-label={t('speedProfile.distributionAria', 'Speed-bucket time-share distribution bar chart')}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={distributionChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="readings" name={t('speedProfile.readings', 'Readings')} radius={[4, 4, 0, 0]}>
-                      {distributionChartData.map((b) => (
-                        <Cell key={b.range} fill={bucketAccent(b.range).fill} fillOpacity={0.75} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+              <div className="h-64 sm:h-72 xl:h-80">
+                {/* chart-a11y:no-table speed-bucket histogram — bucket count varies by drive set; readings not individually meaningful as rows */}
+                <EmbeddedChart
+                  title={t('speedProfile.distribution', 'Speed Distribution')}
+                  ariaLabel={t('speedProfile.distributionAria', 'Speed-bucket time-share distribution bar chart')}
+                  fluid
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={distributionChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="range" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Bar dataKey="readings" name={t('speedProfile.readings', 'Readings')} radius={[4, 4, 0, 0]}>
+                        {distributionChartData.map((b) => (
+                          <Cell key={b.range} fill={bucketAccent(b.range).fill} fillOpacity={0.75} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>
@@ -447,34 +441,37 @@ export default function SpeedProfilePage() {
               />
             ) : (
               <>
-                <div
-                  className="h-56 sm:h-64 xl:h-72"
-                  role="img"
-                  aria-label={t('speedProfile.effVsSpeedAria', 'Per-drive efficiency versus speed scatter plot')}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis
-                        dataKey="speed"
-                        name={t('speedProfile.speed', 'Speed')}
-                        unit={` ${speedUnit}`}
-                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      />
-                      <YAxis
-                        dataKey="efficiency"
-                        name={efficiencyUnit}
-                        unit={` ${efficiencyUnit}`}
-                        tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      <Scatter data={scatterData} fillOpacity={0.75}>
-                        {scatterData.map((entry, i) => (
-                          <Cell key={i} fill={entry.color} />
-                        ))}
-                      </Scatter>
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                {/* chart-a11y:no-table per-drive scatter cloud — each point is one drive, not meaningful as tabular rows */}
+                <div className="h-56 sm:h-64 xl:h-72">
+                  <EmbeddedChart
+                    title={t('speedProfile.effVsSpeed', 'Efficiency vs Speed')}
+                    ariaLabel={t('speedProfile.effVsSpeedAria', 'Per-drive efficiency versus speed scatter plot')}
+                    fluid
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ScatterChart>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis
+                          dataKey="speed"
+                          name={t('speedProfile.speed', 'Speed')}
+                          unit={` ${speedUnit}`}
+                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                        />
+                        <YAxis
+                          dataKey="efficiency"
+                          name={efficiencyUnit}
+                          unit={` ${efficiencyUnit}`}
+                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        <Scatter data={scatterData} fillOpacity={0.75}>
+                          {scatterData.map((entry, i) => (
+                            <Cell key={i} fill={entry.color} />
+                          ))}
+                        </Scatter>
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  </EmbeddedChart>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
                   <ScatterLegend colorClass="bg-emerald-400" label={t('speedProfile.efficient', 'Efficient')} />

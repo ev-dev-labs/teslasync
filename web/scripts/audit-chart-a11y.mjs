@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // chart accessibility audit.
 //
-// Walks `web/src/**` and fails if any `<ChartContainer...>` JSX
+// Walks `web/src/**` and fails if any shared chart-frame JSX
 // opening tag is missing the `ariaLabel` prop (REQUIRED), or — when
 // `data` is supplied — its companion `dataColumns` prop. When `data`
 // is absent the caller MUST justify the omission with a
@@ -42,6 +42,9 @@ const ROOT = join('src');
 // own enforcement.
 const EXEMPT_FILES = new Set([
   join('src', 'components', 'charts', '__tests__', 'ChartContainer.a11y.test.tsx'),
+  // Typed adapter forwards the required aria/data contract through
+  // `ChartContainerProps`; call sites are audited as `<EmbeddedChart>`.
+  join('src', 'components', 'charts', 'EmbeddedChart.tsx'),
 ]);
 const offenders = [];
 
@@ -184,16 +187,17 @@ function auditFile(path) {
   const masked = buildMaskedRegions(text);
   // Match `<ChartContainer` followed by whitespace, `<` (generic
   // param), `/`, or `>`. Excludes anything that just shares a prefix.
-  const re = /<ChartContainer(?=[\s</>])/g;
+  const re = /<(ChartContainer|AnalyticsChartPanel|EmbeddedChart)(?=[\s</>])/g;
   let m;
   while ((m = re.exec(text)) !== null) {
     if (isMaskedRegion(masked, m.index)) continue;
-    const tagEnd = findTagEnd(text, m.index + '<ChartContainer'.length);
+    const componentName = m[1];
+    const tagEnd = findTagEnd(text, m.index + componentName.length + 1);
     if (tagEnd === -1) {
       const line = text.slice(0, m.index).split('\n').length;
       offenders.push({
         where: `${path}:${line}`,
-        why: '<ChartContainer opening tag never closes — could not parse',
+        why: `<${componentName}> opening tag never closes — could not parse`,
       });
       continue;
     }
@@ -234,7 +238,7 @@ walk(ROOT);
 
 if (offenders.length > 0) {
   console.error(
-    `\n<ChartContainer> accessibility audit failed (${offenders.length} issue(s)):`,
+    `\nShared chart-frame accessibility audit failed (${offenders.length} issue(s)):`,
   );
   for (const o of offenders) {
     console.error(`  ${o.where}\n      ${o.why}`);
@@ -269,4 +273,4 @@ if (offenders.length > 0) {
   process.exit(1);
 }
 
-console.log(`OK — every <ChartContainer> in ${ROOT} has ariaLabel + data/dataColumns or a no-table justification`);
+console.log(`OK — every shared chart frame in ${ROOT} has ariaLabel + data/dataColumns or a no-table justification`);

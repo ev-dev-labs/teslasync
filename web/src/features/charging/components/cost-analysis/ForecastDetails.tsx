@@ -5,7 +5,7 @@ import { Text, Caption } from '@/components/ui';
 import { AnimatedNumber, Currency } from '@/components/data-display';
 import {
   ChartTooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Tooltip,
+  ResponsiveContainer, PieChart, Pie, Cell, Tooltip, EmbeddedChart,
 } from '@/components/charts';
 import { fmtNumber } from '@/lib/numberFormat';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -67,7 +67,19 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
       >
         {breakdown && (
           <div className="flex flex-col items-center">
-            <div className="h-44 w-full" role="img" aria-label={t('costAnalysis.forecast.breakdownAria', 'Home versus Supercharger charging share')}>
+            <EmbeddedChart
+              title={t('costAnalysis.forecast.breakdown', 'Charging Breakdown')}
+              ariaLabel={t('costAnalysis.forecast.breakdownAria', 'Home versus Supercharger charging share')}
+              data={breakdownData}
+              dataColumns={[
+                { key: 'name', label: t('costAnalysis.forecast.chargerType', 'Charger type') },
+                { key: 'value', label: t('costAnalysis.forecast.share', 'Share (%)') },
+              ]}
+              fluid={false}
+              mobileHeight={176}
+              height={176}
+              className="w-full"
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
@@ -84,7 +96,7 @@ export function ForecastDetails({ forecastData, isLoading, error, onRetry }: For
                   <Tooltip content={<ChartTooltip />} />
                 </PieChart>
               </ResponsiveContainer>
-            </div>
+            </EmbeddedChart>
             <div className="mt-2 w-full space-y-2">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">

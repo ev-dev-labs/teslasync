@@ -359,7 +359,7 @@ describe('TripReplayPage postures', () => {
     driveMock.mockReturnValue(makeDriveQuery({ isLoading: true }));
     renderPage();
 
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     // The title renders above the loading gate; the data sections do not.
     expect(screen.getByRole('heading', { level: 1, name: 'Trip Replay' })).toBeInTheDocument();
     expect(screen.queryByText('Distance')).not.toBeInTheDocument();

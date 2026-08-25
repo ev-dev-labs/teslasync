@@ -99,6 +99,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 function makeSession(overrides: Partial<ChargingSession> = {}): ChargingSession {
   return {
     id: '10',

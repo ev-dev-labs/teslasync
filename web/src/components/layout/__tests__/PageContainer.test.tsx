@@ -180,6 +180,36 @@ describe('PageContainer', () => {
     expect(container.querySelector('.bg-amber-400')).toBeNull();
   });
 
+  it('keeps page content visible while identifying an unavailable named source', () => {
+    const ready = {
+      ...makeQuery(),
+      data: [{ id: 1 }],
+      isSuccess: true,
+    };
+    const failed = {
+      ...makeQuery({ isError: true }),
+      data: undefined,
+      isSuccess: false,
+    };
+
+    renderWith(
+      <PageContainer
+        title="Energy"
+        query={[ready, failed]}
+        dataSources={[
+          { id: 'drives', label: 'Drive history', query: ready },
+          { id: 'charging', label: 'Charging history', query: failed },
+        ]}
+      >
+        <div>Available drive content</div>
+      </PageContainer>,
+    );
+
+    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByText('Charging history')).toBeInTheDocument();
+    expect(screen.getByText('Available drive content')).toBeInTheDocument();
+  });
+
   it('treats an empty queries array as no query', () => {
     const { container } = renderWith(
       <PageContainer title="Drives" query={[]}>

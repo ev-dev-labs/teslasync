@@ -75,6 +75,7 @@ import {
   ResponsiveContainer,
   ChartTooltip,
   axisTick,
+  EmbeddedChart,
 } from '@/components/charts'
 import { useFleetTelemetryCoverage } from '@/api/hooks/useFleetTelemetry'
 import type {
@@ -446,19 +447,21 @@ export default function FleetTelemetryCoveragePage({
             </Caption>
             {firstLoad ? (
               <ChartSkeleton />
-            ) : sortedDestinations.length === 0 ? (
-              <Text
-                as="p"
-                size="sm"
-                color="muted"
-                className="italic"
-                data-testid="coverage-destinations-empty"
-              >
-                {t('coverage.destinations.empty', 'No destinations reported.')}
-              </Text>
             ) : (
               <>
-                <div style={{ height: destChartHeight }}>
+                <EmbeddedChart
+                  title={t('coverage.destinations.title', 'Destination breakdown')}
+                  ariaLabel={t('coverage.destinations.aria', 'Horizontal bar chart showing routed field counts per destination')}
+                  empty={sortedDestinations.length === 0}
+                  emptyMessage={t('coverage.destinations.empty', 'No destinations reported.')}
+                  fluid={false}
+                  height={destChartHeight}
+                  data={destChartData}
+                  dataColumns={[
+                    { key: 'dest', label: t('coverage.col.destination', 'Destination') },
+                    { key: 'count', label: t('coverage.destinations.routedFields', 'Routed fields') },
+                  ]}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={destChartData}
@@ -499,17 +502,19 @@ export default function FleetTelemetryCoveragePage({
                       </Bar>
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </EmbeddedChart>
                 {/* Color-independent, testable fallback for the chart above. */}
-                <ul className="mt-3 flex flex-wrap gap-2" data-testid="coverage-destinations-list">
-                  {sortedDestinations.map(([dest, count]) => (
-                    <li key={dest}>
-                      <Badge variant="info" size="md" data-testid={`coverage-dest-${dest}`}>
-                        {dest}: {fmtInt(count)}
-                      </Badge>
-                    </li>
-                  ))}
-                </ul>
+                {sortedDestinations.length > 0 && (
+                  <ul className="mt-3 flex flex-wrap gap-2" data-testid="coverage-destinations-list">
+                    {sortedDestinations.map(([dest, count]) => (
+                      <li key={dest}>
+                        <Badge variant="info" size="md" data-testid={`coverage-dest-${dest}`}>
+                          {dest}: {fmtInt(count)}
+                        </Badge>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </>
             )}
           </GlassPanel>

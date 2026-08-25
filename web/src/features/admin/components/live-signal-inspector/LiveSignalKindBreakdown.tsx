@@ -21,6 +21,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ChartTooltip,
+  EmbeddedChart,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 
@@ -92,13 +93,17 @@ export function LiveSignalKindBreakdown({
           'No live signals to categorise yet.',
         )}
       >
-        <div
-          className="h-56 sm:h-64"
-          role="img"
-          aria-label={t(
+        <EmbeddedChart
+          title={t('admin.liveSignals.panels.kinds', 'Signal Kinds')}
+          ariaLabel={t(
             'admin.liveSignals.kinds.chartAria',
             'Bar chart of live signal counts grouped by value kind.',
           )}
+          data={data}
+          dataColumns={[
+            { key: 'label', label: t('admin.liveSignals.kinds.kindCol', 'Kind') },
+            { key: 'value', label: t('admin.liveSignals.kinds.count', 'Fields') },
+          ]}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data} margin={{ top: 8, right: 8, bottom: 4, left: -12 }}>
@@ -134,7 +139,7 @@ export function LiveSignalKindBreakdown({
               </Bar>
             </BarChart>
           </ResponsiveContainer>
-        </div>
+        </EmbeddedChart>
       </LiveSectionState>
     </GlassPanel>
   );

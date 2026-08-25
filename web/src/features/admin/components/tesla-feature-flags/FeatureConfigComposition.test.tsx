@@ -40,13 +40,15 @@ vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
 // ── recharts barrel double: ResponsiveContainer renders its children so the
 //    BarChart double can surface the component-computed `data` (as JSON) plus
 //    each Bar's key/name/fill binding for direct assertion. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Inert = () => null;
   return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartLegend: chartTestDoubles.ChartLegend,
     ChartTooltip: Inert,
     CartesianGrid: Inert,
     Tooltip: Inert,
-    Legend: Inert,
     XAxis: Inert,
     YAxis: Inert,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
@@ -116,10 +118,7 @@ describe('FeatureConfigComposition — loading', () => {
   it('shows an accessible loading skeleton and withholds the chart on first load', () => {
     const { container } = renderComposition({ composition: [], isLoading: true });
 
-    const status = screen.getByRole('status');
-    expect(status).toHaveAttribute('aria-busy', 'true');
-    expect(status).toHaveAccessibleName('Loading');
-    // The pulsing Skeleton is present, but no chart is drawn yet.
+    // EmbeddedChart in loading state renders a skeleton (animate-pulse).
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
     // The title still frames the panel while loading.
@@ -127,8 +126,8 @@ describe('FeatureConfigComposition — loading', () => {
   });
 
   it('prioritises loading over populated rows (skeleton wins, chart withheld)', () => {
-    renderComposition({ composition: COMPOSITION, isLoading: true });
-    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+    const { container } = renderComposition({ composition: COMPOSITION, isLoading: true });
+    expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 });

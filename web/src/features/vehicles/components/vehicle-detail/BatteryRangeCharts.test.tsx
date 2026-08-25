@@ -110,9 +110,25 @@ vi.mock('@/components/charts', () => ({
   YAxis: () => null,
   CartesianGrid: () => null,
   Tooltip: () => null,
-  Legend: () => null,
+  ChartLegend: () => null,
   AREA_DEFAULTS: {},
   areaGradient: () => null,
+  EmbeddedChart: ({
+    children,
+    empty,
+    emptyMessage,
+  }: {
+    children?: ReactNode | ((ctx: { hiddenSeries: null }) => ReactNode)
+    empty?: boolean
+    emptyMessage?: string
+  }) => {
+    const content = typeof children === 'function'
+      ? children({ hiddenSeries: null })
+      : children
+    return empty
+      ? <div role="status">{emptyMessage}</div>
+      : <>{content}</>
+  },
 }))
 
 import { BatteryRangeCharts } from './BatteryRangeCharts'

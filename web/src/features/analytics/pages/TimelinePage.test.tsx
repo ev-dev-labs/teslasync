@@ -36,6 +36,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>()
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles')
+  return { ...actual, ...chartTestDoubles }
+})
+
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
   return {
@@ -281,7 +287,7 @@ describe('TimelinePage', () => {
     // Once the vehicle is auto-selected and the queries start fetching, the
     // page swaps to its spinner shell — the KPI band is gone.
     await waitFor(() =>
-      expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument(),
+      expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument(),
     )
     expect(screen.queryByText('Total Transitions')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Summary metrics' })).toBeNull()

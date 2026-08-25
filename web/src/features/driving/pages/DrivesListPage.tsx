@@ -5,7 +5,7 @@ import {
   Route, Gauge, TrendingUp, Clock, Sparkles,
   ArrowUpDown, ArrowDown, Download, Activity,
   Trash2, AlertTriangle, Star, Repeat, Tag, List as ListIcon,
-  BatteryCharging, Bell, Car, MapPin, Wrench,
+  BatteryCharging, Bell, Car, GitCompareArrows, MapPin, Wrench,
 } from 'lucide-react';
 import { PageContainer, PageHeaderSticky } from '@/components/layout';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -16,13 +16,15 @@ import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   BulkActionsToolbar, type BulkAction,
   KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
-  EntityPreviewDrawer, type DateGroupedListGroup, type OperationalAttention,
+  DataFreshnessAuto, EntityPreviewDrawer,
+  type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
+import { DataStateNotice } from '@/components/feedback';
 import { RangePicker, VehicleSelect, PillFilterBar, type PillItem } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
@@ -120,7 +122,7 @@ export default function DrivesListPage() {
   const tz = useTimezone('vehicle');
 
   /* Unit conversion */
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const toDistanceDisplay = useCallback(
     (v: number) => convertDistanceFromSI(v, unitPrefs.distance),
     [unitPrefs.distance],
@@ -203,7 +205,7 @@ export default function DrivesListPage() {
     }
   }, [collection, dateFilteredDrives, anomalyDrives, notableDrives, commuteDrives]);
 
-  /* ---- Search filter — supports `score:X`, `from:Mon`, `distance:>N`
+  /* ---- Search filter — supports `grade:X`, legacy `score:X`, `from:Mon`, `distance:>N`
  * plus bare substring (addresses + numbers). The structured
  * parser short-circuits when the query is empty, so the pre-
  * existing free-text behaviour stays unchanged for users who
@@ -230,6 +232,10 @@ export default function DrivesListPage() {
         ],
         kv: {
           score: (drive, token) => {
+            const grade = gradeFromEfficiency(getEfficiency(drive)).label.toLowerCase();
+            return grade === token.value.trim().toLowerCase();
+          },
+          grade: (drive, token) => {
             const grade = gradeFromEfficiency(getEfficiency(drive)).label.toLowerCase();
             return grade === token.value.trim().toLowerCase();
           },
@@ -318,7 +324,7 @@ export default function DrivesListPage() {
       getValue: (p) => toDistanceDisplay(p.value),
       formatValue: (v) => `${fmtNumber(v)} ${distanceUnit}`,
       formatTick: (v) => fmtNumber(v) },
-    { key: 'score',      label: t('drives.metric.score', 'Score'),           chart: 'line', color: '#a855f7', accent: 'purple',
+    { key: 'score',      label: t('drives.metric.grade', 'Efficiency grade'), chart: 'line', color: '#a855f7', accent: 'purple',
       formatValue: (v) => gradeFromNumeric(v).label,
       // Numeric ticks for the score axis — letter grades on the axis
       // would make every tick read "B" / "C" / "—", obscuring the trend.
@@ -328,7 +334,7 @@ export default function DrivesListPage() {
       formatValue: (v) => `${fmtInt(v)} ${efficiencyUnit}`,
       formatTick: (v) => fmtInt(v) },
     { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: '#ef4444', accent: 'red',
-      getValue: (p) => p.value * costPerKwh,
+      getValue: (p) => (p.value / 1_000) * costPerKwh,
       formatValue: (v) => formatCurrency(v, 2),
       // Compact axis label so the Y-axis doesn't show "$0.0833" on each tick.
       formatTick: (v) => formatCurrency(v, 2) },
@@ -364,6 +370,18 @@ export default function DrivesListPage() {
   const bulkDeleteDrivesMut = useBulkDeleteDrives();
   const bulkDriveActions = useMemo<BulkAction[]>(() => [
     {
+      id: 'compare',
+      label: t('drives.compareSelected', 'Compare selected'),
+      icon: <GitCompareArrows className="h-3.5 w-3.5" />,
+      disabled: bulkSelected.size !== 2,
+      onClick: async (ids) => {
+        navigate(buildContextHref('/drive-compare', {
+          drive_a: ids[0],
+          drive_b: ids[1],
+        }));
+      },
+    },
+    {
       id: 'delete',
       label: t('bulk.actions.delete', 'Delete'),
       icon: <Trash2 className="h-3.5 w-3.5" />,
@@ -383,7 +401,7 @@ export default function DrivesListPage() {
         clearBulk();
       },
     },
-  ], [t, bulkSelected.size, bulkDeleteDrivesMut, clearBulk]);
+  ], [t, bulkSelected.size, bulkDeleteDrivesMut, clearBulk, navigate]);
 
   /* ---- Period labels for the comparison header ---- */
   // Friendly format that always shows years on both ends so a Dec→Jan
@@ -423,7 +441,7 @@ export default function DrivesListPage() {
     priorLabel = undefined;
   }
 
-  const avgGrade = gradeFromNumeric(currentStats.avgGradeNumeric);
+  const avgGrade = gradeFromEfficiency(currentStats.avgEfficiencyWhKm);
 
   /* ---- Headline grids ---- */
   const distMi = toDistanceDisplay(currentStats.totalDistanceM);
@@ -436,31 +454,100 @@ export default function DrivesListPage() {
   const priorEffDisp = priorStats?.avgEfficiencyWhKm != null
     ? toEfficiencyDisplay(priorStats.avgEfficiencyWhKm)
     : null;
-  const totalCost = currentStats.totalEnergyKwh * costPerKwh;
-  const priorTotalCost = priorStats ? priorStats.totalEnergyKwh * costPerKwh : null;
-  const driveAttention: OperationalAttention[] = anomalyDrives.length > 0
-    ? [{
-        key: 'drive-anomalies',
-        title: t('operations.drives.anomalyTitle', '{{count}} efficiency exception', {
-          count: anomalyDrives.length,
-        }),
-        description: t(
-          'operations.drives.anomalyDescription',
-          'Review low-efficiency drives against route, speed, temperature, and battery context.',
-        ),
-        tone: 'warning',
-      }]
-    : currentStats.count === 0
-      ? [{
-          key: 'drives-empty',
-          title: t('operations.drives.noDataTitle', 'No drives in this analysis window'),
-          description: t(
-            'operations.drives.noDataDescription',
-            'Choose a wider window or complete a drive to build an operating baseline.',
+  const totalCost = (currentStats.totalEnergyWh / 1_000) * costPerKwh;
+  const priorTotalCost = priorStats && priorStats.energyMeasuredCount > 0
+    ? (priorStats.totalEnergyWh / 1_000) * costPerKwh
+    : null;
+  const routeContextCount = dateFilteredDrives.filter((drive) => {
+    const hasStart = Boolean(
+      drive.startAddress
+      || (drive.startLat != null && drive.startLon != null),
+    );
+    const hasEnd = Boolean(
+      drive.endAddress
+      || (drive.endLat != null && drive.endLon != null),
+    );
+    return hasStart && hasEnd;
+  }).length;
+  const missingEfficiencyCount = Math.max(
+    0,
+    currentStats.count - currentStats.efficiencyMeasuredCount,
+  );
+  const efficiencyMovementPct = (
+    currentStats.avgEfficiencyWhKm != null
+    && priorStats?.avgEfficiencyWhKm != null
+    && priorStats.avgEfficiencyWhKm > 0
+  )
+    ? ((priorStats.avgEfficiencyWhKm - currentStats.avgEfficiencyWhKm)
+      / priorStats.avgEfficiencyWhKm) * 100
+    : null;
+
+  let efficiencyMovementValue = t('drives.decision.noBaseline', 'No baseline');
+  let efficiencyMovementTone: 'success' | 'warning' | 'neutral' = 'neutral';
+  if (efficiencyMovementPct != null) {
+    if (Math.abs(efficiencyMovementPct) < 1) {
+      efficiencyMovementValue = t('drives.decision.stable', 'Stable');
+    } else if (efficiencyMovementPct > 0) {
+      efficiencyMovementValue = t(
+        'drives.decision.improved',
+        '{{value}}% lower',
+        { value: fmtNumber(efficiencyMovementPct, 1) },
+      );
+      efficiencyMovementTone = 'success';
+    } else {
+      efficiencyMovementValue = t(
+        'drives.decision.regressed',
+        '{{value}}% higher',
+        { value: fmtNumber(Math.abs(efficiencyMovementPct), 1) },
+      );
+      efficiencyMovementTone = 'warning';
+    }
+  }
+
+  const driveAttention: OperationalAttention[] = [];
+  if (anomalyDrives.length > 0) {
+    driveAttention.push({
+      key: 'drive-anomalies',
+      title: anomalyDrives.length === 1
+        ? t('operations.drives.anomalyTitle_one', '1 energy-intensity exception')
+        : t(
+            'operations.drives.anomalyTitle_other',
+            '{{count}} energy-intensity exceptions',
+            { count: anomalyDrives.length },
           ),
-          tone: 'info',
-        }]
-      : [];
+      description: t(
+        'operations.drives.anomalyDescription',
+        'Review measured high-energy drives against route, speed, temperature, and battery context.',
+      ),
+      tone: 'warning',
+    });
+  }
+  if (currentStats.count > 0 && missingEfficiencyCount > 0) {
+    driveAttention.push({
+      key: 'drive-energy-coverage',
+      title: t(
+        'operations.drives.partialEnergyTitle',
+        '{{count}} drives excluded from efficiency',
+        { count: missingEfficiencyCount },
+      ),
+      description: t(
+        'operations.drives.partialEnergyDescription',
+        'Activity remains visible, but efficiency requires measured energy and at least 1 km of distance.',
+      ),
+      tone: currentStats.efficiencyMeasuredCount === 0 ? 'warning' : 'info',
+    });
+  }
+  if (currentStats.count === 0) {
+    driveAttention.push({
+      key: 'drives-empty',
+      title: t('operations.drives.noDataTitle', 'No drives in this analysis window'),
+      description: t(
+        'operations.drives.noDataDescription',
+        'Choose a wider window or complete a drive to build an operating baseline.',
+      ),
+      tone: 'info',
+    });
+  }
 
   /* ---- Highlights rows — "fold-down" period stats (top speed, longest,
  * avg trip, avg duration) surfaced beside the trend chart. Real period
@@ -536,7 +623,7 @@ export default function DrivesListPage() {
       {avgGrade.label !== '—' && (
         <>
           <span className="opacity-50">·</span>
-          <span>{t('drives.avgScore', 'avg')}{' '}
+          <span>{t('drives.avgGrade', 'efficiency grade')}{' '}
             <Text as="span" weight="semibold" style={{ color: avgGrade.color }}>{avgGrade.label}</Text>
           </span>
         </>
@@ -555,7 +642,10 @@ export default function DrivesListPage() {
   return (
     <PageContainer
       title={t('drives.title', 'Drive History')}
-      subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
+      subtitle={t(
+        'drives.subtitle',
+        'Measured energy intensity, route evidence, and comparable drive history',
+      )}
       error={drivesError as Error | null}
       copyLink
       query={drivesQuery}
@@ -599,19 +689,19 @@ export default function DrivesListPage() {
           title={t('operations.drives.title', 'Activity, efficiency, and exceptions in context')}
           description={t(
             'operations.drives.description',
-            'Driving volume, distance, score, and efficiency use one vehicle-aware period with direct access to supporting evidence.',
+            'Measured energy, route context, and exceptions use one vehicle-aware period with direct access to supporting evidence.',
           )}
           statusLabel={
             currentStats.count === 0
               ? t('operations.status.awaitingData', 'Awaiting data')
-              : anomalyDrives.length > 0
+              : anomalyDrives.length > 0 || missingEfficiencyCount > 0
                 ? t('operations.status.review', 'Review recommended')
                 : t('operations.status.onTrack', 'On track')
           }
           statusTone={
             currentStats.count === 0
               ? 'neutral'
-              : anomalyDrives.length > 0
+              : anomalyDrives.length > 0 || missingEfficiencyCount > 0
                 ? 'warning'
                 : 'success'
           }
@@ -620,6 +710,13 @@ export default function DrivesListPage() {
               {datePresetLabel ?? `${startDate} → ${endDate}`}
             </Badge>
           }
+          freshness={(
+            <DataFreshnessAuto
+              query={drivesQuery}
+              source={t('operations.drives.historySource', 'Drive history')}
+            />
+          )}
+          metricColumns={3}
           metrics={[
             {
               key: 'drives',
@@ -642,32 +739,93 @@ export default function DrivesListPage() {
               tone: 'success',
             },
             {
-              key: 'score',
-              label: t('drives.avgScore', 'Avg score'),
-              value: avgGrade.label,
+              key: 'efficiency',
+              label: `${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`,
+              value: avgEffDisp != null ? fmtInt(avgEffDisp) : '—',
               detail: t(
-                'operations.drives.scoreDetail',
-                'Efficiency-derived grade across drives with usable telemetry.',
+                'operations.drives.efficiencyDetail',
+                '{{measured}} of {{total}} drives have measured energy and sufficient distance.',
+                {
+                  measured: currentStats.efficiencyMeasuredCount,
+                  total: currentStats.count,
+                },
+              ),
+              tone: avgEffDisp == null
+                ? 'neutral'
+                : anomalyDrives.length > 0
+                  ? 'warning'
+                  : 'success',
+            },
+            {
+              key: 'movement',
+              label: t('drives.decision.movement', 'Efficiency movement'),
+              value: efficiencyMovementValue,
+              detail: t(
+                'operations.drives.movementDetail',
+                'Distance-weighted energy intensity compared with the prior period.',
+              ),
+              tone: efficiencyMovementTone,
+            },
+            {
+              key: 'exceptions',
+              label: t('drives.decision.exceptions', 'Efficiency exceptions'),
+              value: fmtCompact(anomalyDrives.length),
+              detail: t(
+                'operations.drives.exceptionDetail',
+                'Measured drives in the high energy-intensity grade.',
               ),
               tone: anomalyDrives.length > 0 ? 'warning' : 'success',
             },
             {
-              key: 'efficiency',
-              label: `${t('drives.efficiency', 'Efficiency')} (${efficiencyUnit})`,
-              value: avgEffDisp != null ? fmtInt(avgEffDisp) : '—',
+              key: 'route-context',
+              label: t('drives.decision.routeCoverage', 'Route context'),
+              value: currentStats.count > 0
+                ? `${fmtInt((routeContextCount / currentStats.count) * 100)}%`
+                : '—',
               detail: t(
-                'operations.drives.efficiencyDetail',
-                'Average energy intensity at the selected display boundary.',
+                'operations.drives.routeCoverageDetail',
+                '{{covered}} of {{total}} drives include both origin and destination evidence.',
+                { covered: routeContextCount, total: currentStats.count },
               ),
-              tone: avgEffDisp == null ? 'neutral' : anomalyDrives.length > 0 ? 'warning' : 'success',
+              tone: currentStats.count === 0
+                ? 'neutral'
+                : routeContextCount === currentStats.count
+                  ? 'success'
+                  : 'info',
             },
           ]}
           attention={driveAttention}
+          actions={(
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<GitCompareArrows className="h-4 w-4" aria-hidden="true" />}
+              onClick={() => navigate('/drive-compare')}
+            >
+              {t('drives.openCompare', 'Compare drives')}
+            </Button>
+          )}
           provenance={t(
             'operations.drives.provenance',
-            'Derived from completed drive telemetry, vehicle-local day boundaries, and current energy-cost preferences.',
+            'Measured energy and distance stay canonical until display; missing evidence is excluded rather than estimated.',
           )}
         />
+
+        {!isDrivesLoading && currentStats.count > 0 && missingEfficiencyCount > 0 && (
+          <DataStateNotice
+            state="partial"
+            title={t('drives.partialEnergy.title', 'Efficiency evidence is partial')}
+            message={t(
+              'drives.partialEnergy.message',
+              '{{measured}} of {{total}} drives include measured energy and at least 1 km of distance. Activity, route, and timing evidence remain complete.',
+              {
+                measured: currentStats.efficiencyMeasuredCount,
+                total: currentStats.count,
+              },
+            )}
+          />
+        )}
 
         {/* Opt-in natural-language drive search.
             Hidden when ai_mode='off' or the nl-drive-search-replay toggle
@@ -684,7 +842,7 @@ export default function DrivesListPage() {
               <SearchInput
                 value={search}
                 onChange={(v) => { setUrlBatch({ q: v || null, page: null }); }}
-                placeholder={t('drives.searchPlaceholder', 'Search drives — try "score:D", "Office", "29.1"')}
+                placeholder={t('drives.searchPlaceholder', 'Search drives — try "grade:D", "Office", "29.1"')}
                 className="w-full"
                 historyScope="drives"
               />
@@ -784,18 +942,12 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
-                    label={t('drives.avgScore', 'Avg score')}
+                    label={t('drives.avgGrade', 'Efficiency grade')}
                     value={avgGrade.label}
                     color="purple"
-                    delta={priorHasData && priorStats!.avgGradeNumeric != null && currentStats.avgGradeNumeric != null ? {
-                      metric: 'drive_score',
-                      previous: priorStats!.avgGradeNumeric,
-                      current: currentStats.avgGradeNumeric,
-                      display: 'percent',
-                    } : undefined}
                   />
                   <MetricCard
-                    label={`${t('drives.efficiency', 'Efficiency')} (${efficiencyUnit})`}
+                    label={`${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`}
                     value={avgEffDisp != null ? fmtInt(avgEffDisp) : '—'}
                     color="amber"
                     delta={priorHasData && avgEffDisp != null && priorEffDisp != null ? {
@@ -806,10 +958,12 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
-                    label={t('drives.cost', 'Cost')}
-                    value={formatEnergyCost(currentStats.totalEnergyKwh)}
+                    label={t('drives.energyAndCost', 'Measured energy / cost')}
+                    value={currentStats.energyMeasuredCount > 0
+                      ? `${formatEnergy(currentStats.totalEnergyWh)} · ${formatEnergyCost(currentStats.totalEnergyWh / 1_000)}`
+                      : '—'}
                     color="red"
-                    delta={priorHasData ? {
+                    delta={priorHasData && priorTotalCost != null && currentStats.energyMeasuredCount > 0 ? {
                       metric: 'cost',
                       previous: priorTotalCost,
                       current: totalCost,
@@ -916,7 +1070,7 @@ export default function DrivesListPage() {
           <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
             <SectionTitle className="flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('drives.allDrives', 'All Drives')}
+              {t('drives.driveEvidence', 'Drive evidence')}
               <Text as="span" size="xs" weight="regular" color="muted">
                 ({fmtCompact(sortedDrives.length)})
               </Text>
@@ -1093,7 +1247,7 @@ export default function DrivesListPage() {
                     key: 'energy',
                     label: t('drives.energyUsed', 'Energy used'),
                     value: previewDrive.energyUsedWh != null
-                      ? `${fmtNumber(previewDrive.energyUsedWh / 1000)} kWh`
+                      ? formatEnergy(previewDrive.energyUsedWh)
                       : '—',
                   },
                   {
@@ -1111,7 +1265,7 @@ export default function DrivesListPage() {
                   },
                   {
                     key: 'efficiency',
-                    label: t('drives.efficiency', 'Efficiency'),
+                    label: t('drives.efficiency', 'Energy intensity'),
                     value: getEfficiency(previewDrive) != null
                       ? `${fmtInt(
                           toEfficiencyDisplay(getEfficiency(previewDrive) ?? 0),
@@ -1119,8 +1273,8 @@ export default function DrivesListPage() {
                       : '—',
                   },
                   {
-                    key: 'score',
-                    label: t('drives.avgScore', 'Score'),
+                    key: 'grade',
+                    label: t('drives.avgGrade', 'Efficiency grade'),
                     value: gradeFromEfficiency(getEfficiency(previewDrive)).label,
                   },
                 ]

@@ -197,11 +197,15 @@ describe('DiskForecastPage', () => {
     // Totals are summed and byte-formatted.
     expect(screen.getByText('4.5 GB')).toBeInTheDocument()
 
-    // Uncompressed / compressed carry their share-of-total subtitles.
-    expect(screen.getByText('Uncompressed')).toBeInTheDocument()
-    expect(screen.getByText('66.7% of total')).toBeInTheDocument()
-    expect(screen.getByText('Compressed')).toBeInTheDocument()
-    expect(screen.getByText('33.3% of total')).toBeInTheDocument()
+    // Uncompressed / compressed carry their share-of-total subtitles. Scope
+    // these assertions away from the chart's accessible fallback table.
+    const summary = within(
+      screen.getByRole('region', { name: 'Fleet disk summary' }),
+    )
+    expect(summary.getByText('Uncompressed')).toBeInTheDocument()
+    expect(summary.getByText('66.7% of total')).toBeInTheDocument()
+    expect(summary.getByText('Compressed')).toBeInTheDocument()
+    expect(summary.getByText('33.3% of total')).toBeInTheDocument()
 
     // Daily growth is summed across all rows.
     expect(screen.getByText('150.0 MB/d')).toBeInTheDocument()
@@ -216,7 +220,9 @@ describe('DiskForecastPage', () => {
 
     renderPage()
 
-    const table = await waitFor(() => screen.getByRole('table'))
+    const table = await waitFor(() =>
+      within(screen.getByRole('region', { name: 'Hypertables' })).getByRole('table'),
+    )
 
     expect(within(table).getByText(LONG_NAME)).toBeInTheDocument()
     expect(within(table).getByText('drives')).toBeInTheDocument()

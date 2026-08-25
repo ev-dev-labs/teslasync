@@ -32,7 +32,7 @@ export function AnnotationList({ annotations, onRemove }: AnnotationListProps) {
         return (
           <div
             key={ann.id}
-            className="group flex items-center gap-2 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 text-xs dark:border-white/[0.04] dark:bg-white/[0.02]"
+            className="group flex items-center gap-2 rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-1.5 text-xs"
           >
             <div
               className="h-2 w-2 shrink-0 rounded-full"

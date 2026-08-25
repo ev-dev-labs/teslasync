@@ -39,13 +39,13 @@ import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { ChartTooltip } from '@/components/charts/ChartTooltip';
 import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useRangeState } from '@/hooks/useRangeState';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
+  ChartLegend, ChartTooltip, EmbeddedChart,
 } from '@/components/charts';
 import { useToast } from '@/components/feedback/Toast';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -659,8 +659,12 @@ export default function AlertsListPage() {
           <GlassPanel className="p-6">
             <EmptyState
               icon={<Icons.notificationsMuted className="h-8 w-8" />}
-              title={t('No alerts')}
+              title={t('alerts.emptyTitle', 'No alerts')}
               message={t('alerts.noAlertsInRange', 'No alerts in this range. Your fleet is running smoothly.')}
+              description={t(
+                'alerts.noAlertsInRangeDescription',
+                'Alert rules continue monitoring new telemetry and will surface actionable events here.',
+              )}
               actionTo={{
                 label: t('operations.alerts.manageRules', 'Manage rules'),
                 to: '/notifications/studio',
@@ -699,17 +703,36 @@ export default function AlertsListPage() {
                   message={t('alerts.noTrend', 'No alert activity in the last 7 days.')}
                 />
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={alertsByDay}>
+                <EmbeddedChart
+                  title={t('Alert Trend (7 Days)')}
+                  ariaLabel={t(
+                    'alerts.trendAria',
+                    'Alert counts by severity over the last seven days',
+                  )}
+                  data={alertsByDay}
+                  dataColumns={[
+                    { key: 'day', label: t('alerts.day', 'Day') },
+                    { key: 'critical', label: t('Critical') },
+                    { key: 'warning', label: t('Warning') },
+                    { key: 'info', label: t('Info') },
+                  ]}
+                  chartKey="alerts-list-seven-day-trend"
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={alertsByDay}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                     <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Bar dataKey="critical" name={t('Critical')} stackId="a" fill={SEVERITY_HEX.critical} fillOpacity={0.75} />
-                    <Bar dataKey="warning" name={t('Warning')} stackId="a" fill={SEVERITY_HEX.warning} fillOpacity={0.7} />
-                    <Bar dataKey="info" name={t('Info')} stackId="a" fill={SEVERITY_HEX.info} fillOpacity={0.6} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                    <ChartLegend />
+                    <Bar dataKey="critical" name={t('Critical')} stackId="a" fill={SEVERITY_HEX.critical} fillOpacity={0.75} hide={hiddenSeries?.isHidden('critical')} />
+                    <Bar dataKey="warning" name={t('Warning')} stackId="a" fill={SEVERITY_HEX.warning} fillOpacity={0.7} hide={hiddenSeries?.isHidden('warning')} />
+                    <Bar dataKey="info" name={t('Info')} stackId="a" fill={SEVERITY_HEX.info} fillOpacity={0.6} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('info')} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               )}
             </div>
           </GlassPanel>
@@ -736,7 +759,18 @@ export default function AlertsListPage() {
               />
             ) : (
               <div className="grid gap-3 sm:grid-cols-2 sm:items-center">
-                <div className="h-40 sm:h-56">
+                <EmbeddedChart
+                  title={t('Alerts by Type')}
+                  ariaLabel={t('alerts.typeDistributionAria', 'Alert distribution by type')}
+                  data={alertsByType.map(({ name, value }) => ({ name, value }))}
+                  dataColumns={[
+                    { key: 'name', label: t('alerts.type', 'Alert type') },
+                    { key: 'value', label: t('alerts.count', 'Alerts') },
+                  ]}
+                  fluid={false}
+                  mobileHeight={160}
+                  height={224}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie data={alertsByType} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={2} dataKey="value">
@@ -745,7 +779,7 @@ export default function AlertsListPage() {
                       <Tooltip content={<ChartTooltip />} />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </EmbeddedChart>
                 <ul className="space-y-1.5">
                   {alertsByType.map((d, i) => (
                     <li key={i} className="flex items-center gap-2 text-xs">
@@ -944,15 +978,55 @@ export default function AlertsListPage() {
           </div>
         ) : (
           <GlassPanel className="p-6">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            <EmptyState
               icon={<Icons.notificationsMuted className="h-8 w-8" />}
-              title={t('No alerts')}
+              title={t('alerts.emptyTitle', 'No alerts')}
               message={
                 alertSearch
-                  ? t('No alerts match your search.')
+                  ? t('alerts.noSearchResults', 'No alerts match your search.')
                   : filter === 'all'
-                    ? t('Your fleet is running smoothly. Alerts will appear here.')
+                    ? t(
+                        'alerts.noAlerts',
+                        'Your fleet is running smoothly. Alerts will appear here.',
+                      )
                     : t('alerts.noneForFilter', 'No {{filter}} alerts right now.', { filter })
+              }
+              description={
+                alertSearch
+                  ? t(
+                      'alerts.noSearchResultsDescription',
+                      'Try a broader title or message search, or clear the search to restore all alerts.',
+                    )
+                  : filter !== 'all'
+                    ? t(
+                        'alerts.noneForFilterDescription',
+                        'Clear the active filters to review alerts in every status.',
+                      )
+                    : t(
+                        'alerts.noAlertsDescription',
+                        'Configured rules continue monitoring incoming fleet telemetry.',
+                      )
+              }
+              action={
+                alertSearch
+                  ? {
+                      label: t('alerts.clearSearch', 'Clear search'),
+                      onClick: () => applySearch(''),
+                    }
+                  : filter !== 'all'
+                    ? {
+                        label: t('alerts.clearFilters', 'Clear filters'),
+                        onClick: clearAllFilters,
+                      }
+                    : undefined
+              }
+              actionTo={
+                !alertSearch && filter === 'all'
+                  ? {
+                      label: t('operations.alerts.manageRules', 'Manage rules'),
+                      to: '/notifications/studio',
+                    }
+                  : undefined
               }
             />
           </GlassPanel>

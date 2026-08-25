@@ -7,6 +7,8 @@ interface EmptyStateProps {
   icon?: React.ReactNode;
   title?: string;
   message: string;
+  /** Supporting context that explains prerequisites or the next expected system event. */
+  description?: string;
   /** Imperative action — runs on click (mutates state, opens modal, etc.) */
   action?: { label: string; onClick: () => void };
   /** Navigation action — preferred when the CTA just goes somewhere. Takes priority over `action`. */
@@ -20,7 +22,15 @@ interface EmptyStateProps {
 // neutral variants now reaches this CTA automatically.
 const linkButtonClasses = cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-10 px-4 text-sm');
 
-export function EmptyState({ icon, title, message, action, actionTo, className }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  message,
+  description,
+  action,
+  actionTo,
+  className,
+}: EmptyStateProps) {
   return (
     <div
       role="status"
@@ -36,9 +46,18 @@ export function EmptyState({ icon, title, message, action, actionTo, className }
           {title}
         </Heading>
       )}
-      <Text variant="bodySm" as="p" className="mb-6 max-w-lg leading-relaxed">
+      <Text
+        variant="bodySm"
+        as="p"
+        className={cn(description ? 'mb-2' : 'mb-6', 'max-w-lg leading-relaxed')}
+      >
         {message}
       </Text>
+      {description && (
+        <Text variant="bodySm" as="p" color="muted" className="mb-6 max-w-lg leading-relaxed">
+          {description}
+        </Text>
+      )}
       {actionTo ? (
         <Link to={actionTo.to} className={linkButtonClasses}>
           {actionTo.label}

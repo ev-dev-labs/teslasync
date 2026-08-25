@@ -353,7 +353,7 @@ describe('ChargingOptimizerWidget', () => {
     expect(screen.queryByText('No optimizer data')).not.toBeInTheDocument();
     expect(screen.queryByText('Charging Optimizer')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('shows the no-data empty state (standard) while keeping the titled shell', () => {
@@ -370,7 +370,7 @@ describe('ChargingOptimizerWidget', () => {
     optimizerMock.mockReturnValue(q);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);

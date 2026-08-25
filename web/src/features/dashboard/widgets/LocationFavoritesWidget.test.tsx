@@ -261,7 +261,7 @@ describe('LocationFavoritesWidget compact layout', () => {
     );
     renderWidget(COMPACT);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     // Regression guard: the snapshot drives the visible compact badge, so it
     // MUST be refetched (the old code refetched only the locations query).

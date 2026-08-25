@@ -57,6 +57,7 @@ export function ListExportMenu({
     selectedCount > 0 ? 'selected' : 'visible',
   );
   const containerRef = useRef<HTMLDivElement>(null);
+  const previousSelectedCountRef = useRef(selectedCount);
 
   const close = useCallback(() => setOpen(false), []);
 
@@ -76,11 +77,15 @@ export function ListExportMenu({
     };
   }, [open, close]);
 
-  // When the selection count drops to 0 mid-menu, snap back to 'visible'
-  // so the chosen scope can never be unselectable.
+  // A newly-created selection is the likely export intent. Preserve explicit
+  // scope changes while the selection remains active, then reset when cleared.
   useEffect(() => {
-    if (selectedCount === 0 && scope === 'selected') setScope('visible');
-  }, [selectedCount, scope]);
+    const hadSelection = previousSelectedCountRef.current > 0;
+    const hasSelection = selectedCount > 0;
+    if (!hadSelection && hasSelection) setScope('selected');
+    if (hadSelection && !hasSelection) setScope('visible');
+    previousSelectedCountRef.current = selectedCount;
+  }, [selectedCount]);
 
   const triggerLabel = disabled
     ? t('listExport.disabledTooltip', 'No data to export')

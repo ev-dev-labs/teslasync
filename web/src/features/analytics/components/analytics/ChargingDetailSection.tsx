@@ -6,13 +6,15 @@ import { MetricCard } from '@/components/data-display';
 import { Text } from '@/components/ui';
 import {
   ChartTooltip,
+  ChartLegend,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   ComposedChart, Line, Area, Bar,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { fmtInt } from '@/lib/numberFormat';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import type { FleetAnalyticsQuery } from './constants';
 
 /** Stable bar corner-radius — hoisted so the hot chart JSX never allocates a fresh array per render. */
@@ -66,9 +68,10 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
                   {fmtInt(b.count)} {t('analytics.charging.sessions', 'sessions')}
                 </Text>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]">
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]">
                 <div
-                  className="h-full rounded-full bg-neon-green transition-all duration-slow"
+                  data-testid="charger-brand-fill"
+                  className="h-full rounded-full bg-emerald-500 transition-all duration-slow"
                   style={{ width: `${b.pct}%` }}
                 />
               </div>
@@ -95,7 +98,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
                 <Text size="xs" weight="medium" color="secondary" className="w-28 truncate text-right">
                   {ct.type ?? '—'}
                 </Text>
-                <div className="h-3 flex-1 overflow-hidden rounded-full bg-white/[0.06]">
+                <div className="h-3 flex-1 overflow-hidden rounded-full bg-[var(--surface-2)]">
                   <div
                     className="h-full rounded-full transition-all duration-slow"
                     style={{ width: `${pct}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length] }}
@@ -150,7 +153,7 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
       </AnalyticsPanel>
 
       {/* Monthly Charging Trend — hero band */}
-      <AnalyticsPanel
+      <AnalyticsChartPanel
         className="md:col-span-2 2xl:col-span-3"
         title={t('analytics.charging.monthlyTrend', 'Monthly Charging Trend')}
         icon={<TrendingUp className="h-4 w-4" />}
@@ -159,8 +162,22 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
         onRetry={refetch}
         isEmpty={monthlyTrend.length === 0}
         emptyMessage={t('analytics.charging.noMonthly', 'No monthly data')}
+        ariaLabel={t(
+          'analytics.charging.monthlyTrendAria',
+          'Monthly charging energy, average power, and session count',
+        )}
+        size="detail"
+        data={monthlyTrend}
+        dataColumns={[
+          { key: 'month', label: t('analytics.charging.month', 'Month') },
+          { key: 'energy', label: t('analytics.charging.energykWh', 'Energy (kWh)') },
+          { key: 'avg_power', label: t('analytics.charging.avgPowerkW', 'Avg Power (kW)') },
+          { key: 'sessions', label: t('analytics.charging.sessions', 'Sessions') },
+        ]}
+        exportFilename="fleet-monthly-charging"
+        chartKey="analytics-monthly-charging"
       >
-        <div className="h-72 sm:h-80">
+        {({ hiddenSeries }) => (
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={monthlyTrend} margin={chartMarginLabeled} {...chartAnimation}>
               {chartGrid}
@@ -168,15 +185,15 @@ export function ChargingDetailSection({ query }: { query: FleetAnalyticsQuery })
               <YAxis yAxisId="left" tick={axisTick} />
               <YAxis yAxisId="right" orientation="right" tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
-              <Legend />
+              <ChartLegend />
               {areaGradient('monthlyEnergyGrad', CHART_COLORS[1])}
-              <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" />
-              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} />
-              <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={BAR_RADIUS} opacity={0.6} />
+              <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[1]} fill="url(#monthlyEnergyGrad)" hide={hiddenSeries?.isHidden('energy')} />
+              <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="avg_power" name={t('analytics.charging.avgPowerkW', 'Avg Power (kW)')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('avg_power')} />
+              <Bar yAxisId="left" dataKey="sessions" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[2]} radius={BAR_RADIUS} opacity={0.6} hide={hiddenSeries?.isHidden('sessions')} />
             </ComposedChart>
           </ResponsiveContainer>
-        </div>
-      </AnalyticsPanel>
+        )}
+      </AnalyticsChartPanel>
     </>
   );
 }

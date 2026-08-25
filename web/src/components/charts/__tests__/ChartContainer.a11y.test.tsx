@@ -7,9 +7,11 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 import { ChartContainer } from '../ChartContainer';
+import { EmbeddedChart } from '../EmbeddedChart';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -50,10 +52,43 @@ function renderChart(ui: React.ReactNode) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(<QueryClientProvider client={qc}>{ui}</QueryClientProvider>);
+  return render(
+    <QueryClientProvider client={qc}>
+      <MemoryRouter>{ui}</MemoryRouter>
+    </QueryClientProvider>,
+  );
 }
 
 describe('ChartContainer accessibility contract', () => {
+  it('keeps semantics without nested panel chrome in embedded mode', () => {
+    renderChart(
+      <EmbeddedChart
+        title="Widget energy trend"
+        ariaLabel="Widget energy trend over seven days"
+        data={[{ day: 'Mon', energy: 12 }]}
+        dataColumns={[
+          { key: 'day', label: 'Day' },
+          { key: 'energy', label: 'Energy' },
+        ]}
+      >
+        <div data-testid="embedded-chart-body">chart</div>
+      </EmbeddedChart>,
+    );
+
+    const figure = screen.getByRole('figure', { name: 'Widget energy trend' });
+    expect(figure).toHaveAttribute('data-chart-variant', 'embedded');
+    expect(figure).toHaveClass('border-0', 'bg-transparent', 'p-0');
+    expect(figure).not.toHaveClass('rounded-panel', 'p-5', 'shadow-panel');
+    expect(within(figure).getByRole('heading', { name: 'Widget energy trend' }))
+      .toHaveClass('sr-only');
+    expect(within(figure).getByRole('img', {
+      name: 'Widget energy trend over seven days',
+    })).toContainElement(screen.getByTestId('embedded-chart-body'));
+    expect(within(figure).getByRole('table')).toBeInTheDocument();
+    expect(within(figure).queryByRole('button', { name: /export chart/i }))
+      .not.toBeInTheDocument();
+  });
+
   it('renders as a <figure> labelled by its title heading', () => {
     renderChart(
       <ChartContainer title="Daily Energy" ariaLabel="Daily energy use over the last 7 days">
@@ -73,6 +108,23 @@ describe('ChartContainer accessibility contract', () => {
     });
     expect(img).toBeInTheDocument();
     expect(within(img).getByTestId('chart-body')).toBeInTheDocument();
+  });
+
+  it('renders an optional title icon as decorative chrome', () => {
+    renderChart(
+      <ChartContainer
+        title="Energy trend"
+        icon={<svg data-testid="title-icon" />}
+        ariaLabel="Energy trend over time"
+      >
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    expect(screen.getByTestId('title-icon').parentElement).toHaveAttribute(
+      'aria-hidden',
+      'true',
+    );
   });
 
   it('wires aria-describedby to the figcaption fallback', () => {
@@ -238,5 +290,75 @@ describe('ChartContainer accessibility contract', () => {
     expect(ids[0]).toBeTruthy();
     expect(ids[1]).toBeTruthy();
     expect(ids[0]).not.toBe(ids[1]);
+  });
+
+  it('applies semantic responsive heights with explicit override support', () => {
+    renderChart(
+      <ChartContainer
+        title="Responsive"
+        ariaLabel="Responsive chart"
+        size="detail"
+        height={480}
+        mobileHeight={320}
+      >
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    const figure = screen.getByRole('figure', { name: 'Responsive' });
+    const chart = screen.getByRole('img', { name: 'Responsive chart' });
+    expect(figure).toHaveAttribute('data-chart-size', 'detail');
+    expect(chart).toHaveStyle({
+      '--chart-height-mobile': '320px',
+      '--chart-height-desktop': '480px',
+    });
+    expect(chart).toHaveClass(
+      'h-[var(--chart-height-mobile)]',
+      'sm:h-[var(--chart-height-desktop)]',
+    );
+  });
+
+  it('renders contextual empty copy without exposing an empty chart image', () => {
+    renderChart(
+      <ChartContainer
+        title="No history"
+        ariaLabel="History chart"
+        empty
+        emptyTitle="History not available"
+        emptyMessage="No samples fall inside this range."
+        emptyDescription="Choose a longer range after telemetry has been collected."
+      >
+        <div data-testid="hidden-chart">chart</div>
+      </ChartContainer>,
+    );
+
+    expect(screen.getByText('History not available')).toBeInTheDocument();
+    expect(screen.getByText('No samples fall inside this range.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Choose a longer range after telemetry has been collected.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'History chart' })).toBeNull();
+    expect(screen.queryByTestId('hidden-chart')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();
+  });
+
+  it('contains initial query failures and keeps retry inside the chart frame', () => {
+    const onRetry = vi.fn();
+    renderChart(
+      <ChartContainer
+        title="Unavailable"
+        ariaLabel="Unavailable chart"
+        error={new Error('offline')}
+        onRetry={onRetry}
+      >
+        <div data-testid="hidden-chart">chart</div>
+      </ChartContainer>,
+    );
+
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Unavailable chart' })).toBeNull();
+    expect(screen.queryByTestId('hidden-chart')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(onRetry).toHaveBeenCalledTimes(1);
   });
 });

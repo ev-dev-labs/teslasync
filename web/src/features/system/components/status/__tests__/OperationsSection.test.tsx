@@ -235,6 +235,20 @@ describe('OperationsSection — populated', () => {
 })
 
 describe('OperationsSection — failure paths', () => {
+  it('explains when notification statistics have not been reported', async () => {
+    mockGetStats.mockResolvedValue(null as unknown as NotificationStats)
+    mockGetLogs.mockResolvedValue([])
+    mockGetAudit.mockResolvedValue([])
+
+    renderSection()
+    expand()
+
+    expect(
+      await screen.findByText('No notification activity has been recorded.'),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/Delivery totals and channel health appear/)).toBeInTheDocument()
+  })
+
   it('renders an error alert for every data source when the queries fail', async () => {
     mockGetStats.mockRejectedValue(new Error('stats down'))
     mockGetLogs.mockRejectedValue(new Error('logs down'))

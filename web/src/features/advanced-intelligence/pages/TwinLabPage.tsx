@@ -143,6 +143,7 @@ export default function TwinLabPage() {
       </FadeIn>
 
       <FadeIn delay={0.1}>
+        {/* chart-legend-audit:skip uncertainty bounds and estimate form one modeled interval and must remain visible together */}
         <ChartContainer
           title={t('advancedIntelligence.twin.uncertainty.title', 'Range-effect uncertainty comparison')}
           subtitle={t(

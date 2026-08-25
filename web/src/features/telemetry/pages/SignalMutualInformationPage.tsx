@@ -43,6 +43,38 @@ export default function SignalMutualInformationPage() {
   const signalsQuery = useSignals(id);
   const historyA = useSignalHistory(id, signalA, HISTORY_HOURS);
   const historyB = useSignalHistory(id, signalB, HISTORY_HOURS);
+  const signalAChosen = signalA !== '';
+  const signalBChosen = signalB !== '';
+  const bothChosen = signalAChosen && signalBChosen;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'signal-catalog',
+        label: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+        query: signalsQuery,
+      },
+      {
+        id: 'signal-a-history',
+        label: t('dataSources.labels.signalAHistory', 'Signal A history'),
+        query: historyA,
+        enabled: signalAChosen,
+      },
+      {
+        id: 'signal-b-history',
+        label: t('dataSources.labels.signalBHistory', 'Signal B history'),
+        query: historyB,
+        enabled: signalBChosen,
+      },
+    ],
+    [
+      historyA,
+      historyB,
+      signalAChosen,
+      signalBChosen,
+      signalsQuery,
+      t,
+    ],
+  );
   const options = useMemo(
     () => (signalsQuery.data ?? []).map((name) => ({ value: name, label: name })),
     [signalsQuery.data],
@@ -68,11 +100,20 @@ export default function SignalMutualInformationPage() {
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('signalMutualInformation.title', 'Signal Mutual Information')} />;
   }
-  const bothChosen = signalA !== '' && signalB !== '';
-  const isLoading = signalsQuery.isLoading ||
-    (bothChosen && (historyA.isLoading || historyB.isLoading));
-  const isError = signalsQuery.isError || historyA.isError || historyB.isError;
-  const error = signalsQuery.error ?? historyA.error ?? historyB.error;
+  const historyAHasData = historyA.data !== undefined;
+  const historyBHasData = historyB.data !== undefined;
+  const isLoading = bothChosen && (
+    (!historyAHasData && historyA.isLoading)
+    || (!historyBHasData && historyB.isLoading)
+  );
+  const isError = bothChosen && (
+    (historyA.isError && !historyAHasData)
+    || (historyB.isError && !historyBHasData)
+  );
+  const error =
+    historyA.isError && !historyAHasData
+      ? historyA.error
+      : historyB.error;
   const maxContribution = Math.max(
     0,
     ...(result?.cells ?? []).map((cell) => Math.abs(cell.contribution)),
@@ -86,6 +127,7 @@ export default function SignalMutualInformationPage() {
       )}
       actions={<VehicleSelect />}
       query={[signalsQuery, historyA, historyB]}
+      dataSources={dataSources}
     >
       <FadeIn>
         <GlassPanel className="p-4 sm:p-5">

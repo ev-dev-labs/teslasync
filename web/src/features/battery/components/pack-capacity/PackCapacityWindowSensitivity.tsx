@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -67,20 +68,37 @@ export function PackCapacityWindowSensitivity({
           'packCapacity.windowSensitivity.aria',
           'Capacity estimate sensitivity to minimum state of charge window',
         )}
-        height={320}
+        size="standard"
         loading={state.isLoading}
         empty={false}
         exportable={state.isResolved && !state.error}
         exportData={rows}
         data={rows}
+        dataColumns={[
+          {
+            key: 'threshold',
+            label: t('packCapacity.columns.minimumSocWindow', 'Minimum SoC window'),
+          },
+          { key: 'included', label: t('packCapacity.series.included', 'Included sessions') },
+          {
+            key: 'current',
+            label: `${t('packCapacity.series.current', 'Current estimate')} (${energyUnit})`,
+          },
+          {
+            key: 'sigma',
+            label: `${t('packCapacity.series.sigma', 'Posterior sigma')} (${energyUnit})`,
+          },
+        ]}
+        chartKey="pack-capacity-window-sensitivity"
       >
-        <PackCapacitySectionBody
-          result={result}
-          state={state}
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows}>
+        {({ hiddenSeries }) => (
+          <PackCapacitySectionBody
+            result={result}
+            state={state}
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -109,6 +127,7 @@ export function PackCapacityWindowSensitivity({
                 width={72}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 yAxisId="count"
                 dataKey="included"
@@ -119,6 +138,7 @@ export function PackCapacityWindowSensitivity({
                 fill={chartTokens.series[0]}
                 fillOpacity={0.55}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('included')}
               />
               <Line
                 yAxisId="energy"
@@ -130,6 +150,7 @@ export function PackCapacityWindowSensitivity({
                 stroke={chartTokens.series[1]}
                 strokeWidth={2.5}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('current')}
               />
               <Line
                 yAxisId="energy"
@@ -141,10 +162,12 @@ export function PackCapacityWindowSensitivity({
                 stroke={chartTokens.series[4]}
                 strokeWidth={2}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('sigma')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </PackCapacitySectionBody>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </PackCapacitySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

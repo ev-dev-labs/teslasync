@@ -322,7 +322,7 @@ describe('WeeklySummaryCardWidget — lifecycle', () => {
     const refetch = vi.fn();
     renderWidget({ size: TALL, query: makeQuery({ refetch }) });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

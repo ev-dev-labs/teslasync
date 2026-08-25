@@ -72,6 +72,16 @@ vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ unitPrefs: { temperature: state.temperature } }),
 }));
 
+// ── Hidden series: no-op stub so useHiddenSeries doesn't need a Router. ──
+vi.mock('@/hooks/useHiddenSeries', () => ({
+  useHiddenSeries: () => ({
+    hidden: new Set<string>(),
+    toggle: () => undefined,
+    isHidden: () => false,
+    reset: () => undefined,
+  }),
+}));
+
 // ── charts barrel double: ResponsiveContainer + LineChart render their children
 //    so the series / data / reference bindings surface as testable DOM.
 //    ChartContainer mirrors the real loading → empty → children precedence and
@@ -82,10 +92,10 @@ vi.mock('@/components/charts', () => {
   return {
     AREA_DEFAULTS: { type: 'monotone', strokeWidth: 2 },
     ChartTooltip: Inert,
+    ChartLegend: Inert,
     Tooltip: Inert,
     CartesianGrid: Inert,
     YAxis: Inert,
-    Legend: Inert,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     ChartContainer: ({
       title,

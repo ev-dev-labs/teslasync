@@ -150,8 +150,16 @@ export function OperationsSection() {
                 </div>
               </>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when the stats endpoint returns no body; refetch happens automatically on the 15s interval */
-                message={t('No notification data available')}
+              // no-action: notification metrics appear automatically after the first delivery.
+              <EmptyState
+                message={t(
+                  'system.empty.notifications',
+                  'No notification activity has been recorded.',
+                )}
+                description={t(
+                  'system.empty.notificationsDescription',
+                  'Delivery totals and channel health appear after alerts or system messages send notifications.',
+                )}
                 className="py-8"
               />
             )}

@@ -30,6 +30,12 @@ import { MemoryRouter } from 'react-router-dom';
 import { isValidElement, type ReactElement, type ReactNode } from 'react';
 import { Car, Shield, Snowflake, Zap } from 'lucide-react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // jsdom lacks matchMedia; framer-motion (<FadeIn>) reads it at module load for
 // the reduced-motion preference. Install a no-op before any import runs.
 vi.hoisted(() => {

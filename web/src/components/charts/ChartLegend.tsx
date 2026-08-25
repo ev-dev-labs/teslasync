@@ -2,6 +2,7 @@ import { Legend } from 'recharts'
 import { useChartHiddenSeries } from './ChartHiddenSeriesContext'
 import type { ChartLegendState } from './useChartLegendState'
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries'
+import { Button } from '@/components/ui'
 
 /**
  * Recharts' Legend payload uses its `DataKey<any>` type (string | number |
@@ -98,16 +99,43 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
   const seriesKey = pickKey(entry, value)
   const interactive = resolved != null
   const dimmed = interactive ? resolved.isHidden(seriesKey) : false
+  const sharedProps = {
+    style: {
+      opacity: dimmed ? 0.4 : 1,
+      textDecoration: dimmed ? 'line-through' : 'none',
+      cursor: interactive ? 'pointer' : 'default',
+    },
+    'data-series-key': seriesKey,
+    'data-series-hidden': dimmed ? 'true' : 'false',
+  } as const
+
+  if (interactive) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-auto min-h-0 rounded-none p-0 font-normal hover:bg-transparent"
+        aria-pressed={dimmed}
+        onClick={(event) => {
+          event.stopPropagation()
+          toggleFromLegend(resolved, {
+            ...entry,
+            value:
+              entry?.value
+              ?? (typeof value === 'string' || typeof value === 'number' ? value : undefined),
+          })
+        }}
+        {...sharedProps}
+      >
+        {value}
+      </Button>
+    )
+  }
+
   return (
     <span
-      style={{
-        opacity: dimmed ? 0.4 : 1,
-        textDecoration: dimmed ? 'line-through' : 'none',
-        cursor: interactive ? 'pointer' : 'default',
-      }}
-      aria-pressed={interactive ? dimmed : undefined}
-      data-series-key={seriesKey}
-      data-series-hidden={dimmed ? 'true' : 'false'}
+      {...sharedProps}
     >
       {value}
     </span>

@@ -1,14 +1,14 @@
 import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, Gauge, Zap } from 'lucide-react';
+import { Activity, Gauge } from 'lucide-react';
 
 import {
   Bar,
   BarChart,
   Cell,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
-  Legend,
   Pie,
   PieChart,
   ResponsiveContainer,
@@ -81,6 +81,9 @@ export default function BatteryChargingCharts({
     [analysis.charge_level_distribution],
   );
   const energyBreakdown = useMemo(() => computeEnergyBreakdown(analysis), [analysis]);
+  const energyBreakdownRows = energyBreakdown?.pieData ?? [];
+  const hasChargeLevelData =
+    analysis.total_sessions > 0 && chargeLevelDistribution.length > 0;
 
   return (
     <>
@@ -89,32 +92,49 @@ export default function BatteryChargingCharts({
         fallbackTitle={t('battery.section.chargeDistFailed', 'Charge level distribution failed to load')}
       >
         <FadeIn delay={0.25}>
-          <GlassPanel className="p-4 sm:p-5">
-            <div className="mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <SectionTitle className="flex items-center gap-2">
-                <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
-                {t('battery.chart.chargeDist', 'Charge Level Distribution')}
-              </SectionTitle>
-              <Text size="2xs" color="muted">
-                {t('battery.chart.chargeDistSub', 'Recent 100 sessions')}
-              </Text>
-            </div>
-            {analysis.total_sessions > 0 && chargeLevelDistribution.length > 0 ? (
-              <>
-                <div className="h-44 sm:h-56 2xl:h-64">
+          <ChartContainer
+            title={t('battery.chart.chargeDist', 'Charge Level Distribution')}
+            subtitle={t('battery.chart.chargeDistSub', 'Recent 100 sessions')}
+            ariaLabel={t(
+              'battery.chart.chargeDistAria',
+              'Distribution of charging-session start and end battery levels',
+            )}
+            size="detail"
+            empty={!hasChargeLevelData}
+            emptyMessage={t('battery.chart.noSessions', 'No charging session data yet')}
+            data={chargeLevelDistribution}
+            dataColumns={[
+              { key: 'range', label: t('battery.chart.chargeBand', 'Battery level') },
+              {
+                key: 'startCount',
+                label: t('battery.chart.chargeStarted', 'Charge Started'),
+              },
+              {
+                key: 'endCount',
+                label: t('battery.chart.chargeEnded', 'Charge Ended'),
+              },
+            ]}
+            exportData={chargeLevelDistribution}
+            exportFilename="charge-level-distribution"
+            chartKey="battery-charge-level-distribution"
+          >
+            {({ hiddenSeries }) => (
+              <div className="flex h-full flex-col">
+                <div className="min-h-0 flex-1">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chargeLevelDistribution}>
                       {chartGrid}
                       <XAxis dataKey="range" tick={axisTickSm} tickLine={false} axisLine={false} />
                       <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Legend />
+                      <ChartLegend />
                       <Bar
                         dataKey="startCount"
                         name={t('battery.chart.chargeStarted', 'Charge Started')}
                         fill="#ef4444"
                         fillOpacity={0.5}
                         radius={[3, 3, 0, 0]}
+                        hide={hiddenSeries?.isHidden('startCount')}
                       />
                       <Bar
                         dataKey="endCount"
@@ -122,11 +142,12 @@ export default function BatteryChargingCharts({
                         fill="#10b981"
                         fillOpacity={0.5}
                         radius={[3, 3, 0, 0]}
+                        hide={hiddenSeries?.isHidden('endCount')}
                       />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                <div className="mt-3 grid shrink-0 grid-cols-2 gap-3 sm:grid-cols-4">
                   <HabitStat
                     value={
                       analysis.avg_start_soc_pct == null
@@ -155,15 +176,9 @@ export default function BatteryChargingCharts({
                     accent="text-cyan-300"
                   />
                 </div>
-              </>
-            ) : (
-              <EmptyState
-                icon={<Zap className="h-8 w-8" aria-hidden="true" />}
-                message={t('battery.chart.noSessions', 'No charging session data yet')}
-                className="py-8"
-              />
+              </div>
             )}
-          </GlassPanel>
+          </ChartContainer>
         </FadeIn>
       </SectionErrorBoundary>
 
@@ -179,41 +194,39 @@ export default function BatteryChargingCharts({
             <ChartContainer
               className="h-full"
               title={t('battery.chart.acdc', 'AC / DC Energy Breakdown')}
-              ariaLabel={t('battery.chart.acdc.aria', 'AC versus DC energy share pie chart')}
-              exportable
+              ariaLabel={t('battery.chart.acdcAria', 'AC versus DC energy share pie chart')}
+              size="compact"
+              empty={energyBreakdownRows.length === 0}
+              emptyMessage={t('battery.chart.noBreakdown', 'No charging data for breakdown')}
+              data={energyBreakdownRows}
+              dataColumns={[
+                { key: 'name', label: t('battery.chart.chargingType', 'Charging type') },
+                { key: 'value', label: t('battery.chart.energyKwh', 'Energy (kWh)') },
+              ]}
+              exportData={energyBreakdownRows}
               exportFilename="energy-breakdown"
             >
-              {energyBreakdown ? (
-                <div className="h-52 2xl:h-60">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={energyBreakdown.pieData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        innerRadius={40}
-                        strokeWidth={2}
-                        stroke="rgba(0,0,0,0.3)"
-                      >
-                        {energyBreakdown.pieData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.fill} />
-                        ))}
-                      </Pie>
-                      <Legend />
-                      <Tooltip content={<ChartTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : (
-                <EmptyState
-                  icon={<Zap className="h-8 w-8" aria-hidden="true" />}
-                  message={t('battery.chart.noBreakdown', 'No charging data for breakdown')}
-                  className="py-8"
-                />
-              )}
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={energyBreakdownRows}
+                    dataKey="value"
+                    nameKey="name"
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={80}
+                    innerRadius={40}
+                    strokeWidth={2}
+                    stroke="rgba(0,0,0,0.3)"
+                  >
+                    {energyBreakdownRows.map((entry) => (
+                      <Cell key={entry.name} fill={entry.fill} />
+                    ))}
+                  </Pie>
+                  <ChartLegend />
+                  <Tooltip content={<ChartTooltip />} />
+                </PieChart>
+              </ResponsiveContainer>
             </ChartContainer>
 
             <GlassPanel className="h-full p-4 sm:p-5">

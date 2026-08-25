@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
   ChartContainer,
+  ChartLegend,
   AreaChart,
   Area,
   XAxis,
@@ -124,11 +125,13 @@ function TimelineChart({
       title={t('replay.timeline.title', 'Speed & Power Timeline')}
       subtitle={t('replay.timeline.subtitle', 'Click to seek replay position')}
       ariaLabel={t('replay.timeline.aria', 'Trip replay speed and power timeline area chart')}
+      chartKey="trip-replay-speed-power"
       height={height}
     >
-      {data.length > 0 ? (
-        <ResponsiveContainer width="100%" height={height}>
-          <AreaChart
+      {({ hiddenSeries }) => (
+        data.length > 0 ? (
+          <ResponsiveContainer width="100%" height={height}>
+            <AreaChart
             data={data}
             className="cursor-pointer"
             syncId={syncProps.syncId}
@@ -178,6 +181,7 @@ function TimelineChart({
             <Tooltip
               content={<ChartTooltip labelFormatter={(v) => `${fmt(v, 1)} min`} />}
             />
+            <ChartLegend />
             <Area
               {...AREA_DEFAULTS}
               yAxisId="speed"
@@ -186,6 +190,7 @@ function TimelineChart({
               stroke={CHART_COLORS[0]}
               fill="url(#speedGrad)"
               isAnimationActive={false}
+              hide={hiddenSeries?.isHidden('speed')}
             />
             <Area
               {...AREA_DEFAULTS}
@@ -195,6 +200,7 @@ function TimelineChart({
               stroke={CHART_COLORS[1]}
               fill="url(#powerGrad)"
               isAnimationActive={false}
+              hide={hiddenSeries?.isHidden('power')}
             />
             {cursorTime != null && (
               <ReferenceLine
@@ -205,13 +211,14 @@ function TimelineChart({
                 yAxisId="speed"
               />
             )}
-          </AreaChart>
-        </ResponsiveContainer>
-      ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-          icon={<Activity className="h-6 w-6" />}
-          message={t('replay.timeline.noData', 'No telemetry data available')}
-        />
+            </AreaChart>
+          </ResponsiveContainer>
+        ) : (
+          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+            icon={<Activity className="h-6 w-6" />}
+            message={t('replay.timeline.noData', 'No telemetry data available')}
+          />
+        )
       )}
     </ChartContainer>
   );

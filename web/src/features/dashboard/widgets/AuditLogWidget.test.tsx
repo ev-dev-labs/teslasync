@@ -216,7 +216,7 @@ describe('AuditLogWidget — feed view (wide)', () => {
     renderWidget({ size: { cols: 3, rows: 2 } });
     expect(screen.getByText('No audit events')).toBeInTheDocument();
     // Refresh affordance is still present and accessible in the empty state.
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
@@ -276,7 +276,7 @@ describe('AuditLogWidget — loading / error / refresh', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Audit Log')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('surfaces a genuine load error as an error panel instead of a misleading empty state', () => {
@@ -299,7 +299,7 @@ describe('AuditLogWidget — loading / error / refresh', () => {
     mockUseSecurityEvents.mockReturnValue(makeQuery({ data: [], refetch: secRefetch }));
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(auditRefetch).toHaveBeenCalledTimes(1);
     expect(secRefetch).toHaveBeenCalledTimes(1);

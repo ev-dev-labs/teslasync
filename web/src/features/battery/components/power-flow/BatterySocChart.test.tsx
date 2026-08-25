@@ -227,12 +227,13 @@ describe('BatterySocChart — error branch', () => {
 });
 
 describe('BatterySocChart — loading branch', () => {
-  it('shows the spinner inside the accessible chart frame, not the empty state', () => {
+  it('shows the chart skeleton inside the accessible figure, not the empty state', () => {
     renderChart({ loading: true, data: [] });
 
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: ARIA_LABEL })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: TITLE })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: ARIA_LABEL })).toBeNull();
+    expect(screen.getByRole('status', { name: 'Loading chart…' })).toBeInTheDocument();
     expect(screen.queryByText('No data available')).toBeNull();
   });
 });
@@ -243,7 +244,8 @@ describe('BatterySocChart — empty branch', () => {
 
     expect(screen.getByText('No data available')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: ARIA_LABEL })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: TITLE })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: ARIA_LABEL })).toBeNull();
     // Not the loading spinner.
     expect(screen.queryByRole('status', { name: 'Loading' })).toBeNull();
   });

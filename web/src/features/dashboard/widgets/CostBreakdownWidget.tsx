@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { PieChart as PieIcon, DollarSign, TrendingDown, Fuel } from 'lucide-react';
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer, useThemeChartPalette,
+  EmbeddedChart,
+  type ChartDataRow,
 } from '@/components/charts';
 import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
@@ -17,7 +19,7 @@ import type { WidgetProps } from './types';
 
 const MI_TO_KM = 1.60934;
 
-interface DonutSegment {
+interface DonutSegment extends ChartDataRow {
   name: string;
   value: number;
   color: string;
@@ -175,13 +177,24 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
       {hasData ? (
         <div className="flex flex-col gap-3">
           {/* Donut chart */}
-          <div
-            className="h-[140px]"
-            role="img"
-            aria-label={t(
+          <EmbeddedChart
+            title={t('widget.costBreakdown.title', 'Cost Breakdown')}
+            ariaLabel={t(
               'widget.costBreakdown.chartLabel',
               'Monthly EV charging cost breakdown',
             )}
+            data={donutData}
+            dataColumns={[
+              { key: 'name', label: t('widget.costBreakdown.month', 'Month') },
+              {
+                key: 'value',
+                label: t('widget.costBreakdown.cost', 'Cost'),
+                format: (value) => formatCurrency(Number(value ?? 0)),
+              },
+            ]}
+            fluid={false}
+            height={140}
+            mobileHeight={140}
           >
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -205,7 +218,7 @@ export default function CostBreakdownWidget({ vehicleId, size }: WidgetProps) {
                 />
               </PieChart>
             </ResponsiveContainer>
-          </div>
+          </EmbeddedChart>
 
           {/* Monthly ranked list */}
           <WidgetRankedList

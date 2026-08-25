@@ -372,7 +372,7 @@ describe('SystemHealthWidget — states & interaction', () => {
     setup({ health: makeQuery({ data: makeHealth(), refetch }) });
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

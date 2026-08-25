@@ -11,6 +11,7 @@ import {
   BarChart,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -28,6 +29,7 @@ import { Badge, Button, DataTable, Input, Select, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ModelScorecard, Prediction } from '@/types/ownership';
@@ -101,6 +103,8 @@ export default function ModelTrustPage() {
   const [outcomeDraft, setOutcomeDraft] = useState({ observed_value: 0 });
 
   usePageTitle(t('ownership.trust.navTitle', 'Prediction Accuracy Lab'));
+
+  const calibrationHidden = useHiddenSeries('model-trust-calibration');
 
   const trustQuery = useModelTrust(vehicleId, windowDays);
   const recordPrediction = useRecordPrediction();
@@ -549,6 +553,7 @@ export default function ModelTrustPage() {
               },
             ]}
             height={280}
+            chartKey="model-trust-calibration"
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={calibrationData} margin={chartMargin}>
@@ -556,8 +561,21 @@ export default function ModelTrustPage() {
                 <XAxis dataKey="name" tick={axisTick} />
                 <YAxis tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="error" fill="rgba(34,211,238,0.65)" radius={[4, 4, 0, 0]} />
-                <Bar dataKey="bias" fill="rgba(251,191,36,0.5)" radius={[4, 4, 0, 0]} />
+                <ChartLegend state={calibrationHidden} />
+                <Bar
+                  dataKey="error"
+                  name={t('ownership.trust.calibration.col.error', 'Mean absolute error')}
+                  fill="rgba(34,211,238,0.65)"
+                  radius={[4, 4, 0, 0]}
+                  hide={calibrationHidden.isHidden('error')}
+                />
+                <Bar
+                  dataKey="bias"
+                  name={t('ownership.trust.calibration.col.bias', 'Mean bias')}
+                  fill="rgba(251,191,36,0.5)"
+                  radius={[4, 4, 0, 0]}
+                  hide={calibrationHidden.isHidden('bias')}
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

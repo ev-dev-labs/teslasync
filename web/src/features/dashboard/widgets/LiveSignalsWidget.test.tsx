@@ -284,7 +284,7 @@ describe('LiveSignalsWidget — rendering', () => {
     render(<LiveSignalsWidget size={STANDARD} />);
 
     // The freshness indicator is exposed as an accessible "Refresh" button.
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

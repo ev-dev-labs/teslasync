@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   Line,
   LineChart,
@@ -65,20 +66,36 @@ export function PackCapacityProcessSensitivity({
           'packCapacity.processSensitivity.aria',
           'Capacity estimate sensitivity to process uncertainty',
         )}
-        height={320}
+        size="standard"
         loading={state.isLoading}
         empty={false}
         exportable={state.isResolved && !state.error}
         exportData={rows}
         data={rows}
+        dataColumns={[
+          {
+            key: 'noise',
+            label: t('packCapacity.columns.processNoise', 'Process noise (Wh / square-root day)'),
+          },
+          {
+            key: 'current',
+            label: `${t('packCapacity.series.current', 'Current estimate')} (${energyUnit})`,
+          },
+          {
+            key: 'sigma',
+            label: `${t('packCapacity.series.sigma', 'Posterior sigma')} (${energyUnit})`,
+          },
+        ]}
+        chartKey="pack-capacity-process-sensitivity"
       >
-        <PackCapacitySectionBody
-          result={result}
-          state={state}
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows}>
+        {({ hiddenSeries }) => (
+          <PackCapacitySectionBody
+            result={result}
+            state={state}
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -99,6 +116,7 @@ export function PackCapacityProcessSensitivity({
                 width={72}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Line
                 dataKey="current"
                 name={t(
@@ -108,6 +126,7 @@ export function PackCapacityProcessSensitivity({
                 stroke={chartTokens.series[1]}
                 strokeWidth={2.5}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('current')}
               />
               <Line
                 dataKey="sigma"
@@ -118,10 +137,12 @@ export function PackCapacityProcessSensitivity({
                 stroke={chartTokens.series[4]}
                 strokeWidth={2}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('sigma')}
               />
-            </LineChart>
-          </ResponsiveContainer>
-        </PackCapacitySectionBody>
+              </LineChart>
+            </ResponsiveContainer>
+          </PackCapacitySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

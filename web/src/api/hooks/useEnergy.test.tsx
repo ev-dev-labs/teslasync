@@ -405,59 +405,60 @@ describe('useSleepEfficiency', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Deprecated vampire-drain hooks — guaranteed 404, must fail fast (retry:false)
+// Canonical vampire-drain hooks — FSM/signal-history derived API shape
 // ---------------------------------------------------------------------------
 
-describe('useVampireDrainStats (deprecated)', () => {
+describe('useVampireDrainStats', () => {
   it('GETs /vampire-drain/stats with a snake_case vehicle_id param', async () => {
-    mockedRequest.mockResolvedValueOnce({ event_count: 0 });
+    mockedRequest.mockResolvedValueOnce({
+      event_count: 1,
+      total_observed_hours: 24,
+      avg_drain_pct_per_day: 1.2,
+      median_drain_pct_per_day: 1.1,
+      p95_drain_pct_per_day: 2.4,
+      sample_window_days: 90,
+    });
     const { result } = renderHook(() => useVampireDrainStats('7'), { wrapper: makeWrapper(makeClient()) });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calledUrl()).toBe('/vampire-drain/stats?vehicle_id=7');
-  });
-
-  it('fails fast without retrying the known-dead endpoint', async () => {
-    mockedRequest.mockRejectedValue(new Error('HTTP 404'));
-    const { result } = renderHook(() => useVampireDrainStats('7'), {
-      wrapper: makeWrapper(makeRetryingClient()),
-    });
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    // The retrying client would fire four times (1 + 3) if the hook did not
-    // pin retry:false. Exactly one call proves the fail-fast hardening.
-    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(result.current.data?.avg_drain_pct_per_day).toBe(1.2);
   });
 });
 
-describe('useVampireDrainEvents (deprecated)', () => {
-  it('GETs /vampire-drain with vehicle_id and a default limit of 50', async () => {
-    mockedRequest.mockResolvedValueOnce([{ id: 1 }]);
+describe('useVampireDrainEvents', () => {
+  it('GETs /vampire-drain with vehicle_id and unwraps the response envelope', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      vehicle_id: 7,
+      events: [{
+        started_at: '2025-01-01T00:00:00Z',
+        ended_at: '2025-01-02T00:00:00Z',
+        duration_hours: 24,
+        start_battery_pct: 80,
+        end_battery_pct: 79,
+        drain_pct: 1,
+        drain_pct_per_day: 1,
+        ambient_temp_c_avg: null,
+      }],
+    });
     const { result } = renderHook(() => useVampireDrainEvents('7'), { wrapper: makeWrapper(makeClient()) });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(calledUrl()).toBe('/vampire-drain?vehicle_id=7&limit=50');
-    expect(result.current.data).toEqual([{ id: 1 }]);
+    expect(result.current.data).toHaveLength(1);
+    expect(result.current.data?.[0]?.drain_pct_per_day).toBe(1);
   });
 
   it('honours a custom limit', async () => {
-    mockedRequest.mockResolvedValueOnce([]);
+    mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, events: [] });
     renderHook(() => useVampireDrainEvents('7', 10), { wrapper: makeWrapper(makeClient()) });
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(calledUrl()).toBe('/vampire-drain?vehicle_id=7&limit=10');
   });
 
-  it('coerces a non-array payload to [] via safeArray select', async () => {
-    mockedRequest.mockResolvedValueOnce(null);
+  it('coerces a null events field to [] via safeArray select', async () => {
+    mockedRequest.mockResolvedValueOnce({ vehicle_id: 7, events: null });
     const { result } = renderHook(() => useVampireDrainEvents('7'), { wrapper: makeWrapper(makeClient()) });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data).toEqual([]);
-  });
-
-  it('fails fast without retrying the known-dead endpoint', async () => {
-    mockedRequest.mockRejectedValue(new Error('HTTP 404'));
-    const { result } = renderHook(() => useVampireDrainEvents('7'), {
-      wrapper: makeWrapper(makeRetryingClient()),
-    });
-    await waitFor(() => expect(result.current.isError).toBe(true));
-    expect(mockedRequest).toHaveBeenCalledTimes(1);
   });
 });
 

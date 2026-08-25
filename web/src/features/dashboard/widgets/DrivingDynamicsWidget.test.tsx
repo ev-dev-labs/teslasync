@@ -99,6 +99,12 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // `useThemeChartPalette()` (called unconditionally at the top of the widget)
 // reaches `useTheme()`, which throws outside a <ThemeProvider>. Stub only the
 // hook — keep the real ThemeProvider component + tokens — and hand

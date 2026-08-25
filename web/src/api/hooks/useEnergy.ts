@@ -14,6 +14,7 @@ import type {
   EnergyFlowData,
   VampireDrainStats,
   VampireDrainEvent,
+  VampireDrainEventsResponse,
   ProjectedRangeData,
   SleepEfficiencyData,
   TeslaEnergyHistoryEntry,
@@ -99,41 +100,24 @@ export function useEnergyFlow(vehicleId: string | null) {
   });
 }
 
-/**
- * DEPRECATED. The backend `/vampire-drain/stats`
- * route was deleted alongside the `vampire_drain_events` table; this hook
- * will reliably 404 in production. Kept (not removed) because the
- * `features/dashboard` VampireDrainWidget and the legacy VampireDrainPage
- * still call it; their UI surfaces the resulting query error gracefully.
- * A future replacement should derive vampire-drain metrics from `signal_log`
- * (BatteryLevel + IdleNumberOfMinutes) and route through `useSleepEfficiency`
- * style aggregates.
- */
+/** Fetches 90-day parked, non-charging drain statistics derived from canonical history. */
 export function useVampireDrainStats(vehicleId: string | null) {
   return useQuery({
     queryKey: ['vampire-drain-stats', vehicleId],
     queryFn: ({ signal }) => request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${vehicleId}`, { signal }),
     enabled: vehicleId !== null,
-    // Deleted backend route → guaranteed 404. Don't burn three
-    // exponential-backoff retries on a known-dead endpoint; surface the
-    // error immediately so the widget renders its graceful fallback.
-    retry: false,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 
-/**
- * DEPRECATED. See `useVampireDrainStats` for the
- * deletion rationale and migration plan. Returns 404 from the backend.
- */
+/** Fetches parked, non-charging drain windows and unwraps the API envelope. */
 export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {
   return useQuery({
     queryKey: ['vampire-drain-events', vehicleId, limit],
-    queryFn: ({ signal }) => request<VampireDrainEvent[]>(`/vampire-drain?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
+    queryFn: ({ signal }) => request<VampireDrainEventsResponse>(`/vampire-drain?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
     enabled: vehicleId !== null,
-    // Same deleted-route rationale as useVampireDrainStats — fail fast
-    // rather than retrying a guaranteed 404.
-    retry: false,
-    select: safeArray,
+    staleTime: STALE_TIMES.STANDARD,
+    select: (response): VampireDrainEvent[] => safeArray(response?.events),
   });
 }
 

@@ -60,27 +60,31 @@ vi.mock('react-i18next', () => ({
 // data-* attributes to make the segment count, series name and per-bucket
 // fills observable.
  
-vi.mock('@/components/charts', () => ({
-  ResponsiveContainer: ({ children }: any) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-  BarChart: ({ children, data }: any) => (
-    <div data-testid="bar-chart" data-count={String((data ?? []).length)}>
-      {children}
-    </div>
-  ),
-  Bar: ({ children, name, dataKey }: any) => (
-    <div data-testid="bar" data-name={String(name)} data-key={String(dataKey)}>
-      {children}
-    </div>
-  ),
-  Cell: ({ fill }: any) => <div data-testid="cell" data-fill={String(fill)} />,
-  XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={String(dataKey)} />,
-  YAxis: () => <div data-testid="y-axis" />,
-  CartesianGrid: () => <div data-testid="cartesian-grid" />,
-  Tooltip: () => <div data-testid="tooltip" />,
-  ChartTooltip: () => <div data-testid="chart-tooltip" />,
-}));
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ResponsiveContainer: ({ children }: any) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
+    BarChart: ({ children, data }: any) => (
+      <div data-testid="bar-chart" data-count={String((data ?? []).length)}>
+        {children}
+      </div>
+    ),
+    Bar: ({ children, name, dataKey }: any) => (
+      <div data-testid="bar" data-name={String(name)} data-key={String(dataKey)}>
+        {children}
+      </div>
+    ),
+    Cell: ({ fill }: any) => <div data-testid="cell" data-fill={String(fill)} />,
+    XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={String(dataKey)} />,
+    YAxis: () => <div data-testid="y-axis" />,
+    CartesianGrid: () => <div data-testid="cartesian-grid" />,
+    Tooltip: () => <div data-testid="tooltip" />,
+    ChartTooltip: () => <div data-testid="chart-tooltip" />,
+  };
+});
 
 // Feedback barrel double. <QueryError> reaches for a Router (useNavigate) which
 // a bare render() doesn't provide; the stand-ins surface only what the panel

@@ -22,6 +22,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ChartTooltip,
+  EmbeddedChart,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 
@@ -91,6 +92,10 @@ export function SignalGapHealthPanel({ analysis, hasVehicle }: SignalGapHealthPa
 function DistributionBody({ segments, buckets }: { segments: BucketSegment[]; buckets: GapBuckets }) {
   const { t } = useTranslation();
   const total = buckets.total || 1;
+  const chartRows = useMemo(
+    () => segments.map(({ label, count }) => ({ label, count })),
+    [segments],
+  );
 
   return (
     <div className="space-y-4">
@@ -129,7 +134,15 @@ function DistributionBody({ segments, buckets }: { segments: BucketSegment[]; bu
         ))}
       </div>
 
-      <div className="h-56 sm:h-64">
+      <EmbeddedChart
+        title={t('signalGap.distributionTitle', 'Signal Health Distribution')}
+        ariaLabel={t('signalGap.chartAria', 'Signal staleness bucket counts by category')}
+        data={chartRows}
+        dataColumns={[
+          { key: 'label', label: t('signalGap.segmentLabel', 'Category') },
+          { key: 'count', label: t('signalGap.signals', 'Signals') },
+        ]}
+      >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={segments} margin={{ top: 8, right: 8, bottom: 4, left: -12 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
@@ -143,7 +156,7 @@ function DistributionBody({ segments, buckets }: { segments: BucketSegment[]; bu
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-      </div>
+      </EmbeddedChart>
     </div>
   );
 }

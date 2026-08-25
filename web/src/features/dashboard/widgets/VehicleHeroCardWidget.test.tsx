@@ -516,7 +516,7 @@ describe('VehicleHeroCardWidget — vehicle resolution + refresh', () => {
     const refetch = vi.fn();
     renderWidget(FULL, { state: makeStateQuery({ refetch, isFetching: false }) });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

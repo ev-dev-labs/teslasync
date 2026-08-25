@@ -58,33 +58,36 @@ vi.mock('@/components/motion', () => ({
 // `SmallMultiplesChart` echo their bound props as data-* attributes so the
 // mode/axis/animation wiring is observable without recharts' real layout.
  
-vi.mock('@/components/charts', () => ({
-  ResponsiveContainer: ({ children }: any) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-  LineChart: ({ children, margin }: any) => (
-    <div data-testid="line-chart" data-margin-right={String(margin?.right)}>
-      {children}
-    </div>
-  ),
-  Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke }: any) => (
-    <div
-      data-testid="line"
-      data-key={String(dataKey)}
-      data-name={String(name)}
-      data-yaxis={String(yAxisId)}
-      data-animated={String(isAnimationActive)}
-      data-connect-nulls={String(connectNulls)}
-      data-stroke={String(stroke)}
-    />
-  ),
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartLegend: chartTestDoubles.ChartLegend,
+    ResponsiveContainer: ({ children }: any) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
+    LineChart: ({ children, margin }: any) => (
+      <div data-testid="line-chart" data-margin-right={String(margin?.right)}>
+        {children}
+      </div>
+    ),
+    Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke }: any) => (
+      <div
+        data-testid="line"
+        data-key={String(dataKey)}
+        data-name={String(name)}
+        data-yaxis={String(yAxisId)}
+        data-animated={String(isAnimationActive)}
+        data-connect-nulls={String(connectNulls)}
+        data-stroke={String(stroke)}
+      />
+    ),
   XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={String(dataKey)} />,
   YAxis: ({ yAxisId, orientation }: any) => (
     <div data-testid={`y-axis-${yAxisId}`} data-orientation={orientation ?? 'left'} />
   ),
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
-  Legend: () => <div data-testid="legend" />,
   SmallMultiplesChart: ({ series, cellHeight, syncId }: any) => (
     <div
       data-testid="small-multiples"
@@ -93,7 +96,8 @@ vi.mock('@/components/charts', () => ({
       data-sync-id={String(syncId)}
     />
   ),
-}));
+  };
+});
  
 
 import { SignalChartPanel, type SignalChartPanelProps } from './SignalChartPanel';
@@ -253,7 +257,7 @@ describe('SignalChartPanel — loading state', () => {
     renderPanel({ loading: true, isLive: true, data: [] });
 
     expect(screen.queryByRole('status', { name: /Loading chart/ })).toBeNull();
-    expect(screen.getByText(/Waiting for signal data/)).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for live signal data/)).toBeInTheDocument();
   });
 });
 
@@ -261,24 +265,26 @@ describe('SignalChartPanel — loading state', () => {
 
 describe('SignalChartPanel — empty states', () => {
   it('shows the historical empty state announced via role=status', () => {
-    const { container } = renderPanel({ data: [] });
+    renderPanel({ data: [] });
 
-    expect(screen.getByText('No data for this time range')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('No data for this time range');
-    expect(container.querySelector('.lucide-activity')).toHaveAttribute(
-      'aria-hidden',
-      'true',
+    expect(
+      screen.getByText('No signal samples were recorded in this time range.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No signal samples were recorded in this time range.',
     );
+    expect(screen.getByText(/Expand the range or select another signal/)).toBeInTheDocument();
     expect(screen.queryByTestId('line-chart')).toBeNull();
   });
 
   it('shows the live waiting state with decorative radio glyphs', () => {
     const { container } = renderPanel({ isLive: true, data: [] });
 
-    expect(screen.getByText(/Waiting for signal data/)).toBeInTheDocument();
-    // Header glyph + waiting glyph — both decorative.
+    expect(screen.getByText(/Waiting for live signal data/)).toBeInTheDocument();
+    expect(screen.getByText(/publishes the chosen signals/)).toBeInTheDocument();
+    // Only the header glyph — EmbeddedChart's empty state does not add a Radio icon.
     const radios = container.querySelectorAll('.lucide-radio');
-    expect(radios).toHaveLength(2);
+    expect(radios).toHaveLength(1);
     radios.forEach((r) => expect(r).toHaveAttribute('aria-hidden', 'true'));
   });
 });
@@ -452,7 +458,9 @@ describe('SignalChartPanel — null-safety', () => {
     expect(() =>
       renderPanel({ data: undefined as unknown as SignalChartPanelProps['data'] }),
     ).not.toThrow();
-    expect(screen.getByText('No data for this time range')).toBeInTheDocument();
+    expect(
+      screen.getByText('No signal samples were recorded in this time range.'),
+    ).toBeInTheDocument();
   });
 
   it('tolerates an undefined selectedSignals list (zero lines, no crash)', () => {

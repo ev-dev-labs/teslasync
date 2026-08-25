@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
 import { Tooltip } from '@/components/ui';
 import { useLiveConnection, type LiveConnectionStatus } from '@/hooks/useLiveConnection';
 import { cn } from '@/lib/cn';
+import { PrefetchLink } from '../PrefetchLink';
 import { useStatusBarAnnouncer } from './StatusBarContext';
 
 /**
@@ -131,7 +131,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
 
   return (
     <Tooltip content={tooltipBody} side="top">
-      <Link
+      <PrefetchLink
         to="/signal-diff"
         aria-label={ariaLabel}
         className={cn(
@@ -161,7 +161,7 @@ export function LiveTelemetrySegment({ iconOnly = false }: LiveTelemetrySegmentP
             )}
           </>
         )}
-      </Link>
+      </PrefetchLink>
     </Tooltip>
   );
 }

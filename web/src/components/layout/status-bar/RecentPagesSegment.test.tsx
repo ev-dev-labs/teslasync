@@ -5,7 +5,12 @@ import {
   __resetRecentPagesForTests,
   recordPageView,
 } from '@/lib/recentPages';
+import { prefetchRoute } from '@/lib/routePrefetch';
 import { RecentPagesSegment } from './RecentPagesSegment';
+
+vi.mock('@/lib/routePrefetch', () => ({
+  prefetchRoute: vi.fn(),
+}));
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -34,6 +39,7 @@ function renderSegment(iconOnly = false) {
 describe('RecentPagesSegment', () => {
   beforeEach(() => {
     __resetRecentPagesForTests();
+    vi.mocked(prefetchRoute).mockClear();
   });
 
   afterEach(() => {
@@ -78,6 +84,9 @@ describe('RecentPagesSegment', () => {
     expect(rows[1]).toHaveTextContent('Drive 42');
     expect(rows[2]).toHaveTextContent('Model 3');
     expect(rows[0]).toHaveAttribute('href', '/charging/7');
+
+    fireEvent.mouseEnter(rows[0]);
+    expect(prefetchRoute).toHaveBeenCalledWith('/charging/7');
   });
 
   it('caps the popover at five entries while retaining the full saved count', () => {

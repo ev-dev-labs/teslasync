@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -67,20 +68,34 @@ export function PackCapacitySocWindowProfile({
           'packCapacity.socProfile.aria',
           'Measurement count and uncertainty by state of charge window',
         )}
-        height={320}
+        size="standard"
         loading={state.isLoading}
         empty={false}
         exportable={state.isResolved && !state.error}
         exportData={rows}
         data={rows}
+        dataColumns={[
+          { key: 'window', label: t('packCapacity.columns.socWindow', 'SoC window') },
+          { key: 'samples', label: t('packCapacity.series.samples', 'Qualified samples') },
+          {
+            key: 'median',
+            label: `${t('packCapacity.series.binMedian', 'Median implied capacity')} (${energyUnit})`,
+          },
+          {
+            key: 'relativeSigma',
+            label: t('packCapacity.series.binSigma', 'Mean relative sigma (%)'),
+          },
+        ]}
+        chartKey="pack-capacity-soc-window-profile"
       >
-        <PackCapacitySectionBody
-          result={result}
-          state={state}
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows}>
+        {({ hiddenSeries }) => (
+          <PackCapacitySectionBody
+            result={result}
+            state={state}
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -114,6 +129,7 @@ export function PackCapacitySocWindowProfile({
                 hide
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 yAxisId="count"
                 dataKey="samples"
@@ -124,6 +140,7 @@ export function PackCapacitySocWindowProfile({
                 fill={chartTokens.series[0]}
                 fillOpacity={0.58}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('samples')}
               />
               <Line
                 yAxisId="energy"
@@ -135,6 +152,7 @@ export function PackCapacitySocWindowProfile({
                 stroke={chartTokens.series[1]}
                 strokeWidth={2.5}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('median')}
               />
               <Line
                 yAxisId="percent"
@@ -146,10 +164,12 @@ export function PackCapacitySocWindowProfile({
                 stroke={chartTokens.series[4]}
                 strokeWidth={2}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('relativeSigma')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </PackCapacitySectionBody>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </PackCapacitySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

@@ -4,6 +4,7 @@ import { Sun } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useTeslaEnergyHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -11,7 +12,7 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   date: string;
   solar_kwh: number;
 }
@@ -212,13 +213,17 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
         emptyIcon={<Sun className="h-5 w-5" />}
         stats={stats}
         chart={
-          <div
-            role="img"
-            aria-label={t(
+          <EmbeddedChart
+            title={t('widget.solarProduction.title', 'Solar Production')}
+            ariaLabel={t(
               'widget.solarProduction.chartLabel',
               'Daily solar production over the last 30 days',
             )}
-            className="h-full w-full"
+            data={chartData}
+            dataColumns={[
+              { key: 'date', label: t('widget.solarProduction.date', 'Date') },
+              { key: 'solar_kwh', label: t('widget.solarProduction.solarKwh', 'Solar (kWh)') },
+            ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
@@ -237,12 +242,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
                   tickFormatter={(v: number) => fmt(v, 0)}
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: 'rgba(0,0,0,0.85)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
+                  content={<ChartTooltip />}
                   formatter={(value: number) => [
                     `${fmtNumber(value, 1)} kWh`,
                     t('widget.solarProduction.solar', 'Solar'),
@@ -265,7 +265,7 @@ export default function SolarProductionWidget({ size }: WidgetProps) {
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

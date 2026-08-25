@@ -53,6 +53,40 @@ describe('createQueryClient', () => {
     expect(opts.queries?.refetchIntervalInBackground).toBe(false)
     expect(opts.queries?.networkMode).toBe('offlineFirst')
   })
+
+  it('keeps the last successful value visible while a same-key refresh is pending', async () => {
+    const qc = createQueryClient()
+    const queryKey = ['perceived-performance', 'refresh']
+    qc.setQueryData(queryKey, 'previous')
+
+    let resolveRefresh: ((value: string) => void) | undefined
+    const observer = new QueryObserver(qc, {
+      queryKey,
+      queryFn: () =>
+        new Promise<string>((resolve) => {
+          resolveRefresh = resolve
+        }),
+    })
+    const unsubscribe = observer.subscribe(() => {})
+
+    try {
+      const refresh = observer.refetch()
+      await Promise.resolve()
+
+      const pending = observer.getCurrentResult()
+      expect(pending.isFetching).toBe(true)
+      expect(pending.data).toBe('previous')
+
+      resolveRefresh?.('fresh')
+      await refresh
+
+      const settled = observer.getCurrentResult()
+      expect(settled.isFetching).toBe(false)
+      expect(settled.data).toBe('fresh')
+    } finally {
+      unsubscribe()
+    }
+  })
 })
 
 describe('refetchInterval pause-when-hidden behaviour', () => {

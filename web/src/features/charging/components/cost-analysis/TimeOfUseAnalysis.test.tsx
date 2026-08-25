@@ -61,9 +61,11 @@ vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
 //    BarChart double can surface the component-computed `data` (as JSON), the
 //    series binding, the X-axis interval, the Y tick formatter, and each
 //    per-hour <Cell fill> for direct assertion. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Inert = () => null;
   return {
+    ...chartTestDoubles,
     chartGrid: {},
     axisTickSm: {},
     ChartTooltip: Inert,

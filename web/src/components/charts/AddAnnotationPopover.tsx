@@ -137,15 +137,17 @@ export function AddAnnotationPopover({
               const Icon = opt.icon;
               const isSelected = category === opt.value;
               return (
-                <button
+                <Button
                   key={opt.value}
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setCategory(opt.value)}
                   aria-pressed={isSelected}
                   className={cn(
-                    'flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs transition-colors',
+                    '!h-auto rounded-full border px-2.5 py-1 text-xs font-normal',
                     isSelected
-                      ? 'border-current bg-gray-100 font-medium text-[var(--text-primary)] dark:bg-white/10'
+                      ? 'border-current bg-[var(--control-bg)] font-medium'
                       : 'border-transparent text-[var(--text-muted)] hover:text-[var(--text-secondary)]',
                   )}
                   style={
@@ -156,7 +158,7 @@ export function AddAnnotationPopover({
                 >
                   <Icon className="h-3 w-3" />
                   {t(`annotation.cat.${opt.value}`, opt.label)}
-                </button>
+                </Button>
               );
             })}
           </div>

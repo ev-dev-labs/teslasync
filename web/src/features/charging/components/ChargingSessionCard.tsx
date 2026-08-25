@@ -33,7 +33,7 @@ export { formatDurationMinutes as formatDuration };
 
 interface ChargingSessionCardProps {
   session: ChargingSession;
-  toDistanceDisplay: (km: number) => number;
+  toDistanceDisplay: (meters: number) => number;
   distanceUnit: string;
   selected?: boolean;
   onToggleSelect?: (id: number, on: boolean) => void;
@@ -83,7 +83,7 @@ export function ChargingSessionCard({
   }, [session]);
   const cpk = costPerKwh(session);
   const addedM = distanceAddedM(session);
-  const milesGained = addedM != null ? toDistanceDisplay(addedM / 1000) : null;
+  const rangeAddedDisplay = addedM != null ? toDistanceDisplay(addedM) : null;
   const energyKwh = (session.total_energy_added_wh ?? 0) / 1000;
   const isFree = session.cost_decimal == null || session.cost_decimal === 0;
 
@@ -188,9 +188,9 @@ export function ChargingSessionCard({
       {cpk != null && (
         <span className="text-[var(--text-muted)]">({formatCurrency(cpk, 2)}/kWh)</span>
       )}
-      {typeof milesGained === 'number' && milesGained > 0 && (
+      {typeof rangeAddedDisplay === 'number' && rangeAddedDisplay > 0 && (
         <span className="flex items-center gap-1 text-purple-300">
-          <Zap className="h-3 w-3" aria-hidden /> +{fmtInt(milesGained)} {distanceUnit}
+          <Zap className="h-3 w-3" aria-hidden /> +{fmtInt(rangeAddedDisplay)} {distanceUnit}
         </span>
       )}
     </>

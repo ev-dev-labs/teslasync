@@ -24,6 +24,14 @@ export { DraftRestorePrompt } from './DraftRestorePrompt';
 export { OfflineBanner } from './OfflineBanner';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
 export { DataStateNotice, type DataStateKind, type DataStateNoticeProps } from './DataStateNotice';
+export {
+  DataSourceNotice,
+  resolveDataSourceStatus,
+  type DataSourceDescriptor,
+  type DataSourceNoticeProps,
+  type DataSourceQuery,
+  type DataSourceStatus,
+} from './DataSourceNotice';
 export { RuntimeHealthBanner } from './RuntimeHealthBanner';
 export { TeslaReauthBanner } from './TeslaReauthBanner';
 export { RateLimitBanner } from './RateLimitBanner';

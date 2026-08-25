@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { Link } from 'react-router-dom';
 import { AlertTriangle, BellOff, BellRing, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePriorityAlerts } from '@/api/hooks/useNotifications';
 import { Badge, Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { PrefetchLink } from '../PrefetchLink';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { cn } from '@/lib/cn';
 import { normalizeSeverity } from '@/lib/tokens';
@@ -227,7 +227,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
               const severityLabel = critical ? criticalLabel : warningLabel;
               return (
                 <li key={alert.id}>
-                  <Link
+                  <PrefetchLink
                     to={getAlertDrillthroughHref(alert)}
                     onClick={close}
                     className="flex min-h-12 items-start gap-2 rounded-md px-2 py-2 hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
@@ -262,7 +262,7 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
                       className="mt-1 h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]"
                       aria-hidden
                     />
-                  </Link>
+                  </PrefetchLink>
                 </li>
               );
             })}
@@ -270,13 +270,13 @@ export function AlertsSegment({ iconOnly = false }: AlertsSegmentProps) {
         )}
 
         <div className="border-t border-[var(--border-subtle)] px-2 pt-2">
-          <Link
+          <PrefetchLink
             to="/notifications/alerts"
             onClick={close}
             className="text-xs font-medium text-[var(--theme-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
           >
             {t('statusBar.alerts.viewAll', 'View all alerts')}
-          </Link>
+          </PrefetchLink>
         </div>
       </Popover>
     </>

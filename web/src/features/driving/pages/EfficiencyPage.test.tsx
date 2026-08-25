@@ -169,8 +169,7 @@ function makeStats(over: Partial<DrivingStats> = {}): DrivingStats {
   };
 }
 
-// A drive within the default (last-30-days) window with 10% battery burned
-// over 50 km at 20 m/s → getEfficiency = (10 * 0.75 * 1000) / 50 = 150 Wh/km.
+// A drive within the default window with 7.5 kWh measured over 50 km: 150 Wh/km.
 function makeDrive(over: Partial<Drive> = {}): Drive {
   const now = new Date().toISOString();
   return {
@@ -281,23 +280,19 @@ describe('efficiencyColor', () => {
   });
 });
 
-/* ── getEfficiency: battery-delta → Wh/km, or null for degenerate drives ─── */
+/* ── getEfficiency: measured SI energy → Wh/km ───────────────────────────── */
 describe('getEfficiency', () => {
-  it('derives Wh/km from battery delta and distance', () => {
-    // (60 - 50)% * 0.75 * 1000 / (50000 / 1000) = 7500 / 50 = 150.
+  it('derives Wh/km from measured watt-hours and distance', () => {
     expect(getEfficiency(makeDrive())).toBe(150);
-    // Doubling the distance halves the derived consumption.
     expect(getEfficiency(makeDrive({ distanceM: 100000 }))).toBe(75);
+    expect(
+      getEfficiency(makeDrive({ startBatteryPct: null, endBatteryPct: null })),
+    ).toBe(150);
   });
 
   it('returns null when the drive cannot yield a meaningful figure', () => {
     expect(getEfficiency(makeDrive({ distanceM: 0 }))).toBeNull();
-    // No net battery used (start <= end) → not derivable.
-    expect(getEfficiency(makeDrive({ startBatteryPct: 50, endBatteryPct: 60 }))).toBeNull();
-    // Missing battery readings collapse to a zero delta → null.
-    expect(
-      getEfficiency(makeDrive({ startBatteryPct: null, endBatteryPct: null })),
-    ).toBeNull();
+    expect(getEfficiency(makeDrive({ energyUsedWh: null }))).toBeNull();
   });
 });
 
@@ -313,12 +308,15 @@ describe('EfficiencyPage', () => {
     expect(screen.queryByText('Avg Consumption')).toBeNull();
   });
 
-  it('surfaces a failure banner and still renders the empty KPI placeholder', () => {
+  it('identifies the failed source and still renders the empty KPI placeholder', () => {
     setDriving({ isError: true, error: new Error('stats blew up') }, { data: [] });
     renderPage();
 
-    expect(screen.getByText(/Failed to load data/)).toBeInTheDocument();
-    expect(screen.getByText(/stats blew up/)).toBeInTheDocument();
+    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByText('Efficiency summary')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Drive history')).toBeInTheDocument();
+    expect(screen.getByText('Ready')).toBeInTheDocument();
     // Sections never disappear — the KPI band degrades to a placeholder.
     expect(screen.getByText('No efficiency data available yet')).toBeInTheDocument();
   });

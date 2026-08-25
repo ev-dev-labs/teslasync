@@ -60,7 +60,21 @@ vi.mock('react-i18next', async () => {
 
 /* ── charts: surface the data payload + per-series props for inspection. The
  *    real Recharts primitives would paint nothing under jsdom. ──────────── */
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => ({
+  ...(await import('@/test/chartTestDoubles')).chartTestDoubles,
+  EmbeddedChart: ({
+    ariaLabel,
+    height,
+    children,
+  }: {
+    ariaLabel?: string;
+    height?: number;
+    children?: ReactNode;
+  }) => (
+    <div role="img" aria-label={ariaLabel} data-height={String(height ?? '')}>
+      {children}
+    </div>
+  ),
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
@@ -276,19 +290,19 @@ describe('LocationLeaderboardPanel — ready state', () => {
 describe('LocationLeaderboardPanel — responsive height', () => {
   it('floors the chart height at 240px for a short list', () => {
     renderPanel({ data: [datum(), datum({ name: 'Work' })] }); // 2 rows → floor
-    expect(screen.getByRole('img', { name: ARIA }).style.height).toBe('240px');
+    expect(screen.getByRole('img', { name: ARIA })).toHaveAttribute('data-height', '240');
   });
 
   it('grows the chart height with the row count (34px per row)', () => {
     const rows = Array.from({ length: 8 }, (_, i) => datum({ name: `L${i}`, value: i }));
     renderPanel({ data: rows }); // 8 * 34 = 272
-    expect(screen.getByRole('img', { name: ARIA }).style.height).toBe('272px');
+    expect(screen.getByRole('img', { name: ARIA })).toHaveAttribute('data-height', '272');
   });
 
   it('caps the chart height at 15 rows so a long list stays bounded', () => {
     const rows = Array.from({ length: 25 }, (_, i) => datum({ name: `L${i}`, value: i }));
     renderPanel({ data: rows }); // min(25, 15) * 34 = 510
-    expect(screen.getByRole('img', { name: ARIA }).style.height).toBe('510px');
+    expect(screen.getByRole('img', { name: ARIA })).toHaveAttribute('data-height', '510');
   });
 });
 

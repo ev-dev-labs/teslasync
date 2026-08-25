@@ -39,13 +39,12 @@ export interface AcDcBreakdown {
   total: { energy: number; cost: number; freeEnergy: number; freeCount: number };
 }
 
-export interface EfficiencyStats {
-  avgEfficiency: number;
-  best: { id: number; date: string; efficiency: number; added: number; used: number };
-  worst: { id: number; date: string; efficiency: number; added: number; used: number };
-  wallLoss: number;
-  totalAdded: number;
-  totalUsed: number;
+export interface ChargeRateStats {
+  averagePowerW: number;
+  best: { id: number; date: string; powerW: number };
+  worst: { id: number; date: string; powerW: number };
+  totalEnergyWh: number;
+  totalDurationS: number;
   count: number;
 }
 
@@ -192,35 +191,44 @@ export function computeAcDcBreakdown(sessions: ChargingSession[]): AcDcBreakdown
   };
 }
 
-export function computeEfficiencyStats(sessions: ChargingSession[]): EfficiencyStats | null {
+export function computeChargeRateStats(sessions: ChargingSession[]): ChargeRateStats | null {
   if (sessions.length === 0) return null;
   const withData = sessions.filter(
     (s) => s.total_energy_added_wh > 0 && durationMinutes(s.started_at, s.ended_at) > 0,
   );
   if (withData.length === 0) return null;
-  const efficiencies = withData.map((s) => ({
-    id: s.id,
-    date: s.started_at,
-    efficiency: (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60,
-    added: s.total_energy_added_wh,
-    used: s.total_energy_added_wh,
-  }));
-  const totalAdded = convertEnergyFromSI(
-    withData.reduce((sum, s) => sum + (s.total_energy_added_wh ?? 0), 0),
-    'kWh',
+  const rates = withData.map((s) => {
+    const durationS = durationMinutes(s.started_at, s.ended_at) * 60;
+    return {
+      id: s.id,
+      date: s.started_at,
+      powerW: s.total_energy_added_wh / (durationS / 3600),
+      durationS,
+    };
+  });
+  const totalEnergyWh = withData.reduce(
+    (sum, session) => sum + (session.total_energy_added_wh ?? 0),
+    0,
   );
-  const totalUsed = totalAdded;
-  const avgEfficiency = withData.length > 0
-    ? withData.reduce((sum, s) => sum + (s.total_energy_added_wh / durationMinutes(s.started_at, s.ended_at)) * 60, 0) / withData.length
+  const totalDurationS = rates.reduce((sum, rate) => sum + rate.durationS, 0);
+  const averagePowerW = totalDurationS > 0
+    ? totalEnergyWh / (totalDurationS / 3600)
     : 0;
-  const sorted = [...efficiencies].sort((a, b) => b.efficiency - a.efficiency);
+  const sorted = [...rates].sort((a, b) => b.powerW - a.powerW);
   return {
-    avgEfficiency,
-    best: sorted[0],
-    worst: sorted[sorted.length - 1],
-    wallLoss: 0,
-    totalAdded,
-    totalUsed,
+    averagePowerW,
+    best: {
+      id: sorted[0].id,
+      date: sorted[0].date,
+      powerW: sorted[0].powerW,
+    },
+    worst: {
+      id: sorted[sorted.length - 1].id,
+      date: sorted[sorted.length - 1].date,
+      powerW: sorted[sorted.length - 1].powerW,
+    },
+    totalEnergyWh,
+    totalDurationS,
     count: withData.length,
   };
 }

@@ -305,7 +305,7 @@ describe('AlertFeedWidget — refresh wiring', () => {
     mockAlerts.mockReturnValue(qr({ data: ALERTS, refetch }));
     renderWidget(NARROW);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

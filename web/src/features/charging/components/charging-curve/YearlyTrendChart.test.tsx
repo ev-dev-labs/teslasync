@@ -40,7 +40,6 @@ import { render, screen, within, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
-import { CHART_COLORS } from '@/components/charts';
 
 // jsdom lacks matchMedia; framer-motion's useReducedMotion (reached via shared
 // UI) reads it. Install a benign stub before any shared module evaluates.
@@ -192,28 +191,15 @@ describe('YearlyTrendChart — data rows', () => {
   });
 });
 
-describe('YearlyTrendChart — legend (regression: palette-driven, not hardcoded)', () => {
-  it('renders a per-series legend whose swatches read inline from the palette', () => {
+describe('YearlyTrendChart — shared legend contract', () => {
+  it('opts the chart into URL-persisted shared legend controls', () => {
     renderChart(TREND);
 
-    // The two average-series labels are legend-only strings; "DC Sessions" also
-    // heads the fallback table, so it appears exactly twice (header + legend).
-    expect(screen.getByText('10→80% avg')).toBeInTheDocument();
-    expect(screen.getByText('20→80% avg')).toBeInTheDocument();
-    expect(screen.getAllByText('DC Sessions')).toHaveLength(2);
-
-    // Pre-fix the swatches were hardcoded Tailwind classes (`bg-[#00f0ff]`,
-    // `bg-purple-500`, `bg-red-500`) with NO inline color; the hardened swatch
-    // sets `style.backgroundColor` from CHART_COLORS[0]/[2]/[5].
-    const swatches = Array.from(document.querySelectorAll<HTMLElement>('span.rounded-sm'));
-    expect(swatches).toHaveLength(3);
-    const colors = swatches.map((s) => s.style.backgroundColor);
-    expect(colors.every((c) => c !== '')).toBe(true);
-    // Three distinct series colors — the legend maps 1:1 onto the series.
-    expect(new Set(colors).size).toBe(3);
-    // The first swatch tracks the 10→80% line color (CHART_COLORS[0]).
-    expect(colors[0]).not.toBe('');
-    expect(CHART_COLORS[0]).toBeTruthy();
+    expect(screen.getByRole('figure', { name: TITLE })).toHaveAttribute(
+      'data-chart-key',
+      'charging-curve-yearly-trend',
+    );
+    expect(document.querySelectorAll('span.rounded-sm')).toHaveLength(0);
   });
 });
 
@@ -226,7 +212,7 @@ describe('YearlyTrendChart — empty branch (regression: no export over empty da
     expect(screen.getByText('No data available')).toBeInTheDocument();
     // Title + accessible frame stay mounted (the panel is never truly blank).
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: ARIA_LABEL })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: ARIA_LABEL })).not.toBeInTheDocument();
     // No fallback data table and no export menu when there's nothing to show.
     expect(screen.queryByText(`${TITLE} — data table`)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();

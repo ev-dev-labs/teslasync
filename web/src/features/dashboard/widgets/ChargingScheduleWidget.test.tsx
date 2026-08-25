@@ -569,6 +569,6 @@ describe('ChargingScheduleWidget — accessibility', () => {
     ).toBeGreaterThanOrEqual(4);
     expect(
       screen.getByRole('button', { name: /refresh/i }),
-    ).toHaveAttribute('aria-label', 'Refresh');
+    ).toHaveAttribute('aria-label', expect.stringMatching(/^Refresh/));
   });
 });

@@ -47,6 +47,21 @@ export default function FirmwareImpactPage() {
 
   const drivesQuery = useDrives(vehicleIdStr);
   const updatesQuery = useSoftwareUpdates(vehicleIdStr ?? '');
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'drive-history',
+        label: t('dataSources.labels.driveHistory', 'Drive history'),
+        query: drivesQuery,
+      },
+      {
+        id: 'software-updates',
+        label: t('dataSources.labels.softwareUpdates', 'Software updates'),
+        query: updatesQuery,
+      },
+    ],
+    [drivesQuery, t, updatesQuery],
+  );
 
   const summary = useMemo(
     () =>
@@ -99,9 +114,18 @@ export default function FirmwareImpactPage() {
     return <NoVehicleSelected pageTitle={t('firmwareImpact.title', 'Firmware Impact')} />;
   }
 
-  const isLoading = drivesQuery.isLoading || updatesQuery.isLoading;
-  const isError = drivesQuery.isError || updatesQuery.isError;
-  const error = drivesQuery.error ?? updatesQuery.error;
+  const drivesHaveData = drivesQuery.data !== undefined;
+  const updatesHaveData = updatesQuery.data !== undefined;
+  const isLoading =
+    (!drivesHaveData && drivesQuery.isLoading)
+    || (!updatesHaveData && updatesQuery.isLoading);
+  const isError =
+    (drivesQuery.isError && !drivesHaveData)
+    || (updatesQuery.isError && !updatesHaveData);
+  const error =
+    drivesQuery.isError && !drivesHaveData
+      ? drivesQuery.error
+      : updatesQuery.error;
 
   return (
     <PageContainer
@@ -111,6 +135,7 @@ export default function FirmwareImpactPage() {
         'A controlled before-and-after test of every software update, judged by Welch\u2019s t-test on your real consumption',
       )}
       query={[drivesQuery, updatesQuery]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}

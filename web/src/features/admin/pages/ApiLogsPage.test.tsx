@@ -4,7 +4,7 @@
  * The page is the admin "API Call Log" viewer: a KPI band (total calls,
  * error rate, avg duration, last-24h), a "By Service" quick-pick rail, a
  * filter panel (service/method/status/endpoint), and a paginated, expandable
- * log table with a JSON export.
+ * log table with a consistent CSV / JSON export menu.
  *
  * These tests exercise the page's real branches end-to-end (no smoke render):
  *   1. Loading  — both queries pending → no data rows, both fetchers fired.
@@ -272,7 +272,7 @@ describe('ApiLogsPage', () => {
     renderPage();
 
     await waitFor(() => expect(screen.getByText('No API call logs')).toBeInTheDocument());
-    expect(screen.getByRole('button', { name: /Export JSON/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'No data to export' })).toBeDisabled();
     // Service rail shows its own empty copy, not a spinner.
     expect(screen.getByText('No service activity yet')).toBeInTheDocument();
   });
@@ -360,7 +360,7 @@ describe('ApiLogsPage', () => {
     expect(screen.queryByRole('button', { name: /Clear/ })).not.toBeInTheDocument();
   });
 
-  it('exports the current page as JSON via a DOM-attached anchor and revokes the URL', async () => {
+  it('offers CSV and JSON and exports the current page via a DOM-attached anchor', async () => {
     mockedStats.mockResolvedValue(makeStats());
     mockedLogs.mockResolvedValue(makeLogsResponse());
 
@@ -376,9 +376,11 @@ describe('ApiLogsPage', () => {
 
     // Export is only enabled once the current page of logs has loaded.
     await screen.findByText('/vehicles');
-    const exportBtn = screen.getByRole('button', { name: /Export JSON/ });
+    const exportBtn = screen.getByRole('button', { name: 'Export list' });
     expect(exportBtn).not.toBeDisabled();
     fireEvent.click(exportBtn);
+    expect(screen.getByRole('menuitem', { name: 'Download as CSV' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Download as JSON' }));
 
     expect(createObjectURL).toHaveBeenCalledTimes(1);
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:api-logs');

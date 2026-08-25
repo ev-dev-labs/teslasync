@@ -26,7 +26,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import { ToastProvider } from '@/components/feedback/Toast';
-import { useMutationToast } from './_toastHelpers';
+import { useDeferredMutationToast, useMutationToast } from './_toastHelpers';
 
 // ── react-i18next: deterministic translator that honours `defaultValue` and
 //    interpolates `{{var}}` placeholders so title assertions are exact. ──
@@ -234,5 +234,25 @@ describe('useMutationToast — provider contract', () => {
       'useToast must be used within ToastProvider',
     );
     spy.mockRestore();
+  });
+});
+
+describe('useDeferredMutationToast — deferred provider contract', () => {
+  it('mounts without a provider while the mutation feedback remains dormant', () => {
+    const { result } = renderHook(() => useDeferredMutationToast());
+
+    expect(result.current.success).toBeTypeOf('function');
+    expect(result.current.error).toBeTypeOf('function');
+  });
+
+  it('still fails loudly when feedback is dispatched without a provider', () => {
+    const { result } = renderHook(() => useDeferredMutationToast());
+
+    expect(() => result.current.success('toast.k', 'Saved')).toThrow(
+      'useToast must be used within ToastProvider',
+    );
+    expect(() => result.current.error(new Error('boom'))).toThrow(
+      'useToast must be used within ToastProvider',
+    );
   });
 });

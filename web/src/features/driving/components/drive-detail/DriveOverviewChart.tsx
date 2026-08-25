@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartLegend, ChartTooltip,
   ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient,
@@ -51,11 +51,13 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
       <ChartContainer
         title={t('driveDetail.driveChart', 'Drive Overview')}
         ariaLabel={t('driveDetail.driveChart.aria', 'Drive overview composed chart of speed, range, SOC and power over time')}
+        chartKey="drive-detail-overview"
         height={360}
       >
-        {hasChart ? (
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart
+        {({ hiddenSeries }) => (
+          hasChart ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart
               data={chartData}
               syncId={syncProps.syncId}
               syncMethod={syncProps.syncMethod}
@@ -66,20 +68,21 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
               <YAxis yAxisId="power" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} unit=" kW" />
               <YAxis yAxisId="speed" hide />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               {areaGradient('driveOverviewSpeed', '#3b82f6', 0.08)}
               <ReferenceLine yAxisId="power" y={0} stroke="rgba(255,255,255,0.1)" />
-              <Area {...AREA_DEFAULTS} yAxisId="speed" dataKey="speed" stroke="#3b82f6" fill="url(#driveOverviewSpeed)" strokeWidth={1.5} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} />
+              <Area {...AREA_DEFAULTS} yAxisId="speed" dataKey="speed" stroke="#3b82f6" fill="url(#driveOverviewSpeed)" strokeWidth={1.5} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} hide={hiddenSeries?.isHidden('speed')} />
               {series.hasIdealRange && (
-                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="idealRange" stroke="#c084fc" strokeWidth={1} name={`${t('driveDetail.rangeIdeal', 'Range ideal')} (${distanceUnit})`} strokeDasharray="4 2" />
+                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="idealRange" stroke="#c084fc" strokeWidth={1} name={`${t('driveDetail.rangeIdeal', 'Range ideal')} (${distanceUnit})`} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('idealRange')} />
               )}
               {series.hasRangeSeries && (
-                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey={series.estRangeKey} stroke="#a855f7" strokeWidth={1} name={`${t('driveDetail.rangeEst', 'Range est.')} (${distanceUnit})`} strokeDasharray="4 2" />
+                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey={series.estRangeKey} stroke="#a855f7" strokeWidth={1} name={`${t('driveDetail.rangeEst', 'Range est.')} (${distanceUnit})`} strokeDasharray="4 2" hide={hiddenSeries?.isHidden(series.estRangeKey)} />
               )}
-              <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="battery" stroke="#84cc16" strokeWidth={1.5} name={`${t('driveDetail.soc', 'SOC')} %`} />
+              <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="battery" stroke="#84cc16" strokeWidth={1.5} name={`${t('driveDetail.soc', 'SOC')} %`} hide={hiddenSeries?.isHidden('battery')} />
               {series.hasUsableSoc && (
-                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} />
+                <Line {...AREA_DEFAULTS} yAxisId="speed" dataKey="usableSoc" stroke="#22d3ee" strokeWidth={1} name={`${t('driveDetail.usableSoc', 'Usable SOC')} %`} hide={hiddenSeries?.isHidden('usableSoc')} />
               )}
-              <Line {...AREA_DEFAULTS} yAxisId="power" dataKey="power" stroke="#f59e0b" name={`${t('driveDetail.power', 'Power')} kW`} />
+              <Line {...AREA_DEFAULTS} yAxisId="power" dataKey="power" stroke="#f59e0b" name={`${t('driveDetail.power', 'Power')} kW`} hide={hiddenSeries?.isHidden('power')} />
               {syncedX != null && (
                 <ReferenceLine
                   yAxisId="power"
@@ -98,17 +101,18 @@ export function DriveOverviewChart({ chartData }: DriveOverviewChartProps) {
                 to every other chart sharing the same dataset.
               */}
               <ChartBrush dataKey="time" />
-            </ComposedChart>
-          </ResponsiveContainer>
-        ) : (
-          <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" />
-            <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
-          </div>
+              </ComposedChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" />
+              <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+            </div>
+          )
         )}
       </ChartContainer>
       {/* Rich legend with Mean/Max/Min stats */}
-      {hasChart && <ChartLegend chartData={chartData} />}
+      {hasChart && <DriveStatsLegend chartData={chartData} />}
     </FadeIn>
   );
 }
@@ -143,7 +147,7 @@ function summarize(vals: (number | null)[]): SeriesStat | null {
   return { mean: sum / count, max, min };
 }
 
-function ChartLegend({ chartData }: { chartData: ChartDataPoint[] }) {
+function DriveStatsLegend({ chartData }: { chartData: ChartDataPoint[] }) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const speedUnit = unitPrefs.speed;

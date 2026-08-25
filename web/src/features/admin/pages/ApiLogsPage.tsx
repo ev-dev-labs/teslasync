@@ -2,7 +2,7 @@ import { useState, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  FileText, Clock, AlertTriangle, Activity, Download,
+  FileText, Clock, AlertTriangle, Activity,
   Search, Filter, Layers, ChevronDown, ChevronUp, X,
 } from 'lucide-react';
 
@@ -14,13 +14,14 @@ import {
 import { StatCard, DateTime } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
-import { RangePicker } from '@/components/forms';
+import { ListExportMenu, RangePicker } from '@/components/forms';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { typography } from '@/lib/tokens';
+import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { getAPICallLogs, getAPICallLogStats } from '@/api/devtools';
 import type { APICallLog, APICallLogStats } from '@/api/types';
 import { deriveServiceOptions } from '../lib/serviceOptions';
@@ -234,20 +235,31 @@ export default function ApiLogsPage() {
 
   const trackedCount = stats?.by_service ? Object.keys(stats.by_service).length : 0;
 
-  const handleExport = useCallback(() => {
-    const blob = new Blob([JSON.stringify(logs, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `teslasync-api-logs-${new Date().toISOString().split('T')[0]}.json`;
-    // Firefox only fires the download when the anchor is connected to the
-    // document — append + remove mirrors the app's other export helpers
-    // (lib/export.ts, lib/csvExport.ts, useSettingsBackup.ts).
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    URL.revokeObjectURL(url);
-  }, [logs]);
+  const exportFilename = `teslasync-api-logs-${new Date().toISOString().slice(0, 10)}`;
+  const exportRows = useMemo(
+    () =>
+      logs.map((log) => ({
+        id: log.id,
+        timestamp: log.ts,
+        vehicle_id: log.vehicle_id,
+        service: log.service,
+        method: log.http_method,
+        endpoint: log.endpoint,
+        status_code: log.status_code,
+        duration_ms: log.duration_ms,
+        rate_limited: log.rate_limited,
+        error: log.error_message,
+        request_body: log.request_body,
+        response_body: log.response_body,
+      })),
+    [logs],
+  );
+  const handleExportCsv = useCallback(() => {
+    exportAsCSV(exportRows, `${exportFilename}.csv`);
+  }, [exportFilename, exportRows]);
+  const handleExportJson = useCallback(() => {
+    exportAsJSON(logs, `${exportFilename}.json`);
+  }, [exportFilename, logs]);
 
   return (
     <PageContainer
@@ -437,16 +449,13 @@ export default function ApiLogsPage() {
                     : t('apiLogs.totalCount', '{{count}} total', { count: 0 })}
                 </Caption>
               </div>
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                icon={<Download className="h-3.5 w-3.5" aria-hidden="true" />}
-                onClick={handleExport}
+              <ListExportMenu
+                onExportCsv={handleExportCsv}
+                onExportJson={handleExportJson}
+                visibleCount={logs.length}
                 disabled={logs.length === 0}
-              >
-                {t('apiLogs.exportJson', 'Export JSON')}
-              </Button>
+                testId="api-logs-export"
+              />
             </div>
 
             {logsLoading && logs.length === 0 ? (

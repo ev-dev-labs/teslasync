@@ -42,6 +42,12 @@ import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { BatteryCellData, CellReading } from '@/api/hooks/useAnalytics';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // ── Hoisted, per-test controllable state ─────────────────────────────
 // `query` feeds the stubbed useBatteryCells; `temp` feeds useUnits so a
 // single test can flip °C→°F; `selected` feeds useSelectedVehicle.

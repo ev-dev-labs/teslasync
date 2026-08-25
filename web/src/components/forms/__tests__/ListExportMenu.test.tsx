@@ -84,6 +84,31 @@ describe('ListExportMenu', () => {
     expect(screen.getByTestId('le-scope-visible')).not.toBeChecked();
   });
 
+  it('defaults to selected when a selection is created after mount', () => {
+    const { rerender } = render(
+      <ListExportMenu
+        onExportCsv={onExportCsv}
+        onExportJson={onExportJson}
+        visibleCount={10}
+        selectedCount={0}
+        testId="le"
+      />,
+    );
+
+    rerender(
+      <ListExportMenu
+        onExportCsv={onExportCsv}
+        onExportJson={onExportJson}
+        visibleCount={10}
+        selectedCount={2}
+        testId="le"
+      />,
+    );
+    fireEvent.click(screen.getByTestId('le-trigger'));
+
+    expect(screen.getByTestId('le-scope-selected')).toBeChecked();
+  });
+
   it('passes the chosen scope to onExportCsv', () => {
     render(
       <ListExportMenu

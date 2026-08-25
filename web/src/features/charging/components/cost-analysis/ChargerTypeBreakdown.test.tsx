@@ -48,6 +48,12 @@ vi.mock('@/hooks/useOnlineStatus', () => ({
   useOnlineStatus: () => true,
 }));
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import { ChargerTypeBreakdown } from './ChargerTypeBreakdown';
 import type { ChargerTypeData } from './types';
 

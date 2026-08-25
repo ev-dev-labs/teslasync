@@ -357,7 +357,9 @@ describe('FleetAPIPage', () => {
     expect(screen.getByText(/Set MONGODB_ENABLED=true/)).toBeInTheDocument();
 
     // Empty version endpoints → configured-endpoints empty state.
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(screen.getByText('Endpoint metadata unavailable')).toBeInTheDocument();
+    expect(screen.getByText(/did not publish any configured endpoint URLs/)).toBeInTheDocument();
+    expect(screen.getByText(/Configure the public and Tesla Fleet API URLs/)).toBeInTheDocument();
 
     // Capture stats are known, so a real 0 is shown (not an em-dash).
     expect(within(kpiRegion()).getByText('0')).toBeInTheDocument();

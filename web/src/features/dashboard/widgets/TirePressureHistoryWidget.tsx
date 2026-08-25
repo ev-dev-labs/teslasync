@@ -4,6 +4,7 @@ import { CircleDot } from 'lucide-react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useTirePressureHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -31,7 +32,7 @@ const TIRE_COLORS = {
   rr: '#a855f7', // purple
 } as const;
 
-export interface ChartDatum {
+export interface ChartDatum extends ChartDataRow {
   time: string;
   fl: number | null;
   fr: number | null;
@@ -56,7 +57,10 @@ export function buildChartData(
     .sort((a, b) => a.time.localeCompare(b.time));
 }
 
-export function latestNonNull(data: ChartDatum[], key: keyof Omit<ChartDatum, 'time'>): number | null {
+export function latestNonNull(
+  data: ChartDatum[],
+  key: 'fl' | 'fr' | 'rl' | 'rr',
+): number | null {
   for (let i = data.length - 1; i >= 0; i--) {
     const v = data[i][key];
     if (v != null) return v;
@@ -143,8 +147,25 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
   const tick = isWide ? axisTick : axisTickSm;
 
   const chart = (
-    <ResponsiveContainer width="100%" height="100%">
-      <LineChart data={chartData} margin={chartMargin} {...chartAnimation}>
+    <EmbeddedChart
+      title={t('widget.tirePressureHistory.title', 'Tire Pressure History')}
+      ariaLabel={t(
+        'widget.tirePressureHistory.chartAria',
+        'Front and rear tire pressure history',
+      )}
+      data={chartData}
+      dataColumns={[
+        { key: 'time', label: t('widget.tirePressureHistory.time', 'Time'), format: (value) => formatTime(String(value ?? '')) },
+        { key: 'fl', label: `${t('widget.tirePressureHistory.fl', 'FL')} (${pressureUnit})` },
+        { key: 'fr', label: `${t('widget.tirePressureHistory.fr', 'FR')} (${pressureUnit})` },
+        { key: 'rl', label: `${t('widget.tirePressureHistory.rl', 'RL')} (${pressureUnit})` },
+        { key: 'rr', label: `${t('widget.tirePressureHistory.rr', 'RR')} (${pressureUnit})` },
+      ]}
+      chartKey="dashboard-tire-pressure-history"
+    >
+      {({ hiddenSeries }) => (
+        <ResponsiveContainer width="100%" height="100%">
+          <LineChart data={chartData} margin={chartMargin} {...chartAnimation}>
         {chartGrid}
         <XAxis
           dataKey="time"
@@ -161,12 +182,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
           tickFormatter={(v: number) => `${fmt(v, 1)}`}
         />
         <Tooltip
-          contentStyle={{
-            background: 'rgba(0,0,0,0.85)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 8,
-            fontSize: 12,
-          }}
+          content={<ChartTooltip />}
           labelFormatter={formatTime}
           formatter={(value: number, name: string) => {
             const labels: Record<string, string> = {
@@ -178,6 +194,7 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
             return [`${fmtNumber(value, 1)} ${pressureUnit}`, labels[name] ?? name];
           }}
         />
+        <ChartLegend />
         <ReferenceLine
           y={refLow}
           stroke="rgba(34,197,94,0.35)"
@@ -190,12 +207,14 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
           strokeDasharray="4 4"
           label={{ value: t('widget.tirePressureHistory.max', 'Max'), fill: 'rgba(34,197,94,0.5)', fontSize: 10, position: 'insideBottomLeft' }}
         />
-        <Line type="monotone" dataKey="fl" stroke={TIRE_COLORS.fl} strokeWidth={2} dot={false} connectNulls name="fl" />
-        <Line type="monotone" dataKey="fr" stroke={TIRE_COLORS.fr} strokeWidth={2} dot={false} connectNulls name="fr" />
-        <Line type="monotone" dataKey="rl" stroke={TIRE_COLORS.rl} strokeWidth={2} dot={false} connectNulls name="rl" />
-        <Line type="monotone" dataKey="rr" stroke={TIRE_COLORS.rr} strokeWidth={2} dot={false} connectNulls name="rr" />
-      </LineChart>
-    </ResponsiveContainer>
+        <Line type="monotone" dataKey="fl" stroke={TIRE_COLORS.fl} strokeWidth={2} dot={false} connectNulls name="fl" hide={hiddenSeries?.isHidden('fl')} />
+        <Line type="monotone" dataKey="fr" stroke={TIRE_COLORS.fr} strokeWidth={2} dot={false} connectNulls name="fr" hide={hiddenSeries?.isHidden('fr')} />
+        <Line type="monotone" dataKey="rl" stroke={TIRE_COLORS.rl} strokeWidth={2} dot={false} connectNulls name="rl" hide={hiddenSeries?.isHidden('rl')} />
+        <Line type="monotone" dataKey="rr" stroke={TIRE_COLORS.rr} strokeWidth={2} dot={false} connectNulls name="rr" hide={hiddenSeries?.isHidden('rr')} />
+          </LineChart>
+        </ResponsiveContainer>
+      )}
+    </EmbeddedChart>
   );
 
   if (isCompact) {

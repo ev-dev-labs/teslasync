@@ -1,5 +1,4 @@
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Activity,
@@ -15,6 +14,7 @@ import { useApiHealth, type ApiHealthStatus } from '@/api/hooks/useApiHealth';
 import { useExtendedSystemHealth } from '@/api/hooks/useAdmin';
 import { useRbacMatrix } from '@/api/hooks/useRbacMatrix';
 import { cn } from '@/lib/cn';
+import { PrefetchLink } from '../PrefetchLink';
 import {
   useStatusBarAnnouncer,
   useStatusBarPopover,
@@ -84,7 +84,7 @@ function AdminConnectionControl({
   if (!isAdmin) {
     return (
       <Tooltip content={presentation.tooltip} side="top">
-        <Link
+        <PrefetchLink
           to="/system-status"
           aria-label={presentation.ariaLabel}
           className={cn(
@@ -94,7 +94,7 @@ function AdminConnectionControl({
           )}
         >
           {presentation.content}
-        </Link>
+        </PrefetchLink>
       </Tooltip>
     );
   }
@@ -222,13 +222,13 @@ function AdminConnectionControl({
           </div>
         )}
 
-        <Link
+        <PrefetchLink
           to="/system-status"
           onClick={close}
           className="inline-flex text-xs font-medium text-[var(--theme-primary)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
         >
           {t('statusBar.connectionDiagnostics.fullStatus', 'Open system status')}
-        </Link>
+        </PrefetchLink>
       </Popover>
     </>
   );
@@ -337,7 +337,7 @@ export function ConnectionSegment({
 
   return (
     <Tooltip content={tooltip} side="top">
-      <Link
+      <PrefetchLink
         to="/system-status"
         aria-label={ariaLabel}
         className={cn(
@@ -347,7 +347,7 @@ export function ConnectionSegment({
         )}
       >
         {content}
-      </Link>
+      </PrefetchLink>
     </Tooltip>
   );
 }

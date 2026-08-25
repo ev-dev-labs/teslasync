@@ -53,6 +53,12 @@ vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
 vi.mock('@/api/hooks/useEnergy', () => ({ useEnergyStats: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useEnergyStats } from '@/api/hooks/useEnergy';
 import { useUnits } from '@/hooks/useUnits';
@@ -343,7 +349,7 @@ describe('EnergyStatsWidget — states & interaction', () => {
     setup({ stats: makeQuery({ data: makeStats(), refetch }) });
     renderWidget({ size: STANDARD });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

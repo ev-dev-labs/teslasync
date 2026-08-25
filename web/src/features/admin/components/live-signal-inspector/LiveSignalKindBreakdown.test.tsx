@@ -58,26 +58,29 @@ vi.mock('react-i18next', async () => {
 
 type Datum = { category: string; label: string; value: number };
 
-vi.mock('@/components/charts', () => ({
-  ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-  BarChart: ({ data, children }: { data?: Datum[]; children?: ReactNode }) => (
-    <div data-testid="bar-chart" data-bar-count={String((data ?? []).length)}>
-      <ul data-testid="bar-data">
-        {(data ?? []).map((d) => (
-          <li
-            key={d.category}
-            data-testid="bar-datum"
-            data-category={String(d.category)}
-            data-label={String(d.label)}
-            data-value={String(d.value)}
-          >
-            {d.label}
-          </li>
-        ))}
-      </ul>
-      {children}
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
+    BarChart: ({ data, children }: { data?: Datum[]; children?: ReactNode }) => (
+      <div data-testid="bar-chart" data-bar-count={String((data ?? []).length)}>
+        <ul data-testid="bar-data">
+          {(data ?? []).map((d) => (
+            <li
+              key={d.category}
+              data-testid="bar-datum"
+              data-category={String(d.category)}
+              data-label={String(d.label)}
+              data-value={String(d.value)}
+            >
+              {d.label}
+            </li>
+          ))}
+        </ul>
+        {children}
     </div>
   ),
   Bar: ({ name, children }: { name?: string; children?: ReactNode }) => (
@@ -93,7 +96,8 @@ vi.mock('@/components/charts', () => ({
   CartesianGrid: () => null,
   Tooltip: () => <div data-testid="tooltip" />,
   ChartTooltip: () => null,
-}));
+  };
+});
 
 import { LiveSignalKindBreakdown } from './LiveSignalKindBreakdown';
 

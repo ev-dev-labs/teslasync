@@ -80,8 +80,10 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
 // BarChart drops its axis children so no recharts code runs.
 vi.mock('@/components/charts', async (importActual) => {
   const actual = await importActual<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     ResponsiveContainer: ({ children }: { children: ReactNode }) => (
       <div data-testid="responsive-container">{children}</div>
     ),

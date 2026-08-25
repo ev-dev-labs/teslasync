@@ -244,7 +244,7 @@ describe('BackupHistoryWidget', () => {
     });
     render(<BackupHistoryWidget size={STANDARD} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetchSites).toHaveBeenCalledTimes(1);
     expect(refetchEvents).toHaveBeenCalledTimes(1);
   });
@@ -258,7 +258,7 @@ describe('BackupHistoryWidget', () => {
     });
     render(<BackupHistoryWidget size={STANDARD} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetchSites).toHaveBeenCalledTimes(1);
     expect(refetchEvents).not.toHaveBeenCalled();
   });

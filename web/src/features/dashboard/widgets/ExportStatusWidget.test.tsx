@@ -340,7 +340,7 @@ describe('ExportStatusWidget states', () => {
     renderWidget(STANDARD);
     expect(screen.getByText('Export Status')).toBeInTheDocument();
     expect(screen.getByText('No export jobs')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
@@ -473,7 +473,7 @@ describe('ExportStatusWidget refresh', () => {
     mockUseExportJobs.mockReturnValue(qr({ data: [makeAdmin()], refetch: adminRefetch }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(exportsRefetch).toHaveBeenCalledTimes(1);
     expect(adminRefetch).toHaveBeenCalledTimes(1);
   });

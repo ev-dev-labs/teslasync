@@ -3,11 +3,11 @@ import { useTranslation } from 'react-i18next';
 import { useUnits } from '@/hooks/useUnits';
 import { Car, BarChart3, Clock, TrendingDown, TrendingUp, Activity } from 'lucide-react';
 import { GlassPanel, Badge, PanelTitle, Text, Caption } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip, CHART_COLORS,
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { formatDate } from '@/lib/dateFormat';
@@ -65,20 +65,35 @@ export function DrivingSection({
             unit: unitPrefs.distance,
           })}
         </Caption>
-        {isLoading ? (
-          <Skeleton height={220} />
-        ) : isError ? (
-          <QueryError error={error} onRetry={onRetry} />
-        ) : hasChart ? (
-          <div
-            className="h-56 sm:h-64 xl:h-72"
-            role="img"
-            aria-label={t(
+        <EmbeddedChart
+          title={t('analytics.weeklyDigest.dailyDistance', 'Daily Distance')}
+          ariaLabel={t(
               'analytics.weeklyDigest.dailyDistanceChartLabel',
               'Bar chart of daily driving distance in {{unit}}',
               { unit: unitPrefs.distance },
-            )}
-          >
+          )}
+          data={distanceChartData}
+          dataColumns={[
+            { key: 'day', label: t('analytics.weeklyDigest.day', 'Day') },
+            {
+              key: 'distance',
+              label: t('analytics.weeklyDigest.dailyDistance', 'Daily Distance ({{unit}})', {
+                unit: unitPrefs.distance,
+              }),
+            },
+          ]}
+          loading={isLoading}
+          error={isError ? error : undefined}
+          onRetry={onRetry}
+          empty={!hasChart}
+          emptyMessage={t(
+            'analytics.weeklyDigest.noDailyDistance',
+            'No driving distance data is available for this week.',
+          )}
+          fluid={false}
+          mobileHeight={224}
+          height={288}
+        >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={distanceChartData} margin={chartMarginLabeled}>
                 {chartGrid}
@@ -94,13 +109,7 @@ export function DrivingSection({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            message={t('analytics.weeklyDigest.noDailyDistance', 'No driving distance data is available for this week.')}
-            className="py-8"
-          />
-        )}
+        </EmbeddedChart>
       </div>
 
       {/* Driving efficiency stats */}

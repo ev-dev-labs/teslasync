@@ -356,7 +356,7 @@ describe('DrivetrainHealthWidget', () => {
 
     // The error panel replaces the gauge + header (and its refresh control).
     expect(screen.queryByText('Healthy')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('refetches when the freshness refresh control is activated', () => {
@@ -366,7 +366,7 @@ describe('DrivetrainHealthWidget', () => {
     );
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);

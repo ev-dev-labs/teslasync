@@ -6,6 +6,10 @@ import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorDisplay } from '@/components/feedback/ErrorDisplay';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
 import { PageLoadSkeleton } from '@/components/feedback/PageLoadSkeleton';
+import {
+  DataSourceNotice,
+  type DataSourceDescriptor,
+} from '@/components/feedback/DataSourceNotice';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Heading, Text } from '@/components/ui/Typography';
 import { useSetBreadcrumbOverrides } from './BreadcrumbOverridesContext';
@@ -87,6 +91,12 @@ export interface PageContainerProps {
    * data) should mount `<DataFreshnessAuto>` via `metadataActions`.
    */
   query?: FreshnessQuery | readonly FreshnessQuery[];
+  /**
+   * Named independent sources used by this page. When some sources are
+   * delayed or unavailable, a non-fatal notice is rendered while successful
+   * sections remain on screen.
+   */
+  dataSources?: readonly DataSourceDescriptor[];
 }
 
 export function PageContainer({
@@ -94,7 +104,7 @@ export function PageContainer({
   destructiveActions, overflowActions, primaryAction,
   loading, busy, error, empty, emptyMessage,
   breadcrumbLabels,
-  children, className, copyLink, query,
+  children, className, copyLink, query, dataSources,
 }: PageContainerProps) {
   // Push per-page breadcrumb label overrides up to the global Layout
   // breadcrumb. The Layout itself reads from BreadcrumbOverridesContext +
@@ -170,7 +180,10 @@ export function PageContainer({
           <EmptyState message={emptyMessage ?? `No ${title.toLowerCase()} found.`} />
         </GlassPanel>
       ) : (
-        <PageErrorBoundary pageName={title}>{children}</PageErrorBoundary>
+        <PageErrorBoundary pageName={title}>
+          {dataSources && <DataSourceNotice sources={dataSources} />}
+          {children}
+        </PageErrorBoundary>
       )}
     </div>
   );

@@ -152,69 +152,77 @@ export function ChartExportMenu({
           aria-label={t('chart.export.menuLabel', 'Export chart')}
           className={cn(
             'absolute right-0 z-30 mt-1 w-56 rounded-lg p-1',
-            'border border-white/[0.08] bg-[var(--surface-elevated)] shadow-xl',
+            'border border-[var(--border-subtle)] bg-[var(--surface-elevated)] shadow-xl',
           )}
         >
           {onExportCsv && (
-            <button
+            <Button
               type="button"
               role="menuitem"
+              variant="ghost"
+              size="sm"
               onClick={handleCsv}
+              icon={<FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />}
               className={cn(
-                'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-                'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-                'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+                '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+                'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+                'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               )}
             >
-              <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{t('chart.export.csv', 'Download data as CSV')}</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handlePng}
             disabled={busy}
+            icon={<ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('chart.export.png', 'Save as PNG')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handleSvg}
             disabled={busy}
+            icon={<FileImage className="h-3.5 w-3.5" aria-hidden="true" />}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            <FileImage className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('chart.export.svg', 'Save as SVG')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handleCopy}
             disabled={busy}
+            icon={<Copy className="h-3.5 w-3.5" aria-hidden="true" />}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('chart.export.copy', 'Copy image to clipboard')}</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

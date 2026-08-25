@@ -10,7 +10,7 @@ import { AlertBanner, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartLegend, ChartTooltip,
   ComposedChart, Line, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -20,6 +20,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceToSI } from '@/lib/unitConversion';
 import { chartTokens } from '@/lib/tokens';
 import type { Drive } from '@/types/driving';
@@ -42,6 +43,7 @@ export default function MileageBudgetPage() {
   const { formatCurrency } = useFormatting();
   const { config, update } = useMileageBudget();
   const [nowMs] = useState(() => Date.now());
+  const mileageHidden = useHiddenSeries('mileage-budget');
 
   const drivesQuery = useDriveHistory(vehicleIdStr, HISTORY_LIMIT);
   const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
@@ -372,6 +374,7 @@ export default function MileageBudgetPage() {
               },
               { key: 'allowed', label: t('mileageBudget.col.allowed', 'Allowed') },
             ]}
+            chartKey="mileage-budget"
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={chartData}>
@@ -379,6 +382,7 @@ export default function MileageBudgetPage() {
                 <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                 <Tooltip content={<ChartTooltip />} />
+                <ChartLegend state={mileageHidden} />
                 <Area
                   type="monotone"
                   dataKey="used"
@@ -387,6 +391,7 @@ export default function MileageBudgetPage() {
                   fill={chartTokens.series[0]}
                   fillOpacity={0.15}
                   strokeWidth={2}
+                  hide={mileageHidden.isHidden('used')}
                 />
                 <Line
                   type="monotone"
@@ -396,6 +401,7 @@ export default function MileageBudgetPage() {
                   strokeWidth={2}
                   strokeDasharray="6 4"
                   dot={false}
+                  hide={mileageHidden.isHidden('allowed')}
                 />
               </ComposedChart>
             </ResponsiveContainer>

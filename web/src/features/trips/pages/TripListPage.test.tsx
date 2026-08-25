@@ -374,8 +374,7 @@ describe('TripListPage — loading', () => {
     mockUseTrips.mockReturnValue(makeQuery({ data: undefined, isLoading: true, isFetching: true }));
     renderPage();
 
-    // Brand spinner is the sole body content.
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     // Header title + the range control persist during load.
     expect(screen.getByRole('heading', { name: 'Trips', level: 1 })).toBeInTheDocument();
     expect(screen.getByTestId('range-picker')).toBeInTheDocument();

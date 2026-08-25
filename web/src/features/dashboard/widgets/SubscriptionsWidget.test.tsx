@@ -455,7 +455,7 @@ describe('SubscriptionsWidget — interactions & a11y', () => {
     const q = setQuery({ data: makeEnvelope({ premium_connectivity: true }) });
     renderWidget(FULL);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     expect(q.refetch).toHaveBeenCalledTimes(1);

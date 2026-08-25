@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   Line,
   LineChart,
@@ -74,7 +75,7 @@ export function PackCapacityEstimateTimeline({
           'packCapacity.timeline.aria',
           'Timeline of raw and filtered capacity estimates',
         )}
-        height={360}
+        size="detail"
         loading={state.isLoading}
         empty={false}
         exportable={
@@ -82,14 +83,35 @@ export function PackCapacityEstimateTimeline({
         }
         exportData={rows}
         data={rows}
+        dataColumns={[
+          { key: 'date', label: t('chart.col.date', 'Date') },
+          {
+            key: 'raw',
+            label: `${t('packCapacity.series.raw', 'Raw estimate')} (${energyUnit})`,
+          },
+          {
+            key: 'filtered',
+            label: `${t('packCapacity.series.filtered', 'Filtered estimate')} (${energyUnit})`,
+          },
+          {
+            key: 'lower',
+            label: `${t('packCapacity.series.lower', 'Posterior minus one sigma')} (${energyUnit})`,
+          },
+          {
+            key: 'upper',
+            label: `${t('packCapacity.series.upper', 'Posterior plus one sigma')} (${energyUnit})`,
+          },
+        ]}
+        chartKey="pack-capacity-estimate-timeline"
       >
-        <PackCapacitySectionBody
-          result={result}
-          state={state}
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <LineChart data={rows}>
+        {({ hiddenSeries }) => (
+          <PackCapacitySectionBody
+            result={result}
+            state={state}
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -110,6 +132,7 @@ export function PackCapacityEstimateTimeline({
                 width={72}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Line
                 type="monotone"
                 dataKey="raw"
@@ -118,6 +141,7 @@ export function PackCapacityEstimateTimeline({
                 strokeOpacity={0.5}
                 strokeWidth={1.5}
                 dot={{ r: 2 }}
+                hide={hiddenSeries?.isHidden('raw')}
               />
               <Line
                 type="monotone"
@@ -130,6 +154,7 @@ export function PackCapacityEstimateTimeline({
                 strokeOpacity={0.45}
                 strokeDasharray="4 4"
                 dot={false}
+                legendType="none"
               />
               <Line
                 type="monotone"
@@ -142,6 +167,7 @@ export function PackCapacityEstimateTimeline({
                 strokeOpacity={0.45}
                 strokeDasharray="4 4"
                 dot={false}
+                legendType="none"
               />
               <Line
                 type="monotone"
@@ -153,10 +179,12 @@ export function PackCapacityEstimateTimeline({
                 stroke={chartTokens.series[1]}
                 strokeWidth={2.5}
                 dot={{ r: 3 }}
+                hide={hiddenSeries?.isHidden('filtered')}
               />
-            </LineChart>
-          </ResponsiveContainer>
-        </PackCapacitySectionBody>
+              </LineChart>
+            </ResponsiveContainer>
+          </PackCapacitySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

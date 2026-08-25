@@ -27,6 +27,11 @@ export interface FeedbackListParams {
   offset?: number
 }
 
+export interface BulkFeedbackUpdateInput {
+  ids: number[]
+  update: FeedbackUpdateInput
+}
+
 function buildQuery(params: FeedbackListParams): string {
   const sp = new URLSearchParams()
   if (params.status) sp.set('status', params.status)
@@ -70,15 +75,68 @@ export function useUpdateFeedback() {
   const { success, error } = useMutationToast()
   return useMutation({
     mutationFn: ({ id, update }: { id: number; update: FeedbackUpdateInput }) =>
-      request<FeedbackEntry>(`/admin/feedback/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(update),
-      }),
+      updateFeedback(id, update),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: feedbackKeys.all })
       success('toast.feedback.update.success', 'Feedback updated')
     },
     onError: (e) => error(e, 'toast.feedback.update.error', 'Failed to update feedback'),
+  })
+}
+
+export function useBulkUpdateFeedback() {
+  const qc = useQueryClient()
+  const { success, error } = useMutationToast()
+
+  return useMutation({
+    mutationFn: async ({ ids, update }: BulkFeedbackUpdateInput) => {
+      if (
+        ids.length === 0 ||
+        ids.some((id) => !Number.isInteger(id) || id <= 0)
+      ) {
+        throw new Error('Bulk feedback updates require one or more valid feedback IDs')
+      }
+
+      const uniqueIds = Array.from(new Set(ids))
+      const settled = await Promise.allSettled(
+        uniqueIds.map((id) => updateFeedback(id, update)),
+      )
+      const updated: FeedbackEntry[] = []
+      let failed = 0
+      for (const result of settled) {
+        if (result.status === 'fulfilled') updated.push(result.value)
+        else failed += 1
+      }
+
+      if (failed > 0) {
+        throw new Error(
+          `${failed} of ${uniqueIds.length} feedback items could not be updated`,
+        )
+      }
+      return updated
+    },
+    onSuccess: (rows) => {
+      success(
+        'toast.feedback.bulkUpdate.success',
+        `Updated ${rows.length} feedback items`,
+      )
+    },
+    onError: (e) =>
+      error(
+        e,
+        'toast.feedback.bulkUpdate.error',
+        'Some feedback items could not be updated',
+      ),
+    onSettled: () => {
+      qc.invalidateQueries({ queryKey: feedbackKeys.all })
+    },
+  })
+}
+
+function updateFeedback(id: number, update: FeedbackUpdateInput) {
+  return request<FeedbackEntry>(`/admin/feedback/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(update),
   })
 }

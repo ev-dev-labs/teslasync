@@ -263,9 +263,9 @@ describe('ChargerTypeChart — empty branch (regression: never a blank panel)', 
 
     // The pre-fix component omitted `empty`, so this placeholder never rendered.
     expect(screen.getByText('No data available')).toBeInTheDocument();
-    // Title + accessible frame stay mounted (the panel is never truly blank).
+    // The title stays mounted while the empty state replaces the chart image.
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: ARIA_LABEL })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: ARIA_LABEL })).toBeNull();
     // No fallback data table and no export menu when there's nothing to show.
     expect(screen.queryByText(`${TITLE} — data table`)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();

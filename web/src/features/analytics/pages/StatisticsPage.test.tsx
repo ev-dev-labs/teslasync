@@ -356,7 +356,7 @@ describe('StatisticsPage', () => {
 
     expect(await screen.findAllByTestId('stat-grid-skeleton')).toHaveLength(2);
     expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
-    expect(screen.queryByText('No Data')).not.toBeInTheDocument();
+    expect(screen.queryByText('No statistics yet')).not.toBeInTheDocument();
   });
 
   it('surfaces a retry-able error when the period-stats request fails', async () => {
@@ -381,15 +381,17 @@ describe('StatisticsPage', () => {
     await waitFor(() => expect(periodStatsCallCount()).toBeGreaterThan(before));
   });
 
-  it('shows the "No Data" empty state when period stats resolve empty', async () => {
+  it('shows a guided empty state when period stats resolve empty', async () => {
     periodStatsHandler = () => Promise.resolve(null);
 
     renderPage();
 
-    expect(await screen.findByText('No Data')).toBeInTheDocument();
+    expect(await screen.findByText('No statistics yet')).toBeInTheDocument();
     expect(
-      screen.getByText('No statistics available for this vehicle.'),
+      screen.getByText(/no completed driving or charging history/i),
     ).toBeInTheDocument();
+    expect(screen.getByText(/Complete a drive or charging session/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'View drives' })).toHaveAttribute('href', '/drives');
     expect(screen.queryByRole('region', { name: 'Statistics' })).not.toBeInTheDocument();
   });
 

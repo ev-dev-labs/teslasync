@@ -433,6 +433,23 @@ export default function MaintenancePage() {
     queryFn: () => request<ServiceRecord[]>('/maintenance/records'),
     enabled,
   });
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'maintenance-items',
+        label: t('dataSources.labels.maintenanceItems', 'Maintenance items'),
+        query: itemsQuery,
+        enabled,
+      },
+      {
+        id: 'service-records',
+        label: t('dataSources.labels.serviceRecords', 'Service records'),
+        query: recordsQuery,
+        enabled,
+      },
+    ],
+    [enabled, itemsQuery, recordsQuery, t],
+  );
 
   const items = useMemo(() => itemsQuery.data ?? [], [itemsQuery.data]);
   const records = useMemo(() => recordsQuery.data ?? [], [recordsQuery.data]);
@@ -566,6 +583,7 @@ export default function MaintenancePage() {
       subtitle={t('maintenance.subtitle', 'Service schedule, records, and upcoming maintenance')}
       actions={actions}
       query={[itemsQuery, recordsQuery]}
+      dataSources={dataSources}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>

@@ -20,8 +20,9 @@ interface CostSectionProps {
   /** True when the query resolved but produced no rows. */
   isEmpty?: boolean;
   emptyIcon?: ReactNode;
-  /** Empty-state copy. Falls back to a localized "No data available" so an empty section is never a blank panel. */
+  /** Empty-state copy. Falls back to charging-specific selected-window guidance. */
   emptyMessage?: string;
+  emptyDescription?: string;
   /** Height of the loading skeleton block. */
   skeletonHeight?: number;
   className?: string;
@@ -46,6 +47,7 @@ export function CostSection({
   isEmpty,
   emptyIcon,
   emptyMessage,
+  emptyDescription,
   skeletonHeight = 220,
   className,
   bodyClassName,
@@ -71,10 +73,17 @@ export function CostSection({
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isEmpty ? (
+        // no-action: recovery uses the page-level vehicle and date controls that remain visible.
         <EmptyState
-          /* no-action: transient empty state — surfaces when no charging rows match the filters */
           icon={emptyIcon}
-          message={emptyMessage ?? t('common.noData', 'No data available')}
+          message={emptyMessage ?? t(
+            'common.noChargingRecords',
+            'No charging records match the current selection.',
+          )}
+          description={emptyDescription ?? t(
+            'common.noChargingRecordsDescription',
+            'Adjust the vehicle or date filters, or return after more charging history is recorded.',
+          )}
         />
       ) : (
         <div className={bodyClassName}>{children}</div>

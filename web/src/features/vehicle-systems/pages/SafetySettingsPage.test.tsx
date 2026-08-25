@@ -183,10 +183,12 @@ vi.mock('@/components/forms', async () => {
 // value/max/unit; everything else is inert.
 vi.mock('@/components/charts', async () => {
   const React = await vi.importActual<typeof import('react')>('react');
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Null = () => null;
   const Pass = ({ children }: { children?: ReactNode }) =>
     React.createElement(React.Fragment, null, children);
   return {
+    ...chartTestDoubles,
     LinearGauge: function LinearGauge({
       value,
       max,
@@ -493,7 +495,7 @@ describe('SafetySettingsPage', () => {
     renderPage();
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('AEB')).toBeInTheDocument(); // table column header
-    expect(screen.queryByText('No history records found.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No safety settings history has been recorded.')).not.toBeInTheDocument();
   });
 
   it('shows skeleton scaffolding (not data or empty states) while loading', () => {
@@ -553,7 +555,8 @@ describe('SafetySettingsPage', () => {
     renderPage();
 
     expect(screen.getByText('No safety state history to chart yet.')).toBeInTheDocument();
-    expect(screen.getByText('No history records found.')).toBeInTheDocument();
+    expect(screen.getByText('No safety settings history has been recorded.')).toBeInTheDocument();
+    expect(screen.getByText(/driver-assistance and safety configuration telemetry/)).toBeInTheDocument();
     expect(captured.lineChartData).toBeUndefined();
   });
 

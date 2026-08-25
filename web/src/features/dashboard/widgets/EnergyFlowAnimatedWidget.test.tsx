@@ -314,7 +314,7 @@ describe('EnergyFlowAnimatedWidget — refresh', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ power: 25 }), { refetch }));
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

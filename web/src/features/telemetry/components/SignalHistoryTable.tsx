@@ -203,8 +203,15 @@ export function SignalHistoryTable({
           // no-action: empty result for a user-issued query; user adjusts the controls above to re-query.
           <EmptyState
             icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-            title={t('No data')}
-            message={t('No signal data found for this query.')}
+            title={t('signalHistory.emptyTitle', 'No signal samples')}
+            message={t(
+              'signalHistory.emptyMessage',
+              'No signal data matches the selected signals and time range.',
+            )}
+            description={t(
+              'signalHistory.emptyDescription',
+              'Expand the time range or choose another signal, then run the query again.',
+            )}
           />
         )}
       </GlassPanel>

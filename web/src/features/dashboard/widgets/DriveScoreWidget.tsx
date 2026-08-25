@@ -107,9 +107,14 @@ export default function DriveScoreWidget({ size }: WidgetProps) {
       {hasScore ? (
         <WidgetGaugeHero gauge={gauge} stats={stats} compact={isCompact} />
       ) : (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+        // no-action: the score is generated automatically after a qualifying drive.
+        <EmptyState
           icon={<TrendingUp className="h-5 w-5" />}
-          message={t('widget.noScore', 'No data yet')}
+          message={t('widget.noScore', 'No drive score yet')}
+          description={t(
+            'widget.noScoreDescription',
+            'Complete a drive with measured energy and distance to calculate an efficiency score.',
+          )}
           className="py-4"
         />
       )}

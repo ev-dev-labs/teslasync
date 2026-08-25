@@ -163,7 +163,7 @@ describe('SecurityStatistics — loading', () => {
     // Neither the metrics nor the empty state may render yet.
     expect(screen.queryByRole('group')).toBeNull();
     expect(screen.queryByText('Lock/Unlock Events')).toBeNull();
-    expect(screen.queryByText('No data available')).toBeNull();
+    expect(screen.queryByText('No security events are available in this history window.')).toBeNull();
   });
 
   it('prioritises the skeleton over stale data when both are present', () => {
@@ -228,7 +228,13 @@ describe('SecurityStatistics — empty', () => {
     // Panel title + empty status region both present.
     expect(screen.getByText('Security Statistics')).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(
+      screen.getByText('No security events are available in this history window.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Lock, door, window, HomeLink, and Sentry statistics/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Refresh security history' }),
+    ).toBeInTheDocument();
 
     // No metrics, skeletons, or error in the empty branch.
     expect(screen.queryByRole('group')).toBeNull();

@@ -511,9 +511,14 @@ export default function MapOverviewPage() {
               pagination
             />
           ) : (
-            <EmptyState /* no-action: transient empty state — no location history */
+            // no-action: location history appears automatically after valid GPS reports.
+            <EmptyState
               icon={<Clock className="h-8 w-8" aria-hidden="true" />}
               message={t('mapOverview.noHistory', 'No location history found.')}
+              description={t(
+                'mapOverview.noHistoryDescription',
+                'Location history appears after the selected vehicle reports valid GPS positions.',
+              )}
             />
           )}
         </GlassPanel>

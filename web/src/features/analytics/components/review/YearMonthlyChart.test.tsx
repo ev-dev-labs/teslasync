@@ -324,13 +324,13 @@ describe('YearMonthlyChart — empty state', () => {
     renderChart(makeReview({ monthly_stats: [] }));
 
     expect(screen.getByText('No data available')).toBeInTheDocument();
-    // Title + accessible chart frame stay mounted.
+    // The title stays mounted while the empty state replaces the chart image.
     expect(screen.getByRole('heading', { level: 3, name: 'Monthly activity' })).toBeInTheDocument();
     expect(
-      screen.getByRole('img', {
+      screen.queryByRole('img', {
         name: 'Bar and line chart of monthly drives and distance across the year',
       }),
-    ).toBeInTheDocument();
+    ).toBeNull();
     // No fallback data table is built when there are zero rows.
     expect(screen.queryByText('Monthly activity — data table')).toBeNull();
   });

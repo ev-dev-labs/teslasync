@@ -2,7 +2,7 @@ import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YA
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
 
-import { ChartContainer, ChartTooltip } from '@/components/charts';
+import { ChartContainer, ChartLegend, ChartTooltip } from '@/components/charts';
 import { Text } from '@/components/ui';
 import { chartTokens } from '@/lib/tokens';
 
@@ -56,12 +56,14 @@ export function ChargeAdvisorScenarioChart({ analysis, state }: ChargeAdvisorCom
           chartKey="charge-advisor-scenarios"
           height={290}
         >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={rows}>
+          {({ hiddenSeries }) => (
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={rows}>
               <CartesianGrid stroke={chartTokens.gridStroke} strokeDasharray="3 3" />
               <XAxis dataKey="date" />
               <YAxis domain={[0, 100]} />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Area
                 type="monotone"
                 dataKey="mean"
@@ -70,6 +72,7 @@ export function ChargeAdvisorScenarioChart({ analysis, state }: ChargeAdvisorCom
                 fill={chartTokens.series[0]}
                 fillOpacity={0.12}
                 strokeWidth={2}
+                hide={hiddenSeries?.isHidden('mean')}
               />
               <Area
                 type="monotone"
@@ -80,9 +83,11 @@ export function ChargeAdvisorScenarioChart({ analysis, state }: ChargeAdvisorCom
                 fillOpacity={0.08}
                 strokeWidth={2}
                 strokeDasharray="6 4"
+                hide={hiddenSeries?.isHidden('p75')}
               />
-            </AreaChart>
-          </ResponsiveContainer>
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </ChartContainer>
       )}
     </ChargeAdvisorSection>

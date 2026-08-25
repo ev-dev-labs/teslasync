@@ -9,7 +9,7 @@ import { MetricCard, MetricBar } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartLegend, ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 
@@ -181,6 +181,7 @@ export default function RouteEfficiencyPage() {
                 'routeEfficiency.comparisonAria',
                 'Per-route best, average, and worst efficiency comparison bar chart',
               )}
+              chartKey="route-efficiency-comparison"
               data={chartData}
               dataColumns={[
                 { key: 'name', label: t('routeEfficiency.col.route', 'Route') },
@@ -192,17 +193,20 @@ export default function RouteEfficiencyPage() {
               loading={isLoading}
               empty={!isLoading && chartData.length < 2}
             >
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 12 }}>
+              {({ hiddenSeries }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} layout="vertical" margin={{ left: 8, right: 12 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis type="number" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   <YAxis dataKey="name" type="category" tick={{ fill: 'var(--text-muted)', fontSize: 9 }} width={110} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--surface-2)', fillOpacity: 0.3 }} />
-                  <Bar dataKey="best" name={`${t('routeEfficiency.best', 'Best')} ${effUnit}`} fill={ROUTE_EFF_COLORS.best} fillOpacity={0.85} radius={[0, 3, 3, 0]} />
-                  <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${effUnit}`} fill={ROUTE_EFF_COLORS.avg} fillOpacity={0.65} radius={[0, 3, 3, 0]} />
-                  <Bar dataKey="worst" name={`${t('routeEfficiency.worst', 'Worst')} ${effUnit}`} fill={ROUTE_EFF_COLORS.worst} fillOpacity={0.5} radius={[0, 3, 3, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
+                  <ChartLegend />
+                  <Bar dataKey="best" name={`${t('routeEfficiency.best', 'Best')} ${effUnit}`} fill={ROUTE_EFF_COLORS.best} fillOpacity={0.85} radius={[0, 3, 3, 0]} hide={hiddenSeries?.isHidden('best')} />
+                  <Bar dataKey="avg" name={`${t('routeEfficiency.avgLabel', 'Avg')} ${effUnit}`} fill={ROUTE_EFF_COLORS.avg} fillOpacity={0.65} radius={[0, 3, 3, 0]} hide={hiddenSeries?.isHidden('avg')} />
+                  <Bar dataKey="worst" name={`${t('routeEfficiency.worst', 'Worst')} ${effUnit}`} fill={ROUTE_EFF_COLORS.worst} fillOpacity={0.5} radius={[0, 3, 3, 0]} hide={hiddenSeries?.isHidden('worst')} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
             </ChartContainer>
           )}
 

@@ -358,7 +358,7 @@ describe('RecentDrivesWidget refresh', () => {
     routeDrives([makeDrive()]);
     renderWidget(1);
 
-    const refresh = await screen.findByRole('button', { name: 'Refresh' });
+    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     const before = drivesCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

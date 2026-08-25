@@ -4,6 +4,8 @@ import { Zap } from 'lucide-react';
 import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, axisTick, axisTickSm, chartAnimation, fmt, areaGradient,
+  ChartLegend, EmbeddedChart,
+  type ChartDataRow,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { Badge } from '@/components/ui';
@@ -16,7 +18,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   time: string;
   power: number | null;
   soc: number | null;
@@ -153,10 +155,29 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
   const tick = isWide ? axisTick : axisTickSm;
 
   const chart = useMemo(() => {
-    if (chartData.length === 0) return <></>;
     return (
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
+      <EmbeddedChart
+        title={t('widget.chargingSessionDetail.title', 'Charge Session Detail')}
+        ariaLabel={t(
+          'widget.chargingSessionDetail.chartAria',
+          'Charging power and battery state of charge over the latest session',
+        )}
+        empty={chartData.length === 0}
+        emptyMessage={t(
+          'widget.chargingSessionDetail.noTelemetry',
+          'No charging telemetry is available for this session',
+        )}
+        data={chartData}
+        dataColumns={[
+          { key: 'time', label: t('widget.chargingSessionDetail.time', 'Time') },
+          { key: 'power', label: t('widget.chargingSessionDetail.powerKw', 'Power (kW)') },
+          { key: 'soc', label: t('widget.chargingSessionDetail.soc', 'SoC %') },
+        ]}
+        chartKey="dashboard-charging-session-detail"
+      >
+        {({ hiddenSeries }) => (
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
           data={chartData}
           margin={{ top: 4, right: 4, bottom: 0, left: -10 }}
           {...chartAnimation}
@@ -194,6 +215,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
           />
 
           <Tooltip content={<ChartTooltip />} />
+          <ChartLegend />
 
           <Area
             yAxisId="power"
@@ -204,6 +226,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             strokeWidth={1.5}
             name={t('widget.chargingSessionDetail.powerKw', 'Power (kW)')}
             connectNulls
+            hide={hiddenSeries?.isHidden('power')}
           />
 
           <Line
@@ -215,9 +238,12 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             dot={false}
             name={t('widget.chargingSessionDetail.soc', 'SoC %')}
             connectNulls
+            hide={hiddenSeries?.isHidden('soc')}
           />
-        </ComposedChart>
-      </ResponsiveContainer>
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+      </EmbeddedChart>
     );
   }, [chartData, tick, t]);
 

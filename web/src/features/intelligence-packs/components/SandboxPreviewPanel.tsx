@@ -16,6 +16,8 @@ import {
   Bar,
   BarChart,
   CartesianGrid,
+  ChartTooltip,
+  EmbeddedChart,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -39,6 +41,66 @@ function seriesToChartData(series: number[]) {
   return series.map((value, i) => ({ i, value }));
 }
 
+function FormulaSeriesChart({
+  title,
+  kind,
+  data,
+}: {
+  title: string;
+  kind: 'line' | 'area' | 'bar';
+  data: { i: number; value: number }[];
+}) {
+  const { t } = useTranslation();
+
+  return (
+    // chart-legend-audit:skip line, area, and bar are mutually exclusive render modes for one formula series
+    <EmbeddedChart
+      title={title}
+      ariaLabel={t(
+        'intelPacks.sandbox.chartAria',
+        'Synthetic sandbox output for {{title}}',
+        { title },
+      )}
+      data={data}
+      dataColumns={[
+        { key: 'i', label: t('intelPacks.sandbox.row', 'Sample') },
+        { key: 'value', label: t('intelPacks.sandbox.value', 'Value') },
+      ]}
+      fluid={false}
+      mobileHeight={120}
+      height={120}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        {kind === 'line' ? (
+          <LineChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+            <XAxis dataKey="i" hide />
+            <YAxis width={36} tick={{ fontSize: 10 }} />
+            <Tooltip content={<ChartTooltip />} />
+            <Line type="monotone" dataKey="value" stroke="#22d3ee" dot={false} strokeWidth={2} isAnimationActive={false} />
+          </LineChart>
+        ) : kind === 'area' ? (
+          <AreaChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+            <XAxis dataKey="i" hide />
+            <YAxis width={36} tick={{ fontSize: 10 }} />
+            <Tooltip content={<ChartTooltip />} />
+            <Area type="monotone" dataKey="value" stroke="#34d399" fill="#34d39933" isAnimationActive={false} />
+          </AreaChart>
+        ) : (
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
+            <XAxis dataKey="i" hide />
+            <YAxis width={36} tick={{ fontSize: 10 }} />
+            <Tooltip content={<ChartTooltip />} />
+            <Bar dataKey="value" fill="#a78bfa" isAnimationActive={false} />
+          </BarChart>
+        )}
+      </ResponsiveContainer>
+    </EmbeddedChart>
+  );
+}
+
 function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind; result: FormulaRunResult | null }) {
   const { t } = useTranslation();
   if (!result) {
@@ -56,36 +118,8 @@ function WidgetCard({ title, kind, result }: { title: string; kind: PackVizKind;
       <p className="text-xs font-medium text-[var(--text-primary)]">{title}</p>
       {data.length === 0 ? (
         <p className="text-xs text-[var(--text-muted)]">{t('intelPacks.sandbox.noData', 'No output rows.')}</p>
-      ) : kind === 'line' ? (
-        <ResponsiveContainer width="100%" height={120}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-            <XAxis dataKey="i" hide />
-            <YAxis width={36} tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Line type="monotone" dataKey="value" stroke="#22d3ee" dot={false} strokeWidth={2} isAnimationActive={false} />
-          </LineChart>
-        </ResponsiveContainer>
-      ) : kind === 'area' ? (
-        <ResponsiveContainer width="100%" height={120}>
-          <AreaChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-            <XAxis dataKey="i" hide />
-            <YAxis width={36} tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Area type="monotone" dataKey="value" stroke="#34d399" fill="#34d39933" isAnimationActive={false} />
-          </AreaChart>
-        </ResponsiveContainer>
-      ) : kind === 'bar' ? (
-        <ResponsiveContainer width="100%" height={120}>
-          <BarChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" opacity={0.15} />
-            <XAxis dataKey="i" hide />
-            <YAxis width={36} tick={{ fontSize: 10 }} />
-            <Tooltip />
-            <Bar dataKey="value" fill="#a78bfa" isAnimationActive={false} />
-          </BarChart>
-        </ResponsiveContainer>
+      ) : kind === 'line' || kind === 'area' || kind === 'bar' ? (
+        <FormulaSeriesChart title={title} kind={kind} data={data} />
       ) : kind === 'sparkline' ? (
         <Sparkline data={result.series} ariaLabel={title} />
       ) : kind === 'radial-gauge' ? (

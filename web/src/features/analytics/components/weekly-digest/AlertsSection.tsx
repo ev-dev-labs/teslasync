@@ -4,7 +4,7 @@ import { GlassPanel, Badge, PanelTitle, Text, Caption } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import {
   ChartTooltip,
-  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend,
+  PieChart, Pie, Cell, Tooltip, ResponsiveContainer, ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { fmtInt } from '@/lib/numberFormat';
 import type { DigestMetrics, AlertPieEntry } from './types';
@@ -112,13 +112,20 @@ export function AlertsSection({
               {t('analytics.weeklyDigest.alertDistribution', 'Alert Distribution')}
             </Caption>
             {pieData.length > 0 ? (
-              <div
-                className="h-56 w-full sm:h-64"
-                role="img"
-                aria-label={t(
+              <EmbeddedChart
+                title={t('analytics.weeklyDigest.alertDistribution', 'Alert Distribution')}
+                ariaLabel={t(
                   'analytics.weeklyDigest.alertDistributionChartLabel',
                   'Pie chart of alerts by severity',
                 )}
+                data={pieData.map(({ name, value }) => ({ name, value }))}
+                dataColumns={[
+                  { key: 'name', label: t('analytics.weeklyDigest.severity', 'Severity') },
+                  { key: 'value', label: t('analytics.weeklyDigest.alerts', 'Alerts') },
+                ]}
+                fluid={false}
+                mobileHeight={224}
+                height={256}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
@@ -138,14 +145,12 @@ export function AlertsSection({
                       ))}
                     </Pie>
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend
+                    <ChartLegend
                       verticalAlign="bottom"
-                      iconType="circle"
-                      wrapperStyle={{ fontSize: 12, color: 'var(--text-muted)' }}
                     />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             ) : (
               <EmptyState /* no-action: transient empty state — alerts exist but carry no severity breakdown to chart */
                 icon={<AlertTriangle className="h-8 w-8" />}

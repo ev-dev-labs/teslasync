@@ -182,7 +182,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     // The page header + every panel title mount immediately (never gated on
     // data), while the KPI numbers stay hidden behind their skeletons.
     expect(screen.getByText('My Activity')).toBeInTheDocument();
-    expect(screen.getByText('Activity over time')).toBeInTheDocument();
+    expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
     expect(screen.queryByText('Total actions')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
@@ -284,7 +284,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
 
     expect((await screen.findAllByText('Permission denied')).length).toBeGreaterThan(0);
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
-    expect(screen.getByText('Activity over time')).toBeInTheDocument();
+    expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
     expect(screen.queryByText('Sign in required')).toBeNull();
     expect(screen.queryByText('Activity feed is not supported')).toBeNull();
   });
@@ -300,7 +300,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
 
     // Sections remain mounted around the errors.
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
-    expect(screen.getByText('Activity over time')).toBeInTheDocument();
+    expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
 
     // The hard-gate notices are NOT shown for a plain server error.
     expect(screen.queryByText('Activity feed is not supported')).toBeNull();

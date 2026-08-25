@@ -23,7 +23,7 @@
 
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity, BarChart3, Radio } from 'lucide-react';
+import { BarChart3, Radio } from 'lucide-react';
 
 import { GlassPanel, SectionTitle } from '@/components/ui';
 import { Skeleton } from '@/components/feedback';
@@ -36,9 +36,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
+  ChartLegend,
   ResponsiveContainer,
   SmallMultiplesChart,
+  EmbeddedChart,
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
 import { fmtInt } from '@/lib/numberFormat';
@@ -47,6 +48,15 @@ import { cn } from '@/lib/cn';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
 
 export type SignalChartMode = 'overlay' | 'grid' | 'auto';
+
+type AccessibleChartValue = string | number | null | undefined;
+
+function toAccessibleChartValue(value: unknown): AccessibleChartValue {
+  if (value == null || typeof value === 'string' || typeof value === 'number') {
+    return value;
+  }
+  return String(value);
+}
 
 export interface SignalChartPanelProps {
   selectedSignals: string[];
@@ -111,6 +121,18 @@ export function SignalChartPanel({
   }, [chartMode, selectedSignals.length, gridAutoThreshold]);
 
   const resolvedTitle = title ?? (isLive ? t('Live Signal Stream') : t('Signal Chart'));
+  const accessibleRows = useMemo(
+    () => data.map((point) => {
+      const row: Record<string, AccessibleChartValue> = {
+        timestamp: toAccessibleChartValue(point.timestamp),
+      };
+      for (const signal of selectedSignals) {
+        row[signal] = toAccessibleChartValue(point[signal]);
+      }
+      return row;
+    }),
+    [data, selectedSignals],
+  );
 
   return (
     <FadeIn>
@@ -119,7 +141,7 @@ export function SignalChartPanel({
           {isLive ? (
             <Radio className="h-4 w-4 text-red-500 animate-pulse" aria-hidden="true" />
           ) : (
-            <BarChart3 className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
+            <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           )}
           <SectionTitle>{resolvedTitle}</SectionTitle>
           {isLive ? (
@@ -138,60 +160,69 @@ export function SignalChartPanel({
           <div style={{ height }} role="status" aria-label={t('Loading chart…')}>
             <Skeleton className="h-full w-full" />
           </div>
-        ) : data.length > 0 ? (
-          effectiveMode === 'grid' ? (
-            <SmallMultiplesChart
-              data={data}
-              series={selectedSignals}
-              cellHeight={gridCellHeight}
-              syncId={`signal-chart-${isLive ? 'live' : 'historical'}`}
-            />
-          ) : (
-            <ResponsiveContainer width="100%" height={height}>
-              <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
-                <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                <XAxis
-                  dataKey="timestamp"
-                  tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                  tickFormatter={(v: string) => formatTime(v)}
-                />
-                <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                {useRightAxis ? (
-                  <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                ) : null}
-                <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ fontSize: 11, cursor: 'pointer' }} iconType="circle" />
-                {selectedSignals.map((sig, i) => (
-                  <Line
-                    key={sig}
-                    type="monotone"
-                    dataKey={sig}
-                    stroke={CHART_COLORS[i % CHART_COLORS.length]}
-                    strokeWidth={1.5}
-                    dot={false}
-                    name={sig}
-                    yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
-                    connectNulls
-                    isAnimationActive={!isLive}
-                  />
-                ))}
-              </LineChart>
-            </ResponsiveContainer>
-          )
-        ) : isLive ? (
-          <div className="flex items-center justify-center" style={{ height }} role="status">
-            <span className="text-[var(--text-muted)] flex items-center gap-2">
-              <Radio className="h-4 w-4 animate-pulse text-red-500" aria-hidden="true" />
-              {t('Waiting for signal data…')}
-            </span>
-          </div>
+        ) : effectiveMode === 'grid' ? (
+          <SmallMultiplesChart
+            data={data}
+            series={selectedSignals}
+            cellHeight={gridCellHeight}
+            syncId={`signal-chart-${isLive ? 'live' : 'historical'}`}
+          />
         ) : (
-          <div className="flex items-center justify-center" style={{ height }} role="status">
-            <span className="text-[var(--text-muted)] flex items-center gap-2">
-              <Activity className="h-4 w-4" aria-hidden="true" />
-              {t('No data for this time range')}
-            </span>
-          </div>
+          <EmbeddedChart
+            chartKey="signal-chart-overlay"
+            title={resolvedTitle}
+            ariaLabel={isLive
+              ? t('signalChart.liveAria', 'Live signal stream chart')
+              : t('signalChart.histAria', 'Historical signal chart')}
+            loading={loading && !isLive}
+            empty={data.length === 0}
+            emptyMessage={isLive
+              ? t('signalChart.waitingLive', 'Waiting for live signal data…')
+              : t('signalChart.emptyRange', 'No signal samples were recorded in this time range.')}
+            emptyDescription={isLive
+              ? t('signalChart.waitingLiveDescription', 'Samples will appear when the selected vehicle publishes the chosen signals.')
+              : t('signalChart.emptyRangeDescription', 'Expand the range or select another signal to inspect available history.')}
+            height={height}
+            data={accessibleRows}
+            dataColumns={[
+              { key: 'timestamp', label: t('common.timestamp', 'Timestamp') },
+              ...selectedSignals.map((sig) => ({ key: sig, label: sig })),
+            ]}
+          >
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height={height}>
+                <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                  <XAxis
+                    dataKey="timestamp"
+                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tickFormatter={(v: string) => formatTime(v)}
+                  />
+                  <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  {useRightAxis ? (
+                    <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                  ) : null}
+                  <Tooltip content={<ChartTooltip />} />
+                  <ChartLegend />
+                  {selectedSignals.map((sig, i) => (
+                    <Line
+                      key={sig}
+                      type="monotone"
+                      dataKey={sig}
+                      stroke={CHART_COLORS[i % CHART_COLORS.length]}
+                      strokeWidth={1.5}
+                      dot={false}
+                      name={sig}
+                      yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
+                      connectNulls
+                      isAnimationActive={!isLive}
+                      hide={hiddenSeries?.isHidden(sig) ?? false}
+                    />
+                  ))}
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+          </EmbeddedChart>
         )}
       </GlassPanel>
     </FadeIn>

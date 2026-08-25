@@ -1,6 +1,6 @@
 import { useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useToast } from '@/components/feedback/Toast';
+import { useOptionalToast } from '@/components/feedback/Toast';
 
 /**
  * Extracts a human-readable detail line from an arbitrary thrown value.
@@ -65,9 +65,12 @@ function errorDetail(err: unknown): string | undefined {
  * translated title so users see both "Failed to save settings" and the
  * underlying "HTTP 500: …" detail.
  */
-export function useMutationToast() {
-  const toast = useToast();
+function useMutationToastInternal(requireProviderOnRender: boolean) {
+  const toast = useOptionalToast();
   const { t } = useTranslation();
+  if (requireProviderOnRender && !toast) {
+    throw new Error('useToast must be used within ToastProvider');
+  }
 
   // The toast dispatcher and translator can change identity between renders:
   // the ToastProvider rebuilds its context value whenever a toast is added or
@@ -83,6 +86,7 @@ export function useMutationToast() {
     () => ({
       success(key: string, fallback: string, vars?: Record<string, unknown>) {
         const { toast, t } = latest.current;
+        if (!toast) throw new Error('useToast must be used within ToastProvider');
         toast.success(t(key, { defaultValue: fallback, ...(vars ?? {}) }));
       },
       error(
@@ -91,9 +95,24 @@ export function useMutationToast() {
         fallback = 'Something went wrong',
       ) {
         const { toast, t } = latest.current;
+        if (!toast) throw new Error('useToast must be used within ToastProvider');
         toast.error(t(key, { defaultValue: fallback }), errorDetail(err));
       },
     }),
     [],
   );
+}
+
+export function useMutationToast() {
+  return useMutationToastInternal(true);
+}
+
+/**
+ * Defers the ToastProvider contract check until feedback is dispatched.
+ * Passive primitives may initialize dormant mutation hooks without forcing
+ * every read-only render tree to mount the provider; an attempted mutation
+ * still fails loudly if the application provider is missing.
+ */
+export function useDeferredMutationToast() {
+  return useMutationToastInternal(false);
 }

@@ -16,7 +16,7 @@ interface SessionListSectionProps {
   sessions: ChargingSession[] | undefined;
   filteredSessions: ChargingSession[];
   isLoading: boolean;
-  toDistanceDisplay: (mi: number) => number;
+  toDistanceDisplay: (meters: number) => number;
   distanceUnit: string;
   sortBy: SortKey;
   sortDesc: boolean;

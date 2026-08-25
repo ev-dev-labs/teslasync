@@ -393,7 +393,7 @@ describe('LiveSignalSparklinesWidget — refresh', () => {
     expect(await screen.findByText(fmtNumber(60, 1))).toBeInTheDocument();
     await waitFor(() => expect(liveCallCount()).toBe(1));
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     await waitFor(() => expect(liveCallCount()).toBe(2));
   });

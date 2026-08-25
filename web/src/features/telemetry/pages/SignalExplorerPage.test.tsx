@@ -226,6 +226,7 @@ describe('SignalExplorerPage', () => {
     // Deterministic guidance before Explore, and Explore is disabled with no
     // signals selected.
     expect(screen.getByText('Pick signals and click Explore')).toBeInTheDocument();
+    expect(screen.getByText(/Historical queries use the selected range/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Explore' })).toBeDisabled();
     // No historical query fired.
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -343,7 +344,7 @@ describe('SignalExplorerPage', () => {
     expect(screen.queryByText('Records')).not.toBeInTheDocument();
     // The live chart shows its waiting state and the history table (historical
     // only) is absent.
-    expect(screen.getByText('Waiting for signal data…')).toBeInTheDocument();
+    expect(screen.getByText('Waiting for live signal data…')).toBeInTheDocument();
     expect(screen.queryByText('Signal Data')).not.toBeInTheDocument();
     // No historical fetch in live mode.
     expect(mockedRequest).not.toHaveBeenCalled();

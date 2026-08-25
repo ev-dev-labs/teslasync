@@ -309,7 +309,7 @@ describe('automation-status — lazy component wiring', () => {
     );
     await renderWidget(statusDef, { cols: 3, rows: 3 });
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

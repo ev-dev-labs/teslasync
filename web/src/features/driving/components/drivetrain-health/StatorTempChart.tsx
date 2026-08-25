@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   LineChart,
   Line,
@@ -11,12 +12,12 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   ReferenceLine,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 
 import type { MotorChartDataPoint } from './constants';
 import { convertTempFromSI } from '@/lib/unitConversion';
@@ -30,6 +31,7 @@ export function StatorTempChart({ data, loading = false }: StatorTempChartProps)
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const tempUnit = unitPrefs.temperature;
+  const hidden = useHiddenSeries('stator-temp-chart');
 
   const toTemperatureDisplay = useCallback(
     (value: number) => convertTempFromSI(value, tempUnit),
@@ -80,6 +82,7 @@ export function StatorTempChart({ data, loading = false }: StatorTempChartProps)
           { key: 'statorRer', label: `${t('drivetrain.col.statorRer', 'Rear-Right')} (${tempUnit})` },
         ]}
         height={280}
+        chartKey="stator-temp-chart"
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart data={rows}>
@@ -87,24 +90,27 @@ export function StatorTempChart({ data, loading = false }: StatorTempChartProps)
             <XAxis dataKey="time" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
             <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
             <Tooltip content={<ChartTooltip />} />
-            <Legend />
+            <ChartLegend state={hidden} />
             <Line
               {...AREA_DEFAULTS}
               dataKey="stator"
               name={`${t('drivetrain.statorTemp', 'Stator Temp')} (${tempUnit})`}
               stroke="#ef4444"
+              hide={hidden.isHidden('stator')}
             />
             <Line
               {...AREA_DEFAULTS}
               dataKey="statorRel"
               name={`${t('drivetrain.statorTempRearLeft', 'Rear-Left Stator Temp')} (${tempUnit})`}
               stroke="#a855f7"
+              hide={hidden.isHidden('statorRel')}
             />
             <Line
               {...AREA_DEFAULTS}
               dataKey="statorRer"
               name={`${t('drivetrain.statorTempRearRight', 'Rear-Right Stator Temp')} (${tempUnit})`}
               stroke="#06b6d4"
+              hide={hidden.isHidden('statorRer')}
             />
             <ReferenceLine
               y={normalThreshold}

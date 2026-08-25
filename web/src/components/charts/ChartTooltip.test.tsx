@@ -89,6 +89,41 @@ describe('ChartTooltipBase', () => {
     expect(screen.getByText('RAW:2026-04-30T13:30:15Z')).toBeInTheDocument()
   })
 
+  it('honors the formatter prop Recharts injects into custom tooltip content', () => {
+    const formatter = vi.fn(() => ['65 km/h', 'Road speed'] as const)
+    const payload = [{ name: 'speed', value: 65, unit: 'km/h' }]
+
+    render(
+      <ChartTooltipBase
+        active={true}
+        label="x"
+        payload={payload}
+        formatter={formatter}
+      />,
+    )
+
+    expect(screen.getByText('Road speed:')).toBeInTheDocument()
+    expect(screen.getByText('65 km/h')).toBeInTheDocument()
+    expect(formatter).toHaveBeenCalledWith(65, 'speed', payload[0], 0, payload)
+  })
+
+  it('passes the payload to a Recharts-compatible label formatter', () => {
+    const labelFormatter = vi.fn((tooltipLabel: string | number | undefined) => `Sample ${tooltipLabel}`)
+    const payload = [{ name: 'speed', value: 65 }]
+
+    render(
+      <ChartTooltipBase
+        active={true}
+        label="12:34"
+        payload={payload}
+        labelFormatter={labelFormatter}
+      />,
+    )
+
+    expect(screen.getByText('Sample 12:34')).toBeInTheDocument()
+    expect(labelFormatter).toHaveBeenCalledWith('12:34', payload)
+  })
+
   it('renders the unit suffix from default formatter when provided', () => {
     render(
       <ChartTooltipBase

@@ -352,7 +352,7 @@ describe('TelemetryErrorsWidget — loading, error & refresh hardening', () => {
     mockUseErrors.mockReturnValue(qr({ data: [makeError()], refetch: errorsRefetch }));
     renderWidget(STANDARD);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     // BUG FIX: the feed is driven by the errors query, so refresh must refetch

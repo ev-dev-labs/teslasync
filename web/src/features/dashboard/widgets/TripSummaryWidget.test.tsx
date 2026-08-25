@@ -370,7 +370,7 @@ describe('TripSummaryWidget', () => {
     expect(screen.queryByText('No trips recorded yet')).not.toBeInTheDocument();
     expect(screen.queryByText('Trip Summary')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('refetches when the freshness control is activated', () => {
@@ -378,7 +378,7 @@ describe('TripSummaryWidget', () => {
     tripsMock.mockReturnValue(q);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);

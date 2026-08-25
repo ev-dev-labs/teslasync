@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -58,6 +59,7 @@ export function CycleStressDurationProfile({
           'cycleStress.duration.aria',
           'Chart of cycle count and mean depth by closure duration',
         )}
+        chartKey="cycle-stress-duration-profile"
         height={300}
         loading={state.isLoading}
         empty={false}
@@ -94,14 +96,15 @@ export function CycleStressDurationProfile({
           },
         ]}
       >
-        <CycleStressSectionBody
-          result={result}
-          state={state}
-          requirement="cycles"
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows}>
+        {({ hiddenSeries }) => (
+          <CycleStressSectionBody
+            result={result}
+            state={state}
+            requirement="cycles"
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -130,6 +133,7 @@ export function CycleStressDurationProfile({
                 unit="%"
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 yAxisId="count"
                 dataKey="weightedCycles"
@@ -140,6 +144,7 @@ export function CycleStressDurationProfile({
                 fill={chartTokens.series[3]}
                 fillOpacity={0.78}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('weightedCycles')}
               />
               <Line
                 yAxisId="depth"
@@ -153,10 +158,12 @@ export function CycleStressDurationProfile({
                 strokeWidth={2}
                 dot={{ r: 4 }}
                 connectNulls
+                hide={hiddenSeries?.isHidden('meanDepthPct')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CycleStressSectionBody>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CycleStressSectionBody>
+        )}
       </ChartContainer>
     </section>
   );

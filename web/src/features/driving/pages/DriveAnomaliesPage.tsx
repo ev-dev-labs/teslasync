@@ -188,6 +188,7 @@ export default function DriveAnomaliesPage() {
             />
           </GlassPanel>
         ) : (
+          // chart-legend-audit:skip fitted baseline and two-sigma bounds form one analytical envelope and must remain visible together
           <ChartContainer
             title={t('anomalies.chart', 'Your Consumption Law')}
             subtitle={t('anomalies.chartHint', 'Quadratic fit of consumption vs speed with a ±2σ band; red points break the law')}

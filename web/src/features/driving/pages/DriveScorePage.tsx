@@ -17,6 +17,7 @@ import {
 } from '@/components/ui';
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   LinearGauge,
   AREA_DEFAULTS,
@@ -31,7 +32,6 @@ import {
   ResponsiveContainer,
   Cell,
   ReferenceLine,
-  Legend,
   renderAnnotationLines,
 } from '@/components/charts';
 import {
@@ -41,7 +41,7 @@ import {
   InlineMetric,
   KVList,
 } from '@/components/data-display';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import { DataStateNotice, EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 
@@ -56,13 +56,14 @@ import { cn } from '@/lib/cn';
 import { typography, chartTokens } from '@/lib/tokens';
 import { COLOR } from '@/lib/colors';
 import { Icons } from '@/lib/icons';
+import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
 
 /* ------------------------------------------------------------------ */
 /*  Types                                                              */
 /* ------------------------------------------------------------------ */
 
-/** Per-drive score computed on the client when the API score is absent. */
+/** Per-drive heuristic computed only when all required evidence is measured. */
 export interface ComputedScore {
   total: number;
   efficiency: number;
@@ -122,21 +123,26 @@ const DRIVES_PER_PAGE = 10;
 /*  Scoring algorithm                                                  */
 /* ------------------------------------------------------------------ */
 
-export function scoreDrive(drive: Drive): ComputedScore {
-  const battUsed = (drive.startBatteryPct ?? 50) - (drive.endBatteryPct ?? 45);
-  const energyKwh =
-    drive.energyUsedWh != null ? drive.energyUsedWh / 1000 : (battUsed / 100) * 75;
-  const distanceKm = (drive.distanceM ?? 0) / 1000;
-  const whPerKm = distanceKm > 0 ? (energyKwh * 1000) / distanceKm : 200;
+export function scoreDrive(drive: Drive): ComputedScore | null {
+  const whPerKm = getEnergyIntensityWhPerKm(drive.distanceM, drive.energyUsedWh);
+  if (
+    whPerKm == null
+    || drive.avgPowerW == null
+    || !Number.isFinite(drive.avgPowerW)
+    || drive.avgPowerW < 0
+    || drive.maxSpeedMps == null
+    || !Number.isFinite(drive.maxSpeedMps)
+    || drive.maxSpeedMps < 0
+  ) {
+    return null;
+  }
 
   const effScore = Math.max(0, Math.min(40, 40 - (whPerKm - 130) / 3));
-  const avgPowerKw = drive.avgPowerW != null ? drive.avgPowerW / 1000 : 30;
-  const smoothScore = Math.max(0, Math.min(30, 30 - avgPowerKw / 3));
-  const maxSpeedDisplayMph =
-    drive.maxSpeedMps != null ? drive.maxSpeedMps * 2.2369362920544 : 80;
+  const smoothScore = Math.max(0, Math.min(30, 30 - drive.avgPowerW / 3_000));
+  const highSpeedExcessMps = Math.max(0, drive.maxSpeedMps - 40.2336);
   const speedScore = Math.max(
     0,
-    Math.min(30, 30 - Math.max(0, maxSpeedDisplayMph - 90) / 2),
+    Math.min(30, 30 - highSpeedExcessMps * 1.1184681460272),
   );
 
   const total = Math.round(effScore + smoothScore + speedScore);
@@ -613,9 +619,13 @@ export default function DriveScorePage() {
   }, [drives, startDate, endDate]);
 
   const scoredDrives = useMemo<ScoredDrive[]>(
-    () => filteredDrives.map((d) => ({ drive: d, score: scoreDrive(d) })),
+    () => filteredDrives.flatMap((drive) => {
+      const score = scoreDrive(drive);
+      return score ? [{ drive, score }] : [];
+    }),
     [filteredDrives],
   );
+  const unscoredDriveCount = filteredDrives.length - scoredDrives.length;
 
   const allScores = useMemo(
     () => scoredDrives.map((sd) => sd.score),
@@ -658,18 +668,24 @@ export default function DriveScorePage() {
 
   /* ---- category metric readouts ---- */
   const avgWhPerKm = useMemo(
-    () =>
-      scoredDrives.length > 0
-        ? scoredDrives.reduce((sum, sd) => sum + sd.score.whPerKm, 0) /
-          scoredDrives.length
-        : 0,
+    () => {
+      const energyWh = scoredDrives.reduce(
+        (sum, sd) => sum + (sd.drive.energyUsedWh ?? 0),
+        0,
+      );
+      const distanceM = scoredDrives.reduce(
+        (sum, sd) => sum + sd.drive.distanceM,
+        0,
+      );
+      return getEnergyIntensityWhPerKm(distanceM, energyWh) ?? 0;
+    },
     [scoredDrives],
   );
   const avgPowerW = useMemo(
     () =>
       scoredDrives.length > 0
         ? scoredDrives.reduce(
-            (sum, sd) => sum + (sd.drive.avgPowerW ?? 30000),
+            (sum, sd) => sum + (sd.drive.avgPowerW ?? 0),
             0,
           ) / scoredDrives.length
         : 0,
@@ -1018,6 +1034,23 @@ export default function DriveScorePage() {
       actions={actions}
       query={[drivesQuery, scoreQuery]}
     >
+      {!drivesLoading && unscoredDriveCount > 0 && (
+        <DataStateNotice
+          state="partial"
+          title={t('driveScore.partial.title', 'Score evidence is partial')}
+          message={unscoredDriveCount === 1
+            ? t(
+                'driveScore.partial.message_one',
+                '1 drive is excluded because measured energy, average power, or maximum speed is unavailable.',
+              )
+            : t(
+                'driveScore.partial.message_other',
+                '{{count}} drives are excluded because measured energy, average power, or maximum speed is unavailable.',
+                { count: unscoredDriveCount },
+              )}
+        />
+      )}
+
       {/* ── Band A — KPI summary ─────────────────────────────────── */}
       <FadeIn>
         <section aria-label={t('driveScore.kpis', 'Key metrics')}>
@@ -1235,15 +1268,16 @@ export default function DriveScorePage() {
                   scope: 'efficiency',
                   chartId: 'drive-score-trend',
                 }}
+                chartKey="drive-score-trend"
               >
-                {({ annotations: chartAnnotations }) => (
+                {({ annotations: chartAnnotations, hiddenSeries: scoreHidden }) => (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={trendChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
                       <XAxis dataKey="date" stroke={chartTokens.axisStroke} fontSize={12} />
                       <YAxis domain={[0, 100]} stroke={chartTokens.axisStroke} fontSize={12} />
                       <Tooltip content={<ChartTooltip />} />
-                      <Legend />
+                      <ChartLegend state={scoreHidden ?? undefined} />
                       <ReferenceLine
                         y={80}
                         stroke={COLOR.GOOD}
@@ -1262,6 +1296,7 @@ export default function DriveScorePage() {
                         stroke={gradeColor(overallGrade)}
                         dot={{ r: 3, fill: gradeColor(overallGrade) }}
                         activeDot={{ r: 5 }}
+                        hide={scoreHidden?.isHidden('score')}
                       />
                       <Line
                         {...AREA_DEFAULTS}
@@ -1270,6 +1305,7 @@ export default function DriveScorePage() {
                         stroke={CATEGORY_COLORS.efficiency}
                         strokeWidth={1}
                         strokeDasharray="4 2"
+                        hide={scoreHidden?.isHidden('efficiency')}
                       />
                       <Line
                         {...AREA_DEFAULTS}
@@ -1278,6 +1314,7 @@ export default function DriveScorePage() {
                         stroke={CATEGORY_COLORS.smoothness}
                         strokeWidth={1}
                         strokeDasharray="4 2"
+                        hide={scoreHidden?.isHidden('smoothness')}
                       />
                       <Line
                         {...AREA_DEFAULTS}
@@ -1286,6 +1323,7 @@ export default function DriveScorePage() {
                         stroke={CATEGORY_COLORS.speed}
                         strokeWidth={1}
                         strokeDasharray="4 2"
+                        hide={scoreHidden?.isHidden('speed')}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -1303,6 +1341,7 @@ export default function DriveScorePage() {
               noDrivesMsg,
               <Icons.efficiency className="h-8 w-8" aria-hidden="true" />,
             ) ?? (
+              // chart-legend-audit:skip maximum bars are fixed category-capacity backdrops, not independently meaningful series
               <ChartContainer
                 title={t('driveScore.categoryBreakdown', 'Category Breakdown')}
                 ariaLabel={t(

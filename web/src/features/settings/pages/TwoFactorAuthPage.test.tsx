@@ -160,7 +160,7 @@ describe('TwoFactorAuthPage — open mode', () => {
 
     // Header affordances driven by `copyLink` + `query` props.
     expect(screen.getByRole('button', { name: /Copy link to this view/i })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /^Refresh$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument()
 
     // Both bento sections expose accessible region names (a11y landmarks).
     expect(

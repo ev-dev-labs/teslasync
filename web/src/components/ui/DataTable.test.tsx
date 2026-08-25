@@ -215,6 +215,45 @@ describe('DataTable — columnReorder + columnVisibility (Phase-46 / Prompt 45)'
   })
 })
 
+describe('DataTable — pagination persistence', () => {
+  const PAGINATED_ROWS = Array.from({ length: 60 }, (_, index) => ({
+    id: index + 1,
+    name: `Row ${index + 1}`,
+    status: 'ok' as const,
+  }))
+
+  it('restores the selected page size for a stable table identifier', () => {
+    const first = render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={PAGINATED_ROWS}
+        keyExtractor={row => row.id}
+        tableId="pagination-persistence"
+        pagination
+      />,
+    )
+
+    const pageSize = screen.getByRole('combobox', { name: 'Rows per page' })
+    expect(pageSize).toHaveValue('25')
+    fireEvent.change(pageSize, { target: { value: '50' } })
+    expect(window.localStorage.getItem('teslasync.table.pagination-persistence.page-size')).toBe('50')
+    first.unmount()
+
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={PAGINATED_ROWS}
+        keyExtractor={row => row.id}
+        tableId="pagination-persistence"
+        pagination
+      />,
+    )
+
+    expect(screen.getByRole('combobox', { name: 'Rows per page' })).toHaveValue('50')
+    expect(screen.getByText('Showing 1–50 of 60')).toBeInTheDocument()
+  })
+})
+
 // Virtualization stress tests.
 // Stress test: with `virtualized` enabled on a 5000-row dataset the DOM
 // must contain only the spacer rows + a small visible window — never

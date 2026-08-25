@@ -246,7 +246,9 @@ describe('SecretRotationPage', () => {
 
     renderPage()
 
-    const table = await waitFor(() => screen.getByRole('table'))
+    const table = await waitFor(() =>
+      within(screen.getByRole('region', { name: 'Rotation status' })).getByRole('table'),
+    )
 
     expect(within(table).getAllByText('Tesla refresh token').length).toBeGreaterThan(0)
     expect(within(table).getByText('MQTT mTLS certificate')).toBeInTheDocument()
@@ -306,7 +308,9 @@ describe('SecretRotationPage', () => {
     expect(screen.getByText('80.00d / 120.00d')).toBeInTheDocument()
 
     // Severity mix panel + its legend list every tier label.
-    expect(screen.getByText('Severity mix')).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('heading', { name: 'Severity mix' }).length,
+    ).toBeGreaterThan(0)
     expect(screen.getByText('Expiry watch')).toBeInTheDocument()
     expect(screen.getAllByText('OK').length).toBeGreaterThan(0)
     // "Overdue" is the critical severity label (legend + badges).
@@ -397,7 +401,9 @@ describe('SecretRotationPage', () => {
     // Summary cards clip the 30-char label to 21 chars + ellipsis…
     expect(screen.getAllByText(TRUNCATED).length).toBeGreaterThan(0)
     // …while the full label is preserved in the detail table.
-    const table = screen.getByRole('table')
+    const table = within(
+      screen.getByRole('region', { name: 'Rotation status' }),
+    ).getByRole('table')
     expect(within(table).getByText(LONG)).toBeInTheDocument()
   })
 

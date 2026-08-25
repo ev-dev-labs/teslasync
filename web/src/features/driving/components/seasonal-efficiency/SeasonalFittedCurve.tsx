@@ -35,6 +35,7 @@ export function SeasonalFittedCurve({
           {t('seasonalEfficiency.curve.subtitle', 'A distance-weighted descriptive harmonic fit across local calendar day; the shaded band is the central residual range.')}
         </Text>
         <SeasonalSectionBody state={state} requirement="fit" fitStatus={analysis.fit.status}>
+          {/* chart-legend-audit:skip transparent lower offset and residual width form one fitted uncertainty band and cannot be hidden independently */}
           <ChartContainer
             title={t('seasonalEfficiency.curve.chartTitle', '365-day fitted intensity')}
             subtitle={t('seasonalEfficiency.curve.chartSubtitle', 'Values are converted from canonical Wh/m at display time.')}

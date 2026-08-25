@@ -5,6 +5,7 @@ import {
   ComposedChart, Line, XAxis, YAxis, Tooltip, ReferenceArea,
   ResponsiveContainer, chartGrid, chartMargin, axisTick, axisTickSm,
   chartAnimation, fmt,
+  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useMotorHistory } from '@/api/hooks/useVehicles';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -16,7 +17,7 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   time: string;
   torque: number | null;
   statorTemp: number | null;
@@ -166,8 +167,25 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<Cog className="h-5 w-5" />}
         stats={stats}
         chart={
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
+          <EmbeddedChart
+            title={t('widget.motorHistory.title', 'Motor History')}
+            ariaLabel={t(
+              'widget.motorHistory.chartAria',
+              'Motor torque, stator temperature, and acceleration history',
+            )}
+            data={chartData}
+            dataColumns={[
+              { key: 'time', label: t('widget.motorHistory.time', 'Time'), format: (value) => formatTime(String(value ?? '')) },
+              { key: 'torque', label: t('widget.motorHistory.torqueNm', 'Torque (Nm)') },
+              { key: 'statorTemp', label: `${t('widget.motorHistory.statorTemp', 'Stator')} (${tempUnit})` },
+              { key: 'lateralG', label: t('widget.motorHistory.lateralG', 'Lateral G') },
+              { key: 'longitudinalG', label: t('widget.motorHistory.longG', 'Long. G') },
+            ]}
+            chartKey="dashboard-motor-history"
+          >
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="time"
@@ -199,12 +217,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 label={isWide ? { value: tempUnit, angle: 90, position: 'insideRight', fill: 'rgba(255,255,255,0.4)', fontSize: 10 } : undefined}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                content={<ChartTooltip />}
                 labelFormatter={(v: string) => formatTime(v)}
                 formatter={(value: number, name: string) => {
                   if (name === 'torque') {
@@ -222,6 +235,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   return [String(value), name];
                 }}
               />
+              <ChartLegend />
               {/* Danger zone band above 100°C */}
               <ReferenceArea
                 yAxisId="temp"
@@ -240,6 +254,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 dot={false}
                 connectNulls
                 name="torque"
+                hide={hiddenSeries?.isHidden('torque')}
               />
               {/* Stator temp line — orange */}
               <Line
@@ -251,6 +266,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 dot={false}
                 connectNulls
                 name="statorTemp"
+                hide={hiddenSeries?.isHidden('statorTemp')}
               />
               {/* Wide mode: g-force overlays */}
               {isWide && (
@@ -264,6 +280,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   dot={false}
                   connectNulls
                   name="lateralG"
+                  hide={hiddenSeries?.isHidden('lateralG')}
                 />
               )}
               {isWide && (
@@ -277,10 +294,13 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   dot={false}
                   connectNulls
                   name="longitudinalG"
+                  hide={hiddenSeries?.isHidden('longitudinalG')}
                 />
               )}
-            </ComposedChart>
-          </ResponsiveContainer>
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

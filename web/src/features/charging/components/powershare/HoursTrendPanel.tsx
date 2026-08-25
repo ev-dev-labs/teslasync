@@ -3,10 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Clock } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip,
   ChartTooltip, chartGrid, axisTickSm,
+  EmbeddedChart,
 } from '@/components/charts';
 
 import { HOURS_COLOR, type TrendPoint } from './constants';
@@ -45,20 +45,32 @@ export function HoursTrendPanel({ points, isLoading, error, onRetry }: HoursTren
         <Clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('powershare.hoursTrend.title', 'Remaining Runtime Trend')}
       </PanelTitle>
-      {isLoading ? (
-        <Skeleton height={220} />
-      ) : error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : rows.length === 0 ? (
-        <EmptyState /* no-action: transient — runtime appears once telemetry streams */
-          icon={<Clock className="h-8 w-8" />}
-          message={t(
+      <EmbeddedChart
+        title={t('powershare.hoursTrend.title', 'Remaining Runtime Trend')}
+        ariaLabel={t(
+          'powershare.hoursTrend.ariaLabel',
+          'Estimated remaining runtime trend',
+        )}
+        data={rows.map(({ label, value }) => ({ label, value }))}
+        dataColumns={[
+          { key: 'label', label: t('powershare.time', 'Time') },
+          {
+            key: 'value',
+            label: t('powershare.kpi.hoursRemaining', 'Hours Remaining'),
+          },
+        ]}
+        loading={isLoading}
+        error={error}
+        onRetry={onRetry}
+        empty={rows.length === 0}
+        emptyMessage={t(
             'powershare.hoursTrend.noData',
             'No runtime readings yet. Estimated hours appear once Powershare reports telemetry.',
-          )}
-        />
-      ) : (
-        <div className="h-56 sm:h-64">
+        )}
+        fluid={false}
+        mobileHeight={224}
+        height={256}
+      >
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={rows}>
               {chartGrid}
@@ -77,8 +89,7 @@ export function HoursTrendPanel({ points, isLoading, error, onRetry }: HoursTren
               />
             </LineChart>
           </ResponsiveContainer>
-        </div>
-      )}
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

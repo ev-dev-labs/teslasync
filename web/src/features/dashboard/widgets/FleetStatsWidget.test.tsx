@@ -328,7 +328,7 @@ describe('FleetStatsWidget — resilience & shell wiring', () => {
     mockAnalytics.mockReturnValue(qr({ data: makeAnalytics(), refetch }));
 
     renderWidget();
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

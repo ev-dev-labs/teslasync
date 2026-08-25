@@ -360,7 +360,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
       info: infoQuery({ data: POPULATED, refetch: infoRefetch }),
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(sitesRefetch).toHaveBeenCalledTimes(1);
     expect(infoRefetch).toHaveBeenCalledTimes(1);
@@ -374,7 +374,7 @@ describe('EnergySiteInfoWidget — refresh', () => {
       info: infoQuery({ refetch: infoRefetch }),
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     // The `if (siteId) refetchInfo()` guard skips the disabled info query.
     expect(sitesRefetch).toHaveBeenCalledTimes(1);

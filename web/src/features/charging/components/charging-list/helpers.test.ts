@@ -11,10 +11,11 @@
  *
  * The suite pins the bugs the hardening pass fixed:
  *   - UNIT (×1000): computeEnergyTrend / computeCostByType / computeAcDcBreakdown
- *     / computeEfficiencyStats emitted raw watt-hours where every consumer
- *     (ChartsRow, AcDcStatsPanel, EfficiencyPanel) labels/treats the value as
- *     kWh. They now convert at the boundary, matching computeStats /
- *     computeChargerSpecs.
+ *     emitted raw watt-hours where consumers label/treat the value as kWh.
+ *     They now convert at the display boundary.
+ *   - SEMANTICS: energy divided by duration was previously called
+ *     "efficiency" and displayed as a percentage. It is now modeled in
+ *     canonical watts as charging delivery rate.
  *   - SEPARATOR corruption: the old `parseFloat(fmtNumber(x, n))` idiom
  *     truncated any value ≥ 1000 at its thousands separator ("12,345.0" → 12).
  *   - CRASH: computeStartLevelDist indexed buckets[-1] / buckets[NaN] for a
@@ -31,7 +32,7 @@ import {
   computeCostByType,
   computeStartLevelDist,
   computeAcDcBreakdown,
-  computeEfficiencyStats,
+  computeChargeRateStats,
   computeChargerSpecs,
   computeEnhancedStats,
   filterAndSortSessions,
@@ -346,34 +347,41 @@ describe('computeAcDcBreakdown', () => {
   });
 });
 
-/* ── computeEfficiencyStats ───────────────────────────────────────────── */
+/* ── computeChargeRateStats ───────────────────────────────────────────── */
 
-describe('computeEfficiencyStats', () => {
+describe('computeChargeRateStats', () => {
   it('returns null when there are no sessions or none carry usable data', () => {
-    expect(computeEfficiencyStats([])).toBeNull();
+    expect(computeChargeRateStats([])).toBeNull();
     // Zero energy AND zero duration → filtered out → null.
     expect(
-      computeEfficiencyStats([makeSession({ total_energy_added_wh: 0, ended_at: null })]),
+      computeChargeRateStats([makeSession({ total_energy_added_wh: 0, ended_at: null })]),
     ).toBeNull();
   });
 
-  it('ranks best/worst by throughput and reports totals in kWh', () => {
-    const stats = computeEfficiencyStats([
+  it('ranks sessions by delivery power and keeps aggregate values SI-canonical', () => {
+    const stats = computeChargeRateStats([
       sessionMin(1, 60, { total_energy_added_wh: 30_000 }),
       sessionMin(2, 60, { total_energy_added_wh: 10_000 }),
     ])!;
 
     expect(stats.count).toBe(2);
-    // efficiency = (Wh / minutes) * 60 → session 1 out-throughputs session 2.
     expect(stats.best.id).toBe(1);
-    expect(stats.best.efficiency).toBeCloseTo(30_000, 3);
+    expect(stats.best.powerW).toBeCloseTo(30_000, 3);
     expect(stats.worst.id).toBe(2);
-    expect(stats.worst.efficiency).toBeCloseTo(10_000, 3);
-    expect(stats.avgEfficiency).toBeCloseTo(20_000, 3);
-    // Regression: 40 kWh total, NOT 40_000 Wh.
-    expect(stats.totalAdded).toBe(40);
-    expect(stats.totalUsed).toBe(40);
-    expect(stats.wallLoss).toBe(0);
+    expect(stats.worst.powerW).toBeCloseTo(10_000, 3);
+    expect(stats.averagePowerW).toBeCloseTo(20_000, 3);
+    expect(stats.totalEnergyWh).toBe(40_000);
+    expect(stats.totalDurationS).toBe(7_200);
+  });
+
+  it('weights average delivery power by elapsed time instead of averaging session rates', () => {
+    const stats = computeChargeRateStats([
+      sessionMin(1, 60, { total_energy_added_wh: 30_000 }),
+      sessionMin(2, 120, { total_energy_added_wh: 10_000 }),
+    ])!;
+
+    // 40 kWh over 3 h = 13.333 kW; an unweighted mean would incorrectly be 17.5 kW.
+    expect(stats.averagePowerW).toBeCloseTo(13_333.333, 3);
   });
 });
 

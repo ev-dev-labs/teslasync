@@ -215,7 +215,7 @@ describe('SignalLogViewerPage', () => {
     expect(
       screen.getByText('Run a query to see the value-type breakdown.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('No signal data found for this query.')).toBeInTheDocument();
+    expect(screen.getByText('No signal data matches the selected signals and time range.')).toBeInTheDocument();
 
     // No fetch was triggered.
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -257,8 +257,11 @@ describe('SignalLogViewerPage', () => {
     expect(urls.every((u) => !u.includes('/api/v1'))).toBe(true);
 
     // Results render: the string value only exists in the history table.
-    const table = await screen.findByRole('table');
-    await waitFor(() => expect(within(table).getByText('charging')).toBeInTheDocument());
+    // Wait for 'charging' to appear, then locate the table containing it
+    // (avoids ambiguity with ChartContainer's sr-only a11y fallback table).
+    await waitFor(() => expect(screen.getByText('charging')).toBeInTheDocument());
+    const allTables = screen.getAllByRole('table');
+    const table = allTables.find((t) => within(t).queryByText('charging')) ?? allTables[allTables.length - 1];
 
     // KPI counters: 4 rows total, 3 numeric, 1 text, across 2 signals. Scope to
     // the KPI region — "Signals" also labels the (hidden) cockpit combobox.

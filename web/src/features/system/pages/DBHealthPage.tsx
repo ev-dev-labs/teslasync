@@ -42,6 +42,26 @@ export default function DBHealthPage() {
   const statsQuery = useDBStats();
   const migrationQuery = useMigrations();
   const poolQuery = useConnectionPool();
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'database-statistics',
+        label: t('dataSources.labels.databaseStatistics', 'Database statistics'),
+        query: statsQuery,
+      },
+      {
+        id: 'migration-status',
+        label: t('dataSources.labels.migrationStatus', 'Migration status'),
+        query: migrationQuery,
+      },
+      {
+        id: 'connection-pool',
+        label: t('dataSources.labels.connectionPool', 'Connection pool'),
+        query: poolQuery,
+      },
+    ],
+    [migrationQuery, poolQuery, statsQuery, t],
+  );
 
   const {
     data: dbStats, isLoading: statsLoading, isFetching: statsFetching,
@@ -261,6 +281,7 @@ export default function DBHealthPage() {
       subtitle={t('dbHealth.subtitle', 'Database health metrics and table statistics')}
       actions={actions}
       query={[statsQuery, migrationQuery, poolQuery]}
+      dataSources={dataSources}
     >
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>

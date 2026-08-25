@@ -229,7 +229,7 @@ function SmallMultiplesCell({
       ref={ref}
       className={cn(
         'rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle,transparent)] p-2',
-        cellInteractive && 'cursor-pointer hover:border-[var(--neon-cyan,#22d3ee)]',
+        cellInteractive && 'cursor-pointer hover:border-[var(--theme-primary)]',
       )}
       role={cellInteractive ? 'button' : 'group'}
       tabIndex={cellInteractive ? 0 : -1}

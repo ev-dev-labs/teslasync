@@ -36,6 +36,21 @@ export default function EnergyLedgerPage() {
 
   const sessionsQuery = useChargingSessions(vehicleIdStr);
   const drivesQuery = useDrives(vehicleIdStr);
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'charging-history',
+        label: t('dataSources.labels.chargingHistory', 'Charging history'),
+        query: sessionsQuery,
+      },
+      {
+        id: 'drive-history',
+        label: t('dataSources.labels.driveHistory', 'Drive history'),
+        query: drivesQuery,
+      },
+    ],
+    [drivesQuery, sessionsQuery, t],
+  );
 
   const summary = useMemo(
     () => buildEnergyLedger(sessionsQuery.data ?? [], drivesQuery.data ?? []),
@@ -68,9 +83,18 @@ export default function EnergyLedgerPage() {
     return <NoVehicleSelected pageTitle={t('energyLedger.title', 'Energy Ledger')} />;
   }
 
-  const isLoading = sessionsQuery.isLoading || drivesQuery.isLoading;
-  const isError = sessionsQuery.isError || drivesQuery.isError;
-  const error = sessionsQuery.error ?? drivesQuery.error;
+  const sessionsHaveData = sessionsQuery.data !== undefined;
+  const drivesHaveData = drivesQuery.data !== undefined;
+  const isLoading =
+    (!sessionsHaveData && sessionsQuery.isLoading)
+    || (!drivesHaveData && drivesQuery.isLoading);
+  const isError =
+    (sessionsQuery.isError && !sessionsHaveData)
+    || (drivesQuery.isError && !drivesHaveData);
+  const error =
+    sessionsQuery.isError && !sessionsHaveData
+      ? sessionsQuery.error
+      : drivesQuery.error;
 
   return (
     <PageContainer
@@ -80,6 +104,7 @@ export default function EnergyLedgerPage() {
         'Double-entry accounting for electrons: every kilowatt-hour charged is matched against driving, standing still and the change in what is stored',
       )}
       query={[sessionsQuery, drivesQuery]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}

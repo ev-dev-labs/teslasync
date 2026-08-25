@@ -440,7 +440,7 @@ describe('BatteryDegradationForecastWidget — refresh wiring', () => {
     mockDegradation.mockReturnValue(qr({ data: makeData(), refetch }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

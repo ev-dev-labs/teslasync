@@ -207,7 +207,7 @@ describe('ChargeStatusWidget — shell states', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Charging')).toBeNull();
     expect(screen.queryByText('No charge data')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
   });
 
   it('renders an explicit empty state when no vehicle state has arrived', () => {
@@ -336,7 +336,7 @@ describe('ChargeStatusWidget — refresh wiring', () => {
     mockVehicleState.mockReturnValue(qr({ data: stateData(CHARGING), refetch }));
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

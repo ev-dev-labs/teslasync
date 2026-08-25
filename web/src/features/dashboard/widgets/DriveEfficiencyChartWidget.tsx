@@ -7,13 +7,14 @@ import {
   Tooltip, ReferenceLine,
   chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
+  ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { request } from '@/api/client';
 import { fmtNumber } from '@/lib/numberFormat';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { getEnergyIntensityWhPerKm } from '@/lib/drivesAggregation';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
@@ -36,49 +37,33 @@ export interface DailyEfficiency {
 
 /** Estimate Wh/km for a single drive from energy + distance data. */
 export function estimateEfficiency(d: Drive): number | null {
-  const distanceKm = convertDistanceFromSI(d.distance_m ?? 0, 'km');
-  if (!distanceKm || distanceKm < 0.8) return null; // skip tiny drives
-
-  if (d.energy_used_wh != null && d.energy_used_wh > 0) {
-    const whPerKm = d.energy_used_wh / distanceKm;
-    if (whPerKm < 30 || whPerKm > 500) return null;
-    return whPerKm;
-  }
-
-  // Fallback: estimate from battery pct
-  const startBatt = d.start_soc_pct;
-  const endBatt = d.end_soc_pct;
-  if (startBatt == null || endBatt == null) return null;
-  const battUsed = startBatt - endBatt;
-  if (battUsed <= 0) return null;
-  const whPerKm = (battUsed * 0.75 * 1000) / distanceKm;
+  const whPerKm = getEnergyIntensityWhPerKm(d.distance_m, d.energy_used_wh);
+  if (whPerKm == null) return null;
   if (whPerKm < 30 || whPerKm > 500) return null;
   return whPerKm;
 }
 
-/** Group drives by date and compute daily averages + rolling average. */
+/** Group drives by date and compute distance-weighted daily intensity. */
 export function buildDailyEfficiency(drives: Drive[], windowSize: number, fmtShortDate: (iso: string) => string): DailyEfficiency[] {
-  const byDate = new Map<string, number[]>();
+  const byDate = new Map<string, { energyWh: number; distanceM: number }>();
 
   for (const d of drives) {
     if (!d.start_ts) continue;
     const eff = estimateEfficiency(d);
     if (eff == null) continue;
     const dateKey = d.start_ts.slice(0, 10); // YYYY-MM-DD
-    const existing = byDate.get(dateKey);
-    if (existing) {
-      existing.push(eff);
-    } else {
-      byDate.set(dateKey, [eff]);
-    }
+    const existing = byDate.get(dateKey) ?? { energyWh: 0, distanceM: 0 };
+    existing.energyWh += d.energy_used_wh ?? 0;
+    existing.distanceM += d.distance_m ?? 0;
+    byDate.set(dateKey, existing);
   }
 
   // Sort by date ascending
   const sorted = [...byDate.entries()].sort(([a], [b]) => a.localeCompare(b));
 
-  const dailyAvgs = sorted.map(([date, values]) => ({
+  const dailyAvgs = sorted.map(([date, totals]) => ({
     date,
-    avg: values.reduce((s, v) => s + v, 0) / values.length,
+    avg: totals.energyWh / (totals.distanceM / 1_000),
   }));
 
   // Compute rolling average
@@ -190,8 +175,28 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
   }, [t, overallAvg, bestDay, trend, efficiencyUnit]);
 
   const chartEl = (
-    <div className="flex h-full flex-col">
-      <div className="min-h-0 flex-1 px-2 pb-1">
+    <EmbeddedChart
+      title={t('widget.driveEfficiencyChart.title', 'Drive Efficiency')}
+      ariaLabel={t(
+        'widget.driveEfficiencyChart.chartAria',
+        'Daily and seven-day rolling drive efficiency',
+      )}
+      data={displayData}
+      dataColumns={[
+        { key: 'label', label: t('widget.driveEfficiencyChart.date', 'Date') },
+        {
+          key: 'efficiency',
+          label: `${t('widget.driveEfficiencyChart.daily', 'Daily')} (${efficiencyUnit})`,
+        },
+        {
+          key: 'rollingAvg',
+          label: `${t('widget.driveEfficiencyChart.rolling', '7-day avg')} (${efficiencyUnit})`,
+        },
+      ]}
+      chartKey="dashboard-drive-efficiency"
+      className="px-2 pb-1"
+    >
+      {({ hiddenSeries }) => (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart
             data={displayData}
@@ -210,6 +215,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               tickFormatter={(v: number) => `${fmt(v, 0)}`}
             />
             <Tooltip content={<ChartTooltip />} />
+            <ChartLegend />
             {overallAvg != null && (
               <ReferenceLine
                 y={overallAvg}
@@ -224,6 +230,7 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               stroke={palette.series[0]}
               fill="url(#efficiency-grad)"
               name={t('widget.driveEfficiencyChart.daily', 'Daily') + ` (${efficiencyUnit})`}
+              hide={hiddenSeries?.isHidden('efficiency')}
             />
             <Area
               {...AREA_DEFAULTS}
@@ -233,33 +240,12 @@ export default function DriveEfficiencyChartWidget({ vehicleId, size }: WidgetPr
               strokeWidth={1.5}
               strokeDasharray="4 2"
               name={t('widget.driveEfficiencyChart.rolling', '7-day avg') + ` (${efficiencyUnit})`}
+              hide={hiddenSeries?.isHidden('rollingAvg')}
             />
           </AreaChart>
         </ResponsiveContainer>
-      </div>
-
-      {/* Legend */}
-      <div className="flex flex-shrink-0 items-center justify-center gap-3 px-4 pb-1.5">
-        <div className="flex items-center gap-1">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ background: palette.series[0] }}
-          />
-          <span className="text-2xs text-[var(--text-secondary)]">
-            {t('widget.driveEfficiencyChart.daily', 'Daily')}
-          </span>
-        </div>
-        <div className="flex items-center gap-1">
-          <span
-            className="inline-block h-2 w-2 rounded-full"
-            style={{ background: ROLLING_AVG_COLOR }}
-          />
-          <span className="text-2xs text-[var(--text-secondary)]">
-            {t('widget.driveEfficiencyChart.rolling', '7-day avg')}
-          </span>
-        </div>
-      </div>
-    </div>
+      )}
+    </EmbeddedChart>
   );
 
   return (

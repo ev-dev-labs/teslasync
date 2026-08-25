@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -71,7 +72,7 @@ export function PackCapacityMonthTrend({
           'packCapacity.month.aria',
           'Monthly qualified sample count and capacity estimates',
         )}
-        height={330}
+        size="detail"
         loading={state.isLoading}
         empty={false}
         exportable={
@@ -79,14 +80,28 @@ export function PackCapacityMonthTrend({
         }
         exportData={rows}
         data={rows}
+        dataColumns={[
+          { key: 'month', label: t('packCapacity.columns.month', 'Month') },
+          { key: 'samples', label: t('packCapacity.series.samples', 'Qualified samples') },
+          {
+            key: 'median',
+            label: `${t('packCapacity.series.monthMedian', 'Raw monthly median')} (${energyUnit})`,
+          },
+          {
+            key: 'latest',
+            label: `${t('packCapacity.series.monthLatest', 'Latest filtered estimate')} (${energyUnit})`,
+          },
+        ]}
+        chartKey="pack-capacity-month-trend"
       >
-        <PackCapacitySectionBody
-          result={result}
-          state={state}
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows}>
+        {({ hiddenSeries }) => (
+          <PackCapacitySectionBody
+            result={result}
+            state={state}
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -115,6 +130,7 @@ export function PackCapacityMonthTrend({
                 width={72}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 yAxisId="count"
                 dataKey="samples"
@@ -125,6 +141,7 @@ export function PackCapacityMonthTrend({
                 fill={chartTokens.series[0]}
                 fillOpacity={0.55}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('samples')}
               />
               <Line
                 yAxisId="energy"
@@ -138,6 +155,7 @@ export function PackCapacityMonthTrend({
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 connectNulls={false}
+                hide={hiddenSeries?.isHidden('median')}
               />
               <Line
                 yAxisId="energy"
@@ -151,10 +169,12 @@ export function PackCapacityMonthTrend({
                 strokeWidth={2}
                 dot={{ r: 3 }}
                 connectNulls={false}
+                hide={hiddenSeries?.isHidden('latest')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </PackCapacitySectionBody>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </PackCapacitySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

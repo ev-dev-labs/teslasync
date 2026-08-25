@@ -40,6 +40,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import { BatteryTab } from './BatteryTab';
@@ -97,7 +99,8 @@ vi.mock('@/hooks/useSettings', async () => {
 // ── recharts barrel double: ResponsiveContainer passes children through, and
 //    each chart surfaces its `data` prop (as JSON) plus its series so the
 //    page-computed values + dataKey bindings are directly assertable. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
   const Inert = () => null;
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const makeChart =
@@ -125,6 +128,7 @@ vi.mock('@/components/charts', () => {
     />
   );
   return {
+    ...actual,
     ChartTooltip: Inert,
     ChartGradient: Inert,
     chartGrid: null,
@@ -186,10 +190,15 @@ function makeQuery(over: QueryOverride = {}): FleetAnalyticsQuery {
 }
 
 function renderTab(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <BatteryTab query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <BatteryTab query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -291,11 +300,11 @@ describe('BatteryTab — populated', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
     // Values come from the second (latest) row, not the first.
-    expect(screen.getByText('92.4')).toBeInTheDocument();     // health_score, 1dp
-    expect(screen.getByText('75.0 kWh')).toBeInTheDocument(); // capacity_wh via formatEnergy
-    expect(screen.getByText('3.21')).toBeInTheDocument();     // degradation_pct, 2dp
-    expect(screen.getByText('480')).toBeInTheDocument();      // range_km → km, 0dp
-    expect(screen.getByText('312')).toBeInTheDocument();      // cycle_count int
+    expect(screen.getAllByText('92.4').length).toBeGreaterThan(0);     // health_score, 1dp
+    expect(screen.getAllByText('75.0 kWh').length).toBeGreaterThan(0); // capacity_wh via formatEnergy
+    expect(screen.getAllByText('3.21').length).toBeGreaterThan(0);     // degradation_pct, 2dp
+    expect(screen.getAllByText('480').length).toBeGreaterThan(0);      // range_km → km, 0dp
+    expect(screen.getAllByText('312').length).toBeGreaterThan(0);      // cycle_count int
   });
 
   it('renders all four panels and binds every chart series to its dataKey', () => {
@@ -312,9 +321,9 @@ describe('BatteryTab — populated', () => {
     expect(screen.getAllByTestId('chart-line')).toHaveLength(2);
     expect(screen.getByTestId('chart-composed')).toBeInTheDocument();
 
-    // Each series is bound to the expected SI field.
+    // Each series is bound to its display-boundary field.
     expect(screen.getByTestId('series-health_score')).toBeInTheDocument();
-    expect(screen.getByTestId('series-capacity_wh')).toBeInTheDocument();
+    expect(screen.getByTestId('series-capacity')).toBeInTheDocument();
     expect(screen.getByTestId('series-range')).toBeInTheDocument();
     expect(screen.getByTestId('series-degradation_pct')).toBeInTheDocument();
     expect(screen.getByTestId('series-cycle_count')).toBeInTheDocument();

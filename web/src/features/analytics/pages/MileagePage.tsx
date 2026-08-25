@@ -12,7 +12,7 @@ import { MetricCard, MetricBar, KVList } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip,
+  ChartTooltip, EmbeddedChart,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis,
   CartesianGrid, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS, areaGradient, axisTickSm,
@@ -43,9 +43,6 @@ interface MonthRow {
   dailyAvg: number;
 }
 
-/** Shared responsive chart height so every panel reads with identical rhythm. */
-const CHART_HEIGHT = 'h-64 sm:h-72';
-
 /* ------------------------------------------------------------------ */
 /*  Component                                                          */
 /* ------------------------------------------------------------------ */
@@ -74,6 +71,29 @@ export default function MileagePage() {
   const statsQuery = useMileageStats(activeId);
   const dailyQuery = useDailyMileage(activeId, 90);
   const monthlyQuery = useMonthlyMileage(activeId);
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'mileage-summary',
+        label: t('dataSources.labels.mileageSummary', 'Mileage summary'),
+        query: statsQuery,
+        enabled: vehicleId != null,
+      },
+      {
+        id: 'daily-mileage',
+        label: t('dataSources.labels.dailyMileage', 'Daily mileage'),
+        query: dailyQuery,
+        enabled: vehicleId != null,
+      },
+      {
+        id: 'monthly-mileage',
+        label: t('dataSources.labels.monthlyMileage', 'Monthly mileage'),
+        query: monthlyQuery,
+        enabled: vehicleId != null,
+      },
+    ],
+    [dailyQuery, monthlyQuery, statsQuery, t, vehicleId],
+  );
 
   const stats = statsQuery.data;
   const dailyRows = useMemo(() => dailyQuery.data ?? [], [dailyQuery.data]);
@@ -144,6 +164,10 @@ export default function MileagePage() {
       }),
     [monthlyData, fromKm],
   );
+  const monthlyChartRows = useMemo(
+    () => monthlyRows.map(({ month, distance }) => ({ month, distance })),
+    [monthlyRows],
+  );
 
   const monthColumns: Column<MonthRow>[] = useMemo(
     () => [
@@ -165,6 +189,7 @@ export default function MileagePage() {
       title={t('mileage.title', 'Mileage')}
       subtitle={t('mileage.subtitle', 'Daily and monthly distance tracking')}
       query={[statsQuery, dailyQuery, monthlyQuery]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* §1 — KPI band: full-width responsive metric grid */}
@@ -246,7 +271,22 @@ export default function MileagePage() {
                 message={t('mileage.noOdometer', 'No odometer readings yet')}
               />
             ) : (
-              <div className={CHART_HEIGHT} role="img" aria-label={t('mileage.odometerOverTime', 'Odometer Over Time')}>
+              <EmbeddedChart
+                title={t('mileage.odometerOverTime', 'Odometer Over Time')}
+                ariaLabel={t('mileage.odometerOverTimeAria', 'Odometer readings over time')}
+                data={odometerData}
+                dataColumns={[
+                  { key: 'date', label: t('mileage.date', 'Date') },
+                  {
+                    key: 'odometer',
+                    label: `${t('mileage.odometer', 'Odometer')} (${distanceUnit})`,
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={256}
+                chartKey="mileage-odometer-over-time"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={odometerData}>
                     {areaGradient('odoGrad', palette[2])}
@@ -263,7 +303,7 @@ export default function MileagePage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 
@@ -318,7 +358,22 @@ export default function MileagePage() {
                 message={t('mileage.noDaily', 'No daily distance yet')}
               />
             ) : (
-              <div className={CHART_HEIGHT} role="img" aria-label={t('mileage.dailyDistance', 'Daily Distance')}>
+              <EmbeddedChart
+                title={t('mileage.dailyDistance', 'Daily Distance')}
+                ariaLabel={t('mileage.dailyDistanceAria', 'Daily distance traveled over time')}
+                data={dailyData}
+                dataColumns={[
+                  { key: 'date', label: t('mileage.date', 'Date') },
+                  {
+                    key: 'distance',
+                    label: `${t('mileage.distance', 'Distance')} (${distanceUnit})`,
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={256}
+                chartKey="mileage-daily-distance"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -333,7 +388,7 @@ export default function MileagePage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 
@@ -352,7 +407,22 @@ export default function MileagePage() {
                 message={t('mileage.noMonthly', 'No monthly distance yet')}
               />
             ) : (
-              <div className={CHART_HEIGHT} role="img" aria-label={t('mileage.monthlyDistance', 'Monthly Distance')}>
+              <EmbeddedChart
+                title={t('mileage.monthlyDistance', 'Monthly Distance')}
+                ariaLabel={t('mileage.monthlyDistanceAria', 'Monthly distance traveled over time')}
+                data={monthlyChartRows}
+                dataColumns={[
+                  { key: 'month', label: t('mileage.month', 'Month') },
+                  {
+                    key: 'distance',
+                    label: `${t('mileage.distance', 'Distance')} (${distanceUnit})`,
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={256}
+                chartKey="mileage-monthly-distance"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyRows}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -367,7 +437,7 @@ export default function MileagePage() {
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
         </section>

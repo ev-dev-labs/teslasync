@@ -244,9 +244,21 @@ export default function GlancePage() {
     >
       {!vehicle ? (
         <GlassPanel className="p-8">
-          <EmptyState /* no-action: transient empty state — surfaces when no vehicles are registered */
+          <EmptyState
             icon={<Battery className="h-8 w-8" />}
-            message={t('glance.noVehicle', 'No vehicle found')}
+            title={t('glance.noVehicleTitle', 'No vehicle available')}
+            message={t(
+              'glance.noVehicle',
+              'Register or sync a Tesla vehicle before opening the live glance workspace.',
+            )}
+            description={t(
+              'glance.noVehicleDescription',
+              'Vehicle status, charging, climate, security, and location evidence will appear after the first telemetry check-in.',
+            )}
+            actionTo={{
+              label: t('glance.manageVehicles', 'Manage vehicles'),
+              to: '/vehicles',
+            }}
           />
         </GlassPanel>
       ) : (

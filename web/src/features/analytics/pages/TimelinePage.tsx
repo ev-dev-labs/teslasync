@@ -19,8 +19,8 @@ import {
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  ChartTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ChartLegend, ChartTooltip, EmbeddedChart,
 } from '@/components/charts';
 
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -515,21 +515,37 @@ export default function TimelinePage() {
               />
             )
           ) : (
-            <div className="h-56 sm:h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyBreakdown}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                  <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend wrapperStyle={{ fontSize: 12 }} />
-                  <Bar dataKey="driving" name={t('timeline.driving', 'Driving')} stackId="a" fill={STATE_COLORS.driving} fillOpacity={0.85} />
-                  <Bar dataKey="charging" name={t('timeline.charging', 'Charging')} stackId="a" fill={STATE_COLORS.charging} fillOpacity={0.85} />
-                  <Bar dataKey="idle" name={t('timeline.idle', 'Idle')} stackId="a" fill={STATE_COLORS.idle} fillOpacity={0.85} />
-                  <Bar dataKey="sleeping" name={t('timeline.sleeping', 'Sleeping')} stackId="a" fill={STATE_COLORS.sleeping} fillOpacity={0.85} radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
+            <EmbeddedChart
+              title={t('timeline.dailyBreakdown', 'Daily Breakdown')}
+              ariaLabel={t('timeline.dailyBreakdownAria', 'Daily transition counts by vehicle state')}
+              data={dailyBreakdown}
+              dataColumns={[
+                { key: 'day', label: t('timeline.day', 'Day') },
+                { key: 'driving', label: t('timeline.driving', 'Driving') },
+                { key: 'charging', label: t('timeline.charging', 'Charging') },
+                { key: 'idle', label: t('timeline.idle', 'Idle') },
+                { key: 'sleeping', label: t('timeline.sleeping', 'Sleeping') },
+              ]}
+              height={256}
+              mobileHeight={224}
+              chartKey="timeline-daily-breakdown"
+            >
+              {({ hiddenSeries }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dailyBreakdown}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                    <XAxis dataKey="day" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 10 }} allowDecimals={false} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <ChartLegend />
+                    <Bar dataKey="driving" name={t('timeline.driving', 'Driving')} stackId="a" fill={STATE_COLORS.driving} fillOpacity={0.85} hide={hiddenSeries?.isHidden('driving')} />
+                    <Bar dataKey="charging" name={t('timeline.charging', 'Charging')} stackId="a" fill={STATE_COLORS.charging} fillOpacity={0.85} hide={hiddenSeries?.isHidden('charging')} />
+                    <Bar dataKey="idle" name={t('timeline.idle', 'Idle')} stackId="a" fill={STATE_COLORS.idle} fillOpacity={0.85} hide={hiddenSeries?.isHidden('idle')} />
+                    <Bar dataKey="sleeping" name={t('timeline.sleeping', 'Sleeping')} stackId="a" fill={STATE_COLORS.sleeping} fillOpacity={0.85} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('sleeping')} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </EmbeddedChart>
           )}
         </GlassPanel>
 

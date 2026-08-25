@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next';
 
 import { ChartContainer } from '@/components/charts';
 import {
-  ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer,
+  ChartLegend, ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   ChartTooltip, chartGrid, axisTick,
 } from '@/components/charts';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtInt } from '@/lib/numberFormat';
@@ -32,6 +33,7 @@ export function YearMonthlyChart({ data }: Props) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const { distance: distanceUnit, locale } = unitPrefs;
+  const hidden = useHiddenSeries('year-monthly-chart');
 
   const rows = useMemo(() => {
     return (data.monthly_stats ?? []).map((m) => ({
@@ -60,6 +62,7 @@ export function YearMonthlyChart({ data }: Props) {
         { key: 'distance', label: distanceName },
         { key: 'energy', label: t('yearReview.energyKwh', 'kWh') },
       ]}
+      chartKey="year-monthly-chart"
     >
       <div className="h-64 sm:h-72 xl:h-80">
         <ResponsiveContainer width="100%" height="100%">
@@ -69,9 +72,9 @@ export function YearMonthlyChart({ data }: Props) {
             <YAxis yAxisId="left" tick={axisTick} tickLine={false} axisLine={false} allowDecimals={false} />
             <YAxis yAxisId="right" orientation="right" tick={axisTick} tickLine={false} axisLine={false} />
             <Tooltip content={<ChartTooltip />} />
-            <Legend wrapperStyle={{ fontSize: 12 }} />
-            <Bar yAxisId="left" dataKey="drives" name={drivesName} fill="#a78bfa" radius={[4, 4, 0, 0]} maxBarSize={36} animationDuration={800} />
-            <Line yAxisId="right" type="monotone" dataKey="distance" name={distanceName} stroke="#22d3ee" strokeWidth={2} dot={false} animationDuration={800} />
+            <ChartLegend state={hidden} wrapperStyle={{ fontSize: 12 }} />
+            <Bar yAxisId="left" dataKey="drives" name={drivesName} fill="#a78bfa" radius={[4, 4, 0, 0]} maxBarSize={36} animationDuration={800} hide={hidden.isHidden('drives')} />
+            <Line yAxisId="right" type="monotone" dataKey="distance" name={distanceName} stroke="#22d3ee" strokeWidth={2} dot={false} animationDuration={800} hide={hidden.isHidden('distance')} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>

@@ -10,7 +10,7 @@ import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, ChartGradient, chartGrid, axisTickSm,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
@@ -467,10 +467,17 @@ export default function TeslaChargingHistoryPage() {
                 message={t('tesla_charging.noChartData', 'No spending data yet. Click "Refresh from Tesla" to sync.')}
               />
             ) : (
-              <div
-                className="h-56 sm:h-64 xl:h-72"
-                role="img"
-                aria-label={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+              <EmbeddedChart
+                title={t('tesla_charging.monthlySpending', 'Monthly Spending')}
+                ariaLabel={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+                data={monthlyData}
+                dataColumns={[
+                  { key: 'month', label: t('tesla_charging.month', 'Month') },
+                  { key: 'total', label: t('tesla_charging.spending', 'Spending') },
+                ]}
+                fluid={false}
+                mobileHeight={224}
+                height={288}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
@@ -484,7 +491,7 @@ export default function TeslaChargingHistoryPage() {
                     <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 

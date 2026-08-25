@@ -204,7 +204,7 @@ describe('TirePressureVisualWidget — shell states', () => {
 
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('No tire pressure data')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
   });
 
   it('renders an explicit empty state (no car diagram) when no snapshot has arrived', () => {
@@ -423,7 +423,7 @@ describe('TirePressureVisualWidget — refresh wiring', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap(), refetch }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -433,7 +433,7 @@ describe('TirePressureVisualWidget — refresh wiring', () => {
     mockLatest.mockReturnValue(qr({ data: makeSnap(), refetch }));
     renderWidget(COMPACT);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

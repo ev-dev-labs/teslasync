@@ -348,7 +348,7 @@ describe('LifetimeStatsWidget — refresh + vehicle resolution', () => {
     mockLifetime.mockReturnValue(makeQuery({ data: makeStats(), refetch }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

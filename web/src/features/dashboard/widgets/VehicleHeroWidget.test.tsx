@@ -370,7 +370,7 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
     setup({ state: makeQuery({ data: makeStateData(), refetch, isFetching: false }) });
     render(<VehicleHeroWidget size={STANDARD} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -382,7 +382,7 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
     });
     render(<VehicleHeroWidget size={STANDARD} />);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

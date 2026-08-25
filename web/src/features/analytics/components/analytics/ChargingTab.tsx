@@ -4,14 +4,15 @@ import { Plug, Zap, DollarSign, Gauge, Timer, TrendingUp, PieChart as PieChartIc
 import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip,
+  ChartLegend,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line, PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { AnalyticsPanel } from './AnalyticsPanel';
+import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { MetricBandSkeleton } from './helpers';
 import { PIE_COLORS } from './constants';
 import { ChargingDetailSection } from './ChargingDetailSection';
@@ -89,7 +90,7 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
         className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5 2xl:grid-cols-3"
       >
         {/* Charger Types Donut */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.charging.chargerTypes', 'Charger Types')}
           icon={<PieChartIcon className="h-4 w-4" />}
           loading={isLoading}
@@ -97,33 +98,38 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={chargerTypes.length === 0}
           emptyMessage={t('analytics.charging.noTypes', 'No charger type data')}
+          ariaLabel={t('analytics.charging.chargerTypesAria', 'Charging sessions by charger type')}
+          data={chargerTypes}
+          dataColumns={[
+            { key: 'type', label: t('analytics.charging.chargerType', 'Charger type') },
+            { key: 'count', label: t('analytics.charging.sessions', 'Sessions') },
+          ]}
+          exportFilename="fleet-charger-types"
         >
-          <div className="h-64 sm:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chargerTypes}
-                  dataKey="count"
-                  nameKey="type"
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={95}
-                  paddingAngle={3}
-                >
-                  {chargerTypes.map((_, i) => (
-                    <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={chargerTypes}
+                dataKey="count"
+                nameKey="type"
+                cx="50%"
+                cy="50%"
+                innerRadius={55}
+                outerRadius={95}
+                paddingAngle={3}
+              >
+                {chargerTypes.map((_, i) => (
+                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
+            </PieChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Start Battery Distribution */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.charging.startBattery', 'Start Battery Distribution')}
           icon={<Battery className="h-4 w-4" />}
           loading={isLoading}
@@ -131,22 +137,27 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={batteryDist.length === 0}
           emptyMessage={t('analytics.charging.noBatDist', 'No battery distribution data')}
+          ariaLabel={t('analytics.charging.startBatteryAria', 'Charging sessions by starting battery level')}
+          data={batteryDist}
+          dataColumns={[
+            { key: 'range', label: t('analytics.charging.batteryRange', 'Battery level') },
+            { key: 'count', label: t('analytics.charging.sessions', 'Sessions') },
+          ]}
+          exportFilename="fleet-start-battery-distribution"
         >
-          <div className="h-64 sm:h-72">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={batteryDist} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="range" tick={axisTickSm} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={batteryDist} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="range" tick={axisTickSm} />
+              <YAxis tick={axisTick} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name={t('analytics.charging.sessions', 'Sessions')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Hourly Charging Pattern */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.charging.hourlyPattern', 'Hourly Charging Pattern')}
           icon={<Clock className="h-4 w-4" />}
           loading={isLoading}
@@ -154,8 +165,17 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={hourly.length === 0}
           emptyMessage={t('analytics.charging.noHourly', 'No hourly data')}
+          ariaLabel={t('analytics.charging.hourlyPatternAria', 'Charging sessions and energy by hour of day')}
+          data={hourly}
+          dataColumns={[
+            { key: 'hour', label: t('analytics.charging.hour', 'Hour') },
+            { key: 'charges', label: t('analytics.charging.charges', 'Charges') },
+            { key: 'energy', label: t('analytics.charging.energykWh', 'Energy (kWh)') },
+          ]}
+          exportFilename="fleet-hourly-charging"
+          chartKey="analytics-hourly-charging"
         >
-          <div className="h-64 sm:h-72">
+          {({ hiddenSeries }) => (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={hourly} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -163,13 +183,13 @@ export function ChargingTab({ query }: { query: FleetAnalyticsQuery }) {
                 <YAxis yAxisId="left" tick={axisTick} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="charges" name={t('analytics.charging.charges', 'Charges')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
-                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[3]} />
+                <ChartLegend />
+                <Bar yAxisId="left" dataKey="charges" name={t('analytics.charging.charges', 'Charges')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('charges')} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="energy" name={t('analytics.charging.energykWh', 'Energy (kWh)')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('energy')} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          )}
+        </AnalyticsChartPanel>
 
         {/* Charger Brands · Cost by Type · Cost Analysis · Monthly Trend (band) */}
         <ChargingDetailSection query={query} />

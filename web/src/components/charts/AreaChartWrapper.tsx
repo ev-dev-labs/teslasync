@@ -1,4 +1,4 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -9,6 +9,9 @@ import {
   CartesianGrid,
 } from 'recharts';
 import { cn } from '@/lib/cn';
+import { chartTokens } from '@/lib/tokens';
+import { ChartTooltip } from './ChartTooltip';
+import { ChartLegend } from './ChartLegend';
 
 export interface SeriesConfig {
   key: string;
@@ -32,7 +35,8 @@ export interface AreaChartWrapperProps {
 }
 
 /** Stable SVG gradient id for a series — shared by the `<defs>` and the `<Area fill>`. */
-const gradientId = (key: string): string => `gradient-${key}`;
+const gradientId = (instanceId: string, key: string): string =>
+  `gradient-${instanceId}-${key.replace(/[^a-zA-Z0-9_-]/g, '-')}`;
 
 /**
  * Resolves a Recharts tooltip entry: maps the hovered `dataKey` to its
@@ -58,6 +62,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
   ) {
     const safeSeries = series ?? [];
     const safeData = data ?? [];
+    const instanceId = useId().replace(/:/g, '');
 
     return (
       <div
@@ -70,50 +75,63 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
           <AreaChart data={safeData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
               {safeSeries.map((s) => (
-                <linearGradient key={s.key} id={gradientId(s.key)} x1="0" y1="0" x2="0" y2="1">
+                <linearGradient
+                  key={s.key}
+                  id={gradientId(instanceId, s.key)}
+                  x1="0"
+                  y1="0"
+                  x2="0"
+                  y2="1"
+                >
                   <stop offset="0%" stopColor={s.color} stopOpacity={0.3} />
                   <stop offset="100%" stopColor={s.color} stopOpacity={0} />
                 </linearGradient>
               ))}
             </defs>
 
-            <CartesianGrid strokeDasharray="3 3" className="stroke-gray-200 dark:stroke-gray-700" />
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={chartTokens.gridStroke}
+              strokeOpacity={0.4}
+            />
 
             <XAxis
               dataKey={xKey}
-              tick={{ fontSize: 11 }}
+              tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
               tickFormatter={xFormatter}
-              className="text-[var(--text-muted)]"
             />
             <YAxis
-              tick={{ fontSize: 11 }}
+              tick={{ fill: chartTokens.axisStroke, fontSize: 11 }}
               tickFormatter={yFormatter}
-              className="text-[var(--text-muted)]"
             />
 
             <Tooltip
-              contentStyle={{
-                backgroundColor: 'rgba(17, 24, 39, 0.95)',
-                border: '1px solid rgba(75, 85, 99, 0.5)',
-                borderRadius: 8,
-                fontSize: 12,
-                color: '#e5e7eb',
-              }}
-              formatter={(value: number, name: string) =>
-                resolveAreaTooltip(safeSeries, value, name, yFormatter)
-              }
-              labelFormatter={xFormatter}
+              content={(
+                <ChartTooltip
+                  valueFormatter={
+                    yFormatter
+                      ? (value) => yFormatter(Number(value))
+                      : undefined
+                  }
+                  labelFormatter={
+                    xFormatter
+                      ? (label) => xFormatter(String(label ?? ''))
+                      : undefined
+                  }
+                />
+              )}
             />
+            {safeSeries.length > 1 ? <ChartLegend /> : null}
 
             {safeSeries.map((s) => (
               <Area
                 key={s.key}
                 type="monotone"
                 dataKey={s.key}
-                name={s.key}
+                name={s.label}
                 stroke={s.color}
                 strokeWidth={2}
-                fill={`url(#${gradientId(s.key)})`}
+                fill={`url(#${gradientId(instanceId, s.key)})`}
               />
             ))}
           </AreaChart>

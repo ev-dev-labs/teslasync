@@ -1,11 +1,11 @@
 /**
  * EnergyPage — contract + hardening tests.
  *
- * EnergyPage is the "Energy Intelligence" dashboard. It fans three TanStack
- * Query hooks (energy stats, paginated charging sessions, latest charging
- * telemetry) out through the real `useUnits` / `useFormatting` display boundary
- * into a KPI band, an efficiency/cost hero, lifetime metrics, two gas-savings
- * cost cards, four analytics charts, and a recent-sessions table.
+ * EnergyPage is the "Energy Intelligence" dashboard. It fans independent
+ * energy, charging-session, charging-telemetry, and idle-drain queries through
+ * the real `useUnits` / `useFormatting` display boundary into an operational
+ * brief, KPI band, driver investigation, efficiency/cost hero, lifetime
+ * metrics, two gas-comparison cards, four charts, and a sessions table.
  *
  * These tests drive the page end-to-end — the real hooks + real
  * unit-conversion/formatting boundary run against a mocked `request()` — so the
@@ -14,16 +14,16 @@
  *   1. Full render: title, KPI band (SI→display cost/distance), lifetime energy,
  *      charger-type badges, and the recent-sessions table.
  *   2. Gas-savings regression: `gasEquivalent` derives from SI meters converted
- *      to the user's display distance (200 km → ~$24), NOT raw meters × 0.12
- *      (which produced a ~$24,000 "equivalent" after the phase-42 SI cutover).
+ *      to miles for the configured MPG model (200 km → $19.88), NOT raw meters
+ *      × 0.12 (which produced a ~$24,000 "equivalent" after the SI cutover).
  *   3. Loading — the dedicated skeleton replaces the page while stats are
  *      in flight, never a half-populated dashboard.
  *   4. Error — a failed stats query surfaces a retryable <QueryError> banner
  *      while the independent sessions table still renders (graceful degrade),
  *      and Retry re-fires the stats request.
  *   5. Empty — replay / brand-new accounts get an honest empty hero (not four
- *      zeroed gauges) plus an empty sessions table, and the cost cards fold to
- *      the `gasCost === 0` savings branch without dividing by zero.
+ *      zeroed gauges) plus an empty sessions table, and the cost cards withhold
+ *      comparisons when no measured distance or complete cost coverage exists.
  *   6. Anti-stub / a11y — every analytics section renders (four chart panels +
  *      hero + lifetime), charger buckets resolve to all three type labels, and
  *      the landmark regions expose their accessible names.
@@ -83,6 +83,47 @@ vi.mock('@/hooks/useRangeState', () => ({
     setRange: vi.fn(),
   }),
 }))
+
+vi.mock('@/hooks/useSettings', async () => {
+  const actual = await vi.importActual<typeof import('@/hooks/useSettings')>('@/hooks/useSettings')
+  const settings = {
+    unit_of_length: 'km',
+    unit_of_temp: 'C',
+    unit_of_pressure: 'bar',
+    preferred_range: 'rated',
+    language: 'en',
+    base_cost_per_kwh: 0.12,
+    api_suspended: false,
+    theme: 'neon-cyan',
+    mode: 'dark',
+    custom_primary: '#00b4d8',
+    custom_accent: '#e63946',
+    gas_price_per_unit: 4,
+    gas_unit: 'gallon',
+    gas_efficiency_mpg: 25,
+    decimal_precision: 2,
+    quiet_hours_enabled: false,
+    quiet_hours_start: '22:00',
+    quiet_hours_end: '07:00',
+    alert_digest_mode: 'instant',
+    currency_symbol: '$',
+    locale: 'en-US',
+    timezone_user: '',
+  }
+  return {
+    ...actual,
+    useSettings: () => ({
+      settings,
+      isMiles: false,
+      isFahrenheit: false,
+      isPSI: false,
+      decimals: 2,
+      locale: 'en-US',
+      density: 'comfortable' as const,
+      rangeType: 'rated' as const,
+    }),
+  }
+})
 
 import { request } from '@/api/client'
 import { ToastProvider } from '@/components/feedback/Toast'
@@ -206,7 +247,17 @@ interface InstallOpts {
   statsPending?: boolean
   statsError?: boolean
   sessions?: ChargingSession[]
+  sessionsError?: boolean
   telemetry?: unknown
+  idleStats?: {
+    event_count: number
+    total_observed_hours: number
+    avg_drain_pct_per_day: number | null
+    median_drain_pct_per_day: number | null
+    p95_drain_pct_per_day: number | null
+    sample_window_days: number
+  }
+  idleError?: boolean
 }
 
 function install(opts: InstallOpts = {}) {
@@ -216,7 +267,17 @@ function install(opts: InstallOpts = {}) {
     statsPending = false,
     statsError = false,
     sessions = defaultSessions,
+    sessionsError = false,
     telemetry = { vehicle_id: 7, ts: '2025-06-03T20:00:00Z', lifetime_energy_used: 54321 },
+    idleStats = {
+      event_count: 8,
+      total_observed_hours: 320,
+      avg_drain_pct_per_day: 1.2,
+      median_drain_pct_per_day: 0.9,
+      p95_drain_pct_per_day: 2.4,
+      sample_window_days: 90,
+    },
+    idleError = false,
   } = opts
 
   mockedRequest.mockImplementation((path: string) => {
@@ -226,8 +287,17 @@ function install(opts: InstallOpts = {}) {
       if (statsError) return Promise.reject(new Error('energy boom'))
       return Promise.resolve(stats)
     }
-    if (path.startsWith('/charging?')) return Promise.resolve(sessions)
+    if (path.startsWith('/charging?')) {
+      return sessionsError
+        ? Promise.reject(new Error('charging history boom'))
+        : Promise.resolve(sessions)
+    }
     if (path.startsWith('/charging-telemetry/latest')) return Promise.resolve(telemetry)
+    if (path.startsWith('/vampire-drain/stats')) {
+      return idleError
+        ? Promise.reject(new Error('idle drain boom'))
+        : Promise.resolve(idleStats)
+    }
     if (path.startsWith('/saved-views')) return Promise.resolve([])
     if (path.startsWith('/annotations')) return Promise.resolve([])
     return Promise.resolve({})
@@ -278,10 +348,21 @@ describe('EnergyPage', () => {
     expect(screen.getByText('$0.22')).toBeInTheDocument()
     expect(screen.getByText('$0.05')).toBeInTheDocument()
     // Yearly projection appears both as a KPI and as the annual card EV cost.
-    expect(screen.getAllByText('$120.00').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('$121.67').length).toBeGreaterThan(0)
 
     // Lifetime energy comes straight from live charging telemetry.
     expect(screen.getByText('54,321.00')).toBeInTheDocument()
+
+    // The decision brief combines measured drive consumption, real 90-day
+    // parked-drain evidence, a usage projection, and explicit unsupported
+    // charging-loss semantics instead of manufacturing a percentage.
+    expect(screen.getByText('1.20%/day')).toBeInTheDocument()
+    expect(screen.getByText('Projected 30-day use')).toBeInTheDocument()
+    expect(screen.getByText('Not measured')).toBeInTheDocument()
+    expect(screen.getByText('Efficiency driver investigation')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Review temperature impact' })).toHaveAttribute('href', '/temperature-impact')
+    expect(screen.getByRole('link', { name: 'Review speed profile' })).toHaveAttribute('href', '/speed-profile')
+    expect(screen.getByRole('link', { name: 'Review route efficiency' })).toHaveAttribute('href', '/route-efficiency')
 
     // Recent-sessions table renders real rows with per-type badges. 'CCS' is
     // the raw type echoed only in the table; 'Supercharger' also appears in the
@@ -291,19 +372,40 @@ describe('EnergyPage', () => {
     expect(screen.getAllByText('Supercharger').length).toBeGreaterThan(0)
   })
 
-  it('projects gas savings from SI distance (no ~1000x inflation)', async () => {
+  it('projects gas savings from SI distance and configured fuel assumptions', async () => {
     renderPage()
 
     // The period-total card is labelled with the resolved window length.
     expect(await screen.findByText('30-Day Total')).toBeInTheDocument()
 
-    // 200 km × $0.12 → "$24.00" gas equivalent; savings = $24 − $10 EV = "$14.00".
-    // (findByText waits for the stats query so totalDistance is populated.)
-    expect(await screen.findByText('$24.00')).toBeInTheDocument()
-    expect(await screen.findByText('$14.00')).toBeInTheDocument()
+    // 200 km → 124.27 mi; /25 mpg × $4/gal = $19.88 gas equivalent.
+    // Recorded EV cost is $10, so modeled savings are $9.88.
+    expect(await screen.findByText('$19.88')).toBeInTheDocument()
+    expect(await screen.findByText('$9.88')).toBeInTheDocument()
 
     // Regression guard: raw-meters × 0.12 would have printed "$24,000.00".
     expect(screen.queryByText('$24,000.00')).toBeNull()
+  })
+
+  it('labels a charging-cost premium honestly instead of calling it savings', async () => {
+    install({
+      sessions: [
+        makeSession({
+          id: 201,
+          total_energy_added_wh: 45000,
+          cost_decimal: 30,
+        }),
+      ],
+    })
+    renderPage()
+
+    expect(
+      await screen.findByText('Recorded electric cost exceeds the gas model'),
+    ).toBeInTheDocument()
+    expect(screen.getAllByText('Higher by')).toHaveLength(2)
+    expect(screen.getByText('$10.12')).toBeInTheDocument()
+    expect(screen.getAllByText(/more$/)).toHaveLength(2)
+    expect(screen.queryByText('Electric operation remains cost-favorable')).not.toBeInTheDocument()
   })
 
   it('shows the loading skeleton while energy stats are in flight', async () => {
@@ -336,18 +438,56 @@ describe('EnergyPage', () => {
     await waitFor(() => expect(energyCallCount()).toBeGreaterThan(before))
   })
 
-  it('renders an honest empty hero and folds the cost cards to the zero-savings branch', async () => {
+  it('renders an honest empty hero and withholds unsupported savings', async () => {
     // No vehicles → selection is null → stats + sessions queries stay disabled.
     install({ vehicles: [], stats: null, sessions: [] })
     renderPage()
 
     // Honest empty hero instead of four misleading zero gauges.
     expect(await screen.findByText(/No energy data yet/i)).toBeInTheDocument()
+    expect(
+      screen.getByText('No charging sessions fall within the selected analysis window.'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText('No charger-type energy is available for the selected analysis window.'),
+    ).toBeInTheDocument()
     // The sessions table degrades to its own empty state, not a blank panel.
     expect(screen.getByText('No charging sessions recorded')).toBeInTheDocument()
 
-    // gasCost === 0 must not divide-by-zero — both cards show "0.00% less".
-    expect(screen.getAllByText(/0\.00% less/).length).toBeGreaterThan(0)
+    // No drive distance or cost coverage means savings are unknown, not zero.
+    expect(screen.queryByText(/0\.00% less/)).toBeNull()
+    expect(
+      screen.getAllByText('Complete charging-cost coverage is required before savings are modeled.'),
+    ).toHaveLength(2)
+  })
+
+  it('keeps supported sections visible when an independent source fails', async () => {
+    install({ idleError: true })
+    renderPage()
+
+    expect(await screen.findByTestId('energy-partial-data')).toHaveTextContent(
+      'Unavailable sources: idle-drain history.',
+    )
+    expect(screen.getByText('Recent Charging Sessions')).toBeInTheDocument()
+    expect(screen.getByText('CCS')).toBeInTheDocument()
+    expect(screen.getByText('Not measured')).toBeInTheDocument()
+  })
+
+  it('withholds savings and projections when session cost coverage is partial', async () => {
+    install({
+      sessions: [
+        makeSession({ id: 201, total_energy_added_wh: 10000, cost_decimal: 2 }),
+        makeSession({ id: 202, total_energy_added_wh: 12000, cost_decimal: null }),
+      ],
+    })
+    renderPage()
+
+    expect(await screen.findByText('Cost coverage is partial')).toBeInTheDocument()
+    expect(screen.getByText(/1 of 2 returned sessions include cost/)).toBeInTheDocument()
+    expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByText('Complete charging-cost coverage is required before savings are modeled.'),
+    ).toHaveLength(2)
   })
 
   it('renders every analytics section with accessible landmarks (no stubbed panels)', async () => {

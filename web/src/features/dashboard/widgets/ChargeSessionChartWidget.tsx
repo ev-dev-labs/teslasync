@@ -5,6 +5,8 @@ import { Zap } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, Cell,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt, safe,
+  ChartTooltip, EmbeddedChart,
+  type ChartDataRow,
 } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { request } from '@/api/client';
@@ -31,7 +33,7 @@ const CHARGER_TYPE_LABEL: Record<string, string> = {
   dc: 'DC Fast',
 };
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   label: string;
   energy: number;
   type: string;
@@ -122,12 +124,18 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
         stats={stats}
         chart={
           <div className="flex h-full w-full flex-col px-2 pb-1">
-            <div
-              role="img"
-              aria-label={t(
+            <EmbeddedChart
+              title={t('widget.chargeSessionChart.title', 'Charge Sessions')}
+              ariaLabel={t(
                 'widget.chargeSessionChart.chartLabel',
                 'Bar chart of energy added per charge session',
               )}
+              data={chartData}
+              dataColumns={[
+                { key: 'label', label: t('widget.chargeSessionChart.session', 'Session') },
+                { key: 'energy', label: t('widget.chargeSessionChart.energyKwh', 'Energy (kWh)') },
+                { key: 'type', label: t('widget.chargeSessionChart.chargerType', 'Charger type') },
+              ]}
               className="min-h-0 flex-1"
             >
               <ResponsiveContainer width="100%" height="100%">
@@ -142,12 +150,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                     tickFormatter={(v: number) => `${fmt(v, 0)}`}
                   />
                   <Tooltip
-                    contentStyle={{
-                      background: 'rgba(0,0,0,0.85)',
-                      border: '1px solid rgba(255,255,255,0.1)',
-                      borderRadius: 8,
-                      fontSize: 12,
-                    }}
+                    content={<ChartTooltip />}
                     formatter={(value: number, _name: string, props: { payload?: ChartDatum }) => [
                       `${fmt(value, 1)} kWh`,
                       CHARGER_TYPE_LABEL[props.payload?.type ?? ''] ?? props.payload?.type ?? '',
@@ -162,7 +165,7 @@ export default function ChargeSessionChartWidget({ vehicleId, size }: WidgetProp
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </EmbeddedChart>
 
             {/* Legend */}
             <div className="flex items-center justify-center gap-3 pb-1">

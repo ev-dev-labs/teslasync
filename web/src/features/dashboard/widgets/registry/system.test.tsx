@@ -426,7 +426,7 @@ describe('system-health — lazy component wiring', () => {
     mockUseSystemHealth.mockReturnValue(makeQuery({ data: healthy, refetch }));
     await renderWidget('system-health', { cols: 2, rows: 4 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

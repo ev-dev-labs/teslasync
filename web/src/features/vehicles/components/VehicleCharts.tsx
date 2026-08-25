@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ChartTooltip,
-  AREA_DEFAULTS, areaGradient,
+  AREA_DEFAULTS, areaGradient, EmbeddedChart,
 } from '@/components/charts'
 import { Navigation, Activity, Car, Settings } from 'lucide-react'
 import {
@@ -275,29 +275,36 @@ export function VehicleCharts({
           </h3>
           {hasSpeedData ? (
             <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={speedSeries}>
-                  {areaGradient('vehicleSpeedGrad', '#00f0ff', 0.1)}
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="var(--glass-border)"
-                    strokeOpacity={0.4}
-                  />
-                  <XAxis
-                    dataKey="time"
-                    tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                  />
-                  <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Area
-                    {...AREA_DEFAULTS}
-                    dataKey="speed"
-                    stroke="#00f0ff"
-                    fill="url(#vehicleSpeedGrad)"
-                    name={t('vehicles.detail.speedSeries', 'Speed {{unit}}', { unit: speedUnit })}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
+              {/* chart-a11y:no-table live telemetry speed series — variable-length continuous signal, not tabular */}
+              <EmbeddedChart
+                title={t('common.speedHistory', 'Speed History')}
+                ariaLabel={t('vehicles.detail.speedHistoryAria', 'Vehicle speed history area chart')}
+                fluid
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={speedSeries}>
+                    {areaGradient('vehicleSpeedGrad', '#00f0ff', 0.1)}
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="var(--glass-border)"
+                      strokeOpacity={0.4}
+                    />
+                    <XAxis
+                      dataKey="time"
+                      tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                    />
+                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="speed"
+                      stroke="#00f0ff"
+                      fill="url(#vehicleSpeedGrad)"
+                      name={t('vehicles.detail.speedSeries', 'Speed {{unit}}', { unit: speedUnit })}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </EmbeddedChart>
             </div>
           ) : (
             <div className="h-64 flex items-center justify-center">

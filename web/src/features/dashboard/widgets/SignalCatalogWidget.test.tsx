@@ -172,7 +172,7 @@ describe('SignalCatalogWidget — loading / empty / error states', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
     expect(screen.queryByText('No signals in catalog')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
   });
 
   it('shows the empty state when the catalog loaded with zero entries and no error', () => {
@@ -400,7 +400,7 @@ describe('SignalCatalogWidget — observations wiring & refresh', () => {
     const q = setCatalog({ data: [makeEntry()], isFetching: false });
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(q.refetch).toHaveBeenCalledTimes(1);
   });

@@ -29,6 +29,20 @@ describe('EmptyState', () => {
     expect(screen.getByText(/no data has been recorded/i)).toBeInTheDocument();
   });
 
+  it('renders supporting guidance separately from the primary message', () => {
+    renderInRouter(
+      <EmptyState
+        message="No sessions have been recorded."
+        description="Complete a charging session to populate this view."
+      />,
+    );
+
+    expect(screen.getByText('No sessions have been recorded.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Complete a charging session to populate this view.'),
+    ).toBeInTheDocument();
+  });
+
   it('exposes role="status" so assistive tech announces empty surfaces', () => {
     renderInRouter(<EmptyState message="Nothing yet" />);
     expect(screen.getByRole('status')).toBeInTheDocument();

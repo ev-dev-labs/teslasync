@@ -29,8 +29,9 @@ import {
 } from '@/components/feedback';
 import {
   ChartTooltip,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend, ResponsiveContainer,
   PieChart, Pie, Cell,
+  EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber, formatBytes } from '@/lib/numberFormat';
@@ -130,6 +131,14 @@ export default function DiskForecastPage() {
   const topBySize = useMemo(
     () => [...rows].sort((a, b) => (b.total_bytes ?? 0) - (a.total_bytes ?? 0)).slice(0, 10),
     [rows],
+  );
+  const topBySizeChartRows = useMemo(
+    () => topBySize.map(({ hypertable_name, uncompressed_bytes, compressed_bytes }) => ({
+      hypertable_name,
+      uncompressed_bytes,
+      compressed_bytes,
+    })),
+    [topBySize],
   );
 
   const growthLeaders = useMemo(
@@ -327,21 +336,23 @@ export default function DiskForecastPage() {
               <HardDrive className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}
             </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={320} />
-            ) : showError ? (
-              <QueryError error={query.error} onRetry={retry} />
-            ) : topBySize.length === 0 ? (
-              <EmptyState /* no-action: composition renders once hypertables report sizes */
-                icon={<HardDrive className="h-8 w-8" />}
-                message={t('admin.diskForecast.noComposition', 'No hypertable sizes to chart yet.')}
-              />
-            ) : (
-              <div
-                className="h-72 sm:h-80"
-                role="img"
-                aria-label={t('admin.diskForecast.compositionAria', 'Stacked bar chart of the largest hypertables split by uncompressed and compressed bytes')}
-              >
+            <EmbeddedChart
+              chartKey="admin-disk-composition"
+              title={t('admin.diskForecast.compositionTitle', 'Compressed vs uncompressed')}
+              ariaLabel={t('admin.diskForecast.compositionAria', 'Stacked bar chart of the largest hypertables split by uncompressed and compressed bytes')}
+              loading={isLoading}
+              error={showError ? (query.error ?? undefined) : undefined}
+              onRetry={retry}
+              empty={!isLoading && !showError && topBySize.length === 0}
+              emptyMessage={t('admin.diskForecast.noComposition', 'No hypertable sizes to chart yet.')}
+              data={topBySizeChartRows}
+              dataColumns={[
+                { key: 'hypertable_name', label: t('admin.diskForecast.colTable', 'Table') },
+                { key: 'uncompressed_bytes', label: t('admin.diskForecast.uncompressed', 'Uncompressed'), format: (v) => formatBytes(Number(v)) },
+                { key: 'compressed_bytes', label: t('admin.diskForecast.compressed', 'Compressed'), format: (v) => formatBytes(Number(v)) },
+              ]}
+            >
+              {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart layout="vertical" data={topBySize} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
@@ -358,13 +369,14 @@ export default function DiskForecastPage() {
                       tickFormatter={(v) => truncate(String(v))}
                     />
                     <Tooltip content={<ChartTooltip />} formatter={(v) => formatBytes(Number(v))} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
+                    <ChartLegend />
                     <Bar
                       dataKey="uncompressed_bytes"
                       name={t('admin.diskForecast.uncompressed', 'Uncompressed')}
                       stackId="a"
                       fill={UNCOMPRESSED_HEX}
                       fillOpacity={0.85}
+                      hide={hiddenSeries?.isHidden('uncompressed_bytes') ?? false}
                     />
                     <Bar
                       dataKey="compressed_bytes"
@@ -373,11 +385,12 @@ export default function DiskForecastPage() {
                       fill={COMPRESSED_HEX}
                       fillOpacity={0.85}
                       radius={[0, 4, 4, 0]}
+                      hide={hiddenSeries?.isHidden('compressed_bytes') ?? false}
                     />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            )}
+              )}
+            </EmbeddedChart>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5">
@@ -385,41 +398,41 @@ export default function DiskForecastPage() {
               <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('admin.diskForecast.severityTitle', 'Severity mix')}
             </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={220} />
-            ) : showError ? (
-              <QueryError error={query.error} onRetry={retry} />
-            ) : severitySlices.length === 0 ? (
-              <EmptyState /* no-action: severity is derived from backend thresholds */
-                icon={<ShieldAlert className="h-8 w-8" />}
-                message={t('admin.diskForecast.noSeverity', 'No severity data available yet.')}
-              />
-            ) : (
-              <div className="space-y-4">
-                <div
-                  className="h-44"
-                  role="img"
-                  aria-label={t('admin.diskForecast.severityAria', 'Donut chart of hypertables grouped by quota severity tier')}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={severitySlices}
-                        dataKey="value"
-                        nameKey="label"
-                        innerRadius={48}
-                        outerRadius={72}
-                        paddingAngle={2}
-                        strokeWidth={0}
-                      >
-                        {severitySlices.map((s) => (
-                          <Cell key={s.key} fill={SEVERITY_HEX[s.key]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+            <div className="space-y-4">
+              <EmbeddedChart
+                title={t('admin.diskForecast.severityTitle', 'Severity mix')}
+                ariaLabel={t('admin.diskForecast.severityAria', 'Donut chart of hypertables grouped by quota severity tier')}
+                loading={isLoading}
+                error={showError ? (query.error ?? undefined) : undefined}
+                onRetry={retry}
+                empty={!isLoading && !showError && severitySlices.length === 0}
+                emptyMessage={t('admin.diskForecast.noSeverity', 'No severity data available yet.')}
+                data={severitySlices}
+                dataColumns={[
+                  { key: 'label', label: t('admin.diskForecast.col.severity', 'Severity') },
+                  { key: 'value', label: t('admin.diskForecast.col.count', 'Count') },
+                ]}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={severitySlices}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={48}
+                      outerRadius={72}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {severitySlices.map((s) => (
+                        <Cell key={s.key} fill={SEVERITY_HEX[s.key]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </EmbeddedChart>
+              {!isLoading && !showError && severitySlices.length > 0 && (
                 <ul className="space-y-1.5">
                   {SEVERITY_ORDER.map((key) => (
                     <li key={key} className="flex items-center justify-between gap-2">
@@ -437,8 +450,8 @@ export default function DiskForecastPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
+              )}
+            </div>
           </GlassPanel>
         </section>
       </FadeIn>

@@ -40,6 +40,7 @@ import {
   AREA_DEFAULTS, areaGradient,
   ChartBrush,
   ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
+  ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
 
@@ -149,6 +150,10 @@ function ChargingChartSync({
 
 export default function ChargingDetailPage() {
   const { t } = useTranslation();
+  const closedTelemetryDescription = t(
+    'charging.detail.closedTelemetryDescription',
+    'This closed session cannot recover missing samples; future sessions will populate when telemetry is available.',
+  );
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id);
 
@@ -590,7 +595,21 @@ export default function ChargingDetailPage() {
                 />
               </PanelTitle>
               {chargeCurve.length > 0 ? (
-                <div className="h-64 sm:h-72 xl:h-80">
+                <EmbeddedChart
+                  title={t('charging.detail.chargeCurve', 'Charge Curve')}
+                  ariaLabel={t(
+                    'charging.detail.chargeCurveAria',
+                    'Charging power by battery state of charge',
+                  )}
+                  data={chargeCurve}
+                  dataColumns={[
+                    { key: 'soc', label: t('charging.detail.soc', 'SoC') },
+                    { key: 'power', label: t('charging.detail.power', 'Power') },
+                  ]}
+                  fluid={false}
+                  mobileHeight={256}
+                  height={320}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chargeCurve} margin={chartMargin}>
                       {areaGradient('powerGrad', '#a855f7')}
@@ -615,12 +634,16 @@ export default function ChargingDetailPage() {
                       />
                     </AreaChart>
                   </ResponsiveContainer>
-                </div>
+                </EmbeddedChart>
               ) : (
                 // no-action: data-quality edge case — telemetry rows exist but lack usable battery_level/power_kw pairs; synthesizeCurve covers the no-telemetry case.
                 <EmptyState
                   icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
-                  message={t('common.noData', 'No data available')}
+                  message={t(
+                    'charging.detail.noCurveData',
+                    'A charge curve cannot be plotted because this session has no paired battery-level and power samples.',
+                  )}
+                  description={closedTelemetryDescription}
                   className="py-8"
                 />
               )}
@@ -683,9 +706,27 @@ export default function ChargingDetailPage() {
                 ) : timeSeriesData.length > 0 ? (
                   <ChargingChartSync>
                     {({ sync, syncedX }) => (
-                      <div className="h-72 sm:h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                          <ComposedChart
+                      <EmbeddedChart
+                        title={t('charging.detail.socOverTime', 'SoC, Energy & Range over Time')}
+                        ariaLabel={t(
+                          'charging.detail.socOverTimeAria',
+                          'Battery level, energy, and range throughout the charging session',
+                        )}
+                        data={timeSeriesData}
+                        dataColumns={[
+                          { key: 'time', label: t('charging.detail.time', 'Time') },
+                          { key: 'soc', label: t('charging.detail.soc', 'SoC') },
+                          { key: 'energy', label: t('charging.detail.energy', 'Energy') },
+                          { key: 'range', label: t('charging.detail.range', 'Range') },
+                        ]}
+                        chartKey="charging-detail-session-timeline"
+                        fluid={false}
+                        mobileHeight={288}
+                        height={320}
+                      >
+                        {({ hiddenSeries }) => (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <ComposedChart
                             data={timeSeriesData}
                             margin={chartMargin}
                             syncId={sync.syncId}
@@ -698,6 +739,7 @@ export default function ChargingDetailPage() {
                             <YAxis yAxisId="left" tick={axisTickSm} domain={[0, 100]} />
                             <YAxis yAxisId="right" orientation="right" tick={axisTickSm} />
                             <Tooltip content={<ChartTooltip />} />
+                            <ChartLegend />
                             <Area
                               {...AREA_DEFAULTS}
                               yAxisId="left"
@@ -706,6 +748,7 @@ export default function ChargingDetailPage() {
                               fill="url(#socGrad)"
                               name={t('charging.detail.soc', 'SoC')}
                               unit=" %"
+                              hide={hiddenSeries?.isHidden('soc')}
                             />
                             <Line
                               {...AREA_DEFAULTS}
@@ -714,6 +757,7 @@ export default function ChargingDetailPage() {
                               stroke="#00f0ff"
                               name={t('charging.detail.energy', 'Energy')}
                               unit=" kWh"
+                              hide={hiddenSeries?.isHidden('energy')}
                             />
                             <Line
                               {...AREA_DEFAULTS}
@@ -722,6 +766,7 @@ export default function ChargingDetailPage() {
                               stroke="#f59e0b"
                               name={t('charging.detail.range', 'Range')}
                               unit={` ${distanceUnit}`}
+                              hide={hiddenSeries?.isHidden('range')}
                             />
                             {syncedX != null && (
                               <ReferenceLine
@@ -738,16 +783,21 @@ export default function ChargingDetailPage() {
                                 recharts propagates the visible window to every
                                 other chart sharing this provider's syncId. */}
                             <ChartBrush dataKey="time" />
-                          </ComposedChart>
-                        </ResponsiveContainer>
-                      </div>
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        )}
+                      </EmbeddedChart>
                     )}
                   </ChargingChartSync>
                 ) : (
                   // no-action: historical telemetry for this closed session either recorded soc/energy/range rows or it never did — nothing to trigger now.
                   <EmptyState
                     icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
-                    message={t('common.noData', 'No data available')}
+                    message={t(
+                      'charging.detail.noTimelineData',
+                      'No battery level, energy, or range samples were recorded for this session.',
+                    )}
+                    description={closedTelemetryDescription}
                     className="py-8"
                   />
                 )}
@@ -767,9 +817,27 @@ export default function ChargingDetailPage() {
                   ) : tempData.length > 0 ? (
                     <ChargingChartSync>
                       {({ sync, syncedX }) => (
-                        <div className="h-56 sm:h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart
+                        <EmbeddedChart
+                          title={t('charging.detail.temperature', 'Temperature')}
+                          ariaLabel={t(
+                            'charging.detail.temperatureAria',
+                            'Battery, cabin, and ambient temperature throughout the charging session',
+                          )}
+                          data={tempData}
+                          dataColumns={[
+                            { key: 'time', label: t('charging.detail.time', 'Time') },
+                            { key: 'battery', label: t('charging.detail.batteryTemp', 'Battery') },
+                            { key: 'inside', label: t('charging.detail.insideTemp', 'Inside') },
+                            { key: 'outside', label: t('charging.detail.outsideTemp', 'Outside') },
+                          ]}
+                          chartKey="charging-detail-temperature"
+                          fluid={false}
+                          mobileHeight={224}
+                          height={256}
+                        >
+                          {({ hiddenSeries }) => (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart
                               data={tempData}
                               margin={chartMargin}
                               syncId={sync.syncId}
@@ -780,12 +848,14 @@ export default function ChargingDetailPage() {
                               <XAxis dataKey="time" tick={axisTickSm} />
                               <YAxis tick={axisTickSm} unit={` ${tempUnit}`} />
                               <Tooltip content={<ChartTooltip />} />
+                              <ChartLegend />
                               <Line
                                 {...AREA_DEFAULTS}
                                 dataKey="battery"
                                 stroke="#ef4444"
                                 name={t('charging.detail.batteryTemp', 'Battery')}
                                 unit={` ${tempUnit}`}
+                                hide={hiddenSeries?.isHidden('battery')}
                               />
                               <Line
                                 {...AREA_DEFAULTS}
@@ -793,6 +863,7 @@ export default function ChargingDetailPage() {
                                 stroke="#f59e0b"
                                 name={t('charging.detail.insideTemp', 'Inside')}
                                 unit={` ${tempUnit}`}
+                                hide={hiddenSeries?.isHidden('inside')}
                               />
                               <Line
                                 {...AREA_DEFAULTS}
@@ -800,6 +871,7 @@ export default function ChargingDetailPage() {
                                 stroke="#3b82f6"
                                 name={t('charging.detail.outsideTemp', 'Outside')}
                                 unit={` ${tempUnit}`}
+                                hide={hiddenSeries?.isHidden('outside')}
                               />
                               {syncedX != null && (
                                 <ReferenceLine
@@ -811,16 +883,21 @@ export default function ChargingDetailPage() {
                                   isFront
                                 />
                               )}
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          )}
+                        </EmbeddedChart>
                       )}
                     </ChargingChartSync>
                   ) : (
                     // no-action: this closed session either logged battery/inside/outside temperature telemetry or it never did — nothing to trigger.
                     <EmptyState
                       icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
-                      message={t('common.noData', 'No data available')}
+                      message={t(
+                        'charging.detail.noTemperatureData',
+                        'No battery, cabin, or ambient temperature samples were recorded for this session.',
+                      )}
+                      description={closedTelemetryDescription}
                       className="py-8"
                     />
                   )}
@@ -838,9 +915,26 @@ export default function ChargingDetailPage() {
                   ) : voltCurrentData.length > 0 ? (
                     <ChargingChartSync>
                       {({ sync, syncedX }) => (
-                        <div className="h-56 sm:h-64">
-                          <ResponsiveContainer width="100%" height="100%">
-                            <ComposedChart
+                        <EmbeddedChart
+                          title={t('charging.detail.voltageCurrent', 'Voltage & Current')}
+                          ariaLabel={t(
+                            'charging.detail.voltageCurrentAria',
+                            'Charging voltage and current throughout the session',
+                          )}
+                          data={voltCurrentData}
+                          dataColumns={[
+                            { key: 'time', label: t('charging.detail.time', 'Time') },
+                            { key: 'voltage', label: t('charging.detail.voltage', 'Voltage') },
+                            { key: 'current', label: t('charging.detail.current', 'Current') },
+                          ]}
+                          chartKey="charging-detail-voltage-current"
+                          fluid={false}
+                          mobileHeight={224}
+                          height={256}
+                        >
+                          {({ hiddenSeries }) => (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <ComposedChart
                               data={voltCurrentData}
                               margin={chartMargin}
                               syncId={sync.syncId}
@@ -852,6 +946,7 @@ export default function ChargingDetailPage() {
                               <YAxis yAxisId="v" tick={axisTickSm} unit=" V" />
                               <YAxis yAxisId="a" orientation="right" tick={axisTickSm} unit=" A" />
                               <Tooltip content={<ChartTooltip />} />
+                              <ChartLegend />
                               <Line
                                 {...AREA_DEFAULTS}
                                 yAxisId="v"
@@ -859,6 +954,7 @@ export default function ChargingDetailPage() {
                                 stroke="#f59e0b"
                                 name={t('charging.detail.voltage', 'Voltage')}
                                 unit=" V"
+                                hide={hiddenSeries?.isHidden('voltage')}
                               />
                               <Line
                                 {...AREA_DEFAULTS}
@@ -867,6 +963,7 @@ export default function ChargingDetailPage() {
                                 stroke="#06b6d4"
                                 name={t('charging.detail.current', 'Current')}
                                 unit=" A"
+                                hide={hiddenSeries?.isHidden('current')}
                               />
                               {syncedX != null && (
                                 <ReferenceLine
@@ -879,16 +976,21 @@ export default function ChargingDetailPage() {
                                   isFront
                                 />
                               )}
-                            </ComposedChart>
-                          </ResponsiveContainer>
-                        </div>
+                              </ComposedChart>
+                            </ResponsiveContainer>
+                          )}
+                        </EmbeddedChart>
                       )}
                     </ChargingChartSync>
                   ) : (
                     // no-action: this closed session either logged voltage/current telemetry or it never did — nothing left to trigger for a finished charge.
                     <EmptyState
                       icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
-                      message={t('common.noData', 'No data available')}
+                      message={t(
+                        'charging.detail.noElectricalData',
+                        'No voltage or current samples were recorded for this session.',
+                      )}
+                      description={closedTelemetryDescription}
                       className="py-8"
                     />
                   )}
@@ -1005,6 +1107,10 @@ export default function ChargingDetailPage() {
                 <EmptyState
                   icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
                   message={t('charging.detail.noLiveData', 'No live charging telemetry available.')}
+                  description={t(
+                    'charging.detail.noLiveDataDescription',
+                    'Live electrical parameters appear only while the selected vehicle is actively charging.',
+                  )}
                   className="py-8"
                 />
               )}

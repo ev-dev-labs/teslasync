@@ -5,6 +5,7 @@ import {
   Bar,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -59,6 +60,7 @@ export function CycleStressThresholdSensitivity({
           'cycleStress.threshold.aria',
           'Sensitivity chart of cycle share and equivalent full cycles at depth thresholds',
         )}
+        chartKey="cycle-stress-threshold-sensitivity"
         height={300}
         loading={state.isLoading}
         empty={false}
@@ -92,14 +94,15 @@ export function CycleStressThresholdSensitivity({
           },
         ]}
       >
-        <CycleStressSectionBody
-          result={result}
-          state={state}
-          requirement="cycles"
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={rows}>
+        {({ hiddenSeries }) => (
+          <CycleStressSectionBody
+            result={result}
+            state={state}
+            requirement="cycles"
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <ComposedChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -127,6 +130,7 @@ export function CycleStressThresholdSensitivity({
                 unit="%"
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 yAxisId="index"
                 dataKey="equivalentFullCycles"
@@ -137,6 +141,7 @@ export function CycleStressThresholdSensitivity({
                 fill={chartTokens.series[1]}
                 fillOpacity={0.78}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('equivalentFullCycles')}
               />
               <Line
                 yAxisId="share"
@@ -149,10 +154,12 @@ export function CycleStressThresholdSensitivity({
                 stroke={chartTokens.series[2]}
                 strokeWidth={2}
                 dot={{ r: 4 }}
+                hide={hiddenSeries?.isHidden('weightedSharePct')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </CycleStressSectionBody>
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CycleStressSectionBody>
+        )}
       </ChartContainer>
     </section>
   );

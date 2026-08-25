@@ -93,6 +93,12 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 type PanelProps = ComponentProps<typeof PowerTrendPanel>;
 
 const TITLE = 'Output Power Trend';
@@ -148,8 +154,7 @@ describe('PowerTrendPanel — persistent chrome + a11y', () => {
 
     const chart = screen.getByRole('img', { name: CHART_LABEL });
     expect(chart).toBeInTheDocument();
-    // The region is the sized chart wrapper, not some incidental element.
-    expect(chart).toHaveClass('h-56');
+    expect(chart).toHaveAttribute('data-testid', 'embedded-chart');
     // A populated chart shows neither the loading nor the empty affordance.
     expect(screen.queryByText(EMPTY_COPY)).toBeNull();
     expect(document.querySelector('.animate-pulse')).toBeNull();
@@ -173,9 +178,12 @@ describe('PowerTrendPanel — state branches', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText(EMPTY_COPY)).toBeInTheDocument();
-    // Never a blank panel: the header persists, and neither chart nor skeleton show.
+    // Never a blank panel: the shared frame retains its accessible identity
+    // while replacing the plot with the truthful empty state.
     expect(heading()).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.getByRole('img', { name: CHART_LABEL })).toContainElement(
+      screen.getByRole('status'),
+    );
     expect(document.querySelector('.animate-pulse')).toBeNull();
   });
 });
@@ -230,6 +238,8 @@ describe('PowerTrendPanel — null safety (regression)', () => {
     ).not.toThrow();
 
     expect(screen.getByText(EMPTY_COPY)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.getByRole('img', { name: CHART_LABEL })).toContainElement(
+      screen.getByRole('status'),
+    );
   });
 });

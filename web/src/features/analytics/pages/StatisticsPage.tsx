@@ -210,10 +210,21 @@ export default function StatisticsPage() {
           </GlassPanel>
         ) : !stats ? (
           <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+            <EmptyState
               icon={<BarChart3 className="h-10 w-10" aria-hidden="true" />}
-              title={t('statistics.noData', 'No Data')}
-              message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')}
+              title={t('statistics.noData', 'No statistics yet')}
+              message={t(
+                'statistics.noDataMsg',
+                'This vehicle has no completed driving or charging history in the selected period.',
+              )}
+              description={t(
+                'statistics.noDataDescription',
+                'Complete a drive or charging session, then return after TeslaSync has processed the activity.',
+              )}
+              actionTo={{
+                label: t('statistics.viewDrives', 'View drives'),
+                to: '/drives',
+              }}
             />
           </GlassPanel>
         ) : (
@@ -273,9 +284,14 @@ export default function StatisticsPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              // no-action: battery estimates populate automatically after sufficient telemetry.
+              <EmptyState
                 icon={<Battery className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.noBattery', 'No battery health data available')}
+                description={t(
+                  'statistics.noBatteryDescription',
+                  'Battery health estimates appear after enough charging and range telemetry has accumulated.',
+                )}
                 className="py-8"
               />
             )}
@@ -303,9 +319,14 @@ export default function StatisticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              // no-action: state history accumulates automatically from vehicle activity.
+              <EmptyState
                 icon={<Clock className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.noStates', 'No state distribution data')}
+                description={t(
+                  'statistics.noStatesDescription',
+                  'Driving, charging, and parked-state history will populate this distribution over time.',
+                )}
                 className="py-8"
               />
             )}
@@ -333,9 +354,14 @@ export default function StatisticsPage() {
                 <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(fromKm(((mileage.last_30d_km ?? 0) / 30) * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              // no-action: mileage totals populate automatically after a completed drive.
+              <EmptyState
                 icon={<Car className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.noMileage', 'No mileage data available')}
+                description={t(
+                  'statistics.noMileageDescription',
+                  'Distance totals and projections appear after the first completed drive is recorded.',
+                )}
                 className="py-8"
               />
             )}
@@ -368,9 +394,17 @@ export default function StatisticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              <EmptyState
                 icon={<Car className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.singleVehicle', 'Add more vehicles to compare')}
+                description={t(
+                  'statistics.singleVehicleDescription',
+                  'Fleet comparison requires activity from at least two registered vehicles.',
+                )}
+                actionTo={{
+                  label: t('statistics.manageVehicles', 'Manage vehicles'),
+                  to: '/vehicles',
+                }}
                 className="py-8"
               />
             )}

@@ -8,6 +8,12 @@ import { installPack } from '../../lib/packActions';
 import { EFFICIENCY_INSIGHTS_ENVELOPE } from '../../lib/catalogFixtures';
 import type { VerificationResult } from '../../lib/verifyEnvelope';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 const signedVerification: VerificationResult = {
   status: 'signature-valid',
   recomputedDigestSha256Hex: 'a'.repeat(64),

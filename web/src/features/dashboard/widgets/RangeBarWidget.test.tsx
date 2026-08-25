@@ -430,7 +430,7 @@ describe('RangeBarWidget — interactions & a11y', () => {
     const q = setState({ state: makeState() });
     renderWidget(FULL);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     expect(q.refetch).toHaveBeenCalledTimes(1);

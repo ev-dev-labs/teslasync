@@ -16,6 +16,7 @@ import type {
   MonthlyMileage,
   MileageStats,
   VampireDrainEvent,
+  VampireDrainEventsResponse,
   VampireDrainStats,
   VisitedLocation,
   Trip,
@@ -84,14 +85,13 @@ export const getMileageStats = (vehicleId: number) =>
   request<MileageStats>(`/mileage/stats?vehicle_id=${vehicleId}`)
 
 // === Vampire Drain ===
-/** Fetches vampire drain events for a vehicle, optionally filtered by date range. */
-export const getVampireDrainEvents = (vehicleId: number, limit = 100, offset = 0, start?: string, end?: string) => {
-  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(limit), offset: String(offset) })
-  if (start) params.set('start', start)
-  if (end) params.set('end', end)
-  return request<VampireDrainEvent[]>(`/vampire-drain?${params}`)
+/** Fetches the latest canonical parked-drain windows for a vehicle. */
+export const getVampireDrainEvents = (vehicleId: number, limit = 100) => {
+  const params = new URLSearchParams({ vehicle_id: String(vehicleId), limit: String(limit) })
+  return request<VampireDrainEventsResponse>(`/vampire-drain?${params}`)
+    .then((response): VampireDrainEvent[] => response?.events ?? [])
 }
-/** Fetches aggregate vampire drain statistics (avg/max rate, total range lost). */
+/** Fetches aggregate 90-day parked-drain statistics. */
 export const getVampireDrainStats = (vehicleId: number) =>
   request<VampireDrainStats>(`/vampire-drain/stats?vehicle_id=${vehicleId}`)
 
