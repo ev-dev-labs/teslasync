@@ -80,7 +80,7 @@ describe('ChartContainer accessibility contract', () => {
     expect(figure).toHaveClass('border-0', 'bg-transparent', 'p-0');
     expect(figure).not.toHaveClass('rounded-panel', 'p-5', 'shadow-panel');
     expect(within(figure).getByRole('heading', { name: 'Widget energy trend' }))
-      .toHaveClass('sr-only');
+      .toBeInTheDocument();
     expect(within(figure).getByRole('img', {
       name: 'Widget energy trend over seven days',
     })).toContainElement(screen.getByTestId('embedded-chart-body'));
@@ -314,8 +314,77 @@ describe('ChartContainer accessibility contract', () => {
     });
     expect(chart).toHaveClass(
       'h-[var(--chart-height-mobile)]',
+      'min-h-[var(--chart-height-mobile)]',
+      'max-h-[var(--chart-height-mobile)]',
       'sm:h-[var(--chart-height-desktop)]',
+      'sm:min-h-[var(--chart-height-desktop)]',
+      'sm:max-h-[var(--chart-height-desktop)]',
+      'min-w-0',
+      'max-w-full',
+      'overflow-hidden',
+      '[contain:layout_size]',
     );
+  });
+
+  it('uses a fixed embedded viewport when explicit heights are supplied', () => {
+    renderChart(
+      <EmbeddedChart
+        title="Bounded widget"
+        ariaLabel="Bounded embedded chart"
+        height={256}
+        mobileHeight={224}
+      >
+        <div className="h-full">chart</div>
+      </EmbeddedChart>,
+    );
+
+    const figure = screen.getByRole('figure', { name: 'Bounded widget' });
+    const chart = screen.getByRole('img', { name: 'Bounded embedded chart' });
+
+    expect(figure).not.toHaveAttribute('data-chart-fluid');
+    expect(figure).toHaveClass('min-w-0', 'max-w-full');
+    expect(chart).toHaveStyle({
+      '--chart-height-mobile': '224px',
+      '--chart-height-desktop': '256px',
+    });
+    expect(chart).toHaveClass(
+      'h-[var(--chart-height-mobile)]',
+      'min-h-[var(--chart-height-mobile)]',
+      'max-h-[var(--chart-height-mobile)]',
+      '[contain:layout_size]',
+    );
+    expect(chart).not.toHaveClass('h-full');
+  });
+
+  it('keeps fluid embedded sizing bounded by the shared fallback height', () => {
+    renderChart(
+      <div className="h-72">
+        <EmbeddedChart
+          title="Fluid widget"
+          ariaLabel="Fluid embedded chart"
+          fluid
+        >
+          <div>chart</div>
+        </EmbeddedChart>
+      </div>,
+    );
+
+    const figure = screen.getByRole('figure', { name: 'Fluid widget' });
+    const chart = screen.getByRole('img', { name: 'Fluid embedded chart' });
+
+    expect(figure).toHaveAttribute('data-chart-fluid', 'true');
+    expect(figure).toHaveClass('h-full', 'min-h-0', 'max-h-full');
+    expect(chart).toHaveClass(
+      'h-full',
+      'min-h-[var(--chart-height-mobile)]',
+      'sm:min-h-[var(--chart-height-desktop)]',
+      'max-h-full',
+      '[contain:layout_size]',
+    );
+    expect(chart).toHaveStyle({
+      '--chart-height-mobile': '200px',
+      '--chart-height-desktop': '240px',
+    });
   });
 
   it('renders contextual empty copy without exposing an empty chart image', () => {

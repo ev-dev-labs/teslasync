@@ -1,8 +1,8 @@
 import { motion } from 'framer-motion'
-import clsx from 'clsx'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/components/ui/ThemeProvider'
 import { batteryColor, boolColor } from '@/lib/colors'
+import { cn } from '@/lib/cn'
 
 export type TeslaModel = 'model3' | 'models' | 'modely' | 'modelx' | 'cybertruck'
 
@@ -245,7 +245,7 @@ export function TeslaCarViz({
     .join(', ')
 
   return (
-    <div className={clsx('relative flex items-center justify-center', className)}>
+    <div className={cn('relative flex items-center justify-center', className)}>
       {/* Ambient glow behind car */}
       <div
         className="absolute rounded-full blur-[60px] opacity-30"
@@ -652,4 +652,3 @@ export function TeslaCarMini({ batteryLevel, isCharging, model }: { batteryLevel
     </svg>
   )
 }
-

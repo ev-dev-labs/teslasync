@@ -58,12 +58,8 @@
     <title>TeslaSync</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Centralized web-font loading (Typography Unit 0): every non-system
-         preset family is requested once here with display=swap so text is
-         visible immediately (system-ui fallback) even before a web font
-         loads. Never load fonts per-page. -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&family=Roboto:wght@400;500;700&family=Source+Sans+3:wght@400;500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Atkinson+Hyperlegible:wght@400;700&family=Fira+Code:wght@400;500;600&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- FontProvider requests only the active font pair after first paint.
+         Map routes load Leaflet's bundled stylesheet with their own chunk. -->
     <style>
       /* Minimal first-paint shell. Keep startup calm and product-focused. */
       #splash {
@@ -123,14 +119,5 @@
     </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-    <script>
-      // Remove splash after React hydrates
-      window.addEventListener('load', function() {
-        setTimeout(function() {
-          var s = document.getElementById('splash');
-          if (s) { s.classList.add('fade-out'); setTimeout(function() { s.remove(); }, 200); }
-        }, 300);
-      });
-    </script>
   </body>
 </html>

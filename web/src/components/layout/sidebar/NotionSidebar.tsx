@@ -33,7 +33,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { PrefetchNavLink } from '../PrefetchLink'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
 import type {

@@ -8,7 +8,7 @@ import {
   Save,
   Sparkles,
 } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import type {
   BackgroundJobKind,
   UseBackgroundJobsResult,

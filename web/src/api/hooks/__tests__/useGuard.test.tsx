@@ -9,9 +9,13 @@ import {
   type GuardEventsResponse,
 } from '../useGuard';
 
-vi.mock('@/components/feedback/Toast', () => ({
-  useToast: () => ({ success: vi.fn(), error: vi.fn() }),
-}));
+vi.mock('@/components/feedback/Toast', () => {
+  const toast = { success: vi.fn(), error: vi.fn() };
+  return {
+    useToast: () => toast,
+    useOptionalToast: () => toast,
+  };
+});
 
 vi.mock('@/lib/queryBroadcast', () => ({
   invalidateAndBroadcast: vi.fn(),

@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/runtime';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { TourStep } from '@/hooks/useTour';
 import { useMotionPreference } from '@/hooks/useMotionPreference';

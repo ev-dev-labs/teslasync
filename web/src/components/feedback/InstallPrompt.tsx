@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download, X } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/runtime'
 import { broadcast, subscribe } from '@/lib/broadcast'
 
 interface BeforeInstallPromptEvent extends Event {

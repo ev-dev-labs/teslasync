@@ -3,8 +3,8 @@ import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { Check, PlayCircle, RotateCcw, Sparkles, X } from 'lucide-react'
 
-import { Modal, Button } from '@/components/ui'
-import { EmptyState } from '@/components/feedback'
+import { Modal, Button } from '@/components/ui/runtime'
+import { EmptyState } from '@/components/feedback/runtime'
 import { cn } from '@/lib/cn'
 import {
   TOUR_OPEN_LAUNCHER_EVENT,
@@ -183,14 +183,16 @@ export function TourLauncher() {
         )}
 
         <div className="flex items-center justify-between border-t border-[var(--glass-border)] pt-3">
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={handleResetAll}
-            className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] transition-colors hover:text-[var(--text-primary)] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]"
+            className="h-auto gap-1.5 rounded-md px-2 py-1 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)]"
           >
             <RotateCcw className="h-3.5 w-3.5" aria-hidden />
             {t('tour.launcher.resetAll', 'Reset all tours')}
-          </button>
+          </Button>
           <Button variant="ghost" size="sm" onClick={handleClose}>
             <X className="mr-1 h-3.5 w-3.5" aria-hidden />
             {t('tour.launcher.close', 'Close')}

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "./perf-baseline.schema.json",
+  "title": "TeslaSync performance baseline",
+  "type": "object",
+  "required": ["$schema", "generatedAt", "lighthouseVersion", "build", "routes"],
+  "properties": {
+    "$schema": { "type": "string" },
+    "comment": { "type": "string" },
+    "generatedAt": { "type": ["string", "null"], "format": "date-time" },
+    "lighthouseVersion": { "type": ["string", "null"] },
+    "build": {
+      "type": "object",
+      "required": ["totalGzippedJsKB", "entryGzippedKB", "initialGzippedJsKB", "chunkCount"],
+      "properties": {
+        "totalGzippedJsKB": { "type": ["number", "null"], "minimum": 0 },
+        "entryGzippedKB": { "type": ["number", "null"], "minimum": 0 },
+        "initialGzippedJsKB": { "type": ["number", "null"], "minimum": 0 },
+        "chunkCount": { "type": ["integer", "null"], "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "routes": {
+      "type": "object",
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "type": "object",
+            "required": ["fcp", "lcp", "tbt", "cls", "tti", "speedIndex", "transferKB"],
+            "properties": {
+              "fcp": { "type": ["number", "null"], "minimum": 0 },
+              "lcp": { "type": ["number", "null"], "minimum": 0 },
+              "tbt": { "type": ["number", "null"], "minimum": 0 },
+              "cls": { "type": ["number", "null"], "minimum": 0 },
+              "tti": { "type": ["number", "null"], "minimum": 0 },
+              "speedIndex": { "type": ["number", "null"], "minimum": 0 },
+              "transferKB": { "type": ["number", "null"], "minimum": 0 }
+            },
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "required": ["error"],
+            "properties": {
+              "error": { "type": "string" }
+            },
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -9,7 +9,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-vi.mock('@/components/ui', () => ({
+vi.mock('@/components/ui/runtime', () => ({
   Caption: ({ children, ...props }: HTMLAttributes<HTMLSpanElement>) => (
     <span {...props}>{children}</span>
   ),

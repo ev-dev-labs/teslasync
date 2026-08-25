@@ -10,7 +10,7 @@ import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Search } from 'lucide-react';
-import { Input, Text } from '@/components/ui';
+import { Button, Input, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { getSettingsIndex, searchSettings, type SettingsEntry } from '../searchIndex';
 
@@ -152,15 +152,17 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
             const active = idx === activeIndex;
             return (
               <li key={entry.id}>
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   id={`${listboxId}-option-${entry.id}`}
                   role="option"
                   aria-selected={active}
                   onMouseEnter={() => setActiveIndex(idx)}
                   onClick={() => commit(entry)}
                   className={cn(
-                    'flex w-full flex-col items-start gap-0.5 px-4 py-2 text-left transition-colors',
+                    'h-auto w-full flex-col items-start gap-0.5 rounded-none px-4 py-2 text-left',
                     'focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
                     active
                       ? 'bg-white/[0.06] text-[var(--text-primary)]'
@@ -171,7 +173,7 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
                   {entry.description && (
                     <Text variant="caption">{entry.description}</Text>
                   )}
-                </button>
+                </Button>
               </li>
             );
           })}

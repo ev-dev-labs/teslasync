@@ -36,7 +36,7 @@ import {
   type FocusEvent,
   type KeyboardEvent,
 } from 'react'
-import { Input, type InputProps } from '@/components/ui'
+import { Input, type InputProps } from '@/components/ui/runtime'
 import { useSettings } from '@/hooks/useSettings'
 import {
   formatForUnit,

@@ -15,6 +15,7 @@ import {
   type SelectOption,
 } from '@/components/ui'
 import { ListSkeleton, EmptyState, useToast } from '@/components/feedback'
+import { VisuallyHidden } from '@/components/a11y'
 import { FadeIn } from '@/components/motion'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import {
@@ -605,7 +606,13 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
               </ErrorText>
             )}
             {validationError && validationField != null && (
-              <span className="sr-only" data-testid="quiet-hours-error">{validationError}</span>
+              <VisuallyHidden
+                liveRegion
+                priority="assertive"
+                data-testid="quiet-hours-error"
+              >
+                {validationError}
+              </VisuallyHidden>
             )}
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">

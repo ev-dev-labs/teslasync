@@ -8,6 +8,7 @@ import {
   resolveSansStack,
   resolveMonoStack,
   applyFontCSS,
+  fontStylesheetHref,
   readStoredFontPrefs,
   DEFAULT_FONT_PREFS,
   FONT_SANS_STACKS,
@@ -80,6 +81,7 @@ let fetchMock: ReturnType<typeof vi.fn>
 
 beforeEach(() => {
   localStorage.clear()
+  document.getElementById('teslasync-active-fonts')?.remove()
   for (const v of FONT_VARS) document.documentElement.style.removeProperty(v)
   requestMock.mockReset()
   // Default: GET /settings resolves an (empty) blob so the PUT branch runs.
@@ -159,6 +161,26 @@ describe('applyFontCSS', () => {
     expect(cssVar('--leading')).toBe('1.7')
     expect(cssVar('--tracking')).toBe('0.03em')
     expect(cssVar('--font-weight-bold')).toBe('600')
+  })
+
+  describe('fontStylesheetHref', () => {
+    it('loads only the active sans and monospace families', () => {
+      const href = fontStylesheetHref(DEFAULT_FONT_PREFS)
+      expect(href).toContain('family=Inter:wght@300;400;500;600;700;800;900')
+      expect(href).toContain('family=JetBrains+Mono:wght@400;500;600')
+      expect(href).not.toContain('Roboto')
+      expect(href).not.toContain('Atkinson')
+    })
+
+    it('does not request Google Fonts for system or custom stacks', () => {
+      expect(
+        fontStylesheetHref({
+          ...DEFAULT_FONT_PREFS,
+          sans: 'system',
+          mono: 'system',
+        }),
+      ).toBeNull()
+    })
   })
 
   it('resolves a custom sans stack into --font-sans', () => {
@@ -278,6 +300,9 @@ describe('FontProvider — mount + hydration', () => {
     // Effect applies the CSS vars from the initial (default) prefs.
     expect(cssVar('--font-scale')).toBe('1')
     expect(cssVar('--font-sans')).toBe(FONT_SANS_STACKS.inter)
+    const stylesheet = document.getElementById('teslasync-active-fonts') as HTMLLinkElement
+    expect(stylesheet.href).toContain('family=Inter')
+    expect(stylesheet.href).toContain('family=JetBrains+Mono')
     await waitFor(() => expect(result.current.initialized).toBe(true))
     // Raw fetch, not the resilient client, drives hydration.
     expect(fetchMock).toHaveBeenCalledWith('/api/v1/settings')

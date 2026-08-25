@@ -146,15 +146,17 @@ export function SignalCatalogPanel({
           const checked = selectedSet.has(s.name);
           const disabled = !checked && selectionMax != null && (selection.selectedSignals.length >= selectionMax);
           return (
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               aria-label={checked
                 ? t('signalCatalog.removeSignal', { defaultValue: 'Remove {{name}} from selection', name: s.name })
                 : t('signalCatalog.addSignal',    { defaultValue: 'Add {{name}} to selection',      name: s.name })}
               onClick={(e) => { e.stopPropagation(); selection.onToggle(s.name); }}
               disabled={disabled}
               className={cn(
-                'touch-target flex items-center justify-center rounded border transition-colors',
+                'touch-target rounded border p-0',
                 checked
                   ? 'border-cyan-400/50 bg-cyan-400/15 text-cyan-300'
                   : disabled
@@ -163,7 +165,7 @@ export function SignalCatalogPanel({
               )}
             >
               {checked ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
-            </button>
+            </Button>
           );
         },
       });

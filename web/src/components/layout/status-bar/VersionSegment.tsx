@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag } from 'lucide-react';
-import { Tooltip, Button } from '@/components/ui';
+import { Tooltip, Button } from '@/components/ui/runtime';
 import { cn } from '@/lib/cn';
 import { AboutBuildModal } from './AboutBuildModal';
 import { useAboutBuild } from './useAboutBuild';

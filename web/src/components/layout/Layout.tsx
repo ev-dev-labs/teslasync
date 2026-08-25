@@ -11,14 +11,12 @@ import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { AnnouncerRegion } from '@/components/a11y'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
-import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
-import { FeedbackModal } from '../feedback/FeedbackModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
@@ -41,7 +39,7 @@ import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { AnimatePresence, motion, RouteTransition } from '@/components/motion'
+import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { LinearSidebar } from './sidebar/LinearSidebar'
 import { buildCompactNavTree } from './sidebar/compactNav'
@@ -49,13 +47,12 @@ import { NotionSidebar } from './sidebar/NotionSidebar'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
-import { RuntimeHealthBanner } from '@/components/feedback'
+import { RuntimeHealthBanner } from '@/components/feedback/runtime'
 import {
   Button,
   CommandPaletteTrigger,
   Logo,
-  ThemePicker,
-} from '@/components/ui'
+} from '@/components/ui/runtime'
 import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
@@ -80,6 +77,21 @@ import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 import { HelixMark } from '@/components/branding/HelixMark';
+
+const LazyFeedbackModal = lazy(async () => {
+  const module = await import('../feedback/FeedbackModal')
+  return { default: module.FeedbackModal }
+})
+
+const LazyKeyboardShortcutsModal = lazy(async () => {
+  const module = await import('../feedback/KeyboardShortcutsModal')
+  return { default: module.KeyboardShortcutsModal }
+})
+
+const LazyThemePicker = lazy(async () => {
+  const module = await import('@/components/ui/ThemePicker')
+  return { default: module.ThemePicker }
+})
 
 const navI18nKeys: Record<string, string> = {
   // Sidebar nav labels are rendered verbatim from `navSections` below. The
@@ -767,7 +779,23 @@ function ThemeQuickSwitcher({
           }}
           className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e3"
         >
-          <ThemePicker compact showMode showCustom={false} onChange={() => setOpen(false)} onModeChange={() => setOpen(false)} />
+          <Suspense
+            fallback={
+              <div
+                role="status"
+                aria-label={t('theme.loadingPicker', 'Loading theme picker…')}
+                className="min-h-64 animate-pulse rounded-shape-md bg-[var(--surface-2)] motion-reduce:animate-none"
+              />
+            }
+          >
+            <LazyThemePicker
+              compact
+              showMode
+              showCustom={false}
+              onChange={() => setOpen(false)}
+              onModeChange={() => setOpen(false)}
+            />
+          </Suspense>
           <div className="mt-3 flex justify-end border-t border-[var(--border-subtle)] pt-3">
             <Button
               type="button"
@@ -1202,8 +1230,7 @@ export default function Layout() {
 
   const navLabel = useCallback((label: string) => {
     if (!navI18nKeys[label]) return label
-    const translated = t(navI18nKeys[label])
-    return translated === navI18nKeys[label] ? label : translated
+    return t(navI18nKeys[label], label)
   }, [t])
   const activeNavPath = activeNavEntry?.item.to
   const activeIsPinned = activeNavPath ? pinnedNavPaths.includes(activeNavPath) : false
@@ -1770,13 +1797,21 @@ export default function Layout() {
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
       <GotoIndicator visible={shortcutMode === 'goto'} />
-      <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
+      {showCheatSheet && (
+        <Suspense fallback={null}>
+          <LazyKeyboardShortcutsModal open onClose={toggleCheatSheet} />
+        </Suspense>
+      )}
 
       {/* In-app feedback modal — opened via the
           sidebar footer button, the Cmd+K palette ("feedback.open"
           command), or any other surface that dispatches the
           `open-feedback-modal` window event. */}
-      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      {feedbackOpen && (
+        <Suspense fallback={null}>
+          <LazyFeedbackModal open onClose={() => setFeedbackOpen(false)} />
+        </Suspense>
+      )}
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (

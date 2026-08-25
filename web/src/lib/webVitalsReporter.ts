@@ -19,26 +19,13 @@
  */
 
 import { onCLS, onFCP, onINP, onLCP, onTTFB, type Metric } from 'web-vitals'
-import { isReportingAllowed } from './cookieConsent'
+import {
+  isVitalsReportingAllowed,
+  resetVitalsConsentRequirementForTests,
+} from './webVitalsConsent'
 
 const ENDPOINT = '/api/v1/web-vitals'
 const FLUSH_INTERVAL_MS = 2_000
-
-// Opt-in flag pushed by main.tsx after the `/system/version` resolve.
-// When `false` (the default for self-hosted
-// installs), reporting flows unchanged. When `true`, every flush()
-// gates on the user's stored consent state and silently drops the
-// batch when the user has not yet accepted.
-let requireCookieConsent = false
-
-/**
- * Update the deployment-wide consent gate. Called from main.tsx once
- * the `/system/version` query resolves. Re-callable so a settings
- * change that flips the flag mid-session is honored on the next flush.
- */
-export function setVitalsConsentRequirement(required: boolean): void {
-  requireCookieConsent = Boolean(required)
-}
 
 export interface VitalsPayload {
   name: string
@@ -93,7 +80,7 @@ export async function flush(): Promise<void> {
   // batch. The queue is splice-emptied so a future accept doesn't
   // back-flush historical metrics that pre-date the decision —
   // GDPR's "lawful basis at time of collection" requirement.
-  if (!isReportingAllowed(requireCookieConsent)) {
+  if (!isVitalsReportingAllowed()) {
     state.queue.length = 0
     return
   }
@@ -163,5 +150,5 @@ export function __resetWebVitalsReporterForTests(): void {
   // Clear the consent gate so existing webVitalsReporter tests (which
   // run before any cookieConsent
   // setup) keep observing the legacy "always send" behaviour.
-  requireCookieConsent = false
+  resetVitalsConsentRequirementForTests()
 }

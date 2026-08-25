@@ -424,8 +424,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // own surface, so charts never matched the panels beside them.
           variant === 'embedded'
             ? cn(
-                'group m-0 min-w-0 border-0 bg-transparent p-0 shadow-none',
-                fluid && 'h-full',
+                'group m-0 border-0 bg-transparent p-0 shadow-none',
+                fluid && 'h-full min-h-0 max-h-full',
               )
             : 'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-panel',
           // Tailwind preflight already removes default <figure> margins;
@@ -440,18 +440,22 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // forced-colors overrides via the global rules in `index.css`
           // (axis ticks / grid lines / legend text → `CanvasText`).
           'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+          // Grid and flex items default to min-width:auto, allowing an SVG's
+          // intrinsic width to enlarge the entire page. Keep every chart frame
+          // inside its assigned track instead.
+          'min-w-0 max-w-full',
           className,
         )}
       >
         {variant === 'embedded' ? (
           <>
-            <Heading level="panel" id={titleId} className="sr-only">
+            <VisuallyHidden as="h3" id={titleId}>
               {title}
-            </Heading>
+            </VisuallyHidden>
             {subtitle && (
-              <Text as="p" variant="caption" className="sr-only">
+              <VisuallyHidden as="p">
                 {subtitle}
-              </Text>
+              </VisuallyHidden>
             )}
           </>
         ) : (
@@ -556,11 +560,21 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         )}
 
         <div
-          style={fluid ? undefined : chartHeightStyle}
+          style={chartHeightStyle}
           className={cn(
+            // Recharts' ResponsiveContainer measures this viewport. Width,
+            // overflow, and size containment ensure the measured child can
+            // never feed a larger intrinsic size back into its own ancestor.
+            'relative w-full min-w-0 max-w-full overflow-hidden [contain:layout_size]',
             fluid
-              ? 'relative h-full min-h-36'
-              : 'relative h-[var(--chart-height-mobile)] sm:h-[var(--chart-height-desktop)]',
+              ? cn(
+                  'h-full min-h-[var(--chart-height-mobile)] max-h-full',
+                  'sm:min-h-[var(--chart-height-desktop)]',
+                )
+              : cn(
+                  'h-[var(--chart-height-mobile)] min-h-[var(--chart-height-mobile)] max-h-[var(--chart-height-mobile)]',
+                  'sm:h-[var(--chart-height-desktop)] sm:min-h-[var(--chart-height-desktop)] sm:max-h-[var(--chart-height-desktop)]',
+                ),
             // In Windows High Contrast / forced-colors
             // mode the SVG strokes collapse to a small palette of system
             // colours and the multi-series chart becomes illegible. Hide

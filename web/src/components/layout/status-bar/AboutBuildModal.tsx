@@ -1,6 +1,6 @@
 import { ExternalLink, Sparkles, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Modal } from '@/components/ui';
+import { Button, Modal } from '@/components/ui/runtime';
 import { openChangelogModal } from '@/hooks/useChangelog';
 import { useAboutBuild } from './useAboutBuild';
 

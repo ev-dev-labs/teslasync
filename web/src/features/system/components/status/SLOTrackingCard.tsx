@@ -175,22 +175,24 @@ export function SLOTrackingCard() {
 
       <div className="mt-3 flex flex-wrap gap-1" role="tablist" aria-label={t('Uptime window selector')}>
         {(Object.keys(WINDOW_LABEL) as Window[]).map((w) => (
-          <button
+          <Button
             key={w}
             type="button"
+            variant="ghost"
+            size="sm"
             role="tab"
             aria-selected={win === w}
             title={t(WINDOW_LABEL[w])}
             onClick={() => setWin(w)}
             className={cn(
-              'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+              'h-auto rounded-full px-3 py-1 text-xs font-medium',
               win === w
                 ? 'bg-cyan-500/20 text-cyan-200 ring-1 ring-cyan-400/40'
                 : 'bg-white/[0.04] text-[var(--text-secondary)] hover:bg-white/[0.08]',
             )}
           >
             {w}
-          </button>
+          </Button>
         ))}
       </div>
 

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Wifi, WifiOff } from 'lucide-react';
-import { Tooltip } from '@/components/ui';
+import { Tooltip } from '@/components/ui/runtime';
 import { useLiveConnection, type LiveConnectionStatus } from '@/hooks/useLiveConnection';
 import { cn } from '@/lib/cn';
 import { PrefetchLink } from '../PrefetchLink';

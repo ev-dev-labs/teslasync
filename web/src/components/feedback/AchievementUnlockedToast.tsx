@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { X, Trophy } from 'lucide-react'
-import clsx from 'clsx'
 
 import { AchievementBadge } from '@/features/analytics/components/AchievementBadge'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
 import type { AchievementUnlockedEvent } from '@/api/hooks/useAchievementUnlocks'
+import { cn } from '@/lib/cn'
 
 /**
  * AchievementUnlockedToast — a wider-than-normal toast that celebrates a
@@ -104,7 +104,7 @@ export function AchievementUnlockedToast({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={reduce ? { opacity: 0 } : { opacity: 0, x: 80, scale: 0.95 }}
       transition={reduce ? { duration: 0 } : { type: 'spring', bounce: 0.25, duration: 0.45 }}
-      className={clsx(
+      className={cn(
         'pointer-events-auto rounded-xl border backdrop-blur-xl p-4 bg-white/[0.03]',
         'border-yellow-500/40 shadow-[0_0_24px_rgba(234,179,8,0.18)]',
         'relative overflow-visible',
@@ -155,7 +155,7 @@ export function AchievementUnlockedToast({
           <button
             type="button"
             onClick={handleView}
-            className={clsx(
+            className={cn(
               'mt-2 inline-flex items-center gap-1 text-xs font-medium text-yellow-300',
               'underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2',
               'focus-visible:ring-yellow-500/50 rounded',

@@ -9,7 +9,7 @@ import {
   HelpCircle,
   Radio,
 } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import { useApiHealth, type ApiHealthStatus } from '@/api/hooks/useApiHealth';
 import { useExtendedSystemHealth } from '@/api/hooks/useAdmin';
 import { useRbacMatrix } from '@/api/hooks/useRbacMatrix';

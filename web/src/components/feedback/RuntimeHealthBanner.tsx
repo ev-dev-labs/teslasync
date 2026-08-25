@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useRuntimeStatus } from '@/api/hooks/useAdmin';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
-import { Button, Text } from '@/components/ui';
+import { Button, Text } from '@/components/ui/runtime';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { DataStateNotice } from './DataStateNotice';
 

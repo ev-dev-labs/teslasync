@@ -33,7 +33,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { ShieldCheck } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/runtime'
 import { useVersionInfo } from '@/api/hooks/useSettings'
 import {
   type ConsentState,
@@ -41,7 +41,7 @@ import {
   setConsent,
   subscribeConsent,
 } from '@/lib/cookieConsent'
-import { setVitalsConsentRequirement } from '@/lib/webVitalsReporter'
+import { setVitalsConsentRequirement } from '@/lib/webVitalsConsent'
 import { setErrorReporterConsentRequirement } from '@/lib/errorReporter'
 
 interface CookieConsentBannerProps {

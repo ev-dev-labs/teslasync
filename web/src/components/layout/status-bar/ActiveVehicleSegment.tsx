@@ -1,7 +1,7 @@
 import { useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Check, ChevronUp } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';

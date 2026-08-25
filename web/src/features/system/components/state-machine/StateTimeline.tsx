@@ -169,14 +169,16 @@ export function StateTimeline({
               key={tr.id}
               content={`${tr.from_state} → ${tr.to_state} · ${formatTime(new Date(tr.ts))}`}
             >
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={(e) => {
                   e.preventDefault();
                   onSelect?.(tr);
                 }}
                 className={cn(
-                  'touch-target-overlay absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border transition-all',
+                  'touch-target-overlay absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border p-0 transition-all',
                   isSelected
                     ? 'h-4 w-4 border-[var(--border-strong)] ring-2 ring-white/30'
                     : 'h-2.5 w-2.5 border-transparent hover:h-3.5 hover:w-3.5',

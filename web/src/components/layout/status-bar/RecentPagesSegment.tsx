@@ -11,7 +11,7 @@ import {
   MapPinned,
   Route,
 } from 'lucide-react';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import {
   getRecentPages,
   subscribeRecentPages,

@@ -18,6 +18,9 @@ interface EmbeddedChartTestProps {
   error?: unknown;
   loading?: boolean;
   onRetry?: () => void;
+  height?: number;
+  mobileHeight?: number;
+  fluid?: boolean;
 }
 
 function EmbeddedChartTestDouble({
@@ -31,7 +34,11 @@ function EmbeddedChartTestDouble({
   error,
   loading = false,
   onRetry,
+  height,
+  mobileHeight,
+  fluid,
 }: EmbeddedChartTestProps) {
+  const resolvedFluid = fluid ?? (height == null && mobileHeight == null);
   const content =
     typeof children === 'function'
       ? children({ hiddenSeries: { isHidden: () => false } })
@@ -46,6 +53,9 @@ function EmbeddedChartTestDouble({
       aria-label={ariaLabel}
       data-testid="embedded-chart"
       data-chart-key={chartKey}
+      data-chart-height={height}
+      data-chart-mobile-height={mobileHeight}
+      data-chart-fluid={resolvedFluid}
     >
       {empty ? (
         <EmptyState

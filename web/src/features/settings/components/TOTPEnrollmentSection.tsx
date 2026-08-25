@@ -22,7 +22,8 @@
  * working.
  */
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, ConfirmDialog, Text } from '@/components/ui'
+import { GlassPanel, ConfirmDialog } from '@/components/ui'
+import { VisuallyHidden } from '@/components/a11y'
 import { Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import {
@@ -51,9 +52,9 @@ export function TOTPEnrollmentSection() {
           <div className="flex-1 space-y-2">
             <Skeleton className="h-5 w-48" />
             <Skeleton className="h-3 w-full max-w-md" />
-            <Text variant="bodySm" className="sr-only">
+            <VisuallyHidden>
               {t('totp.loading', 'Loading two-factor settings…')}
-            </Text>
+            </VisuallyHidden>
           </div>
         </GlassPanel>
       </FadeIn>

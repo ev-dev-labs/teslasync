@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Caption, CommandPaletteTrigger } from '@/components/ui'
+import { Caption, CommandPaletteTrigger } from '@/components/ui/runtime'
 import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
 import { WorkspaceContextControl } from './WorkspaceContextControl'

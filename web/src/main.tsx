@@ -14,17 +14,25 @@ import { FontProvider, applyFontCSS, readStoredFontPrefs } from './components/ui
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
-import { initRum } from './observability/rum'
 import App from './App'
-import './i18n'
+import { loadEnglishResources } from './i18n'
 import './index.css'
 
 // ── RUM bootstrap (Phase 44 / Prompt 0060) ────────────────────────────────────
-// Install the OpenTelemetry browser SDK BEFORE React mounts so the
-// auto-instrumentations (page load, fetch, XHR) can capture even the very
-// first request the app fires. No-ops if VITE_OTLP_HTTP_ENDPOINT is unset
-// (the dev default), so this is safe in every environment.
-initRum()
+// OpenTelemetry and Zone.js are intentionally loaded outside the entry chunk.
+// Most deployments leave RUM disabled; they should not download the SDK only
+// to execute its no-op branch. Configured deployments start it concurrently
+// with React bootstrap so instrumentation never blocks first paint.
+const rumEndpoint = (import.meta.env.VITE_OTLP_HTTP_ENDPOINT ?? '').trim()
+if (rumEndpoint) {
+  void import('./observability/rum')
+    .then(({ initRum }) => initRum())
+    .catch((error) => {
+      console.warn('[rum] OpenTelemetry bootstrap failed:', error)
+    })
+} else if (import.meta.env.DEV) {
+  console.info('[rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled.')
+}
 
 // ── Frontend error reporting (Phase 46 / Prompt 01) ───────────────────────────
 // Install global window.error / window.unhandledrejection listeners BEFORE
@@ -140,6 +148,33 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// The English catalog is intentionally a post-render chunk. Shell labels
+// provide readable defaults while the full translation catalog hydrates in
+// parallel, keeping translation parsing off the critical first-paint path.
+const hydrateEnglishResources = () => {
+  void loadEnglishResources().catch((error: unknown) => {
+    console.error('[i18n] English translation catalog failed to load:', error)
+    reportFrontendError(error, 'promise')
+  })
+}
+if ('requestIdleCallback' in window) {
+  window.requestIdleCallback(hydrateEnglishResources, { timeout: 1_500 })
+} else {
+  globalThis.setTimeout(hydrateEnglishResources, 0)
+}
+
+// The splash is an inline no-FOUC surface, not a network loading gate. Dismiss
+// it after React has had two animation frames to commit and paint the shell;
+// waiting for window.load would keep it visible behind slow fonts or images.
+window.requestAnimationFrame(() => {
+  window.requestAnimationFrame(() => {
+    const splash = document.getElementById('splash')
+    if (!splash) return
+    splash.classList.add('fade-out')
+    window.setTimeout(() => splash.remove(), 200)
+  })
+})
 
 // ── Web Vitals reporting (Phase 40 / Prompt 35, Phase 45 / Prompt 12) ──────
 // Lazy-loaded so it never blocks first paint. In production, ship metrics to

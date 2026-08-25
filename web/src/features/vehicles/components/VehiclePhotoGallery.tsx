@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Image as ImageIcon } from 'lucide-react';
 
-import { Lightbox, type LightboxImage } from '@/components/ui/Lightbox';
+import { Button, Lightbox, type LightboxImage } from '@/components/ui';
 import { cn } from '@/lib/cn';
 
 export interface VehiclePhotoGalleryProps {
@@ -88,8 +88,10 @@ export function VehiclePhotoGallery({
       >
         {photos.map((photo, i) => (
           <li key={`${photo.src}-${i}`} className="aspect-square">
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               data-testid={`vehicle-photo-thumb-${i}`}
               onClick={() => handleOpen(i)}
               aria-label={
@@ -106,7 +108,7 @@ export function VehiclePhotoGallery({
                     )
               }
               className={cn(
-                'group relative block h-full w-full overflow-hidden rounded-lg',
+                'group relative h-full w-full overflow-hidden rounded-lg p-0',
                 'border border-[var(--glass-border)] bg-[var(--surface-1)]',
                 'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
                 'forced-colors:border-[CanvasText]',
@@ -118,7 +120,7 @@ export function VehiclePhotoGallery({
                 loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-normal group-hover:scale-[1.03]"
               />
-            </button>
+            </Button>
           </li>
         ))}
       </ul>

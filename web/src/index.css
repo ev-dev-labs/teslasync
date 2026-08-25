@@ -1550,6 +1550,7 @@ figure[data-print-card]:fullscreen > div[role='img'] {
   flex: 1 1 auto;
   height: auto !important;
   min-height: 0;
+  max-height: none !important;
 }
 
 figure[data-print-card]:fullscreen h3 {

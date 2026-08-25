@@ -315,7 +315,7 @@ vi.mock('./sidebar/NavSectionHeader', () => ({
 }))
 
 // ── @/components/ui: faithful Button + trivial ThemePicker ────────────
-vi.mock('@/components/ui', async () => {
+vi.mock('@/components/ui/runtime', async () => {
   const { forwardRef } = await import('react')
   const Button = forwardRef<HTMLButtonElement, Record<string, unknown>>((props, ref) => {
     const { children, variant, size, loading, icon, ...rest } = props
@@ -341,6 +341,9 @@ vi.mock('@/components/ui', async () => {
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
+vi.mock('@/components/ui/ThemePicker', () => ({
+  ThemePicker: () => <div data-testid="theme-picker" />,
+}))
 
 // Import AFTER the mocks so the shell wires the stubs.
 import Layout, { navSections, navSearchKeywords } from './Layout'
@@ -860,7 +863,7 @@ describe('Layout — ThemeQuickSwitcher', () => {
 
     fireEvent.click(trigger)
     const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
-    expect(within(dialog).getByTestId('theme-picker')).toBeInTheDocument()
+    expect(await within(dialog).findByTestId('theme-picker')).toBeInTheDocument()
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
 
     fireEvent.keyDown(document, { key: 'Escape' })

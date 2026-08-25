@@ -11,14 +11,14 @@
  * Every data source is a `useFeedbackList(...)` call, distinguished by its
  * params: `limit === 1` is one of the six count facets, anything else is the
  * table query. We stub the module so the tree mounts hermetically and drive
- * each branch by shaping a scenario. `useUpdateFeedback` is a mutate spy.
+ * each branch by shaping a scenario. Single and bulk update hooks are spies.
  *
  * `@testing-library/user-event` is NOT installed in this repo (see
  * EditableText.test.tsx), so interactions are driven via `fireEvent`.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -67,15 +67,26 @@ vi.mock('@/hooks/useDateFormat', () => {
 vi.mock('@/api/hooks/useFeedback', async () => {
   const actual =
     await vi.importActual<typeof import('@/api/hooks/useFeedback')>('@/api/hooks/useFeedback')
-  return { ...actual, useFeedbackList: vi.fn(), useUpdateFeedback: vi.fn() }
+  return {
+    ...actual,
+    useFeedbackList: vi.fn(),
+    useUpdateFeedback: vi.fn(),
+    useBulkUpdateFeedback: vi.fn(),
+  }
 })
 
 import { useSettings } from '@/hooks/useSettings'
-import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
+import {
+  useBulkUpdateFeedback,
+  useFeedbackList,
+  useUpdateFeedback,
+} from '@/api/hooks/useFeedback'
 import FeedbackQueuePage from './FeedbackQueuePage'
 
 const mockUseFeedbackList = useFeedbackList as unknown as ReturnType<typeof vi.fn>
 const mockUseUpdateFeedback = useUpdateFeedback as unknown as ReturnType<typeof vi.fn>
+const mockUseBulkUpdateFeedback =
+  useBulkUpdateFeedback as unknown as ReturnType<typeof vi.fn>
 const mockUseSettings = useSettings as unknown as ReturnType<typeof vi.fn>
 
 const baseSettings = {
@@ -103,6 +114,7 @@ interface Scenario { main: any; counts: Record<FacetKey, any> }
 
 let refetches: Record<string, ReturnType<typeof vi.fn>>
 let mockMutate: ReturnType<typeof vi.fn>
+let mockBulkMutateAsync: ReturnType<typeof vi.fn>
 let scenario: Scenario
 
 function rowA(): AnyRow {
@@ -232,12 +244,18 @@ beforeEach(() => {
     other: vi.fn(),
   }
   mockMutate = vi.fn()
+  mockBulkMutateAsync = vi.fn().mockResolvedValue([])
 
   mockUseSettings.mockReset()
   mockUseSettings.mockReturnValue({ settings: baseSettings, locale: 'en-US' })
 
   mockUseUpdateFeedback.mockReset()
   mockUseUpdateFeedback.mockReturnValue({ mutate: mockMutate, isPending: false })
+  mockUseBulkUpdateFeedback.mockReset()
+  mockUseBulkUpdateFeedback.mockReturnValue({
+    mutateAsync: mockBulkMutateAsync,
+    isPending: false,
+  })
 
   mockUseFeedbackList.mockReset()
   mockUseFeedbackList.mockImplementation(feedbackListImpl)
@@ -452,6 +470,24 @@ describe('FeedbackQueuePage', () => {
       id: 101,
       update: { github_issue_url: 'https://github.com/acme/repo/issues/7' },
     })
+  })
+
+  it('bulk-updates selected feedback and clears the selection after success', async () => {
+    renderPage()
+
+    fireEvent.click(screen.getAllByLabelText('Select row')[0])
+    const closeSelected = screen.getByRole('button', { name: 'Close selected' })
+    fireEvent.click(closeSelected)
+
+    await waitFor(() =>
+      expect(mockBulkMutateAsync).toHaveBeenCalledWith({
+        ids: [101],
+        update: { status: 'closed' },
+      }),
+    )
+    await waitFor(() =>
+      expect(screen.queryByRole('button', { name: 'Close selected' })).toBeNull(),
+    )
   })
 
   it('shows Forward to GitHub only when the bridge is enabled and the row has no issue; clicking it forwards', () => {

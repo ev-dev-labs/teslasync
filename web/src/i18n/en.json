@@ -5243,6 +5243,12 @@
     "common": {
       "error": "Something went wrong"
     },
+    "feedback": {
+      "bulkUpdate": {
+        "success": "Updated {{count}} feedback items",
+        "error": "Some feedback items could not be updated"
+      }
+    },
     "dataRepair": {
       "charging": {
         "update": {
@@ -16852,6 +16858,11 @@
         "githubUrl": "GitHub issue URL",
         "saveUrl": "Save URL",
         "forward": "Forward to GitHub"
+      },
+      "bulk": {
+        "triage": "Mark triaged",
+        "close": "Close selected",
+        "reopen": "Reopen selected"
       },
       "maskedEmail": "Reporter email, click to reveal"
     }

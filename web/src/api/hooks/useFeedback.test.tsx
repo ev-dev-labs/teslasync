@@ -319,7 +319,8 @@ describe('useBulkUpdateFeedback', () => {
     expect(invalidateSpy).toHaveBeenCalledTimes(1)
     expect(successToast).toHaveBeenCalledWith(
       'toast.feedback.bulkUpdate.success',
-      'Updated 2 feedback items',
+      'Updated {{count}} feedback items',
+      { count: 2 },
     )
   })
 

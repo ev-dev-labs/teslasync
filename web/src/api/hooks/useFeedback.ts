@@ -118,7 +118,8 @@ export function useBulkUpdateFeedback() {
     onSuccess: (rows) => {
       success(
         'toast.feedback.bulkUpdate.success',
-        `Updated ${rows.length} feedback items`,
+        'Updated {{count}} feedback items',
+        { count: rows.length },
       )
     },
     onError: (e) =>

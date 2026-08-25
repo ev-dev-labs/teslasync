@@ -1,7 +1,7 @@
 import { useRef } from 'react';
 import { Bug, CircleHelp, Compass, Keyboard } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import { dispatchTourLauncherOpen } from '@/lib/tourRegistry';
 import { cn } from '@/lib/cn';
 import { VersionSegment } from './VersionSegment';

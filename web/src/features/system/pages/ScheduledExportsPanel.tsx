@@ -22,13 +22,18 @@
 import { useCallback, useState, type FormEvent } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Button } from '@/components/ui/Button';
-import { Input } from '@/components/ui/Input';
-import { Select } from '@/components/ui/Select';
-import { Badge } from '@/components/ui/Badge';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { Heading, Text, Code } from '@/components/ui/Typography';
+import {
+  Badge,
+  Button,
+  Code,
+  ConfirmDialog,
+  GlassPanel,
+  Heading,
+  Input,
+  Select,
+  Table,
+  Text,
+} from '@/components/ui';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
@@ -363,7 +368,7 @@ export function ScheduledExportsPanel() {
           />
         ) : (
           <div className="overflow-x-auto" data-testid="scheduled-exports-table">
-            <table className="min-w-full divide-y divide-[var(--border-subtle)]">
+            <Table className="min-w-full divide-y divide-[var(--border-subtle)]">
               <thead>
                 <tr className="text-left text-xs uppercase tracking-wide text-[var(--text-secondary)]">
                   <th className="py-2 pe-4">{t('dataExport.scheduled.table.name', 'Name')}</th>
@@ -455,7 +460,7 @@ export function ScheduledExportsPanel() {
                   </tr>
                 ))}
               </tbody>
-            </table>
+            </Table>
           </div>
         )}
       </div>

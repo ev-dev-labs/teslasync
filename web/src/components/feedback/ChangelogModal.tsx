@@ -1,6 +1,6 @@
 import { useEffect, useId, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal, Button, Badge } from '@/components/ui'
+import { Modal, Button, Badge } from '@/components/ui/runtime'
 import { EmptyState } from './EmptyState'
 import {
   OPEN_CHANGELOG_MODAL_EVENT,

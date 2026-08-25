@@ -17,10 +17,10 @@
  * collapses to a single column.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Calendar as CalendarIcon, ChevronDown } from 'lucide-react';
-import { DayPicker, type DateRange } from 'react-day-picker';
+import type { DateRange } from 'react-day-picker';
 import 'react-day-picker/dist/style.css';
 import { Button } from '@/components/ui/Button';
 import { Popover } from '@/components/ui/Popover';
@@ -32,6 +32,11 @@ import {
   matchPresetId,
   resolveAllTimeStart,
 } from '@/lib/datePresets';
+
+const LazyDayPicker = lazy(async () => {
+  const module = await import('react-day-picker');
+  return { default: module.DayPicker };
+});
 
 export interface RangePickerValue {
   start: string;
@@ -263,17 +268,27 @@ export function RangePicker({
           {!presetsOnly && (
             <div className="flex flex-col flex-1 min-w-0">
               <div className="p-2">
-                <DayPicker
-                  mode="range"
-                  selected={staged}
-                  onSelect={setStaged}
-                  numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
-                  fromDate={minDateObj}
-                  toDate={maxDateObj}
-                  showOutsideDays={false}
-                  className="rdp-tesla"
-                  weekStartsOn={(i18n.language?.startsWith('en') ? 0 : 1) as 0 | 1}
-                />
+                <Suspense
+                  fallback={
+                    <div
+                      role="status"
+                      aria-label={t('date.range.loadingCalendar', 'Loading calendar…')}
+                      className="min-h-72 animate-pulse rounded-shape-md bg-[var(--surface-2)] motion-reduce:animate-none"
+                    />
+                  }
+                >
+                  <LazyDayPicker
+                    mode="range"
+                    selected={staged}
+                    onSelect={setStaged}
+                    numberOfMonths={typeof window !== 'undefined' && window.innerWidth >= 768 ? 2 : 1}
+                    fromDate={minDateObj}
+                    toDate={maxDateObj}
+                    showOutsideDays={false}
+                    className="rdp-tesla"
+                    weekStartsOn={(i18n.language?.startsWith('en') ? 0 : 1) as 0 | 1}
+                  />
+                </Suspense>
               </div>
 
               <div className="flex flex-col gap-2 border-t border-[var(--glass-border)] px-3 py-2 sm:flex-row sm:items-center sm:justify-between">

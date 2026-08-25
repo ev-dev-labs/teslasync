@@ -39,6 +39,7 @@ const { toastSuccess, toastError } = vi.hoisted(() => ({
 }));
 vi.mock('@/components/feedback/Toast', () => ({
   useToast: () => ({ success: toastSuccess, error: toastError }),
+  useOptionalToast: () => ({ success: toastSuccess, error: toastError }),
 }));
 
 // Deterministic i18n: t(key) -> key, so we can assert the exact toast keys the

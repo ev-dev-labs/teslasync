@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { AlertTriangle, X } from 'lucide-react'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/runtime'
 import { drainQueuedTeslaMutations } from '@/lib/teslaAuthRecovery'
 
 /**

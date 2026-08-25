@@ -20,6 +20,10 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
+import {
+  findEntryAssetNames,
+  findModulePreloadAssetNames,
+} from './bundle-assets.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = resolve(__dirname, '..')
@@ -33,8 +37,8 @@ function fmtKB(bytes) {
   return `${(bytes / 1024).toFixed(1)} KB`
 }
 
-function classify(name) {
-  if (name.startsWith('index-')) return 'entry'
+function classify(name, entryNames) {
+  if (entryNames.has(name)) return 'entry'
   if (name.startsWith('vendor-')) return 'vendor'
   return 'route'
 }
@@ -45,11 +49,23 @@ function main() {
     return
   }
 
+  const entryNames = findEntryAssetNames(dirname(ASSETS_DIR))
+  if (entryNames.size === 0) {
+    console.error('[bundle-size] no module entry found in dist/index.html')
+    if (STRICT) process.exit(1)
+  }
+  const preloadedNames = findModulePreloadAssetNames(dirname(ASSETS_DIR))
   const files = readdirSync(ASSETS_DIR).filter((f) => f.endsWith('.js'))
   const rows = files.map((name) => {
     const raw = readFileSync(join(ASSETS_DIR, name))
     const gz = gzipSync(raw).length
-    return { name, kind: classify(name), raw: raw.length, gz }
+    return {
+      name,
+      kind: classify(name, entryNames),
+      preloaded: preloadedNames.has(name),
+      raw: raw.length,
+      gz,
+    }
   }).sort((a, b) => b.gz - a.gz)
 
   const totals = rows.reduce(
@@ -63,18 +79,22 @@ function main() {
   )
 
   console.log('\n[bundle-size] per-chunk (sorted by gzipped size)')
-  console.log('  kind     gzip       raw        name')
-  console.log('  -------  ---------  ---------  ----------------------------------------')
+  console.log('  kind     preload  gzip       raw        name')
+  console.log('  -------  -------  ---------  ---------  ----------------------------------------')
   for (const r of rows) {
     console.log(
-      `  ${r.kind.padEnd(7)}  ${fmtKB(r.gz).padStart(9)}  ${fmtKB(r.raw).padStart(9)}  ${r.name}`,
+      `  ${r.kind.padEnd(7)}  ${(r.preloaded ? 'yes' : 'no').padEnd(7)}  ${fmtKB(r.gz).padStart(9)}  ${fmtKB(r.raw).padStart(9)}  ${r.name}`,
     )
   }
-  console.log('  -------  ---------  ---------  ----------------------------------------')
+  console.log('  -------  -------  ---------  ---------  ----------------------------------------')
   console.log(`  TOTAL              ${fmtKB(totals.gz).padStart(9)}  ${fmtKB(totals.raw).padStart(9)}  ${rows.length} chunks`)
   for (const [kind, gz] of Object.entries(totals.byKind)) {
     console.log(`  ${kind.padEnd(7).padStart(9)}${''.padStart(2)}${fmtKB(gz).padStart(9)}`)
   }
+  const initialGzip = rows
+    .filter((row) => row.kind === 'entry' || row.preloaded)
+    .reduce((sum, row) => sum + row.gz, 0)
+  console.log(`  initial JS${fmtKB(initialGzip).padStart(11)}  (entry + modulepreloads)`)
 
   // Check budgets
   const failures = []

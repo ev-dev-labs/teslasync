@@ -58,16 +58,20 @@ vi.mock('@/api/hooks/useLocations', () => ({
   useUpdateGeofenceCategory: vi.fn(),
 }));
 
-vi.mock('@/components/feedback/Toast', () => ({
-  useToast: () => ({
+vi.mock('@/components/feedback/Toast', () => {
+  const toast = {
     toast: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
     info: vi.fn(),
     warning: vi.fn(),
     dismiss: vi.fn(),
-  }),
-}));
+  };
+  return {
+    useToast: () => toast,
+    useOptionalToast: () => toast,
+  };
+});
 
 vi.mock('./RateForm', () => ({
   RateForm: ({ geofenceId, currentRate }: { geofenceId: number; currentRate?: { id: number } | null }) => (

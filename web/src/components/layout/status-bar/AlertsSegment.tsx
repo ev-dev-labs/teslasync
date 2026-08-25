@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { AlertTriangle, BellOff, BellRing, ChevronRight } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { usePriorityAlerts } from '@/api/hooks/useNotifications';
-import { Badge, Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui';
+import { Badge, Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import { PrefetchLink } from '../PrefetchLink';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { cn } from '@/lib/cn';

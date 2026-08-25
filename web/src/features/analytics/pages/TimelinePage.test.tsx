@@ -231,6 +231,16 @@ describe('TimelinePage', () => {
     expect(screen.getByText('Time by State')).toBeInTheDocument()
     expect(screen.getByText('State Transitions')).toBeInTheDocument()
 
+    // Regression: EmbeddedChart used to default to fluid sizing, silently
+    // ignoring these explicit heights. ResponsiveContainer then measured an
+    // auto-sized grid track and expanded the chart down the entire page.
+    const dailyChart = screen.getByRole('img', {
+      name: 'Daily transition counts by vehicle state',
+    })
+    expect(dailyChart).toHaveAttribute('data-chart-height', '256')
+    expect(dailyChart).toHaveAttribute('data-chart-mobile-height', '224')
+    expect(dailyChart).toHaveAttribute('data-chart-fluid', 'false')
+
     // With data present, sections are NOT showing their empty copy.
     expect(screen.queryByText('No daily transition activity yet')).toBeNull()
     expect(screen.queryByText('No state transitions recorded')).toBeNull()

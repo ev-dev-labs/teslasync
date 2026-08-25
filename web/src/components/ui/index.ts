@@ -25,6 +25,7 @@ export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';
+export { Table, type TableProps } from './Table';
 export { DataTableColumnsMenu } from './DataTableColumnsMenu';
 export { DataTableBulkBar } from './DataTableBulkBar';
 export { DataTableResizer } from './DataTableResizer';

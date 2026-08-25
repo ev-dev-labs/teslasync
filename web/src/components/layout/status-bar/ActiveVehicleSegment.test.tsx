@@ -75,7 +75,7 @@ vi.mock('react-i18next', async () => {
 
 // Thin Tooltip stand-in: renders the trigger (children) plus the tooltip content
 // in a queryable container, so the two never collide in role/text lookups.
-vi.mock('@/components/ui', async (importOriginal) => {
+vi.mock('@/components/ui/runtime', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/ui')>()
   return {
     ...actual,

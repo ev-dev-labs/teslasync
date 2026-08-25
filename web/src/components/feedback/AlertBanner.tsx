@@ -1,7 +1,7 @@
 import { type ReactNode, type HTMLAttributes } from 'react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '../../lib/cn'
-import { Button } from '@/components/ui'
+import { Button } from '@/components/ui/runtime'
 import { X } from 'lucide-react'
 
 export type AlertVariant = 'info' | 'success' | 'warning' | 'danger'

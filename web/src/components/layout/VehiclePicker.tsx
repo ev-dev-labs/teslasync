@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car } from 'lucide-react';
-import { Select } from '@/components/ui';
+import { Select } from '@/components/ui/runtime';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePinned } from '@/api/hooks/usePinned';
 import { cn } from '@/lib/cn';
@@ -85,4 +85,3 @@ export function VehiclePicker({ className }: VehiclePickerProps) {
     </div>
   );
 }
-

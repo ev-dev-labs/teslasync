@@ -410,9 +410,9 @@ describe('DigitalTwinPage', () => {
 
     expect(screen.getByRole('heading', { name: 'Digital Twin', level: 1 })).toBeInTheDocument();
     // PageContainer keeps the real header visible and renders the
-    // accessible PageLoadSkeleton (role=status, name="Loading") instead of
+    // accessible PageLoadSkeleton (role=status, name="Loading…") instead of
     // a centered spinner while the vehicles list is loading.
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     expect(container.querySelector('[data-testid="page-load-skeleton"]')).not.toBeNull();
     expect(screen.queryByText('Live Overview')).not.toBeInTheDocument();
     expect(

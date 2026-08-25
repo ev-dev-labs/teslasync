@@ -6,7 +6,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { Button, Popover, Text, Tooltip } from '@/components/ui';
+import { Button, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import type { UseBackgroundJobsResult } from '@/hooks/useBackgroundJobs';
 import { cn } from '@/lib/cn';
 import { ActiveVehicleSegment } from './ActiveVehicleSegment';
