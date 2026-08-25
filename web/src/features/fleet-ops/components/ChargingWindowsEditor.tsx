@@ -1,17 +1,20 @@
 import { Plus, Trash2 } from 'lucide-react';
+import { useId } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Input, Select } from '@/components/ui';
+import { Button, ErrorText, Input, Select } from '@/components/ui';
 import type { EditableChargingWindow } from './chargingWindowUtils';
 
 interface ChargingWindowsEditorProps {
   value: EditableChargingWindow[];
   onChange: (value: EditableChargingWindow[]) => void;
+  error?: string;
 }
 
 const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
 
-export function ChargingWindowsEditor({ value, onChange }: ChargingWindowsEditorProps) {
+export function ChargingWindowsEditor({ value, onChange, error }: ChargingWindowsEditorProps) {
   const { t } = useTranslation();
+  const errorId = useId();
   const update = (key: string, patch: Partial<EditableChargingWindow>) => {
     onChange(value.map((window) => window.key === key ? { ...window, ...patch } : window));
   };
@@ -26,7 +29,11 @@ export function ChargingWindowsEditor({ value, onChange }: ChargingWindowsEditor
   ]);
 
   return (
-    <fieldset className="space-y-3 rounded-xl border border-[var(--glass-border)] p-4">
+    <fieldset
+      className="space-y-3 rounded-xl border border-[var(--glass-border)] p-4"
+      aria-invalid={error ? true : undefined}
+      aria-describedby={error ? errorId : undefined}
+    >
       <div className="flex items-center justify-between gap-3">
         <legend className="text-sm font-semibold text-[var(--text-primary)]">
           {t('fleetOps.policyDialog.windows', 'Allowed charging windows')}
@@ -75,6 +82,7 @@ export function ChargingWindowsEditor({ value, onChange }: ChargingWindowsEditor
           </Button>
         </div>
       ))}
+      {error && <ErrorText id={errorId}>{error}</ErrorText>}
     </fieldset>
   );
 }

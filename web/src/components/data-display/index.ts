@@ -64,6 +64,7 @@ export {
   EntityPreviewDrawer,
   type EntityPreviewDrawerProps,
   type EntityPreviewField,
+  type EntityPreviewRelatedAction,
   type EntityPreviewTone,
 } from './EntityPreviewDrawer';
 export {

@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { CopyLinkButton } from './CopyLinkButton';
+import { PageActions } from './PageActions';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { ErrorDisplay } from '@/components/feedback/ErrorDisplay';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
@@ -37,11 +38,26 @@ function pickWorstQuery(queries: readonly FreshnessQuery[]): FreshnessQuery {
   return worst;
 }
 
-interface PageContainerProps {
+export interface PageContainerProps {
   title: string;
   subtitle?: string;
+  /** @deprecated Use the semantic action slots below for new or touched pages. */
   actions?: ReactNode;
+  /** Vehicle, time-range, and other scope controls. */
+  contextActions?: ReactNode;
+  /** Freshness or source metadata that precedes scope controls. */
+  metadataActions?: ReactNode;
+  /** Repeatable utility commands such as refresh or compare. */
+  secondaryActions?: ReactNode;
+  /** Rare visible destructive commands; prefer overflow for infrequent actions. */
+  destructiveActions?: ReactNode;
+  /** Saved views, print, share, export, and other low-frequency commands. */
+  overflowActions?: ReactNode;
+  /** The single dominant page command. Rendered at the far right. */
+  primaryAction?: ReactNode;
   loading?: boolean;
+  /** Announces background loading without replacing progressively rendered content. */
+  busy?: boolean;
   error?: Error | null;
   empty?: boolean;
   emptyMessage?: string;
@@ -62,20 +78,21 @@ interface PageContainerProps {
    */
   copyLink?: boolean;
   /**
-   * When provided, renders `<DataFreshnessAuto>` in the header next to
-   * `actions`. Pass either a single `useQuery()` result
+   * When provided, renders `<DataFreshnessAuto>` in the header metadata zone.
+   * Pass either a single `useQuery()` result
    * or an array; arrays surface the most-degraded state via
    * `pickWorstQuery` so a single chip can stand in for the whole page.
    *
    * Pages that need finer control (e.g. `forceStaleAfterMs` for cagg-driven
-   * data) should keep mounting `<DataFreshnessAuto>` directly via the
-   * `actions` prop instead of using this convenience.
+   * data) should mount `<DataFreshnessAuto>` via `metadataActions`.
    */
   query?: FreshnessQuery | readonly FreshnessQuery[];
 }
 
 export function PageContainer({
-  title, subtitle, actions, loading, error, empty, emptyMessage,
+  title, subtitle, actions, contextActions, metadataActions, secondaryActions,
+  destructiveActions, overflowActions, primaryAction,
+  loading, busy, error, empty, emptyMessage,
   breadcrumbLabels,
   children, className, copyLink, query,
 }: PageContainerProps) {
@@ -100,7 +117,7 @@ export function PageContainer({
     <div
       className={cn('min-w-0 space-y-6', className)}
       data-role="page-container"
-      aria-busy={loading || undefined}
+      aria-busy={loading || busy || undefined}
     >
       <header
         className="relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between"
@@ -122,16 +139,26 @@ export function PageContainer({
             )}
           </div>
         </div>
-        {(actions || copyLink || resolvedQuery) && (
-          <div
-            className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-1.5 sm:w-fit xl:justify-end"
-            data-role="page-actions"
-          >
-            {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
-            {copyLink && <CopyLinkButton />}
-            {actions}
-          </div>
-        )}
+        <PageActions
+          metadata={
+            resolvedQuery || metadataActions
+              ? <>{resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}{metadataActions}</>
+              : undefined
+          }
+          context={contextActions}
+          secondary={
+            actions || secondaryActions
+              ? <>{actions}{secondaryActions}</>
+              : undefined
+          }
+          destructive={destructiveActions}
+          overflow={
+            copyLink || overflowActions
+              ? <>{overflowActions}{copyLink && <CopyLinkButton />}</>
+              : undefined
+          }
+          primary={primaryAction}
+        />
       </header>
 
       {loading ? (

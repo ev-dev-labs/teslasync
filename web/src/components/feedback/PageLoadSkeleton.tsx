@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { cn } from '@/lib/cn';
 
@@ -7,6 +8,8 @@ interface PageLoadSkeletonProps {
   className?: string;
   /** Hide the placeholder title when the real page header is already visible. */
   showHeader?: boolean;
+  /** Accessible loading label. Defaults to the shared translated loading copy. */
+  label?: string;
 }
 
 /**
@@ -19,13 +22,17 @@ export function PageLoadSkeleton({
   panels = 3,
   className,
   showHeader = true,
+  label,
 }: PageLoadSkeletonProps) {
+  const { t } = useTranslation();
+  const loadingLabel = label?.trim() || t('common.loading', 'Loading…');
+
   return (
     <div
       className={cn('space-y-5 animate-pulse', className)}
       role="status"
       aria-busy="true"
-      aria-label="Loading"
+      aria-label={loadingLabel}
       data-testid="page-load-skeleton"
     >
       {showHeader && (

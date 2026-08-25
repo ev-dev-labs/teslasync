@@ -5,6 +5,7 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { cn } from '@/lib/cn';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { Button } from '@/components/ui';
 
 /**
  * `<DataFreshness>` — query-result-driven freshness chip.
@@ -38,6 +39,10 @@ export interface DataFreshnessProps {
   onRefresh?: () => void;
   /** Compact mode (condensed icon, no text) for small widgets */
   compact?: boolean;
+  /** Optional data-source label shown in the hover and accessible detail. */
+  source?: string;
+  /** Force stale once the successful update is older than this duration. */
+  forceStaleAfterMs?: number;
 }
 
 export type FreshnessStatus = 'fresh' | 'fetching' | 'stale' | 'error';
@@ -77,6 +82,13 @@ const STATUS_CONFIG = {
   },
 } as const;
 
+const STATUS_LABEL = {
+  fresh: { key: 'freshness.fresh', fallback: 'Up to date' },
+  fetching: { key: 'freshness.updating', fallback: 'Updating…' },
+  stale: { key: 'freshness.stale', fallback: 'Stale' },
+  error: { key: 'freshness.error', fallback: 'Error' },
+} as const;
+
 // Centralize this once the shared
 // `formatRelativeTime` helper in @/lib/dateFormat grows i18n plural support.
 // Today the shared helper returns hardcoded English ("just now", "5m ago"),
@@ -114,6 +126,8 @@ export function DataFreshness({
   isError,
   onRefresh,
   compact = false,
+  source,
+  forceStaleAfterMs,
 }: DataFreshnessProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
@@ -129,11 +143,15 @@ export function DataFreshness({
     return () => clearInterval(id);
   }, [updatedAt]);
 
+  const forcedStale =
+    forceStaleAfterMs != null &&
+    updatedAt != null &&
+    Date.now() - updatedAt > forceStaleAfterMs;
   const status: FreshnessStatus = isError
     ? 'error'
     : isFetching
       ? 'fetching'
-      : isStale
+      : isStale || forcedStale
         ? 'stale'
         : 'fresh';
 
@@ -147,9 +165,12 @@ export function DataFreshness({
   const isBackgroundRefetch = isFetching && updatedAt != null;
   const showPulse = isBackgroundRefetch && !reduce;
 
+  const ageLabel = updatedAt ? formatRelativeTime(updatedAt, t) : '';
   const relativeTime =
     updatedAt && !isFetching
-      ? formatRelativeTime(updatedAt, t)
+      ? status === 'stale'
+        ? t('freshness.staleWithAge', 'Stale · {{age}}', { age: ageLabel })
+        : ageLabel
       : isFetching
         ? t('freshness.updating', 'updating…')
         : isError
@@ -164,41 +185,41 @@ export function DataFreshness({
   // suppress the dot pulse but still need to communicate the in-flight
   // refetch. Surface the state via the tooltip so screen-readers + hover
   // users see "Updating…" while the data lands.
-  const title = isFetching && reduce
+  const updateTitle = isFetching && reduce
     ? t('freshness.updatingTooltip', 'Updating…')
     : updatedAt
       ? t('freshness.lastUpdated', 'Last updated: {{time}}', {
           time: formatTime(new Date(updatedAt)),
         })
       : t('freshness.neverUpdated', 'Never updated');
+  const sourceTitle = source
+    ? t('freshness.source', 'Source: {{source}}', { source })
+    : null;
+  const title = [updateTitle, sourceTitle].filter(Boolean).join(' · ');
+  const statusLabel = t(STATUS_LABEL[status].key, STATUS_LABEL[status].fallback);
+  const stateLabel = ageLabel
+    ? t('freshness.ariaLabel', '{{status}} · {{age}}', {
+        status: statusLabel,
+        age: ageLabel,
+      })
+    : statusLabel;
+  const accessibleState = sourceTitle
+    ? `${stateLabel} · ${sourceTitle}`
+    : stateLabel;
+  const ariaLabel = onRefresh
+    ? t('freshness.refreshState', 'Refresh data · {{state}}', { state: accessibleState })
+    : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: accessibleState });
+  const rootClassName = cn(
+    'inline-flex items-center leading-none transition-colors',
+    compact
+      ? 'gap-0.5 text-2xs'
+      : 'gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-1.5 text-xs',
+    cfg.color,
+    onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
+  );
 
-  return (
-    <span
-      className={cn(
-        'inline-flex items-center leading-none transition-colors',
-        compact
-          ? 'gap-0.5 text-2xs'
-          : 'gap-1.5 rounded-pill border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-1.5 text-xs',
-        cfg.color,
-        onRefresh && !isFetching && 'cursor-pointer hover:text-[var(--text-secondary)]',
-      )}
-      onClick={handleClick}
-      title={title}
-      role={onRefresh ? 'button' : 'status'}
-      // `aria-live="polite"` lets screen readers
-      // announce freshness state changes (e.g. "fetching" → "fresh") on
-      // dashboards/widgets without yanking focus. The `aria-atomic="true"`
-      // attribute groups the dot + icon + relative-time text into one
-      // single utterance instead of three separate ones.
-      aria-live="polite"
-      aria-atomic="true"
-      aria-label={
-        onRefresh
-          ? t('freshness.refresh', 'Refresh')
-          : t('a11y.dataFreshness', 'Data freshness: {{state}}', { state: status })
-      }
-      data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
-    >
+  const content = (
+    <>
       {/* Status dot with pulse */}
       <span className="relative flex h-1.5 w-1.5 shrink-0">
         {status === 'fetching' && !reduce && (
@@ -223,6 +244,7 @@ export function DataFreshness({
           compact ? 'h-2 w-2' : 'h-2.5 w-2.5',
           status === 'fetching' && !reduce && 'animate-spin',
         )}
+        aria-hidden="true"
       />
       {/* Reserve a stable width so the label changing (e.g. "just now" →
           "updating…" → "5m ago") never reflows neighbouring header items. */}
@@ -231,6 +253,44 @@ export function DataFreshness({
           {relativeTime}
         </span>
       )}
+    </>
+  );
+
+  if (onRefresh) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className={cn(
+          rootClassName,
+          compact ? '!h-auto !min-h-0 !p-0' : '!h-auto !rounded-pill',
+          'disabled:!bg-[var(--surface-2)] disabled:!opacity-100',
+        )}
+        onClick={handleClick}
+        disabled={isFetching}
+        title={title}
+        aria-live="polite"
+        aria-atomic="true"
+        aria-label={ariaLabel}
+        data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
+      >
+        {content}
+      </Button>
+    );
+  }
+
+  return (
+    <span
+      className={rootClassName}
+      title={title}
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+      aria-label={ariaLabel}
+      data-bg-refetch={isBackgroundRefetch ? 'true' : undefined}
+    >
+      {content}
     </span>
   );
 }
@@ -264,6 +324,8 @@ export interface DataFreshnessAutoProps {
  * `6 * 60 * 60 * 1000` to flag a 6-hour-old daily cagg as amber.
  */
   forceStaleAfterMs?: number;
+  /** Optional data-source label shown in the hover and accessible detail. */
+  source?: string;
 }
 
 /**
@@ -284,21 +346,18 @@ export function DataFreshnessAuto({
   compact,
   refetchable = true,
   forceStaleAfterMs,
+  source,
 }: DataFreshnessAutoProps) {
-  const isStale =
-    query.isStale ||
-    (forceStaleAfterMs != null && query.dataUpdatedAt
-      ? Date.now() - query.dataUpdatedAt > forceStaleAfterMs
-      : false);
-
   return (
     <DataFreshness
       updatedAt={query.dataUpdatedAt > 0 ? query.dataUpdatedAt : null}
       isFetching={query.isFetching}
-      isStale={isStale}
+      isStale={query.isStale}
       isError={query.isError}
       onRefresh={refetchable ? () => { void query.refetch(); } : undefined}
       compact={compact}
+      source={source}
+      forceStaleAfterMs={forceStaleAfterMs}
     />
   );
 }

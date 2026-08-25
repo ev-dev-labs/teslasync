@@ -22,7 +22,7 @@ import {
   Tabs, PanelTitle, Caption, Label, HelperText,
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, Spinner, AlertBanner } from '@/components/feedback';
+import { Skeleton, AlertBanner } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { FadeIn } from '@/components/motion';
 import { useDirtyForm } from '@/hooks/useDirtyForm';
@@ -734,9 +734,10 @@ export default function GeofencesPage() {
                 <Button
                   variant="secondary"
                   size="sm"
-                  icon={locationLoading ? <Spinner size="sm" /> : <Navigation className="h-4 w-4" aria-hidden="true" />}
+                  icon={<Navigation className="h-4 w-4" aria-hidden="true" />}
                   onClick={handleGetLocation}
                   disabled={locationLoading || (locationSource === 'vehicle' && selectedVehicleId <= 0)}
+                  loading={locationLoading}
                 >
                   {locationLoading
                     ? t('geofences.gettingLocation', 'Getting location…')

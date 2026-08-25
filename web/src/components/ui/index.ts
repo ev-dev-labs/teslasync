@@ -29,7 +29,7 @@ export { DataTableColumnsMenu } from './DataTableColumnsMenu';
 export { DataTableBulkBar } from './DataTableBulkBar';
 export { DataTableResizer } from './DataTableResizer';
 export { DensityApplier } from './DensityApplier';
-export { Drawer } from './Drawer';
+export { Drawer, type DrawerProps, type DrawerSize } from './Drawer';
 export { CommandPalette } from './CommandPalette';
 export {
   CommandPaletteTrigger,

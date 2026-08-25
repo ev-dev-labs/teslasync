@@ -138,18 +138,18 @@ describe('RegionSettings — header', () => {
 })
 
 describe('RegionSettings — loading / error / empty states', () => {
-  it('renders a status spinner (not the empty panel) while the query is pending', () => {
+  it('renders a region-card skeleton (not the empty panel) while the query is pending', () => {
     mockedUseRegion.mockReturnValue(
       regionState({ data: undefined, isLoading: true }),
     )
     renderSection()
 
-    // The localized loading label doubles as the spinner's accessible name.
-    expect(screen.getByText('Loading region…')).toBeInTheDocument()
-    expect(screen.getByRole('status', { name: 'Loading region…' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('status', { name: 'Loading region…' }),
+    ).toHaveAttribute('aria-busy', 'true')
     // The header (and its refresh control) stay mounted during load.
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument()
-    // The misleading "no data" empty copy must NOT compete with the spinner —
+    // The misleading "no data" empty copy must NOT compete with the skeleton —
     // this is the core bug the harden fixes.
     expect(screen.queryByText(/No region data yet/)).not.toBeInTheDocument()
   })
@@ -166,8 +166,8 @@ describe('RegionSettings — loading / error / empty states', () => {
     )
     renderSection()
 
-    // 503 → QueryError "Server error" branch with a Retry CTA.
-    expect(screen.getByText('Server error')).toBeInTheDocument()
+    // 503 → QueryError dependency-unavailable branch with a Retry CTA.
+    expect(screen.getByText('Service unavailable')).toBeInTheDocument()
     // No empty panel is shown when the load errored.
     expect(screen.queryByText(/No region data yet/)).not.toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
@@ -186,7 +186,7 @@ describe('RegionSettings — loading / error / empty states', () => {
 
     // Data wins — the error UI is suppressed while we still have a region.
     expect(screen.getByText('na')).toBeInTheDocument()
-    expect(screen.queryByText('Server error')).not.toBeInTheDocument()
+    expect(screen.queryByText('Service unavailable')).not.toBeInTheDocument()
   })
 
   it('shows the "no data yet" empty state before the first successful fetch', () => {

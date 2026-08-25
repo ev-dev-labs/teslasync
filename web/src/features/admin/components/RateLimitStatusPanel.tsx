@@ -18,7 +18,7 @@ import { RefreshCw, AlertTriangle } from 'lucide-react'
 import { GlassPanel, Button } from '@/components/ui'
 import { Heading, Text, Caption } from '@/components/ui/Typography'
 import { MetricBar } from '@/components/data-display'
-import { Spinner } from '@/components/feedback'
+import { ListSkeleton } from '@/components/feedback'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatRelative, formatDurationMsLong } from '@/lib/dateFormat'
 import {
@@ -174,15 +174,11 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
       </div>
 
       {isLoading ? (
-        <div
-          className="flex items-center gap-3 py-6 text-[var(--text-secondary)]"
-          data-testid="rate-limit-loading"
-        >
-          <Spinner size="sm" />
-          <Text variant="bodySm">
-            {t('rateLimitStatus.loading', 'Loading rate-limit status…')}
-          </Text>
-        </div>
+        <ListSkeleton
+          rows={3}
+          label={t('rateLimitStatus.loading', 'Loading rate-limit status…')}
+          testId="rate-limit-loading"
+        />
       ) : error ? (
         <div
           className="flex items-start gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3"

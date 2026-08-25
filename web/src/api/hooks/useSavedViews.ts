@@ -20,6 +20,7 @@ import type { SavedView, SavedViewCreateInput, SavedViewUpdateInput } from '../t
 
 export const savedViewsKeys = {
   all: ['saved-views'] as const,
+  allList: ['saved-views', 'all'] as const,
   list: (route: string) => ['saved-views', route] as const,
 };
 
@@ -50,9 +51,19 @@ export function useSavedViews(route: string) {
   });
 }
 
+/** Fetch every saved view for global discovery surfaces such as Cmd+K. */
+export function useAllSavedViews() {
+  return useQuery({
+    queryKey: savedViewsKeys.allList,
+    queryFn: ({ signal }) => request<SavedView[]>('/saved-views', { signal }),
+    staleTime: STALE_TIMES.STANDARD,
+    select: safeArray,
+  });
+}
+
 /**
- * Create a new saved view. Invalidates the route's list query so the
- * menu reflects the new entry immediately. Surfaces a toast so the user
+ * Create a new saved view. Invalidates saved-view lists so both the owning
+ * page and global discovery reflect the new entry. Surfaces a toast so the user
  * can see the save succeeded (or why it failed — duplicate name, etc.).
  */
 export function useCreateSavedView() {
@@ -65,8 +76,8 @@ export function useCreateSavedView() {
         method: 'POST',
         body: JSON.stringify(input),
       }),
-    onSuccess: (created) => {
-      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(created.route) });
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.all });
       success('toast.savedViews.create.success', 'Saved view created');
     },
     onError: (e) => error(e, 'toast.savedViews.create.error', 'Failed to save view'),
@@ -80,9 +91,9 @@ export interface UpdateSavedViewArgs {
 }
 
 /**
- * Patch an existing saved view. The caller passes the route alongside
- * the id so we can invalidate the right list cache without a round-trip
- * to read the row back.
+ * Patch an existing saved view. The route remains in the argument contract for
+ * existing callers; the shared key invalidation keeps route and global lists
+ * coherent without a round-trip.
  */
 export function useUpdateSavedView() {
   const qc = useQueryClient();
@@ -94,8 +105,8 @@ export function useUpdateSavedView() {
         method: 'PUT',
         body: JSON.stringify(patch),
       }),
-    onSuccess: (_data, vars) => {
-      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(vars.route) });
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.all });
       success('toast.savedViews.update.success', 'View updated');
     },
     onError: (e) => error(e, 'toast.savedViews.update.error', 'Failed to update view'),
@@ -108,8 +119,8 @@ export interface DeleteSavedViewArgs {
 }
 
 /**
- * Delete a saved view by id. The caller passes the route so we can
- * invalidate the right list cache.
+ * Delete a saved view by id. The route stays in the public argument shape for
+ * existing callers while the base query key updates every cached list.
  */
 export function useDeleteSavedView() {
   const { success, error } = useMutationToast();
@@ -117,7 +128,7 @@ export function useDeleteSavedView() {
   return useOptimisticMutation<void, DeleteSavedViewArgs, SavedView[]>({
     mutationFn: ({ id }) =>
       request<void>(`/saved-views/${id}`, { method: 'DELETE' }),
-    queryKeys: ({ route }) => [savedViewsKeys.list(route)],
+    queryKeys: [savedViewsKeys.all],
     updater: (prev, { id }) => prev?.filter((v) => v.id !== id),
     broadcast: true,
     onMutate: () => {
@@ -155,7 +166,7 @@ export function useSetDefaultSavedView() {
         body: JSON.stringify({ is_default: isDefault }),
       }),
     onSuccess: (_data, vars) => {
-      invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.list(vars.route) });
+        invalidateAndBroadcast(qc, { queryKey: savedViewsKeys.all });
       success(
         vars.isDefault ? 'toast.savedViews.setDefault.success' : 'toast.savedViews.unsetDefault.success',
         vars.isDefault ? 'Default view set' : 'Default cleared',

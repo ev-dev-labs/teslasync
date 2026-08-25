@@ -418,6 +418,29 @@ describe('DrivesListPage — populated (km)', () => {
   });
 });
 
+describe('DrivesListPage — contextual links', () => {
+  it('preserves the drive vehicle and time window across related workflows', async () => {
+    renderPage();
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Quick view drive' }))[0]);
+
+    const drawer = await screen.findByRole('dialog', { name: 'Home → Office' });
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/7');
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute('href', '/charging?from=2026-04-24&to=2026-04-24');
+    expect(within(drawer).getByRole('link', { name: 'Start location' }))
+      .toHaveAttribute(
+        'href',
+        '/locations?q=Home&from=2026-04-24&to=2026-04-24',
+      );
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2026-04-24&to=2026-04-24&signals=VehicleSpeed%2CBatteryLevel',
+      );
+  });
+});
+
 describe('DrivesListPage — unit boundary (miles)', () => {
   it('re-labels headers and converts SI → miles at the render edge', () => {
     mockUnits.mockReturnValue(makeUnits('mi'));

@@ -2,18 +2,32 @@ import { type ReactNode } from 'react'
 import { FadeIn } from '../motion/FadeIn'
 import { Heading, Text } from '../ui/Typography'
 import { CopyLinkButton } from './CopyLinkButton'
+import { PageActions } from './PageActions'
 
 /** Standard page header with optional subtitle and action buttons. */
 export function PageHeader({
   title,
   subtitle,
   actions,
+  contextActions,
+  metadataActions,
+  secondaryActions,
+  destructiveActions,
+  overflowActions,
+  primaryAction,
   icon,
   copyLink,
 }: {
   title: string
   subtitle?: string
+  /** @deprecated Use the semantic action slots below for new or touched pages. */
   actions?: ReactNode
+  contextActions?: ReactNode
+  metadataActions?: ReactNode
+  secondaryActions?: ReactNode
+  destructiveActions?: ReactNode
+  overflowActions?: ReactNode
+  primaryAction?: ReactNode
   icon?: ReactNode
   /**
    * Show a "Copy link" button that copies the current URL (with all query
@@ -55,15 +69,22 @@ export function PageHeader({
             )}
           </div>
         </div>
-        {(actions || copyLink) && (
-          <div
-            className="flex w-full min-w-0 max-w-full flex-wrap items-center gap-2 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-1.5 sm:w-fit xl:justify-end"
-            data-role="page-actions"
-          >
-            {copyLink && <CopyLinkButton />}
-            {actions}
-          </div>
-        )}
+        <PageActions
+          metadata={metadataActions}
+          context={contextActions}
+          secondary={
+            actions || secondaryActions
+              ? <>{actions}{secondaryActions}</>
+              : undefined
+          }
+          destructive={destructiveActions}
+          overflow={
+            copyLink || overflowActions
+              ? <>{overflowActions}{copyLink && <CopyLinkButton />}</>
+              : undefined
+          }
+          primary={primaryAction}
+        />
       </header>
     </FadeIn>
   )

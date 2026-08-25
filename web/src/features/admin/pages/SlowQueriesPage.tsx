@@ -28,7 +28,7 @@ import { PanelTitle, Caption, Code, Text } from '@/components/ui/Typography';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
-  EmptyState, AlertBanner, SectionErrorBoundary, Skeleton, QueryError,
+  EmptyState, DataStateNotice, SectionErrorBoundary, Skeleton, QueryError,
 } from '@/components/feedback';
 import {
   ChartTooltip,
@@ -266,12 +266,12 @@ export default function SlowQueriesPage() {
       query={query}
     >
       {subsystemMissing && (
-        <AlertBanner variant="warning" title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}>
+        <DataStateNotice state="unsupported" title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}>
           {t(
             'admin.slowQueries.notConfigured',
             'pg_stat_statements is not installed on this PostgreSQL instance. Run `CREATE EXTENSION pg_stat_statements;` and add it to shared_preload_libraries to enable this page.',
           )}
-        </AlertBanner>
+        </DataStateNotice>
       )}
 
       {/* 1 — KPI band ---------------------------------------------------- */}

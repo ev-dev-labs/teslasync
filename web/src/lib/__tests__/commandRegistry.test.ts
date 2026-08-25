@@ -108,6 +108,7 @@ describe('commandRegistry', () => {
   it('includes the primary operational workflow commands', () => {
     const ids = new Set(commandRegistry.map(c => c.id))
     expect(ids.has('action.center')).toBe(true)
+    expect(ids.has('action.export')).toBe(true)
     expect(ids.has('action.compare.fleet')).toBe(true)
     expect(ids.has('action.compare.period')).toBe(true)
     expect(

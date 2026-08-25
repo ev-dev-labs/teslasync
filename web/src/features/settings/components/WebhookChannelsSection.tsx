@@ -30,7 +30,6 @@
 import {
   useCallback,
   useEffect,
-  useId,
   useMemo,
   useRef,
   useState,
@@ -44,6 +43,7 @@ import {
   Button,
   ConfirmDialog,
   CopyButton,
+  ErrorText,
   GlassPanel,
   Heading,
   HelperText,
@@ -60,8 +60,9 @@ import {
 // caption) under the same name; importing from the file path is the
 // established escape hatch documented in TOTPEnrollmentSection.
 import { Label } from '@/components/ui/Label';
-import { EmptyState, Spinner } from '@/components/feedback';
+import { EmptyState, ListSkeleton, Spinner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import {
   type NotificationChannelInput,
   type NotificationChannelWebhook,
@@ -238,6 +239,7 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
   const { t } = useTranslation();
   const [form, setForm] = useState<WebhookFormState>(initial ?? EMPTY_FORM);
   const [showSecret, setShowSecret] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<Record<'name' | 'url', string>>>({});
   const [formError, setFormError] = useState('');
   const saveMut = useSaveChannel();
   const isEdit = (initial?.id ?? null) !== null;
@@ -247,8 +249,21 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
     if (!open) return;
     setForm(initial ?? EMPTY_FORM);
     setShowSecret(false);
+    setFieldErrors({});
     setFormError('');
   }, [open, initial]);
+  const isDirty = open
+    && JSON.stringify(form) !== JSON.stringify(initial ?? EMPTY_FORM);
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    isDirty,
+    onClose,
+    {
+      message: t(
+        'webhookChannels.form.unsaved',
+        'You have unsaved webhook changes. Discard them?',
+      ),
+    },
+  );
 
   // Static body sample used to build a representative signature so the
   // user sees a non-trivial hex string. Mirrors the envelope the
@@ -267,15 +282,19 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
   const handleSubmit = useCallback(
     (e: FormEvent) => {
       e.preventDefault();
+      setFieldErrors({});
       setFormError('');
       const trimmedName = form.name.trim();
       const trimmedUrl = form.url.trim();
-      if (trimmedName === '') {
-        setFormError(t('webhookChannels.form.nameRequired', 'Name is required.'));
-        return;
+      const nextErrors: typeof fieldErrors = {};
+      if (!trimmedName) {
+        nextErrors.name = t('webhookChannels.form.nameRequired', 'Name is required.');
       }
       if (!isHttpsLike(trimmedUrl)) {
-        setFormError(t('webhookChannels.form.urlInvalid', 'URL must start with http:// or https://.'));
+        nextErrors.url = t('webhookChannels.form.urlInvalid', 'URL must start with http:// or https://.');
+      }
+      setFieldErrors(nextErrors);
+      if (Object.keys(nextErrors).length > 0) {
         return;
       }
       saveMut.mutate(toSavePayload({ ...form, name: trimmedName, url: trimmedUrl }), {
@@ -287,29 +306,28 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
         },
       });
     },
-    [form, onSaved, saveMut, t],
+    [fieldErrors, form, onSaved, saveMut, t],
   );
 
-  const titleId = useId();
-
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      title={
-        isEdit
-          ? t('webhookChannels.form.editTitle', 'Edit webhook')
-          : t('webhookChannels.form.addTitle', 'Add webhook')
-      }
-      ariaLabel={
-        isEdit
-          ? t('webhookChannels.form.editTitle', 'Edit webhook')
-          : t('webhookChannels.form.addTitle', 'Add webhook')
-      }
-      size="md"
-      data-testid="webhook-form-modal"
-    >
-      <form onSubmit={handleSubmit} className="space-y-4" aria-labelledby={titleId}>
+    <>
+      <Modal
+        open={open}
+        onClose={requestClose}
+        title={
+          isEdit
+            ? t('webhookChannels.form.editTitle', 'Edit webhook')
+            : t('webhookChannels.form.addTitle', 'Add webhook')
+        }
+        ariaLabel={
+          isEdit
+            ? t('webhookChannels.form.editTitle', 'Edit webhook')
+            : t('webhookChannels.form.addTitle', 'Add webhook')
+        }
+        size="md"
+        data-testid="webhook-form-modal"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1">
           <Label htmlFor="webhook-form-name" required>
             {t('webhookChannels.form.name', 'Name')}
@@ -317,7 +335,11 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
           <Input
             id="webhook-form-name"
             value={form.name}
-            onChange={(e) => setForm((s) => ({ ...s, name: e.target.value }))}
+            onChange={(e) => {
+              setForm((s) => ({ ...s, name: e.target.value }));
+              setFieldErrors((current) => ({ ...current, name: undefined }));
+            }}
+            error={fieldErrors.name}
             placeholder={t('webhookChannels.form.namePlaceholder', 'Discord #alerts')}
             required
             data-testid="webhook-form-name"
@@ -332,7 +354,11 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
             id="webhook-form-url"
             type="url"
             value={form.url}
-            onChange={(e) => setForm((s) => ({ ...s, url: e.target.value }))}
+            onChange={(e) => {
+              setForm((s) => ({ ...s, url: e.target.value }));
+              setFieldErrors((current) => ({ ...current, url: undefined }));
+            }}
+            error={fieldErrors.url}
             placeholder={t(
               'webhookChannels.form.urlPlaceholder',
               'https://discord.com/api/webhooks/...',
@@ -418,31 +444,24 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
           />
         </div>
 
-        {formError !== '' ? (
-          <Text variant="bodySm" className="text-rose-300" role="alert">
-            {formError}
-          </Text>
-        ) : null}
+        {formError !== '' ? <ErrorText>{formError}</ErrorText> : null}
 
         <div className="flex justify-end gap-2 pt-2">
           <Button
             type="button"
             variant="ghost"
-            onClick={onClose}
+            onClick={requestClose}
             data-testid="webhook-form-cancel"
           >
             {t('webhookChannels.form.cancel', 'Cancel')}
           </Button>
           <Button
             type="submit"
-            disabled={saveMut.isPending}
+            loading={saveMut.isPending}
             data-testid="webhook-form-submit"
           >
             {saveMut.isPending ? (
-              <>
-                <Spinner className="mr-2 h-4 w-4" />
-                {t('webhookChannels.form.saving', 'Saving…')}
-              </>
+              t('webhookChannels.form.saving', 'Saving…')
             ) : isEdit ? (
               t('webhookChannels.form.saveEdit', 'Save changes')
             ) : (
@@ -451,7 +470,9 @@ function WebhookFormModal({ open, initial, onClose, onSaved }: WebhookFormModalP
           </Button>
         </div>
       </form>
-    </Modal>
+      </Modal>
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
+    </>
   );
 }
 
@@ -510,11 +531,11 @@ function WebhookRow({
             size="sm"
             onClick={onTest}
             disabled={testBusy || toggleBusy}
+            loading={testBusy}
+            icon={<Send className="h-4 w-4" />}
             aria-label={t('webhookChannels.row.test', 'Test webhook')}
             data-testid={`webhook-test-${channel.id}`}
-          >
-            {testBusy ? <Spinner className="h-4 w-4" /> : <Send className="h-4 w-4" />}
-          </Button>
+          />
           <Button
             type="button"
             variant="ghost"
@@ -699,9 +720,11 @@ export function WebhookChannelsSection() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Spinner />
-          </div>
+          <ListSkeleton
+            rows={3}
+            label={t('webhookChannels.loading', 'Loading webhook channels…')}
+            testId="webhook-channels-loading"
+          />
         ) : error ? (
           <Text variant="bodySm" className="text-rose-300" role="alert">
             {t('webhookChannels.loadError', 'Failed to load webhook channels: {{error}}', {

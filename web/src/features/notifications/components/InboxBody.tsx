@@ -263,6 +263,10 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     refetch: groupsRefetch,
   } = useNotificationGroups(filters, { enabled: isGrouped });
   const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
+  const groupedDeliveryCount = useMemo(
+    () => groups.reduce((total, group) => total + Math.max(0, group.count), 0),
+    [groups],
+  );
 
   const ruleMap = useMemo<Record<number, AlertRule>>(() => {
     const m: Record<number, AlertRule> = {};
@@ -586,10 +590,23 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
             />
           )}
-          <span className="text-xs text-[var(--text-muted)]">
-            {isGrouped
-              ? t('notifications.inbox.countLabel', '{{count}} notifications', { count: groups.length })
-              : t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}
+          <span
+            className="text-xs text-[var(--text-muted)]"
+            data-testid="inbox-result-count"
+          >
+            {isGrouped ? (
+              <>
+                {t('notifications.inbox.threadCountLabel', '{{count}} threads', {
+                  count: groups.length,
+                })}
+                <span aria-hidden="true"> · </span>
+                {t('notifications.inbox.deliveryCountLabel', '{{count}} deliveries', {
+                  count: groupedDeliveryCount,
+                })}
+              </>
+            ) : (
+              t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })
+            )}
           </span>
           {!archived && (
             <div

@@ -14,6 +14,7 @@ import { RecentPagesSegment } from './status-bar/RecentPagesSegment';
 import { HelpSegment } from './status-bar/HelpSegment';
 import { MoreSegment } from './status-bar/MoreSegment';
 import { AboutBuildModal } from './status-bar/AboutBuildModal';
+import { WorkspaceContextControl } from './WorkspaceContextControl';
 import {
   StatusBarProvider,
   useStatusBarAnnouncer,
@@ -31,7 +32,7 @@ import { cn } from '@/lib/cn';
  * Always-on 28px footer pinned to the bottom of the viewport with prioritized
  * status segments:
  *
- *   API · Live telemetry · Alerts · Recent pages · Background jobs · Active vehicle · Help/About
+ *   API · Live telemetry · Alerts · Recent pages · Analysis window · Background jobs · Active vehicle · Help/About
  *
  * Each segment is its own component (in `./status-bar/`) and is fed by a
  * dedicated hook so subscribers don't pay for the whole bar.
@@ -131,6 +132,11 @@ function StatusBarContent({
         <div className="flex min-w-0 items-center gap-1">
           <RecentPagesSegment iconOnly={iconOnly} />
           <Divider />
+          <WorkspaceContextControl
+            variant="status"
+            iconOnly={iconOnly}
+            listenForCommands={false}
+          />
           {showOverflow ? (
             <MoreSegment
               iconOnly={iconOnly}

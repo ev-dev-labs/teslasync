@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { describe, expect, it, vi } from 'vitest'
 import { EntityPreviewDrawer } from './EntityPreviewDrawer'
 
@@ -40,5 +41,39 @@ describe('EntityPreviewDrawer', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Open drive details' }))
     expect(onClose).toHaveBeenCalledOnce()
     expect(onOpenDetails).toHaveBeenCalledOnce()
+  })
+
+  it('closes after opening a related context link', () => {
+    const onClose = vi.fn()
+    const onNavigate = vi.fn()
+
+    render(
+      <MemoryRouter>
+        <EntityPreviewDrawer
+          open
+          onClose={onClose}
+          eyebrow="Drive preview"
+          title="Home to Office"
+          fields={[]}
+          relatedActions={[
+            {
+              key: 'telemetry',
+              label: 'Telemetry evidence',
+              to: '/signals?from=2026-08-20&to=2026-08-20',
+              onNavigate,
+            },
+          ]}
+        />
+      </MemoryRouter>,
+    )
+
+    const link = screen.getByRole('link', { name: 'Telemetry evidence' })
+    expect(link).toHaveAttribute(
+      'href',
+      '/signals?from=2026-08-20&to=2026-08-20',
+    )
+    fireEvent.click(link)
+    expect(onNavigate).toHaveBeenCalledOnce()
+    expect(onClose).toHaveBeenCalledOnce()
   })
 })

@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
   Route, BatteryCharging, Bell, BellRing, MapPin, Workflow, Compass, MapPinned,
-  FileText, CalendarDays, X,
+  Bookmark, FileText, CalendarDays, X,
 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import type { TFunction } from 'i18next'
@@ -26,7 +26,10 @@ import {
   type RecentPageKind,
 } from '@/lib/recentPages'
 import { useGlobalSearch } from '@/api/hooks/useSearch'
-import type { SearchHitType } from '@/api/types'
+import { useAllSavedViews } from '@/api/hooks/useSavedViews'
+import { useAcknowledgeAlert, useAlerts, useReopenAlert } from '@/api/hooks/useAlerts'
+import { useToast } from '@/components/feedback/Toast'
+import type { Alert, SearchHitType } from '@/api/types'
 import { markCommandPaletteDiscovered } from '@/features/onboarding/checklist'
 import {
   parsePrefix,
@@ -50,6 +53,8 @@ interface PaletteItem {
   /** Display-only shortcut hint shown next to the item (e.g. "?" or "g d") */
   shortcut?: string
 }
+
+type PaletteMode = 'search' | 'vehicle-select' | 'alert-select'
 
 // ─── Palette-eligible commands ──────────────────────────────────────────────
 
@@ -257,7 +262,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   const [open, setOpen] = useState(initialOpen)
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [mode, setMode] = useState<'search' | 'vehicle-select'>('search')
+  const [mode, setMode] = useState<PaletteMode>('search')
   const [pendingCommand, setPendingCommand] = useState<string | null>(null)
   const [recentVersion, setRecentVersion] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -266,9 +271,19 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
 
   const { data: vehicles } = useVehicles()
   const vehicleList = vehicles ?? []
+  const { data: savedViews } = useAllSavedViews()
+  const savedViewList = savedViews ?? []
+  const alertsQuery = useAlerts()
+  const openAlertList = useMemo(
+    () => (alertsQuery.data ?? []).filter((alert) => !alert.acknowledged_at),
+    [alertsQuery.data],
+  )
   const commandMutation = useVehicleCommand()
+  const acknowledgeAlertMutation = useAcknowledgeAlert({ showSuccessToast: false })
+  const reopenAlertMutation = useReopenAlert()
   const { commands: registryCommands } = useCommandRegistry()
   const { vehicleId: activeVehicleId, setVehicleId } = useSelectedVehicle()
+  const toast = useToast()
 
   // Command def lookup (stable — COMMANDS is a module-level constant)
   const commandDefMap = useMemo(() => new Map(COMMANDS.map(c => [c.id, c])), [])
@@ -316,6 +331,43 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       setQuery('')
     }
   }, [vehicleList, executeCommand])
+
+  const selectAlertToAcknowledge = useCallback(() => {
+    setMode('alert-select')
+    setSelectedIndex(0)
+    setQuery('')
+  }, [])
+
+  const acknowledgeAlert = useCallback((alert: Alert) => {
+    acknowledgeAlertMutation.mutate(
+      { id: alert.id },
+      {
+        onSuccess: () => {
+          toast.toast({
+            type: 'success',
+            title: t('alerts.ack.success', 'Alert acknowledged'),
+            duration: 5000,
+            action: {
+              label: t('alerts.ack.undo', 'Undo'),
+              onClick: () => {
+                reopenAlertMutation.mutate(alert.id)
+              },
+            },
+          })
+        },
+      },
+    )
+    recordCommandUse('action.alerts.acknowledge')
+    bumpRecent()
+    close()
+  }, [
+    acknowledgeAlertMutation,
+    bumpRecent,
+    close,
+    reopenAlertMutation,
+    t,
+    toast,
+  ])
 
   const switchActiveVehicle = useCallback((id: number) => {
     setVehicleId(id)
@@ -402,6 +454,53 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       }))
   }, [vehicleList, activeVehicleId, t, switchActiveVehicle])
 
+  const savedViewItems: PaletteItem[] = useMemo(
+    () =>
+      savedViewList.map((view) => {
+        const queryString = view.query.trim().replace(/^\?/, '')
+        const destination = queryString
+          ? `${view.route}?${queryString}`
+          : view.route
+        const id = `saved-view-${view.id}`
+        return {
+          id,
+          label: view.name,
+          section: t('palette.section.savedViews', 'Saved views'),
+          icon: <Bookmark className="h-4 w-4" />,
+          type: 'navigate' as const,
+          sublabel: view.route,
+          keywords: [
+            'saved',
+            'view',
+            view.name.replace(/[-_]+/g, ' '),
+            view.route,
+            view.query,
+            view.is_pinned ? 'pinned' : '',
+            view.is_default ? 'default' : '',
+          ].filter(Boolean),
+          action: () => {
+            recordCommandUse(id)
+            go(destination)
+          },
+        }
+      }),
+    [savedViewList, t, go],
+  )
+
+  const contextualActionItems: PaletteItem[] = useMemo(
+    () => [{
+      id: 'action.alerts.acknowledge',
+      label: t('palette.cmd.acknowledgeAlert', 'Acknowledge an alert'),
+      section: t('palette.section.actions', 'Actions'),
+      icon: <BellRing className="h-4 w-4" />,
+      type: 'registry',
+      sublabel: t('palette.acknowledgeAlert.hint', 'Choose from recent open alerts'),
+      keywords: ['acknowledge', 'alert', 'open', 'resolve', 'triage', 'respond'],
+      action: selectAlertToAcknowledge,
+    }],
+    [selectAlertToAcknowledge, t],
+  )
+
   // Static registry: theme, refresh, navigate-to-feature, etc. Keep them in
   // their own section so power users can scan for "preferences" and "actions".
   const registryItems: PaletteItem[] = useMemo(() =>
@@ -447,6 +546,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     const candidates: PaletteItem[] = [
       ...registryItems,
       ...vehicleSwitchItems,
+      ...savedViewItems,
+      ...contextualActionItems,
       ...navItems,
       ...commandItems,
     ]
@@ -464,7 +565,17 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       id: `most-used-${item.id}`,
       section: sectionLabel,
     }))
-  }, [query, recentVersion, registryItems, vehicleSwitchItems, navItems, commandItems, t])
+  }, [
+    query,
+    recentVersion,
+    registryItems,
+    vehicleSwitchItems,
+    savedViewItems,
+    contextualActionItems,
+    navItems,
+    commandItems,
+    t,
+  ])
 
   // ── Recent pages ──────────────────────────────────────────────────────────
   //
@@ -518,6 +629,21 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       action: () => { if (pendingCommand) executeCommand(pendingCommand, v.id) },
     })),
   [vehicleList, pendingCommand, executeCommand, t])
+
+  const alertItems: PaletteItem[] = useMemo(
+    () =>
+      openAlertList.map((alert) => ({
+        id: `acknowledge-alert-${alert.id}`,
+        label: alert.title?.trim() || t('operations.alerts.untitled', 'Untitled alert'),
+        section: t('palette.section.openAlerts', 'Open alerts'),
+        icon: <BellRing className="h-4 w-4" />,
+        type: 'command' as const,
+        sublabel: [alert.severity, alert.message].filter(Boolean).join(' · '),
+        keywords: [alert.type, alert.severity, alert.message].filter(Boolean),
+        action: () => acknowledgeAlert(alert),
+      })),
+    [acknowledgeAlert, openAlertList, t],
+  )
 
   // ── Live entity search ────────────────────────────────────────────────────
   //
@@ -580,8 +706,28 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   // state, where the user sees Most Used → Recent → Pages → … .
 
   const allItems = useMemo(
-    () => [...searchResultItems, ...mostUsedItems, ...recentPageItems, ...registryItems, ...vehicleSwitchItems, ...navItems, ...commandItems],
-    [searchResultItems, mostUsedItems, recentPageItems, registryItems, vehicleSwitchItems, navItems, commandItems],
+    () => [
+      ...searchResultItems,
+      ...mostUsedItems,
+      ...recentPageItems,
+      ...savedViewItems,
+      ...contextualActionItems,
+      ...registryItems,
+      ...vehicleSwitchItems,
+      ...navItems,
+      ...commandItems,
+    ],
+    [
+      searchResultItems,
+      mostUsedItems,
+      recentPageItems,
+      savedViewItems,
+      contextualActionItems,
+      registryItems,
+      vehicleSwitchItems,
+      navItems,
+      commandItems,
+    ],
   )
 
   const filtered = useMemo(() => {
@@ -637,7 +783,12 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     return scored.map(s => s.cmd)
   }, [allItems, activeScope, scopedTerm, recentVersion])
 
-  const displayItems = mode === 'vehicle-select' ? vehicleItems : filtered
+  const displayItems =
+    mode === 'vehicle-select'
+      ? vehicleItems
+      : mode === 'alert-select'
+        ? alertItems
+        : filtered
 
   // Stable semantic key over the visible items. `displayItems` is a fresh
   // ternary on every render — even when its underlying memoised value is
@@ -665,7 +816,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   // change would otherwise undo the user's navigation.
   useEffect(() => { setSelectedIndex(0) }, [query, mode, displayItemIdsKey])
 
-  // Esc closes the palette (or pops vehicle-select mode). Esc fires from
+  // Esc closes the palette (or pops a contextual selection mode). Esc fires from
   // anywhere — closing modals from inside an input is expected, and the
   // palette's own input is the most common Esc target.
   useEffect(() => {
@@ -676,7 +827,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       // keypress (open → immediately close), so this branch was removed.
       // See the `toggle-command-palette` listener below for the real wiring.
       if (e.key === 'Escape') {
-        if (mode === 'vehicle-select') {
+        if (mode !== 'search') {
           goBack()
         } else if (open && activeScope !== null) {
           // First ESC with an active scope clears the scope chip + term so
@@ -735,7 +886,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     } else if (e.key === 'Enter' && displayItems[effectiveSelectedIndex]) {
       e.preventDefault()
       displayItems[effectiveSelectedIndex].action()
-    } else if (e.key === 'Backspace' && query === '' && mode === 'vehicle-select') {
+    } else if (e.key === 'Backspace' && query === '' && mode !== 'search') {
       e.preventDefault()
       goBack()
     } else if (e.key === 'Backspace' && activeScope !== null && scopedTerm === '' && mode === 'search') {
@@ -814,20 +965,26 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
             className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)]"
           >
             <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
-              {/* Search input / vehicle-select header */}
+              {/* Search input / contextual selection header */}
               <div className="flex items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
-                {mode === 'vehicle-select' ? (
+                {mode !== 'search' ? (
                   <>
                     <button
+                      type="button"
                       onClick={goBack}
+                      aria-label={t('palette.back', 'Back')}
                       className="flex-shrink-0 rounded-lg p-1.5 text-[var(--text-muted)] transition-colors hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]"
                     >
-                      <ChevronLeft className="h-5 w-5" />
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
                     </button>
                     <div className="flex-1 flex items-center gap-2">
-                      <Zap className="h-4 w-4 text-[var(--theme-primary)]" />
+                      {mode === 'vehicle-select'
+                        ? <Zap className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />
+                        : <BellRing className="h-4 w-4 text-[var(--theme-primary)]" aria-hidden="true" />}
                       <span className="text-sm text-[var(--text-secondary)]">
-                        {t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: `Send "${pendingCommandLabel}" to…` })}
+                        {mode === 'vehicle-select'
+                          ? t('palette.selectVehicleFor', { command: pendingCommandLabel, defaultValue: `Send "${pendingCommandLabel}" to…` })
+                          : t('palette.acknowledgeAlert.select', 'Choose an open alert to acknowledge')}
                       </span>
                     </div>
                   </>
@@ -882,11 +1039,17 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
               </div>
 
               {/* Results */}
-              <div ref={listRef} className="max-h-80 overflow-y-auto py-2 px-2" onKeyDown={mode === 'vehicle-select' ? handleInputKey : undefined}>
+              <div ref={listRef} className="max-h-80 overflow-y-auto py-2 px-2" onKeyDown={mode !== 'search' ? handleInputKey : undefined}>
                 {displayItems.length === 0 ? (
                   <div className="py-8 text-center text-sm text-[var(--text-muted)]">
                     {mode === 'vehicle-select'
                       ? t('palette.noVehicles', 'No vehicles available')
+                      : mode === 'alert-select'
+                        ? alertsQuery.isLoading
+                          ? t('palette.acknowledgeAlert.loading', 'Loading open alerts…')
+                          : alertsQuery.isError
+                            ? t('palette.acknowledgeAlert.error', 'Open alerts are unavailable right now')
+                            : t('palette.acknowledgeAlert.empty', 'No open alerts to acknowledge')
                       : activeScope !== null && !scopedTerm
                         ? t(`palette.scope.${activeScope}.empty`, {
                             scope: getScopeMeta(activeScope).label,
@@ -983,7 +1146,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                   </span>
                   <span className="flex items-center gap-1">
                     <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">ESC</kbd>{' '}
-                    {mode === 'vehicle-select'
+                    {mode !== 'search'
                       ? t('palette.back', 'Back')
                       : activeScope !== null
                         ? t('palette.clearFilter', 'Clear filter')

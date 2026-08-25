@@ -367,12 +367,14 @@ describe('ShareDriveDialog — create mode', () => {
 });
 
 describe('ShareDriveDialog — existing shares list', () => {
-  it('shows a loading spinner while the list is fetching', async () => {
+  it('shows a list skeleton while the list is fetching', async () => {
     const d = deferred<ShareToken[]>();
     routeRequest({ listShares: () => d.promise });
     renderDialog();
 
-    expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('status', { name: 'Loading active share links…' }),
+    ).toHaveAttribute('aria-busy', 'true');
 
     await act(async () => {
       d.resolve([]);

@@ -1,9 +1,10 @@
 /**
  * VehicleListPage — fleet-list contract, hardening & a11y tests.
  *
- * VehicleListPage is the fleet shell. It fans four hooks — `useVehicles`,
+ * VehicleListPage is the fleet shell. It fans five hooks — `useVehicles`,
  * `useFleetStates`, `useSyncVehicles`, `useDeleteVehicle` (plus `usePinned`
- * for pin-order and `useVehicleLive` to keep the first car's SSE warm) — into
+ * for pin-order, `useFleetWorkOrders` for service attention, and
+ * `useVehicleLive` to keep the first car's SSE warm) — into
  * a KPI band, an overview bento (per-vehicle battery bars + a status
  * breakdown), and a responsive vehicle-card grid with per-card row actions.
  *
@@ -140,6 +141,11 @@ vi.mock('@/api/hooks/usePinned', async (importActual) => {
   return { ...actual, usePinned: vi.fn(), useTogglePin: vi.fn() };
 });
 
+vi.mock('@/api/hooks/useFleetOps', async (importActual) => {
+  const actual = await importActual<typeof import('@/api/hooks/useFleetOps')>();
+  return { ...actual, useFleetWorkOrders: vi.fn() };
+});
+
 // The first-vehicle SSE warm-up is irrelevant to what this page renders.
 vi.mock('@/hooks/useVehicleLive', () => ({
   useVehicleLive: () => ({ state: {}, connected: false }),
@@ -167,6 +173,7 @@ import {
   useDeleteVehicle,
 } from '@/api/hooks/useVehicles';
 import { usePinned, useTogglePin } from '@/api/hooks/usePinned';
+import { useFleetWorkOrders, type FleetWorkOrder } from '@/api/hooks/useFleetOps';
 import { fmtNumber } from '@/lib/numberFormat';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import type { Vehicle } from '@/types/vehicle';
@@ -178,6 +185,7 @@ const mockSync = vi.mocked(useSyncVehicles);
 const mockDelete = vi.mocked(useDeleteVehicle);
 const mockPinned = vi.mocked(usePinned);
 const mockTogglePin = vi.mocked(useTogglePin);
+const mockFleetWorkOrders = vi.mocked(useFleetWorkOrders);
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
 function qr(over: Record<string, unknown> = {}): any {
@@ -257,8 +265,29 @@ const V1 = makeVehicle({ id: 1, vehicle_id: 1, vin: 'VIN00000000000001', display
 const V2 = makeVehicle({ id: 2, vehicle_id: 2, vin: 'VIN00000000000002', display_name: 'Model Y Beta', model: 'Model Y', trim_badging: 'Long Range' });
 const V3 = makeVehicle({ id: 3, vehicle_id: 3, vin: 'VIN00000000000003', display_name: 'Model S Gamma', model: 'Model S', trim_badging: 'Plaid' });
 
-const S1 = makeState({ vehicle_id: 1, battery_level: 80, rated_range: 400_000, odometer: 100_000, is_charging: true, charger_power: 11, is_locked: true, sentry_mode: true, state: 'online' });
-const S2 = makeState({ vehicle_id: 2, battery_level: 50, rated_range: 250_000, odometer: 200_000, is_charging: false, speed: 30, is_locked: false, sentry_mode: false, state: 'online' });
+const S1 = makeState({ vehicle_id: 1, battery_level: 80, rated_range: 400_000, odometer: 100_000, is_charging: true, charger_power: 11, is_locked: true, sentry_mode: true, state: 'online', software_version: '2026.8.3' });
+const S2 = makeState({ vehicle_id: 2, battery_level: 50, rated_range: 250_000, odometer: 200_000, is_charging: false, speed: 30, is_locked: false, sentry_mode: false, state: 'online', software_version: '2026.8.2' });
+
+const OPEN_WORK_ORDER: FleetWorkOrder = {
+  id: 91,
+  vehicle_id: 2,
+  vehicle_display_name: 'Model Y Beta',
+  cost_center_id: null,
+  cost_center_name: null,
+  title: 'Inspect front suspension',
+  description: null,
+  status: 'open',
+  severity: 'high',
+  due_odometer_m: null,
+  due_at: null,
+  scheduled_start_at: null,
+  scheduled_end_at: null,
+  cost_minor: null,
+  currency: null,
+  version: 1,
+  created_at: '2026-01-01T00:00:00Z',
+  updated_at: '2026-01-01T00:00:00Z',
+};
 
 const VEHICLES: Vehicle[] = [V1, V2, V3];
 const FLEET_STATES = [
@@ -279,6 +308,9 @@ function installHappyPath() {
   mockDelete.mockReturnValue(deleteMut);
   mockPinned.mockReturnValue(qr({ data: [] }));
   mockTogglePin.mockReturnValue(mutation());
+  mockFleetWorkOrders.mockReturnValue(qr({
+    data: { items: [OPEN_WORK_ORDER], total: 1, limit: 100, offset: 0 },
+  }));
 }
 
 /** Renders the live route location so navigation side effects are assertable. */
@@ -335,6 +367,25 @@ describe('VehicleListPage — happy path', () => {
     // 1 charging (V1) of 2 vehicles reporting live state (V1, V2).
     expect(within(summary).getByText('1 / 2')).toBeInTheDocument();
 
+    const posture = screen.getByTestId('fleet-operational-brief');
+    const readinessMetric = within(posture)
+      .getByText('Departure ready')
+      .closest('[role="listitem"]');
+    expect(readinessMetric).not.toBeNull();
+    expect(within(readinessMetric as HTMLElement).getByText('2/3')).toBeInTheDocument();
+    expect(within(posture).getByText('Live utilization')).toBeInTheDocument();
+    expect(within(posture).getByText('67%')).toBeInTheDocument();
+    expect(within(posture).getByText('Software posture')).toBeInTheDocument();
+    expect(within(posture).getByText('2 versions')).toBeInTheDocument();
+    expect(within(posture).getByText('Service attention')).toBeInTheDocument();
+    expect(within(posture).getByText('1 open')).toBeInTheDocument();
+    expect(
+      within(posture).getByRole('button', { name: /Source: Live vehicle state/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(posture).getByRole('button', { name: /Source: Fleet work orders/ }),
+    ).toBeInTheDocument();
+
     // Every vehicle gets a card, each with its derived status badge.
     const grid = cardGrid();
     expect(within(grid).getByText('Model 3 Alpha')).toBeInTheDocument();
@@ -379,6 +430,20 @@ describe('VehicleListPage — happy path', () => {
     expect(screen.getByText('Driving')).toBeInTheDocument();
     expect(screen.getByText('Offline')).toBeInTheDocument();
   });
+
+  it('surfaces software fragmentation and urgent service work in decision details', async () => {
+    renderPage();
+    const posture = await screen.findByTestId('fleet-operational-brief');
+    fireEvent.click(within(posture).getByRole('button', { name: 'Review details' }));
+
+    const drawer = await screen.findByRole('dialog', {
+      name: 'Availability and readiness across the fleet details',
+    });
+    expect(within(drawer).getByText('2 software versions are active')).toBeInTheDocument();
+    expect(
+      within(drawer).getByText('Urgent service work requires attention (1)'),
+    ).toBeInTheDocument();
+  });
 });
 
 /* ─────────────────────────────── Accessibility ──────────────────────────── */
@@ -418,6 +483,18 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(within(drawer).getByText('Vehicle preview')).toBeInTheDocument();
     expect(within(drawer).getByText('80.00%')).toBeInTheDocument();
     expect(within(drawer).getByText('400.00 km')).toBeInTheDocument();
+    expect(within(drawer).getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute('href', '/drives');
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute('href', '/charging');
+    expect(within(drawer).getByRole('link', { name: 'Visited locations' }))
+      .toHaveAttribute('href', '/locations');
+    expect(within(drawer).getByRole('link', { name: 'Alerts' }))
+      .toHaveAttribute('href', '/notifications/alerts');
+    expect(within(drawer).getByRole('link', { name: 'Service history' }))
+      .toHaveAttribute('href', '/maintenance');
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute('href', '/signals');
 
     fireEvent.click(within(drawer).getByRole('button', { name: 'Open vehicle details' }));
     await waitFor(() => {
@@ -485,6 +562,16 @@ describe('VehicleListPage — sync & compare actions', () => {
     );
     expect(probe.getAttribute('data-search')).toContain('leftId=1');
     expect(probe.getAttribute('data-search')).toContain('rightId=2');
+  });
+
+  it('opens the dedicated fleet-operations workspace from the posture brief', async () => {
+    renderPage();
+    const probe = screen.getByTestId('location');
+    fireEvent.click(await screen.findByRole('button', { name: 'Fleet operations' }));
+
+    await waitFor(() =>
+      expect(probe.getAttribute('data-pathname')).toBe('/fleet-operations'),
+    );
   });
 
   it('hides the Compare action when the fleet has fewer than two vehicles', async () => {
@@ -611,5 +698,18 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2);
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('keeps live fleet content visible when service attention is unavailable', async () => {
+    mockFleetWorkOrders.mockReturnValue(
+      qr({ isError: true, error: new Error('work orders unavailable'), data: undefined }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText('Service attention is temporarily unavailable'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Fleet availability and live state remain visible, but maintenance work orders could not be loaded.')).toBeInTheDocument();
+    expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
   });
 });

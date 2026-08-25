@@ -848,18 +848,34 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 		Severity:   "critical",
 		SignalName: "BatteryLevel",
 		VehicleID:  &vehicleID,
+		VehicleIDs: []int64{vehicleID},
 	}
 	infoRule := &alertmodel.AlertRule{
-		ID:         ruleInfoID,
-		Name:       "Door unlocked",
-		Severity:   "info",
-		SignalName: "Locked",
+		ID:          ruleInfoID,
+		Name:        "Door unlocked",
+		Severity:    "info",
+		SignalName:  "Locked",
+		AllVehicles: true,
+		VehicleIDs:  []int64{},
 	}
 
 	now := time.Now().UTC()
 	readAt := now.Add(time.Second)
+	acknowledgedAt := now.Add(2 * time.Second)
+	acknowledgedBy := "fleet.operator"
+	acknowledgementNote := "Charging scheduled"
 	logs := []*notificationmodel.NotificationLog{
-		{ID: 1001, AlertID: &ruleCritID, Title: "Battery is low", Message: "5%", Status: "sent", CreatedAt: now},
+		{
+			ID:                  1001,
+			AlertID:             &ruleCritID,
+			Title:               "Battery is low",
+			Message:             "5%",
+			Status:              "sent",
+			CreatedAt:           now,
+			AcknowledgedAt:      &acknowledgedAt,
+			AcknowledgedBy:      &acknowledgedBy,
+			AcknowledgementNote: &acknowledgementNote,
+		},
 		{ID: 1002, AlertID: &ruleInfoID, Title: "Door unlocked", Message: "front-left", Status: "failed", CreatedAt: now, ReadAt: &readAt},
 		{ID: 1003, AlertID: nil, Title: "Test notification", Message: "hello", Status: "sent", CreatedAt: now},
 	}
@@ -903,6 +919,21 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[0].IsRead {
 		t.Errorf("resp[0].IsRead = true, want false")
 	}
+	if resp[0].AcknowledgedAt == nil || !resp[0].AcknowledgedAt.Equal(acknowledgedAt) {
+		t.Errorf("resp[0].AcknowledgedAt = %v, want %v", resp[0].AcknowledgedAt, acknowledgedAt)
+	}
+	if resp[0].AcknowledgedBy == nil || *resp[0].AcknowledgedBy != acknowledgedBy {
+		t.Errorf("resp[0].AcknowledgedBy = %v, want %q", resp[0].AcknowledgedBy, acknowledgedBy)
+	}
+	if resp[0].AcknowledgementNote == nil || *resp[0].AcknowledgementNote != acknowledgementNote {
+		t.Errorf("resp[0].AcknowledgementNote = %v, want %q", resp[0].AcknowledgementNote, acknowledgementNote)
+	}
+	if resp[0].AllVehicles == nil || *resp[0].AllVehicles {
+		t.Errorf("resp[0].AllVehicles = %v, want false", resp[0].AllVehicles)
+	}
+	if len(resp[0].VehicleIDs) != 1 || resp[0].VehicleIDs[0] != vehicleID {
+		t.Errorf("resp[0].VehicleIDs = %v, want [%d]", resp[0].VehicleIDs, vehicleID)
+	}
 	// Drill-through metadata.
 	if resp[0].RuleID == nil || *resp[0].RuleID != ruleCritID {
 		t.Errorf("resp[0].RuleID = %v, want pointer to %d", resp[0].RuleID, ruleCritID)
@@ -923,6 +954,12 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	}
 	if resp[1].VehicleID != 0 {
 		t.Errorf("resp[1].VehicleID = %d, want 0 (rule had no vehicle)", resp[1].VehicleID)
+	}
+	if resp[1].AllVehicles == nil || !*resp[1].AllVehicles {
+		t.Errorf("resp[1].AllVehicles = %v, want true", resp[1].AllVehicles)
+	}
+	if resp[1].VehicleIDs == nil || len(resp[1].VehicleIDs) != 0 {
+		t.Errorf("resp[1].VehicleIDs = %v, want an empty canonical scope", resp[1].VehicleIDs)
 	}
 	if !resp[1].IsRead {
 		t.Errorf("resp[1].IsRead = false, want true")
@@ -958,6 +995,13 @@ func TestAlertHandler_List_AdaptsNotificationLogsToAlertShape(t *testing.T) {
 	if resp[2].RuleSeverity != nil {
 		t.Errorf("resp[2].RuleSeverity = %v, want nil", resp[2].RuleSeverity)
 	}
+	if resp[2].AllVehicles != nil || resp[2].VehicleIDs != nil {
+		t.Errorf(
+			"resp[2] scope = all:%v vehicles:%v, want nil system scope",
+			resp[2].AllVehicles,
+			resp[2].VehicleIDs,
+		)
+	}
 }
 
 func TestAlertHandler_List_EmptyReturnsEmptyArray(t *testing.T) {
@@ -988,7 +1032,7 @@ func TestAlertHandler_List_AppliesPriorityFilters(t *testing.T) {
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(
 		http.MethodGet,
-		"/alerts?severity=warning,critical&read=false&archived=false&limit=51&offset=3",
+		"/alerts?severity=warning,critical&vehicle_id=7,9&vehicle_id=7&from=2025-01-02&to=2025-01-03&before_created_at=2025-01-02T12:30:00Z&before_id=123&read=false&archived=false&limit=51&offset=3",
 		nil,
 	)
 	handler.List(rec, req)
@@ -1015,6 +1059,23 @@ func TestAlertHandler_List_AppliesPriorityFilters(t *testing.T) {
 	if got.Limit != 51 || got.Offset != 3 {
 		t.Fatalf("pagination = (%d, %d), want (51, 3)", got.Limit, got.Offset)
 	}
+	if len(got.VehicleIDs) != 2 || got.VehicleIDs[0] != 7 || got.VehicleIDs[1] != 9 {
+		t.Fatalf("vehicle IDs = %v, want [7 9]", got.VehicleIDs)
+	}
+	wantFrom := time.Date(2025, time.January, 2, 0, 0, 0, 0, time.UTC)
+	wantTo := time.Date(2025, time.January, 3, 23, 59, 59, int(time.Second-time.Nanosecond), time.UTC)
+	if !got.From.Equal(wantFrom) || !got.To.Equal(wantTo) {
+		t.Fatalf("date range = (%v, %v), want (%v, %v)", got.From, got.To, wantFrom, wantTo)
+	}
+	wantBefore := time.Date(2025, time.January, 2, 12, 30, 0, 0, time.UTC)
+	if !got.BeforeCreatedAt.Equal(wantBefore) || got.BeforeID != 123 {
+		t.Fatalf(
+			"pagination cursor = (%v, %d), want (%v, 123)",
+			got.BeforeCreatedAt,
+			got.BeforeID,
+			wantBefore,
+		)
+	}
 }
 
 func TestAlertHandler_List_RejectsInvalidFilters(t *testing.T) {
@@ -1025,6 +1086,15 @@ func TestAlertHandler_List_RejectsInvalidFilters(t *testing.T) {
 
 	for _, rawQuery := range []string{
 		"severity=emergency",
+		"vehicle_id=invalid",
+		"vehicle_id=0",
+		"from=tomorrow",
+		"to=eventually",
+		"from=2025-01-03&to=2025-01-02",
+		"before_created_at=2025-01-02T12:30:00Z",
+		"before_id=123",
+		"before_created_at=tomorrow&before_id=123",
+		"before_created_at=2025-01-02T12:30:00Z&before_id=0",
 		"read=sometimes",
 		"archived=perhaps",
 	} {

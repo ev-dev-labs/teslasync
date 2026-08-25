@@ -404,8 +404,8 @@ describe('DLQInspectorPage — list error handling', () => {
     renderPage();
 
     // Recoverable error surface (entries panel + reason breakdown both render
-    // a QueryError for a 5xx → "Server error").
-    expect((await screen.findAllByText('Server error')).length).toBeGreaterThan(0);
+    // a QueryError for a dependency outage → "Service unavailable").
+    expect((await screen.findAllByText('Service unavailable')).length).toBeGreaterThan(0);
     // The band stays mounted and shows honest dashes rather than a fake "0".
     expect(screen.getByText('Total entries')).toBeInTheDocument();
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);

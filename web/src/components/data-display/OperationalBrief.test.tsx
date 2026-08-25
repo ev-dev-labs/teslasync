@@ -26,6 +26,7 @@ describe('OperationalBrief', () => {
         statusTone="warning"
         scope="Fleet · All vehicles"
         freshness="2025-01-15T10:00:00Z"
+        metricColumns={2}
         metrics={[
           { key: 'score', label: 'Pack score', value: '91', detail: 'Fleet average' },
           {
@@ -53,6 +54,7 @@ describe('OperationalBrief', () => {
     expect(screen.getByText('Monitor')).toBeInTheDocument();
     expect(screen.getByText('Pack score')).toBeInTheDocument();
     expect(screen.getByText('Projection changed')).toBeInTheDocument();
+    expect(screen.getByRole('list')).toHaveClass('md:grid-cols-2');
 
     fireEvent.click(screen.getByRole('button', { name: 'Open battery workspace' }));
     expect(onOpen).toHaveBeenCalledOnce();

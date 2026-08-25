@@ -23,20 +23,28 @@ import {
   isWorkspaceDensity,
   isWorkspaceRangePreset,
 } from '@/lib/workspacePreferences'
+import { useStatusBarPopover } from './status-bar/StatusBarContext'
 
 export interface WorkspaceContextControlProps {
   className?: string
   /** Only one mounted control should handle global command-palette events. */
   listenForCommands?: boolean
+  /** Compact footer treatment coordinated with the other status popovers. */
+  variant?: 'header' | 'status'
+  iconOnly?: boolean
 }
 
 export function WorkspaceContextControl({
   className,
   listenForCommands = true,
+  variant = 'header',
+  iconOnly = false,
 }: WorkspaceContextControlProps) {
   const { t } = useTranslation()
   const triggerRef = useRef<HTMLButtonElement>(null)
-  const [open, setOpen] = useState(false)
+  const { open, toggle, close } = useStatusBarPopover(
+    variant === 'status' ? 'workspace-context-status' : 'workspace-context',
+  )
   const range = useRangeState({
     defaultPresetId: '7d',
     enableCompare: true,
@@ -103,6 +111,18 @@ export function WorkspaceContextControl({
   const activeLabel = activePreset
     ? t(activePreset.i18nKey, activePreset.fallback)
     : t('workspace.analysis.custom', 'Custom')
+  const visibleContextLabel = range.compare
+    ? t(
+        'workspace.analysis.rangeWithComparison',
+        '{{range}} · Compare',
+        { range: activeLabel },
+      )
+    : activeLabel
+  const triggerLabel = t(
+    'workspace.analysis.trigger',
+    'Analysis window: {{range}}',
+    { range: visibleContextLabel },
+  )
   const validDraft = draftStart.length > 0 && draftEnd.length > 0 && draftStart <= draftEnd
 
   const updateDensity = (next: string) => {
@@ -116,25 +136,28 @@ export function WorkspaceContextControl({
         ref={triggerRef}
         type="button"
         size="sm"
-        variant="secondary"
+        variant={variant === 'status' ? 'ghost' : 'secondary'}
         icon={<Icons.calendar className="h-4 w-4" aria-hidden="true" />}
         aria-expanded={open}
         aria-haspopup="dialog"
-        aria-label={t(
-          'workspace.analysis.trigger',
-          'Analysis window: {{range}}',
-          { range: activeLabel },
+        aria-label={triggerLabel}
+        title={triggerLabel}
+        onClick={toggle}
+        className={cn(
+          'max-w-40 justify-start',
+          variant === 'status' &&
+            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs',
+          className,
         )}
-        onClick={() => setOpen((current) => !current)}
-        className={cn('max-w-40 justify-start', className)}
       >
-        <span className="truncate">{activeLabel}</span>
+        {!iconOnly && <span className="truncate">{visibleContextLabel}</span>}
       </Button>
 
       <Popover
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={close}
         anchorRef={triggerRef}
+        side={variant === 'status' ? 'top' : 'bottom'}
         align="end"
         ariaLabel={t('workspace.analysis.title', 'Workspace analysis context')}
         className="w-[min(92vw,24rem)] p-4"
@@ -151,6 +174,14 @@ export function WorkspaceContextControl({
                 'Vehicle-aware pages inherit this analysis window and interface density.',
               )}
             </Text>
+            {(range.presetId === 'live' || range.presetId === '24h') && (
+              <Caption className="mt-2 block">
+                {t(
+                  'workspace.analysis.liveHint',
+                  'Live uses the latest available data. Precise-history views use rolling instants; calendar summaries include the local dates intersected by the selected window.',
+                )}
+              </Caption>
+            )}
           </div>
 
           <Select
@@ -190,7 +221,7 @@ export function WorkspaceContextControl({
             disabled={!validDraft}
             onClick={() => {
               range.setRange({ start: draftStart, end: draftEnd })
-              setOpen(false)
+              close()
             }}
             className="w-full"
           >
@@ -222,6 +253,14 @@ export function WorkspaceContextControl({
               { start: range.start, end: range.end },
             )}
           </Caption>
+          {range.compare && (
+            <Caption className="block text-cyan-300">
+              {t(
+                'workspace.analysis.comparisonActive',
+                'Comparison active: previous matching period',
+              )}
+            </Caption>
+          )}
         </div>
       </Popover>
     </>

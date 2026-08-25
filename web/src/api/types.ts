@@ -661,6 +661,10 @@ export interface Alert {
   message: string
   is_read: boolean
   created_at: string
+  /** Canonical alert-rule scope. `null`/omitted means the originating rule
+   * no longer exists or the row is a fleet-wide system notification. */
+  all_vehicles?: boolean | null
+  vehicle_ids?: number[] | null
   /** Drill-through metadata. Populated when the
    *  notification log links to a still-existing alert rule. Used by
    *  `getAlertDrillthroughHref()` (web/src/lib/alertDrillthrough.ts) to

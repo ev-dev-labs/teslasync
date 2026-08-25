@@ -134,13 +134,14 @@ afterEach(() => {
 })
 
 describe('WatchFacePage', () => {
-  it('shows the loading spinner while the summary query is in flight', () => {
+  it('shows the watch-shaped loading skeleton while the summary query is in flight', () => {
     hooks.summary = { data: undefined, isLoading: true, error: null }
     renderPage()
 
     const status = screen.getByRole('status')
     expect(status).toBeInTheDocument()
-    expect(status).toHaveAttribute('aria-label', 'Loading')
+    expect(status).toHaveAttribute('aria-label', 'Loading watch summary…')
+    expect(status).toHaveAttribute('aria-busy', 'true')
     // Neither the empty message nor any vehicle content is shown yet.
     expect(screen.queryByText('No vehicle found')).toBeNull()
     expect(screen.queryByText('My Model 3')).toBeNull()

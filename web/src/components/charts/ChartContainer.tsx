@@ -2,7 +2,7 @@ import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } 
 import { useTranslation } from 'react-i18next';
 import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Spinner } from '@/components/feedback/Spinner';
+import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
 import { Button, FullscreenButton, Heading, Text } from '@/components/ui';
@@ -483,13 +483,14 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // `role="img" aria-label` so a focus-stop on the chart body
           // re-states the summary the user heard at the figure boundary
           // (browsers don't always re-announce ancestor regions).
-          role="img"
-          aria-label={ariaLabel}
+          role={loading ? undefined : 'img'}
+          aria-label={loading ? undefined : ariaLabel}
         >
           {loading ? (
-            <div className="flex h-full items-center justify-center">
-              <Spinner size="md" />
-            </div>
+            <ChartSkeleton
+              className="h-full"
+              label={t('chart.loading', 'Loading chart…')}
+            />
           ) : empty ? (
             <EmptyState /* no-action: chart cannot meaningfully recover without data — show prose only */
               message={t('chart.noData', 'No data available')}

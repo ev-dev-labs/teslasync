@@ -8,6 +8,7 @@ describe('PageLoadSkeleton', () => {
     expect(skeleton).toBeInTheDocument()
     expect(skeleton).toHaveAttribute('aria-busy', 'true')
     expect(skeleton).toHaveAttribute('role', 'status')
+    expect(skeleton).toHaveAccessibleName('Loading…')
   })
 
   it('renders the requested number of panels', () => {

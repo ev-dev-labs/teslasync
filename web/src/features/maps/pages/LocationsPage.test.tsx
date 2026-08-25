@@ -365,6 +365,35 @@ describe('LocationsPage — detail list', () => {
     ['#1', '#2', '#3', '#4'].forEach((r) => expect(screen.getByText(r)).toBeInTheDocument());
   });
 
+  it('opens location evidence with vehicle, activity, service, and telemetry links', async () => {
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Inspect Home, Seattle' }),
+    );
+
+    const drawer = await screen.findByRole('dialog', { name: 'Home, Seattle' });
+    expect(within(drawer).getByText('Location evidence')).toBeInTheDocument();
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/2');
+    expect(within(drawer).getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute(
+        'href',
+        '/drives?q=Home%2C+Seattle&from=2000-01-01&to=2099-12-31',
+      );
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute(
+        'href',
+        '/charging?q=Home%2C+Seattle&from=2000-01-01&to=2099-12-31',
+      );
+    expect(within(drawer).getByRole('link', { name: 'Service history' }))
+      .toHaveAttribute('href', '/maintenance');
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2000-01-01&to=2099-12-31',
+      );
+  });
+
   it('filters the list by the search box and shows a no-match empty state', async () => {
     renderPage();
     const search = await screen.findByPlaceholderText(/Search by address/);

@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserRegion, useRefreshTeslaRegion } from '@/api/hooks/useUser'
 import { GlassPanel, Button, IconBox } from '@/components/ui'
-import { EmptyState, Spinner, QueryError } from '@/components/feedback'
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
@@ -51,8 +51,21 @@ export function RegionSettings() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Spinner size="md" label={t('region.loading', 'Loading region…')} />
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label={t('region.loading', 'Loading region…')}
+            className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+          >
+            {Array.from({ length: 2 }).map((_, index) => (
+              <div
+                key={index}
+                className="space-y-3 rounded-lg border border-[var(--border-subtle)] bg-white/[0.02] p-4"
+              >
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-6 w-2/3" />
+              </div>
+            ))}
           </div>
         ) : isError && !region ? (
           <QueryError

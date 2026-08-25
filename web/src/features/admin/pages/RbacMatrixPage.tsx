@@ -52,7 +52,13 @@ import {
   Text,
 } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
-import { Spinner, EmptyState, AlertBanner, QueryError } from '@/components/feedback'
+import {
+  AlertBanner,
+  EmptyState,
+  QueryError,
+  StatGridSkeleton,
+  TableSkeleton,
+} from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { cn } from '@/lib/cn'
@@ -406,12 +412,12 @@ export default function RbacMatrixPage() {
         title={t('rbac.title', 'RBAC matrix')}
         subtitle={t('rbac.subtitle', 'Provider-agnostic role-permission bindings')}
       >
-        <GlassPanel
-          className="flex min-h-[240px] items-center justify-center p-6"
-          data-testid="rbac-loading"
-        >
-          <Spinner size="lg" label={t('rbac.loading', 'Loading matrix…')} />
-        </GlassPanel>
+        <div className="space-y-4" data-testid="rbac-loading">
+          <StatGridSkeleton cards={6} className="lg:grid-cols-6" />
+          <GlassPanel className="p-5">
+            <TableSkeleton rows={7} cols={4} />
+          </GlassPanel>
+        </div>
       </PageContainer>
     )
   }

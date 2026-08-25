@@ -5,16 +5,16 @@ import {
   Route, Gauge, TrendingUp, Clock, Sparkles,
   ArrowUpDown, ArrowDown, Download, Activity,
   Trash2, AlertTriangle, Star, Repeat, Tag, List as ListIcon,
+  BatteryCharging, Bell, Car, MapPin, Wrench,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
+import { PageContainer, PageHeaderSticky } from '@/components/layout';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
-  BulkActionsToolbar, type BulkAction, DataFreshnessAuto,
+  BulkActionsToolbar, type BulkAction,
   KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
   EntityPreviewDrawer, type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
@@ -47,6 +47,7 @@ import { formatDateTime, formatRelativeDays, formatDurationMinutes, formatDayKey
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { buildContextHref } from '@/lib/contextNavigation';
 import type { Drive } from '@/types/driving';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import {
@@ -548,14 +549,18 @@ export default function DrivesListPage() {
     return <NoVehicleSelected pageTitle={t('drives.title', 'Drive History')} />;
   }
 
+  const previewFrom = localDayKey(previewDrive?.startTs, tz);
+  const previewTo = localDayKey(previewDrive?.endTs ?? previewDrive?.startTs, tz) ?? previewFrom;
+
   return (
     <PageContainer
       title={t('drives.title', 'Drive History')}
       subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
       error={drivesError as Error | null}
       copyLink
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
+      query={drivesQuery}
+      contextActions={
+        <>
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -565,14 +570,15 @@ export default function DrivesListPage() {
             align="end"
             triggerTestId="drives-range-picker"
           />
-          <DataFreshnessAuto query={drivesQuery} />
-          <div data-tour="drives-saved-views">
-            <SavedViewMenu
-              route="/drives"
-              currentQuery={savedView.currentQuery}
-              onApply={savedView.apply}
-            />
-          </div>
+        </>
+      }
+      overflowActions={
+        <div data-tour="drives-saved-views">
+          <SavedViewMenu
+            route="/drives"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
         </div>
       }
     >
@@ -1127,6 +1133,77 @@ export default function DrivesListPage() {
                   onClick: () => navigate(`/drives/${previewDrive.id}`),
                 }
               : undefined
+          }
+          relatedActions={
+            previewDrive
+              ? [
+                  {
+                    key: 'vehicle',
+                    label: t('entityContext.vehicle', 'Vehicle'),
+                    to: `/vehicles/${previewDrive.vehicleId}`,
+                    icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'charging',
+                    label: t('entityContext.charging', 'Charging sessions'),
+                    to: buildContextHref('/charging', {
+                      from: previewFrom,
+                      to: previewTo,
+                    }),
+                    icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  ...(previewDrive.startAddress
+                    ? [{
+                        key: 'start-location',
+                        label: t('entityContext.startLocation', 'Start location'),
+                        to: buildContextHref('/locations', {
+                          q: previewDrive.startAddress,
+                          from: previewFrom,
+                          to: previewTo,
+                        }),
+                        icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                      }]
+                    : []),
+                  ...(previewDrive.endAddress
+                    && previewDrive.endAddress !== previewDrive.startAddress
+                    ? [{
+                        key: 'end-location',
+                        label: t('entityContext.endLocation', 'Destination'),
+                        to: buildContextHref('/locations', {
+                          q: previewDrive.endAddress,
+                          from: previewFrom,
+                          to: previewTo,
+                        }),
+                        icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                      }]
+                    : []),
+                  {
+                    key: 'alerts',
+                    label: t('entityContext.alerts', 'Alerts'),
+                    to: buildContextHref('/notifications/alerts', {
+                      from: previewFrom,
+                      to: previewTo,
+                    }),
+                    icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'service',
+                    label: t('entityContext.service', 'Service history'),
+                    to: '/maintenance',
+                    icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'telemetry',
+                    label: t('entityContext.telemetry', 'Telemetry evidence'),
+                    to: buildContextHref('/signals', {
+                      from: previewFrom,
+                      to: previewTo,
+                      signals: ['VehicleSpeed', 'BatteryLevel'],
+                    }),
+                    icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                  },
+                ]
+              : []
           }
         />
         </div>

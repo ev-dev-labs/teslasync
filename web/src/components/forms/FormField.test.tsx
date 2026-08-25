@@ -32,6 +32,7 @@ describe('FormField', () => {
     const label = screen.getByText('Phone').closest('label')
     const forAttr = label?.getAttribute('for')
     expect(forAttr).toBeTruthy()
+    expect(screen.getByRole('textbox')).toHaveAttribute('id', forAttr)
   })
 
   it('shows an asterisk and aria-label when required', () => {
@@ -40,9 +41,9 @@ describe('FormField', () => {
         <input />
       </FormField>,
     )
-    const required = screen.getByLabelText('required')
-    expect(required).toBeInTheDocument()
-    expect(required).toHaveTextContent('*')
+    const input = screen.getByRole('textbox', { name: /Name/i })
+    expect(input).toHaveAttribute('aria-required', 'true')
+    expect(screen.getByText('*')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('renders the hint when no error is set', () => {
@@ -53,6 +54,7 @@ describe('FormField', () => {
     )
     expect(screen.getByText('0–100 percent')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby')
   })
 
   it('renders the error and hides the hint when both are set', () => {
@@ -63,6 +65,7 @@ describe('FormField', () => {
     )
     expect(screen.getByRole('alert')).toHaveTextContent('Must be a number')
     expect(screen.queryByText('0–100 percent')).toBeNull()
+    expect(screen.getByRole('textbox')).toHaveAttribute('aria-invalid', 'true')
   })
 
   it('error text includes role=alert for screen readers', () => {

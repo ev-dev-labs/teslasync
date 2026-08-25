@@ -216,7 +216,7 @@ describe('PowerTrendPanel — branch precedence', () => {
   it('prefers the error card over a populated chart', () => {
     renderPanel({ error: new ApiError('x', 503), points: SAMPLE_POINTS });
 
-    expect(screen.getByText('Server error')).toBeInTheDocument();
+    expect(screen.getByText('Service unavailable')).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
   });
 });

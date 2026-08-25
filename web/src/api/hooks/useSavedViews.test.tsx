@@ -6,10 +6,10 @@
 //                                     AbortSignal threading, the always-an-array
 //                                     contract enforced by select: safeArray,
 //                                     and the error path)
-//   - useCreateSavedView             (POST body, route-scoped invalidation from
-//                                     the created row, success + error toasts)
-//   - useUpdateSavedView             (PUT body, invalidation keyed off vars.route
-//                                     rather than the returned row)
+//   - useAllSavedViews               (GET all routes for global discovery)
+//   - useCreateSavedView             (POST body, global saved-view invalidation,
+//                                     success + error toasts)
+//   - useUpdateSavedView             (PUT body + global saved-view invalidation)
 //   - useDeleteSavedView             (DELETE, optimistic removal before the server
 //                                     answers, rollback on failure)
 //   - useSetDefaultSavedView         (PUT {is_default} with the correct toggle
@@ -53,6 +53,7 @@ import type { SavedView } from '../types';
 import {
   savedViewsKeys,
   useSavedViews,
+  useAllSavedViews,
   useCreateSavedView,
   useUpdateSavedView,
   useDeleteSavedView,
@@ -110,6 +111,7 @@ beforeEach(() => {
 describe('savedViewsKeys', () => {
   it('exposes a stable base key', () => {
     expect(savedViewsKeys.all).toEqual(['saved-views']);
+    expect(savedViewsKeys.allList).toEqual(['saved-views', 'all']);
   });
 
   it('scopes the list key per route and keeps distinct routes distinct', () => {
@@ -183,6 +185,36 @@ describe('useSavedViews', () => {
   });
 });
 
+describe('useAllSavedViews', () => {
+  it('GETs the unfiltered collection and normalizes its payload', async () => {
+    mockedRequest.mockResolvedValueOnce([
+      mkView(),
+      mkView({ id: 2, route: '/charging', name: 'Superchargers' }),
+    ]);
+
+    const { result } = renderHook(() => useAllSavedViews(), {
+      wrapper: makeWrapper(newClient()),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toHaveLength(2);
+    expect(mockedRequest).toHaveBeenCalledWith(
+      '/saved-views',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
+  });
+
+  it('coerces a malformed payload to an empty collection', async () => {
+    mockedRequest.mockResolvedValueOnce({ bad: true } as unknown as SavedView[]);
+    const { result } = renderHook(() => useAllSavedViews(), {
+      wrapper: makeWrapper(newClient()),
+    });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data).toEqual([]);
+  });
+});
+
 // ---------------------------------------------------------------------------
 // useCreateSavedView
 // ---------------------------------------------------------------------------
@@ -218,7 +250,7 @@ describe('useCreateSavedView', () => {
 
     expect(mockedInvalidate).toHaveBeenCalledWith(
       expect.anything(),
-      { queryKey: ['saved-views', '/charging'] },
+      { queryKey: ['saved-views'] },
     );
     expect(toastSuccess).toHaveBeenCalledTimes(1);
     expect(toastSuccess).toHaveBeenCalledWith('toast.savedViews.create.success');
@@ -271,7 +303,7 @@ describe('useUpdateSavedView', () => {
 
     expect(mockedInvalidate).toHaveBeenCalledWith(
       expect.anything(),
-      { queryKey: ['saved-views', '/charging'] },
+      { queryKey: ['saved-views'] },
     );
     expect(toastSuccess).toHaveBeenCalledWith('toast.savedViews.update.success');
   });
@@ -386,7 +418,7 @@ describe('useSetDefaultSavedView', () => {
 
     expect(mockedInvalidate).toHaveBeenCalledWith(
       expect.anything(),
-      { queryKey: ['saved-views', '/drives'] },
+      { queryKey: ['saved-views'] },
     );
     expect(toastSuccess).toHaveBeenCalledWith('toast.savedViews.setDefault.success');
   });

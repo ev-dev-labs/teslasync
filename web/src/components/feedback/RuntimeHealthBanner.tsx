@@ -1,4 +1,4 @@
-import { Activity, Bell, Gauge } from 'lucide-react';
+import { Bell, Gauge } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -6,7 +6,7 @@ import { useRuntimeStatus } from '@/api/hooks/useAdmin';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 import { Button, Text } from '@/components/ui';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { AlertBanner } from './AlertBanner';
+import { DataStateNotice } from './DataStateNotice';
 
 const FAILURE_STATUSES = new Set([
   'degraded',
@@ -60,9 +60,8 @@ export function RuntimeHealthBanner() {
   const lastTelemetryAt = onboardingQuery.data?.last_telemetry_at ?? null;
 
   return (
-    <AlertBanner
-      variant={critical ? 'danger' : 'warning'}
-      icon={<Activity className="h-5 w-5" />}
+    <DataStateNotice
+      state={critical ? 'unavailable' : 'partial'}
       title={t('runtimeHealth.title', 'TeslaSync is running in degraded mode')}
       role={critical ? 'alert' : 'status'}
       aria-live="polite"
@@ -108,6 +107,6 @@ export function RuntimeHealthBanner() {
           </Button>
         </div>
       </div>
-    </AlertBanner>
+    </DataStateNotice>
   );
 }

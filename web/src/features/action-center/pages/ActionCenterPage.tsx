@@ -81,7 +81,7 @@ export default function ActionCenterPage() {
         ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         : null;
     try {
-      await applyAction.mutateAsync({
+      const result = await applyAction.mutateAsync({
         recommendation_id: pending.recommendation.id,
         fingerprint: pending.recommendation.fingerprint,
         action: pending.action,
@@ -89,10 +89,50 @@ export default function ActionCenterPage() {
         confirmed: true,
         snoozed_until: snoozedUntil,
       });
-      toast.success(
-        t('actionCenter.toast.success', 'Action applied'),
-        t('actionCenter.toast.successMessage', 'Your decision inbox state was updated.'),
-      );
+      if (pending.action === 'restore') {
+        toast.success(
+          t('actionCenter.toast.restoreSuccess', 'Recommendation restored'),
+          t('actionCenter.toast.restoreSuccessMessage', 'The recommendation is back in the open queue.'),
+        );
+      } else {
+        toast.toast({
+          type: 'success',
+          title: t('actionCenter.toast.success', 'Action applied'),
+          message: t(
+            'actionCenter.toast.successMessage',
+            'Your decision inbox state was updated.',
+          ),
+          duration: 5000,
+          action: {
+            label: t('common.undo', 'Undo'),
+            onClick: () => {
+              void applyAction.mutateAsync({
+                recommendation_id: result.recommendation.id,
+                fingerprint: result.recommendation.fingerprint,
+                action: 'restore',
+                expected_version: result.recommendation.current_state.version,
+                confirmed: true,
+                snoozed_until: null,
+              }).then(() => {
+                toast.success(
+                  t('actionCenter.toast.undoSuccess', 'Action undone'),
+                  t(
+                    'actionCenter.toast.undoSuccessMessage',
+                    'The recommendation was restored to the open queue.',
+                  ),
+                );
+              }).catch((error) => {
+                toast.error(
+                  t('actionCenter.toast.undoError', 'Could not undo action'),
+                  error instanceof Error
+                    ? error.message
+                    : t('actionCenter.toast.errorMessage', 'Refresh and try again.'),
+                );
+              });
+            },
+          },
+        });
+      }
       setPending(null);
     } catch (error) {
       toast.error(
@@ -108,7 +148,7 @@ export default function ActionCenterPage() {
   const pageSize = filter.limit ?? 50;
   const page = Math.floor((filter.offset ?? 0) / pageSize) + 1;
   const RefreshIcon = Icons.refresh;
-  const actions = (
+  const refreshAction = (
     <Button
       type="button"
       variant="secondary"
@@ -127,7 +167,7 @@ export default function ActionCenterPage() {
         'actionCenter.page.subtitle',
         'A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard.',
       )}
-      actions={actions}
+      secondaryActions={refreshAction}
       query={query}
       copyLink
     >

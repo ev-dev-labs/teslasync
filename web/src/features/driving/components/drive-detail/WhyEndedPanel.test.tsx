@@ -134,11 +134,10 @@ vi.mock('@/components/data-display', () => ({
 }));
 
 vi.mock('@/components/feedback', () => ({
-  Spinner: ({ label }: any) => (
-    <div role="status" data-testid="spinner">
-      {label ?? 'Loading'}
-    </div>
+  ListSkeleton: ({ testId, label }: any) => (
+    <div role="status" aria-label={label} data-testid={testId} />
   ),
+  TableSkeleton: () => <div data-testid="table-skeleton" />,
   EmptyState: ({ title, message, action }: any) => (
     <div data-testid="empty">
       {title ? <div data-testid="empty-title">{title}</div> : null}
@@ -295,13 +294,14 @@ describe('WhyEndedPanel — expand', () => {
 // ── 4. Loading / error ───────────────────────────────────────────────────────
 
 describe('WhyEndedPanel — loading & error', () => {
-  it('shows the spinner (and no tables) while loading', () => {
+  it('shows diagnostic skeletons (and no data tables) while loading', () => {
     useDriveWhyEnded.mockReturnValue(makeWhy({ isLoading: true }));
 
     render(<WhyEndedPanel driveId="42" />);
     expand();
 
-    expect(screen.getByTestId('spinner')).toBeInTheDocument();
+    expect(screen.getByTestId('why-ended-timeline-loading')).toBeInTheDocument();
+    expect(screen.getByTestId('table-skeleton')).toBeInTheDocument();
     expect(screen.queryByTestId('timeline')).toBeNull();
     expect(screen.queryByTestId('signal-table')).toBeNull();
   });

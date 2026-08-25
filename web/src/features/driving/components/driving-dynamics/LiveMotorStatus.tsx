@@ -4,7 +4,7 @@ import { Cog, Gauge } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { LinearGauge, BipolarBar, temperatureGaugeRange } from '@/components/charts';
-import { EmptyState, Spinner, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useMotorLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -105,8 +105,24 @@ export default function LiveMotorStatus({
   let body: ReactNode;
   if (isLoading) {
     body = (
-      <div className="flex min-h-[8rem] items-center justify-center py-8">
-        <Spinner label={t('dynamics.motorLoading', 'Loading motor telemetry…')} />
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('dynamics.motorLoading', 'Loading motor telemetry…')}
+        className="grid min-h-[8rem] grid-cols-1 gap-5 py-2 @xl:grid-cols-2"
+      >
+        <div className="flex items-center justify-center gap-6">
+          <Skeleton rounded className="h-28 w-28" />
+          <Skeleton rounded className="h-20 w-20" />
+        </div>
+        <div className="space-y-4">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <div key={index} className="space-y-2">
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-full" />
+            </div>
+          ))}
+        </div>
       </div>
     );
   } else if (hasAny) {

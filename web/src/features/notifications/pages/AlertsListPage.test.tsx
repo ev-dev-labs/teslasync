@@ -25,7 +25,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -71,8 +71,23 @@ vi.mock('@/api/client', async (importActual) => {
 // over them (vi.mock is hoisted above module init).
 const mutations = vi.hoisted(() => ({
   markRead: vi.fn(),
+  bulkSetRead: vi.fn(),
   ack: vi.fn(),
   reopen: vi.fn(),
+}));
+const selectedVehicle = vi.hoisted(() => ({
+  vehicleId: null as number | null,
+  vehicle: null as { display_name: string; vin: string } | null,
+}));
+const bulkReadState = vi.hoisted(() => ({
+  isPending: false,
+}));
+const markReadState = vi.hoisted(() => ({
+  isPending: false,
+}));
+const lifecycleMutationState = vi.hoisted(() => ({
+  acknowledgePending: false,
+  reopenPending: false,
 }));
 
 vi.mock('@/api/hooks/useNotifications', async (importActual) => {
@@ -82,9 +97,23 @@ vi.mock('@/api/hooks/useNotifications', async (importActual) => {
     useAlerts: vi.fn(),
     useAlertRules: vi.fn(),
     useAlertDetail: vi.fn(),
-    useMarkAlertRead: () => ({ mutate: mutations.markRead, isPending: false }),
-    useAcknowledgeAlert: () => ({ mutate: mutations.ack, isPending: false }),
-    useReopenAlert: () => ({ mutate: mutations.reopen, isPending: false }),
+    useMarkAlertRead: () => ({
+      mutate: mutations.markRead,
+      isPending: markReadState.isPending,
+    }),
+    useBulkSetAlertsRead: () => ({
+      mutate: mutations.bulkSetRead,
+      mutateAsync: mutations.bulkSetRead,
+      isPending: bulkReadState.isPending,
+    }),
+    useAcknowledgeAlert: () => ({
+      mutate: mutations.ack,
+      isPending: lifecycleMutationState.acknowledgePending,
+    }),
+    useReopenAlert: () => ({
+      mutate: mutations.reopen,
+      isPending: lifecycleMutationState.reopenPending,
+    }),
   };
 });
 
@@ -93,19 +122,45 @@ vi.mock('@/api/hooks/usePinned', async (importActual) => {
   return { ...actual, usePinned: () => ({ data: [] }) };
 });
 
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({
+    ...selectedVehicle,
+    vehicles: [],
+    setVehicleId: vi.fn(),
+  }),
+}));
+
 // Prop-capturing stub for each alert row. Renders the title plus four
 // aria-labelled buttons so interaction tests can drive the page's real
 // callbacks without depending on AlertCard's presentation.
 vi.mock('../components/AlertCard', () => {
-  const AlertCard = ({ alert, onMarkRead, onAcknowledge, onReopen, onOpenDetail }: {
+  const AlertCard = ({
+    alert,
+    onMarkRead,
+    onAcknowledge,
+    onReopen,
+    onOpenDetail,
+    selected,
+    onToggleSelect,
+  }: {
     alert: { id: number; title: string };
     onMarkRead: () => void;
     onAcknowledge: () => void;
     onReopen: () => void;
     onOpenDetail: () => void;
+    selected?: boolean;
+    onToggleSelect?: (selected: boolean) => void;
   }) => (
     <div data-testid={`alert-card-${alert.id}`}>
       <span>{alert.title}</span>
+      <button
+        type="button"
+        aria-label={`select-${alert.id}`}
+        aria-pressed={selected}
+        onClick={() => onToggleSelect?.(!selected)}
+      >
+        select
+      </button>
       <button type="button" aria-label={`mark-read-${alert.id}`} onClick={onMarkRead}>mr</button>
       <button type="button" aria-label={`ack-${alert.id}`} onClick={onAcknowledge}>ack</button>
       <button type="button" aria-label={`reopen-${alert.id}`} onClick={onReopen}>reopen</button>
@@ -183,7 +238,19 @@ const RECENT = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
 
 const ALERTS: Alert[] = [
   { id: 1, vehicle_id: 1, type: 'battery_low', severity: 'critical', title: 'Battery critically low', message: 'Pack at 2%', is_read: false, created_at: RECENT },
-  { id: 2, vehicle_id: 1, type: 'tire_pressure_low', severity: 'warning', title: 'Tire pressure warning', message: 'Front-left soft', is_read: true, created_at: RECENT },
+  {
+    id: 2,
+    vehicle_id: 1,
+    type: 'tire_pressure_low',
+    severity: 'warning',
+    title: 'Tire pressure warning',
+    message: 'Front-left soft',
+    is_read: true,
+    created_at: RECENT,
+    acknowledged_at: RECENT,
+    acknowledged_by: 'fleet.operator',
+    rule_signal: 'TpmsPressureFl',
+  },
   { id: 3, vehicle_id: 2, type: 'software_update', severity: 'info', title: 'Software update available', message: 'v2025 is ready', is_read: false, created_at: RECENT },
 ];
 
@@ -198,20 +265,33 @@ function renderPage() {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const page = () => (
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={['/notifications/alerts']}>
         <ToastProvider>
           <AlertsListPage />
         </ToastProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(page());
+  return {
+    ...result,
+    rerenderPage: () => result.rerender(page()),
+  };
 }
 
 beforeEach(() => {
   localStorage.clear();
+  selectedVehicle.vehicleId = null;
+  selectedVehicle.vehicle = null;
+  bulkReadState.isPending = false;
+  markReadState.isPending = false;
+  lifecycleMutationState.acknowledgePending = false;
+  lifecycleMutationState.reopenPending = false;
   mutations.markRead.mockClear();
+  mutations.bulkSetRead.mockReset();
+  mutations.bulkSetRead.mockResolvedValue({ updated: 1 });
   mutations.ack.mockClear();
   mutations.reopen.mockClear();
   mockAlerts.mockReturnValue(qr({ data: ALERTS }));
@@ -290,8 +370,18 @@ describe('AlertsListPage — rendering branches', () => {
 
     // Filter tabs carry live counts derived from the data.
     expect(screen.getByRole('button', { name: 'All (3)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open (2)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Acknowledged (1)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Unread (2)' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Critical (1)' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Open critical (1)' })).toBeInTheDocument();
+    expect(mockAlerts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        from: expect.any(String),
+        to: expect.any(String),
+        fetchAll: true,
+      }),
+    );
 
     // Every row renders (via the stub).
     expect(screen.getByTestId('alert-card-1')).toBeInTheDocument();
@@ -301,12 +391,41 @@ describe('AlertsListPage — rendering branches', () => {
     // Insights section is a labelled landmark; type distribution lists names.
     expect(screen.getByRole('region', { name: 'Alert insights' })).toBeInTheDocument();
     expect(screen.getByText('tire pressure low')).toBeInTheDocument();
+    expect(screen.getByTestId('alerts-operational-brief')).toBeInTheDocument();
+    expect(screen.getByText('Immediate triage')).toBeInTheDocument();
   });
 
   it('surfaces a critical callout when unacknowledged critical alerts exist', () => {
     renderPage();
     expect(screen.getByText('1 critical alert needs attention')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /View critical/ })).toBeInTheDocument();
+  });
+
+  it('triages only open critical alerts and excludes acknowledged critical rows', async () => {
+    mockAlerts.mockReturnValue(
+      qr({
+        data: [
+          ...ALERTS,
+          {
+            ...ALERTS[0],
+            id: 4,
+            title: 'Acknowledged critical alert',
+            acknowledged_at: RECENT,
+            acknowledged_by: 'fleet.operator',
+          },
+        ],
+      }),
+    );
+    renderPage();
+
+    fireEvent.click(screen.getByRole('button', { name: /View critical/ }));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId('alert-card-4')).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId('alert-card-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('alert-card-2')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('alert-card-3')).not.toBeInTheDocument();
   });
 
   it('shows a spinner and suppresses the body while loading', () => {
@@ -360,6 +479,27 @@ describe('AlertsListPage — filtering', () => {
     expect(screen.getByTestId('alert-card-2')).toBeInTheDocument();
     expect(screen.queryByTestId('alert-card-3')).not.toBeInTheDocument();
   });
+
+  it('filters by acknowledgement lifecycle without conflating read state', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Acknowledged (1)' }));
+
+    await waitFor(() => expect(screen.queryByTestId('alert-card-1')).not.toBeInTheDocument());
+    expect(screen.getByTestId('alert-card-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('alert-card-3')).not.toBeInTheDocument();
+  });
+
+  it('inherits the global vehicle selection while retaining fleet-wide system alerts', () => {
+    selectedVehicle.vehicleId = 1;
+    selectedVehicle.vehicle = { display_name: 'Model Y', vin: 'VIN-1' };
+    renderPage();
+
+    expect(screen.getByTestId('alert-card-1')).toBeInTheDocument();
+    expect(screen.getByTestId('alert-card-2')).toBeInTheDocument();
+    expect(screen.queryByTestId('alert-card-3')).not.toBeInTheDocument();
+    expect(screen.getByText('Model Y')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All (2)' })).toBeInTheDocument();
+  });
 });
 
 describe('AlertsListPage — row actions', () => {
@@ -375,6 +515,102 @@ describe('AlertsListPage — row actions', () => {
     fireEvent.click(screen.getByRole('button', { name: 'reopen-2' }));
     expect(mutations.reopen).toHaveBeenCalledTimes(1);
     expect(mutations.reopen).toHaveBeenCalledWith(2);
+  });
+
+  it('marks selected alerts read in bulk and offers an undo action', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'select-1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark read' }));
+
+    await waitFor(() =>
+      expect(mutations.bulkSetRead).toHaveBeenCalledWith({
+        ids: [1],
+        read: true,
+      }),
+    );
+    fireEvent.click(await screen.findByRole('button', { name: 'Undo' }));
+    expect(mutations.bulkSetRead).toHaveBeenLastCalledWith({
+      ids: [1],
+      read: false,
+    });
+  });
+
+  it('preserves alerts selected after an in-flight bulk request started', async () => {
+    let resolveBulk: ((value: { updated: number }) => void) | undefined;
+    mutations.bulkSetRead.mockReturnValueOnce(
+      new Promise<{ updated: number }>((resolve) => {
+        resolveBulk = resolve;
+      }),
+    );
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'select-1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Mark read' }));
+
+    fireEvent.click(screen.getByRole('button', { name: 'select-3' }));
+    expect(screen.getByText('2 selected')).toBeInTheDocument();
+
+    await act(async () => {
+      resolveBulk?.({ updated: 1 });
+      await Promise.resolve();
+    });
+
+    await waitFor(() => expect(screen.getByText('1 selected')).toBeInTheDocument());
+    expect(screen.getByRole('button', { name: 'select-1' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
+    expect(screen.getByRole('button', { name: 'select-3' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
+  it('retains selection while an optimistic unread-row update is pending and after rollback', () => {
+    const page = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'select-1' }));
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+    bulkReadState.isPending = true;
+    mockAlerts.mockReturnValue(qr({ data: ALERTS.filter((alert) => alert.id !== 1) }));
+    page.rerenderPage();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+    bulkReadState.isPending = false;
+    mockAlerts.mockReturnValue(qr({ data: ALERTS }));
+    page.rerenderPage();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+  });
+
+  it('retains selection through a failed optimistic row-level mark-read update', () => {
+    const page = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'select-1' }));
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+    markReadState.isPending = true;
+    mockAlerts.mockReturnValue(qr({ data: ALERTS.filter((alert) => alert.id !== 1) }));
+    page.rerenderPage();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+    markReadState.isPending = false;
+    mockAlerts.mockReturnValue(qr({ data: ALERTS }));
+    page.rerenderPage();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+  });
+
+  it('retains selection while an optimistic lifecycle update is pending', () => {
+    const page = renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'select-1' }));
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+    lifecycleMutationState.acknowledgePending = true;
+    mockAlerts.mockReturnValue(qr({ data: ALERTS.filter((alert) => alert.id !== 1) }));
+    page.rerenderPage();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
+
+    lifecycleMutationState.acknowledgePending = false;
+    mockAlerts.mockReturnValue(qr({ data: ALERTS }));
+    page.rerenderPage();
+    expect(screen.getByText('1 selected')).toBeInTheDocument();
   });
 
   it('opens the acknowledge dialog and submits the note to the mutation', async () => {

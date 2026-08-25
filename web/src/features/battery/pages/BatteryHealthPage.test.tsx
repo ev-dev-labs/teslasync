@@ -287,6 +287,15 @@ function metricCardValue(label: string): string {
   return valueEl?.textContent ?? '';
 }
 
+function operationalMetric(label: string): HTMLElement {
+  const brief = screen.getByTestId('battery-operational-brief');
+  const metric = within(brief).getByText(label).closest('[role="listitem"]');
+  if (!(metric instanceof HTMLElement)) {
+    throw new Error(`Operational metric "${label}" was not rendered`);
+  }
+  return metric;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   selectedVehicleMock.mockReturnValue({
@@ -457,6 +466,17 @@ describe('BatteryHealthPage · dashboard render', () => {
     expect(metricCardValue('Total Cycles')).toContain('320');
     expect(metricCardValue('Battery Age')).toContain('18');
 
+    // Decision-first posture makes confidence and risk explicit instead of
+    // requiring operators to infer them from the charts below.
+    expect(within(operationalMetric('Range confidence')).getByText('High')).toBeInTheDocument();
+    expect(within(operationalMetric('Charging stress')).getByText('Low')).toBeInTheDocument();
+    expect(within(operationalMetric('Thermal impact')).getByText('90 / 100')).toBeInTheDocument();
+    expect(
+      within(screen.getByTestId('battery-operational-brief')).getByRole('button', {
+        name: /Source: Battery analytics/,
+      }),
+    ).toBeInTheDocument();
+
     // Health verdict badge + a11y years-to-80 hero value.
     expect(screen.getByText('Excellent')).toBeInTheDocument();
     expect(screen.getByText('8.5')).toBeInTheDocument();
@@ -501,6 +521,27 @@ describe('BatteryHealthPage · dashboard render', () => {
     expect(screen.getByText('Health Concern')).toBeInTheDocument();
     expect(screen.getByText('Your degradation rate is above average — review charging habits.')).toBeInTheDocument();
     expect(screen.getByText('Reduce fast charging frequency to slow degradation.')).toBeInTheDocument();
+  });
+
+  it('keeps limited evidence and elevated battery risks explicit in the posture summary', () => {
+    healthMock.mockReturnValue(
+      makeQuery({
+        data: makeHealth({
+          history: [HEALTH_DEFAULTS.history[0]],
+          prediction: {
+            ...TRUSTWORTHY_PREDICTION,
+            has_enough_data: false,
+          },
+          stress_level: 'High',
+          temp_exposure_score: 70,
+        }),
+      }),
+    );
+    renderPage();
+
+    expect(within(operationalMetric('Range confidence')).getByText('Limited')).toBeInTheDocument();
+    expect(within(operationalMetric('Charging stress')).getByText('High')).toBeInTheDocument();
+    expect(within(operationalMetric('Thermal impact')).getByText('70 / 100')).toBeInTheDocument();
   });
 
   it('feeds the charging-statistics panel with real AC/DC session counts', async () => {

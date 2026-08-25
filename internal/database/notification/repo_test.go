@@ -3,6 +3,7 @@ package notification
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // helper for *int64 literals.
@@ -163,6 +164,56 @@ func TestBuildNotificationLogWhere_RuleJoinFlagSetByVehicleOrSeverity(t *testing
 				t.Fatalf("expected needsRuleJoin=true")
 			}
 		})
+	}
+}
+
+func TestBuildNotificationLogWhere_UsesCanonicalVehicleScope(t *testing.T) {
+	w := buildNotificationLogWhere(NotificationLogFilters{
+		VehicleIDs: []int64{7, 9},
+	})
+	if len(w.clauses) != 1 {
+		t.Fatalf("vehicle clauses = %v, want one clause", w.clauses)
+	}
+	clause := w.clauses[0]
+	for _, expected := range []string{
+		"nl.alert_id IS NULL",
+		"ar.all_vehicles",
+		"alert_rule_vehicles",
+		"arv.vehicle_id = ANY($1)",
+	} {
+		if !strings.Contains(clause, expected) {
+			t.Fatalf("vehicle clause = %q, missing %q", clause, expected)
+		}
+	}
+	if strings.Contains(clause, "ar.vehicle_id") {
+		t.Fatalf("vehicle clause still uses deprecated alert_rules.vehicle_id: %q", clause)
+	}
+	if len(w.args) != 1 {
+		t.Fatalf("vehicle args = %v, want one canonical vehicle array", w.args)
+	}
+}
+
+func TestBuildNotificationLogWhere_UsesStableKeysetCursor(t *testing.T) {
+	before := time.Date(2025, time.January, 2, 12, 30, 0, 0, time.UTC)
+	w := buildNotificationLogWhere(NotificationLogFilters{
+		BeforeCreatedAt: before,
+		BeforeID:        123,
+	})
+	if len(w.clauses) != 1 {
+		t.Fatalf("cursor clauses = %v, want one clause", w.clauses)
+	}
+	clause := w.clauses[0]
+	for _, expected := range []string{
+		"nl.created_at < $1",
+		"nl.created_at = $1",
+		"nl.id < $2",
+	} {
+		if !strings.Contains(clause, expected) {
+			t.Fatalf("cursor clause = %q, missing %q", clause, expected)
+		}
+	}
+	if len(w.args) != 2 || w.args[0] != before || w.args[1] != int64(123) {
+		t.Fatalf("cursor args = %v, want [%v 123]", w.args, before)
 	}
 }
 

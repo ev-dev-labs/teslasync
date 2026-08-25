@@ -29,7 +29,7 @@ import {
 import { SeverityBadge } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
-  EmptyState, AlertBanner, QueryError, Skeleton, SectionErrorBoundary,
+  EmptyState, DataStateNotice, QueryError, Skeleton, SectionErrorBoundary,
 } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { cn } from '@/lib/cn';
@@ -106,15 +106,15 @@ export default function SchemaDriftPage() {
       query={query}
     >
       {subsystemMissing && (
-        <AlertBanner
-          variant="warning"
-          title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}
+        <DataStateNotice
+          state="unsupported"
+          title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}
         >
           {t(
             'admin.schemaDrift.notConfigured',
             'The schema-drift subsystem is not configured on this deployment. Enable schema fingerprinting in config to populate this page.',
           )}
-        </AlertBanner>
+        </DataStateNotice>
       )}
 
       {/* 1 — KPI band: status + count deltas */}

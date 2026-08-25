@@ -2,6 +2,8 @@ export const WORKSPACE_RANGE_EVENT = 'teslasync:workspace-range'
 export const WORKSPACE_DENSITY_EVENT = 'teslasync:workspace-density'
 
 export const WORKSPACE_RANGE_PRESETS = [
+  'live',
+  '24h',
   'today',
   '7d',
   '30d',

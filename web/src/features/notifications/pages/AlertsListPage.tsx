@@ -9,27 +9,31 @@
  * fallback for what /notifications/quiet-hours owns canonically.
  */
 
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { PageContainer } from '@/components/layout/PageContainer';
+import { Link, useNavigate } from 'react-router-dom';
+import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
-import { PanelTitle, Text, Caption } from '@/components/ui/Typography';
+import { PanelTitle, Text } from '@/components/ui/Typography';
 import { Pagination } from '@/components/ui/Pagination';
 import { TabNav } from '@/components/ui/TabNav';
 import { PinButton } from '@/components/ui/PinButton';
 import { PrintButton } from '@/components/ui/PrintButton';
+import { Checkbox } from '@/components/ui';
 import { useUrlEnum, useUrlNumber, useUrlString, useUrlBatch } from '@/hooks/useUrlState';
 
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
-  DataFreshnessAuto,
+  BulkActionsToolbar,
+  type BulkAction,
   KpiOverviewCard,
   MetricCard,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { QueryError } from '@/components/feedback/QueryError';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
 import { FadeIn } from '@/components/motion/FadeIn';
@@ -52,17 +56,27 @@ import {
   useAcknowledgeAlert as useAcknowledgeAlertHook,
   useReopenAlert as useReopenAlertHook,
   useAlertDetail as useAlertDetailHook,
+  useBulkSetAlertsRead,
 } from '@/api/hooks/useNotifications';
 import { usePinned } from '@/api/hooks/usePinned';
 import type { Alert } from '@/api/types';
 import { Icons } from '@/lib/icons';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { AcknowledgeAlertDialog } from '@/features/admin/components/AcknowledgeAlertDialog';
-import { AlertDetailTimeline } from '@/features/admin/components/AlertDetailTimeline';
-import { Modal } from '@/components/ui/Modal';
 import { AlertCard } from '../components/AlertCard';
+import { AlertOperationalBrief } from '../components/AlertOperationalBrief';
+import { AlertDetailDrawer } from '../components/AlertDetailDrawer';
 
 type AlertSeverity = 'info' | 'warning' | 'critical';
+type AlertFilter =
+  | 'all'
+  | 'unread'
+  | 'open'
+  | 'acknowledged'
+  | 'critical'
+  | 'open-critical';
 
 /**
  * Hex fills for the stacked severity trend bars. Held as a const map (never
@@ -116,16 +130,24 @@ export function isQuietHoursActive(qh: QuietHours | null | undefined): boolean {
   return hhmm >= qh.start || hhmm < qh.end;
 }
 
+function rangeBoundaryToISO(date: string, inclusiveEnd: boolean): string | undefined {
+  const boundary = new Date(
+    `${date}T${inclusiveEnd ? '23:59:59.999' : '00:00:00.000'}`,
+  );
+  return Number.isNaN(boundary.getTime()) ? undefined : boundary.toISOString();
+}
+
 export default function AlertsListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('Alerts'));
   const toast = useToast();
   const savedView = useSavedViewUrl();
   const { locale } = useDateFormat();
 
-  const [filter] = useUrlEnum<'all' | 'unread' | 'critical'>(
+  const [filter] = useUrlEnum<AlertFilter>(
     'filter',
-    ['all', 'unread', 'critical'] as const,
+    ['all', 'unread', 'open', 'acknowledged', 'critical', 'open-critical'] as const,
     'all',
   );
   const [alertSearch] = useUrlString('q', '');
@@ -137,31 +159,51 @@ export default function AlertsListPage() {
   const setUrlParams = useUrlBatch();
   const alertsPerPage = 20;
 
-  const alertsQuery = useAlerts();
-  const { data: rawAlerts, isLoading, error } = alertsQuery;
-
+  const { vehicleId, vehicle } = useSelectedVehicle();
   const { start, end, setRange } = useRangeState({
     persistKey: 'alerts.range',
     defaultPresetId: 'all',
   });
+  const prior = useMemo(() => priorPeriod(start, end), [start, end]);
+  const alertListScope = useMemo(
+    () => ({
+      from: rangeBoundaryToISO(prior?.start ?? start, false),
+      to: rangeBoundaryToISO(end, true),
+      vehicle_id: vehicleId ?? undefined,
+      fetchAll: true,
+    }),
+    [prior?.start, start, end, vehicleId],
+  );
+  const alertsQuery = useAlerts(alertListScope);
+  const { data: rawAlerts, isLoading, error } = alertsQuery;
   const alerts = useMemo(() => {
     if (!rawAlerts?.length) return rawAlerts;
     const startMs = new Date(`${start}T00:00:00`).getTime();
     const endMs = new Date(`${end}T23:59:59.999`).getTime();
     return rawAlerts.filter((a) => {
       if (!a.created_at) return false;
-      const t = new Date(a.created_at).getTime();
-      return t >= startMs && t <= endMs;
+      const createdMs = new Date(a.created_at).getTime();
+      const inVehicleScope =
+        vehicleId == null ||
+        a.all_vehicles === true ||
+        (Array.isArray(a.vehicle_ids)
+          ? a.vehicle_ids.includes(vehicleId)
+          : a.vehicle_id === vehicleId || a.vehicle_id <= 0);
+      return createdMs >= startMs && createdMs <= endMs && inVehicleScope;
     });
-  }, [rawAlerts, start, end]);
-  const { data: rules } = useAlertRules();
+  }, [rawAlerts, start, end, vehicleId]);
+  const rulesQuery = useAlertRules();
+  const { data: rules } = rulesQuery;
   const markReadMut = useMarkAlertRead();
-  const ackMut = useAcknowledgeAlertHook();
+  const bulkSetReadMut = useBulkSetAlertsRead();
+  const ackMut = useAcknowledgeAlertHook({ showSuccessToast: false });
   const reopenMut = useReopenAlertHook();
+  const bulkSelection = useBulkSelection<number>();
   const [ackDialogId, setAckDialogId] = useState<number | null>(null);
   const [detailId, setDetailId] = useState<number | null>(null);
   const detailQuery = useAlertDetailHook(detailId, { enabled: detailId !== null });
   const ackTarget = useMemo(() => alerts?.find((a) => a.id === ackDialogId) ?? null, [alerts, ackDialogId]);
+  const detailTarget = useMemo(() => alerts?.find((a) => a.id === detailId) ?? null, [alerts, detailId]);
   const { data: rulePins = [] } = usePinned('alert_rule');
   const pinnedRules = useMemo(() => {
     if (!rules || rulePins.length === 0) return [];
@@ -174,7 +216,12 @@ export default function AlertsListPage() {
 
   const tabFilteredAlerts = useMemo(() => alerts?.filter(a => {
     if (filter === 'unread') return !a.is_read;
+    if (filter === 'open') return !a.acknowledged_at;
+    if (filter === 'acknowledged') return Boolean(a.acknowledged_at);
     if (filter === 'critical') return a.severity === 'critical';
+    if (filter === 'open-critical') {
+      return a.severity === 'critical' && !a.acknowledged_at;
+    }
     return true;
   }) ?? [], [alerts, filter]);
 
@@ -183,6 +230,52 @@ export default function AlertsListPage() {
     [],
   );
   const filteredAlerts = useFilteredList(tabFilteredAlerts, alertSearch, alertSearchFields);
+  const visibleAlertIds = useMemo(
+    () => filteredAlerts.map((alert) => alert.id),
+    [filteredAlerts],
+  );
+  const bulkSelectionState = bulkSelection.masterState(visibleAlertIds);
+  const selectedUnreadCount = useMemo(
+    () =>
+      filteredAlerts.reduce(
+        (count, alert) =>
+          count + (bulkSelection.selectedIds.has(alert.id) && !alert.is_read ? 1 : 0),
+        0,
+      ),
+    [filteredAlerts, bulkSelection.selectedIds],
+  );
+
+  useEffect(() => {
+    if (
+      bulkSetReadMut.isPending ||
+      markReadMut.isPending ||
+      ackMut.isPending ||
+      reopenMut.isPending
+    ) {
+      return;
+    }
+    const visible = new Set(visibleAlertIds);
+    for (const id of bulkSelection.selectedIds) {
+      if (!visible.has(id)) bulkSelection.setSelected(id, false);
+    }
+  }, [
+    visibleAlertIds,
+    bulkSelection.selectedIds,
+    bulkSelection.setSelected,
+    bulkSetReadMut.isPending,
+    markReadMut.isPending,
+    ackMut.isPending,
+    reopenMut.isPending,
+  ]);
+
+  useEffect(() => {
+    if (bulkSelection.count === 0) return;
+    const clearOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') bulkSelection.clear();
+    };
+    window.addEventListener('keydown', clearOnEscape);
+    return () => window.removeEventListener('keydown', clearOnEscape);
+  }, [bulkSelection.count, bulkSelection.clear]);
 
   const totalPages = Math.max(1, Math.ceil(filteredAlerts.length / alertsPerPage));
   const safeAlertPage = Math.min(alertPage, totalPages);
@@ -190,7 +283,13 @@ export default function AlertsListPage() {
 
   const totalCount = alerts?.length ?? 0;
   const unreadCount = useMemo(() => alerts?.filter(a => !a.is_read).length ?? 0, [alerts]);
-  const criticalCount = useMemo(() => alerts?.filter(a => a.severity === 'critical' && !a.is_read).length ?? 0, [alerts]);
+  const criticalCount = useMemo(() => alerts?.filter(a => a.severity === 'critical').length ?? 0, [alerts]);
+  const openCount = useMemo(() => alerts?.filter(a => !a.acknowledged_at).length ?? 0, [alerts]);
+  const acknowledgedCount = totalCount - openCount;
+  const openCriticalCount = useMemo(
+    () => alerts?.filter(a => a.severity === 'critical' && !a.acknowledged_at).length ?? 0,
+    [alerts],
+  );
   const infoCount = useMemo(() => alerts?.filter(a => (a.severity ?? 'info') === 'info').length ?? 0, [alerts]);
   const warningCount = useMemo(() => alerts?.filter(a => a.severity === 'warning').length ?? 0, [alerts]);
   const readCount = useMemo(() => alerts?.filter(a => a.is_read === true).length ?? 0, [alerts]);
@@ -198,20 +297,25 @@ export default function AlertsListPage() {
   const readRatePct = totalCount > 0 ? Math.round((readCount / totalCount) * 100) : null;
 
   /* ── Prior-period stats for KPI deltas ──────────────────────── */
-  const prior = useMemo(() => priorPeriod(start, end), [start, end]);
   const priorAlerts = useMemo(() => {
     if (!rawAlerts?.length || !prior) return [];
     const startMs = new Date(`${prior.start}T00:00:00`).getTime();
     const endMs = new Date(`${prior.end}T23:59:59.999`).getTime();
     return rawAlerts.filter((a) => {
       if (!a.created_at) return false;
-      const t = new Date(a.created_at).getTime();
-      return t >= startMs && t <= endMs;
+      const createdMs = new Date(a.created_at).getTime();
+      const inVehicleScope =
+        vehicleId == null ||
+        a.all_vehicles === true ||
+        (Array.isArray(a.vehicle_ids)
+          ? a.vehicle_ids.includes(vehicleId)
+          : a.vehicle_id === vehicleId || a.vehicle_id <= 0);
+      return createdMs >= startMs && createdMs <= endMs && inVehicleScope;
     });
-  }, [rawAlerts, prior]);
+  }, [rawAlerts, prior, vehicleId]);
   const priorTotal = priorAlerts.length;
   const priorUnread = useMemo(() => priorAlerts.filter(a => !a.is_read).length, [priorAlerts]);
-  const priorCritical = useMemo(() => priorAlerts.filter(a => a.severity === 'critical' && !a.is_read).length, [priorAlerts]);
+  const priorCritical = useMemo(() => priorAlerts.filter(a => a.severity === 'critical').length, [priorAlerts]);
   const priorWarning = useMemo(() => priorAlerts.filter(a => a.severity === 'warning').length, [priorAlerts]);
   const priorInfo = useMemo(() => priorAlerts.filter(a => (a.severity ?? 'info') === 'info').length, [priorAlerts]);
   const priorRead = useMemo(() => priorAlerts.filter(a => a.is_read === true).length, [priorAlerts]);
@@ -303,7 +407,48 @@ export default function AlertsListPage() {
     reopenMut.mutate(id);
   }, [reopenMut]);
 
-  const applyStatusFilter = useCallback((next: 'all' | 'unread' | 'critical') => {
+  const bulkAlertActions = useMemo<BulkAction[]>(
+    () => [
+      {
+        id: 'mark-read',
+        label: t('operations.alerts.bulk.markRead', 'Mark read'),
+        icon: <Icons.show className="h-3.5 w-3.5" aria-hidden="true" />,
+        disabled: selectedUnreadCount === 0,
+        onClick: async (ids) => {
+          const alertIds = ids.map(Number).filter((id) => Number.isInteger(id) && id > 0);
+          if (alertIds.length === 0) return;
+          await bulkSetReadMut.mutateAsync({ ids: alertIds, read: true });
+          for (const id of alertIds) {
+            bulkSelection.setSelected(id, false);
+          }
+          toast.toast({
+            type: 'success',
+            title: t(
+              'operations.alerts.bulk.markReadSuccess',
+              '{{count}} alerts marked as read',
+              { count: alertIds.length },
+            ),
+            duration: 5000,
+            action: {
+              label: t('common.undo', 'Undo'),
+              onClick: () => {
+                bulkSetReadMut.mutate({ ids: alertIds, read: false });
+              },
+            },
+          });
+        },
+      },
+    ],
+    [
+      bulkSelection.setSelected,
+      bulkSetReadMut,
+      selectedUnreadCount,
+      t,
+      toast,
+    ],
+  );
+
+  const applyStatusFilter = useCallback((next: AlertFilter) => {
     setUrlParams({ filter: next === 'all' ? null : next, page: null });
   }, [setUrlParams]);
 
@@ -315,39 +460,89 @@ export default function AlertsListPage() {
     setUrlParams({ q: null, filter: null, page: null });
   }, [setUrlParams]);
 
+  const vehicleLabel =
+    vehicle?.display_name?.trim() ||
+    vehicle?.vin ||
+    (vehicleId != null
+      ? t('operations.alerts.vehicleNumber', 'Vehicle #{{id}}', { id: vehicleId })
+      : t('operations.alerts.allVehicles', 'All vehicles'));
+
   return (
     <PageContainer
       title={t('Alerts')}
       subtitle={t('alerts.subtitle', 'Live alert events from your fleet')}
-      loading={isLoading}
-      error={error as Error | null}
       copyLink
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
+      query={alertsQuery}
+      busy={isLoading}
+      contextActions={
+        <>
           <RangePicker
             value={{ start, end }}
             onChange={setRange}
             align="end"
             triggerTestId="alerts-range"
           />
-          <DataFreshnessAuto query={alertsQuery} />
           {quietActive && <Badge variant="info" size="sm">{t('Quiet hours')}</Badge>}
-          <div data-print-hide className="flex items-center gap-2">
-            {/* Saved-view route key is intentionally pinned to '/alerts' so
-                pre-existing user-saved views from the legacy /alerts route
-                continue to apply on this new page. */}
-            <SavedViewMenu
-              route="/alerts"
-              currentQuery={savedView.currentQuery}
-              onApply={savedView.apply}
-            />
-            <PrintButton />
-          </div>
+        </>
+      }
+      overflowActions={
+        <div data-print-hide className="flex items-center gap-2">
+          {/* Saved-view route key is intentionally pinned to '/alerts' so
+              pre-existing user-saved views from the legacy /alerts route
+              continue to apply on this new page. */}
+          <SavedViewMenu
+            route="/alerts"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
+          <PrintButton />
         </div>
       }
     >
+      {error && (
+        <QueryError
+          error={error}
+          onRetry={() => { void alertsQuery.refetch(); }}
+          resourceName={t('operations.alerts.feed', 'alert feed')}
+        />
+      )}
+      {rulesQuery.error && (
+        <InlineCallout variant="warning" icon={<Icons.alertCircle className="h-4 w-4" />}>
+          {t(
+            'operations.alerts.rulesUnavailable',
+            'Alert events remain available, but rule status could not be loaded.',
+          )}
+        </InlineCallout>
+      )}
+
       <FadeIn>
-        {totalCount > 0 || priorHasData ? (
+        {isLoading ? (
+          <GlassPanel className="space-y-4 p-5" data-testid="alerts-operational-brief-skeleton">
+            <Skeleton className="h-5 w-40" />
+            <Skeleton className="h-8 w-2/3" />
+            <Skeleton className="h-4 w-full max-w-2xl" />
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+              {[1, 2, 3, 4].map((item) => <Skeleton key={item} className="h-24" />)}
+            </div>
+          </GlassPanel>
+        ) : !error ? (
+          <AlertOperationalBrief
+            alerts={alerts ?? []}
+            periodLabel={periodLabel}
+            vehicleLabel={vehicleLabel}
+            query={alertsQuery}
+            onViewCritical={() => applyStatusFilter('open-critical')}
+            onManageRules={() => navigate('/notifications/studio')}
+          />
+        ) : null}
+      </FadeIn>
+
+      <FadeIn delay={0.05}>
+        {isLoading ? (
+          <GlassPanel className="grid grid-cols-2 gap-3 p-5 md:grid-cols-3 xl:grid-cols-6">
+            {[1, 2, 3, 4, 5, 6].map((item) => <Skeleton key={item} className="h-24" />)}
+          </GlassPanel>
+        ) : !error && (totalCount > 0 || priorHasData) ? (
           <KpiOverviewCard
             id="alerts-overview"
             testId="alerts-overview"
@@ -428,9 +623,9 @@ export default function AlertsListPage() {
             }
             secondary={
               <Text as="span" variant="caption" className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <a href="/notifications/studio" className="hover:text-cyan-300 transition-colors">
+                <Link to="/notifications/studio" className="hover:text-cyan-300 transition-colors">
                   {t('Active Rules')} <Text as="span" mono color="secondary">{enabledRules}/{rules?.length ?? 0}</Text> →
-                </a>
+                </Link>
                 <span aria-hidden>·</span>
                 <span>
                   {t('Most Common')}: <Text as="span" color="secondary">{alertsByType[0]?.name ?? '—'}</Text>
@@ -447,29 +642,32 @@ export default function AlertsListPage() {
                 )}
               </Text>
             }
-            footer={criticalCount > 0 ? (
+            footer={openCriticalCount > 0 ? (
               <InlineCallout
                 variant="danger"
                 icon={<Icons.alertCircle className="h-4 w-4" />}
                 action={{
                   label: t('alerts.viewCritical', 'View critical'),
-                  onClick: () => applyStatusFilter('critical'),
+                  onClick: () => applyStatusFilter('open-critical'),
                 }}
               >
-                {t('alerts.criticalCallout', '{{count}} critical alert needs attention', { count: criticalCount })}
+                {t('alerts.criticalCallout', '{{count}} critical alert needs attention', { count: openCriticalCount })}
               </InlineCallout>
             ) : undefined}
           />
-        ) : (
+        ) : !error ? (
           <GlassPanel className="p-6">
             <EmptyState
-              /* no-action: transient empty state — surfaces when no alerts in the selected range */
               icon={<Icons.notificationsMuted className="h-8 w-8" />}
               title={t('No alerts')}
               message={t('alerts.noAlertsInRange', 'No alerts in this range. Your fleet is running smoothly.')}
+              actionTo={{
+                label: t('operations.alerts.manageRules', 'Manage rules'),
+                to: '/notifications/studio',
+              }}
             />
           </GlassPanel>
-        )}
+        ) : null}
       </FadeIn>
 
       {/* Insights bento — trend + type distribution + watchlist. Reflows
@@ -487,6 +685,13 @@ export default function AlertsListPage() {
             <div className="h-48 sm:h-56">
               {isLoading ? (
                 <Skeleton className="h-full w-full" />
+              ) : error ? (
+                <EmptyState
+                  icon={<Icons.notificationsMuted className="h-8 w-8" />}
+                  title={t('operations.alerts.trendUnavailable', 'Trend unavailable')}
+                  message={t('operations.alerts.feedUnavailableDetail', 'Restore the alert feed to review this analysis.')}
+                  action={{ label: t('common.retry', 'Retry'), onClick: () => { void alertsQuery.refetch(); } }}
+                />
               ) : weekAlertCount === 0 ? (
                 <EmptyState
                   /* no-action: transient — no alert activity in the trailing 7-day window */
@@ -516,6 +721,13 @@ export default function AlertsListPage() {
             </PanelTitle>
             {isLoading ? (
               <Skeleton className="h-48 w-full sm:h-56" />
+            ) : error ? (
+              <EmptyState
+                icon={<Icons.filter className="h-8 w-8" />}
+                title={t('operations.alerts.distributionUnavailable', 'Distribution unavailable')}
+                message={t('operations.alerts.feedUnavailableDetail', 'Restore the alert feed to review this analysis.')}
+                action={{ label: t('common.retry', 'Retry'), onClick: () => { void alertsQuery.refetch(); } }}
+              />
             ) : alertsByType.length === 0 ? (
               <EmptyState
                 /* no-action: transient — nothing to categorize until alerts arrive */
@@ -555,7 +767,19 @@ export default function AlertsListPage() {
                 <Text as="span" size="xs" weight="regular" color="muted">({pinnedRules.length})</Text>
               )}
             </PanelTitle>
-            {pinnedRules.length === 0 ? (
+            {rulesQuery.isLoading ? (
+              <div className="space-y-3">
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+                <Skeleton className="h-12" />
+              </div>
+            ) : rulesQuery.error ? (
+              <QueryError
+                error={rulesQuery.error}
+                onRetry={() => { void rulesQuery.refetch(); }}
+                resourceName={t('operations.alerts.rules', 'alert rules')}
+              />
+            ) : pinnedRules.length === 0 ? (
               <EmptyState
                 /* no-action: user-curated watchlist is empty until a rule is pinned */
                 icon={<Icons.notifications className="h-8 w-8" />}
@@ -598,11 +822,17 @@ export default function AlertsListPage() {
             <TabNav
               tabs={[
                 { key: 'all', label: `${t('All')} (${totalCount})` },
+                { key: 'open', label: `${t('operations.alerts.open', 'Open')} (${openCount})` },
+                { key: 'acknowledged', label: `${t('operations.alerts.acknowledged', 'Acknowledged')} (${acknowledgedCount})` },
                 { key: 'unread', label: `${t('Unread')} (${unreadCount})` },
                 { key: 'critical', label: `${t('Critical')} (${criticalCount})` },
+                {
+                  key: 'open-critical',
+                  label: `${t('operations.alerts.openCritical', 'Open critical')} (${openCriticalCount})`,
+                },
               ]}
               active={filter}
-              onChange={k => applyStatusFilter(k as 'all' | 'unread' | 'critical')}
+              onChange={k => applyStatusFilter(k as AlertFilter)}
             />
           </div>
         </FilterBar>
@@ -625,7 +855,13 @@ export default function AlertsListPage() {
                     value:
                       filter === 'unread'
                         ? t('Unread')
-                        : t('Critical'),
+                        : filter === 'open'
+                          ? t('operations.alerts.open', 'Open')
+                          : filter === 'acknowledged'
+                            ? t('operations.alerts.acknowledged', 'Acknowledged')
+                            : filter === 'open-critical'
+                              ? t('operations.alerts.openCritical', 'Open critical')
+                              : t('Critical'),
                     onRemove: () => applyStatusFilter('all'),
                   } satisfies FilterChipDescriptor
                 : null,
@@ -642,8 +878,42 @@ export default function AlertsListPage() {
           <div className="grid grid-cols-1 gap-2 2xl:grid-cols-2 2xl:gap-3">
             {[1, 2, 3, 4, 5, 6].map(i => <Skeleton key={i} className="h-24" />)}
           </div>
+        ) : error ? (
+          <GlassPanel className="p-6">
+            <EmptyState
+              icon={<Icons.notificationsMuted className="h-8 w-8" />}
+              title={t('operations.alerts.feedUnavailable', 'Alert feed unavailable')}
+              message={t('operations.alerts.feedUnavailableDetail', 'Restore the alert feed to resume triage.')}
+              action={{ label: t('common.retry', 'Retry'), onClick: () => { void alertsQuery.refetch(); } }}
+            />
+          </GlassPanel>
         ) : filteredAlerts.length > 0 ? (
           <div data-tour="alerts-list">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+              <Checkbox
+                checked={bulkSelectionState === 'all'}
+                indeterminate={bulkSelectionState === 'some'}
+                onChange={() => bulkSelection.toggleAll(visibleAlertIds)}
+                label={t('operations.alerts.bulk.selectVisible', 'Select visible alerts')}
+              />
+              <Text as="span" variant="caption">
+                {t(
+                  'operations.alerts.bulk.visibleCount',
+                  '{{count}} alerts in the current view',
+                  { count: filteredAlerts.length },
+                )}
+              </Text>
+            </div>
+            <BulkActionsToolbar
+              selectedIds={Array.from(bulkSelection.selectedIds)}
+              total={filteredAlerts.length}
+              onClear={bulkSelection.clear}
+              actions={bulkAlertActions}
+              itemNoun={{
+                one: t('operations.alerts.bulk.alertOne', 'alert'),
+                other: t('operations.alerts.bulk.alertOther', 'alerts'),
+              }}
+            />
             <StaggerContainer className="grid grid-cols-1 gap-2 2xl:grid-cols-2 2xl:gap-3">
               {pagedAlerts.map(a => (
                 <StaggerItem key={a.id}>
@@ -653,6 +923,10 @@ export default function AlertsListPage() {
                     onAcknowledge={() => setAckDialogId(a.id)}
                     onReopen={() => handleReopen(a.id)}
                     onOpenDetail={() => setDetailId(a.id)}
+                    selected={bulkSelection.isSelected(a.id)}
+                    onToggleSelect={(selected) =>
+                      bulkSelection.setSelected(a.id, selected)
+                    }
                     t={t}
                   />
                 </StaggerItem>
@@ -692,36 +966,27 @@ export default function AlertsListPage() {
         submitting={ackMut.isPending}
         alertTitle={ackTarget?.title}
       />
-      <Modal
-        open={detailId !== null}
+      <AlertDetailDrawer
+        alert={detailTarget}
+        detail={detailQuery.data}
+        isLoading={detailQuery.isLoading}
+        error={detailQuery.error}
+        vehicleName={
+          detailTarget?.vehicle_id === vehicleId
+            ? vehicle?.display_name || vehicle?.vin
+            : null
+        }
         onClose={() => setDetailId(null)}
-        title={t('alerts.timeline.title', 'Audit timeline')}
-        size="md"
-      >
-        <div className="space-y-4">
-          {detailQuery.isLoading ? (
-            <Skeleton className="h-32" />
-          ) : detailQuery.data ? (
-            <>
-              <div className="space-y-1">
-                <Text as="span" size="sm" weight="medium" color="primary" className="block">
-                  {detailQuery.data.title}
-                </Text>
-                <Caption className="block">
-                  {detailQuery.data.message}
-                </Caption>
-              </div>
-              <AlertDetailTimeline events={detailQuery.data.events} />
-            </>
-          ) : (
-            <EmptyState /* no-action: detail load failed; reopening the modal will retry */
-              icon={<Icons.notifications className="h-6 w-6" />}
-              title={t('alerts.timeline.empty', 'No events yet')}
-              message={t('alerts.timeline.empty', 'No events yet')}
-            />
-          )}
-        </div>
-      </Modal>
+        onAcknowledge={(id) => {
+          setDetailId(null);
+          setAckDialogId(id);
+        }}
+        onReopen={(id) => {
+          setDetailId(null);
+          handleReopen(id);
+        }}
+        onRetry={() => { void detailQuery.refetch(); }}
+      />
     </PageContainer>
   );
 }

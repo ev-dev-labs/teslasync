@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { Archive, ArchiveRestore, ChevronRight, MailOpen, Mail } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { DateTime, SeverityBadge } from '@/components/data-display';
-import { Button } from '@/components/ui';
+import { Button, Checkbox } from '@/components/ui';
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import type { NotificationLog, AlertRule, Alert, Vehicle } from '@/api/types';
 
@@ -104,12 +104,11 @@ export function NotificationRow({
         }
       }}
     >
-      <input
-        type="checkbox"
+      <Checkbox
         checked={selected}
-        onChange={e => onSelectionChange(log.id, e.target.checked)}
+        onChange={checked => onSelectionChange(log.id, checked)}
         aria-label={t('notifications.inbox.row.select', 'Select notification')}
-        className="mt-1 h-4 w-4 cursor-pointer rounded border-[var(--border-strong)] bg-white/[0.04] text-cyan-500 focus:ring-2 focus:ring-cyan-500"
+        className="mt-1"
       />
 
       <div className="flex-1 min-w-0">

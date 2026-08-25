@@ -174,16 +174,18 @@ describe('PedalUsage — empty states', () => {
 })
 
 describe('PedalUsage — loading + error states', () => {
-  it('shows a spinner (not the empty state) while the first fetch is in flight', async () => {
+  it('shows a gauge skeleton (not the empty state) while the first fetch is in flight', async () => {
     // Never-resolving promise keeps the query in the pending+fetching state.
     mockedRequest.mockReturnValue(new Promise<never>(() => {}))
 
     renderWithClient(<PedalUsage vehicleId={1} />)
 
-    // Header stays visible and the loading label appears in place of the
+    // Header stays visible and the loading region appears in place of the
     // misleading "no telemetry" empty state.
     expect(screen.getByText('Pedal Usage')).toBeInTheDocument()
-    expect(await screen.findByText('Loading pedal telemetry…')).toBeInTheDocument()
+    expect(
+      await screen.findByRole('status', { name: 'Loading pedal telemetry…' }),
+    ).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('No pedal telemetry received yet')).toBeNull()
     expect(screen.queryByText('Throttle Position')).toBeNull()
   })

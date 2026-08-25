@@ -11,7 +11,7 @@
  *  3. The per-hypertable detail table renders each row (name + chunk count).
  *  4. Accessible landmarks + chart labels are present (a11y contract).
  *  5. The "Quota pressure" banner appears only when a hypertable is critical.
- *  6. A 503 renders the "Subsystem unavailable" explainer (not an error).
+ *  6. A 503 renders the unsupported-deployment explainer (not an error).
  *  7. A genuine (non-503) failure renders <QueryError> everywhere — and the
  *     KPI band must NOT surface fabricated zero totals.
  *  8. Zero hypertables renders empty states for every section.
@@ -295,7 +295,7 @@ describe('DiskForecastPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument(),
+      expect(screen.getByText('Feature not supported')).toBeInTheDocument(),
     )
     expect(
       screen.getByText(/TimescaleDB hypertable metrics are unavailable/i),
@@ -315,7 +315,7 @@ describe('DiskForecastPage', () => {
     // The KPI band must not lie with "0 B" totals when the fetch failed.
     expect(screen.queryByText('Total disk')).toBeNull()
     // A hard failure is distinct from the 503 not-configured state.
-    expect(screen.queryByText('Subsystem unavailable')).toBeNull()
+    expect(screen.queryByText('Feature not supported')).toBeNull()
   })
 
   it('renders empty states for every section when there are zero hypertables', async () => {

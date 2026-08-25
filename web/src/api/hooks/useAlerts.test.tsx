@@ -32,6 +32,7 @@ import {
   useAlertMetrics,
   useAlertDetail,
   useMarkAlertRead,
+  useBulkSetAlertsRead,
   useAcknowledgeAlert,
   useCommentAlert,
   useReopenAlert,
@@ -145,6 +146,7 @@ describe('useAlerts shim re-export surface', () => {
       useAlertMetrics,
       useAlertDetail,
       useMarkAlertRead,
+      useBulkSetAlertsRead,
       useAcknowledgeAlert,
       useCommentAlert,
       useReopenAlert,
@@ -160,7 +162,7 @@ describe('useAlerts shim re-export surface', () => {
       useAlertMessagePlaceholders,
       useAlertMessagePreview,
     ];
-    expect(hooks).toHaveLength(20);
+    expect(hooks).toHaveLength(21);
     for (const hook of hooks) {
       expect(typeof hook).toBe('function');
     }
@@ -219,6 +221,48 @@ describe('useAlerts', () => {
     expect(calledUrl()).toBe('/alerts');
     expect(calledOpts()).toEqual(expect.objectContaining({ signal: expect.anything() }));
     expect(result.current.data).toEqual([makeAlert()]);
+  });
+
+  it('server-scopes the list and exhausts pagination when fetchAll is enabled', async () => {
+    const firstPage = Array.from({ length: 1000 }, (_, index) =>
+      makeAlert({ id: index + 1 }),
+    );
+    const finalPage = [makeAlert({ id: 1001 })];
+    requestMock
+      .mockResolvedValueOnce(firstPage)
+      .mockResolvedValueOnce(finalPage);
+    const scope = {
+      from: '2025-01-01T00:00:00.000Z',
+      to: '2025-01-31T23:59:59.999Z',
+      vehicle_id: 7,
+      fetchAll: true,
+    };
+
+    const { result } = renderHook(() => useAlerts(scope), {
+      wrapper: wrapperFor(makeClient()),
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const firstQuery = new URLSearchParams({
+      from: scope.from,
+      to: scope.to,
+      vehicle_id: '7',
+      limit: '1000',
+    });
+    const secondQuery = new URLSearchParams({
+      from: scope.from,
+      to: scope.to,
+      vehicle_id: '7',
+      limit: '1000',
+      before_created_at: firstPage[firstPage.length - 1]?.created_at ?? '',
+      before_id: String(firstPage[firstPage.length - 1]?.id ?? 0),
+    });
+    expect(calledUrl(0)).toBe(`/alerts?${firstQuery.toString()}`);
+    expect(calledUrl(1)).toBe(`/alerts?${secondQuery.toString()}`);
+    expect(calledOpts(0)).toEqual(
+      expect.objectContaining({ signal: expect.anything() }),
+    );
+    expect(result.current.data).toHaveLength(1001);
   });
 
   describe('usePriorityAlerts', () => {
@@ -375,6 +419,42 @@ describe('useMarkAlertRead', () => {
   });
 });
 
+describe('useBulkSetAlertsRead', () => {
+  it('optimistically marks every Alerts cache and supports undo through mark-unread', async () => {
+    requestMock.mockResolvedValue({ updated: 1 });
+    const client = makeClient();
+    const scope = { from: '2025-01-01T00:00:00Z', fetchAll: true };
+    client.setQueryData(alertKeys.alerts, [
+      makeAlert({ id: 1, is_read: false }),
+      makeAlert({ id: 2, is_read: false }),
+    ]);
+    client.setQueryData(alertKeys.alertList(scope), [
+      makeAlert({ id: 1, is_read: false }),
+      makeAlert({ id: 2, is_read: false }),
+    ]);
+
+    const { result } = renderHook(() => useBulkSetAlertsRead(), {
+      wrapper: wrapperFor(client),
+    });
+
+    await act(async () => {
+      await result.current.mutateAsync({ ids: [1], read: true });
+    });
+    expect(calledUrl(0)).toBe('/notifications/mark-read');
+    expect(JSON.parse(String(calledOpts(0).body))).toEqual({ ids: [1] });
+    expect(client.getQueryData<Alert[]>(alertKeys.alerts)?.[0]?.is_read).toBe(true);
+    expect(client.getQueryData<Alert[]>(alertKeys.alertList(scope))?.[0]?.is_read).toBe(true);
+
+    await act(async () => {
+      await result.current.mutateAsync({ ids: [1], read: false });
+    });
+    expect(calledUrl(1)).toBe('/notifications/mark-unread');
+    expect(JSON.parse(String(calledOpts(1).body))).toEqual({ ids: [1] });
+    expect(client.getQueryData<Alert[]>(alertKeys.alerts)?.[0]?.is_read).toBe(false);
+    expect(client.getQueryData<Alert[]>(alertKeys.alertList(scope))?.[0]?.is_read).toBe(false);
+  });
+});
+
 // ── Acknowledge / comment / reopen ───────────────────────────────────────────
 describe('useAcknowledgeAlert', () => {
   it('POSTs a trimmed note, writes the detail cache, and marks the row acked', async () => {
@@ -411,6 +491,27 @@ describe('useAcknowledgeAlert', () => {
     });
 
     expect(calledOpts().body).toBe('{}');
+  });
+
+  it('lets callers replace the default success toast with an Undo-capable toast', async () => {
+    const detail: AlertDetail = {
+      ...makeAlert({ id: 5, acknowledged_at: '2025-02-02T00:00:00Z' }),
+      events: [],
+    };
+    requestMock.mockResolvedValue(detail);
+    const client = makeClient();
+    client.setQueryData(alertKeys.alerts, [makeAlert({ id: 5 })]);
+
+    const { result } = renderHook(
+      () => useAcknowledgeAlert({ showSuccessToast: false }),
+      { wrapper: wrapperFor(client) },
+    );
+    await act(async () => {
+      await result.current.mutateAsync({ id: 5 });
+    });
+
+    expect(calledUrl()).toBe('/alerts/5/acknowledge');
+    expect(toastSuccess).not.toHaveBeenCalled();
   });
 });
 

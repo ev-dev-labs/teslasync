@@ -6,7 +6,7 @@ import {
   DollarSign, Route, BatteryCharging, CalendarDays, TrendingUp,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, DataTable, Badge, PanelTitle, Text, Caption,
   MetricLabel, HelperText, type Column,
@@ -535,8 +535,8 @@ export default function EnergyPage() {
     <PageContainer
       title={t('energy.pageTitle', 'Energy Intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
-      actions={
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+      contextActions={
+        <>
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -544,12 +544,14 @@ export default function EnergyPage() {
             align="end"
             triggerTestId="energy-range"
           />
-          <SavedViewMenu
-            route="/energy"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
-        </div>
+        </>
+      }
+      overflowActions={
+        <SavedViewMenu
+          route="/energy"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
       }
     >
       {statsError && <QueryError error={statsError} onRetry={refetch} />}

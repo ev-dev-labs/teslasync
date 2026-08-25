@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Link, Trash2, Eye, ExternalLink } from 'lucide-react';
 import { Modal, Button, CopyButton, Toggle, Select, Input } from '@/components/ui';
 import { GlassPanel } from '@/components/ui';
-import { Spinner, AlertBanner } from '@/components/feedback';
+import { ListSkeleton, AlertBanner } from '@/components/feedback';
 import { useCreateShareLink, useShareLinks, useRevokeShareLink } from '@/api/hooks/useSharing';
 import { formatDate } from '@/lib/dateFormat';
 
@@ -148,9 +148,11 @@ export function ShareDriveDialog({ driveId, open, onClose }: ShareDriveDialogPro
             {t('share.existing', 'Active Share Links')}
           </h3>
           {sharesLoading ? (
-            <div className="flex justify-center py-4">
-              <Spinner className="h-5 w-5" />
-            </div>
+            <ListSkeleton
+              rows={2}
+              label={t('share.loadingLinks', 'Loading active share links…')}
+              testId="share-links-loading"
+            />
           ) : sharesError ? (
             <AlertBanner variant="danger" role="alert">
               {t('share.loadError', 'Could not load your existing share links. Please try again.')}

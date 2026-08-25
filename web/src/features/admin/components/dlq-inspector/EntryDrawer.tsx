@@ -29,7 +29,7 @@ import {
   type TabItem,
 } from '@/components/ui';
 import { KVList, TimeStamp } from '@/components/data-display';
-import { EmptyState, Spinner } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { fmtInt } from '@/lib/numberFormat';
 import type { DLQEntryFull, DLQEntrySummary } from '@/types/admin-diagnostics';
 
@@ -199,6 +199,18 @@ export function EntryDrawer({
           ? t('admin.dlq.drawer.title', 'DLQ entry #{{id}}', { id: head.id })
           : t('admin.dlq.drawer.titleFallback', 'DLQ entry')
       }
+      size="lg"
+      tabs={
+        head && !loading ? (
+          <Tabs
+            tabs={tabs}
+            activeTab={activeTab}
+            onChange={setActiveTab}
+            ariaLabel={t('admin.dlq.drawer.payloadView', 'Payload view')}
+            className="border-b-0"
+          />
+        ) : undefined
+      }
       footer={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <Button variant="secondary" onClick={onClose}>
@@ -216,19 +228,25 @@ export function EntryDrawer({
         </div>
       }
     >
-      {loading && !full ? (
-        <div className="flex items-center justify-center py-12">
-          <Spinner />
-        </div>
-      ) : head ? (
+      {head ? (
         <div className="space-y-4">
           <GlassPanel className="p-4">
             <KVList items={summaryItems} />
           </GlassPanel>
-
           <GlassPanel className="p-4">
-            <Tabs tabs={tabs} activeTab={activeTab} onChange={setActiveTab} />
-            <div className="mt-3">
+            {loading && !full ? (
+              <div
+                role="status"
+                aria-busy="true"
+                aria-label={t('admin.dlq.drawer.loading', 'Loading payload details…')}
+                className="space-y-3"
+                data-testid="dlq-entry-loading"
+              >
+                <Skeleton className="h-9 w-48" />
+                <Skeleton className="h-48 w-full" />
+              </div>
+            ) : (
+              <div>
               <div className="mb-2 flex items-center justify-end gap-2">
                 <CopyButton text={copyText} />
               </div>
@@ -242,7 +260,19 @@ export function EntryDrawer({
                 {panel.body}
               </Text>
             </div>
+            )}
           </GlassPanel>
+        </div>
+      ) : loading ? (
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('admin.dlq.drawer.loading', 'Loading payload details…')}
+          className="space-y-4"
+          data-testid="dlq-entry-loading"
+        >
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-56 w-full" />
         </div>
       ) : (
         // no-action: this drawer only mounts once a DLQ entry is selected —

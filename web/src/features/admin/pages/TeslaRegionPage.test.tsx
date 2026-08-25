@@ -120,10 +120,9 @@ const overviewRegion = () =>
 const aboutRegion = () =>
   screen.getByRole('region', { name: 'About your region' })
 
-// The page header's Refresh control is a real <button>. PageContainer ALSO
-// renders a <DataFreshnessAuto> chip (a <span role="button" aria-label="Refresh">)
-// from the `query` prop, so `getByRole('button', { name: 'Refresh' })` is
-// ambiguous — pick the genuine button element.
+// PageContainer also renders a keyboard-operable DataFreshness refresh button.
+// Its accessible name begins "Refresh data", so the exact "Refresh" matcher
+// below continues to identify the page-level command.
 function headerRefreshButton(): HTMLButtonElement {
   const match = screen
     .getAllByRole('button', { name: 'Refresh' })

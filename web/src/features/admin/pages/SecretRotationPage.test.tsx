@@ -13,7 +13,7 @@
  *  4. The per-secret detail table renders each row (kind + target + expiry).
  *  5. Accessible landmarks, chart img labels, and the refresh control exist.
  *  6. The urgency + severity-mix sections surface their derived readouts.
- *  7. A 503 renders the "Subsystem unavailable" explainer (not an error).
+ *  7. A 503 renders the unsupported-deployment explainer (not an error).
  *  8. A genuine (non-503) failure renders <QueryError> everywhere — and the
  *     KPI band must NOT surface fabricated "0.00 tracked / 0.00 overdue"
  *     totals that would falsely reassure an operator no secret is overdue.
@@ -321,7 +321,7 @@ describe('SecretRotationPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument(),
+      expect(screen.getByText('Feature not supported')).toBeInTheDocument(),
     )
     expect(
       screen.getByText(/rotation tracker is not configured on this deployment/i),
@@ -346,7 +346,7 @@ describe('SecretRotationPage', () => {
     expect(screen.queryByText('Healthy')).toBeNull()
     expect(screen.queryByText('Oldest secret')).toBeNull()
     // A hard failure is distinct from the 503 not-configured state.
-    expect(screen.queryByText('Subsystem unavailable')).toBeNull()
+    expect(screen.queryByText('Feature not supported')).toBeNull()
   })
 
   it('renders empty states for every section when there are zero secrets', async () => {

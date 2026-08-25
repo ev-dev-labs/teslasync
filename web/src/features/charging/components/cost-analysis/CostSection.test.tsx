@@ -239,7 +239,7 @@ describe('CostSection — error branch', () => {
       isEmpty: true,
       emptyMessage: 'Nothing here',
     });
-    expect(screen.getByText('Server error')).toBeInTheDocument();
+    expect(screen.getByText('Service unavailable')).toBeInTheDocument();
     expect(screen.queryByText('Nothing here')).toBeNull();
   });
 });

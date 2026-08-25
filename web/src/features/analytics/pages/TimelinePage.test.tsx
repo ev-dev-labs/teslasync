@@ -342,4 +342,28 @@ describe('TimelinePage', () => {
     expect(within(kpiBand).getByText('7')).toBeInTheDocument()
     expect(within(kpiBand).queryByText('10')).toBeNull()
   })
+
+  it('opens state-transition evidence without leaving the timeline', async () => {
+    renderPage()
+
+    const inspect = await screen.findByRole('button', {
+      name: 'Inspect transition asleep to driving',
+    })
+    fireEvent.click(inspect)
+
+    const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
+    expect(within(drawer).getByText('State transition')).toBeInTheDocument()
+    expect(within(drawer).getByText('shift_state')).toBeInTheDocument()
+    expect(within(drawer).getByText('D')).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/1')
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2025-03-01&to=2025-03-01&signals=shift_state',
+      )
+
+    fireEvent.click(within(drawer).getByText('Close'))
+    expect(screen.queryByRole('dialog', { name: 'asleep → driving' })).toBeNull()
+  })
 })

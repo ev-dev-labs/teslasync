@@ -359,7 +359,7 @@ describe('MileagePage — per-query error + retry', () => {
     renderPage();
 
     const w = windowsRegion();
-    expect(within(w).getByText('Server error')).toBeInTheDocument();
+    expect(within(w).getByText('Service unavailable')).toBeInTheDocument();
     // Stats-driven KPIs remain intact.
     expect(cardValue(kpiRegion(), 'Total Distance')).toBe('12,000 km');
 

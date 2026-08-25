@@ -155,6 +155,27 @@ describe('useSelectedVehicle', () => {
     expect(params.get('period_b')).toBe('90');
   });
 
+  it('preserves the global time scope when the vehicle changes', async () => {
+    const { result } = renderHook(() => {
+      const selected = useSelectedVehicle();
+      const location = useLocation();
+      return { ...selected, location };
+    }, {
+      wrapper: makeWrapper([
+        '/battery?from=2026-07-29&to=2026-08-27&time_scope=30d',
+      ]),
+    });
+
+    act(() => result.current.setVehicleId(2));
+
+    await waitFor(() => expect(result.current.vehicleId).toBe(2));
+    const params = new URLSearchParams(result.current.location.search);
+    expect(params.get('vehicle_id')).toBe('2');
+    expect(params.get('from')).toBe('2026-07-29');
+    expect(params.get('to')).toBe('2026-08-27');
+    expect(params.get('time_scope')).toBe('30d');
+  });
+
   it('updates an existing URL-backed vehicle filter instead of being overwritten by it', async () => {
     const { result } = renderHook(() => {
       const selected = useSelectedVehicle();

@@ -149,6 +149,25 @@ describe('PageHeader', () => {
     expect(screen.getByRole('button', { name: 'New rule' })).toBeInTheDocument()
   })
 
+  it('places typed page actions in the canonical groups', () => {
+    const { container } = renderHeader(
+      <PageHeader
+        title="Fleet"
+        metadataActions={<span>Fresh</span>}
+        contextActions={<button type="button">Vehicle</button>}
+        secondaryActions={<button type="button">Compare</button>}
+        destructiveActions={<button type="button">Remove</button>}
+        overflowActions={<button type="button">More</button>}
+        primaryAction={<button type="button">Sync</button>}
+      />,
+    )
+
+    expect(
+      Array.from(container.querySelectorAll('[data-action-group]'))
+        .map((group) => group.getAttribute('data-action-group')),
+    ).toEqual(['metadata', 'context', 'secondary', 'destructive', 'overflow', 'primary'])
+  })
+
   it('copies the current URL and shows a success toast + "Copied" state on click', async () => {
     renderHeader(<PageHeader title="Notifications" copyLink />)
     const btn = screen.getByRole('button', { name: /copy link to this view/i })

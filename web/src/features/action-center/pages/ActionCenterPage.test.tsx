@@ -9,6 +9,7 @@ import type {
 const useActionCenterMock = vi.fn();
 const useHistoryMock = vi.fn();
 const mutateAsyncMock = vi.fn();
+const toastMock = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const setVehicleIdMock = vi.fn();
@@ -35,7 +36,7 @@ vi.mock('@/components/feedback', async () => {
   );
   return {
     ...actual,
-    useToast: () => ({ success: toastSuccess, error: toastError }),
+    useToast: () => ({ toast: toastMock, success: toastSuccess, error: toastError }),
   };
 });
 vi.mock('@/hooks/useUnits', () => ({
@@ -113,6 +114,7 @@ function renderPage() {
 beforeEach(() => {
   useActionCenterMock.mockReset();
   mutateAsyncMock.mockReset();
+  toastMock.mockReset();
   toastSuccess.mockReset();
   toastError.mockReset();
   setVehicleIdMock.mockReset();
@@ -124,7 +126,28 @@ beforeEach(() => {
     error: null,
     refetch: vi.fn(),
   });
-  mutateAsyncMock.mockResolvedValue({});
+  mutateAsyncMock.mockResolvedValue({
+    recommendation: {
+      ...recommendation,
+      current_state: {
+        status: 'acknowledged',
+        version: 1,
+        snoozed_until: null,
+        updated_at: '2026-02-20T00:02:00Z',
+      },
+    },
+    event: {
+      id: 1,
+      recommendation_id: recommendation.id,
+      fingerprint: recommendation.fingerprint,
+      action: 'acknowledge',
+      from_state: 'open',
+      to_state: 'acknowledged',
+      outcome: 'applied',
+      state_version: 1,
+      occurred_at: '2026-02-20T00:02:00Z',
+    },
+  });
 });
 
 describe('ActionCenterPage', () => {
@@ -177,6 +200,36 @@ describe('ActionCenterPage', () => {
           confirmed: true,
         }),
       ),
+    );
+  });
+
+  it('offers a version-safe Undo that restores a reversible action', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /acknowledge/i }));
+    fireEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: /acknowledge/i }),
+    );
+
+    await waitFor(() => expect(toastMock).toHaveBeenCalledTimes(1));
+    const toast = toastMock.mock.calls[0]?.[0] as {
+      action?: { label: string; onClick?: () => void };
+    };
+    expect(toast.action?.label).toBe('Undo');
+    toast.action?.onClick?.();
+
+    await waitFor(() => {
+      expect(mutateAsyncMock).toHaveBeenLastCalledWith({
+        recommendation_id: recommendation.id,
+        fingerprint: recommendation.fingerprint,
+        action: 'restore',
+        expected_version: 1,
+        confirmed: true,
+        snoozed_until: null,
+      });
+    });
+    expect(toastSuccess).toHaveBeenCalledWith(
+      'Action undone',
+      'The recommendation was restored to the open queue.',
     );
   });
 

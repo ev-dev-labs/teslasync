@@ -14,6 +14,8 @@ describe('workspacePreferences', () => {
   });
 
   it('accepts only supported range and density values', () => {
+    expect(isWorkspaceRangePreset('live')).toBe(true);
+    expect(isWorkspaceRangePreset('24h')).toBe(true);
     expect(isWorkspaceRangePreset('today')).toBe(true);
     expect(isWorkspaceRangePreset('all')).toBe(true);
     expect(isWorkspaceRangePreset('custom')).toBe(false);

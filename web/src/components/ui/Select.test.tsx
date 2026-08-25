@@ -133,6 +133,7 @@ describe('Select — error state', () => {
     const errorEl = document.getElementById('model-error');
     expect(errorEl?.textContent).toBe('Please pick a model');
     expect(select.getAttribute('aria-describedby')).toBe('model-error');
+    expect(screen.getByRole('alert')).toHaveTextContent('Please pick a model');
   });
 
   it('applies the red border class when in error', () => {
@@ -163,6 +164,24 @@ describe('Select — hint state', () => {
     const { container } = render(<Select options={OPTIONS} label="Model" />);
     const select = container.querySelector('select') as HTMLSelectElement;
     expect(select.getAttribute('aria-describedby')).toBeNull();
+  });
+
+  it('preserves caller descriptions while appending the hint association', () => {
+    render(
+      <>
+        <span id="external-help">External help</span>
+        <Select
+          options={OPTIONS}
+          label="Model"
+          hint="Pick your trim"
+          aria-describedby="external-help"
+        />
+      </>,
+    );
+    expect(screen.getByLabelText('Model')).toHaveAttribute(
+      'aria-describedby',
+      'external-help model-hint',
+    );
   });
 });
 

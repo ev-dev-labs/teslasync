@@ -277,7 +277,7 @@ describe('SlowQueriesPage — non-happy states', () => {
 
     renderPage();
 
-    expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(screen.getByText(/pg_stat_statements is not installed/i)).toBeInTheDocument();
     // The generic QueryError must NOT show for the 503 branch.
     expect(screen.queryByText("Can't reach server")).toBeNull();

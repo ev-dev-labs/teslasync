@@ -27,7 +27,7 @@ import {
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
-  EmptyState, AlertBanner, SectionErrorBoundary, Skeleton, QueryError,
+  EmptyState, AlertBanner, DataStateNotice, SectionErrorBoundary, Skeleton, QueryError,
 } from '@/components/feedback';
 import {
   ChartTooltip,
@@ -269,12 +269,12 @@ export default function SecretRotationPage() {
       query={query}
     >
       {subsystemMissing && (
-        <AlertBanner variant="warning" title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}>
+        <DataStateNotice state="unsupported" title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}>
           {t(
             'admin.secretRotation.notConfigured',
             'The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.',
           )}
-        </AlertBanner>
+        </DataStateNotice>
       )}
 
       {counts.critical > 0 && (

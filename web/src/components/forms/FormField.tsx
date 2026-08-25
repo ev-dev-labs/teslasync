@@ -1,5 +1,18 @@
-import { type ReactNode, useId } from 'react'
+import {
+  cloneElement,
+  isValidElement,
+  type ReactNode,
+  useId,
+} from 'react'
 import { cn } from '@/lib/cn'
+import { Label } from '@/components/ui/Label'
+
+interface FieldControlProps {
+  id?: string
+  'aria-describedby'?: string
+  'aria-invalid'?: boolean | 'true' | 'false'
+  'aria-required'?: boolean | 'true' | 'false'
+}
 
 export interface FormFieldProps {
   /** Required visible label. */
@@ -53,24 +66,34 @@ export function FormField({
   className,
 }: FormFieldProps) {
   const autoId = useId()
-  const fieldId = htmlFor ?? autoId
+  const isSingleControl = isValidElement<FieldControlProps>(children)
+  const childId = isSingleControl ? children.props.id : undefined
+  const fieldId = htmlFor ?? childId ?? autoId
   const errorId = error ? `${fieldId}-error` : undefined
   const hintId = hint && !error ? `${fieldId}-hint` : undefined
+  const feedbackId = errorId ?? hintId
+  const control = isSingleControl
+    ? cloneElement(children, {
+        id: childId ?? fieldId,
+        'aria-describedby': [
+          children.props['aria-describedby'],
+          feedbackId,
+        ].filter(Boolean).join(' ') || undefined,
+        'aria-invalid': error ? 'true' : children.props['aria-invalid'],
+        'aria-required': required ? 'true' : children.props['aria-required'],
+      })
+    : children
 
   return (
     <div className={cn('space-y-1.5', className)}>
-      <label
+      <Label
         htmlFor={fieldId}
+        required={required}
         className="block text-xs font-medium text-[var(--text-secondary)]"
       >
         {label}
-        {required && (
-          <span className="ml-1 text-rose-300" aria-label="required">
-            *
-          </span>
-        )}
-      </label>
-      {children}
+      </Label>
+      {control}
       {error ? (
         <p id={errorId} role="alert" className="text-xs text-rose-300">
           {error}

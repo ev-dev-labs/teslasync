@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
-import { Spinner } from '@/components/feedback';
+import { Skeleton } from '@/components/feedback';
 import { Badge, Button as ControlButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -59,7 +59,25 @@ export default function WatchFacePage() {
   // DOM, preserving the wearable invariant).
   let watchContent: React.ReactNode;
   if (isLoading) {
-    watchContent = <Spinner size="lg" />;
+    watchContent = (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('watch.loading', 'Loading watch summary…')}
+        className="flex h-full flex-col items-center"
+      >
+        <Skeleton className="h-3 w-24" />
+        <div className="flex flex-1 items-center justify-center">
+          <Skeleton rounded className="h-32 w-32" />
+        </div>
+        <div className="flex gap-4 pb-2">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} rounded className="h-11 w-11" />
+          ))}
+        </div>
+        <Skeleton className="h-3 w-16" />
+      </div>
+    );
   } else if (error || !data) {
     watchContent = (
       <p className="text-[var(--text-secondary)] text-sm text-center px-4">

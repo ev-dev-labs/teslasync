@@ -28,7 +28,7 @@ import {
 } from '@/components/ui';
 import { UnitInput, VehicleSelect } from '@/components/forms';
 import { MetricCard } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, Spinner } from '@/components/feedback';
+import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -392,13 +392,10 @@ export default function SmartChargePage() {
                 <Button
                   onClick={handleOptimize}
                   disabled={!vehicleIdNum || optimizeMutation.isPending}
+                  loading={optimizeMutation.isPending}
+                  icon={<CalendarClock className="h-4 w-4" aria-hidden="true" />}
                   className="w-full gap-2"
                 >
-                  {optimizeMutation.isPending ? (
-                    <Spinner className="h-4 w-4" />
-                  ) : (
-                    <CalendarClock className="h-4 w-4" aria-hidden="true" />
-                  )}
                   {t('chargePlanner.optimize', 'Find Cheapest Window')}
                 </Button>
 
@@ -464,12 +461,13 @@ export default function SmartChargePage() {
                       {t('chargePlanner.applied', 'Schedule Applied!')}
                     </Badge>
                   ) : (
-                    <Button onClick={handleApply} disabled={applyMutation.isPending} className="gap-2">
-                      {applyMutation.isPending ? (
-                        <Spinner className="h-4 w-4" />
-                      ) : (
-                        <Zap className="h-4 w-4" aria-hidden="true" />
-                      )}
+                    <Button
+                      onClick={handleApply}
+                      disabled={applyMutation.isPending}
+                      loading={applyMutation.isPending}
+                      icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+                      className="gap-2"
+                    >
                       {t('chargePlanner.applySchedule', 'Apply Schedule')}
                     </Button>
                   ))}

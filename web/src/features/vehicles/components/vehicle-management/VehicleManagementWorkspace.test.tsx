@@ -444,7 +444,9 @@ describe('VehicleManagementWorkspace', () => {
     holdReads = true
     installRequestRouter()
     const view = renderWorkspace()
-    expect(screen.getAllByText('Loading cached data').length).toBeGreaterThan(0)
+    expect(
+      screen.getAllByRole('status', { name: 'Loading cached data' }).length,
+    ).toBeGreaterThan(0)
     expect(document.querySelectorAll('[data-management-endpoint]')).toHaveLength(8)
     view.unmount()
 
@@ -470,9 +472,37 @@ describe('VehicleManagementWorkspace', () => {
     fireEvent.click(
       within(dialog).getByRole('button', { name: 'Submit pricing query' }),
     )
-    expect(await screen.findByText('Capability unavailable')).toBeInTheDocument()
+    expect(await screen.findByText('Permission denied')).toBeInTheDocument()
     expect(
       screen.getAllByText('Tesla account lacks vehicle_pricing_info scope'),
     ).not.toHaveLength(0)
+  })
+
+  it('distinguishes a missing Tesla prerequisite from a permission denial', async () => {
+    pricingError = new ApiError(
+      'Tesla account does not meet the pricing prerequisite',
+      412,
+    )
+    installRequestRouter()
+    renderWorkspace()
+
+    fireEvent.click(
+      within(endpointCard('vehicle-pricing')).getByRole('button', {
+        name: 'Open pricing query',
+      }),
+    )
+    const dialog = screen.getByRole('dialog')
+    fireEvent.change(within(dialog).getByLabelText(/JSON object/), {
+      target: { value: '{"opaque":true}' },
+    })
+    fireEvent.click(
+      within(dialog).getByRole('button', { name: 'Submit pricing query' }),
+    )
+
+    expect(await screen.findByText('Prerequisite required')).toBeInTheDocument()
+    expect(
+      screen.getAllByText('Tesla account does not meet the pricing prerequisite'),
+    ).not.toHaveLength(0)
+    expect(screen.queryByText('Permission denied')).toBeNull()
   })
 })

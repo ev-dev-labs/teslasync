@@ -327,6 +327,9 @@ describe('InboxBody — grouped view', () => {
     expect(await screen.findByTestId('notification-groups')).toBeInTheDocument();
     expect(screen.getByText('Battery thread')).toBeInTheDocument();
     expect(screen.getByText('One-off ping')).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(
+      '2 threads · 4 deliveries',
+    );
 
     // Grouped endpoint used; the flat endpoint stays untouched.
     expect(groupedCalls().length).toBeGreaterThanOrEqual(1);

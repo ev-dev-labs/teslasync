@@ -68,6 +68,7 @@ vi.mock('@/store/selectedVehicle', () => ({
 
 import { useCommandRegistry } from '../useCommandRegistry'
 import { commandRegistry, scoreCommand } from '@/lib/commandRegistry'
+import { WORKSPACE_RANGE_EVENT } from '@/lib/workspacePreferences'
 
 afterEach(() => {
   vi.clearAllMocks()
@@ -180,6 +181,44 @@ describe('useCommandRegistry', () => {
       void result.current.getById('action.settings')!.invoke()
 
       expect(mocks.navigate).toHaveBeenCalledWith('/settings')
+    })
+
+    it.each([
+      ['action.export', '/data-export'],
+      ['action.compare.fleet', '/vehicle-comparison'],
+      ['action.compare.period', '/period-compare'],
+      ['action.system.status', '/system-status'],
+    ])('routes %s to its operational workspace', (commandId, path) => {
+      const { result } = mount()
+      void result.current.getById(commandId)!.invoke()
+
+      expect(mocks.navigate).toHaveBeenCalledWith(path)
+    })
+
+    it('dispatches the selected global analysis range', () => {
+      const listener = vi.fn()
+      window.addEventListener(WORKSPACE_RANGE_EVENT, listener)
+      const { result } = mount()
+
+      void result.current.getById('workspace.range.30d')!.invoke()
+
+      expect(listener).toHaveBeenCalledTimes(1)
+      expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ preset: '30d' })
+      window.removeEventListener(WORKSPACE_RANGE_EVENT, listener)
+    })
+
+    it.each([
+      ['workspace.range.live', 'live'],
+      ['workspace.range.24h', '24h'],
+    ])('dispatches %s as a production time scope', (commandId, preset) => {
+      const listener = vi.fn()
+      window.addEventListener(WORKSPACE_RANGE_EVENT, listener)
+      const { result } = mount()
+
+      void result.current.getById(commandId)!.invoke()
+
+      expect((listener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({ preset })
+      window.removeEventListener(WORKSPACE_RANGE_EVENT, listener)
     })
 
     it('switches theme and surfaces a toast for a named-theme command', () => {

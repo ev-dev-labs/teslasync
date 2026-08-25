@@ -5,7 +5,8 @@ import {
   useUpdateFleetCostCenter,
   type FleetCostCenter,
 } from '@/api/hooks/useFleetOps';
-import { Button, Input, Modal, Toggle } from '@/components/ui';
+import { Button, ConfirmDialog, Input, Modal, Toggle } from '@/components/ui';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import { MutationErrorDialog } from './MutationErrorDialog';
 
 interface CostCenterDialogProps {
@@ -26,27 +27,50 @@ export function CostCenterDialog({
   const { t } = useTranslation();
   const createMutation = useCreateFleetCostCenter();
   const updateMutation = useUpdateFleetCostCenter();
-  const [code, setCode] = useState(item?.code ?? '');
-  const [name, setName] = useState(item?.name ?? '');
-  const [active, setActive] = useState(item?.active ?? true);
-  const [validation, setValidation] = useState<string | null>(null);
+  const [initialValues] = useState(() => ({
+    code: item?.code ?? '',
+    name: item?.name ?? '',
+    active: item?.active ?? true,
+  }));
+  const [code, setCode] = useState(initialValues.code);
+  const [name, setName] = useState(initialValues.name);
+  const [active, setActive] = useState(initialValues.active);
+  const [errors, setErrors] = useState<Partial<Record<'code' | 'name', string>>>({});
   const pending = createMutation.isPending || updateMutation.isPending;
   const error = createMutation.error ?? updateMutation.error;
+  const isDirty = code !== initialValues.code
+    || name !== initialValues.name
+    || active !== initialValues.active;
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    isDirty,
+    onClose,
+    {
+      message: t(
+      'fleetOps.costCenterDialog.unsaved',
+      'You have unsaved cost-center changes. Discard them?',
+      ),
+    },
+  );
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const normalizedCode = code.trim();
     const normalizedName = name.trim();
-    if (
-      normalizedCode.length < 1
-      || normalizedCode.length > 32
-      || normalizedName.length < 1
-      || normalizedName.length > 120
-    ) {
-      setValidation(t('fleetOps.costCenterDialog.validation', 'Code and name are required and must fit their limits.'));
+    const nextErrors: typeof errors = {};
+    if (!normalizedCode) {
+      nextErrors.code = t('fleetOps.costCenterDialog.codeRequired', 'Enter a cost-center code.');
+    } else if (normalizedCode.length > 32) {
+      nextErrors.code = t('fleetOps.costCenterDialog.codeLimit', 'Use 32 characters or fewer.');
+    }
+    if (!normalizedName) {
+      nextErrors.name = t('fleetOps.costCenterDialog.nameRequired', 'Enter a cost-center name.');
+    } else if (normalizedName.length > 120) {
+      nextErrors.name = t('fleetOps.costCenterDialog.nameLimit', 'Use 120 characters or fewer.');
+    }
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
       return;
     }
-    setValidation(null);
     const input = { code: normalizedCode, name: normalizedName, active };
     if (item) {
       updateMutation.mutate(
@@ -66,7 +90,7 @@ export function CostCenterDialog({
     <>
       <Modal
         open
-        onClose={onClose}
+        onClose={requestClose}
         title={item
           ? t('fleetOps.costCenterDialog.editTitle', 'Edit cost center')
           : t('fleetOps.costCenterDialog.createTitle', 'Add cost center')}
@@ -77,14 +101,22 @@ export function CostCenterDialog({
               label={t('fleetOps.costCenterDialog.code', 'Code')}
               value={code}
               maxLength={32}
-              onChange={(event) => setCode(event.target.value)}
+              onChange={(event) => {
+                setCode(event.target.value);
+                setErrors((current) => ({ ...current, code: undefined }));
+              }}
+              error={errors.code}
               required
             />
             <Input
               label={t('fleetOps.costCenterDialog.name', 'Name')}
               value={name}
               maxLength={120}
-              onChange={(event) => setName(event.target.value)}
+              onChange={(event) => {
+                setName(event.target.value);
+                setErrors((current) => ({ ...current, name: undefined }));
+              }}
+              error={errors.name}
               required
             />
           </div>
@@ -93,7 +125,6 @@ export function CostCenterDialog({
             onChange={setActive}
             label={t('fleetOps.costCenterDialog.active', 'Available for new fleet activity')}
           />
-          {validation && <p role="alert" className="text-sm text-rose-300">{validation}</p>}
           <div className="flex justify-between gap-2">
             <div>
               {item && (
@@ -103,7 +134,7 @@ export function CostCenterDialog({
               )}
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={onClose}>{t('common.cancel', 'Cancel')}</Button>
+              <Button type="button" variant="ghost" onClick={requestClose}>{t('common.cancel', 'Cancel')}</Button>
               <Button type="submit" loading={pending}>{t('common.save', 'Save')}</Button>
             </div>
           </div>
@@ -119,6 +150,7 @@ export function CostCenterDialog({
           onClose();
         }}
       />
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </>
   );
 }

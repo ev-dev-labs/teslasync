@@ -1,17 +1,32 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
-import { SelectedVehicleProvider } from '@/store/selectedVehicle'
+import {
+  __SELECTED_VEHICLE_STORAGE_KEY__,
+  SelectedVehicleProvider,
+} from '@/store/selectedVehicle'
 import { CommandPalette, addRecentCommand, getRecentCommands } from '../CommandPalette'
 import { CommandPaletteHost } from '@/components/layout/CommandPaletteHost'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
+import { savedViewsKeys } from '@/api/hooks/useSavedViews'
+import { searchKeys } from '@/api/hooks/useSearch'
+import { alertKeys } from '@/api/hooks/useAlerts'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { recordCommandUse, _resetFrecency } from '@/lib/commandFrecency'
 import type { Vehicle } from '@/types/vehicle'
+import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
+
+const { requestMock } = vi.hoisted(() => ({
+  requestMock: vi.fn(),
+}))
+
+vi.mock('@/api/client', () => ({
+  request: (...args: unknown[]) => requestMock(...args),
+}))
 
 // jsdom doesn't implement matchMedia; ThemeProvider uses it for `prefers-color-scheme`
 if (!window.matchMedia) {
@@ -43,10 +58,34 @@ function makeVehicles(): Vehicle[] {
   ]
 }
 
-function makeWrapper(vehicles: Vehicle[]) {
+function makeAlert(overrides: Partial<Alert> = {}): Alert {
+  return {
+    id: 9,
+    vehicle_id: 1,
+    type: 'battery',
+    severity: 'critical',
+    title: 'Battery critically low',
+    message: 'Charge before the next dispatch',
+    is_read: false,
+    created_at: '2026-08-24T16:00:00Z',
+    ...overrides,
+  }
+}
+
+function makeWrapper(
+  vehicles: Vehicle[],
+  savedViews: SavedView[] = [],
+  searchResponses: Record<string, SearchResponse> = {},
+  alerts: Alert[] = [],
+) {
   return function Wrapper({ children }: { children: ReactNode }) {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
     qc.setQueryData(vehicleKeys.all, vehicles)
+    qc.setQueryData(savedViewsKeys.allList, savedViews)
+    qc.setQueryData(alertKeys.alerts, alerts)
+    for (const [query, response] of Object.entries(searchResponses)) {
+      qc.setQueryData(searchKeys.global(query, undefined, 5), response)
+    }
     return (
       <QueryClientProvider client={qc}>
         <MemoryRouter initialEntries={['/']}>
@@ -59,6 +98,11 @@ function makeWrapper(vehicles: Vehicle[]) {
       </QueryClientProvider>
     )
   }
+}
+
+function LocationProbe() {
+  const location = useLocation()
+  return <output data-testid="location">{location.pathname}{location.search}</output>
 }
 
 // Mounts the global keyboard-shortcut hook the same way Layout does in
@@ -81,6 +125,8 @@ beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
   _resetFrecency()
+  requestMock.mockReset()
+  requestMock.mockResolvedValue({})
 })
 
 afterEach(() => {
@@ -216,6 +262,20 @@ describe('CommandPalette search', () => {
     })
   })
 
+  it('changes the global vehicle selection from a switch command', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'switch model y' } })
+    fireEvent.click(await screen.findByRole('button', { name: /Switch to Model Y/i }))
+
+    await waitFor(() => {
+      expect(localStorage.getItem(__SELECTED_VEHICLE_STORAGE_KEY__)).toBe('2')
+    })
+  })
+
   it('surfaces theme registry commands on a "theme" search', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
@@ -237,6 +297,125 @@ describe('CommandPalette search', () => {
     fireEvent.change(input, { target: { value: 'refresh' } })
 
     expect(await screen.findByText(/Refresh data/)).toBeInTheDocument()
+  })
+
+  it('opens live entity-search results from the command center', async () => {
+    const Wrapper = makeWrapper(makeVehicles(), [], {
+      alpha: {
+        query: 'alpha',
+        hits: [{
+          type: 'drive',
+          id: 77,
+          title: 'Alpha commute',
+          subtitle: 'Drive · completed',
+          url: '/drives/77',
+          score: 100,
+        }],
+      },
+    })
+    render(
+      <>
+        <CommandPalette />
+        <LocationProbe />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'alpha' } })
+
+    const result = await screen.findByRole('button', { name: /Alpha commute/i })
+    fireEvent.click(result)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/drives/77')
+    })
+  })
+
+  it('finds and applies saved views from any supported workspace', async () => {
+    const Wrapper = makeWrapper(makeVehicles(), [{
+      id: 41,
+      name: 'Long-haul efficiency',
+      route: '/drives',
+      query: 'range=30d&sort=efficiency',
+      is_default: false,
+      is_pinned: true,
+      sort_order: 0,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }])
+    render(
+      <>
+        <CommandPalette />
+        <LocationProbe />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'long haul' } })
+
+    const result = await screen.findByRole('button', { name: /Long-haul efficiency/i })
+    expect(screen.getByText('Saved views')).toBeInTheDocument()
+    fireEvent.click(result)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/drives?range=30d&sort=efficiency',
+      )
+    })
+  })
+
+  it('acknowledges an open alert from the command center and exposes Undo', async () => {
+    const alert = makeAlert()
+    const acknowledged: AlertDetail = {
+      ...alert,
+      acknowledged_at: '2026-08-24T17:00:00Z',
+      events: [],
+    }
+    const reopened: AlertDetail = {
+      ...alert,
+      acknowledged_at: null,
+      events: [],
+    }
+    requestMock.mockImplementation((path: string) => {
+      if (path === `/alerts/${alert.id}/acknowledge`) return Promise.resolve(acknowledged)
+      if (path === `/alerts/${alert.id}/reopen`) return Promise.resolve(reopened)
+      return Promise.reject(new Error(`Unexpected request: ${path}`))
+    })
+    const Wrapper = makeWrapper(
+      makeVehicles(),
+      [],
+      { acknowledge: { query: 'acknowledge', hits: [] } },
+      [alert],
+    )
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'acknowledge' } })
+    fireEvent.click(await screen.findByRole('button', { name: /Acknowledge an alert/i }))
+
+    expect(screen.getByText('Choose an open alert to acknowledge')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /Battery critically low/i }))
+
+    await waitFor(() => {
+      expect(requestMock).toHaveBeenCalledWith(
+        `/alerts/${alert.id}/acknowledge`,
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+    expect(await screen.findByText('Alert acknowledged')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => {
+      expect(requestMock).toHaveBeenCalledWith(
+        `/alerts/${alert.id}/reopen`,
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
   })
 
   // Regression for a scoring bug where each keyword was

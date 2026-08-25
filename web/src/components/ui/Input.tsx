@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
 import { HelpIcon, type HelpIconProps } from './HelpIcon';
@@ -32,8 +32,28 @@ const sizeClasses: Record<NonNullable<InputProps['size']>, string> = {
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, help, error, hint, icon, suffix, size = 'md', className, id, required, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  ({
+    label,
+    help,
+    error,
+    hint,
+    icon,
+    suffix,
+    size = 'md',
+    className,
+    id,
+    required,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  }, ref) => {
+    const reactId = useId();
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || `input-${reactId}`;
+    const feedbackId = error
+      ? `${inputId}-error`
+      : hint
+        ? `${inputId}-hint`
+        : undefined;
+    const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
       <div className="space-y-1">
         {label && (
@@ -66,12 +86,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
               className,
             )}
             aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+            aria-describedby={describedBy}
             {...props}
           />
           {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2">{suffix}</span>}
         </div>
-        {error && <p id={`${inputId}-error`} className="text-xs text-red-500">{error}</p>}
+        {error && <p id={`${inputId}-error`} role="alert" className="text-xs text-rose-300">{error}</p>}
         {hint && !error && <p id={`${inputId}-hint`} className="text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );

@@ -23,7 +23,7 @@ import { RefreshCw, AlertTriangle, ChevronRight } from 'lucide-react'
 import { GlassPanel, Button } from '@/components/ui'
 import { Heading, Text, Caption } from '@/components/ui/Typography'
 import { MetricBar } from '@/components/data-display'
-import { Spinner } from '@/components/feedback'
+import { Skeleton } from '@/components/feedback'
 import { fmtNumber } from '@/lib/numberFormat'
 import { formatRelative, formatDurationMsLong } from '@/lib/dateFormat'
 import { useQueueStatus } from '@/api/hooks/useSystemQueues'
@@ -85,10 +85,12 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
   const handleOpen = () => onOpen(stat.worker)
 
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="auto"
       onClick={handleOpen}
-      className="text-left w-full rounded-xl border border-white/[0.06] bg-[var(--surface-1)]/40 p-4 transition-colors hover:bg-[var(--surface-1)]/70 focus:outline-none focus:ring-2 focus:ring-[var(--accent-primary)]"
+      className="h-auto w-full flex-col items-stretch justify-start rounded-xl border border-white/[0.06] bg-[var(--surface-1)]/40 p-4 text-left hover:bg-[var(--surface-1)]/70"
       data-testid={`queue-worker-card-${stat.worker}`}
       aria-label={t('queueStatus.openDrawer', 'Show recent {{worker}} jobs', {
         worker: stat.display_name,
@@ -175,7 +177,7 @@ function WorkerCard({ stat, onOpen }: WorkerCardProps) {
           <Caption className="text-amber-300/80">{oldestLabel}</Caption>
         ) : null}
       </div>
-    </button>
+    </Button>
   )
 }
 
@@ -240,13 +242,29 @@ export function QueueStatusPanel({ testHookOverride }: QueueStatusPanelProps = {
 
       {isLoading ? (
         <div
-          className="flex items-center gap-3 py-6 text-[var(--text-secondary)]"
+          className="grid grid-cols-1 gap-4 md:grid-cols-3"
           data-testid="queue-loading"
+          role="status"
+          aria-busy="true"
+          aria-label={t('queueStatus.loading', 'Loading worker status…')}
         >
-          <Spinner size="sm" />
-          <Text variant="bodySm">
-            {t('queueStatus.loading', 'Loading worker status…')}
-          </Text>
+          {[0, 1, 2].map((item) => (
+            <div
+              key={item}
+              aria-hidden="true"
+              className="space-y-4 rounded-xl border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <Skeleton className="h-4 w-28" />
+                <Skeleton className="h-4 w-14" />
+              </div>
+              <Skeleton className="h-10 w-full" />
+              <div className="grid grid-cols-2 gap-3">
+                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-9 w-full" />
+              </div>
+            </div>
+          ))}
         </div>
       ) : error ? (
         <div

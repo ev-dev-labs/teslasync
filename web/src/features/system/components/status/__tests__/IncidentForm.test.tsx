@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -53,7 +53,7 @@ function renderForm(onClose: () => void = vi.fn()) {
 // The <Modal> portals into document.body, so the form is not inside the
 // render container. Reach it from the (portaled) title input instead.
 function getForm(): HTMLFormElement {
-  const form = screen.getByLabelText('Title').closest('form')
+  const form = screen.getByLabelText(/^Title/).closest('form')
   if (!form) throw new Error('IncidentForm: <form> not found')
   return form
 }
@@ -72,7 +72,7 @@ describe('IncidentForm', () => {
     renderForm()
     expect(screen.getByRole('dialog')).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Log an incident' })).toBeInTheDocument()
-    expect(screen.getByLabelText('Title')).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Title/)).toBeInTheDocument()
     expect(screen.getByLabelText('Severity')).toBeInTheDocument()
     expect(screen.getByLabelText('Status')).toBeInTheDocument()
     expect(screen.getByLabelText(/Affected components/i)).toBeInTheDocument()
@@ -89,7 +89,7 @@ describe('IncidentForm', () => {
 
   it('blocks submit and shows a field-associated error when the title is too short', () => {
     renderForm()
-    const title = screen.getByLabelText('Title')
+    const title = screen.getByLabelText(/^Title/)
     fireEvent.change(title, { target: { value: 'ab' } })
     fireEvent.submit(getForm())
 
@@ -101,7 +101,7 @@ describe('IncidentForm', () => {
 
   it('trims surrounding whitespace before validating the title length', () => {
     renderForm()
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '  ab  ' } })
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: '  ab  ' } })
     fireEvent.submit(getForm())
 
     expect(mockRequest).not.toHaveBeenCalled()
@@ -110,7 +110,7 @@ describe('IncidentForm', () => {
 
   it('clears the validation error as soon as the title is corrected', () => {
     renderForm()
-    const title = screen.getByLabelText('Title')
+    const title = screen.getByLabelText(/^Title/)
     fireEvent.change(title, { target: { value: 'ab' } })
     fireEvent.submit(getForm())
     expect(title).toHaveAttribute('aria-invalid', 'true')
@@ -124,7 +124,7 @@ describe('IncidentForm', () => {
     const onClose = vi.fn()
     renderForm(onClose)
 
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: '  Wall connector restart  ' } })
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: '  Wall connector restart  ' } })
     fireEvent.change(screen.getByLabelText('Severity'), { target: { value: 'major' } })
     fireEvent.change(screen.getByLabelText('Status'), { target: { value: 'monitoring' } })
     fireEvent.change(screen.getByLabelText(/Affected components/i), { target: { value: 'tesla, telemetry,' } })
@@ -149,7 +149,7 @@ describe('IncidentForm', () => {
 
   it('omits a blank initial message and sends an empty affected-components list', async () => {
     renderForm()
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Router flapped' } })
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Router flapped' } })
     fireEvent.change(screen.getByLabelText(/Initial timeline message/i), { target: { value: '   ' } })
     fireEvent.submit(getForm())
 
@@ -169,7 +169,7 @@ describe('IncidentForm', () => {
     mockRequest = vi.fn().mockRejectedValue(new Error('boom: DB down'))
     renderForm(onClose)
 
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Something broke' } })
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Something broke' } })
     fireEvent.submit(getForm())
 
     expect(await screen.findByText('boom: DB down')).toBeInTheDocument()
@@ -185,7 +185,7 @@ describe('IncidentForm', () => {
     const onClose = vi.fn()
     renderForm(onClose)
 
-    fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'Slow incident' } })
+    fireEvent.change(screen.getByLabelText(/^Title/), { target: { value: 'Slow incident' } })
     fireEvent.submit(getForm())
 
     const pendingBtn = await screen.findByRole('button', { name: 'Logging…' })
@@ -202,5 +202,25 @@ describe('IncidentForm', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(mockRequest).not.toHaveBeenCalled()
+  })
+
+  it('keeps a dirty incident draft open until discard is confirmed', async () => {
+    const onClose = vi.fn()
+    renderForm(onClose)
+    fireEvent.change(screen.getByLabelText(/^Title/), {
+      target: { value: 'Unsubmitted incident' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' })
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Keep editing' }))
+    expect(onClose).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    const reopened = await screen.findByRole('dialog', { name: 'Unsaved changes' })
+    fireEvent.click(within(reopened).getByRole('button', { name: 'Discard changes' }))
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1))
   })
 })

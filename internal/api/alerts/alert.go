@@ -162,6 +162,72 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 		}
 	}
 
+	seenVehicleIDs := make(map[int64]struct{})
+	for _, value := range query["vehicle_id"] {
+		for _, rawID := range strings.Split(value, ",") {
+			rawID = strings.TrimSpace(rawID)
+			if rawID == "" {
+				continue
+			}
+			vehicleID, err := strconv.ParseInt(rawID, 10, 64)
+			if err != nil || vehicleID <= 0 {
+				return filters, fmt.Errorf("invalid vehicle_id %q", rawID)
+			}
+			if _, exists := seenVehicleIDs[vehicleID]; exists {
+				continue
+			}
+			seenVehicleIDs[vehicleID] = struct{}{}
+			filters.VehicleIDs = append(filters.VehicleIDs, vehicleID)
+		}
+	}
+
+	parseRangeTime := func(name string, inclusiveDateEnd bool) (time.Time, error) {
+		raw := strings.TrimSpace(query.Get(name))
+		if raw == "" {
+			return time.Time{}, nil
+		}
+		if parsed, err := time.Parse("2006-01-02", raw); err == nil {
+			if inclusiveDateEnd {
+				parsed = parsed.Add(24*time.Hour - time.Nanosecond)
+			}
+			return parsed, nil
+		}
+		parsed, err := time.Parse(time.RFC3339Nano, raw)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid %s: must be an RFC3339 timestamp or YYYY-MM-DD date", name)
+		}
+		return parsed, nil
+	}
+
+	var err error
+	filters.From, err = parseRangeTime("from", false)
+	if err != nil {
+		return filters, err
+	}
+	filters.To, err = parseRangeTime("to", true)
+	if err != nil {
+		return filters, err
+	}
+	if !filters.From.IsZero() && !filters.To.IsZero() && filters.From.After(filters.To) {
+		return filters, fmt.Errorf("invalid date range: from must not be after to")
+	}
+
+	beforeCreatedAt := strings.TrimSpace(query.Get("before_created_at"))
+	beforeID := strings.TrimSpace(query.Get("before_id"))
+	if (beforeCreatedAt == "") != (beforeID == "") {
+		return filters, fmt.Errorf("before_created_at and before_id must be provided together")
+	}
+	if beforeCreatedAt != "" {
+		filters.BeforeCreatedAt, err = time.Parse(time.RFC3339Nano, beforeCreatedAt)
+		if err != nil {
+			return filters, fmt.Errorf("invalid before_created_at: must be an RFC3339 timestamp")
+		}
+		filters.BeforeID, err = strconv.ParseInt(beforeID, 10, 64)
+		if err != nil || filters.BeforeID <= 0 {
+			return filters, fmt.Errorf("invalid before_id %q", beforeID)
+		}
+	}
+
 	parseOptionalBool := func(name string) (*bool, error) {
 		raw := strings.TrimSpace(query.Get(name))
 		if raw == "" {
@@ -174,7 +240,6 @@ func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, err
 		return &value, nil
 	}
 
-	var err error
 	filters.Read, err = parseOptionalBool("read")
 	if err != nil {
 		return filters, err
@@ -205,6 +270,16 @@ type AlertResponse struct {
 	Message   string    `json:"message"`
 	IsRead    bool      `json:"is_read"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// Rule scope is included because multi-vehicle rules cannot be represented
+	// truthfully by the deprecated single vehicle_id field. A nil scope denotes
+	// a system notification or a deleted originating rule.
+	AllVehicles *bool   `json:"all_vehicles,omitempty"`
+	VehicleIDs  []int64 `json:"vehicle_ids"`
+
+	AcknowledgedAt      *time.Time `json:"acknowledged_at,omitempty"`
+	AcknowledgedBy      *string    `json:"acknowledged_by,omitempty"`
+	AcknowledgementNote *string    `json:"acknowledgement_note,omitempty"`
 
 	// Drill-through metadata populated when the notification log links to a
 	// still-existing alert rule.
@@ -287,19 +362,34 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 	out := make([]*AlertResponse, len(logs))
 	for i, l := range logs {
 		resp := &AlertResponse{
-			ID:        l.ID,
-			Title:     l.Title,
-			Message:   l.Message,
-			IsRead:    l.ReadAt != nil,
-			CreatedAt: l.CreatedAt,
-			Type:      "notification",
-			Severity:  "info",
+			ID:                  l.ID,
+			Title:               l.Title,
+			Message:             l.Message,
+			IsRead:              l.ReadAt != nil,
+			CreatedAt:           l.CreatedAt,
+			Type:                "notification",
+			Severity:            "info",
+			AcknowledgedAt:      l.AcknowledgedAt,
+			AcknowledgedBy:      l.AcknowledgedBy,
+			AcknowledgementNote: l.AcknowledgementNote,
 		}
 		if l.AlertID != nil {
 			if rule, ok := rules[*l.AlertID]; ok {
 				resp.Type = slugifyRuleName(rule.Name)
 				resp.Severity = alertRuleSeverityToWire(rule.Severity)
-				if rule.VehicleID != nil {
+				allVehicles := rule.AllVehicles
+				resp.AllVehicles = &allVehicles
+				if rule.VehicleIDs != nil {
+					resp.VehicleIDs = append([]int64{}, rule.VehicleIDs...)
+				}
+				switch {
+				case rule.AllVehicles:
+					resp.VehicleID = 0
+				case len(rule.VehicleIDs) == 1:
+					resp.VehicleID = rule.VehicleIDs[0]
+				case rule.VehicleIDs == nil && rule.VehicleID != nil:
+					// Rolling-deploy fallback for repositories that have not
+					// hydrated the canonical junction scope yet.
 					resp.VehicleID = *rule.VehicleID
 				}
 				// Carry the owning rule's identity so the frontend can deep-link from

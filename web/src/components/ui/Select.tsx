@@ -37,13 +37,32 @@ const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
 };
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ options, label, help, error, hint, placeholder, size = 'md', className, id, required, ...props }, ref) => {
+  ({
+    options,
+    label,
+    help,
+    error,
+    hint,
+    placeholder,
+    size = 'md',
+    className,
+    id,
+    required,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  }, ref) => {
     // Fall back to a stable, unique React id so the error/hint nodes and
     // their `aria-describedby` wiring never collapse to `undefined-error`
     // (invalid + duplicated across label-less selects) when neither `id`
     // nor `label` is supplied.
     const reactId = useId();
     const selectId = id || label?.toLowerCase().replace(/\s+/g, '-') || `select-${reactId}`;
+    const feedbackId = error
+      ? `${selectId}-error`
+      : hint
+        ? `${selectId}-hint`
+        : undefined;
+    const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
       <div className="space-y-1">
         {label && (
@@ -72,7 +91,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             className,
           )}
           aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? `${selectId}-error` : hint ? `${selectId}-hint` : undefined}
+          aria-describedby={describedBy}
           {...props}
         >
           {placeholder && <option value="">{placeholder}</option>}
@@ -82,7 +101,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p id={`${selectId}-error`} className="text-xs text-red-500">{error}</p>}
+        {error && <p id={`${selectId}-error`} role="alert" className="text-xs text-rose-300">{error}</p>}
         {hint && !error && <p id={`${selectId}-hint`} className="text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );

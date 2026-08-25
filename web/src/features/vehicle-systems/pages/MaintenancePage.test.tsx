@@ -398,6 +398,35 @@ describe('MaintenancePage', () => {
     expect(screen.getByTestId('ai-predictive-maintenance')).toHaveAttribute('data-vehicle-id', '7');
   });
 
+  it('opens a service record with related operational evidence links', () => {
+    h.recordsQuery = makeQuery({
+      data: [
+        makeRecord({
+          id: 11,
+          date: '2024-03-01T10:00:00Z',
+          description: 'Annual inspection',
+          notes: 'Brake wear documented',
+        }),
+      ],
+    });
+
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+
+    const drawer = screen.getByRole('dialog', { name: 'Annual inspection' });
+    expect(within(drawer).getByText('Brake wear documented')).toBeInTheDocument();
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/7');
+    expect(within(drawer).getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute('href', '/drives?from=2024-03-01&to=2024-03-01');
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute('href', '/charging?from=2024-03-01&to=2024-03-01');
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute('href', '/signals?from=2024-03-01&to=2024-03-01');
+    expect(within(drawer).getByRole('link', { name: 'Build service evidence pack' }))
+      .toHaveAttribute('href', '/diagnostics/service-evidence');
+  });
+
   it('re-converts the SI distance to the user mi preference at the render boundary', () => {
     h.unit.distance = 'mi';
     h.itemsQuery = makeQuery({

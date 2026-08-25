@@ -153,15 +153,17 @@ describe('ActiveOrdersSection — header', () => {
 })
 
 describe('ActiveOrdersSection — loading / error / empty states', () => {
-  it('renders a loading spinner while the query is pending', () => {
+  it('renders an order-list skeleton while the query is pending', () => {
     mockedUseOrders.mockReturnValue(
       ordersState({ data: undefined, isLoading: true }),
     )
     renderSection()
-    expect(screen.getByText('Loading orders…')).toBeInTheDocument()
+    expect(
+      screen.getByRole('status', { name: 'Loading orders…' }),
+    ).toHaveAttribute('aria-busy', 'true')
     // The header (and its refresh control) stay mounted during load.
     expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument()
-    // No empty-state copy competes with the spinner.
+    // No empty-state copy competes with the skeleton.
     expect(screen.queryByText(/No order data yet/)).not.toBeInTheDocument()
   })
 
@@ -177,8 +179,8 @@ describe('ActiveOrdersSection — loading / error / empty states', () => {
     )
     renderSection()
 
-    // 503 → QueryError "Server error" branch with a Retry CTA.
-    expect(screen.getByText('Server error')).toBeInTheDocument()
+    // 503 → QueryError dependency-unavailable branch with a Retry CTA.
+    expect(screen.getByText('Service unavailable')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: /retry/i }))
     expect(refetch).toHaveBeenCalledTimes(1)
   })
@@ -212,7 +214,7 @@ describe('ActiveOrdersSection — loading / error / empty states', () => {
     renderSection()
     // Data wins — the error UI is suppressed while we still have rows to show.
     expect(screen.getByText('Model S')).toBeInTheDocument()
-    expect(screen.queryByText('Server error')).not.toBeInTheDocument()
+    expect(screen.queryByText('Service unavailable')).not.toBeInTheDocument()
   })
 })
 

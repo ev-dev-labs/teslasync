@@ -1,6 +1,6 @@
 import { UsersRound } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
-import { EmptyState, InlineCallout, Spinner } from '@/components/feedback';
+import { EmptyState, InlineCallout, Skeleton } from '@/components/feedback';
 import { Badge, Button, GlassPanel } from '@/components/ui';
 import type { BenchmarkRelease } from '@/api/hooks/useBenchmarks';
 
@@ -39,15 +39,32 @@ export function CohortEligibilityPanel({
             {t('benchmarks.cohort.title', 'Cohort eligibility')}
           </h2>
         </div>
-        <Badge variant={release && !release.suppressed ? 'success' : 'warning'} dot>
-          {release && !release.suppressed
-            ? t('benchmarks.cohort.eligible', 'Eligible')
-            : t('benchmarks.cohort.pending', 'Not released')}
-        </Badge>
+        {loading ? (
+          <Skeleton className="h-6 w-24 rounded-full" />
+        ) : (
+          <Badge variant={release && !release.suppressed ? 'success' : 'warning'} dot>
+            {release && !release.suppressed
+              ? t('benchmarks.cohort.eligible', 'Eligible')
+              : t('benchmarks.cohort.pending', 'Not released')}
+          </Badge>
+        )}
       </div>
       {loading ? (
-        <div className="flex justify-center py-10">
-          <Spinner />
+        <div
+          role="status"
+          aria-busy="true"
+          aria-label={t('benchmarks.cohort.loading', 'Loading cohort eligibility…')}
+          className="space-y-4 py-2"
+        >
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            {Array.from({ length: 3 }).map((_, index) => (
+              <div key={index} className="space-y-2">
+                <Skeleton className="h-3 w-24" />
+                <Skeleton className="h-5 w-32" />
+              </div>
+            ))}
+          </div>
+          <Skeleton className="h-9 w-52" />
         </div>
       ) : !optedIn ? (
         // no-action: the opt-in control is the ConsentGate section rendered directly above this panel on the page; this card only reflects that state.

@@ -15,9 +15,9 @@ import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertTriangle, ArrowUpDown, CalendarPlus, CheckCircle, Clock,
-  DollarSign, Filter, Gauge, Layers, ListChecks, RefreshCw,
-  ShieldCheck, Tag, TrendingUp, Wrench,
+  Activity, AlertTriangle, ArrowUpDown, BatteryCharging, Bell, CalendarPlus,
+  Car, CheckCircle, Clock, DollarSign, Eye, Filter, Gauge, Layers, ListChecks,
+  MapPin, RefreshCw, Route, ShieldCheck, Tag, TrendingUp, Wrench,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -25,7 +25,12 @@ import {
   Badge, Button, DataTable, GlassPanel, PanelTitle, Select, Subhead, Text,
   type Column,
 } from '@/components/ui';
-import { Currency, MetricBar, MetricCard } from '@/components/data-display';
+import {
+  Currency,
+  EntityPreviewDrawer,
+  MetricBar,
+  MetricCard,
+} from '@/components/data-display';
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleSelect } from '@/components/forms';
@@ -37,7 +42,9 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { request } from '@/api/client';
 import { cn } from '@/lib/cn';
+import { buildContextHref } from '@/lib/contextNavigation';
 import { formatDate, formatDateTime } from '@/lib/dateFormat';
+import { localDayKey } from '@/lib/drivesAggregation';
 import { fmtInt } from '@/lib/numberFormat';
 import { typography } from '@/lib/tokens';
 
@@ -349,6 +356,7 @@ function ItemsSkeleton() {
 function buildServiceColumns(
   t: (key: string, fallback: string) => string,
   formatDistance: DistanceFormatter,
+  onPreview: (record: ServiceRecord) => void,
 ): Column<ServiceRecord>[] {
   return [
     {
@@ -383,6 +391,24 @@ function buildServiceColumns(
       header: t('maintenance.col.provider', 'Provider'),
       render: (r) => <Text as="span" size="sm" color="secondary">{r.provider || '—'}</Text>,
     },
+    {
+      key: 'actions',
+      header: '',
+      visibleOnMobile: true,
+      align: 'right',
+      render: (record) => (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-9 w-9 p-0"
+          aria-label={t('maintenance.inspectRecord', 'Inspect service record')}
+          onClick={() => onPreview(record)}
+        >
+          <Eye className="h-4 w-4" aria-hidden="true" />
+        </Button>
+      ),
+    },
   ];
 }
 
@@ -413,6 +439,8 @@ export default function MaintenancePage() {
 
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [sortBy, setSortBy] = useState('status');
+  const [previewRecord, setPreviewRecord] = useState<ServiceRecord | null>(null);
+  const previewDay = localDayKey(previewRecord?.date);
 
   const categories = useMemo(
     () => Array.from(new Set(items.map((i) => i.category))).sort(),
@@ -495,7 +523,10 @@ export default function MaintenancePage() {
     [items],
   );
 
-  const serviceColumns = useMemo(() => buildServiceColumns(t, formatDistance), [t, formatDistance]);
+  const serviceColumns = useMemo(
+    () => buildServiceColumns(t, formatDistance, setPreviewRecord),
+    [t, formatDistance],
+  );
 
   const handleSchedule = useCallback(() => {
     // Placeholder — a future slice opens the scheduling modal here. The
@@ -811,6 +842,96 @@ export default function MaintenancePage() {
           )}
         </GlassPanel>
       </FadeIn>
+
+      <EntityPreviewDrawer
+        open={previewRecord !== null}
+        onClose={() => setPreviewRecord(null)}
+        eyebrow={t('maintenance.preview.eyebrow', 'Service evidence')}
+        title={
+          previewRecord?.description
+          || t('maintenance.preview.title', 'Service record')
+        }
+        description={previewRecord?.notes || undefined}
+        statusLabel={t('maintenance.preview.completed', 'Completed')}
+        statusTone="success"
+        fields={
+          previewRecord
+            ? [
+                {
+                  key: 'date',
+                  label: t('maintenance.col.date', 'Date'),
+                  value: formatDateTime(previewRecord.date),
+                },
+                {
+                  key: 'mileage',
+                  label: t('maintenance.col.mileage', 'Mileage'),
+                  value: formatDistance(previewRecord.mileage, { precision: 0 }),
+                },
+                {
+                  key: 'cost',
+                  label: t('maintenance.col.cost', 'Cost'),
+                  value: formatCurrency(previewRecord.cost, 2),
+                },
+                {
+                  key: 'provider',
+                  label: t('maintenance.col.provider', 'Provider'),
+                  value: previewRecord.provider || '—',
+                },
+              ]
+            : []
+        }
+        relatedActions={
+          previewRecord
+            ? [
+                {
+                  key: 'vehicle',
+                  label: t('entityContext.vehicle', 'Vehicle'),
+                  to: `/vehicles/${previewRecord.vehicle_id}`,
+                  icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'drives',
+                  label: t('entityContext.drives', 'Drive history'),
+                  to: buildContextHref('/drives', { from: previewDay, to: previewDay }),
+                  icon: <Route className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'charging',
+                  label: t('entityContext.charging', 'Charging sessions'),
+                  to: buildContextHref('/charging', { from: previewDay, to: previewDay }),
+                  icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'locations',
+                  label: t('entityContext.locations', 'Visited locations'),
+                  to: buildContextHref('/locations', { from: previewDay, to: previewDay }),
+                  icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'alerts',
+                  label: t('entityContext.alerts', 'Alerts'),
+                  to: buildContextHref('/notifications/alerts', {
+                    from: previewDay,
+                    to: previewDay,
+                  }),
+                  icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'telemetry',
+                  label: t('entityContext.telemetry', 'Telemetry evidence'),
+                  to: buildContextHref('/signals', { from: previewDay, to: previewDay }),
+                  icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'evidence-pack',
+                  label: t('entityContext.evidencePack', 'Build service evidence pack'),
+                  to: '/diagnostics/service-evidence',
+                  icon: <ShieldCheck className="h-4 w-4" aria-hidden="true" />,
+                },
+              ]
+            : []
+        }
+      />
     </PageContainer>
   );
 }

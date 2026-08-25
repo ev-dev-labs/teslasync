@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import {
   Car, RefreshCw, Battery, Gauge, Zap, Activity, ListChecks,
   ExternalLink, Trash2, Lock, Shield, ArrowLeftRight, AlertCircle,
+  BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -21,15 +22,24 @@ import {
   EntityPreviewDrawer,
   type OperationalAttention,
 } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, AlertBanner, StatGridSkeleton } from '@/components/feedback';
+import {
+  Skeleton,
+  EmptyState,
+  QueryError,
+  AlertBanner,
+  DataStateNotice,
+  StatGridSkeleton,
+} from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useSyncVehicles, useDeleteVehicle, useFleetStates,
 } from '@/api/hooks/useVehicles';
+import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
 import { usePinned } from '@/api/hooks/usePinned';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -441,6 +451,7 @@ export default function VehicleListPage() {
   usePageTitle(t('nav.vehicles', 'Fleet'));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const { setVehicleId } = useSelectedVehicle();
 
   /* ── Data ── */
   const vehiclesQuery = useVehicles();
@@ -453,6 +464,8 @@ export default function VehicleListPage() {
 
   const statesQuery = useFleetStates(vehicleList);
   const fleetStates = statesQuery.data;
+  const workOrdersQuery = useFleetWorkOrders({ limit: 100 });
+  const workOrders = workOrdersQuery.data?.items ?? [];
 
   /* Pinned vehicles float to the top of the list. */
   const { data: vehiclePins = [] } = usePinned('vehicle');
@@ -481,12 +494,28 @@ export default function VehicleListPage() {
         : 0;
     const totalRange = withState.reduce((s, e) => s + (e.state.rated_range ?? 0), 0);
     const charging = withState.filter((e) => e.state.is_charging).length;
+    const ready = withState.filter((e) => (e.state.battery_level ?? 0) >= 20).length;
+    const active = withState.filter((e) => {
+      const status = deriveVehicleStatus(e.state);
+      return status === 'driving' || status === 'charging';
+    }).length;
+    const softwareVersions = new Set(
+      withState
+        .map((entry) => entry.state.software_version?.trim())
+        .filter((version): version is string => Boolean(version)),
+    );
     return {
       entries: withState,
       avgBattery: avg,
       totalRange,
       chargingCount: charging,
       onlineCount: withState.length,
+      readyCount: ready,
+      activeCount: active,
+      softwareVersions: [...softwareVersions].sort(),
+      softwareReportingCount: withState.filter(
+        (entry) => Boolean(entry.state.software_version?.trim()),
+      ).length,
     };
   }, [fleetStates]);
 
@@ -516,6 +545,15 @@ export default function VehicleListPage() {
   const lowBatteryCount = fleet.entries.filter(
     ({ state }) => (state.battery_level ?? 100) < 20,
   ).length;
+  const openWorkOrders = workOrders.filter(
+    (order) => order.status !== 'completed' && order.status !== 'cancelled',
+  );
+  const urgentWorkOrders = openWorkOrders.filter(
+    (order) => order.severity === 'high' || order.severity === 'critical',
+  );
+  const utilizationPct = vehicleList.length > 0
+    ? Math.round((fleet.activeCount / vehicleList.length) * 100)
+    : 0;
   const fleetAttention: OperationalAttention[] = [
     ...(!fleetStatePending && offlineCount > 0
       ? [{
@@ -541,6 +579,36 @@ export default function VehicleListPage() {
             'Review charging readiness before the next scheduled departure.',
           ),
           tone: 'warning' as const,
+        }]
+      : []),
+    ...(fleet.softwareVersions.length > 1
+      ? [{
+          key: 'software',
+          title: t(
+            'operations.vehicles.softwareMixedTitle',
+            '{{count}} software versions are active',
+            { count: fleet.softwareVersions.length },
+          ),
+          description: t(
+            'operations.vehicles.softwareMixedDescription',
+            'Review rollout consistency before diagnosing behavior that differs between vehicles.',
+          ),
+          tone: 'warning' as const,
+        }]
+      : []),
+    ...(urgentWorkOrders.length > 0
+      ? [{
+          key: 'service',
+          title: t(
+            'operations.vehicles.serviceAttentionTitle',
+            'Urgent service work requires attention ({{count}})',
+            { count: urgentWorkOrders.length },
+          ),
+          description: t(
+            'operations.vehicles.serviceAttentionDescription',
+            'High- or critical-severity maintenance is still open in Fleet Operations.',
+          ),
+          tone: 'danger' as const,
         }]
       : []),
   ];
@@ -603,33 +671,31 @@ export default function VehicleListPage() {
   }
 
   /* ── Render ── */
-  const actions = (
-    <>
-      {vehicleList.length >= 2 && (
-        <Button
-          variant="outline"
-          icon={<ArrowLeftRight className="h-4 w-4" />}
-          onClick={handleCompare}
-        >
-          {t('vehicles.compareButton', 'Compare vehicles')}
-        </Button>
-      )}
-      <Button
-        onClick={handleSync}
-        loading={syncMut.isPending}
-        icon={<RefreshCw className="h-4 w-4" />}
-      >
-        {t('vehicles.syncButton', 'Sync from Tesla')}
-      </Button>
-    </>
-  );
-
   return (
     <PageContainer
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
-      query={vehiclesQuery}
-      actions={actions}
+      query={[vehiclesQuery, statesQuery, workOrdersQuery]}
+      secondaryActions={
+        vehicleList.length >= 2 ? (
+          <Button
+            variant="outline"
+            icon={<ArrowLeftRight className="h-4 w-4" />}
+            onClick={handleCompare}
+          >
+            {t('vehicles.compareButton', 'Compare vehicles')}
+          </Button>
+        ) : undefined
+      }
+      primaryAction={
+        <Button
+          onClick={handleSync}
+          loading={syncMut.isPending}
+          icon={<RefreshCw className="h-4 w-4" />}
+        >
+          {t('vehicles.syncButton', 'Sync from Tesla')}
+        </Button>
+      }
     >
       {/* Sync feedback — transient, dismissible */}
       {syncMut.isSuccess && (
@@ -654,6 +720,20 @@ export default function VehicleListPage() {
           </AlertBanner>
         </FadeIn>
       )}
+      {workOrdersQuery.isError && vehicleList.length > 0 && (
+        <DataStateNotice
+          state="partial"
+          title={t(
+            'operations.vehicles.serviceUnavailableTitle',
+            'Service attention is temporarily unavailable',
+          )}
+        >
+          {t(
+            'operations.vehicles.serviceUnavailableDescription',
+            'Fleet availability and live state remain visible, but maintenance work orders could not be loaded.',
+          )}
+        </DataStateNotice>
+      )}
 
       {vehicleList.length === 0 ? (
         <EmptyState
@@ -673,7 +753,7 @@ export default function VehicleListPage() {
             title={t('operations.vehicles.title', 'Availability and readiness across the fleet')}
             description={t(
               'operations.vehicles.description',
-              'Live connectivity, battery readiness, and charging activity are consolidated before vehicle-level detail.',
+              'Live connectivity, departure readiness, utilization, software consistency, and service attention are consolidated before vehicle-level detail.',
             )}
             statusLabel={
               fleetStatePending
@@ -689,7 +769,30 @@ export default function VehicleListPage() {
                   ? 'warning'
                   : 'success'
             }
-            freshness={<DataFreshnessAuto query={statesQuery} />}
+            freshness={
+              <div className="flex flex-wrap items-center gap-2">
+                <DataFreshnessAuto
+                  query={statesQuery}
+                  source={t('operations.vehicles.liveStateSource', 'Live vehicle state')}
+                />
+                <DataFreshnessAuto
+                  query={workOrdersQuery}
+                  source={t('operations.vehicles.workOrdersSource', 'Fleet work orders')}
+                />
+              </div>
+            }
+            actions={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
+                onClick={() => navigate('/fleet-operations')}
+              >
+                {t('operations.vehicles.openFleetOperations', 'Fleet operations')}
+              </Button>
+            }
+            metricColumns={3}
             metrics={[
               {
                 key: 'vehicles',
@@ -716,36 +819,89 @@ export default function VehicleListPage() {
                     : 'success',
               },
               {
-                key: 'battery',
-                label: t('vehicles.avgBattery', 'Avg Battery'),
-                value: fleetStatePending ? '—' : `${fmtNumber(fleet.avgBattery)}%`,
+                key: 'readiness',
+                label: t('operations.vehicles.readiness', 'Departure ready'),
+                value: fleetStatePending ? '—' : `${fleet.readyCount}/${vehicleList.length}`,
                 detail: t(
-                  'operations.vehicles.batteryDetail',
-                  'Mean state of charge across vehicles with live state.',
+                  'operations.vehicles.readinessDetail',
+                  'Vehicles reporting live state with at least 20% battery.',
                 ),
                 tone: fleetStatePending
                   ? 'neutral'
-                  : fleet.avgBattery < 20
-                    ? 'danger'
-                    : fleet.avgBattery < 40
-                      ? 'warning'
-                      : 'success',
+                  : fleet.readyCount < vehicleList.length
+                    ? 'warning'
+                    : 'success',
               },
               {
-                key: 'charging',
-                label: t('operations.vehicles.charging', 'Charging now'),
-                value: fleetStatePending ? '—' : fleet.chargingCount,
+                key: 'utilization',
+                label: t('operations.vehicles.utilization', 'Live utilization'),
+                value: fleetStatePending ? '—' : `${utilizationPct}%`,
                 detail: t(
-                  'operations.vehicles.chargingDetail',
-                  'Vehicles actively reporting a charging state.',
+                  'operations.vehicles.utilizationDetail',
+                  '{{active}} of {{total}} registered vehicles are driving or charging now.',
+                  { active: fleet.activeCount, total: vehicleList.length },
                 ),
-                tone: 'neutral',
+                tone: fleetStatePending ? 'neutral' : 'info',
+              },
+              {
+                key: 'software',
+                label: t('operations.vehicles.softwarePosture', 'Software posture'),
+                value: fleetStatePending || fleet.softwareVersions.length === 0
+                  ? '—'
+                  : fleet.softwareVersions.length === 1
+                    ? fleet.softwareVersions[0]
+                    : t(
+                        'operations.vehicles.softwareVersionCount',
+                        '{{count}} versions',
+                        { count: fleet.softwareVersions.length },
+                      ),
+                detail: t(
+                  'operations.vehicles.softwareDetail',
+                  '{{reported}} of {{online}} live vehicles reported a software version.',
+                  {
+                    reported: fleet.softwareReportingCount,
+                    online: fleet.onlineCount,
+                  },
+                ),
+                tone: fleetStatePending || fleet.softwareVersions.length === 0
+                  ? 'neutral'
+                  : fleet.softwareVersions.length > 1
+                    ? 'warning'
+                    : 'success',
+              },
+              {
+                key: 'service',
+                label: t('operations.vehicles.serviceAttention', 'Service attention'),
+                value: workOrdersQuery.isLoading || workOrdersQuery.isError
+                  ? '—'
+                  : t(
+                      'operations.vehicles.openWorkOrders',
+                      '{{count}} open',
+                      { count: openWorkOrders.length },
+                    ),
+                detail: workOrdersQuery.isError
+                  ? t(
+                      'operations.vehicles.serviceUnavailableMetric',
+                      'Work-order data is unavailable; live fleet data remains usable.',
+                    )
+                  : t(
+                      'operations.vehicles.serviceDetail',
+                      'High- or critical-severity work orders requiring review: {{urgent}}.',
+                      { urgent: urgentWorkOrders.length },
+                    ),
+                tone: workOrdersQuery.isLoading || workOrdersQuery.isError
+                  ? 'neutral'
+                  : urgentWorkOrders.length > 0
+                    ? 'danger'
+                    : openWorkOrders.length > 0
+                      ? 'warning'
+                      : 'success',
               },
             ]}
             attention={fleetAttention}
             provenance={t(
               'operations.vehicles.provenance',
-              'Based on the registered fleet and the latest independently resolved live state for each vehicle.',
+              'Based on the registered fleet, the latest independently resolved live state for each vehicle, and Fleet Operations work orders.',
             )}
           />
 
@@ -917,6 +1073,54 @@ export default function VehicleListPage() {
                 onClick: () => navigate(`/vehicles/${previewTarget.vehicle.id}`),
               }
             : undefined
+        }
+        relatedActions={
+          previewTarget
+            ? [
+                {
+                  key: 'drives',
+                  label: t('entityContext.drives', 'Drive history'),
+                  to: '/drives',
+                  icon: <Route className="h-4 w-4" aria-hidden="true" />,
+                  onNavigate: () => setVehicleId(previewTarget.vehicle.id),
+                },
+                {
+                  key: 'charging',
+                  label: t('entityContext.charging', 'Charging sessions'),
+                  to: '/charging',
+                  icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                  onNavigate: () => setVehicleId(previewTarget.vehicle.id),
+                },
+                {
+                  key: 'locations',
+                  label: t('entityContext.locations', 'Visited locations'),
+                  to: '/locations',
+                  icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                  onNavigate: () => setVehicleId(previewTarget.vehicle.id),
+                },
+                {
+                  key: 'alerts',
+                  label: t('entityContext.alerts', 'Alerts'),
+                  to: '/notifications/alerts',
+                  icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                  onNavigate: () => setVehicleId(previewTarget.vehicle.id),
+                },
+                {
+                  key: 'service',
+                  label: t('entityContext.service', 'Service history'),
+                  to: '/maintenance',
+                  icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                  onNavigate: () => setVehicleId(previewTarget.vehicle.id),
+                },
+                {
+                  key: 'telemetry',
+                  label: t('entityContext.telemetry', 'Telemetry evidence'),
+                  to: '/signals',
+                  icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                  onNavigate: () => setVehicleId(previewTarget.vehicle.id),
+                },
+              ]
+            : []
         }
       />
     </PageContainer>

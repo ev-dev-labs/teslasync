@@ -17,6 +17,8 @@ export interface DatePreset {
   i18nKey: string;
   fallback: string;
   resolve: (now?: Date) => DatePresetRange;
+  /** Rolling scopes must be selected explicitly, not inferred from dates. */
+  requiresExplicitSelection?: boolean;
 }
 
 /** Format a Date as YYYY-MM-DD using LOCAL calendar fields. */
@@ -33,6 +35,29 @@ export const DATE_PRESETS: DatePreset[] = [
     i18nKey: 'date.preset.today',
     fallback: 'Today',
     resolve: (now = new Date()) => ({ start: iso(now), end: iso(now) }),
+  },
+  {
+    id: 'live',
+    i18nKey: 'date.preset.live',
+    fallback: 'Live',
+    // Calendar-only APIs use today as the compatibility window. Consumers
+    // using useRangeState's instant bounds receive a rolling five-minute
+    // window instead.
+    requiresExplicitSelection: true,
+    resolve: (now = new Date()) => ({ start: iso(now), end: iso(now) }),
+  },
+  {
+    id: '24h',
+    i18nKey: 'date.preset.last24h',
+    fallback: 'Last 24 hours',
+    // A rolling 24-hour period can cross two local calendar days. Precise
+    // instant bounds are resolved by useRangeState for APIs that accept them.
+    requiresExplicitSelection: true,
+    resolve: (now = new Date()) => {
+      const s = new Date(now);
+      s.setDate(s.getDate() - 1);
+      return { start: iso(s), end: iso(now) };
+    },
   },
   {
     id: 'yesterday',
@@ -160,6 +185,7 @@ export function resolveAllTimeStart(minDate?: string): string {
  */
 export function matchPresetId(start: string, end: string, now?: Date): string | undefined {
   for (const preset of DATE_PRESETS) {
+    if (preset.requiresExplicitSelection) continue;
     const r = preset.resolve(now);
     if (r.start === start && r.end === end) return preset.id;
   }

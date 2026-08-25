@@ -360,6 +360,63 @@ describe('useRangeState — preset id derivation', () => {
     });
     expect(result.current.presetId).toBeUndefined();
   });
+
+  it('preserves Live as a distinct semantic scope from Today', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-27T12:30:00.000Z'));
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter(['/charging']),
+    });
+
+    act(() => result.current.range.setPreset('live'));
+
+    expect(result.current.range.presetId).toBe('live');
+    expect(result.current.range.startInstant).toBe('2026-08-27T12:25:00.000Z');
+    expect(result.current.range.endInstantExclusive).toBe('2026-08-27T12:30:00.000Z');
+    expect(new URLSearchParams(result.current.query).get('time_scope')).toBe('live');
+  });
+
+  it('resolves the 24-hour scope to precise rolling instants', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-27T12:30:00.000Z'));
+    const { result } = renderHook(() => useRangeState(), {
+      wrapper: withRouter(['/charging']),
+    });
+
+    act(() => result.current.setPreset('24h'));
+
+    expect(result.current.presetId).toBe('24h');
+    expect(result.current.startInstant).toBe('2026-08-26T12:30:00.000Z');
+    expect(result.current.endInstantExclusive).toBe('2026-08-27T12:30:00.000Z');
+  });
+
+  it('keeps rolling scope dates and URL bounds current across midnight', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 23, 59, 30));
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter(['/charging']),
+    });
+
+    act(() => result.current.range.setPreset('24h'));
+    expect(result.current.range.start).toBe('2026-08-26');
+    expect(result.current.range.end).toBe('2026-08-27');
+
+    act(() => vi.advanceTimersByTime(60_000));
+
+    expect(result.current.range.start).toBe('2026-08-27');
+    expect(result.current.range.end).toBe('2026-08-28');
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('from')).toBe('2026-08-27');
+    expect(params.get('to')).toBe('2026-08-28');
+  });
 });
 
 describe('useRangeState — comparison mode', () => {
@@ -469,6 +526,22 @@ describe('useRangeState — atomic updates', () => {
     expect(params.get('q')).toBe('roadtrip');
   });
 
+  it('preserves the global vehicle scope when the time window changes', () => {
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter(['/charging?vehicle_id=2']),
+    });
+
+    act(() => result.current.range.setPreset('30d'));
+
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('vehicle_id')).toBe('2');
+    expect(params.get('time_scope')).toBe('30d');
+  });
+
   it('resets the range and related URL keys in one navigation', () => {
     const { result } = renderHook(() => {
       const range = useRangeState();
@@ -515,6 +588,32 @@ describe('useRangeState — custom URL keys', () => {
     );
     expect(result.current.start).toBe('2025-03-01');
     expect(result.current.end).toBe('2025-03-15');
+  });
+
+  it('inherits global range changes and removes conflicting canonical keys', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 7, 27, 12));
+    const { result } = renderHook(() => {
+      const global = useRangeState();
+      const page = useRangeState({ fromKey: 'start', toKey: 'end' });
+      const [params] = useSearchParams();
+      return { global, page, query: params.toString() };
+    }, {
+      wrapper: withRouter([
+        '/charging?start=2025-03-01&end=2025-03-15',
+      ]),
+    });
+
+    act(() => result.current.global.setPreset('30d'));
+
+    expect(result.current.page.start).toBe('2026-07-29');
+    expect(result.current.page.end).toBe('2026-08-27');
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('start')).toBe('2026-07-29');
+    expect(params.get('end')).toBe('2026-08-27');
+    expect(params.get('time_scope')).toBe('30d');
+    expect(params.get('from')).toBeNull();
+    expect(params.get('to')).toBeNull();
   });
 });
 

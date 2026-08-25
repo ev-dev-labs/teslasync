@@ -13,7 +13,7 @@ import {
   type Column,
 } from '@/components/ui'
 import { PageContainer } from '@/components/layout'
-import { EmptyState, QueryError, Skeleton, Spinner } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { UserCell } from '@/components/data-display'
 import { Icons } from '@/lib/icons'
@@ -236,11 +236,11 @@ export default function FeedbackQueuePage() {
       variant="ghost"
       size="sm"
       onClick={handleRefreshAll}
-      disabled={isRefreshing}
+      loading={isRefreshing}
       aria-label={t('common.refresh', 'Refresh')}
+      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
     >
-      {isRefreshing ? <Spinner size="sm" /> : <Icons.refresh className="h-4 w-4" aria-hidden="true" />}
-      <span className="ml-1">{t('common.refresh', 'Refresh')}</span>
+      {t('common.refresh', 'Refresh')}
     </Button>
   )
 

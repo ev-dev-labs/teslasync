@@ -166,6 +166,13 @@ vi.mock('../components/ChargingSessionCard', () => ({
         >
           {props.selected ? 'selected' : 'select'}
         </button>
+        <button
+          type="button"
+          aria-label={`preview ${props.session.id}`}
+          onClick={() => props.onPreview?.(props.session)}
+        >
+          preview
+        </button>
       </div>
     );
   },
@@ -380,6 +387,27 @@ describe('ChargingListPage — happy path', () => {
     // Every session card in the window renders.
     expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
     expect(screen.getByTestId('session-card-6')).toBeInTheDocument();
+  });
+
+  it('preserves the session vehicle, place, and time window in related links', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'preview 1' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Home Garage' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/1');
+    expect(screen.getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute('href', '/drives?from=2024-06-15&to=2024-06-15');
+    expect(screen.getByRole('link', { name: 'Charge location' }))
+      .toHaveAttribute(
+        'href',
+        '/locations?q=Home+Garage&from=2024-06-15&to=2024-06-15',
+      );
+    expect(screen.getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2024-06-15&to=2024-06-15&signals=ACChargingPower%2CDCChargingPower%2CBatteryLevel',
+      );
   });
 
   it('shows charger-category collection pills and the by-type secondary summary', async () => {

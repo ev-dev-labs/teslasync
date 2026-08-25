@@ -157,14 +157,16 @@ export function NotificationGroupRow({
           {!isSingleton && (extraCount > 0 || group.unread_count > 1) && (
             <div className="mt-1 flex flex-wrap items-center gap-2 px-3 pb-1">
               {extraCount > 0 && (
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="sm"
                   onClick={() => setExpanded((v) => !v)}
                   aria-expanded={expanded}
                   aria-controls={regionId}
                   aria-label={expandLabel}
                   className={cn(
-                    'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs',
+                    'h-auto gap-1 rounded-full border px-2 py-0.5 text-xs',
                     'border-cyan-400/30 bg-cyan-400/10 text-cyan-200',
                     'hover:bg-cyan-400/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/60',
                   )}
@@ -180,7 +182,7 @@ export function NotificationGroupRow({
                       count: extraCount,
                     })}
                   </span>
-                </button>
+                </Button>
               )}
               {group.unread_count > 0 && (
                 <span

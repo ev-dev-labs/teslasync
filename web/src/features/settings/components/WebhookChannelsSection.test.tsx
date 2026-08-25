@@ -232,6 +232,28 @@ describe('WebhookChannelsSection — add modal', () => {
       ),
     ).toHaveLength(0);
   });
+
+  it('requires confirmation before closing a dirty webhook draft', async () => {
+    mockedRequest.mockImplementation((path: string) => {
+      if (path === '/notifications') return Promise.resolve([]);
+      throw new Error(`unexpected path: ${path}`);
+    });
+    renderSection();
+    fireEvent.click(await screen.findByTestId('webhook-add'));
+    const modal = await screen.findByTestId('webhook-form-modal');
+    fireEvent.change(within(modal).getByTestId('webhook-form-name'), {
+      target: { value: 'Unsaved webhook' },
+    });
+
+    fireEvent.click(within(modal).getByTestId('webhook-form-cancel'));
+    const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+    expect(screen.getByTestId('webhook-form-modal')).toBeInTheDocument();
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => {
+      expect(screen.queryByTestId('webhook-form-modal')).not.toBeInTheDocument();
+    });
+  });
 });
 
 describe('WebhookChannelsSection — test action', () => {

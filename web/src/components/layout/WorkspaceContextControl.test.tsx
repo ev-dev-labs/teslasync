@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   setRange: vi.fn(),
   setCompare: vi.fn(),
   saveSettings: vi.fn(),
+  compare: false,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -36,7 +37,7 @@ vi.mock('@/hooks/useRangeState', () => ({
     endInstantExclusive: '2025-01-08T00:00:00Z',
     timezone: 'UTC',
     presetId: '7d',
-    compare: false,
+    compare: mocks.compare,
     comparePrev: undefined,
     setRange: mocks.setRange,
     setRangeWithUrlUpdates: vi.fn(),
@@ -63,6 +64,7 @@ vi.mock('@/api/hooks/useSettings', () => ({
 describe('WorkspaceContextControl', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.compare = false;
   });
 
   it('changes presets, comparison, custom dates, and density from the popover', () => {
@@ -74,8 +76,11 @@ describe('WorkspaceContextControl', () => {
     expect(
       screen.getByRole('dialog', { name: 'Workspace analysis context' }),
     ).toBeInTheDocument();
+    const rangeSelect = screen.getByLabelText('Analysis window');
+    expect(rangeSelect).toHaveTextContent('Live');
+    expect(rangeSelect).toHaveTextContent('Last 24 hours');
 
-    fireEvent.change(screen.getByLabelText('Analysis window'), {
+    fireEvent.change(rangeSelect, {
       target: { value: '30d' },
     });
     expect(mocks.setPreset).toHaveBeenCalledWith('30d');
@@ -174,5 +179,41 @@ describe('WorkspaceContextControl', () => {
     ).toHaveClass('w-full');
     expect(mocks.setPreset).not.toHaveBeenCalled();
     expect(mocks.saveSettings).not.toHaveBeenCalled();
+  });
+
+  it('uses compact coordinated chrome in the status bar', () => {
+    render(
+      <WorkspaceContextControl
+        variant="status"
+        iconOnly
+        listenForCommands={false}
+      />,
+    );
+
+    const trigger = screen.getByRole('button', {
+      name: 'Analysis window: Last 7 days',
+    });
+    expect(trigger).toHaveClass('h-5');
+    expect(trigger).not.toHaveTextContent('Last 7 days');
+
+    fireEvent.click(trigger);
+    expect(
+      screen.getByRole('dialog', { name: 'Workspace analysis context' }),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps comparison mode visible while the popover is closed', () => {
+    mocks.compare = true;
+    render(<WorkspaceContextControl />);
+
+    const trigger = screen.getByRole('button', {
+      name: 'Analysis window: Last 7 days · Compare',
+    });
+    expect(trigger).toHaveTextContent('Last 7 days · Compare');
+
+    fireEvent.click(trigger);
+    expect(
+      screen.getByText('Comparison active: previous matching period'),
+    ).toBeInTheDocument();
   });
 });

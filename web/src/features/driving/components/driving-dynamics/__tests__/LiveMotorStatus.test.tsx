@@ -164,10 +164,13 @@ describe('LiveMotorStatus — empty / awaiting-source state', () => {
     expect(screen.queryByText('Motor')).toBeNull()
   })
 
-  it('renders a spinner — not the empty state — while the first load is in flight', () => {
+  it('renders a powertrain skeleton — not the empty state — while the first load is in flight', () => {
     renderPanel(undefined, { isLoading: true })
 
     expect(screen.getByRole('heading', { name: 'Live Motor Status' })).toBeInTheDocument()
+    expect(
+      screen.getByRole('status', { name: 'Loading motor telemetry…' }),
+    ).toHaveAttribute('aria-busy', 'true')
     expect(screen.queryByText('Awaiting live motor data')).toBeNull()
   })
 

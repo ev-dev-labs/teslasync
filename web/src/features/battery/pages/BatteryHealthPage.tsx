@@ -216,11 +216,11 @@ export default function BatteryHealthPage() {
     return <NoVehicleSelected pageTitle={t('battery.title', 'Battery Health')} />;
   }
 
-  const pageActions = (
-    <span className="flex items-center gap-3">
+  const pageContextActions = (
+    <>
       <VehicleSelect />
       <LiveIndicator variant="compact" />
-    </span>
+    </>
   );
 
   /* ── Empty / error ─────────────────────────────────────────────── */
@@ -230,7 +230,7 @@ export default function BatteryHealthPage() {
         title={t('battery.title', 'Battery Health')}
         subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
         error={healthLoading ? null : healthError as Error | null}
-        actions={pageActions}
+        contextActions={pageContextActions}
       >
         <LiveStaleDataBanner />
         <FadeIn>
@@ -256,6 +256,60 @@ export default function BatteryHealthPage() {
   // access so the "New vs Now" range cells degrade to a placeholder instead
   // of throwing on `.length` / `[0]`.
   const history = health.history ?? [];
+  const rangeSnapshotCount = history.filter(
+    (point) => Number.isFinite(point.range_m) && point.range_m > 0,
+  ).length;
+  const rangeConfidence =
+    projectionTrustworthy && rangeSnapshotCount >= 3
+      ? 'high'
+      : rangeSnapshotCount >= 2
+        ? 'developing'
+        : 'limited';
+  const rangeConfidenceLabel =
+    rangeConfidence === 'high'
+      ? t('operations.battery.rangeConfidenceHigh', 'High')
+      : rangeConfidence === 'developing'
+        ? t('operations.battery.rangeConfidenceDeveloping', 'Developing')
+        : t('operations.battery.rangeConfidenceLimited', 'Limited');
+  const rangeConfidenceDetail =
+    rangeConfidence === 'high'
+      ? t('operations.battery.rangeConfidenceHighDetail', {
+          count: rangeSnapshotCount,
+          years: yearsTo80,
+          defaultValue:
+            '{{count}} historical range samples support a stable {{years}}-year threshold forecast.',
+        })
+      : rangeConfidence === 'developing'
+        ? t('operations.battery.rangeConfidenceDevelopingDetail', {
+            count: rangeSnapshotCount,
+            defaultValue:
+              '{{count}} historical range samples are available; more history will tighten the forecast.',
+          })
+        : t('operations.battery.rangeConfidenceLimitedDetail', {
+            count: rangeSnapshotCount,
+            defaultValue:
+              'Only {{count}} usable range samples are available; treat projections as directional.',
+          });
+  const chargingStressTone: OperationalTone =
+    health.stress_level === 'Low'
+      ? 'success'
+      : health.stress_level === 'Medium'
+        ? 'warning'
+        : 'danger';
+  const chargingStressLabel =
+    health.stress_level === 'Low'
+      ? t('operations.battery.chargingStressLow', 'Low')
+      : health.stress_level === 'Medium'
+        ? t('operations.battery.chargingStressMedium', 'Medium')
+        : t('operations.battery.chargingStressHigh', 'High');
+  const thermalExposureTone: OperationalTone =
+    health.temp_exposure_score == null
+      ? 'neutral'
+      : health.temp_exposure_score <= 25
+        ? 'success'
+        : health.temp_exposure_score <= 50
+          ? 'warning'
+          : 'danger';
   const healthOperationalTone: OperationalTone =
     health.current_soh >= 90
       ? 'success'
@@ -280,7 +334,7 @@ export default function BatteryHealthPage() {
     <PageContainer
       title={t('battery.title', 'Battery Health')}
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
-      actions={pageActions}
+      contextActions={pageContextActions}
     >
       <LiveStaleDataBanner />
 
@@ -290,7 +344,7 @@ export default function BatteryHealthPage() {
         title={t('operations.battery.title', 'Long-term pack health remains measurable and actionable')}
         description={t(
           'operations.battery.description',
-          'Health, degradation, charge-cycle exposure, and projection confidence are summarized before the deeper evidence.',
+          'Health, degradation, range confidence, charging stress, thermal impact, and cycle exposure are summarized before the deeper evidence.',
         )}
         statusLabel={
           health.current_soh >= 90
@@ -300,7 +354,13 @@ export default function BatteryHealthPage() {
               : t('operations.battery.statusService', 'Service review')
         }
         statusTone={healthOperationalTone}
-        freshness={<DataFreshnessAuto query={healthQuery} />}
+        metricColumns={3}
+        freshness={
+          <DataFreshnessAuto
+            query={healthQuery}
+            source={t('operations.battery.analyticsSource', 'Battery analytics')}
+          />
+        }
         scope={
           <Badge variant="neutral" size="sm">
             {t('operations.scope.lifetime', 'Lifetime model')}
@@ -328,21 +388,47 @@ export default function BatteryHealthPage() {
             tone: health.degradation_rate_pct_per_year <= 5 ? 'success' : 'warning',
           },
           {
-            key: 'projection',
-            label: t('operations.battery.projectionHorizon', 'Projection horizon'),
-            value: projectionTrustworthy
-              ? `${yearsTo80} ${t('battery.yr', 'yr')}`
-              : yearsTo80,
-            detail: projectionTrustworthy
-              ? t(
-                  'operations.battery.projectionDetail',
-                  'Projected time to the common warranty-health threshold.',
-                )
-              : t(
-                  'operations.battery.projectionUnavailable',
-                  'More stable history is required for a trustworthy projection.',
-                ),
-            tone: projectionTrustworthy ? 'info' : 'warning',
+            key: 'range-confidence',
+            label: t('operations.battery.rangeConfidence', 'Range confidence'),
+            value: rangeConfidenceLabel,
+            detail: rangeConfidenceDetail,
+            tone:
+              rangeConfidence === 'high'
+                ? 'success'
+                : rangeConfidence === 'developing'
+                  ? 'info'
+                  : 'warning',
+          },
+          {
+            key: 'charging-stress',
+            label: t('operations.battery.chargingStress', 'Charging stress'),
+            value: chargingStressLabel,
+            detail: t('operations.battery.chargingStressDetail', {
+              fast: fmtPercent(health.fast_charge_pct),
+              depth: fmtPercent(health.avg_depth_of_discharge_pct),
+              defaultValue:
+                '{{fast}} fast-charge sessions; {{depth}} average depth of discharge.',
+            }),
+            tone: chargingStressTone,
+          },
+          {
+            key: 'thermal-impact',
+            label: t('operations.battery.thermalImpact', 'Thermal impact'),
+            value:
+              health.temp_exposure_score == null
+                ? '—'
+                : `${fmtInt(health.temp_exposure_score)} / 100`,
+            detail:
+              health.temp_exposure_score == null
+                ? t(
+                    'operations.battery.thermalImpactUnavailable',
+                    'More temperature history is required to estimate thermal exposure.',
+                  )
+                : t(
+                    'operations.battery.thermalImpactDetail',
+                    'Lower exposure is better; sustained high temperatures increase pack wear.',
+                  ),
+            tone: thermalExposureTone,
           },
           {
             key: 'cycles',

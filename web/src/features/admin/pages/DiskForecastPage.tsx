@@ -25,7 +25,7 @@ import { PanelTitle, Caption, Text } from '@/components/ui/Typography';
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
-  EmptyState, AlertBanner, SectionErrorBoundary, Skeleton, QueryError,
+  EmptyState, AlertBanner, DataStateNotice, SectionErrorBoundary, Skeleton, QueryError,
 } from '@/components/feedback';
 import {
   ChartTooltip,
@@ -232,12 +232,12 @@ export default function DiskForecastPage() {
       query={query}
     >
       {subsystemMissing && (
-        <AlertBanner variant="warning" title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}>
+        <DataStateNotice state="unsupported" title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}>
           {t(
             'admin.diskForecast.notConfigured',
             'TimescaleDB hypertable metrics are unavailable on this deployment. This page requires TimescaleDB to be installed and accessible.',
           )}
-        </AlertBanner>
+        </DataStateNotice>
       )}
 
       {severityCounts.critical > 0 && (

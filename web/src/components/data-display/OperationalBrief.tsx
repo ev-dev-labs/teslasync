@@ -49,6 +49,7 @@ export interface OperationalBriefProps {
   provenance?: string
   className?: string
   testId?: string
+  metricColumns?: 2 | 3 | 4
 }
 
 const TONE_TEXT: Record<OperationalTone, string> = {
@@ -57,6 +58,12 @@ const TONE_TEXT: Record<OperationalTone, string> = {
   warning: 'text-amber-300',
   danger: 'text-rose-300',
   neutral: 'text-[var(--text-primary)]',
+}
+
+const METRIC_COLUMNS: Record<NonNullable<OperationalBriefProps['metricColumns']>, string> = {
+  2: 'md:grid-cols-2',
+  3: 'md:grid-cols-3',
+  4: 'md:grid-cols-4',
 }
 
 export function OperationalBrief({
@@ -73,6 +80,7 @@ export function OperationalBrief({
   provenance,
   className,
   testId,
+  metricColumns = 4,
 }: OperationalBriefProps) {
   const { t } = useTranslation()
   const titleId = useId()
@@ -129,7 +137,10 @@ export function OperationalBrief({
 
             <div
               role="list"
-              className="mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)] md:grid-cols-4"
+              className={cn(
+                'mt-4 grid grid-cols-2 gap-px overflow-hidden rounded-shape-md border border-[var(--border-subtle)] bg-[var(--border-subtle)]',
+                METRIC_COLUMNS[metricColumns],
+              )}
             >
               {metrics.map((metric) => (
                 <div
@@ -191,25 +202,10 @@ export function OperationalBrief({
         open={detailsOpen}
         onClose={() => setDetailsOpen(false)}
         title={t('operations.detailTitle', '{{title}} details', { title })}
-        footer={
-          <Button
-            type="button"
-            variant="secondary"
-            className="w-full"
-            onClick={() => setDetailsOpen(false)}
-          >
-            {t('common.close', 'Close')}
-          </Button>
-        }
+        description={description}
+        headerMeta={<Badge variant={statusTone} dot>{statusLabel}</Badge>}
       >
         <div className="space-y-6">
-          <div>
-            <Badge variant={statusTone} dot>{statusLabel}</Badge>
-            <Text as="p" variant="bodySm" className="mt-3">
-              {description}
-            </Text>
-          </div>
-
           <div className="space-y-3">
             <PanelTitle>{t('operations.metrics', 'Operational metrics')}</PanelTitle>
             {metrics.map((metric) => (

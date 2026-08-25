@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Zap, AlertTriangle, Star, Plug, Sun, Tag, List as ListIcon,
   Trash2, Battery, Home, Bolt,
+  Activity, Bell, Car, MapPin, Route, Wrench,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
@@ -24,7 +25,7 @@ import { DensityToggle, type Density } from '@/components/forms/DensityToggle';
 import { SortControl, type SortDirection } from '@/components/forms/SortControl';
 import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
-  SavedViewMenu, DataFreshnessAuto,
+  SavedViewMenu,
   KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
   BulkActionsToolbar, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
@@ -46,6 +47,7 @@ import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDays } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
+import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
 import { ChargingSessionCard } from '../components/ChargingSessionCard';
 import {
@@ -587,13 +589,20 @@ export default function ChargingListPage() {
     return <NoVehicleSelected pageTitle={t('charging.list.title', 'Charging Sessions')} />;
   }
 
+  const previewFrom = localDayKey(previewSession?.started_at, tz);
+  const previewTo = localDayKey(
+    previewSession?.ended_at ?? previewSession?.started_at,
+    tz,
+  ) ?? previewFrom;
+
   return (
     <PageContainer
       title={t('charging.list.title', 'Charging Sessions')}
       subtitle={t('charging.list.subtitle', 'Cost, charger type, energy patterns, and battery-friendly scoring')}
       copyLink
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
+      query={chargingQuery}
+      contextActions={
+        <>
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -603,13 +612,14 @@ export default function ChargingListPage() {
             align="end"
             triggerTestId="charging-list-range"
           />
-          <DataFreshnessAuto query={chargingQuery} />
-          <SavedViewMenu
-            route="/charging"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
-        </div>
+        </>
+      }
+      overflowActions={
+        <SavedViewMenu
+          route="/charging"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
       }
     >
       <PullToRefresh onRefresh={async () => { await refetch(); }}>
@@ -1133,6 +1143,64 @@ export default function ChargingListPage() {
                   onClick: () => navigate(`/charging/${previewSession.id}`),
                 }
               : undefined
+          }
+          relatedActions={
+            previewSession
+              ? [
+                  {
+                    key: 'vehicle',
+                    label: t('entityContext.vehicle', 'Vehicle'),
+                    to: `/vehicles/${previewSession.vehicle_id}`,
+                    icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'drives',
+                    label: t('entityContext.drives', 'Drive history'),
+                    to: buildContextHref('/drives', {
+                      from: previewFrom,
+                      to: previewTo,
+                    }),
+                    icon: <Route className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  ...(previewSession.start_place
+                    ? [{
+                        key: 'location',
+                        label: t('entityContext.location', 'Charge location'),
+                        to: buildContextHref('/locations', {
+                          q: previewSession.start_place,
+                          from: previewFrom,
+                          to: previewTo,
+                        }),
+                        icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                      }]
+                    : []),
+                  {
+                    key: 'alerts',
+                    label: t('entityContext.alerts', 'Alerts'),
+                    to: buildContextHref('/notifications/alerts', {
+                      from: previewFrom,
+                      to: previewTo,
+                    }),
+                    icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'service',
+                    label: t('entityContext.service', 'Service history'),
+                    to: '/maintenance',
+                    icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'telemetry',
+                    label: t('entityContext.telemetry', 'Telemetry evidence'),
+                    to: buildContextHref('/signals', {
+                      from: previewFrom,
+                      to: previewTo,
+                      signals: ['ACChargingPower', 'DCChargingPower', 'BatteryLevel'],
+                    }),
+                    icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                  },
+                ]
+              : []
           }
         />
       </PullToRefresh>

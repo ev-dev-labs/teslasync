@@ -15,6 +15,7 @@ import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough';
 import { GlassPanel } from '@/components/ui/GlassPanel';
 import { Badge } from '@/components/ui/Badge';
 import { Button } from '@/components/ui/Button';
+import { Checkbox } from '@/components/ui';
 import { Text, Caption } from '@/components/ui/Typography';
 import { SeverityBadge } from '@/components/data-display/SeverityBadge';
 import { StatusDot } from '@/components/data-display/StatusDot';
@@ -57,10 +58,21 @@ export interface AlertCardProps {
   onAcknowledge: () => void;
   onOpenDetail: () => void;
   onReopen: () => void;
+  selected?: boolean;
+  onToggleSelect?: (selected: boolean) => void;
   t: TFunction;
 }
 
-export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onReopen, t }: AlertCardProps) {
+export function AlertCard({
+  alert,
+  onMarkRead,
+  onAcknowledge,
+  onOpenDetail,
+  onReopen,
+  selected = false,
+  onToggleSelect,
+  t,
+}: AlertCardProps) {
   const sev = normalizeSeverity(alert.severity);
   const tokens = severityTokens[sev];
   const Icon = TYPE_ICONS[alert.type] || Icons.notifications;
@@ -73,8 +85,19 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
       className={cn(
         'p-4 flex items-start gap-4 transition-all duration-normal group',
         !alert.is_read && cn(tokens.border, tokens.bg.replace('/10', '/5')),
+        selected && 'ring-1 ring-cyan-400/40 bg-cyan-500/[0.04]',
       )}
     >
+      {onToggleSelect && (
+        <Checkbox
+          checked={selected}
+          onChange={onToggleSelect}
+          aria-label={t('operations.alerts.selectAlert', 'Select {{title}}', {
+            title: alert.title || t('operations.alerts.untitled', 'untitled alert'),
+          })}
+          className="mt-3 shrink-0"
+        />
+      )}
       <div className="flex flex-col items-center gap-1 shrink-0">
         <div className={cn('rounded-xl p-2.5 ring-1', tokens.bg, tokens.border)}>
           <Icon className={cn('h-4 w-4', tokens.fg)} />
@@ -107,17 +130,25 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
           <SeverityBadge severity={alert.severity} size="sm" showIcon={false}>
             {alert.severity}
           </SeverityBadge>
+          <Badge variant={isAcked ? 'success' : sev === 'critical' ? 'danger' : 'warning'} size="sm">
+            {isAcked
+              ? t('operations.alerts.lifecycleAcknowledged', 'Acknowledged')
+              : t('operations.alerts.lifecycleOpen', 'Open')}
+          </Badge>
           <Text as="span" size="2xs" color="muted">{(alert.type ?? 'notification').replace(/_/g, ' ')}</Text>
-          {isAcked && (
+          {alert.rule_signal && (
+            <Text as="span" size="2xs" color="muted">
+              {t('operations.alerts.signalLabel', 'Signal')}: {alert.rule_signal}
+            </Text>
+          )}
+          {isAcked && alert.acknowledged_by && (
             <Badge variant="success" size="sm">
-              {alert.acknowledged_by
-                ? t('alerts.ack.ackedBy', 'Acknowledged by {{actor}}', { actor: alert.acknowledged_by })
-                : t('alerts.ack.ackedByAnonymous', 'Acknowledged')}
+              {t('alerts.ack.ackedBy', 'Acknowledged by {{actor}}', { actor: alert.acknowledged_by })}
             </Badge>
           )}
           <Link
             to={drillHref}
-            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200 underline-offset-2 hover:underline opacity-0 group-hover:opacity-100 transition-opacity"
+            className="ml-auto inline-flex items-center gap-1 text-xs font-medium text-cyan-300 underline-offset-2 transition-opacity hover:text-cyan-200 hover:underline lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100"
           >
             {t('alerts.viewContext', 'View context')}
             <Icons.next className="h-3 w-3" />
@@ -128,7 +159,7 @@ export function AlertCard({ alert, onMarkRead, onAcknowledge, onOpenDetail, onRe
             icon={<Icons.notifications className="h-3 w-3" />}
             onClick={onOpenDetail}
           >
-            {t('alerts.timeline.title', 'Audit timeline')}
+            {t('operations.alerts.inspect', 'Inspect alert')}
           </Button>
           {isAcked ? (
             <Button

@@ -56,7 +56,13 @@ import {
   type Column,
 } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
-import { Spinner, Skeleton, ChartSkeleton, EmptyState, QueryError } from '@/components/feedback'
+import {
+  ChartSkeleton,
+  EmptyState,
+  ListSkeleton,
+  QueryError,
+  Skeleton,
+} from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import {
   BarChart,
@@ -626,15 +632,11 @@ export default function FleetTelemetryCoveragePage({
 
       {/* 5 — Categories detail band: full-width, reflows to more columns wide */}
       {firstLoad ? (
-        <div
-          className="flex items-center gap-3 py-6 text-[var(--text-secondary)]"
-          data-testid="coverage-loading"
-        >
-          <Spinner size="sm" />
-          <Text size="sm" color="secondary">
-            {t('coverage.loading', 'Loading routing snapshot…')}
-          </Text>
-        </div>
+        <ListSkeleton
+          rows={5}
+          label={t('coverage.loading', 'Loading routing snapshot…')}
+          testId="coverage-loading"
+        />
       ) : error ? (
         <div data-testid="coverage-error">
           <QueryError

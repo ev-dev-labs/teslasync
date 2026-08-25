@@ -1,16 +1,21 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
   Clock, ArrowRightLeft, Car, BatteryCharging, Moon, RefreshCw, AlertCircle,
-  BarChart3,
+  Activity, BarChart3, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, Select, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
 import { RangePicker } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
-import { MetricCard, MetricBar, DataFreshnessAuto } from '@/components/data-display';
+import {
+  DataFreshnessAuto,
+  EntityPreviewDrawer,
+  MetricBar,
+  MetricCard,
+} from '@/components/data-display';
 import { Skeleton, EmptyState, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
@@ -26,6 +31,8 @@ import { fmtPercent } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
+import { buildContextHref } from '@/lib/contextNavigation';
+import { localDayKey } from '@/lib/drivesAggregation';
 
 /* ─── Types matching actual API responses ────────────────── */
 
@@ -111,6 +118,13 @@ function formatDurationFromSeconds(seconds: number): string {
   return formatHoursFromSeconds(seconds);
 }
 
+function transitionDuration(row: TransitionRow): string {
+  const start = new Date(row.ts).getTime();
+  const end = row.next_ts ? new Date(row.next_ts).getTime() : Date.now();
+  if (Number.isNaN(start) || Number.isNaN(end) || end <= start) return '—';
+  return formatDurationFromSeconds((end - start) / 1000);
+}
+
 /* ─── Component ──────────────────────────────────────────── */
 
 export default function TimelinePage() {
@@ -133,6 +147,8 @@ export default function TimelinePage() {
     persistKey: 'timeline.range',
     defaultPresetId: '7d',
   });
+  const [previewTransition, setPreviewTransition] = useState<TransitionRow | null>(null);
+  const previewDay = localDayKey(previewTransition?.ts);
 
   // Backend accepts `?days=N` (trailing window). Compute inclusive day
   // count from the picker's range. Custom historical windows that don't
@@ -302,17 +318,11 @@ export default function TimelinePage() {
         header: t('timeline.duration', 'Duration'),
         sortable: false,
         render: (row) => {
-          /* Duration in row.to_state = (next transition or now) - row.ts.
-           * The newest row uses `now` so the user sees the live age of
-           * the current state. */
-          const start = new Date(row.ts).getTime();
-          const end = row.next_ts ? new Date(row.next_ts).getTime() : Date.now();
-          if (Number.isNaN(start) || Number.isNaN(end) || end <= start) {
-            return <Caption>—</Caption>;
-          }
+          const duration = transitionDuration(row);
+          if (duration === '—') return <Caption>—</Caption>;
           return (
             <Text variant="body" className="tabular-nums">
-              {formatDurationFromSeconds((end - start) / 1000)}
+              {duration}
             </Text>
           );
         },
@@ -325,6 +335,26 @@ export default function TimelinePage() {
           <Text variant="bodySm">
             {row.trigger_field ?? '—'}
           </Text>
+        ),
+      },
+      {
+        key: 'actions',
+        header: t('timeline.actions', 'Actions'),
+        sortable: false,
+        render: (row) => (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={t(
+              'timeline.inspectTransition',
+              'Inspect transition {{from}} to {{to}}',
+              { from: row.from_state, to: row.to_state },
+            )}
+            onClick={() => setPreviewTransition(row)}
+          >
+            {t('timeline.inspect', 'Inspect')}
+          </Button>
         ),
       },
     ],
@@ -553,6 +583,136 @@ export default function TimelinePage() {
           />
         </GlassPanel>
       </FadeIn>
+
+      <EntityPreviewDrawer
+        open={previewTransition !== null}
+        onClose={() => setPreviewTransition(null)}
+        eyebrow={t('timeline.preview.eyebrow', 'State transition')}
+        title={
+          previewTransition
+            ? t(
+                'timeline.preview.title',
+                '{{from}} → {{to}}',
+                {
+                  from: previewTransition.from_state,
+                  to: previewTransition.to_state,
+                },
+              )
+            : t('timeline.preview.fallbackTitle', 'Transition details')
+        }
+        description={
+          previewTransition
+            ? t(
+                'timeline.preview.description',
+                'Recorded {{time}}',
+                { time: formatDateTime(previewTransition.ts) },
+              )
+            : undefined
+        }
+        statusLabel={previewTransition?.to_state}
+        statusTone={
+          previewTransition
+            ? STATE_BADGE[previewTransition.to_state] ?? 'neutral'
+            : 'neutral'
+        }
+        fields={
+          previewTransition
+            ? [
+                {
+                  key: 'from-state',
+                  label: t('timeline.fromState', 'From State'),
+                  value: previewTransition.from_state,
+                },
+                {
+                  key: 'to-state',
+                  label: t('timeline.toState', 'To State'),
+                  value: previewTransition.to_state,
+                },
+                {
+                  key: 'duration',
+                  label: t('timeline.duration', 'Duration'),
+                  value: transitionDuration(previewTransition),
+                },
+                {
+                  key: 'trigger-field',
+                  label: t('timeline.preview.triggerField', 'Trigger field'),
+                  value: previewTransition.trigger_field ?? '—',
+                },
+                {
+                  key: 'trigger-value',
+                  label: t('timeline.preview.triggerValue', 'Trigger value'),
+                  value: previewTransition.trigger_value ?? '—',
+                },
+              ]
+            : []
+        }
+        relatedActions={
+          previewTransition && vehicleId != null
+            ? [
+                {
+                  key: 'vehicle',
+                  label: t('entityContext.vehicle', 'Vehicle'),
+                  to: `/vehicles/${vehicleId}`,
+                  icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'drives',
+                  label: t('entityContext.drives', 'Drive history'),
+                  to: buildContextHref('/drives', {
+                    from: previewDay,
+                    to: previewDay,
+                  }),
+                  icon: <Route className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'charging',
+                  label: t('entityContext.charging', 'Charging sessions'),
+                  to: buildContextHref('/charging', {
+                    from: previewDay,
+                    to: previewDay,
+                  }),
+                  icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'locations',
+                  label: t('entityContext.locations', 'Visited locations'),
+                  to: buildContextHref('/locations', {
+                    from: previewDay,
+                    to: previewDay,
+                  }),
+                  icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'alerts',
+                  label: t('entityContext.alerts', 'Alerts'),
+                  to: buildContextHref('/notifications/alerts', {
+                    from: previewDay,
+                    to: previewDay,
+                  }),
+                  icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'service',
+                  label: t('entityContext.service', 'Service history'),
+                  to: '/maintenance',
+                  icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'telemetry',
+                  label: t('entityContext.telemetry', 'Telemetry evidence'),
+                  to: buildContextHref('/signals', {
+                    from: previewDay,
+                    to: previewDay,
+                    signals: previewTransition.trigger_field
+                      ? [previewTransition.trigger_field]
+                      : [],
+                  }),
+                  icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                },
+              ]
+            : []
+        }
+      />
     </PageContainer>
   );
 }
