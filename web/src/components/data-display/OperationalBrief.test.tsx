@@ -65,6 +65,8 @@ describe('OperationalBrief', () => {
     expect(
       screen.getByText('Battery-health snapshots and charging history'),
     ).toBeInTheDocument();
+    expect(within(drawer).getByText('What changed')).toBeInTheDocument();
+    expect(within(drawer).getByText('Not scored')).toBeInTheDocument();
 
     const closeButtons = within(drawer).getAllByRole('button', { name: 'Close' });
     fireEvent.click(closeButtons[closeButtons.length - 1]);

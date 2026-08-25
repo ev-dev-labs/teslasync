@@ -1247,6 +1247,23 @@ select option:checked {
 }
 
 
+/* Application-shell presentation modes. Report mode keeps evidence and scope
+   metadata while removing commands; kiosk mode gives the active route the
+   entire viewport and removes page-level editing chrome. */
+[data-presentation-mode='report'] [data-action-zone='commands'],
+[data-presentation-mode='kiosk'] [data-role='page-header'],
+[data-presentation-mode='kiosk'] [data-role='compact-breadcrumbs'] {
+  display: none !important;
+}
+
+[data-presentation-mode='report'] [data-role='page-container'] {
+  gap: 1.25rem;
+}
+
+[data-presentation-mode='kiosk'] [data-role='page-container'] {
+  min-height: 100vh;
+}
+
 /* === @media print (Phase-40 / Prompt 54) =====================================
  * Live SPA printing: hide app chrome, swap dark glass surfaces for white paper,
  * keep recharts SVGs readable, and avoid mid-element page breaks.
@@ -1273,6 +1290,14 @@ select option:checked {
     --text-secondary: #222222;
     --text-muted: #555555;
     color-scheme: light;
+  }
+
+  [data-role='report-masthead'] {
+    display: flex !important;
+  }
+
+  [data-presentation-mode='report'] [data-role='page-header'] {
+    box-shadow: none !important;
   }
 
   html, body {

@@ -13,6 +13,7 @@ import { ThemeProvider } from './components/ui/ThemeProvider'
 import { FontProvider, applyFontCSS, readStoredFontPrefs } from './components/ui/FontProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
+import { OperationalModeProvider } from './hooks/useOperationalMode'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
 import App from './App'
 import { loadEnglishResources } from './i18n'
@@ -132,12 +133,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <FontProvider>
                 <SelectedVehicleProvider>
                   <ToastProvider>
-                    <App />
-                    <ReloadPrompt />
-                    {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                        with a transient toast + confetti. Mounted alongside the
-                        standard toast stack so the SSE subscription is global. */}
-                    <AchievementUnlockListener />
+                    <OperationalModeProvider>
+                      <App />
+                      <ReloadPrompt />
+                      {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                          with a transient toast + confetti. Mounted alongside the
+                          standard toast stack so the SSE subscription is global. */}
+                      <AchievementUnlockListener />
+                    </OperationalModeProvider>
                   </ToastProvider>
                 </SelectedVehicleProvider>
               </FontProvider>

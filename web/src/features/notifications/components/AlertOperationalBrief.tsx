@@ -10,6 +10,7 @@ import {
 import { Badge, Button } from '@/components/ui';
 import { fmtInt } from '@/lib/numberFormat';
 import { Icons } from '@/lib/icons';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 
 interface AlertOperationalBriefProps {
   alerts: readonly Alert[];
@@ -99,6 +100,109 @@ export function AlertOperationalBrief({
       tone: 'info',
     });
   }
+  const primaryAttention = attention[0];
+
+  const narrativeLimitations = [
+    t(
+      'operations.alerts.narrative.rootCauseLimitation',
+      'Alert records show triggers and response state; they do not prove root cause.',
+    ),
+  ];
+  if (missingEvidence > 0) {
+    narrativeLimitations.push(
+      t(
+        'operations.alerts.narrative.missingSignalLimitation',
+        '{{count}} open alert lacks related signal metadata.',
+        { count: missingEvidence },
+      ),
+    );
+  }
+  if (alerts.length > 5) {
+    narrativeLimitations.push(
+      t(
+        'operations.alerts.narrative.evidenceCap',
+        'The evidence preview shows the 5 most recent records from this scope.',
+      ),
+    );
+  }
+
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.alerts.narrative.whatChanged',
+      '{{open}} alerts remain open, including {{critical}} critical.',
+      { open: openAlerts.length, critical: openCritical.length },
+    ),
+    whyItMatters:
+      primaryAttention?.description ??
+      (openAlerts.length > 0
+        ? t(
+            'operations.alerts.narrative.openImpact',
+            'Unacknowledged alerts can leave vehicle or fleet conditions without a recorded response.',
+          )
+        : t(
+            'operations.alerts.narrative.clearImpact',
+            'No alert in the selected scope is waiting for acknowledgement.',
+          )),
+    confidence: {
+      label: 'high',
+      score: null,
+      basis: [
+        t(
+          'operations.alerts.narrative.confidenceRecord',
+          'Alert state comes from direct persisted event records.',
+        ),
+        t(
+          'operations.alerts.narrative.confidenceAudit',
+          'Acknowledgement ownership comes from the server audit record.',
+        ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      primaryAttention?.description ??
+      t(
+        'operations.alerts.narrative.noResponse',
+        'No immediate response is required; continue monitoring the selected scope.',
+      ),
+    limitations: narrativeLimitations,
+    evidence: alerts.slice(0, 5).map((alert) => ({
+      id: `alert-${alert.id}`,
+      summary: `${alert.title}: ${alert.message}`,
+      observedAt: alert.created_at,
+      provenance: {
+        source: t(
+          'operations.alerts.narrative.alertSource',
+          'Alert event feed',
+        ),
+        recordId: String(alert.id),
+        method: alert.rule_signal
+          ? t(
+              'operations.alerts.narrative.signalMethod',
+              'Related signal: {{signal}}',
+              { signal: alert.rule_signal },
+            )
+          : null,
+      },
+    })),
+    provenance: [
+      {
+        source: t(
+          'operations.alerts.narrative.alertSource',
+          'Alert event feed',
+        ),
+        method: t(
+          'operations.alerts.narrative.scopeMethod',
+          'Filtered to the active vehicle and analysis window.',
+        ),
+      },
+      {
+        source: t(
+          'operations.alerts.narrative.ackSource',
+          'Acknowledgement audit history',
+        ),
+      },
+    ],
+  };
 
   return (
     <OperationalBrief
@@ -142,6 +246,7 @@ export function AlertOperationalBrief({
         },
       ]}
       attention={attention}
+      narrative={narrative}
       scope={
         <>
           <Badge variant="neutral" size="sm">{vehicleLabel}</Badge>

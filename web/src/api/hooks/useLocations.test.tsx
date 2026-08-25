@@ -333,6 +333,7 @@ describe('useBulkGeofencesDelete', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/bulk');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ ids: [1, 2, 9], op: 'delete' });
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
@@ -455,6 +456,7 @@ describe('useRenameGeofence', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/7');
     expect(opts.method).toBe('PUT');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ name: 'Office Charger' });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
@@ -480,6 +482,7 @@ describe('useUpdateGeofenceCategory', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/7');
     expect(opts.method).toBe('PUT');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ category: 'work' });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
@@ -503,6 +506,7 @@ describe('useArchiveGeofence', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/3/archive');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
 
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
@@ -535,6 +539,7 @@ describe('useUnarchiveGeofence', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/3/unarchive');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofences });
     expect(successToast).toHaveBeenCalledWith('toast.geofence.unarchive.success', 'Place restored');
   });
@@ -553,6 +558,7 @@ describe('useMarkGeofenceReviewed', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/3/reviewed');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofencesNeedsReview });
     expect(successToast).toHaveBeenCalledWith('toast.geofence.reviewed.success', 'Marked reviewed');
   });
@@ -601,6 +607,7 @@ describe('useCreateGeofenceRate', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/7/rates');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     // The body must carry rate_per_wh (SI canonical), never a *_kwh field,
     // and must NOT include geofenceId (a path param, not a body field).
     const body = JSON.parse(opts.body as string);
@@ -668,6 +675,7 @@ describe('useDeleteGeofenceRate', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/7/rates/99');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRates(7) });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: locationKeys.geofenceRatesCurrent });
     expect(successToast).toHaveBeenCalledWith(
@@ -752,6 +760,7 @@ describe('useApplyGeofenceRate', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/geofences/7/rates/99/apply');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
 
     expect(invalidate).toHaveBeenCalledWith({
       queryKey: ['geofences', 7, 'rates', 99, 'preview'],

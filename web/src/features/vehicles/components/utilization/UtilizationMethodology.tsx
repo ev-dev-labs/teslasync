@@ -238,7 +238,7 @@ export function UtilizationMethodology({
             </div>
 
             {accounting.returnedRows === 0 ? (
-              <EmptyState
+              <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                 className="py-6"
                 icon={<Database className="h-7 w-7" aria-hidden="true" />}
                 message={t(

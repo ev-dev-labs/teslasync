@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { ActiveVehicleSegment } from './ActiveVehicleSegment';
 import { BackgroundWorkSegment } from './BackgroundWorkSegment';
 import { HelpSegment } from './HelpSegment';
+import { PresentationModeSegment } from './PresentationModeSegment';
 import { useStatusBarPopover } from './StatusBarContext';
 import { useBuildNews } from './useAboutBuild';
 
@@ -144,6 +145,7 @@ export function MoreSegment({
           backgroundJobs={backgroundJobs}
         />
         <ActiveVehicleSegment embedded onSelect={close} />
+        <PresentationModeSegment embedded onAction={close} />
         <HelpSegment
           embedded
           onAction={close}

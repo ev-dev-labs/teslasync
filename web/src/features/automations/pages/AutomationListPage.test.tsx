@@ -62,6 +62,15 @@ const { useAutomationsMock, useBulkMock, useVehiclesMock, navigateMock, captured
     captured: {} as Record<string, Record<string, unknown>>,
   }));
 
+const operationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}));
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}));
+
 // i18n → return the developer fallback string, interpolating `{{vars}}`.
 // Supports both the `t(key, 'Default', { vars })` and the
 // `t(key, { defaultValue, ...vars })` call styles the tree uses.
@@ -301,6 +310,8 @@ beforeEach(() => {
   useBulkMock.mockReset();
   useVehiclesMock.mockReset();
   navigateMock.mockReset();
+  operationalMode.canWrite = true;
+  operationalMode.writeBlockReason = null;
   for (const key of Object.keys(captured)) delete captured[key];
 
   // Sensible defaults; individual specs override as needed.
@@ -343,6 +354,28 @@ describe('AutomationListPage', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search automations' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'New' })).toBeInTheDocument();
+  });
+
+  it('renders the read-only explanation outside the disabled create action', () => {
+    operationalMode.canWrite = false;
+    operationalMode.writeBlockReason =
+      'Reconnect before making operational changes.';
+    renderPage();
+
+    const createButton = screen.getByRole('button', { name: 'New' });
+    const noticeTitle = screen.getByText(
+      'Bulk automation controls are read-only',
+    );
+
+    expect(createButton).toBeDisabled();
+    expect(createButton).toHaveAttribute(
+      'title',
+      'Reconnect before making operational changes.',
+    );
+    expect(noticeTitle.closest('button')).toBeNull();
+    expect(
+      screen.getByText('Reconnect before making operational changes.'),
+    ).toBeInTheDocument();
   });
 
   it('computes summary stats from the full, unfiltered set', () => {

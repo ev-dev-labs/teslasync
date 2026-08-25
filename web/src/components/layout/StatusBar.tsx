@@ -7,12 +7,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import { ConnectionSegment } from './status-bar/ConnectionSegment';
 import { LiveTelemetrySegment } from './status-bar/LiveTelemetrySegment';
+import { OperationalModeSegment } from './status-bar/OperationalModeSegment';
 import { ActiveVehicleSegment } from './status-bar/ActiveVehicleSegment';
 import { AlertsSegment } from './status-bar/AlertsSegment';
 import { BackgroundWorkSegment } from './status-bar/BackgroundWorkSegment';
 import { RecentPagesSegment } from './status-bar/RecentPagesSegment';
 import { HelpSegment } from './status-bar/HelpSegment';
 import { MoreSegment } from './status-bar/MoreSegment';
+import { PresentationModeSegment } from './status-bar/PresentationModeSegment';
 import { AboutBuildModal } from './status-bar/AboutBuildModal';
 import { WorkspaceContextControl } from './WorkspaceContextControl';
 import {
@@ -127,6 +129,7 @@ function StatusBarContent({
           />
           <Divider />
           <LiveTelemetrySegment iconOnly={iconOnly} />
+          <OperationalModeSegment iconOnly={iconOnly} />
           <AlertsSegment iconOnly={iconOnly} />
         </div>
         <div className="flex min-w-0 items-center gap-1">
@@ -149,6 +152,7 @@ function StatusBarContent({
                 iconOnly={iconOnly}
                 backgroundJobs={backgroundJobs}
               />
+              <PresentationModeSegment iconOnly={iconOnly} />
               <ActiveVehicleSegment iconOnly={iconOnly} />
               <HelpSegment
                 iconOnly={iconOnly}

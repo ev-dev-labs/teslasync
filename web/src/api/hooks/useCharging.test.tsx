@@ -685,6 +685,7 @@ describe('useApplySchedule', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/charge-planner/apply');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual(applyReq);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: chargePlannerKeys.all });
     expect(successToast).toHaveBeenCalledWith(
@@ -764,6 +765,7 @@ describe('useBulkDeleteCharging', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/charging/bulk');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ ids: [1, 2, 3] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: chargingKeys.all });
     expect(successToast).toHaveBeenCalledWith(

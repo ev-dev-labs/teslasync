@@ -19,7 +19,7 @@ export function VehicleOptionsDataView({
   if (options.length === 0) {
     return (
       <div>
-        <EmptyState
+        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
           title={t(
             'vehicleManagement.options.emptyTitle',
             'No vehicle options returned',

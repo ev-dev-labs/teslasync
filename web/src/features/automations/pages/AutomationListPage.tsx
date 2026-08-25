@@ -6,9 +6,10 @@ import { Button, Input, Select, type SelectOption } from '@/components/ui';
 import { BulkActionToolbar, MetricCard } from '@/components/data-display';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { Skeleton } from '@/components/feedback';
+import { OperationalWriteNotice, Skeleton } from '@/components/feedback';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useAutomations, useBulkAutomationsUpdate } from '@/api/hooks/useAutomations';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import type { Automation } from '@/api/types';
@@ -47,6 +48,7 @@ export default function AutomationListPage() {
   }, [vehiclesRaw]);
 
   const bulkUpdate = useBulkAutomationsUpdate();
+  const operationalMode = useOperationalMode();
 
   // ── Filters ────────────────────────────────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
@@ -154,6 +156,8 @@ export default function AutomationListPage() {
         variant="primary"
         icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
         onClick={() => navigate('/automations/new')}
+        disabled={!operationalMode.canWrite}
+        title={operationalMode.writeBlockReason ?? undefined}
       >
         {t('automationList.new', 'New')}
       </Button>
@@ -170,6 +174,13 @@ export default function AutomationListPage() {
       actions={actions}
       query={automationsQuery}
     >
+      <OperationalWriteNotice
+        title={t(
+          'automationList.readOnly.title',
+          'Bulk automation controls are read-only',
+        )}
+      />
+
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section
@@ -235,12 +246,14 @@ export default function AutomationListPage() {
             id: 'enable',
             label: t('automationList.bulk.enable', 'Enable'),
             icon: <Icons.play className="h-4 w-4" />,
+            disabled: !operationalMode.canWrite,
             onClick: (ids) => runBulk(ids, 'enable'),
           },
           {
             id: 'disable',
             label: t('automationList.bulk.disable', 'Disable'),
             icon: <Icons.pause className="h-4 w-4" />,
+            disabled: !operationalMode.canWrite,
             onClick: (ids) => runBulk(ids, 'disable'),
           },
           {
@@ -248,6 +261,7 @@ export default function AutomationListPage() {
             label: t('automationList.bulk.delete', 'Delete'),
             variant: 'danger',
             icon: <Icons.delete className="h-4 w-4" />,
+            disabled: !operationalMode.canWrite,
             confirm: {
               title: t('automationList.bulk.deleteConfirm.title', 'Delete automations?'),
               description: t(

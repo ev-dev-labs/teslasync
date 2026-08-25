@@ -80,9 +80,11 @@ export function useImportAutomations() {
     mutationFn: (envelope: AutomationImportEnvelope) =>
       request<AutomationImportResult>('/automations/import', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(envelope),
       }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
@@ -103,10 +105,12 @@ export function useToggleAutomation() {
     mutationFn: ({ id, enabled }) =>
       request<{ id: number; enabled: boolean }>(`/automations/${id}/toggle`, {
         method: 'PATCH',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ enabled }),
       }),
     queryKeys: [automationKeys.all],
+    networkMode: 'always',
     updater: (prev, { id, enabled }) => {
       // The `['automations']` prefix also matches the object-shaped
       // `['automations', id]` detail cache written by `useAutomation`.
@@ -141,8 +145,9 @@ export function useReEnableAutomation() {
     mutationFn: (id: number) =>
       request<{ id: number; enabled: boolean; auto_disabled: boolean }>(
         `/automations/${id}/re-enable`,
-        { method: 'PATCH' },
+        { method: 'PATCH', requiresLiveMode: true },
       ),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       success('toast.automation.reEnable.success', 'Automation re-enabled');
@@ -156,7 +161,11 @@ export function useDeleteAutomation() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request<void>(`/automations/${id}`, { method: 'DELETE' }),
+      request<void>(`/automations/${id}`, {
+        method: 'DELETE',
+        requiresLiveMode: true,
+      }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
@@ -186,9 +195,11 @@ export function useBulkAutomationsUpdate() {
     mutationFn: (vars: { ids: number[]; op: AutomationBulkOp }) =>
       request<AutomationBulkResult>('/automations/bulk', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ids: vars.ids, op: vars.op }),
       }),
+    networkMode: 'always',
     onSuccess: (_data, vars) => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       invalidateAndBroadcast(qc, { queryKey: ['automation-history'] });
@@ -210,7 +221,11 @@ export function useTestRunAutomation() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request<void>(`/automations/${id}/test-run`, { method: 'POST' }),
+      request<void>(`/automations/${id}/test-run`, {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['automation-history'] });
       success('toast.automation.testRun.success', 'Test run started');
@@ -238,9 +253,11 @@ export function useCreateAutomationFull() {
     mutationFn: (input: AutomationFullInput) =>
       request<AutomationFull>('/automations', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       success('toast.automation.create.success', 'Automation created');
@@ -256,9 +273,11 @@ export function useUpdateAutomationFull() {
     mutationFn: ({ id, input }: { id: number; input: AutomationFullInput }) =>
       request<AutomationFull>(`/automations/${id}`, {
         method: 'PUT',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(input),
       }),
+    networkMode: 'always',
     onSuccess: (_d, vars) => {
       invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
       invalidateAndBroadcast(qc, { queryKey: automationKeys.detail(vars.id) });

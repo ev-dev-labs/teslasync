@@ -12,6 +12,7 @@ import {
   Toggle,
 } from '@/components/ui/runtime'
 import { useRangeState } from '@/hooks/useRangeState'
+import { useProductPreferences } from '@/hooks/useProductPreferences'
 import { getCurrentDensity } from '@/hooks/useDensitySync'
 import { getDatePreset } from '@/lib/datePresets'
 import { cn } from '@/lib/cn'
@@ -45,8 +46,9 @@ export function WorkspaceContextControl({
   const { open, toggle, close } = useStatusBarPopover(
     variant === 'status' ? 'workspace-context-status' : 'workspace-context',
   )
+  const { preferences } = useProductPreferences()
   const range = useRangeState({
-    defaultPresetId: '7d',
+    defaultPresetId: preferences.defaultAnalysisRange,
     enableCompare: true,
   })
   const { data: settings } = useSettings()

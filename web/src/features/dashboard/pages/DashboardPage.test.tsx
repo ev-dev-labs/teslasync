@@ -246,9 +246,6 @@ vi.mock('../components/ImportPreviewModal', () => ({
 vi.mock('../components/DashboardSettingsModal', () => ({
   DashboardSettingsModal: (props: any) => (props.open ? <div data-testid="dash-settings" /> : null),
 }));
-vi.mock('../components/KioskOverlay', () => ({
-  KioskOverlay: () => <div data-testid="kiosk-overlay" />,
-}));
 vi.mock('../components/KioskSettingsModal', () => ({
   KioskSettingsModal: (props: any) => (props.open ? <div data-testid="kiosk-settings" /> : null),
 }));
@@ -673,7 +670,6 @@ describe('DashboardPage — kiosk mode', () => {
   it('renders the kiosk surface and hides the add-widget FAB in kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = true;
     renderPage();
-    expect(screen.getByTestId('kiosk-overlay')).toBeInTheDocument();
     expect(screen.getByTestId('kiosk-grid')).toBeInTheDocument();
     expect(screen.queryByTestId('add-widget-fab')).toBeNull();
   });
@@ -682,7 +678,7 @@ describe('DashboardPage — kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = false;
     renderPage();
     expect(screen.getByTestId('add-widget-fab')).toBeInTheDocument();
-    expect(screen.queryByTestId('kiosk-overlay')).toBeNull();
+    expect(screen.queryByTestId('kiosk-grid')).toBeNull();
   });
 });
 

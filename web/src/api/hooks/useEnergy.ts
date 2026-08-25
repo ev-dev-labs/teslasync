@@ -223,6 +223,7 @@ export function useUpdateTOUSettings() {
     mutationFn: ({ siteId, settings }: { siteId: number; settings: TOUSettingsPayload }) =>
       request(`/tesla/energy-sites/${siteId}/tou-settings`, {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings),
       }),

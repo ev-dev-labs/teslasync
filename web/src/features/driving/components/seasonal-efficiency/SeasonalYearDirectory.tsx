@@ -25,7 +25,7 @@ export function SeasonalYearDirectory({
         </Text>
         <SeasonalSectionBody state={state}>
           {analysis.years.length === 0 ? (
-            <EmptyState message={t('seasonalEfficiency.yearDirectory.empty', 'No local calendar years have included observations.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.yearDirectory.empty', 'No local calendar years have included observations.')} />
           ) : (
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {analysis.years.map((year) => (

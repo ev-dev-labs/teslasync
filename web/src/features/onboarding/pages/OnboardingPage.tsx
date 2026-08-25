@@ -8,12 +8,15 @@ import {
   BookOpen,
   ExternalLink,
   SkipForward,
+  SlidersHorizontal,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
+import { PersonaSelect } from '@/components/forms';
 import { GlassPanel, Button, IconBox, SectionTitle, Text } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
 import { cn } from '@/lib/cn';
 
@@ -48,6 +51,7 @@ export default function OnboardingPage() {
   const navigate = useNavigate();
   const { data, isLoading, isError, error, refetch, isFetching } = useOnboardingStatus();
   const { skip } = useOnboardingSkip();
+  const { preferences, updatePreferences } = useProductPreferences();
 
   const teslaConnected = data?.tesla_connected ?? false;
   const vehicleCount = data?.vehicle_count ?? 0;
@@ -194,8 +198,43 @@ export default function OnboardingPage() {
           lastTelemetryAt={data?.last_telemetry_at ?? null}
         />
 
+        <FadeIn delay={0.08}>
+          <GlassPanel className="p-4 sm:p-5">
+            <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(280px,420px)] lg:items-center">
+              <div className="flex min-w-0 items-start gap-3">
+                <IconBox color="cyan" size="md">
+                  <SlidersHorizontal className="h-5 w-5" aria-hidden />
+                </IconBox>
+                <div className="min-w-0">
+                  <SectionTitle>
+                    {t(
+                      'onboarding.workspaceProfile.title',
+                      'Tailor your workspace',
+                    )}
+                  </SectionTitle>
+                  <Text variant="bodySm" as="p" className="mt-1 max-w-3xl">
+                    {t(
+                      'onboarding.workspaceProfile.description',
+                      'Choose the perspective that best matches your work. TeslaSync will prioritize navigation and discovery without hiding features or changing permissions.',
+                    )}
+                  </Text>
+                </div>
+              </div>
+              <PersonaSelect
+                id="onboarding-workspace-profile"
+                value={preferences.persona}
+                onChange={(persona) => updatePreferences({ persona })}
+                label={t(
+                  'onboarding.workspaceProfile.label',
+                  'Primary use',
+                )}
+              />
+            </div>
+          </GlassPanel>
+        </FadeIn>
+
         {/* 2 — Hero bento: setup checklist (primary) + resources (context) */}
-        <FadeIn delay={0.1}>
+        <FadeIn delay={0.15}>
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             <GlassPanel className="p-4 sm:p-6 xl:col-span-2">
               <div className="mb-5 flex items-start gap-3">
@@ -221,7 +260,7 @@ export default function OnboardingPage() {
         </FadeIn>
 
         {/* 3 — What you'll unlock once setup completes (full-width band) */}
-        <FadeIn delay={0.2}>
+        <FadeIn delay={0.25}>
           <section className="space-y-3 sm:space-y-4">
             <SectionTitle>{t('onboarding.unlock.title', "What you'll unlock")}</SectionTitle>
             <OnboardingFeaturePreview />
@@ -229,7 +268,7 @@ export default function OnboardingPage() {
         </FadeIn>
 
         {/* 4 — Footer action band: status + refresh + skip / continue */}
-        <FadeIn delay={0.3}>
+        <FadeIn delay={0.35}>
           <GlassPanel className="p-4 sm:p-5">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Text variant="bodySm" as="p">

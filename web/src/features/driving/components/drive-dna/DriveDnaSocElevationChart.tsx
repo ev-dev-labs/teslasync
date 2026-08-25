@@ -143,7 +143,7 @@ export function DriveDnaSocElevationChart({
                 />
               </div>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                 className="h-full"
                 icon={<BatteryMedium className="h-8 w-8" aria-hidden="true" />}
                 message={t(

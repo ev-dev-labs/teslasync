@@ -18,6 +18,7 @@ export {
   type ExportScope,
 } from './ListExportMenu';
 export { PillFilterBar, type PillFilterBarProps, type PillItem } from './PillFilterBar';
+export { PersonaSelect, type PersonaSelectProps } from './PersonaSelect';
 export { SearchInput, type SearchInputProps } from './SearchInput';
 export { TagInput, type TagInputProps, type TagInputHandle, type TagSeparator } from './TagInput';
 export {

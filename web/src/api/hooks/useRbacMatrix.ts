@@ -75,6 +75,7 @@ export function useUpsertRbacCells() {
       const body: RbacUpsertRequest = { cells }
       return request<void>('/admin/rbac/matrix', {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       })
     },

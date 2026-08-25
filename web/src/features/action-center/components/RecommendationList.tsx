@@ -18,6 +18,8 @@ interface RecommendationListProps {
   ) => void;
   /** Resets the active filter set back to its default (open, no vehicle/priority/source). */
   onClearFilters: () => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 export function RecommendationList({
@@ -27,6 +29,8 @@ export function RecommendationList({
   onRetry,
   onAction,
   onClearFilters,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: RecommendationListProps) {
   const { t } = useTranslation();
   const EmptyIcon = Icons.notifications;
@@ -66,7 +70,13 @@ export function RecommendationList({
       className="space-y-4"
     >
       {items.map((item) => (
-        <RecommendationCard key={item.id} recommendation={item} onAction={onAction} />
+        <RecommendationCard
+          key={item.id}
+          recommendation={item}
+          onAction={onAction}
+          actionsDisabled={actionsDisabled}
+          actionsDisabledReason={actionsDisabledReason}
+        />
       ))}
     </section>
   );

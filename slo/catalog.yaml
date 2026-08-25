@@ -84,6 +84,16 @@ slos:
     owner: platform
     tags: [http, action-center, decision-inbox]
 
+  - name: activity_timeline_read_availability
+    description: "Unified vehicle activity timeline reads must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, activity, operations]
+
   - name: action_center_write_availability
     description: "Confirmation-gated Action Center state actions must return without server errors; expected conflicts remain valid outcomes."
     sli:

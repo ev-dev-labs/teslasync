@@ -113,6 +113,11 @@ vi.mock('./status-bar/RecentPagesSegment', () => ({
     <div data-testid="seg-recent" data-icon-only={String(!!iconOnly)} />
   ),
 }));
+vi.mock('./status-bar/PresentationModeSegment', () => ({
+  PresentationModeSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
+    <div data-testid="seg-presentation" data-icon-only={String(!!iconOnly)} />
+  ),
+}))
 vi.mock('./status-bar/HelpSegment', () => ({
   HelpSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
     <div data-testid="seg-help" data-icon-only={String(!!iconOnly)} />
@@ -159,6 +164,7 @@ const SEGMENT_TESTIDS = [
   'seg-vehicle',
   'seg-background',
   'seg-recent',
+  'seg-presentation',
   'seg-help',
   'seg-time',
 ] as const;

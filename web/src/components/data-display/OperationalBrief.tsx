@@ -12,6 +12,8 @@ import {
 } from '@/components/ui'
 import { cn } from '@/lib/cn'
 import { Icons } from '@/lib/icons'
+import type { OperationalNarrative } from '@/types/operationalNarrative'
+import { OperationalNarrativeDetails } from './OperationalNarrativeDetails'
 
 export type OperationalTone =
   | 'success'
@@ -47,6 +49,7 @@ export interface OperationalBriefProps {
   freshness?: ReactNode
   actions?: ReactNode
   provenance?: string
+  narrative?: OperationalNarrative
   className?: string
   testId?: string
   metricColumns?: 2 | 3 | 4
@@ -78,6 +81,7 @@ export function OperationalBrief({
   freshness,
   actions,
   provenance,
+  narrative,
   className,
   testId,
   metricColumns = 4,
@@ -86,6 +90,20 @@ export function OperationalBrief({
   const titleId = useId()
   const [detailsOpen, setDetailsOpen] = useState(false)
   const primaryAttention = attention[0]
+  const resolvedNarrative: OperationalNarrative = narrative ?? {
+    whatChanged: description,
+    whyItMatters: primaryAttention?.description ?? null,
+    confidence: {
+      label: 'not_scored',
+      score: null,
+      basis: [],
+    },
+    likelyCause: null,
+    recommendedResponse: primaryAttention?.description ?? null,
+    limitations: [],
+    evidence: [],
+    provenance: provenance ? [{ source: provenance }] : [],
+  }
 
   return (
     <>
@@ -206,6 +224,8 @@ export function OperationalBrief({
         headerMeta={<Badge variant={statusTone} dot>{statusLabel}</Badge>}
       >
         <div className="space-y-6">
+          <OperationalNarrativeDetails narrative={resolvedNarrative} />
+
           <div className="space-y-3">
             <PanelTitle>{t('operations.metrics', 'Operational metrics')}</PanelTitle>
             {metrics.map((metric) => (
@@ -258,20 +278,6 @@ export function OperationalBrief({
               </Text>
             )}
           </div>
-
-          {provenance && (
-            <div className="border-t border-[var(--border-subtle)] pt-4">
-              <Text
-                as="p"
-                size="xs"
-                color="muted"
-                className="flex items-start gap-2"
-              >
-                <Icons.database className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                {provenance}
-              </Text>
-            </div>
-          )}
         </div>
       </Drawer>
     </>

@@ -14,10 +14,17 @@ import {
   GlassPanel, Button, Input, Select, Badge, SectionTitle, Text, Caption,
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { AlertBanner, EmptyState, QueryError, Skeleton } from '@/components/feedback';
+import {
+  AlertBanner,
+  EmptyState,
+  OperationalWriteNotice,
+  QueryError,
+  Skeleton,
+} from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAutomationEvents } from '@/hooks/useAutomationEvents';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   useAutomations,
   useAutomationHistory,
@@ -132,6 +139,7 @@ export default function AutomationsListPage() {
   const testRunMutation = useTestRunAutomation();
   const reEnableMutation = useReEnableAutomation();
   const importMutation = useImportAutomations();
+  const operationalMode = useOperationalMode();
 
   // Import file input — validation errors surface via alert; network
   // success/failure is handled by the mutation's toast + query invalidation.
@@ -275,6 +283,7 @@ export default function AutomationsListPage() {
             accept=".json"
             className="hidden"
             onChange={handleImportFile}
+            disabled={!operationalMode.canWrite}
             aria-label={t('automations.importFileLabel', 'Choose automation export file')}
           />
           <Button
@@ -283,17 +292,33 @@ export default function AutomationsListPage() {
             size="sm"
             onClick={() => importInputRef.current?.click()}
             loading={importMutation.isPending}
+            disabled={!operationalMode.canWrite}
+            title={operationalMode.writeBlockReason ?? undefined}
           >
             <Upload className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.import', 'Import')}
           </Button>
-          <Button type="button" variant="primary" size="sm" onClick={() => navigate('/automations/new')}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => navigate('/automations/new')}
+            disabled={!operationalMode.canWrite}
+            title={operationalMode.writeBlockReason ?? undefined}
+          >
             <Plus className="mr-1.5 h-4 w-4" aria-hidden="true" />
             {t('automations.create', 'Create')}
           </Button>
         </div>
       }
     >
+      <OperationalWriteNotice
+        title={t(
+          'automations.readOnly.title',
+          'Automation controls are read-only',
+        )}
+      />
+
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section
@@ -402,7 +427,10 @@ export default function AutomationsListPage() {
               </Caption>
             </summary>
             <div className="mt-4">
-              <PresetGallery />
+              <PresetGallery
+                actionsDisabled={!operationalMode.canWrite}
+                actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
+              />
             </div>
           </details>
         </GlassPanel>
@@ -442,6 +470,8 @@ export default function AutomationsListPage() {
                       onReEnable={handleReEnable}
                       onDelete={handleDelete}
                       onTestRun={handleTestRun}
+                      actionsDisabled={!operationalMode.canWrite}
+                      actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
                     />
                   </StaggerItem>
                 ))}
@@ -451,10 +481,12 @@ export default function AutomationsListPage() {
                 <EmptyState
                   icon={<Zap className="h-8 w-8" />}
                   message={t('automations.empty', 'No automations yet. Create a typed automation to get started!')}
-                  actionTo={{
-                    label: t('automations.empty.cta', 'Create automation'),
-                    to: '/automations/new',
-                  }}
+                  actionTo={operationalMode.canWrite
+                    ? {
+                        label: t('automations.empty.cta', 'Create automation'),
+                        to: '/automations/new',
+                      }
+                    : undefined}
                 />
               </GlassPanel>
             ) : (

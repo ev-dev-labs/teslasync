@@ -88,6 +88,16 @@ describe('AlertOperationalBrief', () => {
     expect(onViewCritical).toHaveBeenCalledTimes(1);
     expect(onManageRules).toHaveBeenCalledTimes(1);
 
+    fireEvent.click(screen.getByRole('button', { name: 'Review details' }));
+    const drawer = screen.getByRole('dialog');
+    expect(
+      within(drawer).getByText('2 alerts remain open, including 1 critical.'),
+    ).toBeInTheDocument();
+    expect(within(drawer).getByText('High')).toBeInTheDocument();
+    expect(
+      within(drawer).getAllByText('Alert event feed', { exact: false }),
+    ).not.toHaveLength(0);
+
     vi.useRealTimers();
   });
 });

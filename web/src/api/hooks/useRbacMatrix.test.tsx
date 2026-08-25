@@ -193,6 +193,7 @@ describe('useUpsertRbacCells', () => {
     const [url, opts] = mockedRequest.mock.calls[0]
     expect(url).toBe('/admin/rbac/matrix')
     expect(opts.method).toBe('PUT')
+    expect(opts.requiresLiveMode).toBe(true)
     // Body is wrapped in the { cells } envelope the handler expects.
     expect(JSON.parse(opts.body as string)).toEqual({ cells })
     expect(invalidate).toHaveBeenCalledWith({ queryKey: rbacMatrixKeys.matrix() })

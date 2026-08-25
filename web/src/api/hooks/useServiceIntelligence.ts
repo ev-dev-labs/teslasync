@@ -243,6 +243,7 @@ export function useImportCommunicationsCatalog() {
         '/admin/service-intelligence/communications/import',
         {
           method: 'POST',
+          requiresLiveMode: true,
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ artifact_url: artifactURL }),
         },

@@ -268,7 +268,7 @@ describe('AlertRulesPage — data state', () => {
     expect(screen.getByText('Zebra')).toBeInTheDocument();
     expect(screen.getByText('Mango')).toBeInTheDocument();
     expect(
-      screen.getByRole('button', { name: 'Download table as CSV' }),
+      screen.getByRole('button', { name: 'Download CSV' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: 'Reorder or hide columns' }),

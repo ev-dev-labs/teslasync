@@ -13,13 +13,21 @@ import (
 
 type fakeSource struct {
 	alerts      []domain.AlertRecord
+	battery     []domain.BatteryHealthRecord
 	charging    []domain.ChargingRecord
+	drives      []domain.DriveEfficiencyRecord
 	workOrders  []domain.WorkOrderRecord
+	commands    []domain.CommandReliabilityRecord
 	signals     []domain.SignalHealthRecord
+	incidents   []domain.SystemIncidentRecord
 	alertErr    error
+	batteryErr  error
 	chargingErr error
+	driveErr    error
 	workErr     error
+	commandErr  error
 	signalErr   error
+	incidentErr error
 }
 
 func (f *fakeSource) ListActiveAlerts(
@@ -28,10 +36,29 @@ func (f *fakeSource) ListActiveAlerts(
 	return f.alerts, f.alertErr
 }
 
+func (f *fakeSource) ListLatestBatteryHealth(
+	context.Context, *int64, int,
+) ([]domain.BatteryHealthRecord, error) {
+	return f.battery, f.batteryErr
+}
+
 func (f *fakeSource) ListStaleChargingSessions(
 	context.Context, *int64, time.Time, int,
 ) ([]domain.ChargingRecord, error) {
 	return f.charging, f.chargingErr
+}
+
+func (f *fakeSource) ListDriveEfficiencyEvidence(
+	context.Context,
+	*int64,
+	time.Time,
+	time.Time,
+	int,
+	float64,
+	float64,
+	int,
+) ([]domain.DriveEfficiencyRecord, error) {
+	return f.drives, f.driveErr
 }
 
 func (f *fakeSource) ListActiveWorkOrders(
@@ -40,10 +67,22 @@ func (f *fakeSource) ListActiveWorkOrders(
 	return f.workOrders, f.workErr
 }
 
+func (f *fakeSource) ListCommandReliability(
+	context.Context, *int64, time.Time, time.Time, int,
+) ([]domain.CommandReliabilityRecord, error) {
+	return f.commands, f.commandErr
+}
+
 func (f *fakeSource) ListSignalHealth(
 	context.Context, *int64, time.Time, time.Time, int,
 ) ([]domain.SignalHealthRecord, error) {
 	return f.signals, f.signalErr
+}
+
+func (f *fakeSource) ListOpenSystemIncidents(
+	context.Context, int,
+) ([]domain.SystemIncidentRecord, error) {
+	return f.incidents, f.incidentErr
 }
 
 type fakeAdvancedIntelligence struct {
@@ -385,6 +424,153 @@ func TestSignalProviderIgnoresRoutineVehicleSleep(t *testing.T) {
 	}
 	if len(items) != 0 {
 		t.Fatalf("routine sleep produced %d recommendation(s)", len(items))
+	}
+}
+
+func TestBatteryHealthProviderUsesIssuedPassportEvidence(t *testing.T) {
+	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{battery: []domain.BatteryHealthRecord{
+		{
+			LedgerID: 44,
+			Vehicle:  domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+			SohPct:   79.2,
+			IssuedAt: now.Add(-time.Hour),
+		},
+		{
+			LedgerID: 45,
+			Vehicle:  domain.VehicleRef{ID: 8, DisplayName: "Nova"},
+			SohPct:   92,
+			IssuedAt: now.Add(-time.Hour),
+		},
+	}}
+	items, err := (batteryHealthProvider{source: source}).Recommendations(
+		context.Background(),
+		ListFilter{},
+		now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %d, want only the below-threshold passport", len(items))
+	}
+	item := items[0]
+	if item.SourceFeature != domain.SourceBatteryHealth ||
+		item.ProjectedImpact != nil ||
+		item.NavigationPath == nil ||
+		*item.NavigationPath != "/battery-passport?vehicle_id=7" {
+		t.Fatalf("battery recommendation = %+v", item)
+	}
+	if item.Evidence[0].Provenance.Source != "tesla_battery_passport_ledger" {
+		t.Fatalf("battery provenance = %+v", item.Evidence[0].Provenance)
+	}
+}
+
+func TestDriveEfficiencyProviderProjectsOnlyMeasuredExcessEnergy(t *testing.T) {
+	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{drives: []domain.DriveEfficiencyRecord{{
+		DriveID:               91,
+		Vehicle:               domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+		StartedAt:             now.Add(-2 * time.Hour),
+		EndedAt:               now.Add(-time.Hour),
+		DistanceM:             20_000,
+		EnergyUsedWh:          8_000,
+		EnergyIntensityWhPerM: 0.4,
+		BaselineWhPerM:        0.2,
+		BaselineSampleCount:   20,
+		IntensityRatio:        2,
+		ExcessEnergyWh:        4_000,
+	}}}
+	items, err := (driveEfficiencyProvider{source: source}).Recommendations(
+		context.Background(),
+		ListFilter{},
+		now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %d, want 1", len(items))
+	}
+	item := items[0]
+	if item.Priority != domain.PriorityHigh ||
+		item.ProjectedImpact == nil ||
+		item.ProjectedImpact.EnergyWh == nil ||
+		*item.ProjectedImpact.EnergyWh != 4_000 {
+		t.Fatalf("drive recommendation = %+v", item)
+	}
+	if item.NavigationPath == nil || *item.NavigationPath != "/drives/91" {
+		t.Fatalf("drive navigation = %v", item.NavigationPath)
+	}
+}
+
+func TestVehicleReadinessProviderRequiresRepeatedFailures(t *testing.T) {
+	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{commands: []domain.CommandReliabilityRecord{
+		{
+			Vehicle:         domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+			AttemptCount:    5,
+			FailureCount:    4,
+			LatestFailureAt: now.Add(-time.Hour),
+			WindowStart:     now.Add(-24 * time.Hour),
+			CheckedAt:       now,
+		},
+		{
+			Vehicle:         domain.VehicleRef{ID: 8, DisplayName: "Nova"},
+			AttemptCount:    2,
+			FailureCount:    2,
+			LatestFailureAt: now.Add(-time.Hour),
+			WindowStart:     now.Add(-24 * time.Hour),
+			CheckedAt:       now,
+		},
+	}}
+	items, err := (vehicleReadinessProvider{source: source}).Recommendations(
+		context.Background(),
+		ListFilter{},
+		now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 1 || items[0].Vehicle == nil || items[0].Vehicle.ID != 7 {
+		t.Fatalf("command recommendations = %+v", items)
+	}
+	if items[0].Priority != domain.PriorityHigh ||
+		items[0].Evidence[0].Provenance.Source != "command_logs" {
+		t.Fatalf("command recommendation = %+v", items[0])
+	}
+}
+
+func TestSystemHealthProviderUsesOnlyUnresolvedIncidentRecords(t *testing.T) {
+	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{incidents: []domain.SystemIncidentRecord{{
+		ID:                 12,
+		Title:              "Telemetry ingestion delayed",
+		Severity:           "critical",
+		Status:             "investigating",
+		AffectedComponents: []string{"mqtt", "signal-writer"},
+		StartedAt:          now.Add(-2 * time.Hour),
+		UpdatedAt:          now.Add(-time.Hour),
+	}}}
+	provider := systemHealthProvider{source: source}
+	items, err := provider.Recommendations(context.Background(), ListFilter{}, now)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 1 ||
+		items[0].Priority != domain.PriorityCritical ||
+		items[0].Severity != domain.SeverityCritical ||
+		items[0].Vehicle != nil {
+		t.Fatalf("system recommendation = %+v", items)
+	}
+	vehicleID := int64(7)
+	filtered, err := provider.Recommendations(
+		context.Background(),
+		ListFilter{VehicleID: &vehicleID},
+		now,
+	)
+	if err != nil || len(filtered) != 1 {
+		t.Fatalf("vehicle-filtered system recommendations = %+v, err = %v", filtered, err)
 	}
 }
 

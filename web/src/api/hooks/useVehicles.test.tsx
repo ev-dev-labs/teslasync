@@ -135,11 +135,17 @@ function lastUrl(): string {
   return requestMock.mock.calls.at(-1)?.[0] as string;
 }
 /** Second positional arg of the most recent request() call = fetch options. */
-function lastOpts(): { signal?: unknown; method?: string; body?: unknown } {
+function lastOpts(): {
+  signal?: unknown;
+  method?: string;
+  body?: unknown;
+  requiresLiveMode?: boolean;
+} {
   return (requestMock.mock.calls.at(-1)?.[1] ?? {}) as {
     signal?: unknown;
     method?: string;
     body?: unknown;
+    requiresLiveMode?: boolean;
   };
 }
 /** A disabled query must never fetch — give React Query a tick to prove it. */
@@ -855,6 +861,7 @@ describe('official vehicle-management partner hooks', () => {
 
     expect(lastUrl()).toBe('/vehicles/5/enterprise-payer');
     expect(lastOpts().method).toBe('POST');
+    expect(lastOpts().requiresLiveMode).toBe(true);
     expect(JSON.parse(String(lastOpts().body))).toEqual({
       payload,
       confirmed: true,

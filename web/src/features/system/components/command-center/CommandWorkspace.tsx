@@ -1,8 +1,8 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SearchX } from 'lucide-react';
 import { Badge, GlassPanel, Heading, Text } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { AlertBanner, EmptyState } from '@/components/feedback';
 import type { CommandLogEntry } from '@/api/hooks/useCommands';
 import {
   CATEGORY_META,
@@ -27,6 +27,8 @@ interface CommandWorkspaceProps {
   state: VehicleState | null;
   latestCommands: CommandLogEntry[];
   loading: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   onExecute: (command: string, params?: Record<string, unknown>) => void;
 }
 
@@ -35,6 +37,8 @@ export function CommandWorkspace({
   state,
   latestCommands,
   loading,
+  disabled = false,
+  disabledReason,
   onExecute,
 }: CommandWorkspaceProps) {
   const { t } = useTranslation();
@@ -42,6 +46,10 @@ export function CommandWorkspace({
   const [activeDomainId, setActiveDomainId] = useState<CommandDomainId>('access');
   const [activeDialog, setActiveDialog] = useState<ActiveCommandDialog | null>(null);
   const { favorites, toggleFavorite } = useCommandFavorites(vehicle.id);
+
+  useEffect(() => {
+    if (disabled) setActiveDialog(null);
+  }, [disabled]);
 
   const latestByCommand = useMemo(
     () => new Map((latestCommands ?? []).map((entry) => [entry.command, entry])),
@@ -78,6 +86,8 @@ export function CommandWorkspace({
         : undefined);
     const common = {
       loading,
+      disabled,
+      disabledReason,
       lastStatus: getLatestCommandStatus(latest),
       isFavorite: favorites.includes(definition.id),
       onToggleFavorite: () => toggleFavorite(definition.id),
@@ -108,6 +118,8 @@ export function CommandWorkspace({
     );
   }, [
     favorites,
+    disabled,
+    disabledReason,
     latestByCommand,
     loading,
     onExecute,
@@ -119,6 +131,21 @@ export function CommandWorkspace({
   return (
     <>
       <GlassPanel className="space-y-5 p-4 sm:p-5" data-testid="command-workspace">
+        {disabled && (
+          <AlertBanner
+            variant="warning"
+            title={t(
+              'operationalMode.commandsDisabled.title',
+              'Vehicle commands are read-only',
+            )}
+          >
+            {disabledReason ??
+              t(
+                'operationalMode.writeBlocked',
+                'Return to live mode before making operational changes.',
+              )}
+          </AlertBanner>
+        )}
         <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -167,6 +194,10 @@ export function CommandWorkspace({
                 'commands.search.noResults',
                 'No commands match your search',
               )}
+              action={{
+                label: t('commands.search.clear', 'Clear search'),
+                onClick: () => setSearch(''),
+              }}
               className="py-8"
             />
           )

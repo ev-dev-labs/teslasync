@@ -54,7 +54,7 @@ export function DestinationRankings({
 
         <ExplorerSectionBody state={state} className="mt-4 min-h-72">
           {!summary.evidence.rankingSufficient ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={<MapPinned className="h-8 w-8" aria-hidden="true" />}
               message={t(
@@ -131,7 +131,7 @@ export function DestinationRankings({
                   )}
                 </Text>
                 {summary.rareRanking.length === 0 ? (
-                  <EmptyState
+                  <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                     className="py-8"
                     icon={<Pin className="h-7 w-7" aria-hidden="true" />}
                     message={t(

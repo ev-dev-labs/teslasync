@@ -116,6 +116,7 @@ export function useSetFlag() {
         `/system/flags/${encodeURIComponent(key)}`,
         {
           method: 'PUT',
+          requiresLiveMode: true,
           body: JSON.stringify(body),
         },
       );
@@ -146,7 +147,7 @@ export function useDeleteFlag() {
       const qs = new URLSearchParams({ reason }).toString();
       return request<FeatureFlagWriteResponse>(
         `/system/flags/${encodeURIComponent(key)}?${qs}`,
-        { method: 'DELETE' },
+        { method: 'DELETE', requiresLiveMode: true },
       );
     },
     onSuccess: (_res, vars) => {

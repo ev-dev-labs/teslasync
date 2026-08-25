@@ -34,7 +34,7 @@ export function SeasonalRankedMonths({
         </Text>
         <SeasonalSectionBody state={state}>
           {ranked.length === 0 ? (
-            <EmptyState message={t('seasonalEfficiency.rankedMonths.empty', 'No local month has an included observation yet.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.rankedMonths.empty', 'No local month has an included observation yet.')} />
           ) : (
             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
               {ranked.map((month, index) => (

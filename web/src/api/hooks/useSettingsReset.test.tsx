@@ -77,8 +77,14 @@ function mkResult(overrides: Partial<SettingsResetResult> = {}): SettingsResetRe
   };
 }
 
-function firstCall(): [string, RequestInit] {
-  return mockedRequest.mock.calls[0] as [string, RequestInit];
+function firstCall(): [
+  string,
+  RequestInit & { requiresLiveMode?: boolean },
+] {
+  return mockedRequest.mock.calls[0] as [
+    string,
+    RequestInit & { requiresLiveMode?: boolean },
+  ];
 }
 
 beforeEach(() => {
@@ -135,6 +141,7 @@ describe('useResetSection', () => {
     const [url, opts] = firstCall();
     expect(url).toBe('/settings/reset');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ section: 'geofences' });
   });
 
@@ -225,6 +232,7 @@ describe('useResetAllSettings', () => {
     const [url, opts] = firstCall();
     expect(url).toBe('/settings/reset');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({});
   });
 

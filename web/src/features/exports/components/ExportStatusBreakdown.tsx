@@ -8,6 +8,14 @@ import { fmtInt, fmtPercent, formatBytes } from '@/lib/numberFormat';
 
 import { STATUS_ORDER, statusColor, type ExportStats } from './exportStats';
 
+const STATUS_LABELS: Record<(typeof STATUS_ORDER)[number], string> = {
+  ready: 'Ready',
+  processing: 'Processing',
+  queued: 'Queued',
+  failed: 'Failed',
+  expired: 'Expired',
+};
+
 interface ExportStatusBreakdownProps {
   stats: ExportStats;
   isLoading: boolean;
@@ -78,7 +86,9 @@ export function ExportStatusBreakdown({
               return (
                 <MetricBar
                   key={status}
-                  label={t(`exportsList.status.${status}`, status)}
+                  label={t(`exportsList.status.${status}`, {
+                    defaultValue: STATUS_LABELS[status],
+                  })}
                   value={count}
                   max={stats.total}
                   color={statusColor[status]}

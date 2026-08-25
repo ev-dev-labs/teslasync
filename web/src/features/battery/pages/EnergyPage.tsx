@@ -58,6 +58,7 @@ import { CHARGER_COLORS } from '@/lib/colors';
 import { chartTokens, neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { useTimezone } from '@/lib/timezone';
 
@@ -770,6 +771,152 @@ export default function EnergyPage() {
       icon: <TrendingUp className="h-4 w-4" />, color: 'red',
     },
   ];
+  const narrativeEvidence: OperationalNarrative['evidence'] = [
+    ...dailyEnergy
+      .slice(-3)
+      .reverse()
+      .map((day) => ({
+        id: `energy-day-${day.date}`,
+        summary: t(
+          'operations.energy.narrative.dailySummary',
+          '{{date}}: {{energy}} consumed across {{distance}}.',
+          {
+            date: day.date,
+            energy: formatEnergy(day.energy_wh ?? 0),
+            distance: `${fmtNumber(toDistanceDisplay(day.distance_m ?? 0), 1)} ${distanceUnit}`,
+          },
+        ),
+        observedAt: day.date,
+        provenance: {
+          source: t('operations.energy.consumptionSource', 'Drive consumption'),
+          recordId: day.date,
+          method: t(
+            'operations.energy.narrative.dailyMethod',
+            'Daily aggregate of measured drive energy and distance.',
+          ),
+        },
+      })),
+    ...sessions.slice(0, 2).map((session) => ({
+      id: `energy-charge-${session.id}`,
+      summary: t(
+        'operations.energy.narrative.sessionSummary',
+        '{{date}} charging: {{energy}} added; recorded cost {{cost}}.',
+        {
+          date: session.started_at,
+          energy: formatEnergy(session.total_energy_added_wh ?? 0),
+          cost:
+            session.cost_decimal == null
+              ? t('operations.energy.narrative.costMissing', 'not recorded')
+              : formatCurrency(session.cost_decimal),
+        },
+      ),
+      observedAt: session.started_at,
+      provenance: {
+        source: t('operations.energy.narrative.chargingSource', 'Charging history'),
+        recordId: String(session.id),
+        method: t(
+          'operations.energy.narrative.sessionMethod',
+          'Direct charging-session energy and recorded cost.',
+        ),
+      },
+    })),
+  ];
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.energy.narrative.whatChanged',
+      '{{energy}} of measured drive energy across {{days}} daily records, with {{cost}} in recorded charging cost.',
+      {
+        energy: formatEnergy(Math.max(0, scopedDriveEnergyWh)),
+        days: dailyEnergy.length,
+        cost: formatCurrency(totalCost),
+      },
+    ),
+    whyItMatters: t(
+      'operations.energy.narrative.impact',
+      'Energy intensity and cost coverage determine operating exposure and whether projections are decision-ready.',
+    ),
+    confidence: {
+      label:
+        dailyEnergy.length >= 7
+        && secondarySourceFailures.length === 0
+        && (sessions.length === 0 || costedSessions.length === sessions.length)
+          ? 'high'
+          : dailyEnergy.length > 0 || sessions.length > 0
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.energy.narrative.dailyBasis',
+          '{{count}} daily drive aggregates contain measured energy.',
+          { count: dailyEnergy.length },
+        ),
+        t(
+          'operations.energy.narrative.costBasis',
+          '{{priced}} of {{total}} returned charging sessions include recorded cost.',
+          { priced: costedSessions.length, total: sessions.length },
+        ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      energyAttention[0]?.description
+      ?? t(
+        'operations.energy.narrative.monitorResponse',
+        'No immediate response is indicated; continue collecting drive and charging evidence.',
+      ),
+    limitations: [
+      t(
+        'operations.energy.lossUnavailableDescription',
+        'Independent wall-input and battery-retained energy are absent from the session contract, so no loss percentage is fabricated.',
+      ),
+      ...(secondarySourceFailures.length > 0
+        ? [
+            t(
+              'operations.energy.narrative.sourceLimitation',
+              '{{count}} supporting data source is unavailable, so this assessment is partial.',
+              { count: secondarySourceFailures.length },
+            ),
+          ]
+        : []),
+      ...(costedSessions.length < sessions.length
+        ? [
+            t(
+              'operations.energy.narrative.costLimitation',
+              'Cost totals exclude sessions without a recorded price.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.energy.narrative.windowLimitation',
+        'Idle drain uses a separate 90-day source window and is not attributed to a specific cause.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.energy.consumptionSource', 'Drive consumption'),
+        method: t(
+          'operations.energy.narrative.driveMethod',
+          'Sums canonical measured drive energy and distance in the active analysis window.',
+        ),
+      },
+      {
+        source: t('operations.energy.narrative.chargingSource', 'Charging history'),
+        method: t(
+          'operations.energy.narrative.costMethod',
+          'Sums only cost values persisted on returned charging sessions.',
+        ),
+      },
+      {
+        source: t('operations.energy.narrative.idleSource', 'Parked-state history'),
+        method: t(
+          'operations.energy.narrative.idleMethod',
+          'Computes parked, non-charging battery change over the separate 90-day source window.',
+        ),
+      },
+    ],
+  };
 
   /* ── Loading short-circuit ────────────────────────────────────── */
   if (isLoading) {
@@ -832,6 +979,7 @@ export default function EnergyPage() {
               : t('operations.status.review', 'Review recommended')
         }
         statusTone={energyStatusTone}
+        narrative={narrative}
         scope={
           <Badge variant="neutral" size="sm">
             {t('operations.scope.days', '{{count}} days', { count: periodDays })}

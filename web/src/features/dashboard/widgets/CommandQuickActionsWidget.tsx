@@ -8,6 +8,7 @@ import { Button } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps, WidgetSize } from './types';
 
@@ -55,6 +56,7 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
   const { data: vehicles, isLoading, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicles();
   const id = vehicleId ?? vehicles?.[0]?.id ?? 0;
   const { mutate: sendCommand } = useVehicleCommand();
+  const operationalMode = useOperationalMode();
   const [activeCommand, setActiveCommand] = useState<string | null>(null);
 
   const cols = size?.cols ?? 2;
@@ -69,14 +71,14 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
 
   const handleCommand = useCallback(
     (command: string) => {
-      if (!id) return;
+      if (!id || !operationalMode.canWrite) return;
       setActiveCommand(command);
       sendCommand(
         { vehicleId: id, command },
         { onSettled: () => setActiveCommand(null) },
       );
     },
-    [id, sendCommand],
+    [id, operationalMode.canWrite, sendCommand],
   );
 
   const handleRefresh = useCallback(() => {
@@ -115,7 +117,12 @@ export default function CommandQuickActionsWidget({ vehicleId, size }: WidgetPro
                 key={cmd.id}
                 variant="ghost"
                 size="sm"
-                disabled={!!activeCommand}
+                disabled={!!activeCommand || !operationalMode.canWrite}
+                title={
+                  !operationalMode.canWrite
+                    ? operationalMode.writeBlockReason ?? undefined
+                    : undefined
+                }
                 aria-busy={isRunning || undefined}
                 onClick={() => handleCommand(cmd.command)}
                 aria-label={t(cmd.labelKey, cmd.labelFallback)}

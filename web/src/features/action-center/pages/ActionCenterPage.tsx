@@ -11,6 +11,7 @@ import { FadeIn } from '@/components/motion';
 import { Button, Pagination } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { Icons } from '@/lib/icons';
 import type {
   ActionCenterFilter,
@@ -32,6 +33,7 @@ export default function ActionCenterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
+  const operationalMode = useOperationalMode();
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [filter, setFilter] = useState<ActionCenterFilter>(() => ({
     ...initialFilter,
@@ -69,9 +71,19 @@ export default function ActionCenterPage() {
         if (recommendation.navigation_path) navigate(recommendation.navigation_path);
         return;
       }
+      if (!operationalMode.canWrite) {
+        toast.warning(
+          t(
+            'operationalMode.actionCenterDisabled.title',
+            'Inbox actions are read-only',
+          ),
+          operationalMode.writeBlockReason ?? undefined,
+        );
+        return;
+      }
       setPending({ recommendation, action });
     },
-    [navigate],
+    [navigate, operationalMode, t, toast],
   );
 
   const confirmAction = useCallback(async () => {
@@ -197,6 +209,8 @@ export default function ActionCenterPage() {
           error={query.error}
           onRetry={() => void query.refetch()}
           onAction={handleAction}
+          actionsDisabled={!operationalMode.canWrite}
+          actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
           onClearFilters={() => setFilter(initialFilter)}
         />
         <Pagination

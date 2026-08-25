@@ -57,6 +57,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/explore': 'Browse and search every feature in TeslaSync with a 1-line description for each.',
   '/live': 'Real-time map of where your vehicle is right now.',
   '/timeline': 'Hour-by-hour history of drives, charges, and events.',
+  '/activity': 'Unified timeline of drives, charging, alerts, software updates, and annotations.',
   '/weekly-digest': 'A printable weekly recap of usage, range, and cost.',
 
   // ── Vehicles ───────────────────────────────────────────────────────

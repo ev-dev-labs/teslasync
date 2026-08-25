@@ -154,6 +154,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'Roadmap', load: () => import('../features/system/pages/RoadmapPage') },
   { name: 'TeslaAccount', load: () => import('../features/system/pages/TeslaAccountPage') },
   { name: 'MyActivity', load: () => import('../features/system/pages/MyActivityPage') },
+  { name: 'ActivityTimeline', load: () => import('../features/system/pages/ActivityTimelinePage') },
 
   // Settings, onboarding, misc
   { name: 'Settings', load: () => import('../features/settings/pages/SettingsPage') },

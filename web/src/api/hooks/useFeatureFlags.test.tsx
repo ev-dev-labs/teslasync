@@ -77,9 +77,11 @@ function wrapperFor(client: QueryClient) {
 function calledUrl(i = 0): string {
   return mockedRequest.mock.calls[i]?.[0] as string;
 }
-/** RequestInit the mocked `request` was called with on invocation `i`. */
-function calledOpts(i = 0): RequestInit {
-  return (mockedRequest.mock.calls[i]?.[1] ?? {}) as RequestInit;
+/** Request options the mocked `request` was called with on invocation `i`. */
+function calledOpts(i = 0): RequestInit & { requiresLiveMode?: boolean } {
+  return (mockedRequest.mock.calls[i]?.[1] ?? {}) as RequestInit & {
+    requiresLiveMode?: boolean;
+  };
 }
 
 const listPayload: FeatureFlagsListResponse = {
@@ -269,6 +271,7 @@ describe('useSetFlag', () => {
 
     expect(calledUrl()).toBe('/system/flags/beta%2Fx');
     expect(calledOpts().method).toBe('PUT');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     expect(JSON.parse(calledOpts().body as string)).toEqual({ value: true, reason: 'enable' });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: featureFlagKeys.flag('beta/x') });
@@ -330,6 +333,7 @@ describe('useDeleteFlag', () => {
 
     expect(calledUrl()).toBe('/system/flags/beta%2Fx?reason=clean+up+%26+remove');
     expect(calledOpts().method).toBe('DELETE');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     expect(calledOpts().body).toBeUndefined();
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['system', 'flags'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: featureFlagKeys.flag('beta/x') });

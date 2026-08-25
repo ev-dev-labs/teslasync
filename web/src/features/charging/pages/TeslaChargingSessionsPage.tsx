@@ -18,6 +18,7 @@ import {
 import {
   StatCard,
   MetricBar,
+  DataFreshnessAuto,
   OperationalBrief,
   type OperationalAttention,
 } from '@/components/data-display';
@@ -53,6 +54,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
 
@@ -284,6 +286,121 @@ export default function TeslaChargingSessionsPage() {
 
     return items;
   }, [error, formatCurrency, is403, isLoading, operationalTotals, sessions.length, t]);
+  const narrativeEvidence: OperationalNarrative['evidence'] = sessions
+    .slice(0, 5)
+    .map((session) => ({
+      id: `fleet-charging-session-${session.id}`,
+      summary: t(
+        'operations.charging.fleetNarrative.sessionSummary',
+        '{{date}} at {{site}}: {{energy}} added with {{cost}} recorded cost.',
+        {
+          date: session.charge_start_datetime,
+          site:
+            session.site_location_name
+            || t('operations.charging.fleetNarrative.unknownSite', 'unrecorded site'),
+          energy: formatEnergy(session.total_energy_added_wh ?? 0),
+          cost:
+            session.total_cost == null
+              ? t('operations.charging.fleetNarrative.costMissing', 'no')
+              : formatCurrency(session.total_cost, 2),
+        },
+      ),
+      observedAt: session.charge_start_datetime,
+      provenance: {
+        source: t(
+          'operations.charging.fleetNarrative.source',
+          'Tesla Fleet Charging sessions',
+        ),
+        recordId: String(session.session_id),
+        method: t(
+          'operations.charging.fleetNarrative.sessionMethod',
+          'Direct business-account charging session returned by Tesla Fleet Charging.',
+        ),
+      },
+    }));
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.charging.fleetNarrative.whatChanged',
+      '{{sessions}} Fleet Charging sessions delivered {{energy}} with {{cost}} in recorded fees.',
+      {
+        sessions: sessions.length,
+        energy: formatEnergy(operationalTotals.totalWh),
+        cost: formatCurrency(operationalTotals.totalCost, 2),
+      },
+    ),
+    whyItMatters: t(
+      'operations.charging.fleetNarrative.impact',
+      'Business-account session records provide auditable site, energy, fee, and charger evidence for fleet cost review.',
+    ),
+    confidence: {
+      label:
+        sessions.length > 0 && operationalTotals.missingCostCount === 0
+          ? 'high'
+          : sessions.length > 0
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.charging.fleetNarrative.sessionBasis',
+          '{{count}} direct Fleet Charging sessions match the active filters.',
+          { count: sessions.length },
+        ),
+        operationalTotals.missingCostCount === 0
+          ? t(
+              'operations.charging.fleetNarrative.costBasis',
+              'Every matching session includes a recorded cost.',
+            )
+          : t(
+              'operations.charging.fleetNarrative.costLimitedBasis',
+              '{{count}} matching session lacks recorded cost.',
+              { count: operationalTotals.missingCostCount },
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      chargingAttention[0]?.description
+      ?? t(
+        'operations.charging.fleetNarrative.monitorResponse',
+        'No immediate response is indicated; continue reviewing site costs and newly synchronized sessions.',
+      ),
+    limitations: [
+      t(
+        'operations.charging.fleetNarrative.accountLimitation',
+        'This source is available only to eligible Tesla business accounts.',
+      ),
+      ...(operationalTotals.missingCostCount > 0
+        ? [
+            t(
+              'operations.charging.fleetNarrative.missingCostLimitation',
+              'Cost totals exclude sessions without a fee supplied by Tesla.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.charging.fleetNarrative.causeLimitation',
+        'Session records show observed energy and fees but do not diagnose the cause of charging behavior.',
+      ),
+      t(
+        'operations.charging.fleetNarrative.evidenceLimit',
+        'Supporting evidence is limited to the five most recent sessions matching the active filters.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t(
+          'operations.charging.fleetNarrative.source',
+          'Tesla Fleet Charging sessions',
+        ),
+        method: t(
+          'operations.charging.fleetNarrative.sourceMethod',
+          'Aggregates energy, direct Tesla fee fields, charger type, and site from synchronized business-account sessions.',
+        ),
+      },
+    ],
+  };
 
   const selectedVehicleLabel = vehicleOptions.find((option) => option.value === selectedVin)?.label
     ?? t('tesla_sessions.allVehicles', 'All Vehicles');
@@ -527,11 +644,21 @@ export default function TeslaChargingSessionsPage() {
                 ? 'warning'
                 : 'success'
         }
+        narrative={narrative}
         scope={
           <>
             <Badge variant="neutral" size="sm">{selectedVehicleLabel}</Badge>
             <Badge variant="neutral" size="sm">{start} – {end}</Badge>
           </>
+        }
+        freshness={
+          <DataFreshnessAuto
+            query={sessionsQuery}
+            source={t(
+              'operations.charging.fleetNarrative.source',
+              'Tesla Fleet Charging sessions',
+            )}
+          />
         }
         metrics={[
           {

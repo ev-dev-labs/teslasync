@@ -109,7 +109,7 @@ export default function JourneyFragmentationPage() {
             : t('journeyFragmentation.footer.note', 'Charts and directories describe returned records at the selected continuity threshold.')}
         </Text>
         {result.returnedRows === 0 && (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             message={t('journeyFragmentation.footer.waiting', 'No returned drive rows are available for this vehicle yet.')}
           />
         )}

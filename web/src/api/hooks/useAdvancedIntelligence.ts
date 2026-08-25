@@ -208,6 +208,7 @@ export function useStartFederatedRound() {
     mutationFn: (body: StartFederatedRoundRequest) =>
       request<FederatedRoundResult>(`${ROOT}/federated-learning/rounds`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
     onSuccess: (_data, variables) => {

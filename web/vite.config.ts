@@ -49,7 +49,12 @@ export default defineConfig({
       srcDir: 'src/sw',
       filename: 'sw.ts',
       injectManifest: {
-        // HTML intentionally excluded — index.html MUST NOT be precached
+        // Precache only the small install/offline shell. Route JavaScript and
+        // CSS are cached on demand by sw.ts instead of downloading all 500+
+        // lazy chunks during first install. Large branding source files are
+        // intentionally absent from this list.
+        //
+        // HTML remains excluded — index.html MUST NOT be precached
         // behind a ForwardAuth proxy (Authentik/Authelia/oauth2-proxy).
         // workbox-precaching's `directoryIndex` default rewrites a GET /
         // to /index.html and serves it from cache, swallowing top-level
@@ -59,9 +64,21 @@ export default defineConfig({
         // bundles with SW unregistration). Navigation requests are now
         // handled by the NavigationRoute(NetworkFirst) registered in
         // sw.ts so offline launch still works without the loop.
-        globPatterns: ['**/*.{js,css,svg,png,ico,woff,woff2,json}'],
+        globPatterns: [
+          'manifest.json',
+          'watch-manifest.json',
+          'assets/spritesheet-*.svg',
+        ],
       },
-      includeAssets: ['favicon.svg', 'icons/*.svg', 'icons/*.png'],
+      includeAssets: [
+        'favicon.svg',
+        'icons/apple-touch-icon.png',
+        'icons/badge-72.png',
+        'icons/icon-192.png',
+        'icons/icon-512.png',
+        'icons/icon-maskable-192.png',
+        'icons/icon-maskable-512.png',
+      ],
       manifest: {
         name: 'TeslaSync',
         short_name: 'TeslaSync',

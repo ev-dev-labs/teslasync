@@ -26,6 +26,8 @@ export interface StaleSessionRowProps {
   onToggle: () => void;
   /** Element id of the repair form this row discloses (for `aria-controls`). */
   controlsId: string;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 /** Elapsed open time as a compact `12h` / `3d 4h` label. */
@@ -55,6 +57,8 @@ export function StaleSessionRow({
   expanded,
   onToggle,
   controlsId,
+  disabled = false,
+  disabledReason,
 }: StaleSessionRowProps) {
   const { t } = useTranslation();
 
@@ -63,9 +67,13 @@ export function StaleSessionRow({
       variant="ghost"
       size="auto"
       onClick={onToggle}
+      disabled={disabled}
+      title={disabledReason}
       aria-expanded={expanded}
       aria-controls={controlsId}
-      aria-label={t('dataRepair.row.toggle', 'Open repair form for record #{{id}}', { id })}
+      aria-label={disabled
+        ? t('dataRepair.row.readOnly', 'Repair is unavailable for record #{{id}}', { id })
+        : t('dataRepair.row.toggle', 'Open repair form for record #{{id}}', { id })}
       className={cn(
         'min-h-11 w-full justify-between gap-3 rounded-lg border px-3 py-2.5 text-left font-normal',
         expanded

@@ -28,11 +28,11 @@ vi.mock('workbox-routing', () => ({
 }));
 
 vi.mock('workbox-strategies', () => ({
-  CacheFirst: vi.fn().mockImplementation(function () {
-    return {};
+  CacheFirst: vi.fn().mockImplementation(function (options: unknown) {
+    return { kind: 'CacheFirst', options };
   }),
-  NetworkFirst: vi.fn().mockImplementation(function () {
-    return {};
+  NetworkFirst: vi.fn().mockImplementation(function (options: unknown) {
+    return { kind: 'NetworkFirst', options };
   }),
 }));
 
@@ -155,5 +155,72 @@ describe('Service worker push handler — Phase-49 / Slice 0010 duplicate-icon f
 
     const opts = capturedNotifications[0].options;
     expect(opts.icon).toBeUndefined();
+  });
+});
+
+describe('Service worker on-demand route asset caching', () => {
+  it('runtime-caches only same-origin scripts and styles', async () => {
+    const { registerRoute } = await import('workbox-routing');
+    const calls = vi.mocked(registerRoute).mock.calls as unknown as Array<
+      [unknown, { options?: { cacheName?: string } }]
+    >;
+    const assetRoute = calls.find(([, strategy]) =>
+      strategy?.options?.cacheName === 'app-route-assets');
+
+    expect(assetRoute).toBeDefined();
+    const matcher = assetRoute?.[0] as (context: {
+      request: Pick<Request, 'destination'>;
+      url: URL;
+    }) => boolean;
+    const sameOrigin = new URL('/assets/TimelinePage-hash.js', window.location.href);
+
+    expect(matcher({
+      request: { destination: 'script' },
+      url: sameOrigin,
+    })).toBe(true);
+    expect(matcher({
+      request: { destination: 'style' },
+      url: new URL('/assets/index-hash.css', window.location.href),
+    })).toBe(true);
+    expect(matcher({
+      request: { destination: 'image' },
+      url: sameOrigin,
+    })).toBe(false);
+    expect(matcher({
+      request: { destination: 'script' },
+      url: new URL('https://cdn.example.com/chunk.js'),
+    })).toBe(false);
+  });
+
+  it('refuses to cache redirected ForwardAuth responses as route assets', async () => {
+    const { registerRoute } = await import('workbox-routing');
+    const calls = vi.mocked(registerRoute).mock.calls as unknown as Array<
+      [unknown, {
+        options?: {
+          cacheName?: string;
+          plugins?: Array<{
+            cacheWillUpdate?: (context: { response: Response }) => Promise<Response | null>;
+          }>;
+        };
+      }]
+    >;
+    const strategy = calls.find(([, candidate]) =>
+      candidate?.options?.cacheName === 'app-route-assets')?.[1];
+    const guard = strategy?.options?.plugins?.find((plugin) => plugin.cacheWillUpdate);
+
+    expect(guard?.cacheWillUpdate).toBeTypeOf('function');
+    const valid = {
+      status: 200,
+      redirected: false,
+      url: `${window.location.origin}/assets/chunk.js`,
+    } as Response;
+    const redirected = {
+      status: 200,
+      redirected: true,
+      url: `${window.location.origin}/auth/login`,
+    } as Response;
+
+    await expect(guard?.cacheWillUpdate?.({ response: valid })).resolves.toBe(valid);
+    await expect(guard?.cacheWillUpdate?.({ response: redirected })).resolves.toBeNull();
   });
 });

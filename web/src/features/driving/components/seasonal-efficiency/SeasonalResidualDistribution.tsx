@@ -64,7 +64,7 @@ export function SeasonalResidualDistribution({
         </Text>
         <SeasonalSectionBody state={state} requirement="fit" fitStatus={analysis.fit.status}>
           {chartData.length === 0 ? (
-            <EmptyState message={t('seasonalEfficiency.residual.empty', 'No finite fitted residuals are available.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.residual.empty', 'No finite fitted residuals are available.')} />
           ) : (
             <>
               <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

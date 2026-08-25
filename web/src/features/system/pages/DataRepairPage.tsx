@@ -10,7 +10,7 @@
  * formatted at the display boundary via `useUnits()`.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AlertTriangle, BatteryCharging, CheckCircle, RefreshCw, Route, ShieldAlert, Wrench,
@@ -19,10 +19,17 @@ import {
 import { PageContainer } from '@/components/layout';
 import { Badge, Button, GlassPanel, PanelTitle } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { EmptyState, InlineCallout, QueryError, Skeleton } from '@/components/feedback';
+import {
+  EmptyState,
+  InlineCallout,
+  OperationalWriteNotice,
+  QueryError,
+  Skeleton,
+} from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useUnits } from '@/hooks/useUnits';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { AIDataRepairSuggestions } from '@/components/ai/AIDataRepairSuggestions';
 import {
   useStaleSessions,
@@ -39,6 +46,7 @@ export default function DataRepairPage() {
   usePageTitle(t('dataRepair.title', 'Data Repair'));
 
   const { formatEnergy, formatPower, formatDistance, formatSpeed } = useUnits();
+  const operationalMode = useOperationalMode();
 
   const staleQuery = useStaleSessions();
   const { data, isLoading, isError, error, refetch, isFetching } = staleQuery;
@@ -50,8 +58,15 @@ export default function DataRepairPage() {
   // A single expanded key across both panels so only one repair form is open
   // at a time (keyed `charging-<id>` / `drive-<id>`).
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const toggle = (key: string) => setExpandedKey((cur) => (cur === key ? null : key));
+  const toggle = (key: string) => {
+    if (!operationalMode.canWrite) return;
+    setExpandedKey((cur) => (cur === key ? null : key));
+  };
   const collapse = () => setExpandedKey(null);
+
+  useEffect(() => {
+    if (!operationalMode.canWrite) setExpandedKey(null);
+  }, [operationalMode.canWrite]);
 
   const chargingMetrics = (s: StaleChargingSession): StaleRowMetric[] => [
     { key: 'energy', label: t('dataRepair.metric.energy', 'Energy'), value: formatEnergy(s.total_energy_added_wh) },
@@ -86,6 +101,10 @@ export default function DataRepairPage() {
       actions={actions}
       query={staleQuery}
     >
+      <OperationalWriteNotice
+        title={t('dataRepair.readOnly.title', 'Data repair is read-only')}
+      />
+
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section
@@ -181,9 +200,17 @@ export default function DataRepairPage() {
                         expanded={expanded}
                         onToggle={() => toggle(key)}
                         controlsId={formId}
+                        disabled={!operationalMode.canWrite}
+                        disabledReason={operationalMode.writeBlockReason ?? undefined}
                       />
                       {expanded && (
-                        <ChargingRepairForm session={s} formId={formId} onClose={collapse} />
+                        <ChargingRepairForm
+                          session={s}
+                          formId={formId}
+                          onClose={collapse}
+                          disabled={!operationalMode.canWrite}
+                          disabledReason={operationalMode.writeBlockReason ?? undefined}
+                        />
                       )}
                     </li>
                   );
@@ -233,9 +260,17 @@ export default function DataRepairPage() {
                         expanded={expanded}
                         onToggle={() => toggle(key)}
                         controlsId={formId}
+                        disabled={!operationalMode.canWrite}
+                        disabledReason={operationalMode.writeBlockReason ?? undefined}
                       />
                       {expanded && (
-                        <DriveRepairForm drive={d} formId={formId} onClose={collapse} />
+                        <DriveRepairForm
+                          drive={d}
+                          formId={formId}
+                          onClose={collapse}
+                          disabled={!operationalMode.canWrite}
+                          disabledReason={operationalMode.writeBlockReason ?? undefined}
+                        />
                       )}
                     </li>
                   );

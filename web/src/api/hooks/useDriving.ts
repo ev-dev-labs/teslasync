@@ -325,6 +325,7 @@ export function useBulkDeleteDrives() {
     mutationFn: (ids: number[]) =>
       request<BulkOperationResult>('/drives/bulk', {
         method: 'DELETE',
+        requiresLiveMode: true,
         body: JSON.stringify({ ids }),
       }),
     onSuccess: (res) => {

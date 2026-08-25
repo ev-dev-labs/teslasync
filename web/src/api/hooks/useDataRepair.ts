@@ -88,7 +88,12 @@ export function useUpdateCharging() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: RepairPatch }) =>
-      request(`/data-repair/charging/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
+      request(`/data-repair/charging/${id}`, {
+        method: 'PUT',
+        requiresLiveMode: true,
+        body: JSON.stringify(patch),
+      }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
       success('toast.dataRepair.charging.update.success', 'Charging session updated');
@@ -103,7 +108,11 @@ export function useCloseCharging() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request(`/data-repair/charging/${id}/close`, { method: 'POST' }),
+      request(`/data-repair/charging/${id}/close`, {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
       success('toast.dataRepair.charging.close.success', 'Charging session closed');
@@ -118,7 +127,11 @@ export function useDiscardCharging() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
-      request(`/data-repair/charging/${id}`, { method: 'DELETE' }),
+      request(`/data-repair/charging/${id}`, {
+        method: 'DELETE',
+        requiresLiveMode: true,
+      }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
       success('toast.dataRepair.charging.discard.success', 'Charging session discarded');
@@ -135,7 +148,12 @@ export function useUpdateDrive() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ id, patch }: { id: number; patch: RepairPatch }) =>
-      request(`/data-repair/drive/${id}`, { method: 'PUT', body: JSON.stringify(patch) }),
+      request(`/data-repair/drive/${id}`, {
+        method: 'PUT',
+        requiresLiveMode: true,
+        body: JSON.stringify(patch),
+      }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
       success('toast.dataRepair.drive.update.success', 'Drive updated');
@@ -148,7 +166,11 @@ export function useCloseDrive() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request(`/data-repair/drive/${id}/close`, { method: 'POST' }),
+    mutationFn: (id: number) => request(`/data-repair/drive/${id}/close`, {
+      method: 'POST',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
       success('toast.dataRepair.drive.close.success', 'Drive closed');
@@ -161,7 +183,11 @@ export function useDiscardDrive() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request(`/data-repair/drive/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: number) => request(`/data-repair/drive/${id}`, {
+      method: 'DELETE',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
       success('toast.dataRepair.drive.discard.success', 'Drive discarded');

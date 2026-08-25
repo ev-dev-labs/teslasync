@@ -4,7 +4,7 @@ interface ClassDictionary {
   [className: string]: unknown
 }
 
-interface ClassArray extends Array<ClassValue> {}
+type ClassArray = ClassValue[]
 
 type ClassValue = string | number | boolean | null | undefined | ClassDictionary | ClassArray
 

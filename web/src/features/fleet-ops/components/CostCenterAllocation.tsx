@@ -19,6 +19,8 @@ interface CostCenterAllocationProps {
   onAdd: () => void;
   onEdit: (item: FleetCostCenter) => void;
   onDelete: (item: FleetCostCenter) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 export function CostCenterAllocation({
@@ -31,6 +33,8 @@ export function CostCenterAllocation({
   onAdd,
   onEdit,
   onDelete,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: CostCenterAllocationProps) {
   const { t } = useTranslation();
   const allocations = costCenterAllocations(costCenters, reservations, workOrders);
@@ -38,7 +42,14 @@ export function CostCenterAllocation({
     <GlassPanel className="p-5">
       <div className="flex items-center justify-between gap-3">
         <PanelTitle>{t('fleetOps.costCenters.title', 'Cost-center allocation')}</PanelTitle>
-        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd}>
+        <Button
+          type="button"
+          size="sm"
+          icon={<Plus className="h-4 w-4" />}
+          onClick={onAdd}
+          disabled={actionsDisabled}
+          title={actionsDisabledReason}
+        >
           {t('fleetOps.costCenters.add', 'Add cost center')}
         </Button>
       </div>
@@ -48,7 +59,9 @@ export function CostCenterAllocation({
         <EmptyState
           icon={<Building2 className="h-8 w-8" />}
           message={t('fleetOps.costCenters.empty', 'No cost centers have been configured.')}
-          action={{ label: t('fleetOps.costCenters.add', 'Add cost center'), onClick: onAdd }}
+          action={actionsDisabled
+            ? undefined
+            : { label: t('fleetOps.costCenters.add', 'Add cost center'), onClick: onAdd }}
         />
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -71,6 +84,8 @@ export function CostCenterAllocation({
                     size="sm"
                     className="min-h-11 min-w-11 px-0"
                     aria-label={t('fleetOps.costCenters.edit', 'Edit {{name}}', { name: allocation.cost_center.name })}
+                    disabled={actionsDisabled}
+                    title={actionsDisabledReason}
                     onClick={() => onEdit(allocation.cost_center)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -81,6 +96,8 @@ export function CostCenterAllocation({
                     size="sm"
                     className="min-h-11 min-w-11 px-0 text-rose-300"
                     aria-label={t('fleetOps.costCenters.delete', 'Delete {{name}}', { name: allocation.cost_center.name })}
+                    disabled={actionsDisabled}
+                    title={actionsDisabledReason}
                     onClick={() => onDelete(allocation.cost_center)}
                   >
                     <Trash2 className="h-4 w-4" />

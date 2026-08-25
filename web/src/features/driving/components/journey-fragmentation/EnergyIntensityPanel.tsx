@@ -33,7 +33,7 @@ export function EnergyIntensityPanel({ result }: JourneyFragmentationSectionProp
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.energy.subtitle', 'Distance-weighted whole-journey intensity with complete-energy coverage shown for each group.')}</Text>
       </div>
       {result.journeyCount === 0 ? (
-        <EmptyState icon={<BatteryMedium className="h-7 w-7" />} message={t('journeyFragmentation.energy.empty', 'No observed journeys are available for energy comparison.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<BatteryMedium className="h-7 w-7" />} message={t('journeyFragmentation.energy.empty', 'No observed journeys are available for energy comparison.')} />
       ) : (
         <>
           <div className="grid gap-3 md:grid-cols-3">

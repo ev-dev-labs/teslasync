@@ -45,6 +45,12 @@ vi.mock('./HelpSegment', () => ({
   ),
 }));
 
+vi.mock('./PresentationModeSegment', () => ({
+  PresentationModeSegment: ({ embedded }: { embedded?: boolean }) => (
+    <div data-testid="more-presentation" data-embedded={String(embedded)} />
+  ),
+}));
+
 import { MoreSegment } from './MoreSegment';
 
 afterEach(() => cleanup());
@@ -106,6 +112,10 @@ describe('MoreSegment', () => {
       'true',
     );
     expect(screen.getByTestId('more-help')).toHaveAttribute(
+      'data-embedded',
+      'true',
+    );
+    expect(screen.getByTestId('more-presentation')).toHaveAttribute(
       'data-embedded',
       'true',
     );

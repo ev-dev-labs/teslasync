@@ -20,11 +20,14 @@ export interface TimelineItemProps {
   /** When provided, the entire row becomes a navigable `<Link>` for
    *  alert drill-through. */
   href?: string
+  /** Optional semantic badges/chips (status, severity, provenance) rendered
+   *  in a wrapped row beneath the subtitle. */
+  badges?: ReactNode
 }
 
 /** Timeline item for activity feeds. When `href` is provided, the entire row
  *  becomes a navigable link for alert drill-through. */
-export function TimelineItem({ icon, title, subtitle, time, color, isLast, href }: TimelineItemProps) {
+export function TimelineItem({ icon, title, subtitle, time, color, isLast, href, badges }: TimelineItemProps) {
   // Guard the accent so a missing/blank colour cannot produce an invalid
   // `undefined15` inline value — fall back to a neutral theme surface instead.
   const hasColor = typeof color === 'string' && color.trim().length > 0
@@ -50,6 +53,7 @@ export function TimelineItem({ icon, title, subtitle, time, color, isLast, href 
       <div className="pb-4 min-w-0 flex-1">
         <p className="text-sm font-medium text-[var(--text-primary)] truncate">{title || '—'}</p>
         {subtitle ? <p className="text-xs text-[var(--text-muted)] mt-0.5">{subtitle}</p> : null}
+        {badges ? <div className="mt-1.5 flex flex-wrap items-center gap-1.5">{badges}</div> : null}
         <p className="text-2xs text-[var(--text-muted)] mt-1">{time || '—'}</p>
       </div>
     </>

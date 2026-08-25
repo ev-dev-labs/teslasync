@@ -31,6 +31,7 @@
  *
  * Everything here is pure — no React, no i18n, no DOM.
  */
+import type { ProductPersona } from '@/lib/productPreferences'
 
 /** Canonical order of the compact groups. Also the render order. */
 export const COMPACT_GROUP_TITLES = [
@@ -172,6 +173,89 @@ export interface CompactNavTree<TItem extends CompactNavItemLike> {
   activeSectionTitle?: CompactGroupTitle
   /** True when the active route was long-tail and had to be injected. */
   injectedActivePath?: string
+}
+
+const PERSONA_GROUP_ORDER: Readonly<
+  Record<ProductPersona, readonly CompactGroupTitle[]>
+> = {
+  owner: COMPACT_GROUP_TITLES,
+  fleet_operator: [
+    'Overview',
+    'Fleet',
+    'Automation & Alerts',
+    'Charging & Energy',
+    'Driving',
+    'Battery',
+    'Reports & Analytics',
+    'System & Developer',
+    'Settings & Account',
+  ],
+  analyst: [
+    'Overview',
+    'Reports & Analytics',
+    'Driving',
+    'Charging & Energy',
+    'Battery',
+    'Fleet',
+    'Automation & Alerts',
+    'System & Developer',
+    'Settings & Account',
+  ],
+  administrator: [
+    'Overview',
+    'System & Developer',
+    'Automation & Alerts',
+    'Settings & Account',
+    'Fleet',
+    'Charging & Energy',
+    'Driving',
+    'Battery',
+    'Reports & Analytics',
+  ],
+}
+
+export function prioritizeCompactNavTree<
+  TItem extends CompactNavItemLike,
+>(
+  tree: CompactNavTree<TItem>,
+  persona: ProductPersona,
+): CompactNavTree<TItem> {
+  const order = PERSONA_GROUP_ORDER[persona] ?? COMPACT_GROUP_TITLES
+  const rank = new Map(order.map((title, index) => [title, index]))
+  return {
+    ...tree,
+    sections: [...tree.sections].sort(
+      (left, right) =>
+        (rank.get(left.title) ?? Number.MAX_SAFE_INTEGER) -
+        (rank.get(right.title) ?? Number.MAX_SAFE_INTEGER),
+    ),
+  }
+}
+
+export function prioritizeCanonicalNavSections<
+  TSection extends { title: string },
+>(
+  sections: readonly TSection[],
+  persona: ProductPersona,
+): TSection[] {
+  const order = PERSONA_GROUP_ORDER[persona] ?? COMPACT_GROUP_TITLES
+  const rank = new Map(order.map((title, index) => [title, index]))
+  return sections
+    .map((section, index) => ({ section, index }))
+    .sort((left, right) => {
+      const leftGroup =
+        CANONICAL_SECTION_TO_COMPACT_GROUP[left.section.title]
+      const rightGroup =
+        CANONICAL_SECTION_TO_COMPACT_GROUP[right.section.title]
+      const leftRank = leftGroup
+        ? (rank.get(leftGroup) ?? Number.MAX_SAFE_INTEGER)
+        : Number.MAX_SAFE_INTEGER
+      const rightRank = rightGroup
+        ? (rank.get(rightGroup) ?? Number.MAX_SAFE_INTEGER)
+        : Number.MAX_SAFE_INTEGER
+      return leftRank - rightRank || left.index - right.index
+    })
+    .map(({ section }) => section)
 }
 
 /**

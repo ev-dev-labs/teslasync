@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { Clock, History } from 'lucide-react'
 import { AlertBanner } from './AlertBanner'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { useAsOfDate } from '@/hooks/useAsOfDate'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat'
 
 /**
@@ -21,8 +23,8 @@ import { formatDateTime, toLocalDatetimeStr } from '@/lib/dateFormat'
  * just below BrowserCompatBanner. Reuses the AlertBanner `info`
  * variant so its tone matches the SPA's other contextual notices.
  *
- * Inline picker: the "Pick another date" button toggles a small
- * `<input type="datetime-local">` row attached to the banner. The same
+ * Inline picker: the "Pick another date" button toggles a shared
+ * `<Input type="datetime-local">` row attached to the banner. The same
  * UI is opened from the command palette via the
  * {@link TIME_MACHINE_OPEN_PICKER_EVENT} window event so users can both
  * reveal AND change the historical anchor without leaving the current
@@ -65,11 +67,13 @@ export function TimeMachineBanner({
   testHookPickerOpen = false,
 }: TimeMachineBannerProps = {}) {
   const { t, i18n } = useTranslation()
-  const { asOf, setAsOf, clear } = useAsOfDate()
+  const operationalMode = useOperationalMode()
+  const { setAsOf, clear } = useAsOfDate()
   const [pickerOpen, setPickerOpen] = useState<boolean>(testHookPickerOpen)
   const [draft, setDraft] = useState<string>('')
 
-  const effective = testHookAsOf !== undefined ? testHookAsOf : asOf
+  const effective =
+    testHookAsOf !== undefined ? testHookAsOf : operationalMode.asOf
 
   useEffect(() => {
     function onOpen() {
@@ -111,19 +115,35 @@ export function TimeMachineBanner({
 
   const formatted =
     effective != null ? formatDateTime(effective, { locale: i18n.language }) : ''
-  const title = t('timeMachine.banner.title', 'Viewing data as of {{when}}', {
-    when: formatted,
-  })
+  const title =
+    effective != null
+      ? t('timeMachine.banner.title', 'Viewing data as of {{when}}', {
+          when: formatted,
+        })
+      : t('timeMachine.banner.pickPrompt', 'Open the time machine')
   const body =
     effective != null
-      ? t('timeMachine.banner.body', 'Read-only point-in-time mode.')
-      : t('timeMachine.banner.pickPrompt', 'Pick a point in time to view historical data.')
+      ? operationalMode.mode === 'as_of'
+        ? operationalMode.description
+        : t('timeMachine.banner.body', 'Read-only point-in-time mode.')
+      : t(
+          'timeMachine.banner.pickBody',
+          'Pick a date and time within the last 90 days to reconstruct what TeslaSync looked like at that moment.',
+        )
   const pickLabel = t('timeMachine.banner.pick', 'Pick a date')
   const returnLabel = t('timeMachine.banner.returnToLive', 'Return to live')
   const submitLabel = t('timeMachine.banner.submit', 'View as of date')
   const cancelLabel = t('timeMachine.banner.cancel', 'Cancel')
   const inputLabel = t('timeMachine.banner.inputLabel', 'Date and time')
   const inputId = 'time-machine-banner-input'
+  const maxDate = new Date()
+  const minDate = new Date(maxDate.getTime() - 90 * 24 * 60 * 60 * 1000)
+  const draftIso = localInputToRfc3339(draft)
+  const draftTime = draftIso == null ? Number.NaN : Date.parse(draftIso)
+  const draftValid =
+    Number.isFinite(draftTime) &&
+    draftTime >= minDate.getTime() &&
+    draftTime <= maxDate.getTime()
 
   return (
     <div
@@ -168,28 +188,23 @@ export function TimeMachineBanner({
               data-testid="time-machine-banner-picker"
               className="flex flex-wrap items-end gap-2 pt-1"
             >
-              <div className="flex flex-col gap-1">
-                <label
-                  htmlFor={inputId}
-                  className="text-xs font-medium text-[var(--text-secondary)]"
-                >
-                  {inputLabel}
-                </label>
-                <input
-                  id={inputId}
-                  type="datetime-local"
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  data-testid="time-machine-banner-input"
-                  className="rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] px-2 py-1 text-xs text-[var(--text-primary)] focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-              </div>
+              <Input
+                id={inputId}
+                type="datetime-local"
+                label={inputLabel}
+                value={draft}
+                min={toLocalDatetimeStr(minDate)}
+                max={toLocalDatetimeStr(maxDate)}
+                onChange={(event) => setDraft(event.target.value)}
+                data-testid="time-machine-banner-input"
+                size="sm"
+              />
               <Button
                 type="button"
                 variant="primary"
                 size="sm"
                 onClick={handleSubmit}
-                disabled={!draft}
+                disabled={!draftValid}
                 data-testid="time-machine-banner-submit"
               >
                 {submitLabel}

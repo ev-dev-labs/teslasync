@@ -258,7 +258,7 @@ export default function BatteryChargingCharts({
                   />
                 </div>
               ) : (
-                <EmptyState
+                <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                   icon={<Activity className="h-8 w-8" aria-hidden="true" />}
                   message={t('battery.stats.empty', 'No charging statistics yet')}
                   className="py-8"

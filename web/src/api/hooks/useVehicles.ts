@@ -182,7 +182,11 @@ export function useRefreshVehicle() {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/wake`, { method: 'POST' }),
+    mutationFn: (id: string) => request<Vehicle>(`/vehicles/${id}/wake`, {
+      method: 'POST',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: (data, id) => {
       queryClient.setQueryData(vehicleKeys.detail(id), data);
       invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
@@ -196,7 +200,11 @@ export function useDeleteVehicle() {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request<void>(`/vehicles/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: number) => request<void>(`/vehicles/${id}`, {
+      method: 'DELETE',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
       success('toast.vehicles.delete.success', 'Vehicle deleted');
@@ -209,7 +217,11 @@ export function useSyncVehicles() {
   const queryClient = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', { method: 'POST' }),
+    mutationFn: () => request<{ synced: number; vehicles: Vehicle[] }>('/vehicles/sync', {
+      method: 'POST',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: (data) => {
       invalidateAndBroadcast(queryClient, { queryKey: vehicleKeys.all });
       success('toast.vehicles.sync.success', 'Vehicles synced ({{count}} updated)', { count: data.synced });
@@ -221,7 +233,11 @@ export function useSyncVehicles() {
 export function useWakeVehicle() {
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) => request<{ status: string }>(`/vehicles/${id}/wake`, { method: 'POST' }),
+    mutationFn: (id: number) => request<{ status: string }>(`/vehicles/${id}/wake`, {
+      method: 'POST',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: () => {
       success('toast.vehicles.wake.success', 'Wake command sent');
     },
@@ -610,6 +626,7 @@ export function useSetEnterprisePayer(vehicleId?: string) {
         `/vehicles/${vehicleId}/enterprise-payer`,
         {
           method: 'POST',
+          requiresLiveMode: true,
           body: JSON.stringify({ payload, confirmed }),
         },
       ),

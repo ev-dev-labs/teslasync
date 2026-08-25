@@ -171,7 +171,7 @@ export function CarbonIntensityCurve({
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               message={t(
                 'carbon.curve.empty',
                 'No valid hourly intensity rows are available.',

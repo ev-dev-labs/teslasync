@@ -49,6 +49,7 @@ import { cn } from '@/lib/cn';
 import { deriveVehicleStatus, statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
 
@@ -629,6 +630,157 @@ export default function VehicleListPage() {
         }]
       : []),
   ];
+  const narrativeEvidence: OperationalNarrative['evidence'] = [
+    ...vehicleList.slice(0, 4).map((vehicle) => {
+      const state = stateById.get(vehicle.id) ?? null;
+      return {
+        id: `fleet-vehicle-${vehicle.id}`,
+        summary: t(
+          'operations.vehicles.narrative.vehicleSummary',
+          '{{vehicle}}: {{state}}, battery {{battery}}.',
+          {
+            vehicle: vehicle.display_name,
+            state:
+              state?.state
+              ?? t('operations.vehicles.narrative.stateUnavailable', 'live state unavailable'),
+            battery: state == null ? '—' : `${fmtNumber(state.battery_level)}%`,
+          },
+        ),
+        observedAt: state?.since ?? null,
+        provenance: {
+          source: t('operations.vehicles.liveStateSource', 'Live vehicle state'),
+          recordId: String(vehicle.id),
+          method: t(
+            'operations.vehicles.narrative.vehicleMethod',
+            'Latest independently resolved state for this registered vehicle.',
+          ),
+        },
+      };
+    }),
+    ...urgentWorkOrders.slice(0, 2).map((workOrder) => ({
+      id: `fleet-work-order-${workOrder.id}`,
+      summary: t(
+        'operations.vehicles.narrative.workOrderSummary',
+        '{{vehicle}}: {{severity}} work order — {{title}}.',
+        {
+          vehicle: workOrder.vehicle_display_name,
+          severity: workOrder.severity,
+          title: workOrder.title,
+        },
+      ),
+      observedAt: workOrder.updated_at,
+      provenance: {
+        source: t('operations.vehicles.workOrdersSource', 'Fleet work orders'),
+        recordId: String(workOrder.id),
+        method: t(
+          'operations.vehicles.narrative.workOrderMethod',
+          'Open high- or critical-severity Fleet Operations work order.',
+        ),
+      },
+    })),
+  ];
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.vehicles.narrative.whatChanged',
+      '{{online}} of {{total}} registered vehicles have live state; {{ready}} are departure ready and {{urgent}} urgent work orders remain open.',
+      {
+        online: fleet.onlineCount,
+        total: vehicleList.length,
+        ready: fleet.readyCount,
+        urgent: urgentWorkOrders.length,
+      },
+    ),
+    whyItMatters:
+      fleetAttention[0]?.description
+      ?? t(
+        'operations.vehicles.narrative.readyImpact',
+        'Current connectivity, charge level, software posture, and service status support fleet dispatch decisions.',
+      ),
+    confidence: {
+      label:
+        vehicleList.length > 0
+        && fleet.onlineCount === vehicleList.length
+        && !workOrdersQuery.isError
+          ? 'high'
+          : fleet.onlineCount > 0
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.vehicles.narrative.liveBasis',
+          'Live state resolved for {{online}} of {{total}} registered vehicles.',
+          { online: fleet.onlineCount, total: vehicleList.length },
+        ),
+        workOrdersQuery.isError
+          ? t(
+              'operations.vehicles.narrative.workOrderLimitedBasis',
+              'Fleet Operations work orders were unavailable.',
+            )
+          : t(
+              'operations.vehicles.narrative.workOrderBasis',
+              '{{count}} open work orders were evaluated for service attention.',
+              { count: openWorkOrders.length },
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      urgentWorkOrders.length > 0
+        ? t(
+            'operations.vehicles.narrative.serviceResponse',
+            'Review the urgent Fleet Operations work orders before assigning affected vehicles.',
+          )
+        : offlineCount > 0
+          ? t(
+              'operations.vehicles.narrative.connectivityResponse',
+              'Verify connectivity before issuing commands to vehicles without live state.',
+            )
+          : lowBatteryCount > 0
+            ? t(
+                'operations.vehicles.narrative.chargeResponse',
+                'Confirm charging plans for vehicles below the departure-readiness threshold.',
+              )
+            : t(
+                'operations.vehicles.narrative.monitorResponse',
+                'No immediate fleet response is indicated; continue monitoring readiness and service status.',
+              ),
+    limitations: [
+      t(
+        'operations.vehicles.narrative.snapshotLimitation',
+        'Live vehicle state is a current snapshot and does not explain why a vehicle is offline or at a low charge level.',
+      ),
+      ...(workOrdersQuery.isError
+        ? [
+            t(
+              'operations.vehicles.narrative.workOrderLimitation',
+              'Service readiness is incomplete while Fleet Operations work orders are unavailable.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.vehicles.narrative.evidenceLimit',
+        'Supporting evidence is limited to four vehicle snapshots and two urgent work orders.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.vehicles.liveStateSource', 'Live vehicle state'),
+        method: t(
+          'operations.vehicles.narrative.liveMethod',
+          'Resolves current state independently for every registered vehicle.',
+        ),
+      },
+      {
+        source: t('operations.vehicles.workOrdersSource', 'Fleet work orders'),
+        method: t(
+          'operations.vehicles.narrative.serviceMethod',
+          'Counts open work orders and elevates high- and critical-severity records.',
+        ),
+      },
+    ],
+  };
 
   /* ── Mutations ── */
   const syncMut = useSyncVehicles();
@@ -786,6 +938,7 @@ export default function VehicleListPage() {
                   ? 'warning'
                   : 'success'
             }
+            narrative={narrative}
             freshness={
               <div className="flex flex-wrap items-center gap-2">
                 <DataFreshnessAuto

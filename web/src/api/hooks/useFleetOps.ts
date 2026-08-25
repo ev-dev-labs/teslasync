@@ -281,6 +281,7 @@ function useFleetMutation<TData, TVariables>(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
+    networkMode: 'always',
     onSuccess: () => queryClient.invalidateQueries({ queryKey: fleetOpsKeys.all }),
   });
 }
@@ -289,6 +290,7 @@ function useCreateMutation<TData, TInput>(resource: string) {
   return useFleetMutation<TData, TInput>((input) =>
     request<TData>(`/fleet-ops/${resource}`, {
       method: 'POST',
+      requiresLiveMode: true,
       body: JSON.stringify(input),
     }),
   );
@@ -298,6 +300,7 @@ function useUpdateMutation<TData, TInput>(resource: string) {
   return useFleetMutation<TData, VersionedUpdate<TInput>>(({ id, version, input }) =>
     request<TData>(`/fleet-ops/${resource}/${id}`, {
       method: 'PUT',
+      requiresLiveMode: true,
       body: JSON.stringify({ ...input, version }),
     }),
   );
@@ -305,7 +308,10 @@ function useUpdateMutation<TData, TInput>(resource: string) {
 
 function useDeleteMutation(resource: string) {
   return useFleetMutation<void, VersionedDelete>(({ id, version }) =>
-    request<void>(`/fleet-ops/${resource}/${id}?version=${version}`, { method: 'DELETE' }),
+    request<void>(`/fleet-ops/${resource}/${id}?version=${version}`, {
+      method: 'DELETE',
+      requiresLiveMode: true,
+    }),
   );
 }
 

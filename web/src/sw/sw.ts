@@ -76,6 +76,50 @@ registerRoute(
 // config used. Re-implementing them here keeps SPA performance unchanged
 // after the strategy switch.
 
+const cacheSuccessfulSameOriginAsset = {
+  cacheWillUpdate: async ({ response }: { response: Response }) => {
+    if (
+      response.status !== 200
+      || response.redirected
+      || new URL(response.url || self.location.href).origin !== self.location.origin
+    ) {
+      return null
+    }
+    return response
+  },
+}
+
+// Vite emits content-hashed route chunks. Cache only chunks the user actually
+// visits instead of precaching the entire application during SW installation.
+// Redirected responses are rejected so a ForwardAuth login page can never be
+// cached under a JavaScript or stylesheet URL.
+registerRoute(
+  ({ request, url }) =>
+    url.origin === self.location.origin
+    && (request.destination === 'script' || request.destination === 'style'),
+  new CacheFirst({
+    cacheName: 'app-route-assets',
+    plugins: [
+      cacheSuccessfulSameOriginAsset,
+      new ExpirationPlugin({ maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+    ],
+  }),
+)
+
+// Keep images used by visited routes available offline without eagerly
+// downloading large, route-specific branding and report assets.
+registerRoute(
+  ({ request, url }) =>
+    url.origin === self.location.origin && request.destination === 'image',
+  new CacheFirst({
+    cacheName: 'app-route-images',
+    plugins: [
+      cacheSuccessfulSameOriginAsset,
+      new ExpirationPlugin({ maxEntries: 100, maxAgeSeconds: 60 * 60 * 24 * 30 }),
+    ],
+  }),
+)
+
 // Google Fonts stylesheets
 registerRoute(
   ({ url }) => url.origin === 'https://fonts.googleapis.com',

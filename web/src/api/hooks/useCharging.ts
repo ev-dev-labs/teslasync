@@ -344,6 +344,7 @@ export function useApplySchedule() {
     mutationFn: (params: ApplyScheduleRequest) =>
       request<ApplyScheduleResponse>('/charge-planner/apply', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(params),
       }),
     onSuccess: () => {
@@ -385,7 +386,11 @@ export function useBulkDeleteCharging() {
     mutationFn: (ids: number[]) =>
       request<{ deleted?: number; updated?: number; failed?: Array<{ id: number; reason: string }> }>(
         '/charging/bulk',
-        { method: 'DELETE', body: JSON.stringify({ ids }) },
+        {
+          method: 'DELETE',
+          requiresLiveMode: true,
+          body: JSON.stringify({ ids }),
+        },
       ),
     onSuccess: (res) => {
       invalidateAndBroadcast(qc, { queryKey: chargingKeys.all });

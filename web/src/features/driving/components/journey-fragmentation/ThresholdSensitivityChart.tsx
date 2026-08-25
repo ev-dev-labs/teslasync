@@ -30,7 +30,7 @@ export function ThresholdSensitivityChart({ result, loading = false }: JourneyFr
     >
       {({ hiddenSeries }) => (
         result.includedDrives === 0 ? (
-          <EmptyState message={t('journeyFragmentation.chart.noData', 'No included journey data is available yet.')} />
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.chart.noData', 'No included journey data is available yet.')} />
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={data}>

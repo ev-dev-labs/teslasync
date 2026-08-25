@@ -127,9 +127,11 @@ export function useSetGuardConfig() {
     }) =>
       request<SetConfigResponse>(`/vehicles/${vehicleId}/guard`, {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }),
+    networkMode: 'always',
     onSuccess: (_data, { vehicleId }) => {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.config(vehicleId) });
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
@@ -149,7 +151,9 @@ export function useGuardPanic() {
     mutationFn: (vehicleId: number) =>
       request<PanicResponse>(`/vehicles/${vehicleId}/guard/panic`, {
         method: 'POST',
+        requiresLiveMode: true,
       }),
+    networkMode: 'always',
     onSuccess: (_data, vehicleId) => {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Panic alert triggered');
@@ -171,7 +175,9 @@ export function useAcknowledgeGuardEvent() {
     mutationFn: ({ vehicleId, eventId }: { vehicleId: number; eventId: number }) =>
       request<{ status: string }>(`/vehicles/${vehicleId}/guard/events/${eventId}/acknowledge`, {
         method: 'POST',
+        requiresLiveMode: true,
       }),
+    networkMode: 'always',
     onSuccess: (_data, { vehicleId }) => {
       invalidateAndBroadcast(queryClient, { queryKey: guardKeys.events(vehicleId) });
       toast.success('Event acknowledged');

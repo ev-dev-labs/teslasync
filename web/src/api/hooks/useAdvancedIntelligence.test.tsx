@@ -77,27 +77,35 @@ describe('advanced intelligence reads', () => {
 
 describe('advanced intelligence writes', () => {
   const writes = [
-    [useRunTwinLab, 'twin-lab/scenarios'],
-    [useRunJourneyAssurance, 'journey-assurance/scenarios'],
-    [useRunChargingSiteTwin, 'charging-site-twin/scenarios'],
-    [useCreateResiliencePlan, 'resilience/plans'],
-    [useRunTCOOptimizer, 'tco-optimizer/scenarios'],
-    [useStartFederatedRound, 'federated-learning/rounds'],
-    [useCreateCausalExperiment, 'causal-experiments'],
+    [useRunTwinLab, 'twin-lab/scenarios', false],
+    [useRunJourneyAssurance, 'journey-assurance/scenarios', false],
+    [useRunChargingSiteTwin, 'charging-site-twin/scenarios', false],
+    [useCreateResiliencePlan, 'resilience/plans', false],
+    [useRunTCOOptimizer, 'tco-optimizer/scenarios', false],
+    [useStartFederatedRound, 'federated-learning/rounds', true],
+    [useCreateCausalExperiment, 'causal-experiments', false],
   ] as const;
 
-  it.each(writes)('POSTs %s with the exact body and no double prefix', async (hook, path) => {
-    mockedRequest.mockResolvedValueOnce({});
-    const { Wrapper } = wrapper();
-    const { result } = renderHook(() => hook(), { wrapper: Wrapper });
-    const body = { vehicle_id: 42, confirmed: true };
-    await act(() => result.current.mutateAsync(body as never));
-    expect(mockedRequest).toHaveBeenCalledWith(`/advanced-intelligence/${path}`, {
-      method: 'POST',
-      body: JSON.stringify(body),
-    });
-    expect(mockedRequest.mock.calls[0]?.[0]).not.toContain('/api/v1');
-  });
+  it.each(writes)(
+    'POSTs %s with the exact body and operational-mode policy',
+    async (hook, path, requiresLiveMode) => {
+      mockedRequest.mockResolvedValueOnce({});
+      const { Wrapper } = wrapper();
+      const { result } = renderHook(() => hook(), { wrapper: Wrapper });
+      const body = { vehicle_id: 42, confirmed: true };
+      await act(() => result.current.mutateAsync(body as never));
+      const expectedOptions = {
+        method: 'POST',
+        ...(requiresLiveMode ? { requiresLiveMode: true } : {}),
+        body: JSON.stringify(body),
+      };
+      expect(mockedRequest).toHaveBeenCalledWith(
+        `/advanced-intelligence/${path}`,
+        expectedOptions,
+      );
+      expect(mockedRequest.mock.calls[0]?.[0]).not.toContain('/api/v1');
+    },
+  );
 
   it('invalidates federated and causal reads after writes', async () => {
     mockedRequest.mockResolvedValue({});

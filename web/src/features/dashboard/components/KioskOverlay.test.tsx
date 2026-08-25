@@ -185,14 +185,14 @@ describe('KioskOverlay', () => {
       expect(screen.queryByTestId('kiosk-cursor-style')).toBeNull();
     });
 
-    it('injects a cursor:none style scoped to .kiosk-root, marked aria-hidden', () => {
+    it('injects a cursor:none style scoped to kiosk presentation, marked aria-hidden', () => {
       renderOverlay({ isCursorHidden: true });
 
       const layer = screen.getByTestId('kiosk-cursor-style');
       expect(layer).toHaveAttribute('aria-hidden', 'true');
 
       const style = layer.querySelector('style');
-      expect(style?.textContent).toContain('.kiosk-root');
+      expect(style?.textContent).toContain('[data-presentation-mode="kiosk"]');
       expect(style?.textContent).toContain('cursor: none');
     });
   });

@@ -22,7 +22,7 @@ export function DriveDnaKpiNotices({
   return (
     <>
       {!state.vehicleSelected ? (
-        <EmptyState
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
           className="py-6"
           icon={<Gauge className="h-7 w-7" aria-hidden="true" />}
           message={t(
@@ -146,7 +146,7 @@ export function DriveDnaKpiNotices({
         </AlertBanner>
       ) : null}
       {state.list.isResolved && !state.hasDrive ? (
-        <EmptyState
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
           className="py-6"
           icon={<Gauge className="h-7 w-7" aria-hidden="true" />}
           message={t(
@@ -158,7 +158,7 @@ export function DriveDnaKpiNotices({
       {state.telemetry.isResolved &&
       state.hasDrive &&
       model.sample.validRows === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
           className="py-6"
           icon={<Rows3 className="h-7 w-7" aria-hidden="true" />}
           message={

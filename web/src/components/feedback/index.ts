@@ -22,6 +22,10 @@ export { InlineCallout, type InlineCalloutProps, type CalloutVariant } from './I
 export { DraftRecoveryBanner, type DraftRecoveryBannerProps } from './DraftRecoveryBanner';
 export { DraftRestorePrompt } from './DraftRestorePrompt';
 export { OfflineBanner } from './OfflineBanner';
+export {
+  OperationalWriteNotice,
+  type OperationalWriteNoticeProps,
+} from './OperationalWriteNotice';
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
 export { DataStateNotice, type DataStateKind, type DataStateNoticeProps } from './DataStateNotice';
 export {

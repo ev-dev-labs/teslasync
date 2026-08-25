@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
 	docsfs "github.com/ev-dev-labs/teslasync/docs"
+	apiactivity "github.com/ev-dev-labs/teslasync/internal/api/activity"
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
@@ -870,6 +871,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	safetyHandler := apisafety.NewSafetyHandler(stateReader, liveStateReader)
 	userPreferenceHandler := apiuserpref.NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
+	activityHandler := apiactivity.NewHandler(db)
 	tcoHandler := apitco.NewHandler(db)
 	sleepHandler := apisleep.NewSleepHandler(db)
 	//: VampireDrainHandler deleted (vampire_drain_events).
@@ -3725,6 +3727,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
+
+		// Unified operations-intelligence activity timeline — read-only,
+		// composed at query time from drives, charging_sessions,
+		// notification_logs, software_updates, and chart_annotations. See
+		// internal/database/activity for the UNION ALL composition and
+		// internal/models/activity for why maintenance/service events are
+		// intentionally excluded.
+		r.Get("/activity", activityHandler.List)
 
 		// /vampire-drain + /vampire-drain/stats are derived
 		// live from fsm_transitions because vampire_drain_events no longer exists.

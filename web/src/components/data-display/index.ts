@@ -50,6 +50,10 @@ export {
   type FreshnessQuery,
 } from './DataFreshness';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
+export {
+  OperationalModeBadge,
+  type OperationalModeBadgeProps,
+} from './OperationalModeBadge';
 export { Delta, type DeltaProps } from './Delta';
 export { ComparisonHeader, type ComparisonHeaderProps } from './ComparisonHeader';
 export { KpiOverviewCard, type KpiOverviewCardProps } from './KpiOverviewCard';
@@ -60,6 +64,14 @@ export {
   type OperationalAttention,
   type OperationalTone,
 } from './OperationalBrief';
+export {
+  OperationalNarrativeDetails,
+  type OperationalNarrativeDetailsProps,
+} from './OperationalNarrativeDetails';
+export {
+  CalculationDetails,
+  type CalculationDetailsProps,
+} from './CalculationDetails';
 export {
   EntityPreviewDrawer,
   type EntityPreviewDrawerProps,

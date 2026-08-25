@@ -275,7 +275,7 @@ function normalizeRoute(route) {
 
 function routerPaths(targets) {
   const routes = [];
-  const methodPattern = /\.(?:Get|Post|Put|Delete|Patch|Head|Options)\(\s*"([^"]*)"/g;
+  const methodPattern = /(?:\.|\b)(?:Get|Post|Put|Delete|Patch|Head|Options)\(\s*"([^"]*)"/g;
 
   for (const target of targets) {
     for (const file of walk(target, new Set(['.go']))) {
@@ -283,8 +283,10 @@ function routerPaths(targets) {
       const commentState = { blockComment: false };
       const frames = [];
       const helperRoutes = new Map();
+      const localRouteHelpers = new Map();
       let depth = 0;
       let currentFunction = null;
+      let currentLocalRouteHelper = null;
       let pendingMethodPrefix = null;
 
       for (const sourceLine of lines) {
@@ -293,6 +295,12 @@ function routerPaths(targets) {
         }
         if (currentFunction && depth < currentFunction.bodyDepth) {
           currentFunction = null;
+        }
+        if (
+          currentLocalRouteHelper &&
+          depth < currentLocalRouteHelper.bodyDepth
+        ) {
+          currentLocalRouteHelper = null;
         }
 
         const line = stripGoComments(sourceLine, commentState);
@@ -322,11 +330,41 @@ function routerPaths(targets) {
           }
           methodMatch = methodPattern.exec(line);
         }
-        if (/\.(?:Get|Post|Put|Delete|Patch|Head|Options)\(\s*$/.test(line)) {
+        if (/(?:\.|\b)(?:Get|Post|Put|Delete|Patch|Head|Options)\(\s*$/.test(line)) {
           pendingMethodPrefix = {
             prefixes,
             helperName: currentFunction?.name ?? null,
           };
+        }
+
+        if (currentLocalRouteHelper) {
+          const parameter = currentLocalRouteHelper.pathParameter.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            '\\$&',
+          );
+          const dynamicMethodPattern = new RegExp(
+            `(?:\\.|\\b)(?:Get|Post|Put|Delete|Patch|Head|Options)\\(\\s*${parameter}(?:\\s*\\+\\s*"([^"]*)")?`,
+            'g',
+          );
+          for (const dynamicMatch of line.matchAll(dynamicMethodPattern)) {
+            currentLocalRouteHelper.suffixes.add(dynamicMatch[1] ?? '');
+          }
+        }
+
+        const localHelperCall = line.match(
+          /^\s*([A-Za-z_]\w*)\(\s*"([^"]+)"/,
+        );
+        if (localHelperCall) {
+          const helper = localRouteHelpers.get(localHelperCall[1]);
+          if (helper) {
+            for (const suffix of helper.suffixes) {
+              routes.push(
+                normalizeRoute(
+                  joinRoute(prefixes, `${localHelperCall[2]}${suffix}`),
+                ),
+              );
+            }
+          }
         }
 
         for (const helperCall of line.matchAll(/\b([A-Za-z_]\w*)\(\s*r\s*(?:,|\))/g)) {
@@ -342,6 +380,9 @@ function routerPaths(targets) {
         const functionMatch = line.match(
           /^\s*func(?:\s+\([^)]*\))?\s+([A-Za-z_]\w*)\s*\(\s*r\s+chi\.Router\b/,
         );
+        const localRouteHelperMatch = line.match(
+          /\b([A-Za-z_]\w*)\s*:=\s*func\(\s*([A-Za-z_]\w*)\s+string\b/,
+        );
         const nextDepth = depth + braceDelta(line);
         if (routeMatch) {
           frames.push({ path: routeMatch[1], bodyDepth: nextDepth });
@@ -349,6 +390,18 @@ function routerPaths(targets) {
         if (functionMatch) {
           currentFunction = { name: functionMatch[1], bodyDepth: nextDepth };
           helperRoutes.set(functionMatch[1], []);
+        }
+        if (localRouteHelperMatch) {
+          currentLocalRouteHelper = {
+            name: localRouteHelperMatch[1],
+            pathParameter: localRouteHelperMatch[2],
+            bodyDepth: nextDepth,
+            suffixes: new Set(),
+          };
+          localRouteHelpers.set(
+            localRouteHelperMatch[1],
+            currentLocalRouteHelper,
+          );
         }
         depth = nextDepth;
       }

@@ -16,9 +16,20 @@ var (
 
 type SourceReader interface {
 	ListActiveAlerts(ctx context.Context, vehicleID *int64, since time.Time, limit int) ([]actioncenter.AlertRecord, error)
+	ListLatestBatteryHealth(ctx context.Context, vehicleID *int64, limit int) ([]actioncenter.BatteryHealthRecord, error)
 	ListStaleChargingSessions(ctx context.Context, vehicleID *int64, cutoff time.Time, limit int) ([]actioncenter.ChargingRecord, error)
+	ListDriveEfficiencyEvidence(
+		ctx context.Context,
+		vehicleID *int64,
+		baselineSince, findingSince time.Time,
+		minimumSamples int,
+		minimumRatio, minimumWhPerM float64,
+		limit int,
+	) ([]actioncenter.DriveEfficiencyRecord, error)
 	ListActiveWorkOrders(ctx context.Context, vehicleID *int64, limit int) ([]actioncenter.WorkOrderRecord, error)
+	ListCommandReliability(ctx context.Context, vehicleID *int64, since, checkedAt time.Time, limit int) ([]actioncenter.CommandReliabilityRecord, error)
 	ListSignalHealth(ctx context.Context, vehicleID *int64, from, to time.Time, limit int) ([]actioncenter.SignalHealthRecord, error)
+	ListOpenSystemIncidents(ctx context.Context, limit int) ([]actioncenter.SystemIncidentRecord, error)
 }
 
 type TransitionRequest struct {

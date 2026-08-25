@@ -2,6 +2,7 @@ package actioncenter
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -71,6 +72,71 @@ func TestListActiveWorkOrdersReusesReaderAndAppliesGlobalPriorityBound(t *testin
 		if call.VehicleID == nil || *call.VehicleID != vehicleID || call.Limit != 3 {
 			t.Fatalf("reader filter = %+v", call)
 		}
+	}
+}
+
+func TestEvidenceQueriesUseCurrentCanonicalSources(t *testing.T) {
+	t.Parallel()
+	tests := []struct {
+		name      string
+		query     string
+		required  []string
+		forbidden []string
+	}{
+		{
+			name:  "battery passport",
+			query: latestBatteryHealthQuery,
+			required: []string{
+				"tesla_battery_passport_ledger",
+				"DISTINCT ON (ledger.vehicle_id)",
+				"ledger.soh_pct",
+			},
+			forbidden: []string{"battery_snapshots"},
+		},
+		{
+			name:  "drive efficiency",
+			query: driveEfficiencyEvidenceQuery,
+			required: []string{
+				"FROM drives",
+				"d.distance_m",
+				"d.energy_used_wh",
+				"energy_intensity_wh_per_m",
+				"baselines.sample_count >= $4",
+			},
+			forbidden: []string{"distance_mi", "energy_used_kwh"},
+		},
+		{
+			name:  "command reliability",
+			query: commandReliabilityQuery,
+			required: []string{
+				"FROM command_logs",
+				"logs.status IN ('success', 'failed')",
+				"latest_failure_at",
+			},
+		},
+		{
+			name:  "system incidents",
+			query: openSystemIncidentsQuery,
+			required: []string{
+				"FROM status_incidents",
+				"resolved_at IS NULL",
+				"affected_components",
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			for _, required := range test.required {
+				if !strings.Contains(test.query, required) {
+					t.Errorf("query missing %q", required)
+				}
+			}
+			for _, forbidden := range test.forbidden {
+				if strings.Contains(test.query, forbidden) {
+					t.Errorf("query contains forbidden legacy source %q", forbidden)
+				}
+			}
+		})
 	}
 }
 

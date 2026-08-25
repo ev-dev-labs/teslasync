@@ -86,13 +86,13 @@ export interface RedisSignalsPurgeAllResponse {
 export const purgeRedisSignals = (vehicleId: number) =>
   request<RedisSignalsPurgeResponse>(
     `/dev-tools/redis-signals?vehicle_id=${vehicleId}`,
-    { method: 'DELETE' },
+    { method: 'DELETE', requiresLiveMode: true },
   )
 
 export const purgeAllRedisSignals = () =>
   request<RedisSignalsPurgeAllResponse>(
     '/dev-tools/redis-signals/keys',
-    { method: 'DELETE' },
+    { method: 'DELETE', requiresLiveMode: true },
   )
 
 // === Fleet Telemetry ===

@@ -112,9 +112,11 @@ function calledUrl(n = 0): string {
   return mockedRequest.mock.calls[n][0] as string;
 }
 
-/** RequestInit of the Nth (default first) request() call. */
-function calledOpts(n = 0): RequestInit {
-  return mockedRequest.mock.calls[n][1] as RequestInit;
+/** Request options of the Nth (default first) request() call. */
+function calledOpts(n = 0): RequestInit & { requiresLiveMode?: boolean } {
+  return mockedRequest.mock.calls[n][1] as RequestInit & {
+    requiresLiveMode?: boolean;
+  };
 }
 
 beforeEach(() => {
@@ -683,6 +685,7 @@ describe('useUpdateTOUSettings', () => {
     const opts = calledOpts();
     expect(calledUrl()).toBe('/tesla/energy-sites/42/tou-settings');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect((opts.headers as Record<string, string>)['Content-Type']).toBe('application/json');
     expect(JSON.parse(opts.body as string)).toEqual(settings);
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['tesla-site-info', 42] });

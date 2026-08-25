@@ -50,7 +50,7 @@ export function ChargeAdvisorSection({
           </Text>
         )}
         {!state.vehicleSelected ? (
-          <EmptyState
+          <EmptyState /* no-action: vehicle and scenario controls in the surrounding section determine this result */
             className="py-10"
             icon={<PlugZap className="h-7 w-7" aria-hidden="true" />}
             message={t(

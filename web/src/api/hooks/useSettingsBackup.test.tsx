@@ -280,7 +280,9 @@ describe('useApplyImport', () => {
     const returned = await result.current.mutateAsync({ bundle });
 
     expect(returned).toEqual(applied);
-    const body = JSON.parse(mockedRequest.mock.calls[0][1].body as string);
+    const options = mockedRequest.mock.calls[0][1];
+    const body = JSON.parse(options.body as string);
+    expect(options.requiresLiveMode).toBe(true);
     expect(body.dry_run).toBe(false);
     expect(body.bundle).toEqual(bundle);
     expect(qc.getQueryData(settingsBackupKeys.lastImport)).toEqual(applied);

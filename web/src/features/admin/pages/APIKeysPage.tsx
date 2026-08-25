@@ -7,7 +7,7 @@
  * data section owns its own loading / error / empty state.
  */
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Plus, Key, KeyRound, ShieldCheck, XCircle, Crown, Info,
@@ -16,9 +16,15 @@ import {
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button, ConfirmDialog, PanelTitle, Text, Caption } from '@/components/ui';
 import { MetricCard, MetricBar } from '@/components/data-display';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
+import {
+  EmptyState,
+  Skeleton,
+  QueryError,
+  OperationalWriteNotice,
+} from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { useApiKeys, useDeleteApiKey, useRevokeApiKey } from '@/api/hooks/useAdmin';
 import type { NeonColor } from '@/lib/tokens';
 import type { APIKey } from '@/types/admin';
@@ -40,9 +46,16 @@ export default function APIKeysPage() {
 
   const deleteMut = useDeleteApiKey();
   const revokeMut = useRevokeApiKey();
+  const operationalMode = useOperationalMode();
 
   const [showCreate, setShowCreate] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<APIKey | null>(null);
+
+  useEffect(() => {
+    if (operationalMode.canWrite) return;
+    setShowCreate(false);
+    setDeleteTarget(null);
+  }, [operationalMode.canWrite]);
 
   const summary = useMemo(() => summarizeKeys(keys), [keys]);
 
@@ -70,11 +83,17 @@ export default function APIKeysPage() {
           size="sm"
           icon={<Plus className="h-4 w-4" aria-hidden="true" />}
           onClick={() => setShowCreate(true)}
+          disabled={!operationalMode.canWrite}
+          title={operationalMode.writeBlockReason ?? undefined}
         >
           {t('apiKeys.createKey', 'Create Key')}
         </Button>
       }
     >
+      <OperationalWriteNotice
+        title={t('apiKeys.readOnly.title', 'API key management is read-only')}
+      />
+
       {/* 1 — KPI band: full-width responsive metric grid */}
       <FadeIn>
         <section
@@ -145,6 +164,8 @@ export default function APIKeysPage() {
                       onRevoke={(id) => revokeMut.mutate(id)}
                       onDelete={setDeleteTarget}
                       revoking={revokeMut.isPending && revokeMut.variables === k.id}
+                      actionsDisabled={!operationalMode.canWrite}
+                      actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
                     />
                   </StaggerItem>
                 ))}

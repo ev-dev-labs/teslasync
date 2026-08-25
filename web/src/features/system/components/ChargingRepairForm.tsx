@@ -16,11 +16,15 @@ export interface ChargingRepairFormProps {
   /** DOM id so the triggering row can reference this form via `aria-controls`. */
   formId: string;
   onClose: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 /** Non-empty string → keep; otherwise drop from the patch. */
 function num(value: string): number | undefined {
-  return value.trim() === '' ? undefined : Number(value);
+  if (value.trim() === '') return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 /**
@@ -31,7 +35,13 @@ function num(value: string): number | undefined {
  * shows the equivalent in the operator's preferred display unit. Save patches
  * only the fields that were filled; Close stamps `ended_at`; Discard deletes.
  */
-export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairFormProps) {
+export function ChargingRepairForm({
+  session,
+  formId,
+  onClose,
+  disabled = false,
+  disabledReason,
+}: ChargingRepairFormProps) {
   const { t } = useTranslation();
   const { formatEnergy, formatPower } = useUnits();
 
@@ -88,6 +98,7 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           value={form.ended_at}
           placeholder="2026-03-30T04:00:00Z"
           onChange={set('ended_at')}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.energyWh', 'Energy Added (Wh)')}
@@ -95,12 +106,14 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           value={form.total_energy_added_wh}
           onChange={set('total_energy_added_wh')}
           hint={energyHint}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.endSoc', 'End Battery (%)')}
           type="number"
           value={form.end_soc_pct}
           onChange={set('end_soc_pct')}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.peakPowerW', 'Peak Power (W)')}
@@ -108,6 +121,7 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           value={form.peak_power_w}
           onChange={set('peak_power_w')}
           hint={peakHint}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.avgPowerW', 'Avg Power (W)')}
@@ -115,12 +129,14 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           value={form.avg_power_w}
           onChange={set('avg_power_w')}
           hint={avgHint}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.cost', 'Cost')}
           type="number"
           value={form.cost_decimal}
           onChange={set('cost_decimal')}
+          disabled={disabled}
         />
       </div>
 
@@ -129,6 +145,8 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           variant="secondary"
           onClick={onSave}
           loading={update.isPending}
+          disabled={disabled}
+          title={disabledReason}
           icon={<Save className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
         >
@@ -138,6 +156,8 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           variant="secondary"
           onClick={() => close.mutate(session.id, { onSuccess: onClose })}
           loading={close.isPending}
+          disabled={disabled}
+          title={disabledReason}
           icon={<Clock className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
         >
@@ -147,6 +167,8 @@ export function ChargingRepairForm({ session, formId, onClose }: ChargingRepairF
           variant="danger"
           onClick={() => discard.mutate(session.id, { onSuccess: onClose })}
           loading={discard.isPending}
+          disabled={disabled}
+          title={disabledReason}
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
         >

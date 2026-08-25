@@ -36,7 +36,7 @@ export function StopoverGapChart({ result, loading = false }: JourneyFragmentati
       height={280}
     >
       {result.linkedGapSummary.count === 0 ? (
-        <EmptyState message={t('journeyFragmentation.gap.empty', 'No linked stopover pairs are available for this threshold.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.gap.empty', 'No linked stopover pairs are available for this threshold.')} />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>

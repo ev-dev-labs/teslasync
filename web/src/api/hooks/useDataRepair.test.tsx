@@ -162,6 +162,7 @@ describe('useUpdateCharging', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/data-repair/charging/42');
     expect(opts.method).toBe('PUT');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual(patch);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith(
@@ -203,6 +204,7 @@ describe('useCloseCharging', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/data-repair/charging/5/close');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(opts.body).toBeUndefined();
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith(
@@ -238,6 +240,7 @@ describe('useDiscardCharging', () => {
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/data-repair/charging/55');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith(
       'toast.dataRepair.charging.discard.success',
@@ -279,6 +282,7 @@ describe('useUpdateDrive', () => {
     // 404'd every drive mutation. It MUST stay singular.
     expect(url).not.toContain('/drives/');
     expect(opts.method).toBe('PUT');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual(patch);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith('toast.dataRepair.drive.update.success', 'Drive updated');
@@ -314,6 +318,7 @@ describe('useCloseDrive', () => {
     expect(url).toBe('/data-repair/drive/17/close');
     expect(url).not.toContain('/drives/');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith('toast.dataRepair.drive.close.success', 'Drive closed');
   });
@@ -345,6 +350,7 @@ describe('useDiscardDrive', () => {
     expect(url).toBe('/data-repair/drive/71');
     expect(url).not.toContain('/drives/');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith('toast.dataRepair.drive.discard.success', 'Drive discarded');
   });

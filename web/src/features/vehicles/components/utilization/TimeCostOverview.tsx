@@ -165,7 +165,7 @@ export function TimeCostOverview({
         </PanelTitle>
         <UtilizationSectionBody state={state} className="min-h-56">
           {summary.accounting.eligibleRows === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               icon={
                 <Activity className="h-8 w-8" aria-hidden="true" />
               }
@@ -243,7 +243,7 @@ export function TimeCostOverview({
         </PanelTitle>
         <UtilizationSectionBody state={state} className="min-h-56">
           {summary.accounting.eligibleRows === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               icon={<Wallet className="h-8 w-8" aria-hidden="true" />}
               message={t(
                 'utilization.noData',
@@ -251,7 +251,7 @@ export function TimeCostOverview({
               )}
             />
           ) : summary.accounting.usableEnergyRows === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               icon={<Wallet className="h-8 w-8" aria-hidden="true" />}
               message={t(
                 'utilization.costNoEnergy',

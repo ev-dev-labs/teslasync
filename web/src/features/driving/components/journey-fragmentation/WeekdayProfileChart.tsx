@@ -34,7 +34,7 @@ export function WeekdayProfileChart({ result, loading = false }: JourneyFragment
       height={280}
     >
       {data.length === 0 ? (
-        <EmptyState message={t('journeyFragmentation.profile.empty', 'No local journey-start profile is available yet.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('journeyFragmentation.profile.empty', 'No local journey-start profile is available yet.')} />
       ) : (
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={data}>

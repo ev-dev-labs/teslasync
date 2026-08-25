@@ -160,7 +160,7 @@ export function RecentWeekScorecard(
 
       <EfficiencyTargetSectionBody state={state} className="mt-4 min-h-80">
         {rows.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             className="min-h-80"
             icon={<ListOrdered className="h-8 w-8" aria-hidden="true" />}
             message={t(

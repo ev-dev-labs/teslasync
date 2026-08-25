@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
+import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
 import { ListExportMenu } from '../ListExportMenu';
+import { ToastProvider } from '@/components/feedback/Toast';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -80,8 +81,14 @@ describe('ListExportMenu', () => {
     fireEvent.click(screen.getByTestId('le-trigger'));
     expect(screen.getByTestId('le-scope-visible')).toBeInTheDocument();
     expect(screen.getByTestId('le-scope-selected')).toBeInTheDocument();
-    expect(screen.getByTestId('le-scope-selected')).toBeChecked();
-    expect(screen.getByTestId('le-scope-visible')).not.toBeChecked();
+    expect(screen.getByTestId('le-scope-selected')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByTestId('le-scope-visible')).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 
   it('defaults to selected when a selection is created after mount', () => {
@@ -106,7 +113,10 @@ describe('ListExportMenu', () => {
     );
     fireEvent.click(screen.getByTestId('le-trigger'));
 
-    expect(screen.getByTestId('le-scope-selected')).toBeChecked();
+    expect(screen.getByTestId('le-scope-selected')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
   });
 
   it('passes the chosen scope to onExportCsv', () => {
@@ -122,6 +132,65 @@ describe('ListExportMenu', () => {
     fireEvent.click(screen.getByTestId('le-trigger'));
     fireEvent.click(screen.getByTestId('le-csv'));
     expect(onExportCsv).toHaveBeenCalledWith('selected');
+  });
+
+  it('announces progress and blocks duplicate exports while preparing a file', async () => {
+    let resolveExport: (() => void) | undefined;
+    onExportCsv.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveExport = resolve;
+      }),
+    );
+    render(
+      <ListExportMenu
+        onExportCsv={onExportCsv}
+        onExportJson={onExportJson}
+        visibleCount={10}
+        testId="le"
+      />,
+    );
+
+    fireEvent.click(screen.getByTestId('le-trigger'));
+    fireEvent.click(screen.getByTestId('le-csv'));
+
+    const trigger = screen.getByRole('button', {
+      name: 'Preparing CSV export…',
+    });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(trigger);
+    expect(onExportCsv).toHaveBeenCalledTimes(1);
+
+    resolveExport?.();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Export list' })).toBeEnabled(),
+    );
+  });
+
+  it('surfaces export failures with operational feedback', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    onExportJson.mockRejectedValueOnce(new Error('serialization failed'));
+    render(
+      <ToastProvider>
+        <ListExportMenu
+          onExportCsv={onExportCsv}
+          onExportJson={onExportJson}
+          visibleCount={10}
+          testId="le"
+        />
+      </ToastProvider>,
+    );
+
+    fireEvent.click(screen.getByTestId('le-trigger'));
+    fireEvent.click(screen.getByTestId('le-json'));
+
+    expect(
+      await screen.findByText('Could not prepare the JSON export.'),
+    ).toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it('switches to visible scope when the user clicks it', () => {
@@ -151,7 +220,10 @@ describe('ListExportMenu', () => {
       />,
     );
     fireEvent.click(screen.getByTestId('le-trigger'));
-    expect(screen.getByTestId('le-scope-selected')).toBeChecked();
+    expect(screen.getByTestId('le-scope-selected')).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
 
     rerender(
       <ListExportMenu

@@ -102,7 +102,7 @@ export function CarbonGreenTimingScore({
               </Grid>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               message={t(
                 hasScoredSessions
                   ? 'carbon.score.unavailable'

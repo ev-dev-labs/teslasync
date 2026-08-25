@@ -174,6 +174,7 @@ describe('useCreateApiKey', () => {
     const [path, opts] = callArgs();
     expect(path).toBe('/api-keys');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ name: 'deploy', permissions: 'admin' });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: adminKeys.apiKeys });
   });
@@ -204,6 +205,7 @@ describe('useDeleteApiKey', () => {
     const [path, opts] = callArgs();
     expect(path).toBe('/api-keys/k1');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: adminKeys.apiKeys });
   });
 });
@@ -220,6 +222,7 @@ describe('useRevokeApiKey', () => {
     const [path, opts] = callArgs();
     expect(path).toBe('/api-keys/k2/revoke');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
   });
 });
 
@@ -422,6 +425,7 @@ describe('useUpdateMaintenance', () => {
     const [path, opts] = callArgs();
     expect(path).toBe('/admin/maintenance');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({
       mode: 'degraded',
       message: 'reduced service',
@@ -617,6 +621,7 @@ describe('useCreateExport', () => {
     const [path, opts] = callArgs();
     expect(path).toBe('/exports');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBeUndefined();
     expect(JSON.parse(opts.body as string)).toEqual({
       type: 'charging',
       format: 'json',

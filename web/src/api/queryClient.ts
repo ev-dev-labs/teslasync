@@ -65,11 +65,12 @@ export const DEFAULT_QUERY_CLIENT_CONFIG: QueryClientConfig = {
       refetchIntervalInBackground: false,
     },
     mutations: {
-      retry: 1,
-      // PWA: queue mutations triggered while offline (instead of erroring) and
-      // replay them automatically when the connection returns. Long-term
-      // durability across full page reloads requires a persister.
-      networkMode: 'offlineFirst',
+      // Mutations are never replayed after connectivity returns. Replaying an
+      // operator action outside its original context can duplicate commands or
+      // apply stale edits. Hooks may still decide whether a write is valid in
+      // historical mode, but every mutation executes (and fails) immediately.
+      retry: 0,
+      networkMode: 'always',
     },
   },
 }

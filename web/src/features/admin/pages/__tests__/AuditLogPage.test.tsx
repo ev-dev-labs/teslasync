@@ -225,7 +225,7 @@ describe('AuditLogPage — populated view', () => {
   it('exposes the CSV export affordance when there are rows to export', () => {
     renderPage();
     expect(
-      screen.getByRole('button', { name: 'Download table as CSV' }),
+      screen.getByRole('button', { name: 'Download CSV' }),
     ).toBeInTheDocument();
   });
 });

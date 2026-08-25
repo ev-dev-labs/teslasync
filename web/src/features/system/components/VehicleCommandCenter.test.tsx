@@ -18,6 +18,27 @@ import {
   COMMANDS,
 } from '../commands';
 
+const operationalModeState = vi.hoisted(() => ({
+  canWrite: true,
+}));
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => ({
+    mode: operationalModeState.canWrite ? 'live' : 'as_of',
+    asOf: operationalModeState.canWrite
+      ? null
+      : '2026-02-19T00:00:00.000Z',
+    online: true,
+    isReadOnly: !operationalModeState.canWrite,
+    canWrite: operationalModeState.canWrite,
+    label: operationalModeState.canWrite ? 'Live' : 'As of',
+    description: 'Historical state',
+    writeBlockReason: operationalModeState.canWrite
+      ? null
+      : 'Return to live mode before making operational changes.',
+  }),
+}));
+
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>(
     '@/api/client',
@@ -182,6 +203,7 @@ beforeEach(() => {
   localStorage.clear();
   sessionStorage.clear();
   requestMock.mockReset();
+  operationalModeState.canWrite = true;
   stateResponse = { state: makeState(), live: true };
   stateError = null;
   latestEntries = [];
@@ -289,6 +311,20 @@ describe('VehicleCommandCenter — complete command catalogue', () => {
 });
 
 describe('VehicleCommandCenter — command execution', () => {
+  it('disables command execution in historical mode', () => {
+    operationalModeState.canWrite = false;
+    renderCenter();
+    searchFor('flash_lights');
+
+    const command = screen.getByRole('button', { name: 'Flash Lights' });
+    expect(command).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(command);
+    expect(postCalls()).toHaveLength(0);
+    expect(
+      screen.getByText('Vehicle commands are read-only'),
+    ).toBeInTheDocument();
+  });
+
   it('preserves wake-up as a reachable command on the supported endpoint', async () => {
     renderCenter();
 

@@ -11,6 +11,8 @@ interface ToggleCommandTileProps {
   onExecute: (command: string, params?: Record<string, unknown>) => void;
   onRequestDialog: (def: CommandDef) => void;
   loading: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   lastStatus?: string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
@@ -22,7 +24,7 @@ const onStyles = {
   success: { panel: 'border-neon-green/20 bg-neon-green/5', icon: 'bg-neon-green/20 text-neon-green', dot: 'bg-neon-green', text: 'text-emerald-300' },
 } as const;
 
-export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, loading, lastStatus, isFavorite, onToggleFavorite }: ToggleCommandTileProps) {
+export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, loading, disabled = false, disabledReason, lastStatus, isFavorite, onToggleFavorite }: ToggleCommandTileProps) {
   const { t } = useTranslation();
   const [localToggle, setLocalToggle] = useState(false);
 
@@ -38,7 +40,7 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
   const label = t(def.labelKey, def.labelFallback);
 
   const handleActivate = useCallback(() => {
-    if (loading) return;
+    if (loading || disabled) return;
 
     if (isOn) {
       // A toggle that is on but declares no `commandOff` has nothing to send;
@@ -52,7 +54,7 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
       if (!def.stateField) setLocalToggle(true);
       onExecute(def.command, def.params);
     }
-  }, [loading, isOn, def, onExecute, onRequestDialog]);
+  }, [loading, disabled, isOn, def, onExecute, onRequestDialog]);
 
   // Keyboard parity for the sanctioned role="button" tile (mirrors CommandTile).
   // Ignore key events bubbling up from the nested favorite control so pressing
@@ -71,16 +73,17 @@ export function ToggleCommandTile({ def, state, onExecute, onRequestDialog, load
   return (
     <GlassPanel
       role="button"
-      tabIndex={loading ? -1 : 0}
+      tabIndex={loading || disabled ? -1 : 0}
       aria-label={label}
       aria-pressed={isOn}
       aria-busy={loading || undefined}
-      aria-disabled={loading || undefined}
+      aria-disabled={loading || disabled || undefined}
+      title={disabled ? disabledReason : undefined}
       className={cn(
         'p-3 sm:p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[116px] justify-center cursor-pointer relative group',
         'outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--theme-primary)]',
         isOn ? styles.panel : 'hover:border-[var(--border-subtle)]',
-        loading && 'opacity-50 cursor-not-allowed',
+        (loading || disabled) && 'opacity-50 cursor-not-allowed',
       )}
       onClick={handleActivate}
       onKeyDown={handleKeyDown}

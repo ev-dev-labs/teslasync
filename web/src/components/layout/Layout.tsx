@@ -42,7 +42,11 @@ import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { LinearSidebar } from './sidebar/LinearSidebar'
-import { buildCompactNavTree } from './sidebar/compactNav'
+import {
+  buildCompactNavTree,
+  prioritizeCanonicalNavSections,
+  prioritizeCompactNavTree,
+} from './sidebar/compactNav'
 import { NotionSidebar } from './sidebar/NotionSidebar'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
@@ -77,6 +81,10 @@ import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 import { HelixMark } from '@/components/branding/HelixMark';
+import { usePresentationMode } from '@/hooks/usePresentationMode';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { PresentationOverlay } from './presentation/PresentationOverlay';
+import { ReportMasthead } from './presentation/ReportMasthead';
 
 const LazyFeedbackModal = lazy(async () => {
   const module = await import('../feedback/FeedbackModal')
@@ -170,6 +178,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/lifetime-stats': ['lifetime', 'all time', 'totals'],
   '/vehicle-comparison': ['compare vehicles', 'fleet comparison', 'side by side', 'two vehicles'],
   '/timeline': ['timeline', 'events', 'history'],
+  '/activity': ['activity', 'drives', 'charging', 'alerts', 'software updates', 'annotations', 'operations timeline'],
   '/locations': ['places', 'locations', 'visited'],
   '/commands': ['commands', 'control', 'remote'],
   '/command-history': ['command log', 'remote history'],
@@ -324,6 +333,7 @@ export const navSections = [
       { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', color: 'text-amber-400' },
       { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },
+      { to: '/activity', icon: Icons.activity, label: 'Activity Timeline', color: 'text-teal-400' },
       { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
     ],
   },
@@ -817,6 +827,8 @@ function ThemeQuickSwitcher({
 }
 
 export default function Layout() {
+  const presentation = usePresentationMode()
+  const { preferences: productPreferences } = useProductPreferences()
   // Sidebar style preference — localStorage-backed, cross-tab synced.
   // Defaults to 'linear'; user can change via Settings → Appearance.
   const sidebarStyle = useSidebarStyle()
@@ -1083,14 +1095,24 @@ export default function Layout() {
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const activeSectionTitle = activeNavEntry?.section.title
   const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
-  const visibleNavSections = useMemo(() =>
-    navSections
-      .map(section => ({
-        ...section,
-        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
-      }))
-      .filter(section => section.items.length > 0),
-    [vehicleCount, isForwardAuth],
+  const visibleNavSections = useMemo(
+    () =>
+      prioritizeCanonicalNavSections(
+        navSections
+          .map(section => ({
+            ...section,
+            items: section.items.filter(item =>
+              isVisibleNavItem(item, vehicleCount, isForwardAuth),
+            ),
+          }))
+          .filter(section => section.items.length > 0),
+        productPreferences.persona,
+      ),
+    [
+      vehicleCount,
+      isForwardAuth,
+      productPreferences.persona,
+    ],
   )
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
@@ -1125,8 +1147,16 @@ export default function Layout() {
   // when the current route is outside the curated set so location context is
   // never lost. See `sidebar/compactNav.ts`.
   const compactNav = useMemo(
-    () => buildCompactNavTree(visibleNavSections, location.pathname),
-    [visibleNavSections, location.pathname],
+    () =>
+      prioritizeCompactNavTree(
+        buildCompactNavTree(visibleNavSections, location.pathname),
+        productPreferences.persona,
+      ),
+    [
+      visibleNavSections,
+      location.pathname,
+      productPreferences.persona,
+    ],
   )
 
   useEffect(() => {
@@ -1316,9 +1346,12 @@ export default function Layout() {
           it before any sidebar / header / banner control. Supersedes the
           previous `a11y.skipToMain` link.
           Audit anchor: skipToContent|skip.to.content */}
-      <SkipToContent />
+      {presentation.mode === 'standard' && <SkipToContent />}
       <BreadcrumbOverridesProvider>
-      <div className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]">
+      <div
+        data-presentation-mode={presentation.mode}
+        className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
+      >
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
           `useAnnouncer()` without rendering its own hidden region. */}
@@ -1326,7 +1359,7 @@ export default function Layout() {
 
       {/* Mobile overlay */}
       <AnimatePresence>
-        {sidebarOpen && (
+        {presentation.mode === 'standard' && sidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1352,6 +1385,7 @@ export default function Layout() {
         className={cn(
           'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[17rem] xl:translate-x-0',
           'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
+          presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
           // Reserve space for the fixed footer StatusBar
           // so the bottom "Take a tour / Report bug" row never slides under
@@ -1652,7 +1686,7 @@ export default function Layout() {
       </aside>
 
       {/* Mobile top bar */}
-      {!sidebarOpen && (
+      {presentation.mode === 'standard' && !sidebarOpen && (
         <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 py-3 xl:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
@@ -1677,26 +1711,32 @@ export default function Layout() {
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Spacer for fixed mobile header */}
         <div className="h-14 shrink-0 xl:hidden" />
-        <WorkspaceHeader
-          notifications={<NotificationBellPopover />}
-          themeControl={<ThemeQuickSwitcher />}
-        />
+        {presentation.mode === 'standard' && (
+          <WorkspaceHeader
+            notifications={<NotificationBellPopover />}
+            themeControl={<ThemeQuickSwitcher />}
+          />
+        )}
 
         {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
             WHY the SPA is breaking instead of staring at a white page.
             Sits BELOW the SkipToContent link in DOM order so keyboard
             users still hit the WCAG bypass-blocks link first. */}
-        <BrowserCompatBanner />
+        {presentation.mode === 'standard' && <BrowserCompatBanner />}
         {/* Time-machine "viewing data as of …" banner — visible only
             when ?as_of= is set or the inline picker is
             open. Stacked between BrowserCompatBanner and ServiceStatusBanner
             so the historical-mode warning sits at the top of the main
             content column without displacing the higher-priority compat
             and service status notices. */}
-        <TimeMachineBanner />
-        <ServiceStatusBanner />
-        <RuntimeHealthBanner />
+        {presentation.mode === 'standard' && (
+          <>
+            <TimeMachineBanner />
+            <ServiceStatusBanner />
+            <RuntimeHealthBanner />
+          </>
+        )}
         <main
           id="main-content"
           data-role="main-content"
@@ -1710,16 +1750,28 @@ export default function Layout() {
             // the BottomTabBar (which already adds 56px via pb-16), so we
             // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
             // single 28px reservation is enough.
-            statusBarPrefs.enabled && 'xl:pb-7 pb-20',
+            presentation.mode === 'standard' &&
+              statusBarPrefs.enabled &&
+              'xl:pb-7 pb-20',
           )}
         >
           <div
             data-role="page-viewport"
-            className="w-full px-4 py-4 pb-safe sm:px-6 sm:py-5 lg:px-8 lg:py-6 2xl:px-10"
+            className={cn(
+              'w-full pb-safe',
+              presentation.mode === 'standard' &&
+                'px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 2xl:px-10',
+              presentation.mode === 'report' &&
+                'mx-auto max-w-[1600px] px-5 py-6 sm:px-8 lg:px-12',
+              presentation.mode === 'kiosk' && 'p-0',
+            )}
           >
-            <div data-role="compact-breadcrumbs" className="xl:hidden">
-              <LayoutBreadcrumbs className="min-w-0 text-sm" />
-            </div>
+            {presentation.mode === 'report' && <ReportMasthead />}
+            {presentation.mode === 'standard' && (
+              <div data-role="compact-breadcrumbs" className="xl:hidden">
+                <LayoutBreadcrumbs className="min-w-0 text-sm" />
+              </div>
+            )}
             <RouteTransition>
               <Outlet />
             </RouteTransition>
@@ -1728,18 +1780,31 @@ export default function Layout() {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <BottomTabBar />
+      {presentation.mode === 'standard' && <BottomTabBar />}
 
       {/* Footer status bar — always-on health/version
           surface pinned to the bottom of the viewport. Hides itself when the
           user toggles it off in Settings → Appearance. */}
-      <StatusBar />
+      {presentation.mode === 'standard' && <StatusBar />}
+
+      <PresentationOverlay
+        mode={presentation.mode}
+        config={presentation.config}
+        isDimmed={presentation.isDimmed}
+        isCursorHidden={presentation.isCursorHidden}
+        dashboardCount={presentation.rotation.dashboardCount}
+        currentIndex={presentation.rotation.currentIndex}
+        showRotation={presentation.rotation.enabled}
+        onExit={presentation.exitPresentation}
+      />
 
       {/* Command Palette */}
-      <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
+      {presentation.mode === 'standard' && (
+        <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
+      )}
 
       {/* PWA Install Prompt */}
-      <InstallPrompt />
+      {presentation.mode === 'standard' && <InstallPrompt />}
 
       {/* Route-change / mutation progress bar —
           mounted ABOVE every banner so the slim 2 px strip at the very
@@ -1750,7 +1815,7 @@ export default function Layout() {
       <TopProgress />
 
       {/* Offline status banner (PWA / mobile) */}
-      <OfflineBanner />
+      {presentation.mode === 'standard' && <OfflineBanner />}
 
       {/* Impersonation banner — security context,
           highest priority. Mounted ABOVE every other banner because an
@@ -1764,7 +1829,7 @@ export default function Layout() {
           version banners because an operator-declared outage is the
           highest-priority operational message and should not be hidden
           under transient client-side notices. */}
-      <MaintenanceBanner />
+      {presentation.mode === 'standard' && <MaintenanceBanner />}
 
       {/* Rate-limit / circuit-breaker banner —
           most-transient surface, sits on top so the user sees the
@@ -1772,17 +1837,17 @@ export default function Layout() {
           order from top to bottom: rate-limit → tesla-reauth →
           new-version. Each banner is ≤ 48 px tall so the stack stays
           under 144 px even when all three fire simultaneously. */}
-      <RateLimitBanner />
+      {presentation.mode === 'standard' && <RateLimitBanner />}
 
       {/* New-version banner — proactive reload nudge
           when the backend redeploys mid-session, before the next chunk-load
           failure surfaces as an ErrorBoundary fallback. */}
-      <NewVersionBanner />
+      {presentation.mode === 'standard' && <NewVersionBanner />}
 
       {/* Tesla third-party token expiry banner —
           sticky top-of-page recovery surface for the partial-failure case
           where Tesla-backed calls 401 but non-Tesla data still loads. */}
-      <TeslaReauthBanner />
+      {presentation.mode === 'standard' && <TeslaReauthBanner />}
 
       {/* ForwardAuth session-expiry modals —
           SessionExpiringModal opens ~60s before the proxy cookie ages

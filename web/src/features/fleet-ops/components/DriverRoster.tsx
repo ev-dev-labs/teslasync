@@ -20,6 +20,8 @@ interface DriverRosterProps {
   onAdd: () => void;
   onEdit: (item: FleetDriver) => void;
   onDelete: (item: FleetDriver) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 export function DriverRoster({
@@ -30,6 +32,8 @@ export function DriverRoster({
   onAdd,
   onEdit,
   onDelete,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: DriverRosterProps) {
   const { t } = useTranslation();
   const columns = useMemo<Column<FleetDriver>[]>(() => [
@@ -67,6 +71,8 @@ export function DriverRoster({
             size="sm"
             className="min-h-11 min-w-11 px-0"
             aria-label={t('fleetOps.drivers.edit', 'Edit {{name}}', { name: item.display_name })}
+            disabled={actionsDisabled}
+            title={actionsDisabledReason}
             onClick={() => onEdit(item)}
           >
             <Pencil className="h-4 w-4" />
@@ -77,6 +83,8 @@ export function DriverRoster({
             size="sm"
             className="min-h-11 min-w-11 px-0 text-rose-300"
             aria-label={t('fleetOps.drivers.delete', 'Delete {{name}}', { name: item.display_name })}
+            disabled={actionsDisabled}
+            title={actionsDisabledReason}
             onClick={() => onDelete(item)}
           >
             <Trash2 className="h-4 w-4" />
@@ -85,13 +93,20 @@ export function DriverRoster({
       ),
       align: 'right',
     },
-  ], [onDelete, onEdit, t]);
+  ], [actionsDisabled, actionsDisabledReason, onDelete, onEdit, t]);
 
   return (
     <GlassPanel className="p-5">
       <div className="mb-4 flex items-center justify-between gap-3">
         <PanelTitle>{t('fleetOps.drivers.title', 'Fleet drivers')}</PanelTitle>
-        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd}>
+        <Button
+          type="button"
+          size="sm"
+          icon={<Plus className="h-4 w-4" />}
+          onClick={onAdd}
+          disabled={actionsDisabled}
+          title={actionsDisabledReason}
+        >
           {t('fleetOps.drivers.add', 'Add driver')}
         </Button>
       </div>
@@ -101,7 +116,9 @@ export function DriverRoster({
         <EmptyState
           icon={<UsersRound className="h-8 w-8" />}
           message={t('fleetOps.drivers.empty', 'No fleet drivers are configured.')}
-          action={{ label: t('fleetOps.drivers.add', 'Add driver'), onClick: onAdd }}
+          action={actionsDisabled
+            ? undefined
+            : { label: t('fleetOps.drivers.add', 'Add driver'), onClick: onAdd }}
         />
       ) : (
         <DataTable

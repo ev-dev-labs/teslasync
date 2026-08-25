@@ -7,9 +7,10 @@
  * `web/src/components/ui/__tests__/DataTable.test.tsx`.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import '@/i18n'
 import { DataTable, type Column } from './DataTable'
+import { ToastProvider } from '../feedback/Toast'
 
 interface Row {
   id: number
@@ -460,5 +461,62 @@ describe('DataTable — export adoption (Phase-46 / Prompt 55)', () => {
     expect(csv).toContain('1,ALPHA,ok')
     expect(csv).toContain('2,BRAVO,fail')
     expect(csv).toContain('3,CHARLIE,ok')
+  })
+
+  it('keeps the export control visibly busy until an async full-data export resolves', async () => {
+    let resolveRows: ((rows: Row[]) => void) | undefined
+    const exportAll = vi.fn(
+      () =>
+        new Promise<Row[]>((resolve) => {
+          resolveRows = resolve
+        }),
+    )
+    render(
+      <DataTable
+        columns={REORDER_COLS}
+        data={ROWS}
+        keyExtractor={r => r.id}
+        tableId="export-7"
+        exportable
+        exportAll={exportAll}
+      />,
+    )
+
+    const button = screen.getByRole('button', { name: /download csv/i })
+    fireEvent.click(button)
+    expect(button).toBeDisabled()
+    expect(button).toHaveAttribute('aria-busy', 'true')
+
+    resolveRows?.(ROWS)
+    await waitFor(() => expect(button).toBeEnabled())
+    expect(exportAll).toHaveBeenCalledTimes(1)
+  })
+
+  it('surfaces async export failures and restores the control', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
+    render(
+      <ToastProvider>
+        <DataTable
+          columns={REORDER_COLS}
+          data={ROWS}
+          keyExtractor={r => r.id}
+          tableId="export-8"
+          exportable
+          exportAll={() => Promise.reject(new Error('query failed'))}
+        />
+      </ToastProvider>,
+    )
+
+    const button = screen.getByRole('button', { name: /download csv/i })
+    fireEvent.click(button)
+
+    expect(
+      await screen.findByText('Could not prepare the table export.'),
+    ).toBeInTheDocument()
+    expect(button).toBeEnabled()
+    expect(consoleError).toHaveBeenCalled()
+    consoleError.mockRestore()
   })
 })

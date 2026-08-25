@@ -11,6 +11,10 @@ import { ContextMenuRoot } from '@/components/ui/ContextMenu'
 import { RouteAnnouncer } from '@/components/a11y'
 import { recordPageView, resolvePageLabel } from '@/lib/recentPages'
 import { getBaseTitle } from '@/lib/titleStore'
+import {
+  getProductPreferencesSnapshot,
+  type ProductLandingPage,
+} from '@/lib/productPreferences'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -134,6 +138,11 @@ const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCost
 const CarbonIntelligence = lazy(() => import('./features/analytics/pages/CarbonIntelligencePage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
+// Phase: unified vehicle operations-intelligence activity timeline
+// (drives + charging + alerts + software updates + annotations). Distinct
+// from `Timeline` above (FSM state transitions) and `MyActivity` (per-user
+// audit log) below.
+const ActivityTimeline = lazy(() => import('./features/system/pages/ActivityTimelinePage'))
 const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
 const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
 const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
@@ -431,20 +440,46 @@ export function resolveReturnRedirect(
   return url.pathname + url.search + url.hash
 }
 
+export function resolvePreferredLandingRedirect(
+  currentPathname: string,
+  preferredLandingPage: ProductLandingPage,
+): ProductLandingPage | null {
+  if (currentPathname !== '/' || preferredLandingPage === '/') return null
+  return preferredLandingPage
+}
+
 export default function App() {
   const navigate = useNavigate()
+  const startupRoutingHandled = useRef(false)
 
-  // After re-authentication, redirect back to the page the user was on.
+  // Resolve startup routing once. A post-auth return target takes precedence;
+  // otherwise the preferred landing page applies only to an initial root
+  // load, so later Dashboard navigation remains reachable.
   useEffect(() => {
+    if (startupRoutingHandled.current) return
+    startupRoutingHandled.current = true
+
     const returnUrl = sessionStorage.getItem('teslasync-return-url')
-    if (!returnUrl) return
-    sessionStorage.removeItem('teslasync-return-url')
-    const dest = resolveReturnRedirect(
-      returnUrl,
-      window.location.origin,
+    if (returnUrl) {
+      sessionStorage.removeItem('teslasync-return-url')
+      const dest = resolveReturnRedirect(
+        returnUrl,
+        window.location.origin,
+        window.location.pathname,
+      )
+      if (dest) {
+        navigate(dest)
+        return
+      }
+    }
+
+    const preferredLanding = resolvePreferredLandingRedirect(
       window.location.pathname,
+      getProductPreferencesSnapshot().landingPage,
     )
-    if (dest) navigate(dest)
+    if (preferredLanding) {
+      navigate(preferredLanding, { replace: true })
+    }
   }, [navigate])
 
   return (
@@ -536,6 +571,7 @@ export default function App() {
         <Route path="charging/vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
         <Route path="locations" element={<SafeRoute name="Locations"><Locations /></SafeRoute>} />
         <Route path="timeline" element={<SafeRoute name="Timeline"><Timeline /></SafeRoute>} />
+        <Route path="activity" element={<SafeRoute name="ActivityTimeline"><ActivityTimeline /></SafeRoute>} />
         <Route path="mileage" element={<SafeRoute name="Mileage"><Mileage /></SafeRoute>} />
         <Route path="projected-range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
         {/* Phase-50 / 0063 alias: the slice prompt registered the AI feature

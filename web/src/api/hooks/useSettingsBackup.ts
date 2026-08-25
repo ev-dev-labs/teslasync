@@ -118,6 +118,7 @@ export function useApplyImport() {
     mutationFn: ({ bundle }) =>
       request<SettingsImportResult>('/settings/import', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify({ dry_run: false, bundle }),
       }),
     onSuccess: (result) => {

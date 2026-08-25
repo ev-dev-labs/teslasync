@@ -134,7 +134,7 @@ export function ShareCardDistanceDistribution({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the shared report is read-only and reflects its fixed evidence scope */
               message={t(
                 'shareCard.distanceDistribution.empty',
                 'No eligible row has a valid measured distance.',

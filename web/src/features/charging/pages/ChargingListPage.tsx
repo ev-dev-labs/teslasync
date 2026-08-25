@@ -50,6 +50,7 @@ import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { ChargingSessionCard } from '../components/ChargingSessionCard';
 import {
   computeChargingPeriodStats, priorPeriod, detectChargingAnomalies,
@@ -97,7 +98,7 @@ export default function ChargingListPage() {
   /* ── Data ─────────────────────────────────────────────────────── */
   const { vehicleId } = useSelectedVehicle();
   const tz = useTimezone('vehicle');
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const distanceUnit = unitPrefs.distance;
   const toDistanceDisplay = useCallback(
     (meters: number) => convertDistanceFromSI(meters, unitPrefs.distance),
@@ -623,6 +624,129 @@ export default function ChargingListPage() {
         }]
       : []),
   ];
+  const narrativeEvidence: OperationalNarrative['evidence'] = (
+    anomalies.length > 0 ? anomalies.map((anomaly) => anomaly.session) : dateFilteredSessions
+  )
+    .slice(0, 5)
+    .map((session) => {
+      const anomaly = anomalyById.get(session.id);
+      return {
+        id: `charging-session-${session.id}`,
+        summary:
+          anomaly?.message
+          ?? t(
+            'operations.charging.narrative.sessionSummary',
+            '{{date}}: {{energy}} added at {{place}}.',
+            {
+              date: session.started_at,
+              energy: formatEnergy(session.total_energy_added_wh ?? 0),
+              place:
+                session.start_place
+                ?? t('operations.charging.narrative.unknownPlace', 'an unrecorded location'),
+            },
+          ),
+        observedAt: session.started_at,
+        provenance: {
+          source: t('operations.charging.sessionsSource', 'Charging sessions'),
+          recordId: String(session.id),
+          method: anomaly
+            ? t(
+                'operations.charging.narrative.anomalyMethod',
+                'Session matched a deterministic telemetry, power, duration, or cost exception rule.',
+              )
+            : t(
+                'operations.charging.narrative.sessionMethod',
+                'Direct charging-session energy, time, and location record.',
+              ),
+        },
+      };
+    });
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.charging.narrative.whatChanged',
+      '{{sessions}} sessions delivered {{energy}} in the selected window; {{exceptions}} require review.',
+      {
+        sessions: currentStats.count,
+        energy: formatEnergy(currentStats.totalEnergyWh),
+        exceptions: anomalies.length,
+      },
+    ),
+    whyItMatters: t(
+      'operations.charging.narrative.impact',
+      'Current charge posture and repeated session exceptions affect departure readiness, cost visibility, and charger confidence.',
+    ),
+    confidence: {
+      label:
+        currentStats.count > 0 && !vehicleStateQuery.isError
+          ? 'high'
+          : currentStats.count > 0 || liveState != null
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.charging.narrative.sessionBasis',
+          '{{count}} sessions were evaluated in the active period.',
+          { count: currentStats.count },
+        ),
+        vehicleStateQuery.isError
+          ? t(
+              'operations.charging.narrative.liveLimitedBasis',
+              'Live charging and battery state could not be resolved.',
+            )
+          : t(
+              'operations.charging.narrative.liveBasis',
+              'Current charging and battery state comes from the live vehicle-state record.',
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      chargingAttention[0]?.description
+      ?? t(
+        'operations.charging.narrative.monitorResponse',
+        'No immediate response is indicated; continue monitoring departure readiness and session exceptions.',
+      ),
+    limitations: [
+      t(
+        'operations.charging.efficiencyNotMeasuredDetail',
+        'Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.',
+      ),
+      t(
+        'operations.charging.narrative.reliabilityLimitation',
+        'The clear-session ratio is an exception heuristic, not a charger-uptime service level.',
+      ),
+      ...(vehicleStateQuery.isError
+        ? [
+            t(
+              'operations.charging.narrative.liveLimitation',
+              'Departure readiness is incomplete while live vehicle state is unavailable.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.charging.narrative.causeLimitation',
+        'Session patterns do not establish whether the vehicle, charger, site, or network caused an exception.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.charging.liveStateSource', 'Live vehicle state'),
+        method: t(
+          'operations.charging.narrative.liveMethod',
+          'Provides current battery level, charging state, and estimated time to target.',
+        ),
+      },
+      {
+        source: t('operations.charging.sessionsSource', 'Charging sessions'),
+        method: t(
+          'operations.charging.narrative.historyMethod',
+          'Evaluates recorded sessions for energy, cost, duration, power, and telemetry exceptions.',
+        ),
+      },
+    ],
+  };
 
   /* ── Defensive: no vehicle ──────────────────────────────────── */
   if (vehicleId == null) {
@@ -716,6 +840,7 @@ export default function ChargingListPage() {
                 ? 'warning'
                 : 'success'
           }
+          narrative={narrative}
           scope={<Badge variant="neutral" size="sm">{periodLabel}</Badge>}
           freshness={
             <div className="flex flex-wrap items-center gap-2">

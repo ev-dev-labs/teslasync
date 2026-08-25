@@ -13,6 +13,9 @@ const toastMock = vi.fn();
 const toastSuccess = vi.fn();
 const toastError = vi.fn();
 const setVehicleIdMock = vi.fn();
+const operationalModeState = vi.hoisted(() => ({
+  canWrite: true,
+}));
 
 vi.mock('@/api/hooks/useActionCenter', () => ({
   useActionCenter: (...args: unknown[]) => useActionCenterMock(...args),
@@ -41,6 +44,22 @@ vi.mock('@/components/feedback', async () => {
 });
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({ formatEnergy: (value: number) => `${value} Wh` }),
+}));
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => ({
+    mode: operationalModeState.canWrite ? 'live' : 'as_of',
+    asOf: operationalModeState.canWrite
+      ? null
+      : '2026-02-19T00:00:00.000Z',
+    online: true,
+    isReadOnly: !operationalModeState.canWrite,
+    canWrite: operationalModeState.canWrite,
+    label: operationalModeState.canWrite ? 'Live' : 'As of',
+    description: 'Historical state',
+    writeBlockReason: operationalModeState.canWrite
+      ? null
+      : 'Return to live mode before making operational changes.',
+  }),
 }));
 
 import ActionCenterPage from './ActionCenterPage';
@@ -118,6 +137,7 @@ beforeEach(() => {
   toastSuccess.mockReset();
   toastError.mockReset();
   setVehicleIdMock.mockReset();
+  operationalModeState.canWrite = true;
   useHistoryMock.mockReset();
   useActionCenterMock.mockReturnValue(queryResult());
   useHistoryMock.mockReturnValue({
@@ -201,6 +221,18 @@ describe('ActionCenterPage', () => {
         }),
       ),
     );
+  });
+
+  it('disables inbox state changes in historical mode while preserving source navigation', () => {
+    operationalModeState.canWrite = false;
+    renderPage();
+
+    expect(
+      screen.getByRole('button', { name: /acknowledge/i }),
+    ).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /open source/i }),
+    ).not.toBeDisabled();
   });
 
   it('offers a version-safe Undo that restores a reversible action', async () => {

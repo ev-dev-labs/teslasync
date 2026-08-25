@@ -34,7 +34,7 @@ export function SeasonalMonthSupport({
         </Text>
         <SeasonalSectionBody state={state}>
           {analysis.includedCount === 0 ? (
-            <EmptyState message={t('seasonalEfficiency.monthSupport.empty', 'No included rows are available for month support.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.monthSupport.empty', 'No included rows are available for month support.')} />
           ) : (
             <ChartContainer
               title={t('seasonalEfficiency.monthSupport.chartTitle', 'Included samples and observed distance')}

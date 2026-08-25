@@ -134,7 +134,7 @@ export function ShareCardDurationDistribution({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the shared report is read-only and reflects its fixed evidence scope */
               message={t(
                 'shareCard.durationDistribution.empty',
                 'No eligible row has a valid measured duration.',

@@ -40,7 +40,15 @@ const triggerLabels: Record<AutomationTriggerKind, { key: string; fallback: stri
   trigger_signal: { key: 'automations.builder.triggerSignal', fallback: 'Signal Threshold' },
 };
 
-function PresetCard({ preset }: { preset: AutomationPreset }) {
+function PresetCard({
+  preset,
+  actionsDisabled,
+  actionsDisabledReason,
+}: {
+  preset: AutomationPreset;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
+}) {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const Icon = iconMap[preset.icon] ?? Shield;
@@ -83,6 +91,8 @@ function PresetCard({ preset }: { preset: AutomationPreset }) {
         size="sm"
         variant="secondary"
         onClick={handleInstall}
+        disabled={actionsDisabled}
+        title={actionsDisabledReason}
         aria-label={t('automations.presets.installNamed', 'Install {{name}}', {
           name: preset.name,
         })}
@@ -113,9 +123,15 @@ function PresetCardSkeleton() {
 
 interface PresetGalleryProps {
   category?: string;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
-export function PresetGallery({ category }: PresetGalleryProps) {
+export function PresetGallery({
+  category,
+  actionsDisabled,
+  actionsDisabledReason,
+}: PresetGalleryProps) {
   const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
 
@@ -155,7 +171,11 @@ export function PresetGallery({ category }: PresetGalleryProps) {
       <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
         {presetList.map((preset) => (
           <StaggerItem key={preset.id}>
-            <PresetCard preset={preset} />
+            <PresetCard
+              preset={preset}
+              actionsDisabled={actionsDisabled}
+              actionsDisabledReason={actionsDisabledReason}
+            />
           </StaggerItem>
         ))}
       </StaggerContainer>

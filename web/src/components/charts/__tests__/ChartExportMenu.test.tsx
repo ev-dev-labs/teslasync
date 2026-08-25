@@ -13,7 +13,14 @@ import { ToastProvider } from '@/components/feedback/Toast';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (_key: string, fallback: string) => fallback,
+    t: (_key: string, fallback: string, opts?: Record<string, unknown>) => {
+      if (!opts) return fallback;
+      return Object.entries(opts).reduce(
+        (text, [key, value]) =>
+          text.replace(`{{${key}}}`, String(value)),
+        fallback,
+      );
+    },
   }),
 }));
 
@@ -101,6 +108,65 @@ describe('ChartExportMenu', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Save as SVG' }));
     expect(onExportSVG).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menu')).toBeNull();
+  });
+
+  it('shows progress and blocks duplicate export requests while preparing a file', async () => {
+    let resolveExport: (() => void) | undefined;
+    onExportPNG.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveExport = resolve;
+      }),
+    );
+    render(
+      <ChartExportMenu
+        onExportPNG={onExportPNG}
+        onExportSVG={onExportSVG}
+        onCopyImage={onCopyImage}
+      />,
+    );
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as PNG' }));
+
+    const trigger = screen.getByRole('button', {
+      name: 'Preparing chart export…',
+    });
+    expect(trigger).toBeDisabled();
+    expect(trigger).toHaveAttribute('aria-busy', 'true');
+    fireEvent.click(trigger);
+    expect(onExportPNG).toHaveBeenCalledTimes(1);
+
+    resolveExport?.();
+    await waitFor(() =>
+      expect(
+        screen.getByRole('button', { name: 'Export chart' }),
+      ).not.toBeDisabled(),
+    );
+  });
+
+  it('surfaces a download failure instead of leaving an unhandled rejection', async () => {
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    onExportSVG.mockRejectedValueOnce(new Error('renderer unavailable'));
+    render(
+      <ToastProvider>
+        <ChartExportMenu
+          onExportPNG={onExportPNG}
+          onExportSVG={onExportSVG}
+          onCopyImage={onCopyImage}
+        />
+      </ToastProvider>,
+    );
+
+    openMenu();
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Save as SVG' }));
+
+    expect(
+      await screen.findByText('Could not prepare the SVG export.'),
+    ).toBeInTheDocument();
+    expect(consoleError).toHaveBeenCalled();
+    consoleError.mockRestore();
   });
 
   it('clicking "Copy image to clipboard" calls onCopyImage and toasts success', async () => {

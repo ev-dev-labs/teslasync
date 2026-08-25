@@ -16,6 +16,8 @@ export interface DriveRepairFormProps {
   /** DOM id so the triggering row can reference this form via `aria-controls`. */
   formId: string;
   onClose: () => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 /**
@@ -41,7 +43,13 @@ function num(value: string): number | undefined {
  * only the fields that were filled; Close stamps `ended_at` + `duration_s`;
  * Discard deletes.
  */
-export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps) {
+export function DriveRepairForm({
+  drive,
+  formId,
+  onClose,
+  disabled = false,
+  disabledReason,
+}: DriveRepairFormProps) {
   const { t } = useTranslation();
   const { formatDistance, formatDuration, formatSpeed } = useUnits();
 
@@ -103,6 +111,7 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           value={form.ended_at}
           placeholder="2026-03-30T04:00:00Z"
           onChange={set('ended_at')}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.distanceM', 'Distance (m)')}
@@ -110,6 +119,7 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           value={form.distance_m}
           onChange={set('distance_m')}
           hint={distanceHint}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.durationS', 'Duration (s)')}
@@ -117,12 +127,14 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           value={form.duration_s}
           onChange={set('duration_s')}
           hint={durationHint}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.endSoc', 'End Battery (%)')}
           type="number"
           value={form.end_soc_pct}
           onChange={set('end_soc_pct')}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.maxSpeedMps', 'Max Speed (m/s)')}
@@ -130,6 +142,7 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           value={form.max_speed_mps}
           onChange={set('max_speed_mps')}
           hint={maxSpeedHint}
+          disabled={disabled}
         />
         <Input
           label={t('dataRepair.field.avgSpeedMps', 'Avg Speed (m/s)')}
@@ -137,6 +150,7 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           value={form.avg_speed_mps}
           onChange={set('avg_speed_mps')}
           hint={avgSpeedHint}
+          disabled={disabled}
         />
       </div>
 
@@ -145,6 +159,8 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           variant="secondary"
           onClick={onSave}
           loading={update.isPending}
+          disabled={disabled}
+          title={disabledReason}
           icon={<Save className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
         >
@@ -154,6 +170,8 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           variant="secondary"
           onClick={() => close.mutate(drive.id, { onSuccess: onClose })}
           loading={close.isPending}
+          disabled={disabled}
+          title={disabledReason}
           icon={<Clock className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
         >
@@ -163,6 +181,8 @@ export function DriveRepairForm({ drive, formId, onClose }: DriveRepairFormProps
           variant="danger"
           onClick={() => discard.mutate(drive.id, { onSuccess: onClose })}
           loading={discard.isPending}
+          disabled={disabled}
+          title={disabledReason}
           icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
           className="min-h-11"
         >

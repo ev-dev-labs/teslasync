@@ -38,6 +38,8 @@ interface AutomationCardProps {
   onReEnable: (id: number) => void;
   onDelete: (id: number) => void;
   onTestRun: (id: number) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 export function AutomationCard({
@@ -48,6 +50,8 @@ export function AutomationCard({
   onReEnable,
   onDelete,
   onTestRun,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: AutomationCardProps) {
   const { t } = useTranslation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -68,6 +72,12 @@ export function AutomationCard({
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, [menuOpen]);
+
+  useEffect(() => {
+    if (actionsDisabled) {
+      setConfirmDelete(false);
+    }
+  }, [actionsDisabled]);
 
   const handleToggle = useCallback(
     (checked: boolean) => {
@@ -112,8 +122,10 @@ export function AutomationCard({
             <Toggle
               checked={a.auto_disabled ? false : a.enabled}
               onChange={handleToggle}
+              disabled={actionsDisabled}
               size="sm"
               aria-label={t('automations.toggleLabel', 'Toggle automation')}
+              title={actionsDisabledReason}
             />
 
             {/* Kebab menu */}
@@ -136,6 +148,8 @@ export function AutomationCard({
                     <UiButton
                       type="button"
                       variant="ghost"
+                      disabled={actionsDisabled}
+                      title={actionsDisabledReason}
                       className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-[var(--text-primary)] hover:!bg-[var(--surface-2)]"
                       onClick={() => { onTestRun(a.id); setMenuOpen(false); }}
                     >
@@ -146,6 +160,8 @@ export function AutomationCard({
                       <UiButton
                         type="button"
                         variant="ghost"
+                        disabled={actionsDisabled}
+                        title={actionsDisabledReason}
                         className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-cyan-300 hover:!bg-[var(--surface-2)]"
                         onClick={() => { onReEnable(a.id); setMenuOpen(false); }}
                       >
@@ -174,6 +190,8 @@ export function AutomationCard({
                     <UiButton
                       type="button"
                       variant="ghost"
+                      disabled={actionsDisabled}
+                      title={actionsDisabledReason}
                       className="!h-auto !w-full !justify-start !rounded-none !px-3 !py-2 text-sm text-red-400 hover:!bg-red-500/10"
                       onClick={() => { setConfirmDelete(true); setMenuOpen(false); }}
                     >

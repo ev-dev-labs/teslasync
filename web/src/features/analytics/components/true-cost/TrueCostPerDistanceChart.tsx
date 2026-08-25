@@ -103,7 +103,7 @@ export function TrueCostPerDistanceChart({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('tco.perDistance.empty', 'A supported fuel comparison is required for cost-per-distance evidence.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.perDistance.empty', 'A supported fuel comparison is required for cost-per-distance evidence.')} />
           )}
         </TrueCostSectionBody>
       </ChartContainer>

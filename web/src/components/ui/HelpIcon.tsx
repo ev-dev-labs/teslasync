@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { HelpCircle } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -62,11 +63,12 @@ export function HelpIcon({
   className,
 }: HelpIconProps) {
   const { t } = useTranslation();
+  const { preferences } = useProductPreferences();
   const text = i18nKey ? t(i18nKey, { defaultValue: content ?? '' }) : (content ?? '');
 
   // Render nothing when no help content is supplied — keeps callers from
   // having to gate the icon themselves when a help string is missing.
-  if (!text) return null;
+  if (!preferences.contextualHelp || !text) return null;
 
   const label =
     ariaLabel ??

@@ -37,6 +37,7 @@ import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { cn } from '@/lib/cn';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import DeferredBatterySection from '../components/battery-health/DeferredBatterySection';
 import {
   buildInsights,
@@ -239,7 +240,7 @@ export default function BatteryHealthPage() {
         {healthLoading ? (
           <BatteryHealthSkeleton />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             icon={<Battery className="h-10 w-10" aria-hidden="true" />}
             message={t('battery.empty', 'No battery health data available yet.')}
           />
@@ -328,6 +329,130 @@ export default function BatteryHealthPage() {
         ? 'warning' as const
         : 'danger' as const,
   }));
+  const narrativeEvidence: OperationalNarrative['evidence'] = history
+    .slice(-5)
+    .reverse()
+    .map((snapshot) => ({
+      id: `battery-health-${snapshot.date}`,
+      summary: t(
+        'operations.battery.narrative.snapshotSummary',
+        '{{date}}: {{health}} state of health with {{capacity}} estimated usable capacity.',
+        {
+          date: snapshot.date,
+          health: fmtPercent(snapshot.soh_pct),
+          capacity: formatEnergy(snapshot.capacity_wh),
+        },
+      ),
+      observedAt: snapshot.date,
+      provenance: {
+        source: t('operations.battery.narrative.historySource', 'Battery health history'),
+        recordId: snapshot.date,
+        method: t(
+          'operations.battery.narrative.snapshotMethod',
+          'Direct capacity and range snapshot retained by battery analytics.',
+        ),
+      },
+    }));
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.battery.narrative.whatChanged',
+      'Modeled pack health is {{health}}, with {{rate}} annualized degradation across the available history.',
+      {
+        health: fmtPercent(health.current_soh),
+        rate: `${fmtNumber(health.degradation_rate_pct_per_year, 2)}%`,
+      },
+    ),
+    whyItMatters:
+      healthAttention[0]?.description
+      ?? t(
+        'operations.battery.narrative.healthyImpact',
+        'Stable capacity preserves usable range and reduces near-term service uncertainty.',
+      ),
+    confidence: {
+      label:
+        rangeConfidence === 'high'
+          ? 'high'
+          : rangeConfidence === 'developing'
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.battery.narrative.snapshotBasis',
+          '{{count}} retained battery-health snapshots support this assessment.',
+          { count: history.length },
+        ),
+        projectionTrustworthy
+          ? t(
+              'operations.battery.narrative.projectionBasis',
+              'The degradation projection passed the page stability bounds.',
+            )
+          : t(
+              'operations.battery.narrative.projectionLimitedBasis',
+              'The projection is withheld because the available trend did not pass stability bounds.',
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      health.current_soh < 70
+        ? t(
+            'operations.battery.narrative.serviceResponse',
+            'Arrange an independent battery-health review and preserve the supporting snapshots.',
+          )
+        : chargingStressTone === 'danger'
+          ? t(
+              'operations.battery.narrative.chargingResponse',
+              'Review repeated fast charging and deep discharge exposure before the pattern continues.',
+            )
+          : t(
+              'operations.battery.narrative.monitorResponse',
+              'Continue monitoring capacity, thermal exposure, and charging stress as new snapshots arrive.',
+            ),
+    limitations: [
+      t(
+        'operations.battery.narrative.causeLimitation',
+        'Capacity history can identify a trend but does not diagnose the physical cause of degradation.',
+      ),
+      ...(health.temp_exposure_score == null
+        ? [
+            t(
+              'operations.battery.narrative.temperatureLimitation',
+              'Temperature history is insufficient to score thermal exposure.',
+            ),
+          ]
+        : []),
+      ...(!projectionTrustworthy
+        ? [
+            t(
+              'operations.battery.narrative.projectionLimitation',
+              'Time-to-threshold projections remain directional until a stable trend is available.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.battery.narrative.evidenceLimit',
+        'Supporting evidence is limited to the five most recent retained snapshots.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.battery.analyticsSource', 'Battery analytics'),
+        method: t(
+          'operations.battery.narrative.analyticsMethod',
+          'Models state of health and degradation from retained battery snapshots.',
+        ),
+      },
+      {
+        source: t('operations.battery.narrative.chargingSource', 'Charging history'),
+        method: t(
+          'operations.battery.narrative.chargingMethod',
+          'Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions.',
+        ),
+      },
+    ],
+  };
 
   /* ── Main render ───────────────────────────────────────────────── */
   return (
@@ -354,6 +479,7 @@ export default function BatteryHealthPage() {
               : t('operations.battery.statusService', 'Service review')
         }
         statusTone={healthOperationalTone}
+        narrative={narrative}
         metricColumns={3}
         freshness={
           <DataFreshnessAuto

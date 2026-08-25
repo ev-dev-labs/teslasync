@@ -27,6 +27,7 @@
  * pipeline.
  */
 import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
+import { assertOperationalWriteAllowed } from '../lib/operationalMode'
 
 export { ApiError, getApiBase, isApiError }
 
@@ -39,6 +40,12 @@ export interface ApiRequestOptions extends RequestInit {
    * generated degraded snapshot intentionally carries HTTP 503.
    */
   acceptedStatuses?: readonly number[]
+  /**
+   * Marks a mutation as unsafe outside live mode. The client rejects it
+   * before any network attempt while viewing `?as_of=` data or while offline,
+   * preventing delayed vehicle/configuration changes from replaying later.
+   */
+  requiresLiveMode?: boolean
   /**
    * Optional. If provided, the fetch + retry loop honors cancellation:
    * the underlying fetch is wired to an abort signal that is the merge of
@@ -339,9 +346,12 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     responseType = 'json',
     skipAuthRefresh = false,
     acceptedStatuses = [],
+    requiresLiveMode = false,
     headers,
     ...fetchOptions
   } = options
+
+  assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)
 
   // Normalise once at the entry point: ensures a leading slash AND
   // defensively strips any stray `/api/v1` prefix the caller passed.

@@ -173,6 +173,24 @@ describe('Toggle — icon-only naming lands on the button, not the wrapper', () 
 });
 
 describe('Toggle — interactions', () => {
+  it('uses native disabled semantics and ignores button, label, and wrapper clicks', () => {
+    const onChange = vi.fn();
+    const { container } = render(
+      <Toggle
+        checked={false}
+        onChange={onChange}
+        label="Live control"
+        disabled
+      />,
+    );
+
+    expect(screen.getByRole('switch')).toBeDisabled();
+    fireEvent.click(screen.getByRole('switch'));
+    fireEvent.click(screen.getByText('Live control'));
+    fireEvent.click(container.firstChild as HTMLElement);
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
   it('calls onChange with the negated value when the button is clicked (off → on)', () => {
     const onChange = vi.fn();
     render(<Toggle checked={false} onChange={onChange} aria-label="Sync" />);

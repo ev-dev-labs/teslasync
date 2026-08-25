@@ -72,7 +72,17 @@ while read -r url; do
   fi
   # Normalize: remove query params for matching
   BASE=$(echo "$url" | sed 's/\?.*$//' | sed 's/{[^}]*}/{PARAM}/g' | sed 's:/$::')
-  if printf '%s\n' "$ROUTES" | grep -qxF "$BASE" 2>/dev/null; then
+  # A final expression appended directly to a path is a query-string helper
+  # whose implementation the TypeScript extractor cannot resolve
+  # interprocedurally (for example `/alerts${buildQuery(params)}`). Preserve
+  # real dynamic path segments (`/{PARAM}`) while removing only this suffix.
+  BASE=$(echo "$BASE" | sed -E 's/([^/])\{PARAM\}$/\1/')
+  # Generic hook factories legitimately receive a path segment as a function
+  # parameter (for example `/fleet-ops/${resource}`). Treat extracted
+  # `{PARAM}` segments as one-segment wildcards and require at least one
+  # concrete registered route to match the complete shape.
+  ROUTE_PATTERN=$(echo "$BASE" | sed 's/{PARAM}/[^\/]+/g')
+  if printf '%s\n' "$ROUTES" | grep -Eq "^${ROUTE_PATTERN}$" 2>/dev/null; then
     echo "  ✅ $url"
   else
     echo "  ❌ $url (NO MATCHING BACKEND ROUTE)"

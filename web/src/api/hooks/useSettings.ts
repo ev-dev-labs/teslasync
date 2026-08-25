@@ -119,7 +119,11 @@ export function useSyncVehicles() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: () => request<{ synced: number }>('/vehicles/sync', { method: 'POST' }),
+    mutationFn: () =>
+      request<{ synced: number }>('/vehicles/sync', {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: settingsKeys.vehicles });
       success('toast.settings.vehicles.sync.success', 'Vehicles synced');
@@ -260,6 +264,7 @@ export function useToggleAPISuspend() {
     mutationFn: (suspended: boolean) =>
       request<{ api_suspended: boolean }>('/settings/suspend-api', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ suspended }),
       }),
@@ -315,6 +320,7 @@ export function useUpdatePollingConfig() {
     mutationFn: (pc: PollingConfig) =>
       request<PollingConfig>('/settings/polling-config', {
         method: 'PUT',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(pc),
       }),

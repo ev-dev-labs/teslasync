@@ -33,7 +33,7 @@ describe('DEFAULT_QUERY_CLIENT_CONFIG', () => {
     ).toBe(false)
   })
 
-  it('preserves the prior staleTime / retry / networkMode contract', () => {
+  it('keeps queries cache-first while mutations fail immediately offline', () => {
     const queries = DEFAULT_QUERY_CLIENT_CONFIG.defaultOptions?.queries
     expect(queries?.staleTime).toBe(60_000)
     expect(queries?.retry).toBe(1)
@@ -41,8 +41,8 @@ describe('DEFAULT_QUERY_CLIENT_CONFIG', () => {
     expect(queries?.networkMode).toBe('offlineFirst')
 
     const mutations = DEFAULT_QUERY_CLIENT_CONFIG.defaultOptions?.mutations
-    expect(mutations?.retry).toBe(1)
-    expect(mutations?.networkMode).toBe('offlineFirst')
+    expect(mutations?.retry).toBe(0)
+    expect(mutations?.networkMode).toBe('always')
   })
 })
 
@@ -52,6 +52,8 @@ describe('createQueryClient', () => {
     const opts = qc.getDefaultOptions()
     expect(opts.queries?.refetchIntervalInBackground).toBe(false)
     expect(opts.queries?.networkMode).toBe('offlineFirst')
+    expect(opts.mutations?.retry).toBe(0)
+    expect(opts.mutations?.networkMode).toBe('always')
   })
 
   it('keeps the last successful value visible while a same-key refresh is pending', async () => {

@@ -56,6 +56,7 @@ const H = vi.hoisted(() => {
     sidebarStyle: { value: 'legacy' as string },
     sidebarProps: { linear: null as Record<string, unknown> | null, notion: null as Record<string, unknown> | null },
     forwardAuth: { value: false },
+    presentation: { mode: 'standard' as 'standard' | 'report' | 'kiosk' },
     toast: {
       toast: vi.fn(),
       success: vi.fn(),
@@ -188,6 +189,32 @@ vi.mock('@/hooks/useTour', () => ({
 vi.mock('@/hooks/useSidebarStyle', () => ({
   useSidebarStyle: () => H.sidebarStyle.value,
 }))
+vi.mock('@/hooks/usePresentationMode', () => ({
+  usePresentationMode: () => ({
+    mode: H.presentation.mode,
+    isActive: H.presentation.mode !== 'standard',
+    isReport: H.presentation.mode === 'report',
+    isKiosk: H.presentation.mode === 'kiosk',
+    config: {
+      hideCursor: true,
+      cursorTimeout: 5,
+      dimAfter: 0,
+      dimLevel: 0.5,
+      showClock: true,
+      clockPosition: 'bottom-right',
+    },
+    isDimmed: false,
+    isCursorHidden: false,
+    rotation: {
+      dashboardCount: 0,
+      currentIndex: 0,
+      enabled: false,
+    },
+    enterReport: vi.fn(),
+    enterKiosk: vi.fn(),
+    exitPresentation: vi.fn(),
+  }),
+}))
 vi.mock('../../hooks/useRealtimeEvents', () => ({
   useRealtimeEvents: (opts: unknown) => H.realtime(opts),
 }))
@@ -284,8 +311,16 @@ vi.mock('./sidebar/NotionSidebar', () => ({
   },
 }))
 vi.mock('./StatusBar', () => ({
-  StatusBar: () => null,
+  StatusBar: () => <div data-testid="status-bar" />,
   useStatusBarPrefs: () => ({ enabled: true, iconOnly: false }),
+}))
+vi.mock('./presentation/PresentationOverlay', () => ({
+  PresentationOverlay: ({ mode }: { mode: string }) => (
+    <div data-testid="presentation-overlay" data-mode={mode} />
+  ),
+}))
+vi.mock('./presentation/ReportMasthead', () => ({
+  ReportMasthead: () => <div data-testid="report-masthead" />,
 }))
 vi.mock('../data-display/ServiceStatus', () => ({ ServiceStatusBanner: () => null }))
 vi.mock('./BreadcrumbOverridesContext', () => ({
@@ -390,6 +425,7 @@ beforeEach(() => {
   H.sidebarProps.linear = null
   H.sidebarProps.notion = null
   H.forwardAuth.value = false
+  H.presentation.mode = 'standard'
   H.request.mockReset()
   H.request.mockImplementation(H.defaultReq)
   H.realtime.mockReset()
@@ -665,6 +701,45 @@ describe('Layout — global page chrome', () => {
 
     expect(viewport).toHaveClass('w-full')
     expect(viewport).not.toHaveClass('mx-auto', 'max-w-[1920px]')
+  })
+
+  it('switches the shell to a print-ready report view', () => {
+    H.presentation.mode = 'report'
+    const { container } = renderLayout('/battery')
+
+    expect(
+      container.querySelector('[data-presentation-mode="report"]'),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('report-masthead')).toBeInTheDocument()
+    expect(screen.getByTestId('presentation-overlay')).toHaveAttribute(
+      'data-mode',
+      'report',
+    )
+    expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
+    expect(screen.queryByTestId('status-bar')).toBeNull()
+    expect(container.querySelector('aside')).toHaveClass('hidden')
+    expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
+      'max-w-[1600px]',
+    )
+  })
+
+  it('switches the shell to a full-viewport kiosk view', () => {
+    H.presentation.mode = 'kiosk'
+    const { container } = renderLayout('/')
+
+    expect(
+      container.querySelector('[data-presentation-mode="kiosk"]'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('report-masthead')).toBeNull()
+    expect(screen.getByTestId('presentation-overlay')).toHaveAttribute(
+      'data-mode',
+      'kiosk',
+    )
+    expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
+    expect(screen.queryByTestId('status-bar')).toBeNull()
+    expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
+      'p-0',
+    )
   })
 })
 

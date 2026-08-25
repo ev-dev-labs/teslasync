@@ -27,6 +27,7 @@
 
 const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/': () => import('../features/dashboard/pages/DashboardPage'),
+  '/activity': () => import('../features/system/pages/ActivityTimelinePage'),
   '/admin/feedback': () => import('../features/admin/pages/FeedbackQueuePage'),
   '/admin/telemetry/coverage': () => import('../features/admin/pages/FleetTelemetryCoveragePage'),
   '/alert-rules': () => import('../features/notifications/components/LegacyAlertRulesRedirect'),

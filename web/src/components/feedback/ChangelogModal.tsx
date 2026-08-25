@@ -12,6 +12,7 @@ import type {
   ChangelogEntry,
 } from '@/generated/changelog'
 import { cn } from '@/lib/cn'
+import { useProductPreferences } from '@/hooks/useProductPreferences'
 
 /**
  * Changelog modal.
@@ -44,6 +45,7 @@ const AUTO_SHOW_DELAY_MS = 2_000
 
 export function ChangelogModal() {
   const { t } = useTranslation()
+  const { preferences } = useProductPreferences()
   const { entries, newEntries, seenVersion, hasUnseen, canAutoShow, hasCompletedOnboarding, markSeen, stampShown } =
     useChangelog()
 
@@ -58,6 +60,7 @@ export function ChangelogModal() {
   useEffect(() => {
     if (open) return
     if (!hasUnseen) return
+    if (!preferences.releaseHighlights) return
     if (!hasCompletedOnboarding) return
     if (!canAutoShow) return
     const timer = window.setTimeout(() => {
@@ -68,7 +71,14 @@ export function ChangelogModal() {
       stampShown()
     }, AUTO_SHOW_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [open, hasUnseen, hasCompletedOnboarding, canAutoShow, stampShown])
+  }, [
+    open,
+    hasUnseen,
+    hasCompletedOnboarding,
+    canAutoShow,
+    preferences.releaseHighlights,
+    stampShown,
+  ])
 
   // Imperative-open via the global custom event.
   useEffect(() => {

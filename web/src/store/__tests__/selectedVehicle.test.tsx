@@ -6,6 +6,10 @@ import {
   useSelectedVehicleStore,
   __SELECTED_VEHICLE_STORAGE_KEY__,
 } from '../selectedVehicle';
+import {
+  resetProductPreferences,
+  updateProductPreferences,
+} from '@/lib/productPreferences';
 
 const STORAGE_KEY = __SELECTED_VEHICLE_STORAGE_KEY__;
 
@@ -16,9 +20,11 @@ function wrapper({ children }: { children: ReactNode }) {
 describe('SelectedVehicleProvider', () => {
   beforeEach(() => {
     window.localStorage.clear();
+    resetProductPreferences();
   });
 
   afterEach(() => {
+    resetProductPreferences();
     window.localStorage.clear();
   });
 
@@ -31,6 +37,15 @@ describe('SelectedVehicleProvider', () => {
     window.localStorage.setItem(STORAGE_KEY, '42');
     const { result } = renderHook(() => useSelectedVehicleStore(), { wrapper });
     expect(result.current.vehicleId).toBe(42);
+  });
+
+  it('uses an explicit default vehicle ahead of the last active vehicle', () => {
+    window.localStorage.setItem(STORAGE_KEY, '42');
+    updateProductPreferences({ defaultVehicleId: 99 });
+    const { result } = renderHook(() => useSelectedVehicleStore(), {
+      wrapper,
+    });
+    expect(result.current.vehicleId).toBe(99);
   });
 
   it('ignores garbage values in localStorage', () => {

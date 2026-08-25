@@ -82,10 +82,23 @@ function makeWrapper() {
 }
 
 /** Reads back the [path, options] pair from the Nth request() call. */
-function callArgs(n = 0): [string, { method?: string; body?: unknown; signal?: unknown }] {
+function callArgs(n = 0): [
+  string,
+  {
+    method?: string;
+    body?: unknown;
+    signal?: unknown;
+    requiresLiveMode?: boolean;
+  },
+] {
   return mockedRequest.mock.calls[n] as [
     string,
-    { method?: string; body?: unknown; signal?: unknown },
+    {
+      method?: string;
+      body?: unknown;
+      signal?: unknown;
+      requiresLiveMode?: boolean;
+    },
   ];
 }
 
@@ -334,6 +347,7 @@ describe('useDLQReplay', () => {
     const [url, opts] = callArgs();
     expect(url).toBe('/system/dlq/11/replay');
     expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['system', 'dlq'] });
     expect(toast.success).toHaveBeenCalledWith(
       'admin.dlq.toast.replaySuccess',

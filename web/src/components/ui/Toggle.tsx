@@ -5,6 +5,7 @@ export interface ToggleProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onCha
   label?: string;
   checked: boolean;
   onChange: (checked: boolean) => void;
+  disabled?: boolean;
   size?: 'sm' | 'md';
   className?: string;
 }
@@ -48,6 +49,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
       label,
       checked,
       onChange,
+      disabled = false,
       size = 'md',
       className,
       // Naming/description attributes belong on the interactive
@@ -71,8 +73,13 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
     return (
       <div
         ref={ref}
-        className={cn('inline-flex items-center gap-2 cursor-pointer select-none', className)}
+        className={cn(
+          'inline-flex items-center gap-2 select-none',
+          disabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer',
+          className,
+        )}
         onClick={(e) => {
+          if (disabled) return;
           // Allow clicking the label text to toggle, but ignore clicks that
           // already targeted the button (which fires its own onClick).
           if ((e.target as HTMLElement).closest('button')) return;
@@ -90,6 +97,7 @@ export const Toggle = forwardRef<HTMLDivElement, ToggleProps>(
           aria-labelledby={label ? labelId : ariaLabelledBy}
           aria-describedby={ariaDescribedBy}
           title={title}
+          disabled={disabled}
           onClick={() => onChange(!isChecked)}
           className={cn(
             'relative inline-flex shrink-0 rounded-full transition-colors duration-normal',

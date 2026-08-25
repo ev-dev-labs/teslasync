@@ -26,6 +26,26 @@ describe('useOptimisticMutation', () => {
     vi.useRealTimers();
   });
 
+  it('forwards an explicit network mode to the TanStack mutation', async () => {
+    const { Wrapper, qc } = makeWrapper();
+    const { result } = renderHook(
+      () =>
+        useOptimisticMutation<void, number, Row[]>({
+          mutationFn: () => Promise.resolve(undefined),
+          queryKeys: [['rows']],
+          updater: (previous) => previous,
+          networkMode: 'always',
+        }),
+      { wrapper: Wrapper },
+    );
+
+    await act(async () => {
+      await result.current.mutateAsync(1);
+    });
+
+    expect(qc.getMutationCache().getAll()[0]?.options.networkMode).toBe('always');
+  });
+
   it('applies the optimistic update immediately, before the mutationFn settles', async () => {
     const { Wrapper, qc } = makeWrapper();
     qc.setQueryData<Row[]>(['rows'], [{ id: 1, done: false }, { id: 2, done: false }]);

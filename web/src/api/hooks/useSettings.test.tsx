@@ -82,7 +82,12 @@ import {
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
 /** The captured (url, options) tuple of a `request()` invocation. */
-type ReqOpts = { method?: string; body?: string; signal?: unknown };
+type ReqOpts = {
+  method?: string;
+  body?: string;
+  signal?: unknown;
+  requiresLiveMode?: boolean;
+};
 function callAt(n = 0): [string, ReqOpts] {
   return mockedRequest.mock.calls[n] as [string, ReqOpts];
 }
@@ -471,6 +476,7 @@ describe('useSyncVehicles', () => {
 
     expect(callAt(0)[0]).toBe('/vehicles/sync');
     expect(callAt(0)[1].method).toBe('POST');
+    expect(callAt(0)[1].requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.vehicles });
     expect(successToast).toHaveBeenCalledWith(
       'toast.settings.vehicles.sync.success',
@@ -769,6 +775,7 @@ describe('useToggleAPISuspend', () => {
 
     expect(callAt(0)[0]).toBe('/settings/suspend-api');
     expect(callAt(0)[1].method).toBe('POST');
+    expect(callAt(0)[1].requiresLiveMode).toBe(true);
     expect(bodyAt(0)).toEqual({ suspended: true });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.settings });
     expect(successToast).toHaveBeenCalledWith(
@@ -823,6 +830,7 @@ describe('useUpdatePollingConfig', () => {
 
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].method).toBe('PUT');
+    expect(callAt(0)[1].requiresLiveMode).toBe(true);
     expect(bodyAt(0)).toEqual(pc);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['polling-config'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['capture-stats'] });

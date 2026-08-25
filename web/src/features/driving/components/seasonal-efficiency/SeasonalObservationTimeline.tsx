@@ -35,7 +35,7 @@ export function SeasonalObservationTimeline({
         </Text>
         <SeasonalSectionBody state={state}>
           {analysis.includedCount === 0 ? (
-            <EmptyState message={t('seasonalEfficiency.states.noTimeline', 'No included observations are available for the timeline.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.states.noTimeline', 'No included observations are available for the timeline.')} />
           ) : (
             <ChartContainer
               title={t('seasonalEfficiency.timeline.chartTitle', 'Drive intensity over returned history')}

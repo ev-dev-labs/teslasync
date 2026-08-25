@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
 import { tableTokens } from '../../lib/tokens'
-import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, GripVertical, Loader2 } from 'lucide-react'
+import { ChevronUp, ChevronDown, ChevronRight, AlertTriangle, Download, GripVertical } from 'lucide-react'
 import { Pagination } from './Pagination'
+import { Button } from './Button'
 import { SectionErrorBoundary } from '../feedback/SectionErrorBoundary'
+import { useOptionalToast } from '../feedback/Toast'
 import { DataTableColumnMenu } from './DataTableColumnMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableResizer } from './DataTableResizer'
@@ -313,6 +315,7 @@ export function DataTable<T>({
   overscan,
   rowContextMenu,
 }: DataTableProps<T>) {
+  const toast = useOptionalToast()
   const { t } = useTranslation()
   // Shared context menu host. We call this once per
   // table render so the imperative `openMenu` reference stays stable
@@ -593,10 +596,15 @@ export function DataTable<T>({
       }))
       const csv = toCSV(sourceRows, csvCols)
       downloadCSV(filenameBase, csv)
+    } catch (error) {
+      console.error('[DataTable] CSV export failed', error)
+      toast?.error(
+        t('table.export.failed', 'Could not prepare the table export.'),
+      )
     } finally {
       setExporting(false)
     }
-  }, [exporting, exportAll, data, exportFilename, tableId, name, visibleColumns, exportRow])
+  }, [exporting, exportAll, data, exportFilename, tableId, name, visibleColumns, exportRow, t, toast])
 
   // Total visible column count for colSpan calcs (incl. selection / expand).
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
@@ -917,27 +925,23 @@ export function DataTable<T>({
           </div>
           <div className="flex items-center gap-2">
             {exportable && (
-              <button
+              <Button
                 type="button"
                 onClick={handleExportCsv}
                 disabled={exporting || data.length === 0}
-                aria-label={t('table.export.csv', 'Download table as CSV')}
+                loading={exporting}
+                variant="ghost"
+                size="sm"
+                aria-label={t('table.export.csv', 'Download CSV')}
                 className={cn(
-                  'inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs',
+                  '!h-8 gap-1.5 rounded-md px-2 py-1 text-xs',
                   'border border-white/[0.08] bg-white/[0.03]',
                   'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-white/[0.06]',
-                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-500',
-                  'transition-colors',
-                  'disabled:opacity-50 disabled:cursor-not-allowed',
                 )}
+                icon={<Download className="h-3.5 w-3.5" aria-hidden="true" />}
               >
-                {exporting ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                ) : (
-                  <Download className="h-3.5 w-3.5" aria-hidden="true" />
-                )}
                 <span>{t('table.export.csvButton', 'Download CSV')}</span>
-              </button>
+              </Button>
             )}
             {showColumnMenu && (
               <DataTableColumnMenu

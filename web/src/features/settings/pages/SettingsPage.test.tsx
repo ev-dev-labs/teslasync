@@ -122,6 +122,7 @@ vi.mock('../components', async () => {
     SettingsSearch: ({ className }: { className?: string }) => (
       <div data-testid="stub-search" className={className} />
     ),
+    WorkspacePreferencesSettings: () => <div data-testid="stub-workspace" />,
     GeneralSettings: () => <div data-testid="stub-general" />,
     AppearanceSettings: () => <div data-testid="stub-appearance" />,
     TypographySettings: () => <div data-testid="stub-typography" />,

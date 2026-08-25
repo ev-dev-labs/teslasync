@@ -135,7 +135,7 @@ export function TrueCostEnergyCostTrend({
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState message={t('tco.charts.energy.empty', 'No month has both supported recorded cost and energy.')} />
+              <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.charts.energy.empty', 'No month has both supported recorded cost and energy.')} />
             )}
           </TrueCostSectionBody>
         )}

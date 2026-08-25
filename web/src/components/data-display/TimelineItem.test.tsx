@@ -37,6 +37,21 @@ describe('TimelineItem — content', () => {
     // the swatch wrapper hides decorative art from assistive tech
     expect(icon.parentElement).toHaveAttribute('aria-hidden', 'true')
   })
+
+  it('renders badges below the subtitle when provided and omits the row otherwise', () => {
+    const { rerender } = render(
+      <TimelineItem
+        title="Alert"
+        time="now"
+        color="#ef4444"
+        badges={<span data-testid="tl-badge">critical</span>}
+      />,
+    )
+    expect(screen.getByTestId('tl-badge')).toBeInTheDocument()
+
+    rerender(<TimelineItem title="Alert" time="now" color="#ef4444" />)
+    expect(screen.queryByTestId('tl-badge')).not.toBeInTheDocument()
+  })
 })
 
 describe('TimelineItem — colour swatch null-safety', () => {

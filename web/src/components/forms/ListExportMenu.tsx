@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Download, FileJson, FileSpreadsheet, ListChecks } from 'lucide-react';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui';
+import { useOptionalToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 
 export interface ListExportMenuProps {
@@ -52,7 +53,9 @@ export function ListExportMenu({
   testId,
 }: ListExportMenuProps) {
   const { t } = useTranslation();
+  const toast = useOptionalToast();
   const [open, setOpen] = useState(false);
+  const [exporting, setExporting] = useState<'csv' | 'json' | null>(null);
   const [scope, setScope] = useState<ExportScope>(
     selectedCount > 0 ? 'selected' : 'visible',
   );
@@ -87,7 +90,11 @@ export function ListExportMenu({
     previousSelectedCountRef.current = selectedCount;
   }, [selectedCount]);
 
-  const triggerLabel = disabled
+  const triggerLabel = exporting
+    ? t('listExport.exporting', 'Preparing {{format}} export…', {
+        format: exporting.toUpperCase(),
+      })
+    : disabled
     ? t('listExport.disabledTooltip', 'No data to export')
     : t('listExport.menuLabel', 'Export list');
 
@@ -98,14 +105,42 @@ export function ListExportMenu({
     count: selectedCount,
   });
 
+  const runExport = useCallback((
+    format: 'csv' | 'json',
+    exportAction: (scope: ExportScope) => void | Promise<void>,
+  ) => {
+    if (exporting) return;
+    close();
+    setExporting(format);
+    const handleError = (error: unknown) => {
+      console.error(`[ListExportMenu] ${format.toUpperCase()} export failed`, error);
+      toast?.error(
+        t('listExport.failed', 'Could not prepare the {{format}} export.', {
+          format: format.toUpperCase(),
+        }),
+      );
+    };
+    try {
+      const pending = exportAction(scope);
+      if (pending) {
+        void pending
+          .catch(handleError)
+          .finally(() => setExporting(null));
+      } else {
+        setExporting(null);
+      }
+    } catch (error) {
+      handleError(error);
+      setExporting(null);
+    }
+  }, [close, exporting, scope, t, toast]);
+
   const handleCsv = useCallback(() => {
-    close();
-    void onExportCsv(scope);
-  }, [close, onExportCsv, scope]);
+    void runExport('csv', onExportCsv);
+  }, [onExportCsv, runExport]);
   const handleJson = useCallback(() => {
-    close();
-    void onExportJson(scope);
-  }, [close, onExportJson, scope]);
+    void runExport('json', onExportJson);
+  }, [onExportJson, runExport]);
 
   return (
     <div
@@ -120,7 +155,8 @@ export function ListExportMenu({
         className="!h-8 gap-1.5 !px-2 text-[var(--text-secondary)]"
         icon={<Download className="h-3.5 w-3.5" />}
         onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
+        disabled={disabled || exporting !== null}
+        loading={exporting !== null}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={triggerLabel}
@@ -131,7 +167,7 @@ export function ListExportMenu({
           {t('listExport.button', 'Export')}
         </span>
       </Button>
-      {open && !disabled && (
+      {open && !disabled && !exporting && (
         <div
           role="menu"
           aria-label={triggerLabel}
@@ -164,34 +200,38 @@ export function ListExportMenu({
               />
             </fieldset>
           )}
-          <button
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handleCsv}
             data-testid={testId ? `${testId}-csv` : undefined}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
               'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
               'focus-visible:outline-none focus-visible:bg-white/[0.06]',
             )}
+            icon={<FileSpreadsheet className="h-3.5 w-3.5" aria-hidden />}
           >
-            <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden />
             <span>{t('listExport.csv', 'Download as CSV')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handleJson}
             data-testid={testId ? `${testId}-json` : undefined}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
               'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
               'focus-visible:outline-none focus-visible:bg-white/[0.06]',
             )}
+            icon={<FileJson className="h-3.5 w-3.5" aria-hidden />}
           >
-            <FileJson className="h-3.5 w-3.5" aria-hidden />
             <span>{t('listExport.json', 'Download as JSON')}</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -207,20 +247,35 @@ interface ScopeRadioProps {
 
 function ScopeRadio({ checked, onChange, label, testId }: ScopeRadioProps) {
   return (
-    <label
+    <Button
+      type="button"
+      role="radio"
+      aria-checked={checked}
+      variant="ghost"
+      size="sm"
+      onClick={onChange}
+      data-testid={testId}
       className={cn(
-        'flex cursor-pointer items-center gap-2 rounded px-2 py-1 text-xs',
+        '!h-auto w-full justify-start gap-2 rounded px-2 py-1 text-xs',
         'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
       )}
+      icon={
+        <span
+          className={cn(
+            'grid h-3.5 w-3.5 place-items-center rounded-full border',
+            checked
+              ? 'border-[var(--theme-primary)]'
+              : 'border-[var(--control-border)]',
+          )}
+          aria-hidden="true"
+        >
+          {checked && (
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--theme-primary)]" />
+          )}
+        </span>
+      }
     >
-      <input
-        type="radio"
-        checked={checked}
-        onChange={onChange}
-        className="h-3 w-3 accent-blue-500"
-        data-testid={testId}
-      />
       <span>{label}</span>
-    </label>
+    </Button>
   );
 }

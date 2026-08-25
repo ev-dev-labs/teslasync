@@ -174,6 +174,7 @@ describe('Redis signal cache', () => {
     const [url, opts] = call()
     expect(url).toBe('/dev-tools/redis-signals?vehicle_id=7')
     expect(opts?.method).toBe('DELETE')
+    expect(opts?.requiresLiveMode).toBe(true)
   })
 
   it('purgeAllRedisSignals DELETEs the bounded keyspace sweep', async () => {
@@ -182,6 +183,7 @@ describe('Redis signal cache', () => {
     const [url, opts] = call()
     expect(url).toBe('/dev-tools/redis-signals/keys')
     expect(opts?.method).toBe('DELETE')
+    expect(opts?.requiresLiveMode).toBe(true)
   })
 })
 

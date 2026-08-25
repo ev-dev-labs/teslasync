@@ -16,6 +16,8 @@ interface ReservationPanelProps {
   onEdit: (item: FleetReservation) => void;
   onCancel: (item: FleetReservation) => void;
   onDelete: (item: FleetReservation) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 const statusColor: Record<FleetReservation['status'], string> = {
@@ -34,6 +36,8 @@ export function ReservationPanel({
   onEdit,
   onCancel,
   onDelete,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: ReservationPanelProps) {
   const { t } = useTranslation();
   const upcoming = items.filter((item) => item.status === 'requested' || item.status === 'confirmed');
@@ -84,10 +88,19 @@ export function ReservationPanel({
           onEdit={onEdit}
           onCancel={onCancel}
           onDelete={onDelete}
+          disabled={actionsDisabled}
+          disabledReason={actionsDisabledReason}
         />
       ),
     },
-  ], [onCancel, onDelete, onEdit, t]);
+  ], [
+    actionsDisabled,
+    actionsDisabledReason,
+    onCancel,
+    onDelete,
+    onEdit,
+    t,
+  ]);
 
   return (
     <GlassPanel className="p-5">
@@ -98,7 +111,9 @@ export function ReservationPanel({
         <EmptyState
           icon={<CalendarDays className="h-8 w-8" />}
           message={t('fleetOps.reservations.empty', 'No reservations in this planning window.')}
-          action={{ label: t('fleetOps.reservations.add', 'Add reservation'), onClick: onAdd }}
+          action={actionsDisabled
+            ? undefined
+            : { label: t('fleetOps.reservations.add', 'Add reservation'), onClick: onAdd }}
         />
       ) : (
         <div className="mt-4 space-y-5">
@@ -116,6 +131,8 @@ export function ReservationPanel({
                         onEdit={onEdit}
                         onCancel={onCancel}
                         onDelete={onDelete}
+                        disabled={actionsDisabled}
+                        disabledReason={actionsDisabledReason}
                       />
                     </div>
                   ))}

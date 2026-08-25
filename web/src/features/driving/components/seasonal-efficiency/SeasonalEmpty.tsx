@@ -7,5 +7,5 @@ export function SeasonalEmpty({
   message: string;
   title?: string;
 }) {
-  return <EmptyState title={title} message={message} />;
+  return <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ title={title} message={message} />;
 }

@@ -36,7 +36,6 @@ import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
-import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { AddWidgetButton } from '../components/AddWidgetButton';
 import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
@@ -295,8 +294,7 @@ export default function DashboardPage() {
   /* ——— Kiosk mode ——— */
   const {
     config: kioskConfig, updateConfig: updateKioskConfig,
-    isKiosk, enterKiosk, exitKiosk,
-    isDimmed, isCursorHidden, rotateIndex, validIds,
+    isKiosk, enterKiosk,
   } = useKioskMode(dashboards, activeId, switchDashboard);
 
   /* ——— Auth status ——— */
@@ -775,14 +773,6 @@ export default function DashboardPage() {
             compactMode={activeDashboard.settings?.compactMode}
             showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
             kioskWidgetOpacity={kioskConfig.widgetOpacity ?? 1}
-          />
-          <KioskOverlay
-            config={kioskConfig}
-            isDimmed={isDimmed}
-            isCursorHidden={isCursorHidden}
-            dashboardCount={validIds.length}
-            currentIndex={rotateIndex}
-            onExit={exitKiosk}
           />
         </div>,
         document.body,

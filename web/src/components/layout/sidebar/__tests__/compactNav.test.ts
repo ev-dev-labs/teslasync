@@ -17,6 +17,8 @@ import {
   COMPACT_NAV_BLUEPRINT,
   EXPLORE_PATH,
   MAX_COMPACT_GROUPS,
+  prioritizeCompactNavTree,
+  prioritizeCanonicalNavSections,
   type CompactNavSectionLike,
 } from '../compactNav'
 
@@ -224,6 +226,81 @@ describe('buildCompactNavTree', () => {
     const before = source.map((s) => s.items.length)
     buildCompactNavTree(source, '/dashcam')
     expect(source.map((s) => s.items.length)).toEqual(before)
+  })
+})
+
+describe('prioritizeCompactNavTree', () => {
+  it('keeps the owner product order unchanged', () => {
+    const tree = buildCompactNavTree(catalog(), '/')
+    expect(
+      prioritizeCompactNavTree(tree, 'owner').sections.map(
+        (section) => section.title,
+      ),
+    ).toEqual(tree.sections.map((section) => section.title))
+  })
+
+  it('moves analytical work ahead of operational groups for analysts', () => {
+    const tree = buildCompactNavTree(catalog(), '/analytics')
+    const prioritized = prioritizeCompactNavTree(tree, 'analyst')
+    const titles = prioritized.sections.map((section) => section.title)
+
+    expect(titles.indexOf('Reports & Analytics')).toBeLessThan(
+      titles.indexOf('Driving'),
+    )
+    expect(titles.indexOf('Reports & Analytics')).toBeLessThan(
+      titles.indexOf('Fleet'),
+    )
+    expect(prioritized.activeSectionTitle).toBe('Reports & Analytics')
+  })
+
+  it('moves system work near the top for administrators without hiding groups', () => {
+    const tree = buildCompactNavTree(catalog(), '/system-status')
+    const prioritized = prioritizeCompactNavTree(tree, 'administrator')
+
+    expect(prioritized.sections[0]?.title).toBe('Overview')
+    expect(prioritized.sections[1]?.title).toBe('System & Developer')
+    expect(
+      prioritized.sections.map((section) => section.title).sort(),
+    ).toEqual(tree.sections.map((section) => section.title).sort())
+    expect(prioritized.injectedActivePath).toBeUndefined()
+  })
+
+  it('does not mutate the source tree while prioritizing fleet operations', () => {
+    const tree = buildCompactNavTree(catalog(), '/')
+    const before = tree.sections.map((section) => section.title)
+    const prioritized = prioritizeCompactNavTree(tree, 'fleet_operator')
+
+    expect(tree.sections.map((section) => section.title)).toEqual(before)
+    expect(prioritized.sections).not.toBe(tree.sections)
+  })
+})
+
+describe('prioritizeCanonicalNavSections', () => {
+  it('prioritizes complete sidebar sections without dropping long-tail groups', () => {
+    const source = catalog()
+    const prioritized = prioritizeCanonicalNavSections(
+      source,
+      'administrator',
+    )
+
+    expect(prioritized[0]?.title).toBe('Home')
+    expect(prioritized[1]?.title).toBe('Diagnostics')
+    expect(prioritized.map((section) => section.title).sort()).toEqual(
+      source.map((section) => section.title).sort(),
+    )
+  })
+
+  it('preserves source order within one persona priority group', () => {
+    const source = [
+      { title: 'Vehicles', items: [] },
+      { title: 'Service', items: [] },
+      { title: 'Security', items: [] },
+    ]
+    expect(
+      prioritizeCanonicalNavSections(source, 'fleet_operator').map(
+        (section) => section.title,
+      ),
+    ).toEqual(['Vehicles', 'Service', 'Security'])
   })
 })
 

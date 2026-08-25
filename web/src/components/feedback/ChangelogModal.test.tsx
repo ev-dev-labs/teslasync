@@ -16,6 +16,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import type { ChangelogEntry } from '@/generated/changelog'
+import {
+  resetProductPreferences,
+  updateProductPreferences,
+} from '@/lib/productPreferences'
 
 const OPEN_EVENT = 'teslasync:changelog:open'
 
@@ -126,6 +130,8 @@ function openViaEvent() {
 
 describe('ChangelogModal', () => {
   beforeEach(() => {
+    window.localStorage.clear()
+    resetProductPreferences()
     mockChangelog = makeChangelog()
   })
 
@@ -347,6 +353,25 @@ describe('ChangelogModal', () => {
 
       expect(screen.queryByRole('dialog')).toBeNull()
       expect(mockChangelog.stampShown).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('suppresses automatic highlights when the user opts out but keeps manual release notes', () => {
+    vi.useFakeTimers()
+    try {
+      updateProductPreferences({ releaseHighlights: false })
+      render(<ChangelogModal />)
+      act(() => {
+        vi.advanceTimersByTime(2_000)
+      })
+      expect(screen.queryByRole('dialog')).toBeNull()
+      expect(mockChangelog.stampShown).not.toHaveBeenCalled()
+
+      openViaEvent()
+      expect(screen.getByRole('dialog')).toBeTruthy()
+      expect(mockChangelog.stampShown).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }

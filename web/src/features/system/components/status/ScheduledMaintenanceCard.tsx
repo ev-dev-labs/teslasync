@@ -23,14 +23,15 @@
  * "active now" case; we don't double up.
  */
 
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { CalendarClock, AlertTriangle, X } from 'lucide-react'
 import { GlassPanel, Button, ConfirmDialog, Input, Badge, PanelTitle, Text } from '@/components/ui'
-import { useToast } from '@/components/feedback'
+import { OperationalWriteNotice, useToast } from '@/components/feedback'
 import { useMaintenanceState, useUpdateMaintenance } from '@/api/hooks/useAdmin'
 import { useDateFormat } from '@/hooks/useDateFormat'
 import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { cn } from '@/lib/cn'
 
 interface ScheduledMaintenanceCardProps {
@@ -50,6 +51,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
   const { t } = useTranslation()
   const { data: state } = useMaintenanceState()
   const mutation = useUpdateMaintenance()
+  const operationalMode = useOperationalMode()
   const toast = useToast()
   const { formatDateTime } = useDateFormat()
   const [showSchedule, setShowSchedule] = useState(false)
@@ -80,6 +82,9 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
     setStartError('')
     setDurationError('')
   }
+  useEffect(() => {
+    if (!operationalMode.canWrite) discardSchedule()
+  }, [operationalMode.canWrite])
   const scheduleIsDirty = showSchedule
     && (whenLocal !== '' || duration !== '60' || message !== '')
   const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
@@ -185,6 +190,12 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
       </div>
 
       <div className="mt-3 space-y-3 text-sm">
+        <OperationalWriteNotice
+          title={t(
+            'systemStatus.maintenance.readOnly',
+            'Maintenance controls are read-only',
+          )}
+        />
         {isActive && state?.maintenance_message && (
           <Text variant="bodySm">{state.maintenance_message}</Text>
         )}
@@ -217,7 +228,15 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
         )}
 
         {!isActive && !showSchedule && (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setShowSchedule(true)} className="gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSchedule(true)}
+            disabled={!operationalMode.canWrite}
+            title={operationalMode.writeBlockReason ?? undefined}
+            className="gap-1.5"
+          >
             <CalendarClock className="h-3.5 w-3.5" aria-hidden />
             {t('systemStatus.maintenance.scheduleAction', 'Schedule a window')}
           </Button>
@@ -235,6 +254,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                   setStartError('')
                 }}
                 error={startError || undefined}
+                disabled={!operationalMode.canWrite}
                 required
               />
               <Input
@@ -248,6 +268,7 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
                   setDurationError('')
                 }}
                 error={durationError || undefined}
+                disabled={!operationalMode.canWrite}
                 required
               />
             </div>
@@ -258,12 +279,20 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               maxLength={500}
+              disabled={!operationalMode.canWrite}
             />
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" size="sm" onClick={requestClose} disabled={mutation.isPending}>
                 {t('common.cancel', 'Cancel')}
               </Button>
-              <Button type="submit" variant="primary" size="sm" loading={mutation.isPending}>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={mutation.isPending}
+                disabled={!operationalMode.canWrite}
+                title={operationalMode.writeBlockReason ?? undefined}
+              >
                 {mutation.isPending
                   ? t('systemStatus.maintenance.scheduling', 'Scheduling…')
                   : t('systemStatus.maintenance.schedule', 'Schedule')}
@@ -273,7 +302,16 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
         )}
 
         {isActive && (
-          <Button type="button" variant="ghost" size="sm" onClick={handleClear} loading={mutation.isPending} className="gap-1.5 text-amber-200">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            loading={mutation.isPending}
+            disabled={!operationalMode.canWrite}
+            title={operationalMode.writeBlockReason ?? undefined}
+            className="gap-1.5 text-amber-200"
+          >
             <X className="h-3.5 w-3.5" aria-hidden />
             {mutation.isPending
               ? t('systemStatus.maintenance.clearing', 'Clearing…')

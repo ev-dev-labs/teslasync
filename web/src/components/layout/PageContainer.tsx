@@ -17,6 +17,8 @@ import {
   DataFreshnessAuto,
   type FreshnessQuery,
 } from '@/components/data-display/DataFreshness';
+import { OperationalModeBadge } from '@/components/data-display/OperationalModeBadge';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 
 /**
  * Pick the most-degraded query in a list so the single page-tier badge
@@ -106,6 +108,7 @@ export function PageContainer({
   breadcrumbLabels,
   children, className, copyLink, query, dataSources,
 }: PageContainerProps) {
+  const operationalMode = useOperationalMode();
   // Push per-page breadcrumb label overrides up to the global Layout
   // breadcrumb. The Layout itself reads from BreadcrumbOverridesContext +
   // `useBreadcrumbs(...)` and renders the single canonical breadcrumb row
@@ -151,8 +154,12 @@ export function PageContainer({
         </div>
         <PageActions
           metadata={
-            resolvedQuery || metadataActions
-              ? <>{resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}{metadataActions}</>
+            resolvedQuery || metadataActions || operationalMode.isReadOnly
+              ? <>
+                  {operationalMode.isReadOnly && <OperationalModeBadge />}
+                  {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
+                  {metadataActions}
+                </>
               : undefined
           }
           context={contextActions}

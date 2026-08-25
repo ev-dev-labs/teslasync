@@ -99,7 +99,7 @@ export function TrueCostMonthlyDeltaChart({
               </BarChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('tco.charts.monthlyDelta.empty', 'No supported monthly fuel deltas are available.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.charts.monthlyDelta.empty', 'No supported monthly fuel deltas are available.')} />
           )}
         </TrueCostSectionBody>
       </ChartContainer>

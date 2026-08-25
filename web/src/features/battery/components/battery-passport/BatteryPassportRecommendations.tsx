@@ -81,7 +81,7 @@ export function BatteryPassportRecommendations({
               ))}
             </ol>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: certificate evidence appears only when the selected vehicle has source data */
               className="py-7"
               icon={
                 <ClipboardList

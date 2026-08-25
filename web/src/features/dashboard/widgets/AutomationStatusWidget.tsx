@@ -4,6 +4,7 @@ import { Badge, Toggle } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useAutomations, useToggleAutomation } from '@/api/hooks/useAutomations';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Automation } from '@/api/types';
@@ -75,10 +76,14 @@ function AutomationRow({
   automation,
   t,
   showToggle,
+  actionsDisabled,
+  actionsDisabledReason,
 }: {
   automation: Automation;
   t: (k: string, f: string) => string;
   showToggle: boolean;
+  actionsDisabled: boolean;
+  actionsDisabledReason?: string;
 }) {
   const toggle = useToggleAutomation();
   const status = getStatusBadge(automation, t);
@@ -117,6 +122,8 @@ function AutomationRow({
         <Toggle
           size="sm"
           checked={automation.enabled}
+          disabled={actionsDisabled}
+          title={actionsDisabledReason}
           onChange={(checked) =>
             toggle.mutate({ id: automation.id, enabled: checked })
           }
@@ -132,10 +139,14 @@ function FullView({
   automations,
   t,
   isWide,
+  actionsDisabled,
+  actionsDisabledReason,
 }: {
   automations: Automation[];
   t: (k: string, f: string) => string;
   isWide: boolean;
+  actionsDisabled: boolean;
+  actionsDisabledReason?: string;
 }) {
   const enabled = automations.filter((a) => a.enabled).length;
   const failing = automations.filter((a) => a.consecutive_failures > 0 && a.enabled).length;
@@ -177,6 +188,8 @@ function FullView({
             automation={a}
             t={t}
             showToggle={isWide}
+            actionsDisabled={actionsDisabled}
+            actionsDisabledReason={actionsDisabledReason}
           />
         ))}
       </div>
@@ -187,6 +200,7 @@ function FullView({
 export default function AutomationStatusWidget({ size }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: automations, isLoading, error, isFetching, isStale, isError, dataUpdatedAt, refetch } = useAutomations();
+  const operationalMode = useOperationalMode();
 
   const items = automations ?? [];
   const isCompact = size.cols <= 1 || size.rows <= 1;
@@ -213,7 +227,13 @@ export default function AutomationStatusWidget({ size }: WidgetProps) {
           {isCompact ? (
             <CompactView automations={items} t={t} />
           ) : (
-            <FullView automations={items} t={t} isWide={isWide} />
+            <FullView
+              automations={items}
+              t={t}
+              isWide={isWide}
+              actionsDisabled={!operationalMode.canWrite}
+              actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
+            />
           )}
         </FadeIn>
       ) : (

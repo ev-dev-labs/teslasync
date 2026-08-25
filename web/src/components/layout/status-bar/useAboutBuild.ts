@@ -1,5 +1,6 @@
 import { useUpdateCheck, useVersionInfo } from '@/api/hooks/useSettings';
 import { useChangelog } from '@/hooks/useChangelog';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 
 const BUILD_VERSION: string = import.meta.env.VITE_APP_VERSION || 'dev';
 const BUILD_SHA: string = import.meta.env.VITE_GIT_SHA || 'dev';
@@ -16,11 +17,14 @@ function formatUptime(seconds: number | undefined | null): string | null {
 
 export function useBuildNews() {
   const changelog = useChangelog();
+  const { preferences } = useProductPreferences();
   const { data: updateCheck } = useUpdateCheck();
   return {
     changelog,
     updateCheck,
-    hasBuildNews: !!updateCheck?.update_available || changelog.hasUnseen,
+    hasBuildNews:
+      !!updateCheck?.update_available ||
+      (preferences.releaseHighlights && changelog.hasUnseen),
   };
 }
 

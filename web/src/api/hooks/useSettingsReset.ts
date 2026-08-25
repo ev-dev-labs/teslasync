@@ -97,6 +97,7 @@ export function useResetSection(section: string) {
       normalizeResetResult(
         await request<SettingsResetResult>('/settings/reset', {
           method: 'POST',
+          requiresLiveMode: true,
           body: JSON.stringify({ section }),
         }),
       ),
@@ -128,6 +129,7 @@ export function useResetAllSettings() {
       normalizeResetResult(
         await request<SettingsResetResult>('/settings/reset', {
           method: 'POST',
+          requiresLiveMode: true,
           body: JSON.stringify({}),
         }),
       ),

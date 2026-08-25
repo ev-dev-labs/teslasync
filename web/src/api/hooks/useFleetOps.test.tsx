@@ -42,7 +42,7 @@ describe('fleet operations query hooks', () => {
       { wrapper: Wrapper },
     );
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    const [url, options] = requestMock.mock.calls[0] as [string, RequestInit];
+    const [url, options] = requestMock.mock.calls[0] as [string, RequestInit & { requiresLiveMode?: boolean }];
     expect(url).toBe('/fleet-ops/reservations?vehicle_id=7&cost_center_id=3&limit=25');
     expect(options.signal).toBeInstanceOf(AbortSignal);
   });
@@ -108,6 +108,7 @@ describe('fleet operations mutations', () => {
     const [url, options] = requestMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe('/fleet-ops/reservations');
     expect(options.method).toBe('POST');
+    expect(options.requiresLiveMode).toBe(true);
     expect(JSON.parse(String(options.body))).toMatchObject({ vehicle_id: 2, cost_center_id: 4 });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: fleetOpsKeys.all });
   });
@@ -134,9 +135,10 @@ describe('fleet operations mutations', () => {
       });
 
     });
-    const [url, options] = requestMock.mock.calls[0] as [string, RequestInit];
+    const [url, options] = requestMock.mock.calls[0] as [string, RequestInit & { requiresLiveMode?: boolean }];
     expect(url).toBe('/fleet-ops/charging-policies/8');
     expect(options.method).toBe('PUT');
+    expect(options.requiresLiveMode).toBe(true);
     expect(JSON.parse(String(options.body))).toMatchObject({ version: 3, max_power_w: 11000 });
   });
 

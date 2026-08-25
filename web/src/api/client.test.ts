@@ -78,6 +78,7 @@ beforeEach(() => {
   __resetSudoStateForTests()
   resilientFetchMock.mockReset()
   fetchMock = vi.spyOn(globalThis, 'fetch')
+  window.history.replaceState(null, '', '/')
 })
 
 afterEach(() => {
@@ -128,6 +129,37 @@ describe('SudoCanceledError', () => {
 })
 
 describe('request() — success paths', () => {
+  it('blocks live-only mutations before the network in historical mode', async () => {
+    window.history.replaceState(
+      null,
+      '',
+      '/commands?as_of=2026-01-02T03%3A04%3A05Z',
+    )
+
+    await expect(
+      request('/vehicles/1/command', {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
+    ).rejects.toMatchObject({
+      name: 'OperationalModeWriteError',
+      mode: 'as_of',
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(resilientFetchMock).not.toHaveBeenCalled()
+  })
+
+  it('does not forward the live-mode policy marker to fetch', async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ ok: true }))
+
+    await request('/vehicles/1/command', {
+      method: 'POST',
+      requiresLiveMode: true,
+    })
+
+    expect(fetchMock.mock.calls[0][1]).not.toHaveProperty('requiresLiveMode')
+  })
+
   it('transforms snake_case JSON to expose both snake and camel keys', async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse({ display_name: 'Model 3', battery_level: 80 }))
 

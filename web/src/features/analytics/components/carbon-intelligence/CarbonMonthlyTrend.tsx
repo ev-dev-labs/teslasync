@@ -174,7 +174,7 @@ export function CarbonMonthlyTrend({
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
                 message={t(
                   'carbon.monthly.empty',
                   'The selected-period summary returned no monthly rollup rows.',
