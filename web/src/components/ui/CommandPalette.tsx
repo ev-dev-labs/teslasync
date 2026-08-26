@@ -956,16 +956,20 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
             className="fixed inset-0 z-[200] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)]"
             onClick={close}
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -20 }}
-            transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
-            data-role="command-palette"
-            data-command-palette-panel
-            className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)] xl:left-[calc(50%+var(--shell-sidebar-half-width))]"
+          <div
+            data-command-palette-positioner
+            className="pointer-events-none fixed inset-x-0 top-[10%] z-[201] flex justify-center px-4 sm:top-[15%] xl:ps-[calc(var(--shell-sidebar-width)+1rem)]"
           >
-            <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
+              data-role="command-palette"
+              data-command-palette-panel
+              className="pointer-events-auto w-full max-w-lg"
+            >
+              <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
               {/* Search input / contextual selection header */}
               <div className="flex items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
                 {mode !== 'search' ? (
@@ -1188,8 +1192,9 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                   </div>
                 )}
               </div>
-            </div>
-          </motion.div>
+              </div>
+            </motion.div>
+          </div>
         </>
       )}
     </AnimatePresence>

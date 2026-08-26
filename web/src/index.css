@@ -92,7 +92,6 @@
   /* Fixed desktop shell geometry shared by the sidebar and overlays that
      center within the post-sidebar workspace. */
   --shell-sidebar-width: 17rem;
-  --shell-sidebar-half-width: 8.5rem;
   /*
    * Motion duration tokens (Phase-45 / Prompt 21).
    *

@@ -182,11 +182,17 @@ describe('CommandPalette keyboard shortcut', () => {
       expect(screen.getByPlaceholderText(/Search pages/i)).toBeInTheDocument()
       expect(onOpen).toHaveBeenCalledTimes(1)
     })
-    expect(
-      document.querySelector('[data-command-palette-panel]'),
-    ).toHaveClass(
-      'xl:left-[calc(50%+var(--shell-sidebar-half-width))]',
+    const positioner = document.querySelector(
+      '[data-command-palette-positioner]',
     )
+    const panel = document.querySelector('[data-command-palette-panel]')
+    expect(positioner).toHaveClass(
+      'flex',
+      'justify-center',
+      'xl:ps-[calc(var(--shell-sidebar-width)+1rem)]',
+    )
+    expect(panel).toHaveClass('w-full', 'max-w-lg', 'pointer-events-auto')
+    expect(panel?.getAttribute('class')).not.toContain('translate-x')
   })
 
   it('opens on Ctrl+K when focus is on the body', async () => {
