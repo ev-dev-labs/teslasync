@@ -10,12 +10,13 @@ feature:
     in-scope stale-session inventory, then call
     validate_data_repair_plan on the proposed draft to confirm it
     satisfies the RepairPlan contract. Do NOT propose closing,
-    deleting, or updating any row that is NOT included in the
+    quarantining, or updating any row that is NOT included in the
     in-scope stale-session inventory the user message lists; the
     per-request scope binding will refuse it, but you should refuse
     it first with a polite explanation. The actions you may
-    propose are exactly: "close" (set ended_at=now, fill in
-    computed duration), "discard" (delete the stale row entirely),
+    propose are exactly: "close" (the operator must provide and
+    review an exact RFC3339 boundary), "quarantine" (preserve a
+    restorable snapshot and remove the stale row from active data),
     or "update" (apply a partial patch — supply update_fields with
     only the keys the user explicitly mentioned or the inventory
     makes obviously wrong). Never invent values for
@@ -27,14 +28,14 @@ feature:
     including rows for other vehicles. Be concise: one rationale
     sentence per proposed plan plus the typed draft is enough — the
     user reviews the structured proposal in the AI panel and clicks
-    the canonical Save / Close / Discard button in the baseline
+    the     canonical Save / Close / Quarantine button in the baseline
     edit form to apply it. Never claim the plan was applied, saved,
-    closed, or discarded; it is propose-only.
+    closed, or quarantined; it is propose-only.
   # Tools MUST mirror
   # internal/ai/strategies/data-repair-suggestions/strategy.go's
   # allowedTools whitelist. Both tools are PROPOSE-ONLY: they
   # construct or validate a RepairPlan DTO but do NOT touch the
-  # database. The actual save / close / delete call goes through
+  # database. The actual save / close / quarantine call goes through
   # the existing typed PUT / POST / DELETE
   # /api/v1/data-repair/{kind}/{id} handlers AFTER the user
   # explicitly clicks the canonical button in the DataRepairPage UI;
@@ -67,7 +68,7 @@ goldens:
       answer_must_not_contain:
         - "saved"
         - "closed the"
-        - "discarded"
+        - "quarantined the"
         - "applied"
         - "deleted"
         # Honest-no-invention pin: the LLM must NOT add a
@@ -80,7 +81,7 @@ goldens:
         (2) called validate_data_repair_plan on the proposed
         draft, (3) the narration mentions the close action and
         the in-scope target ID, (4) does NOT claim the session
-        was closed / saved / discarded, (5) does NOT invent
+        was closed / saved / quarantined, (5) does NOT invent
         end_battery_pct / total_energy_added_wh values the user
         did not supply.
         Pass = score >= 4.
@@ -132,7 +133,7 @@ goldens:
   # Pin: must NOT call any tool when the scope is wrong.
   - name: refusal_out_of_scope_target
     input:
-      user_message: "Discard charging session #777 — it's been open for ages."
+      user_message: "Quarantine charging session #777 — it's been open for ages."
       context_overrides:
         scoped_charging_ids: [42]
         scoped_drive_ids: []
@@ -142,7 +143,7 @@ goldens:
         - validate_data_repair_plan
       answer_must_contain: ["cannot"]
       answer_must_not_contain:
-        - "discarded"
+        - "quarantined"
         - "deleted"
         - "saved"
         - "draft_data_repair_plan"

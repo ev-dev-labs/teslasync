@@ -107,6 +107,14 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Matched files:
   - `internal/ai/provider/trace.go`
 
+## Scheduled data-repair tick → advisory-locked scan → durable case materialization — `data_repair_scan`
+
+- Status: **OK**
+- Instrumented files matched: 2 (threshold ≥ 2)
+- Matched files:
+  - `internal/api/datarepair/scanner.go`
+  - `internal/app/new.go`
+
 ## Tesla per-field MQTT signal → VIN resolve → codec decode → router → writers → DB save → side-effects — `tesla_signal_ingest_to_db`
 
 - Status: **OK**

@@ -95,20 +95,20 @@ slos:
     tags: [http, activity, operations]
 
   - name: data_repair_read_availability
-    description: "Data-repair inventory and evidence diagnosis reads must return without server errors."
+    description: "Data-repair inventory, evidence diagnosis, durable case reads, and quarantine-ledger reads must return without server errors."
     sli:
-      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\",status_class!=\"5xx\"}[5m]))"
-      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\"}[5m]))"
     objective: 99.5
     window: 30d
     owner: platform
     tags: [http, data-repair, operations]
 
   - name: data_repair_write_availability
-    description: "Confirmation-gated data-repair mutations must avoid server errors; expected validation conflicts remain valid outcomes."
+    description: "Confirmation-gated session repair, case metadata, quarantine, and restore mutations must avoid server errors; expected validation conflicts remain valid outcomes."
     sli:
-      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[5m]))"
-      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[5m]))"
     objective: 99.5
     window: 30d
     owner: platform

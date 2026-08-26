@@ -121,7 +121,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             settings even on pages that never call useSettings() and after
             cross-tab settings broadcasts. */}
         <FormatterPrefsBridge />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true }}>
           {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
               <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
               navigation when any registered useNavigationGuard reports a

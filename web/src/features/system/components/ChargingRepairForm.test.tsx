@@ -12,7 +12,7 @@
  *      appears only for the energy/peak/avg fields and only when non-empty.
  *   3. Save patch builder — only filled fields are patched (`num` drops empty
  *      strings), `ended_at` is trimmed, and edited values win over the seed.
- *   4. Action wiring — Save/Close/Discard each call the right mutation with the
+ *   4. Action wiring — Save/Close/Quarantine each call the right mutation with the
  *      session id and forward `onSuccess -> onClose`; Cancel closes directly
  *      without touching any mutation.
  *   5. Loading — a pending mutation disables its button and sets `aria-busy`.
@@ -27,7 +27,7 @@
  * (`@testing-library/user-event` is not a dependency).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, within } from '@testing-library/react';
 
 import type { StaleChargingSession } from '@/api/hooks/useDataRepair';
 import { ChargingRepairForm, type ChargingRepairFormProps } from './ChargingRepairForm';
@@ -38,10 +38,12 @@ import { ChargingRepairForm, type ChargingRepairFormProps } from './ChargingRepa
 const H = vi.hoisted(() => ({
   updateFn: vi.fn(),
   closeFn: vi.fn(),
-  discardFn: vi.fn(),
+  quarantineFn: vi.fn(),
+  previewFn: vi.fn(),
+  previewReset: vi.fn(),
   updatePending: { value: false },
   closePending: { value: false },
-  discardPending: { value: false },
+  quarantinePending: { value: false },
 }));
 
 // i18n → return the developer fallback string, interpolating {{vars}} so the
@@ -78,7 +80,17 @@ vi.mock('@/api/hooks/useDataRepair', async () => {
     ...actual,
     useUpdateCharging: () => ({ mutate: H.updateFn, isPending: H.updatePending.value }),
     useCloseCharging: () => ({ mutate: H.closeFn, isPending: H.closePending.value }),
-    useDiscardCharging: () => ({ mutate: H.discardFn, isPending: H.discardPending.value }),
+    useQuarantineCharging: () => ({
+      mutate: H.quarantineFn,
+      isPending: H.quarantinePending.value,
+    }),
+    useRepairImpactPreview: () => ({
+      mutate: H.previewFn,
+      reset: H.previewReset,
+      isPending: false,
+      data: undefined,
+      error: null,
+    }),
   };
 });
 
@@ -122,10 +134,15 @@ function renderForm(props: Partial<ChargingRepairFormProps> = {}) {
 beforeEach(() => {
   H.updateFn.mockReset();
   H.closeFn.mockReset();
-  H.discardFn.mockReset();
+  H.quarantineFn.mockReset();
+  H.previewFn.mockReset();
+  H.previewReset.mockReset();
+  H.previewFn.mockImplementation(
+    (_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
+  );
   H.updatePending.value = false;
   H.closePending.value = false;
-  H.discardPending.value = false;
+  H.quarantinePending.value = false;
 });
 
 function confirmAction(actionName: string): void {
@@ -155,7 +172,7 @@ describe('ChargingRepairForm', () => {
     // All four actions are reachable by accessible name.
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Close Session' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Discard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Move to quarantine' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -250,14 +267,53 @@ describe('ChargingRepairForm', () => {
     expect(H.updateFn).not.toHaveBeenCalled();
   });
 
-  it('discards the stale session via the Discard action and forwards onClose', () => {
-    H.discardFn.mockImplementation(
-      (_id: number, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
+  it('applies the exact boundary that was previewed when the field changes in flight', () => {
+    let finishPreview: (() => void) | undefined;
+    H.previewFn.mockImplementation(
+      (_input: unknown, opts?: { onSuccess?: () => void }) => {
+        finishPreview = opts?.onSuccess;
+      },
+    );
+    renderForm();
+
+    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+      target: { value: '2026-03-30T04:00:00Z' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Close Session' }));
+    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+      target: { value: '2026-03-30T05:00:00Z' },
+    });
+    act(() => finishPreview?.());
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+
+    expect(H.closeFn).toHaveBeenCalledWith(
+      {
+        id: 77,
+        ended_at: '2026-03-30T04:00:00Z',
+        rule: 'manual',
+        expected_stored_ended_at: '',
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
+  });
+
+  it('quarantines the stale session with an operator reason and forwards onClose', () => {
+    H.quarantineFn.mockImplementation(
+      (_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
     );
     const { onClose } = renderForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Discard' }));
-    expect(H.discardFn).toHaveBeenCalledWith(77, expect.objectContaining({ onSuccess: expect.any(Function) }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to quarantine' }));
+    const dialog = screen.getByRole('dialog');
+    const confirm = within(dialog).getByRole('button', { name: 'Move to quarantine' });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(within(dialog).getByLabelText('Operator note'), {
+      target: { value: 'Duplicate session imported during recovery' },
+    });
+    fireEvent.click(confirm);
+    expect(H.quarantineFn).toHaveBeenCalledWith(
+      { id: 77, reason: 'Duplicate session imported during recovery' },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -267,20 +323,20 @@ describe('ChargingRepairForm', () => {
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(H.updateFn).not.toHaveBeenCalled();
     expect(H.closeFn).not.toHaveBeenCalled();
-    expect(H.discardFn).not.toHaveBeenCalled();
+    expect(H.quarantineFn).not.toHaveBeenCalled();
   });
 
   it('disables an action button and marks it busy while its mutation is pending', () => {
     H.updatePending.value = true;
     H.closePending.value = true;
-    H.discardPending.value = true;
+    H.quarantinePending.value = true;
     renderForm();
 
     const save = screen.getByRole('button', { name: 'Save' });
     expect(save).toBeDisabled();
     expect(save).toHaveAttribute('aria-busy', 'true');
     expect(screen.getByRole('button', { name: 'Close Session' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Discard' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Move to quarantine' })).toBeDisabled();
     // Cancel has no async work and stays operable as an escape hatch.
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeEnabled();
   });

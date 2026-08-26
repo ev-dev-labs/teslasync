@@ -86,9 +86,9 @@ func TestDraftDataRepairPlan_CloseCharging_OK(t *testing.T) {
 	}
 }
 
-// TestDraftDataRepairPlan_DiscardDrive_OK proves the discard path
+// TestDraftDataRepairPlan_QuarantineDrive_OK proves the quarantine path
 // for drives works end-to-end through the scope check.
-func TestDraftDataRepairPlan_DiscardDrive_OK(t *testing.T) {
+func TestDraftDataRepairPlan_QuarantineDrive_OK(t *testing.T) {
 	t.Parallel()
 	stub := &stubDataRepairValidator{}
 	tool := &draftDataRepairPlan{validator: stub}
@@ -96,7 +96,7 @@ func TestDraftDataRepairPlan_DiscardDrive_OK(t *testing.T) {
 	in, err := tool.Validate(json.RawMessage(`{
 		"target_kind": "drive",
 		"target_id": 99,
-		"action": "discard"
+		"action": "quarantine"
 	}`))
 	if err != nil {
 		t.Fatalf("Validate err = %v", err)
@@ -110,8 +110,8 @@ func TestDraftDataRepairPlan_DiscardDrive_OK(t *testing.T) {
 	if env.Status != "ok" {
 		t.Errorf("Status = %q, want %q", env.Status, "ok")
 	}
-	if env.Draft.Action != "discard" {
-		t.Errorf("Draft.Action = %q, want %q", env.Draft.Action, "discard")
+	if env.Draft.Action != "quarantine" {
+		t.Errorf("Draft.Action = %q, want %q", env.Draft.Action, "quarantine")
 	}
 }
 
@@ -187,7 +187,7 @@ func TestDraftDataRepairPlan_OutOfScopeCharging_Refuses(t *testing.T) {
 	in, _ := tool.Validate(json.RawMessage(`{
 		"target_kind": "charging",
 		"target_id": 777,
-		"action": "discard"
+		"action": "quarantine"
 	}`))
 
 	// Scope contains charging 42 only.
@@ -270,16 +270,16 @@ func TestDraftDataRepairPlan_CloseWithUpdateFields_Refuses(t *testing.T) {
 	}
 }
 
-// TestDraftDataRepairPlan_DiscardWithUpdateFields_Refuses pins the
-// same guard for the discard action.
-func TestDraftDataRepairPlan_DiscardWithUpdateFields_Refuses(t *testing.T) {
+// TestDraftDataRepairPlan_QuarantineWithUpdateFields_Refuses pins the
+// same guard for the quarantine action.
+func TestDraftDataRepairPlan_QuarantineWithUpdateFields_Refuses(t *testing.T) {
 	t.Parallel()
 	tool := &draftDataRepairPlan{validator: &stubDataRepairValidator{}}
 
 	in, _ := tool.Validate(json.RawMessage(`{
 		"target_kind": "drive",
 		"target_id": 99,
-		"action": "discard",
+		"action": "quarantine",
 		"update_fields": {"distance_m": 100}
 	}`))
 
@@ -493,7 +493,7 @@ func TestValidateDataRepairPlan_OutOfScope_Refuses(t *testing.T) {
 	in, _ := tool.Validate(json.RawMessage(`{
 		"target_kind": "charging",
 		"target_id": 777,
-		"action": "discard"
+		"action": "quarantine"
 	}`))
 
 	_, err := tool.Execute(scopedCtx([]int64{42}, nil), in)

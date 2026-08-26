@@ -2,18 +2,21 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
 	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
@@ -144,6 +147,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initGasPriceWorker(ctx)
 	a.initUnitDriftValidator(ctx)
 	a.initAIBackgroundJobs(ctx)
+	a.initDataRepairScanner(ctx)
 	a.initHealthWatchdog(ctx)
 	a.loadOpenAPISpec()
 
@@ -1293,6 +1297,73 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *se
 		span.SetStatus(codes.Error, "embeddings TTL failed")
 		log.Warn().Err(err).Str("reason", reason).Msg("ai background jobs: embeddings TTL run failed")
 	}
+}
+
+const dataRepairScanInterval = 15 * time.Minute
+
+type dataRepairScanner interface {
+	Scan(context.Context, apidatarepair.ScanOptions) (apidatarepair.ScanResult, error)
+}
+
+func (a *App) initDataRepairScanner(ctx context.Context) {
+	if a.DB == nil {
+		return
+	}
+	a.DataRepairScanner = apidatarepair.NewScanner(a.DB)
+	resilience.SafeGoLoop(ctx, "data-repair-scanner", func(loopCtx context.Context) {
+		runDataRepairScanTick(loopCtx, a.DataRepairScanner, "initial")
+
+		ticker := time.NewTicker(dataRepairScanInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-loopCtx.Done():
+				return
+			case <-ticker.C:
+				runDataRepairScanTick(loopCtx, a.DataRepairScanner, "periodic")
+			}
+		}
+	})
+	log.Info().Dur("interval", dataRepairScanInterval).Msg("data-repair integrity scanner scheduled")
+}
+
+func runDataRepairScanTick(ctx context.Context, scanner dataRepairScanner, reason string) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "data_repair.scan_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(attribute.String("data_repair.reason", reason)),
+	)
+	defer span.End()
+
+	result, err := scanner.Scan(tickCtx, apidatarepair.ScanOptions{
+		Trigger:     systemmodel.RepairScanTriggerScheduled,
+		InitiatedBy: "system",
+	})
+	span.SetAttributes(
+		attribute.Int("data_repair.discovered", result.Discovered),
+		attribute.Int("data_repair.refreshed", result.Refreshed),
+		attribute.Bool("data_repair.truncated", result.Truncated),
+		attribute.String("data_repair.status", string(result.Status)),
+	)
+	if errors.Is(err, apidatarepair.ErrScanAlreadyRunning) {
+		log.Debug().Str("reason", reason).Msg("data-repair scan skipped because another scan is running")
+		return
+	}
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "data-repair scan failed")
+		log.Warn().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Str("reason", reason).
+			Msg("data-repair integrity scan failed")
+		return
+	}
+	log.Info().
+		Int("discovered", result.Discovered).
+		Int("refreshed", result.Refreshed).
+		Bool("truncated", result.Truncated).
+		Str("reason", reason).
+		Msg("data-repair integrity scan completed")
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {

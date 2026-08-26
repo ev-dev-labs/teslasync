@@ -163,6 +163,16 @@ function mockApi(report: RepairSuggestionsResponse, stale: StaleSessionsResponse
   mockRequest.mockImplementation((url: string) => {
     if (typeof url === 'string' && url.startsWith(SUGGESTIONS_URL)) return Promise.resolve(report);
     if (url === STALE_URL) return Promise.resolve(stale);
+    if (url === '/vehicles') return Promise.resolve([]);
+    if (typeof url === 'string' && url.startsWith('/data-repair/cases?')) {
+      return Promise.resolve({ cases: [], has_more: false });
+    }
+    if (url === '/data-repair/cases/stats') {
+      return Promise.resolve({
+        total: 0, open: 0, in_review: 0, applied: 0, dismissed: 0,
+        quarantined: 0, restored: 0, resolved: 0, drive: 0, charging: 0,
+      });
+    }
     return Promise.resolve({});
   });
 }
@@ -185,6 +195,10 @@ function renderPage() {
   );
 }
 
+async function openDiagnostics(): Promise<void> {
+  fireEvent.click(await screen.findByRole('tab', { name: 'Diagnostics' }));
+}
+
 beforeEach(() => {
   mockRequest.mockReset();
   // jsdom defaults navigator.onLine to true, but pin it so the QueryError
@@ -193,16 +207,25 @@ beforeEach(() => {
 });
 
 describe('DataRepairPage', () => {
-  it('renders the clean-state KPI band, the honest empty states, and the risk callout', async () => {
+  it('renders the case workspace immediately and loads deep diagnostics only on intent', async () => {
     mockApi(buildReport(), EMPTY_STALE);
     renderPage();
 
     expect(await screen.findByRole('heading', { name: 'Data Repair', level: 1 })).toBeInTheDocument();
     expect(
-      screen.getByText('Find and repair broken drive and charging session boundaries'),
+      screen.getByText(
+        'Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections.',
+      ),
     ).toBeInTheDocument();
+    expect(screen.getByText('Integrity command center')).toBeInTheDocument();
+    expect(
+      mockRequest.mock.calls.some(([url]) => String(url).startsWith(SUGGESTIONS_URL)),
+    ).toBe(false);
+    expect(mockRequest.mock.calls.some(([url]) => url === STALE_URL)).toBe(false);
 
-    const kpi = screen.getByRole('region', { name: 'Repair summary' });
+    await openDiagnostics();
+
+    const kpi = await screen.findByRole('region', { name: 'Repair summary' });
     expect(within(kpi).getByText('Suggested Repairs')).toBeInTheDocument();
     expect(within(kpi).getByText('Drive Boundaries')).toBeInTheDocument();
     expect(within(kpi).getByText('Charging Boundaries')).toBeInTheDocument();
@@ -242,20 +265,21 @@ describe('DataRepairPage', () => {
       EMPTY_STALE,
     );
     renderPage();
+    await openDiagnostics();
 
     expect(
-      await screen.findByText('2 session boundary(s) contradicted by later evidence'),
+      await screen.findByTestId('repair-suggestion-drive-42'),
     ).toBeInTheDocument();
 
-    expect(screen.getByTestId('repair-suggestion-drive-42')).toBeInTheDocument();
     expect(screen.getByTestId('repair-suggestion-charging-9')).toBeInTheDocument();
     expect(screen.getByText('Drive left open, then charging started')).toBeInTheDocument();
     expect(screen.getByText('Charging left open after it stopped')).toBeInTheDocument();
   });
 
-  it('shows loading skeletons for the suggestion sections while the diagnosis is in flight', () => {
+  it('shows loading skeletons for the suggestion sections while the diagnosis is in flight', async () => {
     mockRequest.mockReturnValue(new Promise<never>(() => {}));
     const { container } = renderPage();
+    await openDiagnostics();
 
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
     // Panel scaffolding is visible during load — never a blank page.
@@ -269,9 +293,20 @@ describe('DataRepairPage', () => {
       if (typeof url === 'string' && url.startsWith(SUGGESTIONS_URL)) {
         return Promise.reject(new Error('diagnosis boom'));
       }
+      if (url === '/vehicles') return Promise.resolve([]);
+      if (typeof url === 'string' && url.startsWith('/data-repair/cases?')) {
+        return Promise.resolve({ cases: [], has_more: false });
+      }
+      if (url === '/data-repair/cases/stats') {
+        return Promise.resolve({
+          total: 0, open: 0, in_review: 0, applied: 0, dismissed: 0,
+          quarantined: 0, restored: 0, resolved: 0, drive: 0, charging: 0,
+        });
+      }
       return Promise.resolve(EMPTY_STALE);
     });
     renderPage();
+    await openDiagnostics();
 
     // One banner per suggestion section; the stale panels resolve fine.
     const banners = await screen.findAllByText("Can't reach server");
@@ -290,6 +325,7 @@ describe('DataRepairPage', () => {
       EMPTY_STALE,
     );
     renderPage();
+    await openDiagnostics();
 
     const applyButton = await screen.findByTestId('repair-apply-drive-42');
 
@@ -299,7 +335,8 @@ describe('DataRepairPage', () => {
       mockRequest.mock.calls.filter(([url]) => String(url).includes('/close')),
     ).toHaveLength(0);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Apply repair' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply repair' }));
 
     await waitFor(() => {
       expect(mockRequest).toHaveBeenCalledWith(
@@ -330,12 +367,25 @@ describe('DataRepairPage', () => {
         );
       }
       if (url === STALE_URL) return Promise.resolve(EMPTY_STALE);
+      if (url === '/vehicles') return Promise.resolve([]);
+      if (typeof url === 'string' && url.startsWith('/data-repair/cases?')) {
+        return Promise.resolve({ cases: [], has_more: false });
+      }
+      if (url === '/data-repair/cases/stats') {
+        return Promise.resolve({
+          total: 0, open: 0, in_review: 0, applied: 0, dismissed: 0,
+          quarantined: 0, restored: 0, resolved: 0, drive: 0, charging: 0,
+        });
+      }
+      if (url === '/data-repair/drive/42/preview') return Promise.resolve({});
       return Promise.reject(new Error('no durable evidence currently supports repairing this drive'));
     });
     renderPage();
+    await openDiagnostics();
 
     fireEvent.click(await screen.findByTestId('repair-apply-drive-42'));
-    fireEvent.click(screen.getByRole('button', { name: 'Apply repair' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Apply repair' }));
 
     expect(
       await screen.findByText('no durable evidence currently supports repairing this drive'),
@@ -356,6 +406,7 @@ describe('DataRepairPage', () => {
       EMPTY_STALE,
     );
     renderPage();
+    await openDiagnostics();
 
     const card = await screen.findByTestId('repair-suggestion-drive-42');
     expect(
@@ -370,6 +421,7 @@ describe('DataRepairPage', () => {
   it('surfaces a truncated scan honestly instead of implying the list is complete', async () => {
     mockApi(buildReport({ truncated: true }), EMPTY_STALE);
     renderPage();
+    await openDiagnostics();
     expect(await screen.findByText(/hit its per-request limit/i)).toBeInTheDocument();
   });
 
@@ -379,6 +431,7 @@ describe('DataRepairPage', () => {
       stale_drives: [buildDrive()],
     });
     renderPage();
+    await openDiagnostics();
 
     // 42000 Wh → 42.00 kWh, 250000 W → 250.00 kW, 15000 m → 15.00 km,
     // 30 m/s → 108.00 km/h (global useSettings stub: metric, precision 2).
@@ -401,6 +454,7 @@ describe('DataRepairPage', () => {
       stale_drives: [buildDrive()],
     });
     renderPage();
+    await openDiagnostics();
 
     const chargingRow = await screen.findByRole('button', {
       name: 'Open repair form for record #101',
@@ -422,6 +476,7 @@ describe('DataRepairPage', () => {
   it('refetches BOTH the diagnosis and the stale inventory from the header refresh', async () => {
     mockApi(buildReport(), EMPTY_STALE);
     renderPage();
+    await openDiagnostics();
 
     await screen.findByText('All charging sessions are complete');
 

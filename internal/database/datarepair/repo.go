@@ -19,14 +19,24 @@ const queryTimeout = 10 * time.Second
 
 // Repo is the read-only diagnosis data-access surface.
 type Repo struct {
-	db *database.DB
+	query database.DBTX
 }
 
 // NewRepo constructs the diagnosis repo. A nil *database.DB yields a repo
 // whose methods return an error instead of panicking, so a composition root
 // that boots without Postgres degrades to "diagnosis unavailable".
 func NewRepo(db *database.DB) *Repo {
-	return &Repo{db: db}
+	if db == nil {
+		return &Repo{}
+	}
+	return &Repo{query: db.Pool}
+}
+
+// NewRepoWithDBTX binds diagnosis reads to an existing transaction. The
+// scanner uses this so its transaction-scoped advisory lock and all detection
+// queries share one connection, including on single-connection deployments.
+func NewRepoWithDBTX(tx database.DBTX) *Repo {
+	return &Repo{query: tx}
 }
 
 // ErrNoDatabase is returned by every method when the repo was constructed
@@ -34,7 +44,7 @@ func NewRepo(db *database.DB) *Repo {
 var ErrNoDatabase = fmt.Errorf("data-repair diagnosis: no database configured")
 
 func (r *Repo) ready() error {
-	if r == nil || r.db == nil || r.db.Pool == nil {
+	if r == nil || r.query == nil {
 		return ErrNoDatabase
 	}
 	return nil
@@ -211,7 +221,7 @@ func (r *Repo) scanCandidates(ctx context.Context, table, query string, args ...
 	ctx, span := tracing.DBSpan(ctx, "select", table)
 	defer span.End()
 
-	rows, err := r.db.Pool.Query(ctx, query, args...)
+	rows, err := r.query.Query(ctx, query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("data-repair: scan %s candidates: %w", table, err)
 	}
@@ -255,7 +265,7 @@ func (r *Repo) getCandidate(ctx context.Context, table, query string, id int64) 
 	defer span.End()
 
 	var c SessionCandidate
-	err := r.db.Pool.QueryRow(ctx, query, id).Scan(&c.ID, &c.VehicleID, &c.StartedAt, &c.EndedAt, &c.DurationS)
+	err := r.query.QueryRow(ctx, query, id).Scan(&c.ID, &c.VehicleID, &c.StartedAt, &c.EndedAt, &c.DurationS)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -299,7 +309,7 @@ func (r *Repo) ChargeStateObservations(ctx context.Context, vehicleID int64, fie
 		  AND str_value IS NOT NULL
 		ORDER BY ts ASC
 		LIMIT $5`
-	rows, err := r.db.Pool.Query(ctx, query, vehicleID, fields, after, until, limit)
+	rows, err := r.query.Query(ctx, query, vehicleID, fields, after, until, limit)
 	if err != nil {
 		return nil, fmt.Errorf("data-repair: charge-state observations for vehicle %d: %w", vehicleID, err)
 	}
@@ -359,7 +369,7 @@ func (r *Repo) FirstChargeStateObservation(
 		ORDER BY ts ASC
 		LIMIT 1`
 	var observation Observation
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, fields, values, after, until).
+	err := r.query.QueryRow(ctx, query, vehicleID, fields, values, after, until).
 		Scan(&observation.Ts, &observation.Field, &observation.Value)
 	if err == pgx.ErrNoRows {
 		return nil, nil
@@ -401,7 +411,7 @@ func (r *Repo) FirstGearObservation(ctx context.Context, vehicleID int64, gears 
 		ts   time.Time
 		gear string
 	)
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, gears, after, until).Scan(&ts, &gear)
+	err := r.query.QueryRow(ctx, query, vehicleID, gears, after, until).Scan(&ts, &gear)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -448,7 +458,7 @@ func (r *Repo) LastDrivingObservation(ctx context.Context, vehicleID int64, driv
 		gear     *string
 		speedMps *float64
 	)
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, drivingGears, from, to).Scan(&ts, &gear, &speedMps)
+	err := r.query.QueryRow(ctx, query, vehicleID, drivingGears, from, to).Scan(&ts, &gear, &speedMps)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -498,7 +508,7 @@ func (r *Repo) LastChargingPowerObservation(ctx context.Context, vehicleID int64
 		acPower *float64
 		dcPower *float64
 	)
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, from, to).Scan(&ts, &acPower, &dcPower)
+	err := r.query.QueryRow(ctx, query, vehicleID, from, to).Scan(&ts, &acPower, &dcPower)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}
@@ -567,7 +577,7 @@ func (r *Repo) firstSessionAfter(
 		ts time.Time
 		id int64
 	)
-	err := r.db.Pool.QueryRow(ctx, query, vehicleID, after, excludeID).Scan(&ts, &id)
+	err := r.query.QueryRow(ctx, query, vehicleID, after, excludeID).Scan(&ts, &id)
 	if err == pgx.ErrNoRows {
 		return nil, nil
 	}

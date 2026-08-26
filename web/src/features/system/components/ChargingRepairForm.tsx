@@ -4,8 +4,9 @@ import { Input } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import {
   useCloseCharging,
-  useDiscardCharging,
+  useQuarantineCharging,
   useUpdateCharging,
+  type ManualCloseRepairInput,
   type RepairPatch,
   type StaleChargingSession,
 } from '@/api/hooks/useDataRepair';
@@ -35,7 +36,7 @@ function num(value: string): number | undefined {
  * backend `ChargingPartialAllowed` whitelist accepts; a live `useUnits()` hint
  * shows the equivalent in the operator's preferred display unit. Save patches
  * only non-boundary fields; Close applies the explicitly entered `ended_at`
- * after confirmation; Discard deletes after confirmation.
+ * after confirmation; quarantine preserves a restorable snapshot.
  */
 export function ChargingRepairForm({
   session,
@@ -58,7 +59,7 @@ export function ChargingRepairForm({
 
   const update = useUpdateCharging();
   const close = useCloseCharging();
-  const discard = useDiscardCharging();
+  const quarantine = useQuarantineCharging();
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -79,12 +80,14 @@ export function ChargingRepairForm({
   };
   const endedAt = form.ended_at.trim();
   const validEndedAt = isRFC3339Boundary(endedAt);
-  const onCloseBoundary = () => close.mutate({
+  const closeInput = {
     id: session.id,
     ended_at: endedAt,
     rule: 'manual',
     expected_stored_ended_at: session.ended_at ?? '',
-  }, { onSuccess: onClose });
+  } as const;
+  const onCloseBoundary = (input: ManualCloseRepairInput) =>
+    close.mutate(input, { onSuccess: onClose });
 
   const energy = num(form.total_energy_added_wh);
   const peak = num(form.peak_power_w);
@@ -158,14 +161,16 @@ export function ChargingRepairForm({
         sessionId={session.id}
         onSave={onSave}
         onCloseBoundary={onCloseBoundary}
-        onDiscard={() => discard.mutate(session.id, { onSuccess: onClose })}
+        onQuarantine={(reason) =>
+          quarantine.mutate({ id: session.id, reason }, { onSuccess: onClose })}
         onCancel={onClose}
         savePending={update.isPending}
         closePending={close.isPending}
-        discardPending={discard.isPending}
+        quarantinePending={quarantine.isPending}
         closeDisabled={!validEndedAt}
         disabled={disabled}
         disabledReason={disabledReason}
+        closePreviewInput={closeInput}
       />
     </div>
   );

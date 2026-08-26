@@ -25,6 +25,8 @@ export interface SearchInputProps {
   value: string;
   /** Called with the new value once the debounce window elapses. */
   onChange: (value: string) => void;
+  /** Programmatic label for the underlying search field. */
+  ariaLabel?: string;
   /** Placeholder shown when the field is empty. */
   placeholder?: string;
   /** Debounce window in milliseconds. Defaults to 250ms. */
@@ -71,6 +73,7 @@ export interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
+  ariaLabel,
   placeholder,
   debounceMs = 250,
   autoFocus,
@@ -239,6 +242,7 @@ export function SearchInput({
         type="search"
         value={local}
         onChange={handleInputChange}
+        aria-label={ariaLabel}
         placeholder={placeholder}
         autoFocus={autoFocus}
         onFocus={historyEnabled ? handleFocus : undefined}

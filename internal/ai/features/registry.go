@@ -2276,7 +2276,7 @@ var Registry = map[string]Feature{
 	// OR ONE stale drive from the in-scope inventory loaded
 	// server-side. PROPOSE-ONLY: the LLM never writes; the user
 	// reviews the typed proposal in the AI side panel and clicks
-	// the canonical Save / Close / Discard button on the baseline
+	// the canonical Save / Close / Quarantine button on the baseline
 	// edit form to apply it (the baseline path through
 	// PUT/POST/DELETE /api/v1/data-repair/{kind}/{id}{...} is the
 	// sole write surface).
@@ -2297,7 +2297,7 @@ var Registry = map[string]Feature{
 	// diagnostic.WithScopedDataRepairIDs BEFORE invoking the dispatcher.
 	// Both tools refuse any LLM-supplied (target_kind, target_id)
 	// pair that is NOT in the snapshot — even if the LLM tries to
-	// propose discarding a different row, the scope check refuses
+	// propose quarantining a different row, the scope check refuses
 	// the call before the proposal reaches the frontend AI panel.
 	//
 	// Routes:
@@ -2338,7 +2338,7 @@ var Registry = map[string]Feature{
 	"data-repair-suggestions": {
 		ID:          "data-repair-suggestions",
 		Name:        "Data repair suggestions",
-		Description: "Opt-in LLM that proposes a typed RepairPlan (close, discard, or partial-update) for ONE stale charging session OR ONE stale drive from the server-side inventory shown on /system/data-repair. PROPOSE-ONLY: routes through two propose-only tools (draft_data_repair_plan + validate_data_repair_plan) that share the SAME per-kind update_fields allowlist used by database.chargingPartialAllowed / drivePartialAllowed. The user reviews the typed proposal in the AI side panel and clicks the canonical Save / Close / Discard button on the baseline edit form to apply it; the LLM never writes. The deterministic stale-session list and per-row edit forms at /system/data-repair remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, place names, or vehicle names. Per-request scope binding installs the current (chargingIDs, driveIDs) snapshot in ctx and refuses any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields.",
+		Description: "Opt-in LLM that proposes a typed RepairPlan (close, quarantine, or partial-update) for ONE stale charging session OR ONE stale drive from the server-side inventory shown on /system/data-repair. PROPOSE-ONLY: routes through two propose-only tools (draft_data_repair_plan + validate_data_repair_plan) that share the SAME per-kind update_fields allowlist used by database.chargingPartialAllowed / drivePartialAllowed. The user reviews the typed proposal in the AI side panel and clicks the canonical Save / Close / Quarantine button on the baseline edit form to apply it; the LLM never writes. The deterministic stale-session list and per-row edit forms at /system/data-repair remain the canonical baseline when AI is off. Per-feature redaction policy is PolicyAlertBuilder (deny-by-default; every PII class redacted to a round-trip tag) so a leaked transcript reveals nothing about VINs, coordinates, place names, or vehicle names. Per-request scope binding installs the current (chargingIDs, driveIDs) snapshot in ctx and refuses any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields.",
 		Tier:        "S",
 		DefaultOn:   false,
 		NeedsRAG:    false,

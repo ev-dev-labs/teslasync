@@ -5462,9 +5462,9 @@
           "success": "Charging session closed",
           "error": "Failed to close charging session"
         },
-        "discard": {
-          "success": "Charging session discarded",
-          "error": "Failed to discard charging session"
+        "quarantine": {
+          "success": "Charging session moved to quarantine",
+          "error": "Failed to quarantine charging session"
         },
         "apply": {
           "success": "Charging boundary repaired",
@@ -5480,14 +5480,46 @@
           "success": "Drive closed",
           "error": "Failed to close drive"
         },
-        "discard": {
-          "success": "Drive discarded",
-          "error": "Failed to discard drive"
+        "quarantine": {
+          "success": "Drive moved to quarantine",
+          "error": "Failed to quarantine drive"
         },
         "apply": {
           "success": "Drive boundary repaired",
           "error": "Failed to repair drive boundary"
         }
+      },
+      "case": {
+        "transition": {
+          "success": "Repair case updated",
+          "error": "Failed to update repair case"
+        },
+        "bulk": {
+          "success": "Updated {{count}} repair cases",
+          "partial": "Updated {{updated}} repair cases; {{skipped}} skipped",
+          "skipped": "No repair cases were updated; {{skipped}} skipped",
+          "error": "Failed to update repair cases"
+        },
+        "assign": {
+          "success": "Case assignment updated",
+          "error": "Failed to update case assignment"
+        },
+        "comment": {
+          "success": "Comment added",
+          "error": "Failed to add comment"
+        }
+      },
+      "scan": {
+        "success": "Data integrity scan completed",
+        "error": "Data integrity scan failed"
+      },
+      "quarantine": {
+        "success": "Session moved to quarantine",
+        "error": "Failed to quarantine session"
+      },
+      "restore": {
+        "success": "Session restored",
+        "error": "Failed to restore session"
       }
     },
     "quietHours": {
@@ -6973,7 +7005,7 @@
         },
         "data-repair-suggestions": {
           "label": "Data repair suggestions",
-          "description": "Opt-in LLM that proposes a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Discard button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM that proposes a typed RepairPlan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Quarantine button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when Helix is off."
         },
         "signal-explorer-nl-filter": {
           "label": "Signal explorer NL filter",
@@ -8239,6 +8271,12 @@
     "readOnly": {
       "title": "Data repair is read-only"
     },
+    "aiSuggestions": {
+      "title": "Helix repair suggestions",
+      "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
+      "button": "Draft repair plan",
+      "badge": "Helix"
+    },
     "kpis": "Repair summary",
     "worklist": "Repair worklist",
     "suggestionsRegion": "Suggested repairs",
@@ -8247,7 +8285,16 @@
     "subtitle": {
       "count": "{{count}} incomplete session(s) found",
       "suggestions": "{{count}} session boundary(s) contradicted by later evidence",
-      "clean": "Find and repair broken drive and charging session boundaries"
+      "clean": "Find and repair broken drive and charging session boundaries",
+      "workspace": "Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections."
+    },
+    "diagnostics": {
+      "title": "Direct evidence diagnostics",
+      "description": "Inspect durable signal contradictions and manually review incomplete sessions. These deeper scans run only while this workspace is open.",
+      "loading": "Loading diagnostics workspace",
+      "scanning": "Scanning",
+      "ready": "Ready",
+      "attention": "Attention needed"
     },
     "kpi": {
       "total": "Total Stale",
@@ -8348,6 +8395,7 @@
     "confirm": {
       "title": "Apply this repair?",
       "message": "This rewrites {{kind}} #{{id}} to end at {{end}}. Distance, energy and speed totals are NOT recomputed — they were measured over the original window. This is recorded in the audit log and is not undone automatically.",
+      "caseImpactDescription": "Review the exact server-calculated impact before applying this boundary.",
       "apply": "Apply repair"
     },
     "manualConfirm": {
@@ -8355,11 +8403,187 @@
       "saveMessage": "This updates the entered measurements without changing the session boundary. The correction is recorded in the audit log.",
       "closeTitle": "Apply this manual boundary?",
       "closeMessage": "This uses the exact end timestamp you entered. The server will reject overlaps or concurrent changes and record the boundary in the audit log.",
-      "discardTitle": "Discard this session?",
-      "discardMessage": "This permanently deletes {{kind}} #{{id}} and records the action in the audit log."
+      "quarantineTitle": "Move this session to quarantine?",
+      "quarantineMessage": "This removes {{kind}} #{{id}} from active data, but preserves a checksummed snapshot for verified restore. The reason and operator are recorded in the audit log.",
+      "quarantineReasonPlaceholder": "Explain why this session should be removed from active data"
     },
     "stale": {
       "intro": "Incomplete sessions with no contradicting evidence. These are listed for manual inspection only — nothing in the recorded history establishes where they should end."
+    },
+    "cases": {
+      "workspaceTitle": "Integrity command center",
+      "workspaceDescription": "Continuous detection creates durable, assignable cases. No repair is applied without operator review.",
+      "lastScan": "Last scan: {{time}}",
+      "noScan": "No completed scan recorded yet",
+      "scanNow": "Run integrity scan",
+      "metricsResource": "Repair case metrics",
+      "workspaceTabs": "Repair workspace views",
+      "tabCases": "Case queue",
+      "tabQuarantine": "Quarantine ledger",
+      "tabDiagnostics": "Diagnostics",
+      "refreshing": "Refreshing",
+      "monitoring": "Monitoring",
+      "metricsUnavailable": "Metrics unavailable",
+      "updating": "Updating",
+      "metricsLabel": "Repair case metrics",
+      "open": "Open cases",
+      "openHint": "Awaiting operator review",
+      "inReview": "In review",
+      "inReviewHint": "Actively triaged",
+      "quarantined": "Quarantined",
+      "quarantinedHint": "Reversible removals",
+      "active": "Active cases",
+      "activeHint": "Active review workload",
+      "queueTitle": "Repair case queue",
+      "queueDescription": "Durable findings stay visible until an operator reviews and resolves them.",
+      "resourceName": "Repair cases",
+      "loading": "Loading repair cases…",
+      "refreshFailed": "Repair cases could not refresh. Showing the most recently loaded queue.",
+      "empty": "No repair cases match these filters.",
+      "pageCount": "{{count}} cases on this page",
+      "caseNumber": "Case #{{id}}",
+      "sessionReference": "{{kind}} #{{id}}",
+      "vehicleNumber": "Vehicle #{{id}}",
+      "reviewCaseLabel": "Review case {{id}}",
+      "review": "Review",
+      "drawerTitle": "Case #{{id}}",
+      "drawerLoadingTitle": "Repair case",
+      "drawerDescription": "{{kind}} session #{{id}} · vehicle #{{vehicle}}",
+      "drawerLoading": "Loading durable evidence and operator history",
+      "beginReview": "Begin review",
+      "reopen": "Reopen",
+      "resolve": "Resolve case",
+      "confidenceBadge": "{{confidence}} confidence",
+      "lastSeen": "Last seen {{time}}",
+      "findingTitle": "Integrity finding",
+      "actionable": "Actionable",
+      "blocked": "Blocked",
+      "vehicle": "Vehicle",
+      "relatedSession": "Related session",
+      "confidence": "Confidence",
+      "firstDetected": "First detected",
+      "lastDetected": "Last detected",
+      "suggestedBoundary": "Suggested boundary",
+      "evidenceGap": "Evidence gap",
+      "evidenceTitle": "Evidence chain",
+      "evidenceDescription": "Durable observations used to establish the session boundary.",
+      "lastInSession": "Last in-session observation",
+      "contradiction": "Contradicting observation",
+      "assignmentTitle": "Ownership",
+      "assignee": "Assignee",
+      "unassignedValue": "Unassigned",
+      "assigneePlaceholder": "Operator name",
+      "saveAssignment": "Save assignment",
+      "activityTitle": "Review notes",
+      "noComments": "No review notes yet.",
+      "commentLabel": "Add review note",
+      "addComment": "Add note",
+      "controlledActions": "Controlled actions",
+      "controlledDescription": "Apply a verified boundary, dismiss a false positive, or move the source session into reversible quarantine.",
+      "dismiss": "Dismiss finding",
+      "quarantineAction": "Move to quarantine",
+      "restoreTitle": "Restore quarantined session",
+      "restoreDescription": "The original row and linked relationships will be verified and restored atomically.",
+      "restoreAction": "Restore session",
+      "confirmQuarantine": "Move session to quarantine?",
+      "confirmRestore": "Restore this session?",
+      "confirmDismiss": "Dismiss this finding?",
+      "confirmResolve": "Resolve this case?",
+      "reasonRequiredDescription": "Provide an operator note. This action is recorded in the audit trail.",
+      "reasonLabel": "Operator note",
+      "reasonPlaceholder": "Explain the evidence and decision",
+      "findings": {
+        "endedBeforeStarted": "Session ends before it starts",
+        "durationMismatch": "Stored duration does not match the session window",
+        "driveOverlap": "Drive overlaps another drive",
+        "chargingOverlap": "Charging session overlaps another charging session",
+        "driveChargingOverlap": "Drive and charging windows overlap",
+        "duplicateWindow": "Duplicate session window",
+        "odometerRollback": "Odometer moves backwards during the session",
+        "socInconsistent": "State of charge changes in the wrong direction",
+        "negativeDistance": "Distance is negative",
+        "negativeDuration": "Duration is negative",
+        "negativeEnergyUsed": "Energy used is negative",
+        "negativeRegenEnergy": "Regenerated energy is negative",
+        "negativeEnergyAdded": "Energy added is negative",
+        "manualQuarantine": "Operator-requested quarantine"
+      },
+      "blockedReasons": {
+        "structuralCorrection": "This structural anomaly requires a manual correction",
+        "operatorAction": "This case records an explicit operator action",
+        "notApplicable": "No safe automatic boundary is available"
+      },
+      "status": {
+        "open": "Open",
+        "inReview": "In review",
+        "applied": "Applied",
+        "dismissed": "Dismissed",
+        "quarantined": "Quarantined",
+        "restored": "Restored",
+        "resolved": "Resolved"
+      },
+      "filters": {
+        "allStatuses": "All statuses",
+        "allKinds": "All session types",
+        "allConfidence": "All confidence levels",
+        "status": "Filter by status",
+        "kind": "Filter by session type",
+        "confidence": "Filter by confidence",
+        "owner": "Filter by owner",
+        "ownerPlaceholder": "Owner",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "case": "Case",
+        "finding": "Finding",
+        "status": "Status",
+        "confidence": "Confidence",
+        "owner": "Owner",
+        "lastDetected": "Last detected",
+        "actions": "Actions"
+      },
+      "bulk": {
+        "beginReview": "Begin review",
+        "dismiss": "Dismiss selected",
+        "noReviewable": "Only open cases can begin review.",
+        "noDismissible": "Only open or in-review cases can be dismissed.",
+        "confirmDismiss": "Dismiss selected findings?",
+        "confirmDismissDescription": "Dismissal changes case metadata only. Source sessions remain untouched and the decision is audited.",
+        "reasonPlaceholder": "Explain why these findings are false positives"
+      }
+    },
+    "quarantine": {
+      "all": "All records",
+      "active": "Awaiting restore",
+      "restored": "Restored",
+      "held": "Held safely",
+      "title": "Quarantine ledger",
+      "description": "Every removal retains a checksummed recovery snapshot and a complete operator trail.",
+      "filterStatus": "Filter quarantine status",
+      "resourceName": "Quarantine records",
+      "loading": "Loading quarantine ledger…",
+      "refreshFailed": "Quarantine records could not refresh. Showing the most recently loaded ledger.",
+      "empty": "No quarantine records match this filter.",
+      "pageCount": "{{count}} records on this page",
+      "confirmRestore": "Restore quarantined session?",
+      "confirmRestoreDescription": "The snapshot checksum and schema version will be verified before the session and its relationships are restored.",
+      "restoreReasonPlaceholder": "Explain why this session should be restored",
+      "columns": {
+        "session": "Session",
+        "status": "Status",
+        "reason": "Reason",
+        "quarantinedAt": "Quarantined",
+        "operator": "Operator",
+        "actions": "Actions"
+      }
+    },
+    "preview": {
+      "title": "Verified impact",
+      "ready": "Ready to apply",
+      "alreadyApplied": "Already applied",
+      "noChanges": "No database fields would change.",
+      "preserved": "{{count}} measured fields stay unchanged",
+      "revalidated": "The server revalidated the current row, evidence, concurrency pin, and overlap guard."
     },
     "metric": {
       "energy": "Energy",
@@ -8370,7 +8594,8 @@
     "row": {
       "toggle": "Open repair form for record #{{id}}",
       "vehicle": "Vehicle {{id}}",
-      "open": "Open"
+      "open": "Open",
+      "readOnly": "Repair is unavailable for record #{{id}}"
     },
     "field": {
       "endedAt": "End Date/Time (ISO)",
@@ -8389,7 +8614,7 @@
     "action": {
       "closeSession": "Close Session",
       "closeDrive": "Close Drive",
-      "discard": "Discard",
+      "quarantine": "Move to quarantine",
       "reviewApply": "Review & apply"
     },
     "charging": {

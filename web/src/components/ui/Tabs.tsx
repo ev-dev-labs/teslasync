@@ -12,6 +12,8 @@ export interface TabsProps {
   activeTab: string;
   onChange: (key: string) => void;
   className?: string;
+  /** Stable ID prefix for linking a consumer-rendered tab panel. */
+  idBase?: string;
   /** Optional accessible label for the tablist (overrides `aria-labelledby`). */
   ariaLabel?: string;
 }
@@ -32,8 +34,9 @@ export interface TabsProps {
  * `role="tabpanel"` and `aria-labelledby` pointing back to the matching tab's
  * generated id (`{tablistId}-tab-{tab.key}`).
  */
-export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsProps) {
-  const tablistId = useId();
+export function Tabs({ tabs, activeTab, onChange, className, idBase, ariaLabel }: TabsProps) {
+  const generatedId = useId();
+  const tablistId = idBase ?? generatedId;
   const refs = useRef<Map<string, HTMLButtonElement>>(new Map());
 
   const items = tabs ?? [];
@@ -50,9 +53,18 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
 
   const moveFocus = (nextKey: string) => {
     onChange(nextKey);
-    // Defer focus to next tick so React commits aria-selected change first.
+    // Defer focus and reveal until React commits aria-selected first.
     requestAnimationFrame(() => {
-      refs.current.get(nextKey)?.focus();
+      const tab = refs.current.get(nextKey);
+      tab?.focus({ preventScroll: true });
+      tab?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    });
+  };
+
+  const handleClick = (key: string) => {
+    onChange(key);
+    requestAnimationFrame(() => {
+      refs.current.get(key)?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     });
   };
 
@@ -76,7 +88,11 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
 
   return (
     <div
-      className={cn('flex gap-1 border-b border-[var(--panel-border)]', className)}
+      className={cn(
+        'scrollbar-none flex max-w-full gap-1 overflow-x-auto border-b border-[var(--panel-border)]',
+        className,
+      )}
+      id={tablistId}
       role="tablist"
       aria-label={ariaLabel}
     >
@@ -96,10 +112,10 @@ export function Tabs({ tabs, activeTab, onChange, className, ariaLabel }: TabsPr
             aria-controls={`${tablistId}-panel-${tab.key}`}
             tabIndex={tab.key === focusableKey ? 0 : -1}
             disabled={tab.disabled}
-            onClick={() => onChange(tab.key)}
+            onClick={() => handleClick(tab.key)}
             onKeyDown={(e) => handleKeyDown(e, tab.key)}
             className={cn(
-              '-mb-px border-b-2 border-transparent px-4 py-2.5 text-sm font-medium transition-colors',
+              '-mb-px min-h-11 shrink-0 whitespace-nowrap border-b-2 border-transparent px-3 py-2.5 text-sm font-medium transition-colors sm:px-4',
               'focus-visible:rounded-shape-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
               selected
                 ? 'border-[var(--theme-primary)] text-[var(--text-primary)]'

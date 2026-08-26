@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
@@ -58,6 +59,7 @@ func newDriveApplyFixture(storedEnd *time.Time) *applyFixture {
 	f.handler = &DataRepairHandler{
 		chargingRepo: f.charging,
 		driveRepo:    f.drives,
+		caseRepo:     newFakeCaseRepository(),
 		clock:        func() time.Time { return testNow },
 		diagnosis:    f.source,
 		audit: func(_ context.Context, _ database.DBTX, e auditEntry) error {
@@ -538,17 +540,381 @@ func TestCloseDrive_ManualBoundaryIsIdempotent(t *testing.T) {
 	}
 }
 
+func newChargingApplyRepo(start time.Time) *fakeChargingRepo {
+	return &fakeChargingRepo{
+		getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
+			return &chargingmodel.ChargingSession{ID: id, VehicleID: 7, StartedAt: start}, nil
+		},
+	}
+}
+
+func matchingDriveApplyCase(
+	caseID int64,
+	startedAt, proposed time.Time,
+) *systemmodel.RepairCase {
+	repairCase := sampleRepairCase(caseID, systemmodel.RepairCaseStatusOpen)
+	repairCase.Fingerprint = systemmodel.RepairCaseFingerprint(
+		systemmodel.RepairCaseKindDrive,
+		1,
+		string(systemmodel.SessionRepairRuleDriveOpenChargingStarted),
+	)
+	repairCase.Kind = systemmodel.RepairCaseKindDrive
+	repairCase.SessionID = 1
+	repairCase.VehicleID = 7
+	repairCase.Rule = string(systemmodel.SessionRepairRuleDriveOpenChargingStarted)
+	repairCase.SuggestedEndedAt = &proposed
+	repairCase.EvidenceStartedAt = startedAt
+	repairCase.EvidenceStoredEndedAt = nil
+	repairCase.Applicable = true
+	return repairCase
+}
+
+func installApplyRollbackFixture(
+	f *applyFixture,
+	repo *fakeCaseRepository,
+	sourceEndedAt **time.Time,
+) {
+	f.handler.transaction = func(
+		ctx context.Context,
+		fn func(database.DBTX) error,
+	) error {
+		caseSnapshot := cloneCaseMap(repo.cases)
+		auditCount := len(f.audits)
+		previousEnd := *sourceEndedAt
+		err := fn(nil)
+		if err != nil {
+			repo.cases = caseSnapshot
+			f.audits = f.audits[:auditCount]
+			*sourceEndedAt = previousEnd
+		}
+		return err
+	}
+}
+
+func TestCloseDrive_CaseAwareApplyTransitionsAndAuditsAtomically(t *testing.T) {
+	startedAt := testNow.Add(-6 * time.Hour)
+	proposed := testNow.Add(-5 * time.Hour)
+	f := newDriveApplyFixture(nil)
+	var sourceEndedAt *time.Time
+	f.drives.getByIDFn = func(_ context.Context, id int64) (*drivemodel.Drive, error) {
+		return &drivemodel.Drive{
+			ID:        id,
+			VehicleID: 7,
+			StartTs:   startedAt,
+			EndTs:     sourceEndedAt,
+		}, nil
+	}
+	f.drives.conditionalFn = func(
+		_ context.Context,
+		_ int64,
+		_ *time.Time,
+		endedAt time.Time,
+		_ int64,
+	) (bool, error) {
+		value := endedAt
+		sourceEndedAt = &value
+		return true, nil
+	}
+	repairCase := matchingDriveApplyCase(77, startedAt, proposed)
+	repo := newFakeCaseRepository(repairCase)
+	f.handler.caseRepo = repo
+	installApplyRollbackFixture(f, repo, &sourceEndedAt)
+
+	body := fmt.Sprintf(
+		`{"case_id":77,"ended_at":%q,"rule":%q,"expected_stored_ended_at":""}`,
+		rfc(proposed),
+		systemmodel.SessionRepairRuleDriveOpenChargingStarted,
+	)
+	rec := doReq(t, f.handler, http.MethodPost, "/data-repair/drive/1/close", strings.NewReader(body))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if sourceEndedAt == nil || !sourceEndedAt.Equal(proposed) {
+		t.Fatalf("source boundary = %v, want %s", sourceEndedAt, proposed)
+	}
+	if got := repo.cases[repairCase.ID].Status; got != systemmodel.RepairCaseStatusApplied {
+		t.Fatalf("case status = %q, want applied", got)
+	}
+	if len(repo.transitionCalls) != 1 {
+		t.Fatalf("case transitions = %d, want exactly 1", len(repo.transitionCalls))
+	}
+	if len(f.audits) != 2 ||
+		f.audits[0].Action != AuditActionCloseDrive ||
+		f.audits[1].Action != AuditActionCaseApply {
+		t.Fatalf("audit rows = %+v", f.audits)
+	}
+}
+
+func TestCloseDrive_LegacySuggestionFindsMatchingActiveCase(t *testing.T) {
+	startedAt := testNow.Add(-6 * time.Hour)
+	proposed := testNow.Add(-5 * time.Hour)
+	f := newDriveApplyFixture(nil)
+	var sourceEndedAt *time.Time
+	f.drives.getByIDFn = func(_ context.Context, id int64) (*drivemodel.Drive, error) {
+		return &drivemodel.Drive{
+			ID: id, VehicleID: 7, StartTs: startedAt, EndTs: sourceEndedAt,
+		}, nil
+	}
+	f.drives.conditionalFn = func(
+		_ context.Context,
+		_ int64,
+		_ *time.Time,
+		endedAt time.Time,
+		_ int64,
+	) (bool, error) {
+		value := endedAt
+		sourceEndedAt = &value
+		return true, nil
+	}
+	repairCase := matchingDriveApplyCase(78, startedAt, proposed)
+	repo := newFakeCaseRepository(repairCase)
+	f.handler.caseRepo = repo
+	installApplyRollbackFixture(f, repo, &sourceEndedAt)
+
+	body := fmt.Sprintf(
+		`{"ended_at":%q,"rule":%q,"expected_stored_ended_at":""}`,
+		rfc(proposed),
+		systemmodel.SessionRepairRuleDriveOpenChargingStarted,
+	)
+	rec := doReq(t, f.handler, http.MethodPost, "/data-repair/drive/1/close", strings.NewReader(body))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if got := repo.cases[repairCase.ID].Status; got != systemmodel.RepairCaseStatusApplied {
+		t.Fatalf("auto-matched case status = %q, want applied", got)
+	}
+	if len(f.audits) != 2 || f.audits[1].Action != AuditActionCaseApply {
+		t.Fatalf("audit rows = %+v", f.audits)
+	}
+}
+
+func TestCloseDrive_CaseTransitionConflictRollsBackBoundary(t *testing.T) {
+	startedAt := testNow.Add(-6 * time.Hour)
+	proposed := testNow.Add(-5 * time.Hour)
+	f := newDriveApplyFixture(nil)
+	var sourceEndedAt *time.Time
+	f.drives.getByIDFn = func(_ context.Context, id int64) (*drivemodel.Drive, error) {
+		return &drivemodel.Drive{
+			ID: id, VehicleID: 7, StartTs: startedAt, EndTs: sourceEndedAt,
+		}, nil
+	}
+	f.drives.conditionalFn = func(
+		_ context.Context,
+		_ int64,
+		_ *time.Time,
+		endedAt time.Time,
+		_ int64,
+	) (bool, error) {
+		value := endedAt
+		sourceEndedAt = &value
+		return true, nil
+	}
+	repairCase := matchingDriveApplyCase(79, startedAt, proposed)
+	repo := newFakeCaseRepository(repairCase)
+	repo.transitionErr = datarepairdb.ErrConcurrentModification
+	f.handler.caseRepo = repo
+	installApplyRollbackFixture(f, repo, &sourceEndedAt)
+
+	body := fmt.Sprintf(
+		`{"case_id":79,"ended_at":%q,"rule":%q,"expected_stored_ended_at":""}`,
+		rfc(proposed),
+		systemmodel.SessionRepairRuleDriveOpenChargingStarted,
+	)
+	rec := doReq(t, f.handler, http.MethodPost, "/data-repair/drive/1/close", strings.NewReader(body))
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want 409; body=%s", rec.Code, rec.Body.String())
+	}
+	if sourceEndedAt != nil {
+		t.Fatalf("source boundary survived rolled-back case conflict: %s", sourceEndedAt)
+	}
+	if got := repo.cases[repairCase.ID].Status; got != systemmodel.RepairCaseStatusOpen {
+		t.Fatalf("case status = %q, want open", got)
+	}
+	if len(f.audits) != 0 {
+		t.Fatalf("audit rows survived rolled-back conflict: %+v", f.audits)
+	}
+}
+
+func TestCloseDrive_CaseAuditFailureRollsBackBoundaryAndCase(t *testing.T) {
+	startedAt := testNow.Add(-6 * time.Hour)
+	proposed := testNow.Add(-5 * time.Hour)
+	f := newDriveApplyFixture(nil)
+	var sourceEndedAt *time.Time
+	f.drives.getByIDFn = func(_ context.Context, id int64) (*drivemodel.Drive, error) {
+		return &drivemodel.Drive{
+			ID: id, VehicleID: 7, StartTs: startedAt, EndTs: sourceEndedAt,
+		}, nil
+	}
+	f.drives.conditionalFn = func(
+		_ context.Context,
+		_ int64,
+		_ *time.Time,
+		endedAt time.Time,
+		_ int64,
+	) (bool, error) {
+		value := endedAt
+		sourceEndedAt = &value
+		return true, nil
+	}
+	repairCase := matchingDriveApplyCase(80, startedAt, proposed)
+	repo := newFakeCaseRepository(repairCase)
+	f.handler.caseRepo = repo
+	auditCalls := 0
+	f.handler.audit = func(_ context.Context, _ database.DBTX, entry auditEntry) error {
+		auditCalls++
+		if auditCalls == 2 {
+			return errBoom
+		}
+		f.audits = append(f.audits, entry)
+		return nil
+	}
+	installApplyRollbackFixture(f, repo, &sourceEndedAt)
+
+	body := fmt.Sprintf(
+		`{"case_id":80,"ended_at":%q,"rule":%q,"expected_stored_ended_at":""}`,
+		rfc(proposed),
+		systemmodel.SessionRepairRuleDriveOpenChargingStarted,
+	)
+	rec := doReq(t, f.handler, http.MethodPost, "/data-repair/drive/1/close", strings.NewReader(body))
+	if rec.Code != http.StatusInternalServerError {
+		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+	if sourceEndedAt != nil {
+		t.Fatalf("source boundary survived rolled-back case audit: %s", sourceEndedAt)
+	}
+	if got := repo.cases[repairCase.ID].Status; got != systemmodel.RepairCaseStatusOpen {
+		t.Fatalf("case status = %q, want open", got)
+	}
+	if len(f.audits) != 0 {
+		t.Fatalf("audit rows survived rollback: %+v", f.audits)
+	}
+}
+
+func TestCloseDrive_AlreadyAppliedBoundaryStillClosesActiveCase(t *testing.T) {
+	startedAt := testNow.Add(-6 * time.Hour)
+	proposed := testNow.Add(-5 * time.Hour)
+	f := newDriveApplyFixture(&proposed)
+	repairCase := matchingDriveApplyCase(81, startedAt, proposed)
+	repo := newFakeCaseRepository(repairCase)
+	f.handler.caseRepo = repo
+	sourceEndedAt := &proposed
+	installApplyRollbackFixture(f, repo, &sourceEndedAt)
+
+	body := fmt.Sprintf(
+		`{"case_id":81,"ended_at":%q,"rule":%q,"expected_stored_ended_at":""}`,
+		rfc(proposed),
+		systemmodel.SessionRepairRuleDriveOpenChargingStarted,
+	)
+	rec := doReq(t, f.handler, http.MethodPost, "/data-repair/drive/1/close", strings.NewReader(body))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if f.drives.partialCalls != 0 {
+		t.Fatalf("already-applied source mutation calls = %d, want 0", f.drives.partialCalls)
+	}
+	if got := repo.cases[repairCase.ID].Status; got != systemmodel.RepairCaseStatusApplied {
+		t.Fatalf("case status = %q, want applied", got)
+	}
+	if len(f.audits) != 1 || f.audits[0].Action != AuditActionCaseApply {
+		t.Fatalf("audit rows = %+v, want only case apply", f.audits)
+	}
+}
+
+func TestCloseDrive_RejectsMismatchedOrInapplicableCase(t *testing.T) {
+	startedAt := testNow.Add(-6 * time.Hour)
+	proposed := testNow.Add(-5 * time.Hour)
+	tests := []struct {
+		name   string
+		mutate func(*systemmodel.RepairCase)
+	}{
+		{
+			name: "wrong session",
+			mutate: func(repairCase *systemmodel.RepairCase) {
+				repairCase.SessionID = 2
+			},
+		},
+		{
+			name: "inapplicable",
+			mutate: func(repairCase *systemmodel.RepairCase) {
+				repairCase.Applicable = false
+			},
+		},
+		{
+			name: "terminal lifecycle",
+			mutate: func(repairCase *systemmodel.RepairCase) {
+				repairCase.Status = systemmodel.RepairCaseStatusDismissed
+			},
+		},
+		{
+			name: "stale evidence pin",
+			mutate: func(repairCase *systemmodel.RepairCase) {
+				stale := testNow.Add(-2 * time.Hour)
+				repairCase.EvidenceStoredEndedAt = &stale
+			},
+		},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			f := newDriveApplyFixture(nil)
+			repairCase := matchingDriveApplyCase(82, startedAt, proposed)
+			test.mutate(repairCase)
+			f.handler.caseRepo = newFakeCaseRepository(repairCase)
+			body := fmt.Sprintf(
+				`{"case_id":82,"ended_at":%q,"rule":%q,"expected_stored_ended_at":""}`,
+				rfc(proposed),
+				systemmodel.SessionRepairRuleDriveOpenChargingStarted,
+			)
+			rec := doReq(
+				t,
+				f.handler,
+				http.MethodPost,
+				"/data-repair/drive/1/close",
+				strings.NewReader(body),
+			)
+			if rec.Code != http.StatusConflict {
+				t.Fatalf("status = %d, want 409; body=%s", rec.Code, rec.Body.String())
+			}
+			if f.drives.partialCalls != 0 {
+				t.Fatalf("rejected case mutated source %d times", f.drives.partialCalls)
+			}
+		})
+	}
+}
+
+func TestDecodeCloseRequestRejectsTrailingJSONAndManualCaseID(t *testing.T) {
+	f := newDriveApplyFixture(nil)
+	tests := []string{
+		`{"ended_at":"2026-06-01T07:00:00Z","rule":"manual","expected_stored_ended_at":""} {}`,
+		`{"case_id":3,"ended_at":"2026-06-01T07:00:00Z","rule":"manual","expected_stored_ended_at":""}`,
+		`{"case_id":0,"ended_at":"2026-06-01T07:00:00Z","rule":"manual","expected_stored_ended_at":""}`,
+	}
+	for _, body := range tests {
+		rec := doReq(
+			t,
+			f.handler,
+			http.MethodPost,
+			"/data-repair/drive/1/close",
+			strings.NewReader(body),
+		)
+		if rec.Code != http.StatusBadRequest {
+			t.Errorf("body %q: status = %d, want 400", body, rec.Code)
+		}
+	}
+	if f.drives.getByIDCalls != 0 || f.drives.partialCalls != 0 {
+		t.Fatalf(
+			"invalid close bodies touched source: get/update=%d/%d",
+			f.drives.getByIDCalls,
+			f.drives.partialCalls,
+		)
+	}
+}
+
 func TestCloseCharging_AppliesReviewedBoundary(t *testing.T) {
 	t.Parallel()
 
 	start := testNow.Add(-8 * time.Hour)
 	stopped := testNow.Add(-6 * time.Hour)
-
-	charging := &fakeChargingRepo{
-		getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
-			return &chargingmodel.ChargingSession{ID: id, VehicleID: 7, StartedAt: start}, nil
-		},
-	}
+	charging := newChargingApplyRepo(start)
 	src := &fakeDiagnosis{
 		chargesByID: map[int64]datarepairCandidate{3: candidate(3, 7, start, nil)},
 		powerObs:    []datarepairObs{chargingPowerObs(testNow.Add(-6*time.Hour-5*time.Minute), 11000)},
@@ -561,6 +927,7 @@ func TestCloseCharging_AppliesReviewedBoundary(t *testing.T) {
 	h := &DataRepairHandler{
 		chargingRepo: charging,
 		driveRepo:    &fakeDriveRepo{},
+		caseRepo:     newFakeCaseRepository(),
 		clock:        func() time.Time { return testNow },
 		diagnosis:    src,
 		audit: func(_ context.Context, _ database.DBTX, e auditEntry) error {

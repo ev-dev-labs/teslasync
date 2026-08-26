@@ -1,6 +1,7 @@
 package datarepair
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,6 +13,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 )
@@ -57,6 +59,10 @@ var driveRecomputedFields = []string{"ended_at", "duration_s"}
 
 // closeRequest is the required body of POST /data-repair/{kind}/{id}/close.
 type closeRequest struct {
+	// CaseID links the source mutation to a durable reviewed case. It is
+	// optional for backwards-compatible suggestion applies and omitted for
+	// manual closes.
+	CaseID *int64 `json:"case_id,omitempty"`
 	// EndedAt is the proposed boundary as an RFC3339 timestamp.
 	EndedAt *string `json:"ended_at"`
 	// Rule is either the machine token shown during review or "manual" for an
@@ -80,8 +86,8 @@ type closeResponse struct {
 	Recomputed []string `json:"recomputed_fields,omitempty"`
 }
 
-// maxCloseBodyBytes caps the request body. The shape is three short strings;
-// anything larger is a client bug or an attack.
+// maxCloseBodyBytes caps the request body. The shape is three short strings
+// and one optional integer; anything larger is a client bug or an attack.
 const maxCloseBodyBytes = 4 << 10
 
 // decodeCloseRequest parses the required body. Unknown fields are rejected so
@@ -91,13 +97,33 @@ func decodeCloseRequest(r *http.Request) (closeRequest, error) {
 	if r.Body == nil {
 		return req, errors.New("request body is required")
 	}
-	dec := json.NewDecoder(io.LimitReader(r.Body, maxCloseBodyBytes))
+	payload, err := io.ReadAll(io.LimitReader(r.Body, maxCloseBodyBytes+1))
+	if err != nil {
+		return closeRequest{}, fmt.Errorf("read request body: %w", err)
+	}
+	if len(payload) > maxCloseBodyBytes {
+		return closeRequest{}, fmt.Errorf("request body exceeds %d bytes", maxCloseBodyBytes)
+	}
+	dec := json.NewDecoder(bytes.NewReader(payload))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(&req); err != nil {
 		if errors.Is(err, io.EOF) {
 			return closeRequest{}, errors.New("request body is required")
 		}
 		return closeRequest{}, fmt.Errorf("invalid JSON body: %w", err)
+	}
+	var trailing json.RawMessage
+	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
+		if err == nil {
+			return closeRequest{}, errors.New("request body must contain one JSON object")
+		}
+		return closeRequest{}, fmt.Errorf("invalid trailing JSON data: %w", err)
+	}
+	if req.CaseID != nil && *req.CaseID <= 0 {
+		return closeRequest{}, errors.New("case_id must be a positive integer")
+	}
+	if req.CaseID != nil && req.Rule != nil && strings.TrimSpace(*req.Rule) == "manual" {
+		return closeRequest{}, errors.New("case_id cannot be used with a manual repair")
 	}
 	return req, nil
 }
@@ -139,6 +165,218 @@ func auditSource(rule string) string {
 		return "manual"
 	}
 	return "suggestion"
+}
+
+type applyCaseTarget struct {
+	repairCase *systemmodel.RepairCase
+	transition bool
+}
+
+func sameOptionalTime(left, right *time.Time) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	return left.UTC().Equal(right.UTC())
+}
+
+func expectedStoredBoundary(req closeRequest) (*time.Time, error) {
+	if req.ExpectedStoredEndedAt == nil {
+		return nil, errors.New("expected_stored_ended_at is required")
+	}
+	raw := strings.TrimSpace(*req.ExpectedStoredEndedAt)
+	if raw == "" {
+		return nil, nil
+	}
+	value, err := parseBoundary(raw)
+	if err != nil {
+		return nil, errors.New(
+			"expected_stored_ended_at must be an RFC3339 timestamp or an empty string",
+		)
+	}
+	return &value, nil
+}
+
+func writeApplyCaseConflict(w http.ResponseWriter, r *http.Request, message string) {
+	err := errors.New(message)
+	recordHandlerError(r.Context(), err)
+	httpx.WriteError(w, http.StatusConflict, message)
+}
+
+// resolveApplyCase binds an explicit case_id, or a deterministic active case
+// when the legacy suggestion request omitted case_id, to the source mutation.
+// The source row is still protected by its own optimistic boundary update;
+// TransitionStatus repeats the case updated_at comparison inside that same
+// transaction.
+func (h *DataRepairHandler) resolveApplyCase(
+	w http.ResponseWriter,
+	r *http.Request,
+	req closeRequest,
+	kind systemmodel.SessionRepairKind,
+	sessionID, vehicleID int64,
+	startedAt time.Time,
+	endedAt time.Time,
+	status closeStatus,
+	rule string,
+) (*applyCaseTarget, bool) {
+	requestedRule := rule
+	if req.Rule != nil {
+		requestedRule = strings.TrimSpace(*req.Rule)
+	}
+	if requestedRule == "manual" {
+		return nil, false
+	}
+
+	// Without the durable repository we cannot honestly determine whether a
+	// matching active case exists. Fail closed rather than applying the source
+	// while potentially leaving its case open.
+	if h.caseRepo == nil {
+		if !h.caseRepositoryReady(w, r) {
+			return nil, true
+		}
+	}
+
+	var (
+		repairCase *systemmodel.RepairCase
+		err        error
+	)
+	if req.CaseID != nil {
+		repairCase, err = h.caseRepo.GetCase(r.Context(), *req.CaseID)
+	} else {
+		fingerprint := systemmodel.RepairCaseFingerprint(
+			systemmodel.RepairCaseKind(kind),
+			sessionID,
+			requestedRule,
+		)
+		repairCase, err = h.caseRepo.FindActiveCaseByFingerprint(r.Context(), fingerprint)
+	}
+	if err != nil {
+		caseID := int64(0)
+		if req.CaseID != nil {
+			caseID = *req.CaseID
+		}
+		writeCaseOperationError(
+			w,
+			r,
+			"apply_case_load",
+			caseID,
+			fmt.Errorf("load repair case for apply: %w", err),
+		)
+		return nil, true
+	}
+	if repairCase == nil {
+		if req.CaseID != nil {
+			writeCaseNotFound(w, r)
+			return nil, true
+		}
+		return nil, false
+	}
+
+	if repairCase.Kind != systemmodel.RepairCaseKind(kind) ||
+		repairCase.SessionID != sessionID ||
+		repairCase.VehicleID != vehicleID ||
+		repairCase.Rule != requestedRule {
+		writeApplyCaseConflict(
+			w,
+			r,
+			"repair case no longer matches the requested source session and rule",
+		)
+		return nil, true
+	}
+	if !repairCase.EvidenceStartedAt.UTC().Equal(startedAt.UTC()) {
+		writeApplyCaseConflict(w, r, "repair case evidence no longer matches the source session")
+		return nil, true
+	}
+	expectedStored, err := expectedStoredBoundary(req)
+	if err != nil {
+		writeCaseValidationError(w, r, err)
+		return nil, true
+	}
+	if !sameOptionalTime(repairCase.EvidenceStoredEndedAt, expectedStored) {
+		writeApplyCaseConflict(
+			w,
+			r,
+			"repair case evidence pin no longer matches the reviewed source state",
+		)
+		return nil, true
+	}
+	if repairCase.SuggestedEndedAt == nil ||
+		!repairCase.SuggestedEndedAt.UTC().Equal(endedAt.UTC()) {
+		writeApplyCaseConflict(
+			w,
+			r,
+			"repair case boundary no longer matches the reviewed suggestion",
+		)
+		return nil, true
+	}
+
+	switch repairCase.Status {
+	case systemmodel.RepairCaseStatusOpen, systemmodel.RepairCaseStatusInReview:
+		if !repairCase.Applicable {
+			writeApplyCaseConflict(w, r, "repair case is no longer applicable")
+			return nil, true
+		}
+		return &applyCaseTarget{repairCase: repairCase, transition: true}, false
+	case systemmodel.RepairCaseStatusApplied:
+		if status == closeStatusAlreadyApplied {
+			return &applyCaseTarget{repairCase: repairCase}, false
+		}
+		fallthrough
+	default:
+		writeApplyCaseConflict(
+			w,
+			r,
+			fmt.Sprintf("repair case status %s cannot be applied", repairCase.Status),
+		)
+		return nil, true
+	}
+}
+
+func caseApplyAuditDetail(
+	from systemmodel.RepairCaseStatus,
+	rule string,
+	sourceMutated bool,
+) string {
+	return fmt.Sprintf(
+		"from=%s to=%s rule=%s source_mutated=%t",
+		from,
+		systemmodel.RepairCaseStatusApplied,
+		rule,
+		sourceMutated,
+	)
+}
+
+func (h *DataRepairHandler) applyCaseOutcome(
+	r *http.Request,
+	tx database.DBTX,
+	target *applyCaseTarget,
+	rule string,
+	sourceMutated bool,
+) error {
+	if target == nil || target.repairCase == nil || !target.transition {
+		return nil
+	}
+	repairCase := target.repairCase
+	if err := h.caseRepo.TransitionStatus(
+		r.Context(),
+		tx,
+		repairCase.ID,
+		systemmodel.RepairCaseStatusApplied,
+		nil,
+		repairCase.UpdatedAt,
+	); err != nil {
+		return fmt.Errorf("transition repair case %d to applied: %w", repairCase.ID, err)
+	}
+	if err := h.writeAudit(
+		r,
+		tx,
+		AuditActionCaseApply,
+		auditEntityDataRepairCase,
+		repairCase.ID,
+		caseApplyAuditDetail(repairCase.Status, rule, sourceMutated),
+	); err != nil {
+		return fmt.Errorf("audit applied repair case %d: %w", repairCase.ID, err)
+	}
+	return nil
 }
 
 // resolveCloseBoundary validates the requested boundary and reports the
@@ -193,7 +431,7 @@ func (h *DataRepairHandler) resolveCloseBoundary(
 	// --- idempotency (checked BEFORE concurrency so a double-click on an
 	//     already-applied suggestion is a no-op, not a conflict) -------------
 	if storedEndedAt != nil && storedEndedAt.UTC().Equal(endedAt) {
-		return endedAt, closeStatusAlreadyApplied, "already_applied", false
+		return endedAt, closeStatusAlreadyApplied, requestedRule, false
 	}
 
 	// --- optimistic concurrency --------------------------------------------

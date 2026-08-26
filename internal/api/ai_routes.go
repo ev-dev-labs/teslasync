@@ -61,60 +61,60 @@ import (
 // mountAIRoutes signature on every carve — only the router.go field
 // assignment changes, which already conflicts on every carve.
 type AIHandlers struct {
-	Chatbot                                http.Handler
-	Digest                                 http.Handler
-	YIR                                    http.Handler
-	Anomaly                                http.Handler
-	Alert                                  http.Handler
-	Automation                             http.Handler
-	Search                                 http.Handler
-	DriveCoach                             http.Handler
-	ChargingDiagnosis                      http.Handler
-	RagHelp                                http.Handler
-	DriveSearch                            http.Handler
-	SpeedProfileInsights                   http.Handler
-	RouteEfficiencySuggestions             http.Handler
-	AutoTripName                           http.Handler
-	TripPlannerLLM                         http.Handler
-	SmartChargeSchedule                    http.Handler
-	BatteryHealth                          http.Handler
-	ChargingCurveClustering                http.Handler
-	CostForecastNarration                  http.Handler
-	VampireDrainExplanation                http.Handler
-	PreheatPrecoolRecommender              http.Handler
-	CabinTemperatureImpactNarrative        http.Handler
-	TirePressureTrendReasoning             http.Handler
-	AlertTuning                            http.Handler
-	InboxCategorize                        http.Handler
-	CrossRuleConflict                      http.Handler
-	AutoNameUnnamedLocations               http.Handler
-	SuggestNewGeofences                    http.Handler
-	GeofenceAwareAutomation                http.Handler
-	LearnedAnomalyBaselines                http.Handler
-	RangePrediction                        http.Handler
-	MLChargingCurveClustering              http.Handler
-	PeriodCompareNarration                 http.Handler
-	LifetimeStatsQA                        http.Handler
-	IncidentTimelineSummarizer             http.Handler
-	DataRepairSuggestions                  http.Handler
-	SignalExplorerNlFilter                 http.Handler
-	LogTraceSummarization                  http.Handler
-	FeedbackQueueTriage                    http.Handler
-	MqttSseInspectorExplanations           http.Handler
-	StateMachineDebuggerNarrator           http.Handler
-	PredictiveMaintenance                  http.Handler
-	TCONarration                           http.Handler
-	SoftwareUpdateChangelogSummarizer      http.Handler
-	PiiRedactionSharedExports              http.Handler
-	QuietHoursSuggestion                   http.Handler
-	SafetySettingExplainer                 http.Handler
-	VoiceMode                              http.Handler
-	WatchFaceNLResponse                    http.Handler
-	NLSqlPlayground                        http.Handler
-	NLGrafanaPanel                         http.Handler
-	NLDashboardComposer                    http.Handler
-	TripPostcardShareCardImageGeneration   http.Handler
-	VehiclePaintPreview                    http.Handler
+	Chatbot                              http.Handler
+	Digest                               http.Handler
+	YIR                                  http.Handler
+	Anomaly                              http.Handler
+	Alert                                http.Handler
+	Automation                           http.Handler
+	Search                               http.Handler
+	DriveCoach                           http.Handler
+	ChargingDiagnosis                    http.Handler
+	RagHelp                              http.Handler
+	DriveSearch                          http.Handler
+	SpeedProfileInsights                 http.Handler
+	RouteEfficiencySuggestions           http.Handler
+	AutoTripName                         http.Handler
+	TripPlannerLLM                       http.Handler
+	SmartChargeSchedule                  http.Handler
+	BatteryHealth                        http.Handler
+	ChargingCurveClustering              http.Handler
+	CostForecastNarration                http.Handler
+	VampireDrainExplanation              http.Handler
+	PreheatPrecoolRecommender            http.Handler
+	CabinTemperatureImpactNarrative      http.Handler
+	TirePressureTrendReasoning           http.Handler
+	AlertTuning                          http.Handler
+	InboxCategorize                      http.Handler
+	CrossRuleConflict                    http.Handler
+	AutoNameUnnamedLocations             http.Handler
+	SuggestNewGeofences                  http.Handler
+	GeofenceAwareAutomation              http.Handler
+	LearnedAnomalyBaselines              http.Handler
+	RangePrediction                      http.Handler
+	MLChargingCurveClustering            http.Handler
+	PeriodCompareNarration               http.Handler
+	LifetimeStatsQA                      http.Handler
+	IncidentTimelineSummarizer           http.Handler
+	DataRepairSuggestions                http.Handler
+	SignalExplorerNlFilter               http.Handler
+	LogTraceSummarization                http.Handler
+	FeedbackQueueTriage                  http.Handler
+	MqttSseInspectorExplanations         http.Handler
+	StateMachineDebuggerNarrator         http.Handler
+	PredictiveMaintenance                http.Handler
+	TCONarration                         http.Handler
+	SoftwareUpdateChangelogSummarizer    http.Handler
+	PiiRedactionSharedExports            http.Handler
+	QuietHoursSuggestion                 http.Handler
+	SafetySettingExplainer               http.Handler
+	VoiceMode                            http.Handler
+	WatchFaceNLResponse                  http.Handler
+	NLSqlPlayground                      http.Handler
+	NLGrafanaPanel                       http.Handler
+	NLDashboardComposer                  http.Handler
+	TripPostcardShareCardImageGeneration http.Handler
+	VehiclePaintPreview                  http.Handler
 }
 
 func mountAIRoutes(
@@ -388,7 +388,7 @@ func mountAIRoutes(
 		// stale charging session OR ONE stale drive from the
 		// in-scope inventory loaded server-side. PROPOSE-ONLY:
 		// the user reviews the typed proposal in the AI side
-		// panel and clicks the canonical Save / Close / Discard
+		// panel and clicks the canonical Save / Close / Quarantine
 		// button on the baseline /system/data-repair edit form;
 		// the LLM never writes. Same stub-fallback pattern as the
 		// other AI handlers — a nil handler is possible during

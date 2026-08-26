@@ -1,4 +1,4 @@
-import { AnimatePresence, motion } from 'framer-motion'
+import { motion } from 'framer-motion'
 import { type ReactNode, useRef } from 'react'
 import { matchPath, useLocation } from 'react-router-dom'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
@@ -37,19 +37,15 @@ export interface RouteTransitionProps {
 }
 
 /**
- * Cross-fades the route content on `pathname` change. Designed to be wrapped
+ * Adds a subtle entrance treatment on `pathname` change. Designed to be wrapped
  * around `<Outlet />` inside the layout so the chrome (sidebar, header) does
  * not animate alongside the page body.
  *
  * Behaviour:
  *   - 120ms ease-out fade + 4px y-translate. Subtle enough to feel polished
  *     without slowing the user down.
- *   - `mode="wait"` ensures the outgoing page unmounts before the incoming
- *     mounts so two pages are never visually layered. The next page's
- *     `useEffect`s fire ~120ms later than they otherwise would, which is
- *     within the Suspense fallback budget.
- *   - `initial={false}` skips the entry animation on the very first render
- *     so we don't flash on cold page load.
+ *   - The next route mounts immediately. There is no exit animation delaying
+ *     lazy-chunk evaluation or the destination page's data queries.
  *   - Re-keyed by `location.pathname` only — query/search/hash changes
  *     (filters, sort, anchors) never trigger a re-fade.
  *   - Honours `prefers-reduced-motion` via `useMotionPreference`. When the
@@ -61,6 +57,7 @@ export function RouteTransition({ children, skipPattern = DEFAULT_SKIP_PATTERNS 
   const location = useLocation()
   const { reduce, durationMs } = useMotionPreference(120)
   const prevPathRef = useRef<string>(location.pathname)
+  const hasMountedRef = useRef(false)
 
   const prevPath = prevPathRef.current
   const newPath = location.pathname
@@ -70,23 +67,22 @@ export function RouteTransition({ children, skipPattern = DEFAULT_SKIP_PATTERNS 
 
   const skipForList = matchesSkip(prevPath) || matchesSkip(newPath)
   const effectiveDurationMs = reduce || skipForList ? 0 : durationMs
+  const animateEntry = hasMountedRef.current && !reduce && !skipForList
 
   // Track the previous path AFTER computing skipForList so the next render
   // sees the correct prev. Using a ref (not state) avoids an extra re-render.
   prevPathRef.current = newPath
+  hasMountedRef.current = true
 
   return (
-    <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={newPath}
-        initial={reduce || skipForList ? false : { opacity: 0, y: 4 }}
-        animate={reduce || skipForList ? { opacity: 1, y: 0 } : { opacity: 1, y: 0 }}
-        exit={reduce || skipForList ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
-        transition={{ duration: effectiveDurationMs / 1000, ease: 'easeOut' }}
-        style={{ minHeight: '100%' }}
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <motion.div
+      key={newPath}
+      initial={animateEntry ? { opacity: 0, y: 4 } : false}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: effectiveDurationMs / 1000, ease: 'easeOut' }}
+      className="min-h-full"
+    >
+      {children}
+    </motion.div>
   )
 }

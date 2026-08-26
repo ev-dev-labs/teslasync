@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
@@ -30,6 +31,8 @@ type chargingRepository interface {
 	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
 	PartialUpdateForRepairWithTx(ctx context.Context, tx database.DBTX, id int64, fields map[string]interface{}) (bool, error)
 	UpdateRepairBoundaryIfUnchangedWithTx(ctx context.Context, tx database.DBTX, id int64, expectedEndedAt *time.Time, endedAt time.Time) (bool, error)
+	SnapshotForQuarantineWithTx(ctx context.Context, tx database.DBTX, id int64) (json.RawMessage, error)
+	RestoreSnapshotWithTx(ctx context.Context, tx database.DBTX, payload json.RawMessage, expectedChecksum string) error
 	DeleteWithTx(ctx context.Context, tx database.DBTX, id int64) (bool, error)
 }
 
@@ -40,6 +43,8 @@ type driveRepository interface {
 	GetByID(ctx context.Context, id int64) (*drivemodel.Drive, error)
 	PartialUpdateForRepairWithTx(ctx context.Context, tx database.DBTX, id int64, fields map[string]interface{}) (bool, error)
 	UpdateRepairBoundaryIfUnchangedWithTx(ctx context.Context, tx database.DBTX, id int64, expectedEndedAt *time.Time, endedAt time.Time, durationS int64) (bool, error)
+	SnapshotForQuarantineWithTx(ctx context.Context, tx database.DBTX, id int64) (json.RawMessage, error)
+	RestoreSnapshotWithTx(ctx context.Context, tx database.DBTX, payload json.RawMessage, expectedChecksum string) error
 	DeleteWithTx(ctx context.Context, tx database.DBTX, id int64) (bool, error)
 }
 
@@ -57,18 +62,21 @@ type transactionFunc func(context.Context, func(database.DBTX) error) error
 
 var errRepairTargetChanged = errors.New("data-repair target changed during mutation")
 
-// DataRepairHandler handles endpoints for repairing incomplete/stale sessions.
+// DataRepairHandler handles endpoints for repairing incomplete/stale sessions
+// and managing their durable review cases.
 //
 // The handler exposes two clearly separated surfaces:
 //
-//   - READ-ONLY DIAGNOSIS — GetStaleSessions (inventory) and GetSuggestions
-//     (evidence-based boundary analysis). Neither writes anything, ever.
-//   - EXPLICIT MUTATION — Update*/Close*/Delete*, each gated behind RequireSudo
-//     in the router and each audited. A repair is NEVER auto-applied: the
-//     operator has to call one of these with an id they reviewed.
+//   - READ-ONLY DIAGNOSIS — inventory, evidence analysis, and case reads.
+//   - EXPLICIT MUTATION — session repair and case metadata writes, each gated
+//     behind RequireSudo in the router and each audited. A repair is NEVER
+//     auto-applied: the operator has to call one of these with an id they
+//     reviewed.
 type DataRepairHandler struct {
 	chargingRepo chargingRepository
 	driveRepo    driveRepository
+	caseRepo     CaseRepository
+	scanner      ScannerService
 	clock        clockFunc
 
 	// diagnosis is the read-only evidence source behind GetSuggestions and the
@@ -109,11 +117,28 @@ func WithAuditFunc(fn auditFunc) Option {
 	return func(h *DataRepairHandler) { h.audit = fn }
 }
 
+// WithCaseRepository replaces the durable case-management repository.
+// It is primarily a test seam; production wiring installs CaseRepo whenever
+// a database is configured.
+func WithCaseRepository(repo CaseRepository) Option {
+	return func(h *DataRepairHandler) { h.caseRepo = repo }
+}
+
+// WithScanner installs the shared integrity scanner used by the manual scan
+// endpoint and the lifecycle-bound background worker.
+func WithScanner(scanner ScannerService) Option {
+	return func(h *DataRepairHandler) { h.scanner = scanner }
+}
+
 func NewDataRepairHandler(db *database.DB, opts ...Option) *DataRepairHandler {
 	h := &DataRepairHandler{
 		chargingRepo: chargingdb.NewChargingRepo(db),
 		driveRepo:    drivedb.NewDriveRepo(db),
 		db:           db,
+	}
+	if db != nil {
+		h.caseRepo = datarepairdb.NewCaseRepo(db)
+		h.scanner = NewScanner(db)
 	}
 	for _, opt := range opts {
 		if opt != nil {
@@ -464,33 +489,48 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 	if done {
 		return
 	}
-	if status == closeStatusAlreadyApplied {
-		httpx.WriteJSON(w, http.StatusOK, closeResponse{
-			Status:    string(closeStatusAlreadyApplied),
-			EndedAt:   endedAt.Format(time.RFC3339),
-			SessionID: id,
-		})
+	caseTarget, done := h.resolveApplyCase(
+		w,
+		r,
+		req,
+		systemmodel.SessionRepairKindCharging,
+		id,
+		session.VehicleID,
+		session.StartedAt,
+		endedAt,
+		status,
+		rule,
+	)
+	if done {
 		return
 	}
 
 	err = h.withTransaction(ctx, func(tx database.DBTX) error {
-		applied, updateErr := h.chargingRepo.UpdateRepairBoundaryIfUnchangedWithTx(
-			ctx, tx, id, session.EndedAt, endedAt,
-		)
-		if updateErr != nil {
-			return updateErr
+		sourceMutated := status != closeStatusAlreadyApplied
+		if sourceMutated {
+			applied, updateErr := h.chargingRepo.UpdateRepairBoundaryIfUnchangedWithTx(
+				ctx, tx, id, session.EndedAt, endedAt,
+			)
+			if updateErr != nil {
+				return updateErr
+			}
+			if !applied {
+				return errRepairTargetChanged
+			}
+			if auditErr := h.writeAudit(
+				r, tx, AuditActionCloseCharging, auditEntityChargingSession, id,
+				closeAuditDetail(rule, auditSource(rule), session.StartedAt, session.EndedAt, endedAt, nil),
+			); auditErr != nil {
+				return auditErr
+			}
 		}
-		if !applied {
-			return errRepairTargetChanged
-		}
-		return h.writeAudit(
-			r, tx, AuditActionCloseCharging, auditEntityChargingSession, id,
-			closeAuditDetail(rule, auditSource(rule), session.StartedAt, session.EndedAt, endedAt, nil),
-		)
+		return h.applyCaseOutcome(r, tx, caseTarget, rule, sourceMutated)
 	})
-	if errors.Is(err, errRepairTargetChanged) {
+	if errors.Is(err, errRepairTargetChanged) ||
+		errors.Is(err, datarepairdb.ErrConcurrentModification) {
+		recordHandlerError(ctx, err)
 		httpx.WriteError(w, http.StatusConflict,
-			"this charging session changed while the repair was being applied; reload and review it again")
+			"the charging session or repair case changed while the repair was being applied; reload and review it again")
 		return
 	}
 	if err != nil {
@@ -503,15 +543,17 @@ func (h *DataRepairHandler) CloseCharging(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	log.Info().
-		Int64("charging_session_id", id).
-		Int64("vehicle_id", session.VehicleID).
-		Time("ended_at", endedAt).
-		Str("rule", rule).
-		Msg("data-repair: charging session boundary applied")
+	if status != closeStatusAlreadyApplied {
+		log.Info().
+			Int64("charging_session_id", id).
+			Int64("vehicle_id", session.VehicleID).
+			Time("ended_at", endedAt).
+			Str("rule", rule).
+			Msg("data-repair: charging session boundary applied")
+	}
 
 	httpx.WriteJSON(w, http.StatusOK, closeResponse{
-		Status:    string(closeStatusClosed),
+		Status:    string(status),
 		EndedAt:   endedAt.Format(time.RFC3339),
 		SessionID: id,
 	})
@@ -568,35 +610,48 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	}
 
 	durationS := int64(endedAt.Sub(drive.StartTs).Seconds() + 0.5)
-	if status == closeStatusAlreadyApplied {
-		httpx.WriteJSON(w, http.StatusOK, closeResponse{
-			Status:     string(closeStatusAlreadyApplied),
-			EndedAt:    endedAt.Format(time.RFC3339),
-			DurationS:  &durationS,
-			SessionID:  id,
-			Recomputed: driveRecomputedFields,
-		})
+	caseTarget, done := h.resolveApplyCase(
+		w,
+		r,
+		req,
+		systemmodel.SessionRepairKindDrive,
+		id,
+		drive.VehicleID,
+		drive.StartTs,
+		endedAt,
+		status,
+		rule,
+	)
+	if done {
 		return
 	}
 
 	err = h.withTransaction(ctx, func(tx database.DBTX) error {
-		applied, updateErr := h.driveRepo.UpdateRepairBoundaryIfUnchangedWithTx(
-			ctx, tx, id, drive.EndTs, endedAt, durationS,
-		)
-		if updateErr != nil {
-			return updateErr
+		sourceMutated := status != closeStatusAlreadyApplied
+		if sourceMutated {
+			applied, updateErr := h.driveRepo.UpdateRepairBoundaryIfUnchangedWithTx(
+				ctx, tx, id, drive.EndTs, endedAt, durationS,
+			)
+			if updateErr != nil {
+				return updateErr
+			}
+			if !applied {
+				return errRepairTargetChanged
+			}
+			if auditErr := h.writeAudit(
+				r, tx, AuditActionCloseDrive, auditEntityDrive, id,
+				closeAuditDetail(rule, auditSource(rule), drive.StartTs, drive.EndTs, endedAt, &durationS),
+			); auditErr != nil {
+				return auditErr
+			}
 		}
-		if !applied {
-			return errRepairTargetChanged
-		}
-		return h.writeAudit(
-			r, tx, AuditActionCloseDrive, auditEntityDrive, id,
-			closeAuditDetail(rule, auditSource(rule), drive.StartTs, drive.EndTs, endedAt, &durationS),
-		)
+		return h.applyCaseOutcome(r, tx, caseTarget, rule, sourceMutated)
 	})
-	if errors.Is(err, errRepairTargetChanged) {
+	if errors.Is(err, errRepairTargetChanged) ||
+		errors.Is(err, datarepairdb.ErrConcurrentModification) {
+		recordHandlerError(ctx, err)
 		httpx.WriteError(w, http.StatusConflict,
-			"this drive changed while the repair was being applied; reload and review it again")
+			"the drive or repair case changed while the repair was being applied; reload and review it again")
 		return
 	}
 	if err != nil {
@@ -609,16 +664,18 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	log.Info().
-		Int64("drive_id", id).
-		Int64("vehicle_id", drive.VehicleID).
-		Time("ended_at", endedAt).
-		Int64("duration_s", durationS).
-		Str("rule", rule).
-		Msg("data-repair: drive boundary applied")
+	if status != closeStatusAlreadyApplied {
+		log.Info().
+			Int64("drive_id", id).
+			Int64("vehicle_id", drive.VehicleID).
+			Time("ended_at", endedAt).
+			Int64("duration_s", durationS).
+			Str("rule", rule).
+			Msg("data-repair: drive boundary applied")
+	}
 
 	httpx.WriteJSON(w, http.StatusOK, closeResponse{
-		Status:     string(closeStatusClosed),
+		Status:     string(status),
 		EndedAt:    endedAt.Format(time.RFC3339),
 		DurationS:  &durationS,
 		SessionID:  id,
@@ -626,114 +683,35 @@ func (h *DataRepairHandler) CloseDrive(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// DeleteCharging removes a stale charging session.
+// DeleteCharging is the legacy route for moving a charging session into
+// reversible quarantine. It intentionally retains DELETE as the transport
+// verb for frontend compatibility, but never permanently deletes without a
+// durable snapshot and operator-initiated case.
 func (h *DataRepairHandler) DeleteCharging(w http.ResponseWriter, r *http.Request) {
 	r, span := startHandlerSpan(r, "delete_charging")
 	defer span.End()
 
 	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
+		recordHandlerError(r.Context(), err)
 		httpx.WriteError(w, http.StatusBadRequest, "invalid charging session ID")
 		return
 	}
-
-	ctx := r.Context()
-	existing, err := h.chargingRepo.GetByID(ctx, id)
-	if err != nil {
-		recordHandlerError(ctx, err)
-		log.Error().Err(err).
-			Str("trace_id", activeTraceID(ctx)).
-			Int64("id", id).
-			Msg("failed to get charging session")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
-		return
-	}
-	if existing == nil {
-		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
-		return
-	}
-
-	err = h.withTransaction(ctx, func(tx database.DBTX) error {
-		deleted, deleteErr := h.chargingRepo.DeleteWithTx(ctx, tx, id)
-		if deleteErr != nil {
-			return deleteErr
-		}
-		if !deleted {
-			return errRepairTargetChanged
-		}
-		return h.writeAudit(
-			r, tx, AuditActionDeleteCharging, auditEntityChargingSession, id,
-			deleteAuditDetail(existing.StartedAt, existing.EndedAt),
-		)
-	})
-	if errors.Is(err, errRepairTargetChanged) {
-		httpx.WriteError(w, http.StatusConflict, "charging session changed while it was being discarded")
-		return
-	}
-	if err != nil {
-		recordHandlerError(ctx, err)
-		log.Error().Err(err).
-			Str("trace_id", activeTraceID(ctx)).
-			Int64("id", id).
-			Msg("failed to delete charging session")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete charging session")
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	h.quarantineLegacySession(w, r, systemmodel.RepairCaseKindCharging, id)
 }
 
-// DeleteDrive removes a stale drive.
+// DeleteDrive is the legacy route for moving a drive into reversible
+// quarantine. The source delete happens only after a validated snapshot and
+// durable operator case have been created in the same transaction.
 func (h *DataRepairHandler) DeleteDrive(w http.ResponseWriter, r *http.Request) {
 	r, span := startHandlerSpan(r, "delete_drive")
 	defer span.End()
 
 	id, err := apiparams.URLParamInt64(r, "id")
 	if err != nil {
+		recordHandlerError(r.Context(), err)
 		httpx.WriteError(w, http.StatusBadRequest, "invalid drive ID")
 		return
 	}
-
-	ctx := r.Context()
-	existing, err := h.driveRepo.GetByID(ctx, id)
-	if err != nil {
-		recordHandlerError(ctx, err)
-		log.Error().Err(err).
-			Str("trace_id", activeTraceID(ctx)).
-			Int64("id", id).
-			Msg("failed to get drive")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to get drive")
-		return
-	}
-	if existing == nil {
-		httpx.WriteError(w, http.StatusNotFound, "drive not found")
-		return
-	}
-
-	err = h.withTransaction(ctx, func(tx database.DBTX) error {
-		deleted, deleteErr := h.driveRepo.DeleteWithTx(ctx, tx, id)
-		if deleteErr != nil {
-			return deleteErr
-		}
-		if !deleted {
-			return errRepairTargetChanged
-		}
-		return h.writeAudit(
-			r, tx, AuditActionDeleteDrive, auditEntityDrive, id,
-			deleteAuditDetail(existing.StartTs, existing.EndTs),
-		)
-	})
-	if errors.Is(err, errRepairTargetChanged) {
-		httpx.WriteError(w, http.StatusConflict, "drive changed while it was being discarded")
-		return
-	}
-	if err != nil {
-		recordHandlerError(ctx, err)
-		log.Error().Err(err).
-			Str("trace_id", activeTraceID(ctx)).
-			Int64("id", id).
-			Msg("failed to delete drive")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to delete drive")
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
+	h.quarantineLegacySession(w, r, systemmodel.RepairCaseKindDrive, id)
 }

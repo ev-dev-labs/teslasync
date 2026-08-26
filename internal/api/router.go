@@ -433,10 +433,23 @@ func mountAccountVehicleManagementRoutes(r chi.Router, h vehicleManagementRouteH
 type dataRepairRoutes interface {
 	GetStaleSessions(http.ResponseWriter, *http.Request)
 	GetSuggestions(http.ResponseWriter, *http.Request)
+	ListCases(http.ResponseWriter, *http.Request)
+	GetCaseStats(http.ResponseWriter, *http.Request)
+	GetCase(http.ResponseWriter, *http.Request)
+	ListQuarantines(http.ResponseWriter, *http.Request)
+	TransitionCase(http.ResponseWriter, *http.Request)
+	AssignCase(http.ResponseWriter, *http.Request)
+	AddCaseComment(http.ResponseWriter, *http.Request)
+	BulkTransitionCases(http.ResponseWriter, *http.Request)
+	ScanCases(http.ResponseWriter, *http.Request)
+	QuarantineCase(http.ResponseWriter, *http.Request)
+	RestoreQuarantine(http.ResponseWriter, *http.Request)
 	UpdateCharging(http.ResponseWriter, *http.Request)
+	PreviewCharging(http.ResponseWriter, *http.Request)
 	CloseCharging(http.ResponseWriter, *http.Request)
 	DeleteCharging(http.ResponseWriter, *http.Request)
 	UpdateDrive(http.ResponseWriter, *http.Request)
+	PreviewDrive(http.ResponseWriter, *http.Request)
 	CloseDrive(http.ResponseWriter, *http.Request)
 	DeleteDrive(http.ResponseWriter, *http.Request)
 }
@@ -446,13 +459,26 @@ func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Hand
 		r.Use(httprate.LimitByIP(20, time.Minute))
 		r.Get("/stale-sessions", h.GetStaleSessions)
 		r.Get("/suggestions", h.GetSuggestions)
+		r.Get("/cases", h.ListCases)
+		r.Get("/cases/stats", h.GetCaseStats)
+		r.Get("/cases/{id}", h.GetCase)
+		r.Get("/quarantine", h.ListQuarantines)
+		r.With(httprate.LimitByIP(2, time.Minute), sudo).Post("/cases/scan", h.ScanCases)
+		r.With(sudo).Post("/cases/{id}/transition", h.TransitionCase)
+		r.With(sudo).Put("/cases/{id}/assignment", h.AssignCase)
+		r.With(sudo).Post("/cases/{id}/comments", h.AddCaseComment)
+		r.With(sudo).Post("/cases/{id}/quarantine", h.QuarantineCase)
+		r.With(sudo).Post("/cases/bulk-transition", h.BulkTransitionCases)
+		r.With(sudo).Post("/quarantine/{id}/restore", h.RestoreQuarantine)
 		r.Route("/charging/{id}", func(r chi.Router) {
 			r.With(sudo).Put("/", h.UpdateCharging)
+			r.Post("/preview", h.PreviewCharging)
 			r.With(sudo).Post("/close", h.CloseCharging)
 			r.With(sudo).Delete("/", h.DeleteCharging)
 		})
 		r.Route("/drive/{id}", func(r chi.Router) {
 			r.With(sudo).Put("/", h.UpdateDrive)
+			r.Post("/preview", h.PreviewDrive)
 			r.With(sudo).Post("/close", h.CloseDrive)
 			r.With(sudo).Delete("/", h.DeleteDrive)
 		})
@@ -937,6 +963,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// worklist is clean.
 	dataRepairOpts := []apidatarepair.Option{
 		apidatarepair.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader),
+	}
+	if opt.DataRepairScanner != nil {
+		dataRepairOpts = append(dataRepairOpts, apidatarepair.WithScanner(opt.DataRepairScanner))
 	}
 	if db != nil {
 		dataRepairOpts = append(dataRepairOpts,

@@ -37,11 +37,13 @@ const H = vi.hoisted(() => {
   ]
   const VEHICLES = [{ id: 1 }, { id: 2 }]
   const STALE = { stale_charging: [{ id: 1 }], stale_drives: [{ id: 1 }, { id: 2 }] }
+  const REPAIR_STATS = { open: 1, in_review: 2 }
 
   const defaultReq = (url: unknown) => {
     if (typeof url === 'string') {
       if (url.startsWith('/alerts')) return Promise.resolve(ALERTS)
       if (url === '/vehicles') return Promise.resolve(VEHICLES)
+      if (url === '/data-repair/cases/stats') return Promise.resolve(REPAIR_STATS)
       if (url.startsWith('/data-repair')) return Promise.resolve(STALE)
     }
     return Promise.resolve({})
@@ -51,6 +53,7 @@ const H = vi.hoisted(() => {
     ALERTS,
     VEHICLES,
     STALE,
+    REPAIR_STATS,
     defaultReq,
     request: vi.fn(defaultReq),
     sidebarStyle: { value: 'legacy' as string },
@@ -793,13 +796,27 @@ describe('Layout — live nav badges', () => {
     })
   })
 
-  it('shows the stale-session badge on the "Data Repair" link', async () => {
+  it('shows the active durable-case badge on the "Data Repair" link', async () => {
     renderLayout('/data-repair')
     await waitFor(() => {
       const link = screen.getByRole('link', { name: 'Data Repair' })
-      // STALE fixture: 1 charging + 2 drives = 3.
+      // REPAIR_STATS fixture: 1 open + 2 in review = 3.
       expect(within(link).getByText('3')).toBeInTheDocument()
     })
+  })
+
+  it('does not run the deep stale-session diagnostic from global chrome', async () => {
+    renderLayout('/')
+    await waitFor(() => {
+      expect(H.request).toHaveBeenCalledWith(
+        '/data-repair/cases/stats',
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
+    })
+    expect(H.request).not.toHaveBeenCalledWith(
+      '/data-repair/stale-sessions',
+      expect.anything(),
+    )
   })
 })
 

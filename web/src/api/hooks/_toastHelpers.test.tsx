@@ -2,7 +2,7 @@
  * useMutationToast — behavioural tests.
  *
  * `_toastHelpers.ts` exports a single hook, `useMutationToast()`, that returns
- * `{ success, error }`. Its job is narrow but load-bearing (40+ mutation call
+ * `{ success, warning, error }`. Its job is narrow but load-bearing (40+ mutation call
  * sites depend on it): translate an i18n key + English fallback into a toast
  * title, derive a user-facing detail line from an arbitrary thrown value, and
  * forward both to the in-house Toast system at the correct severity.
@@ -102,6 +102,20 @@ describe('useMutationToast — success()', () => {
     expect(region).toHaveTextContent('Settings saved');
     // Success is polite, never assertive — no error/alert region should exist.
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  describe('useMutationToast — warning()', () => {
+    it('renders a polite warning toast with interpolated counts', () => {
+      fireHelper((api) => api.warning(
+        'toast.repair.partial',
+        'Updated {{updated}} cases; {{skipped}} skipped',
+        { updated: 2, skipped: 1 },
+      ));
+
+      const region = screen.getByRole('status');
+      expect(region).toHaveTextContent('Updated 2 cases; 1 skipped');
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
   });
 
   it('interpolates {{count}} placeholders into the success message', () => {
@@ -204,6 +218,7 @@ describe('useMutationToast — stability & live dispatch', () => {
 
     expect(result.current).toBe(first);
     expect(result.current.success).toBe(first.success);
+    expect(result.current.warning).toBe(first.warning);
     expect(result.current.error).toBe(first.error);
   });
 
@@ -242,6 +257,7 @@ describe('useDeferredMutationToast — deferred provider contract', () => {
     const { result } = renderHook(() => useDeferredMutationToast());
 
     expect(result.current.success).toBeTypeOf('function');
+    expect(result.current.warning).toBeTypeOf('function');
     expect(result.current.error).toBeTypeOf('function');
   });
 
@@ -249,6 +265,9 @@ describe('useDeferredMutationToast — deferred provider contract', () => {
     const { result } = renderHook(() => useDeferredMutationToast());
 
     expect(() => result.current.success('toast.k', 'Saved')).toThrow(
+      'useToast must be used within ToastProvider',
+    );
+    expect(() => result.current.warning('toast.k', 'Review needed')).toThrow(
       'useToast must be used within ToastProvider',
     );
     expect(() => result.current.error(new Error('boom'))).toThrow(

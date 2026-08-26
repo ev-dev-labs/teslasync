@@ -1,4 +1,4 @@
-import type { MouseEvent, FocusEvent } from 'react'
+import type { MouseEvent, FocusEvent, PointerEvent } from 'react'
 import type { LinkProps, NavLinkProps } from 'react-router-dom'
 import { GuardedLink, GuardedNavLink } from '../feedback/GuardedLink'
 import { prefetchRoute } from '@/lib/routePrefetch'
@@ -8,7 +8,7 @@ import { prefetchRoute } from '@/lib/routePrefetch'
  *
  * Wraps {@link GuardedLink} (so the unsaved-changes navigation guard is
  * preserved) and additionally calls {@link prefetchRoute} on `mouseenter`
- * / `focus`. The lazy chunk for the destination route is eagerly fetched
+ * / `focus` / `pointerdown`. The lazy chunk for the destination route is eagerly fetched
  * the moment the user looks like they might navigate, so the actual
  * click resolves to a cached chunk and renders instantly.
  *
@@ -39,6 +39,7 @@ export function PrefetchLink({
   to,
   onMouseEnter,
   onFocus,
+  onPointerDown,
   ...rest
 }: PrefetchLinkProps) {
   const path = pathFromTo(to)
@@ -54,6 +55,10 @@ export function PrefetchLink({
         prefetchRoute(path)
         onFocus?.(e)
       }}
+      onPointerDown={(e: PointerEvent<HTMLAnchorElement>) => {
+        prefetchRoute(path)
+        onPointerDown?.(e)
+      }}
     />
   )
 }
@@ -63,6 +68,7 @@ export function PrefetchNavLink({
   to,
   onMouseEnter,
   onFocus,
+  onPointerDown,
   ...rest
 }: PrefetchNavLinkProps) {
   const path = pathFromTo(to)
@@ -77,6 +83,10 @@ export function PrefetchNavLink({
       onFocus={(e: FocusEvent<HTMLAnchorElement>) => {
         prefetchRoute(path)
         onFocus?.(e)
+      }}
+      onPointerDown={(e: PointerEvent<HTMLAnchorElement>) => {
+        prefetchRoute(path)
+        onPointerDown?.(e)
       }}
     />
   )

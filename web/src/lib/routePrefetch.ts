@@ -1,12 +1,13 @@
 /**
- * Route prefetch on link hover/focus.
+ * Route prefetch on link hover, focus, or pointer intent.
  *
  * Every route in `App.tsx` is code-split via `React.lazy()`. The first
  * navigation to a route pays the full chunk-fetch + parse cost, which
  * shows as a brief PageLoadSkeleton flash on a typical 100 ms-RTT
  * connection. By eagerly downloading the chunk on hover/focus of the
  * navigation link, the actual click navigates to a chunk that is
- * already in the runtime cache, so the destination renders instantly.
+ * already in the runtime cache, so the destination renders instantly. Pointer
+ * intent gives touch and pen users the same early-start path as mouse users.
  *
  * Each preload is invoked at most once per page lifetime; subsequent
  * hovers are no-ops. Failed downloads are evicted from the cache so
@@ -176,7 +177,7 @@ function resolvePreloaderPath(path: string): string | null {
 
 /**
  * Eagerly download the lazy chunk for `path`. Called by `<PrefetchLink>`
- * on hover / focus; safe to call repeatedly with the same path (subsequent
+ * on hover / focus / pointerdown; safe to call repeatedly with the same path (subsequent
  * calls are no-ops once the chunk is in flight or resolved).
  *
  * - Empty / missing path → no-op (defensive).

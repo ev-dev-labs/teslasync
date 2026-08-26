@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 )
@@ -26,6 +27,8 @@ import (
 // Canonical action tokens. These are matched by audit dashboards and by the
 // frontend's audit-recognition logic, so they must stay stable.
 const (
+	maxHTTPActorChars = 255
+
 	// AuditActionCloseDrive is written when a drive's ended_at is set through
 	// the data-repair close endpoint.
 	AuditActionCloseDrive = "data_repair.close_drive"
@@ -36,16 +39,41 @@ const (
 	AuditActionUpdateDrive = "data_repair.update_drive"
 	// AuditActionUpdateCharging is written for a non-boundary charging correction.
 	AuditActionUpdateCharging = "data_repair.update_charging"
-	// AuditActionDeleteDrive is written when an operator discards a drive.
+	// AuditActionDeleteDrive identifies historical permanent-delete audit rows.
+	// New removals use AuditActionQuarantineDrive.
 	AuditActionDeleteDrive = "data_repair.delete_drive"
-	// AuditActionDeleteCharging is written when an operator discards a charging session.
+	// AuditActionDeleteCharging identifies historical permanent-delete audit rows.
+	// New removals use AuditActionQuarantineCharging.
 	AuditActionDeleteCharging = "data_repair.delete_charging"
+	// AuditActionCaseTransition is written for one operator lifecycle change.
+	AuditActionCaseTransition = "data_repair.case_transition"
+	// AuditActionCaseAssignment is written when a case is assigned or unassigned.
+	AuditActionCaseAssignment = "data_repair.case_assignment"
+	// AuditActionCaseComment is written when a case comment is appended.
+	AuditActionCaseComment = "data_repair.case_comment"
+	// AuditActionCaseBulkTransition is written once per case changed by a bulk request.
+	AuditActionCaseBulkTransition = "data_repair.case_bulk_transition"
+	// AuditActionQuarantineDrive records removal of a drive into reversible quarantine.
+	AuditActionQuarantineDrive = "data_repair.quarantine_drive"
+	// AuditActionQuarantineCharging records removal of a charging session into reversible quarantine.
+	AuditActionQuarantineCharging = "data_repair.quarantine_charging"
+	// AuditActionCaseQuarantine records the matching durable case outcome.
+	AuditActionCaseQuarantine = "data_repair.case_quarantine"
+	// AuditActionRestoreDrive records restoration of a quarantined drive.
+	AuditActionRestoreDrive = "data_repair.restore_drive"
+	// AuditActionRestoreCharging records restoration of a quarantined charging session.
+	AuditActionRestoreCharging = "data_repair.restore_charging"
+	// AuditActionCaseRestore records the matching durable case outcome.
+	AuditActionCaseRestore = "data_repair.case_restore"
+	// AuditActionCaseApply records a case transition performed with its source mutation.
+	AuditActionCaseApply = "data_repair.case_apply"
 )
 
 // Canonical entity_type tokens.
 const (
 	auditEntityDrive           = "drive"
 	auditEntityChargingSession = "charging_session"
+	auditEntityDataRepairCase  = "data_repair_case"
 )
 
 // auditEntry is the canonical write-shape for audit_logs.
@@ -92,14 +120,23 @@ func insertAuditLog(tx database.DBTX, ctx context.Context, now time.Time, e audi
 	return err
 }
 
-// actorFromRequest resolves the operator identity from the configured
-// ForwardAuth header. Empty when no auth proxy is configured — the row is
-// still written so a dev install can see what happened.
+// actorFromRequest resolves the HTTP operator identity from the configured
+// ForwardAuth header. Open-mode requests still receive a durable, non-empty
+// attribution rather than violating actor constraints or masquerading as a
+// scheduled system action.
 func actorFromRequest(r *http.Request, headerName string) string {
-	if r == nil || headerName == "" {
-		return ""
+	actor := ""
+	if r != nil && headerName != "" {
+		actor = strings.TrimSpace(r.Header.Get(headerName))
 	}
-	return strings.TrimSpace(r.Header.Get(headerName))
+	if actor == "" || !utf8.ValidString(actor) || strings.ContainsRune(actor, '\x00') {
+		return "anonymous"
+	}
+	runes := []rune(actor)
+	if len(runes) > maxHTTPActorChars {
+		return string(runes[:maxHTTPActorChars])
+	}
+	return actor
 }
 
 // clientIP prefers the first X-Forwarded-For hop, then RemoteAddr with the

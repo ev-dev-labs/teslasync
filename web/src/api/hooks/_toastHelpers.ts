@@ -58,8 +58,8 @@ function errorDetail(err: unknown): string | undefined {
  *     onError: (e) => error(e, 'toast.foo.delete.error', 'Failed to delete item'),
  *   });
  *
- * The `success` helper takes an i18n key + English fallback, plus an optional
- * interpolation map for `{{count}}`-style placeholders. The `error` helper
+ * The `success` and `warning` helpers take an i18n key + English fallback,
+ * plus an optional interpolation map for `{{count}}`-style placeholders. The `error` helper
  * takes the raw error (any shape — Error, string, unknown), an i18n key, and
  * a fallback. The error's `message` is shown as a secondary line beneath the
  * translated title so users see both "Failed to save settings" and the
@@ -88,6 +88,11 @@ function useMutationToastInternal(requireProviderOnRender: boolean) {
         const { toast, t } = latest.current;
         if (!toast) throw new Error('useToast must be used within ToastProvider');
         toast.success(t(key, { defaultValue: fallback, ...(vars ?? {}) }));
+      },
+      warning(key: string, fallback: string, vars?: Record<string, unknown>) {
+        const { toast, t } = latest.current;
+        if (!toast) throw new Error('useToast must be used within ToastProvider');
+        toast.warning(t(key, { defaultValue: fallback, ...(vars ?? {}) }));
       },
       error(
         err: unknown,

@@ -31,6 +31,18 @@ describe('SearchInput', () => {
     expect(screen.getByPlaceholderText('Search…')).toBeInTheDocument();
   });
 
+  it('forwards a programmatic label to the search field', () => {
+    render(
+      <SearchInput
+        value=""
+        onChange={() => undefined}
+        ariaLabel="Filter by owner"
+      />,
+    );
+
+    expect(screen.getByRole('searchbox', { name: 'Filter by owner' })).toBeInTheDocument();
+  });
+
   it('reflects the initial controlled value', () => {
     render(<Harness initial="abc" />);
     expect(screen.getByPlaceholderText('Search…')).toHaveValue('abc');

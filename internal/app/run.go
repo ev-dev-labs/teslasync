@@ -31,13 +31,14 @@ import (
 // so that Close() runs after Run() returns.
 func (a *App) Run(ctx context.Context) error {
 	r := apirouter.NewRouter(a.DB, a.TeslaClient, a.MQTT, a.Cfg, a.Health, a.StateReader, apirouter.RouterOptions{
-		AppVersion:       a.Build.Version,
-		Encryptor:        a.Encryptor,
-		TelemetryHandler: a.TelemetryHandler,
-		GasPriceWorker:   a.GasPriceWorker,
-		PollEngine:       a.PollEngine,
-		SignalStore:      a.SignalStore,
-		CacheStore:       a.Cache,
+		AppVersion:        a.Build.Version,
+		Encryptor:         a.Encryptor,
+		TelemetryHandler:  a.TelemetryHandler,
+		GasPriceWorker:    a.GasPriceWorker,
+		PollEngine:        a.PollEngine,
+		SignalStore:       a.SignalStore,
+		CacheStore:        a.Cache,
+		DataRepairScanner: a.DataRepairScanner,
 
 		// Dead-letter and feature-flag observability.
 		DLQInspector:           a.DLQInspector,

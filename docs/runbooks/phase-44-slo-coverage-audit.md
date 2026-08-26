@@ -24,7 +24,7 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
 
 ## Findings
 
-All 220 user-facing routes are covered.
+All 225 user-facing routes are covered.
 
 ## Per-route coverage table
 
@@ -80,6 +80,9 @@ All 220 user-facing routes are covered.
 | `/carbon/intensity` | transitive (api_availability) |
 | `/carbon/recommendation` | transitive (api_availability) |
 | `/carbon/summary` | transitive (api_availability) |
+| `/cases` | transitive (api_availability) |
+| `/cases/stats` | transitive (api_availability) |
+| `/cases/{id}` | transitive (api_availability) |
 | `/charging-activity` | transitive (api_availability) |
 | `/charging-history` | transitive (api_availability) |
 | `/charging-summary` | transitive (api_availability) |
@@ -157,10 +160,12 @@ All 220 user-facing routes are covered.
 | `/positions` | transitive (api_availability) |
 | `/predictions` | transitive (api_availability) |
 | `/preferences` | transitive (api_availability) |
+| `/preview` | transitive (api_availability) |
 | `/privacy` | transitive (api_availability) |
 | `/profile` | transitive (api_availability) |
 | `/public-key` | transitive (api_availability) |
 | `/public-key-status` | transitive (api_availability) |
+| `/quarantine` | transitive (api_availability) |
 | `/quick` | transitive (api_availability) |
 | `/rate-plans` | transitive (api_availability) |
 | `/rates` | transitive (api_availability) |

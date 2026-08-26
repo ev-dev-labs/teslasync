@@ -15,6 +15,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/ev-dev-labs/teslasync/internal/database/repairsnapshot"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
@@ -35,6 +36,8 @@ type fakeChargingRepo struct {
 	getByIDFn     func(context.Context, int64) (*chargingmodel.ChargingSession, error)
 	partialFn     func(context.Context, int64, map[string]interface{}) error
 	conditionalFn func(context.Context, int64, *time.Time, time.Time) (bool, error)
+	snapshotFn    func(context.Context, int64) (json.RawMessage, error)
+	restoreFn     func(context.Context, json.RawMessage, string) error
 	deleteFn      func(context.Context, int64) error
 
 	staleCalls    int
@@ -46,6 +49,8 @@ type fakeChargingRepo struct {
 	partialFields map[string]interface{}
 	deleteCalls   int
 	deleteID      int64
+	snapshotCalls int
+	restoreCalls  int
 }
 
 func (f *fakeChargingRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, error) {
@@ -115,12 +120,39 @@ func (f *fakeChargingRepo) DeleteWithTx(ctx context.Context, _ database.DBTX, id
 	return true, nil
 }
 
+func (f *fakeChargingRepo) SnapshotForQuarantineWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	id int64,
+) (json.RawMessage, error) {
+	f.snapshotCalls++
+	if f.snapshotFn != nil {
+		return f.snapshotFn(ctx, id)
+	}
+	return nil, errors.New("charging snapshot not configured")
+}
+
+func (f *fakeChargingRepo) RestoreSnapshotWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	payload json.RawMessage,
+	checksum string,
+) error {
+	f.restoreCalls++
+	if f.restoreFn != nil {
+		return f.restoreFn(ctx, payload, checksum)
+	}
+	return nil
+}
+
 // fakeDriveRepo mirrors fakeChargingRepo for the driveRepository port.
 type fakeDriveRepo struct {
 	getStaleFn    func(context.Context, time.Time) ([]*drivemodel.Drive, error)
 	getByIDFn     func(context.Context, int64) (*drivemodel.Drive, error)
 	partialFn     func(context.Context, int64, map[string]interface{}) error
 	conditionalFn func(context.Context, int64, *time.Time, time.Time, int64) (bool, error)
+	snapshotFn    func(context.Context, int64) (json.RawMessage, error)
+	restoreFn     func(context.Context, json.RawMessage, string) error
 	deleteFn      func(context.Context, int64) error
 
 	staleCalls    int
@@ -132,6 +164,8 @@ type fakeDriveRepo struct {
 	partialFields map[string]interface{}
 	deleteCalls   int
 	deleteID      int64
+	snapshotCalls int
+	restoreCalls  int
 }
 
 func (f *fakeDriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*drivemodel.Drive, error) {
@@ -205,6 +239,31 @@ func (f *fakeDriveRepo) DeleteWithTx(ctx context.Context, _ database.DBTX, id in
 	return true, nil
 }
 
+func (f *fakeDriveRepo) SnapshotForQuarantineWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	id int64,
+) (json.RawMessage, error) {
+	f.snapshotCalls++
+	if f.snapshotFn != nil {
+		return f.snapshotFn(ctx, id)
+	}
+	return nil, errors.New("drive snapshot not configured")
+}
+
+func (f *fakeDriveRepo) RestoreSnapshotWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	payload json.RawMessage,
+	checksum string,
+) error {
+	f.restoreCalls++
+	if f.restoreFn != nil {
+		return f.restoreFn(ctx, payload, checksum)
+	}
+	return nil
+}
+
 // ---- helpers -------------------------------------------------------------
 
 func newTestHandler(c chargingRepository, d driveRepository) *DataRepairHandler {
@@ -227,11 +286,13 @@ func newRouter(h *DataRepairHandler) chi.Router {
 	r.Get("/data-repair/suggestions", h.GetSuggestions)
 	r.Route("/data-repair/charging/{id}", func(r chi.Router) {
 		r.Put("/", h.UpdateCharging)
+		r.Post("/preview", h.PreviewCharging)
 		r.Post("/close", h.CloseCharging)
 		r.Delete("/", h.DeleteCharging)
 	})
 	r.Route("/data-repair/drive/{id}", func(r chi.Router) {
 		r.Put("/", h.UpdateDrive)
+		r.Post("/preview", h.PreviewDrive)
 		r.Post("/close", h.CloseDrive)
 		r.Delete("/", h.DeleteDrive)
 	})
@@ -276,6 +337,33 @@ func sampleDrive(id int64, start time.Time) *drivemodel.Drive {
 		VehicleID: 7,
 		StartTs:   start,
 	}
+}
+
+func fakeQuarantineSnapshot(
+	t *testing.T,
+	kind string,
+	id, vehicleID int64,
+	startedAt time.Time,
+	endedAt *time.Time,
+) json.RawMessage {
+	t.Helper()
+	key := "drive"
+	if kind == "charging" {
+		key = "charging_session"
+	}
+	payload, err := json.Marshal(map[string]interface{}{
+		"schema_version": 1,
+		key: map[string]interface{}{
+			"id":         id,
+			"vehicle_id": vehicleID,
+			"started_at": startedAt.UTC(),
+			"ended_at":   endedAt,
+		},
+	})
+	if err != nil {
+		t.Fatalf("marshal fake quarantine snapshot: %v", err)
+	}
+	return payload
 }
 
 // ---- constructor / clock -------------------------------------------------
@@ -756,8 +844,12 @@ func TestUpdateAndDeleteMutationsWriteAuditRows(t *testing.T) {
 		getByIDFn: func(_ context.Context, id int64) (*drivemodel.Drive, error) {
 			return sampleDrive(id, testNow.Add(-time.Hour)), nil
 		},
+		snapshotFn: func(_ context.Context, id int64) (json.RawMessage, error) {
+			return fakeQuarantineSnapshot(t, "drive", id, 7, testNow.Add(-time.Hour), nil), nil
+		},
 	}
 	driveHandler := newTestHandler(&fakeChargingRepo{}, drive)
+	driveHandler.caseRepo = newFakeCaseRepository()
 	driveHandler.audit = func(_ context.Context, _ database.DBTX, entry auditEntry) error {
 		driveAudits = append(driveAudits, entry)
 		return nil
@@ -772,11 +864,14 @@ func TestUpdateAndDeleteMutationsWriteAuditRows(t *testing.T) {
 		t.Fatalf("drive update audit = %+v", driveAudits)
 	}
 
-	deleteRec := doReq(t, driveHandler, http.MethodDelete, "/data-repair/drive/7", nil)
+	deleteRec := doReq(t, driveHandler, http.MethodDelete, "/data-repair/drive/7",
+		strings.NewReader(`{"reason":"duplicate operator record"}`))
 	if deleteRec.Code != http.StatusNoContent {
 		t.Fatalf("drive delete status = %d, want 204. body=%s", deleteRec.Code, deleteRec.Body.String())
 	}
-	if len(driveAudits) != 2 || driveAudits[1].Action != AuditActionDeleteDrive {
+	if len(driveAudits) != 3 ||
+		driveAudits[1].Action != AuditActionQuarantineDrive ||
+		driveAudits[2].Action != AuditActionCaseQuarantine {
 		t.Fatalf("drive delete audit = %+v", driveAudits)
 	}
 
@@ -785,8 +880,12 @@ func TestUpdateAndDeleteMutationsWriteAuditRows(t *testing.T) {
 		getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
 			return sampleCharging(id), nil
 		},
+		snapshotFn: func(_ context.Context, id int64) (json.RawMessage, error) {
+			return fakeQuarantineSnapshot(t, "charging", id, 7, testNow.Add(-time.Hour), nil), nil
+		},
 	}
 	chargeHandler := newTestHandler(charge, &fakeDriveRepo{})
+	chargeHandler.caseRepo = newFakeCaseRepository()
 	chargeHandler.audit = func(_ context.Context, _ database.DBTX, entry auditEntry) error {
 		chargeAudits = append(chargeAudits, entry)
 		return nil
@@ -801,11 +900,14 @@ func TestUpdateAndDeleteMutationsWriteAuditRows(t *testing.T) {
 		t.Fatalf("charge update audit = %+v", chargeAudits)
 	}
 
-	chargeDeleteRec := doReq(t, chargeHandler, http.MethodDelete, "/data-repair/charging/8", nil)
+	chargeDeleteRec := doReq(t, chargeHandler, http.MethodDelete, "/data-repair/charging/8",
+		strings.NewReader(`{"reason":"duplicate operator record"}`))
 	if chargeDeleteRec.Code != http.StatusNoContent {
 		t.Fatalf("charge delete status = %d, want 204. body=%s", chargeDeleteRec.Code, chargeDeleteRec.Body.String())
 	}
-	if len(chargeAudits) != 2 || chargeAudits[1].Action != AuditActionDeleteCharging {
+	if len(chargeAudits) != 3 ||
+		chargeAudits[1].Action != AuditActionQuarantineCharging ||
+		chargeAudits[2].Action != AuditActionCaseQuarantine {
 		t.Fatalf("charge delete audit = %+v", chargeAudits)
 	}
 }
@@ -1237,13 +1339,23 @@ func TestDeleteCharging_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeChargingRepo{
-		getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
-			return sampleCharging(id), nil
+		snapshotFn: func(_ context.Context, id int64) (json.RawMessage, error) {
+			return fakeQuarantineSnapshot(
+				t,
+				"charging",
+				id,
+				7,
+				testNow.Add(-time.Hour),
+				nil,
+			), nil
 		},
 	}
 	h := newTestHandler(fake, &fakeDriveRepo{})
+	cases := newFakeCaseRepository()
+	h.caseRepo = cases
 
-	rec := doReq(t, h, http.MethodDelete, "/data-repair/charging/55", nil)
+	rec := doReq(t, h, http.MethodDelete, "/data-repair/charging/55",
+		strings.NewReader(`{"reason":"operator identified duplicate"}`))
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204. body=%s", rec.Code, rec.Body.String())
@@ -1256,6 +1368,15 @@ func TestDeleteCharging_HappyPath(t *testing.T) {
 	}
 	if fake.deleteID != 55 {
 		t.Errorf("Delete id = %d, want 55", fake.deleteID)
+	}
+	if fake.snapshotCalls != 1 || cases.upsertCalls != 1 ||
+		cases.createQuarantineCalls != 1 {
+		t.Fatalf(
+			"snapshot/upsert/quarantine calls = %d/%d/%d, want 1/1/1",
+			fake.snapshotCalls,
+			cases.upsertCalls,
+			cases.createQuarantineCalls,
+		)
 	}
 }
 
@@ -1279,23 +1400,27 @@ func TestDeleteCharging_Errors(t *testing.T) {
 			wantDelete: 0,
 		},
 		{
-			name: "get session fails",
+			name: "snapshot fails",
 			path: "/data-repair/charging/5",
 			fake: func() *fakeChargingRepo {
-				return &fakeChargingRepo{getByIDFn: func(context.Context, int64) (*chargingmodel.ChargingSession, error) {
+				return &fakeChargingRepo{snapshotFn: func(context.Context, int64) (json.RawMessage, error) {
 					return nil, errBoom
 				}}
 			},
 			wantStatus: http.StatusInternalServerError,
-			wantErr:    "failed to get charging session",
+			wantErr:    "data-repair quarantine operation failed",
 			wantDelete: 0,
 		},
 		{
-			name:       "not found",
-			path:       "/data-repair/charging/9",
-			fake:       func() *fakeChargingRepo { return &fakeChargingRepo{} },
+			name: "not found",
+			path: "/data-repair/charging/9",
+			fake: func() *fakeChargingRepo {
+				return &fakeChargingRepo{snapshotFn: func(context.Context, int64) (json.RawMessage, error) {
+					return nil, repairsnapshot.ErrNotFound
+				}}
+			},
 			wantStatus: http.StatusNotFound,
-			wantErr:    "charging session not found",
+			wantErr:    "source session not found",
 			wantDelete: 0,
 		},
 		{
@@ -1303,14 +1428,21 @@ func TestDeleteCharging_Errors(t *testing.T) {
 			path: "/data-repair/charging/9",
 			fake: func() *fakeChargingRepo {
 				return &fakeChargingRepo{
-					getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
-						return sampleCharging(id), nil
+					snapshotFn: func(_ context.Context, id int64) (json.RawMessage, error) {
+						return fakeQuarantineSnapshot(
+							t,
+							"charging",
+							id,
+							7,
+							testNow.Add(-time.Hour),
+							nil,
+						), nil
 					},
 					deleteFn: func(context.Context, int64) error { return errBoom },
 				}
 			},
 			wantStatus: http.StatusInternalServerError,
-			wantErr:    "failed to delete charging session",
+			wantErr:    "data-repair quarantine operation failed",
 			wantDelete: 1,
 		},
 	}
@@ -1321,7 +1453,9 @@ func TestDeleteCharging_Errors(t *testing.T) {
 			t.Parallel()
 			fake := tc.fake()
 			h := newTestHandler(fake, &fakeDriveRepo{})
-			rec := doReq(t, h, http.MethodDelete, tc.path, nil)
+			h.caseRepo = newFakeCaseRepository()
+			rec := doReq(t, h, http.MethodDelete, tc.path,
+				strings.NewReader(`{"reason":"operator reason"}`))
 
 			if rec.Code != tc.wantStatus {
 				t.Fatalf("status = %d, want %d. body=%s", rec.Code, tc.wantStatus, rec.Body.String())
@@ -1342,13 +1476,23 @@ func TestDeleteDrive_HappyPath(t *testing.T) {
 	t.Parallel()
 
 	fake := &fakeDriveRepo{
-		getByIDFn: func(_ context.Context, id int64) (*drivemodel.Drive, error) {
-			return sampleDrive(id, testNow), nil
+		snapshotFn: func(_ context.Context, id int64) (json.RawMessage, error) {
+			return fakeQuarantineSnapshot(
+				t,
+				"drive",
+				id,
+				7,
+				testNow.Add(-time.Hour),
+				nil,
+			), nil
 		},
 	}
 	h := newTestHandler(&fakeChargingRepo{}, fake)
+	cases := newFakeCaseRepository()
+	h.caseRepo = cases
 
-	rec := doReq(t, h, http.MethodDelete, "/data-repair/drive/71", nil)
+	rec := doReq(t, h, http.MethodDelete, "/data-repair/drive/71",
+		strings.NewReader(`{"reason":"operator identified duplicate"}`))
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want 204. body=%s", rec.Code, rec.Body.String())
@@ -1358,6 +1502,15 @@ func TestDeleteDrive_HappyPath(t *testing.T) {
 	}
 	if fake.deleteCalls != 1 || fake.deleteID != 71 {
 		t.Errorf("Delete calls=%d id=%d, want 1/71", fake.deleteCalls, fake.deleteID)
+	}
+	if fake.snapshotCalls != 1 || cases.upsertCalls != 1 ||
+		cases.createQuarantineCalls != 1 {
+		t.Fatalf(
+			"snapshot/upsert/quarantine calls = %d/%d/%d, want 1/1/1",
+			fake.snapshotCalls,
+			cases.upsertCalls,
+			cases.createQuarantineCalls,
+		)
 	}
 }
 
@@ -1381,23 +1534,27 @@ func TestDeleteDrive_Errors(t *testing.T) {
 			wantDelete: 0,
 		},
 		{
-			name: "get drive fails",
+			name: "snapshot fails",
 			path: "/data-repair/drive/5",
 			fake: func() *fakeDriveRepo {
-				return &fakeDriveRepo{getByIDFn: func(context.Context, int64) (*drivemodel.Drive, error) {
+				return &fakeDriveRepo{snapshotFn: func(context.Context, int64) (json.RawMessage, error) {
 					return nil, errBoom
 				}}
 			},
 			wantStatus: http.StatusInternalServerError,
-			wantErr:    "failed to get drive",
+			wantErr:    "data-repair quarantine operation failed",
 			wantDelete: 0,
 		},
 		{
-			name:       "not found",
-			path:       "/data-repair/drive/9",
-			fake:       func() *fakeDriveRepo { return &fakeDriveRepo{} },
+			name: "not found",
+			path: "/data-repair/drive/9",
+			fake: func() *fakeDriveRepo {
+				return &fakeDriveRepo{snapshotFn: func(context.Context, int64) (json.RawMessage, error) {
+					return nil, repairsnapshot.ErrNotFound
+				}}
+			},
 			wantStatus: http.StatusNotFound,
-			wantErr:    "drive not found",
+			wantErr:    "source session not found",
 			wantDelete: 0,
 		},
 		{
@@ -1405,14 +1562,21 @@ func TestDeleteDrive_Errors(t *testing.T) {
 			path: "/data-repair/drive/9",
 			fake: func() *fakeDriveRepo {
 				return &fakeDriveRepo{
-					getByIDFn: func(_ context.Context, id int64) (*drivemodel.Drive, error) {
-						return sampleDrive(id, testNow), nil
+					snapshotFn: func(_ context.Context, id int64) (json.RawMessage, error) {
+						return fakeQuarantineSnapshot(
+							t,
+							"drive",
+							id,
+							7,
+							testNow.Add(-time.Hour),
+							nil,
+						), nil
 					},
 					deleteFn: func(context.Context, int64) error { return errBoom },
 				}
 			},
 			wantStatus: http.StatusInternalServerError,
-			wantErr:    "failed to delete drive",
+			wantErr:    "data-repair quarantine operation failed",
 			wantDelete: 1,
 		},
 	}
@@ -1423,7 +1587,9 @@ func TestDeleteDrive_Errors(t *testing.T) {
 			t.Parallel()
 			fake := tc.fake()
 			h := newTestHandler(&fakeChargingRepo{}, fake)
-			rec := doReq(t, h, http.MethodDelete, tc.path, nil)
+			h.caseRepo = newFakeCaseRepository()
+			rec := doReq(t, h, http.MethodDelete, tc.path,
+				strings.NewReader(`{"reason":"operator reason"}`))
 
 			if rec.Code != tc.wantStatus {
 				t.Fatalf("status = %d, want %d. body=%s", rec.Code, tc.wantStatus, rec.Body.String())

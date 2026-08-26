@@ -4,8 +4,9 @@ import { Input } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import {
   useCloseDrive,
-  useDiscardDrive,
+  useQuarantineDrive,
   useUpdateDrive,
+  type ManualCloseRepairInput,
   type RepairPatch,
   type StaleDrive,
 } from '@/api/hooks/useDataRepair';
@@ -42,7 +43,7 @@ function num(value: string): number | undefined {
  * backend `DrivePartialAllowed` whitelist accepts; a live `useUnits()` hint
  * shows the equivalent in the operator's preferred display unit. Save patches
  * only non-boundary fields; Close applies the explicitly entered `ended_at`
- * after confirmation; Discard deletes after confirmation.
+ * after confirmation; quarantine preserves a restorable snapshot.
  */
 export function DriveRepairForm({
   drive,
@@ -65,7 +66,7 @@ export function DriveRepairForm({
 
   const update = useUpdateDrive();
   const close = useCloseDrive();
-  const discard = useDiscardDrive();
+  const quarantine = useQuarantineDrive();
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -86,12 +87,14 @@ export function DriveRepairForm({
   };
   const endedAt = form.ended_at.trim();
   const validEndedAt = isRFC3339Boundary(endedAt);
-  const onCloseBoundary = () => close.mutate({
+  const closeInput = {
     id: drive.id,
     ended_at: endedAt,
     rule: 'manual',
     expected_stored_ended_at: drive.end_ts ?? '',
-  }, { onSuccess: onClose });
+  } as const;
+  const onCloseBoundary = (input: ManualCloseRepairInput) =>
+    close.mutate(input, { onSuccess: onClose });
 
   // Derive the live display-unit hint from the SAME `num()` predicate the save
   // path uses, so the hint and the patch agree on what counts as a valid entry:
@@ -170,14 +173,16 @@ export function DriveRepairForm({
         sessionId={drive.id}
         onSave={onSave}
         onCloseBoundary={onCloseBoundary}
-        onDiscard={() => discard.mutate(drive.id, { onSuccess: onClose })}
+        onQuarantine={(reason) =>
+          quarantine.mutate({ id: drive.id, reason }, { onSuccess: onClose })}
         onCancel={onClose}
         savePending={update.isPending}
         closePending={close.isPending}
-        discardPending={discard.isPending}
+        quarantinePending={quarantine.isPending}
         closeDisabled={!validEndedAt}
         disabled={disabled}
         disabledReason={disabledReason}
+        closePreviewInput={closeInput}
       />
     </div>
   );

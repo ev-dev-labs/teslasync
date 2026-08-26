@@ -10,11 +10,12 @@
  *     preferred display unit at the render boundary (km / km·h⁻¹ / h),
  *   - a Save that PUTs only the filled fields to the singular SI-canonical
  *     `/data-repair/drive/{id}` route, a Close that POSTs `.../close`, a
- *     Discard that DELETEs, and a Cancel that just calls `onClose`.
+ *     reasoned quarantine that DELETEs only after snapshotting, and a Cancel
+ *     that just calls `onClose`.
  *
  * These tests exercise every branch. The shared `request` client is stubbed so
  * the real TanStack Query mutation hooks (`useUpdateDrive`, `useCloseDrive`,
- * `useDiscardDrive`) run end-to-end without a network. `useSettings` is left to
+ * `useQuarantineDrive`) run end-to-end without a network. `useSettings` is left to
  * the global test-setup stub (metric / SI units, decimal_precision=2), so SI
  * values format as km / km/h / h. i18n is stubbed to return the English
  * `defaultValue` with `{{var}}` interpolation so visible copy is deterministic.
@@ -154,7 +155,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     expect(save).toBeInTheDocument();
     expect(save.querySelector('svg[aria-hidden="true"]')).not.toBeNull();
     expect(within(region).getByRole('button', { name: 'Close Drive' })).toBeInTheDocument();
-    expect(within(region).getByRole('button', { name: 'Discard' })).toBeInTheDocument();
+    expect(within(region).getByRole('button', { name: 'Move to quarantine' })).toBeInTheDocument();
     expect(within(region).getByRole('button', { name: 'Cancel' })).toBeInTheDocument();
   });
 
@@ -247,7 +248,9 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
       target: { value: '2026-03-30T04:00:00Z' },
     });
-    confirmAction('Close Drive');
+    fireEvent.click(screen.getByRole('button', { name: 'Close Drive' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm' }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(mockRequest).toHaveBeenCalledWith(
@@ -265,16 +268,25 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     expect(findCall('PUT')).toBeUndefined();
   });
 
-  it('Discard DELETEs the drive and closes the form on success', async () => {
+  it('quarantines the drive with an operator reason and closes the form on success', async () => {
     const { onClose } = renderForm();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
-    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Discard' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Move to quarantine' }));
+    const dialog = within(screen.getByRole('dialog'));
+    const confirm = dialog.getByRole('button', { name: 'Move to quarantine' });
+    expect(confirm).toBeDisabled();
+    fireEvent.change(dialog.getByLabelText('Operator note'), {
+      target: { value: 'Duplicate drive created during reconnect' },
+    });
+    fireEvent.click(confirm);
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(mockRequest).toHaveBeenCalledWith(
       '/data-repair/drive/202',
-      expect.objectContaining({ method: 'DELETE' }),
+      expect.objectContaining({
+        method: 'DELETE',
+        body: JSON.stringify({ reason: 'Duplicate drive created during reconnect' }),
+      }),
     );
   });
 

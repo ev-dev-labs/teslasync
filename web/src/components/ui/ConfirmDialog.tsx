@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import { AlertOctagon, AlertTriangle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
@@ -12,6 +12,8 @@ export interface ConfirmDialogProps {
   open: boolean;
   title: string;
   message: string;
+  /** Optional structured impact details rendered between the warning and actions. */
+  details?: ReactNode;
   confirmLabel?: string;
   cancelLabel?: string;
   variant?: 'danger' | 'warning';
@@ -20,6 +22,8 @@ export interface ConfirmDialogProps {
    * Use this when the parent keeps the dialog open while a mutation is in flight.
    */
   loading?: boolean;
+  /** Disable confirmation until caller-owned validation (for example, a required reason) passes. */
+  confirmDisabled?: boolean;
   /**
    * For extra-dangerous actions (delete vehicle, wipe database). The confirm
    * button stays disabled until the user types this exact string into the
@@ -67,10 +71,12 @@ export function ConfirmDialog({
   open,
   title,
   message,
+  details,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'danger',
   loading = false,
+  confirmDisabled: disabledByCaller = false,
   requireTypedConfirmation,
   typedConfirmationLabel,
   silenceKey,
@@ -125,7 +131,7 @@ export function ConfirmDialog({
   }, [open, loading, onCancel]);
 
   const typedMatches = !requireTypedConfirmation || typed === requireTypedConfirmation;
-  const confirmDisabled = loading || !typedMatches;
+  const confirmDisabled = loading || disabledByCaller || !typedMatches;
 
   // While loading we swallow the backdrop-click close handler to keep the
   // dialog mounted until the mutation resolves; otherwise route to onCancel.
@@ -159,6 +165,7 @@ export function ConfirmDialog({
           {Icon && <Icon className={cn('h-5 w-5 mt-0.5 shrink-0', tokens.fg)} aria-hidden="true" />}
           <p className="text-sm text-[var(--text-primary)]">{message}</p>
         </div>
+        {details}
         {requireTypedConfirmation && (
           <Input
             label={inputLabel}
@@ -203,4 +210,3 @@ export function ConfirmDialog({
     </Modal>
   );
 }
-

@@ -36,7 +36,7 @@ import {
   type TourStartEventDetail,
 } from '@/lib/tourRegistry'
 import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
 import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
@@ -68,8 +68,11 @@ import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useAlerts } from '@/api/hooks/useNotifications'
+import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
-import type { Alert, Vehicle, StaleSessionsResponse } from '@/api/types'
+import { useVehicles } from '@/api/hooks/useVehicles'
+import type { Alert } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
@@ -1062,8 +1065,8 @@ export default function Layout() {
   // in the footer <VersionSegment>.
 
   // Live data for sidebar
-  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: () => request<Vehicle[]>('/vehicles'), refetchInterval: 60_000, retry: 1 })
+  const { data: alerts } = useAlerts()
+  const { data: vehicles } = useVehicles()
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
 
@@ -1089,9 +1092,11 @@ export default function Layout() {
     }
   }, [location.pathname, vehicleCount, activeTourId, settingsFetched])
 
-  // Stale sessions count for Data Repair badge
-  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
-  const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
+  // Use the durable case summary for the navigation badge. Running the direct
+  // stale-session diagnostic in global chrome made every route pay for a
+  // comparatively expensive forensic query.
+  const { data: repairStats } = useRepairCaseStats()
+  const staleCount = (repairStats?.open ?? 0) + (repairStats?.in_review ?? 0)
 
   // Hide auth-gated nav items (e.g. "My Activity") when the deployment isn't
   // running behind a ForwardAuth identity provider — the underlying endpoints

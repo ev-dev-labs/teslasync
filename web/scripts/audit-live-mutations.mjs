@@ -37,10 +37,17 @@ const LIVE_ONLY_MUTATIONS = {
     'useApplyChargingRepair',
     'useUpdateCharging',
     'useCloseCharging',
-    'useDiscardCharging',
+    'useQuarantineCharging',
     'useUpdateDrive',
     'useCloseDrive',
-    'useDiscardDrive',
+    'useQuarantineDrive',
+    'useTransitionRepairCase',
+    'useBulkTransitionRepairCases',
+    'useAssignRepairCase',
+    'useAddRepairCaseComment',
+    'useRunRepairScan',
+    'useQuarantineRepairCase',
+    'useRestoreQuarantine',
   ],
   'hooks/useDLQ.ts': ['useDLQReplay'],
   'hooks/useDriving.ts': ['useBulkDeleteDrives'],
@@ -88,6 +95,7 @@ const LIVE_ONLY_MUTATIONS = {
 };
 
 const MODE_INDEPENDENT_MUTATIONS = {
+  'hooks/useDataRepair.ts': ['useRepairImpactPreview'],
   'hooks/useAdmin.ts': ['useCreateExport'],
   'hooks/useAdvancedIntelligence.ts': [
     'useSimulationMutation',

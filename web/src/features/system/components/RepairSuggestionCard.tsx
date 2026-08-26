@@ -11,10 +11,15 @@ import {
 import { Badge, Button, ConfirmDialog, GlassPanel, Text } from '@/components/ui';
 import { InlineCallout } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
-import type { RepairSuggestion } from '@/api/hooks/useDataRepair';
+import {
+  repairApplyInput,
+  useRepairImpactPreview,
+  type RepairSuggestion,
+} from '@/api/hooks/useDataRepair';
 
 import { RepairChangeDetails } from './RepairChangeDetails';
 import { RepairEvidenceTimeline } from './RepairEvidenceTimeline';
+import { RepairImpactSummary } from './RepairImpactSummary';
 import {
   blockedReasonLabel,
   confidenceLabel,
@@ -26,15 +31,10 @@ import {
 
 export interface RepairSuggestionCardProps {
   suggestion: RepairSuggestion;
-  /** Fires only after the operator confirms in the dialog. */
   onApply: (suggestion: RepairSuggestion) => void;
-  /** True while this row's mutation is in flight. */
   isApplying?: boolean;
-  /** True once this row's mutation resolved successfully. */
   isApplied?: boolean;
-  /** Per-row failure text; rendered inline so it cannot be missed. */
   errorMessage?: string;
-  /** Read-only operational mode, missing sudo, etc. */
   disabled?: boolean;
   disabledReason?: string;
 }
@@ -63,10 +63,12 @@ export function RepairSuggestionCard({
 }: RepairSuggestionCardProps) {
   const { t } = useTranslation();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const preview = useRepairImpactPreview(suggestion.kind);
 
   const KindIcon = suggestion.kind === 'drive' ? Route : BatteryCharging;
   const blocked = !suggestion.applicable;
   const applyDisabled = disabled || blocked || isApplied;
+  const previewError = preview.error instanceof Error ? preview.error.message : undefined;
 
   // Timestamps arrive as RFC3339 and are rendered in the browser locale at the
   // display boundary; SI durations go through useUnits().
@@ -139,6 +141,12 @@ export function RepairSuggestionCard({
           </InlineCallout>
         )}
 
+        {previewError && (
+          <InlineCallout variant="danger" icon={<AlertTriangle />}>
+            {previewError}
+          </InlineCallout>
+        )}
+
         {isApplied && (
           <InlineCallout variant="success" icon={<CheckCircle2 />}>
             {t('dataRepair.card.applied', 'Applied. Refresh to re-check the remaining suggestions.')}
@@ -148,8 +156,13 @@ export function RepairSuggestionCard({
         <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="secondary"
-            onClick={() => setConfirmOpen(true)}
-            loading={isApplying}
+            onClick={() => {
+              preview.reset();
+              preview.mutate(repairApplyInput(suggestion), {
+                onSuccess: () => setConfirmOpen(true),
+              });
+            }}
+            loading={isApplying || preview.isPending}
             disabled={applyDisabled}
             title={blocked ? blockedReasonLabel(t, suggestion.blocked_reason) : disabledReason}
             icon={<Wrench className="h-4 w-4" aria-hidden="true" />}
@@ -169,6 +182,7 @@ export function RepairSuggestionCard({
         variant="warning"
         title={t('dataRepair.confirm.title', 'Apply this repair?')}
         message={confirmMessage}
+        details={preview.data ? <RepairImpactSummary preview={preview.data} /> : undefined}
         confirmLabel={t('dataRepair.confirm.apply', 'Apply repair')}
         cancelLabel={t('common.cancel', 'Cancel')}
         loading={isApplying}

@@ -59,6 +59,13 @@ describe('PrefetchLink', () => {
     expect(mockedPrefetch).toHaveBeenCalledWith('/drives')
   })
 
+  it('calls prefetchRoute on pointerdown for touch and pen navigation', () => {
+    renderLink('/timeline')
+    fireEvent.pointerDown(screen.getByRole('link'), { pointerType: 'touch' })
+    expect(mockedPrefetch).toHaveBeenCalledTimes(1)
+    expect(mockedPrefetch).toHaveBeenCalledWith('/timeline')
+  })
+
   it('calls prefetchRoute with the pathname when `to` is an object', () => {
     renderLink({ pathname: '/charging' })
     fireEvent.mouseEnter(screen.getByRole('link'))
@@ -77,6 +84,14 @@ describe('PrefetchLink', () => {
     const userHandler = vi.fn()
     renderLink('/battery', { onFocus: userHandler })
     fireEvent.focus(screen.getByRole('link'))
+    expect(userHandler).toHaveBeenCalledTimes(1)
+    expect(mockedPrefetch).toHaveBeenCalledTimes(1)
+  })
+
+  it('forwards user-supplied onPointerDown alongside prefetch', () => {
+    const userHandler = vi.fn()
+    renderLink('/battery', { onPointerDown: userHandler })
+    fireEvent.pointerDown(screen.getByRole('link'))
     expect(userHandler).toHaveBeenCalledTimes(1)
     expect(mockedPrefetch).toHaveBeenCalledTimes(1)
   })
@@ -107,8 +122,10 @@ describe('PrefetchNavLink', () => {
     const link = screen.getByRole('link', { name: 'Battery' })
     fireEvent.mouseEnter(link)
     fireEvent.focus(link)
+    fireEvent.pointerDown(link)
 
     expect(mockedPrefetch).toHaveBeenNthCalledWith(1, '/battery')
     expect(mockedPrefetch).toHaveBeenNthCalledWith(2, '/battery')
+    expect(mockedPrefetch).toHaveBeenNthCalledWith(3, '/battery')
   })
 })

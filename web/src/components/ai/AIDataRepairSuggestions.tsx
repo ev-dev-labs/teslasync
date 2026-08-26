@@ -15,7 +15,7 @@
 //     accumulates into the shared AiOutputPanel.
 //
 // The component does NOT replace the deterministic stale-session
-// list, per-row repair forms, or close/discard/update buttons on
+// list, per-row repair forms, or close/quarantine/update buttons on
 // DataRepairPage. That baseline content remains the canonical
 // view visible to every user; this AI section is opt-in propose-
 // only suggestion layered alongside.
@@ -45,7 +45,7 @@
 //     rendered in off mode at all because of I5.
 //   - I8 propose-only:    the LLM never writes; the typed
 //     RepairPlan it proposes is rendered here, and the user must
-//     click the canonical Save / Close / Discard button on the
+//     click the canonical Save / Close / Quarantine button on the
 //     baseline form below to apply it.
 
 import { useMemo } from 'react'
@@ -87,16 +87,23 @@ const NOOP = (): void => {}
  *     stale-session inventory the tabs below render, and the LLM
  *     never writes.
  */
-function InnerSection() {
+export interface AIDataRepairSuggestionsProps {
+  vehicleId?: number;
+}
+
+function ScopedStreamSection({ vehicleId }: AIDataRepairSuggestionsProps) {
   const { t } = useTranslation()
 
   // The backend reads the in-scope stale-session inventory itself
   // (it loads stale charging + stale drives via the canonical
-  // ChargingRepo.GetStale / DriveRepo.GetStale paths). The body is
-  // intentionally empty. useMemo keeps the body reference stable
+  // ChargingRepo.GetStale / DriveRepo.GetStale paths). The body
+  // carries only the selected vehicle scope. useMemo keeps the body reference stable
   // so useAiStream's dependency-tracked re-render path doesn't
   // churn.
-  const body = useMemo(() => ({}), [])
+  const body = useMemo(
+    () => (vehicleId == null ? {} : { vehicle_id: vehicleId }),
+    [vehicleId],
+  )
 
   const stream = useAiStream({
     url: '/ai/system/data-repair/draft',
@@ -109,12 +116,25 @@ function InnerSection() {
       title={t('dataRepair.aiSuggestions.title', 'Helix repair suggestions')}
       description={t(
         'dataRepair.aiSuggestions.description',
-        'Propose a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes — review the proposal here and click the canonical Save / Close / Discard button on the matching baseline form to apply it.',
+        'Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. The LLM never writes — review the proposal here and click the canonical Save / Close / Quarantine button on the matching baseline form to apply it.',
       )}
       buttonLabel={t('dataRepair.aiSuggestions.button', 'Draft repair plan')}
       badgeLabel={t('dataRepair.aiSuggestions.badge', 'Helix')}
       canStart={stream.state !== 'streaming'}
       stream={stream}
+    />
+  )
+}
+ScopedStreamSection.displayName = 'AIDataRepairSuggestionsScopedStream'
+
+function InnerSection({ vehicleId }: AIDataRepairSuggestionsProps) {
+  // Vehicle scope is part of the stream identity. Remounting aborts an
+  // in-flight request and clears completed output before another vehicle's
+  // diagnostics are shown.
+  return (
+    <ScopedStreamSection
+      key={vehicleId ?? 'fleet'}
+      vehicleId={vehicleId}
     />
   )
 }

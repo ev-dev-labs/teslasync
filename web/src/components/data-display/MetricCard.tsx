@@ -31,6 +31,8 @@ interface MetricCardProps {
   delta?: MetricCardDelta
   subtitle?: string
   className?: string
+  /** Allow longer metric labels to wrap to two lines on narrow cards. */
+  wrapLabel?: boolean
   /**
    * Optional contextual help. When provided, a small "?" tooltip is
    * rendered next to the label. Accepts the full `HelpTooltipProps` so
@@ -40,7 +42,7 @@ interface MetricCardProps {
 }
 
 /** Compact metric display card with icon, value, label, and optional trend. */
-export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help }: MetricCardProps) {
+export function MetricCard({ label, value, icon, color = 'cyan', change, delta, subtitle, className, help, wrapLabel = false }: MetricCardProps) {
   const { t } = useTranslation()
   // Fall back to cyan if a caller passes an unregistered colour (e.g. a
   // value driven from API data) so `c.bg`/`c.ring` never throw on undefined.
@@ -61,9 +63,12 @@ export function MetricCard({ label, value, icon, color = 'cyan', change, delta, 
             weight="medium"
             color="secondary"
             data-role="metric-label"
-            className="flex items-center gap-1.5 truncate leading-snug"
+            className={cn(
+              'flex items-start gap-1.5 leading-snug',
+              wrapLabel ? 'min-h-10' : 'truncate',
+            )}
           >
-            <span className="truncate">{label}</span>
+            <span className={wrapLabel ? 'line-clamp-2' : 'truncate'}>{label}</span>
             {help && (
               <HelpTooltip
                 size="xs"

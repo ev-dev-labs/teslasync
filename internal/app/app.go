@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
@@ -119,6 +120,7 @@ type App struct {
 	SLOTracker        *slo.Tracker
 	DataQualityScorer *dataquality.Scorer
 	SyntheticRunner   *synthetic.Runner
+	DataRepairScanner *apidatarepair.Scanner
 
 	// Workers
 	Worker         *worker.Worker

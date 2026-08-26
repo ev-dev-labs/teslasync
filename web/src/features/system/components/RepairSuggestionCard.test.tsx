@@ -17,9 +17,30 @@
  * installed in this repo, so interactions go through `fireEvent`.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
+
+const H = vi.hoisted(() => ({
+  preview: vi.fn(),
+  reset: vi.fn(),
+}));
+
+vi.mock('@/api/hooks/useDataRepair', async () => {
+  const actual = await vi.importActual<typeof import('@/api/hooks/useDataRepair')>(
+    '@/api/hooks/useDataRepair',
+  );
+  return {
+    ...actual,
+    useRepairImpactPreview: () => ({
+      mutate: H.preview,
+      reset: H.reset,
+      isPending: false,
+      error: null,
+      data: undefined,
+    }),
+  };
+});
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -83,6 +104,14 @@ function buildSuggestion(overrides?: Partial<RepairSuggestion>): RepairSuggestio
 }
 
 describe('RepairSuggestionCard', () => {
+  beforeEach(() => {
+    H.preview.mockReset();
+    H.reset.mockReset();
+    H.preview.mockImplementation(
+      (_input: unknown, options?: { onSuccess?: () => void }) => options?.onSuccess?.(),
+    );
+  });
+
   it('renders the rule, the explanation, and the full evidence timeline', () => {
     render(<RepairSuggestionCard suggestion={buildSuggestion()} onApply={vi.fn()} />);
 
