@@ -29,8 +29,10 @@ vi.mock('./VehiclePicker', () => ({
 }))
 
 vi.mock('./WorkspaceContextControl', () => ({
-  WorkspaceContextControl: () => (
-    <button type="button">Analysis window</button>
+  WorkspaceContextControl: ({ className }: { className?: string }) => (
+    <button type="button" className={className}>
+      Analysis window
+    </button>
   ),
 }))
 
@@ -44,14 +46,23 @@ describe('WorkspaceHeader', () => {
     )
 
     const header = screen.getByRole('banner', { name: 'Workspace command bar' })
-    expect(header).toHaveClass('hidden', 'xl:flex')
+    expect(header).toHaveClass(
+      'hidden',
+      'xl:grid',
+      'grid-cols-[minmax(0,1fr)_minmax(18rem,22rem)_minmax(0,1fr)]',
+    )
+    expect(header).toHaveAttribute('data-layout', 'balanced-three-track')
     expect(within(header).getByText('Fleet operations')).toBeInTheDocument()
     expect(within(header).getByTestId('workspace-breadcrumbs')).toHaveAttribute(
       'data-variant',
       'workspace',
     )
     expect(within(header).getByRole('button', { name: 'Search workspace' })).toBeInTheDocument()
-    expect(within(header).getByRole('button', { name: 'Analysis window' })).toBeInTheDocument()
+    const rangeControl = within(header).getByRole('button', {
+      name: 'Analysis window',
+    })
+    expect(rangeControl).toHaveClass('max-w-32')
+    expect(rangeControl.getAttribute('class')).not.toContain('[&>span]:hidden')
     expect(within(header).getByTestId('workspace-vehicle-picker')).toBeInTheDocument()
     expect(within(header).getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
     expect(within(header).getByRole('button', { name: 'Theme' })).toBeInTheDocument()

@@ -70,9 +70,13 @@ describe('WorkspaceContextControl', () => {
   it('changes presets, comparison, custom dates, and density from the popover', () => {
     render(<WorkspaceContextControl />);
 
-    fireEvent.click(
-      screen.getByRole('button', { name: 'Analysis window: Last 7 days' }),
-    );
+    const trigger = screen.getByRole('button', {
+      name: 'Analysis window: Last 7 days',
+    });
+    expect(trigger).toHaveTextContent('Last 7 days');
+    expect(trigger).toHaveAttribute('data-active-range', 'Last 7 days');
+
+    fireEvent.click(trigger);
     expect(
       screen.getByRole('dialog', { name: 'Workspace analysis context' }),
     ).toBeInTheDocument();

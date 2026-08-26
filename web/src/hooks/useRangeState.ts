@@ -261,6 +261,11 @@ function applyUrlUpdates(
   }
 }
 
+function resetPagination(params: URLSearchParams) {
+  params.delete('page');
+  params.delete('offset');
+}
+
 /**
  * Compute the previous period of equal length immediately preceding [start, end].
  * For a 7-day window, returns the 7 days before that. End boundary is exclusive
@@ -375,6 +380,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
+          resetPagination(next);
           applyUrlUpdates(next, urlUpdates);
           next.set(fromKey, pageRange.start);
           next.set(toKey, pageRange.end);
@@ -439,6 +445,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
+        resetPagination(next);
         applyUrlUpdates(next, urlUpdates);
         next.delete(fromKey);
         next.delete(toKey);
@@ -542,6 +549,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
+          resetPagination(next);
           next.set(fromKey, pageRange.start);
           next.set(toKey, pageRange.end);
           next.set(scopeKey, detail.preference.presetId ?? 'custom');

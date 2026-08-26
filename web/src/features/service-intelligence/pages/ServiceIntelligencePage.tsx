@@ -11,6 +11,7 @@ import {
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
 import { AlertBanner } from '@/components/feedback';
+import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Text } from '@/components/ui';
@@ -22,7 +23,6 @@ import {
   CommunicationsCatalogPanel,
   EvidenceLimitationsPanel,
   RecallInventoryPanel,
-  ServiceVehicleSelector,
   SourceFreshnessPanel,
   SymptomMatchesPanel,
   VehicleMatchPanel,
@@ -31,7 +31,7 @@ import {
 export default function ServiceIntelligencePage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const query = useServiceIntelligence(vehicleId);
   const catalogQuery = useCommunicationsCatalogStatus();
   const catalogImport = useImportCommunicationsCatalog();
@@ -56,10 +56,8 @@ export default function ServiceIntelligencePage() {
 
   const actions = (
     <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
-      <ServiceVehicleSelector
-        vehicleId={vehicleId}
-        vehicles={vehicles}
-        onChange={setVehicleId}
+      <VehicleSelect
+        ariaLabel={t('serviceIntelligence.vehicle.select', 'Select vehicle')}
       />
       <Button
         type="button"

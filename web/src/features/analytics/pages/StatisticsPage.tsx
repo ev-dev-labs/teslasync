@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Button, PanelTitle } from '@/components/ui';
+import { GlassPanel, Button, PanelTitle } from '@/components/ui';
 import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
   LinearGauge, ChartTooltip, ChartContainer, ChartLegend,
@@ -17,7 +17,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
@@ -80,15 +80,8 @@ export default function StatisticsPage() {
   );
   const savedView = useSavedViewUrl();
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
-
-  const onPickVehicle = (id: string) => {
-    const n = Number(id);
-    if (Number.isFinite(n) && n > 0) {
-      setVehicleId(n);
-    }
-  };
 
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'statistics.range',
@@ -151,23 +144,12 @@ export default function StatisticsPage() {
     }));
   }, [fleet, fromKm]);
 
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
   /* ── Toolbar ───────────────────────────────────────────────────── */
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      {vehicles.length > 0 && (
-        <Select
-          value={activeId}
-          onChange={(e) => onPickVehicle(e.target.value)}
-          options={vehicleOptions}
-          placeholder={t('statistics.selectVehicle', 'Select Vehicle')}
-          aria-label={t('statistics.selectVehicle', 'Select Vehicle')}
-        />
-      )}
+      <VehicleSelect
+        ariaLabel={t('statistics.selectVehicle', 'Select Vehicle')}
+      />
       <RangePicker
         value={{ start: startDate, end: endDate }}
         onChange={setRange}

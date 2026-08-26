@@ -32,6 +32,11 @@ import {
   matchPresetId,
   resolveAllTimeStart,
 } from '@/lib/datePresets';
+import { useWorkspaceScope } from '@/hooks/useWorkspaceScope';
+import {
+  WORKSPACE_SCOPED_CONTROL,
+  type WorkspaceScopedComponent,
+} from '@/lib/workspaceScope';
 
 const LazyDayPicker = lazy(async () => {
   const module = await import('react-day-picker');
@@ -78,6 +83,8 @@ export interface RangePickerProps {
    * (e.g. `?days=N`) and cannot honor an arbitrary custom range.
    */
   presetsOnly?: boolean;
+  /** Use "local" only when this range is intentionally independent of the shell range. */
+  scope?: 'workspace' | 'local';
 }
 
 function isoFromDate(d: Date): string {
@@ -128,8 +135,10 @@ export function RangePicker({
   className,
   triggerTestId,
   presetsOnly = false,
+  scope = 'workspace',
 }: RangePickerProps) {
   const { t, i18n } = useTranslation();
+  const workspaceScope = useWorkspaceScope();
   const triggerRef = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
 
@@ -199,6 +208,14 @@ export function RangePicker({
 
   const minDateObj = minDate ? dateFromIso(minDate) : undefined;
   const maxDateObj = maxDate ? dateFromIso(maxDate) : new Date();
+
+  if (
+    scope === 'workspace' &&
+    workspaceScope.managed &&
+    workspaceScope.range
+  ) {
+    return null;
+  }
 
   return (
     <>
@@ -331,3 +348,7 @@ export function RangePicker({
     </>
   );
 }
+
+(RangePicker as typeof RangePicker & WorkspaceScopedComponent)[
+  WORKSPACE_SCOPED_CONTROL
+] = 'range';

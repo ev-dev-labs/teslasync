@@ -66,13 +66,11 @@ export default function ChargingCurvePage() {
     refetch();
   }, [refetch]);
 
-  // Session ids are globally-unique DB primary keys, so a selection made for
-  // one vehicle can never match another vehicle's sessions. Reset it on every
-  // vehicle switch so the inspector falls back to its hint instead of stranding
-  // the <Select> on a value that is absent from the new option list.
+  // A vehicle or workspace-range change invalidates the selected session.
+  // Reset so the inspector never points at an option outside the new result set.
   useEffect(() => {
     setSelectedSessionId(null);
-  }, [activeVehicleId]);
+  }, [activeVehicleId, end, start]);
 
   /* ── Derived data ────────────────────────────────────────────────────── */
 

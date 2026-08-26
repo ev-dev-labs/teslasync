@@ -542,6 +542,23 @@ describe('useRangeState — atomic updates', () => {
     expect(params.get('time_scope')).toBe('30d');
   });
 
+  it('resets standard pagination when the workspace time window changes', () => {
+    const { result } = renderHook(() => {
+      const range = useRangeState();
+      const [params] = useSearchParams();
+      return { range, query: params.toString() };
+    }, {
+      wrapper: withRouter(['/charging?page=4&offset=150&vehicle_id=2']),
+    });
+
+    act(() => result.current.range.setPreset('30d'));
+
+    const params = new URLSearchParams(result.current.query);
+    expect(params.get('page')).toBeNull();
+    expect(params.get('offset')).toBeNull();
+    expect(params.get('vehicle_id')).toBe('2');
+  });
+
   it('resets the range and related URL keys in one navigation', () => {
     const { result } = renderHook(() => {
       const range = useRangeState();

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw, ChevronDown, ChevronRight, Activity, Zap, AlertTriangle } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel, Button, DataTable, HelpTooltip, Select, Pagination, CopyButton, PanelTitle, Caption, Text } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import type { Column } from '@/components/ui';
 import { StatCard } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
@@ -93,7 +93,7 @@ export default function StateMachineDebuggerPage() {
   usePageTitle(t('fsm.title', 'FSM Debugger'));
 
   /* ─── Vehicle selector — global sticky picker ─── */
-  const { vehicleId: selectedVehicleId, vehicles, setVehicleId: setStoreVehicleId } = useSelectedVehicle();
+  const { vehicleId: selectedVehicleId, vehicles } = useSelectedVehicle();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeId = selectedVehicleId != null ? String(selectedVehicleId) : '';
 
@@ -127,6 +127,10 @@ export default function StateMachineDebuggerPage() {
 
   const [serverPage, setServerPage] = useState(1);
   const [perPage, setPerPage] = useState(50);
+
+  useEffect(() => {
+    setServerPage(1);
+  }, [activeId, end, start]);
 
   /* ─── Detail panel ─── */
   const [selectedId, setSelectedId] = useState<number | null>(() => {
@@ -319,11 +323,6 @@ export default function StateMachineDebuggerPage() {
     [t, transitions, serverPage, perPage, selectedId],
   );
 
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
   /* Resolve the active range's human label for empty-state copy so users see
    * "No transitions in the selected window" rather than a generic message.
    * Uses the date span when defined; falls back to "All time" when empty. */
@@ -491,18 +490,10 @@ export default function StateMachineDebuggerPage() {
       loading={stateLoading && transLoading && statsLoading}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2" data-tour="debugger-share">
-          {vehicleOptions.length > 0 && (
-            <Select
-              options={vehicleOptions}
-              value={activeId}
-              onChange={(e) => {
-                setStoreVehicleId(Number(e.target.value));
-                setServerPage(1);
-              }}
-              aria-label={t('fsm.selectVehicle', 'Select vehicle')}
-              className="w-44"
-            />
-          )}
+          <VehicleSelect
+            ariaLabel={t('fsm.selectVehicle', 'Select vehicle')}
+            className="w-44"
+          />
           <RangePicker
             value={{ start, end }}
             onChange={(r) => {
@@ -558,7 +549,7 @@ export default function StateMachineDebuggerPage() {
       {/* ──── 2 — Page-specific filters (FSM Type + Per Page) ──── */}
       <FadeIn delay={0.03}>
         <GlassPanel className="p-4 sm:p-5">
-          {vehicleOptions.length > 0 ? (
+          {vehicles.length > 0 ? (
             <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
               <div className="w-full sm:w-64">
                 <Select

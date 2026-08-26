@@ -33,12 +33,6 @@ vi.mock('./BackgroundWorkSegment', () => ({
   ),
 }));
 
-vi.mock('./ActiveVehicleSegment', () => ({
-  ActiveVehicleSegment: ({ embedded }: { embedded?: boolean }) => (
-    <div data-testid="more-vehicle" data-embedded={String(embedded)} />
-  ),
-}));
-
 vi.mock('./HelpSegment', () => ({
   HelpSegment: ({ embedded }: { embedded?: boolean }) => (
     <div data-testid="more-help" data-embedded={String(embedded)} />
@@ -106,10 +100,6 @@ describe('MoreSegment', () => {
     expect(screen.getByTestId('more-background')).toHaveAttribute(
       'data-count',
       '0',
-    );
-    expect(screen.getByTestId('more-vehicle')).toHaveAttribute(
-      'data-embedded',
-      'true',
     );
     expect(screen.getByTestId('more-help')).toHaveAttribute(
       'data-embedded',

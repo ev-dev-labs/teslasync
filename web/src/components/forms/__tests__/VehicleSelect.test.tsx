@@ -6,6 +6,8 @@ import type { ReactNode } from 'react';
 import '@/i18n';
 import { SelectedVehicleProvider, __SELECTED_VEHICLE_STORAGE_KEY__ } from '@/store/selectedVehicle';
 import { VehicleSelect } from '../VehicleSelect';
+import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
+import type { WorkspaceRouteScope } from '@/lib/workspaceScope';
 import type { Vehicle } from '@/types/vehicle';
 
 const STORAGE_KEY = __SELECTED_VEHICLE_STORAGE_KEY__;
@@ -33,21 +35,32 @@ function makeVehicle(id: number, name: string, vin = `VIN-${id}`): Vehicle {
   };
 }
 
-function renderWithFleet(fleet: Vehicle[], initialEntries: string[] = ['/dashboard']) {
+function renderWithFleet(
+  fleet: Vehicle[],
+  initialEntries: string[] = ['/dashboard'],
+  workspaceScope?: WorkspaceRouteScope,
+  controlScope?: 'workspace' | 'local',
+) {
   MOCK_FLEET = fleet;
   function Wrapper({ children }: { children: ReactNode }) {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     return (
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={initialEntries}>
-          <SelectedVehicleProvider>{children}</SelectedVehicleProvider>
+          <SelectedVehicleProvider>
+            {workspaceScope ? (
+              <WorkspaceScopeProvider scope={workspaceScope}>
+                {children}
+              </WorkspaceScopeProvider>
+            ) : children}
+          </SelectedVehicleProvider>
         </MemoryRouter>
       </QueryClientProvider>
     );
   }
   return render(
     <Wrapper>
-      <VehicleSelect />
+      <VehicleSelect scope={controlScope} />
     </Wrapper>,
   );
 }
@@ -107,5 +120,24 @@ describe('VehicleSelect', () => {
         (await Promise.resolve('Select vehicle')) as string,
       ),
     ).toBeInTheDocument();
+  });
+
+  it('defers to the managed shell vehicle selector', () => {
+    const { container } = renderWithFleet(
+      [makeVehicle(1, 'Roadster')],
+      ['/dashboard'],
+      { range: false, vehicle: true },
+    );
+    expect(container.querySelector('select')).toBeNull();
+  });
+
+  it('keeps intentionally local vehicle fields visible under a managed shell', async () => {
+    renderWithFleet(
+      [makeVehicle(1, 'Roadster')],
+      ['/dashboard'],
+      { range: false, vehicle: true },
+      'local',
+    );
+    expect(await screen.findByTestId('vehicle-select')).toBeInTheDocument();
   });
 });

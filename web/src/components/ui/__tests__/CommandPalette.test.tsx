@@ -182,6 +182,11 @@ describe('CommandPalette keyboard shortcut', () => {
       expect(screen.getByPlaceholderText(/Search pages/i)).toBeInTheDocument()
       expect(onOpen).toHaveBeenCalledTimes(1)
     })
+    expect(
+      document.querySelector('[data-command-palette-panel]'),
+    ).toHaveClass(
+      'xl:left-[calc(50%+var(--shell-sidebar-half-width))]',
+    )
   })
 
   it('opens on Ctrl+K when focus is on the body', async () => {

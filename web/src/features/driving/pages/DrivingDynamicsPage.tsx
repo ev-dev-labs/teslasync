@@ -181,7 +181,7 @@ export default function DrivingDynamicsPage() {
         <FadeIn delay={0.1}>
           <section
             aria-label={t('dynamics.section.inputs', 'Driving inputs')}
-            className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3 xl:gap-5"
+            className="grid grid-cols-1 gap-4 md:grid-cols-2 3xl:grid-cols-3 xl:gap-5"
           >
             <SpeedGearPanel
               vehicleId={vehicleId}

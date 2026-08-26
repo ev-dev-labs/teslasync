@@ -2,7 +2,12 @@ import { useTranslation } from 'react-i18next';
 import { Car } from 'lucide-react';
 import { Select } from '@/components/ui';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useWorkspaceScope } from '@/hooks/useWorkspaceScope';
 import { cn } from '@/lib/cn';
+import {
+  WORKSPACE_SCOPED_CONTROL,
+  type WorkspaceScopedComponent,
+} from '@/lib/workspaceScope';
 
 /**
  * VehicleSelect — canonical per-page vehicle scope picker.
@@ -30,6 +35,8 @@ export interface VehicleSelectProps {
   withIcon?: boolean;
   /** Test id forwarded to the `<select>`. Defaults to "vehicle-select". */
   'data-testid'?: string;
+  /** Use "local" only when this selection is intentionally independent of the shell vehicle. */
+  scope?: 'workspace' | 'local';
 }
 
 export function VehicleSelect({
@@ -38,11 +45,20 @@ export function VehicleSelect({
   id,
   withIcon = false,
   'data-testid': testId = 'vehicle-select',
+  scope = 'workspace',
 }: VehicleSelectProps) {
   const { t } = useTranslation();
+  const workspaceScope = useWorkspaceScope();
   const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
 
-  if (vehicles.length === 0) return null;
+  if (
+    vehicles.length === 0 ||
+    (scope === 'workspace' &&
+      workspaceScope.managed &&
+      workspaceScope.vehicle)
+  ) {
+    return null;
+  }
 
   const options = vehicles.map((v) => ({
     value: String(v.id),
@@ -73,3 +89,7 @@ export function VehicleSelect({
     </div>
   );
 }
+
+(VehicleSelect as typeof VehicleSelect & WorkspaceScopedComponent)[
+  WORKSPACE_SCOPED_CONTROL
+] = 'vehicle';

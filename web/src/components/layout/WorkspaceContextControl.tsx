@@ -28,6 +28,8 @@ import { useStatusBarPopover } from './status-bar/StatusBarContext'
 
 export interface WorkspaceContextControlProps {
   className?: string
+  /** Keep command listeners mounted while omitting a route-inapplicable trigger. */
+  hidden?: boolean
   /** Only one mounted control should handle global command-palette events. */
   listenForCommands?: boolean
   /** Compact footer treatment coordinated with the other status popovers. */
@@ -37,6 +39,7 @@ export interface WorkspaceContextControlProps {
 
 export function WorkspaceContextControl({
   className,
+  hidden = false,
   listenForCommands = true,
   variant = 'header',
   iconOnly = false,
@@ -83,6 +86,10 @@ export function WorkspaceContextControl({
     window.addEventListener(WORKSPACE_DENSITY_EVENT, handleDensity)
     return () => window.removeEventListener(WORKSPACE_DENSITY_EVENT, handleDensity)
   }, [density, listenForCommands, saveSettings, settings])
+
+  useEffect(() => {
+    if (hidden && open) close()
+  }, [close, hidden, open])
 
   const rangeOptions = useMemo(
     () =>
@@ -132,27 +139,43 @@ export function WorkspaceContextControl({
     saveSettings.mutate({ ...settings, ui_density: next })
   }
 
+  if (hidden) return null
+
   return (
     <>
       <Button
         ref={triggerRef}
         type="button"
         size="sm"
-        variant={variant === 'status' ? 'ghost' : 'secondary'}
+        variant="ghost"
         icon={<Icons.calendar className="h-4 w-4" aria-hidden="true" />}
+        data-active-range={visibleContextLabel}
         aria-expanded={open}
         aria-haspopup="dialog"
         aria-label={triggerLabel}
         title={triggerLabel}
         onClick={toggle}
         className={cn(
-          'max-w-40 justify-start',
+          'min-w-0 max-w-40 justify-start gap-1.5 text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
           variant === 'status' &&
             'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs',
           className,
         )}
       >
-        {!iconOnly && <span className="truncate">{visibleContextLabel}</span>}
+        {!iconOnly && (
+          <>
+            <span className="min-w-0 flex-1 truncate text-left">
+              {visibleContextLabel}
+            </span>
+            <Icons.expand
+              className={cn(
+                'h-3.5 w-3.5 shrink-0 transition-transform',
+                open && 'rotate-180',
+              )}
+              aria-hidden="true"
+            />
+          </>
+        )}
       </Button>
 
       <Popover

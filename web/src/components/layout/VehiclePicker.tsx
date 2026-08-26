@@ -21,9 +21,14 @@ import { cn } from '@/lib/cn';
  */
 export interface VehiclePickerProps {
   className?: string;
+  /** Hide when there is no meaningful choice. The header keeps one vehicle visible as context. */
+  hideWhenSingle?: boolean;
 }
 
-export function VehiclePicker({ className }: VehiclePickerProps) {
+export function VehiclePicker({
+  className,
+  hideWhenSingle = true,
+}: VehiclePickerProps) {
   const { t } = useTranslation();
   const { vehicleId, setVehicleId, vehicles } = useSelectedVehicle();
   const { data: pins = [] } = usePinned('vehicle');
@@ -58,8 +63,9 @@ export function VehiclePicker({ className }: VehiclePickerProps) {
     [sorted, pins, t],
   );
 
-  // Hide for fleets of 0 or 1 vehicle — there's nothing meaningful to pick.
-  if (vehicles.length <= 1) return null;
+  if (vehicles.length === 0 || (hideWhenSingle && vehicles.length === 1)) {
+    return null;
+  }
 
   return (
     <div

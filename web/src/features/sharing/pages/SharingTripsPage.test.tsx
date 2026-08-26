@@ -29,8 +29,8 @@
  *   7. STALE SELECTION — when the list swaps out from under a selection the
  *      preview + AI card fall back to empty instead of pointing at a trip
  *      that is no longer on screen (the derived-id fix).
- *   8. VEHICLE PICKER — changing the select calls setVehicleId with the numeric
- *      id, the >0 guard rejects the placeholder, the refresh control is
+ *   8. VEHICLE PICKER — changing the canonical select updates the global
+ *      vehicle context, clearing it commits null, the refresh control is
  *      labelled + wired to refetch, and the picker hides with an empty fleet.
  *   9. A11Y — the KPI band + listbox expose labelled landmark roles.
  *
@@ -457,16 +457,17 @@ describe('SharingTripsPage — stale selection', () => {
 /* ── VEHICLE PICKER + REFRESH ──────────────────────────────────────── */
 
 describe('SharingTripsPage — vehicle picker + refresh', () => {
-  it('commits a valid vehicle change, rejects the empty placeholder, and refreshes', () => {
+  it('commits and clears the global vehicle context, then refreshes', () => {
     renderPage();
 
     const select = screen.getByRole('combobox', { name: 'Select vehicle' });
     fireEvent.change(select, { target: { value: '9' } });
     expect(setVehicleIdMock).toHaveBeenCalledWith(9);
 
-    // The `Number.isFinite(n) && n > 0` guard rejects the placeholder ('' → 0).
+    // Clearing the canonical selector also clears the shared vehicle context.
     fireEvent.change(select, { target: { value: '' } });
-    expect(setVehicleIdMock).toHaveBeenCalledTimes(1);
+    expect(setVehicleIdMock).toHaveBeenLastCalledWith(null);
+    expect(setVehicleIdMock).toHaveBeenCalledTimes(2);
 
     // Icon-only refresh control is labelled and wired to refetch.
     fireEvent.click(pageRefreshButton());

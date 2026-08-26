@@ -31,11 +31,18 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { Button, GlassPanel, Select, Pagination, PanelTitle, Text } from '@/components/ui';
+import { Button, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
 import { EntityPreviewDrawer, MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
+import {
+  SearchInput,
+  FilterBar,
+  ActiveFilterChips,
+  RangePicker,
+  VehicleSelect,
+  type FilterChipDescriptor,
+} from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
@@ -104,10 +111,7 @@ export default function LocationsPage() {
   usePageTitle(t('locations.title', 'Visited Locations'));
   const { formatDuration } = useUnits();
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
-  const onPickVehicle = (id: number) => {
-    setVehicleId(id);
-  };
+  const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
@@ -203,14 +207,9 @@ export default function LocationsPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-      {vehicles.length > 0 && (
-        <Select
-          aria-label={t('locations.selectVehicle', 'Select vehicle')}
-          value={String(vehicleId ?? '')}
-          onChange={(e) => onPickVehicle(Number(e.target.value))}
-          options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-        />
-      )}
+      <VehicleSelect
+        ariaLabel={t('locations.selectVehicle', 'Select vehicle')}
+      />
       <RangePicker
         value={{ start, end }}
         onChange={(r) => {

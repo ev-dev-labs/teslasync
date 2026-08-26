@@ -83,6 +83,8 @@ import { Icons } from '@/lib/icons';
 import { HelixMark } from '@/components/branding/HelixMark';
 import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
 import { PresentationOverlay } from './presentation/PresentationOverlay';
 import { ReportMasthead } from './presentation/ReportMasthead';
 
@@ -861,6 +863,10 @@ export default function Layout() {
     }
   })
   const location = useLocation()
+  const workspaceScope = useMemo(
+    () => getWorkspaceRouteScope(location.pathname),
+    [location.pathname],
+  )
   const { t } = useTranslation()
 
   // SSE alert toasts. Live-pipe health is rendered by `<LiveIndicator>`
@@ -1348,6 +1354,7 @@ export default function Layout() {
           Audit anchor: skipToContent|skip.to.content */}
       {presentation.mode === 'standard' && <SkipToContent />}
       <BreadcrumbOverridesProvider>
+      <WorkspaceScopeProvider scope={workspaceScope}>
       <div
         data-presentation-mode={presentation.mode}
         className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
@@ -1383,7 +1390,7 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[17rem] xl:translate-x-0',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[var(--shell-sidebar-width)] xl:translate-x-0',
           'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
           presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
@@ -1428,15 +1435,19 @@ export default function Layout() {
           <CommandPaletteTrigger />
         </div>
 
-        {/* Mobile drawer vehicle scope; desktop scope lives in WorkspaceHeader
-        and remains mirrored by ActiveVehicleSegment in the status line. */}
-        <VehiclePicker className="xl:hidden" />
-        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
-          <WorkspaceContextControl
-            className="w-full max-w-none"
-            listenForCommands={false}
-          />
-        </div>
+        {/* Mobile drawer owns the same route-aware context controls as the
+            desktop header; the footer remains informational only. */}
+        {workspaceScope.vehicle && (
+          <VehiclePicker hideWhenSingle={false} className="xl:hidden" />
+        )}
+        {workspaceScope.range && (
+          <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
+            <WorkspaceContextControl
+              className="w-full max-w-none"
+              listenForCommands={false}
+            />
+          </div>
+        )}
 
         {/* Navigation */}
         {sidebarStyle === 'linear' ? (
@@ -1913,6 +1924,7 @@ export default function Layout() {
           dialogs the user is interacting with. */}
       <CookieConsentBanner />
       </div>
+      </WorkspaceScopeProvider>
       </BreadcrumbOverridesProvider>
     </>
   )

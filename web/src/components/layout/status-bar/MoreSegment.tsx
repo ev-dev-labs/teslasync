@@ -9,7 +9,6 @@ import { useTranslation } from 'react-i18next';
 import { Button, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import type { UseBackgroundJobsResult } from '@/hooks/useBackgroundJobs';
 import { cn } from '@/lib/cn';
-import { ActiveVehicleSegment } from './ActiveVehicleSegment';
 import { BackgroundWorkSegment } from './BackgroundWorkSegment';
 import { HelpSegment } from './HelpSegment';
 import { PresentationModeSegment } from './PresentationModeSegment';
@@ -144,7 +143,6 @@ export function MoreSegment({
           embedded
           backgroundJobs={backgroundJobs}
         />
-        <ActiveVehicleSegment embedded onSelect={close} />
         <PresentationModeSegment embedded onAction={close} />
         <HelpSegment
           embedded

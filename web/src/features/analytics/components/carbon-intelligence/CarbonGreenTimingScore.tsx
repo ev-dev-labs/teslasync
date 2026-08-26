@@ -64,7 +64,7 @@ export function CarbonGreenTimingScore({
                   )}
                 </Text>
               </div>
-              <Grid cols={{ default: 1, sm: 3 }} gap={3}>
+              <Grid minItemWidth="standard" gap={3}>
                 <MetricCard
                   label={t('carbon.score.sessions', 'Support sessions')}
                   value={display.formatNumber(lifetime.sessionsScored, 0)}

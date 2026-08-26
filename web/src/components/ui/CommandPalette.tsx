@@ -962,7 +962,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
             exit={{ opacity: 0, scale: 0.95, y: -20 }}
             transition={{ type: 'spring', bounce: 0.15, duration: 0.3 }}
             data-role="command-palette"
-            className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)]"
+            data-command-palette-panel
+            className="fixed left-4 right-4 top-[10%] z-[201] max-w-lg sm:left-1/2 sm:right-auto sm:top-[15%] sm:-translate-x-1/2 sm:w-[calc(100%-2rem)] xl:left-[calc(50%+var(--shell-sidebar-half-width))]"
           >
             <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
               {/* Search input / contextual selection header */}

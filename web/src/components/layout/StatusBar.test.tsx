@@ -88,11 +88,6 @@ vi.mock('./status-bar/AlertsSegment', () => ({
     <div data-testid="seg-alerts" data-icon-only={String(!!iconOnly)} />
   ),
 }));
-vi.mock('./status-bar/ActiveVehicleSegment', () => ({
-  ActiveVehicleSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
-    <div data-testid="seg-vehicle" data-icon-only={String(!!iconOnly)} />
-  ),
-}));
 vi.mock('./status-bar/BackgroundWorkSegment', () => ({
   BackgroundWorkSegment: ({
     iconOnly,
@@ -132,15 +127,6 @@ vi.mock('./status-bar/MoreSegment', () => ({
     <div data-testid="seg-more" data-count={backgroundJobs.count} />
   ),
 }));
-vi.mock('./WorkspaceContextControl', () => ({
-  WorkspaceContextControl: ({
-    iconOnly,
-  }: {
-    iconOnly?: boolean;
-  }) => (
-    <div data-testid="seg-time" data-icon-only={String(!!iconOnly)} />
-  ),
-}));
 vi.mock('@/hooks/useBackgroundJobs', () => ({
   useBackgroundJobs: () => backgroundMock.current,
 }));
@@ -161,12 +147,10 @@ const SEGMENT_TESTIDS = [
   'seg-connection',
   'seg-live',
   'seg-alerts',
-  'seg-vehicle',
   'seg-background',
   'seg-recent',
   'seg-presentation',
   'seg-help',
-  'seg-time',
 ] as const;
 
 /** Install a deterministic `window.matchMedia` returning `matches(query)`. */
@@ -332,7 +316,7 @@ describe('StatusBar :: icon-only propagation', () => {
   it('forces icon-only when the viewport is narrower than lg (max-width: 1023px)', () => {
     patchMatchMedia((q) => q.includes('1023') || q.includes('1279'));
     render(<StatusBar />);
-    for (const id of ['seg-connection', 'seg-live', 'seg-alerts', 'seg-recent', 'seg-time']) {
+    for (const id of ['seg-connection', 'seg-live', 'seg-alerts', 'seg-recent']) {
       expect(iconOnlyOf(id)).toBe('true');
     }
     expect(screen.getByTestId('seg-more')).toBeInTheDocument();
@@ -353,10 +337,8 @@ describe('StatusBar :: icon-only propagation', () => {
     expect(screen.getByTestId('seg-live')).toBeInTheDocument();
     expect(screen.getByTestId('seg-alerts')).toBeInTheDocument();
     expect(screen.getByTestId('seg-recent')).toBeInTheDocument();
-    expect(screen.getByTestId('seg-time')).toBeInTheDocument();
     expect(screen.getByTestId('seg-more')).toBeInTheDocument();
     expect(screen.queryByTestId('seg-background')).toBeNull();
-    expect(screen.queryByTestId('seg-vehicle')).toBeNull();
     expect(screen.queryByTestId('seg-help')).toBeNull();
     expect(iconOnlyOf('seg-connection')).toBe('false');
   });

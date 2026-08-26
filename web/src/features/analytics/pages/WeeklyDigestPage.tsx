@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AIDigestNarration } from '@/components/ai/AIDigestNarration';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -32,9 +32,7 @@ export default function WeeklyDigestPage() {
     funFact,
     goToPrevWeek,
     goToNextWeek,
-    vehicleOptions,
     selectedVehicleId,
-    setVehicleId,
     drivesLoading,
     drivesError,
     refetchDrives,
@@ -85,12 +83,8 @@ export default function WeeklyDigestPage() {
     selectedVehicleId !== '' && Number.isFinite(parsedVehicleId) ? parsedVehicleId : undefined;
 
   const actions = (
-    <Select
-      options={vehicleOptions}
-      value={selectedVehicleId}
-      onChange={(e) => setVehicleId(e.target.value)}
-      placeholder={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
-      aria-label={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
+    <VehicleSelect
+      ariaLabel={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
       className="w-full sm:w-48"
     />
   );

@@ -7,8 +7,8 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Badge, Button, Select, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
-import { RangePicker } from '@/components/forms';
+import { GlassPanel, Badge, Button, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
 import {
   DataFreshnessAuto,
@@ -132,16 +132,9 @@ export default function TimelinePage() {
   usePageTitle(t('timeline.title', 'Timeline'));
 
   // Vehicle selection is global, persistent, URL-aware, and bookmarkable.
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
-
-  const onPickVehicle = (id: string) => {
-    const n = Number(id);
-    if (Number.isFinite(n) && n > 0) {
-      setVehicleId(n);
-    }
-  };
 
   const { start, end, setRange } = useRangeState({
     persistKey: 'timeline.range',
@@ -363,26 +356,11 @@ export default function TimelinePage() {
 
   /* ─── Actions (vehicle selector + refresh) ─── */
 
-  const vehicleOptions = useMemo(
-    () =>
-      vehicles.map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  );
-
   const actions = (
     <div className="flex items-center gap-3">
-      {vehicles.length > 0 && (
-        <Select
-          options={vehicleOptions}
-          value={activeId}
-          onChange={(e) => onPickVehicle(e.target.value)}
-          placeholder={t('timeline.selectVehicle', 'Select Vehicle')}
-          aria-label={t('timeline.selectVehicle', 'Select Vehicle')}
-        />
-      )}
+      <VehicleSelect
+        ariaLabel={t('timeline.selectVehicle', 'Select Vehicle')}
+      />
       <RangePicker
         value={{ start, end }}
         onChange={(r) => setRange(r)}

@@ -7,7 +7,7 @@ import {
   Trophy, Gauge, BatteryCharging,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { Grid, PageContainer } from '@/components/layout';
 import {
   GlassPanel, HelpTooltip, SectionTitle, Text, Caption, HelperText,
   type HelpTooltipProps,
@@ -314,7 +314,7 @@ export default function LifetimeStatsPage() {
             emptyMessage={t('lifetime.noData', 'No driving data yet')}
             skeletonHeight={200}
           >
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 2xl:grid-cols-1">
+            <Grid minItemWidth="standard" gap={4}>
               <EnvStat
                 visual={
                   <ProgressRing
@@ -337,7 +337,7 @@ export default function LifetimeStatsPage() {
                 value={fmtInt(Math.round((stats?.total_savings ?? 0) / SAVINGS_PER_COFFEE))}
                 label={t('lifetime.coffeesEquiv', 'cups of coffee saved')}
               />
-            </div>
+            </Grid>
           </SectionCard>
 
           <SectionCard
@@ -349,7 +349,7 @@ export default function LifetimeStatsPage() {
             emptyMessage={t('lifetime.noData', 'No driving data yet')}
             skeletonHeight={200}
           >
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 2xl:grid-cols-1">
+            <Grid minItemWidth="standard" gap={3}>
               <RecordCard
                 title={t('lifetime.longestDrive', 'Longest Drive')}
                 value={`${fmtNumber(fromKm(stats?.longest_drive_record?.value ?? 0), 1)} ${distanceUnit}`}
@@ -368,7 +368,7 @@ export default function LifetimeStatsPage() {
                 date={stats?.max_charge_record?.date}
                 icon={<BatteryCharging className="h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />}
               />
-            </div>
+            </Grid>
           </SectionCard>
 
           <SectionCard
