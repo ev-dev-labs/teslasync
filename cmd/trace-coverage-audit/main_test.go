@@ -367,6 +367,9 @@ func TestRenderReport(t *testing.T) {
 			t.Errorf("report missing substring %q\n---\n%s", s, out)
 		}
 	}
+	if strings.HasSuffix(out, "\n\n") {
+		t.Fatal("report must end with exactly one newline")
+	}
 	// An OK flow with no missing requirements must not emit the missing header.
 	okSection := out[strings.Index(out, "`flow_one`"):strings.Index(out, "`flow_two`")]
 	if strings.Contains(okSection, "Missing required-files") {

@@ -13,7 +13,7 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Status: **OK**
 - Instrumented files matched: 5 (threshold ≥ 4)
 - Matched files:
-  - `internal/api/middleware.go`
+  - `internal/api/middleware/observability.go`
   - `internal/database/database.go`
   - `internal/platform/httputil/client.go`
   - `internal/platform/httputil/timeout.go`
@@ -25,7 +25,7 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Instrumented files matched: 7 (threshold ≥ 4)
 - Matched files:
   - `internal/adapter/tesla/client.go`
-  - `internal/api/middleware.go`
+  - `internal/api/middleware/observability.go`
   - `internal/platform/httputil/client.go`
   - `internal/tesla/client.go`
   - `internal/tesla/client_auth.go`
@@ -73,7 +73,7 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Status: **OK**
 - Instrumented files matched: 1 (threshold ≥ 1)
 - Matched files:
-  - `internal/api/sse_handler.go`
+  - `internal/api/sse/handler.go`
 
 ## cmd/resubscribe per-vehicle Tesla MQTT push — `resubscribe_push`
 
@@ -112,7 +112,7 @@ go run ./cmd/trace-coverage-audit -report docs/runbooks/phase-44-trace-coverage-
 - Status: **OK**
 - Instrumented files matched: 16 (threshold ≥ 14)
 - Matched files:
-  - `internal/api/telemetry_handler_ingest.go`
+  - `internal/api/telemetry/telemetry_handler_ingest.go`
   - `internal/mqtt/mqtt.go`
   - `internal/mqtt/vin_cache.go`
   - `internal/signal/redis_cache.go`

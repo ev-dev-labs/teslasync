@@ -1,62 +1,114 @@
 /**
- * DataRepairPage — triage worklist for incomplete (stale) charging sessions
- * and drive records.
- *
- * Full-width modern-ui redesign: a KPI band, an opt-in AI suggestion surface,
- * and a two-column worklist bento (charging + drives side-by-side on wide
- * screens, stacked on mobile). Each stale record expands into an inline SI
- * repair form to update, close, or discard it. All data flows through the
- * `@/api/hooks/useDataRepair` TanStack hooks; values are read as SI and
- * formatted at the display boundary via `useUnits()`.
+ * Evidence-backed session repair worklist. Suggestions remain visible until a
+ * fresh diagnosis confirms resolution, and every mutation requires per-row
+ * operator confirmation.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  AlertTriangle, BatteryCharging, CheckCircle, RefreshCw, Route, ShieldAlert, Wrench,
+  AlertTriangle, BatteryCharging, RefreshCw, Route, ShieldAlert, Wrench,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { Badge, Button, GlassPanel, PanelTitle } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  EmptyState,
   InlineCallout,
   OperationalWriteNotice,
-  QueryError,
-  Skeleton,
 } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
-import { useUnits } from '@/hooks/useUnits';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { AIDataRepairSuggestions } from '@/components/ai/AIDataRepairSuggestions';
 import {
+  repairApplyInput,
+  useApplyChargingRepair,
+  useApplyDriveRepair,
+  useRepairSuggestions,
   useStaleSessions,
-  type StaleChargingSession,
-  type StaleDrive,
+  type RepairSuggestion,
 } from '@/api/hooks/useDataRepair';
 
-import { StaleSessionRow, type StaleRowMetric } from '../components/StaleSessionRow';
-import { ChargingRepairForm } from '../components/ChargingRepairForm';
-import { DriveRepairForm } from '../components/DriveRepairForm';
+import { RepairSuggestionSection } from '../components/RepairSuggestionSection';
+import { StaleChargingWorklist } from '../components/StaleChargingWorklist';
+import { StaleDriveWorklist } from '../components/StaleDriveWorklist';
+
+/** Stable per-row key across both suggestion sections. */
+function rowKey(s: RepairSuggestion): string {
+  return `${s.kind}-${s.session_id}`;
+}
+
+/** Human-readable failure text for a per-row mutation error. */
+function errorText(err: unknown): string | undefined {
+  if (err == null) return undefined;
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  return undefined;
+}
 
 export default function DataRepairPage() {
   const { t } = useTranslation();
   usePageTitle(t('dataRepair.title', 'Data Repair'));
 
-  const { formatEnergy, formatPower, formatDistance, formatSpeed } = useUnits();
   const operationalMode = useOperationalMode();
 
+  const suggestionsQuery = useRepairSuggestions();
   const staleQuery = useStaleSessions();
-  const { data, isLoading, isError, error, refetch, isFetching } = staleQuery;
 
-  const staleCharging = data?.stale_charging ?? [];
-  const staleDrives = data?.stale_drives ?? [];
+  const driveSuggestions = suggestionsQuery.data?.drive_suggestions ?? [];
+  const chargingSuggestions = suggestionsQuery.data?.charging_suggestions ?? [];
+  const totalSuggestions = driveSuggestions.length + chargingSuggestions.length;
+  const blockedCount = useMemo(
+    () => [...driveSuggestions, ...chargingSuggestions].filter((s) => !s.applicable).length,
+    [driveSuggestions, chargingSuggestions],
+  );
+
+  const staleCharging = staleQuery.data?.stale_charging ?? [];
+  const staleDrives = staleQuery.data?.stale_drives ?? [];
   const totalStale = staleCharging.length + staleDrives.length;
 
-  // A single expanded key across both panels so only one repair form is open
-  // at a time (keyed `charging-<id>` / `drive-<id>`).
+  // Per-row apply state, keyed `<kind>-<id>` so two rows never share a spinner
+  // or an error banner.
+  const [pendingKey, setPendingKey] = useState<string | null>(null);
+  const [appliedKeys, setAppliedKeys] = useState<string[]>([]);
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({});
+
+  const applyDrive = useApplyDriveRepair();
+  const applyCharging = useApplyChargingRepair();
+
+  const handleApply = (s: RepairSuggestion) => {
+    const key = rowKey(s);
+    setPendingKey(key);
+    setRowErrors((prev) => {
+      const next = { ...prev };
+      delete next[key];
+      return next;
+    });
+
+    const mutation = s.kind === 'drive' ? applyDrive : applyCharging;
+    mutation.mutate(repairApplyInput(s), {
+      onSuccess: () => {
+        setPendingKey(null);
+        // The card stays on screen with a success marker until the operator
+        // refreshes — a suggestion must never disappear before a fresh
+        // diagnosis confirms it is resolved.
+        setAppliedKeys((prev) => (prev.includes(key) ? prev : [...prev, key]));
+      },
+      onError: (err) => {
+        setPendingKey(null);
+        setRowErrors((prev) => ({
+          ...prev,
+          [key]:
+            errorText(err) ??
+            t('dataRepair.card.genericError', 'The repair was rejected. Refresh and review again.'),
+        }));
+      },
+    });
+  };
+
+  // A single expanded key across both stale panels so only one manual repair
+  // form is open at a time (keyed `charging-<id>` / `drive-<id>`).
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const toggle = (key: string) => {
     if (!operationalMode.canWrite) return;
@@ -68,25 +120,23 @@ export default function DataRepairPage() {
     if (!operationalMode.canWrite) setExpandedKey(null);
   }, [operationalMode.canWrite]);
 
-  const chargingMetrics = (s: StaleChargingSession): StaleRowMetric[] => [
-    { key: 'energy', label: t('dataRepair.metric.energy', 'Energy'), value: formatEnergy(s.total_energy_added_wh) },
-    { key: 'peak', label: t('dataRepair.metric.peak', 'Peak'), value: formatPower(s.peak_power_w) },
-  ];
-  const driveMetrics = (d: StaleDrive): StaleRowMetric[] => [
-    { key: 'distance', label: t('dataRepair.metric.distance', 'Distance'), value: formatDistance(d.distance_m) },
-    { key: 'max', label: t('dataRepair.metric.maxSpeed', 'Max'), value: formatSpeed(d.max_speed_mps) },
-  ];
-
   const subtitle =
-    totalStale > 0
-      ? t('dataRepair.subtitle.count', '{{count}} incomplete session(s) found', { count: totalStale })
-      : t('dataRepair.subtitle.clean', 'Fix incomplete or stale sessions');
+    totalSuggestions > 0
+      ? t('dataRepair.subtitle.suggestions', '{{count}} session boundary(s) contradicted by later evidence', {
+          count: totalSuggestions,
+        })
+      : t('dataRepair.subtitle.clean', 'Find and repair broken drive and charging session boundaries');
+
+  const refreshAll = () => {
+    void suggestionsQuery.refetch();
+    void staleQuery.refetch();
+  };
 
   const actions = (
     <Button
       variant="ghost"
-      onClick={() => refetch()}
-      loading={isFetching}
+      onClick={refreshAll}
+      loading={suggestionsQuery.isFetching || staleQuery.isFetching}
       icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
       aria-label={t('common.refresh', 'Refresh')}
       className="min-h-11"
@@ -99,185 +149,165 @@ export default function DataRepairPage() {
       title={t('dataRepair.title', 'Data Repair')}
       subtitle={subtitle}
       actions={actions}
-      query={staleQuery}
+      query={[suggestionsQuery, staleQuery]}
     >
       <OperationalWriteNotice
         title={t('dataRepair.readOnly.title', 'Data repair is read-only')}
       />
 
-      {/* 1 — KPI band: full-width responsive metric grid */}
+      {/* 1 — KPI band: what the diagnosis found. */}
       <FadeIn>
         <section
           aria-label={t('dataRepair.kpis', 'Repair summary')}
           className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4"
         >
           <MetricCard
-            label={t('dataRepair.kpi.total', 'Total Stale')}
-            value={totalStale}
-            icon={<AlertTriangle className="h-4 w-4" />}
+            label={t('dataRepair.kpi.suggestions', 'Suggested Repairs')}
+            value={totalSuggestions}
+            icon={<Wrench className="h-4 w-4" />}
             color="amber"
           />
           <MetricCard
-            label={t('dataRepair.kpi.charging', 'Stale Charging')}
-            value={staleCharging.length}
-            icon={<BatteryCharging className="h-4 w-4" />}
-            color="cyan"
-          />
-          <MetricCard
-            label={t('dataRepair.kpi.drives', 'Stale Drives')}
-            value={staleDrives.length}
+            label={t('dataRepair.kpi.driveSuggestions', 'Drive Boundaries')}
+            value={driveSuggestions.length}
             icon={<Route className="h-4 w-4" />}
             color="purple"
           />
           <MetricCard
-            label={t('dataRepair.kpi.status', 'Status')}
-            value={totalStale === 0 ? t('dataRepair.status.clean', 'Clean') : t('dataRepair.status.needsRepair', 'Needs Repair')}
-            icon={<Wrench className="h-4 w-4" />}
-            color={totalStale === 0 ? 'green' : 'red'}
+            label={t('dataRepair.kpi.chargingSuggestions', 'Charging Boundaries')}
+            value={chargingSuggestions.length}
+            icon={<BatteryCharging className="h-4 w-4" />}
+            color="cyan"
+          />
+          <MetricCard
+            label={t('dataRepair.kpi.blocked', 'Blocked')}
+            value={blockedCount}
+            icon={<AlertTriangle className="h-4 w-4" />}
+            color={blockedCount === 0 ? 'green' : 'red'}
           />
         </section>
       </FadeIn>
 
-      {/* 2 — AI repair suggestions (opt-in; the HOC renders null when ai_mode='off') */}
+      {/* 2 — How the diagnosis works + what an apply does. */}
       <FadeIn delay={0.1}>
-        <AIDataRepairSuggestions />
-      </FadeIn>
-
-      {/* 3 — Context callout: what "stale" means + the privileged-action warning */}
-      <FadeIn delay={0.15}>
         <InlineCallout variant="warning" icon={<ShieldAlert />}>
           {t(
             'dataRepair.callout',
-            'Sessions open for more than 24 hours are shown here. Editing, closing, or discarding a record is a privileged action and may prompt re-authentication.',
+            'Suggestions come from durable history only: a session is listed when its stored state is contradicted by a later signal, never because it is simply old. Applying a repair rewrites the end timestamp (and, for drives, the derived duration) of that one session, is recorded in the audit log, and is never done automatically.',
           )}
         </InlineCallout>
       </FadeIn>
 
-      {/* 4 — Worklist bento: charging + drives side-by-side on wide screens */}
+      {suggestionsQuery.data?.truncated && (
+        <FadeIn delay={0.12}>
+          <InlineCallout variant="info" icon={<AlertTriangle />}>
+            {t(
+              'dataRepair.truncated',
+              'The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.',
+            )}
+          </InlineCallout>
+        </FadeIn>
+      )}
+
+      {/* 3 — AI repair suggestions (opt-in; the HOC renders null when ai_mode='off') */}
+      <FadeIn delay={0.15}>
+        <AIDataRepairSuggestions />
+      </FadeIn>
+
+      {/* 4 — The two evidence-backed worklists. */}
       <FadeIn delay={0.2}>
         <section
-          aria-label={t('dataRepair.worklist', 'Repair worklist')}
+          aria-label={t('dataRepair.suggestionsRegion', 'Suggested repairs')}
           className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2 xl:gap-5"
         >
-          {/* Charging sessions */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('dataRepair.charging.title', 'Charging Sessions')}
-              {staleCharging.length > 0 && (
-                <Badge variant="warning" size="sm">{staleCharging.length}</Badge>
-              )}
-            </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={44} lines={3} />
-            ) : isError ? (
-              <QueryError
-                error={error}
-                onRetry={() => refetch()}
-                resourceName={t('dataRepair.charging.resource', 'Charging sessions')}
-              />
-            ) : staleCharging.length === 0 ? (
-              // no-action: transient — the charging worklist re-polls every 30s (useStaleSessions' refetchInterval); this is a positive "all clear" state, not a failure to retry.
-              <EmptyState
-                icon={<CheckCircle className="h-8 w-8" />}
-                title={t('dataRepair.charging.emptyTitle', 'All charging sessions are complete')}
-                message={t('dataRepair.charging.empty', 'No stale charging sessions found.')}
-              />
-            ) : (
-              <ul className="space-y-2">
-                {staleCharging.map((s) => {
-                  const key = `charging-${s.id}`;
-                  const formId = `repair-form-${key}`;
-                  const expanded = expandedKey === key;
-                  return (
-                    <li key={s.id}>
-                      <StaleSessionRow
-                        id={s.id}
-                        timestamp={s.started_at}
-                        batteryPct={s.start_soc_pct}
-                        vehicleId={s.vehicle_id}
-                        metrics={chargingMetrics(s)}
-                        expanded={expanded}
-                        onToggle={() => toggle(key)}
-                        controlsId={formId}
-                        disabled={!operationalMode.canWrite}
-                        disabledReason={operationalMode.writeBlockReason ?? undefined}
-                      />
-                      {expanded && (
-                        <ChargingRepairForm
-                          session={s}
-                          formId={formId}
-                          onClose={collapse}
-                          disabled={!operationalMode.canWrite}
-                          disabledReason={operationalMode.writeBlockReason ?? undefined}
-                        />
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+          <RepairSuggestionSection
+            items={driveSuggestions}
+            title={t('dataRepair.drives.suggestionsTitle', 'Drive Boundaries')}
+            emptyTitle={t(
+              'dataRepair.drives.suggestionsEmptyTitle',
+              'No contradicted drive boundaries',
             )}
-          </GlassPanel>
+            emptyMessage={t(
+              'dataRepair.drives.suggestionsEmpty',
+              'Every drive in the scanned window agrees with the durable signal history.',
+            )}
+            icon={<Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            isLoading={suggestionsQuery.isLoading}
+            isError={suggestionsQuery.isError}
+            error={suggestionsQuery.error}
+            onRetry={() => void suggestionsQuery.refetch()}
+            pendingKey={pendingKey}
+            appliedKeys={appliedKeys}
+            rowErrors={rowErrors}
+            onApply={handleApply}
+            disabled={!operationalMode.canWrite}
+            disabledReason={operationalMode.writeBlockReason ?? undefined}
+          />
+          <RepairSuggestionSection
+            items={chargingSuggestions}
+            title={t('dataRepair.charging.suggestionsTitle', 'Charging Boundaries')}
+            emptyTitle={t(
+              'dataRepair.charging.suggestionsEmptyTitle',
+              'No contradicted charging boundaries',
+            )}
+            emptyMessage={t(
+              'dataRepair.charging.suggestionsEmpty',
+              'Every charging session in the scanned window agrees with the durable signal history.',
+            )}
+            icon={<BatteryCharging className="h-4 w-4 text-cyan-300" aria-hidden="true" />}
+            isLoading={suggestionsQuery.isLoading}
+            isError={suggestionsQuery.isError}
+            error={suggestionsQuery.error}
+            onRetry={() => void suggestionsQuery.refetch()}
+            pendingKey={pendingKey}
+            appliedKeys={appliedKeys}
+            rowErrors={rowErrors}
+            onApply={handleApply}
+            disabled={!operationalMode.canWrite}
+            disabledReason={operationalMode.writeBlockReason ?? undefined}
+          />
+        </section>
+      </FadeIn>
 
-          {/* Drives */}
-          <GlassPanel className="p-4 sm:p-5">
-            <PanelTitle className="mb-3 flex items-center gap-2">
-              <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('dataRepair.drives.title', 'Drives')}
-              {staleDrives.length > 0 && (
-                <Badge variant="warning" size="sm">{staleDrives.length}</Badge>
-              )}
-            </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={44} lines={3} />
-            ) : isError ? (
-              <QueryError
-                error={error}
-                onRetry={() => refetch()}
-                resourceName={t('dataRepair.drives.resource', 'Drives')}
-              />
-            ) : staleDrives.length === 0 ? (
-              // no-action: transient — the drives worklist re-polls every 30s (useStaleSessions' refetchInterval); this is a positive "all clear" state, not a failure to retry.
-              <EmptyState
-                icon={<CheckCircle className="h-8 w-8" />}
-                title={t('dataRepair.drives.emptyTitle', 'All drives are complete')}
-                message={t('dataRepair.drives.empty', 'No stale drives found.')}
-              />
-            ) : (
-              <ul className="space-y-2">
-                {staleDrives.map((d) => {
-                  const key = `drive-${d.id}`;
-                  const formId = `repair-form-${key}`;
-                  const expanded = expandedKey === key;
-                  return (
-                    <li key={d.id}>
-                      <StaleSessionRow
-                        id={d.id}
-                        timestamp={d.start_ts}
-                        batteryPct={d.start_battery_pct}
-                        vehicleId={d.vehicle_id}
-                        metrics={driveMetrics(d)}
-                        expanded={expanded}
-                        onToggle={() => toggle(key)}
-                        controlsId={formId}
-                        disabled={!operationalMode.canWrite}
-                        disabledReason={operationalMode.writeBlockReason ?? undefined}
-                      />
-                      {expanded && (
-                        <DriveRepairForm
-                          drive={d}
-                          formId={formId}
-                          onClose={collapse}
-                          disabled={!operationalMode.canWrite}
-                          disabledReason={operationalMode.writeBlockReason ?? undefined}
-                        />
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
+      {/* 5 — Manual fallback: incomplete sessions with no contradicting evidence. */}
+      <FadeIn delay={0.25}>
+        <section
+          aria-label={t('dataRepair.worklist', 'Repair worklist')}
+          className="space-y-3"
+        >
+          <Text as="p" variant="bodySm">
+            {t(
+              'dataRepair.stale.intro',
+              'Incomplete sessions with no contradicting evidence. These are listed for manual inspection only — nothing in the recorded history establishes where they should end.',
             )}
-          </GlassPanel>
+            {totalStale > 0 ? ` (${totalStale})` : ''}
+          </Text>
+          <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2 xl:gap-5">
+            <StaleChargingWorklist
+              sessions={staleCharging}
+              isLoading={staleQuery.isLoading}
+              isError={staleQuery.isError}
+              error={staleQuery.error}
+              onRetry={() => void staleQuery.refetch()}
+              expandedKey={expandedKey}
+              onToggle={toggle}
+              onCollapse={collapse}
+              disabled={!operationalMode.canWrite}
+              disabledReason={operationalMode.writeBlockReason ?? undefined}
+            />
+            <StaleDriveWorklist
+              drives={staleDrives}
+              isLoading={staleQuery.isLoading}
+              isError={staleQuery.isError}
+              error={staleQuery.error}
+              onRetry={() => void staleQuery.refetch()}
+              expandedKey={expandedKey}
+              onToggle={toggle}
+              onCollapse={collapse}
+              disabled={!operationalMode.canWrite}
+              disabledReason={operationalMode.writeBlockReason ?? undefined}
+            />
+          </div>
         </section>
       </FadeIn>
     </PageContainer>

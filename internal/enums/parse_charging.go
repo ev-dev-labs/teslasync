@@ -27,3 +27,19 @@ func IsCharging(raw string) bool {
 func IsChargeComplete(raw string) bool {
 	return strings.Contains(raw, ChargeStateComplete)
 }
+
+func isExplicitChargeState(raw, state string) bool {
+	return raw == state ||
+		raw == "ChargeState"+state ||
+		raw == "DetailedChargeState"+state
+}
+
+// IsChargeEnded reports whether a charge-state transition definitively ends an
+// active charging session. Unknown values are intentionally excluded: absence
+// of positive charging evidence is not proof that charging stopped.
+func IsChargeEnded(raw string) bool {
+	return isExplicitChargeState(raw, ChargeStateComplete) ||
+		isExplicitChargeState(raw, ChargeStateStopped) ||
+		isExplicitChargeState(raw, ChargeStateDisconnected) ||
+		isExplicitChargeState(raw, ChargeStateNoPower)
+}

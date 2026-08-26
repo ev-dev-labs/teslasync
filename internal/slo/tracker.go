@@ -268,19 +268,22 @@ func (t *Tracker) queryScalar(ctx context.Context, expr string) (*float64, error
 // tracker works against a fresh Prometheus that hasn't loaded the
 // generated rules yet.
 func goodRatioExpr(s SLO, window string) string {
-	return fmt.Sprintf("(%s) / clamp_min((%s), 1)",
-		rewriteWindow(s.SLI.GoodEvents, window),
-		rewriteWindow(s.SLI.ValidEvents, window),
+	good := rewriteWindow(s.SLI.GoodEvents, window)
+	valid := rewriteWindow(s.SLI.ValidEvents, window)
+	return nonZeroTrafficRatioExpr(good, valid)
+}
+
+func nonZeroTrafficRatioExpr(good, valid string) string {
+	return fmt.Sprintf(
+		"(((%s) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
+		good, valid, valid,
 	)
 }
 
 // badRatioExpr returns the PromQL for the bad-event ratio over a window.
 // Mirrors cmd/slogen's ratioExpr — single source of truth.
 func badRatioExpr(s SLO, window string) string {
-	return fmt.Sprintf("1 - ((%s) / clamp_min((%s), 1))",
-		rewriteWindow(s.SLI.GoodEvents, window),
-		rewriteWindow(s.SLI.ValidEvents, window),
-	)
+	return fmt.Sprintf("1 - (%s)", goodRatioExpr(s, window))
 }
 
 // rewriteWindow swaps [5m] in the SLI body for the requested window.

@@ -62,7 +62,7 @@ var flows = []flow{
 		Name:        "vehicle_state_read",
 		Description: "GET /vehicles/{id}/state",
 		GlobPatterns: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/database/database.go",
 			"internal/platform/httputil/timeout.go",
 			"internal/platform/httputil/client.go",
@@ -71,7 +71,7 @@ var flows = []flow{
 		},
 		MinSpanFiles: 4,
 		RequiredFiles: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/database/database.go",
 		},
 	},
@@ -79,7 +79,7 @@ var flows = []flow{
 		Name:        "wake_command",
 		Description: "POST /commands/{vehicleId}/wake",
 		GlobPatterns: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/tesla/client.go",
 			"internal/tesla/client_commands.go",
 			"internal/tesla/client_auth.go",
@@ -89,7 +89,7 @@ var flows = []flow{
 		},
 		MinSpanFiles: 4,
 		RequiredFiles: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/tesla/client_commands.go",
 		},
 	},
@@ -429,7 +429,7 @@ func renderReport(results []flowResult) string {
 		}
 		b.WriteString("\n")
 	}
-	return b.String()
+	return strings.TrimRight(b.String(), "\n") + "\n"
 }
 
 func writeReport(path, body string) error {

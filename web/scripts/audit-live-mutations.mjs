@@ -33,6 +33,8 @@ const LIVE_ONLY_MUTATIONS = {
   ],
   'hooks/useCharging.ts': ['useApplySchedule', 'useBulkDeleteCharging'],
   'hooks/useDataRepair.ts': [
+    'useApplyDriveRepair',
+    'useApplyChargingRepair',
     'useUpdateCharging',
     'useCloseCharging',
     'useDiscardCharging',

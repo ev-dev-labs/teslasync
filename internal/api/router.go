@@ -215,6 +215,7 @@ import (
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
@@ -427,6 +428,35 @@ func mountVehicleScopedManagementRoutes(r chi.Router, h vehicleManagementRouteHa
 
 func mountAccountVehicleManagementRoutes(r chi.Router, h vehicleManagementRouteHandler) {
 	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/vehicle-pricing", h.VehiclePricing)
+}
+
+type dataRepairRoutes interface {
+	GetStaleSessions(http.ResponseWriter, *http.Request)
+	GetSuggestions(http.ResponseWriter, *http.Request)
+	UpdateCharging(http.ResponseWriter, *http.Request)
+	CloseCharging(http.ResponseWriter, *http.Request)
+	DeleteCharging(http.ResponseWriter, *http.Request)
+	UpdateDrive(http.ResponseWriter, *http.Request)
+	CloseDrive(http.ResponseWriter, *http.Request)
+	DeleteDrive(http.ResponseWriter, *http.Request)
+}
+
+func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Handler) http.Handler) {
+	r.Route("/data-repair", func(r chi.Router) {
+		r.Use(httprate.LimitByIP(20, time.Minute))
+		r.Get("/stale-sessions", h.GetStaleSessions)
+		r.Get("/suggestions", h.GetSuggestions)
+		r.Route("/charging/{id}", func(r chi.Router) {
+			r.With(sudo).Put("/", h.UpdateCharging)
+			r.With(sudo).Post("/close", h.CloseCharging)
+			r.With(sudo).Delete("/", h.DeleteCharging)
+		})
+		r.Route("/drive/{id}", func(r chi.Router) {
+			r.With(sudo).Put("/", h.UpdateDrive)
+			r.With(sudo).Post("/close", h.CloseDrive)
+			r.With(sudo).Delete("/", h.DeleteDrive)
+		})
+	})
 }
 
 // NewRouter creates and configures the main HTTP router with all API routes,
@@ -901,7 +931,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
 	speedProfileHandler := apispeedprof.NewSpeedProfileHandler(db)
-	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
+	// Data repair: read-only evidence diagnosis + explicit, audited apply.
+	// The diagnosis source is only installed when a database is present; with
+	// no pool the suggestions endpoint reports 503 rather than pretending the
+	// worklist is clean.
+	dataRepairOpts := []apidatarepair.Option{
+		apidatarepair.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader),
+	}
+	if db != nil {
+		dataRepairOpts = append(dataRepairOpts,
+			apidatarepair.WithDiagnosisSource(datarepairdb.NewRepo(db)))
+	}
+	dataRepairHandler := apidatarepair.NewDataRepairHandler(db, dataRepairOpts...)
 	tempImpactHandler := tempimpact.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
 	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
@@ -4486,22 +4527,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Data Repair
-		r.Route("/data-repair", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(20, 1*time.Minute))
-			// GET stays read-only and unguarded; every mutating route
-			// below threads through RequireSudo.
-			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
-			r.Route("/charging/{id}", func(r chi.Router) {
-				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateCharging)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseCharging)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteCharging)
-			})
-			r.Route("/drive/{id}", func(r chi.Router) {
-				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateDrive)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseDrive)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteDrive)
-			})
-		})
+		mountDataRepairRoutes(r, dataRepairHandler, RequireSudo(sudoStore, sudoCfg))
 
 		// Backup & Restore
 		r.Route("/backup", func(r chi.Router) {

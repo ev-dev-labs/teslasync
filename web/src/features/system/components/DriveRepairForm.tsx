@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Save, Trash2, X } from 'lucide-react';
-import { Button, Input } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import {
   useCloseDrive,
@@ -10,6 +9,8 @@ import {
   type RepairPatch,
   type StaleDrive,
 } from '@/api/hooks/useDataRepair';
+import { isRFC3339Boundary } from './repairPresentation';
+import { RepairFormActions } from './RepairFormActions';
 
 export interface DriveRepairFormProps {
   drive: StaleDrive;
@@ -40,8 +41,8 @@ function num(value: string): number | undefined {
  * Inputs are entered in SI (m, s, m/s) to match the `drives` columns the
  * backend `DrivePartialAllowed` whitelist accepts; a live `useUnits()` hint
  * shows the equivalent in the operator's preferred display unit. Save patches
- * only the fields that were filled; Close stamps `ended_at` + `duration_s`;
- * Discard deletes.
+ * only non-boundary fields; Close applies the explicitly entered `ended_at`
+ * after confirmation; Discard deletes after confirmation.
  */
 export function DriveRepairForm({
   drive,
@@ -71,7 +72,6 @@ export function DriveRepairForm({
 
   const onSave = () => {
     const patch: RepairPatch = {};
-    if (form.ended_at.trim()) patch.ended_at = form.ended_at.trim();
     const distance = num(form.distance_m);
     if (distance != null) patch.distance_m = distance;
     const duration = num(form.duration_s);
@@ -84,6 +84,14 @@ export function DriveRepairForm({
     if (avgSpeed != null) patch.avg_speed_mps = avgSpeed;
     update.mutate({ id: drive.id, patch }, { onSuccess: onClose });
   };
+  const endedAt = form.ended_at.trim();
+  const validEndedAt = isRFC3339Boundary(endedAt);
+  const onCloseBoundary = () => close.mutate({
+    id: drive.id,
+    ended_at: endedAt,
+    rule: 'manual',
+    expected_stored_ended_at: drive.end_ts ?? '',
+  }, { onSuccess: onClose });
 
   // Derive the live display-unit hint from the SAME `num()` predicate the save
   // path uses, so the hint and the patch agree on what counts as a valid entry:
@@ -111,6 +119,9 @@ export function DriveRepairForm({
           value={form.ended_at}
           placeholder="2026-03-30T04:00:00Z"
           onChange={set('ended_at')}
+          error={endedAt && !validEndedAt
+            ? t('dataRepair.field.invalidEndedAt', 'Use RFC3339 format, including a timezone.')
+            : undefined}
           disabled={disabled}
         />
         <Input
@@ -154,49 +165,20 @@ export function DriveRepairForm({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          onClick={onSave}
-          loading={update.isPending}
-          disabled={disabled}
-          title={disabledReason}
-          icon={<Save className="h-4 w-4" aria-hidden="true" />}
-          className="min-h-11"
-        >
-          {t('common.save', 'Save')}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => close.mutate(drive.id, { onSuccess: onClose })}
-          loading={close.isPending}
-          disabled={disabled}
-          title={disabledReason}
-          icon={<Clock className="h-4 w-4" aria-hidden="true" />}
-          className="min-h-11"
-        >
-          {t('dataRepair.action.closeDrive', 'Close Drive')}
-        </Button>
-        <Button
-          variant="danger"
-          onClick={() => discard.mutate(drive.id, { onSuccess: onClose })}
-          loading={discard.isPending}
-          disabled={disabled}
-          title={disabledReason}
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          className="min-h-11"
-        >
-          {t('dataRepair.action.discard', 'Discard')}
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={onClose}
-          icon={<X className="h-4 w-4" aria-hidden="true" />}
-          className="ml-auto min-h-11"
-        >
-          {t('common.cancel', 'Cancel')}
-        </Button>
-      </div>
+      <RepairFormActions
+        kind="drive"
+        sessionId={drive.id}
+        onSave={onSave}
+        onCloseBoundary={onCloseBoundary}
+        onDiscard={() => discard.mutate(drive.id, { onSuccess: onClose })}
+        onCancel={onClose}
+        savePending={update.isPending}
+        closePending={close.isPending}
+        discardPending={discard.isPending}
+        closeDisabled={!validEndedAt}
+        disabled={disabled}
+        disabledReason={disabledReason}
+      />
     </div>
   );
 }

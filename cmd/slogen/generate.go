@@ -110,7 +110,14 @@ func renderRecordingRules(cat *Catalog) string {
 func ratioExpr(s SLO, window string) string {
 	good := rewriteWindow(s.SLI.GoodEvents, window)
 	valid := rewriteWindow(s.SLI.ValidEvents, window)
-	return fmt.Sprintf("(%s) / clamp_min((%s), 1)", good, valid)
+	// Preserve the real good/valid ratio at any non-zero traffic rate. A
+	// one-request-per-second denominator floor turns healthy low-volume APIs
+	// into false outages. Windows with no valid events are explicitly healthy
+	// (1) because no reliability budget was consumed.
+	return fmt.Sprintf(
+		"(((%s) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
+		good, valid, valid,
+	)
 }
 
 // rewriteWindow swaps the literal `[5m]` and the subquery `[5m:30s]` for

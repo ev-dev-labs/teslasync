@@ -119,6 +119,11 @@ function bodyOf(call: RequestArgs | undefined): Record<string, unknown> {
   return JSON.parse(String(call?.[1]?.body ?? '{}')) as Record<string, unknown>;
 }
 
+function confirmAction(actionName: string): void {
+  fireEvent.click(screen.getByRole('button', { name: actionName }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+}
+
 beforeEach(() => {
   mockRequest.mockReset();
   mockRequest.mockResolvedValue({});
@@ -176,7 +181,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
   it('Save PUTs only the filled fields to the singular SI-canonical route, then calls onClose', async () => {
     const { onClose } = renderForm();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
@@ -192,7 +197,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     });
   });
 
-  it('patches edited values, trims ended_at, and omits a field the operator clears', async () => {
+  it('keeps ended_at out of Save and omits a field the operator clears', async () => {
     const { onClose } = renderForm();
 
     fireEvent.change(screen.getByLabelText('Distance (m)'), { target: { value: '20000' } });
@@ -201,13 +206,12 @@ describe('DriveRepairForm — Project Apex elevation', () => {
       target: { value: '  2026-03-30T04:00:00Z  ' },
     });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
-    // avg_speed_mps was cleared → dropped; ended_at is whitespace-trimmed.
+    // avg_speed_mps was cleared and ended_at belongs only to Close.
     expect(bodyOf(findCall('PUT'))).toEqual({
-      ended_at: '2026-03-30T04:00:00Z',
       distance_m: 20000,
       end_soc_pct: 80,
       max_speed_mps: 30,
@@ -222,7 +226,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
       buildDrive({ distance_m: Infinity, max_speed_mps: NaN }),
     );
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
 
     const put = findCall('PUT');
@@ -240,12 +244,22 @@ describe('DriveRepairForm — Project Apex elevation', () => {
   it('Close POSTs to the SI-canonical close route and closes the form on success', async () => {
     const { onClose } = renderForm();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close Drive' }));
+    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+      target: { value: '2026-03-30T04:00:00Z' },
+    });
+    confirmAction('Close Drive');
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(mockRequest).toHaveBeenCalledWith(
       '/data-repair/drive/202/close',
-      expect.objectContaining({ method: 'POST' }),
+      expect.objectContaining({
+        method: 'POST',
+        body: JSON.stringify({
+          ended_at: '2026-03-30T04:00:00Z',
+          rule: 'manual',
+          expected_stored_ended_at: '',
+        }),
+      }),
     );
     // Close is a stamp-only action — it must not send a PUT patch.
     expect(findCall('PUT')).toBeUndefined();
@@ -255,6 +269,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     const { onClose } = renderForm();
 
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Discard' }));
 
     await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
     expect(mockRequest).toHaveBeenCalledWith(
@@ -277,7 +292,7 @@ describe('DriveRepairForm — Project Apex elevation', () => {
     mockRequest.mockReturnValue(new Promise<never>(() => {}));
     const { onClose } = renderForm();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
 
     const save = screen.getByRole('button', { name: 'Save' });
     await waitFor(() => expect(save).toBeDisabled());

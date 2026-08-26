@@ -5465,6 +5465,10 @@
         "discard": {
           "success": "Charging session discarded",
           "error": "Failed to discard charging session"
+        },
+        "apply": {
+          "success": "Charging boundary repaired",
+          "error": "Failed to repair charging boundary"
         }
       },
       "drive": {
@@ -5479,6 +5483,10 @@
         "discard": {
           "success": "Drive discarded",
           "error": "Failed to discard drive"
+        },
+        "apply": {
+          "success": "Drive boundary repaired",
+          "error": "Failed to repair drive boundary"
         }
       }
     },
@@ -8233,20 +8241,125 @@
     },
     "kpis": "Repair summary",
     "worklist": "Repair worklist",
-    "callout": "Sessions open for more than 24 hours are shown here. Editing, closing, or discarding a record is a privileged action and may prompt re-authentication.",
+    "suggestionsRegion": "Suggested repairs",
+    "callout": "Suggestions come from durable history only: a session is listed when its stored state is contradicted by a later signal, never because it is simply old. Applying a repair rewrites the end timestamp (and, for drives, the derived duration) of that one session, is recorded in the audit log, and is never done automatically.",
+    "truncated": "The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.",
     "subtitle": {
       "count": "{{count}} incomplete session(s) found",
-      "clean": "Fix incomplete or stale sessions"
+      "suggestions": "{{count}} session boundary(s) contradicted by later evidence",
+      "clean": "Find and repair broken drive and charging session boundaries"
     },
     "kpi": {
       "total": "Total Stale",
       "charging": "Stale Charging",
       "drives": "Stale Drives",
-      "status": "Status"
+      "status": "Status",
+      "suggestions": "Suggested Repairs",
+      "driveSuggestions": "Drive Boundaries",
+      "chargingSuggestions": "Charging Boundaries",
+      "blocked": "Blocked"
     },
     "status": {
       "clean": "Clean",
       "needsRepair": "Needs Repair"
+    },
+    "kind": {
+      "drive": "Drive",
+      "charging": "Charging session"
+    },
+    "badge": {
+      "open": "Open"
+    },
+    "confidence": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "unknown": "Unrated confidence"
+    },
+    "source": {
+      "signalLog": "Signal history",
+      "driveTelemetry": "Drive telemetry",
+      "chargingTelemetry": "Charging telemetry",
+      "drives": "Drive record",
+      "chargingSessions": "Charging record",
+      "unknown": "Durable history"
+    },
+    "rule": {
+      "driveOpenChargingStarted": {
+        "label": "Drive left open, then charging started",
+        "why": "The car was last seen driving, and the next durable event is a charging session starting. A car cannot drive and charge at once, so the Park signal that should have ended this drive was never recorded."
+      },
+      "driveOpenParkObserved": {
+        "label": "Drive left open after the car parked",
+        "why": "Drive telemetry recorded the car shifting into Park after this drive started, but the drive was never closed. The signal arrived; the completion write did not."
+      },
+      "driveEndAfterContradiction": {
+        "label": "Drive ends long after it really finished",
+        "why": "This drive is already closed, but its end time is well after durable evidence shows the drive had finished — so it swallowed time that belongs to another session."
+      },
+      "chargingOpenChargeEnded": {
+        "label": "Charging left open after it stopped",
+        "why": "A later charge-state observation shows charging had stopped, but the session is still recorded as in progress."
+      },
+      "chargingOpenDriveStarted": {
+        "label": "Charging left open, then the car drove away",
+        "why": "The car shifted into a driving gear (or a drive was recorded) while this charging session was still open. Charging and driving are mutually exclusive."
+      },
+      "chargingEndAfterContradiction": {
+        "label": "Charging ends long after it really finished",
+        "why": "This charging session is already closed, but its end time is well after durable evidence shows charging had finished."
+      },
+      "unknown": {
+        "label": "Session boundary looks wrong",
+        "why": "Stored session state contradicts later durable evidence."
+      }
+    },
+    "blocked": {
+      "overlapsNextSession": "Applying this would still leave the session overlapping the next one for this vehicle. Fix the neighbouring session first.",
+      "unknown": "This suggestion cannot be applied right now."
+    },
+    "timeline": {
+      "start": "Session started",
+      "startDetail": "Stored start of {{kind}} #{{id}}",
+      "lastInSession": "Last evidence the session was still running",
+      "noInSession": "No in-session evidence recorded",
+      "noInSessionDetail": "Nothing durable was written between the session start and the contradiction.",
+      "contradiction": "Contradicting evidence",
+      "proposed": "Proposed end",
+      "proposedDetail": "Never later than the contradicting evidence"
+    },
+    "detail": {
+      "vehicle": "Vehicle",
+      "storedEnd": "Stored end",
+      "stillOpen": "Still open",
+      "proposedEnd": "Proposed end",
+      "storedDuration": "Stored duration",
+      "proposedDuration": "Proposed duration",
+      "evidenceGap": "Unobserved gap"
+    },
+    "card": {
+      "label": "Repair suggestion for {{kind}} #{{id}}",
+      "evidence": "Evidence timeline",
+      "details": "Proposed change",
+      "risk": "Applying rewrites only the end timestamp (and the derived duration for drives). Measured totals such as distance, energy and speed are left untouched, so they may still reflect the original window.",
+      "applied": "Applied. Refresh to re-check the remaining suggestions.",
+      "manualOnly": "Nothing is applied until you confirm.",
+      "genericError": "The repair was rejected. Refresh and review again."
+    },
+    "confirm": {
+      "title": "Apply this repair?",
+      "message": "This rewrites {{kind}} #{{id}} to end at {{end}}. Distance, energy and speed totals are NOT recomputed — they were measured over the original window. This is recorded in the audit log and is not undone automatically.",
+      "apply": "Apply repair"
+    },
+    "manualConfirm": {
+      "saveTitle": "Save these corrections?",
+      "saveMessage": "This updates the entered measurements without changing the session boundary. The correction is recorded in the audit log.",
+      "closeTitle": "Apply this manual boundary?",
+      "closeMessage": "This uses the exact end timestamp you entered. The server will reject overlaps or concurrent changes and record the boundary in the audit log.",
+      "discardTitle": "Discard this session?",
+      "discardMessage": "This permanently deletes {{kind}} #{{id}} and records the action in the audit log."
+    },
+    "stale": {
+      "intro": "Incomplete sessions with no contradicting evidence. These are listed for manual inspection only — nothing in the recorded history establishes where they should end."
     },
     "metric": {
       "energy": "Energy",
@@ -8269,25 +8382,34 @@
       "distanceM": "Distance (m)",
       "durationS": "Duration (s)",
       "maxSpeedMps": "Max Speed (m/s)",
-      "avgSpeedMps": "Avg Speed (m/s)"
+      "avgSpeedMps": "Avg Speed (m/s)",
+      "invalidEndedAt": "Use RFC3339 format, including a timezone.",
+      "validEndedAtRequired": "Enter a valid RFC3339 end timestamp first."
     },
     "action": {
       "closeSession": "Close Session",
       "closeDrive": "Close Drive",
-      "discard": "Discard"
+      "discard": "Discard",
+      "reviewApply": "Review & apply"
     },
     "charging": {
       "title": "Charging Sessions",
       "resource": "Charging sessions",
       "emptyTitle": "All charging sessions are complete",
       "empty": "No stale charging sessions found.",
-      "formLabel": "Repair charging session #{{id}}"
+      "formLabel": "Repair charging session #{{id}}",
+      "suggestionsTitle": "Charging Boundaries",
+      "suggestionsEmptyTitle": "No contradicted charging boundaries",
+      "suggestionsEmpty": "Every charging session in the scanned window agrees with the durable signal history."
     },
     "drives": {
       "title": "Drives",
       "resource": "Drives",
       "emptyTitle": "All drives are complete",
-      "empty": "No stale drives found."
+      "empty": "No stale drives found.",
+      "suggestionsTitle": "Drive Boundaries",
+      "suggestionsEmptyTitle": "No contradicted drive boundaries",
+      "suggestionsEmpty": "Every drive in the scanned window agrees with the durable signal history."
     },
     "drive": {
       "formLabel": "Repair drive #{{id}}",

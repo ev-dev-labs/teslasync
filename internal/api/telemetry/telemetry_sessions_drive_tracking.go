@@ -732,10 +732,10 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	_ = reading
 }
 
-func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
+func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) bool {
 	// Guard: prevent double-completion race between cleanup and normal end
 	if active.Completing {
-		return
+		return false
 	}
 	active.Completing = true
 
@@ -1185,7 +1185,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		powerMaxW = &w
 	}
 
-	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
 		if endBattery := int16(endBattery); endBattery > 0 {
 			endBatteryPct = &endBattery
@@ -1225,7 +1225,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 		return nil
 	}); err != nil {
+		active.Completing = false
 		log.Error().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to complete drive")
+		return false
 	}
 
 	// --- Backfill missing start/end values from nearest position data ---
@@ -1269,6 +1271,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		// metrics.TotalDistanceKm is reported in km; convert from SI meters.
 		metrics.TotalDistanceKm.Add(distanceMeters / 1000.0)
 	}
+	return true
 }
 
 // backfillDriveValues checks if a completed drive has missing start/end values

@@ -426,10 +426,10 @@ func (t *TelemetrySessionTracker) recordChargeTelemetry(ctx context.Context, cha
 	_ = reading
 }
 
-func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}, payloadTs time.Time) {
+func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehicleID int64, active *streamingCharge, signals map[string]interface{}, payloadTs time.Time) bool {
 	// Guard: prevent double-completion race between cleanup and normal end
 	if active.Completing {
-		return
+		return false
 	}
 	active.Completing = true
 
@@ -628,7 +628,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	// is left with cost_source unset (implicitly "unknown") rather than a
 	// fabricated currency — see repriceEligibleCostSources precedence.
 
-	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endSocPct *float64
 		if endBattery > 0 {
 			v := float64(endBattery)
@@ -710,7 +710,9 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 		return nil
 	}); err != nil {
+		active.Completing = false
 		log.Error().Err(err).Int64("session_id", active.SessionID).Msg("telemetry: failed to complete charge")
+		return false
 	}
 
 	// Resolve place name + charging-place geofence/rate attribution async —
@@ -749,6 +751,7 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 
 	// Backfill missing start/end values from nearest position data (async)
 	go t.backfillChargeValues(active, vehicleID)
+	return true
 }
 
 // backfillChargeValues fills missing charging session start/end values

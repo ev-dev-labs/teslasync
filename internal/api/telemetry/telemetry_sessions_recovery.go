@@ -12,6 +12,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
 
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/units"
@@ -41,19 +42,25 @@ type recoveryStateBundle struct {
 	state signal.StateReader
 }
 
-// RecoverSessions restores active drive/charge sessions from Postgres on pod restart.
-// Queries for sessions with no end_ts and rebuilds the in-memory tracking state.
+// RecoverSessions restores plausible active drive/charge sessions from
+// Postgres on pod restart. Historical open rows are intentionally not restored
+// as live: they remain available to the evidence-based data-repair workflow.
 func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	recoveryNow := time.Now().UTC()
+
 	// Recover open drives (started within last 24 hours)
-	cutoff := time.Now().UTC().Add(-24 * time.Hour)
-	openDrives, err := t.driveRepo.GetStale(ctx, cutoff)
+	cutoff := recoveryNow.Add(-24 * time.Hour)
+	openDrives, err := t.driveRepo.GetOpenSince(ctx, cutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("session recovery: failed to query open drives")
 	}
 	for _, d := range openDrives {
+		if d.StartTs.After(recoveryNow) {
+			continue
+		}
 		if _, exists := t.activeDrives[d.VehicleID]; exists {
 			continue
 		}
@@ -61,9 +68,10 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 			DriveID:            d.ID,
 			VehicleID:          d.VehicleID,
 			StartTime:          d.StartTs,
-			LastSeen:           time.Now().UTC(),
+			LastSeen:           recoveryNow,
 			accumulatedSignals: make(map[string]interface{}),
-			lastTelemetryWrite: time.Now().UTC(),
+			lastTelemetryWrite: recoveryNow,
+			state:              t.driveStateReader(),
 		}
 
 		t.activeDrives[d.VehicleID] = sd
@@ -71,12 +79,15 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 	}
 
 	// Recover open charges (started within last 48 hours — charges can be long)
-	chargeCutoff := time.Now().UTC().Add(-48 * time.Hour)
-	openCharges, err := t.chargeRepo.GetStale(ctx, chargeCutoff)
+	chargeCutoff := recoveryNow.Add(-48 * time.Hour)
+	openCharges, err := t.chargeRepo.GetOpenSince(ctx, chargeCutoff)
 	if err != nil {
 		log.Warn().Err(err).Msg("session recovery: failed to query open charges")
 	}
 	for _, c := range openCharges {
+		if c.StartedAt.After(recoveryNow) {
+			continue
+		}
 		if _, exists := t.activeCharges[c.VehicleID]; exists {
 			continue
 		}
@@ -85,9 +96,10 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 			VehicleID:          c.VehicleID,
 			StartTime:          c.StartedAt,
 			StartBatteryLevel:  derefFloatAsInt(c.StartSocPct),
-			LastSeen:           time.Now().UTC(),
+			LastSeen:           recoveryNow,
 			accumulatedSignals: make(map[string]interface{}),
-			lastTelemetryWrite: time.Now().UTC(),
+			lastTelemetryWrite: recoveryNow,
+			state:              t.chargeStateReader(),
 		}
 		if c.PeakPowerW != nil {
 			sc.Power = c.PeakPowerW
@@ -99,56 +111,334 @@ func (t *TelemetrySessionTracker) RecoverSessions(ctx context.Context) {
 	log.Info().Int("drives", len(t.activeDrives)).Int("charges", len(t.activeCharges)).Msg("session recovery: complete")
 }
 
-// ValidateRecoveredSessions checks recovered sessions against current SignalStore state.
-// Auto-closes sessions that are no longer active (vehicle parked, charge complete, or timed out).
+var (
+	recoveryChargeStateFields = []string{"DetailedChargeState", "ChargeState"}
+	recoveryActiveStates      = []string{
+		enums.ChargeStateCharging,
+		enums.ChargeStateStarting,
+		"Enable",
+	}
+	recoveryTerminalStates = []string{
+		enums.ChargeStateComplete,
+		enums.ChargeStateStopped,
+		enums.ChargeStateDisconnected,
+		enums.ChargeStateNoPower,
+	}
+)
+
+type recoveryEvidence interface {
+	LastDrivingObservation(context.Context, int64, []string, time.Time, time.Time) (*datarepairdb.Observation, error)
+	FirstGearObservation(context.Context, int64, []string, time.Time, time.Time) (*datarepairdb.Observation, error)
+	FirstChargeStateObservation(context.Context, int64, []string, []string, time.Time, time.Time) (*datarepairdb.Observation, error)
+	FirstChargingSessionAfter(context.Context, int64, time.Time, int64) (*datarepairdb.Observation, error)
+	FirstDriveAfter(context.Context, int64, time.Time, int64) (*datarepairdb.Observation, error)
+}
+
+func finalParkBoundary(
+	ctx context.Context,
+	evidence recoveryEvidence,
+	vehicleID int64,
+	startedAt, until time.Time,
+) (*datarepairdb.Observation, error) {
+	lastDriving, err := evidence.LastDrivingObservation(
+		ctx,
+		vehicleID,
+		[]string{enums.GearDrive, enums.GearReverse},
+		startedAt,
+		until,
+	)
+	if err != nil {
+		return nil, err
+	}
+	searchAfter := startedAt
+	if lastDriving != nil {
+		searchAfter = lastDriving.Ts.Add(-time.Nanosecond)
+	}
+	return evidence.FirstGearObservation(
+		ctx,
+		vehicleID,
+		[]string{enums.GearPark, enums.GearNeutral},
+		searchAfter,
+		until,
+	)
+}
+
+func earlierRecoveryObservation(a, b *datarepairdb.Observation) *datarepairdb.Observation {
+	if a == nil {
+		return b
+	}
+	if b == nil || a.Ts.Before(b.Ts) {
+		return a
+	}
+	return b
+}
+
+func boundedRecoveryEvidenceUntil(nextSameKind *datarepairdb.Observation, until time.Time) time.Time {
+	if nextSameKind == nil || nextSameKind.Ts.After(until) {
+		return until
+	}
+	return nextSameKind.Ts.Add(-time.Nanosecond)
+}
+
+func terminalEvidencePrecedesContradiction(
+	terminal, contradiction *datarepairdb.Observation,
+) bool {
+	return terminal != nil &&
+		(contradiction == nil || terminal.Ts.Before(contradiction.Ts))
+}
+
+func driveRecoveryEvidenceUntil(
+	ctx context.Context,
+	evidence recoveryEvidence,
+	vehicleID int64,
+	startedAt time.Time,
+	driveID int64,
+	until time.Time,
+) (time.Time, error) {
+	nextDrive, err := evidence.FirstDriveAfter(ctx, vehicleID, startedAt, driveID)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return boundedRecoveryEvidenceUntil(nextDrive, until), nil
+}
+
+func chargingRecoveryEvidenceUntil(
+	ctx context.Context,
+	evidence recoveryEvidence,
+	vehicleID int64,
+	startedAt time.Time,
+	sessionID int64,
+	until time.Time,
+) (time.Time, error) {
+	nextCharge, err := evidence.FirstChargingSessionAfter(ctx, vehicleID, startedAt, sessionID)
+	if err != nil {
+		return time.Time{}, err
+	}
+	return boundedRecoveryEvidenceUntil(nextCharge, until), nil
+}
+
+func driveRecoveryContradiction(
+	ctx context.Context,
+	evidence recoveryEvidence,
+	vehicleID int64,
+	startedAt, until time.Time,
+) (*datarepairdb.Observation, error) {
+	chargeSession, err := evidence.FirstChargingSessionAfter(ctx, vehicleID, startedAt, 0)
+	if err != nil {
+		return nil, err
+	}
+	if chargeSession != nil && chargeSession.Ts.After(until) {
+		chargeSession = nil
+	}
+	chargeState, err := evidence.FirstChargeStateObservation(
+		ctx,
+		vehicleID,
+		recoveryChargeStateFields,
+		recoveryActiveStates,
+		startedAt,
+		until,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return earlierRecoveryObservation(chargeSession, chargeState), nil
+}
+
+func chargingRecoveryContradiction(
+	ctx context.Context,
+	evidence recoveryEvidence,
+	vehicleID int64,
+	startedAt, until time.Time,
+) (*datarepairdb.Observation, error) {
+	driveSession, err := evidence.FirstDriveAfter(ctx, vehicleID, startedAt, 0)
+	if err != nil {
+		return nil, err
+	}
+	if driveSession != nil && driveSession.Ts.After(until) {
+		driveSession = nil
+	}
+	driveGear, err := evidence.FirstGearObservation(
+		ctx,
+		vehicleID,
+		[]string{enums.GearDrive, enums.GearReverse},
+		startedAt,
+		until,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return earlierRecoveryObservation(driveSession, driveGear), nil
+}
+
+// ValidateRecoveredSessions checks recovered sessions against timestamped
+// durable history. It closes only when a definitive boundary was persisted
+// after the session started; age and hydrated current-state timestamps are not
+// boundary evidence.
 func (t *TelemetrySessionTracker) ValidateRecoveredSessions(ctx context.Context) {
+	if t.db == nil {
+		return
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
+	evidence := datarepairdb.NewRepo(t.db)
+	t.validateRecoveredWithEvidence(ctx, evidence, time.Now().UTC())
+}
+
+func (t *TelemetrySessionTracker) validateRecoveredWithEvidence(
+	ctx context.Context,
+	evidence recoveryEvidence,
+	now time.Time,
+) {
 	for vehicleID, drive := range t.activeDrives {
-		// Auto-close drives open > 4 hours with no new telemetry
-		if time.Since(drive.StartTime) > 4*time.Hour {
-			log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: auto-closing stale drive (>4h)")
-			t.completeDriveLocked(ctx, vehicleID, drive, nil, time.Time{}, nil)
+		evidenceUntil, err := driveRecoveryEvidenceUntil(
+			ctx,
+			evidence,
+			vehicleID,
+			drive.StartTime,
+			drive.DriveID,
+			now,
+		)
+		if err != nil {
+			log.Warn().Err(err).
+				Int64("drive_id", drive.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Msg("session recovery: failed to resolve drive evidence window")
 			continue
 		}
-		// If SignalStore shows Gear=P and Speed=0, close the drive
-		if t.localSignals != nil {
-			if gear, ok := t.localSignals.GetString(vehicleID, "Gear"); ok && gear == enums.GearPark {
-				log.Info().Int64("drive_id", drive.DriveID).Msg("session recovery: closing drive (Gear=P)")
-				t.completeDriveLocked(ctx, vehicleID, drive, nil, time.Time{}, nil)
-			}
+		boundary, err := finalParkBoundary(
+			ctx,
+			evidence,
+			vehicleID,
+			drive.StartTime,
+			evidenceUntil,
+		)
+		if err != nil {
+			log.Warn().Err(err).
+				Int64("drive_id", drive.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Msg("session recovery: failed to validate drive boundary evidence")
+			continue
+		}
+		contradiction, err := driveRecoveryContradiction(
+			ctx,
+			evidence,
+			vehicleID,
+			drive.StartTime,
+			evidenceUntil,
+		)
+		if err != nil {
+			log.Warn().Err(err).
+				Int64("drive_id", drive.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Msg("session recovery: failed to check drive contradiction evidence")
+			continue
+		}
+		if terminalEvidencePrecedesContradiction(boundary, contradiction) {
+			log.Info().
+				Int64("drive_id", drive.DriveID).
+				Time("boundary_ts", boundary.Ts).
+				Str("gear", boundary.Value).
+				Msg("session recovery: closing drive from timestamped parked-gear evidence")
+			t.completeDriveLocked(
+				ctx,
+				vehicleID,
+				drive,
+				map[string]interface{}{boundary.Field: boundary.Value},
+				boundary.Ts,
+				map[string]time.Time{boundary.Field: boundary.Ts},
+			)
+			continue
+		}
+		if contradiction != nil {
+			delete(t.activeDrives, vehicleID)
+			log.Warn().
+				Int64("drive_id", drive.DriveID).
+				Int64("vehicle_id", vehicleID).
+				Time("contradiction_ts", contradiction.Ts).
+				Str("contradiction_field", contradiction.Field).
+				Msg("session recovery: detached ambiguous drive for operator review")
 		}
 	}
 
 	for vehicleID, charge := range t.activeCharges {
-		// Auto-close charges open > 24 hours
-		if time.Since(charge.StartTime) > 24*time.Hour {
-			log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: auto-closing stale charge (>24h)")
-			t.completeChargeLocked(ctx, vehicleID, charge, nil, time.Time{})
+		evidenceUntil, err := chargingRecoveryEvidenceUntil(
+			ctx,
+			evidence,
+			vehicleID,
+			charge.StartTime,
+			charge.SessionID,
+			now,
+		)
+		if err != nil {
+			log.Warn().Err(err).
+				Int64("session_id", charge.SessionID).
+				Int64("vehicle_id", vehicleID).
+				Msg("session recovery: failed to resolve charging evidence window")
 			continue
 		}
-		// If SignalStore shows charge complete, close
-		if t.localSignals != nil {
-			if state, ok := t.localSignals.GetString(vehicleID, "DetailedChargeState"); ok {
-				if enums.IsChargeComplete(state) {
-					log.Info().Int64("session_id", charge.SessionID).Msg("session recovery: closing charge (Complete)")
-					t.completeChargeLocked(ctx, vehicleID, charge, nil, time.Time{})
-				}
-			}
+		boundary, err := evidence.FirstChargeStateObservation(
+			ctx,
+			vehicleID,
+			recoveryChargeStateFields,
+			recoveryTerminalStates,
+			charge.StartTime,
+			evidenceUntil,
+		)
+		if err != nil {
+			log.Warn().Err(err).
+				Int64("session_id", charge.SessionID).
+				Int64("vehicle_id", vehicleID).
+				Msg("session recovery: failed to validate charging boundary evidence")
+			continue
+		}
+		contradiction, err := chargingRecoveryContradiction(
+			ctx,
+			evidence,
+			vehicleID,
+			charge.StartTime,
+			evidenceUntil,
+		)
+		if err != nil {
+			log.Warn().Err(err).
+				Int64("session_id", charge.SessionID).
+				Int64("vehicle_id", vehicleID).
+				Msg("session recovery: failed to check charging contradiction evidence")
+			continue
+		}
+		if terminalEvidencePrecedesContradiction(boundary, contradiction) {
+			log.Info().
+				Int64("session_id", charge.SessionID).
+				Time("boundary_ts", boundary.Ts).
+				Str("charge_state", boundary.Value).
+				Msg("session recovery: closing charge from timestamped terminal-state evidence")
+			t.completeChargeLocked(
+				ctx,
+				vehicleID,
+				charge,
+				map[string]interface{}{boundary.Field: boundary.Value},
+				boundary.Ts,
+			)
+			continue
+		}
+		if contradiction != nil {
+			delete(t.activeCharges, vehicleID)
+			log.Warn().
+				Int64("session_id", charge.SessionID).
+				Int64("vehicle_id", vehicleID).
+				Time("contradiction_ts", contradiction.Ts).
+				Str("contradiction_field", contradiction.Field).
+				Msg("session recovery: detached ambiguous charging session for operator review")
 		}
 	}
 }
 
-// staleSessionThreshold is the minimum duration since the last signal before
-// a session is considered stale and eligible for recovery completion.
-const staleSessionThreshold = 5 * time.Minute
-
-// RecoverIncompleteSessions finds drives and charges with end_ts IS NULL that
-// are not currently tracked in memory, and completes them using signal_log data.
-// Run once at startup after RecoverSessions / ValidateRecoveredSessions.
-// Sessions with recent signals (< 5 min) are left open — the vehicle is likely
-// still active and will be picked up by normal tracking.
+// RecoverIncompleteSessions finds historical open sessions that were not
+// restored into memory and closes only those with a definitive, timestamped
+// terminal signal. Ambiguous rows stay open for the data-repair worklist; a
+// latest arbitrary signal or elapsed wall-clock time is never treated as a
+// session boundary.
 //
 // ADR-002: snapshot reconstruction at the recovery start/end
 // anchors goes through signal.StateReader (driveR.state / chargeR.state)
@@ -158,13 +448,11 @@ const staleSessionThreshold = 5 * time.Minute
 // Tesla's delta encoding) still appear in the reconstructed snapshot.
 // Without forward-fold, recovery saw nil for those signals and silently
 // zeroed out odometer / energy / lat-lng deltas. The tracker's
-// signalLogReader field is INTENTIONALLY retained for the
-// LatestTimestamp() call (no StateReader equivalent) — removing the field
-// would silently disable the staleness gate and try to "complete" sessions
-// for vehicles that are still actively reporting.
+// signalLogReader field is retained for completion aggregates after a
+// definitive boundary has been found.
 func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context) {
-	if t.signalLogReader == nil {
-		log.Info().Msg("recovery: signal_log reader not available, skipping incomplete session recovery")
+	if t.signalLogReader == nil || t.db == nil {
+		log.Info().Msg("recovery: durable readers not available, skipping incomplete session recovery")
 		return
 	}
 
@@ -176,51 +464,84 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 	// Cold-path readers for snapshot reconstruction at recovery anchors.
 	// A nil .state means SetDriveStateReader / SetChargeStateReader has
 	// not run yet (first boot before router wiring) — the per-site
-	// branches below degrade to empty snapshot maps so the recovered
-	// session still commits with the in-memory data captured pre-crash.
+	// branches below degrade to empty snapshot maps after a boundary is found.
 	driveR := recoveryStateBundle{state: t.driveStateReader()}
 	chargeR := recoveryStateBundle{state: t.chargeStateReader()}
+	evidence := datarepairdb.NewRepo(t.db)
 
-	// 1. Find all open drives (end_ts IS NULL, start_ts < now)
+	// 1. Find open historical drives and require Park/Neutral evidence.
 	openDrives, err := t.driveRepo.GetStale(ctx, now)
 	if err != nil {
 		log.Warn().Err(err).Msg("recovery: failed to query open drives")
 	}
-	var drivesRecovered, drivesSkipped int
+	var drivesRecovered, drivesPendingReview int
 	for _, drive := range openDrives {
-		// Skip if already tracked in memory (recovered by RecoverSessions)
 		if _, exists := t.activeDrives[drive.VehicleID]; exists {
 			continue
 		}
 
-		lastSignalTs, tsErr := t.signalLogReader.LatestTimestamp(ctx, drive.VehicleID)
-		if tsErr != nil {
-			log.Warn().Err(tsErr).Int64("drive_id", drive.ID).Int64("vehicle_id", drive.VehicleID).
-				Msg("recovery: failed to get latest signal timestamp for drive")
+		evidenceUntil, windowErr := driveRecoveryEvidenceUntil(
+			ctx,
+			evidence,
+			drive.VehicleID,
+			drive.StartTs,
+			drive.ID,
+			now,
+		)
+		if windowErr != nil {
+			log.Warn().Err(windowErr).
+				Int64("drive_id", drive.ID).
+				Int64("vehicle_id", drive.VehicleID).
+				Msg("recovery: failed to resolve drive evidence window")
 			continue
 		}
-		if lastSignalTs.IsZero() {
-			// No signals at all — complete with minimal data
-			log.Info().Int64("drive_id", drive.ID).Msg("recovery: completing drive with no signal_log data")
-			t.completeRecoveredDrive(ctx, drive, nil, nil, now)
-			drivesRecovered++
+		boundary, boundaryErr := finalParkBoundary(
+			ctx,
+			evidence,
+			drive.VehicleID,
+			drive.StartTs,
+			evidenceUntil,
+		)
+		if boundaryErr != nil {
+			log.Warn().Err(boundaryErr).
+				Int64("drive_id", drive.ID).
+				Int64("vehicle_id", drive.VehicleID).
+				Msg("recovery: failed to query drive boundary evidence")
+			continue
+		}
+		contradiction, contradictionErr := driveRecoveryContradiction(
+			ctx,
+			evidence,
+			drive.VehicleID,
+			drive.StartTs,
+			evidenceUntil,
+		)
+		if contradictionErr != nil {
+			log.Warn().Err(contradictionErr).
+				Int64("drive_id", drive.ID).
+				Int64("vehicle_id", drive.VehicleID).
+				Msg("recovery: failed to query drive contradiction evidence")
+			continue
+		}
+		if !terminalEvidencePrecedesContradiction(boundary, contradiction) {
+			drivesPendingReview++
+			if contradiction != nil {
+				log.Warn().
+					Int64("drive_id", drive.ID).
+					Int64("vehicle_id", drive.VehicleID).
+					Time("contradiction_ts", contradiction.Ts).
+					Str("contradiction_field", contradiction.Field).
+					Msg("recovery: historical drive left open for operator data repair")
+			}
 			continue
 		}
 
-		staleDuration := now.Sub(lastSignalTs)
-		if staleDuration < staleSessionThreshold {
-			log.Info().Int64("drive_id", drive.ID).Msg("recovery: drive still active, skipping")
-			drivesSkipped++
-			continue
-		}
+		log.Info().
+			Int64("drive_id", drive.ID).
+			Time("boundary_ts", boundary.Ts).
+			Str("gear", boundary.Value).
+			Msg("recovery: completing drive from timestamped parked-gear evidence")
 
-		log.Info().Int64("drive_id", drive.ID).Time("last_signal", lastSignalTs).
-			Msg("recovery: completing stale drive from signal_log")
-
-		// Forward-folded snapshots via StateReader. State() errors are
-		// logged-and-swallowed so a transient cold-read failure does not
-		// abort recovery (the alternative is leaving the session open
-		// with end_ts NULL forever).
 		var startSnap, endSnap map[string]interface{}
 		if driveR.state != nil {
 			s, startErr := driveR.state.State(ctx, drive.VehicleID, drive.StartTs)
@@ -231,7 +552,7 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 			} else {
 				startSnap = stateToLegacyMap(s)
 			}
-			s2, endErr := driveR.state.State(ctx, drive.VehicleID, lastSignalTs)
+			s2, endErr := driveR.state.State(ctx, drive.VehicleID, boundary.Ts)
 			if endErr != nil {
 				log.Warn().Err(endErr).Int64("drive_id", drive.ID).
 					Msg("recovery: state.State drive end snapshot failed")
@@ -244,47 +565,85 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 			endSnap = map[string]interface{}{}
 		}
 
-		t.completeRecoveredDrive(ctx, drive, startSnap, endSnap, lastSignalTs)
-		drivesRecovered++
+		if t.completeRecoveredDrive(ctx, drive, startSnap, endSnap, boundary.Ts) {
+			drivesRecovered++
+		}
 	}
 
-	// 2. Find all open charges (end_ts IS NULL, start_ts < now)
+	// 2. Find open historical charges and require an explicit terminal state.
 	openCharges, err := t.chargeRepo.GetStale(ctx, now)
 	if err != nil {
 		log.Warn().Err(err).Msg("recovery: failed to query open charges")
 	}
-	var chargesRecovered, chargesSkipped int
+	var chargesRecovered, chargesPendingReview int
 	for _, charge := range openCharges {
-		// Skip if already tracked in memory (recovered by RecoverSessions)
 		if _, exists := t.activeCharges[charge.VehicleID]; exists {
 			continue
 		}
 
-		lastSignalTs, tsErr := t.signalLogReader.LatestTimestamp(ctx, charge.VehicleID)
-		if tsErr != nil {
-			log.Warn().Err(tsErr).Int64("charge_id", charge.ID).Int64("vehicle_id", charge.VehicleID).
-				Msg("recovery: failed to get latest signal timestamp for charge")
+		evidenceUntil, windowErr := chargingRecoveryEvidenceUntil(
+			ctx,
+			evidence,
+			charge.VehicleID,
+			charge.StartedAt,
+			charge.ID,
+			now,
+		)
+		if windowErr != nil {
+			log.Warn().Err(windowErr).
+				Int64("charge_id", charge.ID).
+				Int64("vehicle_id", charge.VehicleID).
+				Msg("recovery: failed to resolve charging evidence window")
 			continue
 		}
-		if lastSignalTs.IsZero() {
-			log.Info().Int64("charge_id", charge.ID).Msg("recovery: completing charge with no signal_log data")
-			t.completeRecoveredCharge(ctx, charge, nil, nil, now)
-			chargesRecovered++
+		boundary, stateErr := evidence.FirstChargeStateObservation(
+			ctx,
+			charge.VehicleID,
+			recoveryChargeStateFields,
+			recoveryTerminalStates,
+			charge.StartedAt,
+			evidenceUntil,
+		)
+		if stateErr != nil {
+			log.Warn().Err(stateErr).
+				Int64("charge_id", charge.ID).
+				Int64("vehicle_id", charge.VehicleID).
+				Msg("recovery: failed to query charging boundary evidence")
+			continue
+		}
+		contradiction, contradictionErr := chargingRecoveryContradiction(
+			ctx,
+			evidence,
+			charge.VehicleID,
+			charge.StartedAt,
+			evidenceUntil,
+		)
+		if contradictionErr != nil {
+			log.Warn().Err(contradictionErr).
+				Int64("charge_id", charge.ID).
+				Int64("vehicle_id", charge.VehicleID).
+				Msg("recovery: failed to query charging contradiction evidence")
+			continue
+		}
+		if !terminalEvidencePrecedesContradiction(boundary, contradiction) {
+			chargesPendingReview++
+			if contradiction != nil {
+				log.Warn().
+					Int64("charge_id", charge.ID).
+					Int64("vehicle_id", charge.VehicleID).
+					Time("contradiction_ts", contradiction.Ts).
+					Str("contradiction_field", contradiction.Field).
+					Msg("recovery: historical charge left open for operator data repair")
+			}
 			continue
 		}
 
-		staleDuration := now.Sub(lastSignalTs)
-		if staleDuration < staleSessionThreshold {
-			log.Info().Int64("charge_id", charge.ID).Msg("recovery: charge still active, skipping")
-			chargesSkipped++
-			continue
-		}
+		log.Info().
+			Int64("charge_id", charge.ID).
+			Time("boundary_ts", boundary.Ts).
+			Str("charge_state", boundary.Value).
+			Msg("recovery: completing charge from timestamped terminal-state evidence")
 
-		log.Info().Int64("charge_id", charge.ID).Time("last_signal", lastSignalTs).
-			Msg("recovery: completing stale charge from signal_log")
-
-		// Forward-folded snapshots via StateReader (see drive branch above
-		// for the full rationale). State() errors are logged-and-swallowed.
 		var startSnap, endSnap map[string]interface{}
 		if chargeR.state != nil {
 			s, startErr := chargeR.state.State(ctx, charge.VehicleID, charge.StartedAt)
@@ -295,7 +654,7 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 			} else {
 				startSnap = stateToLegacyMap(s)
 			}
-			s2, endErr := chargeR.state.State(ctx, charge.VehicleID, lastSignalTs)
+			s2, endErr := chargeR.state.State(ctx, charge.VehicleID, boundary.Ts)
 			if endErr != nil {
 				log.Warn().Err(endErr).Int64("charge_id", charge.ID).
 					Msg("recovery: state.State charge end snapshot failed")
@@ -308,13 +667,16 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 			endSnap = map[string]interface{}{}
 		}
 
-		t.completeRecoveredCharge(ctx, charge, startSnap, endSnap, lastSignalTs)
-		chargesRecovered++
+		if t.completeRecoveredCharge(ctx, charge, startSnap, endSnap, boundary.Ts) {
+			chargesRecovered++
+		}
 	}
 
 	log.Info().
-		Int("drives_recovered", drivesRecovered).Int("drives_skipped", drivesSkipped).
-		Int("charges_recovered", chargesRecovered).Int("charges_skipped", chargesSkipped).
+		Int("drives_recovered", drivesRecovered).
+		Int("drives_pending_review", drivesPendingReview).
+		Int("charges_recovered", chargesRecovered).
+		Int("charges_pending_review", chargesPendingReview).
 		Msg("recovery: incomplete session recovery complete")
 }
 
@@ -328,7 +690,7 @@ func (t *TelemetrySessionTracker) RecoverIncompleteSessions(ctx context.Context)
 // normalisation. The legacy units.NormalizeDistance/NormalizeSpeed calls
 // would have actively corrupted SI values by treating meters as miles or
 // km depending on the user's preference setting.
-func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, drive *drivemodel.Drive, startSnap, endSnap map[string]interface{}, endTs time.Time) {
+func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, drive *drivemodel.Drive, startSnap, endSnap map[string]interface{}, endTs time.Time) bool {
 	if startSnap == nil {
 		startSnap = map[string]interface{}{}
 	}
@@ -428,7 +790,7 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 	}
 
 	// Commit to DB
-	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
 		if b := int16(endBattery); b > 0 {
 			endBatteryPct = &b
@@ -445,19 +807,20 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 		return nil
 	}); err != nil {
 		log.Error().Err(err).Int64("drive_id", drive.ID).Msg("recovery: failed to complete drive")
-		return
+		return false
 	}
 
 	log.Info().Int64("drive_id", drive.ID).Int64("vehicle_id", drive.VehicleID).
 		Time("original_start", drive.StartTs).Time("recovered_end", endTs).
 		Int64("duration_s", durationS).Float64("distance_m", distanceMeters).
 		Msg("recovery: drive completed")
+	return true
 }
 
 // completeRecoveredCharge closes a charge that was left open after a crash, using
 // signal_log snapshots to populate end values. Best-effort: if snapshots are
 // empty the session is still closed with whatever data is available.
-func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, charge *chargingmodel.ChargingSession, startSnap, endSnap map[string]interface{}, endTs time.Time) {
+func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, charge *chargingmodel.ChargingSession, startSnap, endSnap map[string]interface{}, endTs time.Time) bool {
 	if startSnap == nil {
 		startSnap = map[string]interface{}{}
 	}
@@ -521,7 +884,7 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 	}
 
 	// Commit to DB
-	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endSocPct *float64
 		if endBattery > 0 {
 			v := float64(endBattery)
@@ -573,11 +936,12 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 		return nil
 	}); err != nil {
 		log.Error().Err(err).Int64("charge_id", charge.ID).Msg("recovery: failed to complete charge")
-		return
+		return false
 	}
 
 	log.Info().Int64("charge_id", charge.ID).Int64("vehicle_id", charge.VehicleID).
 		Time("original_start", charge.StartedAt).Time("recovered_end", endTs).
 		Float64("duration_s", endTs.Sub(charge.StartedAt).Seconds()).Float64("total_energy_added_wh", energyAdded).
 		Msg("recovery: charge completed")
+	return true
 }

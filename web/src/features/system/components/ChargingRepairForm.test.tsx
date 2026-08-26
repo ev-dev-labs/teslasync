@@ -27,7 +27,7 @@
  * (`@testing-library/user-event` is not a dependency).
  */
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 
 import type { StaleChargingSession } from '@/api/hooks/useDataRepair';
 import { ChargingRepairForm, type ChargingRepairFormProps } from './ChargingRepairForm';
@@ -128,6 +128,11 @@ beforeEach(() => {
   H.discardPending.value = false;
 });
 
+function confirmAction(actionName: string): void {
+  fireEvent.click(screen.getByRole('button', { name: actionName }));
+  fireEvent.click(screen.getByRole('button', { name: 'Confirm' }));
+}
+
 describe('ChargingRepairForm', () => {
   it('seeds every SI field from the session and exposes a labelled region', () => {
     renderForm({ formId: 'repair-form-charging-77' });
@@ -174,7 +179,7 @@ describe('ChargingRepairForm', () => {
     expect(screen.queryByText(/ kW$/)).toBeNull();
   });
 
-  it('patches only the filled fields, trimming ended_at (num drops empties)', () => {
+  it('patches only filled non-boundary fields (num drops empties)', () => {
     renderForm({ session: makeSession(EMPTY_METRICS) });
 
     fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
@@ -186,14 +191,13 @@ describe('ChargingRepairForm', () => {
     fireEvent.change(screen.getByLabelText('Cost'), { target: { value: '4.25' } });
     // Avg Power is deliberately left blank -> must be dropped from the patch.
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
 
     expect(H.updateFn).toHaveBeenCalledTimes(1);
     expect(H.updateFn).toHaveBeenCalledWith(
       {
         id: 77,
         patch: {
-          ended_at: '2026-03-30T04:00:00Z',
           total_energy_added_wh: 5000,
           end_soc_pct: 80,
           peak_power_w: 11000,
@@ -208,7 +212,7 @@ describe('ChargingRepairForm', () => {
 
   it('sends an empty patch when nothing is entered', () => {
     renderForm({ session: makeSession(EMPTY_METRICS) });
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
     expect(H.updateFn).toHaveBeenCalledWith(
       { id: 77, patch: {} },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
@@ -220,17 +224,28 @@ describe('ChargingRepairForm', () => {
       (_vars: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
     );
     const { onClose } = renderForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    confirmAction('Save');
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
   it('closes the stale session via the Close action and forwards onClose', () => {
     H.closeFn.mockImplementation(
-      (_id: number, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
+      (_input: unknown, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
     );
     const { onClose } = renderForm();
-    fireEvent.click(screen.getByRole('button', { name: 'Close Session' }));
-    expect(H.closeFn).toHaveBeenCalledWith(77, expect.objectContaining({ onSuccess: expect.any(Function) }));
+    fireEvent.change(screen.getByLabelText('End Date/Time (ISO)'), {
+      target: { value: '2026-03-30T04:00:00Z' },
+    });
+    confirmAction('Close Session');
+    expect(H.closeFn).toHaveBeenCalledWith(
+      {
+        id: 77,
+        ended_at: '2026-03-30T04:00:00Z',
+        rule: 'manual',
+        expected_stored_ended_at: '',
+      },
+      expect.objectContaining({ onSuccess: expect.any(Function) }),
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
     expect(H.updateFn).not.toHaveBeenCalled();
   });
@@ -241,6 +256,7 @@ describe('ChargingRepairForm', () => {
     );
     const { onClose } = renderForm();
     fireEvent.click(screen.getByRole('button', { name: 'Discard' }));
+    fireEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Discard' }));
     expect(H.discardFn).toHaveBeenCalledWith(77, expect.objectContaining({ onSuccess: expect.any(Function) }));
     expect(onClose).toHaveBeenCalledTimes(1);
   });

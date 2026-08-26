@@ -46,6 +46,10 @@ import { request } from '@/api/client';
 import { __flushQueryBroadcastForTests } from '@/lib/queryBroadcast';
 import {
   dataRepairKeys,
+  repairApplyInput,
+  useApplyChargingRepair,
+  useApplyDriveRepair,
+  useRepairSuggestions,
   useStaleSessions,
   useUpdateCharging,
   useCloseCharging,
@@ -54,6 +58,8 @@ import {
   useCloseDrive,
   useDiscardDrive,
   type RepairPatch,
+  type RepairSuggestion,
+  type RepairSuggestionsResponse,
   type StaleSessionsResponse,
 } from './useDataRepair';
 
@@ -94,6 +100,212 @@ describe('dataRepairKeys', () => {
     // Read-only const object — the tuple identity is the query cache anchor
     // every mutation invalidates, so its shape must not drift.
     expect(dataRepairKeys.stale).toHaveLength(2);
+  });
+
+  it('scopes the suggestions key so a vehicle filter does not collide with the global report', () => {
+    expect(dataRepairKeys.suggestions()).toEqual(['data-repair', 'suggestions', {}]);
+    expect(dataRepairKeys.suggestions({ vehicle_id: 7 })).toEqual([
+      'data-repair',
+      'suggestions',
+      { vehicle_id: 7 },
+    ]);
+    expect(dataRepairKeys.suggestions({ vehicle_id: 7 })).not.toEqual(dataRepairKeys.suggestions());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useRepairSuggestions (read-only diagnosis)
+// ---------------------------------------------------------------------------
+
+const suggestion: RepairSuggestion = {
+  kind: 'drive',
+  session_id: 42,
+  vehicle_id: 7,
+  rule: 'drive_open_charging_started',
+  confidence: 'high',
+  started_at: '2026-03-29T06:00:00Z',
+  stored_ended_at: null,
+  stored_duration_s: null,
+  last_in_session_evidence: {
+    ts: '2026-03-29T07:00:00Z',
+    source: 'drive_telemetry',
+    field: 'Gear',
+    value: 'D',
+  },
+  contradicting_evidence: {
+    ts: '2026-03-29T08:00:00Z',
+    source: 'charging_sessions',
+    field: 'charging_session.started_at',
+    value: '#900',
+  },
+  suggested_ended_at: '2026-03-29T07:00:00Z',
+  suggested_duration_s: 3600,
+  evidence_gap_s: 3600,
+  applicable: true,
+};
+
+function suggestionsPayload(
+  overrides?: Partial<RepairSuggestionsResponse>,
+): RepairSuggestionsResponse {
+  return {
+    generated_at: '2026-03-30T00:00:00Z',
+    lookback_days: 30,
+    scanned_drives: 1,
+    scanned_charging_sessions: 0,
+    drive_suggestions: [suggestion],
+    charging_suggestions: [],
+    truncated: false,
+    ...overrides,
+  };
+}
+
+describe('useRepairSuggestions', () => {
+  it('GETs /data-repair/suggestions with no query string when unscoped', async () => {
+    mockedRequest.mockResolvedValueOnce(suggestionsPayload());
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRepairSuggestions(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    // No `/api/v1` prefix — request() adds it.
+    expect(url).toBe('/data-repair/suggestions');
+    expect(opts.signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data?.drive_suggestions).toHaveLength(1);
+  });
+
+  it('serialises the scope as snake_case query params', async () => {
+    mockedRequest.mockResolvedValueOnce(suggestionsPayload());
+
+    const { Wrapper } = makeWrapper();
+    renderHook(() => useRepairSuggestions({ vehicle_id: 7, lookback_days: 14, limit: 5 }), {
+      wrapper: Wrapper,
+    });
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalled());
+    expect(mockedRequest.mock.calls[0][0]).toBe(
+      '/data-repair/suggestions?vehicle_id=7&lookback_days=14&limit=5',
+    );
+  });
+
+  it('surfaces a rejection as isError without leaking a partial report', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('suggestions 503'));
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useRepairSuggestions(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(result.current.data).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// repairApplyInput — the concurrency pin
+// ---------------------------------------------------------------------------
+
+describe('repairApplyInput', () => {
+  it('pins an OPEN session with an empty string so the backend asserts it is still open', () => {
+    expect(repairApplyInput(suggestion)).toEqual({
+      id: 42,
+      ended_at: '2026-03-29T07:00:00Z',
+      rule: 'drive_open_charging_started',
+      expected_stored_ended_at: '',
+    });
+  });
+
+  it('pins an already-closed session with its stored ended_at', () => {
+    const closed: RepairSuggestion = {
+      ...suggestion,
+      rule: 'drive_end_after_contradiction',
+      stored_ended_at: '2026-03-30T02:00:00Z',
+    };
+    expect(repairApplyInput(closed).expected_stored_ended_at).toBe('2026-03-30T02:00:00Z');
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Apply mutations
+// ---------------------------------------------------------------------------
+
+describe('useApplyDriveRepair', () => {
+  it('POSTs the reviewed boundary to the SINGULAR drive close route and toasts success', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      status: 'closed',
+      session_id: 42,
+      ended_at: '2026-03-29T07:00:00Z',
+      duration_s: 3600,
+    });
+
+    const { Wrapper, qc } = makeWrapper();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { result } = renderHook(() => useApplyDriveRepair(), { wrapper: Wrapper });
+
+    result.current.mutate(repairApplyInput(suggestion));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/data-repair/drive/42/close');
+    expect(opts.method).toBe('POST');
+    expect(opts.requiresLiveMode).toBe(true);
+    // The id lives in the URL and must NOT be duplicated in the body.
+    expect(JSON.parse(opts.body)).toEqual({
+      ended_at: '2026-03-29T07:00:00Z',
+      rule: 'drive_open_charging_started',
+      expected_stored_ended_at: '',
+    });
+
+    expect(invalidate).toHaveBeenCalled();
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.dataRepair.drive.apply.success',
+      'Drive boundary repaired',
+    );
+  });
+
+  it('toasts and rejects when the backend refuses the repair', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('409 conflict'));
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useApplyDriveRepair(), { wrapper: Wrapper });
+
+    result.current.mutate(repairApplyInput(suggestion));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    expect(errorToast).toHaveBeenCalledWith(
+      expect.any(Error),
+      'toast.dataRepair.drive.apply.error',
+      'Failed to repair drive boundary',
+    );
+    expect(successToast).not.toHaveBeenCalled();
+  });
+});
+
+describe('useApplyChargingRepair', () => {
+  it('POSTs the reviewed boundary to the charging close route and toasts success', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      status: 'closed',
+      session_id: 3,
+      ended_at: '2026-03-29T07:00:00Z',
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useApplyChargingRepair(), { wrapper: Wrapper });
+
+    result.current.mutate({
+      id: 3,
+      ended_at: '2026-03-29T07:00:00Z',
+      rule: 'charging_open_charge_ended',
+      expected_stored_ended_at: '',
+    });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url, opts] = mockedRequest.mock.calls[0];
+    expect(url).toBe('/data-repair/charging/3/close');
+    expect(opts.method).toBe('POST');
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.dataRepair.charging.apply.success',
+      'Charging boundary repaired',
+    );
   });
 });
 
@@ -193,19 +405,28 @@ describe('useUpdateCharging', () => {
 });
 
 describe('useCloseCharging', () => {
-  it('POSTs to /data-repair/charging/{id}/close (no body), invalidates, and toasts success', async () => {
+  it('POSTs an explicit manual boundary to /data-repair/charging/{id}/close', async () => {
     mockedRequest.mockResolvedValueOnce(undefined);
     const { Wrapper, qc } = makeWrapper();
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
     const { result } = renderHook(() => useCloseCharging(), { wrapper: Wrapper });
 
-    await result.current.mutateAsync(5);
+    await result.current.mutateAsync({
+      id: 5,
+      ended_at: '2026-03-30T04:00:00Z',
+      rule: 'manual',
+      expected_stored_ended_at: '',
+    });
 
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/data-repair/charging/5/close');
     expect(opts.method).toBe('POST');
     expect(opts.requiresLiveMode).toBe(true);
-    expect(opts.body).toBeUndefined();
+    expect(JSON.parse(String(opts.body))).toEqual({
+      ended_at: '2026-03-30T04:00:00Z',
+      rule: 'manual',
+      expected_stored_ended_at: '',
+    });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith(
       'toast.dataRepair.charging.close.success',
@@ -218,7 +439,12 @@ describe('useCloseCharging', () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useCloseCharging(), { wrapper: Wrapper });
 
-    await expect(result.current.mutateAsync(9)).rejects.toThrow('close boom');
+    await expect(result.current.mutateAsync({
+      id: 9,
+      ended_at: '2026-03-30T04:00:00Z',
+      rule: 'manual',
+      expected_stored_ended_at: '',
+    })).rejects.toThrow('close boom');
     expect(errorToast).toHaveBeenCalledWith(
       expect.any(Error),
       'toast.dataRepair.charging.close.error',
@@ -312,13 +538,23 @@ describe('useCloseDrive', () => {
     const invalidate = vi.spyOn(qc, 'invalidateQueries');
     const { result } = renderHook(() => useCloseDrive(), { wrapper: Wrapper });
 
-    await result.current.mutateAsync(17);
+    await result.current.mutateAsync({
+      id: 17,
+      ended_at: '2026-03-30T04:00:00Z',
+      rule: 'manual',
+      expected_stored_ended_at: '',
+    });
 
     const [url, opts] = mockedRequest.mock.calls[0];
     expect(url).toBe('/data-repair/drive/17/close');
     expect(url).not.toContain('/drives/');
     expect(opts.method).toBe('POST');
     expect(opts.requiresLiveMode).toBe(true);
+    expect(JSON.parse(String(opts.body))).toEqual({
+      ended_at: '2026-03-30T04:00:00Z',
+      rule: 'manual',
+      expected_stored_ended_at: '',
+    });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
     expect(successToast).toHaveBeenCalledWith('toast.dataRepair.drive.close.success', 'Drive closed');
   });
@@ -328,7 +564,12 @@ describe('useCloseDrive', () => {
     const { Wrapper } = makeWrapper();
     const { result } = renderHook(() => useCloseDrive(), { wrapper: Wrapper });
 
-    await expect(result.current.mutateAsync(1)).rejects.toThrow('drive close boom');
+    await expect(result.current.mutateAsync({
+      id: 1,
+      ended_at: '2026-03-30T04:00:00Z',
+      rule: 'manual',
+      expected_stored_ended_at: '',
+    })).rejects.toThrow('drive close boom');
     expect(errorToast).toHaveBeenCalledWith(
       expect.any(Error),
       'toast.dataRepair.drive.close.error',

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 )
@@ -29,10 +31,11 @@ var errBoom = errors.New("boom")
 // an optional function field (nil => zero-value success) and records the
 // arguments it was called with so tests can assert wiring without a database.
 type fakeChargingRepo struct {
-	getStaleFn func(context.Context, time.Time) ([]*chargingmodel.ChargingSession, error)
-	getByIDFn  func(context.Context, int64) (*chargingmodel.ChargingSession, error)
-	partialFn  func(context.Context, int64, map[string]interface{}) error
-	deleteFn   func(context.Context, int64) error
+	getStaleFn    func(context.Context, time.Time) ([]*chargingmodel.ChargingSession, error)
+	getByIDFn     func(context.Context, int64) (*chargingmodel.ChargingSession, error)
+	partialFn     func(context.Context, int64, map[string]interface{}) error
+	conditionalFn func(context.Context, int64, *time.Time, time.Time) (bool, error)
+	deleteFn      func(context.Context, int64) error
 
 	staleCalls    int
 	staleCutoff   time.Time
@@ -63,31 +66,62 @@ func (f *fakeChargingRepo) GetByID(ctx context.Context, id int64) (*chargingmode
 	return nil, nil
 }
 
-func (f *fakeChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
+func (f *fakeChargingRepo) PartialUpdateForRepairWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	id int64,
+	fields map[string]interface{},
+) (bool, error) {
 	f.partialCalls++
 	f.partialID = id
 	f.partialFields = fields
 	if f.partialFn != nil {
-		return f.partialFn(ctx, id, fields)
+		if err := f.partialFn(ctx, id, fields); err != nil {
+			return false, err
+		}
 	}
-	return nil
+	return true, nil
 }
 
-func (f *fakeChargingRepo) Delete(ctx context.Context, id int64) error {
+func (f *fakeChargingRepo) UpdateRepairBoundaryIfUnchangedWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	id int64,
+	expectedEndedAt *time.Time,
+	endedAt time.Time,
+) (bool, error) {
+	f.partialCalls++
+	f.partialID = id
+	f.partialFields = map[string]interface{}{"ended_at": endedAt.UTC().Format(time.RFC3339)}
+	if f.conditionalFn != nil {
+		return f.conditionalFn(ctx, id, expectedEndedAt, endedAt)
+	}
+	if f.partialFn != nil {
+		if err := f.partialFn(ctx, id, f.partialFields); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func (f *fakeChargingRepo) DeleteWithTx(ctx context.Context, _ database.DBTX, id int64) (bool, error) {
 	f.deleteCalls++
 	f.deleteID = id
 	if f.deleteFn != nil {
-		return f.deleteFn(ctx, id)
+		if err := f.deleteFn(ctx, id); err != nil {
+			return false, err
+		}
 	}
-	return nil
+	return true, nil
 }
 
 // fakeDriveRepo mirrors fakeChargingRepo for the driveRepository port.
 type fakeDriveRepo struct {
-	getStaleFn func(context.Context, time.Time) ([]*drivemodel.Drive, error)
-	getByIDFn  func(context.Context, int64) (*drivemodel.Drive, error)
-	partialFn  func(context.Context, int64, map[string]interface{}) error
-	deleteFn   func(context.Context, int64) error
+	getStaleFn    func(context.Context, time.Time) ([]*drivemodel.Drive, error)
+	getByIDFn     func(context.Context, int64) (*drivemodel.Drive, error)
+	partialFn     func(context.Context, int64, map[string]interface{}) error
+	conditionalFn func(context.Context, int64, *time.Time, time.Time, int64) (bool, error)
+	deleteFn      func(context.Context, int64) error
 
 	staleCalls    int
 	staleCutoff   time.Time
@@ -118,23 +152,57 @@ func (f *fakeDriveRepo) GetByID(ctx context.Context, id int64) (*drivemodel.Driv
 	return nil, nil
 }
 
-func (f *fakeDriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[string]interface{}) error {
+func (f *fakeDriveRepo) PartialUpdateForRepairWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	id int64,
+	fields map[string]interface{},
+) (bool, error) {
 	f.partialCalls++
 	f.partialID = id
 	f.partialFields = fields
 	if f.partialFn != nil {
-		return f.partialFn(ctx, id, fields)
+		if err := f.partialFn(ctx, id, fields); err != nil {
+			return false, err
+		}
 	}
-	return nil
+	return true, nil
 }
 
-func (f *fakeDriveRepo) Delete(ctx context.Context, id int64) error {
+func (f *fakeDriveRepo) UpdateRepairBoundaryIfUnchangedWithTx(
+	ctx context.Context,
+	_ database.DBTX,
+	id int64,
+	expectedEndedAt *time.Time,
+	endedAt time.Time,
+	durationS int64,
+) (bool, error) {
+	f.partialCalls++
+	f.partialID = id
+	f.partialFields = map[string]interface{}{
+		"ended_at":   endedAt.UTC().Format(time.RFC3339),
+		"duration_s": durationS,
+	}
+	if f.conditionalFn != nil {
+		return f.conditionalFn(ctx, id, expectedEndedAt, endedAt, durationS)
+	}
+	if f.partialFn != nil {
+		if err := f.partialFn(ctx, id, f.partialFields); err != nil {
+			return false, err
+		}
+	}
+	return true, nil
+}
+
+func (f *fakeDriveRepo) DeleteWithTx(ctx context.Context, _ database.DBTX, id int64) (bool, error) {
 	f.deleteCalls++
 	f.deleteID = id
 	if f.deleteFn != nil {
-		return f.deleteFn(ctx, id)
+		if err := f.deleteFn(ctx, id); err != nil {
+			return false, err
+		}
 	}
-	return nil
+	return true, nil
 }
 
 // ---- helpers -------------------------------------------------------------
@@ -144,6 +212,10 @@ func newTestHandler(c chargingRepository, d driveRepository) *DataRepairHandler 
 		chargingRepo: c,
 		driveRepo:    d,
 		clock:        func() time.Time { return testNow },
+		diagnosis:    &fakeDiagnosis{},
+		audit: func(context.Context, database.DBTX, auditEntry) error {
+			return nil
+		},
 	}
 }
 
@@ -152,6 +224,7 @@ func newTestHandler(c chargingRepository, d driveRepository) *DataRepairHandler 
 func newRouter(h *DataRepairHandler) chi.Router {
 	r := chi.NewRouter()
 	r.Get("/data-repair/stale-sessions", h.GetStaleSessions)
+	r.Get("/data-repair/suggestions", h.GetSuggestions)
 	r.Route("/data-repair/charging/{id}", func(r chi.Router) {
 		r.Put("/", h.UpdateCharging)
 		r.Post("/close", h.CloseCharging)
@@ -171,6 +244,13 @@ func doReq(t *testing.T, h *DataRepairHandler, method, path string, body io.Read
 	req := httptest.NewRequest(method, path, body)
 	newRouter(h).ServeHTTP(rec, req)
 	return rec
+}
+
+func manualCloseBody(endedAt time.Time) io.Reader {
+	return strings.NewReader(fmt.Sprintf(
+		`{"ended_at":%q,"rule":"manual","expected_stored_ended_at":""}`,
+		endedAt.UTC().Format(time.RFC3339),
+	))
 }
 
 func bodyError(t *testing.T, rec *httptest.ResponseRecorder) string {
@@ -600,6 +680,7 @@ func TestUpdateDrive_HappyPath(t *testing.T) {
 			return sampleDrive(id, testNow.Add(-time.Hour)), nil
 		},
 	}
+
 	h := newTestHandler(&fakeChargingRepo{}, fake)
 
 	rec := doReq(t, h, http.MethodPut, "/data-repair/drive/8",
@@ -620,6 +701,112 @@ func TestUpdateDrive_HappyPath(t *testing.T) {
 	}
 	if fake.partialFields["distance_m"] != 1234.5 {
 		t.Errorf("PartialUpdate distance_m = %v, want 1234.5", fake.partialFields["distance_m"])
+	}
+}
+
+func TestUpdateHandlersRejectBoundaryBypass(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		path string
+		h    *DataRepairHandler
+	}{
+		{
+			name: "drive",
+			path: "/data-repair/drive/7",
+			h: newTestHandler(&fakeChargingRepo{}, &fakeDriveRepo{
+				getByIDFn: func(_ context.Context, id int64) (*drivemodel.Drive, error) {
+					return sampleDrive(id, testNow.Add(-time.Hour)), nil
+				},
+			}),
+		},
+		{
+			name: "charging",
+			path: "/data-repair/charging/7",
+			h: newTestHandler(&fakeChargingRepo{
+				getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
+					return sampleCharging(id), nil
+				},
+			}, &fakeDriveRepo{}),
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			rec := doReq(t, tc.h, http.MethodPut, tc.path,
+				strings.NewReader(`{"ended_at":"2026-06-01T11:00:00Z"}`))
+			if rec.Code != http.StatusBadRequest {
+				t.Fatalf("status = %d, want 400. body=%s", rec.Code, rec.Body.String())
+			}
+			if got := bodyError(t, rec); !strings.Contains(got, "close action") {
+				t.Errorf("error = %q, want close-action guidance", got)
+			}
+		})
+	}
+}
+
+func TestUpdateAndDeleteMutationsWriteAuditRows(t *testing.T) {
+	t.Parallel()
+
+	var driveAudits []auditEntry
+	drive := &fakeDriveRepo{
+		getByIDFn: func(_ context.Context, id int64) (*drivemodel.Drive, error) {
+			return sampleDrive(id, testNow.Add(-time.Hour)), nil
+		},
+	}
+	driveHandler := newTestHandler(&fakeChargingRepo{}, drive)
+	driveHandler.audit = func(_ context.Context, _ database.DBTX, entry auditEntry) error {
+		driveAudits = append(driveAudits, entry)
+		return nil
+	}
+
+	updateRec := doReq(t, driveHandler, http.MethodPut, "/data-repair/drive/7",
+		strings.NewReader(`{"distance_m":1234}`))
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("drive update status = %d, want 200. body=%s", updateRec.Code, updateRec.Body.String())
+	}
+	if len(driveAudits) != 1 || driveAudits[0].Action != AuditActionUpdateDrive {
+		t.Fatalf("drive update audit = %+v", driveAudits)
+	}
+
+	deleteRec := doReq(t, driveHandler, http.MethodDelete, "/data-repair/drive/7", nil)
+	if deleteRec.Code != http.StatusNoContent {
+		t.Fatalf("drive delete status = %d, want 204. body=%s", deleteRec.Code, deleteRec.Body.String())
+	}
+	if len(driveAudits) != 2 || driveAudits[1].Action != AuditActionDeleteDrive {
+		t.Fatalf("drive delete audit = %+v", driveAudits)
+	}
+
+	var chargeAudits []auditEntry
+	charge := &fakeChargingRepo{
+		getByIDFn: func(_ context.Context, id int64) (*chargingmodel.ChargingSession, error) {
+			return sampleCharging(id), nil
+		},
+	}
+	chargeHandler := newTestHandler(charge, &fakeDriveRepo{})
+	chargeHandler.audit = func(_ context.Context, _ database.DBTX, entry auditEntry) error {
+		chargeAudits = append(chargeAudits, entry)
+		return nil
+	}
+
+	chargeUpdateRec := doReq(t, chargeHandler, http.MethodPut, "/data-repair/charging/8",
+		strings.NewReader(`{"total_energy_added_wh":5000}`))
+	if chargeUpdateRec.Code != http.StatusOK {
+		t.Fatalf("charge update status = %d, want 200. body=%s", chargeUpdateRec.Code, chargeUpdateRec.Body.String())
+	}
+	if len(chargeAudits) != 1 || chargeAudits[0].Action != AuditActionUpdateCharging {
+		t.Fatalf("charge update audit = %+v", chargeAudits)
+	}
+
+	chargeDeleteRec := doReq(t, chargeHandler, http.MethodDelete, "/data-repair/charging/8", nil)
+	if chargeDeleteRec.Code != http.StatusNoContent {
+		t.Fatalf("charge delete status = %d, want 204. body=%s", chargeDeleteRec.Code, chargeDeleteRec.Body.String())
+	}
+	if len(chargeAudits) != 2 || chargeAudits[1].Action != AuditActionDeleteCharging {
+		t.Fatalf("charge delete audit = %+v", chargeAudits)
 	}
 }
 
@@ -760,17 +947,22 @@ func TestCloseCharging_HappyPath(t *testing.T) {
 	}
 	h := newTestHandler(fake, &fakeDriveRepo{})
 
-	rec := doReq(t, h, http.MethodPost, "/data-repair/charging/3/close", nil)
+	rec := doReq(t, h, http.MethodPost, "/data-repair/charging/3/close", manualCloseBody(testNow))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200. body=%s", rec.Code, rec.Body.String())
 	}
-	var out map[string]string
+	// The close response now carries the applied boundary alongside the
+	// status token, so it is no longer a flat string map.
+	var out map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if out["status"] != "closed" {
 		t.Errorf("status field = %q, want closed", out["status"])
+	}
+	if out["ended_at"] != testNow.Format(time.RFC3339) {
+		t.Errorf("ended_at field = %v, want %s", out["ended_at"], testNow.Format(time.RFC3339))
 	}
 	if fake.partialCalls != 1 {
 		t.Fatalf("PartialUpdate calls = %d, want 1", fake.partialCalls)
@@ -850,7 +1042,7 @@ func TestCloseCharging_Errors(t *testing.T) {
 			t.Parallel()
 			fake := tc.fake()
 			h := newTestHandler(fake, &fakeDriveRepo{})
-			rec := doReq(t, h, http.MethodPost, tc.path, nil)
+			rec := doReq(t, h, http.MethodPost, tc.path, manualCloseBody(testNow))
 
 			if rec.Code != tc.wantStatus {
 				t.Fatalf("status = %d, want %d. body=%s", rec.Code, tc.wantStatus, rec.Body.String())
@@ -882,17 +1074,23 @@ func TestCloseDrive_SetsEndedAtAndDuration(t *testing.T) {
 	}
 	h := newTestHandler(&fakeChargingRepo{}, fake)
 
-	rec := doReq(t, h, http.MethodPost, "/data-repair/drive/17/close", nil)
+	rec := doReq(t, h, http.MethodPost, "/data-repair/drive/17/close", manualCloseBody(testNow))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200. body=%s", rec.Code, rec.Body.String())
 	}
-	var out map[string]string
+	var out map[string]any
 	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
 		t.Fatalf("decode response: %v", err)
 	}
 	if out["status"] != "closed" {
 		t.Errorf("status field = %q, want closed", out["status"])
+	}
+	// The response names exactly the columns the apply rewrote — measured
+	// aggregates are deliberately absent.
+	recomputed, _ := out["recomputed_fields"].([]any)
+	if len(recomputed) != 2 || recomputed[0] != "ended_at" || recomputed[1] != "duration_s" {
+		t.Errorf("recomputed_fields = %v, want [ended_at duration_s]", out["recomputed_fields"])
 	}
 	if fake.partialCalls != 1 {
 		t.Fatalf("PartialUpdate calls = %d, want 1", fake.partialCalls)
@@ -923,7 +1121,6 @@ func TestCloseDrive_DurationRounding(t *testing.T) {
 		offset time.Duration // start = testNow - offset
 		want   int64
 	}{
-		{"zero duration", 0, 0},
 		{"exact seconds", 90 * time.Second, 90},
 		{"round down below half", 10*time.Second + 400*time.Millisecond, 10},
 		{"round up at half", 10*time.Second + 500*time.Millisecond, 11},
@@ -942,7 +1139,7 @@ func TestCloseDrive_DurationRounding(t *testing.T) {
 			}
 			h := newTestHandler(&fakeChargingRepo{}, fake)
 
-			rec := doReq(t, h, http.MethodPost, "/data-repair/drive/1/close", nil)
+			rec := doReq(t, h, http.MethodPost, "/data-repair/drive/1/close", manualCloseBody(testNow))
 			if rec.Code != http.StatusOK {
 				t.Fatalf("status = %d, want 200", rec.Code)
 			}
@@ -1019,7 +1216,7 @@ func TestCloseDrive_Errors(t *testing.T) {
 			t.Parallel()
 			fake := tc.fake()
 			h := newTestHandler(&fakeChargingRepo{}, fake)
-			rec := doReq(t, h, http.MethodPost, tc.path, nil)
+			rec := doReq(t, h, http.MethodPost, tc.path, manualCloseBody(testNow))
 
 			if rec.Code != tc.wantStatus {
 				t.Fatalf("status = %d, want %d. body=%s", rec.Code, tc.wantStatus, rec.Body.String())

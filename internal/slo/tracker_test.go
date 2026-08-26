@@ -2,6 +2,7 @@ package slo
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -63,20 +64,21 @@ func TestSnapshot_FastBurnTierFires_WhenBothWindowsAboveThreshold(t *testing.T) 
 	}}}
 	prom := &fakeProm{answers: map[string]float64{
 		// Long window (1h) bad ratio = 0.5 > 0.144 -> firing leg
-		"1 - ((sum(rate(good[1h]))) / clamp_min((sum(rate(valid[1h]))), 1))": 0.5,
+		badRatioExpr(cat.SLOs[0], "1h"): 0.5,
 		// Short window (5m) bad ratio = 0.4 > 0.144 -> firing leg
-		"1 - ((sum(rate(good[5m]))) / clamp_min((sum(rate(valid[5m]))), 1))": 0.4,
+		badRatioExpr(cat.SLOs[0], "5m"): 0.4,
 		// Slow tier windows: 6h + 30m; below threshold so slow burn does NOT fire
-		"1 - ((sum(rate(good[6h]))) / clamp_min((sum(rate(valid[6h]))), 1))":   0.001,
-		"1 - ((sum(rate(good[30m]))) / clamp_min((sum(rate(valid[30m]))), 1))": 0.001,
+		badRatioExpr(cat.SLOs[0], "6h"):  0.001,
+		badRatioExpr(cat.SLOs[0], "30m"): 0.001,
 		// Current ratio (good/valid over 30d) — used for error budget remaining
-		"(sum(rate(good[30d]))) / clamp_min((sum(rate(valid[30d]))), 1)": 0.6,
+		goodRatioExpr(cat.SLOs[0], "30d"): 0.6,
 	}}
 	tr := NewTrackerWithClient(prom, func() time.Time { return time.Unix(0, 0) })
 	snap, err := tr.Snapshot(context.Background(), cat)
 	if err != nil {
 		t.Fatalf("snapshot: %v", err)
 	}
+
 	if len(snap.SLOs) != 1 {
 		t.Fatalf("want 1 SLO, got %d", len(snap.SLOs))
 	}
@@ -97,6 +99,33 @@ func TestSnapshot_FastBurnTierFires_WhenBothWindowsAboveThreshold(t *testing.T) 
 	// budget = 0.01; consumed = (1-0.6)/0.01 = 40; remaining clamped to 0.
 	if *st.ErrorBudgetRemaining != 0 {
 		t.Fatalf("expected remaining=0 (budget exhausted), got %v", *st.ErrorBudgetRemaining)
+	}
+}
+
+func TestRatioExpressionsPreserveLowTrafficAndHandleNoTraffic(t *testing.T) {
+	t.Parallel()
+	slo := SLO{
+		SLI: SLI{
+			GoodEvents:  "sum(rate(good[5m]))",
+			ValidEvents: "sum(rate(valid[5m]))",
+		},
+	}
+
+	good := goodRatioExpr(slo, "1h")
+	if strings.Contains(good, "clamp_min") {
+		t.Fatalf("good ratio floors low traffic: %s", good)
+	}
+	if !strings.Contains(good, "((sum(rate(valid[1h]))) > 0)") ||
+		!strings.Contains(good, "or on() vector(1)") {
+		t.Fatalf("good ratio does not explicitly handle zero traffic: %s", good)
+	}
+
+	bad := badRatioExpr(slo, "1h")
+	if strings.Contains(bad, "clamp_min") {
+		t.Fatalf("bad ratio floors low traffic: %s", bad)
+	}
+	if !strings.HasPrefix(bad, "1 - (") || !strings.Contains(bad, "or on() vector(1)") {
+		t.Fatalf("bad ratio does not derive from the zero-traffic-safe good ratio: %s", bad)
 	}
 }
 

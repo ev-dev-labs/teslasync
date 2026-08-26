@@ -5,28 +5,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:api_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_availability"
           window: "5m"
           owner: "platform"
           objective: "99.5"
       - record: slo:api_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_availability"
           window: "1h"
           owner: "platform"
           objective: "99.5"
       - record: slo:api_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_availability"
           window: "6h"
           owner: "platform"
           objective: "99.5"
       - record: slo:api_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_availability"
           window: "30d"
@@ -36,28 +36,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:api_latency_p99_500ms:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[5m]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[5m])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_latency_p99_500ms"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:api_latency_p99_500ms:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[1h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[1h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_latency_p99_500ms"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:api_latency_p99_500ms:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[6h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[6h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_latency_p99_500ms"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:api_latency_p99_500ms:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/{vehicleID}/state\",le=\"0.5\"}[30d]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[30d])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/{vehicleID}/state\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "api_latency_p99_500ms"
           window: "30d"
@@ -67,28 +67,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:battery_health_latency_1s:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[5m]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[5m])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "battery_health_latency_1s"
           window: "5m"
           owner: "analytics"
           objective: "99"
       - record: slo:battery_health_latency_1s:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[1h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[1h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "battery_health_latency_1s"
           window: "1h"
           owner: "analytics"
           objective: "99"
       - record: slo:battery_health_latency_1s:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[6h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[6h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "battery_health_latency_1s"
           window: "6h"
           owner: "analytics"
           objective: "99"
       - record: slo:battery_health_latency_1s:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/analytics/battery-health\",le=\"1\"}[30d]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[30d])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/analytics/battery-health\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "battery_health_latency_1s"
           window: "30d"
@@ -98,28 +98,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:vehicle_management_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "vehicle_management_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:vehicle_management_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "vehicle_management_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:vehicle_management_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "vehicle_management_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:vehicle_management_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/(tesla/vehicle-pricing|vehicles/\\\\{vehicleID\\\\}/((options|specs|subscriptions|upgrades|warranty|enterprise-roles)(|/refresh)|enterprise-payer))\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "vehicle_management_availability"
           window: "30d"
@@ -129,28 +129,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:service_intelligence_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:service_intelligence_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:service_intelligence_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:service_intelligence_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/service-intelligence/vehicles/{vehicleID}\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_availability"
           window: "30d"
@@ -160,28 +160,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:service_intelligence_catalog_admin_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_catalog_admin_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:service_intelligence_catalog_admin_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_catalog_admin_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:service_intelligence_catalog_admin_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_catalog_admin_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:service_intelligence_catalog_admin_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/admin/service-intelligence/communications/(status|import)\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "service_intelligence_catalog_admin_availability"
           window: "30d"
@@ -191,28 +191,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:action_center_read_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_read_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:action_center_read_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_read_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:action_center_read_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_read_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:action_center_read_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/action-center(|/\\\\{recommendationID\\\\}/history)\",method=\"GET\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_read_availability"
           window: "30d"
@@ -222,59 +222,121 @@ groups:
     interval: 30s
     rules:
       - record: slo:activity_timeline_read_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "activity_timeline_read_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:activity_timeline_read_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "activity_timeline_read_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:activity_timeline_read_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "activity_timeline_read_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:activity_timeline_read_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "activity_timeline_read_availability"
           window: "30d"
           owner: "platform"
           objective: "99"
+  - name: slo_data_repair_read_availability
+    interval: 30s
+    rules:
+      - record: slo:data_repair_read_availability:ratio_rate5m
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[5m]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_read_availability"
+          window: "5m"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:data_repair_read_availability:ratio_rate1h
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[1h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_read_availability"
+          window: "1h"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:data_repair_read_availability:ratio_rate6h
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[6h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_read_availability"
+          window: "6h"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:data_repair_read_availability:ratio_rate30d
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[30d]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_read_availability"
+          window: "30d"
+          owner: "platform"
+          objective: "99.5"
+  - name: slo_data_repair_write_availability
+    interval: 30s
+    rules:
+      - record: slo:data_repair_write_availability:ratio_rate5m
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[5m]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_write_availability"
+          window: "5m"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:data_repair_write_availability:ratio_rate1h
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[1h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_write_availability"
+          window: "1h"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:data_repair_write_availability:ratio_rate6h
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[6h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_write_availability"
+          window: "6h"
+          owner: "platform"
+          objective: "99.5"
+      - record: slo:data_repair_write_availability:ratio_rate30d
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[30d]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "data_repair_write_availability"
+          window: "30d"
+          owner: "platform"
+          objective: "99.5"
   - name: slo_action_center_write_availability
     interval: 30s
     rules:
       - record: slo:action_center_write_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_write_availability"
           window: "5m"
           owner: "platform"
           objective: "99.5"
       - record: slo:action_center_write_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_write_availability"
           window: "1h"
           owner: "platform"
           objective: "99.5"
       - record: slo:action_center_write_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_write_availability"
           window: "6h"
           owner: "platform"
           objective: "99.5"
       - record: slo:action_center_write_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/action-center/{recommendationID}/actions\",method=\"POST\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "action_center_write_availability"
           window: "30d"
@@ -284,28 +346,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:advanced_intelligence_read_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_read_availability"
           window: "5m"
           owner: "analytics"
           objective: "99"
       - record: slo:advanced_intelligence_read_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_read_availability"
           window: "1h"
           owner: "analytics"
           objective: "99"
       - record: slo:advanced_intelligence_read_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_read_availability"
           window: "6h"
           owner: "analytics"
           objective: "99"
       - record: slo:advanced_intelligence_read_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(firmware-canary|component-survival|road-hazards|behavioral-sentinel|charging-forensics|federated-learning/model-cards|causal-experiments)\",method=\"GET\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_read_availability"
           window: "30d"
@@ -315,28 +377,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:advanced_intelligence_scenario_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_scenario_availability"
           window: "5m"
           owner: "analytics"
           objective: "99"
       - record: slo:advanced_intelligence_scenario_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_scenario_availability"
           window: "1h"
           owner: "analytics"
           objective: "99"
       - record: slo:advanced_intelligence_scenario_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_scenario_availability"
           window: "6h"
           owner: "analytics"
           objective: "99"
       - record: slo:advanced_intelligence_scenario_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/advanced-intelligence/(twin-lab/scenarios|journey-assurance/scenarios|charging-site-twin/scenarios|federated-learning/rounds|resilience/plans|causal-experiments|tco-optimizer/scenarios)\",method=\"POST\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "advanced_intelligence_scenario_availability"
           window: "30d"
@@ -346,28 +408,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:telemetry_freshness:ratio_rate5m
-        expr: "(sum(teslasync_telemetry_lag_seconds <= 60)) / clamp_min((sum(teslasync_telemetry_lag_seconds >= 0)), 1)"
+        expr: "(((sum(teslasync_telemetry_lag_seconds <= 60)) / (sum(teslasync_telemetry_lag_seconds >= 0))) and on() ((sum(teslasync_telemetry_lag_seconds >= 0)) > 0)) or on() vector(1)"
         labels:
           slo: "telemetry_freshness"
           window: "5m"
           owner: "ingest"
           objective: "99"
       - record: slo:telemetry_freshness:ratio_rate1h
-        expr: "(sum(teslasync_telemetry_lag_seconds <= 60)) / clamp_min((sum(teslasync_telemetry_lag_seconds >= 0)), 1)"
+        expr: "(((sum(teslasync_telemetry_lag_seconds <= 60)) / (sum(teslasync_telemetry_lag_seconds >= 0))) and on() ((sum(teslasync_telemetry_lag_seconds >= 0)) > 0)) or on() vector(1)"
         labels:
           slo: "telemetry_freshness"
           window: "1h"
           owner: "ingest"
           objective: "99"
       - record: slo:telemetry_freshness:ratio_rate6h
-        expr: "(sum(teslasync_telemetry_lag_seconds <= 60)) / clamp_min((sum(teslasync_telemetry_lag_seconds >= 0)), 1)"
+        expr: "(((sum(teslasync_telemetry_lag_seconds <= 60)) / (sum(teslasync_telemetry_lag_seconds >= 0))) and on() ((sum(teslasync_telemetry_lag_seconds >= 0)) > 0)) or on() vector(1)"
         labels:
           slo: "telemetry_freshness"
           window: "6h"
           owner: "ingest"
           objective: "99"
       - record: slo:telemetry_freshness:ratio_rate30d
-        expr: "(sum(teslasync_telemetry_lag_seconds <= 60)) / clamp_min((sum(teslasync_telemetry_lag_seconds >= 0)), 1)"
+        expr: "(((sum(teslasync_telemetry_lag_seconds <= 60)) / (sum(teslasync_telemetry_lag_seconds >= 0))) and on() ((sum(teslasync_telemetry_lag_seconds >= 0)) > 0)) or on() vector(1)"
         labels:
           slo: "telemetry_freshness"
           window: "30d"
@@ -377,28 +439,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:normalize_throughput:ratio_rate5m
-        expr: "(sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[5m:30s])) / clamp_min((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[5m:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[5m:30s])) / (count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[5m:30s]))) and on() ((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[5m:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "normalize_throughput"
           window: "5m"
           owner: "ingest"
           objective: "95"
       - record: slo:normalize_throughput:ratio_rate1h
-        expr: "(sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[1h:30s])) / clamp_min((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[1h:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[1h:30s])) / (count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[1h:30s]))) and on() ((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[1h:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "normalize_throughput"
           window: "1h"
           owner: "ingest"
           objective: "95"
       - record: slo:normalize_throughput:ratio_rate6h
-        expr: "(sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[6h:30s])) / clamp_min((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[6h:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[6h:30s])) / (count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[6h:30s]))) and on() ((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[6h:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "normalize_throughput"
           window: "6h"
           owner: "ingest"
           objective: "95"
       - record: slo:normalize_throughput:ratio_rate30d
-        expr: "(sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[30d:30s])) / clamp_min((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[30d:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_normalize_pipeline_throughput_signals_per_second >= 100)[30d:30s])) / (count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[30d:30s]))) and on() ((count_over_time(teslasync_normalize_pipeline_throughput_signals_per_second[30d:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "normalize_throughput"
           window: "30d"
@@ -408,28 +470,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:mqtt_no_backlog:ratio_rate5m
-        expr: "(sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[5m:30s])) / clamp_min((count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[5m:30s])) / (count_over_time(teslasync_mqtt_consumer_backlog[5m:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "mqtt_no_backlog"
           window: "5m"
           owner: "ingest"
           objective: "99"
       - record: slo:mqtt_no_backlog:ratio_rate1h
-        expr: "(sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[1h:30s])) / clamp_min((count_over_time(teslasync_mqtt_consumer_backlog[1h:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[1h:30s])) / (count_over_time(teslasync_mqtt_consumer_backlog[1h:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[1h:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "mqtt_no_backlog"
           window: "1h"
           owner: "ingest"
           objective: "99"
       - record: slo:mqtt_no_backlog:ratio_rate6h
-        expr: "(sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[6h:30s])) / clamp_min((count_over_time(teslasync_mqtt_consumer_backlog[6h:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[6h:30s])) / (count_over_time(teslasync_mqtt_consumer_backlog[6h:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[6h:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "mqtt_no_backlog"
           window: "6h"
           owner: "ingest"
           objective: "99"
       - record: slo:mqtt_no_backlog:ratio_rate30d
-        expr: "(sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[30d:30s])) / clamp_min((count_over_time(teslasync_mqtt_consumer_backlog[30d:30s])), 1)"
+        expr: "(((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[30d:30s])) / (count_over_time(teslasync_mqtt_consumer_backlog[30d:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[30d:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "mqtt_no_backlog"
           window: "30d"
@@ -439,28 +501,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:tesla_api_availability:ratio_rate5m
-        expr: "(sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[5m:30s])) / clamp_min((count_over_time(teslasync_tesla_api_circuit_breaker_state[5m:30s])), 1)"
+        expr: "(((sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[5m:30s])) / (count_over_time(teslasync_tesla_api_circuit_breaker_state[5m:30s]))) and on() ((count_over_time(teslasync_tesla_api_circuit_breaker_state[5m:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "tesla_api_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:tesla_api_availability:ratio_rate1h
-        expr: "(sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[1h:30s])) / clamp_min((count_over_time(teslasync_tesla_api_circuit_breaker_state[1h:30s])), 1)"
+        expr: "(((sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[1h:30s])) / (count_over_time(teslasync_tesla_api_circuit_breaker_state[1h:30s]))) and on() ((count_over_time(teslasync_tesla_api_circuit_breaker_state[1h:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "tesla_api_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:tesla_api_availability:ratio_rate6h
-        expr: "(sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[6h:30s])) / clamp_min((count_over_time(teslasync_tesla_api_circuit_breaker_state[6h:30s])), 1)"
+        expr: "(((sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[6h:30s])) / (count_over_time(teslasync_tesla_api_circuit_breaker_state[6h:30s]))) and on() ((count_over_time(teslasync_tesla_api_circuit_breaker_state[6h:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "tesla_api_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:tesla_api_availability:ratio_rate30d
-        expr: "(sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[30d:30s])) / clamp_min((count_over_time(teslasync_tesla_api_circuit_breaker_state[30d:30s])), 1)"
+        expr: "(((sum_over_time((max(teslasync_tesla_api_circuit_breaker_state) == 0)[30d:30s])) / (count_over_time(teslasync_tesla_api_circuit_breaker_state[30d:30s]))) and on() ((count_over_time(teslasync_tesla_api_circuit_breaker_state[30d:30s])) > 0)) or on() vector(1)"
         labels:
           slo: "tesla_api_availability"
           window: "30d"
@@ -470,28 +532,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:sse_delivery:ratio_rate5m
-        expr: "(sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[5m]))) / clamp_min((sum(rate(teslasync_sse_broadcast_duration_seconds_count[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[5m]))) / (sum(rate(teslasync_sse_broadcast_duration_seconds_count[5m])))) and on() ((sum(rate(teslasync_sse_broadcast_duration_seconds_count[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "sse_delivery"
           window: "5m"
           owner: "realtime"
           objective: "95"
       - record: slo:sse_delivery:ratio_rate1h
-        expr: "(sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[1h]))) / clamp_min((sum(rate(teslasync_sse_broadcast_duration_seconds_count[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[1h]))) / (sum(rate(teslasync_sse_broadcast_duration_seconds_count[1h])))) and on() ((sum(rate(teslasync_sse_broadcast_duration_seconds_count[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "sse_delivery"
           window: "1h"
           owner: "realtime"
           objective: "95"
       - record: slo:sse_delivery:ratio_rate6h
-        expr: "(sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[6h]))) / clamp_min((sum(rate(teslasync_sse_broadcast_duration_seconds_count[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[6h]))) / (sum(rate(teslasync_sse_broadcast_duration_seconds_count[6h])))) and on() ((sum(rate(teslasync_sse_broadcast_duration_seconds_count[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "sse_delivery"
           window: "6h"
           owner: "realtime"
           objective: "95"
       - record: slo:sse_delivery:ratio_rate30d
-        expr: "(sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[30d]))) / clamp_min((sum(rate(teslasync_sse_broadcast_duration_seconds_count[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_sse_broadcast_duration_seconds_bucket{le=\"2.0\"}[30d]))) / (sum(rate(teslasync_sse_broadcast_duration_seconds_count[30d])))) and on() ((sum(rate(teslasync_sse_broadcast_duration_seconds_count[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "sse_delivery"
           window: "30d"
@@ -501,28 +563,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:frontend_lcp:ratio_rate5m
-        expr: "(sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[5m]))) / clamp_min((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[5m]))) / (sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[5m])))) and on() ((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "frontend_lcp"
           window: "5m"
           owner: "frontend"
           objective: "90"
       - record: slo:frontend_lcp:ratio_rate1h
-        expr: "(sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[1h]))) / clamp_min((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[1h]))) / (sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[1h])))) and on() ((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "frontend_lcp"
           window: "1h"
           owner: "frontend"
           objective: "90"
       - record: slo:frontend_lcp:ratio_rate6h
-        expr: "(sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[6h]))) / clamp_min((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[6h]))) / (sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[6h])))) and on() ((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "frontend_lcp"
           window: "6h"
           owner: "frontend"
           objective: "90"
       - record: slo:frontend_lcp:ratio_rate30d
-        expr: "(sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[30d]))) / clamp_min((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[30d]))) / (sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[30d])))) and on() ((sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "frontend_lcp"
           window: "30d"
@@ -532,28 +594,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:fleet_ops_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_availability"
           window: "5m"
           owner: "fleet"
           objective: "99.5"
       - record: slo:fleet_ops_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_availability"
           window: "1h"
           owner: "fleet"
           objective: "99.5"
       - record: slo:fleet_ops_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_availability"
           window: "6h"
           owner: "fleet"
           objective: "99.5"
       - record: slo:fleet_ops_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/fleet-ops/.*\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_availability"
           window: "30d"
@@ -563,28 +625,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:fleet_ops_forecast_latency:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[5m]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_forecast_latency"
           window: "5m"
           owner: "fleet"
           objective: "99"
       - record: slo:fleet_ops_forecast_latency:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[1h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[1h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_forecast_latency"
           window: "1h"
           owner: "fleet"
           objective: "99"
       - record: slo:fleet_ops_forecast_latency:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[6h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[6h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_forecast_latency"
           window: "6h"
           owner: "fleet"
           objective: "99"
       - record: slo:fleet_ops_forecast_latency:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[30d]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[30d])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "fleet_ops_forecast_latency"
           window: "30d"
@@ -594,28 +656,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:benchmark_privacy_status_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_privacy_status_availability"
           window: "5m"
           owner: "analytics"
           objective: "99.5"
       - record: slo:benchmark_privacy_status_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_privacy_status_availability"
           window: "1h"
           owner: "analytics"
           objective: "99.5"
       - record: slo:benchmark_privacy_status_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_privacy_status_availability"
           window: "6h"
           owner: "analytics"
           objective: "99.5"
       - record: slo:benchmark_privacy_status_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/privacy\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_privacy_status_availability"
           window: "30d"
@@ -625,28 +687,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:benchmark_consent_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_consent_availability"
           window: "5m"
           owner: "analytics"
           objective: "99"
       - record: slo:benchmark_consent_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_consent_availability"
           window: "1h"
           owner: "analytics"
           objective: "99"
       - record: slo:benchmark_consent_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_consent_availability"
           window: "6h"
           owner: "analytics"
           objective: "99"
       - record: slo:benchmark_consent_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"PUT|DELETE\",route=\"/api/v1/benchmarks/privacy/consent\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_consent_availability"
           window: "30d"
@@ -656,28 +718,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:benchmark_release_read_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_read_availability"
           window: "5m"
           owner: "analytics"
           objective: "99.5"
       - record: slo:benchmark_release_read_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_read_availability"
           window: "1h"
           owner: "analytics"
           objective: "99.5"
       - record: slo:benchmark_release_read_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_read_availability"
           window: "6h"
           owner: "analytics"
           objective: "99.5"
       - record: slo:benchmark_release_read_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/benchmarks/releases\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_read_availability"
           window: "30d"
@@ -687,28 +749,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:benchmark_release_creation_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_creation_availability"
           window: "5m"
           owner: "analytics"
           objective: "99"
       - record: slo:benchmark_release_creation_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_creation_availability"
           window: "1h"
           owner: "analytics"
           objective: "99"
       - record: slo:benchmark_release_creation_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_creation_availability"
           window: "6h"
           owner: "analytics"
           objective: "99"
       - record: slo:benchmark_release_creation_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"POST\",route=\"/api/v1/benchmarks/releases\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "benchmark_release_creation_availability"
           window: "30d"
@@ -718,28 +780,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:geofence_pricing_read_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_read_availability"
           window: "5m"
           owner: "platform"
           objective: "99.5"
       - record: slo:geofence_pricing_read_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_read_availability"
           window: "1h"
           owner: "platform"
           objective: "99.5"
       - record: slo:geofence_pricing_read_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_read_availability"
           window: "6h"
           owner: "platform"
           objective: "99.5"
       - record: slo:geofence_pricing_read_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/geofences/(needs-review|rates/current|\\\\{geofenceID\\\\}/(rates(|/\\\\{rateID\\\\}/preview)|charging-summary|charging-activity))\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_read_availability"
           window: "30d"
@@ -749,28 +811,28 @@ groups:
     interval: 30s
     rules:
       - record: slo:geofence_pricing_write_availability:ratio_rate5m
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[5m]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[5m]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[5m]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_write_availability"
           window: "5m"
           owner: "platform"
           objective: "99"
       - record: slo:geofence_pricing_write_availability:ratio_rate1h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[1h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[1h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[1h]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_write_availability"
           window: "1h"
           owner: "platform"
           objective: "99"
       - record: slo:geofence_pricing_write_availability:ratio_rate6h
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[6h]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[6h]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[6h]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_write_availability"
           window: "6h"
           owner: "platform"
           objective: "99"
       - record: slo:geofence_pricing_write_availability:ratio_rate30d
-        expr: "(sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[30d]))) / clamp_min((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[30d]))), 1)"
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=~\"POST|DELETE\",route=~\"/api/v1/geofences/\\\\{geofenceID\\\\}/(archive|unarchive|reviewed|rates(|/\\\\{rateID\\\\}(|/apply)))\"}[30d]))) > 0)) or on() vector(1)"
         labels:
           slo: "geofence_pricing_write_availability"
           window: "30d"

@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock, Save, Trash2, X } from 'lucide-react';
-import { Button, Input } from '@/components/ui';
+import { Input } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import {
   useCloseCharging,
@@ -10,6 +9,8 @@ import {
   type RepairPatch,
   type StaleChargingSession,
 } from '@/api/hooks/useDataRepair';
+import { isRFC3339Boundary } from './repairPresentation';
+import { RepairFormActions } from './RepairFormActions';
 
 export interface ChargingRepairFormProps {
   session: StaleChargingSession;
@@ -33,7 +34,8 @@ function num(value: string): number | undefined {
  * Inputs are entered in SI (Wh, W) to match the `charging_sessions` columns the
  * backend `ChargingPartialAllowed` whitelist accepts; a live `useUnits()` hint
  * shows the equivalent in the operator's preferred display unit. Save patches
- * only the fields that were filled; Close stamps `ended_at`; Discard deletes.
+ * only non-boundary fields; Close applies the explicitly entered `ended_at`
+ * after confirmation; Discard deletes after confirmation.
  */
 export function ChargingRepairForm({
   session,
@@ -63,7 +65,6 @@ export function ChargingRepairForm({
 
   const onSave = () => {
     const patch: RepairPatch = {};
-    if (form.ended_at.trim()) patch.ended_at = form.ended_at.trim();
     const energy = num(form.total_energy_added_wh);
     if (energy != null) patch.total_energy_added_wh = energy;
     const endSoc = num(form.end_soc_pct);
@@ -76,12 +77,21 @@ export function ChargingRepairForm({
     if (cost != null) patch.cost_decimal = cost;
     update.mutate({ id: session.id, patch }, { onSuccess: onClose });
   };
+  const endedAt = form.ended_at.trim();
+  const validEndedAt = isRFC3339Boundary(endedAt);
+  const onCloseBoundary = () => close.mutate({
+    id: session.id,
+    ended_at: endedAt,
+    rule: 'manual',
+    expected_stored_ended_at: session.ended_at ?? '',
+  }, { onSuccess: onClose });
 
-  const energyHint = form.total_energy_added_wh.trim()
-    ? formatEnergy(Number(form.total_energy_added_wh))
-    : undefined;
-  const peakHint = form.peak_power_w.trim() ? formatPower(Number(form.peak_power_w)) : undefined;
-  const avgHint = form.avg_power_w.trim() ? formatPower(Number(form.avg_power_w)) : undefined;
+  const energy = num(form.total_energy_added_wh);
+  const peak = num(form.peak_power_w);
+  const avg = num(form.avg_power_w);
+  const energyHint = energy != null ? formatEnergy(energy) : undefined;
+  const peakHint = peak != null ? formatPower(peak) : undefined;
+  const avgHint = avg != null ? formatPower(avg) : undefined;
 
   return (
     <div
@@ -98,6 +108,9 @@ export function ChargingRepairForm({
           value={form.ended_at}
           placeholder="2026-03-30T04:00:00Z"
           onChange={set('ended_at')}
+          error={endedAt && !validEndedAt
+            ? t('dataRepair.field.invalidEndedAt', 'Use RFC3339 format, including a timezone.')
+            : undefined}
           disabled={disabled}
         />
         <Input
@@ -140,49 +153,20 @@ export function ChargingRepairForm({
         />
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="secondary"
-          onClick={onSave}
-          loading={update.isPending}
-          disabled={disabled}
-          title={disabledReason}
-          icon={<Save className="h-4 w-4" aria-hidden="true" />}
-          className="min-h-11"
-        >
-          {t('common.save', 'Save')}
-        </Button>
-        <Button
-          variant="secondary"
-          onClick={() => close.mutate(session.id, { onSuccess: onClose })}
-          loading={close.isPending}
-          disabled={disabled}
-          title={disabledReason}
-          icon={<Clock className="h-4 w-4" aria-hidden="true" />}
-          className="min-h-11"
-        >
-          {t('dataRepair.action.closeSession', 'Close Session')}
-        </Button>
-        <Button
-          variant="danger"
-          onClick={() => discard.mutate(session.id, { onSuccess: onClose })}
-          loading={discard.isPending}
-          disabled={disabled}
-          title={disabledReason}
-          icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
-          className="min-h-11"
-        >
-          {t('dataRepair.action.discard', 'Discard')}
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={onClose}
-          icon={<X className="h-4 w-4" aria-hidden="true" />}
-          className="ml-auto min-h-11"
-        >
-          {t('common.cancel', 'Cancel')}
-        </Button>
-      </div>
+      <RepairFormActions
+        kind="charging"
+        sessionId={session.id}
+        onSave={onSave}
+        onCloseBoundary={onCloseBoundary}
+        onDiscard={() => discard.mutate(session.id, { onSuccess: onClose })}
+        onCancel={onClose}
+        savePending={update.isPending}
+        closePending={close.isPending}
+        discardPending={discard.isPending}
+        closeDisabled={!validEndedAt}
+        disabled={disabled}
+        disabledReason={disabledReason}
+      />
     </div>
   );
 }
