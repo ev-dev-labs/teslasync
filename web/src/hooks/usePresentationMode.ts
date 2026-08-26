@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
 } from 'react';
@@ -168,6 +169,10 @@ function getPresentationRotation(): PresentationRotationState {
   return rotationState;
 }
 
+/**
+ * Updates presentation mode from non-React code.
+ * React components should use usePresentationMode so Router owns navigation.
+ */
 export function setPresentationMode(mode: PresentationMode): void {
   if (typeof window === 'undefined') return;
   const url = new URL(window.location.href);
@@ -233,6 +238,8 @@ export async function copyPresentationLink(
 export function usePresentationMode() {
   const location = useLocation();
   const navigate = useNavigate();
+  const locationRef = useRef(location);
+  locationRef.current = location;
   const mode = getPresentationModeFromSearch(location.search);
   const [config, setConfig] = useState<PresentationDisplayConfig>(
     readDisplayConfig,
@@ -310,22 +317,23 @@ export function usePresentationMode() {
 
   const updateMode = useCallback(
     (nextMode: PresentationMode) => {
+      const currentLocation = locationRef.current;
       const params = applyPresentationMode(
-        new URLSearchParams(location.search),
+        new URLSearchParams(currentLocation.search),
         nextMode,
       );
       const search = params.toString();
       navigate(
         {
-          pathname: location.pathname,
+          pathname: currentLocation.pathname,
           search: search ? `?${search}` : '',
-          hash: location.hash,
+          hash: currentLocation.hash,
         },
         { replace: true },
       );
       emitPresentationModeChange();
     },
-    [location.hash, location.pathname, location.search, navigate],
+    [navigate],
   );
 
   const enterReport = useCallback(() => {

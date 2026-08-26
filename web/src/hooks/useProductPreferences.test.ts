@@ -88,6 +88,42 @@ describe('useProductPreferences', () => {
     })
   })
 
+  it('accepts a real cross-tab update after an in-memory write failure', () => {
+    const setItem = vi
+      .spyOn(Storage.prototype, 'setItem')
+      .mockImplementation(() => {
+        throw new Error('storage unavailable')
+      })
+    const { result } = renderHook(() => useProductPreferences())
+
+    act(() => {
+      result.current.updatePreferences({ persona: 'analyst' })
+    })
+    setItem.mockRestore()
+
+    const external = {
+      version: 1,
+      ...DEFAULT_PRODUCT_PREFERENCES,
+      persona: 'fleet_operator',
+      defaultVehicleId: 42,
+    }
+    act(() => {
+      window.localStorage.setItem(
+        PRODUCT_PREFERENCES_STORAGE_KEY,
+        JSON.stringify(external),
+      )
+      window.dispatchEvent(
+        new StorageEvent('storage', {
+          key: PRODUCT_PREFERENCES_STORAGE_KEY,
+          newValue: JSON.stringify(external),
+        }),
+      )
+    })
+
+    expect(result.current.preferences.persona).toBe('fleet_operator')
+    expect(result.current.preferences.defaultVehicleId).toBe(42)
+  })
+
   it('keeps a failed reset authoritative for later in-memory updates', () => {
     const { result } = renderHook(() => useProductPreferences())
     act(() => {

@@ -376,6 +376,11 @@ describe('AutomationListPage', () => {
     expect(
       screen.getByText('Reconnect before making operational changes.'),
     ).toBeInTheDocument();
+
+    selectRows([1]);
+    expect(screen.getByRole('button', { name: 'Enable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Disable' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Delete' })).toBeDisabled();
   });
 
   it('computes summary stats from the full, unfiltered set', () => {
