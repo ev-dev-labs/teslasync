@@ -8,6 +8,20 @@ import path from 'path'
 
 const enablePwaInDev = process.env.VITE_PWA_DEV === 'true'
 
+const verifyEnglishCatalogSplit = {
+  name: 'verify-english-catalog-split',
+  buildStart() {
+    execSync(`${JSON.stringify(process.execPath)} scripts/split-i18n-catalog.mjs --check`, {
+      cwd: __dirname,
+      stdio: 'inherit',
+    })
+    execSync(`${JSON.stringify(process.execPath)} scripts/audit-i18n-namespaces.mjs --strict`, {
+      cwd: __dirname,
+      stdio: 'inherit',
+    })
+  },
+}
+
 // Build-time provenance for the footer status bar.
 // - VITE_APP_VERSION: package.json `version`, overridable via env.
 // - VITE_GIT_SHA: short HEAD sha; "dev" when not in a git checkout.
@@ -31,6 +45,7 @@ export default defineConfig({
   },
   plugins: [
     react(),
+    verifyEnglishCatalogSplit,
     VitePWA({
       // Auto-apply SW updates instead of waiting for a user "Reload now"
       // prompt. The previous 'prompt' mode stranded mobile/PWA users on

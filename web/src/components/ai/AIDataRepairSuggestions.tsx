@@ -91,7 +91,7 @@ export interface AIDataRepairSuggestionsProps {
   vehicleId?: number;
 }
 
-function ScopedStreamSection({ vehicleId }: AIDataRepairSuggestionsProps) {
+function InnerSection({ vehicleId }: AIDataRepairSuggestionsProps) {
   const { t } = useTranslation()
 
   // The backend reads the in-scope stale-session inventory itself
@@ -109,6 +109,11 @@ function ScopedStreamSection({ vehicleId }: AIDataRepairSuggestionsProps) {
     url: '/ai/system/data-repair/draft',
     body,
     onEvent: NOOP,
+    // AI-01: vehicle scope is part of stream identity through the
+    // canonical useAiStream scopeKey mechanism — switching vehicles
+    // aborts an in-flight draft and clears completed output before
+    // another vehicle's diagnostics are shown.
+    scopeKey: vehicleId ?? 'fleet',
   })
 
   return (
@@ -122,19 +127,6 @@ function ScopedStreamSection({ vehicleId }: AIDataRepairSuggestionsProps) {
       badgeLabel={t('dataRepair.aiSuggestions.badge', 'Helix')}
       canStart={stream.state !== 'streaming'}
       stream={stream}
-    />
-  )
-}
-ScopedStreamSection.displayName = 'AIDataRepairSuggestionsScopedStream'
-
-function InnerSection({ vehicleId }: AIDataRepairSuggestionsProps) {
-  // Vehicle scope is part of the stream identity. Remounting aborts an
-  // in-flight request and clears completed output before another vehicle's
-  // diagnostics are shown.
-  return (
-    <ScopedStreamSection
-      key={vehicleId ?? 'fleet'}
-      vehicleId={vehicleId}
     />
   )
 }

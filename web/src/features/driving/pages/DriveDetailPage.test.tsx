@@ -81,6 +81,20 @@ interface HookReturn {
   vehicle: Vehicle | null
   isLoading: boolean
   error: Error | null
+  /**
+   * Raw query result forwarded by the real hook so the page can derive the
+   * shared trust contract. Optional here: when omitted the mock synthesises
+   * one from `drive` + `error`, which keeps every pre-existing case working
+   * while letting a test model "retained rows + failed refresh" explicitly.
+   */
+  driveQuery?: {
+    data?: DriveDetail
+    error?: unknown
+    isError?: boolean
+    isFetching?: boolean
+    dataUpdatedAt?: number
+    refetch?: () => unknown
+  }
   chartData: ChartDataPoint[]
   stats: DriveStats | null
   trail: LatLngExpression[]
@@ -93,10 +107,25 @@ interface HookReturn {
 
 const hookState: { current: HookReturn } = { current: emptyState() }
 
+/** Mirrors what `useDrive()` would return for the current controlled state. */
+function synthesiseDriveQuery(state: HookReturn): NonNullable<HookReturn['driveQuery']> {
+  return state.driveQuery ?? {
+    data: state.drive ?? undefined,
+    error: state.error ?? undefined,
+    isError: state.error != null,
+    isFetching: false,
+    dataUpdatedAt: state.drive != null ? 1_000 : 0,
+    refetch: () => {},
+  }
+}
+
 vi.mock('../components/drive-detail', () => {
   const stub = (testid: string) => () => <div data-testid={testid} />
   return {
-    useDriveDetailData: () => hookState.current,
+    useDriveDetailData: () => ({
+      ...hookState.current,
+      driveQuery: synthesiseDriveQuery(hookState.current),
+    }),
     DriveDetailSkeleton: () => <div data-testid="drive-skeleton" />,
     HeroGauges: stub('hero-gauges'),
     DriveTimeline: stub('drive-timeline'),
@@ -334,6 +363,36 @@ describe('DriveDetailPage', () => {
     expect(screen.queryByTestId('drive-timeline')).toBeNull()
     expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
     expect(screen.queryByTestId('drive-skeleton')).toBeNull()
+  })
+
+  it('keeps the retained drive on screen when a BACKGROUND refresh fails', () => {
+    // Regression guard for the data-trust contract: `error` being set does
+    // NOT mean the page has nothing to show. A refetch that fails over an
+    // already-loaded drive must downgrade trust, not delete the record the
+    // operator is reading.
+    const loaded = loadedState()
+    hookState.current = {
+      ...loaded,
+      error: new Error('refresh exploded'),
+      driveQuery: {
+        data: loaded.drive ?? undefined,
+        error: new Error('refresh exploded'),
+        isError: true,
+        isFetching: false,
+        dataUpdatedAt: 1_000,
+        refetch: () => {},
+      },
+    }
+    renderPage()
+
+    // Sections survive…
+    expect(screen.getByTestId('hero-gauges')).toBeInTheDocument()
+    expect(screen.getByTestId('drive-timeline')).toBeInTheDocument()
+    // …the page-level error surface never fires…
+    expect(screen.queryByText("Can't reach server")).toBeNull()
+    expect(screen.queryByText(NOT_FOUND_COPY)).toBeNull()
+    // …and the non-blocking staleness warning explains the gap instead.
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
   })
 
   it('shows an explicit empty state (never a blank page) when the drive is missing', () => {

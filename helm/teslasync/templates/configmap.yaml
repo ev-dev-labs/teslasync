@@ -41,8 +41,24 @@ data:
   FORWARD_AUTH_HEADER: {{ .Values.config.forwardAuthHeader | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}
   HELM_CHART_VERSION: {{ .Chart.Version | quote }}
-  {{- if .Values.config.webEndpoint }}
-  CORS_ORIGINS: {{ .Values.config.webEndpoint | quote }}
+  {{- $publicOrigins := .Values.config.webEndpoint | default "" }}
+  {{- if and (not $publicOrigins) .Values.ingress.enabled .Values.ingress.tls }}
+  {{- $derivedOrigins := list }}
+  {{- range .Values.ingress.tls }}
+  {{- range .hosts }}
+  {{- $derivedOrigins = append $derivedOrigins (printf "https://%s" .) }}
+  {{- end }}
+  {{- end }}
+  {{- $publicOrigins = join "," $derivedOrigins }}
+  {{- end }}
+  {{- if and (not $publicOrigins) .Values.ingress.enabled .Values.ingress.tls }}
+  {{- fail "config.webEndpoint is required when ingress TLS has no public host so CSRF has a trusted origin" }}
+  {{- end }}
+  {{- if and (not $publicOrigins) .Values.ingressRoute.enabled .Values.ingressRoute.tls.enabled }}
+  {{- fail "config.webEndpoint is required when ingressRoute TLS is enabled so CSRF has a trusted public origin" }}
+  {{- end }}
+  {{- if $publicOrigins }}
+  CORS_ORIGINS: {{ $publicOrigins | quote }}
   {{- end }}
   {{- $ftHost := include "teslasync.fleetTelemetry.host" . }}
   {{- if or .Values.fleetTelemetry.enabled $ftHost }}

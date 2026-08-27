@@ -1,0 +1,12 @@
+{
+  "notFound": {
+    "title": "Page not found",
+    "heading": "We couldn't find that page",
+    "body": "{{path}} doesn't match any route.",
+    "didYouMean": "Did you mean:",
+    "goBack": "Go back",
+    "goHome": "Go to dashboard",
+    "openSearch": "Open command palette",
+    "suggestionsLabel": "Suggested pages"
+  }
+}

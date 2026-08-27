@@ -39,6 +39,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/alerts/rules/draft',
     body,
     onEvent: noopEvent,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight draft and clears the previous
+    // vehicle's proposal before the new scope streams in.
+    scopeKey: vehicleId ?? null,
   })
 
   // The backend rejects vehicle_id <= 0 (aialert/handler.go), so the

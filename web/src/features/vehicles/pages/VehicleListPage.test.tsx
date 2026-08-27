@@ -290,10 +290,63 @@ const OPEN_WORK_ORDER: FleetWorkOrder = {
 };
 
 const VEHICLES: Vehicle[] = [V1, V2, V3];
+/**
+ * Fleet-state entries in the shape `useFleetStates` really produces: each
+ * carries its outcome AND the instant its reading was observed, so the page
+ * can tell a resolved reading apart from an absent snapshot, from a transport
+ * failure, and from a reading retained through an outage. V3 has no
+ * snapshot — that is `missing`, NOT offline.
+ */
+const OBSERVED_AT = 1_700_000_000_000;
+
+function resolvedEntry(vehicle: Vehicle, state: VehicleState, observedAt = OBSERVED_AT) {
+  return {
+    vehicle,
+    state,
+    outcome: 'resolved' as const,
+    stale: false,
+    observedAt,
+    receivedAt: observedAt,
+  };
+}
+function missingEntry(vehicle: Vehicle) {
+  return {
+    vehicle,
+    state: null,
+    outcome: 'missing' as const,
+    stale: false,
+    observedAt: null,
+    receivedAt: OBSERVED_AT,
+  };
+}
+function failedEntry(vehicle: Vehicle) {
+  return {
+    vehicle,
+    state: null,
+    outcome: 'failed' as const,
+    stale: false,
+    observedAt: null,
+    receivedAt: OBSERVED_AT,
+    error: new Error('ECONNREFUSED'),
+  };
+}
+function retainedEntry(vehicle: Vehicle, state: VehicleState, observedAt = OBSERVED_AT) {
+  return {
+    vehicle,
+    state,
+    outcome: 'failed' as const,
+    stale: true,
+    // Deliberately OLD: a retained reading keeps the age it was captured at.
+    observedAt,
+    receivedAt: OBSERVED_AT + 600_000,
+    error: new Error('gateway timeout'),
+  };
+}
+
 const FLEET_STATES = [
-  { vehicle: V1, state: S1 },
-  { vehicle: V2, state: S2 },
-  { vehicle: V3, state: null },
+  resolvedEntry(V1, S1),
+  resolvedEntry(V2, S2),
+  missingEntry(V3),
 ];
 
 let syncMut: ReturnType<typeof mutation>;
@@ -338,6 +391,14 @@ function cardGrid(): HTMLElement {
   return document.querySelector('[data-tour="vehicles-list"]') as HTMLElement;
 }
 
+/** The `<OperationalBrief>` metric tile whose label matches, for scoped reads. */
+function briefMetric(label: string): HTMLElement {
+  const posture = screen.getByTestId('fleet-operational-brief');
+  const tile = within(posture).getByText(label).closest('[role="listitem"]');
+  if (tile == null) throw new Error(`no brief metric tile for "${label}"`);
+  return tile as HTMLElement;
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -372,9 +433,16 @@ describe('VehicleListPage — happy path', () => {
       .getByText('Departure ready')
       .closest('[role="listitem"]');
     expect(readinessMetric).not.toBeNull();
-    expect(within(readinessMetric as HTMLElement).getByText('2/3')).toBeInTheDocument();
+    // Denominator is the COVERED fleet (V1 + V2 have fresh readings), not the
+    // 3 registered vehicles: V3 has no snapshot and cannot be judged ready or
+    // not ready.
+    expect(within(readinessMetric as HTMLElement).getByText('2/2')).toBeInTheDocument();
+    expect(within(readinessMetric as HTMLElement).getByText(
+      /Based on 2 of 3 vehicles with a current reading/,
+    )).toBeInTheDocument();
     expect(within(posture).getByText('Live utilization')).toBeInTheDocument();
-    expect(within(posture).getByText('67%')).toBeInTheDocument();
+    // V1 charging + V2 driving out of 2 covered = 100 %, not 67 % of 3.
+    expect(within(posture).getByText('100%')).toBeInTheDocument();
     expect(within(posture).getByText('Software posture')).toBeInTheDocument();
     expect(within(posture).getByText('2 versions')).toBeInTheDocument();
     expect(within(posture).getByText('Service attention')).toBeInTheDocument();
@@ -393,7 +461,9 @@ describe('VehicleListPage — happy path', () => {
     expect(within(grid).getByText('Model S Gamma')).toBeInTheDocument();
     expect(within(grid).getByText('charging')).toBeInTheDocument();
     expect(within(grid).getByText('driving')).toBeInTheDocument();
-    expect(within(grid).getByText('offline')).toBeInTheDocument();
+    // V3 has NO snapshot. Absence is unknown, never a confident "offline".
+    expect(within(grid).getByText('Unknown')).toBeInTheDocument();
+    expect(within(grid).queryByText('offline')).toBeNull();
   });
 
   it('sums the fleet range KPI from SI metres via the km display boundary', async () => {
@@ -425,10 +495,13 @@ describe('VehicleListPage — happy path', () => {
     // same name also appears on its card, so a loaded vehicle renders ≥ 2 times.
     expect(screen.getAllByText('Model 3 Alpha').length).toBeGreaterThanOrEqual(2);
 
-    // Status breakdown: exactly one vehicle in each derived status.
-    expect(screen.getByText('Charging')).toBeInTheDocument();
-    expect(screen.getByText('Driving')).toBeInTheDocument();
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    // Status breakdown counts ONLY vehicles with an actual reading. V3 has no
+    // snapshot, so it is excluded and disclosed as partial coverage rather
+    // than counted as offline.
+    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Driving' })).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    expect(screen.getByTestId('fleet-status-partial')).toBeInTheDocument();
   });
 
   it('surfaces software fragmentation and urgent service work in decision details', async () => {
@@ -463,8 +536,11 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     expect(bars).toHaveLength(3);
     expect(bars[0]).toHaveAttribute('aria-valuenow', '80');
     expect(bars[1]).toHaveAttribute('aria-valuenow', '50');
-    // V3 has no live state ⇒ level defaults to 0 (null-safe), not undefined.
-    expect(bars[2]).toHaveAttribute('aria-valuenow', '0');
+    // V3 has no live state ⇒ the level is UNKNOWN. `aria-valuenow="0"` would
+    // announce "0 percent", a reading the vehicle never produced; an indefinite
+    // progressbar (no aria-valuenow) is the honest representation.
+    expect(bars[2]).not.toHaveAttribute('aria-valuenow');
+    expect(within(grid).getByText('—')).toBeInTheDocument();
 
     // Icon-only row actions + status glyphs carry accessible names.
     expect(within(grid).getByLabelText('Remove Model 3 Alpha')).toBeInTheDocument();
@@ -502,19 +578,22 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     });
   });
 
-  it('shows the no-live-data placeholder and offline badge for a stateless vehicle', async () => {
+  it('shows the no-live-data placeholder and an UNKNOWN badge for a stateless vehicle', async () => {
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
     const grid = cardGrid();
-    // Only V3 (null state) shows the placeholder; V1/V2 show live stat chips.
+    // Only V3 (no snapshot) shows the placeholder; V1/V2 show live stat chips.
     expect(within(grid).getByText('No live data')).toBeInTheDocument();
-    expect(within(grid).getByText('offline')).toBeInTheDocument();
+    // "We could not resolve this car" must never be rendered as "this car is
+    // offline" — that is an operational claim we have no evidence for.
+    expect(within(grid).getByText('Unknown')).toBeInTheDocument();
+    expect(within(grid).queryByText('offline')).toBeNull();
   });
 
   it('falls back to the VIN and an unknown-model label when naming fields are blank', async () => {
     const bare = makeVehicle({ id: 7, vehicle_id: 7, vin: 'VINBLANK000000007', display_name: '', model: '', trim_badging: '' });
     mockVehicles.mockReturnValue(qr({ data: [bare] }));
-    mockFleetStates.mockReturnValue(qr({ data: [{ vehicle: bare, state: null }] }));
+    mockFleetStates.mockReturnValue(qr({ data: [missingEntry(bare)] }));
     renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
 
@@ -687,17 +766,264 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
   });
 
-  it('surfaces a retryable error in both overview panels when fleet states fail', () => {
+  it('does NOT paint the whole fleet as offline while live state is still loading', () => {
+    // Regression guard: the status counts are derived from the VEHICLE list,
+    // and deriveVehicleStatus(null) === 'offline', so before any live state
+    // arrives every vehicle counted as offline and the old
+    // `counts.length === 0` skeleton guard was dead code. The panel showed a
+    // confident "3 Offline" breakdown built from nothing.
+    mockFleetStates.mockReturnValue(qr({ isLoading: true, isFetching: true, data: undefined }));
+    renderPage();
+
+    expect(screen.getByTestId('fleet-status-skeleton')).toBeInTheDocument();
+    // The breakdown bar is a progressbar labelled with the status name.
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    // The panel header still anchors the section — nothing is hidden.
+    expect(screen.getByText('Fleet Status')).toBeInTheDocument();
+  });
+
+  it('keeps the retained status breakdown during a BACKGROUND fleet-state refresh', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: FLEET_STATES, isFetching: true, isLoading: false }),
+    );
+    renderPage();
+
+    // Retained state means real counts — no skeleton, no error surface.
+    expect(screen.queryByTestId('fleet-status-skeleton')).toBeNull();
+    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
+  it('keeps the retained status breakdown when a background refresh FAILS', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: FLEET_STATES, isError: true, error: new Error('502 Bad Gateway') }),
+    );
+    renderPage();
+
+    expect(screen.queryByTestId('fleet-status-skeleton')).toBeNull();
+    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
+  it('shows the error surface — never a fabricated breakdown — on total fleet-state failure', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: [failedEntry(V1), failedEntry(V2), failedEntry(V3)], isLoading: false }),
+    );
+    renderPage();
+
+    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByTestId('fleet-status-skeleton')).toBeNull();
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+  });
+
+  it('surfaces a retryable error in both overview panels when every fleet-state request fails', () => {
+    // Production path: useFleetStates resolves per vehicle, so a total outage
+    // arrives as a SUCCESSFUL array of `outcome: 'failed'` entries and
+    // `isError` stays false. The panels must read the outcomes, not isError.
     const refetch = vi.fn();
     mockFleetStates.mockReturnValue(
-      qr({ isError: true, error: new Error('down'), data: undefined, refetch }),
+      qr({ data: [failedEntry(V1), failedEntry(V2), failedEntry(V3)], isError: false, refetch }),
     );
     renderPage();
 
     // Battery panel + status panel each render their own error affordance.
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2);
-    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]!);
     expect(refetch).toHaveBeenCalled();
+  });
+
+  it('shows an honest empty state — not an outage — when every vehicle merely lacks a snapshot', () => {
+    // All 204/null: the backend answered, there is simply nothing to report.
+    // This must NOT look like the outage case above.
+    mockFleetStates.mockReturnValue(
+      qr({ data: [missingEntry(V1), missingEntry(V2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    expect(screen.getByText('No fleet status data yet')).toBeInTheDocument();
+  });
+
+  it('counts only resolved vehicles and discloses the rest as partial coverage', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: [resolvedEntry(V1, S1), missingEntry(V2), failedEntry(V3)] }),
+    );
+    renderPage();
+
+    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    const notice = screen.getByTestId('fleet-status-partial');
+    expect(notice).toBeInTheDocument();
+    expect(notice).toHaveTextContent(/rather than counted as offline/i);
+  });
+
+  it('keeps a retained prior reading counted, flagged as partial, on a failed refresh', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: [retainedEntry(V1, S1), resolvedEntry(V2, S2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    // The retained reading still classifies — it is real, just unconfirmed.
+    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Driving' })).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-status-partial')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
+  it('reports —, not 0%/0-of-N, when every fleet-state request failed', () => {
+    // The batch resolves successfully with three failures, so nothing here can
+    // be gated on `isError`. "0% utilization" and "0/3 ready" would be
+    // assertions manufactured from the absence of evidence.
+    mockFleetStates.mockReturnValue(
+      qr({ data: [failedEntry(V1), failedEntry(V2), failedEntry(V3)] }),
+    );
+    renderPage();
+
+    const posture = screen.getByTestId('fleet-operational-brief');
+    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
+    expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
+    expect(within(posture).queryByText('0%')).toBeNull();
+    expect(within(posture).queryByText('0/3')).toBeNull();
+  });
+
+  it('reports —, not 0%/0-of-N, when every vehicle merely lacks a snapshot', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: [missingEntry(V1), missingEntry(V2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    const posture = screen.getByTestId('fleet-operational-brief');
+    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('—')).toBeInTheDocument();
+    expect(within(posture).queryByText('0%')).toBeNull();
+  });
+
+  it('narrows the KPI denominator to covered vehicles and discloses the coverage', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: [resolvedEntry(V1, S1), failedEntry(V2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    // Only V1 has a fresh reading; it is charging ⇒ 1/1 covered = 100 %.
+    expect(within(briefMetric('Live utilization')).getByText('100%')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText(
+      /Based on 1 of 3 vehicles with a current reading/,
+    )).toBeInTheDocument();
+  });
+
+  it('never counts a retained stale reading as live state available', () => {
+    // S1 is `state: 'online', is_charging: true` — but the reading is retained
+    // from before the outage. It proves what the car WAS doing.
+    mockFleetStates.mockReturnValue(
+      qr({ data: [retainedEntry(V1, S1), retainedEntry(V2, S2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+  });
+
+  it('ages the freshness chip from the OBSERVATION, not from the successful wrapper batch', () => {
+    // The trap: `useFleetStates` resolves successfully on every 30 s poll even
+    // when every request failed, so the query's own `dataUpdatedAt` is "now".
+    // Reading freshness from it painted a green "just now" over readings that
+    // had not moved in ten minutes.
+    const tenMinutesAgo = Date.now() - 10 * 60_000;
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, tenMinutesAgo), retainedEntry(V2, S2, tenMinutesAgo)],
+      dataUpdatedAt: Date.now(),
+      isError: false,
+    }));
+    renderPage();
+
+    const header = document.querySelector('header') as HTMLElement;
+    expect(header).not.toBeNull();
+    expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
+    expect(within(header).queryByText('just now')).toBeNull();
+  });
+
+  it('surfaces a refresh error even though the wrapper batch resolved successfully', () => {
+    const tenMinutesAgo = Date.now() - 10 * 60_000;
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, tenMinutesAgo), resolvedEntry(V2, S2)],
+      dataUpdatedAt: Date.now(),
+      isError: false,
+    }));
+    renderPage();
+
+    // `isError` is false on the query; the failure lives in the entries. The
+    // trust contract must still degrade.
+    expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
+  });
+
+  it('holds the displayed age steady across repeated failed 30s polls', () => {
+    // Each poll restamps `dataUpdatedAt` but not `observedAt`, so the rendered
+    // age must track the observation and never reset to "just now".
+    const observedAt = Date.now() - 10 * 60_000;
+
+    for (let poll = 0; poll <= 3; poll += 1) {
+      mockFleetStates.mockReturnValue(qr({
+        // Wrapper timestamp marches on with every poll…
+        data: [retainedEntry(V1, S1, observedAt)],
+        dataUpdatedAt: Date.now() + poll * 30_000,
+      }));
+      const view = renderPage();
+      const header = document.querySelector('header') as HTMLElement;
+      // …the observation age does not.
+      expect(within(header).queryByText('just now')).toBeNull();
+      expect(within(header).getByText(/10m ago/)).toBeInTheDocument();
+      view.unmount();
+    }
+  });
+
+  it('does not count an explicit offline / asleep snapshot as live utilization', () => {
+    const offline = makeState({ vehicle_id: 1, state: 'offline', battery_level: 70, is_charging: false });
+    const asleep = makeState({ vehicle_id: 2, state: 'asleep', battery_level: 60, is_charging: false });
+    mockFleetStates.mockReturnValue(
+      qr({ data: [resolvedEntry(V1, offline), resolvedEntry(V2, asleep), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    // Both ARE live-state responses — that is what the card measures.
+    expect(within(briefMetric('Live state available')).getByText('2/3')).toBeInTheDocument();
+    // Neither is driving or charging, so utilization is a real 0 % of 2.
+    expect(within(briefMetric('Live utilization')).getByText('0%')).toBeInTheDocument();
+    // Backend explicitly said offline/asleep, so the breakdown may say so.
+    expect(screen.getByRole('progressbar', { name: 'Offline' })).toBeInTheDocument();
+    expect(screen.getByRole('progressbar', { name: 'Asleep' })).toBeInTheDocument();
+  });
+
+  it('keeps the fleet on screen when a BACKGROUND vehicles refetch fails', () => {
+    // Data-trust regression guard: `error` set + cached rows present is a
+    // stale refresh, not a dead page. Losing the fleet here is the exact
+    // failure the shared DataState contract exists to prevent.
+    mockVehicles.mockReturnValue(
+      qr({ data: VEHICLES, isError: true, error: new Error('502 Bad Gateway') }),
+    );
+    renderPage();
+
+    // Cards survive…
+    expect(screen.getAllByText('Model 3 Alpha').length).toBeGreaterThan(0);
+    // …the page-level error surface never replaces them…
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    // …and a non-blocking warning explains the staleness instead.
+    expect(screen.getAllByTestId('stale-refresh-warning').length).toBeGreaterThan(0);
+  });
+
+  it('keeps retained live state when a BACKGROUND fleet-state refetch fails', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: FLEET_STATES, isError: true, error: new Error('502 Bad Gateway') }),
+    );
+    renderPage();
+
+    // Neither overview panel falls back to the error surface while the
+    // previous batch is still renderable.
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 
   it('explains a successful battery-state gap and refreshes without presenting an error retry', () => {
@@ -709,13 +1035,15 @@ describe('VehicleListPage — loading, error & empty states', () => {
       screen.getByText('Live battery readings have not arrived for the registered fleet.'),
     ).toBeInTheDocument();
     expect(screen.getByText(/Readings appear after vehicles reconnect/)).toBeInTheDocument();
-    // The status breakdown remains a truthful all-offline classification.
-    expect(screen.getByText('Offline')).toBeInTheDocument();
+    // No entries at all means we know nothing — the breakdown must say so
+    // rather than classify three unseen vehicles as offline.
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    expect(screen.getByText('No fleet status data yet')).toBeInTheDocument();
 
     const refreshButtons = screen.getAllByRole('button', { name: 'Refresh live state' });
-    expect(refreshButtons).toHaveLength(1);
+    expect(refreshButtons).toHaveLength(2);
     expect(screen.queryByRole('button', { name: 'Retry' })).not.toBeInTheDocument();
-    fireEvent.click(refreshButtons[0]);
+    fireEvent.click(refreshButtons[0]!);
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

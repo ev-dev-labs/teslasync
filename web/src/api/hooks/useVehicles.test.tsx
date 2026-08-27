@@ -30,7 +30,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -82,6 +82,8 @@ import {
   useUserPreferenceLatest,
   fetchVehicleState,
   useFleetStates,
+  summariseFleetStates,
+  type FleetStateEntry,
   useVehicleMobileEnabled,
   useRefreshVehicleMobileEnabled,
   useVehicleOptions,
@@ -487,11 +489,15 @@ describe('useFleetStates', () => {
     const { result } = renderH(() => useFleetStates(vehicles));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(requestMock).toHaveBeenCalledTimes(2);
-    expect(result.current.data?.[0]).toEqual({
+    expect(result.current.data?.[0]).toMatchObject({
       vehicle: vehicles[0],
       state: { vehicle_id: 1, state: 'online' },
+      outcome: 'resolved',
+      stale: false,
     });
+    expect(result.current.data?.[0].observedAt).toBeTypeOf('number');
     expect(result.current.data?.[1].state?.vehicle_id).toBe(2);
+    expect(result.current.data?.[1].outcome).toBe('resolved');
   });
 
   it('isolates a single failing vehicle as a null state instead of rejecting the batch', async () => {
@@ -521,6 +527,261 @@ describe('useFleetStates', () => {
     await tick();
     expect(requestMock).not.toHaveBeenCalled();
     expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fleet-state PROVENANCE. Every case below drives the real hook through the
+// real request path — no mocked `isError` — because the defect being guarded
+// is precisely that this query never sets `isError`: it resolves each vehicle
+// independently, so a total outage arrives as a *successful* array of nulls
+// and every consumer rendered "the whole fleet is Offline".
+describe('useFleetStates — outcome provenance', () => {
+  it('marks a transport failure as failed, never as an absent snapshot', async () => {
+    requestMock.mockRejectedValue(new Error('ECONNREFUSED'));
+    const vehicles = [makeVehicle(1), makeVehicle(2)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // The query itself still succeeds — that is the trap this contract closes.
+    expect(result.current.isError).toBe(false);
+    for (const entry of result.current.data ?? []) {
+      expect(entry.outcome).toBe('failed');
+      expect(entry.state).toBeNull();
+      expect(entry.error).toBeInstanceOf(Error);
+    }
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      total: 2,
+      resolvedCount: 0,
+      missingCount: 0,
+      failedCount: 2,
+      statefulCount: 0,
+      unresolvedCount: 2,
+      status: 'unavailable',
+      oldestObservedAt: null,
+    });
+  });
+
+  it('marks a successful empty snapshot as missing, not failed', async () => {
+    // 204 / JSON-null body: the backend answered, it just has no snapshot.
+    requestMock.mockResolvedValue(null);
+    const vehicles = [makeVehicle(1), makeVehicle(2)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    for (const entry of result.current.data ?? []) {
+      expect(entry.outcome).toBe('missing');
+      expect(entry.state).toBeNull();
+      expect(entry.error).toBeUndefined();
+    }
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      resolvedCount: 0,
+      missingCount: 2,
+      failedCount: 0,
+      // Authoritative absence, NOT an outage. Collapsing the two would tell
+      // an operator the API is down when the fleet simply has no snapshots.
+      status: 'absent',
+    });
+  });
+
+  it('distinguishes partial success from partial failure in the same batch', async () => {
+    requestMock.mockImplementation((url: string) => {
+      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
+      if (id === 1) return Promise.resolve({ state: { vehicle_id: 1, state: 'online' }, live: true });
+      if (id === 2) return Promise.resolve(null);
+      return Promise.reject(new Error('boom'));
+    });
+    const vehicles = [makeVehicle(1), makeVehicle(2), makeVehicle(3)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.map((e) => e.outcome)).toEqual([
+      'resolved', 'missing', 'failed',
+    ]);
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      total: 3,
+      resolvedCount: 1,
+      missingCount: 1,
+      failedCount: 1,
+      statefulCount: 1,
+      unresolvedCount: 2,
+      status: 'partial',
+    });
+  });
+
+  it('retains the prior real reading when a refresh fails for that vehicle', async () => {
+    let failing = false;
+    requestMock.mockImplementation((url: string) => {
+      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
+      if (failing) return Promise.reject(new Error('gateway timeout'));
+      return Promise.resolve({ state: { vehicle_id: id, state: 'online' }, live: true });
+    });
+    const vehicles = [makeVehicle(1)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('resolved'));
+    const firstObservedAt = result.current.data?.[0].observedAt;
+    expect(firstObservedAt).toBeTypeOf('number');
+
+    failing = true;
+    await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('failed'));
+
+    const entry = result.current.data?.[0];
+    // The reading survives the blip, but is explicitly no longer confirmed.
+    expect(entry?.state).toEqual({ vehicle_id: 1, state: 'online' });
+    expect(entry?.stale).toBe(true);
+    expect(entry?.error).toBeInstanceOf(Error);
+    // The observation instant is NOT restamped — the reading is as old as it
+    // ever was.
+    expect(entry?.observedAt).toBe(firstObservedAt);
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      resolvedCount: 0,
+      failedCount: 1,
+      retainedCount: 1,
+      statefulCount: 1,
+      unresolvedCount: 0,
+      status: 'partial',
+      oldestObservedAt: firstObservedAt,
+    });
+  });
+
+  it('never refreshes the displayed observation age across repeated failed polls', async () => {
+    // The defect: the wrapper batch resolves successfully on every poll, so
+    // `query.dataUpdatedAt` advanced every 30 s and the freshness chip showed
+    // a green "just now" over readings that had not moved in minutes.
+    let failing = false;
+    requestMock.mockImplementation((url: string) => {
+      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
+      if (failing) return Promise.reject(new Error('ECONNREFUSED'));
+      return Promise.resolve({ state: { vehicle_id: id, state: 'online' }, live: true });
+    });
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('resolved'));
+    const observedAt = result.current.data?.[0].observedAt;
+
+    failing = true;
+    for (let poll = 0; poll < 4; poll += 1) {
+      const before = result.current.dataUpdatedAt;
+      await act(async () => { await result.current.refetch(); });
+      // The wrapper timestamp DOES keep moving — that is exactly why it must
+      // not be the freshness source.
+      expect(result.current.dataUpdatedAt).toBeGreaterThanOrEqual(before);
+      // The observation instant does not.
+      expect(result.current.data?.[0].observedAt).toBe(observedAt);
+      expect(summariseFleetStates(result.current.data ?? []).oldestObservedAt)
+        .toBe(observedAt);
+    }
+  });
+
+  it('stamps observedAt only for readings, never for missing or failed entries', async () => {
+    requestMock.mockImplementation((url: string) => {
+      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
+      if (id === 1) return Promise.resolve({ state: { vehicle_id: 1 }, live: true });
+      if (id === 2) return Promise.resolve(null);
+      return Promise.reject(new Error('boom'));
+    });
+    const { result } = renderH(() =>
+      useFleetStates([makeVehicle(1), makeVehicle(2), makeVehicle(3)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [resolved, missing, failed] = result.current.data ?? [];
+    expect(resolved?.observedAt).toBeTypeOf('number');
+    expect(missing?.observedAt).toBeNull();
+    expect(failed?.observedAt).toBeNull();
+    // Every entry records WHEN the batch ran, even without a reading.
+    for (const entry of result.current.data ?? []) {
+      expect(entry.receivedAt).toBeTypeOf('number');
+    }
+  });
+
+  it('keeps an explicit backend "offline" snapshot as a resolved reading', async () => {
+    // The ONLY legitimate route to an offline classification.
+    requestMock.mockImplementation((url: string) => {
+      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
+      return Promise.resolve({ state: { vehicle_id: id, state: 'offline' }, live: false });
+    });
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const entry = result.current.data?.[0];
+    expect(entry?.outcome).toBe('resolved');
+    expect(entry?.state?.state).toBe('offline');
+    expect(summariseFleetStates(result.current.data ?? [])).toMatchObject({
+      resolvedCount: 1,
+      status: 'ok',
+    });
+  });
+});
+
+describe('summariseFleetStates', () => {
+  const entry = (over: Partial<FleetStateEntry>): FleetStateEntry => ({
+    vehicle: makeVehicle(1),
+    state: null,
+    outcome: 'missing',
+    stale: false,
+    observedAt: null,
+    receivedAt: 1_000,
+    ...over,
+  });
+
+  it('reports empty for a zero-vehicle batch', () => {
+    expect(summariseFleetStates([]).status).toBe('empty');
+  });
+
+  it('reports ok only when every vehicle resolved fresh', () => {
+    const resolved = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'resolved',
+      observedAt: 5_000,
+    });
+    expect(summariseFleetStates([resolved, resolved]).status).toBe('ok');
+  });
+
+  it('separates a transport outage from an authoritative absence', () => {
+    expect(summariseFleetStates([entry({ outcome: 'failed' })]).status).toBe('unavailable');
+    expect(summariseFleetStates([entry({ outcome: 'missing' })]).status).toBe('absent');
+    // A mixed batch with nothing readable is still an outage: at least one
+    // request failed, so we genuinely do not know.
+    expect(
+      summariseFleetStates([entry({ outcome: 'missing' }), entry({ outcome: 'failed' })]).status,
+    ).toBe('unavailable');
+  });
+
+  it('counts a retained reading as stateful but not as resolved', () => {
+    const retained = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'failed',
+      stale: true,
+      observedAt: 5_000,
+    });
+    expect(summariseFleetStates([retained])).toMatchObject({
+      resolvedCount: 0,
+      retainedCount: 1,
+      statefulCount: 1,
+      unresolvedCount: 0,
+      status: 'partial',
+    });
+  });
+
+  it('reports the OLDEST observation as the batch freshness', () => {
+    const old = entry({ state: { vehicle_id: 1 } as never, outcome: 'resolved', observedAt: 1_000 });
+    const recent = entry({ state: { vehicle_id: 2 } as never, outcome: 'resolved', observedAt: 9_000 });
+    expect(summariseFleetStates([recent, old])).toMatchObject({
+      oldestObservedAt: 1_000,
+      newestObservedAt: 9_000,
+    });
+  });
+
+  it('ignores observation instants from entries with no reading', () => {
+    expect(summariseFleetStates([entry({ observedAt: 42 })]).oldestObservedAt).toBeNull();
   });
 });
 

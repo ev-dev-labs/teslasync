@@ -40,6 +40,7 @@ import {
   ResponsiveContainer,
   SmallMultiplesChart,
   EmbeddedChart,
+  projectSmallMultipleSeries,
 } from '@/components/charts';
 import { CHART_COLORS } from '@/lib/colors';
 import { fmtInt } from '@/lib/numberFormat';
@@ -87,6 +88,17 @@ export interface SignalChartPanelProps {
   className?: string;
 }
 
+function toTimestampMs(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) ? value : null;
+  if (value instanceof Date) {
+    const timestampMs = value.getTime();
+    return Number.isFinite(timestampMs) ? timestampMs : null;
+  }
+  if (typeof value !== 'string') return null;
+  const timestampMs = Date.parse(value);
+  return Number.isFinite(timestampMs) ? timestampMs : null;
+}
+
 export function SignalChartPanel({
   selectedSignals = [],
   data = [],
@@ -103,7 +115,7 @@ export function SignalChartPanel({
   className,
 }: SignalChartPanelProps) {
   const { t } = useTranslation();
-  const { formatTime } = useDateFormat();
+  const { formatTime, formatDateTime } = useDateFormat();
 
   const useRightAxis = useMemo(() => {
     if (!stats || stats.length < 2) return false;
@@ -133,6 +145,19 @@ export function SignalChartPanel({
     }),
     [data, selectedSignals],
   );
+  const overlaySeries = useMemo(() => {
+    if (effectiveMode !== 'overlay') return new Map();
+    return new Map(selectedSignals.map((signal) => {
+      const projection = projectSmallMultipleSeries(data, signal, 'timestamp', 400);
+      const rows = projection.rows
+        .flatMap((row) => {
+          const timestampMs = toTimestampMs(row.timestamp);
+          return timestampMs == null ? [] : [{ ...row, timestampMs }];
+        })
+        .sort((left, right) => left.timestampMs - right.timestampMs);
+      return [signal, { ...projection, rows }] as const;
+    }));
+  }, [data, effectiveMode, selectedSignals]);
 
   return (
     <FadeIn>
@@ -194,15 +219,29 @@ export function SignalChartPanel({
                 <LineChart data={data} margin={{ top: 10, right: useRightAxis ? 20 : 10, left: 10, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                   <XAxis
-                    dataKey="timestamp"
+                    dataKey="timestampMs"
+                    type="number"
+                    allowDuplicatedCategory={false}
+                    domain={['dataMin', 'dataMax']}
                     tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                    tickFormatter={(v: string) => formatTime(v)}
+                    tickFormatter={(value: number) => formatTime(new Date(value))}
                   />
                   <YAxis yAxisId="left" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   {useRightAxis ? (
                     <YAxis yAxisId="right" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                   ) : null}
-                  <Tooltip content={<ChartTooltip />} />
+                  <Tooltip
+                    content={(
+                      <ChartTooltip
+                        labelFormatter={(label) => {
+                          const timestampMs = typeof label === 'number' ? label : Number(label);
+                          return Number.isFinite(timestampMs)
+                            ? formatDateTime(new Date(timestampMs))
+                            : '—';
+                        }}
+                      />
+                    )}
+                  />
                   <ChartLegend />
                   {selectedSignals.map((sig, i) => (
                     <Line
@@ -211,10 +250,11 @@ export function SignalChartPanel({
                       dataKey={sig}
                       stroke={CHART_COLORS[i % CHART_COLORS.length]}
                       strokeWidth={1.5}
-                      dot={false}
+                      data={overlaySeries.get(sig)?.rows}
+                      dot={overlaySeries.get(sig)?.showDots ? { r: 2, strokeWidth: 0 } : false}
                       name={sig}
                       yAxisId={useRightAxis && i === 1 ? 'right' : 'left'}
-                      connectNulls
+                      connectNulls={false}
                       isAnimationActive={!isLive}
                       hide={hiddenSeries?.isHidden(sig) ?? false}
                     />

@@ -430,4 +430,72 @@ describe('ChartContainer accessibility contract', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
+
+  it.each([390, 768, 1440])(
+    'keeps bounded geometry and no horizontal overflow through repeated %ipx resizes',
+    (width) => {
+      const { rerender } = renderChart(
+        <div data-testid="resize-host" style={{ width }}>
+          {/* chart-a11y:no-table geometry fixture has no chart data */}
+          <ChartContainer title="Geometry" ariaLabel="Geometry chart" height={360}>
+            <div>chart</div>
+          </ChartContainer>
+        </div>,
+      );
+      const viewport = screen.getByRole('img', { name: 'Geometry chart' });
+      const initialStyle = viewport.getAttribute('style');
+
+      for (let iteration = 0; iteration < 20; iteration += 1) {
+        rerender(
+          <div data-testid="resize-host" style={{ width }}>
+            {/* chart-a11y:no-table geometry fixture has no chart data */}
+            <ChartContainer title="Geometry" ariaLabel="Geometry chart" height={360}>
+              <div>chart</div>
+            </ChartContainer>
+          </div>,
+        );
+      }
+
+      const stableViewport = screen.getByRole('img', { name: 'Geometry chart' });
+      expect(stableViewport.getAttribute('style')).toBe(initialStyle);
+      expect(stableViewport).toHaveAttribute('data-chart-viewport', 'bounded');
+      expect(stableViewport).toHaveClass('min-w-0', 'max-w-full', 'overflow-hidden');
+      expect(stableViewport).not.toHaveClass('h-full');
+    },
+  );
+
+  it('renders the shared range/source/freshness/unit and sampling contract', () => {
+    renderChart(
+      // chart-a11y:no-table metadata fixture has no chart data
+      <ChartContainer
+        title="Telemetry"
+        ariaLabel="Telemetry chart"
+        metadata={{
+          rangeLabel: 'Last 24 hours · vehicle time',
+          sourceLabel: 'Fleet telemetry',
+          freshness: 'stale',
+          freshnessLabel: 'Updated 7 min ago',
+          unitLabel: 'km/h',
+          sampling: {
+            sourceCount: 1_000,
+            renderedCount: 250,
+            sampled: true,
+            strategy: 'stride',
+          },
+        }}
+      >
+        <div>chart</div>
+      </ChartContainer>,
+    );
+
+    const figure = screen.getByRole('figure', { name: 'Telemetry' });
+    expect(figure).toHaveAttribute('data-chart-state', 'ready');
+    expect(figure).toHaveAttribute('data-chart-freshness', 'stale');
+    expect(screen.getByText('Last 24 hours · vehicle time')).toBeInTheDocument();
+    expect(screen.getByText('Fleet telemetry')).toBeInTheDocument();
+    expect(screen.getByText('Updated 7 min ago')).toBeInTheDocument();
+    expect(screen.getByText('km/h')).toBeInTheDocument();
+    expect(screen.getByText(/Showing 250 of 1000 observations/)).toBeInTheDocument();
+    expect(screen.getByText(/Visual series is sampled: 250 of 1000/)).toBeInTheDocument();
+  });
 });

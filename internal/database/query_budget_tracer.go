@@ -16,11 +16,65 @@ package database
 
 import (
 	"context"
+	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/exaring/otelpgx"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"go.opentelemetry.io/otel/attribute"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+)
+
+const slowQueryThreshold = time.Second
+
+var (
+	repositoryQueryDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "query_duration_seconds",
+		Help:      "Duration of PostgreSQL queries observed through the shared pool.",
+		Buckets:   prometheus.DefBuckets,
+	}, []string{"operation", "status"})
+	repositorySlowQueries = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "slow_queries_total",
+		Help:      "PostgreSQL queries taking at least one second.",
+	}, []string{"operation"})
+	repositoryReturnedRows = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "returned_rows_total",
+		Help:      "Rows reported by PostgreSQL command tags where available.",
+	}, []string{"operation"})
+	databasePoolConnections = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "pool_connections",
+		Help:      "Current PostgreSQL pool connection counts by bounded state.",
+	}, []string{"state"})
+	databasePoolUtilization = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "pool_utilization_ratio",
+		Help:      "Fraction of configured PostgreSQL connections currently acquired.",
+	})
+	databasePoolEmptyAcquires = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "pool_empty_acquire_count",
+		Help:      "Cumulative PostgreSQL pool acquires that had to wait for a connection.",
+	})
+	databasePoolCanceledAcquires = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "pool_canceled_acquire_count",
+		Help:      "Cumulative PostgreSQL pool acquires canceled before a connection was obtained.",
+	})
 )
 
 // queryBudgetCounter is a per-request atomic counter installed at the
@@ -30,6 +84,12 @@ type queryBudgetCounter struct {
 }
 
 type queryBudgetCtxKey struct{}
+type queryMetricsCtxKey struct{}
+
+type queryMetrics struct {
+	operation string
+	startedAt time.Time
+}
 
 // AttachQueryBudgetCounter installs a fresh counter in ctx. Called by
 // the chi middleware. Safe to call when the http layer is bypassed
@@ -66,16 +126,70 @@ func (t *queryBudgetTracer) TraceQueryStart(ctx context.Context, conn *pgx.Conn,
 		c.count.Add(1)
 	}
 	if t.inner != nil {
-		return t.inner.TraceQueryStart(ctx, conn, data)
+		ctx = t.inner.TraceQueryStart(ctx, conn, data)
 	}
-	return ctx
+	return context.WithValue(ctx, queryMetricsCtxKey{}, queryMetrics{
+		operation: queryOperation(data.SQL),
+		startedAt: time.Now(),
+	})
 }
 
-// TraceQueryEnd forwards to the inner tracer.
+// TraceQueryEnd forwards to the inner tracer and records low-cardinality
+// repository metrics. Command-tag rows are the only portable row count pgx
+// exposes at this boundary, so the metric deliberately reports rows only
+// where PostgreSQL supplies them.
 func (t *queryBudgetTracer) TraceQueryEnd(ctx context.Context, conn *pgx.Conn, data pgx.TraceQueryEndData) {
+	if metric, ok := ctx.Value(queryMetricsCtxKey{}).(queryMetrics); ok {
+		duration := time.Since(metric.startedAt)
+		status := "success"
+		if data.Err != nil {
+			status = "error"
+		}
+		repositoryQueryDuration.WithLabelValues(metric.operation, status).Observe(duration.Seconds())
+		if duration >= slowQueryThreshold {
+			repositorySlowQueries.WithLabelValues(metric.operation).Inc()
+		}
+		if rows := data.CommandTag.RowsAffected(); rows > 0 {
+			repositoryReturnedRows.WithLabelValues(metric.operation).Add(float64(rows))
+		}
+	}
 	if t.inner != nil {
 		t.inner.TraceQueryEnd(ctx, conn, data)
 	}
+}
+
+func queryOperation(sql string) string {
+	fields := strings.Fields(strings.TrimSpace(sql))
+	if len(fields) == 0 {
+		return "other"
+	}
+	switch strings.ToLower(fields[0]) {
+	case "select", "insert", "update", "delete":
+		return strings.ToLower(fields[0])
+	default:
+		return "other"
+	}
+}
+
+// observePoolStats records pool pressure when a DB health or diagnostics
+// surface inspects the pool. Labels are a fixed vocabulary so connection
+// pressure is observable without attaching a tenant, route, or vehicle ID.
+func observePoolStats(s *pgxpool.Stat) {
+	if s == nil {
+		return
+	}
+	databasePoolConnections.WithLabelValues("total").Set(float64(s.TotalConns()))
+	databasePoolConnections.WithLabelValues("idle").Set(float64(s.IdleConns()))
+	databasePoolConnections.WithLabelValues("acquired").Set(float64(s.AcquiredConns()))
+	databasePoolConnections.WithLabelValues("max").Set(float64(s.MaxConns()))
+	databasePoolConnections.WithLabelValues("constructing").Set(float64(s.ConstructingConns()))
+	if max := s.MaxConns(); max > 0 {
+		databasePoolUtilization.Set(float64(s.AcquiredConns()) / float64(max))
+	} else {
+		databasePoolUtilization.Set(0)
+	}
+	databasePoolEmptyAcquires.Set(float64(s.EmptyAcquireCount()))
+	databasePoolCanceledAcquires.Set(float64(s.CanceledAcquireCount()))
 }
 
 // newCompositeTracer returns the otelpgx + queryBudget composite that

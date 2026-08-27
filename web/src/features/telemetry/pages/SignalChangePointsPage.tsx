@@ -233,7 +233,7 @@ export default function SignalChangePointsPage() {
                   <ReferenceLine key={time} x={time} stroke={chartTokens.series[3]} strokeDasharray="4 4" />
                 ))}
                 <Line type="monotone" dataKey="value" name={t('signalChangePoints.col.value', 'Value')} stroke={chartTokens.series[0]} strokeWidth={1.5} dot={false} />
-                <Line type="stepAfter" dataKey="level" name={t('signalChangePoints.col.level', 'Segment mean')} stroke={chartTokens.series[3]} strokeWidth={2} dot={false} connectNulls />
+                <Line type="stepAfter" dataKey="level" name={t('signalChangePoints.col.level', 'Segment mean')} stroke={chartTokens.series[3]} strokeWidth={2} dot={false} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>

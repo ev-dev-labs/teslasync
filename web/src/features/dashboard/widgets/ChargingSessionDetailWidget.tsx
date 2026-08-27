@@ -225,7 +225,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             fillOpacity={0.3}
             strokeWidth={1.5}
             name={t('widget.chargingSessionDetail.powerKw', 'Power (kW)')}
-            connectNulls
+            connectNulls={false}
             hide={hiddenSeries?.isHidden('power')}
           />
 
@@ -237,7 +237,7 @@ export default function ChargingSessionDetailWidget({ vehicleId, size }: WidgetP
             strokeDasharray="4 3"
             dot={false}
             name={t('widget.chargingSessionDetail.soc', 'SoC %')}
-            connectNulls
+            connectNulls={false}
             hide={hiddenSeries?.isHidden('soc')}
           />
             </ComposedChart>

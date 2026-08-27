@@ -588,8 +588,21 @@ describe('ChargingListPage — non-happy states', () => {
     await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
   });
 
-  it('keeps charging history visible when live departure state fails', async () => {
-    mockVehicleState.mockReturnValue(
+  it('keeps the retained session list when a BACKGROUND refetch fails', async () => {
+    // Data-trust contract: the full-bleed <QueryError> is reserved for an
+    // initial failure with nothing cached. A refetch that fails on top of a
+    // rendered list degrades to a non-blocking staleness notice instead.
+    mockSessions.mockReturnValue(
+      qr({ data: SESSIONS, error: new Error('boom'), isError: true }),
+    );
+    renderPage();
+
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
+  it('keeps charging history visible when live departure state fails', async () => {    mockVehicleState.mockReturnValue(
       qr({ isError: true, error: new Error('live state unavailable'), data: undefined }),
     );
     renderPage();

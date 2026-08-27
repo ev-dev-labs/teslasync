@@ -8,7 +8,7 @@
  */
 import { describe, expect, it, vi, beforeAll } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { SmallMultiplesChart } from '../SmallMultiplesChart';
+import { projectSmallMultipleSeries, SmallMultiplesChart } from '../SmallMultiplesChart';
 
 // jsdom has no ResizeObserver — recharts' ResponsiveContainer uses one
 // internally to track layout. Without the stub each cell crashes during
@@ -234,5 +234,79 @@ describe('SmallMultiplesChart', () => {
     // strideSample's "always keep first + last" contract documented in
     // the implementation, not by checking pixel output (jsdom can't).
     expect(screen.getByTestId('small-multiples-cell-dense')).toBeInTheDocument();
+  });
+
+  it('retains null gap markers through projection and downsampling', () => {
+    const rows = Array.from({ length: 80 }, (_, index) => ({
+      timestamp: `t${index}`,
+      speed: index % 10 === 0 && ![40, 50, 60].includes(index) ? index : null,
+    }));
+    const projection = projectSmallMultipleSeries(rows, 'speed', 'timestamp', 12);
+    expect(projection.hasData).toBe(true);
+    expect(projection.showDots).toBe(true);
+    expect(projection.rows).toContainEqual({ timestamp: 't40', speed: null });
+    expect(projection.rows[0]).toEqual({ timestamp: 't0', speed: 0 });
+    expect(projection.rows).toHaveLength(6);
+    expect(projection.rows).toContainEqual({ timestamp: 't70', speed: 70 });
+  });
+
+  it('keeps a realistic sparse union matrix tightly bounded without inventing outage gaps', () => {
+    const rows = Array.from({ length: 3_000 }, (_, index) => ({
+      timestamp: String(index).padStart(4, '0'),
+      speed: index % 12 === 0 ? index : null,
+    }));
+    const projection = projectSmallMultipleSeries(rows, 'speed', 'timestamp', 50);
+    expect(projection.rows.length).toBeLessThanOrEqual(50);
+    expect(projection.rows.every((row) => typeof row.speed === 'number')).toBe(true);
+    expect(projection.showDots).toBe(true);
+  });
+
+  it('uses source order for uneven numeric, ISO, and duplicate x values', () => {
+    const rows = [
+      { x: 100, iso: '2026-01-03T00:00:00Z', value: 1 },
+      { x: 2, iso: '2026-01-01T00:00:00Z', value: 2 },
+      { x: 2, iso: '2026-01-01T00:00:00Z', value: 3 },
+      { x: 50, iso: '2026-01-02T00:00:00Z', value: 4 },
+    ];
+    expect(projectSmallMultipleSeries(rows, 'value', 'x', 10).rows.map((row) => row.x))
+      .toEqual([100, 2, 2, 50]);
+    expect(projectSmallMultipleSeries(rows, 'value', 'iso', 10).rows.map((row) => row.iso))
+      .toEqual(rows.map((row) => row.iso));
+  });
+
+  it('uses lower-quartile cadence for bursts and avoids certainty with two samples', () => {
+    const burst = Array.from({ length: 201 }, (_, index) => ({
+      x: index,
+      value: [0, 1, 100, 101, 200].includes(index) ? index : null,
+    }));
+    const projected = projectSmallMultipleSeries(burst, 'value', 'x', 12);
+    expect(projected.rows.filter((row) => row.value == null)).toHaveLength(2);
+    const twoPoints = projectSmallMultipleSeries(
+      [{ x: 0, value: 1 }, { x: 100, value: 2 }],
+      'value',
+      'x',
+      12,
+    );
+    expect(twoPoints.rows).toEqual([{ x: 0, value: 1 }, { x: 100, value: 2 }]);
+  });
+
+  it('property-checks 80 deterministic histories (1–200 rows) for cap, order, and endpoints', () => {
+    for (let length = 1; length <= 200; length += 1) {
+      const rows = Array.from({ length }, (_, index) => ({
+        x: index % 7 === 0 ? index : index * 13,
+        value: index % 5 === 0 ? index : null,
+      }));
+      const cap = 2 + (length % 49);
+      const projection = projectSmallMultipleSeries(rows, 'value', 'x', cap);
+      expect(projection.rows.length).toBeLessThanOrEqual(cap);
+      const sourcePositions = projection.rows.map((row) =>
+        rows.findIndex((source) => source.x === row.x && (row.value == null || source.value === row.value)),
+      );
+      expect(sourcePositions).toEqual([...sourcePositions].sort((a, b) => a - b));
+      if (projection.hasData && rows.some((row) => row.value != null)) {
+        expect(projection.rows[0].value).toBe(0);
+        expect(projection.rows.at(-1)?.value).toBe((Math.floor((length - 1) / 5) * 5) || 0);
+      }
+    }
   });
 });

@@ -1,0 +1,185 @@
+{
+  "resaleVault": {
+    "audit": {
+      "emptyDescription": "Generate a key or sign a report to start the local audit trail.",
+      "emptyTitle": "No activity yet",
+      "loading": "Loading audit log…",
+      "refresh": "Refresh",
+      "subtitle": "A local, chronological record of key and report activity in this browser. Never embedded in a signed report or sent anywhere.",
+      "title": "Audit Trail"
+    },
+    "battery": {
+      "avgChargeLimit": "Average charge limit",
+      "capacity": "Current capacity",
+      "cold": "Cold",
+      "cycles": "Equivalent full cycles",
+      "empty": "No battery passport evidence in this report.",
+      "fastChargeRatio": "Fast-charge ratio",
+      "hot": "Hot",
+      "nominal": "Nominal",
+      "originalCapacity": "Original capacity",
+      "provenance": "Passport provenance hash",
+      "recommendations": "Recommendations",
+      "soh": "State of health",
+      "thermal": "Thermal exposure",
+      "title": "Battery Health"
+    },
+    "disclosure": {
+      "exactTimestamps": "Use exact timestamps",
+      "exactTimestampsHint": "Off by default — dates are truncated to the day.",
+      "exactTimestampsWarning": "Exact timestamps can make this report easier to correlate with other data sources. Consider day precision instead.",
+      "hardExclusions": "Always excluded, regardless of profile: {{list}}. These are never offered as a choice.",
+      "profileGroup": "Disclosure profile",
+      "sections": "Evidence sections",
+      "sectionsCustomHint": "Check every section this report should include.",
+      "sectionsFixedHint": "Fixed by the selected profile. Switch to Custom to edit individually.",
+      "subtitle": "Choose what this report includes. Nothing is shared until you export or copy it — this only changes what would be assembled.",
+      "title": "Disclosure Profile",
+      "vinHint": "Excluded by default. Even a masked VIN narrows down the vehicle.",
+      "vinLabel": "VIN disclosure",
+      "vinWarning": "Disclosing the VIN (even masked) is identifying information. Only include it if the recipient specifically needs it."
+    },
+    "evidence": {
+      "scopeNote": "This tab shows all evidence currently available for this vehicle, regardless of your disclosure selection. Use the Disclosure Profile tab to control what actually leaves your browser."
+    },
+    "export": {
+      "digest": "SHA-256 digest",
+      "download": "Download JSON",
+      "keyId": "Key ID",
+      "keyPersisted": "Signing key persisted",
+      "keyRevoked": "Signed with a revoked key",
+      "keySessionOnly": "Signing key session-only",
+      "sign": "Sign report",
+      "signedAt": "Signed at",
+      "subtitle": "Signing computes a SHA-256 digest of the report above and produces an ECDSA signature over it using your active local key.",
+      "title": "Export Signed Report"
+    },
+    "import": {
+      "badJson": "This file is not valid JSON.",
+      "badShape": "This file does not look like a signed vault report (missing report/digest/signature fields).",
+      "chooseFile": "Choose report file",
+      "digestMatches": "Digest matches",
+      "digestMismatch": "Digest mismatch",
+      "empty": "No report imported yet in this session.",
+      "invalid": "Some checks failed",
+      "keyId": "Key ID",
+      "knownKey": "Signed with a key known to this browser",
+      "knownRevoked": "Signed with a locally-known, revoked key",
+      "reportId": "Report ID",
+      "sigInvalid": "Signature invalid",
+      "sigValid": "Signature valid",
+      "subtitle": "Load a signed report JSON file (from this browser or another one) to independently check its digest and signature.",
+      "title": "Import & Verify a Report",
+      "valid": "All checks passed",
+      "verifying": "Verifying…"
+    },
+    "incidents": {
+      "acknowledged": "Acknowledged",
+      "count": "Events observed",
+      "earliest": "Earliest event",
+      "empty": "No security incident evidence in this report.",
+      "latest": "Latest event",
+      "title": "Security Incidents"
+    },
+    "intro": {
+      "body": "Nothing leaves your browser until you explicitly export it. The VIN, precise locations, coordinates, tokens, raw trip paths, and driver identity are never included unless you opt in (VIN) or are always excluded (everything else).",
+      "title": "Local-first, selectively disclosed"
+    },
+    "inventory": {
+      "dataFound": "Data found",
+      "excluded": "Excluded by profile",
+      "included": "Included",
+      "loading": "Loading…",
+      "noData": "No data",
+      "partialError": "One or more evidence sources failed to load. Affected sections are shown as unavailable rather than guessed.",
+      "subtitle": "What data is available for this vehicle, and whether the current disclosure profile would include it.",
+      "title": "Evidence Inventory"
+    },
+    "keys": {
+      "active": "Active",
+      "activeKey": "Active key",
+      "confirmRevoke": "Confirm revoke",
+      "created": "Created",
+      "empty": "No signing keys yet in this browser.",
+      "generate": "Generate new key",
+      "loading": "Loading key registry…",
+      "none": "none — generate one to sign reports",
+      "persisted": "Persisted (survives reload)",
+      "revoke": "Revoke",
+      "revoked": "Revoked",
+      "revokedAt": "Revoked at",
+      "rotate": "Rotate active key",
+      "rotatedFrom": "Rotated from",
+      "sessionOnly": "Session-only (lost on reload)",
+      "title": "Signature & Key Management"
+    },
+    "maintenance": {
+      "categories": "Categories",
+      "empty": "No maintenance or service evidence in this report.",
+      "recordCount": "Service records",
+      "records": "Service records",
+      "scheduledCount": "Scheduled items",
+      "scopeNote": "Maintenance data is read from an account-wide endpoint, not filtered per vehicle. If this account has more than one vehicle, some entries may not belong to this one.",
+      "title": "Maintenance & Service"
+    },
+    "page": {
+      "subtitle": "Build a selectively-disclosed, cryptographically signed vehicle-history report — entirely in this browser.",
+      "title": "Warranty & Resale Vault"
+    },
+    "preview": {
+      "coarsened": "Coarsened ({{count}})",
+      "empty": "Build a report to see exactly what would be included, excluded, and warned about.",
+      "hardExcluded": "Always excluded ({{count}})",
+      "includedWithWarning": "Included with warning",
+      "limitations": "Limitations",
+      "noneExcluded": "Every evidence section is included in this profile.",
+      "sectionExcluded": "Excluded by profile ({{count}})",
+      "timeBounds": "Evidence window: {{earliest}} → {{latest}} ({{precision}} precision).",
+      "title": "Privacy Preview"
+    },
+    "software": {
+      "count": "Updates observed",
+      "empty": "No software update evidence in this report.",
+      "latest": "Latest installed version",
+      "title": "Software Updates"
+    },
+    "tabs": {
+      "ariaLabel": "Warranty & Resale Vault sections",
+      "audit": "Audit Trail",
+      "disclosure": "Disclosure Profile",
+      "evidence": "Evidence",
+      "import": "Import & Verify",
+      "preview": "Preview & Sign"
+    },
+    "usage": {
+      "charging": "Charging",
+      "co2": "CO2 saved",
+      "cost": "Total cost",
+      "distance": "Total distance",
+      "drives": "Drives observed",
+      "driving": "Driving",
+      "duration": "Total duration",
+      "efficiency": "Avg. efficiency",
+      "empty": "No driving or charging history evidence in this report.",
+      "energyAdded": "Total energy added",
+      "fastCharge": "Fast-charge sessions",
+      "peakPower": "Avg. peak power",
+      "regen": "Regen ratio",
+      "scopeNote": "Reflects an observed window of recent records, not a guaranteed complete lifetime history.",
+      "score": "Driving score",
+      "sessions": "Sessions observed",
+      "title": "Driving & Charging History"
+    },
+    "vin": {
+      "excluded": "Excluded (recommended)",
+      "full": "Full VIN",
+      "masked": "Masked (prefix + last 4)"
+    },
+    "warranty": {
+      "empty": "No warranty evidence in this report.",
+      "fetchedAt": "Fetched at",
+      "scopeNote": "Warranty details are scoped to the vehicle selected for this report.",
+      "title": "Warranty"
+    }
+  }
+}

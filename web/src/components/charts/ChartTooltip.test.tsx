@@ -65,6 +65,39 @@ describe('ChartTooltipBase', () => {
     expect(screen.getByText(/2026/)).toBeInTheDocument()
   })
 
+  it('passes an explicit vehicle timezone and precision to shared formatters', () => {
+    render(
+      <ChartTooltipBase
+        active={true}
+        label="2026-04-30T13:30:15Z"
+        timezone="America/Los_Angeles"
+        precision={2}
+        payload={[{ name: 'speed', value: 65.678, unit: 'km/h' }]}
+      />,
+    )
+    expect(screen.getByText(/65\.68/)).toBeInTheDocument()
+    expect(screen.queryByText('2026-04-30T13:30:15Z')).toBeNull()
+  })
+
+  it('falls back to the browser zone when an IANA timezone is invalid', () => {
+    expect(() => render(
+      <ChartTooltipBase
+        active={true}
+        label="2026-04-30T13:30:15Z"
+        timezone="Mars/Olympus_Mons"
+        payload={[{ name: 'speed', value: 65 }]}
+      />,
+    )).not.toThrow()
+    expect(screen.queryByText('2026-04-30T13:30:15Z')).toBeNull()
+  })
+
+  it('leaves default number precision to the shared user formatting policy', () => {
+    render(
+      <ChartTooltipBase active={true} label="x" payload={[{ name: 'speed', value: 65.678 }]} />,
+    )
+    expect(screen.getByText('65.68')).toBeInTheDocument()
+  })
+
   it('honors custom valueFormatter', () => {
     render(
       <ChartTooltipBase
@@ -154,7 +187,8 @@ describe('ChartTooltipBase', () => {
         payload={[{ name: 'state', value: null }]}
       />,
     )
-    // No crash; renders empty value cell
+    // No crash; missingness remains explicit instead of becoming a fabricated zero.
     expect(container.querySelector('[role="tooltip"]')).not.toBeNull()
+    expect(screen.getByText('—')).toBeInTheDocument()
   })
 })

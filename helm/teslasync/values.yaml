@@ -86,6 +86,15 @@ securityContext:
     drop:
       - ALL
 
+# Init containers only probe dependency ports and require no writable
+# filesystem. Kept separate because their BusyBox image has no application UID.
+initSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
 # Pin api + workers (notification, export, automation, command-proxy) to carbon
 # so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
 # and Redis. Empty {} restores default Kubernetes scheduling.
@@ -138,7 +147,8 @@ web:
 
   securityContext:
     allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: false
+    # Nginx writes only to the three mounted emptyDir paths in deployment-web.
+    readOnlyRootFilesystem: true
     capabilities:
       drop:
         - ALL
@@ -466,6 +476,9 @@ serviceAccount:
 ingress:
   enabled: false
   className: ""
+  # Security annotations are emitted by the ingress template. They apply at
+  # the TLS boundary (not the HTTP web pod), and can be overridden here only
+  # when a nonstandard ingress controller requires different annotations.
   annotations: {}
   hosts:
     - host: teslasync.local
@@ -485,6 +498,10 @@ ingressRoute:
   enabled: false
   namespace: ""
   annotations: {}
+  # Adds a Traefik Middleware with the browser-security headers and HSTS.
+  # It is attached automatically to every chart-managed route.
+  securityHeaders:
+    enabled: true
   entryPoints:
     - websecure
   # SSE bypass route — auto-added before catch-all when a ForwardAuth provider is used.
@@ -545,7 +562,10 @@ config:
   browserApiBase: ""
 
   # -- Public-facing base URL for the web frontend.
-  # Used for CORS allowed origins. Leave empty to allow all origins.
+  # Used for CORS and CSRF trusted origins. When standard ingress TLS is
+  # enabled this chart derives https:// origins from ingress.tls hosts if this
+  # remains empty. Set it explicitly for non-443, split-origin, or Traefik
+  # IngressRoute TLS deployments.
   #
   # Examples:
   #   Public:   https://teslasync.cyphers.app
@@ -781,6 +801,19 @@ tesla:
 # ─────────────────────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
+  # timescaledb-ha runs as its postgres user; writable state is limited to
+  # the data PVC plus the explicit runtime emptyDir mounts.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
 
   # -- Connection pool tuning
   maxConns: 25
@@ -871,6 +904,17 @@ postgresql:
 # ─────────────────────────────────────────────────────────────────────────────
 redis:
   enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
   # -- Redis database number
   db: 0
 
@@ -911,6 +955,17 @@ redis:
 # ─────────────────────────────────────────────────────────────────────────────
 mqtt:
   enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1883
+    runAsGroup: 1883
+    fsGroup: 1883
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
   # -- MQTT client ID
   clientId: "teslasync"
   # -- MQTT topic prefix
@@ -1067,6 +1122,17 @@ mongodb:
 # ─────────────────────────────────────────────────────────────────────────────
 grafana:
   enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 472
+    runAsGroup: 472
+    fsGroup: 472
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
 
   image: grafana/grafana:10.4.0
 

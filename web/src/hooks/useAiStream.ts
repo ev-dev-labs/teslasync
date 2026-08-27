@@ -116,6 +116,38 @@ export interface UseAiStreamArgs {
    * convenience.
    */
   onEvent: (ev: AiStreamEvent) => void;
+
+  /**
+   * Identity of the entity/date/property scope this stream is
+   * grounded in — e.g. a vehicle id, a drive/session id, a report
+   * period, or a composite of several (`` `${vehicleId}:${weekStart}` ``).
+   * This is the canonical, reusable mechanism for keeping AI streams
+   * scope-safe across every property-driven surface (AI-01): pass a
+   * value that changes if and only if the underlying entity/date
+   * scope changes.
+   *
+   * When `scopeKey` changes between renders (compared with `===`),
+   * the hook:
+   *   1. Aborts any in-flight fetch for the OLD scope (same effect as
+   *      calling `cancel()`), so a slow response for vehicle A can
+   *      never land after the user has navigated to vehicle B.
+   *   2. Clears all completed output (`text`, `activity`, `usage`,
+   *      `finishReason`, `error`, `limit`) and returns `state` to
+   *      `'idle'`, so stale narrative/evidence from the previous
+   *      scope never renders alongside the new one.
+   *
+   * Omit `scopeKey` (or pass the same value across renders) to keep
+   * the historical behaviour of leaving output in place until the
+   * next `start()` call — this keeps the change backward compatible
+   * for callers with no entity/date scope (e.g. fleet-wide chat).
+   *
+   * Prefer this over remounting the component with a React `key`:
+   * `key`-remount is easy to forget on a new surface and only a
+   * lint rule can catch the omission after the fact, whereas
+   * `scopeKey` is enforced at the same call site as the request
+   * `body`, so the two rarely drift apart.
+   */
+  scopeKey?: string | number | null;
 }
 
 // AiLimitInfo is the structured rate-limit / cost-cap info parsed
@@ -203,7 +235,7 @@ const LINE_DELIM_RE = /\r?\n/;
  * controller.
  */
 export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
-  const { url, body, onEvent } = args;
+  const { url, body, onEvent, scopeKey } = args;
   const [state, setState] = useState<AiStreamState>('idle');
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -247,6 +279,41 @@ export function useAiStream(args: UseAiStreamArgs): UseAiStreamResult {
       }
     };
   }, []);
+
+  // AI-01: entity/date scope is part of stream identity. The first
+  // render just records the initial scopeKey — there is nothing to
+  // abort or clear yet. On every subsequent render where scopeKey
+  // differs from the previously observed value (e.g. the parent
+  // switched the active vehicle, drive, or reporting period), this
+  // effect aborts the in-flight fetch for the OLD scope and wipes
+  // every piece of completed output back to the idle baseline. That
+  // guarantees a slow response scoped to the old entity can never be
+  // attributed to the new one, and that no stale narrative/evidence
+  // lingers on screen after the scope changes.
+  const previousScopeKeyRef = useRef(scopeKey);
+  const scopeInitializedRef = useRef(false);
+  useEffect(() => {
+    if (!scopeInitializedRef.current) {
+      scopeInitializedRef.current = true;
+      previousScopeKeyRef.current = scopeKey;
+      return;
+    }
+    if (scopeKey === previousScopeKeyRef.current) return;
+    previousScopeKeyRef.current = scopeKey;
+
+    if (abortRef.current) {
+      abortRef.current.abort();
+      abortRef.current = null;
+    }
+    runningRef.current = false;
+    setState('idle');
+    setText('');
+    setError(null);
+    setLimit(null);
+    setActivity([]);
+    setUsage(null);
+    setFinishReason(null);
+  }, [scopeKey]);
 
   const start = useCallback(() => {
     if (runningRef.current) return;

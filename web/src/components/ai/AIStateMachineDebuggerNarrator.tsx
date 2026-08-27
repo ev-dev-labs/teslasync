@@ -160,6 +160,10 @@ function InnerSection({ vehicleId, fromUnix, toUnix }: InnerSectionProps) {
     url: '/ai/system/fsm/narrate',
     body,
     onEvent: noopStreamEvent,
+    // AI-01: vehicle + time-window scope is part of stream identity —
+    // changing either aborts an in-flight narration and clears the
+    // previous window's narrative before the new scope streams in.
+    scopeKey: haveScope ? `${vehicleId}:${fromUnix}:${toUnix}` : null,
   })
 
   return (

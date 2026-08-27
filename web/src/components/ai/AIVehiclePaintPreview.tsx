@@ -97,6 +97,10 @@ function InnerSection({ vehicleId, styleHint }: InnerSectionProps) {
     url: urlPath,
     body,
     onEvent: NO_OP,
+    // AI-01: vehicle + style-hint scope is part of stream identity —
+    // changing either aborts an in-flight draft and clears the
+    // previous scope's paint preview before the new scope streams in.
+    scopeKey: haveInputs ? `${numericVehicleId}:${styleHint ?? ''}` : null,
   })
   return (
     <AIFeatureCard

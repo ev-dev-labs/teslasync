@@ -39,6 +39,8 @@ describe('generateCarbonCertificate', () => {
   it('includes the vehicle name', () => {
     generateCarbonCertificate(baseData)
     expect(capturedHTML).toContain('Model Y')
+    expect(capturedHTML).toMatch(/<link rel="stylesheet" href="[^"]+\/print\.css">/)
+    expect(capturedHTML).not.toContain('<style>')
   })
 
   it('calculates CO2 saved correctly', () => {
@@ -72,6 +74,14 @@ describe('generateCarbonCertificate', () => {
   it('shows owner name when provided', () => {
     generateCarbonCertificate({ ...baseData, ownerName: 'Alice' })
     expect(capturedHTML).toContain('Alice')
+  })
+
+  it('HTML-escapes vehicle and owner names in the print document', () => {
+    generateCarbonCertificate({ ...baseData, vehicleName: '<img src=x>', ownerName: '<script>alert(1)</script>' })
+    expect(capturedHTML).not.toContain('<img src=x>')
+    expect(capturedHTML).not.toContain('<script>alert(1)</script>')
+    expect(capturedHTML).toContain('&lt;img src=x&gt;')
+    expect(capturedHTML).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
   })
 
   it('falls back to "TeslaSync User" when no owner name', () => {

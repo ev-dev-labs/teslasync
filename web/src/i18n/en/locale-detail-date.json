@@ -1,0 +1,35 @@
+{
+  "date": {
+    "preset": {
+      "label": "Quick date range",
+      "live": "Live",
+      "last24h": "Last 24 hours",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "last7": "Last 7 days",
+      "last30": "Last 30 days",
+      "last90": "Last 90 days",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "ytd": "Year to date",
+      "lastMonth": "Last month",
+      "last1y": "Last year",
+      "all": "All time"
+    },
+    "range": {
+      "start": "Start date",
+      "end": "End date",
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "trigger": "Date range",
+      "pickRange": "Custom range",
+      "selectStart": "Select start date",
+      "selectEnd": "Select end date",
+      "compare": "Compare to previous period",
+      "vsPrevious": "vs {{start}} – {{end}}",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "popoverLabel": "Date range picker"
+    }
+  }
+}

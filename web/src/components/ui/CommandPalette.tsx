@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Search, ArrowRight, Zap, ChevronLeft, Car, ArrowRightLeft,
@@ -25,6 +25,9 @@ import {
   type RecentEntry,
   type RecentPageKind,
 } from '@/lib/recentPages'
+import { getPinnedNavPaths, subscribeNavPins } from '@/lib/navPins'
+import { getRelatedRoutes, preserveWorkspaceScope } from '@/lib/contextNavigation'
+import { activateShellOverlayGuard } from '@/components/layout/shellFocusTrap'
 import { useGlobalSearch } from '@/api/hooks/useSearch'
 import { useAllSavedViews } from '@/api/hooks/useSavedViews'
 import { useAcknowledgeAlert, useAlerts, useReopenAlert } from '@/api/hooks/useAlerts'
@@ -174,6 +177,13 @@ export function addRecentCommand(entry: RecentCommandEntry) {
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/** Stable ids so the input can point at the highlighted row. */
+const PALETTE_LISTBOX_ID = 'command-palette-listbox'
+
+function paletteRowId(index: number): string {
+  return `command-palette-option-${index}`
+}
+
 function getIconForConfig(cfg: PaletteCommandConfig, def: CommandDef): React.ReactNode {
   const IconComp = cfg.useOffIcon && def.iconOff ? def.iconOff : def.icon
   return <IconComp className="h-4 w-4" />
@@ -225,6 +235,41 @@ function searchSectionLabel(type: SearchHitType, t: TFunction): string {
 
 const RECENT_PAGES_DISPLAY_LIMIT = MOST_USED_MAX_DISPLAY
 
+/**
+ * Delay before the search input takes focus on open.
+ *
+ * The panel mounts behind an entrance animation; focusing synchronously fights
+ * that transition and, on iOS Safari, can raise the keyboard before the panel
+ * has settled. Exported so tests can advance exactly this long instead of
+ * hard-coding the number.
+ */
+export const PALETTE_INPUT_FOCUS_DELAY_MS = 50
+
+/**
+ * `useLayoutEffect` on the client, `useEffect` on the server.
+ *
+ * We need commit-phase timing for the latest-callback ref, but React logs a
+ * warning when `useLayoutEffect` runs during server rendering (it is a no-op
+ * there). Selecting the hook by environment keeps commit-phase ordering in the
+ * browser without assuming an SSR pass never happens.
+ *
+ * TeslaSync ships client-only today — `main.tsx` uses `createRoot` (not
+ * `hydrateRoot`), the build is `tsc && vite build` with no SSR entry, and
+ * sibling shared components (`Popover`, `ContextMenu`) already call
+ * `useLayoutEffect` unguarded. This guard is therefore cheap insurance rather
+ * than a live requirement, and is deliberately NOT unit-tested: under jsdom
+ * `window` is defined, so a `renderToString` probe would exercise the client
+ * branch and only assert React's own warning behaviour.
+ */
+const useIsomorphicLayoutEffect =
+  typeof window !== 'undefined' ? useLayoutEffect : useEffect
+
+/**
+ * Cap for the "Related to this page" section. Contextual links are a nudge,
+ * not a second navigation tree — a long list would crowd out search results.
+ */
+const RELATED_ROUTES_DISPLAY_LIMIT = 4
+
 function recentPageIcon(kind: RecentPageKind): React.ReactNode {
   switch (kind) {
     case 'vehicle': return <Car className="h-4 w-4" />
@@ -267,7 +312,60 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
   const [recentVersion, setRecentVersion] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
+  // Latest-callback ref, same pattern as `<Modal>`'s `onCloseRef`.
+  //
+  // Production passes an inline arrow (`<CommandPaletteHost onOpen={() =>
+  // setSidebarOpen(false)} />` in Layout), so `onOpen` gets a fresh identity on
+  // EVERY Layout render — route changes, SSE alerts, live telemetry ticks,
+  // notification counts. Listing it in the focus effect's dependencies made
+  // that effect tear down and re-run while the palette was still open, which
+  // cancelled and rescheduled the 50 ms focus timer (deferring focus
+  // indefinitely under frequent renders), re-fired `onOpen`, and reset
+  // `query` / `mode` / `selectedIndex` — wiping whatever the user had typed.
+  //
+  // Reading the callback through a ref keeps the effect keyed on `open` alone,
+  // so it runs exactly once per false→true transition regardless of how often
+  // the parent re-renders.
+  //
+  // The ref is updated in the COMMIT phase, not during render. Concurrent
+  // React may start a render, abandon it, and render again with different
+  // props; a render-phase assignment would leave the ref holding a callback
+  // from a tree that was never committed. A layout effect runs only for
+  // committed work and, critically, runs BEFORE passive effects — so the
+  // focus effect below always reads the committed callback.
+  const onOpenRef = useRef(onOpen)
+  useIsomorphicLayoutEffect(() => {
+    onOpenRef.current = onOpen
+  })
+  // Element that had focus when the palette opened. Restored on close so
+  // keyboard users land back on the control they invoked the palette from
+  // instead of at the top of the document.
+  const returnFocusRef = useRef<HTMLElement | null>(null)
+  // Has `onOpen` already been announced for the CURRENT open epoch?
+  //
+  // Under `<StrictMode>` React deliberately replays effects (setup → cleanup →
+  // setup) on mount, and `<CommandPaletteHost>` mounts the palette with
+  // `initialOpen`, so the opening branch runs twice for a single user-visible
+  // open. The focus timer is safe to reschedule, but the callback is not
+  // idempotent from the parent's point of view. This flag survives the replay
+  // (a ref is not reset by an effect cleanup) and is cleared only by a
+  // committed close, so exactly one notification is delivered per open epoch.
+  const openNotifiedRef = useRef(false)
+  // Pending delayed input-focus timer + the intent it was scheduled under.
+  // Both are cleared the moment the palette stops wanting focus, so a timer
+  // that is already in flight cannot resurrect it. See the focus effect below.
+  const focusTimeoutRef = useRef<number | null>(null)
+  const focusIntentRef = useRef(false)
+  const clearPendingInputFocus = useCallback(() => {
+    if (focusTimeoutRef.current != null) {
+      window.clearTimeout(focusTimeoutRef.current)
+      focusTimeoutRef.current = null
+    }
+  }, [])
+  // Panel node — the focus-containment boundary for the `aria-modal` dialog.
+  const panelRef = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
+  const location = useLocation()
 
   const { data: vehicles } = useVehicles()
   const vehicleList = vehicles ?? []
@@ -309,9 +407,13 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     addRecentCommand({ kind: 'nav', path })
     recordCommandUse(path)
     bumpRecent()
-    navigate(path)
+    // Carry the canonical global scope (selected vehicle / analysis window)
+    // onto destinations that own those controls, so a palette jump does not
+    // silently reset the user's scope. Deep links and back/forward keep
+    // working because the scope lives in the URL either way.
+    navigate(preserveWorkspaceScope(path, location.search))
     close()
-  }, [navigate, close, bumpRecent])
+  }, [navigate, close, bumpRecent, location.search])
 
   const executeCommand = useCallback((command: string, vehicleId: number) => {
     commandMutation.mutate({ vehicleId, command })
@@ -413,6 +515,64 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
         })
     ),
   [go, t, isForwardAuth])
+
+  // ── Pinned destinations ───────────────────────────────────────────────────
+  //
+  // The sidebar's "Quick access" list, mirrored into the palette so a pinned
+  // page is reachable without leaving the keyboard. Backed by the same
+  // `lib/navPins` storage + change bus the sidebar writes to, so pinning from
+  // the sidebar updates an already-open palette. Pins that no longer resolve
+  // to a visible catalog entry (route removed, auth-gated in open mode) are
+  // silently dropped rather than rendering a dead row.
+  useEffect(() => subscribeNavPins(() => bumpRecent()), [bumpRecent])
+
+  const navItemByPath = useMemo(
+    () => new Map(navItems.map((item) => [item.id, item])),
+    [navItems],
+  )
+
+  const pinnedPageItems: PaletteItem[] = useMemo(() => {
+    if (query.trim()) return []
+    void recentVersion
+    const sectionLabel = t('palette.section.pinned', 'Pinned')
+    return getPinnedNavPaths()
+      .map((path) => navItemByPath.get(path))
+      .filter((item): item is PaletteItem => Boolean(item))
+      .map((item) => ({
+        ...item,
+        // Re-key so the canonical "Pages" row keeps its own React key.
+        id: `pinned-page-${item.id}`,
+        section: sectionLabel,
+        icon: <Bookmark className="h-4 w-4" />,
+        sublabel: item.id,
+      }))
+  }, [navItemByPath, query, recentVersion, t])
+
+  // ── Contextual destinations ───────────────────────────────────────────────
+  //
+  // "Where else can I go from here?" — derived strictly from the declared
+  // route hierarchy in `lib/routeMeta` (parent + siblings under the same
+  // parent). Nothing is invented: a route with no declared parent produces no
+  // rows at all, so the palette never shows speculative filler.
+  const relatedRouteItems: PaletteItem[] = useMemo(() => {
+    if (query.trim()) return []
+    const sectionLabel = t('palette.section.related', 'Related to this page')
+    return getRelatedRoutes(location.pathname, { limit: RELATED_ROUTES_DISPLAY_LIMIT }).map(
+      (route): PaletteItem => ({
+        id: `related-route-${route.path}`,
+        label: t(route.i18nKey, route.defaultLabel) as string,
+        sublabel:
+          route.relation === 'parent'
+            ? t('palette.related.parent', 'Back to section')
+            : t('palette.related.sibling', 'Same section'),
+        section: sectionLabel,
+        icon: <Compass className="h-4 w-4" />,
+        type: 'navigate' as const,
+        keywords: ['related', route.relation, route.path],
+        action: () => go(route.path),
+      }),
+    )
+  }, [go, location.pathname, query, t])
 
   const commandItems: PaletteItem[] = useMemo(() => {
     if (vehicleList.length === 0) return []
@@ -709,6 +869,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     () => [
       ...searchResultItems,
       ...mostUsedItems,
+      ...pinnedPageItems,
+      ...relatedRouteItems,
       ...recentPageItems,
       ...savedViewItems,
       ...contextualActionItems,
@@ -720,6 +882,8 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     [
       searchResultItems,
       mostUsedItems,
+      pinnedPageItems,
+      relatedRouteItems,
       recentPageItems,
       savedViewItems,
       contextualActionItems,
@@ -853,9 +1017,39 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     return () => window.removeEventListener('toggle-command-palette', handleToggle as EventListener)
   }, [])
 
-  // Focus input when opened; close sidebar on mobile
+  // Focus input when opened; close sidebar on mobile. On close, focus returns
+  // to whatever owned it before the palette took over (the header trigger, a
+  // page action, …) so keyboard and screen-reader users never lose their place.
+  //
+  // The input focus is DELAYED (the panel mounts behind an entrance
+  // animation), which opens a race: a user who hits Escape — or clicks the
+  // backdrop — within that window would get their trigger focus restored, and
+  // then the stale timer would yank focus straight back into a palette that is
+  // already closing. `AnimatePresence` keeps the panel (and the input) mounted
+  // through the exit transition, so `inputRef.current` is still a live,
+  // connected node at that point and the steal really does happen.
+  //
+  // Three guards close it: the timer id is stored and cleared by the effect
+  // cleanup (so a close, a re-open, or an unmount all cancel it), an intent
+  // flag is cleared on close, and the callback itself re-checks that the
+  // palette still wants focus and that the input is still connected.
+  //
+  // The `onOpen` notification is separately guarded by `openNotifiedRef` so a
+  // StrictMode effect replay (or any other repeated setup for the same open
+  // epoch) announces the open exactly once. Rescheduling the focus timer on
+  // replay is harmless; telling the parent twice is not.
   useEffect(() => {
+    clearPendingInputFocus()
+
     if (open) {
+      const active = document.activeElement
+      if (
+        active instanceof HTMLElement &&
+        active !== document.body &&
+        !active.closest('[data-role="command-palette"]')
+      ) {
+        returnFocusRef.current = active
+      }
       // First-open instrumentation marks the "try-command-palette"
       // onboarding-checklist task as complete the moment
       // the user discovers the palette. Idempotent — only writes the flag the
@@ -865,10 +1059,55 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       setSelectedIndex(0)
       setMode('search')
       setPendingCommand(null)
-      onOpen?.()
-      setTimeout(() => inputRef.current?.focus(), 50)
+      if (!openNotifiedRef.current) {
+        openNotifiedRef.current = true
+        onOpenRef.current?.()
+      }
+      focusIntentRef.current = true
+      focusTimeoutRef.current = window.setTimeout(() => {
+        focusTimeoutRef.current = null
+        if (!focusIntentRef.current) return
+        const input = inputRef.current
+        if (!input || !input.isConnected) return
+        input.focus()
+      }, PALETTE_INPUT_FOCUS_DELAY_MS)
+      return clearPendingInputFocus
     }
-  }, [open, onOpen])
+
+    // Committed close ends the epoch: the next open is a new one and must
+    // notify again.
+    openNotifiedRef.current = false
+    focusIntentRef.current = false
+    const target = returnFocusRef.current
+    returnFocusRef.current = null
+    if (target && target.isConnected) {
+      target.focus({ preventScroll: true })
+    }
+    return undefined
+    // Keyed on `open` (plus a stable clearer) ONLY — see `onOpenRef` above for
+    // why the callback must not be a dependency.
+  }, [open, clearPendingInputFocus])
+
+  // `aria-modal="true"` is only truthful when the rest of the page is actually
+  // unreachable. The palette is not portaled to <body>, so we lean on the
+  // shared shell guard: Tab / Shift+Tab wrap inside the panel, and every
+  // ancestor-sibling outside the overlay is marked inert + aria-hidden while
+  // it is open. The guard deliberately does NOT move or restore focus — the
+  // effect above owns both, so focus return happens exactly once.
+  //
+  // The backdrop shares `data-role="command-palette"` with the positioner and
+  // is exempted from inerting, otherwise `inert` would swallow the
+  // click-outside-to-close gesture.
+  useEffect(() => {
+    if (!open) return
+    const panel = panelRef.current
+    if (!panel) return
+    return activateShellOverlayGuard({
+      focusContainer: panel,
+      backgroundAnchor: panel,
+      isOwnRoot: (element) => element.getAttribute('data-role') === 'command-palette',
+    })
+  }, [open])
 
   // Keyboard nav within palette
   function handleInputKey(e: React.KeyboardEvent) {
@@ -883,6 +1122,12 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
       if (maxIndex >= 0) {
         setSelectedIndex(prev => Math.max(Math.min(prev, maxIndex) - 1, 0))
       }
+    } else if (e.key === 'Home' && maxIndex >= 0) {
+      e.preventDefault()
+      setSelectedIndex(0)
+    } else if (e.key === 'End' && maxIndex >= 0) {
+      e.preventDefault()
+      setSelectedIndex(maxIndex)
     } else if (e.key === 'Enter' && displayItems[effectiveSelectedIndex]) {
       e.preventDefault()
       displayItems[effectiveSelectedIndex].action()
@@ -958,9 +1203,22 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
           />
           <div
             data-command-palette-positioner
-            className="pointer-events-none fixed inset-x-0 top-[10%] z-[201] flex justify-center px-4 sm:top-[15%] xl:ps-[calc(var(--shell-sidebar-width)+1rem)]"
+            // Viewport-centered at EVERY width and zoom level. The palette
+            // deliberately does NOT offset by the sidebar width: that made the
+            // panel jump horizontally the moment the `xl` breakpoint flipped
+            // (browser zoom changes the CSS viewport, so zooming alone moved
+            // the panel). `inset-0` + `overflow-y-auto` also keeps the whole
+            // panel reachable at 200% zoom instead of clipping past the fold.
+            //
+            // Phase-45 / Prompt 04: NOT migrated to <Modal>. The palette is a
+            // keyboard-driven system overlay with its own combobox/listbox
+            // semantics and top-anchored geometry; <Modal> centres and traps
+            // differently. The backdrop above is the click-out surface.
+            // eslint-disable-next-line no-restricted-syntax
+            className="pointer-events-none fixed inset-0 z-[201] flex items-start justify-center overflow-y-auto px-4 py-[max(2rem,8vh)]"
           >
             <motion.div
+              ref={panelRef}
               initial={{ opacity: 0, scale: 0.95, y: -20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: -20 }}
@@ -969,9 +1227,14 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
               data-command-palette-panel
               className="pointer-events-auto w-full max-w-lg"
             >
-              <div className="overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-label={t('palette.dialogLabel', 'Command palette')}
+                className="flex max-h-[84vh] flex-col overflow-hidden rounded-2xl border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl"
+              >
               {/* Search input / contextual selection header */}
-              <div className="flex items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
+              <div className="flex shrink-0 items-center gap-3 border-b border-[var(--glass-border)] px-5 py-4">
                 {mode !== 'search' ? (
                   <>
                     <button
@@ -1016,6 +1279,15 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                     <div className="flex-1">
                       <Input
                         ref={inputRef}
+                        role="combobox"
+                        aria-expanded
+                        aria-controls={PALETTE_LISTBOX_ID}
+                        aria-autocomplete="list"
+                        aria-activedescendant={
+                          displayItems.length > 0
+                            ? paletteRowId(effectiveSelectedIndex)
+                            : undefined
+                        }
                         value={scopedTerm}
                         onChange={e => {
                           const next = e.target.value
@@ -1044,7 +1316,15 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
               </div>
 
               {/* Results */}
-              <div ref={listRef} className="max-h-80 overflow-y-auto py-2 px-2" onKeyDown={mode !== 'search' ? handleInputKey : undefined}>
+              <div
+                ref={listRef}
+                id={PALETTE_LISTBOX_ID}
+                role="listbox"
+                tabIndex={-1}
+                aria-label={t('palette.resultsLabel', 'Results')}
+                className="max-h-80 min-h-0 overflow-y-auto px-2 py-2"
+                onKeyDown={mode !== 'search' ? handleInputKey : undefined}
+              >
                 {displayItems.length === 0 ? (
                   <div className="py-8 text-center text-sm text-[var(--text-muted)]">
                     {mode === 'vehicle-select'
@@ -1065,7 +1345,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                   </div>
                 ) : (
                   groupedItems.map((group, groupIndex) => (
-                    <div key={`${group.section}-${groupIndex}`}>
+                    <div key={`${group.section}-${groupIndex}`} role="group" aria-label={group.section}>
                       <div className="px-4 pt-3 pb-1 text-2xs font-semibold uppercase tracking-wider text-[var(--text-secondary)]">
                         {group.section}
                       </div>
@@ -1075,7 +1355,18 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
                         return (
                           <button
                             key={item.id}
+                            id={paletteRowId(globalIndex)}
+                            role="option"
+                            type="button"
+                            // Options are NOT in the tab order: the ARIA
+                            // combobox pattern navigates them with Arrow keys
+                            // via `aria-activedescendant`. Keeping them
+                            // tabbable would also make Tab cycle through
+                            // dozens of rows inside the focus trap.
+                            tabIndex={-1}
                             data-palette-row={globalIndex}
+                            data-palette-selected={isSelected || undefined}
+                            aria-selected={isSelected}
                             aria-current={isSelected || undefined}
                             onClick={item.action}
                             onMouseEnter={() => setSelectedIndex(globalIndex)}
@@ -1141,7 +1432,7 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
               </div>
 
               {/* Footer */}
-              <div className="border-t border-[var(--glass-border)] px-5 py-3 text-2xs text-[var(--text-muted)]">
+              <div className="shrink-0 border-t border-[var(--glass-border)] px-5 py-3 text-2xs text-[var(--text-muted)]">
                 <div className="flex items-center gap-4 flex-wrap">
                   <span className="flex items-center gap-1">
                     <kbd className="rounded bg-[var(--surface-2)] px-1.5 py-0.5 font-mono">↑↓</kbd> {t('palette.navigate', 'Navigate')}

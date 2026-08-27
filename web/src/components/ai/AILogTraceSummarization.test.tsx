@@ -464,3 +464,93 @@ describe('AILogTraceSummarization — on-mode SSE wiring', () => {
     })
   })
 })
+
+// ── 5. AI-01 stream-identity scope (regression) ───────────────────────────
+//
+// LiveLogsPage recomputes { aiFromUnix, aiToUnix } from the LIVE event
+// buffer on every incoming log line (newest event time minus a fixed
+// 30-minute lookback — see LiveLogsPage.tsx). Keying useAiStream's
+// scopeKey on the window as well as the vehicle would therefore abort
+// an in-flight summarization, or wipe a just-completed one, on every
+// single live log event — the vehicle scope did not change, only the
+// window advanced. Only a real vehicle-scope change may abort/reset.
+describe('AILogTraceSummarization — AI-01 stream-identity scope (regression)', () => {
+  it('does NOT abort an in-flight stream as fromUnix/toUnix advance with live events (same vehicle scope)', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    let abortSignal: AbortSignal | undefined
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      abortSignal = init?.signal ?? undefined
+      return pendingStreamResponse()
+    }) as unknown as typeof globalThis.fetch
+
+    const { rerender } = render(
+      <AILogTraceSummarization fromUnix={FROM_UNIX} toUnix={TO_UNIX} vehicleId={42} />,
+    )
+    await clickSummarize()
+    await waitFor(() => expect(abortSignal).toBeDefined())
+    expect(abortSignal?.aborted).toBe(false)
+    expect(screen.getByTestId('ai-output-panel')).toBeInTheDocument()
+
+    // Simulate several live log events advancing the window while the
+    // vehicle scope stays the same — this must NOT abort the stream.
+    for (let i = 1; i <= 3; i += 1) {
+      rerender(
+        <AILogTraceSummarization
+          fromUnix={FROM_UNIX + i * 5}
+          toUnix={TO_UNIX + i * 5}
+          vehicleId={42}
+        />,
+      )
+    }
+
+    expect(abortSignal?.aborted).toBe(false)
+    expect(screen.getByTestId('ai-output-panel')).toBeInTheDocument()
+    // Still streaming — the button remains computed-disabled.
+    expect(screen.getByRole('button', { name: SUMMARIZE_NAME })).toBeDisabled()
+  })
+
+  it('does NOT clear a completed summary as fromUnix/toUnix advance with live events (same vehicle scope), but DOES clear when the vehicle scope changes', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+    const sseBody =
+      sseFrame('delta', { text: 'Summary for vehicle 42.' }) +
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 10, out: 5 } })
+    globalThis.fetch = vi.fn(async () =>
+      new Response(makeReadableStream([sseBody]), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      }),
+    ) as unknown as typeof globalThis.fetch
+
+    const { rerender } = render(
+      <AILogTraceSummarization fromUnix={FROM_UNIX} toUnix={TO_UNIX} vehicleId={42} />,
+    )
+    await clickSummarize()
+    await screen.findByText('Summary for vehicle 42.')
+
+    // Live events advance the window several times — the completed
+    // summary must survive every one of them because the vehicle
+    // scope has not changed.
+    for (let i = 1; i <= 3; i += 1) {
+      rerender(
+        <AILogTraceSummarization
+          fromUnix={FROM_UNIX + i * 5}
+          toUnix={TO_UNIX + i * 5}
+          vehicleId={42}
+        />,
+      )
+      expect(screen.getByText('Summary for vehicle 42.')).toBeInTheDocument()
+    }
+
+    // Now the user actually switches vehicles — a real scope change —
+    // and the stale summary must be cleared.
+    rerender(
+      <AILogTraceSummarization
+        fromUnix={FROM_UNIX + 20}
+        toUnix={TO_UNIX + 20}
+        vehicleId={7}
+      />,
+    )
+    expect(screen.queryByText('Summary for vehicle 42.')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+  })
+})

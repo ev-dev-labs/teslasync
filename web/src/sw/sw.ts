@@ -93,6 +93,23 @@ const cacheSuccessfulSameOriginAsset = {
 // visits instead of precaching the entire application during SW installation.
 // Redirected responses are rejected so a ForwardAuth login page can never be
 // cached under a JavaScript or stylesheet URL.
+//
+// Locale bundles are separate because visiting many translated pages should
+// not evict application, vendor, or route chunks from their cache budget.
+registerRoute(
+  ({ request, url }) =>
+    url.origin === self.location.origin
+    && request.destination === 'script'
+    && /\/assets\/locale-[^/]+\.js$/i.test(url.pathname),
+  new CacheFirst({
+    cacheName: 'i18n-locale-assets',
+    plugins: [
+      cacheSuccessfulSameOriginAsset,
+      new ExpirationPlugin({ maxEntries: 32, maxAgeSeconds: 60 * 60 * 24 * 90 }),
+    ],
+  }),
+)
+
 registerRoute(
   ({ request, url }) =>
     url.origin === self.location.origin

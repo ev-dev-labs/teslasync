@@ -22,8 +22,12 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.redis.podSecurityContext | nindent 8 }}
       containers:
         - name: redis
+          securityContext:
+            {{- toYaml .Values.redis.securityContext | nindent 12 }}
           image: {{ .Values.redis.image | quote }}
           {{- with .Values.redis.command }}
           command:
@@ -49,15 +53,15 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.redis.persistence.enabled }}
           volumeMounts:
             - name: redis-data
               mountPath: /data
-          {{- end }}
-      {{- if .Values.redis.persistence.enabled }}
       volumes:
         - name: redis-data
+        {{- if .Values.redis.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-redis-data
-      {{- end }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
 {{- end }}

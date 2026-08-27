@@ -22,8 +22,12 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.grafana.podSecurityContext | nindent 8 }}
       containers:
         - name: grafana
+          securityContext:
+            {{- toYaml .Values.grafana.securityContext | nindent 12 }}
           image: {{ .Values.grafana.image | quote }}
           ports:
             - name: http
@@ -66,10 +70,10 @@ spec:
             - name: grafana-dashboards
               mountPath: /var/lib/grafana/dashboards/slo
               readOnly: true
-          {{- if .Values.grafana.persistence.enabled }}
             - name: grafana-data
               mountPath: /var/lib/grafana
-          {{- end }}
+            - name: grafana-tmp
+              mountPath: /tmp
       volumes:
         - name: grafana-datasources
           configMap:
@@ -88,9 +92,13 @@ spec:
               - key: {{ base $path }}
                 path: {{ base $path }}
               {{- end }}
-      {{- if .Values.grafana.persistence.enabled }}
         - name: grafana-data
+        {{- if .Values.grafana.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-grafana-data
-      {{- end }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
+        - name: grafana-tmp
+          emptyDir: {}
 {{- end }}

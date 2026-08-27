@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Download, X } from 'lucide-react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from '@/components/motion'
 import { Button } from '@/components/ui/runtime'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { broadcast, subscribe } from '@/lib/broadcast'
 
 interface BeforeInstallPromptEvent extends Event {
@@ -45,6 +46,7 @@ function isStandaloneMode(): boolean {
 
 export default function InstallPrompt() {
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
   const [visible, setVisible] = useState(false)
 
@@ -116,10 +118,10 @@ export default function InstallPrompt() {
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ opacity: 0, y: 60 }}
+          initial={reduce ? false : { opacity: 0, y: 60 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: 60 }}
-          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
+          exit={reduce ? { opacity: 0 } : { opacity: 0, y: 60 }}
+          transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 30 }}
           className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9998] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[28rem]"
         >
           <div

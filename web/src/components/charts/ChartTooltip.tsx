@@ -46,6 +46,10 @@ export interface ChartTooltipProps {
     label: string | number | undefined,
     payload?: TooltipPayload[],
   ) => ReactNode
+  /** IANA timezone for ISO timestamp labels (defaults to the browser zone). */
+  timezone?: string
+  /** Fraction digits for the default numeric formatter (0–20, defaults to 1). */
+  precision?: number
 }
 
 /**
@@ -59,9 +63,20 @@ function isIsoTimestamp(value: unknown): value is string {
   return typeof value === 'string' && ISO_TS_RE.test(value)
 }
 
-function defaultLabelFormatter(label: string | number | undefined): ReactNode {
+function defaultLabelFormatter(
+  label: string | number | undefined,
+  timezone?: string,
+): ReactNode {
   if (label == null) return ''
-  if (isIsoTimestamp(label)) return formatDateTime(label)
+  if (isIsoTimestamp(label)) {
+    // Intl throws RangeError for an invalid IANA zone. Mirror dateFormat's
+    // invalid-zone convention: keep the timestamp usable in the browser zone.
+    try {
+      return formatDateTime(label, timezone ? { tz: timezone } : undefined)
+    } catch {
+      return formatDateTime(label)
+    }
+  }
   return String(label)
 }
 
@@ -69,9 +84,16 @@ function defaultValueFormatter(
   value: unknown,
   _name: string,
   unit: string | undefined,
+  precision: number | undefined,
 ): ReactNode {
   const formatted =
-    typeof value === 'number' ? fmtNumber(value) : String(value ?? '')
+    typeof value === 'number'
+      ? precision == null
+        ? fmtNumber(value)
+        : fmtNumber(value, Math.max(0, Math.min(20, precision)))
+      : value == null
+        ? '—'
+        : String(value)
   return (
     <>
       {formatted}
@@ -97,11 +119,13 @@ export function ChartTooltipBase({
   valueFormatter,
   formatter,
   labelFormatter,
+  timezone,
+  precision,
 }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   const displayLabel = labelFormatter
     ? labelFormatter(label, payload)
-    : defaultLabelFormatter(label)
+    : defaultLabelFormatter(label, timezone)
 
   return (
     <div
@@ -128,7 +152,7 @@ export function ChartTooltipBase({
             displayValue = formatted
           }
         } else {
-          displayValue = defaultValueFormatter(p.value, defaultName, p.unit)
+          displayValue = defaultValueFormatter(p.value, defaultName, p.unit, precision)
         }
 
         return (

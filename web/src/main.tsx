@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
-import { createQueryClient } from './api/queryClient'
+import { createQueryClient } from '@/api/queryClient'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { NavigationGuardProvider } from './components/feedback/NavigationGuardProvider'
@@ -16,7 +16,7 @@ import { SelectedVehicleProvider } from './store/selectedVehicle'
 import { OperationalModeProvider } from './hooks/useOperationalMode'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
 import App from './App'
-import { loadEnglishResources } from './i18n'
+import './i18n'
 import './index.css'
 
 // ── RUM bootstrap (Phase 44 / Prompt 0060) ────────────────────────────────────
@@ -151,21 +151,6 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
-
-// The English catalog is intentionally a post-render chunk. Shell labels
-// provide readable defaults while the full translation catalog hydrates in
-// parallel, keeping translation parsing off the critical first-paint path.
-const hydrateEnglishResources = () => {
-  void loadEnglishResources().catch((error: unknown) => {
-    console.error('[i18n] English translation catalog failed to load:', error)
-    reportFrontendError(error, 'promise')
-  })
-}
-if ('requestIdleCallback' in window) {
-  window.requestIdleCallback(hydrateEnglishResources, { timeout: 1_500 })
-} else {
-  globalThis.setTimeout(hydrateEnglishResources, 0)
-}
 
 // The splash is an inline no-FOUC surface, not a network loading gate. Dismiss
 // it after React has had two animation frames to commit and paint the shell;

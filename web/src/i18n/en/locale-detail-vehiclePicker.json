@@ -1,0 +1,7 @@
+{
+  "vehiclePicker": {
+    "aria": "Select vehicle",
+    "label": "Vehicle",
+    "fallbackName": "Vehicle {{id}}"
+  }
+}

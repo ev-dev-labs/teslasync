@@ -94,4 +94,44 @@ describe('exportAsJSON', () => {
     revokeUrl.mockRestore()
     createUrl.mockRestore()
   })
+
+  it('redacts sensitive values from local JSON exports', async () => {
+    let blob: Blob | undefined
+    const createUrl = vi.spyOn(URL, 'createObjectURL').mockImplementation((value) => {
+      blob = value as Blob
+      return 'blob:test'
+    })
+    const createElementSpy = vi.spyOn(document, 'createElement').mockReturnValue({
+      href: '',
+      download: '',
+      click: vi.fn(),
+    } as unknown as HTMLAnchorElement)
+    const appendSpy = vi.spyOn(document.body, 'appendChild').mockImplementation((node) => node)
+    const removeSpy = vi.spyOn(document.body, 'removeChild').mockImplementation((node) => node)
+    const revokeUrl = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => {})
+
+    exportAsJSON([{
+      vin: '5YJ3E1EA7JF000123',
+      email: 'owner@example.com',
+      name: 'Model 3',
+      savings: 'keep',
+      driving: 'keep',
+      moving: 'keep',
+    }], 'safe.json')
+
+    const exported = await blob?.text()
+    expect(exported).toContain('[REDACTED]')
+    expect(exported).not.toContain('5YJ3E1EA7JF000123')
+    expect(exported).not.toContain('owner@example.com')
+    expect(exported).toContain('Model 3')
+    expect(exported).toContain('"savings": "keep"')
+    expect(exported).toContain('"driving": "keep"')
+    expect(exported).toContain('"moving": "keep"')
+
+    createElementSpy.mockRestore()
+    appendSpy.mockRestore()
+    removeSpy.mockRestore()
+    revokeUrl.mockRestore()
+    createUrl.mockRestore()
+  })
 })

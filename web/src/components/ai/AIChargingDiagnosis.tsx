@@ -57,7 +57,15 @@ function InnerSection({ sessionId }: InnerSectionProps) {
     [validSessionId],
   )
   const body = useMemo(() => ({}), [])
-  const stream = useAiStream({ url, body, onEvent: noop })
+  const stream = useAiStream({
+    url,
+    body,
+    onEvent: noop,
+    // AI-01: session scope is part of stream identity — switching the
+    // charging session aborts any in-flight diagnosis and clears the
+    // previous session's narrative before the new scope streams in.
+    scopeKey: validSessionId,
+  })
   return (
     <AIFeatureCard
       title={t('charging.detail.aiDiagnosis.title', 'Charging diagnosis')}

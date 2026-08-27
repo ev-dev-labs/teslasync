@@ -1,0 +1,299 @@
+{
+  "shareCard": {
+    "title": "Share Card Studio",
+    "subtitle": "Compose a local, evidence-backed SVG without overstating selected-window coverage",
+    "states": {
+      "noVehicle": "Select a vehicle to load this selected-window evidence.",
+      "loadingLabel": "Loading Share Card evidence",
+      "paused": "The initial query is paused while the network is unavailable; no empty response is inferred.",
+      "error": "Selected-window drive evidence is unavailable.",
+      "retry": "Retry evidence query",
+      "pending": "Source availability has not resolved yet.",
+      "cachedError": "Cached evidence remains visible, but the refresh failed.",
+      "cachedPaused": "Cached evidence remains visible while its refresh is paused.",
+      "refreshing": "Cached evidence is visible while a refresh is in progress."
+    },
+    "units": {
+      "efficiency": "{{value}} Wh/{{unit}}",
+      "percent": "{{value}}%",
+      "energyDisplay": "{{value}} {{unit}}",
+      "distanceDisplay": "{{value}} {{unit}}"
+    },
+    "evidence": {
+      "aria": "Share Card KPI and evidence ledger",
+      "title": "KPI and evidence ledger",
+      "returned": "Returned rows",
+      "returnedHint": "Before runtime validation",
+      "eligible": "Eligible drives",
+      "eligibleHint": "Unique ID and in-window timestamp",
+      "distance": "Measured distance",
+      "duration": "Measured duration",
+      "energy": "Measured drive energy",
+      "activeDays": "Active vehicle days",
+      "supportRows": "{{count}} supporting rows",
+      "requestedDays": "{{value}} requested calendar days",
+      "validEmpty": "The drive endpoint returned a valid empty array for this selected window.",
+      "noEligible": "Rows were returned, but none passed identity and selected-window timestamp validation."
+    },
+    "source": {
+      "aria": "Share Card source query and scope ledger",
+      "title": "Source, query, and scope ledger",
+      "endpoint": "GET /drives",
+      "cached": "Cached",
+      "resolved": "Resolved",
+      "contract": "One request, vehicle_id scoped, limit {{limit}}; the API can return at most {{limit}} rows.",
+      "calendarScope": "Selected calendar scope",
+      "calendarRange": "{{start}} through {{end}} in {{timezone}}",
+      "apiWindow": "Half-open API window",
+      "apiBounds": "{{start}} ≤ start_ts < {{end}}",
+      "runtimeScope": "Runtime accounting",
+      "runtimeCounts": "{{returned}} returned · {{eligible}} eligible · {{rejected}} rejected"
+    },
+    "coverage": {
+      "aria": "Share Card coverage and cap disclosure",
+      "title": "Coverage and cap disclosure",
+      "capped": "Exactly {{rows}} rows were returned, so this is an observed capped sample. Older drives inside the requested range may be absent; full-range or lifetime coverage is not claimed.",
+      "returnedEvidence": "{{rows}} rows were returned as selected-window evidence. A sub-cap response is not a guarantee of complete lifetime or range coverage.",
+      "earliest": "Earliest evidence",
+      "latest": "Latest evidence",
+      "observedSpan": "Observed span",
+      "activeDays": "Active/requested days",
+      "dayRatio": "{{active}} / {{requested}}"
+    },
+    "style": {
+      "aria": "Share Card SVG style controls",
+      "title": "SVG style controls",
+      "help": "The deterministic 800 by 418 SVG is rendered locally. Theme colors are fixed into the exported file.",
+      "helpLabel": "More information about SVG style",
+      "theme": "Theme",
+      "midnight": "Midnight",
+      "aurora": "Aurora",
+      "ember": "Ember",
+      "pickTheme": "Use the {{name}} theme",
+      "note": "Metric values are converted from canonical SI only at this render and export boundary."
+    },
+    "preview": {
+      "aria": "Share Card preview and local SVG export",
+      "title": "Full preview and export",
+      "subtitle": "Accessible preview of the exact local SVG payload",
+      "download": "Download safe SVG",
+      "noEligible": "No eligible identity/time evidence supports a card preview.",
+      "empty": "No returned drives support a card preview for this selected window.",
+      "browseDrives": "Browse drives",
+      "alt": "Share card preview: {{title}}",
+      "scopeSummary": "{{subtitle}} · {{disclosure}} · {{footer}}"
+    },
+    "lines": {
+      "aria": "Share Card six-line content inventory",
+      "title": "Card content and line inventory",
+      "subtitle": "All six slots render deterministically. Missing measurements remain an em dash and are disclosed, never converted to zero.",
+      "distance": "Distance",
+      "driveCount": "Eligible drives",
+      "energy": "Drive energy",
+      "regen": "Regen recovered",
+      "longest": "Longest measured drive",
+      "topSpeed": "Top measured speed",
+      "slot": "Line {{slot}} · {{label}}",
+      "measured": "Measured",
+      "missing": "Missing",
+      "support": "{{count}} supporting rows"
+    },
+    "card": {
+      "title": "My Tesla · {{from}} – {{to}}",
+      "cappedSubtitle": "Observed capped sample · {{rows}} returned rows",
+      "returnedSubtitle": "Returned selected-window evidence · {{rows}} rows",
+      "missing": "Missing: {{metrics}}",
+      "cappedDisclosure": "Cap reached; full-range coverage not claimed{{missing}}",
+      "returnedDisclosure": "Returned evidence; completeness not guaranteed{{missing}}",
+      "cappedFooter": "TeslaSync · observed capped sample · not lifetime coverage",
+      "returnedFooter": "TeslaSync · returned selected-window evidence"
+    },
+    "monthly": {
+      "sectionAria": "Selected-window monthly trend section",
+      "title": "Monthly distance, energy, and count trend",
+      "subtitle": "Vehicle-timezone months across the selected calendar window; zero-count months remain visible.",
+      "cappedSubtitle": "Only months represented by returned evidence are shown; truncated months are unknown, never zero.",
+      "aria": "Monthly selected-window drive count, measured distance, and measured energy",
+      "description": "Distance and energy points are null when no eligible row measured that field.",
+      "month": "Month",
+      "distanceSeries": "Distance",
+      "energySeries": "Energy",
+      "countSeries": "Drive count",
+      "empty": "No eligible drives support a selected-window monthly trend."
+    },
+    "weekday": {
+      "sectionAria": "Vehicle-timezone weekday activity profile",
+      "title": "Weekday activity profile",
+      "subtitle": "Eligible drives are assigned to weekdays in the configured vehicle timezone.",
+      "aria": "Drive counts and measured distance by vehicle-local weekday",
+      "description": "A missing distance bar means distance coverage was absent, not zero.",
+      "day": "Weekday",
+      "countSeries": "Drive count",
+      "distanceSeries": "Distance",
+      "empty": "No eligible drives support a weekday activity profile.",
+      "sunday": "Sun",
+      "monday": "Mon",
+      "tuesday": "Tue",
+      "wednesday": "Wed",
+      "thursday": "Thu",
+      "friday": "Fri",
+      "saturday": "Sat"
+    },
+    "distanceBands": {
+      "under5": "Under {{max}}",
+      "5to20": "{{min}}–{{max}}",
+      "20to50": "{{min}}–{{max}}",
+      "50plus": "{{min}} and over"
+    },
+    "durationBands": {
+      "under15": "Under {{max}}",
+      "15to30": "{{min}}–{{max}}",
+      "30to60": "{{min}}–{{max}}",
+      "60plus": "{{min}} and over"
+    },
+    "distanceDistribution": {
+      "sectionAria": "Measured distance distribution",
+      "title": "Distance distribution",
+      "subtitle": "Fixed canonical-SI bands with thresholds converted to display units.",
+      "aria": "Eligible drive counts grouped into measured distance bands",
+      "description": "Rows without a valid nonnegative distance are excluded and reported in field coverage.",
+      "band": "Distance band",
+      "count": "Drive count",
+      "total": "Measured distance",
+      "empty": "No eligible row has a valid measured distance."
+    },
+    "durationDistribution": {
+      "sectionAria": "Measured duration distribution",
+      "title": "Duration distribution",
+      "subtitle": "Fixed canonical-second bands with explicit duration support.",
+      "aria": "Eligible drive counts grouped into measured duration bands",
+      "description": "Rows without a valid nonnegative duration are excluded and reported in field coverage.",
+      "band": "Duration band",
+      "count": "Drive count",
+      "total": "Measured duration",
+      "empty": "No eligible row has a valid measured duration."
+    },
+    "efficiency": {
+      "aria": "Efficiency regen and field coverage evidence",
+      "title": "Efficiency, regen, and field coverage",
+      "weighted": "Distance-weighted consumption",
+      "weightedHint": "{{count}} positive-distance energy rows",
+      "supportDistance": "Efficiency support distance",
+      "denominator": "Explicit denominator",
+      "regenEnergy": "Measured regen",
+      "regenRows": "{{count}} regen rows",
+      "regenShare": "Paired recovered share",
+      "pairedRows": "{{count}} paired energy/regen rows",
+      "distanceCoverage": "Distance",
+      "durationCoverage": "Duration",
+      "energyCoverage": "Energy",
+      "regenCoverage": "Regen",
+      "averageSpeedCoverage": "Average speed",
+      "maxSpeedCoverage": "Maximum speed",
+      "temperatureCoverage": "Temperature",
+      "routeCoverage": "Route labels",
+      "coverageCounts": "{{valid}} valid · {{missing}} missing"
+    },
+    "directory": {
+      "aria": "Privacy-aware representative drive directory",
+      "title": "Representative drive directory",
+      "privacy": "Ranked by measured distance. Exact addresses, route text, coordinates, and map geometry are never copied into this workspace or SVG.",
+      "rank": "Rank",
+      "rankValue": "#{{rank}}",
+      "day": "Vehicle-local day",
+      "distance": "Distance",
+      "duration": "Duration",
+      "energy": "Energy",
+      "efficiency": "Energy intensity",
+      "route": "Route labels",
+      "withheld": "Present · withheld",
+      "notRecorded": "Not recorded",
+      "empty": "No eligible drive can be ranked for this selected window."
+    },
+    "accounting": {
+      "aria": "Exact Share Card accounting identities",
+      "title": "Exact accounting identities",
+      "subtitle": "Count identities are exact. Floating SI distribution totals use a 0.000001-unit tolerance.",
+      "rows": "Terminal dispositions sum to returned rows",
+      "distanceCoverage": "Distance valid + missing equals eligible",
+      "durationCoverage": "Duration valid + missing equals eligible",
+      "energyCoverage": "Energy valid + missing equals eligible",
+      "regenCoverage": "Regen valid + missing equals eligible",
+      "avgSpeedCoverage": "Average speed valid + missing equals eligible",
+      "maxSpeedCoverage": "Maximum speed valid + missing equals eligible",
+      "temperatureCoverage": "Temperature valid + missing equals eligible",
+      "routeCoverage": "Route label valid + missing equals eligible",
+      "monthly": "Monthly counts sum to eligible drives",
+      "weekday": "Weekday counts sum to eligible drives",
+      "days": "Active-day counts sum to eligible drives",
+      "distanceSupport": "Distance-band counts equal distance support",
+      "durationSupport": "Duration-band counts equal duration support",
+      "distanceTotal": "Distance-band SI totals reconcile",
+      "durationTotal": "Duration-band SI totals reconcile",
+      "balances": "Balances",
+      "outside": "Outside tolerance",
+      "expected": "Expected",
+      "actual": "Actual",
+      "residual": "Residual / tolerance",
+      "residualValue": "{{residual}} / {{tolerance}}"
+    },
+    "method": {
+      "aria": "Share Card methodology privacy and export limits",
+      "title": "Methodology, privacy, and export limits",
+      "identity": "Rows are accepted only after record, positive-integer ID, duplicate-ID, timestamp, and half-open selected-window checks.",
+      "metrics": "Each metric has an independent valid/missing denominator. Measured zero remains valid; malformed or absent values remain unknown.",
+      "efficiency": "Consumption is distance-weighted only across rows with positive measured distance and nonnegative measured drive energy.",
+      "timezone": "Month, weekday, and active-day buckets use {{timezone}}; URL calendar labels remain distinct from RFC3339 query instants.",
+      "privacy": "The representative directory and SVG omit exact addresses, coordinates, paths, VINs, and vehicle location.",
+      "export": "The 800×418 SVG is deterministic, XML-escaped, generated locally, and downloaded through a delayed object-URL cleanup.",
+      "step": "Method {{number}}",
+      "capLimit": "The history cap was reached. Every export is labeled as an observed capped sample and must not be read as complete range or lifetime evidence.",
+      "returnedLimit": "Exports describe returned selected-window evidence only; they do not certify complete lifetime or range coverage."
+    }
+  },
+  "sharing": {
+    "trips": {
+      "title": "Share a trip",
+      "subtitle": "Pick a recent trip to share as a static link, postcard, or image.",
+      "recent": {
+        "heading": "Recent trips",
+        "empty": "No recent trips. Drive your vehicle to populate this list."
+      },
+      "row": {
+        "trip": "Trip",
+        "drives": "{{count}} drives"
+      },
+      "staticHint": {
+        "heading": "Static share cards",
+        "body": "Every drive in TeslaSync can be published as a static, redacted share card from the drive detail page. Open a drive, click \"Share\", and copy the public link — anyone with the link can view the static card, no AI required."
+      },
+      "selectVehicle": "Select vehicle",
+      "resource": "Trips",
+      "kpis": "Trip totals",
+      "kpi": {
+        "shareable": "Shareable trips",
+        "distance": "Total distance",
+        "energy": "Total energy",
+        "drives": "Total drives"
+      },
+      "preview": {
+        "heading": "Share preview",
+        "distance": "Distance",
+        "duration": "Duration",
+        "energy": "Energy",
+        "drives": "Drives",
+        "charges": "Charges",
+        "cost": "Cost",
+        "privacy": "Only this redacted summary is shared — never raw coordinates or addresses.",
+        "empty": "Select a trip above to preview what you’ll share."
+      }
+    },
+    "aiTripPostcard": {
+      "title": "Draft a Helix share-card image",
+      "description": "Ask Helix to draft a propose-only image prompt and preview spec for the selected trip's share card. Helix only sees the redacted trip context (distance, duration, drive count, vehicle name) — never raw coordinates or street addresses. The draft is never published automatically; review it here, then use the existing Share button on the trip to publish a static share card.",
+      "button": "Generate share card",
+      "badge": "Helix",
+      "noTripHint": "Pick a trip from the list above to enable Helix."
+    }
+  }
+}

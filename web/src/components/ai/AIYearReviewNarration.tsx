@@ -23,6 +23,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/analytics/year-in-review/narrate',
     body,
     onEvent: () => {},
+    // AI-01: vehicle + year scope is part of stream identity —
+    // changing either aborts an in-flight narration and clears the
+    // previous scope's recap before the new scope streams in.
+    scopeKey: vehicleId != null && vehicleId > 0 ? `${vehicleId}:${defaultYear}` : null,
   })
   // The handler-side parser (internal/api/aiyir/handler.go) rejects
   // vehicle_id <= 0 with a 400 before the LLM is ever invoked, so we

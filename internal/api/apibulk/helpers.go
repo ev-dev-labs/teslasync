@@ -40,14 +40,16 @@ type FailedID struct {
 }
 
 // OperationResult is the canonical response shape for bulk endpoints.
-// Exactly one of Deleted / Updated is populated to match the verb the
-// caller invoked; the omitted field is encoded as `omitempty` so the
-// response stays compact. Failed is always present (possibly empty)
-// so the frontend can render an unconditional "failed: N" badge.
+// Requested is the de-duplicated ID count actually processed. Exactly one of
+// Deleted / Updated is populated to match the verb the caller invoked; the
+// omitted field is encoded as `omitempty` so the response stays compact.
+// Failed is always present (possibly empty) so the frontend can render an
+// unconditional "failed: N" badge.
 type OperationResult struct {
-	Deleted *int64     `json:"deleted,omitempty"`
-	Updated *int64     `json:"updated,omitempty"`
-	Failed  []FailedID `json:"failed"`
+	Requested int64      `json:"requested"`
+	Deleted   *int64     `json:"deleted,omitempty"`
+	Updated   *int64     `json:"updated,omitempty"`
+	Failed    []FailedID `json:"failed"`
 }
 
 // Sentinel errors returned by DecodeIDsRequest / DecodeOpBody. Callers
@@ -140,6 +142,36 @@ func ComputeMissingIDs(requested, existing []int64) []FailedID {
 		missing = append(missing, FailedID{ID: id, Reason: "not_found"})
 	}
 	return missing
+}
+
+// ComputeDeleteFailures preserves deterministic request order while
+// distinguishing an ID that was absent during preflight from one that changed
+// between preflight and DELETE ... RETURNING. The latter is a retry-safe
+// conflict, not a misleading "not_found" response.
+func ComputeDeleteFailures(requested, existing, deleted []int64) []FailedID {
+	if len(requested) == 0 {
+		return []FailedID{}
+	}
+	existingSet := make(map[int64]struct{}, len(existing))
+	for _, id := range existing {
+		existingSet[id] = struct{}{}
+	}
+	deletedSet := make(map[int64]struct{}, len(deleted))
+	for _, id := range deleted {
+		deletedSet[id] = struct{}{}
+	}
+
+	failed := make([]FailedID, 0)
+	for _, id := range requested {
+		if _, found := existingSet[id]; !found {
+			failed = append(failed, FailedID{ID: id, Reason: "not_found"})
+			continue
+		}
+		if _, removed := deletedSet[id]; !removed {
+			failed = append(failed, FailedID{ID: id, Reason: "conflict"})
+		}
+	}
+	return failed
 }
 
 // WriteBadRequest maps the sentinel decode errors to a 400 response in

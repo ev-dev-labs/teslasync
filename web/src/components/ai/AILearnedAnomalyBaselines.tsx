@@ -46,6 +46,11 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/ml/anomaly-baselines/train',
     body,
     onEvent: NOOP_EVENT,
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight training run and clears the
+    // previous vehicle's baseline narrative before the new scope
+    // streams in.
+    scopeKey: vehicleId ?? null,
   })
 
   // canStart is a COMPUTED guard (never a literal true) so the on-mode

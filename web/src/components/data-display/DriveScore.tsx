@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from '@/components/motion'
 import { useTranslation } from 'react-i18next'
 import { GlassPanel } from '@/components/ui'
 import { useMotionPreference } from '@/hooks/useMotionPreference'

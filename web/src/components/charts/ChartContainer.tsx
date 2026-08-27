@@ -24,7 +24,12 @@ import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
 import { ChartExportMenu } from './ChartExportMenu';
 import { ChartHiddenSeriesProvider } from './ChartHiddenSeriesContext';
-import { resolveChartHeights, type ChartSize } from './chartSizing';
+import {
+  chartViewportStyle,
+  resolveChartHeights,
+  type ChartSize,
+} from './chartSizing';
+import type { ChartSamplingDisclosure } from './chartSampling';
 import {
   useChartAnnotationsAsData,
   useCreateAnnotation,
@@ -78,6 +83,12 @@ export interface ChartContainerProps {
   /** Optional decorative title icon. */
   icon?: React.ReactNode;
   subtitle?: string;
+  /**
+   * Presentation metadata shared by every chart frame. Values are already
+   * localized at the call site because this component cannot infer a
+   * vehicle timezone, display unit, or API freshness policy.
+   */
+  metadata?: ChartMetadata;
   loading?: boolean;
   empty?: boolean;
   /** Initial query failure. Cached-refresh failures should keep rendering data instead. */
@@ -185,6 +196,21 @@ export interface ChartContainerProps {
   chartKey?: string;
 }
 
+export interface ChartMetadata {
+  /** Human-readable time window, for example "Apr 1–30 · vehicle time". */
+  rangeLabel?: string;
+  /** Human-readable source, for example "Fleet telemetry". */
+  sourceLabel?: string;
+  /** Human-readable freshness, for example "Updated 2 min ago". */
+  freshnessLabel?: string;
+  /** Semantic freshness state for styling/audits without parsing prose. */
+  freshness?: 'fresh' | 'stale' | 'unknown';
+  /** Display-unit label used by the visible axes/tooltips. */
+  unitLabel?: string;
+  /** Honest disclosure for a rendering-only downsampled series. */
+  sampling?: ChartSamplingDisclosure;
+}
+
 /**
  * Row shape accepted by the fallback
  * `<table>`. Keys must match the `key`s declared in `dataColumns`.
@@ -244,6 +270,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       variant = 'panel',
       icon,
       subtitle,
+      metadata,
       loading,
       empty,
       error,
@@ -280,10 +307,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // implementation detail of the export hook.
     const figureRef = useRef<HTMLElement | null>(null);
     const resolvedHeights = resolveChartHeights(size, height, mobileHeight);
-    const chartHeightStyle = {
-      '--chart-height-mobile': `${resolvedHeights.mobile}px`,
-      '--chart-height-desktop': `${resolvedHeights.desktop}px`,
-    } as CSSProperties;
+    const chartHeightStyle = chartViewportStyle(resolvedHeights) as CSSProperties;
 
     // Stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
@@ -415,6 +439,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         data-chart-key={chartKey}
         data-chart-variant={variant}
         data-chart-fluid={fluid || undefined}
+        data-chart-state={loading ? 'loading' : error ? 'error' : empty ? 'empty' : 'ready'}
+        data-chart-freshness={metadata?.freshness}
         className={cn(
           // Chart frames are panels too: resolve them from the same panel
           // surface contract as GlassPanel and Card (index.css → PANEL
@@ -475,6 +501,21 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               </Heading>
               {subtitle && (
                 <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
+              )}
+              {(metadata?.rangeLabel || metadata?.sourceLabel || metadata?.freshnessLabel || metadata?.unitLabel) && (
+                <Text
+                  as="p"
+                  variant="caption"
+                  className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5"
+                  data-chart-metadata
+                >
+                  {metadata.rangeLabel && <span data-chart-range>{metadata.rangeLabel}</span>}
+                  {metadata.sourceLabel && <span data-chart-source>{metadata.sourceLabel}</span>}
+                  {metadata.freshnessLabel && (
+                    <span data-chart-freshness-label>{metadata.freshnessLabel}</span>
+                  )}
+                  {metadata.unitLabel && <span data-chart-unit>{metadata.unitLabel}</span>}
+                </Text>
               )}
             </div>
           </div>
@@ -561,6 +602,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
         <div
           style={chartHeightStyle}
+          data-chart-viewport="bounded"
           className={cn(
             // Recharts' ResponsiveContainer measures this viewport. Width,
             // overflow, and size containment ensure the measured child can
@@ -630,6 +672,19 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           )}
         </div>
 
+        {metadata?.sampling?.sampled && (
+          <Text as="p" variant="caption" className="mt-2" data-chart-sampling>
+            {t(
+              'chart.sampling.disclosure',
+              'Showing {{rendered}} of {{source}} observations for display.',
+              {
+                rendered: metadata.sampling.renderedCount,
+                source: metadata.sampling.sourceCount,
+              },
+            )}
+          </Text>
+        )}
+
         {/*
           Accessible chart fallback.
 
@@ -658,6 +713,18 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           {ariaDescription && (
             <p className="forced-colors:mb-2 forced-colors:text-[CanvasText]">
               {ariaDescription}
+            </p>
+          )}
+          {metadata?.sampling?.sampled && (
+            <p>
+              {t(
+                'chart.sampling.a11yDisclosure',
+                'Visual series is sampled: {{rendered}} of {{source}} observations are rendered.',
+                {
+                  rendered: metadata.sampling.renderedCount,
+                  source: metadata.sampling.sourceCount,
+                },
+              )}
             </p>
           )}
           {hasFallbackTable ? (

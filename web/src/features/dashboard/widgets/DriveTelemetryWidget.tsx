@@ -203,7 +203,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
               fillOpacity={0.15}
               name={t('widget.driveTelemetry.elevation', 'Elevation')}
               isAnimationActive={false}
-              connectNulls
+              connectNulls={false}
               hide={hiddenSeries?.isHidden('elevation')}
             />
           )}
@@ -217,7 +217,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             fillOpacity={0.3}
             strokeWidth={1.5}
             name={t('widget.driveTelemetry.power', 'Power (kW)')}
-            connectNulls
+            connectNulls={false}
             hide={hiddenSeries?.isHidden('power')}
           />
 
@@ -229,7 +229,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             strokeWidth={2}
             dot={false}
             name={`${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`}
-            connectNulls
+            connectNulls={false}
             hide={hiddenSeries?.isHidden('speed')}
           />
 
@@ -242,7 +242,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             strokeDasharray="4 3"
             dot={false}
             name={t('widget.driveTelemetry.battery', 'Battery %')}
-            connectNulls
+            connectNulls={false}
             hide={hiddenSeries?.isHidden('battery')}
           />
             </ComposedChart>

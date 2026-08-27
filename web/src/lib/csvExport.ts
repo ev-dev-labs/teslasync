@@ -39,6 +39,13 @@ export function escapeCell(value: CsvCellValue): string {
     }
   }
 
+  // Formula-looking strings are active content in spreadsheet applications.
+  // Prefixing an apostrophe preserves the literal while preventing CSV
+  // injection when an operator opens an exported support file in Excel.
+  if (typeof value === 'string' && /^[\t\r\n ]*[=+\-@]/.test(str)) {
+    str = `'${str}`;
+  }
+
   // Quote if the field contains characters that would break naive parsers.
   // Also quote leading/trailing whitespace which Excel otherwise trims.
   if (/[",\r\n]/.test(str) || str !== str.trim()) {

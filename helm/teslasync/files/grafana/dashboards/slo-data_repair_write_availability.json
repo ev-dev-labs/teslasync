@@ -1,7 +1,7 @@
 {
   "uid": "slo-data_repair_write_availability",
   "title": "SLO: data_repair_write_availability",
-  "description": "Confirmation-gated data-repair mutations must avoid server errors; expected validation conflicts remain valid outcomes.",
+  "description": "Confirmation-gated session repair, case metadata, quarantine, and restore mutations must avoid server errors; expected validation conflicts remain valid outcomes.",
   "tags": [
     "slo",
     "owner:platform",

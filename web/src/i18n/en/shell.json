@@ -1,0 +1,1193 @@
+{
+  "a11y": {
+    "breadcrumb": "Breadcrumb",
+    "breadcrumbHome": "Dashboard",
+    "dataFreshness": "Data freshness: {{state}}",
+    "helpFor": "Help for {{field}}",
+    "loading": "Loading",
+    "pagination": "Pagination",
+    "primaryHeader": "Site header",
+    "primaryNav": "Primary",
+    "skipToContent": "Skip to main content"
+  },
+  "achievements": {
+    "dismiss": "Dismiss achievement notification",
+    "toastEyebrow": "Achievement Unlocked",
+    "view": "View"
+  },
+  "alerts": {
+    "ack": {
+      "success": "Alert acknowledged",
+      "undo": "Undo"
+    },
+    "tabFlash": "(!) ALERT — ",
+    "toast": {
+      "title": "Alert",
+      "view": "View"
+    }
+  },
+  "app": {
+    "newVersion": {
+      "later": "Later",
+      "message": "A new version of TeslaSync is available.",
+      "reload": "Reload"
+    }
+  },
+  "browserNotifications": {},
+  "carAnimation": {
+    "charging": "Charging",
+    "loading": "Loading",
+    "tesla": "Tesla vehicle illustration"
+  },
+  "changelog": {
+    "modal": {
+      "gotIt": "Got it",
+      "subtitleFirstVisit": "Welcome! Here's a quick tour of what TeslaSync ships with right now.",
+      "subtitleSinceLastVisit": "{{count}} new release(s) since your last visit.",
+      "title": "What's new in TeslaSync",
+      "viewFull": "View full changelog"
+    },
+    "openModal": "What's new",
+    "unseenAria": "unseen changelog",
+    "unseenHint": "{{count}} new release(s)"
+  },
+  "combobox": {
+    "clearAria": "Clear selection",
+    "closeListAria": "Hide options",
+    "loading": "Loading",
+    "maxReached": "Maximum reached",
+    "moreHidden": "{{count}} more — refine search",
+    "noResults": "No results",
+    "openListAria": "Show options",
+    "removeChip": "Remove {{label}}",
+    "removedChip": "Removed {{label}}",
+    "resultsCount": "{{count}} results",
+    "resultsCountOne": "1 result"
+  },
+  "commands": {
+    "toast": {
+      "error": "Command failed: {{message}}",
+      "failed": "Command failed",
+      "success": "Command sent successfully"
+    }
+  },
+  "common": {
+    "actions": "Actions",
+    "clear": "Clear",
+    "close": "Close",
+    "copyButton": {
+      "copied": "Copied",
+      "copy": "Copy",
+      "errorToast": "Failed to copy",
+      "successToast": "Copied to clipboard"
+    },
+    "copyLink": {
+      "action": "Copy link",
+      "copied": "Copied",
+      "error": "Could not copy link",
+      "label": "Copy link to this view",
+      "success": "Link copied to clipboard"
+    },
+    "dismiss": "Dismiss",
+    "fullscreen": {
+      "enter": "Enter fullscreen",
+      "exit": "Exit fullscreen"
+    },
+    "learnMore": "Learn more",
+    "loading": "Loading...",
+    "printButton": {
+      "print": "Print"
+    },
+    "refresh": "Refresh"
+  },
+  "compat": {
+    "banner": {
+      "body": "TeslaSync needs {{features}} to work correctly. {{recommendation}}",
+      "title": "Your browser is missing required features"
+    }
+  },
+  "confirm": {
+    "silence": {
+      "checkbox": "Don't ask again for this action"
+    }
+  },
+  "consent": {
+    "banner": {
+      "accept": "Accept all",
+      "body": "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.",
+      "decline": "Decline non-essential",
+      "hideDetails": "Hide details",
+      "manage": "Manage preferences",
+      "title": "Cookies & analytics"
+    },
+    "category": {
+      "alwaysOn": "Always on",
+      "analytics": {
+        "body": "Anonymous Core Web Vitals (page-load timings) and uncaught error reports sent to this TeslaSync instance to help operators diagnose issues. No third parties involved.",
+        "title": "Performance & error reporting"
+      },
+      "essential": {
+        "body": "Authentication, session, theme, and saved drafts. Required for the app to work and exempt from consent under the ePrivacy directive.",
+        "title": "Strictly necessary"
+      }
+    }
+  },
+  "contextMenu": {
+    "menuLabel": "Context menu"
+  },
+  "dataSources": {
+    "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
+    "retry": "Retry unavailable sources",
+    "staleMessage": "Previously loaded data remains visible while affected sources recover.",
+    "status": {
+      "failed": "Failed",
+      "loading": "Loading",
+      "paused": "Paused offline",
+      "pending": "Pending",
+      "ready": "Ready",
+      "refreshFailed": "Cached · refresh failed",
+      "refreshing": "Refreshing"
+    },
+    "unavailableMessage": "No requested source has returned usable data yet."
+  },
+  "dataState": {
+    "stale": {
+      "message": "The latest values are temporarily unavailable. Previously loaded data remains visible.",
+      "title": "Data may be stale"
+    }
+  },
+  "date": {
+    "preset": {
+      "all": "All time",
+      "label": "Quick date range",
+      "last1y": "Last year",
+      "last24h": "Last 24 hours",
+      "last30": "Last 30 days",
+      "last7": "Last 7 days",
+      "last90": "Last 90 days",
+      "lastMonth": "Last month",
+      "live": "Live",
+      "mtd": "Month to date",
+      "qtd": "Quarter to date",
+      "today": "Today",
+      "yesterday": "Yesterday",
+      "ytd": "Year to date"
+    },
+    "range": {
+      "apply": "Apply",
+      "cancel": "Cancel",
+      "compare": "Compare to previous period",
+      "end": "End date",
+      "pickRange": "Custom range",
+      "popoverLabel": "Date range picker",
+      "start": "Start date",
+      "summaryDays_one": "{{count}} day",
+      "summaryDays_other": "{{count}} days",
+      "trigger": "Date range"
+    }
+  },
+  "density": {
+    "comfortable": "Comfortable",
+    "compact": "Compact",
+    "spacious": "Spacious"
+  },
+  "draft": {
+    "discardDraft": "Discard draft",
+    "recovery": {
+      "close": "Close",
+      "discard": "Discard",
+      "dismiss": "Dismiss",
+      "empty": "No drafts to restore.",
+      "fallbackLabel": "Unsaved draft",
+      "modalBody": "These drafts were saved in your browser before this session. Resume to continue editing or discard to clear them.",
+      "modalTitle": "Restore unsaved drafts",
+      "promptBody": "You have {{count}} unsaved drafts from a previous session.",
+      "promptBody_one": "You have {{count}} unsaved draft from a previous session.",
+      "promptBody_other": "You have {{count}} unsaved drafts from a previous session.",
+      "promptTitle": "Unsaved drafts restored",
+      "resume": "Resume",
+      "review": "Review",
+      "savedAt": "Saved {{when}}"
+    },
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "unknownTime": "a moment ago",
+    "useDraft": "Use draft"
+  },
+  "editConflict": {
+    "banner": {
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "takeOver": "Take over editing",
+      "title": "Another browser tab is editing this"
+    }
+  },
+  "editableText": {
+    "announce": {
+      "saved": "{{label}} saved"
+    },
+    "error": {
+      "empty": "Value cannot be empty",
+      "saveFailed": "Save failed"
+    },
+    "saving": "Saving…"
+  },
+  "error": {
+    "network": {
+      "message": "Check your internet connection and try again.",
+      "offlineDetail": "We'll retry automatically when your connection returns.",
+      "offlineTitle": "You're offline",
+      "retryWhenOnline": "Retry when online",
+      "title": "Can't reach server"
+    },
+    "notFound": {
+      "cta": "Back to list",
+      "message": "It may have been deleted or the link is wrong.",
+      "thingDefault": "Resource",
+      "title": "{{thing}} not found"
+    },
+    "retry": "Retry",
+    "serverError": {
+      "message": "Something went wrong on our end. Please try again.",
+      "title": "Server error"
+    },
+    "unauthorized": {
+      "cta": "Sign in",
+      "message": "Your session has expired. Please sign in again.",
+      "title": "Sign in required"
+    },
+    "waiting": {
+      "message": "We're pausing requests briefly. Data will refresh automatically.",
+      "title": "Waiting for upstream"
+    }
+  },
+  "errors": {
+    "section": {
+      "subtitle": "Other parts of the page should still work.",
+      "tableTitle": "This table failed to render"
+    }
+  },
+  "export": {
+    "jobDrawer": {
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activeEmpty": "No active exports",
+      "activeHeading": "In progress",
+      "activePill": "{{count}} active",
+      "close": "Dismiss",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download",
+      "expand": "Show export jobs ({{count}} active)",
+      "label": "Export job progress",
+      "loading": "Loading export jobs…",
+      "minimize": "Minimize",
+      "recentEmpty": "No recent exports",
+      "recentHeading": "Recent",
+      "recentLabel": "Exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "title": "Export jobs"
+    },
+    "status": {
+      "expired": "Expired",
+      "failed": "Failed",
+      "processing": "Processing",
+      "queued": "Queued",
+      "ready": "Ready"
+    },
+    "types": {
+      "account": "Account export",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "charging": "Charging",
+      "drives": "Drives",
+      "importCharging": "Import charging",
+      "importDrives": "Import drives"
+    }
+  },
+  "feedback": {},
+  "filters": {
+    "activeLabel": "Active filters",
+    "clearAll": "Clear all",
+    "clearedAll": "All filters cleared",
+    "moreCount": "+{{count}} more",
+    "moreLabel": "Additional active filters",
+    "removeAria": "Remove filter {{label}}",
+    "removed": "Filter removed"
+  },
+  "form": {
+    "required": "required"
+  },
+  "forms": {
+    "discard": "Discard changes",
+    "keepEditing": "Keep editing",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedWarning": "You have unsaved changes. Discard them?"
+  },
+  "freshness": {
+    "ariaLabel": "{{status}} · {{age}}",
+    "days": "{{d}}d ago",
+    "error": "error",
+    "hours": "{{h}}h ago",
+    "justNow": "just now",
+    "lastUpdated": "Last updated: {{time}}",
+    "minutes": "{{m}}m ago",
+    "neverUpdated": "Never updated",
+    "refreshState": "Refresh data · {{state}}",
+    "source": "Source: {{source}}",
+    "staleWithAge": "Stale · {{age}}",
+    "updating": "updating…",
+    "updatingTooltip": "Updating…",
+    "weeks": "{{w}}w ago"
+  },
+  "fsm": {
+    "rangeOption": {
+      "all": "All time",
+      "d30": "Last 30 days",
+      "d7": "Last 7 days",
+      "d90": "Last 90 days",
+      "h1": "Last 1 hour",
+      "h24": "Last 24 hours",
+      "h6": "Last 6 hours"
+    },
+    "typeOption": {
+      "all": "All FSMs",
+      "telemetryConnection": "Telemetry Connection",
+      "vehicle": "Vehicle"
+    }
+  },
+  "global": {
+    "loading": "Loading"
+  },
+  "help": {
+    "feedback": "Open feedback / bug report form",
+    "feedbackLabel": "Report a problem",
+    "shortcuts": "Open keyboard shortcuts",
+    "shortcutsLabel": "Keyboard shortcuts",
+    "tooltip": {
+      "iconLabel": "More info"
+    },
+    "tour": "Open tour launcher",
+    "tourLabel": "Take a tour"
+  },
+  "impersonation": {
+    "banner": {
+      "body": "You are viewing TeslaSync as another subject. End impersonation to restore your session.",
+      "end": "End impersonation",
+      "ending": "Ending…",
+      "endsIn": "Expires in {{time}}",
+      "expired": "Session expired",
+      "title": "Impersonating {{target}}"
+    }
+  },
+  "installPrompt": {
+    "dismiss": "Dismiss install prompt",
+    "install": "Install",
+    "subtitle": "Add to home screen for native experience",
+    "title": "Install TeslaSync"
+  },
+  "kiosk": {
+    "exit": "Exit kiosk mode",
+    "exitLabel": "Exit Kiosk",
+    "rotationPosition": "Dashboard {{current}} of {{total}}"
+  },
+  "lifetime": {
+    "unlocked": "✓ Unlocked"
+  },
+  "lightbox": {
+    "close": "Close image viewer",
+    "counter": "{{current}} / {{total}}",
+    "next": "Next image",
+    "previous": "Previous image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomPercent": "{{value}}%",
+    "zoomReset": "Reset zoom"
+  },
+  "listExport": {
+    "button": "Export",
+    "csv": "Download as CSV",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "json": "Download as JSON",
+    "menuLabel": "Export list",
+    "scopeLegend": "Export scope",
+    "selectedWithCount": "Selected ({{count}})",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})"
+  },
+  "live": {
+    "staleBanner": {
+      "message": "The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.",
+      "title": "Live data unavailable"
+    }
+  },
+  "mask": {
+    "copy": "Copy value",
+    "hide": "Hide value",
+    "reveal": "Reveal value"
+  },
+  "nav": {
+    "workspaceContext": "Fleet operations",
+    "workspaceHeader": "Workspace command bar",
+    "quickAccess": "Quick access",
+    "workspacePages": "Workspace",
+    "dashboard": "Dashboard",
+    "liveMap": "Live Map",
+    "vehicles": "Fleet",
+    "drives": "Drives",
+    "charging": "Charging",
+    "energy": "Energy",
+    "battery": "Battery Health",
+    "analytics": "Analytics",
+    "analyticsPeriodCompare": "Period Comparison",
+    "analyticsPeriodCompareSub": "This week vs last week",
+    "analyticsFleetCompare": "Fleet Comparison",
+    "analyticsFleetCompareSub": "Vehicle vs vehicle",
+    "efficiency": "Efficiency",
+    "mileage": "Mileage",
+    "timeline": "Timeline",
+    "locations": "Locations",
+    "trips": "Trips",
+    "tirePressure": "Tire Pressure",
+    "vampireDrain": "Vampire Drain",
+    "softwareUpdates": "Software Updates",
+    "projectedRange": "Projected Range",
+    "statistics": "Statistics",
+    "alerts": "Alerts",
+    "commands": "Commands",
+    "geofences": "Geofences",
+    "notifications": "Notifications",
+    "notificationsInbox": "Inbox",
+    "notificationsArchived": "Archived",
+    "notificationsAlerts": "Alerts",
+    "notificationsChannels": "Channels",
+    "notificationsWebhooks": "Webhooks",
+    "notificationsBrowser": "Browser",
+    "notificationsQuietHours": "Quiet Hours",
+    "notificationsRules": "Rules",
+    "notificationsStudio": "Studio",
+    "notificationsUnread": "{{count}} unread notifications",
+    "settings": "Settings",
+    "myActivity": "My Activity",
+    "gpsFixQuality": "GPS Fix Quality",
+    "gpsState": {
+      "locked": "Locked",
+      "unlocked": "No fix",
+      "unknown": "Unknown"
+    },
+    "heading": "Heading",
+    "headingValue": "{{cardinal}} ({{degrees}}°)",
+    "unknown": "Unknown",
+    "quickNav": "Quick navigation",
+    "currentPage": "Current page",
+    "closeSidebar": "Close sidebar",
+    "currentSection": "Current",
+    "unpinCurrent": "Remove current page from pinned",
+    "pinCurrent": "Pin current page",
+    "pinnedAction": "Pinned",
+    "pinAction": "Pin",
+    "pinned": "Pinned",
+    "recentlyUsed": "Recently Used",
+    "sections": "Sections",
+    "expandAll": "Expand all sections",
+    "collapseAll": "Collapse all sections",
+    "compactOverview": "Overview",
+    "compactVehicles": "Vehicles",
+    "compactDrives": "Drives",
+    "compactCharging": "Charging",
+    "compactEnergy": "Energy",
+    "compactInsights": "Insights",
+    "compactOperations": "Operations",
+    "compactAdvancedIntelligence": "Advanced Intelligence",
+    "compactAdministration": "Administration",
+    "compactDeveloper": "Developer",
+    "compactFleet": "Fleet",
+    "compactDriving": "Driving",
+    "compactChargingEnergy": "Charging & Energy",
+    "compactBattery": "Battery",
+    "compactReportsAnalytics": "Reports & Analytics",
+    "compactAutomationAlerts": "Automation & Alerts",
+    "compactSystemDeveloper": "System & Developer",
+    "compactSettingsAccount": "Settings & Account",
+    "browseAllFeatures": "Browse all features",
+    "openSidebar": "Open sidebar",
+    "quickSearchHint": "Ctrl+K to jump",
+    "minDelay": "min delay",
+    "pageTitle": "Navigation & Route",
+    "col": {
+      "time": "Time",
+      "destination": "Destination",
+      "distance": "Distance",
+      "eta": "ETA",
+      "lat": "Lat",
+      "lon": "Lon",
+      "home": "Home",
+      "work": "Work"
+    },
+    "wp": {
+      "name": "Name",
+      "type": "Type",
+      "distance": "Distance"
+    },
+    "subtitle": "Live location tracking and navigation status",
+    "refresh": "Refresh",
+    "status": "Navigation Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "routeLastUpdated": "Route last updated",
+    "destination": "Destination",
+    "eta": "ETA",
+    "minutes": "min",
+    "distanceRemaining": "Distance Remaining",
+    "trafficDelay": "Traffic Delay",
+    "noGps": "GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.",
+    "currentLocation": "Current Location",
+    "locationUnavailable": "Location unavailable",
+    "homeStatus": "Home Status",
+    "atHome": "At Home",
+    "homelinkNearby": "HomeLink Nearby",
+    "awayFromHome": "Away",
+    "workStatus": "Work Status",
+    "atWork": "At Work",
+    "notAtWork": "Away",
+    "metric": {
+      "distance": "Distance",
+      "eta": "ETA",
+      "trafficDelay": "Traffic Delay",
+      "avgSpeed": "Avg Speed",
+      "energyAtArrival": "Energy at Arrival"
+    },
+    "speedProfile": "Speed Profile",
+    "chartSpeed": "Speed (mph)",
+    "chartDistance": "Miles to Arrival",
+    "legendSpeed": "Speed (mph)",
+    "legendMilesToArrival": "Miles to Arrival",
+    "chartSpeedV2": "Speed ({{unit}})",
+    "chartDistanceV2": "Distance to Arrival ({{unit}})",
+    "legendSpeedV2": "Speed ({{unit}})",
+    "legendDistanceToArrivalV2": "Distance to Arrival ({{unit}})",
+    "waypoints": "Route Waypoints",
+    "noWaypoints": "The active route does not include waypoint details.",
+    "noWaypointsDescription": "Stops appear here when vehicle navigation supplies waypoint metadata for the active route.",
+    "min": "min",
+    "recentDestinations": "Recent Destinations",
+    "noDestinations": "No destination history available.",
+    "presenceChart": "Home / Work Presence",
+    "noPresence": "No presence history available.",
+    "locationHistory": "Location History",
+    "climate": "Climate",
+    "unpinPage": "Unpin {{page}}",
+    "vehicleComparison": "Fleet Comparison",
+    "noActiveNav": "No active navigation. Start a route in your vehicle to see details here.",
+    "noHistory": "No location history available for this vehicle.",
+    "noSnapshots": "No location snapshots recorded yet.",
+    "noVehicle": "Select a vehicle to view navigation and route data.",
+    "manageVehicles": "Manage vehicles",
+    "trafficDelayTitle": "Route Traffic Delay",
+    "delay": "delay",
+    "resource": "Navigation",
+    "resourceHistory": "Location history",
+    "metricsAria": "Route metrics",
+    "statusAria": "Navigation status",
+    "presenceAria": "Location status",
+    "chartsAria": "Route charts",
+    "routeDetailAria": "Route details",
+    "historyAria": "Location history",
+    "speedHistoryAria": "Speed and distance-to-arrival area chart over time",
+    "speedHistoryTitle": "Speed & Distance History"
+  },
+  "notFound": {
+    "body": "{{path}} doesn't match any route.",
+    "didYouMean": "Did you mean:",
+    "goBack": "Go back",
+    "goHome": "Go to dashboard",
+    "heading": "We couldn't find that page",
+    "openSearch": "Open command palette",
+    "suggestionsLabel": "Suggested pages",
+    "title": "Page not found"
+  },
+  "notifications": {
+    "alertStudio": {
+      "editor": {
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in Settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownBadge": "Unknown",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}"
+      }
+    },
+    "bellPopover": {
+      "allRead": "All caught up",
+      "emptyMessage": "No unread notifications right now.",
+      "emptyTitle": "You're all caught up",
+      "error": "Could not load notifications",
+      "loading": "Loading…",
+      "markAllRead": "Mark all read",
+      "title": "Notifications",
+      "unreadCount": "{{count}} unread",
+      "untitled": "Notification",
+      "viewAll": "View all"
+    }
+  },
+  "operationalMode": {
+    "asOf": {
+      "description": "Historical state reconstructed at {{when}}. Operational changes are disabled.",
+      "label": "As of {{when}}",
+      "shortLabel": "As of",
+      "writeBlocked": "Return to live mode before making operational changes."
+    },
+    "cached": {
+      "description": "The connection is offline. Retained data remains available, but it may be stale.",
+      "label": "Cached",
+      "shortLabel": "Cached",
+      "writeBlocked": "Reconnect before making operational changes."
+    },
+    "live": {
+      "description": "Current data with live actions available.",
+      "label": "Live",
+      "shortLabel": "Live"
+    },
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    }
+  },
+  "operations": {
+    "alerts": {
+      "untitled": "untitled alert"
+    }
+  },
+  "pagination": {
+    "currentPage": "Page {{page}} of {{total}}",
+    "first": "First page",
+    "last": "Last page",
+    "next": "Next page",
+    "pageSize": "Rows per page",
+    "perPage": "{{count}} / page",
+    "previous": "Previous page",
+    "showing": "Showing {{start}}–{{end}} of {{total}}"
+  },
+  "palette": {
+    "acknowledgeAlert": {
+      "empty": "No open alerts to acknowledge",
+      "error": "Open alerts are unavailable right now",
+      "hint": "Choose from recent open alerts",
+      "loading": "Loading open alerts…",
+      "select": "Choose an open alert to acknowledge"
+    },
+    "back": "Back",
+    "close": "Close",
+    "cmd": {
+      "acknowledgeAlert": "Acknowledge an alert",
+      "dashboardEdit": "Edit dashboard layout",
+      "selectVehicle": "Select vehicle…",
+      "shortcuts": "Show keyboard shortcuts",
+      "switchVehicle": "Switch to {{name}}",
+      "themePicker": "Open theme picker"
+    },
+    "navigate": "Navigate",
+    "noResults": "No results for \"{{query}}\"",
+    "noVehicles": "No vehicles available",
+    "placeholder": "Search pages, commands…",
+    "recent": {
+      "daysAgo": "{{count}}d ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago",
+      "hoursAgo": "{{count}}h ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "justNow": "Just now",
+      "minutesAgo": "{{count}}m ago",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago"
+    },
+    "section": {
+      "actions": "Actions",
+      "commands": "Vehicle Commands",
+      "mostUsed": "Most Used",
+      "openAlerts": "Open alerts",
+      "pages": "Pages",
+      "preferences": "Preferences",
+      "recent": "Recent",
+      "savedViews": "Saved views",
+      "selectVehicle": "Select Vehicle",
+      "vehicles": "Vehicles"
+    },
+    "select": "Select",
+    "selectVehicleFor": "Send \"{{command}}\" to…",
+    "shortcut": "Shortcut: {{keys}}",
+    "vehicle": "vehicle",
+    "vehicles": "vehicles"
+  },
+  "pin": {
+    "pin": "Pin",
+    "pinned": "Pinned",
+    "unpin": "Unpin"
+  },
+  "presentation": {
+    "exit": "Exit presentation mode",
+    "exitShort": "Exit",
+    "kiosk": {
+      "help": "Fullscreen monitoring with idle cursor and screen dimming.",
+      "open": "Open kiosk view"
+    },
+    "report": {
+      "active": "Report view",
+      "copyHelp": "Preserves the current route and filter query.",
+      "copyLink": "Copy report link",
+      "description": "Operational report generated from the active TeslaSync view.",
+      "generated": "Generated",
+      "help": "Clean navigation-free layout for printing and review.",
+      "linkCopied": "Report link copied",
+      "linkError": "Could not copy report link",
+      "open": "Open report view",
+      "scope": "Scope"
+    }
+  },
+  "productPreferences": {
+    "persona": {
+      "label": "Workspace profile"
+    }
+  },
+  "pwa": {
+    "later": "Later",
+    "newVersion": "New version available",
+    "offline": {
+      "banner": "Showing cached data. Operational changes stay disabled until you reconnect.",
+      "title": "You're offline"
+    },
+    "reloadNow": "Reload Now",
+    "reloadingIn": "Reloading in {{seconds}}s..."
+  },
+  "ratelimit": {
+    "banner": "Too many requests — pausing for {{n}}s",
+    "retry": "Retry now"
+  },
+  "recentPages": {
+    "justNow": "Just now",
+    "shortDay": "d",
+    "shortHour": "h",
+    "shortMinute": "m"
+  },
+  "replay": {
+    "controls": {
+      "pause": "Pause",
+      "play": "Play",
+      "progress": "Playback progress",
+      "reset": "Reset",
+      "speed": "Playback speed",
+      "stop": "Stop"
+    },
+    "markers": {
+      "atPercent": "at {{pct}}%"
+    },
+    "shortcuts": {
+      "end": "⏭ end",
+      "frame": "Previous / next frame",
+      "help": "Show keyboard shortcuts",
+      "nextFrame": "⏭ frame",
+      "pause": "Pause",
+      "percent": "Jump to N×10%",
+      "play": "Play",
+      "playPause": "Play / Pause",
+      "prevFrame": "⏮ frame",
+      "skip10": "Skip ±10s",
+      "skip5": "Skip ±5s (Shift = ±30s)",
+      "speed": "Speed up / slow down",
+      "speedDown": "Slower",
+      "speedUp": "Faster",
+      "start": "⏮ start",
+      "startEnd": "Jump to start / end",
+      "title": "Trip replay shortcuts"
+    }
+  },
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode"
+  },
+  "routes": {
+    "behavioralSentinel": "Behavioral Sentinel",
+    "causalExperimentLab": "Causal Experiment Lab",
+    "chargingForensics": "Charging Forensics",
+    "chargingSiteTwin": "Charging Site Twin",
+    "componentSurvival": "Component Survival",
+    "emergencyResilience": "Emergency Resilience",
+    "federatedLearningStudio": "Federated Learning Studio",
+    "firmwareCanary": "Firmware Canary",
+    "journeyAssurance": "Journey Assurance",
+    "roadHazardMesh": "Road Hazard Mesh",
+    "tCOOptimizer": "TCO Optimizer",
+    "twinLab": "Vehicle Twin Lab",
+    "vehicleManagement": "Vehicle Management"
+  },
+  "search": {
+    "history": {
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history",
+      "title": "Recent searches"
+    },
+    "palette": {
+      "viewAll": "View all results for \"{{query}}\""
+    },
+    "section": {
+      "alert": "Alerts",
+      "automation": "Automations",
+      "charging": "Charging",
+      "drive": "Drives",
+      "geofence": "Geofences",
+      "location": "Locations",
+      "notification": "Notifications",
+      "results": "Results",
+      "trip": "Trips",
+      "vehicle": "Vehicles"
+    }
+  },
+  "serviceMode": {
+    "banner": {
+      "defaultDegraded": "Some features may be slow or unavailable while we work on it.",
+      "defaultMaintenance": "Maintenance is in progress. Live data may be paused.",
+      "degradedTitle": "Service is degraded",
+      "ended": "Window has ended; refresh to confirm.",
+      "endingNow": "Ending now",
+      "endsIn": "Ends in {{time}}",
+      "maintenanceTitle": "Scheduled maintenance"
+    }
+  },
+  "session": {
+    "expired": {
+      "body": "For your security, your session has timed out. Sign in again to pick up where you left off.",
+      "signIn": "Sign in again",
+      "title": "Session expired"
+    },
+    "expiring": {
+      "body": "You will be signed out in {{countdown}}.",
+      "moreDrafts": "+{{count}} more",
+      "signOut": "Sign out now",
+      "stay": "Stay signed in",
+      "staying": "Refreshing…",
+      "title": "Your session is about to expire",
+      "unsavedBody": "Sign out will keep these drafts in your browser, but you must sign in again to finish them.",
+      "unsavedTitle": "Unsaved drafts"
+    }
+  },
+  "shortcuts": {
+    "close": "Close modal / cancel",
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "label": "Filter shortcuts",
+      "page": "This page"
+    },
+    "goto": "Go to {{label}}",
+    "gotoPrompt": "Go to…",
+    "groups": {
+      "actions": "Actions",
+      "commands": "Commands",
+      "navigation": "Navigation (press g then…)",
+      "replay": "Trip replay"
+    },
+    "openPalette": "Open command palette",
+    "openPaletteAlt": "Open command palette",
+    "openShortcuts": "Show keyboard shortcuts",
+    "search": "Search shortcuts…",
+    "title": "Keyboard Shortcuts"
+  },
+  "slider": {
+    "thumbMax": "{{label}} maximum",
+    "thumbMin": "{{label}} minimum"
+  },
+  "statusBar": {
+    "alerts": {
+      "count": "{{count}} unread alerts",
+      "countMore": "{{count}}+ unread alerts",
+      "newCritical": "Critical alert: {{title}}",
+      "openMoreWithSeverity": "Open {{count}}+ unread alerts. Highest severity: {{severity}}",
+      "openWithSeverity": "Open {{count}} unread alerts. Highest severity: {{severity}}",
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning"
+      },
+      "short": "Alerts",
+      "title": "Priority alerts",
+      "unavailable": "Alerts unavailable",
+      "unavailableAria": "Priority alert monitoring is unavailable",
+      "unavailableDetail": "The latest priority alerts could not be refreshed.",
+      "viewAll": "View all alerts"
+    },
+    "announcements": "Application status announcements",
+    "aria": "Application status",
+    "background": {
+      "aria": "Background tasks",
+      "exportFailed": "{{type}} export failed",
+      "exportLabel": "{{type}} export",
+      "exportReady": "{{type}} export ready",
+      "heading": "Running",
+      "many": "{{count}} tasks",
+      "processing": "Processing",
+      "queued": "Queued",
+      "recentHeading": "Recent activity",
+      "recentTooltip": "Recent background activity",
+      "saved": "Changes saved",
+      "saving": "Saving…",
+      "savingMany": "Saving {{count}} changes…",
+      "syncFailed": "Sync failed",
+      "tooltip": "Background work in progress",
+      "tryAgain": "Please try again"
+    },
+    "connection": {
+      "aria": "API connection status",
+      "degraded": "Degraded",
+      "offline": "Offline",
+      "ok": "Online",
+      "short": "API",
+      "tooltip": "API connection",
+      "unknown": "Connecting…"
+    },
+    "connectionDiagnostics": {
+      "checking": "Checking",
+      "database": "Database latency",
+      "fullStatus": "Open system status",
+      "open": "Open connection diagnostics",
+      "pool": "Active DB connections",
+      "queue": "Buffered events",
+      "status": {
+        "degraded": "Degraded",
+        "disabled": "Disabled",
+        "enabled": "Enabled",
+        "healthy": "Healthy",
+        "unhealthy": "Unhealthy"
+      },
+      "telemetry": "Telemetry stream",
+      "title": "Connection diagnostics",
+      "unavailable": "Diagnostics are temporarily unavailable.",
+      "unknown": "Unknown"
+    },
+    "help": {
+      "about": "About TeslaSync",
+      "buildNews": "Update or release notes available",
+      "open": "Open help and about",
+      "short": "Help",
+      "title": "Help & support",
+      "tooltip": "Help and about"
+    },
+    "live": {
+      "aria": "Live telemetry status",
+      "lastMessage": "Last message {{age}} ago",
+      "offline": "Offline",
+      "reconnecting": "Reconnecting",
+      "short": "Live",
+      "stale": "Stale",
+      "tooltip": "Live telemetry stream",
+      "unknown": "Idle"
+    },
+    "more": {
+      "backgroundComplete": "Background work completed",
+      "backgroundError": "Background work needs attention",
+      "label": "More",
+      "open": "Open more status options",
+      "tooltip": "More status and help"
+    },
+    "presentation": {
+      "description": "Prepare the active view for review or unattended display.",
+      "open": "Open presentation options",
+      "short": "Present",
+      "title": "Presentation",
+      "tooltip": "Report and kiosk views"
+    },
+    "recent": {
+      "count": "{{count}} pages",
+      "count_one": "{{count}} page",
+      "count_other": "{{count}} pages",
+      "empty": "Pages you visit will appear here for quick access.",
+      "open": "Open recently viewed pages, {{count}} saved",
+      "short": "Recent",
+      "title": "Recently viewed",
+      "tooltip": "Recently viewed pages"
+    },
+    "version": {
+      "appVersion": "App version",
+      "aria": "TeslaSync version",
+      "changelog": "Release notes",
+      "chart": "Helm chart",
+      "close": "Close",
+      "commit": "Commit",
+      "go": "Go runtime",
+      "modalTitle": "About this build",
+      "platform": "Platform",
+      "tooltip": "TeslaSync version",
+      "updateAvailable": "Update available",
+      "updateBanner": "A newer release is available",
+      "uptime": "up {{uptime}}",
+      "uptimeLabel": "Server uptime"
+    }
+  },
+  "table": {
+    "bulkActions": {
+      "clear": "Clear selection",
+      "region": "Bulk actions",
+      "selected": "{{count}} selected"
+    },
+    "columns": {
+      "button": "Columns",
+      "empty": "No columns to configure",
+      "heading": "Visible columns",
+      "headingReorder": "Columns",
+      "menu": "Show or hide columns",
+      "menuReorder": "Reorder or hide columns",
+      "moveDown": "Move {{col}} down",
+      "moveUp": "Move {{col}} up",
+      "reset": "Reset",
+      "resizeLabel": "Resize column {{col}}",
+      "showAll": "Show all",
+      "toggleColumn": "Show or hide {{col}}"
+    },
+    "expand": {
+      "collapse": "Collapse row",
+      "column": "Expand row",
+      "expand": "Expand row"
+    },
+    "export": {
+      "csv": "Download CSV",
+      "csvButton": "Download CSV",
+      "failed": "Could not prepare the table export."
+    },
+    "selection": {
+      "deselectAll": "Deselect all rows",
+      "deselectRow": "Deselect row",
+      "selectAll": "Select all rows",
+      "selectRow": "Select row"
+    }
+  },
+  "tagInput": {
+    "added": "{{count}} tags added",
+    "addedOne": "Tag added",
+    "duplicate": "{{tag}} is already added",
+    "maxReached": "Tag limit reached",
+    "maxReachedAnnounce": "Tag limit reached",
+    "maxReachedHint": "Maximum {{count}} tags",
+    "placeholder": "Add a tag…",
+    "removeTag": "Remove {{tag}}",
+    "removed": "Removed {{tag}}",
+    "tagsList": "Tags: {{tags}}",
+    "tagsNone": "No tags yet"
+  },
+  "tesla": {
+    "reauth": {
+      "body": "Reconnect to resume live data and commands.",
+      "cta": "Reconnect",
+      "title": "Tesla account disconnected"
+    }
+  },
+  "theme": {
+    "accent": "Accent",
+    "accentColor": "Accent Color",
+    "custom": "Custom",
+    "customize": "Customize…",
+    "displayMode": "Display Mode",
+    "mode": "Mode",
+    "modeCount": "{{count}} modes",
+    "noModes": "No display modes match your search.",
+    "openPicker": "Open theme picker",
+    "primary": "Primary",
+    "searchModes": "Search display modes…",
+    "theme": "Theme"
+  },
+  "timeMachine": {
+    "banner": {
+      "body": "Read-only point-in-time mode — current state, battery, and other live signals are reconstructed from history. Live actions stay disabled.",
+      "cancel": "Cancel",
+      "inputLabel": "Date and time",
+      "pick": "Pick a date",
+      "pickBody": "Pick a date and time within the last 90 days to reconstruct what TeslaSync looked like at that moment.",
+      "pickPrompt": "Open the time machine",
+      "returnToLive": "Return to live",
+      "submit": "View as of date",
+      "title": "Viewing data as of {{when}}"
+    }
+  },
+  "tour": {
+    "close": "Close tour",
+    "dialogLabel": "Onboarding tour",
+    "finish": "Get Started!",
+    "launcher": {
+      "close": "Close",
+      "completed": "Completed",
+      "recommendedHere": "Recommended for this page",
+      "replay": "Replay",
+      "replayAria": "Replay {{tour}} tour",
+      "resetAll": "Reset all tours",
+      "start": "Start",
+      "startAria": "Start {{tour}} tour",
+      "subtitle": "Guided walkthroughs for every major feature.",
+      "title": "Take a tour"
+    },
+    "next": "Next",
+    "prev": "Back",
+    "skip": "Skip tour",
+    "tours": {
+      "alerts": {
+        "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs.",
+        "title": "Alerts & Alert Studio"
+      },
+      "automations": {
+        "description": "Triggers, conditions, actions, and conflict detection for rules.",
+        "title": "Automation builder"
+      },
+      "charging": {
+        "description": "Sessions, cost analysis, and the charging-curve viewer for any session.",
+        "title": "Charging insights"
+      },
+      "debugger": {
+        "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks.",
+        "title": "FSM Debugger"
+      },
+      "drives": {
+        "description": "Drive history, Saved Views, and the trip replay scrubber with markers.",
+        "title": "Drives & replay"
+      },
+      "main": {
+        "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts.",
+        "title": "TeslaSync overview"
+      },
+      "settings": {
+        "description": "Theme, units, notification channels, and Saved Views — all in one place.",
+        "title": "Settings & preferences"
+      },
+      "vehicles": {
+        "description": "Fleet overview, per-vehicle detail tabs, and managing drivers/access.",
+        "title": "Vehicles & access"
+      }
+    }
+  },
+  "upstream": {
+    "banner": "Tesla upstream unavailable — retry in {{n}}s"
+  },
+  "vehiclePicker": {
+    "aria": "Select vehicle",
+    "fallbackName": "Vehicle {{id}}"
+  },
+  "vehicleSelect": {
+    "aria": "Select vehicle"
+  },
+  "workspace": {
+    "analysis": {
+      "activeRange": "{{start}} to {{end}}",
+      "applyCustom": "Apply custom range",
+      "comparisonActive": "Comparison active: previous matching period",
+      "custom": "Custom",
+      "density": "Workspace density",
+      "description": "Vehicle-aware pages inherit this analysis window and interface density.",
+      "liveHint": "Live uses the latest available data. Precise-history views use rolling instants; calendar summaries include the local dates intersected by the selected window.",
+      "range": "Analysis window",
+      "rangeWithComparison": "{{range}} · Compare",
+      "title": "Workspace analysis context",
+      "trigger": "Analysis window: {{range}}"
+    }
+  }
+}

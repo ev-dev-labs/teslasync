@@ -7,148 +7,261 @@
  * Why
  * ---
  * `navSections` in `Layout.tsx` is the canonical, complete route catalog
- * (20 groups / 150+ items). It stays exactly as-is — the Feature Hub
+ * (20+ groups / 190+ items). It stays exactly as-is — the Feature Hub
  * (`/explore`) and the command palette both enumerate it, so every route
- * remains discoverable and searchable. But rendering all 20 headers in the
+ * remains discoverable and searchable. But rendering all of it in the
  * primary sidebar is a wall of chrome: even collapsed it reads like a
  * side project rather than a product.
  *
- * This module derives a *curated* nine-group tree from that catalog for the
- * Linear style only. `notion` and `legacy` keep the complete catalog because
+ * This module derives a *curated* tree from that catalog for the Linear
+ * style only. `notion` and `legacy` keep the complete catalog because
  * picking them is an explicit user choice to see everything.
+ *
+ * Shape of the tree
+ * -----------------
+ * Two tiers, never interleaved:
+ *
+ *   primary   Overview · Vehicles · Drives · Charging · Energy · Insights ·
+ *             Operations
+ *             The everyday hierarchy. Identical set for every principal;
+ *             only the ORDER changes with the product persona.
+ *
+ *   advanced  Advanced Intelligence · Administration · Developer ·
+ *             Settings & Account
+ *             Deliberate parking spots for admin / developer / experimental
+ *             destinations. They are never deleted or hidden — a group the
+ *             current principal lacks the capability for is sorted last and
+ *             flagged `restricted` so the sidebar can collapse it, while the
+ *             palette and `/explore` keep listing every authorized route.
  *
  * Guarantees (all covered by `__tests__/compactNav.test.ts`)
  * ---------------------------------------------------------
- * 1. At most `MAX_COMPACT_GROUPS` groups, in a fixed product order.
+ * 1. At most `MAX_COMPACT_GROUPS` groups, primary tier always first.
  * 2. No path appears twice across the whole compact tree.
  * 3. Every blueprint path is a real entry in the source catalog.
  * 4. Visibility predicates are respected: the builder only ever emits items
  *    that were present in the (already visibility-filtered) input sections.
  * 5. Location context is never lost. If the active route is a long-tail
  *    route that the curated set omits, the *exact* active item is injected
- *    into its mapped compact group and that group's title is returned as
- *    `activeSectionTitle`.
+ *    into its mapped group and that group's title is returned as
+ *    `activeSectionTitle` — even when the group is `restricted`.
  *
  * Everything here is pure — no React, no i18n, no DOM.
  */
+import { hasNavCapability, type NavCapability } from '@/lib/navCapabilities'
 import type { ProductPersona } from '@/lib/productPreferences'
 
-/** Canonical order of the compact groups. Also the render order. */
-export const COMPACT_GROUP_TITLES = [
+/** The everyday hierarchy, in product order. */
+export const PRIMARY_GROUP_TITLES = [
   'Overview',
-  'Fleet',
-  'Driving',
-  'Charging & Energy',
-  'Battery',
-  'Reports & Analytics',
-  'Automation & Alerts',
-  'System & Developer',
+  'Vehicles',
+  'Drives',
+  'Charging',
+  'Energy',
+  'Insights',
+  'Operations',
+] as const
+
+/** Intentional parking spots for advanced / privileged destinations. */
+export const ADVANCED_GROUP_TITLES = [
+  'Advanced Intelligence',
+  'Administration',
+  'Developer',
   'Settings & Account',
 ] as const
 
+/** Canonical order of the compact groups. Also the default render order. */
+export const COMPACT_GROUP_TITLES = [
+  ...PRIMARY_GROUP_TITLES,
+  ...ADVANCED_GROUP_TITLES,
+] as const
+
+export type PrimaryGroupTitle = (typeof PRIMARY_GROUP_TITLES)[number]
+export type AdvancedGroupTitle = (typeof ADVANCED_GROUP_TITLES)[number]
 export type CompactGroupTitle = (typeof COMPACT_GROUP_TITLES)[number]
 
+export type CompactGroupTier = 'primary' | 'advanced'
+
 /** Hard ceiling asserted by tests so the tree cannot silently regrow. */
-export const MAX_COMPACT_GROUPS = 9
+export const MAX_COMPACT_GROUPS = 11
 
 /** The Feature Hub — the escape hatch to the complete catalog. */
 export const EXPLORE_PATH = '/explore'
 
+export interface CompactBlueprintGroup {
+  readonly title: CompactGroupTitle
+  readonly tier: CompactGroupTier
+  /** Capability required to *promote* the group. `core` = always promoted. */
+  readonly capability: NavCapability
+  readonly paths: readonly string[]
+}
+
 /**
  * The curated core destinations, by compact group.
  *
- * Selection rule: a path earns a slot only if a typical owner would plausibly
- * reach for it in a normal week. Everything else is long-tail and lives
- * behind the command palette + `/explore` — and is still injected here on
- * demand when it is the active route (see `buildCompactNavTree`).
+ * Selection rule: a path earns a primary slot only if a typical owner would
+ * plausibly reach for it in a normal week. Everything else is long-tail and
+ * lives in an advanced group, behind the command palette, and in `/explore`
+ * — and is still injected here on demand when it is the active route (see
+ * `buildCompactNavTree`).
  */
-export const COMPACT_NAV_BLUEPRINT: ReadonlyArray<{
-  readonly title: CompactGroupTitle
-  readonly paths: readonly string[]
-}> = [
+export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
   {
     title: 'Overview',
+    tier: 'primary',
+    capability: 'core',
     paths: ['/', '/action-center', '/live', '/timeline', EXPLORE_PATH],
   },
   {
-    title: 'Fleet',
+    title: 'Vehicles',
+    tier: 'primary',
+    capability: 'core',
     paths: [
       '/vehicles',
       '/digital-twin',
+      '/vehicle-management',
       '/commands',
       '/locations',
       '/climate-control',
-      '/security-access',
       '/maintenance',
       '/software-updates',
     ],
   },
   {
-    title: 'Driving',
+    title: 'Drives',
+    tier: 'primary',
+    capability: 'core',
     paths: ['/drives', '/trips', '/trip-planner', '/geofences', '/mileage', '/drive-score'],
   },
   {
-    title: 'Charging & Energy',
+    title: 'Charging',
+    tier: 'primary',
+    capability: 'core',
     paths: [
       '/charging',
       '/tesla-charging-history',
       '/charging-curve',
       '/smart-charge',
+      '/cost-analysis',
+    ],
+  },
+  {
+    title: 'Energy',
+    tier: 'primary',
+    capability: 'core',
+    paths: [
       '/energy',
+      '/battery',
+      '/battery-degradation',
+      '/battery-cells',
+      '/projected-range',
+      '/vampire-drain',
       '/energy-products',
     ],
   },
   {
-    title: 'Battery',
-    paths: ['/battery', '/battery-degradation', '/battery-cells', '/projected-range', '/vampire-drain'],
+    title: 'Insights',
+    tier: 'primary',
+    capability: 'core',
+    paths: ['/statistics', '/analytics', '/efficiency', '/tco', '/weekly-digest', '/data-export'],
   },
   {
-    title: 'Reports & Analytics',
-    paths: ['/statistics', '/analytics', '/efficiency', '/cost-analysis', '/tco', '/data-export'],
-  },
-  {
-    title: 'Automation & Alerts',
+    title: 'Operations',
+    tier: 'primary',
+    capability: 'core',
     paths: [
       '/automations',
       '/notifications/inbox',
       '/notifications/alerts',
       '/notifications/rules',
       '/notifications/channels',
+      '/security-access',
+      '/system-status',
     ],
   },
   {
-    title: 'System & Developer',
-    paths: ['/system-status', '/signals', '/db-health', '/dev-tools', '/api-playground', '/backup'],
+    title: 'Advanced Intelligence',
+    tier: 'advanced',
+    capability: 'core',
+    paths: [
+      '/intelligence-packs',
+      '/anomaly-detection',
+      '/period-compare',
+      '/what-if',
+      '/drive-dna',
+      '/time-machine',
+    ],
+  },
+  {
+    title: 'Administration',
+    tier: 'advanced',
+    capability: 'administration',
+    paths: [
+      '/admin/audit-log',
+      '/admin/flags',
+      '/admin/dlq',
+      '/api-keys',
+      '/backup',
+      '/data-repair',
+      '/fleet-api',
+    ],
+  },
+  {
+    title: 'Developer',
+    tier: 'advanced',
+    capability: 'developer',
+    paths: [
+      '/dev-tools',
+      '/api-playground',
+      '/signals',
+      '/db-health',
+      '/state-debugger',
+      '/mqtt-inspector',
+    ],
   },
   {
     title: 'Settings & Account',
-    paths: ['/settings', '/tesla-account', '/integrations/helix', '/api-keys', '/account/privacy', '/roadmap'],
+    tier: 'advanced',
+    capability: 'core',
+    paths: ['/settings', '/tesla-account', '/integrations/helix', '/account/privacy', '/roadmap'],
   },
 ]
+
+const BLUEPRINT_BY_TITLE = new Map<CompactGroupTitle, CompactBlueprintGroup>(
+  COMPACT_NAV_BLUEPRINT.map((group) => [group.title, group]),
+)
+
+/** Tier lookup for a compact group title. Unknown titles read as `advanced`. */
+export function compactGroupTier(title: string): CompactGroupTier {
+  return BLUEPRINT_BY_TITLE.get(title as CompactGroupTitle)?.tier ?? 'advanced'
+}
 
 /**
  * Where a long-tail route lands when it has to be injected: canonical
  * `navSections` title → compact group. Keeps "I am somewhere sensible"
- * true for every one of the 150+ routes, not just the curated ones.
+ * true for every one of the 190+ routes, not just the curated ones.
  */
-export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<Record<string, CompactGroupTitle>> = {
+export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<
+  Record<string, CompactGroupTitle>
+> = {
   Home: 'Overview',
-  Vehicles: 'Fleet',
-  Service: 'Fleet',
-  Cabin: 'Fleet',
-  Commands: 'Fleet',
-  Security: 'Fleet',
-  Driving: 'Driving',
-  Charging: 'Charging & Energy',
-  Energy: 'Charging & Energy',
-  Battery: 'Battery',
-  Reports: 'Reports & Analytics',
-  'Advanced Intelligence': 'Reports & Analytics',
-  'Ownership Intelligence': 'Reports & Analytics',
-  Automation: 'Automation & Alerts',
-  Notifications: 'Automation & Alerts',
-  Data: 'System & Developer',
-  Diagnostics: 'System & Developer',
+  Vehicles: 'Vehicles',
+  Service: 'Vehicles',
+  Cabin: 'Vehicles',
+  Commands: 'Vehicles',
+  Controls: 'Vehicles',
+  Driving: 'Drives',
+  Charging: 'Charging',
+  Battery: 'Energy',
+  Energy: 'Energy',
+  Reports: 'Insights',
+  Automation: 'Operations',
+  Notifications: 'Operations',
+  Security: 'Operations',
+  'Advanced Intelligence': 'Advanced Intelligence',
+  'Ownership Intelligence': 'Advanced Intelligence',
+  Data: 'Administration',
+  Diagnostics: 'Developer',
   Account: 'Settings & Account',
   Settings: 'Settings & Account',
   Integrations: 'Settings & Account',
@@ -156,7 +269,7 @@ export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<Record<string, Compact
 }
 
 /** Group used when a section title has no explicit mapping (defensive). */
-const FALLBACK_COMPACT_GROUP: CompactGroupTitle = 'Overview'
+const FALLBACK_COMPACT_GROUP: CompactGroupTitle = 'Advanced Intelligence'
 
 export interface CompactNavItemLike {
   to: string
@@ -167,94 +280,129 @@ export interface CompactNavSectionLike<TItem extends CompactNavItemLike> {
   items: TItem[]
 }
 
+export interface CompactNavGroup<TItem extends CompactNavItemLike> {
+  title: CompactGroupTitle
+  tier: CompactGroupTier
+  /** Capability that promotes this group. */
+  capability: NavCapability
+  /**
+   * True when the current principal lacks {@link capability}. The group is
+   * still emitted (nothing is deleted) but sorts last and should render
+   * collapsed.
+   */
+  restricted: boolean
+  items: TItem[]
+}
+
 export interface CompactNavTree<TItem extends CompactNavItemLike> {
-  sections: Array<{ title: CompactGroupTitle; items: TItem[] }>
+  sections: Array<CompactNavGroup<TItem>>
   /** Compact group holding the active route, or `undefined` when unknown. */
   activeSectionTitle?: CompactGroupTitle
   /** True when the active route was long-tail and had to be injected. */
   injectedActivePath?: string
 }
 
-const PERSONA_GROUP_ORDER: Readonly<
-  Record<ProductPersona, readonly CompactGroupTitle[]>
+export interface BuildCompactNavTreeOptions {
+  /** Capabilities granted to the current principal (see `lib/navCapabilities`). */
+  capabilities?: ReadonlySet<NavCapability>
+}
+
+/**
+ * Persona ordering applies to the PRIMARY tier only. Advanced groups keep
+ * their blueprint order so admin/developer surfaces never leapfrog the
+ * everyday hierarchy for any persona.
+ */
+const PERSONA_PRIMARY_ORDER: Readonly<
+  Record<ProductPersona, readonly PrimaryGroupTitle[]>
 > = {
-  owner: COMPACT_GROUP_TITLES,
+  owner: PRIMARY_GROUP_TITLES,
   fleet_operator: [
     'Overview',
-    'Fleet',
-    'Automation & Alerts',
-    'Charging & Energy',
-    'Driving',
-    'Battery',
-    'Reports & Analytics',
-    'System & Developer',
-    'Settings & Account',
+    'Vehicles',
+    'Operations',
+    'Charging',
+    'Drives',
+    'Energy',
+    'Insights',
   ],
   analyst: [
     'Overview',
-    'Reports & Analytics',
-    'Driving',
-    'Charging & Energy',
-    'Battery',
-    'Fleet',
-    'Automation & Alerts',
-    'System & Developer',
-    'Settings & Account',
+    'Insights',
+    'Drives',
+    'Charging',
+    'Energy',
+    'Vehicles',
+    'Operations',
   ],
   administrator: [
     'Overview',
-    'System & Developer',
-    'Automation & Alerts',
-    'Settings & Account',
-    'Fleet',
-    'Charging & Energy',
-    'Driving',
-    'Battery',
-    'Reports & Analytics',
+    'Operations',
+    'Vehicles',
+    'Charging',
+    'Energy',
+    'Drives',
+    'Insights',
   ],
 }
 
-export function prioritizeCompactNavTree<
-  TItem extends CompactNavItemLike,
->(
+/**
+ * Rank used to sort emitted groups: primary tier first (persona order),
+ * then granted advanced groups, then restricted advanced groups.
+ */
+function groupRank(
+  group: { title: CompactGroupTitle; tier: CompactGroupTier; restricted: boolean },
+  persona: ProductPersona,
+): number {
+  if (group.tier === 'primary') {
+    const order = PERSONA_PRIMARY_ORDER[persona] ?? PRIMARY_GROUP_TITLES
+    const index = order.indexOf(group.title as PrimaryGroupTitle)
+    return index >= 0 ? index : PRIMARY_GROUP_TITLES.length
+  }
+  const advancedIndex = ADVANCED_GROUP_TITLES.indexOf(
+    group.title as AdvancedGroupTitle,
+  )
+  const base =
+    100 + (advancedIndex >= 0 ? advancedIndex : ADVANCED_GROUP_TITLES.length)
+  return group.restricted ? base + 100 : base
+}
+
+export function prioritizeCompactNavTree<TItem extends CompactNavItemLike>(
   tree: CompactNavTree<TItem>,
   persona: ProductPersona,
 ): CompactNavTree<TItem> {
-  const order = PERSONA_GROUP_ORDER[persona] ?? COMPACT_GROUP_TITLES
-  const rank = new Map(order.map((title, index) => [title, index]))
   return {
     ...tree,
     sections: [...tree.sections].sort(
-      (left, right) =>
-        (rank.get(left.title) ?? Number.MAX_SAFE_INTEGER) -
-        (rank.get(right.title) ?? Number.MAX_SAFE_INTEGER),
+      (left, right) => groupRank(left, persona) - groupRank(right, persona),
     ),
   }
 }
 
-export function prioritizeCanonicalNavSections<
-  TSection extends { title: string },
->(
+/**
+ * Order the COMPLETE canonical catalog (used by the Notion / legacy sidebar
+ * styles and the mobile drawer) by mapping each canonical section onto its
+ * compact group and reusing the persona ranking. Nothing is dropped.
+ */
+export function prioritizeCanonicalNavSections<TSection extends { title: string }>(
   sections: readonly TSection[],
   persona: ProductPersona,
 ): TSection[] {
-  const order = PERSONA_GROUP_ORDER[persona] ?? COMPACT_GROUP_TITLES
-  const rank = new Map(order.map((title, index) => [title, index]))
+  const rankFor = (title: string): number => {
+    const mapped = CANONICAL_SECTION_TO_COMPACT_GROUP[title]
+    if (!mapped) return Number.MAX_SAFE_INTEGER
+    return groupRank(
+      { title: mapped, tier: compactGroupTier(mapped), restricted: false },
+      persona,
+    )
+  }
+
   return sections
     .map((section, index) => ({ section, index }))
-    .sort((left, right) => {
-      const leftGroup =
-        CANONICAL_SECTION_TO_COMPACT_GROUP[left.section.title]
-      const rightGroup =
-        CANONICAL_SECTION_TO_COMPACT_GROUP[right.section.title]
-      const leftRank = leftGroup
-        ? (rank.get(leftGroup) ?? Number.MAX_SAFE_INTEGER)
-        : Number.MAX_SAFE_INTEGER
-      const rightRank = rightGroup
-        ? (rank.get(rightGroup) ?? Number.MAX_SAFE_INTEGER)
-        : Number.MAX_SAFE_INTEGER
-      return leftRank - rightRank || left.index - right.index
-    })
+    .sort(
+      (left, right) =>
+        rankFor(left.section.title) - rankFor(right.section.title) ||
+        left.index - right.index,
+    )
     .map(({ section }) => section)
 }
 
@@ -300,8 +448,14 @@ export function findMostSpecificNavEntry<TItem extends CompactNavItemLike>(
 export function buildCompactNavTree<TItem extends CompactNavItemLike>(
   sections: ReadonlyArray<CompactNavSectionLike<TItem>>,
   pathname: string,
+  options: BuildCompactNavTreeOptions = {},
 ): CompactNavTree<TItem> {
   const safeSections = sections ?? []
+  // A missing capability set means "not resolved yet" — treat core-only
+  // groups as promoted and everything else as restricted so privileged
+  // surfaces never flash into the primary position before the auth-mode
+  // contract lands.
+  const capabilities = options.capabilities ?? new Set<NavCapability>(['core'])
 
   // path → item, first occurrence wins (mirrors the catalog's own ordering).
   const byPath = new Map<string, TItem>()
@@ -312,7 +466,7 @@ export function buildCompactNavTree<TItem extends CompactNavItemLike>(
   }
 
   const used = new Set<string>()
-  const groups = COMPACT_NAV_BLUEPRINT.map(group => {
+  const groups: Array<CompactNavGroup<TItem>> = COMPACT_NAV_BLUEPRINT.map((group) => {
     const items: TItem[] = []
     for (const path of group.paths) {
       if (used.has(path)) continue
@@ -321,7 +475,13 @@ export function buildCompactNavTree<TItem extends CompactNavItemLike>(
       used.add(path)
       items.push(item)
     }
-    return { title: group.title, items }
+    return {
+      title: group.title,
+      tier: group.tier,
+      capability: group.capability,
+      restricted: !hasNavCapability(capabilities, group.capability),
+      items,
+    }
   })
 
   const activeEntry = findMostSpecificNavEntry(safeSections, pathname)
@@ -329,8 +489,8 @@ export function buildCompactNavTree<TItem extends CompactNavItemLike>(
   let injectedActivePath: string | undefined
 
   if (activeEntry) {
-    const curatedGroup = groups.find(group =>
-      group.items.some(item => item.to === activeEntry.item.to),
+    const curatedGroup = groups.find((group) =>
+      group.items.some((item) => item.to === activeEntry.item.to),
     )
     if (curatedGroup) {
       activeSectionTitle = curatedGroup.title
@@ -338,8 +498,9 @@ export function buildCompactNavTree<TItem extends CompactNavItemLike>(
       // Long-tail route: inject the exact active item so the user keeps
       // location context and a one-click path back out of the page.
       const targetTitle =
-        CANONICAL_SECTION_TO_COMPACT_GROUP[activeEntry.sectionTitle] ?? FALLBACK_COMPACT_GROUP
-      const target = groups.find(group => group.title === targetTitle)
+        CANONICAL_SECTION_TO_COMPACT_GROUP[activeEntry.sectionTitle] ??
+        FALLBACK_COMPACT_GROUP
+      const target = groups.find((group) => group.title === targetTitle)
       if (target) {
         target.items.push(activeEntry.item)
         used.add(activeEntry.item.to)
@@ -350,7 +511,7 @@ export function buildCompactNavTree<TItem extends CompactNavItemLike>(
   }
 
   return {
-    sections: groups.filter(group => group.items.length > 0),
+    sections: groups.filter((group) => group.items.length > 0),
     activeSectionTitle,
     injectedActivePath,
   }

@@ -36,17 +36,19 @@ import { PrefetchNavLink } from '../PrefetchLink'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import { EXPLORE_PATH } from './compactNav'
+import { compactGroupTier, EXPLORE_PATH, type CompactGroupTier } from './compactNav'
 
 const COMPACT_GROUP_I18N_KEYS: Readonly<Record<string, string>> = {
   Overview: 'nav.compactOverview',
-  Fleet: 'nav.compactFleet',
-  Driving: 'nav.compactDriving',
-  'Charging & Energy': 'nav.compactChargingEnergy',
-  Battery: 'nav.compactBattery',
-  'Reports & Analytics': 'nav.compactReportsAnalytics',
-  'Automation & Alerts': 'nav.compactAutomationAlerts',
-  'System & Developer': 'nav.compactSystemDeveloper',
+  Vehicles: 'nav.compactVehicles',
+  Drives: 'nav.compactDrives',
+  Charging: 'nav.compactCharging',
+  Energy: 'nav.compactEnergy',
+  Insights: 'nav.compactInsights',
+  Operations: 'nav.compactOperations',
+  'Advanced Intelligence': 'nav.compactAdvancedIntelligence',
+  Administration: 'nav.compactAdministration',
+  Developer: 'nav.compactDeveloper',
   'Settings & Account': 'nav.compactSettingsAccount',
 }
 
@@ -55,6 +57,10 @@ const COMPACT_GROUP_I18N_KEYS: Readonly<Record<string, string>> = {
 // on a circular import or duplicating the literal.
 export type LinearSidebarSectionInput = {
   title: string
+  /** Compact tier — `advanced` groups render under the "Advanced" divider. */
+  tier?: CompactGroupTier
+  /** True when the current principal lacks the capability that promotes the group. */
+  restricted?: boolean
   items: Array<{
     to: string
     icon: typeof Icons.home
@@ -421,12 +427,36 @@ export function LinearSidebar({
 
         {/* Sections */}
         <div className="space-y-1.5">
-          {expandedSections.map(section => {
+          {expandedSections.map((section, index) => {
             const expanded = isExpanded(section.title)
             const active = section.title === activeSectionTitle
             const sectionIcon = section.items[0]?.icon ?? Icons.home
+            const tier = section.tier ?? compactGroupTier(section.title)
+            const previousTier =
+              index === 0
+                ? null
+                : (expandedSections[index - 1].tier ??
+                   compactGroupTier(expandedSections[index - 1].title))
+            // One divider between the everyday hierarchy and the advanced
+            // parking spots. Advanced destinations are demoted, never hidden.
+            const startsAdvanced = tier === 'advanced' && previousTier !== 'advanced'
             return (
-              <div key={section.title} className="space-y-0.5">
+              <div
+                key={section.title}
+                className="space-y-0.5"
+                data-nav-group={section.title}
+                data-nav-tier={tier}
+                data-nav-restricted={section.restricted ? 'true' : 'false'}
+              >
+                {startsAdvanced && (
+                  <div
+                    className="mt-3 flex items-center gap-2 border-t border-[var(--border-default)] px-2.5 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+                    data-testid="linear-sidebar-advanced-divider"
+                  >
+                    <Icons.preferences className="h-3 w-3 shrink-0" aria-hidden />
+                    <span>{t('nav.advancedGroups', 'Advanced')}</span>
+                  </div>
+                )}
                 <LinearSectionHeader
                   title={sectionLabel(section.title)}
                   icon={sectionIcon}

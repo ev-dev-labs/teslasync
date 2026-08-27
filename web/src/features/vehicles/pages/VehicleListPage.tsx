@@ -28,16 +28,20 @@ import {
   QueryError,
   AlertBanner,
   DataStateNotice,
+  StaleRefreshWarning,
   StatGridSkeleton,
 } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { knownNumber } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
 import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useSyncVehicles, useDeleteVehicle, useFleetStates,
+  summariseFleetStates, type FleetStateEntry, type FleetStatesSummary,
 } from '@/api/hooks/useVehicles';
 import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
 import { usePinned } from '@/api/hooks/usePinned';
@@ -55,8 +59,14 @@ import { Icons } from '@/lib/icons';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
-/** A fleet entry whose live state has resolved (non-null). */
-type LoadedEntry = { vehicle: Vehicle; state: VehicleState };
+/**
+ * A fleet entry whose live state has resolved to an actual reading.
+ *
+ * Extends the wire entry rather than redefining it so the outcome/provenance
+ * fields stay available to consumers that need to distinguish a fresh reading
+ * from one retained through a failed refresh.
+ */
+type LoadedEntry = FleetStateEntry & { state: VehicleState };
 
 /* ── Loading skeleton ──────────────────────────────────────── */
 
@@ -112,16 +122,24 @@ function StatChip({ icon, label, value }: { icon: ReactNode; label: string; valu
 
 interface FleetKpisProps {
   totalVehicles: number;
-  avgBattery: number;
-  totalRange: number;
+  /** `null` when no vehicle reported a level. Rendered as an em dash, not 0 %. */
+  avgBattery: number | null;
+  /** `null` when no vehicle reported a rated range. */
+  totalRange: number | null;
   chargingCount: number;
-  onlineCount: number;
+  /**
+   * Vehicles with a CURRENT state response. Not "online": an explicit
+   * `offline`/`asleep` snapshot is a live-state response, and a retained
+   * reading from before an outage is not live at all.
+   */
+  liveStateCount: number;
 }
 
 /** Full-width responsive metric grid summarising the whole fleet. */
-function FleetKpis({ totalVehicles, avgBattery, totalRange, chargingCount, onlineCount }: FleetKpisProps) {
+function FleetKpis({ totalVehicles, avgBattery, totalRange, chargingCount, liveStateCount }: FleetKpisProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
+  const unknownLabel = t('common.unknownValue', '—');
   return (
     <section
       aria-label={t('vehicles.summary', 'Fleet summary')}
@@ -135,19 +153,23 @@ function FleetKpis({ totalVehicles, avgBattery, totalRange, chargingCount, onlin
       />
       <MetricCard
         label={t('vehicles.avgBattery', 'Avg Battery')}
-        value={`${fmtNumber(avgBattery)}%`}
+        value={avgBattery == null ? unknownLabel : `${fmtNumber(avgBattery)}%`}
         icon={<Battery className="h-5 w-5" />}
         color="green"
       />
       <MetricCard
         label={`${t('vehicles.totalRange', 'Total Range')} (${unitPrefs.distance})`}
-        value={fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
+        value={totalRange == null
+          ? unknownLabel
+          : fmtNumber(convertDistanceFromSI(totalRange, unitPrefs.distance))}
         icon={<Gauge className="h-5 w-5" />}
         color="purple"
       />
       <MetricCard
-        label={t('vehicles.chargingOnline', 'Charging / Online')}
-        value={`${chargingCount} / ${onlineCount}`}
+        label={t('vehicles.chargingLiveState', 'Charging / Live state')}
+        value={liveStateCount === 0
+          ? unknownLabel
+          : `${chargingCount} / ${liveStateCount}`}
         icon={<Zap className="h-5 w-5" />}
         color="green"
       />
@@ -159,7 +181,8 @@ function FleetKpis({ totalVehicles, avgBattery, totalRange, chargingCount, onlin
 
 interface FleetBatteryPanelProps {
   entries: LoadedEntry[];
-  avgBattery: number;
+  /** `null` when no vehicle reported a battery level — never coerced to 0. */
+  avgBattery: number | null;
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -170,6 +193,9 @@ interface FleetBatteryPanelProps {
 function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onRetry }: FleetBatteryPanelProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
+  // A failed refresh must not delete the readings already on screen: only
+  // fall back to the error surface when there is genuinely nothing retained.
+  const showErrorInstead = isError && entries.length === 0;
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <div className="mb-4 flex items-center justify-between gap-2">
@@ -178,14 +204,18 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
           {t('vehicles.batteryStatus', 'Fleet Battery Status')}
         </PanelTitle>
         <Text variant="bodySm">
-          <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />{' '}
+          {avgBattery == null ? (
+            <span aria-label={t('common.unknown', 'Unknown')}>—</span>
+          ) : (
+            <AnimatedNumber value={Math.round(avgBattery)} suffix="%" />
+          )}{' '}
           {t('vehicles.avgLabel', 'avg')}
         </Text>
       </div>
 
-      {isError ? (
+      {showErrorInstead ? (
         <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
+      ) : isLoading && entries.length === 0 ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-8 rounded-lg" />
@@ -211,15 +241,33 @@ function FleetBatteryPanel({ entries, avgBattery, isLoading, isError, error, onR
       ) : (
         <div className="space-y-3">
           {entries.map(({ vehicle, state }) => {
-            const level = state.battery_level ?? 0;
+            const label = vehicle.display_name || vehicle.vin;
+            // An unreported state of charge is NOT 0 %. Rendering a full-width
+            // empty bar for it would read as "this car is flat".
+            const level = knownNumber(state.battery_level);
+            const range = knownNumber(state.rated_range);
+            if (level == null) {
+              return (
+                <div
+                  key={vehicle.id}
+                  className="flex items-center justify-between gap-3"
+                  data-testid="fleet-battery-unknown"
+                >
+                  <Text as="span" variant="bodySm">{label}</Text>
+                  <Text as="span" variant="bodySm" className="font-mono">
+                    {t('vehicles.batteryUnknown', 'Not reported')}
+                  </Text>
+                </div>
+              );
+            }
             return (
               <MetricBar
                 key={vehicle.id}
-                label={vehicle.display_name || vehicle.vin}
+                label={label}
                 value={level}
                 max={100}
                 color={batteryColor(level)}
-                sublabel={`${level}% · ${formatDistance(state.rated_range ?? 0)}`}
+                sublabel={`${level}% · ${range == null ? '—' : formatDistance(range)}`}
               />
             );
           })}
@@ -237,14 +285,39 @@ interface FleetStatusPanelProps {
   counts: StatusCount[];
   total: number;
   isLoading: boolean;
-  isError: boolean;
-  error: unknown;
+  /** Aggregate outcome of the per-vehicle fan-out. */
+  summary: FleetStatesSummary;
   onRetry: () => void;
 }
 
-/** Count-by-status breakdown, derived from the same fleet-state batch. */
-function FleetStatusPanel({ counts, total, isLoading, isError, error, onRetry }: FleetStatusPanelProps) {
+/**
+ * Count-by-status breakdown.
+ *
+ * Two facts drive every branch, and both come from
+ * {@link summariseFleetStates} rather than from the derived counts:
+ *
+ *   - `statefulCount` — how many vehicles have an ACTUAL reading. The counts
+ *     array is built only from those, because `deriveVehicleStatus(null)`
+ *     returns `'offline'` and would otherwise manufacture a confident
+ *     "everything is offline" breakdown out of an unresolved batch.
+ *   - `failedCount` — how many per-vehicle requests failed. `useFleetStates`
+ *     resolves each vehicle independently and therefore never rejects, so
+ *     `isError` is useless here: a total API outage arrives as a successful
+ *     array of failures. This is the only signal that distinguishes it from a
+ *     healthy fleet that simply has no snapshots yet.
+ */
+function FleetStatusPanel({
+  counts, total, isLoading, summary, onRetry,
+}: FleetStatusPanelProps) {
   const { t } = useTranslation();
+  const nothingResolved = summary.statefulCount === 0;
+  // Transport failure with nothing to show → error surface. A successful
+  // batch with no snapshots is a different, non-alarming state.
+  const showErrorInstead = nothingResolved && summary.failedCount > 0;
+  const showSkeleton = !showErrorInstead && nothingResolved && isLoading;
+  const showCounts = counts.length > 0;
+  const unresolved = summary.unresolvedCount;
+
   return (
     <GlassPanel className="flex h-full flex-col p-4 sm:p-5">
       <PanelTitle className="mb-4 flex items-center gap-2">
@@ -252,15 +325,21 @@ function FleetStatusPanel({ counts, total, isLoading, isError, error, onRetry }:
         {t('vehicles.statusBreakdown', 'Fleet Status')}
       </PanelTitle>
 
-      {isError ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
-        <div className="space-y-3">
+      {showErrorInstead ? (
+        <QueryError
+          error={new Error(t(
+            'vehicles.statusUnavailable',
+            'Live state could not be retrieved for any vehicle.',
+          ))}
+          onRetry={onRetry}
+        />
+      ) : showSkeleton ? (
+        <div className="space-y-3" data-testid="fleet-status-skeleton">
           {Array.from({ length: 3 }).map((_, i) => (
             <Skeleton key={i} className="h-8 rounded-lg" />
           ))}
         </div>
-      ) : counts.length === 0 ? (
+      ) : !showCounts ? (
         <EmptyState
           icon={<ListChecks className="h-8 w-8" />}
           message={t('vehicles.noStatusData', 'No fleet status data yet')}
@@ -276,6 +355,29 @@ function FleetStatusPanel({ counts, total, isLoading, isError, error, onRetry }:
         />
       ) : (
         <div className="space-y-3">
+          {unresolved > 0 || summary.retainedCount > 0 ? (
+            <DataStateNotice
+              state="partial"
+              data-testid="fleet-status-partial"
+              title={t(
+                'vehicles.statusPartialTitle',
+                'Breakdown covers {{resolved}} of {{total}} vehicles',
+                { resolved: summary.statefulCount, total: summary.total },
+              )}
+            >
+              {summary.failedCount > 0
+                ? t(
+                    'vehicles.statusPartialFailed',
+                    '{{failed}} vehicle state request(s) failed. Unresolved vehicles are excluded from the breakdown rather than counted as offline.',
+                    { failed: summary.failedCount },
+                  )
+                : t(
+                    'vehicles.statusPartialMissing',
+                    '{{missing}} vehicle(s) have not reported a snapshot yet and are excluded from the breakdown rather than counted as offline.',
+                    { missing: summary.missingCount },
+                  )}
+            </DataStateNotice>
+          ) : null}
           {counts.map(({ status, count }) => (
             <MetricBar
               key={status}
@@ -306,9 +408,13 @@ function VehicleCard({ vehicle, state, onDelete, onPreview }: VehicleCardProps) 
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
 
-  const status = deriveVehicleStatus(state);
-  const level = state?.battery_level ?? 0;
-  const color = batteryColor(level);
+  // A vehicle with no reading is UNKNOWN, not offline. `deriveVehicleStatus`
+  // maps null → 'offline', which turns "we could not reach the API" into a
+  // confident operational claim about the car.
+  const status = state != null ? deriveVehicleStatus(state) : null;
+  const statusLabel = status ?? t('vehicles.statusUnknown', 'Unknown');
+  const level = knownNumber(state?.battery_level);
+  const color = batteryColor(level ?? 0);
   const name = vehicle.display_name || vehicle.vin;
   const modelLine = [vehicle.model, vehicle.trim_badging].filter(Boolean).join(' ');
 
@@ -339,8 +445,8 @@ function VehicleCard({ vehicle, state, onDelete, onPreview }: VehicleCardProps) 
               >
                 {name}
               </Link>
-              <Badge variant={statusVariant(status)} dot size="sm">
-                {status}
+              <Badge variant={status != null ? statusVariant(status) : 'neutral'} dot size="sm">
+                {statusLabel}
               </Badge>
             </div>
             <Text variant="caption" as="p" className="mt-1 truncate">
@@ -359,12 +465,16 @@ function VehicleCard({ vehicle, state, onDelete, onPreview }: VehicleCardProps) 
               {t('vehicles.battery', 'Battery')}
             </Text>
             <Text size="sm" weight="semibold" color="primary" className="tabular-nums">
-              <AnimatedNumber value={level} suffix="%" />
+              {level == null ? (
+                <span aria-label={t('vehicles.statusUnknown', 'Unknown')}>—</span>
+              ) : (
+                <AnimatedNumber value={level} suffix="%" />
+              )}
             </Text>
           </div>
           <div
             role="progressbar"
-            aria-valuenow={level}
+            aria-valuenow={level ?? undefined}
             aria-valuemin={0}
             aria-valuemax={100}
             aria-label={t('vehicles.batteryLevel', 'Battery level')}
@@ -372,7 +482,7 @@ function VehicleCard({ vehicle, state, onDelete, onPreview }: VehicleCardProps) 
           >
             <div
               className="h-full rounded-full transition-all duration-slow"
-              style={{ width: `${level}%`, background: `linear-gradient(90deg, ${color}99, ${color})` }}
+              style={{ width: `${level ?? 0}%`, background: `linear-gradient(90deg, ${color}99, ${color})` }}
             />
           </div>
         </div>
@@ -473,8 +583,11 @@ export default function VehicleListPage() {
 
   /* ── Data ── */
   const vehiclesQuery = useVehicles();
-  const { data: vehicles, isLoading, error } = vehiclesQuery;
+  const { data: vehicles, isLoading } = vehiclesQuery;
   const vehicleList = vehicles ?? [];
+  // Trust contract for the fleet list: `fatalError` (nothing retained) gates
+  // the page-level error surface, everything else degrades non-destructively.
+  const vehiclesState = useDataState(vehiclesQuery);
 
   // Keep the first vehicle's SSE live-state warm for snappy detail navigation.
   const primaryId = vehicleList[0]?.id;
@@ -482,6 +595,53 @@ export default function VehicleListPage() {
 
   const statesQuery = useFleetStates(vehicleList);
   const fleetStates = statesQuery.data;
+  /* Aggregate outcome of the per-vehicle fan-out. Everything on this page that
+   * used to ask "is `state` null?" now asks this instead, because null covers
+   * three different facts (resolved-offline, no-snapshot, request-failed). */
+  const fleetSummary = useMemo(
+    () => summariseFleetStates(fleetStates ?? []),
+    [fleetStates],
+  );
+  /* Freshness must be driven by WHEN THE READINGS WERE OBSERVED, not by when
+   * the wrapper batch resolved. `useFleetStates` resolves successfully even
+   * when every request failed, so `statesQuery.dataUpdatedAt` advances on
+   * every 30 s poll — a permanently failing fleet rendered a green
+   * "updated just now" chip over readings that were hours old. This synthetic
+   * source substitutes the oldest retained observation and re-injects the
+   * failure the wrapper swallowed. */
+  const fleetStateSource = useMemo(() => ({
+    data: fleetStates,
+    isPending: statesQuery.isPending,
+    isFetching: statesQuery.isFetching,
+    fetchStatus: statesQuery.fetchStatus,
+    refetch: statesQuery.refetch,
+    dataUpdatedAt: fleetSummary.oldestObservedAt ?? 0,
+    isError: fleetSummary.failedCount > 0,
+    error: fleetSummary.failedCount > 0
+      ? new Error(t(
+          'operations.vehicles.stateRequestFailed',
+          'Live state could not be retrieved for {{count}} vehicle(s).',
+          { count: fleetSummary.failedCount },
+        ))
+      : undefined,
+  }), [fleetStates, statesQuery, fleetSummary, t]);
+  /** Freshness chip input — same synthetic timestamps as the trust contract. */
+  const fleetFreshnessQuery = useMemo(() => ({
+    isFetching: statesQuery.isFetching,
+    isStale: statesQuery.isStale || fleetSummary.retainedCount > 0,
+    isError: fleetSummary.failedCount > 0,
+    dataUpdatedAt: fleetSummary.oldestObservedAt ?? 0,
+    refetch: statesQuery.refetch,
+  }), [statesQuery, fleetSummary]);
+  // Live fleet state is pushed/polled current state, so its provenance is
+  // `live` — and degrades to `cached` automatically once a refresh fails.
+  // `useFleetStates` never rejects (per-vehicle failures are recorded in the
+  // payload), so partial/unavailable have to be declared from the summary.
+  const fleetStateData = useDataState(fleetStateSource, {
+    provenance: 'live',
+    partial: fleetSummary.status === 'partial',
+    unavailable: fleetSummary.status === 'unavailable' || fleetSummary.status === 'absent',
+  });
   const workOrdersQuery = useFleetWorkOrders({ limit: 100 });
   const workOrders = workOrdersQuery.data?.items ?? [];
 
@@ -503,17 +663,36 @@ export default function VehicleListPage() {
 
   /* ── Computed fleet metrics ── */
   const fleet = useMemo(() => {
-    const withState = (fleetStates ?? []).filter(
-      (e): e is LoadedEntry => e.state !== null,
-    );
-    const avg =
-      withState.length > 0
-        ? withState.reduce((s, e) => s + (e.state.battery_level ?? 0), 0) / withState.length
-        : 0;
-    const totalRange = withState.reduce((s, e) => s + (e.state.rated_range ?? 0), 0);
-    const charging = withState.filter((e) => e.state.is_charging).length;
-    const ready = withState.filter((e) => (e.state.battery_level ?? 0) >= 20).length;
-    const active = withState.filter((e) => {
+    const entries = fleetStates ?? [];
+    // Every entry carrying a reading, fresh or retained. Used for aggregates
+    // where a slightly stale but REAL value is better than nothing (battery
+    // average, total range, software inventory).
+    const withState = entries.filter((e): e is LoadedEntry => e.state !== null);
+    // Only FRESH readings back the operational counts. A retained reading
+    // proves what the car was doing before the outage, not what it is doing
+    // now, so it must never be counted as live, ready, or active.
+    const fresh = withState.filter((e) => e.outcome === 'resolved' && !e.stale);
+
+    // Vehicles that did not report a level are excluded from BOTH the
+    // numerator and the denominator. Treating them as 0 % would drag the
+    // fleet average toward zero and invent a low-battery alert.
+    const levels = withState
+      .map((e) => knownNumber(e.state.battery_level))
+      .filter((v): v is number => v != null);
+    const avg = levels.length > 0
+      ? levels.reduce((s, v) => s + v, 0) / levels.length
+      : null;
+    const ranges = withState
+      .map((e) => knownNumber(e.state.rated_range))
+      .filter((v): v is number => v != null);
+    const totalRange = ranges.length > 0 ? ranges.reduce((s, v) => s + v, 0) : null;
+    const charging = fresh.filter((e) => e.state.is_charging).length;
+    // "Ready" counts only FRESH readings that actually reported >= 20 %.
+    const freshLevels = fresh
+      .map((e) => knownNumber(e.state.battery_level))
+      .filter((v): v is number => v != null);
+    const ready = freshLevels.filter((v) => v >= 20).length;
+    const active = fresh.filter((e) => {
       const status = deriveVehicleStatus(e.state);
       return status === 'driving' || status === 'charging';
     }).length;
@@ -527,7 +706,15 @@ export default function VehicleListPage() {
       avgBattery: avg,
       totalRange,
       chargingCount: charging,
-      onlineCount: withState.length,
+      /**
+       * Vehicles for which a CURRENT state response is available. Named for
+       * what it measures: `withState.length` also counted explicit
+       * `offline`/`asleep` snapshots and retained stale readings as "online",
+       * which is two separate lies in one number.
+       */
+      liveStateCount: fresh.length,
+      /** Denominator for every count derived from fresh readings. */
+      coveredCount: fresh.length,
       readyCount: ready,
       activeCount: active,
       softwareVersions: [...softwareVersions].sort(),
@@ -538,18 +725,29 @@ export default function VehicleListPage() {
   }, [fleetStates]);
 
   /* O(1) live-state lookup by vehicle id, shared by the status breakdown and
-     the card grid so neither rescans the fleet-state array once per row. */
+     the card grid so neither rescans the fleet-state array once per row.
+     A vehicle absent from this map has NO reading — which is not the same as
+     a reading that says "offline". */
   const stateById = useMemo(() => {
     const map = new Map<number, VehicleState | null>();
     (fleetStates ?? []).forEach((e) => map.set(e.vehicle.id, e.state));
     return map;
   }, [fleetStates]);
 
-  /* Count vehicles by derived status for the breakdown panel. */
+  /* Count vehicles by derived status for the breakdown panel.
+   *
+   * Only vehicles with an ACTUAL reading are counted. `deriveVehicleStatus`
+   * maps a null state to `'offline'`, so counting every vehicle here reported
+   * a whole fleet as offline whenever the batch had not resolved — including
+   * during a total API outage, which `useFleetStates` used to success-shape
+   * into a full array of nulls. A vehicle is only offline when the backend
+   * returned a snapshot saying so. */
   const statusCounts = useMemo<StatusCount[]>(() => {
     const counts = new Map<string, number>();
     for (const v of vehicleList) {
-      const status = deriveVehicleStatus(stateById.get(v.id) ?? null);
+      const state = stateById.get(v.id) ?? null;
+      if (state == null) continue;
+      const status = deriveVehicleStatus(state);
       counts.set(status, (counts.get(status) ?? 0) + 1);
     }
     return [...counts.entries()]
@@ -557,21 +755,42 @@ export default function VehicleListPage() {
       .sort((a, b) => b.count - a.count);
   }, [stateById, vehicleList]);
   const fleetStatePending = statesQuery.isLoading;
+  /** No fresh reading for any vehicle ⇒ every derived count is unknowable. */
+  const noCoverage = fleet.coveredCount === 0;
   const offlineCount = fleetStatePending
     ? 0
-    : Math.max(0, vehicleList.length - fleet.onlineCount);
-  const lowBatteryCount = fleet.entries.filter(
-    ({ state }) => (state.battery_level ?? 100) < 20,
-  ).length;
+    : Math.max(0, vehicleList.length - fleet.liveStateCount);
+  const lowBatteryCount = fleet.entries.filter(({ state }) => {
+    // Only vehicles that actually reported a level can be "below 20 %".
+    const level = knownNumber(state.battery_level);
+    return level != null && level < 20;
+  }).length;
   const openWorkOrders = workOrders.filter(
     (order) => order.status !== 'completed' && order.status !== 'cancelled',
   );
   const urgentWorkOrders = openWorkOrders.filter(
     (order) => order.severity === 'high' || order.severity === 'critical',
   );
-  const utilizationPct = vehicleList.length > 0
-    ? Math.round((fleet.activeCount / vehicleList.length) * 100)
-    : 0;
+  /**
+   * Percentage of the COVERED fleet that is driving or charging.
+   *
+   * `null` when nothing is covered: with no fresh reading, "0 %" is not a
+   * measurement, it is an assumption that every unreachable car is idle.
+   * The denominator is the covered count, not the registered count, so a
+   * partially-resolved batch reports a real ratio and discloses its coverage
+   * rather than silently diluting itself toward zero.
+   */
+  const utilizationPct = fleet.coveredCount > 0
+    ? Math.round((fleet.activeCount / fleet.coveredCount) * 100)
+    : null;
+  /** Rendered beneath any count whose denominator is narrower than the fleet. */
+  const coverageNote = fleet.coveredCount < vehicleList.length
+    ? t(
+        'operations.vehicles.coverageNote',
+        'Based on {{covered}} of {{total}} vehicles with a current reading.',
+        { covered: fleet.coveredCount, total: vehicleList.length },
+      )
+    : '';
   const fleetAttention: OperationalAttention[] = [
     ...(!fleetStatePending && offlineCount > 0
       ? [{
@@ -684,7 +903,7 @@ export default function VehicleListPage() {
       'operations.vehicles.narrative.whatChanged',
       '{{online}} of {{total}} registered vehicles have live state; {{ready}} are departure ready and {{urgent}} urgent work orders remain open.',
       {
-        online: fleet.onlineCount,
+        online: fleet.liveStateCount,
         total: vehicleList.length,
         ready: fleet.readyCount,
         urgent: urgentWorkOrders.length,
@@ -699,10 +918,10 @@ export default function VehicleListPage() {
     confidence: {
       label:
         vehicleList.length > 0
-        && fleet.onlineCount === vehicleList.length
+        && fleet.liveStateCount === vehicleList.length
         && !workOrdersQuery.isError
           ? 'high'
-          : fleet.onlineCount > 0
+          : fleet.liveStateCount > 0
             ? 'medium'
             : 'low',
       score: null,
@@ -710,7 +929,7 @@ export default function VehicleListPage() {
         t(
           'operations.vehicles.narrative.liveBasis',
           'Live state resolved for {{online}} of {{total}} registered vehicles.',
-          { online: fleet.onlineCount, total: vehicleList.length },
+          { online: fleet.liveStateCount, total: vehicleList.length },
         ),
         workOrdersQuery.isError
           ? t(
@@ -822,7 +1041,10 @@ export default function VehicleListPage() {
     return <VehicleListSkeleton />;
   }
 
-  if (error) {
+  // Only an initial failure — one with NOTHING retained — may replace the
+  // page. A background refetch error over a populated fleet keeps the fleet
+  // on screen and is surfaced by <StaleRefreshWarning> below instead.
+  if (vehiclesState.status === 'initialFailure') {
     return (
       <PageContainer
         title={t('nav.vehicles', 'Fleet')}
@@ -830,7 +1052,7 @@ export default function VehicleListPage() {
       >
         <GlassPanel className="p-4 sm:p-5">
           <QueryError
-            error={error}
+            error={vehiclesState.fatalError}
             onRetry={() => vehiclesQuery.refetch()}
             resourceName={t('nav.vehicles', 'Fleet')}
           />
@@ -844,7 +1066,7 @@ export default function VehicleListPage() {
     <PageContainer
       title={t('nav.vehicles', 'Fleet')}
       subtitle={t('vehicles.subtitle', 'View, manage, and sync your Tesla vehicles')}
-      query={[vehiclesQuery, statesQuery, workOrdersQuery]}
+      query={[vehiclesQuery, fleetFreshnessQuery, workOrdersQuery]}
       secondaryActions={
         vehicleList.length >= 2 ? (
           <Button
@@ -903,6 +1125,14 @@ export default function VehicleListPage() {
           )}
         </DataStateNotice>
       )}
+      <StaleRefreshWarning
+        state={vehiclesState}
+        label={t('nav.vehicles', 'Fleet')}
+      />
+      <StaleRefreshWarning
+        state={fleetStateData}
+        label={t('dataSources.labels.liveVehicleState', 'Live vehicle state')}
+      />
 
       {vehicleList.length === 0 ? (
         <EmptyState
@@ -942,7 +1172,7 @@ export default function VehicleListPage() {
             freshness={
               <div className="flex flex-wrap items-center gap-2">
                 <DataFreshnessAuto
-                  query={statesQuery}
+                  query={fleetFreshnessQuery}
                   source={t('operations.vehicles.liveStateSource', 'Live vehicle state')}
                 />
                 <DataFreshnessAuto
@@ -977,12 +1207,14 @@ export default function VehicleListPage() {
               {
                 key: 'online',
                 label: t('operations.vehicles.online', 'Live state available'),
-                value: fleetStatePending ? '—' : `${fleet.onlineCount}/${vehicleList.length}`,
+                value: fleetStatePending || noCoverage
+                  ? '—'
+                  : `${fleet.liveStateCount}/${vehicleList.length}`,
                 detail: t(
                   'operations.vehicles.onlineDetail',
                   'Vehicles with a current state response available.',
                 ),
-                tone: fleetStatePending
+                tone: fleetStatePending || noCoverage
                   ? 'neutral'
                   : offlineCount > 0
                     ? 'warning'
@@ -991,27 +1223,39 @@ export default function VehicleListPage() {
               {
                 key: 'readiness',
                 label: t('operations.vehicles.readiness', 'Departure ready'),
-                value: fleetStatePending ? '—' : `${fleet.readyCount}/${vehicleList.length}`,
-                detail: t(
-                  'operations.vehicles.readinessDetail',
-                  'Vehicles reporting live state with at least 20% battery.',
-                ),
-                tone: fleetStatePending
+                // Without a fresh reading for ANY vehicle, "0/N ready" is an
+                // assertion that the fleet cannot depart — from no evidence.
+                value: fleetStatePending || noCoverage
+                  ? '—'
+                  : `${fleet.readyCount}/${fleet.coveredCount}`,
+                detail: [
+                  t(
+                    'operations.vehicles.readinessDetail',
+                    'Vehicles reporting live state with at least 20% battery.',
+                  ),
+                  coverageNote,
+                ].filter(Boolean).join(' '),
+                tone: fleetStatePending || noCoverage
                   ? 'neutral'
-                  : fleet.readyCount < vehicleList.length
+                  : fleet.readyCount < fleet.coveredCount
                     ? 'warning'
                     : 'success',
               },
               {
                 key: 'utilization',
                 label: t('operations.vehicles.utilization', 'Live utilization'),
-                value: fleetStatePending ? '—' : `${utilizationPct}%`,
-                detail: t(
-                  'operations.vehicles.utilizationDetail',
-                  '{{active}} of {{total}} registered vehicles are driving or charging now.',
-                  { active: fleet.activeCount, total: vehicleList.length },
-                ),
-                tone: fleetStatePending ? 'neutral' : 'info',
+                value: fleetStatePending || utilizationPct == null
+                  ? '—'
+                  : `${utilizationPct}%`,
+                detail: [
+                  t(
+                    'operations.vehicles.utilizationDetail',
+                    '{{active}} of {{total}} registered vehicles are driving or charging now.',
+                    { active: fleet.activeCount, total: fleet.coveredCount },
+                  ),
+                  coverageNote,
+                ].filter(Boolean).join(' '),
+                tone: fleetStatePending || utilizationPct == null ? 'neutral' : 'info',
               },
               {
                 key: 'software',
@@ -1030,7 +1274,7 @@ export default function VehicleListPage() {
                   '{{reported}} of {{online}} live vehicles reported a software version.',
                   {
                     reported: fleet.softwareReportingCount,
-                    online: fleet.onlineCount,
+                    online: fleet.liveStateCount,
                   },
                 ),
                 tone: fleetStatePending || fleet.softwareVersions.length === 0
@@ -1085,7 +1329,7 @@ export default function VehicleListPage() {
                 avgBattery={fleet.avgBattery}
                 totalRange={fleet.totalRange}
                 chargingCount={fleet.chargingCount}
-                onlineCount={fleet.onlineCount}
+                liveStateCount={fleet.liveStateCount}
               />
             )}
           </FadeIn>
@@ -1101,8 +1345,11 @@ export default function VehicleListPage() {
                   entries={fleet.entries}
                   avgBattery={fleet.avgBattery}
                   isLoading={statesQuery.isLoading}
-                  isError={statesQuery.isError}
-                  error={statesQuery.error}
+                  isError={fleetSummary.failedCount > 0}
+                  error={statesQuery.error ?? new Error(t(
+                    'vehicles.statusUnavailable',
+                    'Live state could not be retrieved for any vehicle.',
+                  ))}
                   onRetry={() => statesQuery.refetch()}
                 />
               </FadeIn>
@@ -1111,8 +1358,7 @@ export default function VehicleListPage() {
                   counts={statusCounts}
                   total={vehicleList.length}
                   isLoading={statesQuery.isLoading}
-                  isError={statesQuery.isError}
-                  error={statesQuery.error}
+                  summary={fleetSummary}
                   onRetry={() => statesQuery.refetch()}
                 />
               </FadeIn>
@@ -1182,11 +1428,13 @@ export default function VehicleListPage() {
         }
         statusLabel={
           previewTarget
-            ? deriveVehicleStatus(previewTarget.state)
+            ? (previewTarget.state != null
+                ? deriveVehicleStatus(previewTarget.state)
+                : t('vehicles.statusUnknown', 'Unknown'))
             : undefined
         }
         statusTone={
-          previewTarget
+          previewTarget?.state != null
             ? statusVariant(deriveVehicleStatus(previewTarget.state))
             : 'neutral'
         }

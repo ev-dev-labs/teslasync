@@ -61,6 +61,13 @@ docs/.vitepress/dist/
 
 # Test artifacts
 test-results/
+web/test-results/
+web/playwright-report/
+web/blob-report/
+web/e2e/.auth-state.json
+web/e2e/.app-dist/
+.playwright/
+web/.playwright/
 coverage.out
 coverage.html
 coverage.txt

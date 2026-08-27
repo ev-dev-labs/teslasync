@@ -53,9 +53,24 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
-// ── motion: render children inline (no animation frames in jsdom) ──
+// ── motion: render children inline (no animation frames in jsdom). The real
+//    `ToastProvider` renders below (not mocked) and needs both `motion` (for
+//    MetricBar-style fills elsewhere in the tree) and `AnimatePresence` (for
+//    its toast-stack transitions) — both now come from this barrel rather
+//    than 'framer-motion' directly, so the mock must supply them too. ──
 vi.mock('@/components/motion', () => ({
   FadeIn: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  motion: new Proxy(
+    {},
+    {
+      get: () => (props: Record<string, unknown>) => {
+        const Component = (props.as as string) ?? 'div';
+        const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>;
+        return <Component {...(rest as Record<string, unknown>)}>{children as ReactNode}</Component>;
+      },
+    },
+  ),
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 // ── source-of-truth hooks ──

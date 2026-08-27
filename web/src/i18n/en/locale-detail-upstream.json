@@ -1,0 +1,5 @@
+{
+  "upstream": {
+    "banner": "Tesla upstream unavailable — retry in {{n}}s"
+  }
+}

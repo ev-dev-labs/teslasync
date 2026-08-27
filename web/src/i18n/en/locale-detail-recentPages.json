@@ -1,0 +1,19 @@
+{
+  "recentPages": {
+    "empty": "Pages you visit will appear here for quick access.",
+    "shortMinute": "m",
+    "shortHour": "h",
+    "shortDay": "d",
+    "justNow": "Just now",
+    "clearTitle": "Recently viewed pages",
+    "clearBody": "Wipe the list of pages used by the status bar and the Recent section in the command palette.",
+    "clearButton": "Clear recent pages",
+    "clearConfirmTitle": "Clear recent pages?",
+    "clearConfirmBody": "This will wipe the list immediately. The status bar and palette Recent section will be empty until you visit new pages.",
+    "clearConfirmCta": "Clear pages",
+    "cleared": "Recent pages cleared",
+    "storedCount_one": "{{count}} entry stored",
+    "storedCount_other": "{{count}} entries stored",
+    "storedCount": "{{count}} entries stored"
+  }
+}

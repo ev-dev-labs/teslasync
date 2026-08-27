@@ -61,6 +61,13 @@ vi.mock('@/features/onboarding/components/OnboardingGate', () => ({ OnboardingGa
 vi.mock('@/components/ui/DensityApplier', () => ({ DensityApplier: () => null }))
 vi.mock('@/components/ui/ContextMenu', () => ({ ContextMenuRoot: () => null }))
 vi.mock('@/components/a11y', () => ({ RouteAnnouncer: () => null }))
+// The consent-policy gate issues a TanStack query; this spec renders <App>
+// without a QueryClientProvider. Its own behaviour is covered by
+// components/feedback/__tests__/VitalsConsentPolicyGate.test.tsx and by
+// src/App.consent.test.tsx (which asserts it mounts on standalone routes).
+vi.mock('./components/feedback/VitalsConsentPolicyGate', () => ({
+  VitalsConsentPolicyGate: () => null,
+}))
 
 import App, {
   RecentPagesRecorder,

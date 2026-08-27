@@ -154,7 +154,7 @@ export function ConsumptionSpeedPlot({
                 stroke={CHART_COLORS[1]}
                 strokeWidth={2.5}
                 dot={{ r: 4 }}
-                connectNulls
+                connectNulls={false}
                 hide={hidden('qualifiedConsumption')}
               />
               <Line

@@ -176,7 +176,9 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY started_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	// ID is a deterministic tie-breaker for sessions with the same
+	// telemetry timestamp, keeping offset pagination stable between requests.
+	query += fmt.Sprintf(" ORDER BY started_at DESC, id DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -507,24 +509,44 @@ func (r *DriveRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]int64
 }
 
 // BulkDelete removes drives whose IDs are in `ids`, all inside a single
-// transaction. Returns the actual rows-affected count. Callers should
-// pre-validate which ids exist via FilterExistingIDs to surface failed ids
-// to the client; this method itself is idempotent for missing ids.
+// transaction. Callers that need per-ID concurrent-delete diagnostics should
+// prefer BulkDeleteReturning.
 func (r *DriveRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
-	if len(ids) == 0 {
-		return 0, nil
+	deleted, err := r.BulkDeleteReturning(ctx, ids)
+	if err != nil {
+		return 0, err
 	}
-	var deleted int64
+	return int64(len(deleted)), nil
+}
+
+// BulkDeleteReturning removes drives in one transaction and returns the
+// actual IDs PostgreSQL deleted. The returned IDs let HTTP handlers distinguish
+// an absent request ID from a row that changed after their preflight read.
+func (r *DriveRepo) BulkDeleteReturning(ctx context.Context, ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return []int64{}, nil
+	}
+	deleted := make([]int64, 0, len(ids))
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM drives WHERE id = ANY($1)`, ids)
+		rows, err := tx.Query(ctx, `DELETE FROM drives WHERE id = ANY($1) RETURNING id`, ids)
 		if err != nil {
-			return err
+			return fmt.Errorf("delete drives: %w", err)
 		}
-		deleted = tag.RowsAffected()
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("scan deleted drive: %w", err)
+			}
+			deleted = append(deleted, id)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("iterate deleted drives: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("bulk delete drives: %w", err)
+		return nil, fmt.Errorf("bulk delete drives: %w", err)
 	}
 	return deleted, nil
 }

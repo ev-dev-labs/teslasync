@@ -252,7 +252,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 stroke="#06b6d4"
                 strokeWidth={2}
                 dot={false}
-                connectNulls
+                connectNulls={false}
                 name="torque"
                 hide={hiddenSeries?.isHidden('torque')}
               />
@@ -264,7 +264,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                 stroke="#f97316"
                 strokeWidth={2}
                 dot={false}
-                connectNulls
+                connectNulls={false}
                 name="statorTemp"
                 hide={hiddenSeries?.isHidden('statorTemp')}
               />
@@ -278,7 +278,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   strokeWidth={1}
                   strokeDasharray="4 2"
                   dot={false}
-                  connectNulls
+                  connectNulls={false}
                   name="lateralG"
                   hide={hiddenSeries?.isHidden('lateralG')}
                 />
@@ -292,7 +292,7 @@ export default function MotorHistoryWidget({ vehicleId, size }: WidgetProps) {
                   strokeWidth={1}
                   strokeDasharray="4 2"
                   dot={false}
-                  connectNulls
+                  connectNulls={false}
                   name="longitudinalG"
                   hide={hiddenSeries?.isHidden('longitudinalG')}
                 />

@@ -207,7 +207,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 stroke="#f97316"
                 strokeWidth={2}
                 fill="url(#gradInside)"
-                connectNulls
+                connectNulls={false}
                 name="inside"
                 hide={hiddenSeries?.isHidden('inside')}
               />
@@ -217,7 +217,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 stroke="#3b82f6"
                 strokeWidth={2}
                 fill="url(#gradOutside)"
-                connectNulls
+                connectNulls={false}
                 name="outside"
                 hide={hiddenSeries?.isHidden('outside')}
               />

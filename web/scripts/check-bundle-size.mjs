@@ -3,18 +3,18 @@
  * Bundle-size guard.
  *
  * Walks dist/assets/, computes gzipped size of each JS chunk, prints a
- * report, and (with `--strict`) fails the build when the entry chunk
- * exceeds ENTRY_LIMIT_KB or any vendor/route chunk exceeds CHUNK_LIMIT_KB.
+ * report, and (with `--strict`) fails the build when measurable startup,
+ * vendor, route, or locale budgets are exceeded.
  *
  * Wired in two places:
  * - `npm run build` runs `postbuild` → this script in **report-only** mode,
  * so local builds always print sizes but never fail.
  * - CI calls `npm run perf:check` (= `--strict`) so regressions fail PRs.
  *
- * Limits intentionally start generous (entry 350 KB / chunk 600 KB gzip)
- * so the gate ships without flapping; tighten via env vars
- * (BUNDLE_ENTRY_LIMIT_KB / BUNDLE_CHUNK_LIMIT_KB) once measured baselines
- * are in `web/perf-baseline.json`.
+ * The limits are gzip budgets, not content hashes, so ordinary content changes
+ * remain valid while regressions are actionable. Override them with
+ * BUNDLE_TRANSITIVE_INITIAL_LIMIT_KB, BUNDLE_VENDOR_LIMIT_KB, BUNDLE_ROUTE_LIMIT_KB,
+ * and BUNDLE_LOCALE_LIMIT_KB when profiling a release candidate.
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
@@ -28,10 +28,14 @@ import {
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = resolve(__dirname, '..')
 const ASSETS_DIR = join(WEB_ROOT, 'dist', 'assets')
+const LOCALE_MANIFEST_PATH = join(WEB_ROOT, 'src', 'i18n', 'en', 'usage-manifest.json')
+const SHELL_RESOURCE_PATH = join(WEB_ROOT, 'src', 'i18n', 'en', 'shell.json')
 
 const STRICT = process.argv.includes('--strict') || process.env.STRICT_BUNDLE_CHECK === '1'
-const ENTRY_LIMIT_KB = Number(process.env.BUNDLE_ENTRY_LIMIT_KB ?? 350)
-const CHUNK_LIMIT_KB = Number(process.env.BUNDLE_CHUNK_LIMIT_KB ?? 600)
+const TRANSITIVE_INITIAL_LIMIT_KB = Number(process.env.BUNDLE_TRANSITIVE_INITIAL_LIMIT_KB ?? 410)
+const VENDOR_LIMIT_KB = Number(process.env.BUNDLE_VENDOR_LIMIT_KB ?? 140)
+const ROUTE_LIMIT_KB = Number(process.env.BUNDLE_ROUTE_LIMIT_KB ?? 100)
+const LOCALE_LIMIT_KB = Number(process.env.BUNDLE_LOCALE_LIMIT_KB ?? 67)
 
 function fmtKB(bytes) {
   return `${(bytes / 1024).toFixed(1)} KB`
@@ -39,11 +43,48 @@ function fmtKB(bytes) {
 
 function classify(name, entryNames) {
   if (entryNames.has(name)) return 'entry'
+  if (name.startsWith('locale-')) return 'locale'
   if (name.startsWith('vendor-')) return 'vendor'
   return 'route'
 }
 
+function staticDependencies(contents) {
+  const dependencies = new Set()
+  const pattern = /(?:\bfrom\s*|\bimport\s*)["']\.\/([^"']+\.js)["']/g
+  for (const match of contents.matchAll(pattern)) dependencies.add(match[1])
+  return dependencies
+}
+
+function localeBundleDetails(name, manifest) {
+  const bundle = Object.keys(manifest.bundles ?? {})
+    .sort((left, right) => right.length - left.length)
+    .find((candidate) => name.startsWith(`locale-${candidate}-`))
+  const namespaces = bundle ? manifest.bundles[bundle] ?? [] : []
+  return { bundle: bundle ?? 'unknown', namespaces }
+}
+
+function verifyLocaleBundleNameFixtures() {
+  const manifest = {
+    bundles: {
+      'action-center': ['actionCenter'],
+      'vehicle-systems': ['vehicleSystems'],
+      vehicles: ['vehicles'],
+    },
+  }
+  const fixtures = [
+    ['locale-action-center-abc12345.js', 'action-center'],
+    ['locale-vehicle-systems-abc12345.js', 'vehicle-systems'],
+  ]
+  for (const [fileName, expected] of fixtures) {
+    const { bundle } = localeBundleDetails(fileName, manifest)
+    if (bundle !== expected) {
+      throw new Error(`locale bundle fixture ${fileName} resolved ${bundle}, expected ${expected}`)
+    }
+  }
+}
+
 function main() {
+  verifyLocaleBundleNameFixtures()
   if (!existsSync(ASSETS_DIR) || !statSync(ASSETS_DIR).isDirectory()) {
     console.warn('[bundle-size] dist/assets/ not found — skipping (run `npm run build` first)')
     return
@@ -55,6 +96,9 @@ function main() {
     if (STRICT) process.exit(1)
   }
   const preloadedNames = findModulePreloadAssetNames(dirname(ASSETS_DIR))
+  const localeManifest = existsSync(LOCALE_MANIFEST_PATH)
+    ? JSON.parse(readFileSync(LOCALE_MANIFEST_PATH, 'utf8'))
+    : { bundles: {} }
   const files = readdirSync(ASSETS_DIR).filter((f) => f.endsWith('.js'))
   const rows = files.map((name) => {
     const raw = readFileSync(join(ASSETS_DIR, name))
@@ -67,6 +111,7 @@ function main() {
       gz,
     }
   }).sort((a, b) => b.gz - a.gz)
+  const rowsByName = new Map(rows.map((row) => [row.name, row]))
 
   const totals = rows.reduce(
     (acc, r) => {
@@ -91,24 +136,60 @@ function main() {
   for (const [kind, gz] of Object.entries(totals.byKind)) {
     console.log(`  ${kind.padEnd(7).padStart(9)}${''.padStart(2)}${fmtKB(gz).padStart(9)}`)
   }
-  const initialGzip = rows
-    .filter((row) => row.kind === 'entry' || row.preloaded)
-    .reduce((sum, row) => sum + row.gz, 0)
-  console.log(`  initial JS${fmtKB(initialGzip).padStart(11)}  (entry + modulepreloads)`)
+  const startupNames = new Set(entryNames)
+  const pending = [...entryNames]
+  while (pending.length > 0) {
+    const name = pending.pop()
+    if (!name) continue
+    const row = rowsByName.get(name)
+    if (!row) continue
+    for (const dependency of staticDependencies(readFileSync(join(ASSETS_DIR, name), 'utf8'))) {
+      if (!startupNames.has(dependency) && rowsByName.has(dependency)) {
+        startupNames.add(dependency)
+        pending.push(dependency)
+      }
+    }
+  }
+  const transitiveInitialGzip = [...startupNames]
+    .reduce((sum, name) => sum + (rowsByName.get(name)?.gz ?? 0), 0)
+  console.log(
+    `  startup JS${fmtKB(transitiveInitialGzip).padStart(11)}  (${startupNames.size} transitive static requests)`,
+  )
+  if (existsSync(SHELL_RESOURCE_PATH)) {
+    console.log(
+      `  shell locale${fmtKB(gzipSync(readFileSync(SHELL_RESOURCE_PATH)).length).padStart(10)}  (embedded in startup JS)`,
+    )
+  }
 
   // Check budgets
   const failures = []
+  const initialKB = transitiveInitialGzip / 1024
+  if (initialKB > TRANSITIVE_INITIAL_LIMIT_KB) {
+    failures.push(
+      `startup JS = ${fmtKB(transitiveInitialGzip)} exceeds budget ${TRANSITIVE_INITIAL_LIMIT_KB} KB`,
+    )
+  }
   for (const r of rows) {
     const kb = r.gz / 1024
-    if (r.kind === 'entry' && kb > ENTRY_LIMIT_KB) {
-      failures.push(`entry chunk ${r.name} = ${fmtKB(r.gz)} exceeds budget ${ENTRY_LIMIT_KB} KB`)
-    } else if (r.kind !== 'entry' && kb > CHUNK_LIMIT_KB) {
-      failures.push(`${r.kind} chunk ${r.name} = ${fmtKB(r.gz)} exceeds budget ${CHUNK_LIMIT_KB} KB`)
+    if (r.kind === 'vendor' && kb > VENDOR_LIMIT_KB) {
+      failures.push(`vendor chunk ${r.name} = ${fmtKB(r.gz)} exceeds budget ${VENDOR_LIMIT_KB} KB`)
+    } else if (r.kind === 'route' && kb > ROUTE_LIMIT_KB) {
+      failures.push(`route chunk ${r.name} = ${fmtKB(r.gz)} exceeds budget ${ROUTE_LIMIT_KB} KB`)
+    } else if (r.kind === 'locale' && kb > LOCALE_LIMIT_KB) {
+      const { bundle, namespaces } = localeBundleDetails(r.name, localeManifest)
+      const namespaceSummary = namespaces.length > 12
+        ? `${namespaces.slice(0, 12).join(', ')}, … (+${namespaces.length - 12})`
+        : namespaces.join(', ')
+      failures.push(
+        `locale bundle ${bundle} (${namespaceSummary || 'unknown namespaces'}) = ${fmtKB(r.gz)} exceeds budget ${LOCALE_LIMIT_KB} KB`,
+      )
     }
   }
 
   if (failures.length === 0) {
-    console.log(`\n[bundle-size] OK (entry ≤ ${ENTRY_LIMIT_KB} KB, others ≤ ${CHUNK_LIMIT_KB} KB)\n`)
+    console.log(
+      `\n[bundle-size] OK (transitive startup ≤ ${TRANSITIVE_INITIAL_LIMIT_KB} KB, vendor ≤ ${VENDOR_LIMIT_KB} KB, route ≤ ${ROUTE_LIMIT_KB} KB, locale ≤ ${LOCALE_LIMIT_KB} KB)\n`,
+    )
     return
   }
 

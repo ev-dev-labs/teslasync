@@ -67,7 +67,7 @@ import { CommandPaletteHost } from './CommandPaletteHost'
 import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
-import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useAuthMode, useIsForwardAuth } from '@/api/hooks/useAuthMode'
 import { useAlerts } from '@/api/hooks/useNotifications'
 import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
@@ -88,6 +88,19 @@ import { usePresentationMode } from '@/hooks/usePresentationMode';
 import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
 import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
+import { resolveNavCapabilitiesFromAuthMode } from '@/lib/navCapabilities';
+import {
+  MAX_PINNED_NAV_ITEMS,
+  MAX_RECENT_NAV_ITEMS,
+  getPinnedNavPaths,
+  getRecentNavPaths,
+  navPathsEqual,
+  pinnedNavPathsNeedRewrite,
+  recentNavPathsNeedRewrite,
+  setPinnedNavPaths,
+  setRecentNavPaths,
+  subscribeNavPins,
+} from '@/lib/navPins';
 import { PresentationOverlay } from './presentation/PresentationOverlay';
 import { ReportMasthead } from './presentation/ReportMasthead';
 
@@ -269,12 +282,9 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/ownership/subscription-roi': ['subscription roi', 'connectivity', 'premium features', 'cancel', 'break even', 'recurring cost'],
 }
 
-const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
-const MAX_PINNED_NAV_ITEMS = 8
-const MAX_RECENT_NAV_ITEMS = 3
+// Pinned / recent nav persistence lives in `lib/navPins.ts` so the command
+// palette can surface the same Quick-access list the sidebar renders.
 const EXPANDED_NAV_STORAGE_KEY = 'teslasync-expanded-nav-sections'
-const RECENT_NAV_STORAGE_KEY = 'teslasync-recent-nav-paths'
-const PINNED_NAV_STORAGE_KEY = 'teslasync-pinned-nav-paths'
 
 const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string; icon: typeof Icons.home; gradient: string }> = {
   Home:           { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.home,            gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
@@ -663,6 +673,24 @@ function findNavItemByExactPath(to: string) {
 }
 
 /**
+ * Every destination the canonical catalog knows about.
+ *
+ * Used to reconcile persisted pin / recent lists: a stored path that no longer
+ * exists (route removed or renamed between releases) is a dead link, so it is
+ * dropped before it can be rendered OR re-persisted. Visibility predicates
+ * (`minVehicles`, `requiresAuth`) are deliberately NOT applied here — those
+ * are transient states, and a pin must survive plugging in a second vehicle.
+ */
+const NAV_CATALOG_PATHS: ReadonlySet<string> = new Set(
+  navSections.flatMap(section => section.items.map(item => item.to)),
+)
+
+/** Drop paths the catalog no longer contains, preserving order. */
+export function reconcileNavPaths(paths: readonly string[]): string[] {
+  return paths.filter(path => NAV_CATALOG_PATHS.has(path))
+}
+
+/**
  * Header bell trigger.
  *
  * Replaced the original NavLink-only bell with `NotificationBellPopover`,
@@ -847,24 +875,12 @@ export default function Layout() {
       return new Set(['Home'])
     }
   })
-  const [recentNavPaths, setRecentNavPaths] = useState<string[]>(() => {
-    try {
-      const stored = window.localStorage.getItem(RECENT_NAV_STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) as string[] : []
-      return parsed.slice(0, MAX_RECENT_NAV_ITEMS)
-    } catch {
-      return []
-    }
-  })
-  const [pinnedNavPaths, setPinnedNavPaths] = useState<string[]>(() => {
-    try {
-      const stored = window.localStorage.getItem(PINNED_NAV_STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) as string[] : []
-      return (stored ? parsed : DEFAULT_PINNED_NAV_PATHS).slice(0, MAX_PINNED_NAV_ITEMS)
-    } catch {
-      return DEFAULT_PINNED_NAV_PATHS
-    }
-  })
+  const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
+    () => reconcileNavPaths(getRecentNavPaths()),
+  )
+  const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
+    () => reconcileNavPaths(getPinnedNavPaths()),
+  )
   const location = useLocation()
   const workspaceScope = useMemo(
     () => getWorkspaceRouteScope(location.pathname),
@@ -1102,6 +1118,9 @@ export default function Layout() {
   // running behind a ForwardAuth identity provider — the underlying endpoints
   // 503 in open mode and there is nothing useful to show.
   const isForwardAuth = useIsForwardAuth()
+  // Raw auth-mode contract — the only permission infrastructure the SPA has.
+  // Feeds capability-aware navigation grouping (see `navCapabilities` below).
+  const { data: authMode } = useAuthMode()
 
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const activeSectionTitle = activeNavEntry?.section.title
@@ -1152,20 +1171,32 @@ export default function Layout() {
   // `visibleNavSections` is the complete 20-group catalog — it still feeds
   // the `notion` and `legacy` styles (explicit user choice to see
   // everything), the `/explore` Feature Hub, and the command palette. The
-  // Linear style instead renders a curated nine-group tree; long-tail routes
-  // stay reachable through the always-visible command-palette trigger and
-  // `/explore` (pinned into Overview), and the exact active item is injected
-  // when the current route is outside the curated set so location context is
-  // never lost. See `sidebar/compactNav.ts`.
+  // Linear style instead renders a curated two-tier tree: seven everyday
+  // primary groups (Overview · Vehicles · Drives · Charging · Energy ·
+  // Insights · Operations) followed by intentional advanced groups. Nothing
+  // is deleted — long-tail routes stay reachable through the always-visible
+  // command-palette trigger and `/explore` (pinned into Overview), and the
+  // exact active item is injected when the current route is outside the
+  // curated set so location context is never lost. Capability resolution
+  // comes from the real permission contract (`/system/auth-mode`) and only
+  // demotes advanced groups; it never removes them.
+  // See `sidebar/compactNav.ts` and `lib/navCapabilities.ts`.
+  const navCapabilities = useMemo(
+    () => resolveNavCapabilitiesFromAuthMode(authMode, productPreferences.persona),
+    [authMode, productPreferences.persona],
+  )
   const compactNav = useMemo(
     () =>
       prioritizeCompactNavTree(
-        buildCompactNavTree(visibleNavSections, location.pathname),
+        buildCompactNavTree(visibleNavSections, location.pathname, {
+          capabilities: navCapabilities,
+        }),
         productPreferences.persona,
       ),
     [
       visibleNavSections,
       location.pathname,
+      navCapabilities,
       productPreferences.persona,
     ],
   )
@@ -1228,27 +1259,55 @@ export default function Layout() {
   useEffect(() => {
     const activeTo = activeNavEntry?.item.to
     if (!activeTo || activeTo === '/' || pinnedNavPaths.includes(activeTo)) return
-    setRecentNavPaths(prev => {
+    setRecentNavPathsState(prev => {
       const next = [activeTo, ...prev.filter(path => path !== activeTo)].slice(0, MAX_RECENT_NAV_ITEMS)
       return next.join('|') === prev.join('|') ? prev : next
     })
   }, [activeNavEntry, pinnedNavPaths])
 
+  // Persist through `lib/navPins` so the command palette's Pinned/Recent
+  // sections observe the same storage keys and change bus.
+  //
+  // Write-loop guard: `setPinnedNavPaths` notifies the bus, and this component
+  // also SUBSCRIBES to that bus. Comparing against what storage already holds
+  // means a no-op render never writes, so a notify can never bounce back into
+  // another write. It also stops a first mount from persisting the curated
+  // defaults, which would silently convert "never customized" into an explicit
+  // user list.
   useEffect(() => {
-    try {
-      window.localStorage.setItem(RECENT_NAV_STORAGE_KEY, JSON.stringify(recentNavPaths))
-    } catch {
-      // Ignore storage failures; recent links are convenience-only.
-    }
+    if (!recentNavPathsNeedRewrite(recentNavPaths)) return
+    setRecentNavPaths(recentNavPaths)
   }, [recentNavPaths])
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(pinnedNavPaths))
-    } catch {
-      // Ignore storage failures; pinned links still work for the current session.
-    }
+    if (!pinnedNavPathsNeedRewrite(pinnedNavPaths)) return
+    setPinnedNavPaths(pinnedNavPaths)
   }, [pinnedNavPaths])
+
+  // Same-tab (`NAV_PINS_EVENT`) and cross-tab (`storage`) reconciliation.
+  //
+  // The listener uses the payload the bus delivers rather than re-reading
+  // storage: after a rejected write (quota, private browsing) storage still
+  // holds the PREVIOUS list, so a re-read would roll the user's change back.
+  // Reading through `reconcileNavPaths` means a foreign tab that persisted a
+  // path this build no longer serves cannot resurrect a dead link here, and
+  // returning the previous array reference when nothing changed keeps the
+  // update from re-rendering — and therefore from re-entering the effects
+  // above.
+  useEffect(
+    () =>
+      subscribeNavPins(detail => {
+        setPinnedNavPathsState(prev => {
+          const next = reconcileNavPaths(detail?.pinned ?? getPinnedNavPaths())
+          return navPathsEqual(prev, next) ? prev : next
+        })
+        setRecentNavPathsState(prev => {
+          const next = reconcileNavPaths(detail?.recent ?? getRecentNavPaths())
+          return navPathsEqual(prev, next) ? prev : next
+        })
+      }),
+    [],
+  )
 
   const toggleSection = useCallback((title: string) => {
     setExpandedSections(prev => {
@@ -1276,14 +1335,14 @@ export default function Layout() {
   const activeNavPath = activeNavEntry?.item.to
   const activeIsPinned = activeNavPath ? pinnedNavPaths.includes(activeNavPath) : false
   const pinNavPath = useCallback((to: string) => {
-    setPinnedNavPaths(prev => {
+    setPinnedNavPathsState(prev => {
       if (prev.includes(to)) return prev
       return [to, ...prev].slice(0, MAX_PINNED_NAV_ITEMS)
     })
-    setRecentNavPaths(prev => prev.filter(path => path !== to))
+    setRecentNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
   const unpinNavPath = useCallback((to: string) => {
-    setPinnedNavPaths(prev => prev.filter(path => path !== to))
+    setPinnedNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
   const mainRef = useRef<HTMLElement>(null)
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {

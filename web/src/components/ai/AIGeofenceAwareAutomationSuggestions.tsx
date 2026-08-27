@@ -160,14 +160,21 @@ function InnerSection({
     url: '/ai/geofences/automations/draft',
     body,
     onEvent: handleEvent,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // the selected vehicle aborts an in-flight draft and clears the
+    // stream's own completed output in addition to the local `draft`
+    // state cleared below.
+    scopeKey: vehicleId ?? null,
   })
 
   // Pull cancel out so the cleanup effect's deps stay narrow.
   const { cancel: cancelStream } = stream
 
-  // Cancel + reset on vehicleId change so a stale stream from a
-  // previously-selected vehicle cannot bleed a proposal into the
-  // new scope.
+  // Reset the locally-captured draft on vehicleId change/unmount so a
+  // stale proposal from a previously-selected vehicle cannot bleed
+  // into the new scope. The stream's own text/activity/usage reset is
+  // now handled by useAiStream's scopeKey above; cancelStream() here
+  // only covers unmount.
   useEffect(() => {
     return () => {
       cancelStream()

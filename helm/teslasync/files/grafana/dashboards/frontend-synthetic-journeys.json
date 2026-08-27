@@ -1,0 +1,228 @@
+{
+  "uid": "frontend-synthetic-journeys",
+  "title": "Frontend: synthetic journeys",
+  "description": "Synthetic (proactive) coverage of the critical TeslaSync user journeys, complementing the passive RUM dashboard. THIS DASHBOARD CONTAINS NO CREDENTIALS: probe targets, cookies, bearer tokens and basic-auth material live in the prober's own configuration (a Kubernetes Secret consumed by the blackbox/journey exporter), never in a checked-in dashboard JSON. The dashboard only reads the metric contract below. Panels render 'No data' until a prober publishing that contract is deployed — that is the intended contract-first state.\n\nMETRIC CONTRACT (emit these from any prober — blackbox_exporter, k6, Playwright exporter):\n  probe_success{journey,step,env}                    gauge  1 = step passed, 0 = failed\n  probe_duration_seconds{journey,step,env}           gauge  wall-clock duration of the step, SECONDS\n  probe_http_status_code{journey,step,env}           gauge  last HTTP status observed\n  teslasync_synthetic_journey_runs_total{journey,env,result}  counter  result = success|failure\n\nLABEL RULES (mirror the RUM contract):\n  journey  closed set, kebab-case, e.g. login, dashboard-load, drive-detail, charging-history, export-download\n  step     closed set within a journey, e.g. navigate, first-paint, data-loaded\n  env      closed set, e.g. prod, staging\n  Never add a VIN, user id, session id, coordinate or raw URL as a label.",
+  "tags": [
+    "frontend",
+    "synthetic",
+    "journeys",
+    "owner:frontend"
+  ],
+  "schemaVersion": 38,
+  "version": 1,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "1m",
+  "templating": {
+    "list": [
+      {
+        "name": "env",
+        "label": "Environment",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+        "query": "label_values(probe_success, env)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": false,
+        "current": { "text": "All", "value": "$__all" },
+        "options": []
+      },
+      {
+        "name": "journey",
+        "label": "Journey",
+        "type": "query",
+        "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+        "query": "label_values(probe_success{env=~\"$env\"}, journey)",
+        "refresh": 1,
+        "includeAll": true,
+        "multi": true,
+        "current": { "text": "All", "value": "$__all" },
+        "options": []
+      }
+    ]
+  },
+  "annotations": {
+    "list": [
+      {
+        "name": "Frontend releases",
+        "enable": true,
+        "hide": false,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "DS_TESLASYNC_PROMETHEUS"
+        },
+        "expr": "changes(teslasync_frontend_release_first_seen_timestamp_seconds[$__rate_interval]) > 0",
+        "step": "60s",
+        "tagKeys": "release",
+        "titleFormat": "Frontend release {{release}}",
+        "textFormat": "First real-user sample reported by release {{release}}"
+      }
+    ]
+  },
+  "links": [
+    {
+      "title": "RUM overview",
+      "type": "link",
+      "url": "/d/frontend-rum-overview"
+    }
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "Journeys passing now",
+      "description": "Share of synthetic steps currently reporting probe_success == 1.",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 0, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg(probe_success{env=~\"$env\",journey=~\"$journey\"})",
+          "legendFormat": "pass rate"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "color": "red", "value": null },
+              { "color": "orange", "value": 0.9 },
+              { "color": "green", "value": 0.99 }
+            ]
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Slowest journey p95",
+      "description": "Worst end-to-end synthetic journey duration in the selected scope.",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 8, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "max(max_over_time(sum by (journey) (probe_duration_seconds{env=~\"$env\",journey=~\"$journey\"})[$__rate_interval:]))",
+          "legendFormat": "p95"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "decimals": 2 },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Failed runs (24h)",
+      "description": "Counted from teslasync_synthetic_journey_runs_total{result=\"failure\"}.",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 16, "y": 0, "w": 8, "h": 4 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "sum(increase(teslasync_synthetic_journey_runs_total{env=~\"$env\",journey=~\"$journey\",result=\"failure\"}[24h]))",
+          "legendFormat": "failures"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "id": 10,
+      "type": "timeseries",
+      "title": "Step success by journey",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 0, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (journey) (probe_success{env=~\"$env\",journey=~\"$journey\"})",
+          "legendFormat": "{{journey}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "percentunit", "min": 0, "max": 1, "decimals": 3 },
+        "overrides": []
+      }
+    },
+    {
+      "id": 11,
+      "type": "timeseries",
+      "title": "Step duration by journey and step",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 12, "y": 4, "w": 12, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_duration_seconds{env=~\"$env\",journey=~\"$journey\"}",
+          "legendFormat": "{{journey}} / {{step}}"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "decimals": 3 },
+        "overrides": []
+      }
+    },
+    {
+      "id": 20,
+      "type": "table",
+      "title": "Journey status board",
+      "description": "One row per journey/step with its current pass state and last observed HTTP status.",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 0, "y": 12, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "probe_success{env=~\"$env\",journey=~\"$journey\"}",
+          "legendFormat": "{{journey}} / {{step}}"
+        },
+        {
+          "refId": "B",
+          "expr": "probe_http_status_code{env=~\"$env\",journey=~\"$journey\"}",
+          "legendFormat": "{{journey}} / {{step}} status"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "short", "decimals": 0 },
+        "overrides": []
+      }
+    },
+    {
+      "id": 30,
+      "type": "timeseries",
+      "title": "Synthetic vs real users — LCP",
+      "description": "Cross-check: synthetic navigate+first-paint duration against the real-user LCP p75. A widening gap means the synthetic journey no longer represents the real experience (stale fixtures, warm caches, missing auth path).",
+      "datasource": { "type": "prometheus", "uid": "DS_TESLASYNC_PROMETHEUS" },
+      "gridPos": { "x": 0, "y": 20, "w": 24, "h": 8 },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "avg by (journey) (probe_duration_seconds{env=~\"$env\",journey=~\"$journey\",step=\"first-paint\"})",
+          "legendFormat": "synthetic {{journey}}"
+        },
+        {
+          "refId": "B",
+          "expr": "histogram_quantile(0.75, sum by (le) (rate(teslasync_frontend_web_vitals_lcp_seconds_bucket[$__rate_interval])))",
+          "legendFormat": "real-user LCP p75"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": { "unit": "s", "decimals": 3 },
+        "overrides": []
+      }
+    }
+  ]
+}

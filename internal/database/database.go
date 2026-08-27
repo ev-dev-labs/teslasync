@@ -69,6 +69,7 @@ func New(ctx context.Context, cfg config.DatabaseConfig) (*DB, error) {
 	}
 
 	stats := pool.Stat()
+	observePoolStats(stats)
 	log.Info().
 		Str("host", cfg.Host).
 		Int("max_conns", cfg.MaxConns).
@@ -119,6 +120,7 @@ func (db *DB) Health(ctx context.Context) error {
 	checkCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 	err := db.Pool.Ping(checkCtx)
+	observePoolStats(db.Pool.Stat())
 	if err != nil {
 		tracing.EndSpan(span, err)
 	}
@@ -132,6 +134,7 @@ func (db *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 	defer span.End()
 
 	tx, err := db.Pool.Begin(ctx)
+	observePoolStats(db.Pool.Stat())
 	if err != nil {
 		tracing.EndSpan(span, err)
 		return fmt.Errorf("begin tx: %w", err)
@@ -155,6 +158,7 @@ func (db *DB) WithTx(ctx context.Context, fn func(tx pgx.Tx) error) error {
 // Stats returns current connection pool statistics for monitoring.
 func (db *DB) Stats() map[string]interface{} {
 	s := db.Pool.Stat()
+	observePoolStats(s)
 	return map[string]interface{}{
 		"total_conns":    s.TotalConns(),
 		"idle_conns":     s.IdleConns(),
@@ -168,6 +172,7 @@ func (db *DB) Stats() map[string]interface{} {
 // acquire counters useful for diagnosing connection exhaustion.
 func (db *DB) PoolStats() map[string]interface{} {
 	s := db.Pool.Stat()
+	observePoolStats(s)
 	return map[string]interface{}{
 		"total_conns":            s.TotalConns(),
 		"idle_conns":             s.IdleConns(),

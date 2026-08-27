@@ -1,6 +1,24 @@
 name: Security
 
 on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'go.mod'
+      - 'go.sum'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'web/package.json'
+      - 'web/package-lock.json'
+      - 'Dockerfile*'
+      - 'helm/**'
+      - 'internal/**'
+      - 'web/**'
+      - '.gitleaks.toml'
+      - 'renovate.json'
+      - 'scripts/check-security-workflow-pins.go'
+      - 'scripts/check-security-workflow-pins_test.go'
+      - '.github/workflows/security.yml'
   schedule:
     - cron: "0 4 * * 1"
   workflow_dispatch:
@@ -17,38 +35,169 @@ permissions:
   contents: read
   security-events: write
 
+env:
+  # renovate: datasource=docker depName=aquasec/trivy
+  TRIVY_IMAGE: aquasec/trivy@sha256:62b1e65e8869bc4b4c6aa4fa2b21595256c7c2f6018a9d9ad61caf87187c1969 # 0.74.0
+  # renovate: datasource=docker depName=zricethezav/gitleaks
+  GITLEAKS_IMAGE: zricethezav/gitleaks@sha256:ebfeb6fd4f2c37fa371d3731ebfa662fdf80f93cd37d3b4771bb82263edff8d0 # v8.27.2
+
 jobs:
   security:
     name: Security Scan
     runs-on: ${{ inputs.runner || 'arc-runner' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
         with:
-          go-version: "1.24"
+          go-version: "1.25"
+
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v3.16.0
+
+      - name: Verify workflow supply-chain pins
+        run: |
+          go run ./scripts/check-security-workflow-pins.go
+          go test ./scripts -run TestWorkflowPinChecker
+
+      - name: Verify rendered ingress security behavior
+        shell: bash
+        run: |
+          TLS_RENDERED="$(helm template security helm/teslasync \
+            --set ingress.enabled=true \
+            --set ingress.tls[0].secretName=teslasync-tls \
+            --set ingress.tls[0].hosts[0]=teslasync.local)"
+          grep -Fq 'nginx.ingress.kubernetes.io/force-ssl-redirect: "true"' <<<"$TLS_RENDERED"
+          grep -Fq 'nginx.ingress.kubernetes.io/ssl-redirect: "true"' <<<"$TLS_RENDERED"
+          grep -Fq 'CORS_ORIGINS: "https://teslasync.local"' <<<"$TLS_RENDERED"
+          grep -Fq 'https://fonts.googleapis.com' <<<"$TLS_RENDERED"
+          grep -Fq "media-src 'self' blob:" <<<"$TLS_RENDERED"
+
+          HTTP_RENDERED="$(helm template security helm/teslasync --set ingress.enabled=true)"
+          if grep -q 'force-ssl-redirect\|ssl-redirect' <<<"$HTTP_RENDERED"; then
+            echo "plain-HTTP ingress must not force a TLS redirect" >&2
+            exit 1
+          fi
+
+          if helm template security helm/teslasync \
+            --set ingressRoute.enabled=true \
+            --set ingressRoute.tls.enabled=true > /dev/null 2>&1; then
+            echo "Traefik TLS must reject an unspecified public CSRF origin" >&2
+            exit 1
+          fi
+
+          TRAEFIK_RENDERED="$(helm template security helm/teslasync \
+            --set ingressRoute.enabled=true \
+            --set ingressRoute.tls.enabled=true \
+            --set config.webEndpoint=https://teslasync.example.com)"
+          grep -Fq 'stsSeconds: 63072000' <<<"$TRAEFIK_RENDERED"
+          grep -Fq 'https://fonts.googleapis.com' <<<"$TRAEFIK_RENDERED"
+          grep -Fq "media-src 'self' blob:" <<<"$TRAEFIK_RENDERED"
 
       - name: Run govulncheck
         run: |
-          go install golang.org/x/vuln/cmd/govulncheck@latest
-          govulncheck ./... || echo "::warning::govulncheck found vulnerabilities"
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+          govulncheck ./...
 
-      - name: Trivy filesystem scan
+      - name: Scan dependencies and filesystem secrets
         run: |
-          docker run --rm -v "$(pwd):/src" -w /src \
-            aquasec/trivy:latest fs --severity CRITICAL,HIGH --exit-code 0 \
+          docker run --rm -v "$(pwd):/src" -w /src "${TRIVY_IMAGE}" fs \
+            --scanners vuln,secret \
+            --skip-dirs .git \
+            --skip-dirs node_modules \
+            --skip-dirs web/node_modules \
+            --skip-dirs .cache \
+            --skip-dirs web/.cache \
+            --skip-dirs web/test-results \
+            --skip-dirs web/playwright-report \
+            --skip-dirs coverage \
+            --skip-dirs web/coverage \
+            --skip-dirs dist \
+            --skip-dirs web/dist \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
             --format table .
 
+      - name: Scan Helm IaC configuration
+        run: |
+          docker run --rm -v "$(pwd):/src" -w /src "${TRIVY_IMAGE}" config \
+            --severity CRITICAL,HIGH \
+            --exit-code 1 \
+            --format table helm/teslasync
+
+      - name: Scan checkout for exposed secrets
+        run: |
+          docker run --rm -v "$(pwd):/repo:ro" "${GITLEAKS_IMAGE}" \
+            detect --source=/repo --config=/repo/.gitleaks.toml --no-git --redact --no-banner
+
+      - name: Verify Gitleaks policy catches secrets
+        shell: bash
+        run: |
+          fixture="$(mktemp -d)"
+          trap 'rm -rf "$fixture"' EXIT
+          write_private_key() {
+            printf '%s %s\n%s\n%s %s\n' \
+              '-----BEGIN' 'PRIVATE KEY-----' \
+              'MIIEpgIBAAKCAQEA7Q0qj5WmCqvTNSiP1w3M9yKf9c2V8zR4' \
+              '-----END' 'PRIVATE KEY-----' > "$1"
+          }
+          for fixture_path in production.go internal/negative_test.go web/src/negative.test.ts; do
+            mkdir -p "$(dirname "$fixture/$fixture_path")"
+            write_private_key "$fixture/$fixture_path"
+            if docker run --rm \
+              -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
+              -v "$fixture:/fixture:ro" \
+              "${GITLEAKS_IMAGE}" \
+              detect --source="/fixture/$fixture_path" --config=/config.toml --no-git --redact --no-banner; then
+              echo "Gitleaks failed to detect generated $fixture_path" >&2
+              exit 1
+            fi
+          done
+
+          write_stopword_fixture() {
+            printf 'const %s = "%s%s"\n' "$1" "$2" "$3" > "$4"
+          }
+          for fixture_path in source-stopword.go web/src/stopword.test.ts; do
+            mkdir -p "$(dirname "$fixture/$fixture_path")"
+            write_stopword_fixture token 'sk_live_' 'abcdef1234' "$fixture/$fixture_path"
+            if docker run --rm \
+              -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
+              -v "$fixture:/fixture:ro" \
+              "${GITLEAKS_IMAGE}" \
+              detect --source="/fixture/$fixture_path" --config=/config.toml --no-git --redact --no-banner; then
+              echo "Gitleaks failed to detect generated Stripe-like $fixture_path" >&2
+              exit 1
+            fi
+          done
+          for fixture_path in source-refresh.go web/src/refresh.test.ts; do
+            mkdir -p "$(dirname "$fixture/$fixture_path")"
+            write_stopword_fixture refresh_token 'rt_fake_refresh_token_for_seed_data_only_' 'abc123def456' "$fixture/$fixture_path"
+            if docker run --rm \
+              -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
+              -v "$fixture:/fixture:ro" \
+              "${GITLEAKS_IMAGE}" \
+              detect --source="/fixture/$fixture_path" --config=/config.toml --no-git --redact --no-banner; then
+              echo "Gitleaks failed to detect generated refresh-token $fixture_path" >&2
+              exit 1
+            fi
+          done
+
+          mkdir "$fixture/test-results"
+          write_private_key "$fixture/test-results/ignored.pem"
+          docker run --rm \
+            -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
+            -v "$fixture:/fixture:ro" \
+            "${GITLEAKS_IMAGE}" \
+            detect --source=/fixture --config=/config.toml --no-git --redact --no-banner
+
       - name: Initialize CodeQL
-        uses: github/codeql-action/init@v4
+        uses: github/codeql-action/init@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
         with:
-          languages: go
+          languages: go,javascript-typescript
 
       - name: CodeQL autobuild
-        uses: github/codeql-action/autobuild@v4
+        uses: github/codeql-action/autobuild@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0
 
       - name: CodeQL analysis
-        uses: github/codeql-action/analyze@v4
-        continue-on-error: true
-        with:
-          category: /language:go
+        uses: github/codeql-action/analyze@b1bff81932f5cdfc8695c7752dcee935dcd061c8 # v4.33.0

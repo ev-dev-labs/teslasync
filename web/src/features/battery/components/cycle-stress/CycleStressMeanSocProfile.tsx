@@ -152,7 +152,7 @@ export function CycleStressMeanSocProfile({
                 stroke={chartTokens.series[2]}
                 strokeWidth={2}
                 dot={{ r: 4 }}
-                connectNulls
+                connectNulls={false}
                 hide={hiddenSeries?.isHidden('meanDepthPct')}
               />
               </ComposedChart>

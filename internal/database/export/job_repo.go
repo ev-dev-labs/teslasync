@@ -59,7 +59,7 @@ func (r *ExportJobRepo) List(ctx context.Context, limit, offset int) ([]exportmo
 		            ELSE NULL END AS duration_ms,
 		       created_at, completed_at
 		FROM export_jobs
-		ORDER BY created_at DESC
+		ORDER BY created_at DESC, id DESC
 		LIMIT $1 OFFSET $2`, limit, offset)
 	if err != nil {
 		return nil, err

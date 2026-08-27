@@ -369,6 +369,28 @@ describe('DrivesListPage — primary error', () => {
     expect(screen.queryByRole('region', { name: 'Drive list' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Overview', level: 3 })).toBeNull();
   });
+
+  it('keeps the retained drive list when a BACKGROUND refetch fails', () => {
+    // The bug this guards: `error` reaching <PageContainer error={...}> swaps
+    // a populated, perfectly readable table for a full-bleed error card the
+    // moment one background poll 502s.
+    mockDrives.mockReturnValue(
+      makeQuery({
+        data: DRIVES,
+        error: new Error('Drives refresh failed'),
+        isError: true,
+      }),
+    );
+    renderPage();
+
+    // The list and the overview survive…
+    expect(screen.getByRole('region', { name: 'Drive list' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Overview', level: 3 })).toBeInTheDocument();
+    // …the page-level error surface stays away…
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    // …and a non-blocking notice explains why the numbers may lag.
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
+  });
 });
 
 describe('DrivesListPage — populated (km)', () => {
@@ -669,10 +691,17 @@ describe('DrivesListPage — export links', () => {
     const json = screen.getByRole('link', { name: 'JSON' });
 
     const csvHref = csv.getAttribute('href') ?? '';
-    expect(csvHref).toContain('/export/drives?format=csv');
+    // Param ORDER is deliberately not asserted: `scopedPath` sorts keys so the
+    // same scope always yields a byte-identical URL. Only presence + casing
+    // are contractual.
+    expect(csvHref).toContain('/export/drives?');
+    expect(csvHref).toContain('format=csv');
     expect(csvHref).toContain('vehicle_id=7');
     expect(csvHref).toContain('start=2026-04-01');
     expect(csvHref).toContain('end=2026-04-30');
+    // Never double-prefixed, and never camelCase.
+    expect(csvHref).not.toContain('/api/v1/api/v1');
+    expect(csvHref.split('?')[1] ?? '').not.toMatch(/[?&]?[a-z]+[A-Z]/);
     expect(json.getAttribute('href') ?? '').toContain('format=json');
   });
 });

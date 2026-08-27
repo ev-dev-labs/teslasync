@@ -547,6 +547,13 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           disabled={disabled}
           placeholder={placeholder}
           value={inputValue}
+          // Exposes the full selected value on hover via the native tooltip
+          // when the trigger is closed — otherwise a long option label (e.g.
+          // a vehicle VIN or a long signal name) is silently clipped at the
+          // input's right edge with no way to read the rest without opening
+          // the dropdown. Suppressed while open/typing so it doesn't shadow
+          // the in-progress filter text.
+          title={!open && inputValue ? inputValue : undefined}
           onChange={handleInputChange}
           onFocus={handleInputFocus}
           onKeyDown={handleKeyDown}
@@ -555,6 +562,7 @@ export function Combobox<T>(props: ComboboxProps<T>) {
           }}
           className={cn(
             INPUT_BASE,
+            'text-ellipsis',
             icon && 'pl-10',
             (showClear || !noChevron || loading) && 'pr-16',
             inputClassName,
@@ -657,11 +665,23 @@ export function Combobox<T>(props: ComboboxProps<T>) {
                 id={optionId}
                 role="option"
                 aria-selected={isSelected}
+                // A plain `title` is inert markup — it adds a native hover
+                // tooltip without touching ARIA semantics or introducing
+                // nested interactive elements, so it's safe to surface the
+                // full label even when `renderOption` owns the visible
+                // content (e.g. a custom row that itself truncates/clamps).
+                title={getOptionLabel(opt)}
                 onMouseDown={(e) => e.preventDefault()}
                 onMouseEnter={() => setActiveIndex(i)}
                 onClick={() => commitOption(opt)}
                 className={cn(
                   'cursor-pointer px-3 py-1.5 text-sm text-[var(--text-primary)] transition-colors',
+                  // `truncate` (incl. `white-space: nowrap`) only applies to
+                  // the default plain-label branch. A custom `renderOption`
+                  // owns its own layout — e.g. AddressInput's
+                  // `line-clamp-2` needs normal wrapping, which an inherited
+                  // `nowrap` from this `<li>` would silently defeat.
+                  !renderOption && 'truncate',
                   isActive && 'bg-[var(--surface-2)]',
                   isSelected && 'font-semibold',
                 )}

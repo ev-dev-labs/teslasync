@@ -1,5 +1,5 @@
 import { afterEach, describe, it, expect, vi } from 'vitest'
-import { ApiError, resilientFetch } from './resilience'
+import { ApiError, getApiBase, resilientFetch } from './resilience'
 
 afterEach(() => {
   vi.restoreAllMocks()
@@ -11,6 +11,22 @@ describe('ApiError', () => {
     expect(err.status).toBe(404)
     expect(err.message).toBe('test error')
     expect(err.name).toBe('ApiError')
+  })
+
+  describe('getApiBase', () => {
+    it('reads the CSP-safe Nginx meta configuration before the legacy window value', () => {
+      const meta = document.createElement('meta')
+      meta.name = 'teslasync-api-base'
+      meta.content = 'https://api.example.test///'
+      document.head.appendChild(meta)
+      const previous = window.__TESLASYNC_API_BASE__
+      window.__TESLASYNC_API_BASE__ = 'https://legacy.example.test'
+
+      expect(getApiBase()).toBe('https://api.example.test')
+
+      meta.remove()
+      window.__TESLASYNC_API_BASE__ = previous
+    })
   })
 
   describe('resilientFetch accepted statuses', () => {

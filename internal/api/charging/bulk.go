@@ -21,6 +21,10 @@ type chargingBulkStore interface {
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
 
+type chargingBulkDeleteReturning interface {
+	BulkDeleteReturning(ctx context.Context, ids []int64) ([]int64, error)
+}
+
 func (h *ChargingHandler) chargingBulkRepo() chargingBulkStore {
 	if h.bulkOverride != nil {
 		return h.bulkOverride
@@ -32,7 +36,7 @@ func (h *ChargingHandler) chargingBulkRepo() chargingBulkStore {
 //
 // Contract:
 //   - Body: {"ids":[1,2,3]}, capped at MaxBulkIDs (500). Empty or oversized → 400.
-//   - Response: {"deleted": <int>, "failed": [{"id": <int>, "reason": "not_found"}]}.
+//   - Response: {"requested": <int>, "deleted": <int>, "failed": [{"id": <int>, "reason": "not_found"|"conflict"}]}.
 //   - Pre-validates which IDs exist via FilterExistingIDs so the caller can
 //     pair `failed[]` per id without parsing detail strings.
 //   - All deletes happen in a single Postgres transaction; a failure
@@ -52,14 +56,20 @@ func (h *ChargingHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to validate charging sessions for bulk delete")
 		return
 	}
-	failed := apibulk.ComputeMissingIDs(ids, existing)
-
-	deleted, err := store.BulkDelete(r.Context(), existing)
+	deletedIDs := existing
+	var deleted int64
+	if returningStore, ok := store.(chargingBulkDeleteReturning); ok {
+		deletedIDs, err = returningStore.BulkDeleteReturning(r.Context(), existing)
+		deleted = int64(len(deletedIDs))
+	} else {
+		deleted, err = store.BulkDelete(r.Context(), existing)
+	}
 	if err != nil {
 		log.Error().Err(err).Msg("bulk delete charging sessions")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to bulk delete charging sessions")
 		return
 	}
+	failed := apibulk.ComputeDeleteFailures(ids, existing, deletedIDs)
 
 	if h.db != nil {
 		logAuditFromRequest(h.db, r, h.forwardAuthHeader, "bulk_delete", "charging_session", nil,
@@ -67,8 +77,9 @@ func (h *ChargingHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, apibulk.OperationResult{
-		Deleted: &deleted,
-		Failed:  failed,
+		Requested: int64(len(ids)),
+		Deleted:   &deleted,
+		Failed:    failed,
 	})
 }
 

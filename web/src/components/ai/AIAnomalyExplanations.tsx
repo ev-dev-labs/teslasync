@@ -25,6 +25,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/anomalies/explain',
     body,
     onEvent: () => {},
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight explanation and clears the
+    // previous vehicle's narration before the new scope streams in.
+    scopeKey: vehicleId ?? null,
   })
   // The handler-side parser (internal/api/aianomaly/handler.go) rejects
   // vehicle_id <= 0 with a 400 before the LLM is ever invoked, so we

@@ -1,0 +1,254 @@
+{
+  "help": {
+    "title": "Help",
+    "shortcuts": "Open keyboard shortcuts",
+    "shortcutsLabel": "Keyboard shortcuts",
+    "tour": "Open tour launcher",
+    "tourLabel": "Take a tour",
+    "feedback": "Open feedback / bug report form",
+    "feedbackLabel": "Report a problem",
+    "intro": "Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.",
+    "baseline": {
+      "links": {
+        "docsStatusApi": {
+          "title": "Documentation",
+          "description": "Browse the public API documentation including endpoints, schemas, and example requests."
+        },
+        "onboarding": {
+          "title": "Onboarding",
+          "description": "Walk through the first-time setup wizard to connect a Tesla account and configure live telemetry."
+        },
+        "systemStatus": {
+          "title": "System status",
+          "description": "Inspect the live health of every backend service: database, MQTT, Redis, and the Tesla API."
+        },
+        "search": {
+          "title": "Search",
+          "description": "Find drives, charging sessions, alerts, and other records using typed filters."
+        },
+        "chatbot": {
+          "title": "Chatbot",
+          "description": "Talk to the in-app assistant. Available in deterministic mode or LLM mode when Helix is enabled."
+        }
+      }
+    },
+    "aiHelp": {
+      "title": "Ask the help assistant",
+      "badge": "Helix",
+      "description": "Ask a natural-language question about the application and the assistant will answer using the project’s own documentation, runbooks, and i18n strings — with explicit citations to each source.",
+      "askButton": "Ask the assistant",
+      "placeholder": "e.g. How do I enable energy cost forecasting?",
+      "inputLabel": "Ask a question about the app"
+    },
+    "tooltip": {
+      "iconLabel": "More info"
+    },
+    "vampireDrain": {
+      "body": "Battery percentage lost per day while the vehicle is parked and not charging, derived from observed parked windows.",
+      "avgRate": "Mean battery loss per hour while parked and not charging across the selected period.",
+      "totalLoss": "Estimated kWh lost to vampire drain across all parked sessions in the selected period.",
+      "worstSession": "Single parked session with the largest % battery drop.",
+      "score": "0–100 health score derived from your drain rate vs. fleet expectations. Higher is better."
+    },
+    "sleepEfficiency": {
+      "body": "Share of parked time the car spent in true low-power sleep (vs. idle/online). Higher is better — more sleep means less vampire drain and lower battery wear.",
+      "timeToSleep": "Average minutes from when the car parks to when it enters low-power sleep.",
+      "sentryDrain": "Battery loss per hour while Sentry Mode is active. Sentry keeps cameras and computers on, which adds noticeable drain.",
+      "sentryCost": "Estimated monthly electricity cost of Sentry-related drain, using your configured per-kWh rate.",
+      "sentryOffDrain": "Baseline battery loss per hour while parked with Sentry Mode off — the unavoidable idle drain.",
+      "sentryKwh": "Estimated energy consumed each month by Sentry-related drain."
+    },
+    "driveScore": {
+      "body": "0–100 score derived from smoothness of acceleration, braking, and cornering combined with energy efficiency. Tunable in Settings → Driving.",
+      "iconLabel": "More info about Drive Score"
+    },
+    "tripLogbook": {
+      "body": "Set the rate your employer or tax authority reimburses per distance driven in each category. Rates are stored per kilometre and converted to your display unit; amounts are rate × drive distance.",
+      "iconLabel": "More info about reimbursement rates"
+    },
+    "rangeBuffer": {
+      "body": "The five drives that ended with the least battery remaining. Regularly arriving below 20% adds thermal and cycling stress near the bottom of the pack — a healthy buffer keeps the score high.",
+      "iconLabel": "More info about range buffer"
+    },
+    "drivingRhythm": {
+      "body": "Each cell counts drives starting in that weekday-hour slot (your local time). Darker cells are busier. The predictability score rises the more your departures concentrate into a few slots.",
+      "iconLabel": "More info about the punchcard"
+    },
+    "parkingAnalytics": {
+      "body": "Parking stints are reconstructed from the gaps between consecutive drives, located at the previous drive's destination. The overnight share counts parked time falling between 22:00 and 06:00 local.",
+      "iconLabel": "More info about parking analytics"
+    },
+    "mileageBudget": {
+      "body": "Enter your lease or warranty terms: yearly distance allowance, term start and length, and the per-distance overage fee. The projection extrapolates your average daily driving linearly to the end of the term.",
+      "iconLabel": "More info about allowance terms"
+    },
+    "regenEfficiency": {
+      "body": "Energy recovered through regenerative braking divided by total energy used during driving. Higher is better — Tesla cars typically reach 15–30% recovery in mixed driving.",
+      "iconLabel": "More info about regen metrics"
+    },
+    "fleetTelemetryHealthy": {
+      "body": "Last MQTT message received within the last 5 minutes. Stale means no recent message; check the fleet-telemetry deployment."
+    },
+    "cooldownMin": {
+      "body": "Minimum minutes between consecutive alerts from this rule, regardless of how often the underlying signal crosses the threshold."
+    },
+    "signal": {
+      "layers": "TeslaSync exposes three live-state layers: L1 — in-process signal store on the API pod that ingested the telemetry (lowest latency, scope-limited to that pod). L2 — Redis-backed shared cache of latest values, visible to every pod, used for cross-pod live reads and SSE fanout. log — TimescaleDB signal_log history, authoritative for analytics, charts, and point-in-time reconstruction.",
+      "live": "Live mode streams real-time signal values via Server-Sent Events (SSE). The chart maintains a rolling 5-minute window throttled to 2 Hz updates.",
+      "stale": "A signal is marked stale when its last-seen value in Redis is older than 2 minutes — treat with caution; the vehicle may be offline or the pipeline may be backed up.",
+      "snapshot": "A snapshot is a point-in-time view of every signal value at a single timestamp. The diff falls back to signal_log within the last 30 days when the live layer doesn't have it.",
+      "diff": "Server-side comparison between two snapshots. Unchanged signals are omitted from the result to reduce noise.",
+      "sourceLayer": "The layer that supplied this value: L1 (in-process), L2 (Redis), LOG (TimescaleDB history), or STALE (older than 2 minutes).",
+      "deltaCol": "Numeric difference (and percent change) between Window A and Window B for this signal. 'changed' is shown for non-numeric values that differ."
+    },
+    "fsm": {
+      "type": "Finite-state machine. Tracks vehicle high-level state (driving, charging, parked, online, asleep, offline) and the transitions between them. Sub-FSMs cover drive, charge, command, and notification lifecycles.",
+      "liveState": "The current state the FSM resolved to from the most recent telemetry. The FSM stays in a terminal state until external evidence (telemetry or poll) triggers an explicit transition out."
+    },
+    "replay": {
+      "power": "Instantaneous battery power at this point on the trip. Negative values indicate regenerative braking (energy flowing back into the pack); positive values indicate motor draw.",
+      "battery": "State-of-charge percentage at this point. Drops indicate energy use; rises indicate regen or DC-fast-charging during a drive.",
+      "range": "Estimated rated range remaining at this position based on EPA rated efficiency. Differs from real-world range, which depends on speed, terrain, climate, and load."
+    },
+    "battery": {
+      "soh": "State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%.",
+      "capacity": "Estimated current usable energy capacity of the pack in kWh, derived from the SoH and the original rated capacity.",
+      "degradationRate": "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).",
+      "totalCycles": "Cumulative full-pack equivalent cycles. One cycle = one full discharge + one full charge worth of energy (partial cycles add up over time).",
+      "avgDoD": "Average Depth of Discharge per cycle — how deeply the pack is typically discharged before being recharged. Shallower cycles cause less wear."
+    },
+    "lifetime": {
+      "avgEfficiency": "Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers."
+    },
+    "charging": {
+      "peakPower": "Maximum charging power observed during this session, in kW. DC fast-charging tapers above ~80% SoC; AC charging stays roughly flat.",
+      "avgPower": "Time-averaged charging power across the session. Always lower than peak when the session includes a taper or initial ramp.",
+      "socRange": "The starting and ending state-of-charge percentages for this session. Wider ranges generally mean longer sessions and more taper.",
+      "chargeCurve": "Power vs SoC curve for the session. Tapering — the gradual drop in power as the battery approaches full — is inherent to lithium chemistry and is not a fault. Sudden drops below the curve indicate derating: the charger or battery is throttling power because of cell or ambient temperature limits.",
+      "kwhPerHour": "Average kWh added per hour across the session. Useful for estimating how long a future session will take at the same charger."
+    },
+    "fields": {
+      "settings": {
+        "region": "Tesla account region (NA, EU, CN). Determines which Fleet API endpoint TeslaSync calls. Refresh after changing your Tesla account country.",
+        "gasPriceAutoPoll": "When enabled, TeslaSync automatically fetches U.S. average gasoline prices from the EIA. Used to compute fuel-savings vs. driving an EV.",
+        "gasPricePollInterval": "How often the gas-price worker polls the EIA. Daily catches price spikes; weekly is plenty for most users and is gentler on the upstream feed.",
+        "notificationChannels": "Where alert messages are delivered. Add channels (Discord, Slack, email, webhook, ntfy, Pushover, Telegram) before alerts can fire.",
+        "appearanceDensity": "Controls row height, padding, and font sizes across tables and dashboards. Compact fits more on screen; comfortable is easier to read on large displays.",
+        "chartPalette": "Colour scheme used for chart series. Vivid is the default high-contrast palette; muted reduces visual noise; print is grayscale-friendly for exports.",
+        "timeFormat": "12-hour (1:30 PM) vs 24-hour (13:30) display across timestamps. Affects all surfaces — drives, charging, alerts, telemetry charts.",
+        "uiTheme": "Light / dark / system theme. System follows your OS preference and switches automatically when your OS toggles between modes.",
+        "language": "Display language for UI strings. TeslaSync ships English; community translations may be incomplete for newer features.",
+        "weekStart": "First day of the week in calendar pickers and weekly aggregations. ISO 8601 default is Monday; many U.S. users prefer Sunday.",
+        "electricityCost": "Cost per kWh used to compute charging spend across drives, charging sessions, and TCO analytics. Currency follows the Currency setting above."
+      },
+      "alertStudio": {
+        "cooldown": "Minimum minutes between repeat firings of this rule. Prevents the same condition from spamming your channels (e.g. battery at 19% triggering once per minute).",
+        "severity": "Visual / routing priority — info, warn, or critical. Channels can subscribe to specific severities to keep critical alerts from being drowned out by chatty info ones.",
+        "alertBehavior": "Pick 'Notify on event' for one-time confirmations like 'vehicle locked' or 'charging done'. Pick 'Re-alert until resolved' for ongoing safety concerns like 'vehicle unlocked' or 'door open'.",
+        "kind": "Signal threshold compares a single live telemetry value (e.g. BatteryLevel < 20). Computed metric aggregates over a time window (e.g. cost > $5 in last 24h).",
+        "vehicleId": "Restricts the rule to a single vehicle. Leave blank to apply across every vehicle on the account.",
+        "operator": "Comparison applied to the signal value: =, !=, <, <=, >, >=, between, any change. Some operators only apply to numeric signals.",
+        "testMessage": "Message body sent when the rule fires. Use {{SignalName}} placeholders to interpolate the current value into the notification."
+      },
+      "automations": {
+        "triggerType": "What kicks the automation off — a time schedule, a signal threshold crossing, a geofence enter/exit, or another automation completing.",
+        "operator": "How the trigger or condition value is compared (=, !=, <, >, between, etc.). Numeric operators are only available for numeric signals.",
+        "conditionLogic": "When multiple conditions are configured, ALL must pass (AND) or ANY must pass (OR) for the actions to run.",
+        "debounce": "Minimum milliseconds between consecutive runs of this automation. Protects against duplicate triggers when a signal flickers across the threshold.",
+        "geofence": "A named circular region defined in /locations. Automations can react when the vehicle enters or exits the region.",
+        "timeWindow": "Time-of-day range (e.g. 22:00–06:00) and timezone. The condition only passes during that window in the chosen timezone.",
+        "otherAutomation": "Make this automation depend on another automation's recent state — e.g. only run if 'Morning prep' has not run today.",
+        "signal": "The vehicle telemetry signal this condition reads. Booleans use true/false, 'state' uses keywords like online/asleep, all others compare numeric values.",
+        "cronExpr": "Standard 5-field cron syntax (minute hour day-of-month month day-of-week). Use the simple mode above for the most common schedules.",
+        "timezone": "IANA time zone used to interpret the start/end window. Defaults to your browser zone if left blank.",
+        "dwellMinutes": "How many minutes the vehicle must stay inside the geofence before this dwell trigger fires."
+      },
+      "channels": {
+        "webhookUrl": "Full HTTPS URL TeslaSync POSTs the JSON body to. Discord and Slack provide their own webhook endpoints; for custom services use the generic Webhook channel.",
+        "hmacSecret": "Optional shared secret. When set, TeslaSync signs every request with HMAC-SHA256 in the X-TeslaSync-Signature header so receivers can verify authenticity.",
+        "headersJson": "Extra HTTP headers as a JSON object — e.g. {\"Authorization\": \"Bearer XYZ\"}. Useful for receivers that require API keys outside the URL.",
+        "bodyTemplate": "Optional JSON template for the request body. Use {{message}}, {{severity}}, {{timestamp}} placeholders. If omitted, TeslaSync sends its default JSON envelope.",
+        "smtpHost": "Mail server hostname (e.g. smtp.gmail.com). Most providers use port 587 with STARTTLS; check your provider's docs for the right host + port pair.",
+        "smtpPort": "SMTP server port. 587 for STARTTLS (recommended), 465 for implicit TLS, 25 for plain (insecure — only on local relays).",
+        "smtpPassword": "SMTP password or app-specific password. Stored encrypted at rest. Many providers (Gmail, Microsoft 365) require an app password rather than your account password.",
+        "botToken": "Telegram BotFather token in the format `<id>:<secret>`. Create a bot via @BotFather on Telegram, then start a chat with it before TeslaSync can deliver.",
+        "chatId": "Numeric Telegram chat ID. For a private bot chat this is your user ID; for a group it's negative (e.g. -1001234567890).",
+        "ntfyServer": "Base URL of the ntfy server (e.g. https://ntfy.sh for the public server, or your self-hosted instance).",
+        "ntfyTopic": "Topic name on the ntfy server. Anyone with the topic name can subscribe — pick something hard to guess for sensitive alerts.",
+        "method": "HTTP method TeslaSync uses for outbound delivery. POST is universal; some receivers require PUT or PATCH.",
+        "nameLabel": "Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.",
+        "configSection": "Provider-specific credentials and routing details. Required fields vary by channel type. All secrets are encrypted at rest.",
+        "testHint": "Use the \"Send Test\" button after saving to verify your configuration. Tests bypass severity filters but otherwise match real delivery."
+      }
+    },
+    "subtitle": "Guides, the in-app assistant, and quick links to everything in TeslaSync.",
+    "welcomeTitle": "Welcome to TeslaSync",
+    "channelsTitle": "Ways to get help",
+    "exploreTitle": "Explore the app",
+    "exploreSubtitle": "Every card jumps to a canonical destination already built into the app.",
+    "hero": {
+      "aria": "Getting started"
+    },
+    "explore": {
+      "aria": "Explore the app"
+    },
+    "channels": {
+      "browse": {
+        "title": "Browse the app",
+        "description": "Jump straight to the canonical pages using the quick links below."
+      },
+      "docs": {
+        "title": "Read the documentation",
+        "description": "The public API reference covers every endpoint, schema, and example request."
+      },
+      "assistant": {
+        "title": "Ask the assistant",
+        "description": "When Helix is enabled, ask a natural-language question and get answers with citations."
+      }
+    },
+    "batteryCare": {
+      "body": "Lithium packs age fastest when held full, drained deep, or fast-charged often. The score starts at 100 and pays for each habit: full charges and deep discharges cost up to 30 points each; DC fast energy and time outside the 20–80% band cost up to 20 each.",
+      "iconLabel": "More info about the care score"
+    },
+    "chargeAdvisor": {
+      "body": "Median battery percentage consumed on days you actually drive, per weekday, discounted by how often that weekday is driven at all. The projection walks these expectations forward from your current charge.",
+      "iconLabel": "More info about the advisor"
+    },
+    "driveCalendar": {
+      "body": "Each cell is one day; darker means more distance, scaled against your 95th-percentile day so one road trip doesn't flatten the rest. Streaks count consecutive days with at least one drive.",
+      "iconLabel": "More info about the calendar"
+    },
+    "explorer": {
+      "body": "Arrivals are clustered into ~1 km cells; the most-visited cell becomes your home base and everything else counts as a destination. The roaming radius is the distance covering 90% of your arrivals.",
+      "iconLabel": "More info about explorer stats"
+    },
+    "explorerWorkspace": {
+      "iconLabel": "More information about destination clustering"
+    },
+    "driveCompare": {
+      "body": "Consumption, regen share, and drive score can decide the verdict when both drives have enough data. Trip totals remain neutral context.",
+      "iconLabel": "More info about drive compare"
+    },
+    "efficiencyTarget": {
+      "body": "Weekly consumption is total measured energy divided by total eligible distance. The active local week is descriptive until Sunday ends.",
+      "iconLabel": "More info about the target math"
+    },
+    "milestones": {
+      "body": "Calibration is the odometer immediately before the chronologically first eligible drive in this returned history window. Eligible drive distances are added in order, and milestones are round in your selected distance unit.",
+      "iconLabel": "More info about milestone math"
+    },
+    "coldStart": {
+      "body": "A drive is a cold start when the car sat parked for 6+ hours first, and a warm start when the gap was under an hour. Comparing distance-weighted consumption between the groups isolates the battery- and cabin-warm-up penalty; in-between gaps are excluded as ambiguous.",
+      "iconLabel": "More info about cold start math"
+    },
+    "shareCard": {
+      "body": "The card renders as a self-contained SVG in social 1.91:1 proportions with fixed colors, so it looks identical wherever you post it. Values follow your unit preferences at render time.",
+      "iconLabel": "More info about share cards"
+    },
+    "utilization": {
+      "body": "The observed window runs from the first drive in the picked period to its end. Driving hours come from logged drive durations; everything else is the car sitting still. Costs use your electricity rate from Settings and cover energy only.",
+      "iconLabel": "More info about utilization",
+      "methodologyLabel": "More info about utilization coverage"
+    }
+  }
+}

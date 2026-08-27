@@ -1,0 +1,1173 @@
+{
+  "devtools": {
+    "utils": {
+      "base64": "Base64",
+      "base64Desc": "Encode and decode Base64 text",
+      "computeSha256": "Compute Sha256",
+      "httpStatus": "HTTP Status",
+      "httpStatusDesc": "Reference for HTTP response status codes",
+      "httpStatusCode": "Status Code",
+      "httpStatusText": "Status Text",
+      "httpStatusDescription": "Description",
+      "httpStatusSearch": "Search status codes",
+      "httpStatusSearchPlaceholder": "Search codes",
+      "httpStatusEmpty": "No status codes match your search",
+      "timestamp": "Timestamp",
+      "timestampDesc": "Convert between Unix and ISO 8601 timestamps",
+      "timestampCurrent": "Current time",
+      "timestampNow": "Now",
+      "timestampUseNow": "Fill inputs with the current time",
+      "timestampUnixLabel": "Unix Timestamp",
+      "timestampIsoLabel": "ISO Timestamp",
+      "timestampIso": "ISO",
+      "timestampLocal": "Local",
+      "timestampRelative": "Relative",
+      "timestampUnix": "Unix",
+      "timestampInvalidUnix": "Enter a valid Unix timestamp",
+      "timestampInvalidIso": "Enter a valid ISO 8601 timestamp",
+      "hashInputLabel": "Text to hash",
+      "hashPlaceholder": "Enter text to hash...",
+      "hashInsecureContext": "SHA-256 requires a secure context (HTTPS or localhost).",
+      "hashError": "Could not compute hash.",
+      "vin_mfr": "Manufacturer",
+      "vin_model": "Model",
+      "vin_drive": "Drive",
+      "vin_year": "Year",
+      "vin_plant": "Plant",
+      "vin_serial": "Serial",
+      "vin_results": "Decoded VIN",
+      "vin_hint": "Enter at least 11 characters to decode a VIN",
+      "colorPreview": "Color preview",
+      "colorInvalidHex": "Enter a valid 6-digit hex color, e.g. #3b82f6"
+    },
+    "searchTools": "Search tools...",
+    "noToolsFound": "No tools match your search",
+    "partnerKey": {
+      "title": "Public Key Verification",
+      "desc": "Verify your registered public key with Tesla",
+      "verify": "Verify",
+      "keyRegistered": "Key Registered",
+      "keyNotFound": "Key Not Found",
+      "matchesLocal": "Matches Local Key",
+      "mismatch": "Does Not Match Local Key",
+      "noLocal": "No Local Key Configured",
+      "pemLabel": "Registered PEM",
+      "rawResponse": "Raw Response"
+    },
+    "keypairIdle": "Generate or delete a keypair to see results",
+    "uploadIdle": "Upload a public key to see results",
+    "fleet": {
+      "pairingStep1": "Pairing Step1",
+      "pairingStep2": "Pairing Step2",
+      "pairingStep3": "Pairing Step3",
+      "setupWizard": "Setup Wizard",
+      "toolsTitle": "Fleet API Tools"
+    },
+    "configIdle": "Fetch config to see results",
+    "onboarding": {
+      "stepLabel": "Step {{step}}"
+    },
+    "health": {
+      "vin": "VIN",
+      "firstSeen": "First Seen",
+      "lastSeen": "Last Seen",
+      "errorCode": "Error Code",
+      "message": "Message",
+      "reportedAt": "Reported At",
+      "errorVinsTitle": "Error VINs",
+      "errorVinsDesc": "Vehicles with fleet telemetry configuration errors",
+      "affectedVehicles": "affected",
+      "filteredBy": "Filtered",
+      "clearVinFilter": "Clear VIN filter",
+      "refreshVins": "Refresh from Tesla",
+      "noErrorVins": "No vehicles with telemetry errors",
+      "errorLogTitle": "Error Log",
+      "errorLogDesc": "Detailed fleet telemetry error history",
+      "refreshErrors": "Refresh from Tesla",
+      "noErrors": "No fleet telemetry errors recorded"
+    },
+    "title": "Developer Tools",
+    "subtitle": "Fleet API, telemetry, infrastructure & utilities",
+    "resultPanel": {
+      "noResult": "No result yet"
+    }
+  },
+  "playground": {
+    "search": "Search endpoints...",
+    "endpoints": "endpoints",
+    "noResults": "No matching endpoints",
+    "sending": "Sending...",
+    "send": "Send",
+    "confirmDestructive": "This is a {{method}} request. Are you sure you want to send it?",
+    "confirmYes": "Yes, send",
+    "cancel": "Cancel",
+    "pathParams": "Path Parameters",
+    "queryParams": "Query Parameters",
+    "requestBody": "Request Body",
+    "authHeader": "Authentication (Optional)",
+    "apiKeyPlaceholder": "Leave empty to use session auth",
+    "authHint": "Requests use your browser session by default. Enter an API key to test key-based auth.",
+    "codeSnippet": "Code Snippet",
+    "copied": "Copied",
+    "copy": "Copy",
+    "responseHeaders": "Response Headers",
+    "history": "Recent Requests",
+    "response": "Response",
+    "noResponse": "Send a request to see the response",
+    "title": "API Playground",
+    "subtitle": "Explore and test TeslaSync API endpoints",
+    "selectEndpoint": "Select an endpoint from the sidebar to start testing",
+    "endpointCount": "{{count}} endpoints available"
+  },
+  "admin": {
+    "systemStatus": {
+      "clientPerformance": {
+        "title": "Client Performance",
+        "description": "Web Vitals (LCP, INP, CLS, FCP, TTFB) are collected from real browser sessions and exported as Prometheus histograms (teslasync_web_vitals_value).",
+        "collecting": "Collecting",
+        "metricsList": "LCP · INP · CLS · FCP · TTFB",
+        "viewDashboard": "View dashboard",
+        "noDashboard": "Set VITE_GRAFANA_URL at build time to surface a link to the Web Vitals dashboard."
+      }
+    },
+    "security": {
+      "col": {
+        "time": "Time",
+        "lock": "Lock",
+        "sentry": "Sentry",
+        "doors": "Doors",
+        "windows": "Windows"
+      },
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "on": "On",
+      "off": "Off",
+      "eventHistory": "Security Event History",
+      "timeline": {
+        "title": "Security Event Timeline",
+        "lock": {
+          "positive": "Vehicle Locked",
+          "negative": "Vehicle Unlocked",
+          "positiveDesc": "Doors secured",
+          "negativeDesc": "Doors accessible"
+        },
+        "sentry": {
+          "positive": "Sentry Mode Activated",
+          "negative": "Sentry Mode Deactivated",
+          "positiveDesc": "Camera surveillance enabled",
+          "negativeDesc": "Camera surveillance disabled"
+        },
+        "door": {
+          "positive": "Doors Closed",
+          "negative": "Door Opened"
+        },
+        "noEvents": "No state changes detected in the history."
+      },
+      "live": {
+        "hazards": "Hazards",
+        "highBeams": "High Beams",
+        "turnSignal": "Turn Signal",
+        "driverSeat": "Driver Seat",
+        "occupied": "Occupied",
+        "empty": "Empty",
+        "pairedKeys": "Paired Keys",
+        "valetMode": "Valet Mode",
+        "serviceMode": "Service Mode",
+        "speedLimit": "Speed Limit",
+        "homelinkDevices": "HomeLink Devices",
+        "centerDisplay": "Center Display",
+        "indicator": "Live",
+        "noData": "No live state data available"
+      },
+      "liveState": "Live Vehicle State",
+      "statsTitle": "Security Statistics",
+      "stats": {
+        "lockEvents": "Lock/Unlock Events",
+        "sentryUptime": "Sentry Uptime",
+        "doorOpens": "Door Open Events",
+        "windowOpens": "Window Open Events",
+        "homelink": "HomeLink Detections",
+        "guestMode": "Guest Mode Usage",
+        "totalEvents": "Total Events",
+        "aria": "Security statistics metrics"
+      },
+      "card": {
+        "lockStatus": "Lock Status",
+        "lockDesc": "Vehicle lock state",
+        "sentryMode": "Sentry Mode",
+        "sentryDesc": "Camera surveillance system",
+        "doors": "Doors",
+        "doorsDesc": "All vehicle doors",
+        "windows": "Windows",
+        "windowsDesc": "Window positions",
+        "homelink": "HomeLink",
+        "homelinkDesc": "Garage door opener",
+        "guestMode": "Guest Mode",
+        "guestDesc": "Temporary access mode"
+      },
+      "active": "Active",
+      "inactive": "Inactive",
+      "closed": "Closed",
+      "nearby": "Nearby",
+      "away": "Away",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "sentryChart": "Sentry Mode Activity",
+      "sentryEmpty": "No Sentry Mode activity is recorded in this history window.",
+      "sentryEmptyDescription": "The chart populates as security snapshots record Sentry Mode on and off states.",
+      "statsEmpty": "No security events are available in this history window.",
+      "statsEmptyDescription": "Lock, door, window, HomeLink, and Sentry statistics appear after security state changes are recorded.",
+      "refreshHistory": "Refresh security history",
+      "chart": {
+        "sentryOn": "Sentry On",
+        "sentryOff": "Sentry Off",
+        "date": "Date"
+      },
+      "stat": {
+        "status": "Current Status",
+        "lastLock": "Last Lock Change",
+        "sentryUptime": "Sentry Uptime",
+        "totalEvents": "Total Events"
+      },
+      "secure": "Secure",
+      "unsecure": "Unsecure",
+      "windowDetail": "Window Status Detail",
+      "title": "Security & Access",
+      "subtitle": "Lock status, sentry mode, doors, and windows",
+      "noEvents": "No security events recorded yet.",
+      "open": "Open",
+      "alert": "Check lock, door, and window status.",
+      "alertTitle": "Vehicle may not be secure",
+      "statusTitle": "Security Status",
+      "status": {
+        "noData": "No security state available for this vehicle yet"
+      },
+      "twin": {
+        "title": "Digital Twin",
+        "noData": "No live vehicle state available yet"
+      },
+      "section": {
+        "summary": "Summary metrics",
+        "posture": "Security posture",
+        "live": "Live vehicle state",
+        "analytics": "Security analytics",
+        "history": "Security event history"
+      },
+      "windowState": {
+        "closed": "Closed",
+        "venting": "Venting",
+        "open": "Open",
+        "unknown": "Unknown"
+      },
+      "window": {
+        "fd": "Front Driver",
+        "fp": "Front Passenger",
+        "rd": "Rear Driver",
+        "rp": "Rear Passenger",
+        "allClosed": "All Closed",
+        "openVenting": "{{count}} Open/Venting",
+        "aria": "Window status by position"
+      },
+      "time": {
+        "justNow": "just now",
+        "minutesAgo": "{{count}}m ago",
+        "hoursAgo": "{{count}}h ago",
+        "daysAgo": "{{count}}d ago"
+      }
+    },
+    "audit": {
+      "searchPlaceholder": "Search by action, resource, or details…",
+      "noMatches": "No audit entries match your search.",
+      "filterLabel": {
+        "search": "Search"
+      }
+    },
+    "errors": {
+      "title": "Frontend Errors (Last Hour)",
+      "subtitle": "Reported by browser sessions via /api/v1/web-errors. Exported as Prometheus counter teslasync_web_errors_total.",
+      "totalLastHour": "Errors in last hour",
+      "topOffenders": "Top error sources",
+      "noErrors": "No frontend errors reported in the last hour.",
+      "unableToLoad": "Unable to load error summary."
+    },
+    "dlq": {
+      "audit": {
+        "cols": {
+          "replayedAt": "Replayed at",
+          "actor": "Actor",
+          "dlqId": "DLQ ID",
+          "result": "Result",
+          "dstTopic": "Destination",
+          "error": "Error",
+          "traceId": "Trace ID"
+        },
+        "empty": {
+          "title": "No replay attempts yet",
+          "scopedMessage": "This entry has not been replayed. Use the Replay action above to send it back to its source topic.",
+          "globalMessage": "Replay attempts will appear here once an operator triggers one."
+        },
+        "loading": "Loading audit log…"
+      },
+      "cols": {
+        "arrived": "Arrived",
+        "reason": "Reason",
+        "vin": "VIN",
+        "topic": "Source topic",
+        "redeliveries": "Redel.",
+        "size": "Payload",
+        "replayable": "Replayable",
+        "actions": "Actions"
+      },
+      "actions": {
+        "inspect": "Inspect"
+      },
+      "table": {
+        "loading": "Loading…",
+        "empty": "No DLQ entries — the pipeline is clean."
+      },
+      "drawer": {
+        "tabs": {
+          "inner": "Inner payload",
+          "raw": "Raw envelope"
+        },
+        "title": "DLQ entry #{{id}}",
+        "titleFallback": "DLQ entry",
+        "replay": "Replay",
+        "id": "ID",
+        "arrivedAt": "Arrived",
+        "dlqTopic": "DLQ topic",
+        "reason": "Reason",
+        "vin": "VIN",
+        "sourceTopic": "Source topic",
+        "redeliveries": "Redeliveries",
+        "parseError": "Parse error",
+        "binaryPayload": "(non-UTF-8 binary, {{n}} bytes — use the copy button to download base64)",
+        "binaryEnvelope": "(non-UTF-8 envelope, {{n}} bytes — use the copy button to download base64)",
+        "empty": "No DLQ entry selected."
+      },
+      "stats": {
+        "total": "Total entries",
+        "totalSub": "in dead-letter queue",
+        "replayable": "Replayable",
+        "replayableSub": "parsed with source topic",
+        "replayMode": "Replay mode",
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "replayModeSub": "DLQ_REPLAY_ENABLED env",
+        "aria": "Dead-letter queue summary",
+        "blocked": "Blocked",
+        "blockedSub": "no replay target",
+        "reasons": "Distinct reasons",
+        "reasonsSub": "unique failure causes",
+        "payload": "Total payload",
+        "payloadSub": "raw bytes queued"
+      },
+      "banners": {
+        "disabledTitle": "DLQ replay is disabled",
+        "disabledMessage": "The DLQ_REPLAY_ENABLED env flag is not set on this server. Replay attempts will return HTTP 403 and be logged as result=\"disabled\".",
+        "replayBlockedTitle": "Replay blocked",
+        "replayBlockedMessage": "The server rejected the replay because DLQ_REPLAY_ENABLED is not set. Restart the worker with this env var to enable replays."
+      },
+      "pageTitle": "DLQ Inspector",
+      "subtitle": "Dead-letter queue — inspect failed ingests and replay them back to their source topic.",
+      "panels": {
+        "entries": "Dead-letter entries",
+        "audit": "Recent replay activity",
+        "reasons": "Failure reasons"
+      },
+      "reasons": {
+        "unknown": "unknown",
+        "empty": "No failed ingests — nothing to break down."
+      },
+      "confirm": {
+        "title": "Replay DLQ entry?",
+        "message": "This will republish entry #{{id}} to its source topic. The action is logged and rate-limited.",
+        "confirm": "Replay"
+      }
+    },
+    "flags": {
+      "audit": {
+        "cols": {
+          "changedAt": "Changed at",
+          "actor": "Actor",
+          "flagKey": "Key",
+          "operation": "Op",
+          "oldValue": "Old",
+          "newValue": "New",
+          "reason": "Reason"
+        },
+        "empty": {
+          "title": "No flag changes yet",
+          "scopedMessage": "No audit rows for \"{{key}}\" — edit the value above to start the trail.",
+          "globalMessage": "Flag changes will appear here once an operator edits a value."
+        },
+        "loading": "Loading audit log…"
+      },
+      "editor": {
+        "valueEmpty": "Value is required.",
+        "valueInvalid": "Invalid JSON: {{msg}}",
+        "keyLabel": "Flag key",
+        "keyPlaceholder": "feature.dlq.replay_enabled",
+        "keyImmutable": "Flag keys are immutable once created. Delete + re-create to rename.",
+        "valueLabel": "Value (JSON)",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why this change? (logged in audit)"
+      },
+      "drawer": {
+        "editTitle": "Edit flag \"{{key}}\"",
+        "createTitle": "Create flag",
+        "save": "Save flag"
+      },
+      "cols": {
+        "key": "Flag key",
+        "value": "Value",
+        "actions": "Actions"
+      },
+      "actions": {
+        "edit": "Edit",
+        "delete": "Delete",
+        "add": "Add flag"
+      },
+      "table": {
+        "loading": "Loading flags…",
+        "empty": "No feature flags are set on this server."
+      },
+      "pageTitle": "Feature Flags",
+      "subtitle": "Typed feature-flag registry — all changes are sudo-gated and logged.",
+      "panels": {
+        "registry": "Registry",
+        "changes": "Recent changes",
+        "composition": "Value composition"
+      },
+      "delete": {
+        "title": "Delete flag?",
+        "message": "Permanently remove flag \"{{key}}\". This is logged as a delete operation in the audit feed.",
+        "reasonLabel": "Reason",
+        "reasonPlaceholder": "Why this delete? (logged in audit)",
+        "confirm": "Delete flag"
+      },
+      "stats": {
+        "aria": "Feature flag summary metrics",
+        "resource": "Feature flags",
+        "total": "Total Flags",
+        "boolean": "Boolean Toggles",
+        "structured": "Structured",
+        "changes": "Recent Changes",
+        "deletes": "Deletes",
+        "actors": "Contributors"
+      },
+      "composition": {
+        "boolean": "Boolean",
+        "number": "Number",
+        "string": "String",
+        "object": "Object",
+        "array": "Array",
+        "null": "Null",
+        "sublabel": "{{count}} · {{pct}}%",
+        "empty": "No flags to summarize yet. Add a flag to see its value-type breakdown here."
+      }
+    },
+    "xray": {
+      "chart": {
+        "title": "Samples per bucket",
+        "subtitle": "Time-series of ingested telemetry rows over the selected window.",
+        "ariaLabel": "Bar chart of ingest sample counts per time bucket.",
+        "cols": {
+          "bucket": "Bucket",
+          "count": "Samples"
+        },
+        "tooltip": "Samples"
+      },
+      "controls": {
+        "selectVehicle": "Select vehicle…",
+        "vehicleAria": "Vehicle",
+        "windowAria": "Window",
+        "bucketAria": "Bucket"
+      },
+      "fields": {
+        "cols": {
+          "field": "Field",
+          "count": "Samples",
+          "lastSeen": "Last seen",
+          "kind": "Kind"
+        },
+        "loading": "Loading…",
+        "empty": "No samples in this window. Try widening the window or confirm the vehicle is publishing."
+      },
+      "stats": {
+        "samples": "Total samples",
+        "samplesSub": "within selected window",
+        "fields": "Distinct fields",
+        "fieldsSub": "unique signal names",
+        "window": "Window",
+        "windowSub": "observation horizon"
+      },
+      "pageTitle": "Ingest X-Ray",
+      "subtitle": "Per-vehicle telemetry sample counts — pick a vehicle to inspect what the ingest pipeline is receiving.",
+      "noVehicle": {
+        "title": "Select a vehicle",
+        "message": "Pick a vehicle from the dropdown above to load its ingest X-Ray for the selected window."
+      },
+      "panels": {
+        "fields": "Field statistics"
+      }
+    },
+    "liveSignals": {
+      "cols": {
+        "name": "Signal",
+        "value": "Value",
+        "timestamp": "Last update"
+      },
+      "filterPlaceholder": "Filter signal names…",
+      "filterAria": "Filter signals",
+      "empty": {
+        "title": "No live signals cached",
+        "message": "Redis has no live snapshot for this vehicle yet. Confirm the vehicle is online and publishing."
+      },
+      "table": {
+        "loading": "Loading…",
+        "filtered": "No signals match this filter."
+      },
+      "pageTitle": "Live Signal Inspector",
+      "controls": {
+        "selectVehicle": "Select vehicle…",
+        "vehicleAria": "Vehicle"
+      },
+      "subtitle": "Realtime view of the Redis-cached live signal snapshot. Refreshes every second while this tab is in the foreground.",
+      "noVehicle": {
+        "title": "Select a vehicle",
+        "message": "Pick a vehicle from the dropdown above to start streaming its live signal cache."
+      },
+      "panels": {
+        "snapshot": "Live snapshot"
+      },
+      "kinds": {
+        "kindCol": "Kind"
+      }
+    },
+    "teslaOrders": {
+      "pageTitle": "Tesla Orders",
+      "subtitle": "Vehicle orders and delivery tracking pulled from your Tesla account.",
+      "refresh": "Refresh",
+      "resource": "Orders",
+      "kpis": "Order summary",
+      "insights": "Order insights",
+      "kpi": {
+        "total": "Total Orders",
+        "delivered": "Delivered",
+        "inProgress": "In Progress",
+        "inProgressHint": "Booked or building",
+        "ready": "Ready · Transit",
+        "readyHint": "Awaiting handover",
+        "upgradable": "Upgradable",
+        "nextDelivery": "Next Delivery",
+        "nextDeliveryHint": "Soonest upcoming"
+      },
+      "bucket": {
+        "inProgress": "In Progress",
+        "ready": "Ready · In Transit",
+        "delivered": "Delivered",
+        "cancelled": "Cancelled",
+        "other": "Other"
+      },
+      "panels": {
+        "breakdown": "Order Status",
+        "outlook": "Delivery Outlook",
+        "board": "Orders",
+        "details": "Order Details"
+      },
+      "breakdown": {
+        "empty": "No orders to classify yet.",
+        "barAria": "Order status distribution"
+      },
+      "outlook": {
+        "nextDelivery": "Next delivery",
+        "noUpcoming": "None scheduled",
+        "upgradable": "Upgradable orders",
+        "models": "Distinct models",
+        "vin": "VIN assigned",
+        "lastSynced": "Last synced",
+        "empty": "Sync your Tesla account to see delivery details."
+      },
+      "card": {
+        "orderId": "Order ID",
+        "vin": "VIN",
+        "vinPending": "Not assigned",
+        "delivery": "Delivery",
+        "upgradable": "Upgrade available"
+      },
+      "cols": {
+        "model": "Model",
+        "orderId": "Order ID",
+        "vin": "VIN",
+        "status": "Status",
+        "delivery": "Delivery",
+        "upgradable": "Upgradable",
+        "yes": "Yes"
+      },
+      "filterPlaceholder": "Filter by model, VIN or ID…",
+      "filterAria": "Filter orders",
+      "table": {
+        "filtered": "No orders match this filter."
+      },
+      "empty": {
+        "title": "No orders",
+        "synced": "No active orders found on this Tesla account.",
+        "unsynced": "No order data yet. Refresh to fetch the latest orders from Tesla."
+      },
+      "board": {
+        "aria": "Orders board"
+      }
+    },
+    "diskForecast": {
+      "col": {
+        "count": "Count",
+        "severity": "Severity"
+      }
+    },
+    "secretRotation": {
+      "col": {
+        "count": "Count",
+        "severity": "Severity"
+      }
+    },
+    "slowQueries": {
+      "colQuery": "Query"
+    }
+  },
+  "apiLogs": {
+    "title": "API Logs",
+    "subtitle": "Record of all API calls with request/response details",
+    "totalCalls": "Total Calls",
+    "errorRate": "Error Rate",
+    "avgDuration": "Avg Duration",
+    "last24h": "Last 24h",
+    "byService": "By Service",
+    "filters": "Filters",
+    "clear": "Clear",
+    "allServices": "All Services",
+    "serviceFilterAria": "Filter by service",
+    "serviceCount": "{{tracked}} with data · {{known}} known",
+    "allMethods": "All Methods",
+    "allStatus": "All Status",
+    "filterEndpoint": "Filter by endpoint...",
+    "startDate": "Start date",
+    "endDate": "End date",
+    "noLogs": "No logs found",
+    "exportJson": "Export JSON",
+    "loading": "Loading logs...",
+    "noLogsFound": "No API call logs found",
+    "adjustFilters": "Try adjusting your filters",
+    "requestUrl": "Request URL",
+    "error": "Error",
+    "requestBody": "Request Body",
+    "responseBody": "Response Body",
+    "previous": "Previous",
+    "next": "Next",
+    "noData": "No {{label}}",
+    "showing": "Showing {{from}}–{{to}} of {{total}}",
+    "pageOf": "Page {{page}} of {{total}}",
+    "service": "Service",
+    "method": "Method",
+    "status": "Status",
+    "endpoint": "Endpoint",
+    "logTitle": "API Call Log",
+    "totalCount": "{{count}} total",
+    "noServices": "No service activity yet",
+    "noLogsTitle": "No API call logs",
+    "na": "N/A",
+    "copyBody": "Copy {{label}}"
+  },
+  "backup": {
+    "title": "Backup & Restore",
+    "configCreated": "Config created",
+    "configCreateFailed": "Failed to create config",
+    "configUpdated": "Config updated",
+    "configUpdateFailed": "Failed to update config",
+    "configDeleted": "Config deleted",
+    "configDeleteFailed": "Failed to delete config",
+    "triggered": "Backup triggered",
+    "triggerFailed": "Failed to trigger backup",
+    "quickStarted": "Quick backup started",
+    "quickFailed": "Quick backup failed",
+    "checksumVerified": "Checksum verified",
+    "checksumMismatch": "Checksum mismatch",
+    "verifyFailed": "Verification failed",
+    "previewFailed": "Failed to load preview",
+    "name": "Name",
+    "disabled": "Disabled",
+    "type": "Type",
+    "full": "Full",
+    "incremental": "Incremental",
+    "provider": "Provider",
+    "frequency": "Frequency",
+    "daily": "Daily",
+    "everyNDays": "Every {{days}}d",
+    "schedule": "Schedule",
+    "lastRun": "Last",
+    "nextRun": "Next",
+    "options": "Options",
+    "compress": "Compress",
+    "encrypt": "Encrypt",
+    "triggerNow": "Trigger now",
+    "edit": "Edit",
+    "delete": "Delete",
+    "time": "Time",
+    "runType": "Run Type",
+    "status": "Status",
+    "file": "File",
+    "size": "Size",
+    "records": "Records",
+    "duration": "Duration",
+    "download": "Download",
+    "verify": "Verify",
+    "preview": "Preview",
+    "table": "Table",
+    "rows": "Rows",
+    "subtitle": "Manage automated backups and restore points",
+    "quickBackup": "Quick Backup",
+    "newConfig": "New Config",
+    "totalConfigs": "Total Configs",
+    "totalBackups": "Total Backups",
+    "lastBackup": "Last Backup",
+    "totalSize": "Total Size",
+    "configurations": "Backup Configurations",
+    "noConfigs": "No backup configurations",
+    "noConfigsMessage": "Create a backup configuration to start protecting your data.",
+    "history": "Backup History",
+    "refresh": "Refresh",
+    "noRuns": "No backup runs yet",
+    "noRunsMessage": "Trigger a backup or wait for the scheduled run.",
+    "recentErrors": "Recent Errors",
+    "editConfig": "Edit Configuration",
+    "configName": "Name",
+    "configNamePlaceholder": "Daily full backup",
+    "enabled": "Enabled",
+    "backupType": "Backup Type",
+    "frequencyDays": "Frequency (days)",
+    "maxRetention": "Max Retention",
+    "providerSettings": "Provider Settings",
+    "saveChanges": "Save Changes",
+    "create": "Create",
+    "deleteConfig": "Delete Configuration",
+    "deleteConfigMessage": "Are you sure you want to delete \"{{name}}\"? This cannot be undone.",
+    "restorePreview": "Restore Preview",
+    "checksumFailed": "Checksum verification failed",
+    "metadata": "Backup Metadata",
+    "tables": "Tables",
+    "noTables": "No tables found in backup",
+    "loadingPreview": "Loading preview…",
+    "export": {
+      "successTitle": "Settings exported",
+      "successDetail": "Saved to your downloads folder.",
+      "title": "Export settings",
+      "busy": "Exporting…",
+      "cta": "Export JSON"
+    },
+    "import": {
+      "errorTooLarge": "File is too large (max 1 MB).",
+      "errorRead": "Failed to read the file.",
+      "errorJson": "File is not valid JSON: {{detail}}",
+      "errorPreview": "Failed to preview import.",
+      "appliedTitle": "Settings imported",
+      "appliedDetail": "{{added}} added, {{updated}} updated, {{skipped}} skipped.",
+      "title": "Import settings",
+      "dropPrompt": "Drag a JSON bundle here, or",
+      "parsing": "Reading…",
+      "choose": "Choose a file",
+      "previewHeader": "Previewing {{name}} ({{size}} bytes)",
+      "changeFile": "Change file",
+      "cancel": "Cancel",
+      "applying": "Applying…",
+      "applyCount": "Apply {{count}} change(s)",
+      "applyNoChanges": "Nothing to apply",
+      "appliedHeader": "Import complete",
+      "done": "Done"
+    },
+    "section": {
+      "settings": "General settings",
+      "alertRules": "Alert rules",
+      "geofences": "Geofences",
+      "quietHours": "Quiet hours"
+    }
+  },
+  "redis": {
+    "signalName": "Signal Name",
+    "value": "Value",
+    "type": "Type",
+    "category": "Category",
+    "title": "Redis Signal Viewer",
+    "subtitle": "Inspect cached signal values in Redis",
+    "selectVehicle": "Select vehicle…",
+    "searchPlaceholder": "Filter signals…",
+    "allCategories": "All Categories",
+    "autoRefresh": "Auto-refresh",
+    "refresh": "Refresh",
+    "totalSignals": "Total Signals",
+    "numbers": "Numbers",
+    "strings": "Strings",
+    "booleans": "Booleans",
+    "selectPrompt": "Select a vehicle to view its cached Redis signals",
+    "noSignals": "No signals cached for this vehicle",
+    "noMatch": "No signals match the current filter",
+    "diagnostic": {
+      "modeLocal": {
+        "title": "Redis L2 writes are disabled",
+        "body": "LIVE_SIGNAL_STORE_MODE=local means the telemetry pipeline writes only to the in-process L1 store and never mirrors to Redis. This page reads exclusively from Redis, so it cannot show data while local mode is active.",
+        "cta": "See live-state contract docs"
+      },
+      "mirrorBroken": {
+        "title": "L2 mirror is failing",
+        "body": "The in-process L1 store has {{count}} signals for this vehicle but Redis is empty. The async mirror goroutine in HybridLiveSignalStore.UpdateNonBlocking may be timing out or the Redis connection may be saturated. Check pod logs for \"live signal store: Redis mirror failed\"."
+      },
+      "noTelemetry": {
+        "title": "No recent telemetry for this vehicle",
+        "bodyStale": "Last L1 entry was {{date}}. The 7-day Redis TTL has likely expired. Wait for the next telemetry push or warm the cache from the cold-path reader.",
+        "bodyAbsent": "This vehicle has no L1 entries on this pod. Either telemetry has never streamed for it, or this pod restarted before any telemetry arrived."
+      },
+      "empty": {
+        "title": "No signals cached for this vehicle",
+        "body": "Both L1 and L2 are empty. If this vehicle is currently streaming, give the next batch a few seconds to arrive. Otherwise check the telemetry pipeline."
+      },
+      "cacheNotWired": {
+        "title": "Redis cache is not configured",
+        "body": "The TeslaSync API server started without a Redis connection. Set REDIS_ADDR (or REDIS_HOST + REDIS_PORT) in your environment, ensure the Redis service is reachable, and restart the API. This page reads exclusively from Redis and cannot function without it.",
+        "cta": "See cache configuration docs"
+      },
+      "unreachable": {
+        "title": "Redis is unreachable",
+        "body": "The API server is configured to use Redis, but the connection failed. Check that the Redis pod is running, that network policies allow the API to reach it, and review API server logs for \"redis signal cache: GetAll failed\"."
+      },
+      "requestFailed": {
+        "title": "Could not load Redis signals",
+        "body": "The server returned an error: {{status}} {{message}}. The Redis Signal Viewer cannot recover automatically — try refreshing, and if the error persists check the API server logs."
+      },
+      "networkError": {
+        "title": "Cannot reach the API server",
+        "body": "The browser failed to fetch /api/v1/dev-tools/redis-signals. Check that the API server is running, the proxy/ingress is healthy, and there are no CORS or network errors in DevTools."
+      },
+      "otherVehicles": "Other vehicles with cached signals",
+      "meta": {
+        "mode": "Live store mode",
+        "key": "Redis key",
+        "l1Count": "L1 signals",
+        "l2Count": "L2 fields (raw)",
+        "l1LastSeen": "L1 last seen",
+        "l2LastSeen": "L2 last seen",
+        "vin": "VIN"
+      }
+    },
+    "headerChip": {
+      "mode": "Mode: {{mode}}",
+      "l1Seen": "L1 last: {{date}}"
+    },
+    "maskedCoord": "Coordinate, click to reveal",
+    "purgeButton": "Purge Redis (L2)",
+    "purgeButtonTitle": "Delete this vehicle's cached signals from Redis (L2). The in-process L1 cache on each pod stays put and refills from new telemetry.",
+    "purgeAllButton": "Purge All Redis",
+    "purgeAllButtonTitle": "Delete every vehicle:*:signals HSET in Redis (L2). Requires typed confirmation.",
+    "purgeTitle": "Purge Redis (L2) cache for {{vehicle}}?",
+    "purgeMessage": "This deletes the Redis HSET for this vehicle (L2 cache only). The L1 in-memory cache on this pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives.",
+    "purgeConfirm": "Purge Redis (L2)",
+    "purgeAllTitle": "Purge ALL Redis (L2) caches?",
+    "purgeAllMessage": "This deletes every vehicle:*:signals HSET in Redis (the L2 cache). The L1 in-memory cache on each pod is NOT touched and will refill as new telemetry arrives. Read-paths on other pods may briefly read stale L1 values until the next signal arrives. If more than 1000 keys exist, you may need to click Purge All Redis again to drain.",
+    "purgeAllConfirm": "Purge All Vehicles",
+    "purgeAllTypedLabel": "Type PURGE ALL to confirm",
+    "purgeSuccess": "Redis L2 cache purged",
+    "purgeSuccessDetail": "{{vehicle}}: Redis HSET removed. L1 in-memory caches on each pod will refill from new telemetry.",
+    "purgeNoOpTitle": "Nothing to purge",
+    "purgeNoOpDetail": "{{vehicle}} had no cached signals in Redis.",
+    "purgeAllSuccess": "Redis L2 cache purged",
+    "purgeAllSuccessDetail": "Removed {{count}} vehicle HSET(s) from Redis. L1 in-memory caches on each pod will refill from new telemetry.",
+    "purgeAllPartial": "Redis L2 cache partially purged",
+    "purgeAllPartialDetail": "Removed {{count}} of up to {{limit}} vehicle HSET(s) from Redis. More keys remain — click Purge All Redis again to drain.",
+    "purgeError": "Purge failed",
+    "categoryName": {
+      "Battery": "Battery",
+      "Charging": "Charging",
+      "Driving": "Driving",
+      "Climate": "Climate",
+      "Other": "Other"
+    }
+  },
+  "fleetApi": {
+    "configured": {
+      "emptyTitle": "Endpoint metadata unavailable",
+      "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
+      "emptyDescription": "Configure the public and Tesla Fleet API URLs in deployment settings; metadata appears after the service restarts."
+    }
+  },
+  "apiKeys": {
+    "title": "API Keys",
+    "subtitle": "Manage programmatic access to TeslaSync",
+    "readOnly": {
+      "title": "API key management is read-only"
+    },
+    "createKey": "Create Key",
+    "newKey": "New API Key",
+    "keyCreated": "API Key Created",
+    "copyWarning": "Copy this key now — it won't be shown again.",
+    "revealAria": "API key, click to reveal",
+    "copyAria": "Copy API key",
+    "copy": "Copy",
+    "done": "Done",
+    "name": "Name",
+    "namePlaceholder": "My Application",
+    "permissions": "Permissions",
+    "generate": "Generate Key",
+    "cancel": "Cancel",
+    "expired": "Expired",
+    "created": "Created",
+    "lastUsed": "Last used",
+    "neverUsed": "Never used",
+    "unnamed": "Unnamed key",
+    "revoke": "Revoke",
+    "revokeAria": "Revoke key {{name}}",
+    "delete": "Delete",
+    "deleteAria": "Delete key {{name}}",
+    "deleteTitle": "Delete API Key",
+    "deleteConfirm": "Are you sure you want to permanently delete the key \"{{name}}\"?",
+    "resource": "API key",
+    "keysPanel": "Your API Keys",
+    "count": "{{count}} total",
+    "accessLevels": "Access Levels",
+    "accessLevelsEmpty": "Permission usage appears once you create a key.",
+    "kpi": {
+      "aria": "API key summary",
+      "total": "Total Keys",
+      "active": "Active",
+      "expired": "Expired",
+      "admin": "Admin Access"
+    },
+    "empty": {
+      "title": "No API keys",
+      "message": "Create an API key to enable programmatic access to TeslaSync data and controls."
+    },
+    "guidance": {
+      "title": "About API Keys",
+      "secret": "Treat keys like passwords — never commit them to source control.",
+      "leastPrivilege": "Grant the lowest permission level each integration actually needs.",
+      "rotate": "Revoke keys you no longer use and rotate them periodically."
+    },
+    "perm": {
+      "read": "Read",
+      "readDesc": "Read-only access to fleet data.",
+      "readWrite": "Read-Write",
+      "readWriteDesc": "Read data and send vehicle commands.",
+      "admin": "Admin",
+      "adminDesc": "Full administrative access to every resource."
+    }
+  },
+  "featureConfig": {
+    "title": "Feature Flags",
+    "subtitle": "Tesla account feature configuration",
+    "lastSynced": "Synced",
+    "refresh": "Refresh",
+    "feature": "Feature",
+    "status": "Status",
+    "details": "Details",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "noData": "No feature config data yet. Click Refresh to fetch from Tesla.",
+    "neverSynced": "Not synced yet",
+    "typeColumn": "Type",
+    "noMatch": "No features match your filters.",
+    "tableTitle": "Feature Flags",
+    "showing": "Showing {{shown}} of {{total}}",
+    "searchPlaceholder": "Search features…",
+    "searchLabel": "Search features",
+    "statusFilterLabel": "Filter by status",
+    "distribution": "Distribution",
+    "noDistribution": "No feature data to summarise yet.",
+    "composition": "Enabled vs Disabled by Type",
+    "noComposition": "No feature composition to chart yet.",
+    "compositionChartLabel": "Enabled versus disabled feature counts grouped by feature type",
+    "overviewLabel": "Feature overview",
+    "kpi": {
+      "bandLabel": "Feature summary metrics",
+      "total": "Total Features",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "enabledRate": "Enabled Rate"
+    },
+    "type": {
+      "flag": "Boolean flags",
+      "configured": "Configured",
+      "label": "Type"
+    },
+    "filter": {
+      "all": "All statuses"
+    }
+  },
+  "gas": {
+    "title": "Gas Price Auto-Poll",
+    "subtitle": "Automatically fetch US average gas prices from EIA",
+    "autoPoll": "Auto-Poll",
+    "enabled": "Auto-poll enabled",
+    "disabled": "Auto-poll disabled",
+    "running": "Running",
+    "stopped": "Stopped",
+    "pollInterval": "Poll Interval",
+    "intervalUpdated": "Poll interval updated",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "biweekly": "Bi-weekly",
+    "monthly": "Monthly",
+    "currentPrice": "Current Price",
+    "lastPolled": "Last Polled",
+    "never": "Never",
+    "pollTriggered": "Gas price poll triggered",
+    "pollNow": "Poll Now",
+    "source": "Source: U.S. Energy Information Administration",
+    "status": "Status",
+    "enabledShort": "Auto-poll on",
+    "disabledShort": "Auto-poll off",
+    "unitGallon": "gal",
+    "unitLiter": "L",
+    "perUnit": "per {{unit}}",
+    "perKwh": "per kWh",
+    "kwhEquivalent": "kWh Equivalent",
+    "kwhEquivalentHelp": "Gasoline cost expressed as an equivalent price per kilowatt-hour for EV comparison.",
+    "awaitingFirstPoll": "Awaiting first poll",
+    "kpis": "Gas price summary",
+    "config": "Configuration",
+    "autoPollHelp": "When on, TeslaSync fetches the latest US average gas price on the schedule below.",
+    "pollIntervalHelp": "How often the auto-poll fetches fresh prices.",
+    "priceTrend": "Price Trend",
+    "priceTrendAria": "Line chart of historical gas prices over time",
+    "priceSeries": "Price",
+    "noHistory": "No price history recorded yet. Trigger a poll to get started.",
+    "historyTitle": "Price History",
+    "effectiveFrom": "Effective From",
+    "price": "Price",
+    "unit": "Unit",
+    "efficiency": "Efficiency",
+    "mpg": "mpg",
+    "effectiveTo": "Effective To",
+    "current": "Current",
+    "noHistoryRows": "No price history recorded yet.",
+    "priceTrendDateCol": "Date"
+  },
+  "region": {
+    "title": "Region & API",
+    "subtitle": "Tesla account region and Fleet API endpoint",
+    "lastSynced": "Synced",
+    "refresh": "Refresh",
+    "regionCode": "Region code",
+    "fleetApiUrl": "Fleet API base URL",
+    "noData": "No region data yet. Click Refresh to fetch from Tesla.",
+    "regionName": "Region",
+    "protocol": "Protocol",
+    "host": "Host",
+    "lastSyncedFull": "Last synced",
+    "resource": "Region",
+    "copyUrl": "Copy Fleet API base URL",
+    "status": {
+      "configured": "Configured",
+      "pending": "Not configured"
+    },
+    "kpi": {
+      "section": "Region overview",
+      "region": "Region",
+      "regionUnknown": "Not detected",
+      "status": "Endpoint",
+      "source": "Tesla Fleet API",
+      "protocol": "Protocol",
+      "protocolHint": "Secure transport",
+      "synced": "Last synced",
+      "syncedHint": "From Tesla account"
+    },
+    "endpoint": {
+      "title": "Fleet API endpoint",
+      "subtitle": "The regional base URL TeslaSync uses for every Fleet API call."
+    },
+    "empty": {
+      "title": "No region on record",
+      "message": "TeslaSync has not resolved your account region yet. Refresh to fetch it from Tesla."
+    },
+    "about": {
+      "title": "About your region",
+      "body": "Tesla homes every account to a regional Fleet API host. TeslaSync sends commands and reads vehicle data through this base URL, so it must match the region where your account was created.",
+      "zonesTitle": "Fleet API zones"
+    },
+    "zones": {
+      "na": "North America & Asia-Pacific (excl. China)",
+      "eu": "Europe, Middle East & Africa",
+      "cn": "China"
+    }
+  },
+  "rateLimitStatus": {
+    "title": "Rate-limit budgets",
+    "subtitle": "Live view of every server-side throttle that affects this TeslaSync deployment. Bars climb as the window fills; colour switches from green to amber at 50% and to red at 80%.",
+    "loading": "Loading rate-limit status…",
+    "error": "Could not load rate-limit status. Check API logs and try again.",
+    "empty": "No rate-limited resources are currently observed. Counters appear here once the API has handled at least one request.",
+    "refresh": "Refresh",
+    "lastUpdated": "Updated {{when}}",
+    "windowSeconds": "Last {{seconds}}s window",
+    "windowInstant": "Live snapshot",
+    "resetIn": "Refills in {{duration}}",
+    "usage": "{{current}} / {{limit}}",
+    "severity": {
+      "ok": "Healthy",
+      "warn": "Warning",
+      "critical": "Critical"
+    }
+  },
+  "queueStatus": {
+    "title": "Background workers",
+    "subtitle": "Live view of the notification, export, and automation worker queues. Heartbeat colour switches from green to amber after 60 seconds and to red after 5 minutes of silence; \"down\" means the worker has never reported in.",
+    "loading": "Loading worker status…",
+    "error": "Could not load worker status. Check API logs and try again.",
+    "empty": "No workers are currently registered. The notification, export, and automation processes report here once they start.",
+    "refresh": "Refresh",
+    "lastUpdated": "Updated {{when}}",
+    "queueDepth": "Queue depth",
+    "queueDepthDetail": "{{pending}} pending · {{inProgress}} in progress",
+    "heartbeatRelative": "Last beat {{when}}",
+    "heartbeatNever": "No heartbeat recorded",
+    "oldestPending": "Oldest pending: {{duration}}",
+    "openDrawer": "Show recent {{worker}} jobs",
+    "hostVersion": "{{host}} · {{version}}",
+    "hostUnknown": "No host reported",
+    "versionUnknown": "unknown",
+    "metric": {
+      "succeeded24h": "Succeeded 24h",
+      "failed24h": "Failed 24h"
+    },
+    "severity": {
+      "ok": "Healthy",
+      "warn": "Lagging",
+      "critical": "Stale",
+      "down": "Down"
+    },
+    "drawer": {
+      "title": "Recent jobs",
+      "titleWithWorker": "Recent {{worker}} jobs",
+      "loading": "Loading recent jobs…",
+      "error": "Could not load recent jobs. Check API logs and try again.",
+      "empty": "No recent jobs to show. New jobs will appear here as the worker processes them."
+    },
+    "jobStarted": "Started {{at}}",
+    "jobDuration": "Took {{duration}}",
+    "jobStatus": {
+      "sent": "Sent",
+      "pending": "Pending",
+      "deferred_dnd": "Deferred (DND)",
+      "failed": "Failed",
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "running": "Running",
+      "success": "Succeeded",
+      "partial": "Partial",
+      "cancelled": "Cancelled",
+      "skipped": "Skipped"
+    }
+  },
+  "coverage": {
+    "destinations": {
+      "aria": "Horizontal bar chart showing routed field counts per destination"
+    }
+  }
+}

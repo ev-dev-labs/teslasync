@@ -12,7 +12,7 @@ import { Badge, GlassPanel, Pagination, SectionTitle, Text } from '@/components/
 import { FadeIn } from '@/components/motion';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
-import { DataStateNotice, QueryError } from '@/components/feedback';
+import { DataStateNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { EmptyStateThreshold } from '@/components/feedback/EmptyStateThreshold';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
@@ -40,6 +40,7 @@ import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -132,6 +133,9 @@ export default function ChargingListPage() {
     end: endDate,
   });
   const { data: sessions, isLoading, error, refetch } = chargingQuery;
+  /* Retained sessions survive a failed background refresh: only an initial
+   * failure (nothing cached) is allowed to replace the list with an error. */
+  const chargingState = useDataState(chargingQuery);
   const vehicleStateQuery = useVehicleState(vehicleId ?? 0);
   const liveState = vehicleStateQuery.data?.state;
   const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
@@ -798,7 +802,14 @@ export default function ChargingListPage() {
           {stickySummary}
         </PageHeaderSticky>
 
-        <QueryError error={error as Error} onRetry={refetch} />
+        {chargingState.status === 'initialFailure' ? (
+          <QueryError error={error as Error} onRetry={refetch} />
+        ) : (
+          <StaleRefreshWarning
+            state={chargingState}
+            label={t('charging.list.title', 'Charging Sessions')}
+          />
+        )}
         {vehicleStateQuery.isError && (
           <DataStateNotice
             state="partial"

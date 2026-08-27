@@ -1,0 +1,64 @@
+{
+  "theme": {
+    "title": "Appearance",
+    "subtitle": "Customize colors and display mode",
+    "displayMode": "Display Mode",
+    "modeCount": "{{count}} modes",
+    "searchModes": "Search display modes…",
+    "noModes": "No display modes match your search.",
+    "mode": "Mode",
+    "accentColor": "Accent Color",
+    "theme": "Theme",
+    "custom": "Custom",
+    "primary": "Primary",
+    "accent": "Accent",
+    "openPicker": "Open theme picker",
+    "switchTo": "Switch to {{name}}",
+    "switchedTo": "Switched to {{name}}",
+    "switchedToDark": "Switched to dark mode",
+    "switchedToLight": "Switched to light mode",
+    "toggleMode": "Toggle dark mode",
+    "firstRunTitle": "Personalize TeslaSync",
+    "firstRunBody": "Pick a color theme that fits your style.",
+    "firstRunOpen": "Open theme picker",
+    "firstRunLater": "Maybe later",
+    "customize": "Customize…",
+    "density": {
+      "label": "Information density",
+      "compact": "Compact",
+      "compactHelp": "Tight rows — fits more on screen",
+      "comfortable": "Comfortable",
+      "comfortableHelp": "Default sizing",
+      "spacious": "Spacious",
+      "spaciousHelp": "Roomy — easier to read at distance",
+      "help": "Affects table rows, cards, and dashboard widgets across the app.",
+      "previewTitle": "Preview",
+      "previewRow1": "Sample row — Tesla Model 3",
+      "previewRow2": "Sample row — Tesla Model Y",
+      "previewRow3": "Sample row — Tesla Model S"
+    },
+    "statusBar": {
+      "label": "Status bar",
+      "show": "Show status bar",
+      "showHelp": "Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.",
+      "iconOnly": "Always icon-only",
+      "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into More on constrained screens.",
+      "shownToast": "Status bar shown",
+      "hiddenToast": "Status bar hidden"
+    },
+    "timeFormat": {
+      "label": "Default time format",
+      "relative": "Relative (2h ago)",
+      "relativeHelp": "Best for recent activity feeds",
+      "absolute": "Absolute (Nov 12, 13:42)",
+      "absoluteHelp": "Best for trip planning and event correlation",
+      "help": "Hover any timestamp to see the alternate format. Override per-surface with the format prop where needed."
+    },
+    "chartPalette": {
+      "cbSafe": "Color-blind safe",
+      "neon": "Stylistic neon",
+      "label": "Chart palette",
+      "help": "Defaults to the Okabe-Ito palette so series remain distinguishable for the ~8% of users with red-green colour vision deficiency."
+    }
+  }
+}

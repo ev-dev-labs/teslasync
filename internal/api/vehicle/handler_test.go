@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 )
@@ -234,6 +235,77 @@ func TestVehicleHandler_Positions_InvalidVehicleID(t *testing.T) {
 	}
 	if fake.gotTimelineCalls != 0 {
 		t.Fatalf("Timeline call count = %d, want 0 (handler must reject before calling reader)", fake.gotTimelineCalls)
+	}
+}
+
+type fakeVehicleListFetcher struct {
+	all       []*vehiclemodel.Vehicle
+	page      []*vehiclemodel.Vehicle
+	allCalls  int
+	pageCalls int
+	limit     int
+	offset    int
+}
+
+func (f *fakeVehicleListFetcher) GetAll(context.Context) ([]*vehiclemodel.Vehicle, error) {
+	f.allCalls++
+	return f.all, nil
+}
+
+func (f *fakeVehicleListFetcher) GetPage(_ context.Context, limit, offset int) ([]*vehiclemodel.Vehicle, error) {
+	f.pageCalls++
+	f.limit = limit
+	f.offset = offset
+	return f.page, nil
+}
+
+func TestVehicleHandler_ListWithoutPaginationReturnsEntireFleet(t *testing.T) {
+	vehicles := make([]*vehiclemodel.Vehicle, 51)
+	for i := range vehicles {
+		vehicles[i] = &vehiclemodel.Vehicle{ID: int64(i + 1)}
+	}
+	repo := &fakeVehicleListFetcher{all: vehicles}
+	h := &Handler{vehicleRepo: repo}
+
+	rec := httptest.NewRecorder()
+	h.List(rec, httptest.NewRequest(http.MethodGet, "/vehicles", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var got []vehiclemodel.Vehicle
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode list response: %v; body=%s", err, rec.Body.String())
+	}
+	if len(got) != len(vehicles) {
+		t.Fatalf("vehicle count = %d, want complete fleet count %d", len(got), len(vehicles))
+	}
+	if repo.allCalls != 1 || repo.pageCalls != 0 {
+		t.Fatalf("calls GetAll=%d GetPage=%d, want GetAll once only", repo.allCalls, repo.pageCalls)
+	}
+	if got := rec.Header().Get("X-Pagination-Limit"); got != "" {
+		t.Fatalf("default full-list response unexpectedly has pagination header %q", got)
+	}
+}
+
+func TestVehicleHandler_ListWithPaginationUsesPage(t *testing.T) {
+	repo := &fakeVehicleListFetcher{page: []*vehiclemodel.Vehicle{{ID: 2}}}
+	h := &Handler{vehicleRepo: repo}
+
+	rec := httptest.NewRecorder()
+	h.List(rec, httptest.NewRequest(http.MethodGet, "/vehicles?limit=1&offset=1", nil))
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if repo.allCalls != 0 || repo.pageCalls != 1 {
+		t.Fatalf("calls GetAll=%d GetPage=%d, want GetPage once only", repo.allCalls, repo.pageCalls)
+	}
+	if repo.limit != 1 || repo.offset != 1 {
+		t.Fatalf("GetPage arguments = (%d, %d), want (1, 1)", repo.limit, repo.offset)
+	}
+	if got, want := rec.Header().Get("X-Pagination-Limit"), "1"; got != want {
+		t.Fatalf("X-Pagination-Limit = %q, want %q", got, want)
 	}
 }
 

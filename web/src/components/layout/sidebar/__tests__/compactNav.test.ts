@@ -9,7 +9,9 @@
 
 import { describe, it, expect } from 'vitest'
 import {
+  ADVANCED_GROUP_TITLES,
   buildCompactNavTree,
+  compactGroupTier,
   findMostSpecificNavEntry,
   isCompactActivePath,
   CANONICAL_SECTION_TO_COMPACT_GROUP,
@@ -17,17 +19,27 @@ import {
   COMPACT_NAV_BLUEPRINT,
   EXPLORE_PATH,
   MAX_COMPACT_GROUPS,
+  PRIMARY_GROUP_TITLES,
   prioritizeCompactNavTree,
   prioritizeCanonicalNavSections,
   type CompactNavSectionLike,
 } from '../compactNav'
+import type { NavCapability } from '@/lib/navCapabilities'
 
 type Item = { to: string; label: string }
+
+const ALL_CAPABILITIES = new Set<NavCapability>([
+  'core',
+  'account',
+  'administration',
+  'developer',
+])
+const CORE_ONLY = new Set<NavCapability>(['core'])
 
 /**
  * A miniature stand-in for the canonical catalog: same section titles, a
  * mix of curated + long-tail paths, so the builder can be driven without
- * importing the 150-item literal.
+ * importing the 190-item literal.
  */
 function catalog(): Array<CompactNavSectionLike<Item>> {
   return [
@@ -57,6 +69,7 @@ function catalog(): Array<CompactNavSectionLike<Item>> {
         { to: '/drives', label: 'Drives' },
         { to: '/trips', label: 'Trips' },
         { to: '/drive-dna', label: 'Drive DNA' },
+        { to: '/segments', label: 'Ghost Racing' },
       ],
     },
     {
@@ -68,9 +81,21 @@ function catalog(): Array<CompactNavSectionLike<Item>> {
       ],
     },
     {
+      title: 'Security',
+      items: [{ to: '/security-access', label: 'Security & Access' }],
+    },
+    {
+      title: 'Data',
+      items: [
+        { to: '/backup', label: 'Backup & Restore' },
+        { to: '/data-repair', label: 'Data Repair' },
+      ],
+    },
+    {
       title: 'Diagnostics',
       items: [
         { to: '/system-status', label: 'System Status' },
+        { to: '/db-health', label: 'Database Health' },
         { to: '/dashcam', label: 'Dashcam & Sentry' },
       ],
     },
@@ -80,6 +105,58 @@ function catalog(): Array<CompactNavSectionLike<Item>> {
     },
   ]
 }
+
+function titlesOf<T extends { title: string }>(sections: readonly T[]): string[] {
+  return sections.map((s) => s.title)
+}
+
+describe('group taxonomy', () => {
+  it('declares seven everyday primary groups in the required product order', () => {
+    expect([...PRIMARY_GROUP_TITLES]).toEqual([
+      'Overview',
+      'Vehicles',
+      'Drives',
+      'Charging',
+      'Energy',
+      'Insights',
+      'Operations',
+    ])
+  })
+
+  it('parks admin/developer/experimental destinations in advanced groups', () => {
+    expect([...ADVANCED_GROUP_TITLES]).toEqual([
+      'Advanced Intelligence',
+      'Administration',
+      'Developer',
+      'Settings & Account',
+    ])
+  })
+
+  it('composes the canonical title list as primary-then-advanced', () => {
+    expect([...COMPACT_GROUP_TITLES]).toEqual([
+      ...PRIMARY_GROUP_TITLES,
+      ...ADVANCED_GROUP_TITLES,
+    ])
+    expect(COMPACT_GROUP_TITLES.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
+  })
+
+  it('tags every blueprint group with the tier its title belongs to', () => {
+    for (const group of COMPACT_NAV_BLUEPRINT) {
+      const expected = (PRIMARY_GROUP_TITLES as readonly string[]).includes(group.title)
+        ? 'primary'
+        : 'advanced'
+      expect(group.tier, group.title).toBe(expected)
+      expect(compactGroupTier(group.title)).toBe(expected)
+    }
+  })
+
+  it('gates only the administration and developer groups on a capability', () => {
+    const gated = COMPACT_NAV_BLUEPRINT.filter((g) => g.capability !== 'core').map(
+      (g) => g.title,
+    )
+    expect(gated).toEqual(['Administration', 'Developer'])
+  })
+})
 
 describe('isCompactActivePath', () => {
   it('matches the root only on an exact "/"', () => {
@@ -112,10 +189,12 @@ describe('findMostSpecificNavEntry', () => {
 })
 
 describe('buildCompactNavTree', () => {
-  it('produces at most nine groups, ordered by the blueprint', () => {
-    const { sections } = buildCompactNavTree(catalog(), '/')
+  it('produces at most MAX_COMPACT_GROUPS groups, ordered by the blueprint', () => {
+    const { sections } = buildCompactNavTree(catalog(), '/', {
+      capabilities: ALL_CAPABILITIES,
+    })
     expect(sections.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
-    const order = sections.map((s) => s.title)
+    const order = titlesOf(sections)
     const expectedOrder = COMPACT_GROUP_TITLES.filter((t) => order.includes(t))
     expect(order).toEqual([...expectedOrder])
   })
@@ -137,15 +216,20 @@ describe('buildCompactNavTree', () => {
     const paths = buildCompactNavTree(catalog(), '/').sections.flatMap((s) =>
       s.items.map((i) => i.to),
     )
-    expect(paths).not.toContain('/weekly-digest')
-    expect(paths).not.toContain('/drive-dna')
     expect(paths).not.toContain('/dashcam')
+    expect(paths).not.toContain('/analytics/carbon')
+    expect(paths).not.toContain('/segments')
   })
 
   it('reports the compact group that owns a curated active route', () => {
-    expect(buildCompactNavTree(catalog(), '/drives').activeSectionTitle).toBe('Driving')
-    expect(buildCompactNavTree(catalog(), '/drives/42').activeSectionTitle).toBe('Driving')
+    expect(buildCompactNavTree(catalog(), '/drives').activeSectionTitle).toBe('Drives')
+    expect(buildCompactNavTree(catalog(), '/drives/42').activeSectionTitle).toBe('Drives')
     expect(buildCompactNavTree(catalog(), '/').activeSectionTitle).toBe('Overview')
+    expect(buildCompactNavTree(catalog(), '/vehicles').activeSectionTitle).toBe('Vehicles')
+    expect(buildCompactNavTree(catalog(), '/statistics').activeSectionTitle).toBe('Insights')
+    expect(buildCompactNavTree(catalog(), '/system-status').activeSectionTitle).toBe(
+      'Operations',
+    )
   })
 
   it('injects an omitted active route into its mapped group, preserving identity', () => {
@@ -158,10 +242,10 @@ describe('buildCompactNavTree', () => {
       source,
       '/dashcam',
     )
-    expect(activeSectionTitle).toBe('System & Developer')
+    expect(activeSectionTitle).toBe('Developer')
     expect(injectedActivePath).toBe('/dashcam')
 
-    const group = sections.find((s) => s.title === 'System & Developer')
+    const group = sections.find((s) => s.title === 'Developer')
     const injected = group?.items.find((i) => i.to === '/dashcam')
     // Same object → icon, badge, dataTour and pin wiring all survive.
     expect(injected).toBe(original)
@@ -169,12 +253,22 @@ describe('buildCompactNavTree', () => {
 
   it('injects the most specific long-tail route rather than its curated parent', () => {
     const { sections, activeSectionTitle } = buildCompactNavTree(catalog(), '/analytics/carbon')
-    expect(activeSectionTitle).toBe('Reports & Analytics')
-    const group = sections.find((s) => s.title === 'Reports & Analytics')
+    expect(activeSectionTitle).toBe('Insights')
+    const group = sections.find((s) => s.title === 'Insights')
     const paths = group!.items.map((i) => i.to)
     expect(paths).toContain('/analytics/carbon')
     // The curated parent stays put — it is not replaced or duplicated.
     expect(paths.filter((p) => p === '/analytics')).toHaveLength(1)
+  })
+
+  it('keeps location context even when the owning group is restricted', () => {
+    const { sections, activeSectionTitle } = buildCompactNavTree(catalog(), '/dashcam', {
+      capabilities: CORE_ONLY,
+    })
+    const developer = sections.find((s) => s.title === 'Developer')
+    expect(activeSectionTitle).toBe('Developer')
+    expect(developer?.restricted).toBe(true)
+    expect(developer?.items.map((i) => i.to)).toContain('/dashcam')
   })
 
   it('never leaves a route without sidebar context when it is in the catalog', () => {
@@ -211,7 +305,7 @@ describe('buildCompactNavTree', () => {
       { title: 'Home', items: [{ to: '/', label: 'Dashboard' }] },
     ]
     const { sections } = buildCompactNavTree(onlyHome, '/')
-    expect(sections.map((s) => s.title)).toEqual(['Overview'])
+    expect(titlesOf(sections)).toEqual(['Overview'])
   })
 
   it('is null-safe for empty or malformed input', () => {
@@ -229,48 +323,101 @@ describe('buildCompactNavTree', () => {
   })
 })
 
+describe('capability-aware grouping', () => {
+  it('promotes privileged groups when the capability is granted', () => {
+    const { sections } = buildCompactNavTree(catalog(), '/', {
+      capabilities: ALL_CAPABILITIES,
+    })
+    expect(sections.find((s) => s.title === 'Administration')?.restricted).toBe(false)
+    expect(sections.find((s) => s.title === 'Developer')?.restricted).toBe(false)
+  })
+
+  it('demotes but never deletes privileged groups when the capability is missing', () => {
+    const granted = buildCompactNavTree(catalog(), '/', { capabilities: ALL_CAPABILITIES })
+    const restricted = buildCompactNavTree(catalog(), '/', { capabilities: CORE_ONLY })
+
+    // Same groups, same destinations — only the `restricted` flag differs.
+    expect(titlesOf(restricted.sections).sort()).toEqual(titlesOf(granted.sections).sort())
+    expect(restricted.sections.find((s) => s.title === 'Administration')?.restricted).toBe(
+      true,
+    )
+    expect(restricted.sections.find((s) => s.title === 'Developer')?.restricted).toBe(true)
+    const paths = restricted.sections.flatMap((s) => s.items.map((i) => i.to))
+    expect(paths).toContain('/backup')
+    expect(paths).toContain('/db-health')
+  })
+
+  it('defaults to core-only when capabilities have not resolved yet', () => {
+    const { sections } = buildCompactNavTree(catalog(), '/')
+    expect(sections.find((s) => s.title === 'Administration')?.restricted).toBe(true)
+    expect(sections.find((s) => s.title === 'Overview')?.restricted).toBe(false)
+  })
+
+  it('sorts restricted advanced groups below granted ones', () => {
+    const tree = prioritizeCompactNavTree(
+      buildCompactNavTree(catalog(), '/', { capabilities: CORE_ONLY }),
+      'owner',
+    )
+    const order = titlesOf(tree.sections)
+    expect(order.indexOf('Settings & Account')).toBeLessThan(order.indexOf('Administration'))
+    expect(order.indexOf('Advanced Intelligence')).toBeLessThan(order.indexOf('Developer'))
+  })
+})
+
 describe('prioritizeCompactNavTree', () => {
   it('keeps the owner product order unchanged', () => {
-    const tree = buildCompactNavTree(catalog(), '/')
-    expect(
-      prioritizeCompactNavTree(tree, 'owner').sections.map(
-        (section) => section.title,
-      ),
-    ).toEqual(tree.sections.map((section) => section.title))
+    const tree = buildCompactNavTree(catalog(), '/', { capabilities: ALL_CAPABILITIES })
+    expect(titlesOf(prioritizeCompactNavTree(tree, 'owner').sections)).toEqual(
+      titlesOf(tree.sections),
+    )
   })
 
   it('moves analytical work ahead of operational groups for analysts', () => {
-    const tree = buildCompactNavTree(catalog(), '/analytics')
+    const tree = buildCompactNavTree(catalog(), '/analytics', {
+      capabilities: ALL_CAPABILITIES,
+    })
     const prioritized = prioritizeCompactNavTree(tree, 'analyst')
-    const titles = prioritized.sections.map((section) => section.title)
+    const titles = titlesOf(prioritized.sections)
 
-    expect(titles.indexOf('Reports & Analytics')).toBeLessThan(
-      titles.indexOf('Driving'),
-    )
-    expect(titles.indexOf('Reports & Analytics')).toBeLessThan(
-      titles.indexOf('Fleet'),
-    )
-    expect(prioritized.activeSectionTitle).toBe('Reports & Analytics')
+    expect(titles.indexOf('Insights')).toBeLessThan(titles.indexOf('Drives'))
+    expect(titles.indexOf('Insights')).toBeLessThan(titles.indexOf('Vehicles'))
+    expect(prioritized.activeSectionTitle).toBe('Insights')
   })
 
-  it('moves system work near the top for administrators without hiding groups', () => {
-    const tree = buildCompactNavTree(catalog(), '/system-status')
+  it('moves operational work near the top for administrators without hiding groups', () => {
+    const tree = buildCompactNavTree(catalog(), '/system-status', {
+      capabilities: ALL_CAPABILITIES,
+    })
     const prioritized = prioritizeCompactNavTree(tree, 'administrator')
 
     expect(prioritized.sections[0]?.title).toBe('Overview')
-    expect(prioritized.sections[1]?.title).toBe('System & Developer')
-    expect(
-      prioritized.sections.map((section) => section.title).sort(),
-    ).toEqual(tree.sections.map((section) => section.title).sort())
+    expect(prioritized.sections[1]?.title).toBe('Operations')
+    expect(titlesOf(prioritized.sections).sort()).toEqual(titlesOf(tree.sections).sort())
     expect(prioritized.injectedActivePath).toBeUndefined()
+  })
+
+  it('never lets an advanced group outrank a primary group, for any persona', () => {
+    for (const persona of ['owner', 'fleet_operator', 'analyst', 'administrator'] as const) {
+      const tree = prioritizeCompactNavTree(
+        buildCompactNavTree(catalog(), '/', { capabilities: ALL_CAPABILITIES }),
+        persona,
+      )
+      const tiers = tree.sections.map((s) => s.tier)
+      const firstAdvanced = tiers.indexOf('advanced')
+      if (firstAdvanced === -1) continue
+      expect(
+        tiers.slice(firstAdvanced).every((tier) => tier === 'advanced'),
+        `advanced/primary interleaved for ${persona}`,
+      ).toBe(true)
+    }
   })
 
   it('does not mutate the source tree while prioritizing fleet operations', () => {
     const tree = buildCompactNavTree(catalog(), '/')
-    const before = tree.sections.map((section) => section.title)
+    const before = titlesOf(tree.sections)
     const prioritized = prioritizeCompactNavTree(tree, 'fleet_operator')
 
-    expect(tree.sections.map((section) => section.title)).toEqual(before)
+    expect(titlesOf(tree.sections)).toEqual(before)
     expect(prioritized.sections).not.toBe(tree.sections)
   })
 })
@@ -278,29 +425,30 @@ describe('prioritizeCompactNavTree', () => {
 describe('prioritizeCanonicalNavSections', () => {
   it('prioritizes complete sidebar sections without dropping long-tail groups', () => {
     const source = catalog()
-    const prioritized = prioritizeCanonicalNavSections(
-      source,
-      'administrator',
-    )
+    const prioritized = prioritizeCanonicalNavSections(source, 'administrator')
 
     expect(prioritized[0]?.title).toBe('Home')
-    expect(prioritized[1]?.title).toBe('Diagnostics')
-    expect(prioritized.map((section) => section.title).sort()).toEqual(
-      source.map((section) => section.title).sort(),
-    )
+    expect(titlesOf(prioritized).sort()).toEqual(titlesOf(source).sort())
+  })
+
+  it('keeps advanced canonical sections behind every primary one', () => {
+    const prioritized = prioritizeCanonicalNavSections(catalog(), 'owner')
+    const titles = titlesOf(prioritized)
+    expect(titles.indexOf('Reports')).toBeLessThan(titles.indexOf('Data'))
+    expect(titles.indexOf('Diagnostics')).toBeLessThan(titles.indexOf('Settings'))
   })
 
   it('preserves source order within one persona priority group', () => {
     const source = [
       { title: 'Vehicles', items: [] },
       { title: 'Service', items: [] },
-      { title: 'Security', items: [] },
+      { title: 'Cabin', items: [] },
     ]
-    expect(
-      prioritizeCanonicalNavSections(source, 'fleet_operator').map(
-        (section) => section.title,
-      ),
-    ).toEqual(['Vehicles', 'Service', 'Security'])
+    expect(titlesOf(prioritizeCanonicalNavSections(source, 'fleet_operator'))).toEqual([
+      'Vehicles',
+      'Service',
+      'Cabin',
+    ])
   })
 })
 
@@ -319,5 +467,16 @@ describe('compact group mapping table', () => {
 
   it('declares a non-empty curated path list for every group', () => {
     expect(COMPACT_NAV_BLUEPRINT.every((g) => g.paths.length > 0)).toBe(true)
+  })
+
+  it('routes admin/data destinations to Administration and diagnostics to Developer', () => {
+    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Data']).toBe('Administration')
+    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Diagnostics']).toBe('Developer')
+    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Advanced Intelligence']).toBe(
+      'Advanced Intelligence',
+    )
+    expect(CANONICAL_SECTION_TO_COMPACT_GROUP['Ownership Intelligence']).toBe(
+      'Advanced Intelligence',
+    )
   })
 })

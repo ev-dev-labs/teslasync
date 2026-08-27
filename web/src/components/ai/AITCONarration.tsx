@@ -127,6 +127,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/analytics/tco/narrate',
     body,
     onEvent: noop,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight narration and clears the previous
+    // vehicle's narrative before the new scope streams in.
+    scopeKey: numericVehicleId > 0 ? numericVehicleId : null,
   })
   const haveInputs = numericVehicleId > 0
   return (

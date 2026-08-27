@@ -12,10 +12,8 @@ export interface ResolvedChartHeights {
   desktop: number;
 }
 
-function positiveHeight(value: number | undefined, fallback: number): number {
-  return value != null && Number.isFinite(value) && value > 0
-    ? value
-    : fallback;
+function explicitHeight(value: number | undefined, fallback: number): number {
+  return value != null && Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
 /** Resolve the shared responsive chart-height scale while preserving explicit overrides. */
@@ -25,11 +23,30 @@ export function resolveChartHeights(
   mobileHeight?: number,
 ): ResolvedChartHeights {
   const preset = chartSizeHeights[size];
-  const desktop = positiveHeight(height, preset.desktop);
-  const mobile = positiveHeight(
+  const desktop = explicitHeight(height, preset.desktop);
+  const mobile = explicitHeight(
     mobileHeight,
     height == null ? preset.mobile : Math.min(desktop, preset.mobile),
   );
 
   return { mobile, desktop };
+}
+
+/**
+ * Stable viewport values for a Recharts responsive container.
+ *
+ * A responsive chart must measure an ancestor with a finite height; using
+ * `height="100%"` against an auto-height parent creates the classic
+ * ResizeObserver feedback loop (every chart render makes the parent taller,
+ * which makes the next measurement taller). The shared chart frame consumes
+ * this result and fixes all three CSS height constraints to the same value.
+ */
+export function chartViewportStyle(heights: ResolvedChartHeights): Record<
+  '--chart-height-mobile' | '--chart-height-desktop',
+  string
+> {
+  return {
+    '--chart-height-mobile': `${heights.mobile}px`,
+    '--chart-height-desktop': `${heights.desktop}px`,
+  };
 }

@@ -1,0 +1,140 @@
+{
+  "serviceIntelligence": {
+    "actions": {
+      "evidencePack": "Open Service Evidence Pack"
+    },
+    "applicability": {
+      "potential": "Potentially applicable",
+      "review": "Needs review",
+      "unlikely": "Unlikely"
+    },
+    "common": {
+      "selectMessage": "Choose a vehicle to compare its decoded build and firmware context with safety records.",
+      "selectTitle": "Select a vehicle",
+      "unavailable": "Unavailable"
+    },
+    "communications": {
+      "docs": "Review NHTSA datasets",
+      "empty": "The configured provider returned no manufacturer communications for this vehicle context.",
+      "emptyTitle": "No communications found",
+      "select": "Choose a vehicle to check the configured manufacturer-communications provider.",
+      "source": "Open source document",
+      "title": "Manufacturer communications & TSBs",
+      "unavailable": "NHTSA does not currently document a stable vehicle-scoped JSON API for manufacturer communications. TeslaSync does not fabricate records.",
+      "unavailableTitle": "Typed TSB source unavailable",
+      "staleTitle": "TSB index needs refresh",
+      "stale": "Showing matches from the last successful official NHTSA bulk import.",
+      "typeUnknown": "Communication type unavailable",
+      "hypothesis": "Applicability hypothesis",
+      "symptoms": "{{count}} observed symptom match"
+    },
+    "completion": {
+      "unknown": "Completion unknown"
+    },
+    "confidence": {
+      "value": "{{value}}% confidence"
+    },
+    "disclaimer": {
+      "body": "Campaign applicability, completion, and symptom overlap require confirmation by NHTSA, Tesla, or a qualified technician.",
+      "title": "Service hypotheses, not findings of fault"
+    },
+    "evidence": {
+      "count": "{{count}} items",
+      "empty": "No normalized service-intelligence evidence is available yet.",
+      "emptyTitle": "No evidence bundle",
+      "inventory": "Evidence inventory",
+      "select": "Choose a vehicle to assemble service-ready evidence references.",
+      "source": "Open evidence source",
+      "title": "Evidence & limitations"
+    },
+    "limitations": {
+      "title": "Interpretation limits"
+    },
+    "page": {
+      "subtitle": "Compare decoded vehicle context and observed signal patterns with NHTSA safety records.",
+      "title": "Recall & Service Intelligence"
+    },
+    "recall": {
+      "consequence": "Potential consequence",
+      "empty": "NHTSA returned no recall campaigns for the decoded make, model, and model year.",
+      "emptyTitle": "No recall candidates",
+      "hypothesis": "Applicability hypothesis",
+      "ota": "OTA remedy",
+      "parkIt": "NHTSA park-it warning",
+      "parkOutside": "NHTSA park-outside warning",
+      "remedy": "Published remedy",
+      "reported": "Reported",
+      "select": "Choose a vehicle to load its model-year recall candidates.",
+      "source": "Open NHTSA campaign",
+      "title": "Recall inventory"
+    },
+    "sources": {
+      "available": "Available",
+      "cache": "Normalized cache",
+      "checked": "Checked",
+      "empty": "Source freshness metadata is not available yet.",
+      "emptyTitle": "No source metadata",
+      "fetched": "Fetched",
+      "open": "Open source",
+      "records": "{{count}} records",
+      "select": "Choose a vehicle to inspect source availability and retrieval times.",
+      "title": "Source freshness",
+      "unavailable": "Unavailable",
+      "stale": "Stale"
+    },
+    "summary": {
+      "applicable": "Potentially applicable",
+      "communications": "Communications",
+      "recallCandidates": "Recall candidates",
+      "symptoms": "Symptom matches"
+    },
+    "symptoms": {
+      "campaign": "Campaign {{id}}",
+      "empty": "No recent statistical signal deviations overlapped the returned safety campaign components.",
+      "emptyTitle": "No overlapping symptoms",
+      "score": "{{value}}% match",
+      "select": "Choose a vehicle to compare recent signal deviations with campaign components.",
+      "title": "Ranked observed symptoms"
+    },
+    "vehicle": {
+      "assemblyPlant": "Assembly plant",
+      "empty": "Decoded build and firmware context is not available yet.",
+      "emptyTitle": "No vehicle context",
+      "fallback": "Vehicle {{id}}",
+      "firmware": "Observed firmware",
+      "model": "Vehicle",
+      "modelYear": "Model year",
+      "select": "Select vehicle",
+      "title": "Vehicle match context"
+    },
+    "catalog": {
+      "title": "Official NHTSA TSB catalog",
+      "subtitle": "Administrator controls for the normalized manufacturer-communications index.",
+      "fresh": "Fresh",
+      "stale": "Stale",
+      "unavailable": "Not imported",
+      "records": "Normalized Tesla records",
+      "coverage": "Official period artifacts",
+      "lastSuccess": "Last successful import",
+      "never": "Never",
+      "emptyTitle": "TSB catalog is not populated",
+      "empty": "Import the official periods below to enable manufacturer-communication matching.",
+      "staleTitle": "Catalog refresh recommended",
+      "staleBody": "The latest successful import is more than eight days old. Existing normalized matches remain available.",
+      "failedTitle": "Latest import failed",
+      "failedBody": "The last successful catalog remains active. Retry the affected official period.",
+      "importError": "Catalog import failed",
+      "importErrorBody": "Retry the official artifact import.",
+      "notModified": "Already current",
+      "rowsRead": "{{count}} source rows",
+      "rowsImported": "{{count}} Tesla rows",
+      "rowsRejected": "{{count}} rejected",
+      "periodsTitle": "Official artifact coverage",
+      "periodsBody": "Imports are idempotent, restricted to official NHTSA URLs, and may request step-up authentication.",
+      "latest": "Latest successful",
+      "importPeriodLabel": "Import official NHTSA artifact for {{period}}",
+      "refreshPeriod": "Refresh",
+      "importPeriod": "Import"
+    }
+  }
+}

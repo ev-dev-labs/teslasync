@@ -259,7 +259,7 @@ groups:
           description: "Error budget for SLO \"data_repair_read_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
       - alert: SLODataRepairReadAvailabilitySlowBurn
-        expr: "(1 - slo:data_repair_read_availability:ratio_rate6h) > 0.030000 and (1 - (((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\",status_class!=\"5xx\"}[30m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions)\",method=\"GET\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        expr: "(1 - slo:data_repair_read_availability:ratio_rate6h) > 0.030000 and (1 - (((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\",status_class!=\"5xx\"}[30m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
         for: 15m
         labels:
           severity: ticket
@@ -289,7 +289,7 @@ groups:
           description: "Error budget for SLO \"data_repair_write_availability\" (objective 99.5%, owner platform) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
       - alert: SLODataRepairWriteAvailabilitySlowBurn
-        expr: "(1 - slo:data_repair_write_availability:ratio_rate6h) > 0.030000 and (1 - (((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[30m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(drive|charging)/\\\\{id\\\\}(|/close)\",method=~\"PUT|POST|DELETE\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        expr: "(1 - slo:data_repair_write_availability:ratio_rate6h) > 0.030000 and (1 - (((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[30m]))) / (sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
         for: 15m
         labels:
           severity: ticket
@@ -571,6 +571,186 @@ groups:
         annotations:
           summary: "SLO frontend_lcp slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
           description: "Error budget for SLO \"frontend_lcp\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_frontend_inp_burn
+    rules:
+      - alert: SLOFrontendInpFastBurn
+        expr: "(1 - slo:frontend_inp:ratio_rate1h) > 1.440000 and (1 - slo:frontend_inp:ratio_rate5m) > 1.440000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "frontend_inp"
+          owner: "frontend"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO frontend_inp fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"frontend_inp\" (objective 90%, owner frontend) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOFrontendInpSlowBurn
+        expr: "(1 - slo:frontend_inp:ratio_rate6h) > 0.600000 and (1 - (((sum(rate(teslasync_frontend_web_vitals_inp_seconds_bucket{le=\"0.2\"}[30m]))) / (sum(rate(teslasync_frontend_web_vitals_inp_seconds_count[30m])))) and on() ((sum(rate(teslasync_frontend_web_vitals_inp_seconds_count[30m]))) > 0)) or on() vector(1)) > 0.600000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "frontend_inp"
+          owner: "frontend"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO frontend_inp slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"frontend_inp\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_frontend_cls_burn
+    rules:
+      - alert: SLOFrontendClsFastBurn
+        expr: "(1 - slo:frontend_cls:ratio_rate1h) > 1.440000 and (1 - slo:frontend_cls:ratio_rate5m) > 1.440000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "frontend_cls"
+          owner: "frontend"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO frontend_cls fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"frontend_cls\" (objective 90%, owner frontend) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOFrontendClsSlowBurn
+        expr: "(1 - slo:frontend_cls:ratio_rate6h) > 0.600000 and (1 - (((sum(rate(teslasync_frontend_web_vitals_cls_ratio_bucket{le=\"0.1\"}[30m]))) / (sum(rate(teslasync_frontend_web_vitals_cls_ratio_count[30m])))) and on() ((sum(rate(teslasync_frontend_web_vitals_cls_ratio_count[30m]))) > 0)) or on() vector(1)) > 0.600000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "frontend_cls"
+          owner: "frontend"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO frontend_cls slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"frontend_cls\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_frontend_fcp_burn
+    rules:
+      - alert: SLOFrontendFcpFastBurn
+        expr: "(1 - slo:frontend_fcp:ratio_rate1h) > 1.440000 and (1 - slo:frontend_fcp:ratio_rate5m) > 1.440000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "frontend_fcp"
+          owner: "frontend"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO frontend_fcp fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"frontend_fcp\" (objective 90%, owner frontend) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOFrontendFcpSlowBurn
+        expr: "(1 - slo:frontend_fcp:ratio_rate6h) > 0.600000 and (1 - (((sum(rate(teslasync_frontend_web_vitals_fcp_seconds_bucket{le=\"1.8\"}[30m]))) / (sum(rate(teslasync_frontend_web_vitals_fcp_seconds_count[30m])))) and on() ((sum(rate(teslasync_frontend_web_vitals_fcp_seconds_count[30m]))) > 0)) or on() vector(1)) > 0.600000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "frontend_fcp"
+          owner: "frontend"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO frontend_fcp slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"frontend_fcp\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_frontend_ttfb_burn
+    rules:
+      - alert: SLOFrontendTtfbFastBurn
+        expr: "(1 - slo:frontend_ttfb:ratio_rate1h) > 1.440000 and (1 - slo:frontend_ttfb:ratio_rate5m) > 1.440000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "frontend_ttfb"
+          owner: "frontend"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO frontend_ttfb fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"frontend_ttfb\" (objective 90%, owner frontend) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOFrontendTtfbSlowBurn
+        expr: "(1 - slo:frontend_ttfb:ratio_rate6h) > 0.600000 and (1 - (((sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_bucket{le=\"0.8\"}[30m]))) / (sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_count[30m])))) and on() ((sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_count[30m]))) > 0)) or on() vector(1)) > 0.600000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "frontend_ttfb"
+          owner: "frontend"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO frontend_ttfb slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"frontend_ttfb\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_frontend_route_transition_burn
+    rules:
+      - alert: SLOFrontendRouteTransitionFastBurn
+        expr: "(1 - slo:frontend_route_transition:ratio_rate1h) > 1.440000 and (1 - slo:frontend_route_transition:ratio_rate5m) > 1.440000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "frontend_route_transition"
+          owner: "frontend"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO frontend_route_transition fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"frontend_route_transition\" (objective 90%, owner frontend) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOFrontendRouteTransitionSlowBurn
+        expr: "(1 - slo:frontend_route_transition:ratio_rate6h) > 0.600000 and (1 - (((sum(rate(teslasync_frontend_route_transition_seconds_bucket{le=\"0.5\"}[30m]))) / (sum(rate(teslasync_frontend_route_transition_seconds_count[30m])))) and on() ((sum(rate(teslasync_frontend_route_transition_seconds_count[30m]))) > 0)) or on() vector(1)) > 0.600000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "frontend_route_transition"
+          owner: "frontend"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO frontend_route_transition slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"frontend_route_transition\" (objective 90%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_frontend_rum_ingest_availability_burn
+    rules:
+      - alert: SLOFrontendRumIngestAvailabilityFastBurn
+        expr: "(1 - slo:frontend_rum_ingest_availability:ratio_rate1h) > 0.072000 and (1 - slo:frontend_rum_ingest_availability:ratio_rate5m) > 0.072000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "frontend_rum_ingest_availability"
+          owner: "frontend"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO frontend_rum_ingest_availability fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"frontend_rum_ingest_availability\" (objective 99.5%, owner frontend) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOFrontendRumIngestAvailabilitySlowBurn
+        expr: "(1 - slo:frontend_rum_ingest_availability:ratio_rate6h) > 0.030000 and (1 - (((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\",status_class!=\"5xx\"}[30m]))) / (sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\"}[30m])))) and on() ((sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\"}[30m]))) > 0)) or on() vector(1)) > 0.030000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "frontend_rum_ingest_availability"
+          owner: "frontend"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO frontend_rum_ingest_availability slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"frontend_rum_ingest_availability\" (objective 99.5%, owner frontend) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
   - name: slo_fleet_ops_availability_burn
     rules:

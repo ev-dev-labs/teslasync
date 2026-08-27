@@ -70,7 +70,15 @@ function InnerSection({ driveId }: InnerSectionProps) {
     [normalizedId],
   )
   const body = useMemo(() => ({}), [])
-  const stream = useAiStream({ url, body, onEvent: noop })
+  const stream = useAiStream({
+    url,
+    body,
+    onEvent: noop,
+    // AI-01: drive scope is part of stream identity — switching the
+    // in-view drive aborts an in-flight insight and clears the
+    // previous drive's narrative before the new scope streams in.
+    scopeKey: normalizedId || null,
+  })
   return (
     <AIFeatureCard
       title={t('driveDetail.aiSpeedProfile.title', 'Speed-profile insights')}

@@ -1,0 +1,6 @@
+{
+  "ratelimit": {
+    "banner": "Too many requests — pausing for {{n}}s",
+    "retry": "Retry now"
+  }
+}

@@ -66,6 +66,21 @@ vi.mock('@/components/motion', () => ({
   FadeIn: ({ children, className }: { children?: ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
+  // MetricBar animates its fill via `motion.div`, and the real `ToastProvider`
+  // (rendered here, not mocked) needs `AnimatePresence` for its toast stack
+  // transitions. Both now come from this barrel rather than 'framer-motion'
+  // directly, so the mock must supply them too.
+  motion: new Proxy(
+    {},
+    {
+      get: () => (props: Record<string, unknown>) => {
+        const Component = (props.as as string) ?? 'div';
+        const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>;
+        return <Component {...(rest as Record<string, unknown>)}>{children as ReactNode}</Component>;
+      },
+    },
+  ),
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 // ── Mutable settings double so the distance-unit branch is testable. The real

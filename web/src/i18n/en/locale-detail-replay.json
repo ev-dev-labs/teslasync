@@ -1,0 +1,82 @@
+{
+  "replay": {
+    "elevation": {
+      "title": "Elevation Profile",
+      "noData": "No elevation data available",
+      "label": "Elevation",
+      "aria": "Elevation profile chart — no data available yet"
+    },
+    "controls": {
+      "reset": "Reset",
+      "pause": "Pause",
+      "play": "Play",
+      "stop": "Stop",
+      "speed": "Playback speed",
+      "progress": "Playback progress"
+    },
+    "shortcuts": {
+      "title": "Trip replay shortcuts",
+      "help": "Show keyboard shortcuts",
+      "play": "Play",
+      "pause": "Pause",
+      "playPause": "Play / Pause",
+      "skip5": "Skip ±5s (Shift = ±30s)",
+      "skip10": "Skip ±10s",
+      "frame": "Previous / next frame",
+      "startEnd": "Jump to start / end",
+      "percent": "Jump to N×10%",
+      "speed": "Speed up / slow down",
+      "speedUp": "Faster",
+      "speedDown": "Slower",
+      "start": "⏮ start",
+      "end": "⏭ end",
+      "prevFrame": "⏮ frame",
+      "nextFrame": "⏭ frame"
+    },
+    "markers": {
+      "atPercent": "at {{pct}}%",
+      "start": "Start",
+      "stop": "End",
+      "chargeStart": "Charge start",
+      "chargeStop": "Charge stop",
+      "fastSegment": "Fast segment",
+      "regenPeak": "Regen peak",
+      "lowSoc": "Low battery"
+    },
+    "title": "Trip Replay",
+    "drive": "Drive",
+    "backToDrive": "Back to Drive",
+    "noGps": "No GPS data available for this drive. Trip replay requires valid position coordinates from Fleet Telemetry.",
+    "map": {
+      "noPositions": "No position data available for this drive"
+    },
+    "currentStats": "Current Position Stats",
+    "stat": {
+      "speed": "Speed",
+      "power": "Power",
+      "battery": "Battery",
+      "elevation": "Elevation",
+      "range": "Range",
+      "temp": "Temperature"
+    },
+    "timeline": {
+      "title": "Speed & Power Timeline",
+      "subtitle": "Click to seek replay position",
+      "speed": "Speed",
+      "power": "Power",
+      "noData": "No telemetry data available",
+      "aria": "Trip replay speed and power timeline area chart"
+    },
+    "summary": {
+      "title": "Drive Summary",
+      "distance": "Distance",
+      "duration": "Duration",
+      "efficiency": "Efficiency",
+      "elevGain": "Elevation Gain",
+      "elevLoss": "Elevation Loss",
+      "maxSpeed": "Max Speed",
+      "avgSpeed": "Avg Speed",
+      "battery": "Battery"
+    }
+  }
+}

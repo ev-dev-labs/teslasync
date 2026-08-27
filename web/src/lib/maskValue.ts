@@ -92,7 +92,7 @@ function maskVin(value: string, showLast: number): string {
   // WMI plus the last 4; otherwise we fall back to a fully-bulleted
   // mask — short inputs almost certainly aren't real VINs and showing
   // the WMI of a 3-char string would expose the entire input.
-  if (value.length >= 11) {
+  if (value.length === 17) {
     const visibleSuffix = Math.max(0, Math.min(showLast, value.length - 3))
     const hidden = value.length - 3 - visibleSuffix
     return value.slice(0, 3) + bullets(hidden) + value.slice(value.length - visibleSuffix)

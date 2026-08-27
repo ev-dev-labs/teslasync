@@ -24,7 +24,7 @@ import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/cha
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
-import { DataStateNotice } from '@/components/feedback';
+import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
 import { RangePicker, VehicleSelect, PillFilterBar, type PillItem } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
@@ -37,9 +37,12 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
 import { apiUrl } from '@/api/client';
+import { scopedPath } from '@/api/scope';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
@@ -108,8 +111,37 @@ export default function DrivesListPage() {
   }), [priorRange, startDate, endDate]);
 
   const drivesQuery = useDrives(vehicleIdStr, fetchWindow);
-  const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
+  const { data: drives, isLoading: isDrivesLoading, refetch: refetchDrives } = drivesQuery;
+  /* Trust contract: a failed BACKGROUND refresh must not delete the drive
+   * rows already on screen. `fatalError` is non-null only when the very first
+   * load failed with nothing retained, so it is the only error allowed to
+   * reach <PageContainer error={...}> (which replaces all page content). */
+  const drivesState = useDataState(drivesQuery);
   const [previewDrive, setPreviewDrive] = useState<Drive | null>(null);
+
+  /* Single source of truth for the vehicle + date window every scoped read and
+   * every export on this page must agree on. `scopedPath` renders it as
+   * sorted, URL-encoded snake_case params and strips any accidental
+   * `/api/v1` prefix, so a download link can never drift from the filters the
+   * user can see. */
+  const exportScope = useMemo(() => ({
+    vehicleId: vehicleId ?? null,
+    start: startDate,
+    end: endDate,
+    filters: { format: 'csv' },
+  }), [vehicleId, startDate, endDate]);
+
+  /* A deliberate pull-to-refresh is a statement about the whole workspace, not
+   * about this tab. Broadcasting it means a pinned dashboard on a second
+   * monitor stops showing pre-refresh numbers the moment the operator pulls
+   * here. Reuses the existing coalescing bus — no extra channel. */
+  const { refresh: refreshAcrossTabs } = useCrossTabRefresh({
+    queryKeys: [['drives']],
+  });
+  const handlePullToRefresh = useCallback(async () => {
+    refreshAcrossTabs();
+    await refetchDrives();
+  }, [refreshAcrossTabs, refetchDrives]);
 
   /* A full page back means the range almost certainly holds more drives than
    * one request can carry. Say so rather than silently showing a subset. */
@@ -779,7 +811,7 @@ export default function DrivesListPage() {
         'drives.subtitle',
         'Measured energy intensity, route evidence, and comparable drive history',
       )}
-      error={drivesError as Error | null}
+      error={drivesState.fatalError}
       copyLink
       query={drivesQuery}
       contextActions={
@@ -805,7 +837,7 @@ export default function DrivesListPage() {
         </div>
       }
     >
-      <PullToRefresh onRefresh={async () => { await refetchDrives(); }}>
+      <PullToRefresh onRefresh={handlePullToRefresh}>
         <div className="space-y-4 sm:space-y-6">
         {/* Sticky bar that appears once the overview scrolls out */}
         <PageHeaderSticky
@@ -944,6 +976,11 @@ export default function DrivesListPage() {
             'operations.drives.provenance',
             'Measured energy and distance stay canonical until display; missing evidence is excluded rather than estimated.',
           )}
+        />
+
+        <StaleRefreshWarning
+          state={drivesState}
+          label={t('drives.title', 'Drive History')}
         />
 
         {!isDrivesLoading && currentStats.count > 0 && missingEfficiencyCount > 0 && (
@@ -1246,13 +1283,13 @@ export default function DrivesListPage() {
                 ))}
                 <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
                 <a
-                  href={apiUrl(`/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
+                  href={apiUrl(scopedPath('/export/drives', exportScope))}
                   download="teslasync-drives.csv"
                 >
                   <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
                 </a>
                 <a
-                  href={apiUrl(`/export/drives?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
+                  href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))}
                   download="teslasync-drives.json"
                 >
                   <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>

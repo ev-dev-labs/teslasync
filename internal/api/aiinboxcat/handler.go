@@ -269,6 +269,22 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, inboxautocategorization.FeatureID)
 
+	// 3b) Install the request-validated inbox scope so the
+	//     draft_alert_categories tool can refuse any LLM-supplied
+	//     vehicle_id that does not match what the caller actually
+	//     asked for (defence against prompt-injection exfiltration
+	//     — a malicious notification title/body cannot trick the
+	//     LLM into loading a different vehicle's inbox). Mirrors
+	//     the WithScopedLogTraceWindow / WithScopedFSMTraceWindow
+	//     pattern used by the sibling summarization handlers.
+	scopedVehicleID := int64(0)
+	if body.VehicleID != nil {
+		scopedVehicleID = *body.VehicleID
+	}
+	ctx = nl.WithScopedInboxCategorizationWindow(ctx, nl.ScopedInboxCategorizationWindow{
+		VehicleID: scopedVehicleID,
+	})
+
 	// 4) Open the SSE writer. Stream.New writes the SSE response
 	//    headers, starts the consumer goroutine, and returns a
 	//    child ctx that cancels on stall — we pass that ctx to

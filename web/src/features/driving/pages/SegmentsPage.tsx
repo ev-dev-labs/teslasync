@@ -168,6 +168,14 @@ export default function SegmentsPage() {
     ghost.b.series.forEach((p) => put(p.fraction_of_distance, 'b', p.elapsed_s));
     return [...grid.values()].sort((x, y) => x.frac - y.frac);
   }, [ghost]);
+  const raceSeriesA = useMemo(() => (ghost?.a.series ?? []).map((point) => ({
+    frac: point.fraction_of_distance,
+    a: point.elapsed_s,
+  })), [ghost]);
+  const raceSeriesB = useMemo(() => (ghost?.b.series ?? []).map((point) => ({
+    frac: point.fraction_of_distance,
+    b: point.elapsed_s,
+  })), [ghost]);
 
   /* "Time gap": the A-vs-B split at each shared fraction (delta_s < 0 → A ahead),
      already aligned by the backend. */
@@ -374,6 +382,7 @@ export default function SegmentsPage() {
                             <XAxis
                               dataKey="frac"
                               type="number"
+                              allowDuplicatedCategory={false}
                               domain={[0, 1]}
                               ticks={[0, 0.25, 0.5, 0.75, 1]}
                               tickFormatter={pctTick}
@@ -396,14 +405,16 @@ export default function SegmentsPage() {
                             } />
                             <ChartLegend verticalAlign="top" align="right" />
                             <Line
-                              type="monotone" dataKey="a" connectNulls
+                              type="monotone" dataKey="a" connectNulls={false}
+                              data={raceSeriesA}
                               stroke={COLOR_A} strokeWidth={2} dot={false}
                               name={t('segments.ghost.racerA', 'Attempt A')}
                               animationDuration={700}
                               hide={hiddenSeries?.isHidden('a') ?? false}
                             />
                             <Line
-                              type="monotone" dataKey="b" connectNulls
+                              type="monotone" dataKey="b" connectNulls={false}
+                              data={raceSeriesB}
                               stroke={COLOR_B} strokeWidth={2} dot={false}
                               name={t('segments.ghost.racerB', 'Attempt B')}
                               animationDuration={700}

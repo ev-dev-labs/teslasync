@@ -58,6 +58,7 @@ vi.mock('framer-motion', () => {
     motion: new Proxy({} as Record<string, any>, { get: () => renderDiv }),
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
+    useReducedMotion: () => false,
   }
 })
 

@@ -164,6 +164,19 @@ func TestBatteryHandler_AllFieldsCarryForward(t *testing.T) {
 	if want := (moduleTempMax + moduleTempMin) / 2; avg != want {
 		t.Fatalf("avg_cell_temp_c = %v, want %v (mean of ModuleTempMax/Min)", avg, want)
 	}
+	if _, ok := body["generated_at"].(string); !ok {
+		t.Fatalf("generated_at missing or wrong type (%#v)", body["generated_at"])
+	}
+	if got, _ := body["source"].(string); got != "signal_log_and_cagg_battery_daily" {
+		t.Fatalf("source = %q, want signal_log_and_cagg_battery_daily", got)
+	}
+	partial, ok := body["partial_result"].(map[string]any)
+	if !ok {
+		t.Fatalf("partial_result missing or wrong type (%#v)", body["partial_result"])
+	}
+	if isPartial, _ := partial["is_partial"].(bool); !isPartial {
+		t.Fatalf("partial_result.is_partial = %v, want true when the DB trend source is unavailable", partial["is_partial"])
+	}
 }
 
 // TestBatteryHandler_PropagatesError verifies that a StateReader.SignalAt
@@ -189,6 +202,19 @@ func TestBatteryHandler_PropagatesError(t *testing.T) {
 
 	if rec.Code != http.StatusInternalServerError {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
+	}
+}
+
+func TestBatteryHandler_RejectsOversizedTrendWindow(t *testing.T) {
+	h := &BatteryHandler{state: &fakeStateReader{}}
+	req := newBatteryReportRequest(t, "42")
+	req.URL.RawQuery = "days=367"
+
+	rec := httptest.NewRecorder()
+	h.Report(rec, req)
+
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
 	}
 }
 

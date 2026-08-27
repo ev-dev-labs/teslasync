@@ -1,0 +1,125 @@
+{
+  "tour": {
+    "close": "Close tour",
+    "skip": "Skip tour",
+    "prev": "Back",
+    "finish": "Get Started!",
+    "next": "Next",
+    "title": "Onboarding Tour",
+    "description": "Re-run the guided walkthrough of TeslaSync features",
+    "restart": "Restart Tour",
+    "openLauncher": "Show tours",
+    "takeATour": "Take a tour",
+    "dialogLabel": "Onboarding tour",
+    "launcher": {
+      "title": "Take a tour",
+      "subtitle": "Guided walkthroughs for every major feature.",
+      "recommendedHere": "Recommended for this page",
+      "completed": "Completed",
+      "start": "Start",
+      "replay": "Replay",
+      "resetAll": "Reset all tours",
+      "close": "Close",
+      "startAria": "Start {{tour}} tour",
+      "replayAria": "Replay {{tour}} tour",
+      "openAria": "Open tour launcher",
+      "openShort": "Take a tour"
+    },
+    "tours": {
+      "main": {
+        "title": "TeslaSync overview",
+        "description": "The 60-second tour: sidebar, dashboard layout, edit mode, and keyboard shortcuts."
+      },
+      "alerts": {
+        "title": "Alerts & Alert Studio",
+        "description": "Filter, snooze, and design alert rules with conditions, channels, and test runs."
+      },
+      "charging": {
+        "title": "Charging insights",
+        "description": "Sessions, cost analysis, and the charging-curve viewer for any session."
+      },
+      "drives": {
+        "title": "Drives & replay",
+        "description": "Drive history, Saved Views, and the trip replay scrubber with markers."
+      },
+      "vehicles": {
+        "title": "Vehicles & access",
+        "description": "Fleet overview, per-vehicle detail tabs, and managing drivers/access."
+      },
+      "automations": {
+        "title": "Automation builder",
+        "description": "Triggers, conditions, actions, and conflict detection for rules."
+      },
+      "productPreferences": {
+        "title": "Workspace preferences",
+        "deviceLocal": "This browser",
+        "description": "Choose how TeslaSync prioritizes information when this browser opens. These presentation preferences never change permissions or backend authorization.",
+        "persona": {
+          "label": "Workspace profile"
+        },
+        "personas": {
+          "owner": {
+            "label": "Owner",
+            "description": "Prioritizes daily vehicle status, charging, battery health, and ownership costs."
+          },
+          "fleetOperator": {
+            "label": "Fleet operator",
+            "description": "Prioritizes fleet readiness, alerts, automations, commands, and service operations."
+          },
+          "analyst": {
+            "label": "Analyst",
+            "description": "Prioritizes reports, trends, efficiency, driving evidence, and data exports."
+          },
+          "administrator": {
+            "label": "Administrator",
+            "description": "Prioritizes system health, diagnostics, integrations, data controls, and settings."
+          }
+        },
+        "landing": {
+          "label": "Preferred landing page",
+          "hint": "Applied only when TeslaSync first opens at the root URL; Dashboard remains available from navigation.",
+          "options": {
+            "dashboard": "Dashboard",
+            "actionCenter": "Action Center",
+            "vehicles": "Vehicles",
+            "battery": "Battery",
+            "charging": "Charging",
+            "drives": "Driving",
+            "analytics": "Analytics"
+          }
+        },
+        "defaultVehicle": {
+          "label": "Default active vehicle",
+          "hint": "Used on a fresh app load. Selecting a vehicle here also applies it to the current global vehicle scope.",
+          "lastActive": "Use the last active vehicle",
+          "unnamed": "Vehicle {{id}}",
+          "unavailable": "Unavailable vehicle {{id}}"
+        },
+        "defaultRange": {
+          "label": "Default analysis window",
+          "hint": "Becomes the active global analysis window immediately and is reused when no more specific range is stored."
+        },
+        "contextualHelp": {
+          "label": "Contextual inline help",
+          "hint": "Show concise explanations beside advanced settings and analytical metrics. Help remains available from the status line."
+        },
+        "releaseHighlights": {
+          "label": "Contextual release highlights",
+          "hint": "Surface relevant product changes after an update. Full release notes remain available from Help & support."
+        },
+        "reset": {
+          "label": "Reset defaults",
+          "done": "Workspace preferences restored to defaults."
+        }
+      },
+      "settings": {
+        "title": "Settings & preferences",
+        "description": "Theme, units, notification channels, and Saved Views — all in one place."
+      },
+      "debugger": {
+        "title": "FSM Debugger",
+        "description": "Timeline, source-layer badges, freeze/step controls, and shareable permalinks."
+      }
+    }
+  }
+}

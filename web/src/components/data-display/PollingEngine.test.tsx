@@ -66,6 +66,7 @@ vi.mock('framer-motion', () => ({
       )
     },
   },
+  useReducedMotion: () => false,
 }))
 
 // Stub the eased counter with a synchronous formatter so numeric assertions are

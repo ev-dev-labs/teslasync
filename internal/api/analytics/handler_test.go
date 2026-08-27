@@ -140,3 +140,88 @@ func TestAnalyticsHandler_PropagatesError(t *testing.T) {
 		t.Fatalf("status = %d, want 500; body=%s", rec.Code, rec.Body.String())
 	}
 }
+
+func TestAnalyticsWindow_BoundsAndValidatesRequests(t *testing.T) {
+	now := time.Date(2026, time.August, 26, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name          string
+		target        string
+		wantErr       bool
+		wantDays      int
+		wantUnbounded bool
+		wantStart     time.Time
+		wantEndZero   bool
+	}{
+		{name: "all history remains unbounded", target: "/analytics/fleet", wantUnbounded: true},
+		{name: "explicit days", target: "/analytics/fleet?days=30", wantDays: 30},
+		{name: "one year leap window", target: "/analytics/fleet?days=366", wantDays: 366},
+		{name: "shipped one year preset", target: "/analytics/fleet?days=367", wantDays: 367},
+		{name: "zero days", target: "/analytics/fleet?days=0", wantErr: true},
+		{name: "invalid date", target: "/analytics/fleet?start=not-a-date", wantErr: true},
+		{name: "reversed range", target: "/analytics/fleet?start=2026-08-27&end=2026-08-26", wantErr: true},
+		{name: "long explicit range remains valid", target: "/analytics/fleet?start=2024-01-01&end=2026-08-26"},
+		{
+			name:        "one sided old start remains valid",
+			target:      "/analytics/fleet?start=2020-01-01",
+			wantStart:   time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC),
+			wantEndZero: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, tt.target, nil)
+			start, end, err := analyticsWindow(req, now)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("analyticsWindow() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if tt.wantUnbounded {
+				if !start.IsZero() || !end.IsZero() {
+					t.Fatalf("all-history window = (%s, %s), want unbounded zero values", start, end)
+				}
+				return
+			}
+			if tt.wantEndZero && !end.IsZero() {
+				t.Fatalf("one-sided start end = %s, want zero", end)
+			}
+			if !tt.wantStart.IsZero() && !start.Equal(tt.wantStart) {
+				t.Fatalf("start = %s, want %s", start, tt.wantStart)
+			}
+			if tt.wantDays > 0 {
+				if got := int(end.Sub(start).Hours() / 24); got != tt.wantDays {
+					t.Fatalf("window length = %d days, want %d", got, tt.wantDays)
+				}
+			}
+		})
+	}
+}
+
+func TestAnalyticsHandler_FleetAcceptsHistoricalAndOneYearPresets(t *testing.T) {
+	tests := []struct {
+		name   string
+		target string
+	}{
+		{name: "all history", target: "/analytics/fleet"},
+		{name: "leap year", target: "/analytics/fleet?days=366"},
+		{name: "shipped one year preset", target: "/analytics/fleet?days=367"},
+		{name: "one sided historical start", target: "/analytics/fleet?start=2020-01-01"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			h := &AnalyticsHandler{
+				vehicleRepo:  &fakeVehicleListFetcher{},
+				driveRepo:    fakeDriveByVehicleFetcher{},
+				chargingRepo: fakeChargingByVehicleFetcher{},
+				state:        &fakeStateReader{},
+			}
+			rec := httptest.NewRecorder()
+			h.Fleet(rec, httptest.NewRequest(http.MethodGet, tt.target, nil))
+			if rec.Code != http.StatusOK {
+				t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+			}
+		})
+	}
+}

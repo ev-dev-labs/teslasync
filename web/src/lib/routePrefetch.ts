@@ -149,6 +149,52 @@ const DYNAMIC_PRELOADER_PATTERNS = Object.keys(PRELOADERS).filter((path) =>
 
 const prefetched = new Set<string>()
 
+/**
+ * Network-condition gate.
+ *
+ * Prefetch is a *speculative* download: it spends bandwidth on a navigation
+ * the user has not committed to. Honour the user's explicit Data Saver
+ * preference and skip speculation on 2G-class links, where the extra chunk
+ * competes with the request the user actually made. `navigator.connection`
+ * is not implemented everywhere (Safari/Firefox) — a missing API means "no
+ * signal", which we treat as "prefetch is fine", matching the pre-existing
+ * behaviour on those browsers.
+ */
+const SLOW_EFFECTIVE_TYPES = new Set(['slow-2g', '2g'])
+
+interface NetworkInformationLike {
+  saveData?: boolean
+  effectiveType?: string
+}
+
+function networkInformation(): NetworkInformationLike | undefined {
+  if (typeof navigator === 'undefined') return undefined
+  const nav = navigator as Navigator & {
+    connection?: NetworkInformationLike
+    mozConnection?: NetworkInformationLike
+    webkitConnection?: NetworkInformationLike
+  }
+  return nav.connection ?? nav.mozConnection ?? nav.webkitConnection
+}
+
+/**
+ * `true` when speculative route prefetching is appropriate right now.
+ *
+ * Returns `false` when the user enabled Data Saver (`saveData`) or the
+ * connection reports a 2G-class `effectiveType`. Exported so navigation
+ * primitives can skip scheduling work entirely instead of scheduling a
+ * timer that will be discarded.
+ */
+export function shouldPrefetchRoutes(): boolean {
+  const connection = networkInformation()
+  if (!connection) return true
+  if (connection.saveData === true) return false
+  if (connection.effectiveType && SLOW_EFFECTIVE_TYPES.has(connection.effectiveType)) {
+    return false
+  }
+  return true
+}
+
 function normalizePath(path: string): string {
   const pathname = path.split(/[?#]/, 1)[0] ?? ''
   return pathname.length > 1 ? pathname.replace(/\/+$/, '') : pathname
@@ -189,6 +235,7 @@ function resolvePreloaderPath(path: string): string | null {
  *   retries; the click itself will also trigger the import via React.lazy.
  */
 export function prefetchRoute(path: string): void {
+  if (!shouldPrefetchRoutes()) return
   const preloaderPath = resolvePreloaderPath(path)
   if (!preloaderPath) return
   if (prefetched.has(preloaderPath)) return
@@ -198,6 +245,50 @@ export function prefetchRoute(path: string): void {
   void preload().catch(() => {
     prefetched.delete(preloaderPath)
   })
+}
+
+/**
+ * Default delay before a *touch/pen* intent turns into a real download.
+ *
+ * Mouse users get prefetch on `mouseenter`, which is a genuine intent
+ * signal. Touch users have no hover, so the only pre-click signal is
+ * `pointerdown` — but a `pointerdown` that becomes a scroll, a long-press,
+ * or a drag is NOT an intent to navigate. Waiting a beat and cancelling on
+ * `pointerup`/`pointercancel`/`pointerleave` keeps the early start for real
+ * taps while avoiding a burst of chunk downloads during a flick-scroll.
+ */
+export const TOUCH_INTENT_PREFETCH_DELAY_MS = 120
+
+/**
+ * Schedule a prefetch for `path` and return a cancel function.
+ *
+ * The returned canceller is idempotent and safe to call after the prefetch
+ * already fired. Because cancellation clears the pending timer BEFORE the
+ * dynamic import starts, a cancelled intent can never resolve later and
+ * mutate shared state — there is no stale-update window.
+ *
+ * Returns a no-op canceller when prefetching is disabled for the current
+ * network conditions or the path is not prefetchable.
+ */
+export function schedulePrefetch(
+  path: string,
+  delayMs: number = TOUCH_INTENT_PREFETCH_DELAY_MS,
+): () => void {
+  if (typeof window === 'undefined') return () => {}
+  if (!shouldPrefetchRoutes()) return () => {}
+  if (!resolvePreloaderPath(path)) return () => {}
+
+  let cancelled = false
+  const handle = window.setTimeout(() => {
+    if (cancelled) return
+    prefetchRoute(path)
+  }, Math.max(0, delayMs))
+
+  return () => {
+    if (cancelled) return
+    cancelled = true
+    window.clearTimeout(handle)
+  }
 }
 
 /** Returns true when `path` has at least one matching PRELOADERS entry. */

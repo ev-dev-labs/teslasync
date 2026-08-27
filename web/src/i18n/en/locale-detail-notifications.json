@@ -1,0 +1,438 @@
+{
+  "notifications": {
+    "title": "Notifications",
+    "subtitle": "Inbox of fired alerts plus delivery channels.",
+    "tab": {
+      "inbox": "Inbox",
+      "archived": "Archived",
+      "channels": "Channels"
+    },
+    "inbox": {
+      "selectAll": "Select all visible",
+      "countLabel": "{{count}} notifications",
+      "threadCountLabel": "{{count}} threads",
+      "threadCountLabel_one": "{{count}} thread",
+      "threadCountLabel_other": "{{count}} threads",
+      "deliveryCountLabel": "{{count}} deliveries",
+      "deliveryCountLabel_one": "{{count}} delivery",
+      "deliveryCountLabel_other": "{{count}} deliveries",
+      "filter": {
+        "severity": "Severity",
+        "vehicle": "Vehicle",
+        "rule": "Rule",
+        "allVehicles": "All vehicles",
+        "allRules": "All rules",
+        "searchPlaceholder": "Search messages…",
+        "severity.info": "Info",
+        "severity.warn": "Warn",
+        "severity.critical": "Critical",
+        "searchLabel": "Search",
+        "from": "From",
+        "to": "To"
+      },
+      "row": {
+        "select": "Select notification",
+        "markRead": "Mark as read",
+        "markUnread": "Mark as unread",
+        "archive": "Archive",
+        "unarchive": "Restore"
+      },
+      "bulk": {
+        "markRead": "Mark read",
+        "archive": "Archive",
+        "restore": "Restore",
+        "delete": "Delete",
+        "deleteConfirmTitle": "Delete notifications?",
+        "deleteConfirmBody": "These notifications will be permanently removed. Archive is usually the safer choice.",
+        "announceArchived": "{{count}} items archived",
+        "announceArchived_one": "{{count}} item archived",
+        "announceArchived_other": "{{count}} items archived",
+        "announceRestored": "{{count}} items restored",
+        "announceRestored_one": "{{count}} item restored",
+        "announceRestored_other": "{{count}} items restored"
+      },
+      "empty": {
+        "title": "No notifications",
+        "message": "When alert rules fire, the resulting notifications appear here.",
+        "archivedTitle": "No archived notifications",
+        "archivedMessage": "Archived notifications will appear here.",
+        "cta": "Configure alert rules"
+      },
+      "error": {
+        "title": "Could not load notifications"
+      },
+      "aiCategorize": {
+        "title": "Suggest inbox categories",
+        "badge": "Helix",
+        "description": "Bucket recent alerts into categories from your inbox history. Descriptive replay only — review before applying.",
+        "suggestButton": "Suggest categories",
+        "applyButton": "Apply categories as filter",
+        "previewLabel": "Proposed categories (review before applying):"
+      }
+    },
+    "bulkRead": {
+      "success": "{{count}} marked as read"
+    },
+    "markAllRead": {
+      "action": "Mark all read",
+      "success": "All notifications marked as read"
+    },
+    "bellPopover": {
+      "title": "Notifications",
+      "unreadCount": "{{count}} unread",
+      "allRead": "All caught up",
+      "loading": "Loading…",
+      "error": "Could not load notifications",
+      "emptyTitle": "You're all caught up",
+      "emptyMessage": "No unread notifications right now.",
+      "untitled": "Notification",
+      "markAllRead": "Mark all read",
+      "viewAll": "View all"
+    },
+    "view": {
+      "label": "View",
+      "grouped": "Grouped",
+      "flat": "Flat"
+    },
+    "group": {
+      "expand": "Show {{count}} similar",
+      "expand_one": "Show 1 similar",
+      "expand_other": "Show {{count}} similar",
+      "collapse": "Hide similar",
+      "similar": "+{{count}} similar",
+      "similar_one": "+1 similar",
+      "similar_other": "+{{count}} similar",
+      "markRead": "Mark group read",
+      "markReadSuccess": "Marked {{count}} thread members as read",
+      "markReadError": "Could not mark group as read",
+      "vehicleAffected": "{{count}} vehicle affected",
+      "vehicleAffected_one": "{{count}} vehicle affected",
+      "vehicleAffected_other": "{{count}} vehicles affected",
+      "loadingMembers": "Loading thread members…",
+      "membersError": "Could not load thread members",
+      "noMembers": "No thread members found",
+      "emptyTitle": "No notification threads",
+      "emptyMessage": "When alert rules fire repeatedly, related notifications will be grouped here."
+    },
+    "stats": {
+      "sent": "Total Sent",
+      "failed": "Failed",
+      "pending": "Pending",
+      "activeChannels": "Active Channels",
+      "loading": "Loading notification statistics"
+    },
+    "channels": {
+      "add": "Add Channel",
+      "addTitle": "Add Channel",
+      "editTitle": "Edit Channel",
+      "active": "Active",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "configLabel": "Configuration",
+      "typeLabel": "Channel Type",
+      "nameLabel": "Channel Name",
+      "namePlaceholderPrefix": "My",
+      "nameRequired": "Name is required",
+      "test": "Test Connection",
+      "testShort": "Test",
+      "testing": "Testing…",
+      "testSuccess": "Test notification sent successfully!",
+      "testSuccessShort": "Test sent!",
+      "testFailed": "Test failed",
+      "toggledOn": "Channel enabled",
+      "toggledOff": "Channel disabled",
+      "toggleFailed": "Failed to toggle channel",
+      "deleted": "Channel deleted",
+      "deleteFailed": "Failed to delete channel",
+      "empty": {
+        "title": "No channels configured",
+        "message": "Add a notification channel to start receiving alerts via Discord, Slack, Telegram, Email, and more."
+      },
+      "testHint": "Save then click \"Send Test\" to verify the configuration."
+    },
+    "alertStudio": {
+      "title": "Alert Studio",
+      "subtitle": "Create custom rules from Fleet Telemetry signals",
+      "aiBuilder": {
+        "title": "Draft from natural language",
+        "description": "Describe the alert you want and get a typed AlertRule draft you can review and save below.",
+        "badge": "Helix",
+        "draftButton": "Draft alert"
+      },
+      "aiTuning": {
+        "title": "Suggest lower-noise tuning",
+        "description": "Review recent firings and propose a typed AlertRule patch. Descriptive replay only — review before saving.",
+        "badge": "Helix",
+        "suggestButton": "Suggest tuning",
+        "applyButton": "Apply to form",
+        "previewLabel": "Proposed patch (review before saving):"
+      },
+      "aiConflicts": {
+        "title": "Detect cross-rule conflicts",
+        "description": "Surface structural overlaps between your alert rule definitions. Review only — Helix never edits, merges, or deletes rules.",
+        "badge": "Helix",
+        "detectButton": "Detect conflicts",
+        "reviewButton": "Review rule",
+        "emptyMessage": "No structural conflicts found in the current rule set.",
+        "kind": {
+          "redundant_duplicate": "Redundant duplicate",
+          "overlapping_threshold": "Overlapping threshold"
+        }
+      },
+      "rules": {
+        "untitled": "Untitled",
+        "countOne": "1 rule",
+        "countMany": "{{count}} rules",
+        "title": "Rules",
+        "searchPlaceholder": "Search rules...",
+        "emptyTitle": "No alert rules yet",
+        "emptyDescription": "Create your first rule or pick a template above.",
+        "noMatchesTitle": "No matching rules",
+        "noMatches": "No rules match \"{{search}}\"",
+        "onceModeHint": "Fires once until condition resets",
+        "onceMode": "Once",
+        "disable": "Disable",
+        "enable": "Enable",
+        "disableRule": "Disable rule",
+        "enableRule": "Enable rule",
+        "confirmDeleteTitle": "Delete rule?",
+        "confirmDelete": "Delete \"{{name}}\"?",
+        "deleteRule": "Delete rule",
+        "selectRow": "Select rule {{name}}"
+      },
+      "severity": {
+        "info": "Info",
+        "warn": "Warning",
+        "critical": "Critical"
+      },
+      "editor": {
+        "enabled": "Enabled",
+        "disabled": "Disabled",
+        "alertBehavior": {
+          "onceLabel": "Notify on event",
+          "onceDesc": "Fires when the condition is first met. Stays quiet until it resets.",
+          "repeatLabel": "Re-alert until resolved",
+          "repeatDesc": "Keeps firing every {{cooldown}} minutes while the condition stays true.",
+          "recommendBanner": "Recommended for \"{{op}}\" comparisons: {{recommended}}.",
+          "recommendBannerAlt": "{{alternative}} is also valid — pick whatever fits.",
+          "forceChoose": "Pick how this alert should behave."
+        },
+        "noSignalTitle": "Choose a signal",
+        "noSignalDescription": "Select a telemetry signal before entering a comparison value.",
+        "minValueLabel": "Minimum Value",
+        "maxValueLabel": "Maximum Value",
+        "textValueLabel": "Text Value",
+        "textValuePlaceholder": "Value to compare",
+        "booleanValueLabel": "Boolean Value",
+        "anyChangeDescription": "This rule fires whenever the selected signal changes.",
+        "numericValueLabel": "Numeric Value",
+        "editTitle": "Edit Rule",
+        "newTitle": "New Rule",
+        "nameLabel": "Name",
+        "namePlaceholder": "My alert rule",
+        "enabledLabel": "Status",
+        "vehicleIdLabel": "Vehicle ID",
+        "optionalLabel": "Optional",
+        "vehicleIdPlaceholder": "All vehicles",
+        "vehiclesLabel": "Vehicles",
+        "vehiclesHelp": "Choose 'All vehicles' to apply this rule to your entire fleet, including any cars you add later.",
+        "vehiclesAllOption": "All vehicles (current + future)",
+        "vehiclesEmptyError": "Pick at least one vehicle, or select 'All vehicles'.",
+        "vehiclesEmptyFleetHelp": "Add a vehicle in Settings → Vehicles to use this rule.",
+        "vehiclesSummaryAll": "All vehicles",
+        "vehiclesSummaryNone": "No vehicles selected",
+        "vehiclesSummaryOne": "{{name}}",
+        "vehiclesSummaryCount": "{{count}} vehicles",
+        "vehiclesSummaryPartial": "{{count}} of {{total}} vehicles",
+        "vehiclesUnknownLabel": "Vehicle #{{id}}",
+        "vehiclesUnknownBadge": "Unknown",
+        "signalNameLabel": "Signal",
+        "signalNamePlaceholder": "Select a telemetry signal",
+        "signalTypeHint": "{{type}} signal from {{category}}",
+        "operatorLabel": "Operator",
+        "severityLabel": "Severity",
+        "allowedOperatorsLabel": "Allowed Operators",
+        "allowedOperatorsPlaceholder": "Select a signal to see its operators",
+        "typedValueLabel": "Typed Value",
+        "cooldownLabel": "Cooldown (minutes)",
+        "alertBehaviorLabel": "Alert Behavior",
+        "alertBehaviorPlaceholder": "— Choose one —",
+        "maxFiresLabel": "Max alerts before condition resolves",
+        "maxFiresPlaceholder": "Leave blank for unlimited",
+        "maxFiresHint": "Only applies to repeat-mode rules. Once-mode already caps at 1 per resolution.",
+        "escalationCheckboxLabel": "Escalate to a higher severity if the condition stays unresolved",
+        "escalationAfterLabel": "Escalate after (minutes)",
+        "escalationAfterPlaceholder": "e.g. 30",
+        "escalationSeverityLabel": "Escalated severity",
+        "escalationSeverityPlaceholder": "Select severity…",
+        "escalationHint": "Only repeat-mode rules can escalate. The escalated severity must be higher than the base severity.",
+        "testMessageLabel": "Test Message",
+        "signalHint": "Use {{SignalName}}",
+        "testMessagePlaceholder": "Battery at {{BatteryLevel}}%",
+        "kindLabel": "Rule type"
+      },
+      "signalTypes": {
+        "numeric": "Numeric",
+        "text": "Text",
+        "bool": "Boolean"
+      },
+      "signalCategories": {
+        "custom": "Custom"
+      },
+      "signals": {
+        "optionLabel": "{{name}} - {{type}} - {{category}}",
+        "customOptionLabel": "{{name}} - {{type}} - Custom"
+      },
+      "boolean": {
+        "true": "True",
+        "false": "False"
+      },
+      "test": {
+        "defaultMessage": "Test notification from Alert Studio"
+      },
+      "actions": {
+        "templates": "Templates",
+        "newRule": "New Rule",
+        "saving": "Saving...",
+        "updateRule": "Update Rule",
+        "createRule": "Create Rule",
+        "delete": "Delete",
+        "test": "Test",
+        "reset": "Reset"
+      },
+      "templates": {
+        "header": "Rule Templates - {{count}} pre-built rules",
+        "searchPlaceholder": "Search templates...",
+        "allCategory": "All",
+        "use": "Use",
+        "noMatchesTitle": "No templates found",
+        "noMatches": "No templates match your search"
+      },
+      "snooze": {
+        "badge": "Snoozed until {{time}}",
+        "manage": "Manage snooze",
+        "button": "Snooze",
+        "title": "Snooze \"{{name}}\"",
+        "currentlySnoozed": "Currently snoozed until {{time}}",
+        "1h": "Snooze 1 hour",
+        "4h": "Snooze 4 hours",
+        "24h": "Snooze 24 hours",
+        "cancel": "Cancel snooze"
+      },
+      "channels": {
+        "testTargetLabel": "Test Delivery Target",
+        "browserToast": "Browser toast notification (real-time via SSE)",
+        "alertHistory": "Alert history (saved to database)",
+        "externalChannels": "External channels for test notifications:",
+        "emptyTitle": "No external channels configured",
+        "emptyDescription": "Browser toasts and alert history are always enabled. Configure channels from Notifications to fan out alerts."
+      },
+      "computedMetric": {
+        "metric": "Metric",
+        "loading": "Loading metrics…",
+        "metricPlaceholder": "Choose a metric",
+        "window": "Window",
+        "windowPlaceholder": "Choose a window",
+        "op": "Operator",
+        "threshold": "Threshold",
+        "thresholdPlaceholder": "e.g. 200",
+        "preview": "Live preview",
+        "previewLoading": "Computing…",
+        "wouldNot": "NOT",
+        "would": ""
+      },
+      "kind": {
+        "signal": "Signal threshold",
+        "computedMetric": "Computed metric"
+      }
+    },
+    "log": {
+      "filterLabel": {
+        "search": "Search"
+      }
+    },
+    "bulk": {
+      "announceArchived": "{{count}} items archived",
+      "announceRestored": "{{count}} items restored"
+    },
+    "quietHours": {
+      "aiSuggestion": {
+        "title": "Suggest a quiet-hours window from your notification history",
+        "description": "Ask Helix to recommend ONE quiet-hours window based on the trailing 30 days of your notification cadence. Helix never reads individual notification titles or messages — it consults a per-hour aggregate of non-critical events to find the sparsest interval. Apply the recommendation to seed the form below; you remain in control of the Save button.",
+        "button": "Suggest quiet hours",
+        "badge": "Helix",
+        "applyButton": "Apply to form",
+        "previewLabel": "Proposed window (review before saving):",
+        "previewWindow": "Window: {{start}} → {{end}} ({{tz}})",
+        "previewWeekdays": "Weekday bitmask: {{weekdays}}",
+        "previewBypass": "Bypass severities: {{severities}}",
+        "previewInsufficientHistory": "Helix had insufficient notification history; this is a conservative default.",
+        "previewExistingCount": "You already have {{count}} quiet-hours window(s) configured."
+      },
+      "title": "Quiet hours",
+      "subtitle": "Suppress non-critical notifications during a configurable window.",
+      "summary": {
+        "label": "Quiet hours summary",
+        "resource": "quiet-hours windows",
+        "windows": "Windows",
+        "windowsSub": "Configured schedules",
+        "enabled": "Enabled",
+        "enabledSub": "Active on schedule",
+        "statusNow": "Right now",
+        "statusQuiet": "Quiet",
+        "statusActive": "Delivering",
+        "statusQuietSub": "{{count}} window active now",
+        "statusActiveSub": "No window active now",
+        "alwaysAllow": "Always allowed",
+        "alwaysAllowSub": "Severities that break through"
+      },
+      "guide": {
+        "title": "How quiet hours work",
+        "subtitle": "Defer non-critical alerts on your own schedule.",
+        "stepDefer": "Each window mutes non-critical notifications during a local-time range on the weekdays you pick.",
+        "stepBypass": "Severities on the \"always allow\" list still break through, so you never miss a critical alert.",
+        "stepHelix": "Helix can propose a window from your recent history — review it, then save to apply.",
+        "severityTitle": "Severity levels",
+        "severityCritical": "Critical",
+        "severityCriticalDesc": "Urgent — usually always allowed.",
+        "severityWarn": "Warning",
+        "severityWarnDesc": "Notable, non-urgent events.",
+        "severityInfo": "Info",
+        "severityInfoDesc": "Routine status updates."
+      }
+    },
+    "webhooks": {
+      "title": "Webhooks",
+      "subtitle": "Custom HTTPS endpoints that receive HMAC-signed event payloads.",
+      "summary": {
+        "label": "Webhook endpoints summary",
+        "resource": "webhook endpoints",
+        "endpoints": "Endpoints",
+        "endpointsSub": "Configured receivers",
+        "enabled": "Enabled",
+        "enabledSub": "Active receivers",
+        "secure": "Secure transport",
+        "secureSub": "Delivered over HTTPS",
+        "methods": "HTTP methods",
+        "methodsSub": "Verbs in use",
+        "methodsNone": "—"
+      },
+      "guide": {
+        "title": "How webhooks work",
+        "subtitle": "Forward events to any HTTP receiver, signed and verifiable.",
+        "stepSign": "Every payload is HMAC-SHA256 signed and sent in the X-TeslaSync-Signature header so receivers can verify authenticity.",
+        "stepDeliver": "TeslaSync POSTs a compact JSON envelope on each event; failed deliveries are retried with backoff.",
+        "stepVerify": "Use Test on any endpoint to fire a sample event and preview the signature before you rely on it.",
+        "referenceTitle": "Delivery reference",
+        "refHeader": "Signature header",
+        "refAlgo": "Algorithm",
+        "refMethods": "Methods",
+        "payloadTitleLabel": "Payload fields",
+        "payloadTitle": "Short event headline.",
+        "payloadMessage": "Long-form event body.",
+        "payloadSource": "Always \"teslasync\".",
+        "payloadTimestamp": "RFC3339 server time."
+      }
+    }
+  }
+}

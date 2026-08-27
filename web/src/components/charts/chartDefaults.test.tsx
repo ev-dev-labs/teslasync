@@ -16,7 +16,7 @@ describe('AREA_DEFAULTS', () => {
     expect(AREA_DEFAULTS).toEqual({
       type: 'monotone',
       dot: false,
-      connectNulls: true,
+      connectNulls: false,
       strokeWidth: 2,
       animationDuration: 300,
     })
@@ -25,7 +25,7 @@ describe('AREA_DEFAULTS', () => {
   it('pins each individual default so a silent field drift is caught', () => {
     expect(AREA_DEFAULTS.type).toBe('monotone')
     expect(AREA_DEFAULTS.dot).toBe(false)
-    expect(AREA_DEFAULTS.connectNulls).toBe(true)
+    expect(AREA_DEFAULTS.connectNulls).toBe(false)
     expect(AREA_DEFAULTS.strokeWidth).toBe(2)
     expect(AREA_DEFAULTS.animationDuration).toBe(300)
   })

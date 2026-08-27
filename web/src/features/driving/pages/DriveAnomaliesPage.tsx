@@ -74,33 +74,29 @@ export default function DriveAnomaliesPage() {
   const toSpeed = (kph: number) => Math.round(isMiles ? kph / KM_PER_MILE : kph);
   const toEff = (whPerKm: number) => Math.round(isMiles ? whPerKm * KM_PER_MILE : whPerKm);
 
-  // One merged x-sorted dataset: curve rows carry band values, point rows
-  // carry scatter values. Recharts renders each series from its own keys.
-  const chartData = useMemo(() => {
-    const rows: Record<string, number | null>[] = [];
-    for (const c of summary.curve) {
-      rows.push({
-        speed: toSpeed(c.speedKph),
-        predicted: toEff(c.predicted),
-        upper2: toEff(c.upper2),
-        lower2: toEff(c.lower2),
-        normal: null,
-        outlier: null,
-      });
-    }
-    for (const p of summary.points) {
-      rows.push({
-        speed: toSpeed(p.speedKph),
-        predicted: null,
-        upper2: null,
-        lower2: null,
-        normal: Math.abs(p.z) < 2 ? toEff(p.whPerKm) : null,
-        outlier: Math.abs(p.z) >= 2 ? toEff(p.whPerKm) : null,
-      });
-    }
-    return rows.sort((a, b) => (a.speed ?? 0) - (b.speed ?? 0));
-     
-  }, [summary.curve, summary.points, isMiles]);
+  const curveData = useMemo(() => summary.curve.map((c) => ({
+    speed: toSpeed(c.speedKph),
+    predicted: toEff(c.predicted),
+    upper2: toEff(c.upper2),
+    lower2: toEff(c.lower2),
+  })), [summary.curve, isMiles]);
+  const pointData = useMemo(() => summary.points.map((p) => ({
+    speed: toSpeed(p.speedKph),
+    normal: Math.abs(p.z) < 2 ? toEff(p.whPerKm) : null,
+    outlier: Math.abs(p.z) >= 2 ? toEff(p.whPerKm) : null,
+  })), [summary.points, isMiles]);
+  const normalData = useMemo(
+    () => pointData.filter((point) => point.normal != null),
+    [pointData],
+  );
+  const outlierData = useMemo(
+    () => pointData.filter((point) => point.outlier != null),
+    [pointData],
+  );
+  const chartData = useMemo(
+    () => [...curveData, ...pointData].sort((a, b) => a.speed - b.speed),
+    [curveData, pointData],
+  );
 
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('anomalies.title', 'Anomaly Detective')} />;
@@ -215,6 +211,7 @@ export default function DriveAnomaliesPage() {
                 <XAxis
                   dataKey="speed"
                   type="number"
+                  allowDuplicatedCategory={false}
                   domain={['dataMin', 'dataMax']}
                   tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                   unit={` ${speedUnit}`}
@@ -228,7 +225,8 @@ export default function DriveAnomaliesPage() {
                   stroke="none"
                   fill={chartTokens.series[5]}
                   fillOpacity={0.08}
-                  connectNulls
+                  connectNulls={false}
+                  data={curveData}
                 />
                 <Area
                   type="monotone"
@@ -237,7 +235,8 @@ export default function DriveAnomaliesPage() {
                   stroke="none"
                   fill="var(--surface-2)"
                   fillOpacity={1}
-                  connectNulls
+                  connectNulls={false}
+                  data={curveData}
                 />
                 <Line
                   type="monotone"
@@ -246,16 +245,19 @@ export default function DriveAnomaliesPage() {
                   stroke={chartTokens.series[5]}
                   strokeWidth={2}
                   dot={false}
-                  connectNulls
+                  connectNulls={false}
+                  data={curveData}
                 />
                 <Scatter
                   dataKey="normal"
+                  data={normalData}
                   name={t('anomalies.normal', 'Within band')}
                   fill={chartTokens.series[1]}
                   fillOpacity={0.7}
                 />
                 <Scatter
                   dataKey="outlier"
+                  data={outlierData}
                   name={t('anomalies.outlier', 'Outlier')}
                   fill={chartTokens.series[3]}
                 />

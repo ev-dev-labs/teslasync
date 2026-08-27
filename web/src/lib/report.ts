@@ -1,5 +1,6 @@
 import { formatDate, formatDateTime } from './dateFormat'
 import { fmtNumber } from './numberFormat'
+import { printStylesheetURL, printWhenReady } from './printDocument'
 
 /**
  * Escape a value for safe interpolation into report HTML. Report windows are
@@ -38,21 +39,9 @@ export function generateDriveReport(drive: any, vehicle: any): boolean {
     <html>
     <head>
       <title>Drive Report - ${escapeHtml(formatDate(d.start_date))}</title>
-      <style>
-        body { font-family: system-ui, sans-serif; padding: 40px; color: #1a1a2e; }
-        h1 { color: #0077b6; border-bottom: 2px solid #0077b6; padding-bottom: 8px; }
-        h2 { color: #059669; margin-top: 24px; }
-        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-        th { background: #f3f4f6; text-align: left; padding: 8px 12px; font-size: 12px; text-transform: uppercase; }
-        td { padding: 8px 12px; border-bottom: 1px solid #e5e7eb; }
-        .stat { display: inline-block; width: 23%; text-align: center; margin: 8px 1%; padding: 16px; border: 1px solid #e5e7eb; border-radius: 8px; }
-        .stat-value { font-size: 24px; font-weight: 700; color: #0077b6; }
-        .stat-label { font-size: 11px; color: #6b7280; margin-top: 4px; }
-        .footer { margin-top: 40px; text-align: center; color: #9ca3af; font-size: 11px; }
-        @media print { body { padding: 20px; } }
-      </style>
+      <link rel="stylesheet" href="${printStylesheetURL()}">
     </head>
-    <body>
+    <body class="drive-report">
       <h1>TeslaSync — Drive Report</h1>
       <p><strong>Vehicle:</strong> ${escapeHtml(v.display_name || 'N/A')} | <strong>Date:</strong> ${escapeHtml(formatDateTime(d.start_date))}</p>
 
@@ -81,7 +70,7 @@ export function generateDriveReport(drive: any, vehicle: any): boolean {
     </html>
   `)
   printWindow.document.close()
-  printWindow.print()
+  printWhenReady(printWindow)
   return true
 }
 
@@ -102,16 +91,9 @@ export function generateMonthlyReport(stats: any, vehicles: any[]): boolean {
     <html>
     <head>
       <title>TeslaSync Monthly Report</title>
-      <style>
-        body { font-family: system-ui, sans-serif; padding: 40px; color: #1a1a2e; }
-        h1 { color: #0077b6; }
-        table { width: 100%; border-collapse: collapse; margin: 16px 0; }
-        th { background: #f3f4f6; text-align: left; padding: 8px; font-size: 12px; text-transform: uppercase; }
-        td { padding: 8px; border-bottom: 1px solid #e5e7eb; }
-        .footer { margin-top: 40px; text-align: center; color: #9ca3af; font-size: 11px; }
-      </style>
+      <link rel="stylesheet" href="${printStylesheetURL()}">
     </head>
-    <body>
+    <body class="monthly-report">
       <h1>TeslaSync — Monthly Summary</h1>
       <p>Generated: ${escapeHtml(new Date().toLocaleString())}</p>
       <table>
@@ -128,6 +110,6 @@ export function generateMonthlyReport(stats: any, vehicles: any[]): boolean {
     </html>
   `)
   printWindow.document.close()
-  printWindow.print()
+  printWhenReady(printWindow)
   return true
 }

@@ -2,6 +2,7 @@ import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/rea
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
+import { queryPolicy } from '../queryPolicy';
 import { useToast } from '@/components/feedback/Toast';
 import type { SignalHistoryResponse, SignalStats, TelemetryStatus, VehicleTelemetry } from '@/types/telemetry';
 import { telemetryUptimeSeconds, telemetryVehicleList } from '@/types/telemetry';
@@ -141,14 +142,19 @@ export function useVehicleLiveSignals(
   opts?: UseVehicleLiveSignalsOptions,
 ) {
   const enabled = opts?.enabled ?? true;
+  const interval = opts?.refetchInterval;
   return useQuery({
     queryKey: telemetryKeys.liveSignals(vehicleId),
     queryFn: ({ signal }) => getVehicleLiveSignals(vehicleId ?? 0, { signal }),
     enabled: !!vehicleId && enabled,
-    staleTime: STALE_TIMES.REALTIME,
-    refetchInterval: opts?.refetchInterval ?? false,
-    refetchIntervalInBackground: false,
-    retry: 1,
+    // Volatility tier instead of hand-tuned constants. A caller that asks
+    // for a faster cadence than the tier's 5 s cache window also narrows the
+    // window to match, so the poll can never fire against fresh cache
+    // (`queryPolicy` clamps the interval up to `staleTime` otherwise).
+    ...queryPolicy('live', {
+      refetchInterval: interval ?? false,
+      ...(interval != null ? { staleTime: interval } : {}),
+    }),
   });
 }
 

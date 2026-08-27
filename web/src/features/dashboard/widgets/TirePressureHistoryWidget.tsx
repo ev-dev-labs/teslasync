@@ -207,10 +207,10 @@ export default function TirePressureHistoryWidget({ vehicleId, size }: WidgetPro
           strokeDasharray="4 4"
           label={{ value: t('widget.tirePressureHistory.max', 'Max'), fill: 'rgba(34,197,94,0.5)', fontSize: 10, position: 'insideBottomLeft' }}
         />
-        <Line type="monotone" dataKey="fl" stroke={TIRE_COLORS.fl} strokeWidth={2} dot={false} connectNulls name="fl" hide={hiddenSeries?.isHidden('fl')} />
-        <Line type="monotone" dataKey="fr" stroke={TIRE_COLORS.fr} strokeWidth={2} dot={false} connectNulls name="fr" hide={hiddenSeries?.isHidden('fr')} />
-        <Line type="monotone" dataKey="rl" stroke={TIRE_COLORS.rl} strokeWidth={2} dot={false} connectNulls name="rl" hide={hiddenSeries?.isHidden('rl')} />
-        <Line type="monotone" dataKey="rr" stroke={TIRE_COLORS.rr} strokeWidth={2} dot={false} connectNulls name="rr" hide={hiddenSeries?.isHidden('rr')} />
+        <Line type="monotone" dataKey="fl" stroke={TIRE_COLORS.fl} strokeWidth={2} dot={false} connectNulls={false} name="fl" hide={hiddenSeries?.isHidden('fl')} />
+        <Line type="monotone" dataKey="fr" stroke={TIRE_COLORS.fr} strokeWidth={2} dot={false} connectNulls={false} name="fr" hide={hiddenSeries?.isHidden('fr')} />
+        <Line type="monotone" dataKey="rl" stroke={TIRE_COLORS.rl} strokeWidth={2} dot={false} connectNulls={false} name="rl" hide={hiddenSeries?.isHidden('rl')} />
+        <Line type="monotone" dataKey="rr" stroke={TIRE_COLORS.rr} strokeWidth={2} dot={false} connectNulls={false} name="rr" hide={hiddenSeries?.isHidden('rr')} />
           </LineChart>
         </ResponsiveContainer>
       )}

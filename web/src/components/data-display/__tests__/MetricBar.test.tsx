@@ -28,6 +28,7 @@ vi.mock('framer-motion', () => ({
       },
     },
   ),
+  useReducedMotion: () => false,
 }))
 
 import { MetricBar } from '../MetricBar'

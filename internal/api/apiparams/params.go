@@ -1,8 +1,10 @@
 package apiparams
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -86,21 +88,79 @@ func HTTPStatusCode(status int) string {
 // "filter unspecified" via .IsZero() and typically combine with
 // NullableTime + a `$N::timestamptz IS NULL OR ts >= $N` SQL guard.
 func ParseDateRange(r *http.Request) (startTime, endTime time.Time) {
-	if s := r.URL.Query().Get("start"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			startTime = t
-		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			startTime = t
-		}
-	}
-	if s := r.URL.Query().Get("end"); s != "" {
-		if t, err := time.Parse(time.RFC3339, s); err == nil {
-			endTime = t.Add(-time.Microsecond) // exclusive → inclusive for BETWEEN
-		} else if t, err := time.Parse("2006-01-02", s); err == nil {
-			endTime = t.Add(24*time.Hour - time.Second) // end of day (UTC)
-		}
-	}
+	startTime, _, _ = ParseDateRangeValues(r.URL.Query().Get("start"), "")
+	_, endTime, _ = ParseDateRangeValues("", r.URL.Query().Get("end"))
 	return
+}
+
+// ParseDateRangeValues parses optional start/end bounds while rejecting invalid
+// supplied values. It preserves ParseDateRange's inclusive SQL semantics:
+// RFC3339 end values are exclusive API boundaries converted to inclusive SQL
+// values, while date-only end values include the full UTC calendar day.
+//
+// ParseDateRange remains available for legacy handlers that intentionally
+// treat malformed optional filters as absent. New bounded endpoints should
+// use this function and return its validation error to callers.
+func ParseDateRangeValues(startRaw, endRaw string) (startTime, endTime time.Time, err error) {
+	if raw := strings.TrimSpace(startRaw); raw != "" {
+		startTime, err = parseDateBound(raw, false)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("start must be an RFC3339 timestamp or YYYY-MM-DD date")
+		}
+	}
+	if raw := strings.TrimSpace(endRaw); raw != "" {
+		endTime, err = parseDateBound(raw, true)
+		if err != nil {
+			return time.Time{}, time.Time{}, fmt.Errorf("end must be an RFC3339 timestamp or YYYY-MM-DD date")
+		}
+	}
+	if err := ValidateDateRange(startTime, endTime, 0); err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+	return startTime, endTime, nil
+}
+
+func parseDateBound(raw string, isEnd bool) (time.Time, error) {
+	if t, err := time.Parse(time.RFC3339, raw); err == nil {
+		if isEnd {
+			return t.Add(-time.Microsecond), nil
+		}
+		return t, nil
+	}
+	t, err := time.Parse("2006-01-02", raw)
+	if err != nil {
+		return time.Time{}, err
+	}
+	if isEnd {
+		return t.Add(24*time.Hour - time.Second), nil
+	}
+	return t, nil
+}
+
+// ValidateDateRange verifies chronological ordering and, when maxSpan is
+// non-zero, caps a fully bounded range. Callers that accept one-sided ranges
+// should materialize the missing boundary first so expensive reads are also
+// bounded before calling this helper.
+func ValidateDateRange(startTime, endTime time.Time, maxSpan time.Duration) error {
+	if !startTime.IsZero() && !endTime.IsZero() && startTime.After(endTime) {
+		return fmt.Errorf("start must not be after end")
+	}
+	if maxSpan > 0 && !startTime.IsZero() && !endTime.IsZero() && endTime.Sub(startTime) > maxSpan {
+		return fmt.Errorf("requested date range exceeds maximum of %d days", int(maxSpan.Hours()/24))
+	}
+	return nil
+}
+
+// SetPaginationHeaders publishes additive pagination metadata for endpoints
+// that retain their historical top-level JSON array response. This avoids a
+// breaking envelope migration while letting clients reliably reconstruct the
+// page request. A full page is conservatively marked as possibly truncated;
+// callers must not treat it as proof that another page exists.
+func SetPaginationHeaders(w http.ResponseWriter, limit, offset, returned int) {
+	w.Header().Set("X-Pagination-Limit", strconv.Itoa(limit))
+	w.Header().Set("X-Pagination-Offset", strconv.Itoa(offset))
+	w.Header().Set("X-Pagination-Returned", strconv.Itoa(returned))
+	w.Header().Set("X-Result-Possibly-Truncated", strconv.FormatBool(limit > 0 && returned >= limit))
 }
 
 // NullableTime returns t when use is true, otherwise an interface-typed

@@ -25,7 +25,7 @@ data:
         # Inject API base URL into frontend at runtime.
         # This MUST be empty or a public URL reachable by the browser.
         # The internal K8s address is only used by Nginx's proxy_pass.
-        sub_filter '</head>' '<script>window.__TESLASYNC_API_BASE__="{{ $browserApiBase }}";</script></head>';
+        sub_filter '</head>' '<meta name="teslasync-api-base" content="{{ $browserApiBase | html }}"></head>';
         sub_filter_once on;
 
         location / {
@@ -33,15 +33,28 @@ data:
             # index.html must not be cached so new JS bundle references are picked up
             add_header Cache-Control "no-cache, no-store, must-revalidate" always;
             add_header Pragma "no-cache" always;
+            add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-ue3mo3bS289RnivI3dUkb2fS/Z4Y2IXWPEYuKHmUdY0='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI='; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; worker-src 'self' blob:; manifest-src 'self'" always;
+            add_header X-Frame-Options "DENY" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()" always;
         }
 
         location /api/ {
             set $backend "{{ $apiBackend }}";
             proxy_pass $backend;
-            proxy_set_header Host $host;
+            # Preserve a client-facing non-default port for CSRF host checks.
+            proxy_set_header Host $http_host;
             proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $scheme;
+            # The API never consumes a browser-provided forwarding chain.
+            # ForwardAuth subject is the write-limit identity; transport peer
+            # is the bounded fallback captured before RealIP can rewrite it.
+            proxy_set_header X-Forwarded-For $remote_addr;
+            proxy_set_header True-Client-IP "";
+            proxy_set_header X-Forwarded-Host "";
+            # Keep the TLS-edge scheme for cookie and CSRF origin checks;
+            # `$scheme` here is only the cluster-internal HTTP hop.
+            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
             {{- if $forwardAuthHeader }}
             # Forward the auth header from the reverse proxy (Authentik/Authelia/etc.)
             proxy_set_header {{ $forwardAuthHeader }} $http_{{ $forwardAuthHeader | lower | replace "-" "_" }};
@@ -77,6 +90,11 @@ data:
         location = /sw.js {
             add_header Cache-Control "no-cache, no-store, must-revalidate" always;
             add_header Pragma "no-cache" always;
+            add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-ue3mo3bS289RnivI3dUkb2fS/Z4Y2IXWPEYuKHmUdY0='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI='; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; worker-src 'self' blob:; manifest-src 'self'" always;
+            add_header X-Frame-Options "DENY" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()" always;
             expires 0;
         }
 
@@ -84,10 +102,19 @@ data:
         location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
             expires 1y;
             add_header Cache-Control "public, immutable";
+            add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-ue3mo3bS289RnivI3dUkb2fS/Z4Y2IXWPEYuKHmUdY0='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI='; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; worker-src 'self' blob:; manifest-src 'self'" always;
+            add_header X-Frame-Options "DENY" always;
+            add_header X-Content-Type-Options "nosniff" always;
+            add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+            add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()" always;
         }
 
-        add_header X-Frame-Options "SAMEORIGIN" always;
+        # HSTS is emitted at the TLS ingress only; this pod intentionally
+        # remains HTTP on the cluster network.
+        add_header Content-Security-Policy "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-ue3mo3bS289RnivI3dUkb2fS/Z4Y2IXWPEYuKHmUdY0='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI='; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; worker-src 'self' blob:; manifest-src 'self'" always;
+        add_header X-Frame-Options "DENY" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+        add_header Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()" always;
     }
 {{- end }}

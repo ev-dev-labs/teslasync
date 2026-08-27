@@ -1,0 +1,88 @@
+{
+  "benchmarks": {
+    "budget": {
+      "aria": "Differential privacy budget used",
+      "caption": "Epsilon composes across new source versions. Reading or refreshing an existing release costs nothing.",
+      "empty": "Opt in to start privacy accounting.",
+      "headline": "ε {{spent}} of {{budget}}",
+      "remaining": "ε {{value}} remaining",
+      "title": "Privacy budget",
+      "unavailable": "Budget unavailable"
+    },
+    "chart": {
+      "aria": "Performance percentile by private benchmark metric, from zero to one hundred",
+      "charging": "Charging",
+      "degradation": "Degradation",
+      "efficiency": "Efficiency",
+      "empty": "No released percentiles to chart.",
+      "metric": "Metric",
+      "operations": "Operations",
+      "percentile": "Percentile",
+      "subtitle": "Higher bars mean better relative performance",
+      "title": "Noise-adjusted performance percentiles"
+    },
+    "cohort": {
+      "create": "Create release",
+      "eligible": "Eligible",
+      "error": "Could not create release: {{message}}",
+      "minimum": "Release threshold",
+      "minimumValue": "At least {{count}} vehicles",
+      "model": "Model family",
+      "noRelease": "No stable release yet",
+      "noReleaseMessage": "Create a release for the last three completed months. Cohorts below k={{count}} remain suppressed.",
+      "optInMessage": "Opt in before TeslaSync can derive a bounded local contribution.",
+      "optInTitle": "Consent required",
+      "pending": "Not released",
+      "refresh": "Check current source version",
+      "title": "Cohort eligibility",
+      "unknownYear": "Unknown",
+      "year": "Model-year bucket"
+    },
+    "consent": {
+      "acknowledge": "I opt in to bounded aggregate benchmarking and understand that released aggregates cannot be withdrawn.",
+      "action": "Opt in",
+      "active": "Opt-in is active for this vehicle. Refreshes reuse a stable release and do not spend more privacy budget.",
+      "description": "TeslaSync derives bounded summaries locally. Raw trips, locations and VINs are never submitted to this endpoint.",
+      "error": "Could not update benchmark consent: {{message}}",
+      "title": "Private participation"
+    },
+    "controls": {
+      "cancel": "Keep participation",
+      "confirm": "Revoke & delete",
+      "confirmMessage": "Future use stops immediately and clipped contribution rows are deleted. Published noisy cohort releases cannot be withdrawn.",
+      "confirmTitle": "Revoke private benchmarks?",
+      "description": "Revocation stops future participation and deletes clipped contribution rows. Already released DP aggregates and minimal accounting metadata remain.",
+      "error": "Could not revoke participation: {{message}}",
+      "revoke": "Revoke & delete contribution data",
+      "revokeWord": "REVOKE",
+      "title": "Privacy controls",
+      "typed": "Type {{word}} to confirm"
+    },
+    "method": {
+      "clip": "TeslaSync derives session-level aggregates locally and clips every vehicle to documented bounds.",
+      "cohort": "Only coarse model-family and five-year model-year buckets define similarity; precise location is excluded.",
+      "limit": "Differential privacy protects aggregate contributions. It does not make a tiny local fleet representative, comparable, or suitable for causal conclusions.",
+      "noise": "Crypto-secure Laplace noise is applied to fixed histograms before means, ranges and percentiles are calculated.",
+      "stable": "A release ID is reused until the completed source period or cohort membership version changes.",
+      "title": "Methodology & limits"
+    },
+    "metrics": {
+      "charging": "Charging reliability",
+      "degradation": "Battery degradation",
+      "efficiency": "Driving efficiency",
+      "empty": "Metric cards remain unavailable until an eligible private release exists.",
+      "emptyTitle": "No comparison released",
+      "noPercentile": "Percentile unavailable",
+      "operations": "Notification & command reliability",
+      "percentile": "{{value}}th performance percentile",
+      "range": "Private IQR {{low}}–{{high}}",
+      "subtitle": "Ranges and percentiles are noisy estimates, not exact fleet rankings.",
+      "suppressed": "Suppressed below privacy threshold",
+      "title": "Private comparisons"
+    },
+    "noVehicle": "Choose a vehicle before reviewing or changing benchmark consent.",
+    "noVehicleTitle": "Select a vehicle",
+    "subtitle": "Compare bounded local metrics with coarse, opt-in cohorts using differential privacy.",
+    "title": "Privacy-Preserving Benchmarks"
+  }
+}

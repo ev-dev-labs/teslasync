@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { motion } from '@/components/motion'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { fmtNumber } from '../../lib/numberFormat'
 
 /**
@@ -17,6 +18,7 @@ import { fmtNumber } from '../../lib/numberFormat'
 export function MetricBar({ value, max, color, label, sublabel }: {
   value: number; max: number; color: string; label: string; sublabel?: string
 }) {
+  const { reduce } = useMotionPreference()
   const safeValue = Number.isFinite(value) ? value : 0
   const safeMax = Number.isFinite(max) && max > 0 ? max : 0
   const pct = safeMax > 0 ? Math.min(Math.max((safeValue / safeMax) * 100, 0), 100) : 0
@@ -36,9 +38,9 @@ export function MetricBar({ value, max, color, label, sublabel }: {
       <div className="h-2.5 overflow-hidden rounded-pill bg-[var(--surface-2)]">
         <motion.div
           className="h-full rounded-pill"
-          initial={{ width: 0 }}
+          initial={reduce ? false : { width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: reduce ? 0 : 1, ease: [0.16, 1, 0.3, 1] }}
           style={{ background: `linear-gradient(90deg, ${color}99, ${color})` }}
         />
       </div>

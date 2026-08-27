@@ -21,8 +21,12 @@ spec:
   {{- if and .Values.config.authentikURL .Values.ingressRoute.sseBypass }}
     - match: {{ .Values.ingressRoute.sseBypass.match }}
       kind: Rule
-      {{- if .Values.ingressRoute.sseBypass.middlewares }}
+      {{- if or .Values.ingressRoute.securityHeaders.enabled .Values.ingressRoute.sseBypass.middlewares }}
       middlewares:
+      {{- if .Values.ingressRoute.securityHeaders.enabled }}
+        - name: {{ include "teslasync.fullname" $ }}-security-headers
+          namespace: {{ $.Values.ingressRoute.namespace | default $.Release.Namespace }}
+      {{- end }}
       {{- range .Values.ingressRoute.sseBypass.middlewares }}
         - name: {{ .name }}
           namespace: {{ .namespace | default $.Values.ingressRoute.namespace }}
@@ -38,8 +42,12 @@ spec:
   {{- range .Values.ingressRoute.routes }}
     - match: {{ .match }}
       kind: {{ .kind | default "Rule" }}
-      {{- if .middlewares }}
+      {{- if or $.Values.ingressRoute.securityHeaders.enabled .middlewares }}
       middlewares:
+      {{- if $.Values.ingressRoute.securityHeaders.enabled }}
+        - name: {{ include "teslasync.fullname" $ }}-security-headers
+          namespace: {{ $.Values.ingressRoute.namespace | default $.Release.Namespace }}
+      {{- end }}
       {{- range .middlewares }}
         - name: {{ .name }}
           namespace: {{ .namespace | default $.Values.ingressRoute.namespace }}

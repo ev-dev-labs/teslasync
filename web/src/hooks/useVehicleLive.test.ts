@@ -32,6 +32,17 @@ vi.mock('./useRealtimeEvents', () => ({
 
 vi.mock('@/api/hooks/useTelemetry', () => ({
   useVehicleLiveSignals: () => ({ data: mockInitialData }),
+  telemetryKeys: {
+    liveSignals: (vehicleId?: number) => ['live-signals', vehicleId] as const,
+  },
+}))
+
+// `useLiveRecovery` needs a QueryClient; this suite renders the hook bare.
+// Swapping in a spy keeps the existing render calls provider-free while still
+// letting us assert that the reconnect-recovery wiring is present.
+const liveRecoverySpy = vi.fn()
+vi.mock('./useLiveRecovery', () => ({
+  useLiveRecovery: (opts: unknown) => liveRecoverySpy(opts),
 }))
 
 // Import AFTER the mocks are registered so the hook binds to the fakes.
@@ -50,6 +61,26 @@ describe('useVehicleLive', () => {
     capturedEnabled = undefined
     mockConnected = false
     mockInitialData = undefined
+    liveRecoverySpy.mockClear()
+  })
+
+  it('arms SSE reconnect recovery for the live-signals read', () => {
+    // Redis Pub/Sub never replays, so a reconnect MUST trigger a canonical
+    // re-read or this hook silently keeps whatever it had before the outage.
+    renderHook(() => useVehicleLive(7))
+    expect(liveRecoverySpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        queryKeys: [['live-signals', 7]],
+        enabled: true,
+      }),
+    )
+  })
+
+  it('does not arm recovery without a vehicle', () => {
+    renderHook(() => useVehicleLive(undefined))
+    expect(liveRecoverySpy).toHaveBeenCalledWith(
+      expect.objectContaining({ enabled: false }),
+    )
   })
 
   it('starts with a complete, zeroed state and a disconnected flag', () => {

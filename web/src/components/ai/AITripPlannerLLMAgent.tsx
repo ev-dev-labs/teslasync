@@ -75,6 +75,13 @@ function InnerSection({
     url: '/ai/trips/plan/draft',
     body,
     onEvent: () => {},
+    // AI-01: vehicle + route scope is part of stream identity —
+    // changing the vehicle, origin, or destination aborts an
+    // in-flight draft and clears the previous route's plan before
+    // the new scope streams in.
+    scopeKey: haveVehicle
+      ? `${numericVehicleId}:${origin?.lat ?? ''},${origin?.lng ?? ''}:${destination?.lat ?? ''},${destination?.lng ?? ''}`
+      : null,
   })
   const haveOrigin = origin != null
   const haveDestination = destination != null

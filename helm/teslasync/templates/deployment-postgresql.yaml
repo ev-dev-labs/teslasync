@@ -22,8 +22,12 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.postgresql.podSecurityContext | nindent 8 }}
       containers:
         - name: postgresql
+          securityContext:
+            {{- toYaml .Values.postgresql.securityContext | nindent 12 }}
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
           imagePullPolicy: {{ .Values.postgresql.image.pullPolicy | default "IfNotPresent" }}
           {{- /*
@@ -88,7 +92,14 @@ spec:
             {{- if .Values.postgresql.persistence.enabled }}
             - name: postgresql-data
               mountPath: {{ .Values.postgresql.persistence.mountPath | quote }}
+            {{- else }}
+            - name: postgresql-data
+              mountPath: {{ .Values.postgresql.persistence.mountPath | quote }}
             {{- end }}
+            - name: postgresql-run
+              mountPath: /var/run/postgresql
+            - name: postgresql-tmp
+              mountPath: /tmp
             {{- if .Values.postgresql.initScripts.enabled }}
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
@@ -99,7 +110,14 @@ spec:
         - name: postgresql-data
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-postgresql-data
+        {{- else }}
+        - name: postgresql-data
+          emptyDir: {}
         {{- end }}
+        - name: postgresql-run
+          emptyDir: {}
+        - name: postgresql-tmp
+          emptyDir: {}
         {{- if .Values.postgresql.initScripts.enabled }}
         - name: init-scripts
           configMap:

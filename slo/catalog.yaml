@@ -195,14 +195,82 @@ slos:
     tags: [sse, latency]
 
   - name: frontend_lcp
-    description: "Largest Contentful Paint p75 must stay below 2.5 seconds."
+    description: "Largest Contentful Paint must stay within the 2.5s good threshold for at least 90% of real user samples."
     sli:
       good_events: "sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[5m]))"
       valid_events: "sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[5m]))"
     objective: 90.0
     window: 28d
     owner: frontend
-    tags: [frontend, web-vitals]
+    tags: [frontend, web-vitals, rum]
+
+  - name: frontend_inp
+    description: "Interaction to Next Paint must stay within the 200ms good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_inp_seconds_bucket{le=\"0.2\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_inp_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, interactivity]
+
+  - name: frontend_cls
+    description: "Cumulative Layout Shift must stay within the 0.1 good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_cls_ratio_bucket{le=\"0.1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_cls_ratio_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, stability]
+
+  - name: frontend_fcp
+    description: "First Contentful Paint must stay within the 1.8s good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_fcp_seconds_bucket{le=\"1.8\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_fcp_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, loading]
+
+  - name: frontend_ttfb
+    description: "Time To First Byte must stay within the 800ms good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_bucket{le=\"0.8\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, backend-latency]
+
+  - name: frontend_route_transition
+    description: "SPA route transitions must paint the new route within 500ms for at least 90% of real user navigations."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_route_transition_seconds_bucket{le=\"0.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_route_transition_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, rum, navigation]
+
+  # NOTE: there is deliberately NO `frontend_time_to_usable_content` SLO.
+  # `teslasync_frontend_time_to_usable_content_seconds` is only populated when a
+  # page explicitly calls `markContentReady(token)` (web/src/lib/webVitalsReporter.ts).
+  # Until pages are wired the histogram has no samples, and an SLO over an empty
+  # denominator reports a permanent 100% success — a dishonest green light.
+  # Add the SLO in the same change that wires the first pages; the readiness
+  # gate and the exact wording are in docs/runbooks/frontend-rum-slos.md.
+
+  - name: frontend_rum_ingest_availability
+    description: "The public RUM ingest endpoint must accept browser batches without server errors; losing it blinds every frontend SLO."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: frontend
+    tags: [frontend, rum, http, ingest]
 
   - name: fleet_ops_availability
     description: "Small-fleet operations endpoints must return non-5xx responses."

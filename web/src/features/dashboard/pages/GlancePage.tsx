@@ -47,6 +47,7 @@ import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
 import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 import { cn } from '@/lib/cn';
@@ -158,7 +159,13 @@ export default function GlancePage() {
   } = useSelectedVehicle();
   const vehicleId = selectedVehicleId ?? 0;
 
-  const stateQuery = useVehicleState(vehicleId, { refetchInterval: 10_000 });
+  /* Connection-aware poll cadence: pauses while the tab is hidden, while the
+   * device is offline, while the API is unreachable, and stretches 4× when
+   * the user (or a 2G link) has asked for reduced data usage. Returning
+   * `false` — rather than a large number — stops TanStack from arming a timer
+   * at all. */
+  const liveInterval = useRefreshInterval(10_000);
+  const stateQuery = useVehicleState(vehicleId, { refetchInterval: liveInterval });
   const {
     data: stateData,
     dataUpdatedAt,

@@ -1,6 +1,7 @@
-import { motion } from 'framer-motion'
+import { motion } from '@/components/motion'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '@/components/ui/ThemeProvider'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { batteryColor, boolColor } from '@/lib/colors'
 import { cn } from '@/lib/cn'
 
@@ -222,11 +223,21 @@ export function TeslaCarViz({
 }: TeslaCarVizProps) {
   const { t } = useTranslation()
   const palette = useSvgPalette()
+  // Continuous/infinite loop animations (spinning wheels, pulsing lights,
+  // sentry rings, speed lines) are suppressed under `prefers-reduced-motion:
+  // reduce` — WCAG 2.3.3 flags unbounded motion as a vestibular trigger.
+  // One-shot entrance animations (body draw-in, battery fill) are left as-is
+  // since they complete quickly and don't loop.
+  const { reduce } = useMotionPreference()
   // Guard against an out-of-range model key (callers may cast a raw string).
   if (!(model in WHEEL_POS)) model = 'model3'
   const level = clampPercent(batteryLevel)
   const batClr = batteryColor(level)
   const driving = speed > 0
+  // Semantic "is the car driving" state (used for the a11y summary and
+  // static headlight-on styling) stays true even under reduced motion —
+  // only the *looping* animations gated on `driving` are suppressed.
+  const animateDriving = driving && !reduce
   const w = SIZE_MAP[size] ?? SIZE_MAP.md
   const aspect = model === 'cybertruck' ? 0.56 : model === 'modelx' || model === 'modely' ? 0.55 : 0.52
   const h = w * aspect
@@ -318,8 +329,8 @@ export function TeslaCarViz({
         <g transform={`translate(${WHEEL_POS[model].fx}, ${WHEEL_POS[model].wy})`}>
           <circle r="32" fill={palette.wheel.outer} stroke={palette.wheel.outerStroke} strokeWidth="1.5" />
           <motion.g
-            animate={driving ? { rotate: 360 } : {}}
-            transition={driving ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}
+            animate={animateDriving ? { rotate: 360 } : {}}
+            transition={animateDriving ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}
           >
             <circle r={model === 'cybertruck' ? 24 : 22} fill={palette.wheel.inner} stroke={palette.wheel.innerStroke} strokeWidth="2" />
             {/* 5-spoke design */}
@@ -340,8 +351,8 @@ export function TeslaCarViz({
         <g transform={`translate(${WHEEL_POS[model].rx}, ${WHEEL_POS[model].wy})`}>
           <circle r="32" fill={palette.wheel.outer} stroke={palette.wheel.outerStroke} strokeWidth="1.5" />
           <motion.g
-            animate={driving ? { rotate: 360 } : {}}
-            transition={driving ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}
+            animate={animateDriving ? { rotate: 360 } : {}}
+            transition={animateDriving ? { duration: 0.8, repeat: Infinity, ease: 'linear' } : {}}
           >
             <circle r={model === 'cybertruck' ? 24 : 22} fill={palette.wheel.inner} stroke={palette.wheel.innerStroke} strokeWidth="2" />
             {[0, 72, 144, 216, 288].map(angle => (
@@ -365,8 +376,8 @@ export function TeslaCarViz({
             stroke={driving ? palette.headlightOn : palette.headlightOff}
             strokeWidth={model === 'cybertruck' ? 3 : 2.5}
             strokeLinecap="round"
-            animate={driving ? { opacity: [0.85, 1, 0.85] } : {}}
-            transition={driving ? { duration: 2.5, repeat: Infinity } : {}}
+            animate={animateDriving ? { opacity: [0.85, 1, 0.85] } : {}}
+            transition={animateDriving ? { duration: 2.5, repeat: Infinity } : {}}
             style={driving ? { filter: 'drop-shadow(0 0 6px rgba(255,255,255,0.7))' } : {}}
           />
           {/* Main projector lens */}
@@ -390,14 +401,16 @@ export function TeslaCarViz({
           />
         </g>
 
-        {/* Headlight beam cone (when driving) */}
+        {/* Headlight beam cone (when driving). Static (no pulse) under
+            reduced motion — the cone is still shown so the visual
+            information ("headlights on") isn't lost, just its animation. */}
         {driving && (
           <motion.path
             d={`M${WHEEL_POS[model].headX - 5} ${WHEEL_POS[model].headY - 8} L${WHEEL_POS[model].headX - 60} ${WHEEL_POS[model].headY - 40} L${WHEEL_POS[model].headX - 60} ${WHEEL_POS[model].headY + 20} L${WHEEL_POS[model].headX - 5} ${WHEEL_POS[model].headY + 8} Z`}
             fill="rgba(255,251,230,0.03)"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: [0.3, 0.5, 0.3] }}
-            transition={{ duration: 3, repeat: Infinity }}
+            initial={reduce ? false : { opacity: 0 }}
+            animate={reduce ? { opacity: 0.4 } : { opacity: [0.3, 0.5, 0.3] }}
+            transition={reduce ? { duration: 0 } : { duration: 3, repeat: Infinity }}
           />
         )}
 
@@ -412,8 +425,8 @@ export function TeslaCarViz({
             stroke="#ef4444"
             strokeWidth={model === 'cybertruck' ? 4 : 3}
             strokeLinecap="round"
-            animate={{ opacity: [0.7, 1, 0.7] }}
-            transition={{ duration: 2, repeat: Infinity }}
+            animate={reduce ? { opacity: 0.85 } : { opacity: [0.7, 1, 0.7] }}
+            transition={reduce ? { duration: 0 } : { duration: 2, repeat: Infinity }}
             style={{ filter: 'drop-shadow(0 0 8px rgba(239,68,68,0.6))' }}
           />
           {/* Inner brighter core */}
@@ -479,8 +492,8 @@ export function TeslaCarViz({
               cx={WHEEL_POS[model].headX - 65} cy={WHEEL_POS[model].headY - 50}
               r="6"
               fill="#10b981"
-              animate={{ scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
-              transition={{ duration: 1.5, repeat: Infinity }}
+              animate={reduce ? { scale: 1, opacity: 1 } : { scale: [1, 1.3, 1], opacity: [0.8, 1, 0.8] }}
+              transition={reduce ? { duration: 0 } : { duration: 1.5, repeat: Infinity }}
               style={{ filter: 'drop-shadow(0 0 8px rgba(16,185,129,0.8))' }}
             />
             {/* Lightning bolt on charge indicator */}
@@ -488,8 +501,8 @@ export function TeslaCarViz({
               d={`M${WHEEL_POS[model].headX - 67} ${WHEEL_POS[model].headY - 55} L${WHEEL_POS[model].headX - 64} ${WHEEL_POS[model].headY - 51} L${WHEEL_POS[model].headX - 66} ${WHEEL_POS[model].headY - 51} L${WHEEL_POS[model].headX - 63} ${WHEEL_POS[model].headY - 46} L${WHEEL_POS[model].headX - 66} ${WHEEL_POS[model].headY - 50} L${WHEEL_POS[model].headX - 64} ${WHEEL_POS[model].headY - 50} Z`}
               fill="white"
               opacity="0.9"
-              animate={{ opacity: [0.6, 1, 0.6] }}
-              transition={{ duration: 1, repeat: Infinity }}
+              animate={reduce ? { opacity: 0.9 } : { opacity: [0.6, 1, 0.6] }}
+              transition={reduce ? { duration: 0 } : { duration: 1, repeat: Infinity }}
             />
           </g>
         )}
@@ -523,8 +536,8 @@ export function TeslaCarViz({
                 stroke={palette.climate}
                 strokeWidth="1.2"
                 initial={{ opacity: 0, y: 0 }}
-                animate={{ opacity: [0, 0.6, 0], y: -8 }}
-                transition={{ duration: 2, repeat: Infinity, delay: i * 0.3 }}
+                animate={reduce ? { opacity: 0.4, y: -4 } : { opacity: [0, 0.6, 0], y: -8 }}
+                transition={reduce ? { duration: 0 } : { duration: 2, repeat: Infinity, delay: i * 0.3 }}
               />
             ))}
           </g>
@@ -539,8 +552,8 @@ export function TeslaCarViz({
             stroke={palette.sentry.ring1}
             strokeWidth="1"
             strokeDasharray="4 4"
-            animate={{ rotate: 360 }}
-            transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+            animate={reduce ? { rotate: 0 } : { rotate: 360 }}
+            transition={reduce ? { duration: 0 } : { duration: 20, repeat: Infinity, ease: 'linear' }}
           />
         )}
         {sentryMode && (
@@ -551,8 +564,8 @@ export function TeslaCarViz({
             stroke={palette.sentry.ring2}
             strokeWidth="1"
             strokeDasharray="8 8"
-            animate={{ rotate: -360 }}
-            transition={{ duration: 30, repeat: Infinity, ease: 'linear' }}
+            animate={reduce ? { rotate: 0 } : { rotate: -360 }}
+            transition={reduce ? { duration: 0 } : { duration: 30, repeat: Infinity, ease: 'linear' }}
           />
         )}
 
@@ -569,8 +582,8 @@ export function TeslaCarViz({
                 stroke={palette.speedLine}
                 strokeWidth="1.5"
                 strokeLinecap="round"
-                animate={{ opacity: [0, 0.6, 0], x1: [530 + i * 8, 560 + i * 8] }}
-                transition={{ duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
+                animate={reduce ? { opacity: 0.4 } : { opacity: [0, 0.6, 0], x1: [530 + i * 8, 560 + i * 8] }}
+                transition={reduce ? { duration: 0 } : { duration: 0.6, repeat: Infinity, delay: i * 0.15 }}
               />
             ))}
           </g>

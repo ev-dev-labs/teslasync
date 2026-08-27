@@ -1,7 +1,8 @@
 import { type ReactNode, useCallback, useId, useState } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from '@/components/motion'
 import { cn } from '../../lib/cn'
 import { ChevronDown } from 'lucide-react'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 
 interface AccordionProps {
   title: string
@@ -43,6 +44,7 @@ export function Accordion({
   const isControlled = openProp !== undefined && onOpenChange !== undefined
   const [internalOpen, setInternalOpen] = useState(defaultOpen)
   const open = isControlled ? openProp : internalOpen
+  const { reduce } = useMotionPreference()
 
   // Stable, unique ids wire the trigger to its panel for assistive tech
   // (WAI-ARIA disclosure pattern) and survive remounts / SSR hydration.
@@ -95,10 +97,10 @@ export function Accordion({
             id={panelId}
             role="region"
             aria-labelledby={titleId}
-            initial={{ height: 0, opacity: 0 }}
+            initial={reduce ? false : { height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
+            exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ duration: reduce ? 0 : 0.2 }}
             className="overflow-hidden"
           >
             <div className={cn('border-t border-white/[0.04]', bodyClassName ?? 'px-4 py-3')}>

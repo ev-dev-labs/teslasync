@@ -1,9 +1,10 @@
 import { type ReactNode, useEffect, useId, useRef } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from '@/components/motion'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { Button } from './Button'
 import { Heading, Text } from './Typography'
 
@@ -73,6 +74,7 @@ export function Drawer({
   ariaLabel,
 }: DrawerProps) {
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   const drawerRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
@@ -132,18 +134,19 @@ export function Drawer({
       tabIndex={-1}
     >
       <motion.div
-        initial={{ opacity: 0 }}
+        initial={reduce ? false : { opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
+        transition={reduce ? { duration: 0 } : undefined}
         className="absolute inset-0 bg-[var(--surface-overlay)] backdrop-blur-sm"
         onClick={onClose}
         aria-hidden="true"
       />
       <motion.div
-        initial={{ x: side === 'right' ? '100%' : '-100%' }}
+        initial={reduce ? false : { x: side === 'right' ? '100%' : '-100%' }}
         animate={{ x: 0 }}
-        exit={{ x: side === 'right' ? '100%' : '-100%' }}
-        transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+        exit={reduce ? { opacity: 0 } : { x: side === 'right' ? '100%' : '-100%' }}
+        transition={reduce ? { duration: 0 } : { type: 'spring', damping: 30, stiffness: 300 }}
         data-drawer-panel
         data-drawer-size={size}
         className={cn(
@@ -196,7 +199,7 @@ export function Drawer({
               onClick={onClose}
               aria-label={t('common.close', 'Close')}
               icon={<X className="h-4 w-4" aria-hidden="true" />}
-              className="h-8 w-8 shrink-0 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+              className="h-11 w-11 shrink-0 p-0 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
             />
           </div>
         </div>

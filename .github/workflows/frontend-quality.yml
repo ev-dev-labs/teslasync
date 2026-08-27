@@ -1,0 +1,328 @@
+name: Frontend quality gates
+
+on:
+  pull_request:
+    branches: [main, revamped-ui]
+    paths:
+      - 'web/**'
+      - 'scripts/screenshots.js'
+      - 'cmd/routetemplategen/**'
+      - 'internal/api/webvitals/routetemplates_gen.go'
+      - '.github/workflows/frontend-quality.yml'
+  push:
+    branches: [main, revamped-ui]
+    paths:
+      - 'web/**'
+      - 'scripts/screenshots.js'
+      - 'cmd/routetemplategen/**'
+      - 'internal/api/webvitals/routetemplates_gen.go'
+      - '.github/workflows/frontend-quality.yml'
+  workflow_dispatch:
+    inputs:
+      production_base_url:
+        description: 'Optional deployed URL for authenticated smoke (no mocks)'
+        required: false
+        type: string
+
+concurrency:
+  group: frontend-quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    working-directory: web
+
+jobs:
+  contract:
+    name: Route registry and test discovery
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - run: npm ci --legacy-peer-deps
+      # ── Route-template freshness chain ────────────────────────────────────
+      # App.tsx -> routeRegistry.ts -> internal/api/webvitals (generated Go).
+      # routeRegistry.ts is the source of truth for privacy-safe route
+      # templating on BOTH sides. A `:param` route added to App.tsx but never
+      # regenerated means its opaque value (share token, customer slug) is
+      # never templated and lands verbatim in a Prometheus label and in
+      # buffered browser-error payloads. Both links are checked here so the
+      # gate covers main AND revamped-ui.
+      - name: Route registry is fresh (App.tsx -> routeRegistry.ts)
+        run: node scripts/generate-route-registry.mjs --check
+      - name: Backend route table is fresh (routeRegistry.ts -> Go artifact)
+        working-directory: .
+        run: go run ./cmd/routetemplategen --check
+      - run: npm run e2e:routes
+      - run: npm run e2e:contract
+      - run: npm run e2e:scenario-contract
+      - run: npm run e2e:list
+
+  chromium-quality:
+    name: Chromium responsive, a11y, keyboard, and performance
+    runs-on: ubuntu-latest
+    needs: contract
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npx playwright install --with-deps chromium
+      - name: Build once and run Chromium gates
+        shell: bash
+        env:
+          E2E_MOCKS: '1'
+        run: |
+          set -euo pipefail
+          npm run e2e:build
+          mkdir -p test-results
+          node node_modules/vite/bin/vite.js preview \
+            --outDir e2e/.app-dist --host 127.0.0.1 --port 4173 --strictPort \
+            > test-results/preview.log 2>&1 &
+          PREVIEW_PID=$!
+          cleanup() {
+            kill "$PREVIEW_PID" 2>/dev/null || true
+            wait "$PREVIEW_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 120); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then
+              break
+            fi
+            if ! kill -0 "$PREVIEW_PID" 2>/dev/null; then
+              cat test-results/preview.log
+              exit 1
+            fi
+            if [ "$attempt" -eq 120 ]; then
+              cat test-results/preview.log
+              exit 1
+            fi
+            sleep 1
+          done
+          export E2E_BASE_URL=http://127.0.0.1:4173
+          export E2E_SKIP_WEBSERVER=1
+          npm run e2e:quality:run
+          npm run e2e:performance:run
+          npm run e2e:a11y:run
+          if grep -Eiq 'ECONNREFUSED|proxy error|http proxy error' test-results/preview.log; then
+            cat test-results/preview.log
+            exit 1
+          fi
+      - name: Upload Chromium failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: chromium-quality-report
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            web/test-results/
+            web/playwright-report/
+
+  cross-browser:
+    name: ${{ matrix.browser }} critical smoke
+    runs-on: ubuntu-latest
+    needs: contract
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [firefox, webkit]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Build once and run lightweight engine smoke
+        shell: bash
+        env:
+          E2E_MOCKS: '1'
+        run: |
+          set -euo pipefail
+          npm run e2e:build
+          mkdir -p test-results
+          node node_modules/vite/bin/vite.js preview \
+            --outDir e2e/.app-dist --host 127.0.0.1 --port 4173 --strictPort \
+            > test-results/preview.log 2>&1 &
+          PREVIEW_PID=$!
+          cleanup() {
+            kill "$PREVIEW_PID" 2>/dev/null || true
+            wait "$PREVIEW_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+          for attempt in $(seq 1 120); do
+            if curl --fail --silent --show-error http://127.0.0.1:4173/ >/dev/null; then
+              break
+            fi
+            if ! kill -0 "$PREVIEW_PID" 2>/dev/null; then
+              cat test-results/preview.log
+              exit 1
+            fi
+            if [ "$attempt" -eq 120 ]; then
+              cat test-results/preview.log
+              exit 1
+            fi
+            sleep 1
+          done
+          export E2E_BASE_URL=http://127.0.0.1:4173
+          export E2E_SKIP_WEBSERVER=1
+          npx playwright test --project=${{ matrix.browser }}-smoke
+          if grep -Eiq 'ECONNREFUSED|proxy error|http proxy error' test-results/preview.log; then
+            cat test-results/preview.log
+            exit 1
+          fi
+      - name: Upload engine failure evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.browser }}-smoke-report
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            web/test-results/
+            web/playwright-report/
+
+  visual:
+    name: Deliberate visual snapshot gate (Windows baseline)
+    runs-on: windows-latest
+    needs: contract
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npx playwright install chromium
+      - name: Build once and compare committed snapshots
+        env:
+          E2E_MOCKS: '1'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          npm run e2e:build
+          if ($LASTEXITCODE -ne 0) { throw "E2E build failed: $LASTEXITCODE" }
+          New-Item -ItemType Directory -Force test-results | Out-Null
+          $preview = Start-Process -FilePath node -ArgumentList @(
+            'node_modules/vite/bin/vite.js',
+            'preview',
+            '--outDir', 'e2e/.app-dist',
+            '--host', '127.0.0.1',
+            '--port', '4173',
+            '--strictPort'
+          ) -PassThru -RedirectStandardOutput test-results/preview.log -RedirectStandardError test-results/preview-error.log
+          try {
+            $ready = $false
+            for ($attempt = 1; $attempt -le 120; $attempt++) {
+              if ($preview.HasExited) {
+                Get-Content test-results/preview*.log -ErrorAction SilentlyContinue
+                throw "Vite preview exited before readiness: $($preview.ExitCode)"
+              }
+              try {
+                $response = Invoke-WebRequest -UseBasicParsing http://127.0.0.1:4173/ -TimeoutSec 2
+                if ($response.StatusCode -eq 200) { $ready = $true; break }
+              } catch {}
+              Start-Sleep -Seconds 1
+            }
+            if (-not $ready) {
+              Get-Content test-results/preview*.log -ErrorAction SilentlyContinue
+              throw 'Vite preview was not ready within 120 seconds'
+            }
+            $env:E2E_BASE_URL = 'http://127.0.0.1:4173'
+            $env:E2E_SKIP_WEBSERVER = '1'
+            npm run e2e:visual:run
+            if ($LASTEXITCODE -ne 0) { throw "Visual suite failed: $LASTEXITCODE" }
+            $proxyLeak = Select-String -Path test-results/preview*.log -Pattern 'ECONNREFUSED|proxy error|http proxy error' -ErrorAction SilentlyContinue
+            if ($proxyLeak) {
+              $proxyLeak | ForEach-Object { Write-Error $_.Line }
+              throw 'E2E preview emitted a proxy/network escape error'
+            }
+          } finally {
+            if (-not $preview.HasExited) {
+              Stop-Process -Id $preview.Id
+              $preview.WaitForExit(5000)
+            }
+          }
+      - name: Upload visual diffs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-regression-report
+          if-no-files-found: ignore
+          retention-days: 14
+          path: |
+            web/test-results/
+            web/playwright-report/
+
+  authenticated-production-smoke:
+    name: Optional authenticated production smoke
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.production_base_url != '' }}
+    runs-on: ubuntu-latest
+    needs: contract
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --legacy-peer-deps
+      - run: npx playwright install --with-deps chromium
+      - name: Materialize ephemeral storage state
+        env:
+          STORAGE_STATE_B64: ${{ secrets.E2E_STORAGE_STATE_B64 }}
+        run: |
+          if [ -n "$STORAGE_STATE_B64" ]; then
+            echo "$STORAGE_STATE_B64" | base64 --decode > e2e/.auth-state.json
+            echo "E2E_STORAGE_STATE=e2e/.auth-state.json" >> "$GITHUB_ENV"
+          else
+            echo "No E2E_STORAGE_STATE_B64 secret supplied; running an unauthenticated deployed smoke."
+          fi
+      - name: Run deployed smoke without mocks
+        id: production_smoke
+        env:
+          E2E_BASE_URL: ${{ inputs.production_base_url }}
+          E2E_MOCKS: '0'
+          E2E_SENSITIVE: '1'
+        run: |
+          set +e
+          npx playwright test --project=chromium-smoke cross-browser.smoke.spec.ts
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
+          STATUS=$([ "$EXIT_CODE" -eq 0 ] && echo passed || echo failed)
+          printf '{"status":"%s","project":"chromium-smoke","recording":"disabled"}\n' "$STATUS" > authenticated-smoke-status.json
+          exit 0
+      - name: Remove ephemeral credentials
+        if: always()
+        run: |
+          rm -f e2e/.auth-state.json
+          rm -rf test-results playwright-report blob-report
+      - name: Upload sanitized deployed smoke status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: authenticated-production-smoke-status
+          if-no-files-found: error
+          retention-days: 7
+          path: web/authenticated-smoke-status.json
+      - name: Enforce deployed smoke result
+        if: always() && steps.production_smoke.outputs.exit_code != '0'
+        run: exit 1

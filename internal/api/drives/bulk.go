@@ -29,6 +29,14 @@ type driveBulkStore interface {
 	BulkDelete(ctx context.Context, ids []int64) (int64, error)
 }
 
+// driveBulkDeleteReturning is implemented by the production repository. The
+// narrower legacy store remains supported for existing tests and adapters,
+// while this optional interface lets the handler report a concurrent deletion
+// as a deterministic conflict instead of guessing from a row count.
+type driveBulkDeleteReturning interface {
+	BulkDeleteReturning(ctx context.Context, ids []int64) ([]int64, error)
+}
+
 // driveBulkRepo returns the active driveBulkStore. Production wiring uses the
 // concrete *drivedb.DriveRepo via NewDriveHandler; tests can swap it on the
 // handler before invoking BulkDelete.
@@ -43,7 +51,7 @@ func (h *DriveHandler) driveBulkRepo() driveBulkStore {
 //
 // Standardized bulk-action endpoint contract:
 //   - Body: {"ids":[1,2,3]}, capped at apibulk.MaxIDs (500). Empty or oversized → 400.
-//   - Response: {"deleted": <int>, "failed": [{"id": <int>, "reason": "not_found"}]}.
+//   - Response: {"requested": <int>, "deleted": <int>, "failed": [{"id": <int>, "reason": "not_found"|"conflict"}]}.
 //   - Pre-validates which IDs exist via FilterExistingIDs so the caller can
 //     pair `failed[]` per id without parsing detail strings.
 //   - All deletes happen in a single Postgres transaction; a failure
@@ -63,14 +71,20 @@ func (h *DriveHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, "failed to validate drives for bulk delete")
 		return
 	}
-	failed := apibulk.ComputeMissingIDs(ids, existing)
-
-	deleted, err := store.BulkDelete(r.Context(), existing)
+	deletedIDs := existing
+	var deleted int64
+	if returningStore, ok := store.(driveBulkDeleteReturning); ok {
+		deletedIDs, err = returningStore.BulkDeleteReturning(r.Context(), existing)
+		deleted = int64(len(deletedIDs))
+	} else {
+		deleted, err = store.BulkDelete(r.Context(), existing)
+	}
 	if err != nil {
 		log.Error().Err(err).Msg("bulk delete drives")
 		writeError(w, http.StatusInternalServerError, "failed to bulk delete drives")
 		return
 	}
+	failed := apibulk.ComputeDeleteFailures(ids, existing, deletedIDs)
 
 	if h.db != nil {
 		logAuditFromRequest(h.db, r, h.forwardAuthHeader, "bulk_delete", "drive", nil,
@@ -78,8 +92,9 @@ func (h *DriveHandler) BulkDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, apibulk.OperationResult{
-		Deleted: &deleted,
-		Failed:  failed,
+		Requested: int64(len(ids)),
+		Deleted:   &deleted,
+		Failed:    failed,
 	})
 }
 

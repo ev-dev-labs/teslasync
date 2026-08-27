@@ -35,7 +35,9 @@ export function camelCaseKeys(obj: unknown): unknown {
 
 // --- API Base URL ---
 // Injected at runtime by Nginx via sub_filter into index.html.
-// Falls back to empty string (relative paths) if not set.
+// A meta value avoids introducing a deployment-specific inline script, which
+// keeps the production CSP free of script-src 'unsafe-inline'. The legacy
+// window value remains a fallback for existing non-Nginx deployments.
 declare global {
   interface Window {
     __TESLASYNC_API_BASE__?: string
@@ -43,7 +45,10 @@ declare global {
 }
 
 export function getApiBase(): string {
-  return (window.__TESLASYNC_API_BASE__ || '').replace(/\/+$/, '')
+  const metaValue = typeof document === 'undefined'
+    ? ''
+    : document.querySelector('meta[name="teslasync-api-base"]')?.getAttribute('content') ?? ''
+  return (metaValue || window.__TESLASYNC_API_BASE__ || '').trim().replace(/\/+$/, '')
 }
 
 // --- Offline Detection ---

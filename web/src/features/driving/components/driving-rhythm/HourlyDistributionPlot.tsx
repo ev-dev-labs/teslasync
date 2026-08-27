@@ -141,8 +141,8 @@ export function HourlyDistributionPlot({
                 name={fullDistanceName}
                 stroke={CHART_COLORS[1]}
                 strokeWidth={2.5}
-                dot={false}
-                connectNulls
+                dot={{ r: 2 }}
+                connectNulls={false}
                 hide={hidden('distance')}
               />
             </ComposedChart>

@@ -1,0 +1,139 @@
+{
+  "actionCenter": {
+    "page": {
+      "title": "Action Center",
+      "subtitle": "A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard."
+    },
+    "resource": "Action Center recommendations",
+    "loading": "Loading recommendations",
+    "list": {
+      "label": "Prioritized recommendations"
+    },
+    "summary": {
+      "label": "Action Center summary",
+      "open": "Open",
+      "critical": "Critical",
+      "high": "High",
+      "acknowledged": "Acknowledged",
+      "snoozed": "Snoozed",
+      "dismissed": "Dismissed"
+    },
+    "filters": {
+      "title": "Filter decisions",
+      "clear": "Clear filters",
+      "vehicle": "Vehicle",
+      "priority": "Priority",
+      "source": "Source",
+      "state": "State",
+      "allVehicles": "All vehicles",
+      "allPriorities": "All priorities",
+      "allSources": "All sources",
+      "allStates": "All states"
+    },
+    "priority": {
+      "critical": "Critical",
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "source": {
+      "active_alerts": "Active alerts",
+      "advanced_intelligence": "Advanced intelligence",
+      "battery_health": "Battery health",
+      "charging_reliability": "Charging reliability",
+      "drive_efficiency": "Drive efficiency",
+      "fleet_maintenance": "Fleet maintenance",
+      "signal_health": "Signal health",
+      "system_health": "System health",
+      "vehicle_readiness": "Vehicle readiness"
+    },
+    "state": {
+      "open": "Open",
+      "acknowledged": "Acknowledged",
+      "snoozed": "Snoozed",
+      "dismissed": "Dismissed"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "providerStatus": {
+      "available": "Available",
+      "degraded": "Degraded",
+      "unavailable": "Unavailable"
+    },
+    "provenance": {
+      "notification_logs": "Alert delivery history",
+      "charging_sessions": "Charging history",
+      "command_logs": "Vehicle command history",
+      "drives": "Completed drive history",
+      "fleet_maintenance_work_orders": "Fleet maintenance work orders",
+      "signal_log": "Telemetry history",
+      "status_incidents": "System incident history",
+      "tesla_battery_passport_ledger": "Issued Battery Passports",
+      "method": "Ranked from persisted evidence without synthetic substitutes."
+    },
+    "providers": {
+      "title": "Source coverage",
+      "description": "Unavailable sources are shown explicitly; the inbox never invents substitute findings.",
+      "empty": "No provider status was returned.",
+      "findings": "{{count}} findings"
+    },
+    "card": {
+      "details": "Evidence, scoring, and outcomes",
+      "impactAvailable": "Impact supported",
+      "noImpact": "No projected impact",
+      "allVehicles": "All vehicles",
+      "expires": "Expires {{date}}",
+      "rank": "Rank",
+      "confidence": "Confidence"
+    },
+    "details": {
+      "evidence": "Evidence",
+      "timestampUnknown": "Timestamp unknown",
+      "impact": "Projected impact",
+      "noImpact": "No defensible energy, cost, time, or risk projection is available.",
+      "scoring": "Scoring basis",
+      "rankScore": "Rank {{score}}",
+      "limitations": "Limitations"
+    },
+    "history": {
+      "title": "Action history",
+      "resource": "Action history",
+      "empty": "No actions have been recorded yet."
+    },
+    "outcome": {
+      "applied": "Applied"
+    },
+    "empty": {
+      "title": "Inbox clear",
+      "message": "No recommendations match these filters. Source coverage remains visible above."
+    },
+    "action": {
+      "acknowledge": "Acknowledge",
+      "snooze": "Snooze 24 hours",
+      "dismiss": "Dismiss",
+      "restore": "Restore",
+      "navigate": "Open source"
+    },
+    "actions": {
+      "refresh": "Refresh evidence"
+    },
+    "confirm": {
+      "title": "Confirm inbox action",
+      "message": "{{action}} “{{title}}”? This changes only your Action Center state and does not control the vehicle or source record."
+    },
+    "toast": {
+      "success": "Action applied",
+      "successMessage": "Your decision inbox state was updated.",
+      "restoreSuccess": "Recommendation restored",
+      "restoreSuccessMessage": "The recommendation is back in the open queue.",
+      "undoSuccess": "Action undone",
+      "undoSuccessMessage": "The recommendation was restored to the open queue.",
+      "undoError": "Could not undo action",
+      "error": "Action not applied",
+      "errorMessage": "Refresh and try again."
+    }
+  }
+}

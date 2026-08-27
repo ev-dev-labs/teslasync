@@ -15,14 +15,22 @@ export {
   type ChartContainerProps,
   type ChartDataColumn,
   type ChartDataRow,
+  type ChartMetadata,
 } from './ChartContainer';
 export { EmbeddedChart, type EmbeddedChartProps } from './EmbeddedChart';
 export {
   chartSizeHeights,
   resolveChartHeights,
+  chartViewportStyle,
   type ChartSize,
   type ResolvedChartHeights,
 } from './chartSizing';
+export {
+  downsampleChartRows,
+  type ChartSamplingDisclosure,
+  type DownsampledChartRows,
+} from './chartSampling';
+export { projectSmallMultipleSeries } from './SmallMultiplesChart';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';

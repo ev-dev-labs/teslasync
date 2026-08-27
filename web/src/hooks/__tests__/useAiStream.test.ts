@@ -348,6 +348,117 @@ describe('useAiStream — error paths', () => {
   });
 });
 
+describe('useAiStream — scopeKey (AI-01 entity scope identity)', () => {
+  it('does not reset output when scopeKey is unchanged across rerenders', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('delta', { text: 'hello' }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } }),
+    ]);
+    const { result, rerender } = renderHook(
+      ({ scopeKey }) => useAiStream({ url: '/ai/x', body: {}, onEvent: () => {}, scopeKey }),
+      { initialProps: { scopeKey: 'vehicle-1' } },
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+    expect(result.current.text).toBe('hello');
+
+    rerender({ scopeKey: 'vehicle-1' });
+    expect(result.current.text).toBe('hello');
+    expect(result.current.state).toBe('done');
+  });
+
+  it('aborts an in-flight stream and clears output when scopeKey changes mid-stream', async () => {
+    let abortSignal: AbortSignal | undefined;
+    globalThis.fetch = vi.fn(async (_input, init: RequestInit | undefined) => {
+      abortSignal = init?.signal ?? undefined;
+      return new Response(new ReadableStream<Uint8Array>({ start() {} }), { status: 200 });
+    }) as unknown as typeof globalThis.fetch;
+
+    const { result, rerender } = renderHook(
+      ({ scopeKey }) => useAiStream({ url: '/ai/x', body: {}, onEvent: () => {}, scopeKey }),
+      { initialProps: { scopeKey: 'vehicle-1' } },
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('streaming'));
+
+    rerender({ scopeKey: 'vehicle-2' });
+
+    expect(abortSignal?.aborted).toBe(true);
+    expect(result.current.state).toBe('idle');
+    expect(result.current.text).toBe('');
+  });
+
+  it('clears completed output (text/activity/usage/finishReason) when scopeKey changes after done', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('tool_call', { id: 'call-1', name: 'query_vehicle_state', arguments: {} }),
+      sseFrame('tool_result', { id: 'call-1', name: 'query_vehicle_state', ok: true, data: {} }),
+      sseFrame('delta', { text: 'vehicle A narrative' }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 5, out: 9 } }),
+    ]);
+    const { result, rerender } = renderHook(
+      ({ scopeKey }) => useAiStream({ url: '/ai/x', body: {}, onEvent: () => {}, scopeKey }),
+      { initialProps: { scopeKey: 1 } },
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+    expect(result.current.text).toBe('vehicle A narrative');
+    expect(result.current.activity).toHaveLength(1);
+    expect(result.current.usage).toEqual({ in: 5, out: 9 });
+    expect(result.current.finishReason).toBe('stop');
+
+    rerender({ scopeKey: 2 });
+
+    expect(result.current.text).toBe('');
+    expect(result.current.activity).toEqual([]);
+    expect(result.current.usage).toBeNull();
+    expect(result.current.finishReason).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.state).toBe('idle');
+  });
+
+  it('clears a terminal error/limit banner when scopeKey changes', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('error', {
+        message: 'rate limited',
+        reason: 'rate_limit',
+        retry_after_s: 30,
+        banner_level: 'warn',
+        baseline_available: true,
+      }),
+    ]);
+    const { result, rerender } = renderHook(
+      ({ scopeKey }) => useAiStream({ url: '/ai/x', body: {}, onEvent: () => {}, scopeKey }),
+      { initialProps: { scopeKey: 'vehicle-1' } },
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('error'));
+    expect(result.current.limit).not.toBeNull();
+
+    rerender({ scopeKey: 'vehicle-2' });
+
+    expect(result.current.limit).toBeNull();
+    expect(result.current.error).toBeNull();
+    expect(result.current.state).toBe('idle');
+  });
+
+  it('treats undefined scopeKey (no entity scope) as always-unchanged, preserving legacy behaviour', async () => {
+    globalThis.fetch = mockFetchOK([
+      sseFrame('delta', { text: 'fleet-wide answer' }),
+      sseFrame('done', { finish_reason: 'stop', usage: { in: 1, out: 1 } }),
+    ]);
+    const { result, rerender } = renderHook(
+      () => useAiStream({ url: '/ai/x', body: {}, onEvent: () => {} }),
+      { initialProps: {} },
+    );
+    act(() => result.current.start());
+    await waitFor(() => expect(result.current.state).toBe('done'));
+
+    rerender({});
+    expect(result.current.text).toBe('fleet-wide answer');
+    expect(result.current.state).toBe('done');
+  });
+});
+
 describe('useAiStream — cancellation', () => {
   it('aborts the in-flight fetch on cancel()', async () => {
     let abortSignal: AbortSignal | undefined;

@@ -162,7 +162,7 @@ export function CycleStressMonthTrend({
                 stroke={chartTokens.series[4]}
                 strokeWidth={2}
                 dot={{ r: 3 }}
-                connectNulls
+                connectNulls={false}
                 hide={hiddenSeries?.isHidden('depthWeightedIndex')}
               />
               <Line
@@ -176,7 +176,7 @@ export function CycleStressMonthTrend({
                 stroke={chartTokens.series[2]}
                 strokeWidth={2}
                 dot={{ r: 3 }}
-                connectNulls
+                connectNulls={false}
                 hide={hiddenSeries?.isHidden('meanDepthPct')}
               />
               </ComposedChart>

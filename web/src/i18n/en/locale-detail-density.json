@@ -1,0 +1,9 @@
+{
+  "density": {
+    "table": "Table",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "spacious": "Spacious",
+    "groupLabel": "List density"
+  }
+}

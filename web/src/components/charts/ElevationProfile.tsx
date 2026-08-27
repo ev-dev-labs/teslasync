@@ -111,7 +111,7 @@ export function ElevationProfile({
       height={height}
       className={className}
     >
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={points}
           onClick={handleClick}

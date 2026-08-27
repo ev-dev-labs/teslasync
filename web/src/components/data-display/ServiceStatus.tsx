@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence } from '@/components/motion'
 import { WifiOff } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { getConnectionStatus, onStatusChange, fetchSystemStatus, type SystemStatus } from '../../lib/resilience'
 
 export function ServiceStatusBanner() {
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   const [connStatus, setConnStatus] = useState<string>(getConnectionStatus())
 
   useEffect(() => {
@@ -19,10 +21,10 @@ export function ServiceStatusBanner() {
     <AnimatePresence>
       {isOffline && (
         <motion.div
-          initial={{ height: 0, opacity: 0 }}
+          initial={reduce ? false : { height: 0, opacity: 0 }}
           animate={{ height: 'auto', opacity: 1 }}
-          exit={{ height: 0, opacity: 0 }}
-          transition={{ duration: 0.3 }}
+          exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+          transition={{ duration: reduce ? 0 : 0.3 }}
           className="overflow-hidden"
         >
           <div

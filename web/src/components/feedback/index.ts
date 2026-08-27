@@ -29,6 +29,10 @@ export {
 export { LiveStaleDataBanner } from './LiveStaleDataBanner';
 export { DataStateNotice, type DataStateKind, type DataStateNoticeProps } from './DataStateNotice';
 export {
+  StaleRefreshWarning,
+  type StaleRefreshWarningProps,
+} from './StaleRefreshWarning';
+export {
   DataSourceNotice,
   resolveDataSourceStatus,
   type DataSourceDescriptor,

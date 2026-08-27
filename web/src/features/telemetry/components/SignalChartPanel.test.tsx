@@ -71,7 +71,7 @@ vi.mock('@/components/charts', async () => {
         {children}
       </div>
     ),
-    Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke }: any) => (
+    Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke, data }: any) => (
       <div
         data-testid="line"
         data-key={String(dataKey)}
@@ -80,9 +80,17 @@ vi.mock('@/components/charts', async () => {
         data-animated={String(isAnimationActive)}
         data-connect-nulls={String(connectNulls)}
         data-stroke={String(stroke)}
+        data-x-values={(data ?? []).map((row: Record<string, unknown>) => row.timestampMs).join(',')}
       />
     ),
-  XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={String(dataKey)} />,
+  XAxis: ({ dataKey, type, allowDuplicatedCategory }: any) => (
+    <div
+      data-testid="x-axis"
+      data-key={String(dataKey)}
+      data-type={String(type)}
+      data-allow-duplicated-category={String(allowDuplicatedCategory)}
+    />
+  ),
   YAxis: ({ yAxisId, orientation }: any) => (
     <div data-testid={`y-axis-${yAxisId}`} data-orientation={orientation ?? 'left'} />
   ),
@@ -96,11 +104,16 @@ vi.mock('@/components/charts', async () => {
       data-sync-id={String(syncId)}
     />
   ),
+  projectSmallMultipleSeries: vi.fn((data: Record<string, unknown>[], signal: string) => ({
+    rows: data.filter((row) => typeof row[signal] === 'number'),
+    showDots: false,
+  })),
   };
 });
  
 
 import { SignalChartPanel, type SignalChartPanelProps } from './SignalChartPanel';
+import { projectSmallMultipleSeries } from '@/components/charts';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
 
 // U+00B7 middle dot joins the live event/point counters. Declared via an escape
@@ -380,6 +393,18 @@ describe('SignalChartPanel — chart mode resolution', () => {
       'signal-chart-live',
     );
   });
+
+  it('does not compute unused overlay projections in grid mode', () => {
+    vi.mocked(projectSmallMultipleSeries).mockClear();
+
+    renderPanel({
+      chartMode: 'grid',
+      selectedSignals: ['a', 'b'],
+      data: TWO_SERIES_DATA,
+    });
+
+    expect(projectSmallMultipleSeries).not.toHaveBeenCalled();
+  });
 });
 
 // ── Overlay internals ─────────────────────────────────────────────────────────
@@ -397,6 +422,45 @@ describe('SignalChartPanel — overlay internals', () => {
     expect(lines).toHaveLength(2);
     expect(lines[0]).toHaveAttribute('data-key', 'a');
     expect(lines[1]).toHaveAttribute('data-name', 'b');
+  });
+
+  it('matches per-signal rows by timestamp instead of concatenated array index', () => {
+    renderPanel({
+      selectedSignals: ['a', 'b'],
+      chartMode: 'overlay',
+      data: TWO_SERIES_DATA,
+      stats: COMPARABLE_STATS,
+    });
+
+    const xAxis = screen.getByTestId('x-axis');
+    expect(xAxis).toHaveAttribute('data-key', 'timestampMs');
+    expect(xAxis).toHaveAttribute('data-type', 'number');
+    expect(xAxis).toHaveAttribute('data-allow-duplicated-category', 'false');
+  });
+
+  it('projects interleaved sparse signals onto globally comparable epoch values', () => {
+    const timestamps = [
+      '2024-01-01T00:00:00Z',
+      '2024-01-01T00:00:05Z',
+      '2024-01-01T00:00:10Z',
+    ];
+    renderPanel({
+      selectedSignals: ['a', 'b'],
+      chartMode: 'overlay',
+      data: [
+        { timestamp: timestamps[0], a: 1 },
+        { timestamp: timestamps[1], b: 2 },
+        { timestamp: timestamps[2], a: 3 },
+      ],
+      stats: COMPARABLE_STATS,
+    });
+
+    const lines = screen.getAllByTestId('line');
+    expect(lines[0]).toHaveAttribute(
+      'data-x-values',
+      `${Date.parse(timestamps[0])},${Date.parse(timestamps[2])}`,
+    );
+    expect(lines[1]).toHaveAttribute('data-x-values', String(Date.parse(timestamps[1])));
   });
 
   it('keeps a single left axis when signal ranges are comparable', () => {

@@ -15,7 +15,8 @@ import type { ChartDataPoint, DriveStats, RoutePoint, SpeedSegment, SpeedHistogr
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 
 export function useDriveDetailData(id: string) {
-  const { data: drive, isLoading, error } = useDrive(id);
+  const driveQuery = useDrive(id);
+  const { data: drive, isLoading, error } = driveQuery;
   const { data: vehicle } = useVehicle(String(drive?.vehicleId ?? ''));
   // Drive aggregate fields use the SI display path; the SQL adapter already
   // exposes canonical values at the repository boundary.
@@ -266,6 +267,13 @@ export function useDriveDetailData(id: string) {
     vehicle: vehicle ?? null,
     isLoading,
     error,
+    /**
+     * Raw query result, forwarded so the page can derive the shared
+     * `DataState` trust contract (`api/dataState.ts`) instead of treating
+     * every `error` as fatal — a failed background refresh must keep the
+     * already-rendered drive on screen.
+     */
+    driveQuery,
     chartData,
     stats,
     trail,

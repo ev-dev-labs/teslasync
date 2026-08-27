@@ -1,0 +1,240 @@
+{
+  "anomaly": {
+    "title": "Anomaly Detection",
+    "subtitle": "Automatic health monitoring and signal anomaly detection",
+    "monitored": "Signals Monitored",
+    "last7d": "Anomalies (7d)",
+    "last24h": "Anomalies (24h)",
+    "categories": "Health Categories",
+    "healthSummary": "System Health",
+    "noHealth": "Health data will appear once telemetry is available.",
+    "timeline": "Anomaly Timeline",
+    "value": "Value",
+    "baseline": "Baseline",
+    "noAnomalies": "No anomalies detected — all systems normal.",
+    "frequency": "Most Frequent Anomalies",
+    "count": "Anomalies",
+    "noFrequency": "Anomaly frequency data will appear after detection runs.",
+    "noData": "No data available yet.",
+    "kpis": "Summary metrics",
+    "aiInsights": "AI insights",
+    "selectVehicle": "Select a vehicle to view its anomaly analysis.",
+    "frequencyAria": "Bar chart of the most frequently anomalous signals",
+    "category": {
+      "battery": "Battery",
+      "tires": "Tires",
+      "motors": "Motors",
+      "hvac": "Climate",
+      "charging": "Charging"
+    },
+    "status": {
+      "normal": "Normal",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "severity": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "info": "Info"
+    },
+    "type": {
+      "z_score": "Statistical",
+      "range": "Range",
+      "trend": "Trend"
+    },
+    "aiExplanation": {
+      "title": "Helix explanation",
+      "description": "Get a plain-language explanation of the anomalies the detector has already identified above.",
+      "generateButton": "Generate explanation",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle above to explain its anomalies."
+    },
+    "aiBaseline": {
+      "title": "Learn per-vehicle baseline",
+      "description": "Compute statistical anomaly bounds (mean, stddev, p5/p95) from this vehicle's recent signal history and walk through how each signal compares to the static safe-range fallback.",
+      "generateButton": "Train baseline",
+      "badge": "Helix"
+    },
+    "colSignal": "Signal"
+  },
+  "rul": {
+    "title": "Remaining Useful Life",
+    "subtitle": "Predictive end-of-life forecasts for your wear components",
+    "selectVehicle": "Select a vehicle to view its component prognostics.",
+    "nextService": {
+      "title": "Next Service Due",
+      "by": "projected by",
+      "none": "No upcoming service projected — all components healthy.",
+      "error": "Unable to load service projection."
+    },
+    "board": {
+      "title": "Component Health",
+      "empty": "Component health will appear once telemetry is available."
+    },
+    "card": {
+      "aria": "Show forecast for {{label}}",
+      "health": "Health",
+      "remaining": "Remaining",
+      "distanceLeft": "Distance left",
+      "replaceBy": "Replace by",
+      "confidence": "Confidence",
+      "overdueNow": "Overdue"
+    },
+    "status": {
+      "healthy": "Healthy",
+      "watch": "Watch",
+      "replace_soon": "Replace soon",
+      "overdue": "Overdue"
+    },
+    "confidence": {
+      "high": "High",
+      "medium": "Medium",
+      "low": "Low"
+    },
+    "units": {
+      "years": "yr",
+      "days": "days",
+      "km": "km"
+    },
+    "forecast": {
+      "title": "Health Forecast",
+      "subtitle": "Projected health decaying to the end-of-life threshold, with a confidence band.",
+      "select": "Select a component above to see its forecast.",
+      "empty": "No forecast available for this component yet.",
+      "aria": "Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band",
+      "eol": "End of life",
+      "band": "Confidence band",
+      "projected": "Projected health",
+      "basis": "Basis"
+    }
+  },
+  "rootCauseIntelligence": {
+    "graph": {
+      "concurrent": "concurrent",
+      "consideredOnly": "considered, no corroborating shift · {{n}} samples",
+      "focalNodeLabel": "Focal",
+      "focalTag": "(focal signal)",
+      "lags": "lags",
+      "leads": "leads",
+      "noRelated": "No related signals were identified in the catalog for this focal signal.",
+      "pickOne": "Choose a signal above to see its evidence graph.",
+      "relationSamples": "{{relation}} · {{n}} samples",
+      "title": "Evidence Graph"
+    },
+    "hypotheses": {
+      "effect": "Effect size {{n}}",
+      "helpLabel": "More info about how hypotheses are ranked",
+      "lag": "Lag {{n}} min",
+      "noFocalShift": "No robust shift was found for this signal in the analyzed window, so no hypotheses are offered.",
+      "noneCorroborate": "This signal shows a shift, but no other analyzed signal showed a comparable, well-timed shift.",
+      "pickOne": "Choose a signal above to generate ranked hypotheses.",
+      "samples": "{{n}} samples",
+      "score": "Rank score {{n}}",
+      "title": "Ranked Hypotheses"
+    },
+    "interpretation": {
+      "coverage": "{{withEvidence}} of {{considered}} related signals corroborated · {{samples}} focal samples",
+      "limitationsTitle": "Limitations",
+      "overallScore": "Overall evidence score {{n}} of 1.00",
+      "pickOne": "Choose a signal above to see how its evidence should be read.",
+      "title": "Interpretation & Limits"
+    },
+    "kpis": {
+      "effect": "Focal Shift Effect Size",
+      "effectNone": "No robust shift found",
+      "effectSubtitle": "{{before}} → {{after}}",
+      "hypotheses": "Ranked Hypotheses",
+      "hypothesesSubtitle": "{{n}} candidates considered",
+      "quality": "Evidence Quality",
+      "qualitySubtitle": "Overall score {{n}} of 1.00",
+      "samples": "Focal Samples",
+      "samplesSubtitle": "{{h}}h window",
+      "sectionLabel": "Root-cause evidence metrics"
+    },
+    "picker": {
+      "focalHint": "The signal whose shift you want evidence-ranked hypotheses for.",
+      "focalLabel": "Focal signal",
+      "focalPlaceholder": "Choose a signal",
+      "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
+      "title": "Choose a Signal to Investigate",
+      "windowLabel": "Analysis window"
+    },
+    "quality": {
+      "insufficient": "Insufficient evidence",
+      "moderate": "Moderate evidence",
+      "strong": "Strong evidence",
+      "weak": "Weak evidence"
+    },
+    "subtitle": "Evidence-ranked hypotheses about which telemetry signals moved alongside a chosen signal's biggest shift — a statistical association, never a diagnosis or proof of causation.",
+    "timeline": {
+      "ariaDescription": "{{count}} series shown; the focal signal is {{focal}}",
+      "ariaLabel": "Line chart of the focal signal and its related candidates, each independently normalized to a 0 to 1 scale",
+      "col": {
+        "time": "Time"
+      },
+      "notEnough": "Not enough history yet for this signal and window.",
+      "pickOne": "Choose a signal above to see its normalized timeline.",
+      "subtitle": "Each series independently scaled to 0–1 for visual comparison; ranking uses the raw robust statistics, not this view",
+      "title": "Normalized Signal Timeline"
+    },
+    "title": "Root-Cause Intelligence"
+  },
+  "serviceEvidencePack": {
+    "errors": {
+      "cryptoUnavailable": "This session cannot compute a SHA-256 integrity digest — Web Crypto requires a secure context (HTTPS or localhost). Try again over HTTPS.",
+      "generic": "Something went wrong while generating the pack. Please try again."
+    },
+    "integrity": {
+      "copyDigest": "Copy digest",
+      "explain": "Generate the pack to compute a SHA-256 integrity digest over its canonical JSON. The digest lets anyone verify offline that the exported file has not been altered since it was generated — it is not a digital signature.",
+      "export": "Download JSON",
+      "generate": "Generate pack",
+      "meta": "Schema {{version}} · generated {{when}}",
+      "needsEvidence": "Choose a signal whose analysis clears the minimum evidence bar before generating a pack.",
+      "title": "Integrity & Export"
+    },
+    "inventory": {
+      "col": {
+        "domains": "Domains",
+        "evidence": "Corroborating",
+        "role": "Role",
+        "samples": "Samples",
+        "signal": "Signal"
+      },
+      "evidenceNo": "No",
+      "evidenceYes": "Yes",
+      "noSignals": "No signal evidence is available for this window yet.",
+      "pickOne": "Choose a signal above to build the evidence inventory.",
+      "roleCandidate": "Candidate",
+      "roleFocal": "Focal",
+      "title": "Evidence Inventory"
+    },
+    "kpis": {
+      "hypotheses": "Ranked Hypotheses",
+      "hypothesesSubtitle": "Evidence-ranked, not diagnostic",
+      "qualitySubtitle": "Drives the export gate below",
+      "sectionLabel": "Service evidence pack metrics",
+      "signals": "Signals in Pack",
+      "signalsSubtitle": "{{n}} corroborating",
+      "status": "Pack Status",
+      "statusDigest": "Digest {{digest}}…",
+      "statusGenerated": "Generated",
+      "statusNotReady": "Not ready",
+      "statusNotReadyHint": "Needs stronger evidence first",
+      "statusReady": "Ready",
+      "statusReadyHint": "Generate below to compute its digest"
+    },
+    "preview": {
+      "empty": "Generate a pack above to preview the exact JSON document that will be downloaded.",
+      "title": "Pack Preview"
+    },
+    "privacy": {
+      "excludedTitle": "Never included",
+      "includedTitle": "Included",
+      "notes": "This pack references the vehicle by its numeric id and display name only. Signal evidence is limited to statistical summaries — raw telemetry payloads are never embedded.",
+      "title": "Privacy Manifest"
+    },
+    "subtitle": "A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.",
+    "title": "Service Evidence Pack"
+  }
+}

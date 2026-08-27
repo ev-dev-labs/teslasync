@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { chartSizeHeights, resolveChartHeights } from './chartSizing';
+import {
+  chartSizeHeights,
+  chartViewportStyle,
+  resolveChartHeights,
+} from './chartSizing';
 
 describe('resolveChartHeights', () => {
   it('uses the standard responsive preset by default', () => {
@@ -33,4 +37,31 @@ describe('resolveChartHeights', () => {
       chartSizeHeights.compact,
     );
   });
+
+  it('preserves legitimate explicit compact and tall caller heights', () => {
+    expect(resolveChartHeights('standard', 120)).toEqual({
+      mobile: 120,
+      desktop: 120,
+    });
+    expect(resolveChartHeights('standard', 1_024, 900)).toEqual({
+      mobile: 900,
+      desktop: 1_024,
+    });
+  });
+
+  it.each([390, 768, 1440])(
+    'keeps fixed viewport values across repeated rerenders at %ipx',
+    () => {
+      const initial = resolveChartHeights('detail', 480, 320);
+      for (let render = 0; render < 25; render += 1) {
+        expect(chartViewportStyle(resolveChartHeights('detail', 480, 320))).toEqual(
+          chartViewportStyle(initial),
+        );
+      }
+      expect(chartViewportStyle(initial)).toEqual({
+        '--chart-height-mobile': '320px',
+        '--chart-height-desktop': '480px',
+      });
+    },
+  );
 });

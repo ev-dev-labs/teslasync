@@ -238,7 +238,7 @@ export default function SignalTrendPage() {
                 <ChartLegend state={hidden} />
                 <Area type="monotone" dataKey="bandBase" stackId="band" stroke="none" fill="transparent" name={t('signalTrend.col.low', 'Forecast low')} hide={hidden.isHidden('forecast')} legendType="none" />
                 <Area type="monotone" dataKey="bandRange" stackId="band" stroke="none" fill={chartTokens.series[2]} fillOpacity={0.18} name={t('signalTrend.forecastBand', 'Forecast band')} hide={hidden.isHidden('forecast')} />
-                <Line type="monotone" dataKey="baseline" name={t('signalTrend.col.baseline', 'Baseline')} stroke={chartTokens.series[1]} strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls hide={hidden.isHidden('baseline')} />
+                <Line type="monotone" dataKey="baseline" name={t('signalTrend.col.baseline', 'Baseline')} stroke={chartTokens.series[1]} strokeWidth={2} strokeDasharray="4 3" dot={false} connectNulls={false} hide={hidden.isHidden('baseline')} />
                 <Line type="monotone" dataKey="actual" name={t('signalTrend.col.actual', 'Actual')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} connectNulls={false} hide={hidden.isHidden('actual')} />
               </ComposedChart>
             </ResponsiveContainer>

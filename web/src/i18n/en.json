@@ -1,4 +1,100 @@
 {
+  "density": {
+    "table": "Table",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "spacious": "Spacious",
+    "groupLabel": "List density"
+  },
+  "route": {
+    "noLocationData": "No location data",
+    "roundTrip": "round trip"
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
+  },
+  "sortControl": {
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "fieldLabel": "Sort by",
+    "direction": "Sort direction"
+  },
+  "vehicleSelect": {
+    "aria": "Select vehicle"
+  },
+  "productPreferences": {
+    "title": "Workspace preferences",
+    "description": "Choose how TeslaSync prioritizes information when this browser opens. These presentation preferences never change permissions or backend authorization.",
+    "deviceLocal": "This browser",
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "owner": { "label": "Owner", "description": "Keep the most useful everyday vehicle information close at hand." },
+      "fleetOperator": { "label": "Fleet operator", "description": "Prioritize active fleet operations and current vehicle state." },
+      "analyst": { "label": "Analyst", "description": "Prioritize trends, reports, and historical analysis." },
+      "administrator": { "label": "Administrator", "description": "Prioritize system administration and operational controls." }
+    },
+    "defaultVehicle": {
+      "label": "Default vehicle",
+      "hint": "Choose the vehicle selected when TeslaSync opens.",
+      "lastActive": "Use the last active vehicle",
+      "unnamed": "Vehicle {{id}}",
+      "unavailable": "Unavailable vehicle {{id}}"
+    },
+    "defaultRange": {
+      "label": "Default analysis range",
+      "hint": "Choose the time range used for new analysis views."
+    },
+    "landing": {
+      "label": "Landing page",
+      "hint": "Choose the page shown when TeslaSync opens.",
+      "options": {
+        "dashboard": "Dashboard",
+        "vehicles": "Vehicles",
+        "drives": "Drives",
+        "charging": "Charging",
+        "battery": "Battery",
+        "analytics": "Analytics",
+        "actionCenter": "Action center"
+      }
+    },
+    "contextualHelp": {
+      "label": "Contextual help",
+      "hint": "Show helpful guidance in workspace controls."
+    },
+    "releaseHighlights": {
+      "label": "Release highlights",
+      "hint": "Show recently released capabilities."
+    },
+    "reset": {
+      "label": "Reset defaults",
+      "done": "Workspace preferences restored to defaults."
+    }
+  },
+  "statCard": {
+    "loading": "Loading",
+    "trend": {
+      "increased": "increased",
+      "decreased": "decreased",
+      "unchanged": "no change"
+    }
+  },
+  "workspaceContext": {
+    "ranges": {
+      "live": "Live",
+      "24h": "Last 24 hours",
+      "today": "Today",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "1y": "Last year",
+      "all": "All time"
+    }
+  },
   "dataState": {
     "stale": {
       "title": "Data may be stale",
@@ -4125,6 +4221,15 @@
     "expandAll": "Expand all sections",
     "collapseAll": "Collapse all sections",
     "compactOverview": "Overview",
+    "compactVehicles": "Vehicles",
+    "compactDrives": "Drives",
+    "compactCharging": "Charging",
+    "compactEnergy": "Energy",
+    "compactInsights": "Insights",
+    "compactOperations": "Operations",
+    "compactAdvancedIntelligence": "Advanced Intelligence",
+    "compactAdministration": "Administration",
+    "compactDeveloper": "Developer",
     "compactFleet": "Fleet",
     "compactDriving": "Driving",
     "compactChargingEnergy": "Charging & Energy",

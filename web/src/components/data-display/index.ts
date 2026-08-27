@@ -49,6 +49,10 @@ export {
   type FreshnessStatus,
   type FreshnessQuery,
 } from './DataFreshness';
+export {
+  DataProvenanceBadge,
+  type DataProvenanceBadgeProps,
+} from './DataProvenanceBadge';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
 export {
   OperationalModeBadge,

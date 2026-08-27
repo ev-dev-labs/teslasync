@@ -1,0 +1,31 @@
+{
+  "serviceMode": {
+    "banner": {
+      "degradedTitle": "Service is degraded",
+      "maintenanceTitle": "Scheduled maintenance",
+      "defaultDegraded": "Some features may be slow or unavailable while we work on it.",
+      "defaultMaintenance": "Maintenance is in progress. Live data may be paused.",
+      "endsIn": "Ends in {{time}}",
+      "endingNow": "Ending now",
+      "ended": "Window has ended; refresh to confirm."
+    },
+    "admin": {
+      "title": "Service Mode",
+      "subtitle": "Control the top-of-app banner shown to all users.",
+      "modeLabel": "Mode",
+      "messageLabel": "Banner message",
+      "messageHelp": "Up to 280 characters. Shown when mode is degraded or maintenance.",
+      "untilLabel": "Auto-clear at (optional)",
+      "untilHelp": "ISO 8601 timestamp; SPA renders a countdown until then.",
+      "save": "Save",
+      "saving": "Saving…",
+      "envOverride": "Environment variable TESLASYNC_SYSTEM_MODE={{mode}} is currently overriding the database value. Updates here will persist but won't affect users until the env override is cleared.",
+      "preview": "Preview",
+      "modes": {
+        "ok": "Ok (banner hidden)",
+        "degraded": "Degraded",
+        "maintenance": "Maintenance"
+      }
+    }
+  }
+}

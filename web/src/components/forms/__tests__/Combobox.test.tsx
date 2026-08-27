@@ -360,3 +360,71 @@ describe('Combobox', () => {
     expect(selected).toHaveAttribute('aria-selected', 'true');
   });
 });
+
+describe('Combobox — custom renderOption', () => {
+  /**
+   * Regression: the option `<li>` used to carry an unconditional
+   * `truncate` (⇒ `white-space: nowrap`) class. `nowrap` is inherited by
+   * any descendant that doesn't reset it, which silently defeated a
+   * custom `renderOption`'s own multi-line `line-clamp-2` treatment (the
+   * shape AddressInput uses for geocoded results) — the clamp needs
+   * `white-space: normal` to have more than one line to wrap onto.
+   */
+  it('does not force nowrap/truncate onto a custom renderOption — line-clamp keeps working', () => {
+    render(
+      <Combobox<Item>
+        label="Fruit"
+        value={null}
+        onChange={() => {}}
+        options={ITEMS}
+        getOptionLabel={(o) => o.name}
+        getOptionKey={(o) => o.id}
+        renderOption={(o) => (
+          <span data-testid={`custom-${o.id}`} className="line-clamp-2">
+            {o.name}
+          </span>
+        )}
+      />,
+    );
+    const input = screen.getByRole('combobox', { name: /fruit/i });
+    fireEvent.focus(input);
+    const option = screen.getByRole('option', { name: 'Apple' });
+    // The custom content rendered instead of the plain label.
+    expect(screen.getByTestId('custom-1')).toHaveClass('line-clamp-2');
+    // The `<li>` itself must not carry `truncate` (nowrap) — that class
+    // would inherit into the custom span and collapse `line-clamp-2` to
+    // a single line.
+    expect(option.className).not.toMatch(/\btruncate\b/);
+  });
+
+  it('still exposes the full label as a title on custom-rendered options', () => {
+    render(
+      <Combobox<Item>
+        label="Fruit"
+        value={null}
+        onChange={() => {}}
+        options={ITEMS}
+        getOptionLabel={(o) => o.name}
+        getOptionKey={(o) => o.id}
+        renderOption={(o) => <span>{o.name.toUpperCase()}</span>}
+      />,
+    );
+    const input = screen.getByRole('combobox', { name: /fruit/i });
+    fireEvent.focus(input);
+    // The accessible name now reflects the custom (uppercased) content, so
+    // query by that instead of the original-case label.
+    const option = screen.getByRole('option', { name: 'ELDERBERRY' });
+    // `title` is inert markup — it's safe to surface the full original
+    // label even though the visible text is custom-rendered (uppercased).
+    expect(option).toHaveAttribute('title', 'Elderberry');
+  });
+
+  it('the default (non-custom) label branch keeps its truncate + title contract', () => {
+    render(<Harness />);
+    const input = screen.getByRole('combobox', { name: /fruit/i });
+    fireEvent.focus(input);
+    const option = screen.getByRole('option', { name: 'Apple' });
+    expect(option.className).toMatch(/\btruncate\b/);
+    expect(option).toHaveAttribute('title', 'Apple');
+  });
+});

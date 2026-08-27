@@ -80,6 +80,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/ml/charging-curves/cluster',
     body,
     onEvent: noop,
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight clustering run and clears
+    // the previous vehicle's clusters before the new scope streams in.
+    scopeKey: canStart ? numericVehicleId : null,
   })
   return (
     <AIFeatureCard

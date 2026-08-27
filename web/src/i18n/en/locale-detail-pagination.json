@@ -1,0 +1,12 @@
+{
+  "pagination": {
+    "showing": "Showing {{start}}–{{end}} of {{total}}",
+    "pageSize": "Rows per page",
+    "perPage": "{{count}} / page",
+    "first": "First page",
+    "previous": "Previous page",
+    "currentPage": "Page {{page}} of {{total}}",
+    "next": "Next page",
+    "last": "Last page"
+  }
+}

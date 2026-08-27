@@ -48,7 +48,16 @@ function InnerSection({ tripId }: InnerSectionProps) {
     [hasTrip, canonicalTripId],
   )
   const body = useMemo(() => ({}), [])
-  const stream = useAiStream({ url, body, onEvent: NO_OP })
+  const stream = useAiStream({
+    url,
+    body,
+    onEvent: NO_OP,
+    // AI-01: trip scope is part of stream identity — switching the
+    // in-view trip aborts an in-flight draft and clears the
+    // previous trip's suggested name before the new scope streams
+    // in.
+    scopeKey: hasTrip ? canonicalTripId : null,
+  })
   return (
     <AIFeatureCard
       title={t('trips.detail.aiSuggestName.title', 'Suggest a trip name')}

@@ -1,0 +1,180 @@
+{
+  "intelPacks": {
+    "audit": {
+      "colAction": "Action",
+      "colDetail": "Detail",
+      "colPack": "Pack",
+      "colWhen": "When",
+      "empty": "No actions have been recorded yet."
+    },
+    "capabilities": {
+      "denied": "Denied",
+      "granted": "Granted",
+      "none": "This pack requests no capabilities."
+    },
+    "catalog": {
+      "anonymousPublisher": "Anonymous",
+      "byPublisher": "by {{publisher}} · v{{version}}",
+      "capabilityCount": "{{count}} capabilities",
+      "empty": "No catalog entries are bundled with this build.",
+      "install": "View & install",
+      "installed": "Installed",
+      "installedOutdated": "Installed (outdated)",
+      "intro": "A small, curated, locally-bundled catalog — nothing here is ever fetched from a network. Each entry demonstrates a distinct trust state: signed & recognized, unsigned draft, and a deliberately tampered demo.",
+      "upgradeAvailable": "Update available → v{{version}}",
+      "upToDate": "Up to date (v{{version}})"
+    },
+    "compat": {
+      "compatible": "Compatible",
+      "incompatible": "Incompatible"
+    },
+    "confirm": {
+      "install": "Install",
+      "installMessage": "Signature verified for \"{{name}}\" v{{version}}. Installing grants it exactly the capabilities listed: {{caps}}. Remember: a valid signature proves key possession, not that this publisher’s intentions are trustworthy.",
+      "installTitle": "Install pack?",
+      "trustAndInstall": "Trust & install",
+      "typePhrase": "Type \"{{phrase}}\" to confirm",
+      "uninstallMessage": "This removes \"{{name}}\" and its version history from this device. This cannot be undone.",
+      "uninstallTitle": "Uninstall pack?",
+      "unsignedMessage": "\"{{name}}\" has NO signature. TeslaSync cannot verify who created it or whether it has been altered. Only trust unsigned packs you personally authored or fully understand. This decision is recorded locally and can be reversed by uninstalling.",
+      "unsignedTitle": "Trust this unsigned pack? (local development only)",
+      "upgrade": "Upgrade",
+      "upgradeTitle": "Upgrade pack?"
+    },
+    "detail": {
+      "blockedBody": "Signature/content verification failed or this platform cannot perform it. Installing a pack in this state is never allowed.",
+      "blockedTitle": "This pack cannot be installed",
+      "capabilities": "Requested capabilities",
+      "coefficientsCount": "{{count}} bounded coefficients",
+      "contents": "Manifest contents",
+      "dashboardsCount": "{{count}} dashboard layouts",
+      "formulasCount": "{{count}} analytics formulas",
+      "installAction": "Install",
+      "markBlocked": "Record as blocked",
+      "publisher": "Publisher",
+      "recommendationsCount": "{{count}} automation recommendations (suggestions only — never auto-applied)",
+      "trustAndInstall": "Trust as local-development pack…",
+      "upgradeTo": "Upgrade to v{{version}}"
+    },
+    "export": {
+      "download": "Export",
+      "empty": "No installed packs to export yet.",
+      "title": "Export an installed pack"
+    },
+    "fingerprint": {
+      "claimMismatch": "The manifest’s self-claimed publisher fingerprint does not match the fingerprint recomputed from the actual signing key. Treat this as suspicious.",
+      "copy": "Copy fingerprint",
+      "none": "No signing key (unsigned)",
+      "recognized": "Recognized: {{name}}",
+      "unrecognized": "Not in local recognized-publisher list"
+    },
+    "import": {
+      "chooseFile": "Choose file…",
+      "description": "Import re-runs the full parser, structural limits, expression-safety checks, and signature verification — nothing is trusted just because it came from a file.",
+      "errorTitle": "Import rejected",
+      "parse": "Parse pasted JSON",
+      "pasteLabel": "Or paste envelope JSON",
+      "readError": "Could not read the selected file.",
+      "sourceNote": "Imported manually — re-parsed and re-verified through the exact same pipeline as the bundled catalog.",
+      "title": "Import a manifest",
+      "unknownError": "Could not parse this file."
+    },
+    "installed": {
+      "colEnabled": "Enabled",
+      "colName": "Pack",
+      "colVerification": "Verification",
+      "empty": "No packs are installed yet. Install one from the Catalog tab.",
+      "grantedCapabilities": "Capability grant on record",
+      "none": "none recorded",
+      "noTrustDecision": "No trust decision on record",
+      "rollback": "Rollback",
+      "toggleEnabled": "Enable {{name}}",
+      "trustDecisionKind": "Trust decision: {{decision}}",
+      "uninstall": "Uninstall",
+      "upgradeAvailable": "v{{version}} available — see Catalog",
+      "upgradeHint": "Open the Catalog tab to review and upgrade",
+      "versionHistoryCount": "{{count}} previous version(s) retained for rollback"
+    },
+    "page": {
+      "subtitle": "Signed, sandboxed, local-first analytics packs — declarative data only, never executable code, never a network request.",
+      "title": "Intelligence-Pack Marketplace"
+    },
+    "sandbox": {
+      "average": "avg {{value}}{{unit}}",
+      "deniedFields": "Fields evaluated as 0 (capability denied): {{fields}}",
+      "formulaMissing": "Referenced formula not found.",
+      "intro": "Runs entirely offline against bundled synthetic sample data with strict execution/row/output budgets. Safe to preview even unsigned or unverified packs.",
+      "latest": "Latest",
+      "noDashboards": "This pack declares no dashboard layouts.",
+      "noData": "No output rows.",
+      "noEntries": "No packs available to preview.",
+      "runStats": "{{rows}} sample rows · {{steps}} evaluation steps · {{ms}}ms{{truncated}}",
+      "sampleRange": "sample {{min}}–{{max}}{{unit}}",
+      "selectPack": "Pack to preview",
+      "selectToPreview": "Select a pack to run its sandbox preview.",
+      "truncatedSuffix": " · truncated by budget",
+      "usingFullGrant": "Preview mode: simulating full requested-capability grant (not installed)",
+      "usingInstalledGrant": "Using installed capability grant",
+      "row": "Sample",
+      "value": "Value"
+    },
+    "security": {
+      "browserNote": "Ed25519 in Web Crypto requires a secure context (HTTPS or localhost) and a modern browser (roughly Chrome/Edge 137+, Firefox 130+, Safari 17+ — exact floors vary by OS). Older or locked-down browsers cannot install signed packs; this is by design, not a bug.",
+      "capabilitiesIntro": "There is no field for a \"write\", \"command\", or \"network\" capability anywhere in the schema — requesting one is structurally impossible, not merely denied.",
+      "capabilitiesTitle": "The complete capability allowlist",
+      "g1": "No code execution: never eval, new Function, dynamic import(), or a same-origin iframe. Formulas are interpreted as a closed AST vocabulary, not run as code.",
+      "g2": "No network requests originate from pack content. Sandbox preview data is a fixed, bundled synthetic dataset compiled into this build.",
+      "g3": "Signature verification is cryptographic (SHA-256 + Ed25519 via Web Crypto), never a hand-rolled or heuristic check.",
+      "g4": "No silent weak fallback: if Web Crypto or Ed25519 is unavailable, installation of a signed pack fails explicitly rather than degrading.",
+      "g5": "Structural resource ceilings on the raw JSON (size, depth, node count, string/array lengths, per-formula AST node count and depth).",
+      "g6": "Runtime execution budgets bound every sandbox run: a step ceiling, a wall-clock deadline, and row/output-point caps.",
+      "g7": "Deny-by-default capabilities: the allowlist itself is closed (parse-time reject for anything else), and each capability additionally requires your explicit install-time grant.",
+      "g8": "A valid signature proves key possession and content integrity — nothing about the publisher’s trustworthiness.",
+      "g9": "Local-first persistence: installed packs, trust decisions, and the audit log live in IndexedDB (or a documented localStorage fallback) — never a server round-trip.",
+      "guaranteesTitle": "Guarantees",
+      "limitsTitle": "Resource ceilings & budgets in this build",
+      "maxBytes": "Max envelope size",
+      "maxDepth": "Max JSON depth",
+      "maxExprDepth": "Max AST depth per formula",
+      "maxExprNodes": "Max AST nodes per formula",
+      "maxNodes": "Max JSON node count",
+      "ng1": "Signature verification does NOT vouch for a publisher’s intentions, competence, or good faith. Anyone can generate a keypair and sign anything with it.",
+      "ng2": "Canonicalization is a documented, internally-consistent subset of RFC 8785 (JCS) — not a certified, byte-for-byte-interoperable implementation with arbitrary third-party tooling.",
+      "ng3": "Unsigned packs are unverified by definition. They can be previewed but cannot be enabled without the explicit, clearly-labeled local-development trust flow — a convenience for experimentation, not a security boundary.",
+      "ng4": "The sandbox proves computational safety, not real-world analytical correctness. A formula can look reasonable against sample data and still be a poor model of real behavior.",
+      "ng5": "Automation recommendations never execute anything. They are plain strings a human reviews and manually recreates in the Automation Builder.",
+      "ng6": "Ed25519 support in Web Crypto is a newer browser feature than SHA-256. Older or locked-down browsers, or any non-secure-context origin, cannot install signed packs by design.",
+      "ng7": "The IndexedDB → localStorage storage fallback is about persistence reliability only; it has no bearing on cryptographic verification.",
+      "ng8": "Multi-table writes (e.g. install + audit log append) are not cross-table transactional — each table is written atomically on its own.",
+      "nonGuaranteesTitle": "Explicit non-guarantees",
+      "sandboxDuration": "Max sandbox wall-clock time",
+      "sandboxRows": "Max sandbox sample rows",
+      "sandboxSteps": "Max sandbox evaluation steps"
+    },
+    "tabs": {
+      "ariaLabel": "Intelligence-Pack Marketplace sections",
+      "audit": "Audit Log",
+      "catalog": "Catalog",
+      "importExport": "Import / Export",
+      "installed": "Installed",
+      "sandbox": "Sandbox Preview",
+      "security": "Security & Methodology"
+    },
+    "trust": {
+      "distinctionNote": "A valid signature proves the publisher possesses the signing key and that the content has not changed since signing. It does not prove the publisher’s intentions are trustworthy — that judgement is always yours."
+    },
+    "verify": {
+      "checking": "Checking signature…",
+      "cryptoUnavailable": "Web Crypto unavailable",
+      "digestMismatch": "Content altered — digest mismatch",
+      "ed25519Unsupported": "Ed25519 unsupported",
+      "error": "Verification failed",
+      "invalid": "Signature invalid — do not trust",
+      "platformUnsupported": "Verification unavailable on this browser",
+      "unknown": "Not verified",
+      "unsigned": "Unsigned — preview only",
+      "validRecognized": "Signature valid · recognized publisher",
+      "validUnrecognized": "Signature valid · unrecognized publisher"
+    }
+  }
+}

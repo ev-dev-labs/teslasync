@@ -58,6 +58,8 @@ function main() {
   const routeChunks = urls.filter((url) => /\.(?:js|css|map|html)(?:$|\?)/i.test(url))
   const oversizedBrandSources = urls.filter((url) =>
     /icons\/(?:logo|logo-original)\.(?:svg|png)$/i.test(url))
+  const localeCacheIndex = worker.indexOf('i18n-locale-assets')
+  const appAssetCacheIndex = worker.indexOf('app-route-assets')
 
   if (routeChunks.length > 0) {
     failures.push(`route assets are precached: ${routeChunks.join(', ')}`)
@@ -77,6 +79,11 @@ function main() {
     failures.push(
       `precache is ${fmtKB(rawTotal)} raw, above the ${RAW_LIMIT_KB} KB budget`,
     )
+  }
+  if (localeCacheIndex === -1) {
+    failures.push('locale runtime cache is missing')
+  } else if (appAssetCacheIndex === -1 || localeCacheIndex > appAssetCacheIndex) {
+    failures.push('locale runtime cache must be registered before app-route-assets')
   }
 
   console.log(

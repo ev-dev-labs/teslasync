@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { chartTokens } from '@/lib/tokens';
 import { ChartTooltip } from './ChartTooltip';
 import { ChartLegend } from './ChartLegend';
+import { resolveChartHeights } from './chartSizing';
 
 export interface SeriesConfig {
   key: string;
@@ -63,6 +64,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
     const safeSeries = series ?? [];
     const safeData = data ?? [];
     const instanceId = useId().replace(/:/g, '');
+    const chartHeight = resolveChartHeights('standard', height).desktop;
 
     return (
       <div
@@ -71,7 +73,7 @@ export const AreaChartWrapper = forwardRef<HTMLDivElement, AreaChartWrapperProps
         role={ariaLabel ? 'img' : undefined}
         aria-label={ariaLabel}
       >
-        <ResponsiveContainer width="100%" height={height}>
+        <ResponsiveContainer width="100%" height={chartHeight}>
           <AreaChart data={safeData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
             <defs>
               {safeSeries.map((s) => (

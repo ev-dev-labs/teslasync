@@ -1,0 +1,49 @@
+{
+  "export": {
+    "urlTooLong": "Layout too large for URL sharing ({{size}} chars). Use clipboard or file export instead.",
+    "title": "Export Dashboard",
+    "widgetCount": "{{count}} widgets",
+    "updated": "Updated {{date}}",
+    "downloadFile": "Download JSON File",
+    "copied": "Copied!",
+    "copyClipboard": "Copy to Clipboard",
+    "urlCopied": "URL Copied!",
+    "copyShareUrl": "Copy Shareable URL",
+    "subtitle": "Export drives, charging, analytics, or full backup as CSV/JSON",
+    "jobDrawer": {
+      "label": "Export job progress",
+      "title": "Export jobs",
+      "minimize": "Minimize",
+      "close": "Dismiss",
+      "expand": "Show export jobs ({{count}} active)",
+      "activeCount": "{{count}} export running",
+      "activeCount_other": "{{count}} exports running",
+      "activePill": "{{count}} active",
+      "recentLabel": "Exports",
+      "loading": "Loading export jobs…",
+      "activeHeading": "In progress",
+      "activeEmpty": "No active exports",
+      "recentHeading": "Recent",
+      "recentEmpty": "No recent exports",
+      "statusLine": "{{status}} · started {{relative}}",
+      "completedLine": "{{size}} · {{relative}}",
+      "download": "Download"
+    },
+    "types": {
+      "account": "Account export",
+      "drives": "Drives",
+      "charging": "Charging",
+      "analytics": "Analytics",
+      "backup": "Backup",
+      "importDrives": "Import drives",
+      "importCharging": "Import charging"
+    },
+    "status": {
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed",
+      "expired": "Expired"
+    }
+  }
+}

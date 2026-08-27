@@ -5,7 +5,10 @@
 export const AREA_DEFAULTS = {
   type: 'monotone' as const,
   dot: false,
-  connectNulls: true,
+  // A missing sample is information, not an interpolation request. Keeping
+  // the gap visible prevents charts from implying continuity across telemetry
+  // outages or explicitly unknown measurements.
+  connectNulls: false,
   strokeWidth: 2,
   animationDuration: 300,
 } as const;

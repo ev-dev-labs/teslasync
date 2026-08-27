@@ -249,7 +249,7 @@ func renderSLODashboard(s SLO) (string, error) {
 			URL:   "/explore?left=%7B%22datasource%22:%22tempo%22%7D",
 		}},
 	}
-	return marshalDashboard(d)
+	return marshalDashboard(applyFrontendSpecialisation(d, s))
 }
 
 func renderOverviewDashboard(cat *Catalog) (string, error) {

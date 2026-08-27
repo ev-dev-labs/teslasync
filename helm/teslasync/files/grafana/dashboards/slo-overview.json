@@ -834,8 +834,8 @@
     {
       "id": 20,
       "type": "stat",
-      "title": "fleet_ops_availability",
-      "description": "Objective: 99.5%; owner: fleet",
+      "title": "frontend_inp",
+      "description": "Objective: 90%; owner: frontend",
       "datasource": {
         "type": "prometheus",
         "uid": "DS_TESLASYNC_PROMETHEUS"
@@ -843,6 +843,264 @@
       "gridPos": {
         "x": 18,
         "y": 16,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:frontend_inp:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 21,
+      "type": "stat",
+      "title": "frontend_cls",
+      "description": "Objective: 90%; owner: frontend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:frontend_cls:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 22,
+      "type": "stat",
+      "title": "frontend_fcp",
+      "description": "Objective: 90%; owner: frontend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:frontend_fcp:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 23,
+      "type": "stat",
+      "title": "frontend_ttfb",
+      "description": "Objective: 90%; owner: frontend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:frontend_ttfb:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 24,
+      "type": "stat",
+      "title": "frontend_route_transition",
+      "description": "Objective: 90%; owner: frontend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 20,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:frontend_route_transition:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 25,
+      "type": "stat",
+      "title": "frontend_rum_ingest_availability",
+      "description": "Objective: 99.5%; owner: frontend",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:frontend_rum_ingest_availability:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 26,
+      "type": "stat",
+      "title": "fleet_ops_availability",
+      "description": "Objective: 99.5%; owner: fleet",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 24,
         "w": 6,
         "h": 4
       },
@@ -875,7 +1133,7 @@
       }
     },
     {
-      "id": 21,
+      "id": 27,
       "type": "stat",
       "title": "fleet_ops_forecast_latency",
       "description": "Objective: 99%; owner: fleet",
@@ -884,8 +1142,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 0,
-        "y": 20,
+        "x": 12,
+        "y": 24,
         "w": 6,
         "h": 4
       },
@@ -918,7 +1176,7 @@
       }
     },
     {
-      "id": 22,
+      "id": 28,
       "type": "stat",
       "title": "benchmark_privacy_status_availability",
       "description": "Objective: 99.5%; owner: analytics",
@@ -927,8 +1185,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 6,
-        "y": 20,
+        "x": 18,
+        "y": 24,
         "w": 6,
         "h": 4
       },
@@ -961,7 +1219,7 @@
       }
     },
     {
-      "id": 23,
+      "id": 29,
       "type": "stat",
       "title": "benchmark_consent_availability",
       "description": "Objective: 99%; owner: analytics",
@@ -970,8 +1228,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 12,
-        "y": 20,
+        "x": 0,
+        "y": 28,
         "w": 6,
         "h": 4
       },
@@ -1004,7 +1262,7 @@
       }
     },
     {
-      "id": 24,
+      "id": 30,
       "type": "stat",
       "title": "benchmark_release_read_availability",
       "description": "Objective: 99.5%; owner: analytics",
@@ -1013,8 +1271,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 18,
-        "y": 20,
+        "x": 6,
+        "y": 28,
         "w": 6,
         "h": 4
       },
@@ -1047,7 +1305,7 @@
       }
     },
     {
-      "id": 25,
+      "id": 31,
       "type": "stat",
       "title": "benchmark_release_creation_availability",
       "description": "Objective: 99%; owner: analytics",
@@ -1056,8 +1314,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 0,
-        "y": 24,
+        "x": 12,
+        "y": 28,
         "w": 6,
         "h": 4
       },
@@ -1090,7 +1348,7 @@
       }
     },
     {
-      "id": 26,
+      "id": 32,
       "type": "stat",
       "title": "geofence_pricing_read_availability",
       "description": "Objective: 99.5%; owner: platform",
@@ -1099,8 +1357,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 6,
-        "y": 24,
+        "x": 18,
+        "y": 28,
         "w": 6,
         "h": 4
       },
@@ -1133,7 +1391,7 @@
       }
     },
     {
-      "id": 27,
+      "id": 33,
       "type": "stat",
       "title": "geofence_pricing_write_availability",
       "description": "Objective: 99%; owner: platform",
@@ -1142,8 +1400,8 @@
         "uid": "DS_TESLASYNC_PROMETHEUS"
       },
       "gridPos": {
-        "x": 12,
-        "y": 24,
+        "x": 0,
+        "y": 32,
         "w": 6,
         "h": 4
       },

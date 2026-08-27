@@ -44,6 +44,8 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
     })),
     [socA, socB],
   );
+  const seriesA = useMemo(() => socA.map((point) => ({ progress: point.progress, a: point.value })), [socA]);
+  const seriesB = useMemo(() => socB.map((point) => ({ progress: point.progress, b: point.value })), [socB]);
   const driveAName = t('driveCompare.chart.driveASoc', 'Drive A SOC');
   const driveBName = t('driveCompare.chart.driveBSoc', 'Drive B SOC');
 
@@ -88,6 +90,7 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
                 <XAxis
                   type="number"
                   dataKey="progress"
+                  allowDuplicatedCategory={false}
                   domain={[0, 100]}
                   tick={axisTick}
                   tickLine={false}
@@ -122,7 +125,8 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
                   stroke={CHART_COLORS[0]}
                   strokeWidth={2.5}
                   dot={false}
-                  connectNulls
+                  data={seriesA}
+                  connectNulls={false}
                   hide={hiddenSeries?.isHidden('a') ?? false}
                 />
                 <Line
@@ -132,7 +136,8 @@ export function BatteryComparisonChart({ profileA, profileB, state }: BatteryCom
                   stroke={CHART_COLORS[3]}
                   strokeWidth={2.5}
                   dot={false}
-                  connectNulls
+                  data={seriesB}
+                  connectNulls={false}
                   hide={hiddenSeries?.isHidden('b') ?? false}
                 />
               </LineChart>

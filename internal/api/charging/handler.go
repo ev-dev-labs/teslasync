@@ -15,6 +15,7 @@ import (
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 )
 
 // ChargingHandler handles charging session HTTP requests.
@@ -86,23 +87,31 @@ var chargeTelemetryFieldMappings = []signal.FieldMapping{
 }
 
 func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.charging.list")
+	defer span.End()
+
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
+		span.RecordError(fmt.Errorf("vehicle_id query parameter required"))
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 
 	vehicleID, err := strconv.ParseInt(vehicleIDStr, 10, 64)
-	if err != nil {
+	if err != nil || vehicleID <= 0 {
+		span.RecordError(fmt.Errorf("invalid vehicle_id"))
 		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
 	limit, offset := apiparams.Pagination(r)
 	startTime, endTime := apiparams.ParseDateRange(r)
-	sessions, err := h.chargingRepo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
+	sessions, err := h.chargingRepo.GetByVehicle(ctx, vehicleID, limit, offset, startTime, endTime)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to list charging sessions")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to list charging sessions")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to list charging sessions")
 		return
 	}
@@ -112,6 +121,7 @@ func (h *ChargingHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) 
 	if sessions == nil {
 		sessions = []*chargingmodel.ChargingSession{}
 	}
+	apiparams.SetPaginationHeaders(w, limit, offset, len(sessions))
 	httpx.WriteJSON(w, http.StatusOK, sessions)
 }
 

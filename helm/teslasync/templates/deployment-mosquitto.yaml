@@ -22,8 +22,12 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.mqtt.podSecurityContext | nindent 8 }}
       containers:
         - name: mosquitto
+          securityContext:
+            {{- toYaml .Values.mqtt.securityContext | nindent 12 }}
           image: {{ .Values.mqtt.image | quote }}
           ports:
             - name: mqtt
@@ -48,15 +52,15 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.mqtt.persistence.enabled }}
           volumeMounts:
             - name: mosquitto-data
               mountPath: /mosquitto/data
-          {{- end }}
-      {{- if .Values.mqtt.persistence.enabled }}
       volumes:
         - name: mosquitto-data
+        {{- if .Values.mqtt.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-mosquitto-data
-      {{- end }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
 {{- end }}

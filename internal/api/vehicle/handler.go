@@ -1,6 +1,7 @@
 package vehicle
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,11 +10,13 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -27,9 +30,15 @@ import (
 // when the projected fields are unchanged from the previous emission.
 type Handler struct {
 	vehicleSvc  *service.VehicleService
+	vehicleRepo vehicleListFetcher
 	teslaClient *tesla.Client
 	telemetry   TelemetrySource
 	state       signal.StateReader
+}
+
+type vehicleListFetcher interface {
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
+	GetPage(ctx context.Context, limit, offset int) ([]*vehiclemodel.Vehicle, error)
 }
 
 // vehiclePositionMappings projects the signal_log change feed into the
@@ -49,6 +58,7 @@ var vehiclePositionMappings = []signal.FieldMapping{
 func NewHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *Handler {
 	return &Handler{
 		vehicleSvc:  vehicleSvc,
+		vehicleRepo: vehicleSvc.VehicleRepo(),
 		teslaClient: tc,
 		state:       state,
 	}
@@ -60,11 +70,41 @@ func (h *Handler) SetTelemetrySource(ts TelemetrySource) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	vehicles, err := h.vehicleSvc.VehicleRepo().GetAll(r.Context())
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.vehicles.list")
+	defer span.End()
+
+	repo := h.vehicleRepo
+	if repo == nil {
+		repo = h.vehicleSvc.VehicleRepo()
+	}
+	query := r.URL.Query()
+	_, hasLimit := query["limit"]
+	_, hasOffset := query["offset"]
+
+	var (
+		vehicles []*vehiclemodel.Vehicle
+		err      error
+	)
+	if hasLimit || hasOffset {
+		limit, offset := apiparams.Pagination(r)
+		vehicles, err = repo.GetPage(ctx, limit, offset)
+		if err == nil {
+			apiparams.SetPaginationHeaders(w, limit, offset, len(vehicles))
+		}
+	} else {
+		// Preserve the historical array contract for existing fleet consumers:
+		// an omitted pagination query means the complete vehicle list.
+		vehicles, err = repo.GetAll(ctx)
+	}
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list vehicles")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to list vehicles")
 		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to list vehicles"))
 		return
+	}
+	if vehicles == nil {
+		vehicles = []*vehiclemodel.Vehicle{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, vehicles)
 }

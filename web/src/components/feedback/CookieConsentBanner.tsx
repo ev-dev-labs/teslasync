@@ -41,8 +41,6 @@ import {
   setConsent,
   subscribeConsent,
 } from '@/lib/cookieConsent'
-import { setVitalsConsentRequirement } from '@/lib/webVitalsConsent'
-import { setErrorReporterConsentRequirement } from '@/lib/errorReporter'
 
 interface CookieConsentBannerProps {
   /**
@@ -73,18 +71,14 @@ export function CookieConsentBanner({
   const requireConsent =
     testHookRequireConsent ?? Boolean(versionQuery.data?.require_cookie_consent)
 
-  // Push the deployment-wide consent flag into optional reporters so
-  // they gate their POSTs on the
-  // user's stored consent. Re-pushed on every change so a mid-session
-  // version-query resolve, or a Settings → Privacy reset that
-  // surfaces the banner again, propagates to the reporters before
-  // the next metric/error fires. No-op on installs where the flag is
-  // off — the reporters default to the legacy "always send" baseline.
-  useEffect(() => {
-    if (testHookRequireConsent !== undefined) return
-    setVitalsConsentRequirement(requireConsent)
-    setErrorReporterConsentRequirement(requireConsent)
-  }, [requireConsent, testHookRequireConsent])
+  // NOTE: this component no longer publishes the consent policy into the
+  // reporters. `<VitalsConsentPolicyGate>` (mounted at the App root, above
+  // <Routes>) is the single publisher, so the policy also resolves on the
+  // standalone routes that never mount <Layout> — /s/:token, /watch,
+  // /onboarding. Re-adding a publish here would duplicate the listener and
+  // reintroduce the loading-window fail-open this component used to have.
+  // The `useVersionInfo()` call above is shared with the gate via TanStack
+  // Query's ['version'] key, so it costs no extra request.
 
   const [consent, setConsentState] = useState<ConsentState>(() =>
     testHookConsentState ?? getConsent(),

@@ -28,6 +28,7 @@
  */
 import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
+import { assertNeverQueuedOffline } from './offlineCache'
 
 export { ApiError, getApiBase, isApiError }
 
@@ -359,6 +360,13 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
   // directRequest (via apiUrl) nor the resilientFetch fallback (which
   // also concatenates `/api/v1` directly) can double-prefix.
   const normalisedPath = normalizePath(path)
+
+  // Defence in depth for the offline contract: vehicle commands, data-repair
+  // writes and security writes must fail loudly right here rather than be
+  // attempted (and, under any future retry/persistence layer, queued) while
+  // the device has no network. `requiresLiveMode` already covers the hooks
+  // that opted in; this covers the class of path regardless of the flag.
+  assertNeverQueuedOffline(fetchOptions.method, normalisedPath)
 
   const directResponseType: 'json' | 'text' = responseType
   const cached = getCachedSudoToken()

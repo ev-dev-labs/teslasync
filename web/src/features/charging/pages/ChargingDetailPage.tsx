@@ -13,6 +13,7 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { convertTempFromSI, convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDate, formatTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtWithUnit, fmtPercent } from '@/lib/numberFormat';
 import { chartTokens } from '@/lib/tokens';
@@ -24,11 +25,11 @@ import {
 } from '@/components/ui';
 import {
   MetricBar, InlineMetric, AnimatedNumber, MetricCard, KVList,
-  LiveIndicator, DateTime,
+  LiveIndicator, DateTime, DataProvenanceBadge,
 } from '@/components/data-display';
 import { LinearGauge } from '@/components/charts';
 import {
-  Skeleton, EmptyState, QueryError, LiveStaleDataBanner,
+  Skeleton, EmptyState, QueryError, LiveStaleDataBanner, StaleRefreshWarning,
   PageHeaderSkeleton, StatGridSkeleton, ChartBlockSkeleton,
 } from '@/components/feedback';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
@@ -179,6 +180,10 @@ export default function ChargingDetailPage() {
     error: sessionError,
     refetch: refetchSession,
   } = sessionQuery;
+  /* Historical record: a failed refresh leaves the session on screen and only
+   * downgrades the trust label. `!session` (below) is the sole gate that may
+   * replace the page. */
+  const sessionDataState = useDataState(sessionQuery, { provenance: 'historical' });
   const {
     data: telemetry,
     isLoading: telemetryLoading,
@@ -371,6 +376,10 @@ export default function ChargingDetailPage() {
       }
     >
       <LiveStaleDataBanner />
+      <StaleRefreshWarning
+        state={sessionDataState}
+        label={t('charging.detail.resource', 'Charge session')}
+      />
 
       {/* ── Status chip row + back link ─────────────────────────── */}
       <FadeIn>
@@ -388,6 +397,11 @@ export default function ChargingDetailPage() {
           <Badge variant={dc ? 'warning' : 'info'} dot>
             {dc ? t('charging.detail.dc', 'DC') : t('charging.detail.ac', 'AC')}
           </Badge>
+          <DataProvenanceBadge
+            provenance={sessionDataState.provenance}
+            status={sessionDataState.status}
+            updatedAt={sessionDataState.updatedAt}
+          />
           {chargingState && (
             <Badge variant={chargingStateVariant(chargingState)} size="sm" dot>
               {t(`charging.detail.chargingState.${chargingState}`, chargingState)}

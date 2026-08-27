@@ -183,7 +183,7 @@ export function WeeklyTargetChart(
                   stroke={CHART_COLORS[2]}
                   strokeWidth={2.5}
                   dot={{ r: 3 }}
-                  connectNulls
+                  connectNulls={false}
                   hide={hiddenSeries?.isHidden('rolling') ?? false}
                 />
               </ComposedChart>

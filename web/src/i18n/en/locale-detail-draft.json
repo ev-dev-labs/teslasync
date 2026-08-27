@@ -1,0 +1,33 @@
+{
+  "draft": {
+    "restored": "Draft restored from {{when}}.",
+    "restoredItem": "{{noun}} draft restored from {{when}}.",
+    "useDraft": "Use draft",
+    "discardDraft": "Discard draft",
+    "discardConfirmTitle": "Discard your unsaved changes?",
+    "discardConfirmDescription": "This cannot be undone.",
+    "unknownTime": "a moment ago",
+    "noun": {
+      "rule": "Alert rule",
+      "automation": "Automation",
+      "settings": "Settings"
+    },
+    "recovery": {
+      "promptTitle": "Unsaved drafts restored",
+      "promptBody": "You have {{count}} unsaved drafts from a previous session.",
+      "promptBody_one": "You have {{count}} unsaved draft from a previous session.",
+      "promptBody_other": "You have {{count}} unsaved drafts from a previous session.",
+      "review": "Review",
+      "dismiss": "Dismiss",
+      "close": "Close",
+      "modalTitle": "Restore unsaved drafts",
+      "modalBody": "These drafts were saved in your browser before this session. Resume to continue editing or discard to clear them.",
+      "savedAt": "Saved {{when}}",
+      "resume": "Resume",
+      "discard": "Discard",
+      "discardAll": "Discard all",
+      "fallbackLabel": "Unsaved draft",
+      "empty": "No drafts to restore."
+    }
+  }
+}

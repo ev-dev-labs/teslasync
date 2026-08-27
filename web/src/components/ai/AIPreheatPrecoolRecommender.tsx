@@ -194,6 +194,10 @@ function InnerSection({
     url: '/ai/climate/schedule/draft',
     body,
     onEvent: noopStreamEvent,
+    // AI-01: vehicle + departure scope is part of stream identity —
+    // changing either aborts an in-flight draft and clears the
+    // previous scope's recommendation before the new scope streams in.
+    scopeKey: haveVehicle ? `${numericVehicleId}:${departBy ?? ''}` : null,
   })
 
   return (

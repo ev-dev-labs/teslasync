@@ -258,7 +258,8 @@ func TestDraftAlertCategories_HappyPath_OK(t *testing.T) {
 	vid := int64(1)
 	wd := 7
 	in := alertCategoriesDraftInput{VehicleID: &vid, WindowDays: &wd}
-	out, err := tool.Execute(context.Background(), in)
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{VehicleID: 1})
+	out, err := tool.Execute(ctx, in)
 	if err != nil {
 		t.Fatalf("Execute err = %v, want nil", err)
 	}
@@ -311,7 +312,8 @@ func TestDraftAlertCategories_DefaultWindowDays(t *testing.T) {
 		totalInWindow: 0,
 	}
 	tool := &draftAlertCategories{source: stub}
-	out, err := tool.Execute(context.Background(), alertCategoriesDraftInput{})
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{})
+	out, err := tool.Execute(ctx, alertCategoriesDraftInput{})
 	if err != nil {
 		t.Fatalf("Execute err = %v", err)
 	}
@@ -331,7 +333,8 @@ func TestDraftAlertCategories_NoData(t *testing.T) {
 		minRequired:   10,
 	}
 	tool := &draftAlertCategories{source: stub}
-	out, err := tool.Execute(context.Background(), alertCategoriesDraftInput{})
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{})
+	out, err := tool.Execute(ctx, alertCategoriesDraftInput{})
 	if err != nil {
 		t.Fatalf("Execute err = %v", err)
 	}
@@ -357,7 +360,8 @@ func TestDraftAlertCategories_HasEnoughHistoryFalse(t *testing.T) {
 		minRequired:   10,
 	}
 	tool := &draftAlertCategories{source: stub}
-	out, err := tool.Execute(context.Background(), alertCategoriesDraftInput{})
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{})
+	out, err := tool.Execute(ctx, alertCategoriesDraftInput{})
 	if err != nil {
 		t.Fatalf("Execute err = %v", err)
 	}
@@ -376,7 +380,8 @@ func TestDraftAlertCategories_LoadError(t *testing.T) {
 	t.Parallel()
 	stub := &stubInboxCategorizationSource{loadErr: errors.New("db down")}
 	tool := &draftAlertCategories{source: stub}
-	_, err := tool.Execute(context.Background(), alertCategoriesDraftInput{})
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{})
+	_, err := tool.Execute(ctx, alertCategoriesDraftInput{})
 	if err == nil || !strings.Contains(err.Error(), "db down") {
 		t.Fatalf("Execute err = %v, want wrapping db down", err)
 	}
@@ -391,6 +396,79 @@ func TestDraftAlertCategories_NilSourceErrorsAtExecute(t *testing.T) {
 	_, err := tool.Execute(context.Background(), alertCategoriesDraftInput{})
 	if err == nil || !strings.Contains(err.Error(), "no InboxCategorizationSource wired") {
 		t.Fatalf("Execute err = %v, want wiring error", err)
+	}
+}
+
+// TestDraftAlertCategories_MissingScopeRefused proves Execute
+// hard-fails when no scope has been installed on ctx (AI-06 /
+// SEC-11: the AI handler is the only sanctioned caller and ALWAYS
+// installs a scope; an absent scope means the dispatcher was
+// invoked from an unintended path, so the tool must refuse rather
+// than silently defaulting to "all vehicles").
+func TestDraftAlertCategories_MissingScopeRefused(t *testing.T) {
+	t.Parallel()
+	stub := &stubInboxCategorizationSource{counts: []CategoryCount{{Label: "battery", Count: 5}}, totalInWindow: 5}
+	tool := &draftAlertCategories{source: stub}
+	_, err := tool.Execute(context.Background(), alertCategoriesDraftInput{})
+	if err == nil || !strings.Contains(err.Error(), "no in-scope inbox window installed") {
+		t.Fatalf("Execute err = %v, want missing-scope refusal", err)
+	}
+	if len(stub.loadFilters) != 0 {
+		t.Fatalf("LoadCategoryCounts was called %d times, want 0 (refused before touching the source)", len(stub.loadFilters))
+	}
+}
+
+// TestDraftAlertCategories_RejectsCrossVehicleToolCall is the
+// negative cross-vehicle-leakage test (AI-06 / SEC-11): the AI
+// handler installs vehicle_id=7 as the in-scope window (mirroring
+// what a real request for vehicle 7's inbox would install), but
+// the LLM's tool call asks for vehicle_id=99 — e.g. because a
+// prompt-injection payload embedded in a notification title told
+// it to "categorize vehicle 99 instead". Execute MUST refuse the
+// call and MUST NOT touch the source, so vehicle 99's notification
+// data can never be read into vehicle 7's response.
+func TestDraftAlertCategories_RejectsCrossVehicleToolCall(t *testing.T) {
+	t.Parallel()
+	stub := &stubInboxCategorizationSource{
+		counts:        []CategoryCount{{Label: "battery", Count: 99, SampleRuleIDs: []int64{1}}},
+		totalInWindow: 99,
+	}
+	tool := &draftAlertCategories{source: stub}
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{VehicleID: 7})
+	otherVehicleID := int64(99)
+	_, err := tool.Execute(ctx, alertCategoriesDraftInput{VehicleID: &otherVehicleID})
+	if err == nil {
+		t.Fatal("Execute err = nil, want cross-vehicle scope refusal")
+	}
+	if !strings.Contains(err.Error(), "requested vehicle_id 99 does not match in-scope vehicle_id 7") {
+		t.Fatalf("Execute err = %v, want explicit vehicle_id mismatch message", err)
+	}
+	if len(stub.loadFilters) != 0 {
+		t.Fatalf("LoadCategoryCounts was called %d times, want 0 (refused before touching the source — vehicle 99's data must never load into vehicle 7's response)", len(stub.loadFilters))
+	}
+}
+
+// TestDraftAlertCategories_RejectsFleetScopeEscape proves the
+// inverse cross-entity leak: the handler scoped the request to
+// vehicle_id=0 (all vehicles are OUT of scope for a single-vehicle
+// call is not the case here — rather, the caller's actual request
+// carried NO vehicle_id, but the LLM tool call supplies one). A
+// hallucinated/injected vehicle_id must be refused even when the
+// installed scope is the "all vehicles" sentinel, because the
+// in-scope window the handler installed is the source of truth,
+// not whatever the model decides to send.
+func TestDraftAlertCategories_RejectsFleetScopeEscape(t *testing.T) {
+	t.Parallel()
+	stub := &stubInboxCategorizationSource{counts: []CategoryCount{{Label: "battery", Count: 5}}, totalInWindow: 5}
+	tool := &draftAlertCategories{source: stub}
+	ctx := WithScopedInboxCategorizationWindow(context.Background(), ScopedInboxCategorizationWindow{VehicleID: 0})
+	someVehicleID := int64(3)
+	_, err := tool.Execute(ctx, alertCategoriesDraftInput{VehicleID: &someVehicleID})
+	if err == nil || !strings.Contains(err.Error(), "requested vehicle_id 3 does not match in-scope vehicle_id 0") {
+		t.Fatalf("Execute err = %v, want vehicle_id mismatch refusal", err)
+	}
+	if len(stub.loadFilters) != 0 {
+		t.Fatalf("LoadCategoryCounts was called %d times, want 0", len(stub.loadFilters))
 	}
 }
 

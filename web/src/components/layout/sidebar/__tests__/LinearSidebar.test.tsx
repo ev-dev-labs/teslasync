@@ -338,3 +338,102 @@ describe('LinearSidebar — Feature Hub escape hatch', () => {
     expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
   })
 })
+
+// ─── Two-tier IA: primary hierarchy vs advanced parking spots ───────────────
+
+describe('LinearSidebar — advanced tier', () => {
+  function tieredSections(): LinearSidebarSectionInput[] {
+    return [
+      {
+        title: 'Overview',
+        tier: 'primary',
+        restricted: false,
+        items: [{ to: '/', icon: Icons.home, label: 'Dashboard' }],
+      },
+      {
+        title: 'Drives',
+        tier: 'primary',
+        restricted: false,
+        items: [{ to: '/drives', icon: Icons.drive, label: 'Drives' }],
+      },
+      {
+        title: 'Administration',
+        tier: 'advanced',
+        restricted: false,
+        items: [{ to: '/backup', icon: Icons.database, label: 'Backup' }],
+      },
+      {
+        title: 'Developer',
+        tier: 'advanced',
+        restricted: true,
+        items: [{ to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools' }],
+      },
+    ]
+  }
+
+  it('renders exactly one Advanced divider, before the first advanced group', () => {
+    renderSidebar({ sections: tieredSections(), pathname: '/' })
+
+    const dividers = screen.getAllByTestId('linear-sidebar-advanced-divider')
+    expect(dividers).toHaveLength(1)
+
+    const groups = Array.from(document.querySelectorAll('[data-nav-group]'))
+    const dividerOwner = dividers[0].closest('[data-nav-group]')
+    expect(dividerOwner?.getAttribute('data-nav-group')).toBe('Administration')
+    expect(groups.map((g) => g.getAttribute('data-nav-tier'))).toEqual([
+      'primary',
+      'primary',
+      'advanced',
+      'advanced',
+    ])
+  })
+
+  it('keeps restricted advanced destinations rendered, never deleted', () => {
+    renderSidebar({ sections: tieredSections(), pathname: '/' })
+
+    const developer = document.querySelector('[data-nav-group="Developer"]')
+    expect(developer).not.toBeNull()
+    expect(developer?.getAttribute('data-nav-restricted')).toBe('true')
+    // Header is present (collapsed by default) so the group is discoverable.
+    expect(
+      within(developer as HTMLElement).getByRole('button', { name: /Developer/ }),
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('still expands a restricted group when it owns the active route', () => {
+    renderSidebar({
+      sections: tieredSections(),
+      pathname: '/dev-tools',
+      activeSectionTitle: 'Developer',
+    })
+
+    expect(screen.getByRole('link', { name: /Developer Tools/ })).toBeInTheDocument()
+  })
+
+  it('omits the divider entirely when no advanced group is present', () => {
+    renderSidebar({
+      sections: tieredSections().filter((s) => s.tier === 'primary'),
+      pathname: '/',
+    })
+    expect(screen.queryByTestId('linear-sidebar-advanced-divider')).toBeNull()
+  })
+
+  it('falls back to the blueprint tier when the caller omits it', () => {
+    renderSidebar({
+      sections: [
+        { title: 'Overview', items: [{ to: '/', icon: Icons.home, label: 'Dashboard' }] },
+        {
+          title: 'Settings & Account',
+          items: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
+        },
+      ],
+      pathname: '/',
+    })
+    const groups = Array.from(document.querySelectorAll('[data-nav-group]'))
+    expect(groups.map((g) => g.getAttribute('data-nav-tier'))).toEqual([
+      'primary',
+      'advanced',
+    ])
+    expect(screen.getAllByTestId('linear-sidebar-advanced-divider')).toHaveLength(1)
+  })
+})

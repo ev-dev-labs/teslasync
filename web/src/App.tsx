@@ -4,6 +4,7 @@ import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { VitalsConsentPolicyGate } from './components/feedback/VitalsConsentPolicyGate'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
 import { DensityApplier } from '@/components/ui/DensityApplier'
@@ -485,6 +486,11 @@ export default function App() {
   return (
     <>
       <OnboardingGate />
+      {/* Publishes the live `require_cookie_consent` policy into the optional
+          reporters. Mounted ABOVE <Routes> so it also covers the standalone
+          routes that never mount <Layout> (/s/:token, /watch, /onboarding).
+          Until it resolves, RUM holds its queue and transmits nothing. */}
+      <VitalsConsentPolicyGate />
       <ScrollRestoration />
       <DensityApplier />
       {/* Phase-46 / Prompt 21 — announces the new page title to screen

@@ -1,0 +1,43 @@
+{
+  "table": {
+    "selection": {
+      "selectAll": "Select all rows",
+      "deselectAll": "Deselect all rows",
+      "selectRow": "Select row",
+      "deselectRow": "Deselect row"
+    },
+    "columns": {
+      "button": "Columns",
+      "menu": "Show or hide columns",
+      "menuReorder": "Reorder or hide columns",
+      "heading": "Visible columns",
+      "headingReorder": "Columns",
+      "showAll": "Show all",
+      "reset": "Reset",
+      "toggleColumn": "Show or hide {{col}}",
+      "moveUp": "Move {{col}} up",
+      "moveDown": "Move {{col}} down",
+      "resizeLabel": "Resize column {{col}}",
+      "empty": "No columns to configure"
+    },
+    "expand": {
+      "expand": "Expand row",
+      "collapse": "Collapse row",
+      "column": "Expand row"
+    },
+    "bulkActions": {
+      "region": "Bulk actions",
+      "selected": "{{count}} selected",
+      "clear": "Clear selection",
+      "exportCsv": "Export CSV",
+      "more": "More…"
+    },
+    "export": {
+      "csv": "Download CSV",
+      "csvAria": "Download visible rows as CSV",
+      "loading": "Preparing CSV…",
+      "csvButton": "Download CSV",
+      "failed": "Could not prepare the table export."
+    }
+  }
+}

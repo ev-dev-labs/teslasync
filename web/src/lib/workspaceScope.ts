@@ -11,7 +11,14 @@ export type WorkspaceScopedComponent = {
   [WORKSPACE_SCOPED_CONTROL]?: WorkspaceScopedControlKind;
 };
 
-const RANGE_ENABLED_PATHS = new Set([
+/**
+ * Routes that OWN the global analysis window.
+ *
+ * Exported so the contract can be drift-tested against the generated route
+ * registry: a range-owning path that no longer exists means the shell shows
+ * a control for a page that cannot consume it.
+ */
+export const RANGE_ENABLED_PATHS: ReadonlySet<string> = new Set([
   '/activity',
   '/analytics',
   '/analytics/carbon',
@@ -64,7 +71,7 @@ const RANGE_ENABLED_PATHS = new Set([
   '/vehicle-systems/software',
 ]);
 
-const VEHICLE_DISABLED_PREFIXES = [
+export const VEHICLE_DISABLED_PREFIXES = [
   '/account',
   '/admin',
   '/automations',
@@ -77,7 +84,7 @@ const VEHICLE_DISABLED_PREFIXES = [
   '/settings',
 ] as const;
 
-const VEHICLE_DISABLED_PATHS = new Set([
+export const VEHICLE_DISABLED_PATHS: ReadonlySet<string> = new Set([
   '/action-center',
   '/api-keys',
   '/api-logs',

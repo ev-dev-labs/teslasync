@@ -10,6 +10,7 @@ export { DatePresetChips, type DatePresetChipsProps, type DatePresetSelection } 
 export { DateRangeFilter } from './DateRangeFilter';
 export { RangePicker, type RangePickerProps, type RangePickerValue } from './RangePicker';
 export { FilterBar, type FilterBarProps } from './FilterBar';
+export { FilterSheet, type FilterSheetProps } from './FilterSheet';
 export { FormField, type FormFieldProps } from './FormField';
 export { FormSection, type FormSectionProps } from './FormSection';
 export {

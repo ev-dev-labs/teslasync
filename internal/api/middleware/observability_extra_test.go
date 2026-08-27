@@ -28,10 +28,9 @@ func TestSecurityHeadersPresence(t *testing.T) {
 	}{
 		{"X-Content-Type-Options", "nosniff"},
 		{"X-Frame-Options", "DENY"},
-		{"X-XSS-Protection", "1; mode=block"},
-		{"Strict-Transport-Security", "max-age=31536000; includeSubDomains"},
+		{"X-XSS-Protection", "0"},
 		{"Referrer-Policy", "strict-origin-when-cross-origin"},
-		{"Permissions-Policy", "camera=(), microphone=(), geolocation=()"},
+		{"Permissions-Policy", "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()"},
 	}
 
 	for _, h := range headers {
@@ -54,8 +53,8 @@ func TestSecurityHeadersCSPPresent(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	csp := w.Header().Get("Content-Security-Policy")
-	if csp == "" {
-		t.Error("Content-Security-Policy should not be empty")
+	if csp != apiContentSecurityPolicy {
+		t.Errorf("Content-Security-Policy = %q, want %q", csp, apiContentSecurityPolicy)
 	}
 }
 
@@ -122,7 +121,7 @@ func TestTracingAddsMatchedRoute(t *testing.T) {
 
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/widgets/42", nil)
 	response := httptest.NewRecorder()
-	router.ServeHTTP(response, request)
+	WithMatchedRoute(router).ServeHTTP(response, request)
 
 	spans := recorder.Ended()
 	if len(spans) != 1 {

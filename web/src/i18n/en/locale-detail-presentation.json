@@ -1,0 +1,22 @@
+{
+  "presentation": {
+    "exit": "Exit presentation mode",
+    "exitShort": "Exit",
+    "report": {
+      "active": "Report view",
+      "description": "Operational report generated from the active TeslaSync view.",
+      "generated": "Generated",
+      "scope": "Scope",
+      "open": "Open report view",
+      "help": "Clean navigation-free layout for printing and review.",
+      "copyLink": "Copy report link",
+      "copyHelp": "Preserves the current route and filter query.",
+      "linkCopied": "Report link copied",
+      "linkError": "Could not copy report link"
+    },
+    "kiosk": {
+      "open": "Open kiosk view",
+      "help": "Fullscreen monitoring with idle cursor and screen dimming."
+    }
+  }
+}

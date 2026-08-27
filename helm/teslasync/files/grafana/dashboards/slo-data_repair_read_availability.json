@@ -1,7 +1,7 @@
 {
   "uid": "slo-data_repair_read_availability",
   "title": "SLO: data_repair_read_availability",
-  "description": "Data-repair inventory and evidence diagnosis reads must return without server errors.",
+  "description": "Data-repair inventory, evidence diagnosis, durable case reads, and quarantine-ledger reads must return without server errors.",
   "tags": [
     "slo",
     "owner:platform",

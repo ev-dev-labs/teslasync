@@ -1,0 +1,99 @@
+{
+  "dashcam": {
+    "catalog": {
+      "delete": "Delete clip",
+      "emptyMessage": "Import Sentry/Dashcam clips above to build a local, searchable catalog.",
+      "emptyTitle": "No clips imported yet",
+      "eventCount": "{{count}} event candidate(s)",
+      "listAria": "Imported clips",
+      "noMatchMessage": "Try clearing the search text or resetting a filter chip.",
+      "noMatchTitle": "No clips match these filters"
+    },
+    "detail": {
+      "emptyMessage": "Choose a clip from the catalog to play it back, redact it, review event evidence, or reconstruct the incident timeline.",
+      "emptyTitle": "No clip selected"
+    },
+    "events": {
+      "atSeconds": "t={{seconds}}s",
+      "emptyMessage": "Import metadata (event.json / folder), run local motion analysis, or connect telemetry in the Reconstruction tab to derive event candidates.",
+      "emptyTitle": "No event candidates yet",
+      "title": "Event evidence",
+      "wholeClip": "whole clip"
+    },
+    "export": {
+      "disclaimer": "Exports are generated entirely in this browser. The still-frame export is a single redacted image, not a redacted video file.",
+      "manifest": "Download incident manifest (JSON)",
+      "still": "Export redacted still (PNG)",
+      "title": "Local export"
+    },
+    "filters": {
+      "all": "All",
+      "ariaLabel": "Clip filters",
+      "camera": "Camera",
+      "clear": "Clear filters",
+      "eventType": "Event type",
+      "searchPlaceholder": "Search filename or notes…",
+      "source": "Source folder"
+    },
+    "import": {
+      "cta": "Import {{count}} clip(s)",
+      "description": "Clips never leave this browser tab. Files are parsed and stored locally in IndexedDB, along with any redaction masks and notes you add.",
+      "selected": "{{count}} file(s) selected",
+      "sidecarLabel": "event.json (optional)",
+      "title": "Import clips from disk",
+      "videoLabel": "Video file(s)"
+    },
+    "page": {
+      "noPersistence": "Local storage is not persistent in this browser ({{reason}}) — imported clips will be lost when this tab closes.",
+      "subtitle": "Local-only clip catalog, privacy redaction, and telemetry-synchronized incident reconstruction. Nothing leaves this browser.",
+      "title": "Dashcam & Sentry Intelligence",
+      "unknownReason": "unknown reason"
+    },
+    "player": {
+      "motionNotRun": "Motion score not yet computed.",
+      "motionScore": "Sampled-frame pixel-difference score: {{score}} ({{pairs}} frame pairs)",
+      "motionUnavailable": "Motion analysis unavailable: {{reason}}",
+      "pause": "Pause",
+      "play": "Play",
+      "restart": "Restart",
+      "runMotion": "Run local motion analysis"
+    },
+    "reconstruction": {
+      "description": "Filenames carry no timezone. Adjust the assumed camera clock offset below if the reconstruction looks shifted.",
+      "firstLast": "First: {{first}} at t={{firstAt}}s · Last: {{last}} at t={{lastAt}}s",
+      "incidentSequence": "Incident sequence (statistical)",
+      "lookbackNote": "Requesting the last {{hours}}h of telemetry history from now to reach this clip. Older signal data may already have been pruned server-side.",
+      "noIncidents": "No statistically significant telemetry changes were detected in this window.",
+      "noTimestamp": "This clip's filename did not include a parseable capture time, so it cannot be aligned to telemetry history.",
+      "noVehicle": "Select a vehicle above to align this clip with telemetry history.",
+      "offsetLabel": "Assumed camera clock offset from UTC",
+      "offsetValue": "{{n}} min",
+      "outOfRange": "This clip is old enough that server-side telemetry retention may not reach back this far.",
+      "pointCount": "{{count}} sample(s)",
+      "signalPickerLabel": "Telemetry signals to align",
+      "signalPickerPlaceholder": "Search signals…",
+      "title": "Telemetry-synchronized reconstruction",
+      "window": "Window: {{pre}} pre-roll → clip → {{post}} post-roll"
+    },
+    "redaction": {
+      "add": "Add region",
+      "defaultLabel": "Unlabeled region",
+      "description": "Rectangles are stored as normalized coordinates and rendered over playback. Export produces a redacted still frame or a manifest — never a modified video file.",
+      "empty": "No redaction regions defined yet.",
+      "height": "Height",
+      "labelPlaceholder": "Label",
+      "overlayAria": "Privacy redaction masks",
+      "remove": "Remove region",
+      "title": "Privacy redaction masks",
+      "width": "Width"
+    },
+    "tabs": {
+      "ariaLabel": "Clip detail sections",
+      "events": "Events",
+      "export": "Export",
+      "player": "Player",
+      "reconstruction": "Reconstruction",
+      "redaction": "Redaction"
+    }
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "feedback": {
+    "title": "Report a bug / Send feedback",
+    "openShort": "Report bug",
+    "openAria": "Open feedback / bug report form",
+    "submitError": "Failed to submit feedback. Please try again.",
+    "category": {
+      "bug": "Bug report",
+      "feature": "Feature request",
+      "other": "Other / question"
+    },
+    "form": {
+      "category": {
+        "label": "What kind of feedback?"
+      },
+      "title": {
+        "label": "Title",
+        "placeholder": "Short summary (e.g. \"Battery widget shows NaN\")"
+      },
+      "body": {
+        "label": "Details",
+        "placeholder": "What happened? What did you expect to happen? Steps to reproduce help a lot."
+      },
+      "includeErrors": "Attach recent errors ({{count}})",
+      "includeErrorsHint": "Includes the most recent uncaught errors from this session. Helps reproduce the bug.",
+      "includeConsole": "Attach recent console messages",
+      "includeConsoleHint": "Privacy: console output may include URLs and data you saw. Off by default.",
+      "submit": "Send feedback",
+      "submitting": "Submitting…"
+    },
+    "context": {
+      "title": "Auto-attached context",
+      "page": "Page",
+      "appVersion": "App version",
+      "userAgent": "Browser",
+      "unknown": "unknown"
+    },
+    "queue": {
+      "title": "Feedback queue",
+      "empty": "No feedback yet",
+      "emptyMessage": "User-submitted bug reports and feature requests will appear here.",
+      "openIssue": "Open issue",
+      "pageOf": "Page {{page}} of {{total}} ({{count}} entries)",
+      "bridgeDisabled": "GitHub Issues bridge is not configured on this server (set TESLASYNC_GITHUB_REPO + TESLASYNC_GITHUB_TOKEN to enable forwarding).",
+      "filter": {
+        "status": "Status",
+        "category": "Category",
+        "allStatuses": "All statuses",
+        "allCategories": "All categories"
+      },
+      "col": {
+        "created": "Created",
+        "category": "Category",
+        "title": "Title",
+        "pageRoute": "Page",
+        "status": "Status",
+        "reporter": "Reporter",
+        "github": "GitHub"
+      },
+      "status": {
+        "new": "New",
+        "triaged": "Triaged",
+        "closed": "Closed"
+      },
+      "expand": {
+        "body": "Report body",
+        "appVersion": "App version",
+        "userAgent": "User agent",
+        "submitter": "Submitter",
+        "userEmail": "Email",
+        "recentErrors": "Recent frontend errors",
+        "consoleTail": "Console tail"
+      },
+      "action": {
+        "changeStatus": "Status",
+        "githubUrl": "GitHub issue URL",
+        "saveUrl": "Save URL",
+        "forward": "Forward to GitHub"
+      },
+      "bulk": {
+        "triage": "Mark triaged",
+        "close": "Close selected",
+        "reopen": "Reopen selected"
+      },
+      "maskedEmail": "Reporter email, click to reveal"
+    }
+  }
+}

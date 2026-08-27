@@ -58,8 +58,9 @@ const (
 )
 
 // redactKeyPattern matches header names, query parameter names and JSON keys
-// that may carry secret material; matching values are replaced with REDACTED.
-var redactKeyPattern = regexp.MustCompile(`(?i)token|key|secret|password|cookie`)
+// that may carry credentials or private vehicle/identity data; matching values
+// are replaced with REDACTED before optional diagnostic body capture.
+var redactKeyPattern = regexp.MustCompile(`(?i)(?:^|[_-])(?:access[_-]?token|access[_-]?key|account[_-]?key|api[_-]?key|auth|authorization|cookie|email|key|keys|latitude|longitude|location|p256dh|password|private[_-]?key|refresh[_-]?token|secret|signing[_-]?key|subject|token|user[_-]?key|vin)(?:$|[_-])`)
 
 // opaqueVehicleManagementPathPattern identifies pricing and state-changing
 // payer requests whose undocumented payloads and responses must never be

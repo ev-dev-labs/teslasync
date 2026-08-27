@@ -512,6 +512,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// into this tracker via apperror.SetTracker; see internal/api/apperror.
 	errorTracker := NewErrorTracker(200)
 	apperror.SetTracker(errorTracker)
+	r.Use(apimw.CapturePeerAddress) // Must precede RealIP; rate limits use the transport peer, not XFF.
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(apimw.Tracing)
@@ -546,7 +547,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// with the Fetch spec. Set CORS_ORIGINS env var for production.
 	corsOrigins := []string{"*"}
 	if cfg.CORSOrigins != "" {
-		corsOrigins = []string{cfg.CORSOrigins}
+		corsOrigins = make([]string, 0, len(strings.Split(cfg.CORSOrigins, ",")))
+		for _, origin := range strings.Split(cfg.CORSOrigins, ",") {
+			if origin = strings.TrimSpace(origin); origin != "" {
+				corsOrigins = append(corsOrigins, origin)
+			}
+		}
 	}
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: corsOrigins,
@@ -2972,6 +2978,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
 
+		// All authenticated mutations prove browser same-origin intent and are
+		// bounded by a shared per-client backstop. Public browser telemetry is
+		// mounted outside this group so anonymous ingestion remains unaffected;
+		// credential and destructive routes retain their stricter local limits.
+		r.Use(apimw.CSRFProtectionWithOptions(apimw.CSRFOptions{
+			AllowedOrigins:       apimw.ParseAllowedOrigins(cfg.CORSOrigins),
+			AllowLoopbackOrigins: cfg.Auth.ForwardAuthHeader == "",
+		}))
+		r.Use(apimw.NewWriteRateLimiter(apimw.DefaultWriteLimit, time.Minute, cfg.Auth.ForwardAuthHeader).Middleware)
+
 		// Subject recorder. MUST run AFTER
 		// ForwardAuthMiddleware (so the principal header is the
 		// authoritative one for this request) and BEFORE both the
@@ -4790,7 +4806,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	}
 
-	return r
+	return apimw.WithMatchedRoute(r)
 }
 
 // spaFallback returns an http.Handler that serves static files from dir

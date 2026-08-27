@@ -30,7 +30,32 @@ const (
 	webErrorsRequestBodyLimit = 32 * 1024 // hard cap on the POST body
 	webErrorSummaryWindow     = time.Hour
 	webErrorSummaryTopN       = 3
+
+	// maxTrackedErrorRoutes caps distinct route templates on THIS surface.
+	// Sized like the web-vitals cap: the SPA has well under this many real
+	// routes, and the cap exists so a client POSTing synthetic paths cannot
+	// grow the series count without bound.
+	maxTrackedErrorRoutes = 80
+	// maxNewErrorRoutesPerRequest caps how many previously-unseen templates a
+	// single POST may introduce. A web-error report carries exactly one route,
+	// so 1 is the honest budget; anything above it is a scraper.
+	maxNewErrorRoutesPerRequest = 1
 )
+
+// routeAdmitter bounds the `{route}` label on this surface.
+//
+// Deliberately its OWN registry, not the web-vitals one: sharing would let a
+// burst of junk on `/api/v1/web-errors` consume the cardinality budget that
+// `/api/v1/web-vitals` needs for its real routes. The normalisation rules and
+// caps are identical (both go through `apivitals.NormalizeRoute`), so the two
+// surfaces always produce the SAME template for the same input — only the
+// accounting is separate. Overflow is counted under
+// `teslasync_frontend_label_overflow_total{label="weberrors_route*"}` so the
+// split is observable.
+//
+// Per-IP abuse is bounded independently by the route-level `httprate` limiter
+// in internal/api/router.go (50 reports/minute).
+var routeAdmitter = apivitals.NewRouteAdmitter("weberrors", maxTrackedErrorRoutes, maxNewErrorRoutesPerRequest)
 
 // allowedWebErrorNames keeps the {name} label cardinality bounded.
 // Anything outside this set is bucketed as "Other" so a malicious or
@@ -124,7 +149,10 @@ func (h *Handler) Ingest(w http.ResponseWriter, r *http.Request) {
 	}
 
 	name := normalizeWebErrorName(rep.Name)
-	route := apivitals.NormalizeRoute(rep.Route)
+	// One admission batch per request: the route is normalised by the SHARED
+	// normaliser (identical template to web-vitals) and then folded onto this
+	// surface's own bounded label set.
+	route := routeAdmitter.NewBatch().Admit(rep.Route)
 	message := truncateWebErrorString(rep.Message, maxWebErrorMessageLen)
 	stack := truncateWebErrorString(rep.Stack, maxWebErrorStackLen)
 	ua := truncateWebErrorString(rep.UserAgent, maxWebErrorUserAgentLen)

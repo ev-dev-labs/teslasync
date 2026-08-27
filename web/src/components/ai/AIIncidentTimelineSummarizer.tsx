@@ -126,7 +126,16 @@ function InnerSection({ incidentId }: InnerSectionProps) {
     ? `/ai/system/incidents/${numericIncidentId}/summarize`
     : '/ai/system/incidents/0/summarize'
 
-  const stream = useAiStream({ url, body, onEvent: noop })
+  const stream = useAiStream({
+    url,
+    body,
+    onEvent: noop,
+    // AI-01: incident scope is part of stream identity — switching
+    // the in-view incident aborts an in-flight summary and clears
+    // the previous incident's narrative before the new scope
+    // streams in.
+    scopeKey: haveIncident ? numericIncidentId : null,
+  })
 
   return (
     <AIFeatureCard

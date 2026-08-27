@@ -1,0 +1,12 @@
+{
+  "pwa": {
+    "newVersion": "New version available",
+    "reloadingIn": "Reloading in {{seconds}}s...",
+    "reloadNow": "Reload Now",
+    "later": "Later",
+    "offline": {
+      "title": "You're offline",
+      "banner": "Showing cached data. Operational changes stay disabled until you reconnect."
+    }
+  }
+}

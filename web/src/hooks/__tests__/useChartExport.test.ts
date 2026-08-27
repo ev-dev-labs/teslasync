@@ -114,6 +114,27 @@ describe('useChartExport — exportPNG', () => {
     expect(clicked[0].href).toContain('data:image/png;base64,');
   });
 
+  it('captures the active themed surface and omits marked toolbar controls', async () => {
+    const { result } = renderHook(() => useChartExport('themed'));
+    const chart = attachChartRef(result.current.chartRef);
+    chart.style.backgroundColor = 'rgb(18, 52, 86)';
+    const ignored = document.createElement('button');
+    ignored.setAttribute('data-html2canvas-ignore', 'true');
+    chart.appendChild(ignored);
+
+    await act(async () => {
+      await result.current.exportPNG();
+    });
+
+    const [, options] = html2canvasMock.mock.calls[0] as [
+      HTMLElement,
+      { backgroundColor: string; ignoreElements: (element: Element) => boolean },
+    ];
+    expect(options.backgroundColor).toBe('rgb(18, 52, 86)');
+    expect(options.ignoreElements(ignored)).toBe(true);
+    expect(options.ignoreElements(chart)).toBe(false);
+  });
+
   it('does nothing when chartRef is null', async () => {
     const { result } = renderHook(() => useChartExport('x'));
     await act(async () => {
@@ -154,6 +175,7 @@ describe('useChartExport — exportSVG', () => {
     expect(text).toContain('<?xml version="1.0"');
     expect(text).toContain('xmlns="http://www.w3.org/2000/svg"');
     expect(text).toContain('<rect');
+    expect(text).toContain('background-color: rgb(10, 10, 15)');
   });
 
   it('quietly bails out when there is no child <svg>', async () => {

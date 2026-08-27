@@ -1,0 +1,31 @@
+{
+  "operationalMode": {
+    "live": {
+      "label": "Live",
+      "shortLabel": "Live",
+      "description": "Current data with live actions available."
+    },
+    "cached": {
+      "label": "Cached",
+      "shortLabel": "Cached",
+      "description": "The connection is offline. Retained data remains available, but it may be stale.",
+      "writeBlocked": "Reconnect before making operational changes."
+    },
+    "asOf": {
+      "label": "As of {{when}}",
+      "shortLabel": "As of",
+      "description": "Historical state reconstructed at {{when}}. Operational changes are disabled.",
+      "writeBlocked": "Return to live mode before making operational changes."
+    },
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    },
+    "commandsDisabled": {
+      "title": "Vehicle commands are read-only"
+    },
+    "actionCenterDisabled": {
+      "title": "Inbox actions are read-only"
+    }
+  }
+}

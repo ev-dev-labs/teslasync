@@ -1,0 +1,12 @@
+{
+  "lightbox": {
+    "counter": "{{current}} / {{total}}",
+    "close": "Close image viewer",
+    "previous": "Previous image",
+    "next": "Next image",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomReset": "Reset zoom",
+    "zoomPercent": "{{value}}%"
+  }
+}

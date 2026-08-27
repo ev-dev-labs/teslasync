@@ -86,7 +86,9 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY started_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	// ID is a deterministic tie-breaker for sessions with the same
+	// telemetry timestamp, keeping offset pagination stable between requests.
+	query += fmt.Sprintf(" ORDER BY started_at DESC, id DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -344,20 +346,41 @@ func (r *ChargingRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]in
 }
 
 func (r *ChargingRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
-	if len(ids) == 0 {
-		return 0, nil
+	deleted, err := r.BulkDeleteReturning(ctx, ids)
+	if err != nil {
+		return 0, err
 	}
-	var deleted int64
+	return int64(len(deleted)), nil
+}
+
+// BulkDeleteReturning removes sessions in a single transaction and returns
+// the IDs that actually changed. This closes the preflight/delete race for
+// callers that need a truthful partial-result response.
+func (r *ChargingRepo) BulkDeleteReturning(ctx context.Context, ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return []int64{}, nil
+	}
+	deleted := make([]int64, 0, len(ids))
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM charging_sessions WHERE id = ANY($1)`, ids)
+		rows, err := tx.Query(ctx, `DELETE FROM charging_sessions WHERE id = ANY($1) RETURNING id`, ids)
 		if err != nil {
-			return err
+			return fmt.Errorf("delete charging sessions: %w", err)
 		}
-		deleted = tag.RowsAffected()
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("scan deleted charging session: %w", err)
+			}
+			deleted = append(deleted, id)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("iterate deleted charging sessions: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("bulk delete charging sessions: %w", err)
+		return nil, fmt.Errorf("bulk delete charging sessions: %w", err)
 	}
 	return deleted, nil
 }
