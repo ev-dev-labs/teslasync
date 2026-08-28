@@ -50,6 +50,7 @@ func TestLoad_DatabaseDefaults(t *testing.T) {
 func TestLoad_EnvOverride(t *testing.T) {
 	t.Setenv("TESLASYNC_PORT", "8080")
 	t.Setenv("TESLASYNC_LOG_LEVEL", "debug")
+	t.Setenv("SYNTHETIC_JOURNEY_BASE_URL", "http://teslasync-api:8080")
 
 	cfg, err := Load()
 	if err != nil {
@@ -61,6 +62,9 @@ func TestLoad_EnvOverride(t *testing.T) {
 	}
 	if cfg.LogLevel != "debug" {
 		t.Errorf("expected log level 'debug', got '%s'", cfg.LogLevel)
+	}
+	if cfg.Synthetic.JourneyBaseURL != "http://teslasync-api:8080" {
+		t.Errorf("expected synthetic journey base URL override, got %q", cfg.Synthetic.JourneyBaseURL)
 	}
 }
 

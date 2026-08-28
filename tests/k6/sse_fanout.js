@@ -12,16 +12,17 @@
 //   k6 run -e BASE_URL=http://localhost:8080 -e CONFIRM=RUN \
 //          -e SUBSCRIBERS=500 tests/k6/sse_fanout.js
 //
-// k6 has no native EventSource client; a plain GET with
-// Accept: text/event-stream and a response timeout equal to the hold
-// duration reproduces the same server-side connection lifecycle
-// (one long-lived goroutine + one hub channel per client).
-import http from 'k6/http';
-import { check } from 'k6';
+// Core k6 HTTP buffers response bodies and cannot model SSE. The
+// community xk6-sse extension keeps a real streaming connection open
+// for each VU. CI builds the extension-enabled binary at pinned versions.
+import sse from 'k6/x/sse';
+import { check, sleep } from 'k6';
 import { Trend, Rate, Counter } from 'k6/metrics';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
 const CONFIRM = __ENV.CONFIRM || '';
+const TARGET_ENV = __ENV.TARGET_ENV || 'local';
+const AUTH_TOKEN = __ENV.AUTH_TOKEN || '';
 const AUTH_HEADER = __ENV.AUTH_HEADER || 'X-Forwarded-User';
 const AUTH_VALUE = __ENV.AUTH_VALUE || '';
 const SUBSCRIBERS = parseInt(__ENV.SUBSCRIBERS || '500', 10);
@@ -30,7 +31,9 @@ const RAMP = __ENV.RAMP || '30s';
 
 const connectLatency = new Trend('sse_connect_ms', true);
 const streamBytes = new Counter('sse_stream_bytes');
+const vehicleUpdates = new Counter('sse_vehicle_updates');
 const connectFailures = new Rate('sse_connect_failures');
+const allowedEnvironments = new Set(['local', 'ephemeral-ci', 'staging']);
 
 export const options = {
   scenarios: {
@@ -51,6 +54,8 @@ export const options = {
     // shedding clients — see ops/capacity/profiles.yaml thresholds.
     sse_connect_failures: ['rate<0.01'],
     sse_connect_ms: ['p(95)<1000'],
+    sse_stream_bytes: ['count>0'],
+    sse_vehicle_updates: ['count>0'],
   },
 };
 
@@ -60,40 +65,61 @@ export function setup() {
       'refusing to generate load: set CONFIRM=RUN (see ops/capacity/profiles.yaml safety.require_confirmation)'
     );
   }
-  return { startedAt: Date.now() };
+  if (!allowedEnvironments.has(TARGET_ENV) || /prod/i.test(TARGET_ENV)) {
+    throw new Error(`refusing disallowed target environment: ${TARGET_ENV}`);
+  }
+  if (!Number.isInteger(SUBSCRIBERS) || SUBSCRIBERS < 1 || SUBSCRIBERS > 2000) {
+    throw new Error(`SUBSCRIBERS must be an integer from 1 through 2000, got ${SUBSCRIBERS}`);
+  }
 }
 
 function headers() {
   const h = { Accept: 'text/event-stream', 'Cache-Control': 'no-cache' };
+  if (AUTH_TOKEN) h.Authorization = 'Bearer ' + AUTH_TOKEN;
   if (AUTH_VALUE) h[AUTH_HEADER] = AUTH_VALUE;
   return h;
 }
 
 export default function () {
   const started = Date.now();
-  const res = http.get(`${BASE_URL}/api/v1/events`, {
+  let connected = false;
+  const response = sse.open(`${BASE_URL}/api/v1/events`, {
+    method: 'GET',
     headers: headers(),
-    // k6 reads the stream until the timeout, which is exactly the
-    // long-lived-connection behaviour we are trying to measure.
-    timeout: '60s',
     tags: { endpoint: 'sse' },
+  }, (client) => {
+    client.on('event', (event) => {
+      if (event.name === 'connected' && !connected) {
+        connected = true;
+        connectLatency.add(Date.now() - started);
+        connectFailures.add(false);
+      }
+      if (event.name === 'vehicle_update') {
+        vehicleUpdates.add(1);
+        if (event.data) streamBytes.add(String(event.data).length);
+      }
+    });
+    client.on('error', () => {
+      client.close();
+    });
   });
-  connectLatency.add(Date.now() - started);
 
-  const ok = check(res, {
-    'sse status acceptable': (r) => r.status === 200 || r.status === 401,
-    'sse content-type': (r) =>
-      r.status !== 200 ||
-      (r.headers['Content-Type'] || '').includes('text/event-stream'),
-  });
-  connectFailures.add(!ok);
-  if (res.body) streamBytes.add(res.body.length);
+  if (!connected) {
+    connectFailures.add(true);
+    check(response, {
+      'sse handshake returns 200': (r) => r !== null && r.status === 200,
+      'sse handshake returns event stream': (r) =>
+        r !== null && (r.headers['Content-Type'] || '').includes('text/event-stream'),
+    });
+  }
+  sleep(0.1);
 }
 
 export function handleSummary(data) {
   const summary = {
     profile: 'sse-fanout',
     base_url: BASE_URL,
+    target_environment: TARGET_ENV,
     subscribers: SUBSCRIBERS,
     connect_p95_ms: data.metrics.sse_connect_ms
       ? data.metrics.sse_connect_ms.values['p(95)']
@@ -101,6 +127,8 @@ export function handleSummary(data) {
     connect_failure_rate: data.metrics.sse_connect_failures
       ? data.metrics.sse_connect_failures.values.rate
       : null,
+    stream_bytes: data.metrics.sse_stream_bytes?.values.count ?? 0,
+    vehicle_updates: data.metrics.sse_vehicle_updates?.values.count ?? 0,
   };
   return {
     stdout: JSON.stringify(summary, null, 2),

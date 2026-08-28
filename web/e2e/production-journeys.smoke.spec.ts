@@ -14,12 +14,16 @@ import {
 
 const JOURNEYS = [
   {
-    name: 'fleet health review',
-    routes: ['/', '/vehicles', '/battery'],
+    // Critical operator chain: dashboard/fleet state -> vehicle inspect
+    // (roster) -> battery health -> charging history. Mirrors the
+    // backend's OperatorChainJourneySteps synthetic probe
+    // (internal/synthetic/probe_journey.go) at the UI layer.
+    name: 'critical operator chain',
+    routes: ['/', '/vehicles', '/battery', '/charging'],
   },
   {
     name: 'operational evidence review',
-    routes: ['/charging', '/drives', '/data-repair'],
+    routes: ['/drives', '/data-repair'],
   },
 ] as const;
 

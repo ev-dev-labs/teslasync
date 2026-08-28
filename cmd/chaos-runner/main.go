@@ -16,6 +16,9 @@
 //	API_BASE_URL     (default http://localhost:8080)  — used by recovery probe
 //	CHAOS_SCENARIOS  (default "all") — comma-separated list of scenario names
 //	                                    to run; "all" runs DefaultScenarios()
+//	CHAOS_EXPECT_FLEET_BATTERY_LEVEL (optional 0..100) — require the fleet
+//	                                    recovery response to carry this live
+//	                                    Redis-backed battery observation
 //
 // Output: one JSON-shaped result line per scenario to stdout, suitable
 // for parsing by a CI step or log shipper.
@@ -29,6 +32,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -63,7 +67,30 @@ func main() {
 	}
 
 	probe := makeAPIProbe(apiURL)
-	scenarios := selectScenarios(want, probe)
+	fleetProbeCfg := defaultProbeConfig()
+	if raw := strings.TrimSpace(os.Getenv("CHAOS_EXPECT_FLEET_BATTERY_LEVEL")); raw != "" {
+		expected, err := strconv.Atoi(raw)
+		if err != nil || expected < 0 || expected > 100 {
+			log.Fatal().
+				Str("value", raw).
+				Msg("CHAOS_EXPECT_FLEET_BATTERY_LEVEL must be an integer from 0 through 100")
+		}
+		fleetProbeCfg.expectedFleetBatteryLevel = &expected
+	}
+	fleetProbe := makeFleetAwareProbeWithConfig(apiURL, fleetProbeCfg)
+	// Redis and Postgres are on the read path for the canonical
+	// fleet-state batch endpoint and per-vehicle battery reports —
+	// their chaos scenarios verify those endpoints actually recovered,
+	// not only that /healthz came back. Other scenarios (e.g. the MQTT
+	// blackhole, which is an ingest-path fault) keep the /healthz-only
+	// probe.
+	verifyFor := func(s chaos.Scenario) func(context.Context) error {
+		if s.Proxy == "redis" || s.Proxy == "postgres" {
+			return fleetProbe
+		}
+		return probe
+	}
+	scenarios := selectScenarios(want, verifyFor)
 
 	failed := run(ctx, client, scenarios, os.Stdout)
 
@@ -117,6 +144,10 @@ type probeConfig struct {
 	deadline time.Duration
 	// interval is how long to wait between recovery attempts.
 	interval time.Duration
+	// expectedFleetBatteryLevel, when set, proves the recovered response
+	// came through the seeded live Redis path rather than a success-shaped
+	// empty or durable-only fallback.
+	expectedFleetBatteryLevel *int
 }
 
 // defaultProbeConfig is the production timing: a 5s per-request timeout,
@@ -143,43 +174,93 @@ func makeAPIProbe(apiURL string) func(context.Context) error {
 func makeAPIProbeWithConfig(apiURL string, cfg probeConfig) func(context.Context) error {
 	hc := &http.Client{Timeout: cfg.httpTimeout}
 	return func(ctx context.Context) error {
-		deadline := time.Now().Add(cfg.deadline)
-		var lastErr error
-		for time.Now().Before(deadline) {
-			req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiURL+"/healthz", nil)
-			if err != nil {
-				return fmt.Errorf("build probe request: %w", err)
-			}
-			resp, err := hc.Do(req)
-			if err == nil {
-				// Drain then close so the underlying connection can be
-				// reused across retry attempts.
-				_, _ = io.Copy(io.Discard, resp.Body)
-				_ = resp.Body.Close()
-				if resp.StatusCode == http.StatusOK {
-					return nil
-				}
-				lastErr = fmt.Errorf("/healthz returned %d", resp.StatusCode)
-			} else {
-				lastErr = err
-			}
-			select {
-			case <-time.After(cfg.interval):
-			case <-ctx.Done():
-				return ctx.Err()
-			}
+		err := retryRecoveryProbe(ctx, cfg, func(attemptCtx context.Context) error {
+			return verifyHealthRecovered(attemptCtx, hc, apiURL)
+		})
+		if err != nil {
+			return fmt.Errorf("api never recovered: %w", err)
 		}
-		if lastErr != nil {
-			return fmt.Errorf("api never recovered: %w", lastErr)
-		}
-		return errors.New("api never recovered")
+		return nil
 	}
 }
 
-func selectScenarios(want string, verify func(context.Context) error) []chaos.Scenario {
+func retryRecoveryProbe(ctx context.Context, cfg probeConfig, probe func(context.Context) error) error {
+	if cfg.deadline <= 0 {
+		return errors.New("recovery deadline elapsed before first attempt")
+	}
+	probeCtx, cancel := context.WithTimeout(ctx, cfg.deadline)
+	defer cancel()
+	deadline, _ := probeCtx.Deadline()
+	interval := cfg.interval
+	if interval <= 0 {
+		interval = time.Millisecond
+	}
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if err := probeCtx.Err(); err != nil {
+			return err
+		}
+		if err := probe(probeCtx); err == nil {
+			if err := probeCtx.Err(); err != nil {
+				return err
+			}
+			if !time.Now().Before(deadline) {
+				return context.DeadlineExceeded
+			}
+			return nil
+		} else {
+			lastErr = err
+		}
+		wait := min(interval, time.Until(deadline))
+		if wait <= 0 {
+			break
+		}
+		timer := time.NewTimer(wait)
+		select {
+		case <-timer.C:
+		case <-probeCtx.Done():
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			if lastErr != nil && errors.Is(probeCtx.Err(), context.DeadlineExceeded) {
+				return fmt.Errorf("%w: last recovery failure: %v", context.DeadlineExceeded, lastErr)
+			}
+			return probeCtx.Err()
+		}
+	}
+	if lastErr == nil {
+		return errors.New("recovery deadline elapsed before first attempt")
+	}
+	return fmt.Errorf("%w: last recovery failure: %v", context.DeadlineExceeded, lastErr)
+}
+
+func verifyHealthRecovered(ctx context.Context, hc *http.Client, apiURL string) error {
+	endpoint := strings.TrimRight(apiURL, "/") + "/healthz"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return fmt.Errorf("build probe request: %w", err)
+	}
+	resp, err := hc.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if _, err := io.Copy(io.Discard, io.LimitReader(resp.Body, 64*1024)); err != nil {
+		return fmt.Errorf("read /healthz response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("/healthz returned %d", resp.StatusCode)
+	}
+	return nil
+}
+
+func selectScenarios(want string, verifyFor func(chaos.Scenario) func(context.Context) error) []chaos.Scenario {
 	all := chaos.DefaultScenarios()
 	for i := range all {
-		all[i].Verify = verify
+		all[i].Verify = verifyFor(all[i])
 	}
 	if want == "" || want == "all" {
 		return all
@@ -195,6 +276,169 @@ func selectScenarios(want string, verify func(context.Context) error) []chaos.Sc
 		}
 	}
 	return out
+}
+
+// maxFleetProbeBodyKiB caps the fleet-state response body the chaos
+// probe reads. The endpoint's own limit=25 cap keeps this well under
+// budget in practice; the read cap is a defence-in-depth safety net.
+const maxFleetProbeBodyKiB = 512
+
+// makeFleetAwareProbeWithConfig returns a verify hook that, after confirming
+// /healthz has recovered, also exercises the canonical bulk fleet-state read
+// and, when the fleet has at least one vehicle, a per-vehicle battery report.
+func makeFleetAwareProbeWithConfig(apiURL string, cfg probeConfig) func(context.Context) error {
+	hc := &http.Client{Timeout: cfg.httpTimeout}
+	return func(ctx context.Context) error {
+		err := retryRecoveryProbe(ctx, cfg, func(attemptCtx context.Context) error {
+			if err := verifyHealthRecovered(attemptCtx, hc, apiURL); err != nil {
+				return fmt.Errorf("health recovery check: %w", err)
+			}
+			vehicleID, err := verifyFleetStateRecovered(
+				attemptCtx,
+				hc,
+				apiURL,
+				cfg.expectedFleetBatteryLevel,
+			)
+			if err != nil {
+				return fmt.Errorf("fleet state recovery check: %w", err)
+			}
+			// An empty fleet still proves the fleet-state endpoint recovered.
+			if vehicleID == 0 {
+				return nil
+			}
+			if err := verifyBatteryRecovered(attemptCtx, hc, apiURL, vehicleID); err != nil {
+				return fmt.Errorf("battery recovery check: %w", err)
+			}
+			return nil
+		})
+		if err != nil {
+			return fmt.Errorf("fleet read path never recovered: %w", err)
+		}
+		return nil
+	}
+}
+
+// fleetStateEnvelope is the minimal shape the chaos probe needs from
+// GET /api/v1/vehicles/states — see internal/app/fleetstatesvc.Batch
+// for the full response.
+type fleetStateEnvelope struct {
+	Data *struct {
+		Vehicles *[]fleetStateVehicle `json:"vehicles"`
+	} `json:"data"`
+}
+
+type fleetStateVehicle struct {
+	VehicleID int64 `json:"vehicle_id"`
+	State     *struct {
+		BatteryLevel int `json:"battery_level"`
+	} `json:"state"`
+	DataSource     string   `json:"data_source"`
+	VerifiedFields []string `json:"verified_fields"`
+}
+
+// verifyFleetStateRecovered GETs the canonical fleet-state batch
+// endpoint and returns the first vehicle id it finds (0 if the fleet is
+// empty). A non-2xx status or a body that doesn't parse as the expected
+// envelope is an error — a fast but malformed response is not recovery.
+func verifyFleetStateRecovered(
+	ctx context.Context,
+	hc *http.Client,
+	apiURL string,
+	expectedBatteryLevel *int,
+) (int64, error) {
+	endpoint := strings.TrimRight(apiURL, "/") + "/api/v1/vehicles/states?limit=25"
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+	if err != nil {
+		return 0, fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := hc.Do(req)
+	if err != nil {
+		return 0, fmt.Errorf("do: %w", err)
+	}
+	defer resp.Body.Close()
+	body, err := io.ReadAll(io.LimitReader(resp.Body, maxFleetProbeBodyKiB*1024))
+	if err != nil {
+		return 0, fmt.Errorf("read body: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return 0, fmt.Errorf("unexpected status %d", resp.StatusCode)
+	}
+	var envelope fleetStateEnvelope
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return 0, fmt.Errorf("decode response: %w", err)
+	}
+	if envelope.Data == nil || envelope.Data.Vehicles == nil {
+		return 0, errors.New("response missing non-null data.vehicles")
+	}
+	vehicles := *envelope.Data.Vehicles
+	if len(vehicles) == 0 {
+		if expectedBatteryLevel != nil {
+			return 0, errors.New("response contained no vehicle for the required live battery evidence")
+		}
+		return 0, nil
+	}
+	vehicle := vehicles[0]
+	vehicleID := vehicle.VehicleID
+	if vehicleID <= 0 {
+		return 0, errors.New("response contained an invalid vehicle_id")
+	}
+	if expectedBatteryLevel != nil {
+		if vehicle.State == nil {
+			return 0, errors.New("response missing state for the recovery-probe vehicle")
+		}
+		if vehicle.State.BatteryLevel != *expectedBatteryLevel {
+			return 0, fmt.Errorf(
+				"battery_level = %d, want seeded live value %d",
+				vehicle.State.BatteryLevel,
+				*expectedBatteryLevel,
+			)
+		}
+		if vehicle.DataSource != "live_signal_store" {
+			return 0, fmt.Errorf("data_source = %q, want live_signal_store", vehicle.DataSource)
+		}
+		if !containsString(vehicle.VerifiedFields, "battery_level") {
+			return 0, errors.New("battery_level was not verified as an observed live field")
+		}
+	}
+	return vehicleID, nil
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
+// verifyBatteryRecovered GETs the per-vehicle battery report for
+// vehicleID. Only the status code is checked — the probe cares that
+// the read path (Postgres + any Redis-backed cache in front of it) is
+// serving again, not the specific battery figures.
+func verifyBatteryRecovered(ctx context.Context, hc *http.Client, apiURL string, vehicleID int64) error {
+	if vehicleID <= 0 {
+		return errors.New("vehicle ID must be positive")
+	}
+	url := fmt.Sprintf("%s/api/v1/vehicles/%d/battery", strings.TrimRight(apiURL, "/"), vehicleID)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return fmt.Errorf("build request: %w", err)
+	}
+	req.Header.Set("Accept", "application/json")
+	resp, err := hc.Do(req)
+	if err != nil {
+		return fmt.Errorf("do: %w", err)
+	}
+	defer resp.Body.Close()
+	if _, err := io.Copy(io.Discard, io.LimitReader(resp.Body, maxFleetProbeBodyKiB*1024)); err != nil {
+		return fmt.Errorf("read body: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status %d for vehicle %d battery report", resp.StatusCode, vehicleID)
+	}
+	return nil
 }
 
 func envOr(key, def string) string {

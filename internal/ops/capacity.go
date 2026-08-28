@@ -62,7 +62,10 @@ var requiredCapacityProfiles = []string{
 	"telemetry-burst",
 	"sse-fanout",
 	"analytics-query",
-	"fleet-state-batch",
+	"fleet-state-batch-100",
+	"fleet-state-batch-500",
+	"fleet-state-batch-5000",
+	"fleet-state-mixed",
 	"export-generation",
 	"reconnect-storm",
 }

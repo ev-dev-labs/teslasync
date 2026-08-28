@@ -79,6 +79,10 @@ services:
       - SYNTHETIC_INTERVAL_SECONDS=${SYNTHETIC_INTERVAL_SECONDS:-60}
       - SYNTHETIC_TIMEOUT_SECONDS=${SYNTHETIC_TIMEOUT_SECONDS:-30}
       - SYNTHETIC_PROBE_URLS=${SYNTHETIC_PROBE_URLS:-}
+      # Critical-operator-chain synthetic journey (dashboard/fleet state ->
+      # vehicle inspect -> battery health -> charging history). Opt-in;
+      # empty disables it even when SYNTHETIC_ENABLED=true.
+      - SYNTHETIC_JOURNEY_BASE_URL=${SYNTHETIC_JOURNEY_BASE_URL:-}
       # Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
       # Replay is opt-in because re-publishing a payload that already
       # triggered a production exception is consequential. Replay is

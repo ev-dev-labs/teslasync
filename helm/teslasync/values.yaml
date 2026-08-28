@@ -781,6 +781,18 @@ config:
   # authentikURL: ""
   # authentikHMACKey: ""
 
+# ── Synthetic monitoring — outside-in canary probes ────────────────────
+synthetic:
+  # All synthetic checks are opt-in. probeURLs is a comma-separated list
+  # of endpoint checks.
+  enabled: false
+  intervalSeconds: 60
+  timeoutSeconds: 30
+  probeURLs: ""
+  # Base URL for the critical operator journey. Use the API origin without
+  # /api/v1, e.g. "http://teslasync:8080". Empty disables the journey.
+  journeyBaseURL: ""
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
 #

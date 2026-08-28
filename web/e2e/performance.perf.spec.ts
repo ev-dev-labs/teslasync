@@ -5,17 +5,58 @@ import {
   seedBrowserState,
   waitForHarnessReady,
 } from './mockApi';
-import { QUALITY_ROUTES } from './routeRegistry';
+import { QUALITY_ROUTES, type QualityRoute } from './routeRegistry';
 
 test.describe.configure({ mode: 'serial' });
 
-const INTERACTIVE_BUDGET_MS = 2_500;
-const SETTLED_BUDGET_MS = 4_500;
-const FCP_BUDGET_MS = 1_500;
-const LCP_BUDGET_MS = 2_500;
+// Per-route performance budgets. Every route in QUALITY_ROUTES is
+// exercised (so coverage never regresses below what routeRegistry
+// declares), but the five principal operator routes — dashboard,
+// fleet roster, battery health, drives, and charging — get budgets
+// tuned to their actual composition without weakening the previous
+// global ceilings:
+//   - fleet/drives/charging are list/table pages and get tighter
+//     interaction, paint, transfer, and settle budgets.
+//   - chart-heavy battery and widget-heavy dashboard retain the
+//     production baseline; route specialization must not excuse a
+//     Core Web Vitals regression.
+// Routes not listed here (notifications, settings, data-repair, …)
+// fall back to DEFAULT_BUDGET so newly-registered routes still get a
+// real gate without needing an entry here on day one.
+interface PerfBudget {
+  interactiveMs: number;
+  settledMs: number;
+  fcpMs: number;
+  lcpMs: number;
+  maxLayoutShift: number;
+  maxLongTaskMs: number;
+  maxTransferBytes: number;
+}
+
+const DEFAULT_BUDGET: PerfBudget = {
+  interactiveMs: 2_500,
+  settledMs: 4_500,
+  fcpMs: 1_500,
+  lcpMs: 2_500,
+  maxLayoutShift: 0.1,
+  maxLongTaskMs: 1_000,
+  maxTransferBytes: 5_000_000,
+};
+
+const ROUTE_BUDGETS: Record<string, Partial<PerfBudget>> = {
+  fleet: { interactiveMs: 2_200, settledMs: 4_000, fcpMs: 1_400, lcpMs: 2_200, maxTransferBytes: 4_500_000 },
+  drives: { interactiveMs: 2_200, settledMs: 4_000, fcpMs: 1_400, lcpMs: 2_200, maxTransferBytes: 4_500_000 },
+  charging: { interactiveMs: 2_200, settledMs: 4_000, fcpMs: 1_400, lcpMs: 2_200, maxTransferBytes: 4_500_000 },
+};
+
+function budgetFor(route: QualityRoute): PerfBudget {
+  return { ...DEFAULT_BUDGET, ...ROUTE_BUDGETS[route.name] };
+}
 
 for (const route of QUALITY_ROUTES) {
-  test(`${route.name} stays within principal-route performance budgets`, async ({ page }, testInfo) => {
+  const budget = budgetFor(route);
+
+  test(`${route.name} stays within its route performance budget`, async ({ page }, testInfo) => {
     await seedBrowserState(page, 'dark', route.path);
     const mockApi = await installApiMocks(page, 'populated');
     await page.addInitScript(() => {
@@ -96,20 +137,21 @@ for (const route of QUALITY_ROUTES) {
     const metrics = { route: route.path, interactiveMs, settledMs, ...browserMetrics };
 
     await testInfo.attach(`performance-${route.name}.json`, {
-      body: Buffer.from(JSON.stringify(metrics, null, 2)),
+      body: Buffer.from(JSON.stringify({ ...metrics, budget }, null, 2)),
       contentType: 'application/json',
     });
 
-    expect(metrics.interactiveMs).toBeLessThan(INTERACTIVE_BUDGET_MS);
-    expect(metrics.settledMs).toBeLessThan(SETTLED_BUDGET_MS);
+    expect(metrics.interactiveMs).toBeLessThan(budget.interactiveMs);
+    expect(metrics.settledMs).toBeLessThan(budget.settledMs);
     expect(metrics.firstContentfulPaintMs).not.toBeNull();
-    expect(metrics.firstContentfulPaintMs ?? Number.POSITIVE_INFINITY).toBeLessThan(FCP_BUDGET_MS);
+    expect(metrics.firstContentfulPaintMs ?? Number.POSITIVE_INFINITY).toBeLessThan(budget.fcpMs);
     expect(metrics.largestContentfulPaintMs).not.toBeNull();
-    expect(metrics.largestContentfulPaintMs ?? Number.POSITIVE_INFINITY).toBeLessThan(LCP_BUDGET_MS);
-    expect(metrics.layoutShift).toBeLessThan(0.1);
-    expect(metrics.longTaskMs).toBeLessThan(1_000);
+    expect(metrics.largestContentfulPaintMs ?? Number.POSITIVE_INFINITY).toBeLessThan(budget.lcpMs);
+    expect(metrics.layoutShift).toBeLessThan(budget.maxLayoutShift);
+    expect(metrics.longTaskMs).toBeLessThan(budget.maxLongTaskMs);
     expect(metrics.failedResourceDurations).toBe(0);
     expect(metrics.resourceCount).toBeGreaterThan(0);
+    expect(metrics.transferBytes).toBeLessThan(budget.maxTransferBytes);
     await assertMockApiComplete(page, mockApi);
   });
 }

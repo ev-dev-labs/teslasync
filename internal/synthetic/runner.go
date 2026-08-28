@@ -1,16 +1,6 @@
-// Package synthetic runs outside-in canary probes that exercise the
-// full ingest pipeline and the read-path endpoints. The runner is
-// designed to be embedded inside the TeslaSync API process (so
-// failures roll into the same alertmsg + Prometheus surface) but can
-// also be invoked from cmd/synthetic-probe as a one-shot CI gate.
-//
-// Probes are deliberately small + idempotent — they create a single
-// synthetic vehicle (`synthetic_canary`), publish a known signal via
-// the existing pub-test-signal pathway, and then poll the read side
-// (latest signal, live state, signal_log) to assert the value
-// propagated within the configured SLO. Failures roll up into a
-// SyntheticResult that includes the per-stage timing so operators
-// can pinpoint where the pipeline regressed.
+// Package synthetic runs read-only outside-in probes against TeslaSync HTTP
+// paths. The embedded runner records endpoint and multi-step operator-journey
+// results without creating vehicles or mutating fleet data.
 package synthetic
 
 import (
@@ -27,7 +17,7 @@ import (
 // same canary vehicle are expected.
 type Probe interface {
 	// Name returns the stable identifier surfaced in Prometheus and
-	// the admin board. Must match [a-z][a-z0-9_]*.
+	// the admin observability response. Must match [a-z][a-z0-9_]*.
 	Name() string
 	// Run executes one probe iteration. Returns nil when the probe
 	// succeeded and a wrapped error containing a leaf message
@@ -46,6 +36,18 @@ type Result struct {
 	Streak      int       `json:"streak"` // consecutive successes (>=0) or failures (<=0)
 	TotalRuns   int64     `json:"total_runs"`
 	TotalFailed int64     `json:"total_failed"`
+	// Steps holds per-stage detail for multi-step probes (e.g.
+	// JourneyProbe). Nil for single-endpoint probes such as HTTPProbe.
+	Steps []JourneyStepResult `json:"steps,omitempty"`
+}
+
+// StepReporter is implemented by probes that expose step-level detail
+// from their most recent Run (currently only JourneyProbe). The runner
+// surfaces it on Result.Steps so the admin observability endpoint can
+// report per-stage timing without every probe kind needing its own
+// snapshot endpoint.
+type StepReporter interface {
+	LastStepResults() []JourneyStepResult
 }
 
 // Snapshot is the runner's full state.
@@ -65,8 +67,10 @@ type Runner struct {
 	timeout  time.Duration
 	now      func() time.Time
 
-	stopCh chan struct{}
-	doneCh chan struct{}
+	startOnce sync.Once
+	stopOnce  sync.Once
+	stopCh    chan struct{}
+	doneCh    chan struct{}
 }
 
 // NewRunner constructs a runner. Interval is the per-tick cadence;
@@ -97,20 +101,27 @@ func NewRunner(probes []Probe, interval, timeout time.Duration) *Runner {
 // Start kicks off the ticker. Returns immediately; the goroutine
 // exits when ctx is cancelled or Stop is called.
 func (r *Runner) Start(ctx context.Context) {
-	go r.loop(ctx)
+	r.startOnce.Do(func() {
+		go r.loop(ctx)
+	})
 }
 
 // Stop signals the loop to exit and blocks until it has done so.
-// Safe to call from a SIGTERM handler.
+// Safe to call more than once or before Start.
 func (r *Runner) Stop() {
-	close(r.stopCh)
+	r.stopOnce.Do(func() {
+		close(r.stopCh)
+		r.startOnce.Do(func() {
+			close(r.doneCh)
+		})
+	})
 	<-r.doneCh
 }
 
 func (r *Runner) loop(ctx context.Context) {
 	defer close(r.doneCh)
-	// Run once immediately so the first board view doesn't show
-	// "never run" for every probe.
+	// Run once immediately so the first snapshot doesn't show "never run"
+	// for every probe.
 	r.runAll(ctx)
 	ticker := time.NewTicker(r.interval)
 	defer ticker.Stop()
@@ -149,6 +160,9 @@ func (r *Runner) runOne(ctx context.Context, p Probe) {
 	res.LastRunAt = r.now()
 	res.LastDurMs = dur.Milliseconds()
 	res.TotalRuns++
+	if sr, ok := p.(StepReporter); ok {
+		res.Steps = sr.LastStepResults()
+	}
 	if err != nil {
 		res.OK = false
 		res.LastError = err.Error()
@@ -176,7 +190,9 @@ func (r *Runner) Snapshot() Snapshot {
 	defer r.mu.Unlock()
 	out := Snapshot{GeneratedAt: r.now(), Results: make([]Result, 0, len(r.results))}
 	for _, res := range r.results {
-		out.Results = append(out.Results, *res)
+		result := *res
+		result.Steps = append([]JourneyStepResult(nil), res.Steps...)
+		out.Results = append(out.Results, result)
 	}
 	return out
 }

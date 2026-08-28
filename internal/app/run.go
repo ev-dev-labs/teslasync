@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime"
 	"time"
@@ -48,7 +49,7 @@ const (
 
 // Run constructs the HTTP router (via internal/api), starts the
 // http.Server, records startup metrics, kicks off the uptime ticker
-// goroutine, and blocks until ctx is cancelled or ListenAndServe
+// goroutine, and blocks until ctx is cancelled or Serve
 // returns. On ctx cancellation it performs the explicit shutdown
 // sequence (cancel context → telemetry handler shutdown → server
 // shutdown → inbound api_call_logs drain) before returning. The
@@ -62,6 +63,9 @@ const (
 //
 // so that Close() runs after Run() returns.
 func (a *App) Run(ctx context.Context) error {
+	runCtx, cancelRun := context.WithCancel(ctx)
+	defer cancelRun()
+
 	r := apirouter.NewRouter(a.DB, a.TeslaClient, a.MQTT, a.Cfg, a.Health, a.StateReader, apirouter.RouterOptions{
 		AppVersion:        a.Build.Version,
 		Encryptor:         a.Encryptor,
@@ -108,24 +112,29 @@ func (a *App) Run(ctx context.Context) error {
 	// The isolated drain plane must be listening BEFORE the public
 	// server accepts traffic: a pod that is serving requests but cannot
 	// answer its preStop hook would be killed without draining.
-	if _, err := a.startDrainListener(ctx); err != nil {
+	if _, err := a.startDrainListener(runCtx); err != nil {
 		return err
 	}
 	// SINGLE SHUTDOWN OWNER. This deferred call is the only place the
 	// drain plane is torn down, and being a defer it runs after BOTH
-	// exit paths below — including the ListenAndServe-failed path, which
+	// exit paths below — including the Serve-failed path, which
 	// the previous ctx.Done() watcher goroutine never covered. Deferring
 	// it here also guarantees it runs LAST, after the telemetry, server,
 	// and inbound-log drains, so kubelet can still retry the preStop
 	// hook while the main server is draining.
 	defer a.shutdownDrainListener()
 
+	listener, err := (&net.ListenConfig{KeepAlive: 3 * time.Minute}).Listen(runCtx, "tcp", a.server.Addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", a.server.Addr, err)
+	}
+
 	go func() {
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-runCtx.Done():
 				return
 			case <-ticker.C:
 				metrics.UptimeSeconds.Set(time.Since(a.startupStart).Seconds())
@@ -135,9 +144,15 @@ func (a *App) Run(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info().Int("port", a.Cfg.Port).Msg("HTTP server listening")
-		errCh <- a.server.ListenAndServe()
+		log.Info().Str("bind", listener.Addr().String()).Msg("HTTP server listening")
+		errCh <- a.server.Serve(listener)
 	}()
+	// Start self-probes only after the listener is bound. Starting them during
+	// construction records a guaranteed connection failure against this same
+	// process before it can accept requests.
+	if a.SyntheticRunner != nil {
+		a.SyntheticRunner.Start(runCtx)
+	}
 
 	select {
 	case <-ctx.Done():

@@ -1,17 +1,10 @@
-// Package synthetic runs outside-in canary probes that exercise the
-// full ingest pipeline and the read-path endpoints.
+// Package synthetic runs read-only outside-in canary probes against TeslaSync
+// HTTP paths.
 //
 // Layer: platform
 //
-// Designed to be embedded inside the TeslaSync API process so failures roll
-// into the same alert + metric surface, but it can also be invoked from a
-// one-shot binary as a CI gate.
-//
-// Probes are deliberately small + idempotent — they create a single
-// synthetic vehicle (`synthetic_canary`), publish a known signal via
-// the existing pub-test-signal pathway, and then poll the read side
-// (latest signal, live state, signal_log) to assert the value
-// propagated within the configured SLO. Failures roll up into a
-// SyntheticResult that includes per-stage timing so operators can
-// pinpoint where the pipeline regressed.
+// It is embedded inside the TeslaSync API process so endpoint and multi-step
+// operator-journey failures share the application's observability surface.
+// Probes are bounded and idempotent: they inspect existing data but never
+// create vehicles or mutate fleet state.
 package synthetic

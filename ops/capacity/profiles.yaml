@@ -80,6 +80,14 @@ profiles:
         comparison: lt
         value: 1.0
         rationale: slo/catalog.yaml sse_delivery expects sub-second live updates.
+      - metric: sse_stream_bytes
+        comparison: gt
+        value: 0
+        rationale: Connected but idle subscribers do not exercise Redis Pub/Sub fan-out; the run must deliver actual SSE payload bytes.
+      - metric: sse_vehicle_updates
+        comparison: gt
+        value: 0
+        rationale: Only named vehicle_update events count; the built-in connected event cannot make a broken Redis fan-out path pass.
     observability:
       dashboards: [slo-sse_delivery]
     last_executed: never
@@ -111,8 +119,40 @@ profiles:
       dashboards: [slo-api_latency_p99_500ms, slo-battery_health_latency_1s]
     last_executed: never
 
-  - id: fleet-state-batch
-    title: Large-fleet canonical state read
+  - id: fleet-state-batch-100
+    title: Fleet canonical state read — 100 vehicles
+    description: >-
+      Concurrent single-page reads through the canonical fleet-state endpoint
+      at small-fleet scale, to establish the latency floor before the
+      500- and 5,000-vehicle tiers are compared against it.
+    subsystem: fleet-state
+    driver: k6
+    entrypoint: tests/k6/fleet_state_batch.js
+    destructive: false
+    workload:
+      vehicles: 100
+      virtual_users: 25
+      ramp_up: 30s
+      duration: 5m
+    thresholds:
+      - metric: fleet_state_batch_p95_seconds
+        comparison: lt
+        value: 0.4
+        rationale: A 100-vehicle single page must be near-instant; anything slower indicates a fixed per-request cost problem, not scale.
+      - metric: fleet_state_batch_p99_seconds
+        comparison: lt
+        value: 0.8
+        rationale: Tail latency above this at the smallest tier would only get worse at 500/5,000.
+      - metric: fleet_state_batch_incomplete_ratio
+        comparison: lt
+        value: 0.01
+        rationale: A fast response that silently omits vehicles is not a successful capacity result.
+    observability:
+      dashboards: [slo-api_latency_p99_500ms, fleet-overview, sse-realtime]
+    last_executed: never
+
+  - id: fleet-state-batch-500
+    title: Fleet canonical state read — 500 vehicles (max single page)
     description: >-
       Concurrent maximum-page reads through the canonical fleet-state endpoint
       to exercise roster selection, pipelined Redis reads, set-based signal_log
@@ -139,6 +179,96 @@ profiles:
         comparison: lt
         value: 0.01
         rationale: A fast response that silently omits vehicles is not a successful capacity result.
+    observability:
+      dashboards: [slo-api_latency_p99_500ms, fleet-overview, sse-realtime]
+    last_executed: never
+
+  - id: fleet-state-batch-5000
+    title: Fleet canonical state read — 5,000 vehicles (paginated scan)
+    description: >-
+      Walks a 5,000-vehicle fleet as ten sequential 500-row pages per
+      iteration through the canonical fleet-state endpoint — the same
+      access pattern the SPA's fleet-wide roster fetch uses once a
+      deployment outgrows a single page. Exercises sustained roster
+      selection, pipelined Redis reads, and signal_log/FSM
+      reconstruction under a scan long enough that pool starvation and
+      cache-eviction pressure would surface partway through, not only
+      at the first page.
+    subsystem: fleet-state
+    driver: k6
+    entrypoint: tests/k6/fleet_state_batch.js
+    destructive: false
+    workload:
+      vehicles: 5000
+      virtual_users: 10
+      ramp_up: 30s
+      duration: 5m
+    thresholds:
+      - metric: fleet_state_batch_p95_seconds
+        comparison: lt
+        value: 0.75
+        rationale: Each individual 500-row page must stay within the same per-page budget as the 500-vehicle tier — pagination must not make one page slower.
+      - metric: fleet_state_batch_p99_seconds
+        comparison: lt
+        value: 1.5
+        rationale: Tail latency per page above 1.5 seconds makes a 10-page scan feel stalled partway through.
+      - metric: fleet_state_batch_incomplete_ratio
+        comparison: lt
+        value: 0.01
+        rationale: A fast page that silently omits vehicles is not a successful capacity result.
+      - metric: fleet_state_scan_p95_seconds
+        comparison: lt
+        value: 4.0
+        rationale: The full 10-page scan of a 5,000-vehicle fleet must stay well under the 30s FSM reconciliation tick.
+      - metric: fleet_state_scan_incomplete_ratio
+        comparison: lt
+        value: 0.01
+        rationale: A scan that drops even one page's vehicles undercounts the fleet for any operator reading the aggregate.
+    observability:
+      dashboards: [slo-api_latency_p99_500ms, fleet-overview, sse-realtime]
+    last_executed: never
+
+  - id: fleet-state-mixed
+    title: Fleet state REST + SSE fan-out (mixed concurrent load)
+    description: >-
+      Runs the fleet-state paginated REST scan and the SSE fan-out
+      subscriber load concurrently in one k6 run, modeling the real
+      production mix — operators paging the roster over REST while
+      every connected browser tab holds a live EventSource subscription
+      open. The two paths share the same Redis Pub/Sub fan-out and DB
+      pool, so testing them in isolation understates contention either
+      one alone would not reveal.
+    subsystem: fleet-state
+    driver: k6
+    entrypoint: tests/k6/fleet_state_mixed.js
+    destructive: false
+    workload:
+      vehicles: 500
+      subscribers: 200
+      broadcast_rate_per_second: 50
+      ramp_up: 30s
+      duration: 5m
+    thresholds:
+      - metric: fleet_state_batch_p95_seconds
+        comparison: lt
+        value: 1.0
+        rationale: Concurrent SSE fan-out load may add modest contention over the REST-only 500-vehicle tier; the ceiling is relaxed accordingly.
+      - metric: sse_connect_failure_ratio
+        comparison: lt
+        value: 0.01
+        rationale: Fewer than 99% of subscribers connecting means the hub is shedding clients under combined load.
+      - metric: sse_connect_p95_seconds
+        comparison: lt
+        value: 1.0
+        rationale: slo/catalog.yaml sse_delivery expects sub-second live updates even while REST batch reads are in flight.
+      - metric: sse_stream_bytes
+        comparison: gt
+        value: 0
+        rationale: The mixed profile must exercise real Redis-to-SSE fan-out rather than only holding idle HTTP connections.
+      - metric: sse_vehicle_updates
+        comparison: gt
+        value: 0
+        rationale: Only named vehicle_update events count; the stream's initial connected event is not delivery evidence.
     observability:
       dashboards: [slo-api_latency_p99_500ms, fleet-overview, sse-realtime]
     last_executed: never

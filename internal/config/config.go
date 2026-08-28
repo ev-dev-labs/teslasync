@@ -251,6 +251,12 @@ type SyntheticConfig struct {
 	// probes so /admin/observability/synthetic returns an empty
 	// snapshot.
 	ProbeURLs string
+	// JourneyBaseURL, when set, registers the canonical critical-operator
+	// journey probe (dashboard/fleet state -> vehicle inspect -> battery
+	// health -> charging history — see
+	// internal/synthetic.OperatorChainJourneySteps) against this base URL
+	// (e.g. "http://localhost:8080"). Default empty — disabled.
+	JourneyBaseURL string
 }
 
 // HomeAssistantConfig controls the MQTT discovery publisher that emits a
@@ -547,6 +553,7 @@ func Load() (*Config, error) {
 			IntervalSeconds: envInt("SYNTHETIC_INTERVAL_SECONDS", 60),
 			TimeoutSeconds:  envInt("SYNTHETIC_TIMEOUT_SECONDS", 30),
 			ProbeURLs:       envStr("SYNTHETIC_PROBE_URLS", ""),
+			JourneyBaseURL:  envStr("SYNTHETIC_JOURNEY_BASE_URL", ""),
 		},
 
 		HomeAssistant: HomeAssistantConfig{

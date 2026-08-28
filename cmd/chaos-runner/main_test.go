@@ -61,6 +61,7 @@ func TestEnvOr(t *testing.T) {
 
 func TestSelectScenarios(t *testing.T) {
 	verify := func(context.Context) error { return nil }
+	verifyFor := func(chaos.Scenario) func(context.Context) error { return verify }
 
 	var allNames []string
 	for _, s := range chaos.DefaultScenarios() {
@@ -86,7 +87,7 @@ func TestSelectScenarios(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := selectScenarios(tt.want, verify)
+			got := selectScenarios(tt.want, verifyFor)
 
 			gotNames := []string{}
 			for _, s := range got {
@@ -106,11 +107,46 @@ func TestSelectScenarios_DoesNotMutateDefaults(t *testing.T) {
 	// DefaultScenarios must return nil Verify hooks; selectScenarios wires
 	// them on its own copy without leaking back into the library defaults.
 	verify := func(context.Context) error { return nil }
-	_ = selectScenarios("all", verify)
+	verifyFor := func(chaos.Scenario) func(context.Context) error { return verify }
+	_ = selectScenarios("all", verifyFor)
 	for _, s := range chaos.DefaultScenarios() {
 		if s.Verify != nil {
 			t.Errorf("DefaultScenarios()[%q].Verify leaked a non-nil hook", s.Name)
 		}
+	}
+}
+
+func TestSelectScenarios_DispatchesVerifyPerScenario(t *testing.T) {
+	// Redis/Postgres scenarios must get the fleet-aware probe; every
+	// other scenario (e.g. the MQTT blackhole) keeps the plain one.
+	fleetAware := func(context.Context) error { return errors.New("fleet-aware") }
+	plain := func(context.Context) error { return errors.New("plain") }
+	verifyFor := func(s chaos.Scenario) func(context.Context) error {
+		if s.Proxy == "redis" || s.Proxy == "postgres" {
+			return fleetAware
+		}
+		return plain
+	}
+
+	got := selectScenarios("all", verifyFor)
+	sawRedisOrPostgres, sawOther := false, false
+	for _, s := range got {
+		err := s.Verify(context.Background())
+		switch s.Proxy {
+		case "redis", "postgres":
+			sawRedisOrPostgres = true
+			if err == nil || err.Error() != "fleet-aware" {
+				t.Errorf("scenario %q (proxy=%s): verify = %v, want the fleet-aware probe", s.Name, s.Proxy, err)
+			}
+		default:
+			sawOther = true
+			if err == nil || err.Error() != "plain" {
+				t.Errorf("scenario %q (proxy=%s): verify = %v, want the plain probe", s.Name, s.Proxy, err)
+			}
+		}
+	}
+	if !sawRedisOrPostgres || !sawOther {
+		t.Fatalf("test fixture assumption violated: need at least one redis/postgres scenario and one other (got redis/postgres=%v other=%v)", sawRedisOrPostgres, sawOther)
 	}
 }
 
@@ -124,6 +160,27 @@ func TestDefaultProbeConfig(t *testing.T) {
 	}
 	if cfg.interval != 2*time.Second {
 		t.Errorf("interval = %v, want 2s", cfg.interval)
+	}
+	if cfg.expectedFleetBatteryLevel != nil {
+		t.Errorf("expectedFleetBatteryLevel = %v, want nil by default", *cfg.expectedFleetBatteryLevel)
+	}
+}
+
+func TestRetryRecoveryProbeEnforcesDeadlineDuringAttempt(t *testing.T) {
+	started := time.Now()
+	err := retryRecoveryProbe(
+		context.Background(),
+		probeConfig{deadline: 20 * time.Millisecond, interval: time.Millisecond},
+		func(context.Context) error {
+			time.Sleep(60 * time.Millisecond)
+			return nil
+		},
+	)
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Fatalf("error = %v, want context.DeadlineExceeded", err)
+	}
+	if elapsed := time.Since(started); elapsed > 150*time.Millisecond {
+		t.Fatalf("deadline enforcement took %v, want a bounded return", elapsed)
 	}
 }
 
@@ -265,12 +322,13 @@ func TestMakeAPIProbeWithConfig(t *testing.T) {
 			},
 		},
 		{
-			name:   "non-positive deadline recovers to a bare error",
+			name:   "non-positive deadline reports no attempt",
 			apiURL: "http://127.0.0.1:0",
 			cfg:    probeConfig{httpTimeout: time.Second, deadline: 0, interval: 10 * time.Millisecond},
 			check: func(t *testing.T, err error) {
-				if err == nil || err.Error() != "api never recovered" {
-					t.Fatalf("want bare 'api never recovered', got %v", err)
+				if err == nil || !strings.Contains(err.Error(), "api never recovered") ||
+					!strings.Contains(err.Error(), "before first attempt") {
+					t.Fatalf("want explicit no-attempt recovery error, got %v", err)
 				}
 			},
 		},

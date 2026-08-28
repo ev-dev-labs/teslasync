@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http/cookiejar"
 	"os"
 	"strings"
 	"sync/atomic"
@@ -124,7 +125,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initCache()
 	a.initFlagStore(ctx)
 	a.initObservabilityPhase45(ctx)
-	a.initObservabilityPhase46(ctx)
+	a.initObservabilityPhase46()
 	a.initHomeAssistantPublisher(ctx)
 	a.initEventBus()
 	a.initEncryptor()
@@ -360,7 +361,7 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 //
 // Each subsystem is independent: SLO load failure does NOT block
 // data-quality or synthetic; synthetic disabled does NOT block SLO.
-func (a *App) initObservabilityPhase46(ctx context.Context) {
+func (a *App) initObservabilityPhase46() {
 	// SLO catalog + tracker.
 	if path := a.Cfg.SLO.CatalogPath; path != "" {
 		if cat, err := slo.LoadCatalog(path); err != nil {
@@ -383,15 +384,26 @@ func (a *App) initObservabilityPhase46(ctx context.Context) {
 		a.DataQualityScorer = dataquality.NewScorerFromPool(a.DB.Pool, a.Cfg.DataQuality.WindowMins)
 	}
 
-	// Synthetic runner — built unconditionally so the admin board
-	// can report "synthetic monitoring not enabled" honestly when
-	// disabled. Started only when enabled to avoid background work.
+	// Synthetic runner — built only when enabled; a nil runner makes the
+	// admin observability endpoint report that synthetic monitoring is not
+	// configured. Startup is deferred until the public listener is bound.
 	if a.Cfg.Synthetic.Enabled {
 		probes := buildSyntheticProbes(a.Cfg.Synthetic.ProbeURLs)
+		if baseURL := strings.TrimSpace(a.Cfg.Synthetic.JourneyBaseURL); baseURL != "" {
+			journey, err := buildOperatorChainJourneyProbe(
+				baseURL,
+				time.Duration(a.Cfg.Synthetic.TimeoutSeconds)*time.Second,
+				a.Cfg.Auth.ForwardAuthHeader,
+			)
+			if err != nil {
+				log.Error().Err(err).Msg("synthetic operator journey initialization failed")
+			} else {
+				probes = append(probes, journey)
+			}
+		}
 		interval := time.Duration(a.Cfg.Synthetic.IntervalSeconds) * time.Second
 		timeout := time.Duration(a.Cfg.Synthetic.TimeoutSeconds) * time.Second
 		runner := synthetic.NewRunner(probes, interval, timeout)
-		runner.Start(ctx)
 		a.SyntheticRunner = runner
 		a.addCloser("synthetic-runner", func(_ context.Context) error {
 			runner.Stop()
@@ -409,9 +421,8 @@ func (a *App) initObservabilityPhase46(ctx context.Context) {
 
 // buildSyntheticProbes parses the comma-separated SYNTHETIC_PROBE_URLS
 // list into a set of HTTP probes. Each url becomes a probe named
-// "http_<index>" so the synthetic board has stable identifiers across
-// reorders; operators that want stable names should run the canary in
-// its own deployment with one probe per binary.
+// "http_<index>". Operators that want stable identifiers across URL
+// reordering should run one probe per deployment.
 func buildSyntheticProbes(raw string) []synthetic.Probe {
 	if raw == "" {
 		return nil
@@ -426,6 +437,33 @@ func buildSyntheticProbes(raw string) []synthetic.Probe {
 		probes = append(probes, synthetic.NewHTTPProbe(fmt.Sprintf("http_%d", i), url))
 	}
 	return probes
+}
+
+// buildOperatorChainJourneyProbe wires the canonical critical-operator
+// journey (dashboard/fleet state -> vehicle inspect -> battery health
+// -> charging history) against baseURL. Step observations are exported
+// as bounded-cardinality Prometheus metrics via
+// metrics.ObserveSyntheticJourneyStep (labels: fixed journey + step
+// names only — never vehicle IDs or VINs).
+func buildOperatorChainJourneyProbe(baseURL string, timeout time.Duration, forwardAuthHeader string) (synthetic.Probe, error) {
+	const journeyName = "operator_chain"
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("create synthetic journey cookie jar: %w", err)
+	}
+	client := httputil.NewClient(httputil.ClientConfig{
+		Name:    "synthetic-operator-chain",
+		Timeout: timeout,
+	})
+	client.Jar = jar
+	probe := synthetic.NewJourneyProbe(journeyName, baseURL, synthetic.OperatorChainJourneySteps(), client).
+		WithObserver(func(journey string, step synthetic.JourneyStepResult) {
+			metrics.ObserveSyntheticJourneyStep(journey, step.Name, step.OK, step.Skipped, step.DurationMs)
+		})
+	if forwardAuthHeader != "" {
+		probe.WithHeader(forwardAuthHeader, "teslasync-synthetic")
+	}
+	return probe, nil
 }
 
 // initHomeAssistantPublisher wires the HomeAssistant MQTT discovery

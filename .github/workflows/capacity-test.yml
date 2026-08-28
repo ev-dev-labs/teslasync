@@ -30,7 +30,10 @@ on:
         options:
           - sse-fanout
           - analytics-query
-          - fleet-state-batch
+          - fleet-state-batch-100
+          - fleet-state-batch-500
+          - fleet-state-batch-5000
+          - fleet-state-mixed
           - export-generation
           - reconnect-storm
         default: sse-fanout
@@ -102,7 +105,7 @@ jobs:
           PROFILE: ${{ inputs.profile }}
         run: |
           if [ "$PROFILE" = "reconnect-storm" ]; then
-            docker compose \
+            FLEET_TELEMETRY_ENABLED=true docker compose \
               -f docker-compose.yml \
               -f tests/chaos/docker-compose.capacity.yml \
               --profile chaos \
@@ -123,21 +126,36 @@ jobs:
 
       - name: Install k6
         if: ${{ inputs.profile != 'reconnect-storm' }}
-        run: |
-          sudo gpg -k
-          sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
-            --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
-          echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" \
-            | sudo tee /etc/apt/sources.list.d/k6.list
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq k6
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+        with:
+          k6-version: v1.8.1
 
-      - name: Seed 500-vehicle fleet
-        if: ${{ inputs.profile == 'fleet-state-batch' }}
+      - name: Build pinned SSE-capable k6
+        if: ${{ inputs.profile == 'sse-fanout' || inputs.profile == 'fleet-state-mixed' }}
         run: |
+          go install go.k6.io/xk6/cmd/xk6@v1.4.12
+          "$(go env GOPATH)/bin/xk6" build v1.8.1 \
+            --with github.com/phymbert/xk6-sse@v0.1.12 \
+            --output "$RUNNER_TEMP/k6-sse"
+          echo "K6_BIN=$RUNNER_TEMP/k6-sse" >> "$GITHUB_ENV"
+
+      - name: Seed fleet read path
+        if: ${{ startsWith(inputs.profile, 'fleet-state-batch') || inputs.profile == 'fleet-state-mixed' || inputs.profile == 'reconnect-storm' }}
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          case "$PROFILE" in
+            fleet-state-batch-100)  FLEET_SIZE=100 ;;
+            fleet-state-batch-500)  FLEET_SIZE=500 ;;
+            fleet-state-batch-5000) FLEET_SIZE=5000 ;;
+            fleet-state-mixed)      FLEET_SIZE=500 ;;
+            reconnect-storm)        FLEET_SIZE=1 ;;
+            *) echo "::error::unsupported fleet seed profile"; exit 1 ;;
+          esac
           docker compose exec -T postgres psql \
             -U teslasync \
             -d teslasync \
+            -v fleet_size="$FLEET_SIZE" \
             -v ON_ERROR_STOP=1 <<'SQL'
           INSERT INTO vehicles (tesla_id, vin, display_name, model)
           SELECT
@@ -150,39 +168,81 @@ jobs:
               WHEN 2 THEN 'Model X'
               ELSE 'Model Y'
             END
-          FROM generate_series(1, 500) AS fleet_id
+          FROM generate_series(1, :fleet_size) AS fleet_id
           ON CONFLICT (vin) DO NOTHING;
           SQL
+          if [ "$PROFILE" = "reconnect-storm" ]; then
+            VEHICLE_ID=$(docker compose exec -T postgres psql \
+              -U teslasync \
+              -d teslasync \
+              -At \
+              -v ON_ERROR_STOP=1 \
+              -c "SELECT id FROM vehicles WHERE vin = 'CAP00000000000001'")
+            if ! [[ "$VEHICLE_ID" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::failed to resolve seeded recovery-probe vehicle"
+              exit 1
+            fi
+            OBSERVED_NS=$(date +%s%N)
+            SIGNAL_PAYLOAD=$(printf '{"kind":5,"v":73,"ts":%s,"observed":true}' "$OBSERVED_NS")
+            docker compose exec -T redis redis-cli \
+              HSET "vehicle:${VEHICLE_ID}:signals" BatteryLevel "$SIGNAL_PAYLOAD" >/dev/null
+            docker compose exec -T redis redis-cli \
+              EXPIRE "vehicle:${VEHICLE_ID}:signals" 3600 >/dev/null
+          fi
 
       - name: Run profile
         env:
           BASE_URL: http://localhost:8080
           CONFIRM: RUN
           TARGET_ENV: ephemeral-ci
-          VEHICLES: '500'
           # export-generation is marked destructive; the script refuses to
           # run without this assertion that the stack is disposable.
           EPHEMERAL: '1'
           # Untrusted dispatch inputs travel through the environment.
           HOLD: ${{ inputs.duration }}
           PROFILE: ${{ inputs.profile }}
+          K6_AUTO_EXTENSION_RESOLUTION: 'false'
         run: |
           set -o pipefail
+          PUBLISHER_PID=
+          cleanup_publisher() {
+            if [ -n "$PUBLISHER_PID" ]; then
+              kill "$PUBLISHER_PID" 2>/dev/null || true
+              wait "$PUBLISHER_PID" 2>/dev/null || true
+            fi
+          }
+          trap cleanup_publisher EXIT
+          if [ "$PROFILE" = "sse-fanout" ] || [ "$PROFILE" = "fleet-state-mixed" ]; then
+            # Feed the same Redis channel consumed by EventHub.SubscribeRedis
+            # at the manifest's declared 50 events/second. A real SSE profile
+            # must exercise fan-out, not merely hold idle HTTP connections.
+            docker compose exec -T redis sh -c '
+              while true; do
+                printf "%s\n" "PUBLISH vehicle_signals \"event: vehicle_update\\ndata: {}\\n\\n\""
+                sleep 0.02
+              done | redis-cli
+            ' >/dev/null &
+            PUBLISHER_PID=$!
+          fi
           case "$PROFILE" in
-            sse-fanout)        SCRIPT=tests/k6/sse_fanout.js ;;
-            analytics-query)   SCRIPT=tests/k6/analytics_read.js ;;
-            fleet-state-batch) SCRIPT=tests/k6/fleet_state_batch.js ;;
-            export-generation) SCRIPT=tests/k6/export_generation.js ;;
+            sse-fanout)             SCRIPT=tests/k6/sse_fanout.js ;;
+            analytics-query)        SCRIPT=tests/k6/analytics_read.js ;;
+            fleet-state-batch-100)  SCRIPT=tests/k6/fleet_state_batch.js; export VEHICLES=100 ;;
+            fleet-state-batch-500)  SCRIPT=tests/k6/fleet_state_batch.js; export VEHICLES=500 ;;
+            fleet-state-batch-5000) SCRIPT=tests/k6/fleet_state_batch.js; export VEHICLES=5000; export VUS=10 ;;
+            fleet-state-mixed)      SCRIPT=tests/k6/fleet_state_mixed.js; export VEHICLES=500; export SUBSCRIBERS=200 ;;
+            export-generation)      SCRIPT=tests/k6/export_generation.js ;;
             reconnect-storm)
               TOXIPROXY_URL=http://localhost:8474 \
               API_BASE_URL=http://localhost:8080 \
+              CHAOS_EXPECT_FLEET_BATTERY_LEVEL=73 \
               CHAOS_SCENARIOS=redis_latency_500ms_60s,redis_blackhole_20s \
                 timeout --signal=TERM 30m go run ./cmd/chaos-runner | tee k6-output.txt
               exit ${PIPESTATUS[0]}
               ;;
             *) echo "::error::unknown profile"; exit 1 ;;
           esac
-          timeout --signal=TERM 30m k6 run "$SCRIPT" | tee k6-output.txt
+          timeout --signal=TERM 30m "${K6_BIN:-k6}" run "$SCRIPT" | tee k6-output.txt
 
       - name: Publish results
         if: always()
