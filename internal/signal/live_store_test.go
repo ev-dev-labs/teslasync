@@ -2,6 +2,7 @@ package signal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -299,6 +300,9 @@ func TestHybridLiveSignalStoreWarmHydratesL1FromRedis(t *testing.T) {
 
 	assertFloat64(t, local.Get(15, "BatteryLevel").Raw, 77)
 	assertString(t, local.Get(15, "ShiftState").Raw, "N")
+	if local.Get(15, "BatteryLevel").TimestampSynthetic {
+		t.Fatal("ordinary Redis cache write was marked synthetic after Warm")
+	}
 }
 
 func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T) {
@@ -341,6 +345,9 @@ func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T)
 		if value.Timestamp.IsZero() {
 			t.Fatalf("%s Timestamp is zero after restamp, want non-zero envelope timestamp", name)
 		}
+		if !value.TimestampSynthetic {
+			t.Fatalf("%s timestamp was presented as an observation after legacy restamp", name)
+		}
 		if value.Timestamp.Before(before) || value.Timestamp.After(after) {
 			t.Fatalf("%s Timestamp = %v, want within [%v, %v]", name, value.Timestamp, before, after)
 		}
@@ -351,6 +358,7 @@ func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T)
 		raw := rawHash[field]
 		for _, want := range []string{
 			`"encoding":"teslasync.signal.v1"`,
+			`"observed":false`,
 			`"timestamp"`,
 			`"source":"redis_signal_cache"`,
 		} {
@@ -358,6 +366,42 @@ func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T)
 				t.Fatalf("restamped %s raw = %q does not contain %q", field, raw, want)
 			}
 		}
+	}
+}
+
+func TestRedisEnvelopeWithoutObservationMarkerIsConservativelySynthetic(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	vehicleID := int64(46)
+	encoded, err := encodeTimestampedSignalValueForField(
+		"BatteryLevel",
+		72.0,
+		time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC),
+	)
+	if err != nil {
+		t.Fatalf("encode envelope: %v", err)
+	}
+	var envelope map[string]interface{}
+	if err := json.Unmarshal([]byte(encoded), &envelope); err != nil {
+		t.Fatalf("decode envelope fixture: %v", err)
+	}
+	delete(envelope, "observed")
+	legacyBytes, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatalf("encode pre-marker envelope: %v", err)
+	}
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{
+		"BatteryLevel": string(legacyBytes),
+	}
+
+	cache := &RedisSignalCache{rdb: redisClient}
+	values, err := cache.GetAllValues(ctx, vehicleID)
+	if err != nil {
+		t.Fatalf("GetAllValues() error = %v", err)
+	}
+	value := values["BatteryLevel"]
+	if value == nil || !value.TimestampSynthetic {
+		t.Fatalf("pre-marker envelope = %#v, want conservative synthetic provenance", value)
 	}
 }
 

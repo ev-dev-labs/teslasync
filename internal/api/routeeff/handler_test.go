@@ -462,11 +462,11 @@ func TestList_SQLShape(t *testing.T) {
 	mustContain := []string{
 		"FROM drives",
 		"vehicle_id = $1",
-		"distance_m",       // SI meters
-		"duration_s",       // SI seconds
-		"avg_speed_mps",    // SI m/s
-		"start_soc_pct",    // SI percent
-		"end_soc_pct",      //
+		"distance_m",    // SI meters
+		"duration_s",    // SI seconds
+		"avg_speed_mps", // SI m/s
+		"start_soc_pct", // SI percent
+		"end_soc_pct",   //
 		"ambient_temp_c_avg",
 		"GROUP BY start_label, end_label",
 		"ORDER BY COUNT(*) DESC",

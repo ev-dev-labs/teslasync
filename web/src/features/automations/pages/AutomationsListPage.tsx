@@ -21,6 +21,7 @@ import {
   QueryError,
   Skeleton,
 } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useAutomationEvents } from '@/hooks/useAutomationEvents';
@@ -487,6 +488,13 @@ export default function AutomationsListPage() {
                         to: '/automations/new',
                       }
                     : undefined}
+                />
+                {/* HELP-02 — this list is empty BY DESIGN (automations are
+                    opt-in and never created for you), which is exactly the
+                    thing a bare empty state cannot say. */}
+                <EmptyStateGuidanceDetails
+                  guidanceId="automations.list"
+                  className="mx-auto"
                 />
               </GlassPanel>
             ) : (

@@ -89,7 +89,12 @@ export function useLiveRecovery({
 
   const disconnectedAtRef = useRef<number | null>(null)
   const hasConnectedRef = useRef(false)
-  const lastRecoveryAtRef = useRef(0)
+  // `-Infinity` means "no recovery has ever run", which is the only honest
+  // seed: `0` is a real instant (the epoch), so `now - 0` is a finite elapsed
+  // time and any clock positioned at or near the epoch — a deterministic fake
+  // timer, a device with an unset RTC — made the FIRST recovery look like it
+  // was inside a cooldown and deferred it for no reason.
+  const lastRecoveryAtRef = useRef(Number.NEGATIVE_INFINITY)
   const pendingRef = useRef<number | null>(null)
   const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -194,6 +199,13 @@ export function useLiveRecovery({
       document.addEventListener('visibilitychange', onVisible)
     }
 
+    // The cleanup below clears any armed cooldown timer, so an options change
+    // (`enabled` flipping back on, a new `cooldownMs`) would otherwise strand
+    // a recovery that was already deferred and never re-read the state missed
+    // during that outage. Re-arming here is a no-op on a first mount, where
+    // nothing is pending yet.
+    if (pendingRef.current != null) recoverRef.current()
+
     return () => {
       sseManager.unsubscribe('disconnected', onDisconnected)
       sseManager.unsubscribe('connected', onConnected)
@@ -203,7 +215,5 @@ export function useLiveRecovery({
       // A deferred recovery must not fire into an unmounted consumer.
       clearCooldownTimer()
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- clearCooldownTimer
-    // is a stable ref-based closure; including it would resubscribe every render.
   }, [enabled, cooldownMs])
 }

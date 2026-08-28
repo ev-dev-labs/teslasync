@@ -234,6 +234,15 @@ export default function ExportsPage() {
                   stickyHeader
                   maxHeight={640}
                   selectable="multi"
+                  // A11Y: export job ids are UUIDs, which a screen
+                  // reader spells out character by character. Name each
+                  // row by what the user actually recognises.
+                  rowLabel={(j) =>
+                    t('exportsList.rowLabel', '{{type}} export, {{created}}', {
+                      type: j.type || t('exportsList.unknownType', 'Unknown'),
+                      created: formatDateTime(j.created_at),
+                    })
+                  }
                   selectedKeys={selectedKeys}
                   onSelectionChange={setSelectedKeys}
                   bulkActions={(rows) => (

@@ -244,8 +244,34 @@ func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisS
 	}()
 }
 
+// HandlerOption configures the SSE handler.
+type HandlerOption func(*handlerConfig)
+
+type handlerConfig struct {
+	drain <-chan struct{}
+}
+
+// WithDrainSignal wires a channel that is closed when the process starts
+// draining (the Kubernetes preStop hook flipping the readiness gate).
+//
+// This matters more than it looks. http.Server.Shutdown does NOT cancel
+// the request context of an in-flight handler: it stops accepting new
+// connections and then waits. An SSE handler blocked on its event
+// channel therefore keeps the shutdown pending for the entire grace
+// budget (30s in internal/app), after which every stream is severed
+// abruptly. With a drain signal the handler returns immediately, emits a
+// `shutdown` event so the SPA can reconnect deliberately instead of
+// treating it as an error, and the pod drains in milliseconds.
+func WithDrainSignal(ch <-chan struct{}) HandlerOption {
+	return func(c *handlerConfig) { c.drain = ch }
+}
+
 // SSEHandler handles Server-Sent Events connections.
-func SSEHandler(hub *EventHub) http.HandlerFunc {
+func SSEHandler(hub *EventHub, opts ...HandlerOption) http.HandlerFunc {
+	cfg := handlerConfig{}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -276,6 +302,11 @@ func SSEHandler(hub *EventHub) http.HandlerFunc {
 			select {
 			case <-r.Context().Done():
 				log.Info().Str("client", clientID).Msg("SSE client disconnected")
+				return
+			case <-cfg.drain:
+				fmt.Fprint(w, "event: shutdown\ndata: {\"reason\":\"draining\"}\n\n")
+				flusher.Flush()
+				log.Info().Str("client", clientID).Msg("SSE client released for pod drain")
 				return
 			case msg, ok := <-events:
 				if !ok {

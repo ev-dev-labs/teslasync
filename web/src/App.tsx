@@ -7,9 +7,11 @@ import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { VitalsConsentPolicyGate } from './components/feedback/VitalsConsentPolicyGate'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
+import { TaskOnboardingHost } from '@/features/onboarding/components/TaskOnboardingHost'
+import { DemoModeBanner } from '@/components/feedback/DemoModeBanner'
 import { DensityApplier } from '@/components/ui/DensityApplier'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
-import { RouteAnnouncer } from '@/components/a11y'
+import { RouteAnnouncer, RouteFocusManager } from '@/components/a11y'
 import { recordPageView, resolvePageLabel } from '@/lib/recentPages'
 import { getBaseTitle } from '@/lib/titleStore'
 import {
@@ -274,6 +276,7 @@ const PowerDashboards = lazy(() => import('./features/power-user/pages/Dashboard
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
+const Help = lazy(() => import('./features/system/pages/HelpPage'))
 const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
 const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
 const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
@@ -485,7 +488,17 @@ export default function App() {
 
   return (
     <>
+      {/* HELP-12 — unmistakable synthetic-data label. Self-gating: renders
+          nothing unless demo mode is explicitly and completely configured
+          (see lib/demoMode for the fail-closed guard). Mounted first so it is
+          the topmost element of any screenshot. */}
+      <DemoModeBanner />
       <OnboardingGate />
+      {/* HELP-01 — at most one inline, dismissible, route-scoped onboarding
+          hint. Replaces the automatic dashboard tour: it never takes focus,
+          never blocks, and is suppressed entirely for experienced users and
+          for anyone who opted out. */}
+      <TaskOnboardingHost />
       {/* Publishes the live `require_cookie_consent` policy into the optional
           reporters. Mounted ABOVE <Routes> so it also covers the standalone
           routes that never mount <Layout> (/s/:token, /watch, /onboarding).
@@ -496,6 +509,11 @@ export default function App() {
       {/* Phase-46 / Prompt 21 — announces the new page title to screen
           readers on every SPA navigation. WCAG 2.4.2. */}
       <RouteAnnouncer />
+      {/* A11Y-03 — parks keyboard focus on the new page's <h1> after a
+          client-side navigation so screen-reader and switch users do not
+          have to re-traverse the shell. Suppressed on Back/Forward,
+          query-only navigations, open dialogs, and mid-typing. */}
+      <RouteFocusManager />
       {/* Phase-46 / Prompt 51 — records every route the user visits so
           the command palette and global recent-page surfaces can show them. */}
       <RecentPagesRecorder />
@@ -604,6 +622,11 @@ export default function App() {
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
+        {/* HELP-06/08/09/11 — the help index, glossary, release notes,
+            support bundle and dashboard presets all live here. The page and
+            its tests already existed but were never routed, so /help 404'd
+            and every in-app "get help" link had nowhere to point. */}
+        <Route path="help" element={<SafeRoute name="Help"><Help /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />

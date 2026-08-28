@@ -241,8 +241,8 @@ func TestParseBackupHistoryResponse(t *testing.T) {
 			wantLen: 1,
 		},
 		{
-			name: "missing_duration_defaults_zero",
-			body: `{"response":{"time_series":[{"timestamp":"2026-02-01T12:00:00Z"}]}}`,
+			name:    "missing_duration_defaults_zero",
+			body:    `{"response":{"time_series":[{"timestamp":"2026-02-01T12:00:00Z"}]}}`,
 			wantLen: 1,
 		},
 	}

@@ -174,7 +174,10 @@ describe('AlertFeedWidget — shell states', () => {
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('Alert Feed')).toBeNull();
-    expect(screen.queryAllByRole('link')).toHaveLength(0);
+    // The shared error card now carries "where to look next" destinations
+    // (HELP-05), so scope the "no alert rows" assertion to the widget body
+    // instead of asserting the absence of every link on screen.
+    expect(screen.queryAllByRole('link', { name: /alert/i })).toHaveLength(0);
   });
 
   it('renders an explicit empty state under the real title when there are no alerts', () => {

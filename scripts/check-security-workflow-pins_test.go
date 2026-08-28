@@ -30,6 +30,12 @@ jobs:
       - name: Shell text is not an action
         run: |
           echo "uses: actions/checkout@main"
+  reusable:
+    uses: example/security-workflows/.github/workflows/scan.yml@` + testSHA + ` # v1.2.3
+  attest:
+    steps:
+      - name: Action in another job
+        uses: actions/attest-build-provenance@` + testSHA + ` # v3.0.0
 `
 }
 
@@ -48,6 +54,18 @@ func TestWorkflowPinCheckerRejectsMutableActionAndScanner(t *testing.T) {
 	failures = workflowPinFailures(strings.Replace(pinnedWorkflow(), "aquasec/trivy@"+testDigest, "aquasec/trivy:latest", 1))
 	if !containsFailure(failures, "TRIVY_IMAGE must use a digest-pinned") {
 		t.Fatalf("mutable scanner was not rejected: %v", failures)
+	}
+}
+
+func TestWorkflowPinCheckerRejectsMutableActionsOutsideSecurityJob(t *testing.T) {
+	for _, pinned := range []string{
+		"example/security-workflows/.github/workflows/scan.yml@" + testSHA,
+		"actions/attest-build-provenance@" + testSHA,
+	} {
+		failures := workflowPinFailures(strings.Replace(pinnedWorkflow(), pinned, strings.Split(pinned, "@")[0]+"@main", 1))
+		if !containsFailure(failures, "not SHA-pinned") {
+			t.Fatalf("mutable action outside security job was not rejected: %v", failures)
+		}
 	}
 }
 

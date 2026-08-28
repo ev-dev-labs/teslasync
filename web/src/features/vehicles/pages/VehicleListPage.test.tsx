@@ -297,13 +297,23 @@ const VEHICLES: Vehicle[] = [V1, V2, V3];
  * failure, and from a reading retained through an outage. V3 has no
  * snapshot — that is `missing`, NOT offline.
  */
-const OBSERVED_AT = 1_700_000_000_000;
+const OBSERVED_AT = Date.now() - 1_000;
+const VERIFIED_FIELDS = [
+  'state',
+  'battery_level',
+  'rated_range',
+  'speed',
+  'is_charging',
+  'software_version',
+] as const;
 
 function resolvedEntry(vehicle: Vehicle, state: VehicleState, observedAt = OBSERVED_AT) {
   return {
     vehicle,
     state,
     outcome: 'resolved' as const,
+    freshness: 'fresh' as const,
+    verifiedFields: VERIFIED_FIELDS,
     stale: false,
     observedAt,
     receivedAt: observedAt,
@@ -314,6 +324,8 @@ function missingEntry(vehicle: Vehicle) {
     vehicle,
     state: null,
     outcome: 'missing' as const,
+    freshness: 'unknown' as const,
+    verifiedFields: [],
     stale: false,
     observedAt: null,
     receivedAt: OBSERVED_AT,
@@ -324,6 +336,8 @@ function failedEntry(vehicle: Vehicle) {
     vehicle,
     state: null,
     outcome: 'failed' as const,
+    freshness: 'unknown' as const,
+    verifiedFields: [],
     stale: false,
     observedAt: null,
     receivedAt: OBSERVED_AT,
@@ -335,6 +349,8 @@ function retainedEntry(vehicle: Vehicle, state: VehicleState, observedAt = OBSER
     vehicle,
     state,
     outcome: 'failed' as const,
+    freshness: 'stale' as const,
+    verifiedFields: VERIFIED_FIELDS,
     stale: true,
     // Deliberately OLD: a retained reading keeps the age it was captured at.
     observedAt,
@@ -399,6 +415,18 @@ function briefMetric(label: string): HTMLElement {
   return tile as HTMLElement;
 }
 
+/**
+ * The brief's LIVE VEHICLE STATE freshness chip.
+ *
+ * The brief renders two chips side by side (live state + work orders), so an
+ * unscoped "just now" assertion would match the wrong one. `DataFreshnessAuto`
+ * names its source in the accessible label, which is the stable seam.
+ */
+function liveStateFreshnessChip(): HTMLElement {
+  const posture = screen.getByTestId('fleet-operational-brief');
+  return within(posture).getByLabelText(/Source: Live vehicle state/);
+}
+
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
@@ -438,13 +466,16 @@ describe('VehicleListPage — happy path', () => {
     // not ready.
     expect(within(readinessMetric as HTMLElement).getByText('2/2')).toBeInTheDocument();
     expect(within(readinessMetric as HTMLElement).getByText(
-      /Based on 2 of 3 vehicles with a current reading/,
+      /Based on 2 of 3 vehicles with a current battery reading/,
     )).toBeInTheDocument();
     expect(within(posture).getByText('Live utilization')).toBeInTheDocument();
     // V1 charging + V2 driving out of 2 covered = 100 %, not 67 % of 3.
     expect(within(posture).getByText('100%')).toBeInTheDocument();
     expect(within(posture).getByText('Software posture')).toBeInTheDocument();
     expect(within(posture).getByText('2 versions')).toBeInTheDocument();
+    expect(within(posture).getByText(
+      'Based on 2 of 3 vehicles with a current software reading.',
+    )).toBeInTheDocument();
     expect(within(posture).getByText('Service attention')).toBeInTheDocument();
     expect(within(posture).getByText('1 open')).toBeInTheDocument();
     expect(
@@ -859,15 +890,17 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(notice).toHaveTextContent(/rather than counted as offline/i);
   });
 
-  it('keeps a retained prior reading counted, flagged as partial, on a failed refresh', () => {
+  it('keeps retained state visible but excludes it from current status counts', () => {
     mockFleetStates.mockReturnValue(
       qr({ data: [retainedEntry(V1, S1), resolvedEntry(V2, S2), missingEntry(V3)] }),
     );
     renderPage();
 
-    // The retained reading still classifies — it is real, just unconfirmed.
-    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    // The retained reading remains on its vehicle card, but it cannot assert
+    // that the vehicle is still charging after the refresh failed.
+    expect(screen.queryByRole('progressbar', { name: 'Charging' })).toBeNull();
     expect(screen.getByRole('progressbar', { name: 'Driving' })).toBeInTheDocument();
+    expect(screen.getByText('Last known')).toBeInTheDocument();
     expect(screen.getByTestId('fleet-status-partial')).toBeInTheDocument();
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });
@@ -911,7 +944,7 @@ describe('VehicleListPage — loading, error & empty states', () => {
     expect(within(briefMetric('Live utilization')).getByText('100%')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
     expect(within(briefMetric('Departure ready')).getByText(
-      /Based on 1 of 3 vehicles with a current reading/,
+      /Based on 1 of 3 vehicles with a current battery reading/,
     )).toBeInTheDocument();
   });
 
@@ -925,6 +958,65 @@ describe('VehicleListPage — loading, error & empty states', () => {
 
     expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
     expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+  });
+
+  it('uses the same fresh-only population for software numerator and denominator', () => {
+    mockFleetStates.mockReturnValue(
+      qr({ data: [retainedEntry(V1, S1), retainedEntry(V2, S2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    const software = within(briefMetric('Software posture'));
+    expect(software.getByText('—')).toBeInTheDocument();
+    expect(software.queryByText('2 versions')).toBeNull();
+    expect(software.getByText(
+      'Based on 0 of 3 vehicles with a current software reading.',
+    )).toBeInTheDocument();
+  });
+
+  it('does not raise a current low-battery alert from retained state', async () => {
+    const retainedLowBattery = { ...S1, battery_level: 10 };
+    mockFleetStates.mockReturnValue(
+      qr({
+        data: [
+          retainedEntry(V1, retainedLowBattery),
+          retainedEntry(V2, S2),
+          missingEntry(V3),
+        ],
+      }),
+    );
+    renderPage();
+
+    const posture = screen.getByTestId('fleet-operational-brief');
+    fireEvent.click(within(posture).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', {
+      name: 'Availability and readiness across the fleet details',
+    });
+    expect(within(drawer).queryByText(/vehicle below 20%/i)).toBeNull();
+    expect(within(drawer).queryByText(/Review charging readiness/i)).toBeNull();
+  });
+
+  it('uses API observation time, never FSM state-since, in narrative evidence', async () => {
+    const observedAt = Date.now() - 1_000;
+    const stateWithOldTransition = {
+      ...S1,
+      since: '2020-01-02T03:04:05Z',
+    };
+    mockFleetStates.mockReturnValue(
+      qr({ data: [resolvedEntry(V1, stateWithOldTransition, observedAt)] }),
+    );
+    renderPage();
+
+    const posture = screen.getByTestId('fleet-operational-brief');
+    fireEvent.click(within(posture).getByRole('button', { name: 'Review details' }));
+    const drawer = await screen.findByRole('dialog', {
+      name: 'Availability and readiness across the fleet details',
+    });
+    const summary = within(drawer).getByText(/Model 3 Alpha: online, battery/);
+    const evidence = summary.closest('div');
+    expect(evidence).not.toBeNull();
+    expect(evidence).toHaveTextContent(String(new Date(observedAt).getFullYear()));
+    expect(evidence).not.toHaveTextContent('2020');
   });
 
   it('ages the freshness chip from the OBSERVATION, not from the successful wrapper batch', () => {
@@ -1058,5 +1150,104 @@ describe('VehicleListPage — loading, error & empty states', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Fleet availability and live state remain visible, but maintenance work orders could not be loaded.')).toBeInTheDocument();
     expect(within(cardGrid()).getByText('Model 3 Alpha')).toBeInTheDocument();
+  });
+
+  it('ages the OPERATIONAL BRIEF freshness chip from the observation too', () => {
+    // The header chip has its own guard above. The brief is a second, separate
+    // freshness surface, and it was the one an operator actually reads before
+    // dispatching — both must be fed the synthetic observation timestamp, not
+    // the wrapper batch's `dataUpdatedAt`, which advances on every 30 s poll
+    // even when every per-vehicle request failed.
+    const tenMinutesAgo = Date.now() - 10 * 60_000;
+    mockFleetStates.mockReturnValue(qr({
+      data: [retainedEntry(V1, S1, tenMinutesAgo), retainedEntry(V2, S2, tenMinutesAgo)],
+      dataUpdatedAt: Date.now(),
+      isError: false,
+    }));
+    renderPage();
+
+    // Scoped to the LIVE VEHICLE STATE chip: the brief also carries a work
+    // orders chip, which is legitimately "just now".
+    const chip = liveStateFreshnessChip();
+    expect(chip).toHaveTextContent(/10m ago/);
+    expect(chip).not.toHaveTextContent(/just now/);
+  });
+
+  it('reports the OLDEST observation, so one fresh car cannot mask a stale fleet', () => {
+    // A summary is only as fresh as its stalest member. Reporting the newest
+    // reading would let a single chatty vehicle certify a fleet whose other
+    // members have not been heard from in ten minutes.
+    const tenMinutesAgo = Date.now() - 10 * 60_000;
+    mockFleetStates.mockReturnValue(qr({
+      data: [resolvedEntry(V1, S1, Date.now()), retainedEntry(V2, S2, tenMinutesAgo)],
+      dataUpdatedAt: Date.now(),
+    }));
+    renderPage();
+
+    const chip = liveStateFreshnessChip();
+    expect(chip).toHaveTextContent(/10m ago/);
+    expect(chip).not.toHaveTextContent(/just now/);
+  });
+
+  it('describes a total outage as unresolved, never as a fleet of offline vehicles', () => {
+    // The headline failure this page family exists to prevent: a dead API
+    // rendering as a confident, fully-populated "every vehicle is Offline".
+    mockFleetStates.mockReturnValue(
+      qr({ data: [failedEntry(V1), failedEntry(V2), failedEntry(V3)], isError: false }),
+    );
+    renderPage();
+
+    const posture = screen.getByTestId('fleet-operational-brief');
+    // "unavailable" (we could not resolve it) — NOT "offline" (the car said so).
+    expect(within(posture).getByText('3 vehicle unavailable')).toBeInTheDocument();
+    expect(within(posture).getByText(
+      'Live state could not be resolved. Verify connectivity before issuing commands.',
+    )).toBeInTheDocument();
+    // Nothing anywhere classifies the fleet's operational status.
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+    expect(screen.queryByRole('progressbar', { name: 'Online' })).toBeNull();
+    // …and no derived KPI reports a zero as if it were a measurement.
+    expect(within(briefMetric('Live state available')).getByText('—')).toBeInTheDocument();
+    expect(within(briefMetric('Live utilization')).getByText('—')).toBeInTheDocument();
+  });
+
+  it('keeps missing, failed and resolved distinct in one batch', () => {
+    // `state === null` used to mean three operationally different things at
+    // once. V1 resolved, V2 answered with no snapshot, V3's request failed:
+    // the page must classify only V1 and disclose the other two as coverage
+    // loss, with the notice naming the TRANSPORT failure (the actionable one).
+    mockFleetStates.mockReturnValue(
+      qr({ data: [resolvedEntry(V1, S1), missingEntry(V2), failedEntry(V3)] }),
+    );
+    renderPage();
+
+    expect(screen.getByRole('progressbar', { name: 'Charging' })).toBeInTheDocument();
+    expect(screen.queryByRole('progressbar', { name: 'Offline' })).toBeNull();
+
+    const notice = screen.getByTestId('fleet-status-partial');
+    expect(notice).toHaveTextContent('Breakdown covers 1 of 3 vehicles');
+    expect(notice).toHaveTextContent('1 vehicle state request(s) failed');
+
+    // Coverage is disclosed on the derived KPI rather than diluted into it.
+    expect(within(briefMetric('Departure ready')).getByText('1/1')).toBeInTheDocument();
+    expect(within(briefMetric('Departure ready')).getByText(
+      /Based on 1 of 3 vehicles with a current battery reading/,
+    )).toBeInTheDocument();
+  });
+
+  it('names an authoritative absence as missing, not as a failed request', () => {
+    // Same shape as the case above but with NO transport failure: the notice
+    // must say "has not reported a snapshot yet", because telling an operator
+    // a request failed when it did not sends them debugging the wrong system.
+    mockFleetStates.mockReturnValue(
+      qr({ data: [resolvedEntry(V1, S1), missingEntry(V2), missingEntry(V3)] }),
+    );
+    renderPage();
+
+    const notice = screen.getByTestId('fleet-status-partial');
+    expect(notice).toHaveTextContent('Breakdown covers 1 of 3 vehicles');
+    expect(notice).toHaveTextContent('2 vehicle(s) have not reported a snapshot yet');
+    expect(notice).not.toHaveTextContent(/request\(s\) failed/);
+    expect(screen.queryByText("Can't reach server")).toBeNull();
   });
 });

@@ -9,8 +9,11 @@ metadata:
 spec:
   minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
   selector:
+    # OPS-05: scoped to the STABLE set in disjoint mode. A PDB that also
+    # matched canary pods would count them toward minAvailable and could
+    # block eviction of the stable set during a node drain.
     matchLabels:
-      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      {{- include "teslasync.stableSelectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: api
 {{- end }}
 ---
@@ -25,7 +28,8 @@ metadata:
 spec:
   minAvailable: {{ .Values.web.podDisruptionBudget.minAvailable }}
   selector:
+    # OPS-05: stable-scoped for the same reason as the api PDB above.
     matchLabels:
-      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      {{- include "teslasync.stableSelectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: web
 {{- end }}

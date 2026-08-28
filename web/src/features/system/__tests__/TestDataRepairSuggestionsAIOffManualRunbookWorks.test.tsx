@@ -22,12 +22,12 @@
 // show:
 //
 //   - The page title (Data Repair).
-//   - The four MetricCards (Suggested Repairs, Drive Boundaries,
-//     Charging Boundaries, Blocked) — renamed when the page moved
-//     from an age-based stale list to an evidence-based diagnosis.
+//   - After opening the deferred "Diagnostics" workspace tab: the four
+//     MetricCards (Suggested Repairs, Drive Boundaries, Charging
+//     Boundaries, Blocked) — renamed when the page moved from an
+//     age-based stale list to an evidence-based diagnosis.
 //   - Both stale worklist panels (Charging Sessions, Drives) rendered
-//     side-by-side (the redesign replaced the tab switcher with a
-//     full-width two-column bento).
+//     side-by-side inside that diagnostics workspace.
 //   - The deterministic empty-state when the inventory is empty.
 //
 // The HTTP POST /api/v1/ai/system/data-repair/draft 404-in-off-
@@ -42,7 +42,7 @@
 // positional pattern against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -203,6 +203,11 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     // 1) Page title surfaces.
     expect(await screen.findByText('Data Repair')).toBeInTheDocument();
 
+    // 1b) The deep-diagnostics workspace is deferred behind the Diagnostics
+    // tab (it lazy-loads and only then issues the suggestion/stale scans), so
+    // open it before asserting the deterministic surfaces it owns.
+    fireEvent.click(await screen.findByRole('tab', { name: 'Diagnostics' }));
+
     // 2) Metric cards — the deterministic KPI band is present (await
     // loading to finish; React Query resolves on its own scheduler tick).
     // "Suggested Repairs" appears only on the metric card; the boundary
@@ -214,9 +219,9 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     expect(screen.getAllByText(/Charging Boundaries/i).length).toBeGreaterThan(0);
 
     // 3) Both deterministic worklist panels — Charging Sessions +
-    // Drives — render as section headings. The redesign shows both
-    // lists side-by-side instead of behind a tab switcher, so we assert
-    // the panel headings (exact accessible names avoid matching the
+    // Drives — render as section headings inside the diagnostics
+    // workspace, side-by-side rather than behind a sub-tab switcher, so we
+    // assert the panel headings (exact accessible names avoid matching the
     // "All charging sessions are complete" empty-state heading).
     expect(
       screen.getByRole('heading', { name: 'Charging Sessions' }),

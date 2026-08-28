@@ -1,6 +1,7 @@
 import { Wifi, WifiOff, Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { useLiveConnection } from '@/hooks/useLiveConnection'
+import { useConnectionAnnouncement } from '@/hooks/useConnectionAnnouncement'
 import { formatRelativeTime } from '@/lib/dateFormat'
 import { cn } from '@/lib/cn'
 
@@ -45,6 +46,10 @@ interface VariantConfig {
 export function LiveIndicator({ variant = 'pill', className }: LiveIndicatorProps) {
   const { status, lastMessageAt } = useLiveConnection()
   const { t } = useTranslation()
+  // A11Y-06: colour and icon alone cannot tell a screen-reader user that
+  // the wire dropped and the numbers on screen are now stale. Governed
+  // so a flapping connection speaks at most once per 10 s.
+  useConnectionAnnouncement(status, { label: t('live.scope', 'Live data') })
 
   const cfg: Record<typeof status, VariantConfig> = {
     connected: {

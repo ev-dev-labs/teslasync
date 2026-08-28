@@ -1,6 +1,0 @@
-{
-  "slider": {
-    "thumbMin": "{{label}} minimum",
-    "thumbMax": "{{label}} maximum"
-  }
-}

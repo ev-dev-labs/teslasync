@@ -338,3 +338,52 @@ MongoDB host — bundled service name (only used when mongodb.enabled=true).
 {{- define "teslasync.mongodb.port" -}}
 {{- toString (.Values.mongodb.service.port | default 27017) }}
 {{- end }}
+
+{{/* ── OPS-05: stable/canary selector disjointness ──────────────────────
+
+`spec.selector` on a Deployment is a SUPERSET match: a pod that carries
+every label in the selector is adopted, even if it carries extra ones.
+So a canary pod labelled with the common selector labels plus
+`teslasync.io/rollout: canary` is still matched by the stable
+Deployment's selector — and therefore by the stable HPA (which reads
+metrics through that selector) and the stable PDB.
+
+`teslasync.selectorMode` returns the configured mode. In `disjoint`
+mode the stable workloads add `teslasync.io/rollout: stable` to their
+selectors, making the two sets provably non-overlapping. The Service
+selector deliberately does NOT include the rollout label, so it keeps
+fronting both and traffic still splits by replica share.
+
+Deployment selectors are immutable, so `legacy` remains the default and
+canary is refused in that mode rather than silently overlapping.
+*/}}
+{{- define "teslasync.selectorMode" -}}
+{{- default "legacy" .Values.rollout.selectorMode -}}
+{{- end }}
+
+{{/*
+Guard: canary requires disjoint selectors. Rendering fails loudly rather
+than producing manifests where the stable HPA scales on canary pods.
+*/}}
+{{- define "teslasync.assertCanarySelectors" -}}
+{{- $mode := include "teslasync.selectorMode" . -}}
+{{- $canary := or .Values.rollout.api.canary.enabled (and .Values.web.enabled .Values.rollout.web.canary.enabled) -}}
+{{- if and $canary (ne $mode "disjoint") -}}
+{{- fail "rollout.selectorMode must be \"disjoint\" before enabling any canary: with legacy selectors the stable Deployment/HPA/PDB would also match canary pods (superset selector match). Deployment selectors are immutable — see docs/runbooks/rollout-selector-migration.md for the one-time migration (the obvious --cascade=orphan procedure does NOT converge)." -}}
+{{- end -}}
+{{- if and (ne $mode "legacy") (ne $mode "disjoint") -}}
+{{- fail (printf "rollout.selectorMode must be \"legacy\" or \"disjoint\", got %q" $mode) -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Stable-workload selector labels. Adds the rollout discriminator only in
+disjoint mode, so legacy installs render byte-identical selectors and a
+plain `helm upgrade` never hits the immutable-field error.
+*/}}
+{{- define "teslasync.stableSelectorLabels" -}}
+{{ include "teslasync.selectorLabels" . }}
+{{- if eq (include "teslasync.selectorMode" .) "disjoint" }}
+teslasync.io/rollout: stable
+{{- end }}
+{{- end }}

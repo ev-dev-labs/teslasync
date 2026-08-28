@@ -7,6 +7,12 @@
  * All API calls should go through {@link resilientFetch}.
  */
 
+import { broadcast } from './broadcast'
+import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
+// HELP-12. `demoMode` imports nothing from this module, so there is no cycle;
+// it is a leaf that reads `import.meta.env` and validates it.
+import { demoCredentialsMode, getDemoApiBase } from './demoMode'
+
 type RequestStatus = 'online' | 'offline'
 
 // --- Snake-case to camelCase transformer ---
@@ -147,6 +153,24 @@ export function getReauthUrl(): string | null {
  * App.tsx consumes that key on first mount post-auth.
  */
 export function navigateToReauth(): void {
+  // Identity transition: the cached authenticated API reads on disk belong to
+  // the session we are leaving. Purge them BEFORE navigating so a different
+  // user (or the same user after a permission change) can never be served the
+  // previous identity's vehicle list, drives, or notification counts from
+  // Cache Storage. The worker-side purge is dispatched synchronously and the
+  // worker outlives this document, so it completes even though we navigate on
+  // the next line. See `sw/purgeApiCache.ts`.
+  purgeServiceWorkerApiCache()
+  // Tell sibling tabs to do the same. Cache Storage is shared per-origin, so
+  // the purge above already covers them, but a peer tab must also drop its
+  // in-memory query cache and re-run its own purge in case this tab was
+  // uncontrolled. `auth.logout` is the established topic for that.
+  try {
+    broadcast({ type: 'auth.logout' })
+  } catch {
+    // The bus is best-effort; never let it block a sign-out.
+  }
+
   try {
     sessionStorage.setItem(RETURN_URL_KEY, window.location.href)
   } catch {
@@ -713,9 +737,20 @@ async function _doFetch<T>(
     const merged = combineSignals([userSignal, controller.signal])
 
     try {
-      const res = await fetch(`${getApiBase()}/api/v1${path}`, {
+      // HELP-12: a fully-validated demo base is authoritative here too —
+      // otherwise the retry/fallback path would silently reach the real API
+      // while the direct path went to the fixtures, which is exactly the
+      // "synthetic banner over production data" failure demo mode must not
+      // have. `getDemoApiBase()` is null unless demo mode is completely
+      // configured, so normal-mode traffic is unchanged.
+      const demoBase = getDemoApiBase()
+      const url = demoBase !== null
+        ? `${demoBase}${path}`
+        : `${getApiBase()}/api/v1${path}`
+      const res = await fetch(url, {
         headers: { 'Content-Type': 'application/json' },
         ...restOpts,
+        ...(demoCredentialsMode() ? { credentials: demoCredentialsMode() } : {}),
         signal: merged.signal,
       })
 

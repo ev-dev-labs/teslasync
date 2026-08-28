@@ -19,6 +19,11 @@ services:
       - "${TESLASYNC_PORT:-8080}:8080"
     environment:
       - TESLASYNC_PORT=8080
+      # OPS-09: isolated drain listener serving the preStop hook
+      # (POST/GET /internal/flush). Deliberately NOT published to the
+      # host — the endpoint is one-way and pod-fatal, so it must stay
+      # reachable only from inside the container network.
+      - TESLASYNC_DRAIN_PORT=8090
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
@@ -178,7 +183,33 @@ services:
         VITE_OTLP_HTTP_ENDPOINT: ${VITE_OTLP_HTTP_ENDPOINT:-}
         VITE_OTEL_SERVICE_NAME: ${VITE_OTEL_SERVICE_NAME:-teslasync-web}
         VITE_OTEL_DEPLOY_ENV: ${VITE_OTEL_DEPLOY_ENV:-dev-compose}
-        VITE_APP_VERSION: ${VERSION:-dev}
+        # The SPA build identity is deliberately NOT wired to the shared
+        # `VERSION` variable that the four Go image builds above use.
+        #
+        # It was, and that was a footgun: a self-hoster who legitimately set
+        # `VERSION=1.2.3` in `.env` to stamp their API image also stamped the
+        # web image with a version but no commit id, producing the
+        # unpublishable `1.2.3+dev` identity and failing `docker compose build`
+        # on the web service alone. The web identity now has its own opt-in
+        # variables, so nothing about the Go images can reach it.
+        #
+        # Leave both blank (the default) for an UNVERSIONED build: vite.config
+        # reports `dev-<package version>`, which the PWA handshake's
+        # `parseVersion` cannot read, so a local image can never look "older"
+        # than the API and pin an undismissible update prompt.
+        #
+        # To stamp your own image, set BOTH in `.env` — a version without an
+        # immutable id cannot rotate cache buckets, so supplying only
+        # WEB_APP_VERSION degrades back to the unversioned identity (with a
+        # warning) rather than shipping a fake release identity:
+        #   WEB_APP_VERSION=1.2.3
+        #   WEB_GIT_SHA=$(git rev-parse --short HEAD)
+        #
+        # Release images get their identity from
+        # .github/workflows/release.yml, which additionally sets
+        # VITE_RELEASE_BUILD=1 so a half-configured identity fails hard.
+        VITE_APP_VERSION: ${WEB_APP_VERSION:-}
+        VITE_GIT_SHA: ${WEB_GIT_SHA:-}
     container_name: teslasync-web
     restart: unless-stopped
     ports:

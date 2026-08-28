@@ -1,0 +1,37 @@
+{
+  "chart": {
+    "export": {
+      "menuLabel": "Export chart",
+      "disabledTooltip": "Chart not ready to export",
+      "csv": "Download data as CSV",
+      "png": "Save as PNG",
+      "svg": "Save as SVG",
+      "copy": "Copy image to clipboard",
+      "copySuccess": "Chart image copied to clipboard",
+      "copyFallback": "Clipboard not available — image downloaded instead",
+      "copyFailed": "Failed to copy chart image",
+      "preparing": "Preparing chart export…",
+      "failed": "Could not prepare the {{format}} export."
+    },
+    "exportCsv": "Download data as CSV",
+    "menu": {
+      "label": "Chart actions",
+      "open": "Open chart actions menu",
+      "downloadCsv": "Download data as CSV",
+      "downloadPng": "Download as PNG"
+    },
+    "a11y": {
+      "fallbackTableLabel": "{{title}} — data table",
+      "summary": "Chart: {{title}}"
+    },
+    "loading": "Loading chart…",
+    "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet.",
+    "col": {
+      "date": "Date",
+      "value": "Value",
+      "time": "Time",
+      "energy": "Energy (kWh)"
+    }
+  }
+}

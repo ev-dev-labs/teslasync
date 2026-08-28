@@ -1,7 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { PrefetchNavLink } from './PrefetchLink'
 import InstallPrompt from '../feedback/InstallPrompt'
-import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
@@ -29,7 +28,6 @@ import {
   TOUR_START_EVENT,
   TOURS,
   dispatchTourStart,
-  isTourCompleted as isTourCompletedById,
   completedTourToken,
   seedCompletedFromServer,
   markTourCompleted,
@@ -982,7 +980,7 @@ export default function Layout() {
   // used to re-appear after every clear. Mirror the flags into the persisted
   // settings row (like theme/units) so completion survives a clear and syncs
   // across devices.
-  const { data: settings, isFetched: settingsFetched } = useSettings()
+  const { data: settings } = useSettings()
   const queryClient = useQueryClient()
   const settingsRef = useRef(settings)
   settingsRef.current = settings
@@ -1086,27 +1084,20 @@ export default function Layout() {
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
 
-  // Auto-start the dashboard tour the first time a user lands on `/` with at
-  // least one vehicle linked. Per-feature tours stay launcher-only — see
-  // `tourRegistry.TOURS[*].autoStart` for the predicate. Re-evaluates when
-  // the route or fleet size changes; the per-tour completion key (versioned)
-  // prevents duplicate prompts.
-  useEffect(() => {
-    if (activeTourId) return
-    // Wait until settings have loaded (and thus the server-side completion
-    // list has been seeded into localStorage) before auto-starting, so a
-    // cleared browser that already finished the tour on the server does not
-    // flash it again before the seed lands.
-    if (!settingsFetched) return
-    for (const def of Object.values(TOURS)) {
-      if (!def.autoStart) continue
-      if (isTourCompletedById(def.id, def.version)) continue
-      if (def.autoStart({ pathname: location.pathname, vehicleCount })) {
-        const timer = window.setTimeout(() => setActiveTourId(def.id), 1500)
-        return () => window.clearTimeout(timer)
-      }
-    }
-  }, [location.pathname, vehicleCount, activeTourId, settingsFetched])
+  // HELP-01: there is no tour auto-start effect here any more.
+  //
+  // This used to walk `TOURS`, evaluate each `autoStart` predicate on every
+  // route change, and open the seven-step dashboard spotlight 1.5s after a
+  // user with a linked vehicle landed on `/`. Nobody asked for it, it fired on
+  // a route the user had chosen for some other purpose, and it took the whole
+  // screen. Tours are now reachable only through the launcher (help button,
+  // command palette, settings card), and unsolicited onboarding is limited to
+  // the single inline, dismissible hint rendered by `<TaskOnboardingHost>` —
+  // route-scoped, state-gated, versioned, and suppressed for experienced
+  // users. See `lib/onboardingTasks.ts`.
+  //
+  // `TOURS` is still imported: the TOUR_START_EVENT listener above resolves
+  // explicitly-requested tour ids against it.
 
   // Use the durable case summary for the navigation badge. Running the direct
   // stale-session diagnostic in global chrome made every route pay for a
@@ -1544,6 +1535,7 @@ export default function Layout() {
           />
         ) : (
         <nav
+          aria-label={t('a11y.navSections', 'Navigation sections')}
           className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 xl:py-4 px-3 space-y-3 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
         >
@@ -1889,8 +1881,15 @@ export default function Layout() {
           long-running mutations. */}
       <TopProgress />
 
-      {/* Offline status banner (PWA / mobile) */}
-      {presentation.mode === 'standard' && <OfflineBanner />}
+      {/* Offline status banner (PWA / mobile).
+          NOT mounted here any more. `<OfflineBanner>` is now owned by
+          `<ReloadPrompt>` at the application root so the offline transition
+          is announced exactly once on EVERY route — including the six that
+          never mount this Layout (/quick-stats, /glance, /year-review/:year,
+          /s/:token, /watch, /onboarding) — and in report/kiosk mode, where it
+          renders as a screen-reader-only live region instead of floating
+          chrome. Re-adding a mount here would create a duplicate live region
+          and double the announcement on standard routes. */}
 
       {/* Impersonation banner — security context,
           highest priority. Mounted ABOVE every other banner because an

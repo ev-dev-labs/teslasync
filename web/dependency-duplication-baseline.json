@@ -1,0 +1,265 @@
+{
+  "$comment": [
+    "Dependency-duplication baseline (web/scripts/check-duplicate-modules.mjs).",
+    "PER PACKAGE, not aggregate: a listed package may keep exactly the versions listed.",
+    "A newly duplicated package, or a new version of a listed one, fails the gate even",
+    "when the totals do not move.",
+    "`--update-baseline` only lowers/prunes; growing it requires the explicit",
+    "`--accept-new-duplicates` flag in the same command."
+  ],
+  "totalDuplicatedPackages": 35,
+  "totalExtraCopies": 41,
+  "observed": [
+    {
+      "name": "@rolldown/pluginutils",
+      "versions": [
+        "1.0.0-beta.27",
+        "1.0.0-rc.10"
+      ]
+    },
+    {
+      "name": "@rollup/pluginutils",
+      "versions": [
+        "3.1.0",
+        "5.3.0"
+      ]
+    },
+    {
+      "name": "@types/estree",
+      "versions": [
+        "0.0.39",
+        "1.0.8"
+      ]
+    },
+    {
+      "name": "@types/unist",
+      "versions": [
+        "2.0.11",
+        "3.0.3"
+      ]
+    },
+    {
+      "name": "ajv",
+      "versions": [
+        "6.15.0",
+        "8.20.0"
+      ]
+    },
+    {
+      "name": "ansi-styles",
+      "versions": [
+        "4.3.0",
+        "5.2.0"
+      ]
+    },
+    {
+      "name": "aria-query",
+      "versions": [
+        "5.3.0",
+        "5.3.2"
+      ]
+    },
+    {
+      "name": "balanced-match",
+      "versions": [
+        "1.0.2",
+        "4.0.4"
+      ]
+    },
+    {
+      "name": "brace-expansion",
+      "versions": [
+        "1.1.12",
+        "1.1.14",
+        "2.0.2",
+        "5.0.5"
+      ]
+    },
+    {
+      "name": "commander",
+      "versions": [
+        "2.20.3",
+        "4.1.1"
+      ]
+    },
+    {
+      "name": "debug",
+      "versions": [
+        "3.2.7",
+        "4.4.3"
+      ]
+    },
+    {
+      "name": "dom-accessibility-api",
+      "versions": [
+        "0.5.16",
+        "0.6.3"
+      ]
+    },
+    {
+      "name": "escape-string-regexp",
+      "versions": [
+        "4.0.0",
+        "5.0.0"
+      ]
+    },
+    {
+      "name": "eslint-visitor-keys",
+      "versions": [
+        "3.4.3",
+        "5.0.1"
+      ]
+    },
+    {
+      "name": "estree-walker",
+      "versions": [
+        "1.0.1",
+        "2.0.2",
+        "3.0.3"
+      ]
+    },
+    {
+      "name": "fsevents",
+      "versions": [
+        "2.3.2",
+        "2.3.3"
+      ]
+    },
+    {
+      "name": "glob",
+      "versions": [
+        "11.1.0",
+        "7.2.3"
+      ]
+    },
+    {
+      "name": "glob-parent",
+      "versions": [
+        "5.1.2",
+        "6.0.2"
+      ]
+    },
+    {
+      "name": "ignore",
+      "versions": [
+        "5.3.2",
+        "7.0.5"
+      ]
+    },
+    {
+      "name": "js-tokens",
+      "versions": [
+        "10.0.0",
+        "4.0.0"
+      ]
+    },
+    {
+      "name": "json-schema-traverse",
+      "versions": [
+        "0.4.1",
+        "1.0.0"
+      ]
+    },
+    {
+      "name": "lru-cache",
+      "versions": [
+        "11.2.7",
+        "11.3.2",
+        "5.1.1"
+      ]
+    },
+    {
+      "name": "magic-string",
+      "versions": [
+        "0.25.9",
+        "0.30.21"
+      ]
+    },
+    {
+      "name": "minimatch",
+      "versions": [
+        "10.2.5",
+        "3.1.5",
+        "5.1.9"
+      ]
+    },
+    {
+      "name": "picomatch",
+      "versions": [
+        "2.3.2",
+        "4.0.4"
+      ]
+    },
+    {
+      "name": "pretty-bytes",
+      "versions": [
+        "5.6.0",
+        "6.1.1"
+      ]
+    },
+    {
+      "name": "react-is",
+      "versions": [
+        "16.13.1",
+        "17.0.2",
+        "18.3.1"
+      ]
+    },
+    {
+      "name": "rollup",
+      "versions": [
+        "2.80.0",
+        "4.60.2"
+      ]
+    },
+    {
+      "name": "semver",
+      "versions": [
+        "6.3.1",
+        "7.7.4"
+      ]
+    },
+    {
+      "name": "source-map",
+      "versions": [
+        "0.6.1",
+        "0.8.0-beta.0"
+      ]
+    },
+    {
+      "name": "tr46",
+      "versions": [
+        "1.0.1",
+        "6.0.0"
+      ]
+    },
+    {
+      "name": "type-fest",
+      "versions": [
+        "0.16.0",
+        "0.20.2"
+      ]
+    },
+    {
+      "name": "vite",
+      "versions": [
+        "5.4.21",
+        "8.0.1"
+      ]
+    },
+    {
+      "name": "webidl-conversions",
+      "versions": [
+        "4.0.2",
+        "8.0.1"
+      ]
+    },
+    {
+      "name": "whatwg-url",
+      "versions": [
+        "16.0.1",
+        "7.1.0"
+      ]
+    }
+  ]
+}

@@ -434,6 +434,15 @@ export default function FeedbackQueuePage() {
                 data={items}
                 keyExtractor={(r) => r.id}
                 selectable="multi"
+                // A11Y: without this every checkbox announces the same
+                // "Select row"; the first column is a timestamp, which
+                // is not distinguishing on a busy queue.
+                rowLabel={(r) =>
+                  t('feedback.queue.rowLabel', '{{category}}: {{title}}', {
+                    category: r.category,
+                    title: r.title || t('feedback.queue.untitled', 'Untitled feedback'),
+                  })
+                }
                 selectedKeys={selectedKeys}
                 onSelectionChange={setSelectedKeys}
                 bulkActions={renderBulkActions}

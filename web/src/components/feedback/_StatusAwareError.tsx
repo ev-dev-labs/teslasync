@@ -14,10 +14,18 @@ import {
   TriangleAlert,
   WifiOff,
 } from 'lucide-react'
-import { Button } from '@/components/ui'
+// Direct module path, NOT the `@/components/ui` category barrel. The barrel
+// pulls in `ui/SignalConfigModal`, which imports the feedback barrel, so a
+// barrel import here closes a `feedback/index.ts` <-> `ErrorDisplay.tsx`
+// cycle that Rollup reports as CYCLIC_CROSS_CHUNK_REEXPORT (broken chunk
+// execution order). Intra-`components/` imports use direct paths; the
+// category-barrel convention applies to feature/page call sites.
+import { Button } from '@/components/ui/Button'
 import { useOnlineStatus } from '@/hooks/useOnlineStatus'
 import { classifyError } from '@/lib/errorClassification'
 import { ErrorState, type ErrorStateProps } from './_ErrorState'
+import { ErrorHelpLinks } from './ErrorHelpLinks'
+import { PermissionGuidanceNotice } from './PermissionGuidanceNotice'
 
 export interface StatusAwareErrorProps {
   error: unknown
@@ -67,6 +75,27 @@ export function StatusAwareError({
     'compact' | 'className'
   >
 
+  /**
+   * HELP-05 / HELP-10 wiring.
+   *
+   * This component is the shared destination for every failed query in the
+   * app (`QueryError` is a thin re-export), which makes it the one place
+   * where "what failed" can become "where to go next" without touching a
+   * single page.
+   *
+   * Suppressed in `compact` mode: inline mutation errors sit inside forms and
+   * table rows where a multi-line link list would be worse than nothing.
+   */
+  const footer = compact ? undefined : (
+    <div className="space-y-3">
+      {(kind === 'unauthorized' || kind === 'forbidden') && (
+        <PermissionGuidanceNotice
+          kind={kind === 'unauthorized' ? 'unauthenticated' : 'forbidden'}
+        />
+      )}
+      <ErrorHelpLinks kind={kind} />
+    </div>
+  )
   let state: Omit<ErrorStateProps, 'compact' | 'className'>
   switch (kind) {
     case 'waiting':
@@ -129,9 +158,13 @@ export function StatusAwareError({
       state = {
         Icon: ShieldX,
         title: t('error.forbidden.title', 'Permission denied'),
+        // The "ask an administrator" half of this sentence moved into
+        // <PermissionGuidanceNotice> below, which says it with concrete steps
+        // and names who can grant access. Saying it twice made the card read
+        // like two different pieces of advice.
         message: t(
           'error.forbidden.message',
-          'Your account does not have permission to view or change this resource. Ask an administrator if you need access.',
+          'Your account does not have permission to view or change this resource.',
         ),
       }
       break
@@ -235,6 +268,7 @@ export function StatusAwareError({
       {...baseProps}
       {...state}
       message={message ?? state.message}
+      footer={footer}
     />
   )
 }

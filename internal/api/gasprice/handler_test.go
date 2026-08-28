@@ -639,7 +639,7 @@ func TestHandler_History(t *testing.T) {
 		{
 			name: "two rows including open period",
 			querier: &fakeQuerier{queryRows: newFakeRows([][]any{
-				{int64(2), 3.79, "gallon", 26.0, from2, nil, created2},           // effective_to NULL (open)
+				{int64(2), 3.79, "gallon", 26.0, from2, nil, created2},          // effective_to NULL (open)
 				{int64(1), 3.59, "gallon", 25.0, from1, ptrTime(to1), created1}, // closed period
 			})},
 			wantStatus: http.StatusOK,

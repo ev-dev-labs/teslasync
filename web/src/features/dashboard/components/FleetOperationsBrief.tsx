@@ -244,8 +244,8 @@ function BriefMetric({
         )}
       >
         {value}
+        <Caption className="mt-1 block">{hint}</Caption>
       </dd>
-      <Caption className="mt-1 block">{hint}</Caption>
     </div>
   )
 }

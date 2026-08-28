@@ -1,0 +1,32 @@
+{
+  "sudo": {
+    "title": "Confirm your identity",
+    "description": "For your security, please re-enter your password or authenticator code before this action runs.",
+    "passwordLabel": "Password",
+    "totpLabel": "Authenticator code",
+    "submit": "Confirm",
+    "cancel": "Cancel",
+    "helper": "Your reauth lasts 5 minutes; rapid follow-up actions will not re-prompt.",
+    "tabs": {
+      "label": "Reauth method",
+      "password": "Password",
+      "totp": "Authenticator"
+    },
+    "openMode": {
+      "title": "Confirm sensitive action",
+      "body": "This is a destructive action. Type {{token}} to continue.",
+      "submit": "Continue"
+    },
+    "typedConfirmationLabel": "Type {{token}} to confirm",
+    "errors": {
+      "passwordRequired": "Enter your password to continue.",
+      "totpRequired": "Enter the 6-digit code from your authenticator.",
+      "invalidPassword": "Password did not match.",
+      "invalidTotp": "Authenticator code was rejected.",
+      "totpRateLimit": "Too many failed authenticator attempts. Try again in 15 minutes.",
+      "notConfigured": "Step-up reauth is not configured on this server. Ask your administrator to set TESLASYNC_SUDO_PASSWORD or TESLASYNC_SUDO_TOTP_SECRET.",
+      "typedConfirmationMismatch": "Type {{token}} exactly to confirm.",
+      "unknown": "Reauthentication failed."
+    }
+  }
+}

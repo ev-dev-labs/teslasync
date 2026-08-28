@@ -1,0 +1,215 @@
+# OPS-02 — Measurable automated rollback policy.
+#
+# This file is the single source of truth for "is the release healthy
+# enough to keep?". It is consumed by:
+#
+#   go run ./cmd/rollback-evaluator -policy ops/rollback/policy.yaml \
+#        -snapshot <file.json>            # offline / CI evaluation
+#   go run ./cmd/rollback-evaluator -policy ops/rollback/policy.yaml \
+#        -prometheus-url https://prom…    # live evaluation during bake
+#
+# and statically validated (no cluster required) by `go run ./cmd/ops-gate`.
+#
+# Verdicts
+#   proceed  — every required signal observed and inside its warn band.
+#   hold     — a required signal is missing, stale, or in its warn band.
+#              Deployment pauses; humans decide. NEVER auto-rolls back.
+#   rollback — a required signal crossed its rollback threshold for
+#              `breach_streak` consecutive samples, or a blocking signal
+#              (migration failure) tripped. Emits the rollback plan.
+version: 1
+
+evaluation:
+  # How long the new revision must bake before a `proceed` verdict is
+  # trustworthy. The evaluator refuses to emit `proceed` before this.
+  bake_time: 15m
+  sample_interval: 1m
+  # Minimum number of samples per signal before a verdict is meaningful.
+  min_samples: 5
+  # Consecutive breaching samples required before `rollback`. Guards
+  # against single-scrape spikes (ADR-008 forbids single-window alerts).
+  breach_streak: 3
+  # A signal older than this is treated as missing, not as healthy.
+  max_sample_age: 5m
+  # When a required signal has no data at all, the verdict is `hold`.
+  # Never silently `proceed` on absent telemetry.
+  missing_required_verdict: hold
+
+# Automatic rollback is opt-in per environment. `mode: advise` makes the
+# evaluator emit the verdict + a ready-to-run rollback command but take
+# no action; `mode: enforce` lets the deploy workflow act on a `rollback`
+# verdict. Production stays on `advise` until an operator flips it.
+environments:
+  - name: staging
+    mode: enforce
+    approval_required: false
+  - name: production
+    mode: advise
+    approval_required: true
+
+signals:
+  # ── Backend error rate ───────────────────────────────────────────────
+  - id: api_error_rate
+    title: API 5xx ratio
+    dimension: availability
+    source: prometheus
+    query: |
+      sum(rate(teslasync_red_http_requests_total{status_class="5xx"}[5m]))
+        / clamp_min(sum(rate(teslasync_red_http_requests_total[5m])), 1)
+    unit: ratio
+    comparison: gt
+    warn: 0.005
+    rollback: 0.02
+    required: true
+    blocking: false
+    rationale: >-
+      slo/catalog.yaml api_availability targets 99.5%. A sustained 2% 5xx
+      ratio burns the 28d budget in under a day, so it is a rollback-grade
+      regression rather than a page-and-watch.
+
+  - id: api_latency_p99
+    title: API p99 latency (seconds)
+    dimension: latency
+    source: prometheus
+    query: |
+      histogram_quantile(0.99, sum by (le) (
+        rate(teslasync_red_http_request_duration_seconds_bucket[5m])))
+    unit: seconds
+    comparison: gt
+    warn: 0.5
+    rollback: 1.5
+    required: true
+    blocking: false
+    rationale: >-
+      Mirrors slo:api_latency_p99_500ms. Warn at the SLO threshold,
+      roll back at 3x where the UI becomes unusable.
+
+  # ── Frontend error rate ──────────────────────────────────────────────
+  - id: frontend_error_rate
+    title: Browser errors per RUM sample
+    dimension: availability
+    source: prometheus
+    query: |
+      sum(rate(teslasync_web_errors_total[5m]))
+        / clamp_min(sum(rate(teslasync_frontend_web_vitals_samples_total[5m])), 1)
+    unit: ratio
+    comparison: gt
+    warn: 0.02
+    rollback: 0.10
+    required: true
+    blocking: false
+    rationale: >-
+      teslasync_web_errors_total is fed by the SPA error reporter. One
+      browser error per ten RUM samples means a broken bundle or a
+      crashed route boundary shipped.
+
+  # ── Core Web Vitals ──────────────────────────────────────────────────
+  - id: frontend_lcp_p75
+    title: Largest Contentful Paint p75 (seconds)
+    dimension: latency
+    source: prometheus
+    query: |
+      histogram_quantile(0.75, sum by (le) (
+        rate(teslasync_frontend_web_vitals_lcp_seconds_bucket[10m])))
+    unit: seconds
+    comparison: gt
+    warn: 2.5
+    rollback: 4.0
+    required: true
+    blocking: false
+    rationale: >-
+      2.5s is the Core Web Vitals "good" boundary already encoded in
+      slo/catalog.yaml frontend_lcp. 4.0s is the "poor" boundary.
+
+  - id: frontend_inp_p75
+    title: Interaction to Next Paint p75 (seconds)
+    dimension: latency
+    source: prometheus
+    query: |
+      histogram_quantile(0.75, sum by (le) (
+        rate(teslasync_frontend_web_vitals_inp_seconds_bucket[10m])))
+    unit: seconds
+    comparison: gt
+    warn: 0.2
+    rollback: 0.5
+    required: true
+    blocking: false
+    rationale: >-
+      0.2s / 0.5s are the Core Web Vitals good/poor INP boundaries;
+      slo/catalog.yaml frontend_inp already buckets at le="0.2".
+
+  # ── Migration health ─────────────────────────────────────────────────
+  - id: migration_failures
+    title: Failed schema migrations during this deploy
+    dimension: recovery
+    # Reported by the deploy job (the migrate Job's exit status), not by
+    # Prometheus — a migration that fails before the pod starts never
+    # produces a scrape.
+    source: deploy
+    unit: count
+    comparison: gt
+    warn: 0
+    rollback: 0
+    required: true
+    # blocking: a breach short-circuits the bake and produces `rollback`
+    # immediately, without waiting for breach_streak samples.
+    blocking: true
+    rationale: >-
+      A failed migration means the schema is in an unknown state. The
+      rollback plan MUST consult ops/migrations/manifest.yaml for the
+      matching rollback_notes before running `migrate down`.
+
+  - id: migration_lock_wait_seconds
+    title: Longest migration lock wait during this deploy
+    dimension: recovery
+    source: deploy
+    unit: seconds
+    comparison: gt
+    warn: 30
+    rollback: 300
+    required: false
+    blocking: false
+    rationale: >-
+      Cross-checks the `expected_duration` / `lock_risk` review recorded
+      in ops/migrations/manifest.yaml against reality.
+
+  # ── Realtime pipeline (advisory) ─────────────────────────────────────
+  - id: sse_connection_drop_rate
+    title: SSE active connections vs pre-deploy baseline
+    dimension: availability
+    source: prometheus
+    query: sum(teslasync_sse_connections_active)
+    unit: count
+    comparison: lt
+    warn: 1
+    rollback: 0
+    required: false
+    blocking: false
+    rationale: >-
+      Advisory only: a zero-vehicle install legitimately has no SSE
+      clients, so this can never be `required`.
+
+# Ordered remediation. The evaluator prints the first applicable entry
+# with the placeholders resolved.
+rollback_plan:
+  - step: freeze
+    description: Halt further rollout stages (see ops/rollout/stages.yaml).
+    command: 'helm upgrade teslasync … --set rollout.paused=true'
+  - step: revert-workloads
+    description: Roll application Deployments back to the previous ReplicaSet.
+    command: 'kubectl -n {{namespace}} rollout undo deployment/{{release}}-api deployment/{{release}}-web'
+  - step: revert-chart
+    description: Roll the whole release back to the previous Helm revision.
+    command: 'helm rollback {{release}} {{previous_revision}} -n {{namespace}} --wait --timeout 10m'
+  - step: assess-schema
+    description: >-
+      Only if migration_failures tripped. Read the rollback_notes for the
+      failing version in ops/migrations/manifest.yaml BEFORE touching the
+      schema; forward-compatible migrations are usually left in place.
+    command: 'migrate -path migrations -database "$DATABASE_URL" version'
+  - step: verify
+    description: Re-run the post-deploy smoke gate against the restored revision.
+    command: 'go run ./cmd/smoke-gate -base-url {{base_url}} -manifest ops/smoke/checks.yaml'
+  - step: annotate
+    description: Record the rollback on the Grafana release timeline.
+    command: 'go run ./cmd/release-annotate -action rollback -version {{previous_version}}'

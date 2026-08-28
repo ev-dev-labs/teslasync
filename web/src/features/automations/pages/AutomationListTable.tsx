@@ -255,6 +255,7 @@ export function AutomationListTable({
           data={sorted}
           keyExtractor={(row) => row.id}
           selectable="multi"
+          rowLabel={(row) => row.name ?? t('automationList.unnamed', 'Untitled automation')}
           selectedKeys={selectedKeys}
           onSelectionChange={onSelectionChange}
           sortKey={sortKey}

@@ -256,10 +256,11 @@ describe('EventHistoryTable — sortable Time column', () => {
   it('preserves the supplied order until the header is clicked, then sorts by time', () => {
     const { container } = renderTable({ history: [older, newer] });
 
-    // No active sort key → order matches what the parent supplied.
+    // No active sort key → order matches what the parent supplied, and the
+    // header advertises the neutral `none` state (sortable, not sorted).
     expect(rowTimes()).toEqual(['2020-01-01T00:00:00Z', '2021-06-15T00:00:00Z']);
     const th = container.querySelector('th[data-column-key="createdAt"]');
-    expect(th?.getAttribute('aria-sort')).toBeNull();
+    expect(th?.getAttribute('aria-sort')).toBe('none');
 
     // First click → descending (newest first) + aria-sort reflects it.
     fireEvent.click(screen.getByRole('button', { name: 'Time' }));

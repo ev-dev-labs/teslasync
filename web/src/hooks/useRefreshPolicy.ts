@@ -10,8 +10,9 @@
  *   1. the tab is hidden                      → handled by the query client
  *   2. the device has no network              → the request cannot succeed
  *   3. the API is unreachable                 → every poll is a guaranteed 5xx
- *   4. the user asked for reduced data usage  → `navigator.connection.saveData`
- *      or a 2G/slow-2G effective connection type
+ *   4. the user asked for reduced data usage  → the persisted low-bandwidth
+ *      preference (`hooks/useLowBandwidthMode`) or `navigator.connection`
+ *      reporting `saveData` / a 2G-class effective connection type
  *
  * This module handles 2–4 and layers a priority system on top so that the
  * handful of genuinely essential pollers (an in-progress charge, a live drive)
@@ -24,6 +25,7 @@
 import { useMemo, useSyncExternalStore } from 'react'
 
 import { useConnectionModel } from './useConnectionModel'
+import { isLowBandwidthActive, subscribeLowBandwidth } from './useLowBandwidthMode'
 
 /**
  * How badly a surface needs to keep polling.
@@ -98,47 +100,27 @@ export function resolveRefreshInterval(
   return baseMs
 }
 
-interface NetworkInformationLike {
-  saveData?: boolean
-  effectiveType?: string
-  addEventListener?: (type: 'change', listener: () => void) => void
-  removeEventListener?: (type: 'change', listener: () => void) => void
-}
-
-function getConnection(): NetworkInformationLike | null {
-  if (typeof navigator === 'undefined') return null
-  const conn = (navigator as Navigator & { connection?: NetworkInformationLike }).connection
-  return conn ?? null
-}
-
-const SLOW_EFFECTIVE_TYPES = new Set(['slow-2g', '2g'])
-
-function readSaveData(): boolean {
-  const conn = getConnection()
-  if (conn == null) return false
-  if (conn.saveData === true) return true
-  return typeof conn.effectiveType === 'string' && SLOW_EFFECTIVE_TYPES.has(conn.effectiveType)
-}
-
-function subscribeSaveData(onStoreChange: () => void): () => void {
-  const conn = getConnection()
-  if (conn?.addEventListener == null) return () => {}
-  conn.addEventListener('change', onStoreChange)
-  return () => conn.removeEventListener?.('change', onStoreChange)
-}
-
 function serverSaveData(): boolean {
   return false
 }
 
 /**
- * `true` when the user (or the network stack) has asked for reduced data
- * usage: an explicit Data Saver toggle, or an effective connection type of
+ * `true` when reduced data usage is in effect: either the user's persisted
+ * low-bandwidth preference (`hooks/useLowBandwidthMode`) or the network's own
+ * signal — an OS/browser Data Saver toggle, or an effective connection type of
  * 2G/slow-2G where a background poll would measurably degrade the foreground
  * experience.
+ *
+ * The network detection itself lives in `useLowBandwidthMode` so polling,
+ * animations, chart budgets, map tiles and the service worker all answer the
+ * question identically instead of each re-implementing `navigator.connection`.
  */
 export function useSaveData(): boolean {
-  return useSyncExternalStore(subscribeSaveData, readSaveData, serverSaveData)
+  return useSyncExternalStore(
+    subscribeLowBandwidth,
+    isLowBandwidthActive,
+    serverSaveData,
+  )
 }
 
 function subscribeVisibility(onStoreChange: () => void): () => void {

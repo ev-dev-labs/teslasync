@@ -130,6 +130,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/geofences', name: 'Geofences', label: 'Geofences', i18nKey: 'routes.geofences' },
   { path: '/glance', name: 'Glance', label: 'Glance', i18nKey: 'routes.glance' },
   { path: '/guard-mode', name: 'GuardMode', label: 'Guard Mode', i18nKey: 'routes.guardMode' },
+  { path: '/help', name: 'Help', label: 'Help', i18nKey: 'routes.help' },
   { path: '/hvac-cycling', name: 'HvacCycling', label: 'Hvac Cycling', i18nKey: 'routes.hvacCycling' },
   { path: '/integrations/helix', name: 'Helix', label: 'Helix', i18nKey: 'routes.helix' },
   { path: '/intelligence-packs', name: 'IntelligencePackMarketplace', label: 'Intelligence Pack Marketplace', i18nKey: 'routes.intelligencePackMarketplace' },

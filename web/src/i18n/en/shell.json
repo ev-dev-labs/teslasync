@@ -35,9 +35,9 @@
   },
   "browserNotifications": {},
   "carAnimation": {
+    "tesla": "Tesla vehicle illustration",
     "charging": "Charging",
-    "loading": "Loading",
-    "tesla": "Tesla vehicle illustration"
+    "loading": "Loading"
   },
   "changelog": {
     "modal": {
@@ -50,6 +50,45 @@
     "openModal": "What's new",
     "unseenAria": "unseen changelog",
     "unseenHint": "{{count}} new release(s)"
+  },
+  "checklist": {
+    "tasks": {
+      "commandPalette": {
+        "cta": "Open",
+        "description": "Press Ctrl+K (or ⌘K) to jump anywhere instantly.",
+        "title": "Try the command palette"
+      },
+      "connectVehicle": {
+        "cta": "Connect",
+        "description": "Link your Tesla account to start syncing data.",
+        "title": "Connect your Tesla"
+      },
+      "customizeDashboard": {
+        "cta": "Open",
+        "description": "Add widgets that match how you use TeslaSync.",
+        "title": "Customize your dashboard"
+      },
+      "enablePush": {
+        "cta": "Enable",
+        "description": "Get alerts in your browser even when TeslaSync is closed.",
+        "title": "Enable web push notifications"
+      },
+      "firstAlert": {
+        "cta": "Create",
+        "description": "Get notified when something changes — battery low, charge complete, etc.",
+        "title": "Create your first alert rule"
+      },
+      "notify": {
+        "cta": "Configure",
+        "description": "Without a channel (Discord, ntfy, email, …) your alerts go to /dev/null.",
+        "title": "Add a notification channel"
+      },
+      "pickTheme": {
+        "cta": "Open",
+        "description": "Choose an accent color that fits your style.",
+        "title": "Pick a theme"
+      }
+    }
   },
   "combobox": {
     "clearAria": "Clear selection",
@@ -65,14 +104,194 @@
     "resultsCountOne": "1 result"
   },
   "commands": {
+    "alerts": {
+      "boombox": "Boombox",
+      "findMyCar": "Find my car",
+      "flashLights": "Flash Lights",
+      "horn": "Horn",
+      "locatePing": "Locate Ping",
+      "randomFart": "Random fart"
+    },
+    "cat": {
+      "alerts": "Alerts & Location",
+      "charging": "Charging",
+      "climate": "Climate & Comfort",
+      "climateProtect": "Climate Protection",
+      "doors": "Doors & Trunk",
+      "drive": "Drive",
+      "media": "Media",
+      "navigation": "Navigation",
+      "schedules": "Schedules",
+      "security": "Security & Access",
+      "software": "Software",
+      "sunroof": "Sunroof",
+      "vehicle": "Vehicle",
+      "windows": "Windows"
+    },
+    "charging": {
+      "amperage": "Amperage",
+      "charge": "Charge",
+      "chargePort": "Charge Port",
+      "close": "Close",
+      "dailyMode": "Daily mode",
+      "enterAmps": "Enter charging amps (e.g., 16, 32, 48):",
+      "enterLimit": "Enter charge limit % (50–100):",
+      "maxRange": "Max Range",
+      "open": "Open",
+      "percent": "Charge %",
+      "setAmps": "Set Amps",
+      "setLimit": "Set Limit",
+      "standard": "Standard",
+      "tripMode": "Trip mode"
+    },
+    "climate": {
+      "bioweapon": "Bioweapon",
+      "campMode": "Camp Mode",
+      "climate": "Climate",
+      "climateKeeper": "Climate Keeper",
+      "cop": "Overheat Protect",
+      "copFan": "Overheat Protect",
+      "copHigh": "High",
+      "copHighTemperature": "100°F / 40°C",
+      "copLow": "Low",
+      "copLowTemperature": "90°F / 30°C",
+      "copMedium": "Medium",
+      "copMediumTemperature": "95°F / 35°C",
+      "copOff": "Overheat Protect",
+      "copOn": "On (AC)",
+      "copTemp": "COP Temp",
+      "default": "Default",
+      "defenseMode": "Defense Mode",
+      "dogMode": "Dog Mode",
+      "driver": "Driver",
+      "driverPassenger": "Driver/Passenger",
+      "enterTemp": "Enter temperature in °C (e.g., 21):",
+      "fanOnly": "Fan only",
+      "keepMode": "Keep",
+      "maxPrecondition": "Max Precondition",
+      "off": "OFF",
+      "override": "Override",
+      "resetPrecondition": "Reset Precondition",
+      "seatCool": "Seat Cool",
+      "seatHeat": "Seat Heat",
+      "setLevel": "Low/Med/High",
+      "setTemps": "Set Temps",
+      "steeringHeat": "Steering Heat",
+      "toggle": "Toggle"
+    },
+    "doors": {
+      "frunk": "Frunk",
+      "open": "Open",
+      "trunk": "Trunk"
+    },
+    "drive": {
+      "confirmRemoteStart": "This will enable keyless driving for 2 minutes. Continue?",
+      "keylessDrive": "Keyless drive",
+      "remoteStart": "Remote Start"
+    },
+    "homelink": {
+      "garage": "Garage door",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "trigger": "HomeLink",
+      "triggerTitle": "Enter vehicle coordinates"
+    },
+    "media": {
+      "enterVolume": "Enter volume level (0.0 – 11.0):",
+      "nextFav": "Next Favorite",
+      "nextTrack": "Next Track",
+      "playPause": "Play / Pause",
+      "prevFav": "Prev Favorite",
+      "prevTrack": "Prev Track",
+      "volumeDown": "Volume Down",
+      "volumeUp": "Volume Up"
+    },
+    "nav": {
+      "byId": "By ID",
+      "coordinates": "Lat / Lon",
+      "enterAddress": "Enter destination address:",
+      "enterScId": "Enter Supercharger ID:",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "sendAddress": "Send Address",
+      "sendGPS": "Send GPS",
+      "sendGPSTitle": "Enter GPS coordinates",
+      "supercharger": "Supercharger",
+      "toVehicleNav": "To vehicle nav"
+    },
+    "schedules": {
+      "addCharge": "Add Charge Schedule",
+      "addPrecondition": "Add Precondition",
+      "byId": "By ID",
+      "enterScheduleId": "Enter schedule ID to remove:",
+      "midnight": "Midnight daily",
+      "morning": "7 AM daily",
+      "removeCharge": "Remove Schedule",
+      "removePrecondition": "Remove Precondition"
+    },
+    "security": {
+      "admin": "Admin",
+      "clearPin": "Clear PIN",
+      "clearSpeedPin": "Clear Speed PIN",
+      "confirmClearDrivePin": "Clear PIN to Drive without authentication?",
+      "confirmClearPin": "Clear speed limit PIN without authentication?",
+      "confirmErase": "This will erase all user data from the vehicle touchscreen. Continue?",
+      "enable": "Enable",
+      "enterPin": "Enter 4-digit PIN:",
+      "enterSpeedLimit": "Enter speed limit (50-90 MPH):",
+      "enterSpeedPin": "Enter 4-digit PIN:",
+      "enterValetPin": "Enter 4-digit valet PIN:",
+      "eraseData": "Erase Data",
+      "guestMode": "Guest Mode",
+      "guestOnly": "Guest mode only",
+      "lock": "Lock",
+      "pinToDrive": "PIN to Drive",
+      "requiresPin": "Requires PIN",
+      "resetPin": "Reset PIN",
+      "resetValetPin": "Reset Valet PIN",
+      "sentry": "Sentry",
+      "setMph": "Set MPH",
+      "speedActivate": "Activate",
+      "speedDeactivate": "Deactivate",
+      "speedLimit": "Speed Limit",
+      "speedLimitMode": "Speed Limit",
+      "valetMode": "Valet Mode",
+      "wakeUp": "Wake Up",
+      "wakeVehicle": "Wake vehicle"
+    },
+    "software": {
+      "cancelUpdate": "Cancel Update",
+      "enterDelay": "Install in how many minutes? (0 = now, 120 = 2 hours)",
+      "installNow": "Install now",
+      "scheduleUpdate": "Schedule Update",
+      "stopPending": "Stop pending"
+    },
+    "sunroof": {
+      "close": "Sunroof",
+      "closeMode": "Close",
+      "stop": "Sunroof",
+      "stopMode": "Stop",
+      "vent": "Sunroof",
+      "ventMode": "Vent"
+    },
     "toast": {
       "error": "Command failed: {{message}}",
       "failed": "Command failed",
       "success": "Command sent successfully"
+    },
+    "vehicle": {
+      "changeName": "Change name",
+      "enterName": "Enter new vehicle name:",
+      "rename": "Rename"
+    },
+    "windows": {
+      "close": "Close Windows",
+      "vent": "Vent Windows"
     }
   },
   "common": {
     "actions": "Actions",
+    "cancel": "Cancel",
     "clear": "Clear",
     "close": "Close",
     "copyButton": {
@@ -102,8 +321,10 @@
   },
   "compat": {
     "banner": {
+      "title": "Your browser is missing required features",
       "body": "TeslaSync needs {{features}} to work correctly. {{recommendation}}",
-      "title": "Your browser is missing required features"
+      "recommendation": "Use Chrome ≥ 110, Edge ≥ 110, Firefox ≥ 109, or Safari ≥ 16.",
+      "dismiss": "Dismiss"
     }
   },
   "confirm": {
@@ -151,9 +372,21 @@
     "unavailableMessage": "No requested source has returned usable data yet."
   },
   "dataState": {
+    "partial": {
+      "message": "Some sources did not respond. Available results remain visible and are not treated as complete.",
+      "title": "Partial data"
+    },
     "stale": {
       "message": "The latest values are temporarily unavailable. Previously loaded data remains visible.",
       "title": "Data may be stale"
+    },
+    "unavailable": {
+      "message": "A required service is unavailable. This section will recover when the dependency returns.",
+      "title": "Service unavailable"
+    },
+    "unsupported": {
+      "message": "This feature is not enabled by the current deployment configuration.",
+      "title": "Feature not supported"
     }
   },
   "date": {
@@ -187,9 +420,11 @@
     }
   },
   "density": {
-    "comfortable": "Comfortable",
+    "table": "Table",
     "compact": "Compact",
-    "spacious": "Spacious"
+    "comfortable": "Comfortable",
+    "spacious": "Spacious",
+    "groupLabel": "List density"
   },
   "draft": {
     "discardDraft": "Discard draft",
@@ -224,14 +459,24 @@
     }
   },
   "editableText": {
-    "announce": {
-      "saved": "{{label}} saved"
-    },
+    "saving": "Saving…",
     "error": {
       "empty": "Value cannot be empty",
       "saveFailed": "Save failed"
     },
-    "saving": "Saving…"
+    "announce": {
+      "saved": "{{label}} saved"
+    },
+    "rename": {
+      "geofence": "Rename geofence {{name}}",
+      "alertRule": "Rename alert rule {{name}}"
+    }
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
   },
   "error": {
     "network": {
@@ -264,8 +509,11 @@
   },
   "errors": {
     "section": {
+      "title": "This section failed to load",
       "subtitle": "Other parts of the page should still work.",
-      "tableTitle": "This table failed to render"
+      "chartTitle": "This chart failed to load",
+      "tableTitle": "This table failed to render",
+      "widgetTitle": "Widget failed to load"
     }
   },
   "export": {
@@ -307,13 +555,14 @@
   },
   "feedback": {},
   "filters": {
+    "reset": "Reset filters",
     "activeLabel": "Active filters",
     "clearAll": "Clear all",
     "clearedAll": "All filters cleared",
     "moreCount": "+{{count}} more",
     "moreLabel": "Additional active filters",
-    "removeAria": "Remove filter {{label}}",
-    "removed": "Filter removed"
+    "removed": "Filter removed",
+    "removeAria": "Remove filter {{label}}"
   },
   "form": {
     "required": "required"
@@ -328,6 +577,7 @@
     "ariaLabel": "{{status}} · {{age}}",
     "days": "{{d}}d ago",
     "error": "error",
+    "fresh": "Up to date",
     "hours": "{{h}}h ago",
     "justNow": "just now",
     "lastUpdated": "Last updated: {{time}}",
@@ -335,6 +585,7 @@
     "neverUpdated": "Never updated",
     "refreshState": "Refresh data · {{state}}",
     "source": "Source: {{source}}",
+    "stale": "Stale",
     "staleWithAge": "Stale · {{age}}",
     "updating": "updating…",
     "updatingTooltip": "Updating…",
@@ -360,15 +611,28 @@
     "loading": "Loading"
   },
   "help": {
+    "battery": {
+      "degradationRate": "Annualised rate of capacity loss based on observed SoH trend. Combines calendar fade (time at temperature/SoC) and cycle fade (kWh throughput).",
+      "soh": "State of Health — current usable capacity divided by the original rated capacity, expressed as a percentage. Higher is better; new packs start at 100%."
+    },
     "feedback": "Open feedback / bug report form",
     "feedbackLabel": "Report a problem",
+    "lifetime": {
+      "avgEfficiency": "Average energy used per unit distance across the whole driving history (Wh/km). Lower is better — temperature, speed, and terrain are the main drivers."
+    },
     "shortcuts": "Open keyboard shortcuts",
     "shortcutsLabel": "Keyboard shortcuts",
+    "signal": {
+      "stale": "A signal is marked stale when its last-seen value in Redis is older than 2 minutes — treat with caution; the vehicle may be offline or the pipeline may be backed up."
+    },
     "tooltip": {
       "iconLabel": "More info"
     },
     "tour": "Open tour launcher",
-    "tourLabel": "Take a tour"
+    "tourLabel": "Take a tour",
+    "vampireDrain": {
+      "body": "Battery percentage lost per day while the vehicle is parked and not charging, derived from observed parked windows."
+    }
   },
   "impersonation": {
     "banner": {
@@ -381,10 +645,10 @@
     }
   },
   "installPrompt": {
-    "dismiss": "Dismiss install prompt",
-    "install": "Install",
+    "title": "Install TeslaSync",
     "subtitle": "Add to home screen for native experience",
-    "title": "Install TeslaSync"
+    "install": "Install",
+    "dismiss": "Dismiss install prompt"
   },
   "kiosk": {
     "exit": "Exit kiosk mode",
@@ -395,14 +659,14 @@
     "unlocked": "✓ Unlocked"
   },
   "lightbox": {
-    "close": "Close image viewer",
     "counter": "{{current}} / {{total}}",
-    "next": "Next image",
+    "close": "Close image viewer",
     "previous": "Previous image",
+    "next": "Next image",
     "zoomIn": "Zoom in",
     "zoomOut": "Zoom out",
-    "zoomPercent": "{{value}}%",
-    "zoomReset": "Reset zoom"
+    "zoomReset": "Reset zoom",
+    "zoomPercent": "{{value}}%"
   },
   "listExport": {
     "button": "Export",
@@ -424,9 +688,9 @@
     }
   },
   "mask": {
-    "copy": "Copy value",
+    "reveal": "Reveal value",
     "hide": "Hide value",
-    "reveal": "Reveal value"
+    "copy": "Copy value"
   },
   "nav": {
     "workspaceContext": "Fleet operations",
@@ -599,14 +863,14 @@
     "speedHistoryTitle": "Speed & Distance History"
   },
   "notFound": {
+    "title": "Page not found",
+    "heading": "We couldn't find that page",
     "body": "{{path}} doesn't match any route.",
     "didYouMean": "Did you mean:",
     "goBack": "Go back",
     "goHome": "Go to dashboard",
-    "heading": "We couldn't find that page",
     "openSearch": "Open command palette",
-    "suggestionsLabel": "Suggested pages",
-    "title": "Page not found"
+    "suggestionsLabel": "Suggested pages"
   },
   "notifications": {
     "alertStudio": {
@@ -635,6 +899,7 @@
       "viewAll": "View all"
     }
   },
+  "onboarding": {},
   "operationalMode": {
     "asOf": {
       "description": "Historical state reconstructed at {{when}}. Operational changes are disabled.",
@@ -664,14 +929,14 @@
     }
   },
   "pagination": {
-    "currentPage": "Page {{page}} of {{total}}",
-    "first": "First page",
-    "last": "Last page",
-    "next": "Next page",
+    "showing": "Showing {{start}}–{{end}} of {{total}}",
     "pageSize": "Rows per page",
     "perPage": "{{count}} / page",
+    "first": "First page",
     "previous": "Previous page",
-    "showing": "Showing {{start}}–{{end}} of {{total}}"
+    "currentPage": "Page {{page}} of {{total}}",
+    "next": "Next page",
+    "last": "Last page"
   },
   "palette": {
     "acknowledgeAlert": {
@@ -685,11 +950,53 @@
     "close": "Close",
     "cmd": {
       "acknowledgeAlert": "Acknowledge an alert",
+      "actionCenter": "Open Action Center",
+      "apiPlayground": "Open API playground",
+      "changelog": "What's new",
+      "commandHistory": "Open command history",
+      "dashboardAddWidget": "Add widget to dashboard",
       "dashboardEdit": "Edit dashboard layout",
+      "dashboardReset": "Reset dashboard to default",
+      "dashboardSwitch": "Switch dashboard layout…",
+      "densityComfortable": "Workspace density: Comfortable",
+      "densityCompact": "Workspace density: Compact",
+      "densitySpacious": "Workspace density: Spacious",
+      "export": "Open data export",
+      "fleetComparison": "Compare fleet vehicles",
+      "frecencyReset": "Reset command palette usage history",
+      "newAlert": "Create new alert rule",
+      "notificationsHistory": "Open notification history",
+      "periodComparison": "Compare analysis periods",
+      "range1y": "Analysis window: Last year",
+      "range24h": "Analysis window: Last 24 hours",
+      "range30d": "Analysis window: Last 30 days",
+      "range7d": "Analysis window: Last 7 days",
+      "range90d": "Analysis window: Last 90 days",
+      "rangeAll": "Analysis window: All time",
+      "rangeLive": "Analysis window: Live",
+      "rangeToday": "Analysis window: Today",
+      "refresh": "Refresh data",
+      "securitySettings": "Open security & access",
       "selectVehicle": "Select vehicle…",
+      "settings": "Open settings",
       "shortcuts": "Show keyboard shortcuts",
       "switchVehicle": "Switch to {{name}}",
-      "themePicker": "Open theme picker"
+      "systemStatus": "View system status",
+      "testAlert": "Send a test alert",
+      "themeAuto": "Theme: Auto (system)",
+      "themeDark": "Theme: Dark",
+      "themeLight": "Theme: Light",
+      "themeMatrixGreen": "Switch to Matrix Green",
+      "themeMidnight": "Theme: Midnight Blue",
+      "themeNeonCyan": "Switch to Signal Blue",
+      "themeOled": "Theme: OLED Black",
+      "themePicker": "Open theme picker",
+      "themeRoyalPurple": "Switch to Royal Purple",
+      "themeSolarAmber": "Switch to Solar Amber",
+      "themeTeslaRed": "Switch to Tesla Red",
+      "themeToggleMode": "Toggle dark mode",
+      "timeMachineOpen": "Open time machine",
+      "tour": "Show tours"
     },
     "navigate": "Navigate",
     "noResults": "No results for \"{{query}}\"",
@@ -727,8 +1034,8 @@
   },
   "pin": {
     "pin": "Pin",
-    "pinned": "Pinned",
-    "unpin": "Unpin"
+    "unpin": "Unpin",
+    "pinned": "Pinned"
   },
   "presentation": {
     "exit": "Exit presentation mode",
@@ -753,22 +1060,41 @@
   "productPreferences": {
     "persona": {
       "label": "Workspace profile"
+    },
+    "personas": {
+      "administrator": {
+        "description": "Prioritize system administration and operational controls.",
+        "label": "Administrator"
+      },
+      "analyst": {
+        "description": "Prioritize trends, reports, and historical analysis.",
+        "label": "Analyst"
+      },
+      "fleetOperator": {
+        "description": "Prioritize active fleet operations and current vehicle state.",
+        "label": "Fleet operator"
+      },
+      "owner": {
+        "description": "Keep the most useful everyday vehicle information close at hand.",
+        "label": "Owner"
+      }
     }
   },
   "pwa": {
-    "later": "Later",
     "newVersion": "New version available",
-    "offline": {
-      "banner": "Showing cached data. Operational changes stay disabled until you reconnect.",
-      "title": "You're offline"
-    },
+    "reloadingIn": "Reloading in {{seconds}}s...",
     "reloadNow": "Reload Now",
-    "reloadingIn": "Reloading in {{seconds}}s..."
+    "later": "Later",
+    "offline": {
+      "title": "You're offline",
+      "banner": "Showing cached data. Operational changes stay disabled until you reconnect."
+    }
   },
   "ratelimit": {
     "banner": "Too many requests — pausing for {{n}}s",
     "retry": "Retry now"
   },
+  "rbac": {},
   "recentPages": {
     "justNow": "Just now",
     "shortDay": "d",
@@ -899,8 +1225,8 @@
     "title": "Keyboard Shortcuts"
   },
   "slider": {
-    "thumbMax": "{{label}} maximum",
-    "thumbMin": "{{label}} minimum"
+    "thumbMin": "{{label}} minimum",
+    "thumbMax": "{{label}} maximum"
   },
   "statusBar": {
     "alerts": {
@@ -1111,9 +1437,9 @@
       "title": "Viewing data as of {{when}}"
     }
   },
+  "toast": {},
   "tour": {
     "close": "Close tour",
-    "dialogLabel": "Onboarding tour",
     "finish": "Get Started!",
     "launcher": {
       "close": "Close",
@@ -1170,6 +1496,7 @@
   },
   "vehiclePicker": {
     "aria": "Select vehicle",
+    "label": "Vehicle",
     "fallbackName": "Vehicle {{id}}"
   },
   "vehicleSelect": {
@@ -1188,6 +1515,73 @@
       "rangeWithComparison": "{{range}} · Compare",
       "title": "Workspace analysis context",
       "trigger": "Analysis window: {{range}}"
+    }
+  },
+  "annotations": {
+    "add": "Add annotation",
+    "hide": "Hide annotations",
+    "show": "Show annotations",
+    "markerRow": "Annotations on this chart"
+  },
+  "avatar": {
+    "unknown": "Unknown user",
+    "statusOnline": "Online",
+    "statusIdle": "Idle",
+    "statusOffline": "Offline"
+  },
+  "mobile": {
+    "refresh": {
+      "pull": "Pull to refresh",
+      "release": "Release to refresh",
+      "refreshing": "Refreshing…"
+    },
+    "swipe": {
+      "archive": "Archive",
+      "restore": "Restore",
+      "delete": "Delete",
+      "ack": "Acknowledge",
+      "dismiss": "Dismiss"
+    }
+  },
+  "route": {
+    "noLocationData": "No location data",
+    "roundTrip": "round trip"
+  },
+  "signalQuery": {
+    "from": "From",
+    "to": "To",
+    "quickRange": "Quick Range",
+    "query": "Query",
+    "rows": "Rows",
+    "preset": {
+      "aria": "{{label}} time range"
+    }
+  },
+  "sortControl": {
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "fieldLabel": "Sort by",
+    "direction": "Sort direction"
+  },
+  "statCard": {
+    "loading": "Loading",
+    "trend": {
+      "increased": "increased",
+      "decreased": "decreased",
+      "unchanged": "no change"
+    }
+  },
+  "vehicle": "vehicle",
+  "watch": {
+    "noVehicle": "No vehicle found",
+    "timeToFull": "{{minutes}}m to full",
+    "sentryOn": "Sentry mode on",
+    "sentryOff": "Sentry mode off",
+    "action": {
+      "lock": "Lock vehicle",
+      "unlock": "Unlock vehicle",
+      "climateOn": "Turn climate on",
+      "climateOff": "Turn climate off"
     }
   }
 }

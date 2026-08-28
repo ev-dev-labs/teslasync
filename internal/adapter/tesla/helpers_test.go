@@ -1,6 +1,7 @@
 package tesla
 
 import (
+	"errors"
 	"net/http"
 	"testing"
 	"time"
@@ -20,6 +21,21 @@ func newTestClient(baseURL string, timeout time.Duration) *Client {
 		cb:         httputil.NewCircuitBreaker("test", httputil.DefaultCircuitBreakerConfig()),
 		timeout:    timeout,
 	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (fn roundTripFunc) RoundTrip(req *http.Request) (*http.Response, error) {
+	return fn(req)
+}
+
+// newRequestErrorClient avoids closed-listener port reuse in parallel race runs.
+func newRequestErrorClient(timeout time.Duration) *Client {
+	c := newTestClient("http://tesla.invalid", timeout)
+	c.httpClient.Transport = roundTripFunc(func(*http.Request) (*http.Response, error) {
+		return nil, errors.New("forced transport failure")
+	})
+	return c
 }
 
 // newTestClientWithBreaker is like newTestClient but lets a test inject a

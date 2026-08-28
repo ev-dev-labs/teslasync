@@ -1,0 +1,92 @@
+# OPS-03 — Scheduled backup restore drill.
+#
+# A backup that has never been restored is a hypothesis, not a backup.
+# This file defines the drill; `.github/workflows/backup-restore-drill.yml`
+# executes it on a schedule, and `go run ./cmd/ops-gate -check restore`
+# validates that the definition, the workflow, and the runbook agree.
+#
+# Two modes exist, deliberately:
+#
+#   roundtrip  — self-contained. Boots a throwaway TimescaleDB, seeds it,
+#                runs a real backup through internal/backup.Processor,
+#                restores it into a SECOND scratch database, and asserts
+#                row parity. Needs no production credentials, so it runs
+#                on every schedule tick and gates nothing in production.
+#
+#   production-artifact — restores the newest real production backup
+#                artifact into a scratch database. Requires credentials
+#                that only exist in the deployed environment, so it is
+#                opt-in and skips (loudly) when they are absent.
+version: 1
+
+schedule:
+  cron: "0 5 * * 1"          # Mondays 05:00 UTC
+  timezone: UTC
+  # A drill that has not run within this window is itself a finding.
+  max_interval: 192h        # 8 days — one missed weekly run is a finding
+
+modes:
+  - id: roundtrip
+    default: true
+    requires_credentials: false
+    description: >-
+      Backup → upload (local provider) → download → checksum → decompress
+      → restore into a scratch database → assert critical-table row
+      parity. Fully self-contained inside the CI job.
+    target: ephemeral CI service container
+
+  - id: production-artifact
+    default: false
+    requires_credentials: true
+    credential_env:
+      - BACKUP_DRILL_DATABASE_URL
+      - BACKUP_DRILL_STORAGE_PROVIDER
+      - BACKUP_DRILL_STORAGE_CONFIG
+    description: >-
+      Downloads the newest successful production backup_run artifact and
+      restores it into a scratch database. Never writes to production.
+    target: scratch database provisioned by the operator
+
+# Tables whose row counts must survive the round trip. Kept small and
+# high-signal: one core entity, one time-series, one config table.
+critical_tables:
+  - vehicles
+  - drives
+  - charging_sessions
+
+success_criteria:
+  - id: artifact-round-trips
+    statement: The uploaded artifact downloads with a matching checksum and decompresses cleanly.
+    implemented_by: internal/backupverify.Verifier.VerifyLatest
+  - id: critical-tables-non-empty
+    statement: >-
+      Every table in critical_tables is non-empty in the SOURCE before
+      comparison, and non-empty after restore. Asserted explicitly so an
+      empty fixture cannot pass as 0-vs-0 parity.
+    implemented_by: .github/workflows/backup-restore-drill.yml + scripts/seed-restore-drill.sql
+  - id: row-parity
+    statement: Restored row counts equal the source counts for every critical table.
+    implemented_by: .github/workflows/backup-restore-drill.yml (roundtrip mode)
+  - id: rto-recorded
+    statement: Wall-clock restore duration is recorded on every drill so the RTO estimate stays evidence-based.
+    implemented_by: .github/workflows/backup-restore-drill.yml
+
+# The fixture that makes critical_tables non-empty. Validated to exist by
+# `go run ./cmd/ops-gate -check restore`.
+fixture: scripts/seed-restore-drill.sql
+
+# Recovery objectives. These are TARGETS, not measurements. The drill
+# records actual durations into the job summary; nothing here claims a
+# measured value.
+objectives:
+  rto_target: 1h
+  rpo_target: 24h
+  measurement_status: pending-first-drill
+
+escalation:
+  on_failure: >-
+    Open an issue labelled `ops,backup` with the drill job URL attached,
+    and follow docs/runbooks/backup-restore-drill.md § "Drill failed".
+  runbook: docs/runbooks/backup-restore-drill.md
+
+workflow: .github/workflows/backup-restore-drill.yml

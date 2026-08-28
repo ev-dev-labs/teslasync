@@ -13,6 +13,8 @@ import { useNotificationListener } from '@/hooks/useNotificationListener';
 import { BrowserNotificationsKpis } from '../components/BrowserNotificationsKpis';
 import { BrowserPermissionPanel } from '../components/BrowserPermissionPanel';
 import { BrowserTabSignalsPanel } from '../components/BrowserTabSignalsPanel';
+import { DeviceDataUsagePanel } from '../components/DeviceDataUsagePanel';
+import { DeviceNotificationPrefsPanel } from '../components/DeviceNotificationPrefsPanel';
 import { NotificationSoundsPanel } from '../components/NotificationSoundsPanel';
 
 export default function BrowserNotificationsPage() {
@@ -64,6 +66,19 @@ export default function BrowserNotificationsPage() {
         </FadeIn>
 
         <FadeIn delay={0.2}>
+          <section
+            aria-label={t(
+              'notifications.device.sectionAria',
+              'Per-device notification and data rules',
+            )}
+            className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5"
+          >
+            <DeviceNotificationPrefsPanel className="xl:col-span-2" />
+            <DeviceDataUsagePanel />
+          </section>
+        </FadeIn>
+
+        <FadeIn delay={0.3}>
           <NotificationSoundsPanel />
         </FadeIn>
       </div>

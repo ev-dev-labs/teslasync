@@ -1,0 +1,111 @@
+# OPS-08 — Release supply-chain policy.
+#
+# Enforced by `go run ./cmd/ops-gate -check supply-chain`, which parses
+# the listed workflows and fails on any mutable reference: an action
+# without a full 40-hex SHA, a container image without an
+# @sha256: digest, or a missing required attestation step.
+#
+# This is the RELEASE counterpart of scripts/check-security-workflow-pins.go
+# (which owns .github/workflows/security.yml). The two are deliberately
+# separate so neither team's gate can be weakened by the other.
+version: 1
+
+# Workflows whose third-party `uses:` refs must be immutable.
+pinned_workflows:
+  - path: .github/workflows/release.yml
+    jobs: [build-scan, vulnerability-report, docker, helm, release-notes]
+  - path: .github/workflows/post-deploy-smoke.yml
+    jobs: [smoke]
+  - path: .github/workflows/backup-restore-drill.yml
+    jobs: [drill]
+  - path: .github/workflows/deploy-rollback.yml
+    jobs: [evaluate, rollback]
+  - path: .github/workflows/capacity-test.yml
+    jobs: [capacity]
+  - path: .github/workflows/ops-gate.yml
+    jobs: [gate, helm-rollout]
+
+# Locations a workflow can name a container image it PULLS. All of them
+# are governed by `digest_pinned_images`; the first implementation only
+# inspected root `env:`, which let a mutable service-container tag
+# through untouched.
+governed_image_locations:
+  - root and job `env:` values
+  - jobs.<id>.container.image (and the scalar shorthand)
+  - jobs.<id>.services.<svc>.image
+  - step `with:` inputs named image / image-ref / *-image
+
+# `uses:` refs starting with any of these prefixes are first-party and
+# exempt from SHA pinning (they resolve to this repository's own tree).
+first_party_prefixes:
+  - "./"
+
+# Every action ref must carry a trailing comment naming the human version
+# it was pinned from, so `dependabot`-style bumps stay reviewable.
+require_version_comment: true
+
+# Container images referenced from workflow `env:` or `image:` must be
+# digest-pinned.
+digest_pinned_images: true
+
+# Steps (identified by the action they invoke) that MUST be present in
+# the release workflow for every published image.
+required_release_steps:
+  - id: sbom-generate
+    action_prefix: anchore/sbom-action
+    purpose: Generate a CycloneDX + SPDX SBOM from the built image layers.
+  - id: image-sign
+    action_prefix: sigstore/cosign-installer
+    purpose: Install cosign for keyless (GitHub OIDC) signing.
+  - id: build-provenance
+    action_prefix: actions/attest-build-provenance
+    purpose: Emit an in-toto SLSA provenance attestation bound to the image digest.
+  - id: vulnerability-scan
+    action_prefix: aquasecurity/trivy-action
+    purpose: >-
+      Scan the exported docker-archive BEFORE anything is pushed, so the
+      aggregated verdict can gate every publish job and so the scanned
+      bytes are the exact bytes later promoted.
+
+# Commands that must appear in the release workflow's run blocks.
+required_release_commands:
+  - id: cosign-sign
+    contains: "cosign sign"
+    purpose: Sign the image by digest.
+  - id: cosign-attest-sbom
+    contains: "cosign attest"
+    purpose: Attach the SBOM as a verifiable attestation rather than a bare artifact.
+  - id: artifact-promotion
+    contains: "crane push"
+    purpose: >-
+      Promote the exact scanned archive to the registry. A publish job
+      that rebuilds from source publishes bytes the scan never saw, and
+      the signature would then attest an unassessed image.
+  - id: digest-continuity
+    contains: "DIGEST CONTINUITY"
+    purpose: >-
+      Compare the scanned archive's config digest with the pushed
+      manifest's config digest, so promotion is proven rather than
+      assumed.
+
+# Vulnerability policy applied to the per-release scan. `fail_on` is what
+# turns the release red; everything else is reported in the release notes.
+vulnerability_policy:
+  fail_on: [CRITICAL]
+  report: [CRITICAL, HIGH, MEDIUM]
+  # Fixed vulnerabilities only — an unfixable CRITICAL in a base image
+  # must not be able to permanently block every release. It is reported
+  # and tracked instead.
+  ignore_unfixed: true
+  # Findings acknowledged with an expiry. The gate fails on an expired
+  # entry so exceptions cannot become permanent.
+  exceptions: []
+
+# Attestations a consumer must be able to verify for every published tag.
+required_attestations:
+  - type: cyclonedx
+    verify: cosign verify-attestation --type cyclonedx
+  - type: slsaprovenance
+    verify: gh attestation verify oci://<image> --repo <owner>/<repo>
+  - type: signature
+    verify: cosign verify --certificate-oidc-issuer=https://token.actions.githubusercontent.com

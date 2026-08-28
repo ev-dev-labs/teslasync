@@ -18,6 +18,12 @@ export interface ErrorStateProps {
   title: string
   message: string
   action?: ReactNode
+  /**
+   * Rendered full-width below the message. Used for the guidance and
+   * "where to look next" blocks that must not compete with the inline
+   * action button for horizontal space.
+   */
+  footer?: ReactNode
   /** ARIA role; "status" for non-blocking offline/info states, "alert" otherwise. */
   role?: 'alert' | 'status'
   /**
@@ -65,6 +71,7 @@ export function ErrorState({
   title,
   message,
   action,
+  footer,
   role = 'alert',
   ariaLive,
   compact = false,
@@ -113,6 +120,7 @@ export function ErrorState({
         </div>
         {action && <div className="shrink-0">{action}</div>}
       </div>
+      {footer && <div className={cn(compact ? 'mt-2' : 'mt-3')}>{footer}</div>}
     </div>
   )
 }

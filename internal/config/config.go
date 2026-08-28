@@ -9,7 +9,19 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port                 int
+	Port int
+	// DrainPort is the port of the ISOLATED internal drain listener that
+	// serves the Kubernetes preStop hook (POST/GET /internal/flush).
+	//
+	// It is deliberately separate from Port: the drain endpoint is
+	// one-way and pod-fatal (permanent readiness 503, every SSE stream
+	// released), so it must never be reachable through the Service or
+	// the Ingress. Kubelet reaches it by dialling the pod IP directly,
+	// which needs no Service at all.
+	//
+	// See internal/app/drain.go and the exposure assertions in
+	// .github/workflows/ops-gate.yml.
+	DrainPort            int
 	LogLevel             string
 	CORSOrigins          string
 	VehiclePhotoDir      string
@@ -400,6 +412,7 @@ type RetentionConfig struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Port:                 envInt("TESLASYNC_PORT", 4000),
+		DrainPort:            envInt("TESLASYNC_DRAIN_PORT", 8090),
 		LogLevel:             envStr("TESLASYNC_LOG_LEVEL", "info"),
 		CORSOrigins:          envStr("CORS_ORIGINS", ""),
 		VehiclePhotoDir:      envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),

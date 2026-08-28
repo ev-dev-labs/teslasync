@@ -28,8 +28,9 @@ import (
 // (GetFloat, GetBool, GetString, GetTime) which verify the stored value
 // against the field's declared protomodel.ValueKind.
 type Value struct {
-	Raw       interface{} `json:"value"`
-	Timestamp time.Time   `json:"timestamp"`
+	Raw                interface{} `json:"value"`
+	Timestamp          time.Time   `json:"timestamp"`
+	TimestampSynthetic bool        `json:"-"`
 }
 
 // Store is a concurrent-safe, in-memory store of the latest signal values
@@ -304,10 +305,10 @@ func (s *Store) GetRawMap(vehicleID int64) map[string]interface{} {
 func (s *Store) LoadFromDB(ctx context.Context, vehicleID int64) {
 	// Tier 1: Redis HSET (has ALL 230+ signals, survives pod restart)
 	if s.redisCache != nil {
-		signals, err := s.redisCache.GetAll(ctx, vehicleID)
-		if err == nil && len(signals) > 0 {
-			s.Hydrate(vehicleID, signals)
-			log.Info().Int64("vehicle_id", vehicleID).Int("signals", len(signals)).Msg("signal store: loaded from Redis")
+		values, err := s.redisCache.GetAllValues(ctx, vehicleID)
+		if err == nil && len(values) > 0 {
+			s.HydrateValues(vehicleID, values)
+			log.Info().Int64("vehicle_id", vehicleID).Int("signals", len(values)).Msg("signal store: loaded from Redis")
 			return
 		}
 		if err != nil {
@@ -340,11 +341,37 @@ func (s *Store) Hydrate(vehicleID int64, signals map[string]interface{}) {
 		if _, exists := m[k]; exists {
 			continue
 		}
-		m[k] = &Value{Raw: v, Timestamp: now}
+		m[k] = &Value{Raw: v, Timestamp: now, TimestampSynthetic: true}
 		added++
 	}
 	s.mu.Unlock()
 	log.Debug().Int64("vehicle_id", vehicleID).Int("hydrated", added).Int("skipped", len(signals)-added).Msg("signal store: hydrated from signal_history")
+}
+
+// HydrateValues merges timestamped values without overwriting existing L1
+// entries. Unlike Hydrate, it preserves each value's observation provenance.
+func (s *Store) HydrateValues(vehicleID int64, values map[string]*Value) {
+	if len(values) == 0 {
+		return
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	signals, ok := s.vehicles[vehicleID]
+	if !ok {
+		signals = make(map[string]*Value, len(values))
+		s.vehicles[vehicleID] = signals
+	}
+	for name, value := range values {
+		if value == nil || value.Raw == nil {
+			continue
+		}
+		if _, exists := signals[name]; exists {
+			continue
+		}
+		signals[name] = cloneSignalValue(value)
+	}
 }
 
 // VehicleIDs returns all vehicle IDs that have signal data.

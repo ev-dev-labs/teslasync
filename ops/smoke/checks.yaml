@@ -1,0 +1,142 @@
+# OPS-01 — Authenticated post-deploy smoke gate manifest.
+#
+# Consumed by `go run ./cmd/smoke-gate -base-url https://…`.
+# Validated statically (without any deployment) by `go run ./cmd/ops-gate`.
+#
+# NO SECRETS LIVE HERE. Credentials are referenced by environment
+# variable NAME only (`value_env`); the value is injected by the
+# deployment environment / GitHub Environment secret at run time.
+version: 1
+
+defaults:
+  # Per-request wall-clock budget.
+  timeout: 10s
+  # Latency budget that turns a 200 into a failure.
+  max_latency: 5s
+  expect_status: [200]
+
+auth:
+  # TeslaSync is provider-agnostic ForwardAuth (Authentik / Authelia /
+  # oauth2-proxy). The smoke gate replays the identity header the proxy
+  # would normally inject, so it exercises the same authorization path
+  # real users hit.
+  mode: forward_auth_header
+  header: X-Forwarded-User
+  value_env: SMOKE_FORWARD_AUTH_USER
+  # Optional second credential applied on top of the ForwardAuth header.
+  # Deployments that front the API with a bearer/API-key gateway set
+  # SMOKE_BEARER_TOKEN; deployments that do not leave it unset and the
+  # gate skips it.
+  secondary:
+    mode: bearer
+    header: Authorization
+    value_env: SMOKE_BEARER_TOKEN
+    optional: true
+
+checks:
+  # ── Unauthenticated liveness/readiness surface ───────────────────────
+  - id: liveness
+    description: API process is alive and the database handle answers.
+    method: GET
+    path: /healthz
+    authenticated: false
+    expect_json_field: status
+    expect_json_equals: ok
+    critical: true
+    tags: [availability]
+
+  - id: readiness
+    description: API reports itself ready to receive traffic (DB, write breaker, Tesla auth).
+    method: GET
+    path: /readyz
+    authenticated: false
+    critical: true
+    tags: [availability]
+
+  - id: metrics-exposition
+    description: Prometheus exposition endpoint is scrapeable after deploy.
+    method: GET
+    path: /metrics
+    authenticated: false
+    expect_body_contains: teslasync_
+    max_latency: 10s
+    critical: true
+    tags: [observability]
+
+  - id: drain-contract
+    description: Drain contract is advertised and the pod is NOT draining (read-only probe).
+    method: GET
+    path: /internal/drain-status
+    authenticated: false
+    expect_json_field: draining
+    expect_json_equals: "false"
+    critical: true
+    tags: [recovery]
+    # DO NOT change this to probe /internal/flush. That endpoint is
+    # one-way and pod-fatal: it flips readiness closed permanently,
+    # releases every SSE stream, and holds its response open for the
+    # 5s endpoint-propagation delay — so a smoke "check" would kill the
+    # pod it had just verified and then fail on its own latency budget.
+    # It is not reachable from here anyway: it lives on the isolated
+    # drain listener that no Service publishes. Drain EXECUTION is
+    # covered by internal/ops/lifecycle_test.go and
+    # internal/app/drain_test.go.
+
+  # ── Authenticated API surface ────────────────────────────────────────
+  - id: system-version
+    description: Deployed build advertises a version — proves the new image is actually serving.
+    method: GET
+    path: /api/v1/system/version
+    authenticated: true
+    critical: true
+    tags: [release]
+
+  - id: system-status
+    description: Aggregate dependency status (DB, MQTT, Tesla) is reachable.
+    method: GET
+    path: /api/v1/system/status
+    authenticated: true
+    max_latency: 8s
+    critical: true
+    tags: [availability]
+
+  - id: vehicles-list
+    description: Primary authenticated read path returns the vehicle collection.
+    method: GET
+    path: /api/v1/vehicles
+    authenticated: true
+    critical: true
+    tags: [availability, data]
+
+  - id: sse-stream-headers
+    description: SSE event stream negotiates text/event-stream (fan-out path is live).
+    method: GET
+    path: /api/v1/events
+    authenticated: true
+    expect_header: Content-Type
+    expect_header_contains: text/event-stream
+    stream: true
+    max_latency: 10s
+    critical: true
+    tags: [availability, realtime]
+
+  # ── Frontend surface ─────────────────────────────────────────────────
+  - id: spa-index
+    description: SPA shell is served and carries the app root mount point.
+    method: GET
+    path: /
+    authenticated: false
+    target: web
+    expect_body_contains: 'id="root"'
+    critical: true
+    tags: [availability, frontend]
+
+  - id: spa-deep-link
+    description: SPA fallback rewrites unknown deep links to index.html (no 404 on refresh).
+    method: GET
+    path: /vehicles
+    authenticated: false
+    target: web
+    expect_body_contains: 'id="root"'
+    critical: true
+    tags: [availability, frontend]

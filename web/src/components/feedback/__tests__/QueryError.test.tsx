@@ -84,7 +84,14 @@ describe('QueryError', () => {
     it('renders permission guidance without a misleading Sign-in CTA on 403', () => {
       renderInRouter(<QueryError error={new ApiError('forbidden', 403)} />)
       expect(screen.getByText('Permission denied')).toBeInTheDocument()
-      expect(screen.getByText(/administrator/i)).toBeInTheDocument()
+      // "administrator" now appears in both the guidance body and its
+      // request-access steps, so assert the guidance block is present rather
+      // than that the word occurs exactly once.
+      expect(screen.getAllByText(/administrator/i).length).toBeGreaterThan(0)
+      expect(screen.getByTestId('permission-guidance')).toHaveAttribute(
+        'data-access-block',
+        'forbidden',
+      )
       expect(screen.queryByRole('button', { name: /sign in/i })).toBeNull()
     })
   })

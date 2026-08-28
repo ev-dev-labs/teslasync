@@ -1,4 +1,28 @@
 {
+  "auth": {
+    "expired": {
+      "title": "Session Expired",
+      "message": "Your authentication session has expired. Please sign in again to continue.",
+      "signIn": "Sign In Again"
+    },
+    "notConnected": "Tesla account not connected",
+    "connectPrompt": "Connect your account in",
+    "settings": "Settings",
+    "toStart": "to start tracking."
+  },
+  "dashSettings": {
+    "allVehicles": "All Vehicles",
+    "title": "Dashboard Settings",
+    "identity": "Identity",
+    "name": "Dashboard name",
+    "nameLabel": "Name",
+    "iconLabel": "Icon",
+    "vehicleFilter": "Vehicle Filter",
+    "refresh": "Auto-Refresh",
+    "display": "Display",
+    "showBorders": "Show widget borders",
+    "compactMode": "Compact mode (smaller gaps)"
+  },
   "dashboard": {
     "title": "Fleet Operations",
     "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
@@ -142,156 +166,6 @@
       "emptyMessage": "Add widgets to start building your dashboard."
     }
   },
-  "checklist": {
-    "title": "Get started",
-    "progress": "{{done}}/{{total}} complete",
-    "completeMessage": "You're all set! 🎉",
-    "dismiss": "Dismiss",
-    "restart": "Restart checklist",
-    "empty": "No setup steps available right now.",
-    "dismissedTitle": "Setup checklist hidden",
-    "dismissedMessage": "Remove this widget from your dashboard or restart the checklist to see your remaining setup steps.",
-    "help": "Tracks the few things you need to configure before TeslaSync feels useful. Auto-completes each step as you do it; dismiss it once you're done.",
-    "settings": {
-      "title": "Setup Checklist",
-      "description": "Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.",
-      "restart": "Restart Checklist",
-      "restarted": "Setup checklist restarted — re-add the widget from the dashboard customizer if needed."
-    },
-    "tasks": {
-      "connectVehicle": {
-        "title": "Connect your Tesla",
-        "description": "Link your Tesla account to start syncing data.",
-        "cta": "Connect"
-      },
-      "pickTheme": {
-        "title": "Pick a theme",
-        "description": "Choose an accent color that fits your style.",
-        "cta": "Open"
-      },
-      "firstAlert": {
-        "title": "Create your first alert rule",
-        "description": "Get notified when something changes — battery low, charge complete, etc.",
-        "cta": "Create"
-      },
-      "notify": {
-        "title": "Add a notification channel",
-        "description": "Without a channel (Discord, ntfy, email, …) your alerts go to /dev/null.",
-        "cta": "Configure"
-      },
-      "commandPalette": {
-        "title": "Try the command palette",
-        "description": "Press Ctrl+K (or ⌘K) to jump anywhere instantly.",
-        "cta": "Open"
-      },
-      "enablePush": {
-        "title": "Enable web push notifications",
-        "description": "Get alerts in your browser even when TeslaSync is closed.",
-        "cta": "Enable"
-      },
-      "customizeDashboard": {
-        "title": "Customize your dashboard",
-        "description": "Add widgets that match how you use TeslaSync.",
-        "cta": "Open"
-      }
-    }
-  },
-  "auth": {
-    "expired": {
-      "title": "Session Expired",
-      "message": "Your authentication session has expired. Please sign in again to continue.",
-      "signIn": "Sign In Again"
-    },
-    "notConnected": "Tesla account not connected",
-    "connectPrompt": "Connect your account in",
-    "settings": "Settings",
-    "toStart": "to start tracking."
-  },
-  "dashSettings": {
-    "allVehicles": "All Vehicles",
-    "title": "Dashboard Settings",
-    "identity": "Identity",
-    "name": "Dashboard name",
-    "nameLabel": "Name",
-    "iconLabel": "Icon",
-    "vehicleFilter": "Vehicle Filter",
-    "refresh": "Auto-Refresh",
-    "display": "Display",
-    "showBorders": "Show widget borders",
-    "compactMode": "Compact mode (smaller gaps)"
-  },
-  "import": {
-    "emptyInput": "No data to validate",
-    "readError": "Failed to read file",
-    "invalidFileType": "Please drop a .json file",
-    "noImportParam": "URL does not contain an import parameter",
-    "invalidUrl": "Invalid URL format",
-    "fromFile": "From File",
-    "fromClipboard": "Paste JSON",
-    "fromUrl": "From URL",
-    "preview": "Import Preview",
-    "title": "Import Dashboard",
-    "dropFile": "Drop a .json file here or click to browse",
-    "browse": "Browse Files",
-    "fileInput": "Dashboard JSON file",
-    "validate": "Validate & Preview",
-    "loadUrl": "Load from URL",
-    "availableCount": "{{count}} widgets",
-    "missingCount": "{{count}} skipped",
-    "widgets": "Widgets",
-    "notAvailable": "Not available",
-    "cannotPreview": "Cannot preview this layout",
-    "back": "Back",
-    "confirm": "Import Dashboard"
-  },
-  "perf": {
-    "title": "Fleet Performance",
-    "drives": "Total Drives (30d)",
-    "charges": "Charge Sessions",
-    "cost": "Total Cost",
-    "co2": "CO₂ Saved",
-    "mostEfficient": "Most Efficient"
-  },
-  "templates": {
-    "widgetCount": "{{count}} widgets",
-    "apply": "Use This Template",
-    "detail": "Template Preview",
-    "title": "Dashboard Templates",
-    "blank": "Blank Dashboard"
-  },
-  "hero": {
-    "battery": "Battery",
-    "range": "Range",
-    "speed": "Speed",
-    "power": "Power",
-    "inside": "Inside",
-    "outside": "Outside",
-    "charging": "Charging",
-    "chargePower": "Power",
-    "chargeRate": "Rate",
-    "timeToFull": "Time to Full",
-    "doneAt": "Done",
-    "details": "Details",
-    "commands": "Commands",
-    "liveMap": "Live Map",
-    "digitalTwin": "Digital Twin",
-    "asleep": "Vehicle asleep — wake to see live data",
-    "wakeUp": "Wake Up"
-  },
-  "widgets": {
-    "addedAnnouncement": "{{name}} added to dashboard",
-    "addedBatchAnnouncement": "{{count}} widgets added to dashboard",
-    "addedCount_one": "{{count}} widget added",
-    "addedCount_other": "{{count}} widgets added",
-    "search": "Search widgets... (e.g. battery, chart, map)",
-    "available": "widgets available",
-    "searchResults": "{{count}} results for \"{{query}}\"",
-    "addAllCount": "+ Add all {{count}}",
-    "noResults": "No widgets match \"{{query}}\"",
-    "categoryFilter": "Filter by category",
-    "allCategories": "All",
-    "recentlyAdded": "Recently Added"
-  },
   "glance": {
     "location": {
       "home": "Home",
@@ -354,6 +228,81 @@
     },
     "openApp": "Open full app →"
   },
+  "hero": {
+    "battery": "Battery",
+    "range": "Range",
+    "speed": "Speed",
+    "power": "Power",
+    "inside": "Inside",
+    "outside": "Outside",
+    "charging": "Charging",
+    "chargePower": "Power",
+    "chargeRate": "Rate",
+    "timeToFull": "Time to Full",
+    "doneAt": "Done",
+    "details": "Details",
+    "commands": "Commands",
+    "liveMap": "Live Map",
+    "digitalTwin": "Digital Twin",
+    "asleep": "Vehicle asleep — wake to see live data",
+    "wakeUp": "Wake Up"
+  },
+  "import": {
+    "emptyInput": "No data to validate",
+    "readError": "Failed to read file",
+    "invalidFileType": "Please drop a .json file",
+    "noImportParam": "URL does not contain an import parameter",
+    "invalidUrl": "Invalid URL format",
+    "fromFile": "From File",
+    "fromClipboard": "Paste JSON",
+    "fromUrl": "From URL",
+    "preview": "Import Preview",
+    "title": "Import Dashboard",
+    "dropFile": "Drop a .json file here or click to browse",
+    "browse": "Browse Files",
+    "fileInput": "Dashboard JSON file",
+    "validate": "Validate & Preview",
+    "loadUrl": "Load from URL",
+    "availableCount": "{{count}} widgets",
+    "missingCount": "{{count}} skipped",
+    "widgets": "Widgets",
+    "notAvailable": "Not available",
+    "cannotPreview": "Cannot preview this layout",
+    "back": "Back",
+    "confirm": "Import Dashboard"
+  },
+  "layout": {
+    "newLayoutDefault": "New Layout",
+    "saveAsPrompt": "Name for the new layout:",
+    "resetTitle": "Reset dashboard to default?",
+    "resetConfirm": "Reset",
+    "untitled": "Untitled",
+    "switcherLabel": "Switch dashboard layout",
+    "label": "Layout",
+    "modified": "modified",
+    "editExit": "Done",
+    "editEnter": "Edit",
+    "saveAs": "Save as new layout",
+    "saveAsShort": "Save as",
+    "reset": "Reset to default",
+    "menuLabel": "Saved layouts",
+    "noneVisible": "No layouts available for this vehicle.",
+    "defaultBadge": "default",
+    "newFromCurrent": "New layout from current",
+    "unpin": "Unpin from vehicle",
+    "pin": "Pin to current vehicle",
+    "menuFooter": "Manage layouts in the tab strip below",
+    "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.",
+    "editTitle": "Edit dashboard (E)"
+  },
+  "perf": {
+    "title": "Fleet Performance",
+    "drives": "Total Drives (30d)",
+    "charges": "Charge Sessions",
+    "cost": "Total Cost",
+    "co2": "CO₂ Saved",
+    "mostEfficient": "Most Efficient"
+  },
   "quickStats": {
     "title": "Quick Stats",
     "subtitle": "Fleet snapshot · last 30 days",
@@ -381,6 +330,13 @@
       "empty": "No fleet comparison data yet",
       "unnamed": "Unnamed"
     }
+  },
+  "templates": {
+    "widgetCount": "{{count}} widgets",
+    "apply": "Use This Template",
+    "detail": "Template Preview",
+    "title": "Dashboard Templates",
+    "blank": "Blank Dashboard"
   },
   "widget": {
     "alertFeed": "Alert Feed",
@@ -1475,28 +1431,18 @@
     "updateStatus": "{{status}}",
     "moreInfoAbout": "More info about {{title}}"
   },
-  "layout": {
-    "newLayoutDefault": "New Layout",
-    "saveAsPrompt": "Name for the new layout:",
-    "resetTitle": "Reset dashboard to default?",
-    "resetConfirm": "Reset",
-    "untitled": "Untitled",
-    "switcherLabel": "Switch dashboard layout",
-    "label": "Layout",
-    "modified": "modified",
-    "editExit": "Done",
-    "editEnter": "Edit",
-    "saveAs": "Save as new layout",
-    "saveAsShort": "Save as",
-    "reset": "Reset to default",
-    "menuLabel": "Saved layouts",
-    "noneVisible": "No layouts available for this vehicle.",
-    "defaultBadge": "default",
-    "newFromCurrent": "New layout from current",
-    "unpin": "Unpin from vehicle",
-    "pin": "Pin to current vehicle",
-    "menuFooter": "Manage layouts in the tab strip below",
-    "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.",
-    "editTitle": "Edit dashboard (E)"
+  "widgets": {
+    "addedAnnouncement": "{{name}} added to dashboard",
+    "addedBatchAnnouncement": "{{count}} widgets added to dashboard",
+    "addedCount_one": "{{count}} widget added",
+    "addedCount_other": "{{count}} widgets added",
+    "search": "Search widgets... (e.g. battery, chart, map)",
+    "available": "widgets available",
+    "searchResults": "{{count}} results for \"{{query}}\"",
+    "addAllCount": "+ Add all {{count}}",
+    "noResults": "No widgets match \"{{query}}\"",
+    "categoryFilter": "Filter by category",
+    "allCategories": "All",
+    "recentlyAdded": "Recently Added"
   }
 }

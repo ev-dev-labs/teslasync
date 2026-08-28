@@ -82,7 +82,11 @@ function ExpiredShareView() {
         <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] flex items-center justify-center">
           <MapPin className="h-8 w-8 text-[var(--text-muted)]" />
         </div>
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">
+        <h1
+          className="text-xl font-bold text-[var(--text-primary)] outline-none"
+          tabIndex={-1}
+          data-route-focus-target="true"
+        >
           {t('share.expired.title', 'Share Link Unavailable')}
         </h1>
         <p className="text-[var(--text-secondary)] text-sm">
@@ -263,7 +267,16 @@ export default function SharedDrivePage() {
         {/* Title */}
         <FadeIn>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">{data.title}</h1>
+            {/* a11y-landmark-ok: the "share link unavailable" heading above
+                lives in a mutually-exclusive early-return branch, so only
+                one of the two <h1> elements can ever be rendered. */}
+            <h1
+              className="text-2xl font-bold text-[var(--text-primary)] outline-none"
+              tabIndex={-1}
+              data-route-focus-target="true"
+            >
+              {data.title}
+            </h1>
             {data.description && (
               <p className="text-[var(--text-secondary)]">{data.description}</p>
             )}

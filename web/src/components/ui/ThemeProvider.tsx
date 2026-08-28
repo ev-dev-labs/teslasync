@@ -47,12 +47,70 @@ function hexToRGB(hex: string): string {
  * dark text; dark accents (tesla red, royal purple) get white — so primary
  * buttons stay readable whichever accent the user picks.
  */
+function parseHexColor(hex: string): [number, number, number] | null {
+  const match = /^#([0-9a-f]{6})$/i.exec(hex)
+  if (!match) return null
+  return [
+    Number.parseInt(match[1].slice(0, 2), 16),
+    Number.parseInt(match[1].slice(2, 4), 16),
+    Number.parseInt(match[1].slice(4, 6), 16),
+  ]
+}
+
+function relativeLuminance(hex: string): number | null {
+  const rgb = parseHexColor(hex)
+  if (!rgb) return null
+  const [r, g, b] = rgb.map((channel) => {
+    const value = channel / 255
+    return value <= 0.04045
+      ? value / 12.92
+      : ((value + 0.055) / 1.055) ** 2.4
+  })
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b
+}
+
+function contrastRatio(foreground: string, background: string): number {
+  const foregroundLuminance = relativeLuminance(foreground)
+  const backgroundLuminance = relativeLuminance(background)
+  if (foregroundLuminance == null || backgroundLuminance == null) return 0
+  const lighter = Math.max(foregroundLuminance, backgroundLuminance)
+  const darker = Math.min(foregroundLuminance, backgroundLuminance)
+  return (lighter + 0.05) / (darker + 0.05)
+}
+
 function readableForeground(hex: string): string {
-  const r = parseInt(hex.slice(1, 3), 16)
-  const g = parseInt(hex.slice(3, 5), 16)
-  const b = parseInt(hex.slice(5, 7), 16)
-  const luminance = (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255
-  return luminance > 0.6 ? '#0b0d12' : '#ffffff'
+  const darkForeground = '#0b0d12'
+  if (contrastRatio(darkForeground, hex) >= 4.5) return darkForeground
+  if (contrastRatio('#ffffff', hex) >= 4.5) return '#ffffff'
+  return '#000000'
+}
+
+function mixHex(from: string, to: string, amount: number): string {
+  const start = parseHexColor(from)
+  const end = parseHexColor(to)
+  if (!start || !end) return to
+  const channels = start.map((channel, index) =>
+    Math.round(channel + (end[index] - channel) * amount),
+  )
+  return `#${channels.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`
+}
+
+function accessibleMutedForeground(mode: ModeTheme): string {
+  const surfaces = [mode.bg, mode.surface1, mode.surface2, mode.surface3]
+  const meetsContrast = (color: string) =>
+    surfaces.every((surface) => contrastRatio(color, surface) >= 4.5)
+  if (meetsContrast(mode.textMuted)) return mode.textMuted
+
+  const target = meetsContrast(mode.textPrimary)
+    ? mode.textPrimary
+    : mode.colorScheme === 'dark'
+      ? '#ffffff'
+      : '#000000'
+  for (let step = 1; step <= 20; step += 1) {
+    const candidate = mixHex(mode.textMuted, target, step / 20)
+    if (meetsContrast(candidate)) return candidate
+  }
+  return target
 }
 
 const defaultCustomPrimary = '#00b4d8'
@@ -272,7 +330,7 @@ function applyThemeCSS(theme: ColorTheme, mode: ModeTheme) {
   root.style.setProperty('--glass-border', mode.glassBorder)
   root.style.setProperty('--text-primary', mode.textPrimary)
   root.style.setProperty('--text-secondary', mode.textSecondary)
-  root.style.setProperty('--text-muted', mode.textMuted)
+  root.style.setProperty('--text-muted', accessibleMutedForeground(mode))
   root.style.setProperty('color-scheme', mode.colorScheme)
   document.body.style.background = mode.bg
   // Keep Tailwind dark: utilities aligned with the selected app theme, not the static index.html default.

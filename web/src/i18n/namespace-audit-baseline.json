@@ -1,5 +1,9 @@
 {
   "dotted": {
+    "accessGuidance": [
+      "src\\components\\feedback\\PermissionGuidanceNotice.tsx",
+      "src\\components\\feedback\\PermissionGuidanceNotice.tsx"
+    ],
     "account": [
       "src\\features\\settings\\components\\privacy\\ConsentControlPanel.tsx",
       "src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx",
@@ -33,6 +37,17 @@
       "src\\features\\system\\pages\\CommandReliabilityPage.tsx",
       "src\\features\\system\\pages\\CommandReliabilityPage.tsx"
     ],
+    "dashboardPresets": [
+      "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+      "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+      "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx"
+    ],
+    "dataUnavailable": [
+      "src\\components\\feedback\\DataUnavailableNotice.tsx"
+    ],
+    "demoMode": [
+      "src\\components\\feedback\\DemoModeBanner.tsx"
+    ],
     "energyAnatomy": [
       "src\\features\\driving\\pages\\EnergyAnatomyPage.tsx",
       "src\\features\\driving\\pages\\EnergyAnatomyPage.tsx",
@@ -42,6 +57,9 @@
       "src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
       "src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
       "src\\features\\battery\\pages\\EnergyLedgerPage.tsx"
+    ],
+    "errorHelp": [
+      "src\\components\\feedback\\ErrorHelpLinks.tsx"
     ],
     "explore": [
       "src\\features\\explore\\pages\\ExplorePage.tsx",
@@ -57,6 +75,16 @@
       "src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
       "src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
       "src\\features\\analytics\\pages\\FirmwareImpactPage.tsx"
+    ],
+    "glossary": [
+      "src\\components\\ui\\GlossaryTerm.tsx",
+      "src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+      "src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx"
+    ],
+    "helpIndex": [
+      "src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      "src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      "src\\features\\system\\components\\help-index\\HelpSearch.tsx"
     ],
     "landscape": [
       "src\\features\\driving\\pages\\EfficiencyLandscapePage.tsx",
@@ -100,6 +128,11 @@
       "src\\features\\dashboard\\components\\MiniGridPreview.tsx",
       "src\\features\\dashboard\\components\\MiniGridPreview.tsx"
     ],
+    "problemReport": [
+      "src\\components\\feedback\\ProblemReportModal.tsx",
+      "src\\components\\feedback\\ProblemReportModal.tsx",
+      "src\\components\\feedback\\ProblemReportModal.tsx"
+    ],
     "progressRing": [
       "src\\components\\data-display\\ProgressRing.tsx"
     ],
@@ -120,6 +153,11 @@
       "src\\features\\analytics\\pages\\RegimeShiftsPage.tsx",
       "src\\features\\analytics\\pages\\RegimeShiftsPage.tsx"
     ],
+    "releaseNotes": [
+      "src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+      "src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+      "src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx"
+    ],
     "runtimeHealth": [
       "src\\components\\feedback\\RuntimeHealthBanner.tsx",
       "src\\components\\feedback\\RuntimeHealthBanner.tsx",
@@ -139,6 +177,7 @@
       "src\\components\\data-display\\ServiceStatus.tsx"
     ],
     "signalCatalog": [
+      "src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
       "src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
       "src\\features\\telemetry\\components\\SignalCatalogPanel.tsx"
     ],
@@ -173,10 +212,19 @@
     "sparkline": [
       "src\\components\\charts\\Sparkline.tsx"
     ],
+    "supportBundle": [
+      "src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+      "src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+      "src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx"
+    ],
     "systemStatus": [
       "src\\features\\system\\components\\status\\IncidentForm.tsx",
       "src\\features\\system\\components\\status\\IncidentForm.tsx",
       "src\\features\\system\\components\\status\\IncidentForm.tsx"
+    ],
+    "timezones": [
+      "src\\features\\automations\\pages\\ConditionBuilder.tsx",
+      "src\\features\\automations\\pages\\TriggerConfigurator.tsx"
     ],
     "transitionArrow": [
       "src\\components\\data-display\\TransitionArrow.tsx"

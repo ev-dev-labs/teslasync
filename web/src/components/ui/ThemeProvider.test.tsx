@@ -205,6 +205,16 @@ describe('initial state resolution', () => {
     expect(root.style.getPropertyValue('--theme-primary')).toBe('#3b82f6')
     expect(root.style.getPropertyValue('--bg')).toBe('#0b0d12')
     expect(root.style.getPropertyValue('--bg-app')).toBe('#0b0d12')
+    expect(
+      contrastRatio(
+        root.style.getPropertyValue('--theme-on-primary'),
+        root.style.getPropertyValue('--theme-primary'),
+      ),
+    ).toBeGreaterThanOrEqual(4.5)
+    const muted = root.style.getPropertyValue('--text-muted')
+    for (const surface of ['--bg', '--surface-1', '--surface-2', '--surface-3']) {
+      expect(contrastRatio(muted, root.style.getPropertyValue(surface))).toBeGreaterThanOrEqual(4.5)
+    }
     expect(root.classList.contains('dark')).toBe(true)
     expect(root.classList.contains('light-mode')).toBe(false)
   })
@@ -237,8 +247,10 @@ describe('applyThemeCSS side effects', () => {
     expect(screen.getByTestId('mode-scheme')).toHaveTextContent('light')
     const root = document.documentElement
     expect(root.style.getPropertyValue('--bg')).toBe('#f8fafc')
-    expect(root.style.getPropertyValue('--text-muted')).toBe('#64748b')
-    expect(contrastRatio('#64748b', '#f8fafc')).toBeGreaterThanOrEqual(4.5)
+    const muted = root.style.getPropertyValue('--text-muted')
+    for (const surface of ['--bg', '--surface-1', '--surface-2', '--surface-3']) {
+      expect(contrastRatio(muted, root.style.getPropertyValue(surface))).toBeGreaterThanOrEqual(4.5)
+    }
     expect(root.style.getPropertyValue('color-scheme')).toBe('light')
     expect(root.classList.contains('light-mode')).toBe(true)
     expect(root.classList.contains('dark')).toBe(false)

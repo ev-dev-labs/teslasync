@@ -961,6 +961,17 @@ export default function TeslaChargingSessionsPage() {
                   type: row.charger_type ?? '',
                 })}
                 selectable="multi"
+                // A11Y: the first column is a bare date, which many
+                // rows share. Pair it with the site so each checkbox
+                // names the session it toggles.
+                rowLabel={(row) =>
+                  t('tesla_sessions.rowLabel', '{{site}}, {{date}}', {
+                    site:
+                      row.site_location_name ||
+                      t('tesla_sessions.unknownSite', 'Unknown site'),
+                    date: formatDateTime(row.charge_start_datetime),
+                  })
+                }
                 selectedKeys={selectedKeys}
                 onSelectionChange={setSelectedKeys}
                 bulkActions={(rows) => (

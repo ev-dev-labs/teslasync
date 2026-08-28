@@ -1,0 +1,108 @@
+{
+  "onboarding": {
+    "pageTitle": "Welcome to TeslaSync",
+    "welcome": "Welcome to TeslaSync",
+    "subtitle": "Three quick steps before your dashboard is ready.",
+    "workspaceProfile": {
+      "title": "Tailor your workspace",
+      "description": "Choose the perspective that best matches your work. TeslaSync will prioritize navigation and discovery without hiding features or changing permissions.",
+      "label": "Primary use"
+    },
+    "intro": {
+      "title": "Setup checklist",
+      "desc": "TeslaSync runs entirely on your hardware. No data leaves your install, and you can revisit this page from Settings any time."
+    },
+    "tesla": {
+      "title": "Connect your Tesla account",
+      "desc": "TeslaSync needs Fleet API access to read vehicle data. Sign in with your Tesla account to authorize the connection.",
+      "cta": "Connect Tesla account"
+    },
+    "vehicle": {
+      "title": "Wait for vehicles to appear",
+      "desc": "Vehicles linked to your Tesla account will sync automatically. This usually takes less than a minute after connecting.",
+      "cta": "Refresh",
+      "checking": "Checking…"
+    },
+    "telemetry": {
+      "title": "Wait for telemetry data",
+      "desc": "Once your vehicle uploads its first signal batch (usually within 5 minutes of driving), live data will appear across the app. See the Fleet Telemetry setup guide if it does not arrive.",
+      "docs": "Setup guide"
+    },
+    "ready": "You are all set — your dashboard is ready.",
+    "polling": "This page refreshes automatically every 30 seconds.",
+    "checkAgain": "Check again",
+    "continue": "Continue to dashboard",
+    "skip": "Skip for now",
+    "skipHint": "Explore the app — you can finish setup later from this page.",
+    "footer": {
+      "help": "Need help? See the",
+      "account": "Tesla account page",
+      "or": " or the ",
+      "docs": "documentation"
+    },
+    "syncTitle": "Sync Your Vehicles",
+    "title": "Welcome to TeslaSync",
+    "syncDesc": "Your Tesla account is connected. Sync your vehicles to start tracking.",
+    "desc": "The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.",
+    "sync": "Sync Vehicles",
+    "connect": "Connect Tesla Account",
+    "tracking": "Real-time Tracking",
+    "drives": "Drive History",
+    "charging": "Charge Analytics",
+    "control": "Vehicle Control",
+    "status": {
+      "sectionLabel": "Setup status",
+      "tesla": {
+        "label": "Tesla account",
+        "connected": "Connected",
+        "pending": "Not connected",
+        "hintDone": "Fleet API access authorized",
+        "hint": "Sign in to authorize access"
+      },
+      "vehicles": {
+        "label": "Vehicles synced",
+        "hintDone": "Synced from the Fleet API",
+        "hint": "Waiting for the first sync"
+      },
+      "telemetry": {
+        "label": "Telemetry",
+        "flowing": "Flowing",
+        "waiting": "Waiting",
+        "hintDone": "Live signals arriving",
+        "hint": "No signals received yet"
+      },
+      "loading": "Loading status…"
+    },
+    "progress": {
+      "label": "Setup progress",
+      "value": "{{done}}/{{total}}",
+      "hint": "Steps complete",
+      "allDone": "All steps complete",
+      "stepOf": "Step {{current}} of {{total}}"
+    },
+    "resources": {
+      "title": "Resources & help",
+      "privacy": "TeslaSync runs entirely on your hardware. No data ever leaves your install.",
+      "account": {
+        "title": "Tesla account",
+        "desc": "Connect or manage your Fleet API access."
+      },
+      "guide": {
+        "title": "Fleet Telemetry setup guide",
+        "desc": "Configure streaming so live data starts arriving."
+      },
+      "docs": {
+        "title": "Documentation",
+        "desc": "Guides, reference, and troubleshooting."
+      },
+      "newTab": "(opens in a new tab)"
+    },
+    "unlock": {
+      "title": "What you'll unlock",
+      "tracking": "Follow location, speed, and state live on the map.",
+      "drives": "Every trip logged with route, efficiency, and stats.",
+      "charging": "Track sessions, costs, and battery health over time.",
+      "control": "Climate, charging, and locks — all from one place."
+    }
+  }
+}

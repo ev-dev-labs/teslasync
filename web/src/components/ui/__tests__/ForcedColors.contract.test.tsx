@@ -19,6 +19,21 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+// Same resolver the CLI audit uses, imported rather than reimplemented
+// so the build gate and this spec can never disagree about what
+// "wins the cascade" means.
+import {
+  auditForcedColors,
+  parseCssRules,
+  resolveTokenWinner,
+  readThemeProviderInline,
+  matchesRoot,
+  specificity,
+  TOKEN_FALLBACKS,
+  ELEVATION_TOKENS,
+  THEME_STATES,
+  // @ts-expect-error — plain ESM build script, no type declarations.
+} from '../../../../scripts/audit-forced-colors.mjs';
 
 const CRITICAL_COMPONENTS = [
   'src/components/ui/Button.tsx',
@@ -67,17 +82,80 @@ describe('Forced-colors contract — critical components', () => {
     expect(css).toMatch(/recharts-cartesian-grid/);
     expect(css).toMatch(/\[data-print-card\]/);
   });
-});
 
-describe('Forced-colors contract — Tailwind variant registration', () => {
-  it('tailwind.config.js registers the forced-colors variant via plugin', () => {
-    const cfg = readFileSync('tailwind.config.js', 'utf8');
-    // Either the explicit addVariant call we added, or the literal
-    // `@media (forced-colors: active)` template, or the plain
-    // `forced-colors` variant string — any of these proves the
-    // registration is in place.
-    const hasAddVariant = /addVariant\(\s*['"]forced-colors['"]/.test(cfg);
-    const hasMediaLiteral = MEDIA_RE.test(cfg);
-    expect(hasAddVariant || hasMediaLiteral).toBe(true);
+  /**
+   * A11Y-07 — design-token cascade.
+   *
+   * Almost every surface in the app is styled through CSS custom
+   * properties, and `ThemeProvider` writes the live theme onto `<html>`
+   * as INLINE style. An inline declaration outranks every normal author
+   * rule regardless of specificity, so a plain
+   * `:root { --surface-1: Canvas }` inside the forced-colors block is
+   * inert at runtime — which is exactly the state the first version of
+   * this suite passed on, because it only grepped for the token text.
+   *
+   * These assertions run the same cascade resolver the audit script
+   * uses (imported, not re-implemented, so the two cannot drift) and
+   * assert that the declaration which actually WINS is the
+   * system-colour one.
+   */
+  describe('design-token cascade', () => {
+    it('every audited token wins the cascade in both theme states', () => {
+      const { cascadeOffenders } = auditForcedColors();
+      expect(cascadeOffenders, cascadeOffenders.join('\n')).toEqual([]);
+    });
+
+    it('every critical component still carries an override', () => {
+      const { offenders, missing } = auditForcedColors();
+      expect(missing, `stale allow-list entries: ${missing.join(', ')}`).toEqual([]);
+      expect(
+        offenders,
+        `missing forced-colors override: ${offenders.join(', ')}`,
+      ).toEqual([]);
+    });
+
+    it('ThemeProvider never writes an audited token with important priority', () => {
+      // An important INLINE declaration is unbeatable by any author
+      // rule, so it would silently kill the whole remap.
+      const { importantInline } = readThemeProviderInline(
+        join('src', 'components', 'ui', 'ThemeProvider.tsx'),
+      );
+      const audited = new Set<string>([
+        ...TOKEN_FALLBACKS.map(([token]: [string, string]) => token),
+        ...ELEVATION_TOKENS,
+      ]);
+      const clashes = [...importantInline].filter((token) => audited.has(token));
+      expect(clashes, `inline !important on: ${clashes.join(', ')}`).toEqual([]);
+    });
+
+    it('detects a token that loses to the inline theme value', () => {
+      // Negative control: proves the resolver would catch the original
+      // defect rather than passing vacuously. Patched in memory only.
+      const css = readFileSync(join('src', 'index.css'), 'utf8').replace(
+        '--surface-1: Canvas !important;',
+        '--surface-1: Canvas;',
+      );
+      const rules = parseCssRules(css);
+      const inline = new Set(['--surface-1']);
+      for (const state of THEME_STATES) {
+        const winner = resolveTokenWinner(rules, '--surface-1', state, inline);
+        expect(winner.source).toBe('inline');
+      }
+    });
+
+    it('detects a forced-colors selector that never matches <html>', () => {
+      // `[data-theme]` is not a selector this app ever puts on the
+      // document element — ThemeProvider toggles `.dark` / `.light-mode`.
+      expect(matchesRoot('[data-theme]', ['dark'])).toBe(false);
+      expect(matchesRoot(':root', ['dark'])).toBe(true);
+      expect(matchesRoot(':root.light-mode', ['light-mode'])).toBe(true);
+      expect(matchesRoot(':root.light-mode', ['dark'])).toBe(false);
+    });
+
+    it('ranks :root.light-mode above :root, as the browser does', () => {
+      const bare = specificity(':root');
+      const scoped = specificity(':root.light-mode');
+      expect(scoped[1]).toBeGreaterThan(bare[1]);
+    });
   });
 });

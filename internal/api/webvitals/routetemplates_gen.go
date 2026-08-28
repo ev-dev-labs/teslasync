@@ -11,7 +11,7 @@ package webvitals
 // generatedRoutePaths is the canonical SPA route table. Segments beginning
 // with ':' are client-controlled parameter positions and are templated to
 // `:id` before a route can become a Prometheus label.
-var generatedRoutePaths = [238]string{
+var generatedRoutePaths = [239]string{
 	"/",
 	"/account/2fa",
 	"/account/privacy",
@@ -122,6 +122,7 @@ var generatedRoutePaths = [238]string{
 	"/geofences",
 	"/glance",
 	"/guard-mode",
+	"/help",
 	"/hvac-cycling",
 	"/integrations/helix",
 	"/intelligence-packs",

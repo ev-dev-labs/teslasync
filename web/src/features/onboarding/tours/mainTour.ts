@@ -4,9 +4,19 @@ import type { TourStep } from '@/hooks/useTour'
 /**
  * Main onboarding tour.
  *
- * The dashboard-focused walkthrough that auto-starts the first time a user
- * lands on the dashboard root (`/`) with at least one vehicle linked. Bumping
- * the version below silently invalidates any previously stored completion flag.
+ * Launcher-only since HELP-01. This tour used to auto-start the first time a
+ * user landed on the dashboard with a vehicle linked — a seven-step spotlight
+ * over the whole app, triggered by presence rather than by need. That is an
+ * interruption: it is modal, it is global, and it is unrelated to whatever the
+ * user opened the app to do.
+ *
+ * Progressive, task-specific onboarding replaced it (see
+ * `lib/onboardingTasks.ts`): one hint, on the route where the task is
+ * performed, only while the task is actually outstanding, and never for an
+ * experienced user. The full walkthrough remains available on demand from the
+ * tour launcher, which is where a user who wants a tour goes to ask for one.
+ *
+ * Bumping the version below silently invalidates any stored completion flag.
  */
 
 const STEPS: TourStep[] = [
@@ -70,8 +80,7 @@ export const MAIN_TOUR: TourDefinition = {
   descriptionFallback: 'A quick tour of the dashboard, sidebar, and live data.',
   version: 2,
   steps: STEPS,
-  // Null-safe: a malformed/partial context (missing `vehicleCount`, or no
-  // context at all) must resolve to `false` rather than throw on destructure —
-  // the predicate runs inside a Layout effect on every route change.
-  autoStart: (ctx) => ctx?.pathname === '/' && (ctx?.vehicleCount ?? 0) > 0,
+  // No `autoStart` predicate — by design. Every tour in the registry is now
+  // launcher-only; nothing in this app opens a walkthrough the user did not
+  // ask for. The invariant is pinned in `__tests__/tours.test.ts`.
 }

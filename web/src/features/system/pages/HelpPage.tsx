@@ -21,6 +21,7 @@
 // `data-testid="help-baseline-links"` are load-bearing.
 
 import { useTranslation } from 'react-i18next'
+import { useLocation } from 'react-router-dom'
 import {
   BookOpen,
   Compass,
@@ -39,6 +40,14 @@ import { AIRAGHelp } from '@/components/ai/AIRAGHelp'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import type { NeonColor } from '@/lib/tokens'
 import { HelpLinkCard, type HelpLink } from '../components/HelpLinkCard'
+import {
+  DashboardPresetPanel,
+  GuidedHelpPanel,
+  HelpGlossaryPanel,
+  HelpSearch,
+  ReleaseNotesPanel,
+  SupportBundlePanel,
+} from '../components/help-index'
 
 /**
  * The curated link palette. Order is intentional: documentation
@@ -158,6 +167,7 @@ const HELP_CHANNELS: readonly HelpChannel[] = [
  */
 export default function HelpPage() {
   const { t } = useTranslation()
+  const location = useLocation()
   usePageTitle(t('help.title', 'Help'))
 
   return (
@@ -208,11 +218,51 @@ export default function HelpPage() {
           </section>
         </FadeIn>
 
-        {/* 2 — AI assistant. Self-gating: renders nothing when ai_mode='off'. */}
+        {/* 2 — Deterministic help index. Static, offline-capable, and
+            unaffected by ai_mode: this is the baseline every user gets. */}
+        <FadeIn delay={0.05}>
+          <GlassPanel className="p-4 sm:p-5">
+            <SectionTitle>{t('helpIndex.title', 'Search the help index')}</SectionTitle>
+            <Text as="p" variant="bodySm" className="mt-1 max-w-3xl">
+              {t(
+                'helpIndex.subtitle',
+                'Definitions, pages and troubleshooting, indexed by term and route. Results are the same every time — no model, no network.',
+              )}
+            </Text>
+            <HelpSearch pathname={location.pathname} className="mt-4" />
+          </GlassPanel>
+        </FadeIn>
+
+        {/* 3 — AI assistant. Self-gating: renders nothing when ai_mode='off'. */}
         <AIRAGHelp />
 
-        {/* 3 — Explore the app: curated links reflow to fill the full width */}
+        {/* 4 — Contextual definitions (HELP-03). */}
         <FadeIn delay={0.1}>
+          <HelpGlossaryPanel />
+        </FadeIn>
+
+        {/* 5 — Explicit entry points for guided help. Opt-in only (HELP-01). */}
+        <FadeIn delay={0.11}>
+          <GuidedHelpPanel />
+        </FadeIn>
+
+        {/* 5 — Release notes derived from the canonical changelog (HELP-07). */}
+        <FadeIn delay={0.12}>
+          <ReleaseNotesPanel />
+        </FadeIn>
+
+        {/* 6 — Support bundle + report a problem (HELP-08, HELP-09). */}
+        <FadeIn delay={0.14}>
+          <SupportBundlePanel />
+        </FadeIn>
+
+        {/* 7 — Curated dashboard presets by role (HELP-11). */}
+        <FadeIn delay={0.16}>
+          <DashboardPresetPanel />
+        </FadeIn>
+
+        {/* 8 — Explore the app: curated links reflow to fill the full width */}
+        <FadeIn delay={0.18}>
           <section aria-label={t('help.explore.aria', 'Explore the app')}>
             <div className="mb-3 sm:mb-4">
               <SectionTitle>{t('help.exploreTitle', 'Explore the app')}</SectionTitle>

@@ -135,11 +135,8 @@ func TestGetVehicleState_Errors(t *testing.T) {
 
 func TestGetVehicleState_RequestError(t *testing.T) {
 	t.Parallel()
-	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	url := srv.URL
-	srv.Close() // force connection-refused
 
-	c := newTestClient(url, 5*time.Second)
+	c := newRequestErrorClient(5 * time.Second)
 	_, err := c.GetVehicleState(context.Background(), "VIN1")
 	if err == nil {
 		t.Fatal("expected request error, got nil")
@@ -256,11 +253,8 @@ func TestWakeUp(t *testing.T) {
 
 	t.Run("request error", func(t *testing.T) {
 		t.Parallel()
-		srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-		url := srv.URL
-		srv.Close()
 
-		c := newTestClient(url, 5*time.Second)
+		c := newRequestErrorClient(5 * time.Second)
 		if err := c.WakeUp(context.Background(), "VINW"); err == nil {
 			t.Fatal("expected request error, got nil")
 		}
@@ -359,11 +353,8 @@ func TestSendCommand_ParamsMarshalError(t *testing.T) {
 
 func TestSendCommand_RequestError(t *testing.T) {
 	t.Parallel()
-	srv := httptest.NewServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-	url := srv.URL
-	srv.Close()
 
-	c := newTestClient(url, 5*time.Second)
+	c := newRequestErrorClient(5 * time.Second)
 	if err := c.SendCommand(context.Background(), "VINC", "lock", nil); err == nil {
 		t.Fatal("expected request error, got nil")
 	}

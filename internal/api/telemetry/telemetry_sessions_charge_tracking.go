@@ -126,7 +126,9 @@ func freshChargeCoordinateValue(v *signal.Value, at time.Time) bool {
 	if at.IsZero() {
 		at = time.Now().UTC()
 	}
-	return signal.IsLiveSignalFresh(v, at) &&
+	return v != nil &&
+		!v.TimestampSynthetic &&
+		signal.IsLiveSignalFresh(v, at) &&
 		!v.Timestamp.After(at.Add(signal.LiveSignalFreshnessThreshold))
 }
 

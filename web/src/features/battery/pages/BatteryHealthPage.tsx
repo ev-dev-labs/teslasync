@@ -14,6 +14,7 @@ import {
   GlassPanel, Badge, Button,
   SectionTitle, PanelTitle, Text, MetricLabel,
 } from '@/components/ui';
+import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
 import { gaugeTone, severityTokens, type GaugeTone, type Severity } from '@/lib/tokens';
 import { LinearGauge } from '@/components/charts';
 import {
@@ -583,11 +584,27 @@ export default function BatteryHealthPage() {
       {/* ── 1. KPI band — summary metrics ─────────────────────────── */}
       <SectionErrorBoundary name="battery:summary-cards" fallbackTitle={t('battery.section.summaryCardsFailed', 'Summary metrics failed to load')}>
         <FadeIn>
+          {/* HELP-03. These four words drive most of the misreadings on this
+              page: SoH looks like a fault code, degradation looks like a
+              defect, rated range looks like a measurement, and SOC looks like
+              a fuel gauge. Defining them where they are used — rather than
+              only in the Help glossary — is the whole point of the inline
+              affordance. Each `<GlossaryTerm>` self-gates on the user's
+              contextual-help preference and degrades to plain text. */}
+          <p
+            className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+            data-testid="battery-glossary-strip"
+          >
+            <span>{t('battery.glossary.lead', 'Terms on this page:')}</span>
+            <GlossaryTerm term="state_of_health" />
+            <GlossaryTerm term="degradation" />
+            <GlossaryTerm term="soc" />
+            <GlossaryTerm term="rated_range" />
+          </p>
           <section
             aria-label={t('battery.section.kpis', 'Battery health summary metrics')}
             className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7"
-          >
-            <MetricCard
+          >            <MetricCard
               label={t('battery.metric.soh', 'State of Health')}
               value={fmtPercent(health.current_soh)}
               icon={<Heart className="h-5 w-5" aria-hidden="true" />}

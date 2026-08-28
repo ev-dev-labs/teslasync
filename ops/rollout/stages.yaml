@@ -1,0 +1,265 @@
+# OPS-05 — Staged / canary rollout controls.
+#
+# This file is the human- and machine-readable rollout contract. The Helm
+# chart implements it via `.Values.rollout.*`; `go run ./cmd/ops-gate
+# -check rollout` asserts the two never drift (every component named here
+# must exist in helm/teslasync/values.yaml under rollout, and every stage
+# gate must name a real, implemented gate).
+#
+# DEFAULT BEHAVIOUR IS UNCHANGED. Every canary block ships `enabled:
+# false` and every strategy reproduces the pre-existing
+# RollingUpdate/maxSurge=1/maxUnavailable=0 (or Recreate, for the
+# single-writer workers). Staging is opt-in per deploy.
+version: 1
+
+# Rollout is paused by flipping .Values.rollout.paused — it maps to the
+# Deployment `spec.paused` field, so an in-flight rollout freezes without
+# deleting anything.
+pause_control:
+  helm_value: rollout.paused
+  kubernetes_field: spec.paused
+
+# Shutdown budget lock (OPS-09).
+#
+# The sum of these budgets plus `required_headroom_seconds` must fit
+# inside the chart's terminationGracePeriodSeconds, or the kubelet
+# SIGKILLs the container mid-drain. Enforced three ways so no single
+# edit can silently break it:
+#
+#   * internal/app/run.go constants           (the values actually used)
+#   * TestShutdownBudgetMatchesManifest        (constants == this block)
+#   * cmd/ops-gate -check rollout              (sum + headroom <= chart)
+#
+# Kubernetes' default grace period is 30s. The real budget is 75s, so
+# leaving it at the default meant every rollout SIGKILLed pods 45s into
+# a drain that was still running.
+shutdown:
+  helm_value: terminationGracePeriodSeconds
+  prestop_propagation_seconds: 5
+  telemetry_flush_seconds: 10
+  server_drain_seconds: 30
+  inbound_log_drain_seconds: 30
+  drain_listener_seconds: 5
+  required_headroom_seconds: 10
+
+# The preStop drain endpoint is one-way and pod-fatal, so it is not
+# reachable from the pod network at all: the listener binds to
+# 127.0.0.1 and the preStop hook is an `exec` that runs INSIDE the
+# container (`/usr/local/bin/teslasync drain`). An httpGet hook would
+# not work — kubelet dials those from outside the container, against the
+# pod IP — which is precisely why a wildcard bind was needed before, and
+# precisely why it was reachable cluster-wide.
+drain_plane:
+  helm_value: drain.port
+  bind_address: 127.0.0.1
+  hook_type: exec
+  hook_command: /usr/local/bin/teslasync drain
+  drain_path: /internal/flush
+  public_status_path: /internal/drain-status
+  exposed_by_service: false
+  # A drained pod that is never terminated would sit unready-but-alive
+  # forever. After this budget the LIVENESS probe fails so the kubelet
+  # restarts it. Comfortably above the 80s shutdown budget so a real
+  # termination never reaches it.
+  stuck_drain_liveness_budget_seconds: 180
+
+# ── OPS-05: legacy → disjoint selector migration ─────────────────────
+#
+# `spec.selector` is IMMUTABLE on an existing Deployment, so switching an
+# installed release from `legacy` to `disjoint` cannot be done by
+# `helm upgrade` alone.
+#
+# THE OBVIOUS PROCEDURE IS WRONG. `kubectl delete deployment
+# --cascade=orphan` orphans the pods AND the ReplicaSet. The ReplicaSet
+# is still a running controller: delete the old pods afterwards and it
+# immediately recreates every one of them, so the migration never
+# converges and the Service keeps fronting both revisions indefinitely.
+#
+# The controller has to be removed BEFORE the pods it owns. Validated by
+# `go run ./cmd/ops-gate -check rollout`, which rejects any ordering in
+# which a pod deletion precedes the ReplicaSet removal.
+selector_migration:
+  runbook: docs/runbooks/rollout-selector-migration.md
+  downtime: >-
+    None, if the steps are followed in order. Between steps 3 and 5 the
+    Service fronts both the orphaned old pods and the new stable pods —
+    the same overlap any rolling update produces, and both revisions run
+    the same image.
+  rollback: >-
+    Before step 5, re-run helm upgrade with rollout.selectorMode=legacy
+    and delete the disjoint Deployment; the orphaned pods are still
+    serving, so this is a no-downtime abort. After step 5 the old pods
+    are gone and rollback is a normal Helm revision rollback.
+  steps:
+    - id: orphan-deployment
+      removes: deployment-controller
+      command: kubectl -n $NS delete deployment $REL-api --cascade=orphan
+      description: >-
+        Removes the Deployment but leaves its ReplicaSet AND pods
+        running, so traffic is uninterrupted.
+    - id: orphan-replicaset
+      removes: replicaset-controller
+      command: kubectl -n $NS delete rs -l app.kubernetes.io/instance=$REL,app.kubernetes.io/component=api --cascade=orphan
+      description: >-
+        MANDATORY and easy to miss. Without it the ReplicaSet is still a
+        live controller and recreates every pod deleted in the final
+        step, so the migration never converges.
+    - id: upgrade-disjoint
+      removes: none
+      command: helm upgrade $REL helm/teslasync -n $NS --set rollout.selectorMode=disjoint
+      description: >-
+        Creates the new Deployment with the disjoint selector. Its pods
+        carry teslasync.io/rollout=stable; the orphaned pods do not.
+    - id: wait-ready
+      removes: none
+      command: kubectl -n $NS rollout status deployment/$REL-api --timeout=5m
+      description: >-
+        Wait for the new stable pods to pass readiness before removing
+        any old capacity.
+    - id: delete-orphaned-pods
+      removes: pods
+      command: kubectl -n $NS delete pod -l 'app.kubernetes.io/instance=$REL,app.kubernetes.io/component=api,!teslasync.io/rollout'
+      description: >-
+        Deletes only the un-labelled orphans. Nothing owns them any more,
+        so nothing recreates them. The selector's `!` term is what keeps
+        this from deleting the new stable pods.
+
+components:
+  - id: api
+    workload: Deployment/<release>-api
+    helm_path: rollout.api
+    canary_supported: true
+    # The API is stateless behind a Service; a canary Deployment sharing
+    # the Service selector receives traffic proportional to its replica
+    # share. That is the deliberate, dependency-free traffic split — no
+    # service mesh required.
+    traffic_split: replica-share
+    default_strategy:
+      type: RollingUpdate
+      rendered_by_default: true
+      max_surge: 1
+      max_unavailable: 0
+
+  - id: web
+    workload: Deployment/<release>-web
+    helm_path: rollout.web
+    canary_supported: true
+    traffic_split: replica-share
+    default_strategy:
+      type: RollingUpdate
+      rendered_by_default: true
+      max_surge: 1
+      max_unavailable: 0
+
+  - id: notification-worker
+    workload: Deployment/<release>-notification-worker
+    helm_path: rollout.notificationWorker
+    # Workers consume a shared MQTT subscription. Running two revisions
+    # concurrently would double-deliver notifications, so canary is
+    # structurally unavailable.
+    canary_supported: false
+    traffic_split: none
+    default_strategy:
+      type: kubernetes-default
+      rendered_by_default: false
+      note: >-
+        The chart renders NO strategy block for the workers, so the
+        Kubernetes default (RollingUpdate 25%/25%) applies exactly as it
+        did before rollout controls existed — existing deployment
+        behaviour is unchanged. Operators who want strict single-writer
+        semantics set rollout.notificationWorker.strategy.type to
+        Recreate; the template only emits a strategy block when that
+        value is non-empty.
+
+  - id: export-worker
+    workload: Deployment/<release>-export-worker
+    helm_path: rollout.exportWorker
+    canary_supported: false
+    traffic_split: none
+    default_strategy:
+      type: kubernetes-default
+      rendered_by_default: false
+      note: >-
+        Same as notification-worker: nothing is rendered by default, so
+        the Kubernetes default applies. Set
+        rollout.exportWorker.strategy.type to Recreate to opt in to
+        strict single-writer rollouts.
+
+  - id: automation-worker
+    workload: Deployment/<release>-automation-worker
+    helm_path: rollout.automationWorker
+    canary_supported: false
+    traffic_split: none
+    default_strategy:
+      type: kubernetes-default
+      rendered_by_default: false
+      note: >-
+        Same as notification-worker: nothing is rendered by default, so
+        the Kubernetes default applies. Set
+        rollout.automationWorker.strategy.type to Recreate to opt in to
+        strict single-writer rollouts.
+
+# High-risk behaviour changes ship dark and are enabled per stage rather
+# than at image-promotion time. The chart renders these into the
+# <release>-rollout ConfigMap for deploy tooling and operators; the
+# application itself continues to read flags from its own FlagStore, so
+# adding a name here changes NO runtime behaviour on its own.
+high_risk_flags:
+  - id: tesla-command-writes
+    description: Outbound vehicle command execution (wake, climate, charge control).
+    enable_at_stage: full
+    blast_radius: Sends real commands to customer vehicles; failures are user-visible and irreversible.
+  - id: telemetry-pipeline-rewrite
+    description: Routing changes in internal/tesla/normalize that alter what lands in signal_log.
+    enable_at_stage: full
+    blast_radius: Corrupt writes are durable; recovery requires point-in-time reconstruction from signal_log.
+  - id: destructive-data-repair
+    description: Data-repair quarantine/undo actions that mutate drives and charging_sessions.
+    enable_at_stage: full
+    blast_radius: Mutates historical fleet data; undo depends on the quarantine table staying intact.
+  - id: ai-provider-live-calls
+    description: Live LLM provider calls (vs cached/stubbed responses).
+    enable_at_stage: canary
+    blast_radius: Cost and rate-limit exposure; degrades to cached answers.
+
+stages:
+  - id: canary
+    description: Single canary replica alongside the stable ReplicaSet, receiving replica-share traffic.
+    components: [api, web]
+    canary_replicas: 1
+    bake_time: 15m
+    gates:
+      - smoke
+      - rollback-evaluation
+    promote_when: rollback verdict is `proceed` for the full bake window.
+    abort_when: rollback verdict is `rollback`, or any critical smoke check fails.
+
+  - id: partial
+    description: Canary scaled to roughly a quarter of stable capacity.
+    components: [api, web]
+    canary_replicas: 0
+    canary_percent: 25
+    bake_time: 30m
+    gates:
+      - smoke
+      - rollback-evaluation
+    promote_when: rollback verdict is `proceed` for the full bake window.
+    abort_when: rollback verdict is `rollback`.
+
+  - id: full
+    description: Stable Deployment rolled to the new image; canary scaled to zero; workers rolled last.
+    components: [api, web, notification-worker, export-worker, automation-worker]
+    canary_replicas: 0
+    bake_time: 30m
+    gates:
+      - smoke
+      - rollback-evaluation
+      - config-parity
+    promote_when: rollback verdict is `proceed` and the post-deploy smoke gate is green.
+    abort_when: rollback verdict is `rollback`.
+
+# Gates referenced above must be implemented and runnable.
+gate_implementations:
+  smoke: cmd/smoke-gate
+  rollback-evaluation: cmd/rollback-evaluator
+  config-parity: cmd/ops-gate

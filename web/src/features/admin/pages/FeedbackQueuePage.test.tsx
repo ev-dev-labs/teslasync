@@ -475,7 +475,9 @@ describe('FeedbackQueuePage', () => {
   it('bulk-updates selected feedback and clears the selection after success', async () => {
     renderPage()
 
-    fireEvent.click(screen.getAllByLabelText('Select row')[0])
+    // Row checkboxes are named after the feedback entry (A11Y), e.g.
+    // "Select bug: Charging graph is empty".
+    fireEvent.click(screen.getAllByRole('checkbox', { name: /^Select (?!all)/ })[0])
     const closeSelected = screen.getByRole('button', { name: 'Close selected' })
     fireEvent.click(closeSelected)
 

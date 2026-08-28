@@ -33,6 +33,7 @@ import {
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { fmtInt } from '@/lib/numberFormat';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { QueryError } from '@/components/feedback/QueryError';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
@@ -1029,6 +1030,13 @@ export default function AlertsListPage() {
                   : undefined
               }
             />
+            {/* HELP-02 — "no alerts" is the expected steady state, not a
+                failure. Saying so explicitly stops users hunting for a broken
+                pipeline. Only for the unfiltered view; the search/filter
+                branches above already name their own cause. */}
+            {!alertSearch && filter === 'all' && (
+              <EmptyStateGuidanceDetails guidanceId="alerts.list" className="mx-auto" />
+            )}
           </GlassPanel>
         )}
       </FadeIn>

@@ -1,0 +1,10 @@
+{
+  "watchFaceNL": {
+    "title": "Ask Helix about your watch face",
+    "description": "Ask Helix a glance-style natural-language question about your vehicle right now — battery, range, charging, locks, climate, recent alerts. Helix only reads a typed snapshot of canonical state values; it never claims to have changed a setting or sent a vehicle command. To lock, unlock, start climate, or send another command use the watch-face tap icons or the phone app.",
+    "button": "Ask about my car",
+    "badge": "Helix",
+    "placeholder": "e.g. how is my battery? Is the car locked? Leave empty for a summary.",
+    "inputLabel": "Your question for Helix"
+  }
+}

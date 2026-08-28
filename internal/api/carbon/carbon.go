@@ -95,11 +95,11 @@ func GasEquivCO2Kg(distanceKm float64) float64 {
 // timing score relative to the theoretical greenest (minIntensity) and dirtiest
 // (maxIntensity) hours of the curve:
 //
-//	score = (max - realized) / (max - min) * 100
+//		score = (max - realized) / (max - min) * 100
 //
-//   - 100 ⇒ every kWh was drawn at the greenest hour (realized == min).
-//   - 0   ⇒ every kWh was drawn at the dirtiest hour (realized == max).
-//   - a flat curve (max == min) can't be gamed, so it scores 100.
+//	  - 100 ⇒ every kWh was drawn at the greenest hour (realized == min).
+//	  - 0   ⇒ every kWh was drawn at the dirtiest hour (realized == max).
+//	  - a flat curve (max == min) can't be gamed, so it scores 100.
 //
 // The result is clamped to [0, 100]. Pure and side-effect free — this is the
 // documented scoring contract pinned by carbon_test.go.

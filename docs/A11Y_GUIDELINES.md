@@ -169,15 +169,65 @@ pwsh scripts/a11y-audit.ps1
 | Concern | File |
 |---|---|
 | Reduced-motion hook | `web/src/hooks/useMotionPreference.ts` |
+| Ambient-loop helpers (many-layer scenes) | `web/src/components/motion/ambient.ts` |
+| Chart animation defaults | `web/src/components/charts/chartDefaults.tsx` |
 | Global reduced-motion CSS | `web/src/index.css` (search `prefers-reduced-motion`) |
+| Forced-colors token fallbacks | `web/src/index.css` (search `forced-colors: active`) |
 | Skip link + main landmark | `web/src/components/layout/Layout.tsx` |
+| Route-change announcement | `web/src/components/a11y/RouteAnnouncer.tsx` |
+| Route-change focus | `web/src/components/a11y/RouteFocusManager.tsx` + `web/src/lib/routeFocus.ts` |
+| Dialog focus trap + restore | `web/src/hooks/useDialogFocus.ts` |
 | Modal focus trap | `web/src/components/ui/Modal.tsx` |
 | Drawer focus trap | `web/src/components/ui/Drawer.tsx` |
+| Form error summary | `web/src/components/forms/ValidationSummary.tsx` |
+| Governed announcements | `web/src/hooks/useStatusAnnouncer.ts` + `web/src/lib/announcePolicy.ts` |
+| Live-connection announcements | `web/src/hooks/useConnectionAnnouncement.ts` |
+| Screen-reader summaries (map / gauge / FSM / timeline) | `web/src/hooks/useA11ySummary.ts` |
 | Tabs ARIA pattern | `web/src/components/ui/Tabs.tsx` |
 | Pagination landmark | `web/src/components/ui/Pagination.tsx` |
 | Tooltip describedby | `web/src/components/ui/Tooltip.tsx` |
 | Toggle switch role | `web/src/components/ui/Toggle.tsx` |
-| DataTable sort header | `web/src/components/ui/DataTable.tsx` |
+| DataTable caption / sort / row labels | `web/src/components/ui/DataTable.tsx` |
 | Toast live region | `web/src/components/feedback/Toast.tsx` |
 | Chart tooltip role | `web/src/components/charts/ChartTooltip.tsx` |
 | Severity tokens (color + icon pair) | `web/src/lib/tokens.ts` |
+
+---
+
+## Enforcement
+
+These run in CI via `npm run lint` (`.github/workflows/ci.yml`) and fail the
+build. Run them locally before pushing a change to any shared component:
+
+```powershell
+cd web
+npm run audit:a11y-static      # runs all six in one shot
+```
+
+Individually:
+
+```powershell
+npm run audit:accessible-name  # WCAG 4.1.2 — every control is named
+npm run audit:landmarks        # WCAG 1.3.1 / 2.4.6 — headings + landmarks
+npm run audit:reduced-motion   # WCAG 2.2.2 — no ungoverned infinite loops
+npm run audit:forced-colors    # WCAG 1.4.11 — High Contrast cascade survivability
+npm run audit:sr-only          # visually-hidden discipline
+npm run audit:touch-target     # WCAG 2.5.5 — 44 x 44 px
+```
+
+`audit:forced-colors` does more than grep for token text: it resolves the CSS
+cascade (author rules with their specificity and source order, plus the inline
+custom properties `ThemeProvider` writes onto `<html>`) and fails if the
+system-colour declaration is not the one that actually wins. The same resolver
+is imported by `ForcedColors.contract.test.tsx`, so the spec and the gate
+cannot drift.
+
+Companion documents:
+
+- [`ACCESSIBILITY_CONFORMANCE.md`](./ACCESSIBILITY_CONFORMANCE.md) — the
+  conformance statement, the live-region policy, and the honest list of
+  known limitations.
+- [`ACCESSIBILITY_SHORTCUTS.md`](./ACCESSIBILITY_SHORTCUTS.md) — the keyboard
+  reference, including what is and is not announced.
+- [`audits/manual-sr-test-protocol.md`](./audits/manual-sr-test-protocol.md) —
+  the NVDA / VoiceOver protocol that produces the evidence CI cannot.

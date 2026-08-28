@@ -1,0 +1,73 @@
+{
+  "maintenance": {
+    "aiPredictive": {
+      "title": "Helix maintenance advisor",
+      "description": "Get a 3-6 sentence factual narrative of upcoming maintenance risks. The advisor reads only the deterministic maintenance envelope (per-vehicle scheduled items, recent service records, current mileage when available) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narrative is informational; the reminders, status badges, and upcoming items list above remain the canonical raw view.",
+      "button": "Predict maintenance",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle first."
+    },
+    "title": "Maintenance",
+    "subtitle": "Service schedule, records, and upcoming maintenance",
+    "kpis": "Maintenance summary",
+    "kpi": {
+      "total": "Total Items",
+      "overdue": "Overdue",
+      "soon": "Due Soon",
+      "healthy": "Healthy",
+      "completed": "Completed",
+      "categories": "Categories"
+    },
+    "schedule": "Schedule",
+    "refresh": "Refresh maintenance data",
+    "itemsTitle": "Maintenance Items",
+    "filterCategory": "Filter by category",
+    "sortBy": "Sort items",
+    "allCategories": "All Categories",
+    "sort": {
+      "status": "Status",
+      "name": "Name",
+      "dueDate": "Due Date",
+      "category": "Category"
+    },
+    "status": {
+      "good": "Good",
+      "soon": "Due Soon",
+      "overdue": "Overdue",
+      "completed": "Completed"
+    },
+    "due": "Due",
+    "noItemsTitle": "No maintenance items",
+    "noItemsFiltered": "No items match the selected category. Try a different filter.",
+    "noItems": "No maintenance items found for this vehicle.",
+    "clearFilterCta": "Clear filter",
+    "projectionsTitle": "Service Projections",
+    "noProjections": "No upcoming service projections available.",
+    "costTitle": "Estimated Annual Cost",
+    "totalSpent": "Total Spent",
+    "annualEst": "Annual Est.",
+    "perYear": "/yr",
+    "avgService": "Avg / Service",
+    "evNote": "EV maintenance is typically 40-60% cheaper than a comparable gas vehicle.",
+    "noCost": "No cost data available yet. Log service records to see cost estimates.",
+    "categoryTitle": "Maintenance by Category",
+    "noCategory": "No maintenance items to categorize yet.",
+    "items": "items",
+    "recordsTitle": "Service Records",
+    "noRecords": "No service records logged yet.",
+    "noRecordsShort": "No service records found.",
+    "inspectRecord": "Inspect service record",
+    "preview": {
+      "eyebrow": "Service evidence",
+      "title": "Service record",
+      "completed": "Completed"
+    },
+    "col": {
+      "date": "Date",
+      "description": "Description",
+      "mileage": "Mileage",
+      "cost": "Cost",
+      "provider": "Provider"
+    }
+  }
+}

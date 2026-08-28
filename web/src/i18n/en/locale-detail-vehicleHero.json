@@ -1,0 +1,30 @@
+{
+  "vehicleHero": {
+    "gauge": {
+      "battery": "Battery",
+      "range": "Range",
+      "inside": "Inside",
+      "outside": "Outside"
+    },
+    "photo": {
+      "alt": "{{name}} photo"
+    },
+    "stat": {
+      "insideTemp": "Inside Temp",
+      "outsideTemp": "Outside Temp",
+      "odometer": "Odometer",
+      "range": "Range",
+      "status": "Status",
+      "sentry": "Sentry",
+      "firmware": "Firmware",
+      "power": "Power"
+    },
+    "locked": "Locked",
+    "unlocked": "Unlocked",
+    "action": {
+      "details": "Details",
+      "commands": "Commands",
+      "liveMap": "Live Map"
+    }
+  }
+}

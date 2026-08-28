@@ -1,3 +1,4 @@
+{{- include "teslasync.assertCanarySelectors" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -9,15 +10,21 @@ spec:
   {{- if not .Values.autoscaling.enabled }}
   replicas: {{ .Values.replicaCount }}
   {{- end }}
+  {{- if .Values.rollout.paused }}
+  # OPS-05: rollout.paused freezes an in-flight rollout in place.
+  paused: true
+  {{- end }}
   selector:
     matchLabels:
-      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      {{- include "teslasync.stableSelectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: api
   strategy:
-    type: RollingUpdate
+    type: {{ .Values.rollout.api.strategy.type }}
+    {{- if eq .Values.rollout.api.strategy.type "RollingUpdate" }}
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: {{ .Values.rollout.api.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.rollout.api.strategy.maxUnavailable }}
+    {{- end }}
   template:
     metadata:
       {{- with .Values.podAnnotations }}
@@ -25,9 +32,12 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        {{- include "teslasync.stableSelectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: api
     spec:
+      # OPS-09: must hold the full shutdown budget; see values.yaml and
+      # ops/rollout/stages.yaml `shutdown`.
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
       securityContext:
@@ -48,6 +58,11 @@ spec:
             - name: http
               containerPort: 8080
               protocol: TCP
+            # OPS-09: the drain listener is deliberately NOT declared as
+            # a containerPort. It binds to 127.0.0.1 only, so it is not
+            # reachable from the pod network at all and advertising it
+            # would misrepresent the contract. The preStop exec hook
+            # reaches it over loopback from inside the container.
           envFrom:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}
@@ -74,9 +89,16 @@ spec:
             periodSeconds: 10
           lifecycle:
             preStop:
-              httpGet:
-                path: /internal/flush
-                port: http
+              # OPS-09: exec, NOT httpGet. The drain listener binds to
+              # 127.0.0.1 so nothing on the pod network can reach a
+              # one-way, pod-fatal endpoint — and kubelet dials httpGet
+              # probes from OUTSIDE the container, against the pod IP.
+              # An exec hook runs INSIDE the container, where loopback
+              # is reachable. The image is distroless (no shell), so the
+              # hook re-execs the same binary; exec takes an argv, not a
+              # shell command line.
+              exec:
+                command: ["/usr/local/bin/teslasync", "drain"]
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
       {{- with .Values.nodeSelector }}

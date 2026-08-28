@@ -16,6 +16,7 @@ import { ListSkeleton, QueryError } from '@/components/feedback';
 import { RepairCaseFiltersBar } from './RepairCaseFiltersBar';
 import { RepairRefreshWarning } from './RepairRefreshWarning';
 import { useRepairCaseColumns } from './useRepairCaseColumns';
+import { repairCodeLabel } from './repairCasePresentation';
 
 interface RepairCaseQueueProps {
   cases: RepairCase[];
@@ -113,6 +114,12 @@ export function RepairCaseQueue({
             data={cases}
             keyExtractor={(item) => item.id}
             selectable="multi"
+            rowLabel={(item) =>
+              t('dataRepair.cases.rowLabel', 'Case #{{id}}, {{rule}}', {
+                id: item.id,
+                rule: repairCodeLabel(t, item.rule),
+              })
+            }
             selectedKeys={selectedCaseIds}
             onSelectionChange={(keys) => onSelectionChange(keys.map(Number))}
             mobileColumns={['case', 'actions']}

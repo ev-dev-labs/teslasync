@@ -29,6 +29,11 @@
 import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
 import { assertOperationalWriteAllowed } from '../lib/operationalMode'
 import { assertNeverQueuedOffline } from './offlineCache'
+import {
+  demoCredentialsMode,
+  getDemoApiBase,
+  stripCredentialHeadersForDemo,
+} from '../lib/demoMode'
 
 export { ApiError, getApiBase, isApiError }
 
@@ -72,8 +77,18 @@ function normalizePath(path: string): string {
   return withSlash.replace(/^\/api\/v1\//, '/')
 }
 
-/** Builds a fully qualified API URL for browser-owned flows such as downloads. */
+/**
+ * Builds a fully qualified API URL for browser-owned flows such as downloads.
+ *
+ * HELP-12: when demo mode is fully and validly configured, the validated
+ * isolated demo base is authoritative and the production base is never
+ * consulted. `getDemoApiBase()` returns null for every partially-configured
+ * state, so a malformed demo build falls back to normal behaviour rather than
+ * producing half-demo traffic.
+ */
 export function apiUrl(path: string): string {
+  const demoBase = getDemoApiBase()
+  if (demoBase !== null) return `${demoBase}${normalizePath(path)}`
   return `${getApiBase()}/api/v1${normalizePath(path)}`
 }
 
@@ -81,7 +96,9 @@ function buildHeaders(headers: HeadersInit | undefined, hasBody: boolean): Heade
   const merged = new Headers(headers)
   if (!merged.has('Accept')) merged.set('Accept', 'application/json')
   if (hasBody && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json')
-  return merged
+  // HELP-12: never ship caller identity to a cross-origin demo fixture host.
+  // No-op in normal mode and for a same-origin demo base.
+  return stripCredentialHeadersForDemo(merged)
 }
 
 /**
@@ -239,10 +256,14 @@ async function directRequest<T>(
   acceptedStatuses: readonly number[],
 ): Promise<T> {
   const { headers, body, ...rest } = options
+  const credentials = demoCredentialsMode()
   const res = await fetch(apiUrl(path), {
     ...rest,
     body,
     headers: buildHeaders(headers, body != null),
+    // Only set when a cross-origin demo base is active; `undefined` leaves
+    // fetch's `same-origin` default untouched for every normal request.
+    ...(credentials ? { credentials } : {}),
   })
 
   if (!res.ok && !acceptedStatuses.includes(res.status)) {

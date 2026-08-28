@@ -46,6 +46,7 @@ import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { downsampleChartRows } from './chartSampling';
+import { useChartPointBudget } from './useChartPointBudget';
 
 export interface SmallMultiplesChartProps<T extends Record<string, unknown> = Record<string, unknown>> {
   /** Time-ordered rows. Each row holds `timestamp` + arbitrary series keys. */
@@ -169,6 +170,10 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
   const { t } = useTranslation();
   const fallbackSyncId = useId();
   const resolvedSyncId = syncId ?? fallbackSyncId;
+  // PWA-07: clamp the per-cell budget when the device is in low-bandwidth
+  // mode. Returns `maxPointsPerCell` unchanged otherwise, so nothing about
+  // the default rendering path changes.
+  const effectiveMaxPointsPerCell = useChartPointBudget(maxPointsPerCell);
 
   /**
    * Per-cell projected + downsampled rows. We walk `data` once per
@@ -180,10 +185,10 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
   const cellProjections = useMemo(() => {
     const map = new Map<string, CellProjection>();
     for (const sig of series) {
-      map.set(sig, projectSmallMultipleSeries(data, sig, xKey, maxPointsPerCell));
+      map.set(sig, projectSmallMultipleSeries(data, sig, xKey, effectiveMaxPointsPerCell));
     }
     return map;
-  }, [data, series, xKey, maxPointsPerCell]);
+  }, [data, series, xKey, effectiveMaxPointsPerCell]);
 
   const gridStyle = useMemo<React.CSSProperties>(
     () =>

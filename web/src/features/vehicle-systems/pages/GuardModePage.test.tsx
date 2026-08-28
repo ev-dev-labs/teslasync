@@ -96,9 +96,13 @@ vi.mock('@/api/hooks/useGuard', async (importOriginal) => {
   };
 });
 
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicleState: () => H.vstate.current,
-}));
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
+  return {
+    ...actual,
+    useVehicleState: () => H.vstate.current,
+  };
+});
 
 vi.mock('@/api/hooks/useLocations', () => ({
   useGeofences: () => ({ data: H.geofences.current }),
@@ -207,6 +211,9 @@ function makeState(over: Record<string, unknown> = {}) {
       ...over,
     },
     live: true,
+    observedAt: Date.now(),
+    freshness: 'fresh' as const,
+    verifiedFields: ['latitude', 'longitude', 'is_locked', 'sentry_mode'],
   };
 }
 
@@ -305,6 +312,22 @@ describe('GuardModePage — status surfaces', () => {
     expect(screen.getByText('No active alerts')).toBeInTheDocument();
     // Off KPI value present (sentry off), no unacknowledged events.
     expect(band.getByText('Off')).toBeInTheDocument();
+  });
+
+  it('never presents unverified security state as a current assurance', () => {
+    const unverified = {
+      ...makeState({ is_locked: false, sentry_mode: false }),
+      verifiedFields: [],
+    };
+    install({ state: makeQuery({ data: unverified }) });
+    renderPage();
+
+    expect(screen.getByText('Lock state unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Sentry status unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('Vehicle unlocked')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sentry mode off')).not.toBeInTheDocument();
+    expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
+    expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
   });
 
   it('renders KPI skeletons (no metric labels) while the config is loading', () => {
@@ -507,7 +530,7 @@ describe('GuardModePage — live map', () => {
     // (a) location absent → empty state.
     install({ state: makeQuery({ data: makeState({ latitude: 0, longitude: 0 }) }) });
     const { unmount } = renderPage();
-    expect(screen.getByText('No vehicle location available')).toBeInTheDocument();
+    expect(screen.getByText('Current vehicle location unavailable')).toBeInTheDocument();
     expect(screen.queryByTestId('guard-map')).not.toBeInTheDocument();
     unmount();
 

@@ -11,8 +11,10 @@
  * - hooks/useChangelog.ts (unseen-version tracking)
  *
  * The generated file is committed (mirroring web/src/lib/routeRegistry.ts) so
- * PR diffs surface changelog drift. `prebuild` / `predev` re-run this script
- * automatically; commit the regenerated diff alongside CHANGELOG.md edits.
+ * PR diffs surface changelog drift. `prebuild` / `predev` verify freshness with
+ * `--check` (CLEAN-05: a build must not silently rewrite the source tree);
+ * regenerate explicitly with `npm run generate:changelog` and commit the diff
+ * alongside the CHANGELOG.md edit.
  *
  * Source format:
  * ## [<version>] - <date> top-level version header
@@ -25,7 +27,7 @@
  * blocks are skipped (no date → not a release). `#### Sub-headers` are
  * preserved as bullet entries so the UI doesn't lose grouping context.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs'
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -260,6 +262,7 @@ function emit(entries) {
 }
 
 function main() {
+  const check = process.argv.includes('--check')
   const src = readFileSync(SRC_PATH, 'utf8')
   const entries = parseChangelog(src)
   if (entries.length === 0) {
@@ -267,6 +270,28 @@ function main() {
     process.exit(1)
   }
   const out = emit(entries)
+
+  // CLEAN-05: `--check` is the non-mutating form wired into `prebuild` /
+  // `predev` and into `scripts/check-generated-freshness.mjs`. A build must
+  // never silently rewrite a committed source file — a stale artefact has to
+  // fail loudly so the regenerated diff lands in the PR next to CHANGELOG.md.
+  if (check) {
+    const existing = existsSync(OUT_PATH) ? readFileSync(OUT_PATH, 'utf8') : null
+    if (existing === out) {
+      console.log(
+        `[buildChangelog] OK — ${OUT_PATH.replace(REPO_ROOT, '.')} is current (${entries.length} release(s), latest: ${entries[0].version}).`,
+      )
+      return
+    }
+    console.error(
+      `[buildChangelog] --check: ${OUT_PATH.replace(REPO_ROOT, '.')} is ${existing === null ? 'missing' : 'stale'}.\n`
+      + '  CHANGELOG.md changed without regenerating the committed module.\n'
+      + '  Run:  cd web && npm run generate:changelog\n'
+      + '  then commit the regenerated file alongside the CHANGELOG.md edit.',
+    )
+    process.exit(1)
+  }
+
   mkdirSync(dirname(OUT_PATH), { recursive: true })
   writeFileSync(OUT_PATH, out, 'utf8')
   console.log(

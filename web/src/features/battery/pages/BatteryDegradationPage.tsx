@@ -20,6 +20,7 @@ import {
   ChartBrush,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { FadeIn } from '@/components/motion';
 
 import { useBatteryHealthAnalytics } from '@/api/hooks/useEnergy';
@@ -788,15 +789,25 @@ export default function BatteryDegradationPage() {
             />
           ) : (
             // no-action: degradation history appears automatically after sufficient telemetry.
-            <EmptyState
-              icon={<Activity className="h-8 w-8" />}
-              message={t('battery.degradation.noHistory', 'No degradation records found.')}
-              description={t(
-                'battery.degradation.noHistoryDescription',
-                'Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.',
-              )}
-              className="py-8"
-            />
+            <>
+              <EmptyState
+                icon={<Activity className="h-8 w-8" />}
+                message={t('battery.degradation.noHistory', 'No degradation records found.')}
+                description={t(
+                  'battery.degradation.noHistoryDescription',
+                  'Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.',
+                )}
+                className="py-8"
+              />
+              {/* HELP-02 — governed prerequisite + likely cause for the
+                  highest-anxiety empty state in the app: a user who cannot
+                  see degradation data assumes the feature is broken, not
+                  that the observation window is still too short. */}
+              <EmptyStateGuidanceDetails
+                guidanceId="battery.degradation"
+                className="mx-auto"
+              />
+            </>
           )}
         </GlassPanel>
       </FadeIn>

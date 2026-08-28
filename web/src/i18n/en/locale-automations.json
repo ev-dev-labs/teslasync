@@ -1,4 +1,30 @@
 {
+  "automationList": {
+    "title": "Automations (list)",
+    "readOnly": {
+      "title": "Bulk automation controls are read-only"
+    },
+    "noun": {
+      "one": "automation",
+      "other": "automations"
+    },
+    "bulk": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete"
+    },
+    "empty": {
+      "title": "No automations yet",
+      "cta": "Open builder"
+    },
+    "col": {
+      "name": "Name",
+      "desc": "Description",
+      "runs": "Runs",
+      "status": "Status"
+    },
+    "selectAutomation": "Select automation {{name}}"
+  },
   "automations": {
     "readOnly": {
       "title": "Automation controls are read-only"
@@ -176,31 +202,5 @@
     },
     "empty": "No automations yet. Create a typed automation to get started!",
     "noMatch": "No automations match your filters"
-  },
-  "automationList": {
-    "title": "Automations (list)",
-    "readOnly": {
-      "title": "Bulk automation controls are read-only"
-    },
-    "noun": {
-      "one": "automation",
-      "other": "automations"
-    },
-    "bulk": {
-      "enable": "Enable",
-      "disable": "Disable",
-      "delete": "Delete"
-    },
-    "empty": {
-      "title": "No automations yet",
-      "cta": "Open builder"
-    },
-    "col": {
-      "name": "Name",
-      "desc": "Description",
-      "runs": "Runs",
-      "status": "Status"
-    },
-    "selectAutomation": "Select automation {{name}}"
   }
 }

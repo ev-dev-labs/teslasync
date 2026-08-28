@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
@@ -7,6 +8,7 @@ import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 import type { Vehicle } from '@/types/vehicle';
 import type {
   EnterprisePayerVariables,
@@ -91,6 +93,9 @@ interface RawStatePosition {
 interface RawStateResponse {
   state?: VehicleState
   live?: boolean
+  observed_at?: string | null
+  freshness?: VehicleStateFreshness
+  verified_fields?: string[] | null
   vehicle?: RawStateVehicle | null
   position?: RawStatePosition | null
   is_charging?: boolean
@@ -100,6 +105,67 @@ interface RawStateResponse {
   is_locked?: boolean
   sentry_mode?: boolean
   software_version?: string
+}
+
+export type VehicleStateFreshness = 'fresh' | 'stale' | 'unknown'
+export type VerifiedVehicleStateField = keyof VehicleState
+
+interface MappedVehicleStateResponse {
+  state?: VehicleState
+  live: boolean
+  observedAt: number | null
+  freshness: VehicleStateFreshness
+  verifiedFields: readonly VerifiedVehicleStateField[]
+}
+
+const VEHICLE_STATE_FIELDS = new Set<VerifiedVehicleStateField>([
+  'vehicle_id',
+  'state',
+  'since',
+  'latitude',
+  'longitude',
+  'heading',
+  'speed',
+  'power',
+  'battery_level',
+  'rated_range',
+  'ideal_range',
+  'odometer',
+  'inside_temp',
+  'outside_temp',
+  'is_climate_on',
+  'is_charging',
+  'charger_power',
+  'charge_rate',
+  'time_to_full_charge',
+  'is_locked',
+  'sentry_mode',
+  'software_version',
+])
+
+function parseObservedAt(raw: string | null | undefined): number | null {
+  if (typeof raw !== 'string' || raw.trim() === '') return null
+  const parsed = Date.parse(raw)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
+function stateResponseFreshness(
+  raw: VehicleStateFreshness | undefined,
+  observedAt: number | null,
+  now = Date.now(),
+): VehicleStateFreshness {
+  if (observedAt == null) return 'unknown'
+  if (raw !== 'fresh' && raw !== 'stale') return 'unknown'
+  if (raw === 'stale') return 'stale'
+  return now - observedAt <= TELEMETRY_STALE_AFTER_MS ? 'fresh' : 'stale'
+}
+
+function parseVerifiedFields(raw: string[] | null | undefined): VerifiedVehicleStateField[] {
+  if (!Array.isArray(raw)) return []
+  return [...new Set(raw.filter(
+    (field): field is VerifiedVehicleStateField =>
+      typeof field === 'string' && VEHICLE_STATE_FIELDS.has(field as VerifiedVehicleStateField),
+  ))]
 }
 
 /**
@@ -115,17 +181,26 @@ interface RawStateResponse {
 function mapVehicleStateResponse(
   res: RawStateResponse | null | undefined,
   vehicleId: number,
-): { state?: VehicleState; live: boolean } {
+): MappedVehicleStateResponse {
   if (res == null || typeof res !== 'object') {
-    return { state: undefined, live: false }
+    return {
+      state: undefined,
+      live: false,
+      observedAt: null,
+      freshness: 'unknown',
+      verifiedFields: [],
+    }
   }
   const live = res.live ?? false
+  const observedAt = parseObservedAt(res.observed_at)
+  const freshness = stateResponseFreshness(res.freshness, observedAt)
+  const verifiedFields = parseVerifiedFields(res.verified_fields)
   if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
-    return { state: res.state, live }
+    return { state: res.state, live, observedAt, freshness, verifiedFields }
   }
   const v = res.vehicle
   const p = res.position
-  if (!v && !p) return { state: res.state, live }
+  if (!v && !p) return { state: res.state, live, observedAt, freshness, verifiedFields }
   const state: VehicleState = {
     vehicle_id: v?.id ?? vehicleId,
     state: v?.state ?? 'offline',
@@ -148,7 +223,7 @@ function mapVehicleStateResponse(
     sentry_mode: res.sentry_mode ?? false,
     software_version: res.software_version ?? v?.software_version ?? '',
   }
-  return { state, live }
+  return { state, live, observedAt, freshness, verifiedFields }
 }
 
 export function useVehicleState(
@@ -374,7 +449,7 @@ export function useUserPreferenceLatest(vehicleId: number, refetchInterval?: num
 export async function fetchVehicleState(
   vehicleId: number,
   signal?: AbortSignal,
-): Promise<{ state?: VehicleState; live: boolean }> {
+): Promise<MappedVehicleStateResponse> {
   const res = await request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`, { signal })
   return mapVehicleStateResponse(res, vehicleId)
 }
@@ -410,9 +485,22 @@ export interface FleetStateEntry {
   state: VehicleState | null;
   outcome: FleetStateOutcome;
   /**
-   * `true` when `state` is a RETAINED prior reading carried through a failed
-   * refresh rather than a fresh response. The value is real but no longer
-   * confirmed, so it must not be counted as freshly resolved.
+   * Backend-derived freshness of the newest timestamped live signal.
+   * `unknown` means the response carried state but no authoritative signal
+   * timestamp (for example a durable fallback); it must never be counted as
+   * current merely because the HTTP request just completed.
+   */
+  freshness: VehicleStateFreshness;
+  /**
+   * State fields whose last-known values came from timestamped, non-synthetic
+   * live signals. Durable fallbacks and legacy warmup restamps stay visible,
+   * but are absent here so they cannot back current operational claims.
+   */
+  verifiedFields: readonly VerifiedVehicleStateField[];
+  /**
+   * `true` when `state` is not currently confirmed fresh: a retained prior
+   * reading, a timestamped stale live response, or state with unknown
+   * observation time.
    */
   stale: boolean;
   /**
@@ -436,7 +524,7 @@ export interface FleetStateEntry {
 /** Aggregate outcome of one fleet-state batch. */
 export interface FleetStatesSummary {
   total: number;
-  /** Freshly returned snapshots. */
+  /** Successfully returned snapshots, regardless of signal freshness. */
   resolvedCount: number;
   /** Backend explicitly reported no snapshot. */
   missingCount: number;
@@ -444,6 +532,8 @@ export interface FleetStatesSummary {
   failedCount: number;
   /** Failed vehicles still rendering a retained prior reading. */
   retainedCount: number;
+  /** Successful snapshots whose live-signal freshness is stale or unknown. */
+  unverifiedCount: number;
   /** Entries carrying a real reading — fresh or retained. */
   statefulCount: number;
   /** Entries with no reading at all. Never classifiable as a status. */
@@ -483,11 +573,21 @@ export function summariseFleetStates(
   let missingCount = 0;
   let failedCount = 0;
   let retainedCount = 0;
+  let unverifiedCount = 0;
   let oldestObservedAt: number | null = null;
   let newestObservedAt: number | null = null;
 
   for (const entry of entries) {
-    if (entry.outcome === 'resolved') resolvedCount += 1;
+    if (entry.outcome === 'resolved') {
+      resolvedCount += 1;
+      if (
+        entry.state != null &&
+        (entry.freshness !== 'fresh' || !entry.verifiedFields.includes('state'))
+      ) {
+        unverifiedCount += 1;
+      }
+    }
+
     else if (entry.outcome === 'missing') missingCount += 1;
     else {
       failedCount += 1;
@@ -512,7 +612,7 @@ export function summariseFleetStates(
   // Nothing readable: a transport outage and an authoritative "no snapshots"
   // are different facts and must not share a label.
   else if (statefulCount === 0) status = failedCount > 0 ? 'unavailable' : 'absent';
-  else if (unresolvedCount > 0 || retainedCount > 0) status = 'partial';
+  else if (unresolvedCount > 0 || retainedCount > 0 || unverifiedCount > 0) status = 'partial';
   else status = 'ok';
 
   return {
@@ -521,12 +621,41 @@ export function summariseFleetStates(
     missingCount,
     failedCount,
     retainedCount,
+    unverifiedCount,
     statefulCount,
     unresolvedCount,
     oldestObservedAt,
     newestObservedAt,
     status,
   };
+}
+
+export function isFleetStateFieldCurrent(
+  entry: FleetStateEntry,
+  field: VerifiedVehicleStateField,
+  now = Date.now(),
+): boolean {
+  return entry.outcome === 'resolved' &&
+    isVehicleStateFieldCurrent(entry, field, now)
+}
+
+type VehicleStateTrustMetadata = Pick<
+  MappedVehicleStateResponse,
+  'freshness' | 'observedAt' | 'verifiedFields'
+>
+
+export function isVehicleStateFieldCurrent(
+  response: VehicleStateTrustMetadata | null | undefined,
+  field: VerifiedVehicleStateField,
+  now = Date.now(),
+): boolean {
+  // Fleet Telemetry is a sparse change feed, so unchanged fields are not
+  // re-emitted. A field is current when its source was a real observation and
+  // the vehicle's stream has another real observation inside the freshness
+  // window; the field's own change timestamp may legitimately be older.
+  return response != null &&
+    stateResponseFreshness(response.freshness, response.observedAt, now) === 'fresh' &&
+    response.verifiedFields.includes(field)
 }
 
 function toFleetError(value: unknown): Error {
@@ -640,7 +769,7 @@ export function useFleetStates(vehicles: Vehicle[]) {
   const list = safeArray(vehicles);
   const ids = list.map((v) => v.id).sort((a, b) => a - b);
   const queryKey = [FLEET_STATES_QUERY_ROOT, ids] as const;
-  return useQuery({
+  const query = useQuery({
     queryKey,
     queryFn: ({ signal }) => {
       const eligibleIds = new Set(ids);
@@ -649,13 +778,20 @@ export function useFleetStates(vehicles: Vehicle[]) {
       return Promise.all(
         list.map(async (v): Promise<FleetStateEntry> => {
           try {
-            const { state } = await fetchVehicleState(v.id, signal);
+            const {
+              state,
+              observedAt,
+              freshness,
+              verifiedFields,
+            } = await fetchVehicleState(v.id, signal);
             if (state == null) {
               // Successful response, no snapshot. Explicitly NOT offline.
               return {
                 vehicle: v,
                 state: null,
                 outcome: 'missing',
+                freshness: 'unknown',
+                verifiedFields: [],
                 stale: false,
                 observedAt: null,
                 receivedAt,
@@ -665,8 +801,10 @@ export function useFleetStates(vehicles: Vehicle[]) {
               vehicle: v,
               state,
               outcome: 'resolved',
-              stale: false,
-              observedAt: Date.now(),
+              freshness,
+              verifiedFields,
+              stale: freshness !== 'fresh',
+              observedAt,
               receivedAt,
             };
           } catch (err) {
@@ -676,6 +814,8 @@ export function useFleetStates(vehicles: Vehicle[]) {
                 vehicle: v,
                 state: prior.state,
                 outcome: 'failed',
+                freshness: 'stale',
+                verifiedFields: prior.verifiedFields,
                 stale: true,
                 // Carried forward UNCHANGED: the reading is as old as it ever
                 // was, and a failed refresh must never reset its age.
@@ -688,6 +828,8 @@ export function useFleetStates(vehicles: Vehicle[]) {
               vehicle: v,
               state: null,
               outcome: 'failed',
+              freshness: 'unknown',
+              verifiedFields: [],
               stale: false,
               observedAt: null,
               receivedAt,
@@ -701,6 +843,43 @@ export function useFleetStates(vehicles: Vehicle[]) {
     // Live-tier cache policy; retry deliberately stays with the QueryClient.
     ...queryPolicy('live', { refetchInterval }),
   });
+
+  const [freshnessClock, setFreshnessClock] = useState(0);
+  useEffect(() => {
+    const now = Date.now();
+    const nextBoundary = (query.data ?? [])
+      .filter((entry) =>
+        entry.outcome === 'resolved' &&
+        entry.freshness === 'fresh' &&
+        entry.observedAt != null,
+      )
+      .reduce<number | null>((earliest, entry) => {
+        if (entry.observedAt == null) return earliest;
+        const boundary = entry.observedAt + TELEMETRY_STALE_AFTER_MS;
+        if (boundary < now) return earliest;
+        return earliest == null || boundary < earliest ? boundary : earliest;
+      }, null);
+    if (nextBoundary == null) return undefined;
+
+    const timer = window.setTimeout(
+      () => setFreshnessClock((version) => version + 1),
+      Math.max(1, nextBoundary - now + 1),
+    );
+    return () => window.clearTimeout(timer);
+  }, [query.data, freshnessClock]);
+
+  const data = useMemo(
+    () => query.data?.map((entry) => {
+      if (entry.outcome !== 'resolved' || entry.freshness !== 'fresh') return entry;
+      const freshness = stateResponseFreshness(entry.freshness, entry.observedAt);
+      return freshness === 'fresh'
+        ? entry
+        : { ...entry, freshness, stale: true };
+    }),
+    [query.data, freshnessClock],
+  );
+
+  return { ...query, data };
 }
 
 // ---------- Vehicle Info (mobile enabled, options, specs) ----------

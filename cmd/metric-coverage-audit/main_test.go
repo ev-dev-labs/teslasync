@@ -26,19 +26,19 @@ func middlewareSrc(metrics ...string) string {
 }
 
 // routerSrc builds a synthetic chi router source. When useMw is true a
-// `r.Use(MetricsMiddleware)` line is emitted either before (mwFirst) or after
+// `r.Use(apimw.Metrics)` line is emitted either before (mwFirst) or after
 // the route declarations. nRoutes `r.Get(...)` lines are emitted.
 func routerSrc(useMw, mwFirst bool, nRoutes int) string {
 	var b strings.Builder
-	b.WriteString("package api\n\nfunc setup() {\n")
+	b.WriteString("package api\n\nfunc NewRouter() {\n")
 	if useMw && mwFirst {
-		b.WriteString("\tr.Use(MetricsMiddleware)\n")
+		b.WriteString("\tr.Use(apimw.Metrics)\n")
 	}
 	for i := 0; i < nRoutes; i++ {
 		fmt.Fprintf(&b, "\tr.Get(\"/route%d\", h)\n", i)
 	}
 	if useMw && !mwFirst {
-		b.WriteString("\tr.Use(MetricsMiddleware)\n")
+		b.WriteString("\tr.Use(apimw.Metrics)\n")
 	}
 	b.WriteString("}\n")
 	return b.String()
@@ -148,11 +148,11 @@ func TestCheckRouter(t *testing.T) {
 			name:         "middleware not registered",
 			src:          routerSrc(false, false, 120),
 			wantRoutes:   120,
-			wantFindings: []string{"r.Use(MetricsMiddleware) not registered"},
+			wantFindings: []string{"metrics middleware is not registered"},
 		},
 		{
 			name:          "zero routes",
-			src:           "package api\n\nfunc setup() {\n\tr.Use(MetricsMiddleware)\n}\n",
+			src:           "package api\n\nfunc NewRouter() {\n\tr.Use(apimw.Metrics)\n}\n",
 			wantRoutes:    0,
 			wantFindings:  []string{"zero routes detected", "only 0 routes detected"},
 			bannedFinding: []string{"appears AFTER"},
@@ -188,6 +188,19 @@ func TestCheckRouter(t *testing.T) {
 	}
 }
 
+func TestCheckRouter_IgnoresRouteHelperDeclarationsBeforeCompositionRoot(t *testing.T) {
+	src := "package api\n\nfunc mountFeatureRoutes(r chi.Router) {\n\tr.Get(\"/feature\", h)\n}\n\n" +
+		routerSrc(true, true, 120)
+
+	routeCount, findings := checkRouter(src, "router.go")
+	if routeCount != 121 {
+		t.Fatalf("routeCount=%d want 121", routeCount)
+	}
+	if hasFinding(findings, "appears AFTER") {
+		t.Fatalf("helper declaration order must not be treated as runtime registration order: %v", findings)
+	}
+}
+
 // TestCheckRouter_RouteCounting exercises the regex across every supported chi
 // verb, the `router.` alias prefix, whitespace tolerance, and lines that must
 // NOT be counted.
@@ -207,13 +220,13 @@ func TestCheckRouter_RouteCounting(t *testing.T) {
 		{"\tr.Mount(\"/i\", sub)", true},
 		{"\tr.Handle(\"/j\", h)", true},
 		{"\tr.HandleFunc(\"/k\", h)", true},
-		{"\trouter.Get(\"/l\", h)", true},   // router. alias
-		{"    r.Patch (\"/m\", h)", true},   // spaces + space before paren
-		{"\tr.Use(mw)", false},              // middleware, not a route
-		{"\tr.Group(func(r) {})", false},    // grouping, not a route
-		{"\tfoo.Get(\"/x\", h)", false},     // wrong receiver
-		{"\t// r.Get(\"/y\", h)", false},    // commented out (not at line start)
-		{"\tmyrouter.Get(\"/z\", h)", false},// receiver not r/router
+		{"\trouter.Get(\"/l\", h)", true},    // router. alias
+		{"    r.Patch (\"/m\", h)", true},    // spaces + space before paren
+		{"\tr.Use(mw)", false},               // middleware, not a route
+		{"\tr.Group(func(r) {})", false},     // grouping, not a route
+		{"\tfoo.Get(\"/x\", h)", false},      // wrong receiver
+		{"\t// r.Get(\"/y\", h)", false},     // commented out (not at line start)
+		{"\tmyrouter.Get(\"/z\", h)", false}, // receiver not r/router
 	}
 
 	var b strings.Builder

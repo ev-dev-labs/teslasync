@@ -21,6 +21,7 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
   - `/api/v1/fleet-ops/utilization-forecast`
   - `/api/v1/service-intelligence/vehicles/{vehicleID}`
   - `/api/v1/vehicles/{vehicleID}/state`
+  - `/api/v1/web-vitals`
 
 ## Findings
 

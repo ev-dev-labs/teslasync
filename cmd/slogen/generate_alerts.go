@@ -51,6 +51,7 @@ func runGenerateAlerts(args []string) error {
 	fs := flag.NewFlagSet("generate alerts", flag.ContinueOnError)
 	catalog := fs.String("catalog", "slo/catalog.yaml", "path to SLO catalog YAML")
 	out := fs.String("out", defaultAlertsOut, "output path for alerting rules")
+	check := fs.Bool("check", false, "exit non-zero if the committed file would change; never writes")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -59,8 +60,12 @@ func runGenerateAlerts(args []string) error {
 		return err
 	}
 	rendered := renderAlerts(cat)
-	if err := writeFileIdempotent(*out, rendered); err != nil {
+	if err := writeFileIdempotent(*out, rendered, *check); err != nil {
 		return err
+	}
+	if *check {
+		fmt.Fprintf(os.Stdout, "ok %s is current (%d SLOs, %d alerts)\n", *out, len(cat.SLOs), len(cat.SLOs)*len(burnTiers))
+		return nil
 	}
 	fmt.Fprintf(os.Stdout, "wrote %s (%d SLOs, %d alerts)\n", *out, len(cat.SLOs), len(cat.SLOs)*len(burnTiers))
 	return nil

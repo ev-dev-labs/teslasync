@@ -86,6 +86,15 @@ data:
             proxy_pass $backend;
         }
 
+        # CLEAN-04 — never serve source maps. Maps are not built into the web
+        # image (see Dockerfile.web), but a stale image or a future
+        # `build.sourcemap: true` regression must not be able to publish the
+        # frontend source tree. Declared before the long-cache block so it
+        # wins for `*.js.map` / `*.css.map`.
+        location ~* \.map$ {
+            return 404;
+        }
+
         # Service worker must never be cached — browser needs to detect updates
         location = /sw.js {
             add_header Cache-Control "no-cache, no-store, must-revalidate" always;

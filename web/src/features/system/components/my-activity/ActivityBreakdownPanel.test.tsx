@@ -104,8 +104,10 @@ describe('ActivityBreakdownPanel', () => {
     const retry = screen.getByRole('button', { name: /retry/i });
     fireEvent.click(retry);
     expect(onRetry).toHaveBeenCalledTimes(1);
-    // Error UI replaces the list, not augments it.
-    expect(screen.queryByRole('list')).toBeNull();
+    // Error UI replaces the breakdown list, not augments it. The shared error
+    // card now carries its own "where to look next" list (HELP-05), so this
+    // asserts the absence of the PANEL's list rather than of every list.
+    expect(screen.queryByTestId('activity-breakdown-list')).toBeNull();
   });
 
   it('never renders a blank body when isError is set without an error object', () => {

@@ -73,6 +73,13 @@ paths = ['''(^|/)db/seeds/seed_comprehensive\.sql$''']
 regexes = ['''^  'eyJ''']
 
 [[allowlists]]
+description = "Support bundle synthetic JWT redaction fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/lib/__tests__/supportBundle\.test\.ts$''']
+regexes = ['''^\s*'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'\s*$''']
+
+[[allowlists]]
 description = "Synthetic seed public-key fixture"
 condition = "AND"
 regexTarget = "line"

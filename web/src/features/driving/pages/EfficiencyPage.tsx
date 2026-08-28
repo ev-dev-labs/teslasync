@@ -8,6 +8,7 @@ import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, DataTable, PanelTitle, SectionTitle, Text,
 } from '@/components/ui';
+import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
 import { MetricCard, MetricBar, SavedViewMenu } from '@/components/data-display';
 import {
   ChartContainer, ChartTooltip, renderAnnotationLines,
@@ -18,6 +19,7 @@ import {
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 import { EmptyState, Skeleton } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
@@ -313,6 +315,19 @@ export default function EfficiencyPage() {
       <FadeIn>
         <section aria-label={t('efficiency.section.kpis', 'Key metrics')} className="space-y-3">
           <SectionTitle>{t('efficiency.section.kpis', 'Key Metrics')}</SectionTitle>
+          {/* HELP-03. "Efficiency" is the most over-assumed word in the
+              product: users read a Wh/km figure as a wall-meter cost and then
+              cannot reconcile it with their electricity bill. The definition
+              says plainly that charging losses are excluded. */}
+          <p
+            className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+            data-testid="efficiency-glossary-strip"
+          >
+            <span>{t('efficiency.glossary.lead', 'Terms on this page:')}</span>
+            <GlossaryTerm term="efficiency" />
+            <GlossaryTerm term="rated_range" />
+            <GlossaryTerm term="phantom_drain" />
+          </p>
           {statsLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -322,6 +337,13 @@ export default function EfficiencyPage() {
           ) : !stats ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState /* no-action: transient — no stats for the selected vehicle/range */ message={t('efficiency.noStats', 'No efficiency data available yet')} />
+              {/* HELP-02 — the governed answer for "why is efficiency blank":
+                  the selected range almost always contains no completed
+                  drives, which is a range problem rather than a data problem. */}
+              <EmptyStateGuidanceDetails
+                guidanceId="analytics.efficiency"
+                className="mx-auto"
+              />
             </GlassPanel>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">

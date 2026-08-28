@@ -27,9 +27,11 @@ export {
 } from './chartSizing';
 export {
   downsampleChartRows,
+  resolveChartPointBudget,
   type ChartSamplingDisclosure,
   type DownsampledChartRows,
 } from './chartSampling';
+export { useChartPointBudget } from './useChartPointBudget';
 export { projectSmallMultipleSeries } from './SmallMultiplesChart';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
@@ -42,7 +44,12 @@ export { ElevationProfile, type ElevationDataPoint } from './ElevationProfile';
 export { renderAnnotationLines } from './ChartAnnotationLayer';
 export { AddAnnotationPopover } from './AddAnnotationPopover';
 export { AnnotationList } from './AnnotationList';
-export { AREA_DEFAULTS, areaGradient } from './chartDefaults';
+export {
+  AREA_DEFAULTS,
+  areaGradient,
+  chartAnimationProps,
+  DEFAULT_ANIMATION_MS,
+} from './chartDefaults';
 export { TimeMarker, type TimeMarkerProps } from './TimeMarker';
 // Shared brush, sync, legend, and tooltip primitives.
 // Persistent cursor sync builds on recharts' syncId.

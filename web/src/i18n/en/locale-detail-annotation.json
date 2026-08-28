@@ -1,0 +1,26 @@
+{
+  "annotation": {
+    "addTitle": "Add Annotation",
+    "labelPlaceholder": "e.g., Battery replaced",
+    "label": "Label",
+    "date": "Date",
+    "category": "Category",
+    "descPlaceholder": "Optional description...",
+    "description": "Description",
+    "add": "Add Annotation",
+    "listTitle": "Annotations",
+    "remove": "Remove annotation",
+    "removeNamed": "Remove annotation: {{label}}",
+    "toggle": "Toggle annotations",
+    "clickChart": "Click on chart to annotate",
+    "enable": "Enable annotations",
+    "cat": {
+      "milestone": "Milestone",
+      "maintenance": "Maintenance",
+      "trip": "Trip",
+      "issue": "Issue",
+      "upgrade": "Upgrade",
+      "custom": "Custom"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "polling": {
+    "pollsSaved": "Polls Saved",
+    "savedAmount": "$ Saved",
+    "pollsMade": "Polls Made",
+    "creditLeft": "Credit Left",
+    "fleetTelemetry": "Fleet Telemetry",
+    "idleDetection": "Idle Detection",
+    "prediction": "Prediction",
+    "sleep": "Sleep",
+    "title": "Adaptive Polling Engine",
+    "active": "Active",
+    "vehicleActivity": "Vehicle Activity",
+    "noVehicles": "No vehicles tracked yet. Polling engine will activate on first poll.",
+    "toggleDetails": "Toggle polling details for {{vin}}",
+    "next": "Next",
+    "interval": "Interval",
+    "consecIdle": "Consecutive idle",
+    "batteryLevel": "Battery",
+    "inWord": "in",
+    "confShort": "conf",
+    "basedOn": "Based on",
+    "profileValue": {
+      "driving": "Driving",
+      "charging": "Charging",
+      "idle": "Idle",
+      "sleeping": "Sleeping"
+    }
+  }
+}

@@ -47,13 +47,27 @@ jobs:
         run: npm ci --legacy-peer-deps
 
       - name: Build
+        # CLEAN-04/CLEAN-07: `private` emits HIDDEN source maps — full `.map`
+        # files with no `sourceMappingURL` comment, so nothing fetches them —
+        # which is what gives `perf:check` module attribution for the startup
+        # icon/feature locality checks and the duplicate-module gate. They are
+        # CI-only artefacts and are deleted below before anything is served.
+        env:
+          VITE_SOURCEMAP_MODE: private
         run: npm run build
 
       - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Bundle-size budget (strict)
+      - name: Bundle-size budget + duplicate-module gate (strict)
+        env:
+          VITE_SOURCEMAP_MODE: private
         run: npm run perf:check
+
+      - name: Drop private source maps before anything is served
+        run: |
+          find dist -name '*.map' -delete
+          npm run check:source-maps
 
       - name: Start preview server
         run: |

@@ -52,7 +52,10 @@ import {
 
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useVehicleState } from '@/api/hooks/useVehicles';
+import {
+  isVehicleStateFieldCurrent,
+  useVehicleState,
+} from '@/api/hooks/useVehicles';
 import { useGeofences } from '@/api/hooks/useLocations';
 import {
   useGuardConfig,
@@ -157,12 +160,21 @@ export default function GuardModePage() {
   const isTriggered =
     latestEvent != null && !isGuardEventAcknowledged(latestEvent) && latestEvent.event_type !== 'test_alert';
 
-  const state = vehicleStateQuery.data?.state ?? vehicleStateQuery.data;
-  const vehicleLat = (state as Record<string, unknown>)?.latitude as number | undefined;
-  const vehicleLng = (state as Record<string, unknown>)?.longitude as number | undefined;
-  const hasLocation = vehicleLat != null && vehicleLng != null && vehicleLat !== 0 && vehicleLng !== 0;
-  const isLocked = Boolean((state as Record<string, unknown>)?.is_locked);
-  const sentryOn = Boolean((state as Record<string, unknown>)?.sentry_mode);
+  const stateResponse = vehicleStateQuery.data;
+  const state = stateResponse?.state;
+  const vehicleLat = state?.latitude;
+  const vehicleLng = state?.longitude;
+  const hasLocation =
+    isVehicleStateFieldCurrent(stateResponse, 'latitude') &&
+    isVehicleStateFieldCurrent(stateResponse, 'longitude') &&
+    vehicleLat != null &&
+    vehicleLng != null &&
+    vehicleLat !== 0 &&
+    vehicleLng !== 0;
+  const lockKnown = isVehicleStateFieldCurrent(stateResponse, 'is_locked');
+  const sentryKnown = isVehicleStateFieldCurrent(stateResponse, 'sentry_mode');
+  const isLocked = lockKnown ? Boolean(state?.is_locked) : null;
+  const sentryOn = sentryKnown ? Boolean(state?.sentry_mode) : null;
 
   const homeGeofence = geofences?.find((g) => String(g.id) === effectiveHomeGeofenceId) ?? null;
 
@@ -191,7 +203,7 @@ export default function GuardModePage() {
     : t('guard.disarmed', 'Disarmed');
   const stateColor: NeonColor = isTriggered ? 'red' : isArmed ? 'green' : 'amber';
   const StateIcon: LucideIcon = isTriggered ? ShieldAlert : isArmed ? ShieldCheck : ShieldOff;
-  const LockIcon: LucideIcon = isLocked ? Lock : Unlock;
+  const LockIcon: LucideIcon = isLocked == null ? Info : isLocked ? Lock : Unlock;
   const sensitivityLabel =
     effectiveSensitivity === 'low'
       ? t('guard.sensitivityLow', 'Low')
@@ -282,15 +294,15 @@ export default function GuardModePage() {
             />
             <MetricCard
               label={t('guard.kpiSentry', 'Sentry Mode')}
-              value={sentryOn ? t('guard.on', 'On') : t('guard.off', 'Off')}
+              value={sentryOn == null ? '—' : sentryOn ? t('guard.on', 'On') : t('guard.off', 'Off')}
               icon={<Eye className="h-5 w-5" aria-hidden="true" />}
               color={sentryOn ? 'green' : 'cyan'}
             />
             <MetricCard
               label={t('guard.kpiLock', 'Lock State')}
-              value={isLocked ? t('guard.locked', 'Locked') : t('guard.unlocked', 'Unlocked')}
+              value={isLocked == null ? '—' : isLocked ? t('guard.locked', 'Locked') : t('guard.unlocked', 'Unlocked')}
               icon={<LockIcon className="h-5 w-5" aria-hidden="true" />}
-              color={isLocked ? 'green' : 'amber'}
+              color={isLocked == null ? 'cyan' : isLocked ? 'green' : 'amber'}
             />
             <MetricCard
               label={t('guard.kpiSensitivity', 'Sensitivity')}
@@ -350,7 +362,7 @@ export default function GuardModePage() {
                   <EmptyState
                     /* no-action: transient empty state — surfaces when the vehicle has no live position */
                     icon={<MapPin className="h-8 w-8" aria-hidden="true" />}
-                    message={t('guard.noLocation', 'No vehicle location available')}
+                    message={t('guard.noCurrentLocation', 'Current vehicle location unavailable')}
                   />
                 </div>
               )}
@@ -494,11 +506,19 @@ export default function GuardModePage() {
                   ? t('guard.armedSince', 'Armed since {{time}}', { time: formatDateTime(guardConfig.updated_at) })
                   : t('guard.notArmed', 'Not armed')}
               </StatusRow>
-              <StatusRow icon={LockIcon} tone={isLocked ? 'ok' : 'warn'}>
-                {isLocked ? t('guard.vehicleLocked', 'Vehicle locked') : t('guard.vehicleUnlocked', 'Vehicle unlocked')}
+              <StatusRow icon={LockIcon} tone={isLocked == null ? 'muted' : isLocked ? 'ok' : 'warn'}>
+                {isLocked == null
+                  ? t('guard.lockUnknown', 'Lock state unavailable')
+                  : isLocked
+                    ? t('guard.vehicleLocked', 'Vehicle locked')
+                    : t('guard.vehicleUnlocked', 'Vehicle unlocked')}
               </StatusRow>
               <StatusRow icon={Eye} tone={sentryOn ? 'ok' : 'muted'}>
-                {sentryOn ? t('guard.sentryActive', 'Sentry mode active') : t('guard.sentryInactive', 'Sentry mode off')}
+                {sentryOn == null
+                  ? t('guard.sentryUnknown', 'Sentry status unavailable')
+                  : sentryOn
+                    ? t('guard.sentryActive', 'Sentry mode active')
+                    : t('guard.sentryInactive', 'Sentry mode off')}
               </StatusRow>
               <StatusRow icon={AlertTriangle} tone={unacknowledgedCount > 0 ? 'warn' : 'muted'}>
                 {unacknowledgedCount > 0

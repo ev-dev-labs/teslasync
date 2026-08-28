@@ -32,6 +32,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import type { AppSettings } from '@/api/types';
 
@@ -141,8 +142,7 @@ describe('TestRagHelpAIOffHidesAssistantAndDocsLinksWork (rag-help AI-off contra
   //
   // The HelpPage SPA route renders five curated <Link> cards
   // unconditionally. The off-mode invariant requires that EVERY
-  // baseline link survives even when the AI surface vanishes;
-  // these assertions are the load-bearing baseline-intact proof
+  // baseline link survives even when the AI surface vanishes;  // these assertions are the load-bearing baseline-intact proof
   // (ADR-015 §I3).
   //
   // Per-link test IDs are stable: `help-baseline-link-<id>`. The
@@ -166,6 +166,25 @@ describe('TestRagHelpAIOffHidesAssistantAndDocsLinksWork (rag-help AI-off contra
     chatbot: '/chatbot',
   };
 
+  // HelpPage now mounts query-backed panels alongside the deterministic
+  // baseline (support bundle → /system/version, /system/health). Production
+  // always renders it inside the app's QueryClientProvider, so the contract is
+  // asserted against the same tree. Retries are off: a failing query must
+  // settle immediately rather than hold the render open, since the point of
+  // this suite is that the baseline survives regardless of what else fails.
+  function renderHelpPage() {
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 0 } },
+    });
+    return render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter>
+          <HelpPage />
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
   it('TestRagHelpAIOffHidesAssistantAndDocsLinksWork: HelpPage renders every baseline curated link AND hides AIRAGHelp when ai_mode=off', () => {
     mockUseSettings.mockReturnValue(
       settingsPayload({
@@ -174,11 +193,7 @@ describe('TestRagHelpAIOffHidesAssistantAndDocsLinksWork (rag-help AI-off contra
       }),
     );
 
-    render(
-      <MemoryRouter>
-        <HelpPage />
-      </MemoryRouter>,
-    );
+    renderHelpPage();
 
     // AI surface MUST be absent.
     expect(screen.queryByTestId('ai-feature-rag-help-root')).not.toBeInTheDocument();
@@ -202,11 +217,7 @@ describe('TestRagHelpAIOffHidesAssistantAndDocsLinksWork (rag-help AI-off contra
       }),
     );
 
-    render(
-      <MemoryRouter>
-        <HelpPage />
-      </MemoryRouter>,
-    );
+    renderHelpPage();
 
     // AI surface MUST be present.
     expect(screen.getByTestId('ai-feature-rag-help-root')).toBeInTheDocument();

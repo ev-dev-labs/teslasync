@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { getMapConfig } from '@/api/settings'
 import { FullscreenButton } from '@/components/ui/FullscreenButton'
+import { useDataSaverPolicy } from '@/hooks/useLowBandwidthMode'
 
 export type MapStyle = 'dark' | 'satellite' | 'streets' | 'terrain'
 
@@ -57,6 +58,13 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
     queryFn: getMapConfig,
     staleTime: 5 * 60 * 1000,
   })
+  // PWA-07: satellite and terrain basemaps are photographic raster tiles and
+  // are by far the heaviest thing a map page downloads. Under low-bandwidth
+  // mode they fall back to the lightweight vector-derived dark basemap. The
+  // provider selection below is untouched — an operator who configured Azure
+  // or Google still gets their provider, just its cheapest style.
+  const { richMapTiles } = useDataSaverPolicy()
+  const effectiveStyle: MapStyle = richMapTiles ? style : 'dark'
 
   let tiles: Record<MapStyle, TileDef> = freeTiles
   if (mapConfig?.provider === 'azure' && mapConfig.api_key) {
@@ -65,8 +73,16 @@ export function MapTileLayer({ style = 'dark' }: MapTileLayerProps) {
     tiles = googleTiles(mapConfig.api_key)
   }
 
-  const t = tiles[style] || tiles.dark
-  return <TileLayer url={t.url} attribution={t.attribution} />
+  const t = tiles[effectiveStyle] || tiles.dark
+  return (
+    <TileLayer
+      url={t.url}
+      attribution={t.attribution}
+      // Defer tile requests until the pan/zoom gesture settles so a drag does
+      // not fire a request storm on a constrained link.
+      updateWhenIdle={!richMapTiles}
+    />
+  )
 }
 
 /** Forces Leaflet to recalculate tile positions after the container mounts or resizes. */

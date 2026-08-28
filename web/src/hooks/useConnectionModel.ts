@@ -229,8 +229,6 @@ export function useConnectionModel(): ConnectionModel {
 
   return useMemo(
     () => deriveConnectionModel({ browserOnline, apiStatus, streamStatus, lastTelemetryAtMs }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `clock` is a
-    // deliberate cache-buster for the Date.now() read inside the derivation.
     [browserOnline, apiStatus, streamStatus, lastTelemetryAtMs, clock],
   )
 }

@@ -51,7 +51,17 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#0b0d12" />
+    <!-- Installability (PWA-01).
+         `mobile-web-app-capable` is the standardised name honoured by Chrome
+         on Android. iOS Safari does NOT read it — it still keys standalone
+         launch off the vendor-prefixed `apple-mobile-web-app-capable`, so both
+         must be present or an "Add to Home Screen" install on iPhone opens in
+         a Safari chrome instead of a standalone window.
+         `apple-mobile-web-app-title` is the iOS home-screen label; without it
+         iOS falls back to <title>, which the SPA rewrites per page. -->
     <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="TeslaSync" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="description" content="TeslaSync — Next-gen Tesla Fleet Intelligence Platform" />
     <meta name="color-scheme" content="dark" />

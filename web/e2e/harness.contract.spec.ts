@@ -54,8 +54,16 @@ test('Date semantics contract uses the standard hermetic API lifecycle', () => {
   expect(source).toContain('assertMockApiComplete');
   expect(source.indexOf('await installApiMocks')).toBeLessThan(source.indexOf('page.goto'));
   expect(source.indexOf('page.goto')).toBeLessThan(source.indexOf('await waitForHarnessReady'));
-  expect(source.indexOf('await waitForHarnessReady')).toBeLessThan(source.indexOf('page.evaluate'));
-  expect(source.indexOf('page.evaluate')).toBeLessThan(source.indexOf('await assertMockApiComplete'));
+  const tryIndex = source.indexOf('try {', source.indexOf('await waitForHarnessReady'));
+  const assertionCatchIndex = source.indexOf('} catch (error)', tryIndex);
+  const assertionIndex = source.indexOf('page.evaluate', tryIndex);
+  const completionIndex = source.indexOf('await assertMockApiComplete', assertionCatchIndex);
+  expect(tryIndex).toBeGreaterThan(source.indexOf('await waitForHarnessReady'));
+  expect(assertionIndex).toBeGreaterThan(tryIndex);
+  expect(assertionIndex).toBeLessThan(assertionCatchIndex);
+  expect(completionIndex).toBeGreaterThan(assertionCatchIndex);
+  expect(source).not.toContain('} finally {');
+  expect(source).toContain('new AggregateError(');
 });
 
 test('RUM transport remains enabled while E2E captures only reviewed beacon endpoints', () => {
@@ -79,14 +87,24 @@ test('RUM transport remains enabled while E2E captures only reviewed beacon endp
   expect(mockApi).toContain("'API requests escaped or were blocked by Playwright routing'");
 });
 
+test('mocked browser runs cannot bypass API fixtures through the service worker', () => {
+  const config = readFileSync(resolve(process.cwd(), 'playwright.config.ts'), 'utf8');
+  const viteConfig = readFileSync(resolve(process.cwd(), 'vite.config.ts'), 'utf8');
+  expect(config).toContain("const mocksEnabled = process.env.E2E_MOCKS !== '0'");
+  expect(config).toContain("serviceWorkers: mocksEnabled ? 'block' : 'allow'");
+  expect(viteConfig).toContain("process.env.npm_lifecycle_event === 'e2e:build'");
+  expect(viteConfig).toContain("process.env.E2E_MOCKS !== '0'");
+  expect(viteConfig).toContain('disable: mockedE2eBuild');
+});
+
 test('catch-all API fixture rejects unknown paths', () => {
   expect(resolveApiFixture('/definitely-unmatched', 'GET', 'populated').matched).toBe(false);
   expect(resolveApiFixture('/definitely-unmatched', 'POST', 'populated').matched).toBe(false);
   expect(resolveApiFixture('/vehicles', 'GET', 'populated').matched).toBe(true);
 });
 
-test('axe debt is explicit, route-scoped contrast debt only', () => {
-  expect(Object.keys(AXE_DEBT_BY_ROUTE).sort()).toEqual(['/', '/data-repair', '/vehicles']);
+test('axe debt registry remains zero', () => {
+  expect(Object.keys(AXE_DEBT_BY_ROUTE)).toEqual([]);
   for (const routeDebt of Object.values(AXE_DEBT_BY_ROUTE)) {
     for (const debt of routeDebt) {
       expect(debt.rule).toBeTruthy();
@@ -156,4 +174,19 @@ test('docs screenshots and visual baseline updates are separate commands', () =>
   const wrapper = readFileSync(resolve(process.cwd(), '..', 'scripts', 'screenshots.js'), 'utf8');
   expect(wrapper).toContain('screenshots:docs');
   expect(wrapper).not.toContain('e2e:update-visual');
+});
+
+test('docs screenshot destinations and deployment URLs are portable', () => {
+  const source = readFileSync(
+    resolve(process.cwd(), 'scripts', 'capture-docs-screenshots.mjs'),
+    'utf8',
+  );
+
+  expect(source).toContain('process.env.E2E_BASE_URL');
+  expect(source).toContain('process.env.DOCS_SCREENSHOT_DIR');
+  expect(source).toContain('process.env.E2E_STORAGE_STATE');
+  expect(source).toContain("resolve(scriptDirectory, '..', '..')");
+  expect(source).toContain('resolve(outputDirectory, `${route.name}.png`)');
+  expect(source).not.toMatch(/['"][A-Za-z]:[\\/]/);
+  expect(source).not.toMatch(/['"]\/(?:home|Users)\//);
 });

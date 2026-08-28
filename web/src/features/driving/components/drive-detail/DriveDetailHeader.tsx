@@ -32,7 +32,11 @@ export function DriveDetailHeader({ drive, driveId, vehicleName, onShare }: Driv
           <ArrowLeft className="h-5 w-5" aria-hidden="true" />
         </Link>
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold tracking-tight text-[var(--text-primary)] flex items-center gap-3">
+          <h1
+            className="text-2xl font-bold tracking-tight text-[var(--text-primary)] flex items-center gap-3 outline-none"
+            tabIndex={-1}
+            data-route-focus-target="true"
+          >
             <Route className="h-6 w-6 shrink-0 text-cyan-400" aria-hidden="true" />
             {hasRoute
               ? <>{drive.startAddress} → {drive.endAddress}</>

@@ -75,6 +75,98 @@
     "throughputAria": "MQTT signal throughput over time",
     "time": "Time"
   },
+  "signalChangePoints": {
+    "title": "Signal Change Points",
+    "subtitle": "Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal Trend) and drive-week regime clustering",
+    "pick": "Choose a Signal",
+    "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
+    "signal": "Signal",
+    "choose": "Choose a signal",
+    "kpis": "Change-point metrics",
+    "count": "Change Points",
+    "minSegment": "min segment {{n}} samples",
+    "biggest": "Biggest Shift",
+    "biggestHint": "{{dir}} · confidence {{conf}}",
+    "up": "up",
+    "down": "down",
+    "noShift": "no shift detected",
+    "segments": "Segments",
+    "segmentsHint": "stable stretches between shifts",
+    "samples": "Samples Analyzed",
+    "noiseScale": "noise scale {{n}}",
+    "notEnough": "Not enough history yet for this signal.",
+    "pickOne": "Choose a signal above to detect its change points.",
+    "timeline": "Regime Timeline",
+    "timelineHint": "Raw values against each segment’s mean; dashed markers are detected change points",
+    "timelineAria": "Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points",
+    "col": {
+      "time": "Time",
+      "value": "Value",
+      "level": "Segment mean"
+    },
+    "reading": "Reading the Result",
+    "noReading": "Pick a signal to see how its change points should be read.",
+    "shifted": "Regime shift detected",
+    "stable": "Stable throughout",
+    "shiftedText": "This signal stepped to a new stable level at least once — a different failure mode from a slow ramp, which would show no alarm here at all.",
+    "stableText": "No abrupt level shift cleared the alarm threshold across the window analyzed; single-sample spikes are deliberately not enough to trigger one.",
+    "scope": "Scope",
+    "scopeText": "This detector looks only at this one signal’s raw sample sequence over {{h}}h — it is not the same as the aggregate drive-week regime clustering elsewhere in the app."
+  },
+  "signalChart": {
+    "waitingLive": "Waiting for live signal data…",
+    "waitingLiveDescription": "Samples will appear when the selected vehicle publishes the chosen signals.",
+    "emptyRange": "No signal samples were recorded in this time range.",
+    "emptyRangeDescription": "Expand the range or select another signal to inspect available history.",
+    "histAria": "Historical signal chart",
+    "liveAria": "Live signal stream chart"
+  },
+  "signalDeadband": {
+    "title": "Signal Deadband",
+    "subtitle": "Estimate a robust numeric noise floor and retain material telemetry changes with fewer redundant emissions",
+    "selection": {
+      "title": "Signal Under Test",
+      "empty": "No telemetry signals have been recorded for this vehicle yet.",
+      "label": "Numeric signal",
+      "placeholder": "Choose a signal",
+      "hint": "Thresholds are analyzed in canonical SI signal units; conversion belongs only at the display boundary."
+    },
+    "kpis": {
+      "label": "Deadband metrics",
+      "noise": "MAD Noise Band",
+      "siUnits": "canonical SI signal units",
+      "redundant": "Redundant Emissions",
+      "unchanged": "{{value}} exactly unchanged",
+      "threshold": "Recommended Deadband",
+      "suppression": "{{value}} noise suppressed",
+      "reduction": "Projected Reduction",
+      "fidelity": "{{value}} reconstruction fidelity"
+    },
+    "curve": {
+      "title": "Cumulative Retained Updates",
+      "subtitle": "Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas",
+      "aria": "Line chart of retained telemetry updates across candidate deadband thresholds"
+    },
+    "columns": {
+      "threshold": "Deadband (SI)",
+      "retained": "Retained updates",
+      "reduction": "Reduction (%)",
+      "noise": "Noise suppressed (%)",
+      "material": "Material retained (%)",
+      "fidelity": "Fidelity (%)"
+    },
+    "recommendation": {
+      "title": "Retention Audit",
+      "noNumeric": "This signal needs at least three numeric history points.",
+      "empty": "Choose a signal to audit candidate deadbands."
+    },
+    "audit": {
+      "samples": "Numeric samples",
+      "noise": "Noise suppression",
+      "material": "Material retention",
+      "fidelity": "Fidelity"
+    }
+  },
   "signalDiff": {
     "metric": "Metric",
     "rangeA": "Range A",
@@ -174,6 +266,45 @@
       "unknown": "Unknown"
     }
   },
+  "signalEntropy": {
+    "title": "Signal Entropy",
+    "subtitle": "Quantile-bins a numeric signal and measures how much genuine information it carries, in bits — distinct from gap detection or cross-signal correlation",
+    "pick": "Choose a Signal",
+    "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
+    "signal": "Signal",
+    "choose": "Choose a signal",
+    "kpis": "Entropy metrics",
+    "entropy": "Shannon Entropy",
+    "normalized": "{{n}} normalized",
+    "effectiveStates": "Effective States",
+    "effectiveBins": "{{n}} of {{r}} bins populated",
+    "stuck": "Dominant-State Fraction",
+    "stuckHint": "occupancy of the single most common bin",
+    "changeRate": "Change Rate",
+    "changeRateHint": "{{n}} samples analyzed",
+    "notEnough": "Not enough samples yet for a rolling entropy window on this signal.",
+    "pickOne": "Choose a signal above to compute its entropy.",
+    "rolling": "Rolling Information Density",
+    "rollingHint": "Entropy recomputed over a sliding window using the same global bin edges, so spikes reflect genuinely eventful stretches",
+    "rollingAria": "Line chart of rolling Shannon entropy in bits over time for the selected signal",
+    "col": {
+      "time": "Time",
+      "bits": "Entropy (bits)",
+      "bin": "Bin range",
+      "count": "Samples"
+    },
+    "distribution": "Quantile Bin Distribution",
+    "distributionHint": "Sample counts per equal-frequency bin — a lopsided distribution here explains a low entropy score",
+    "distributionAria": "Bar chart of sample counts across quantile bins for the selected signal",
+    "reading": "Reading the Result",
+    "noReading": "Pick a signal to see how its entropy should be read.",
+    "parked": "Mostly parked",
+    "active": "Informative",
+    "parkedText": "This signal spends almost all of its time in a single quantile bin — most samples are telling you the same thing over and over.",
+    "activeText": "This signal spreads its samples across multiple bins, so each new reading is genuinely informative rather than decoration on a fixed state.",
+    "range": "Observed range",
+    "rangeText": "{{min}} to {{max}} across {{n}} samples in the last {{h}}h window"
+  },
   "signalGap": {
     "status": "Status",
     "signal": "Signal",
@@ -223,180 +354,6 @@
     "emptyMessage": "No signal data matches the selected signals and time range.",
     "emptyDescription": "Expand the time range or choose another signal, then run the query again."
   },
-  "signalChart": {
-    "waitingLive": "Waiting for live signal data…",
-    "waitingLiveDescription": "Samples will appear when the selected vehicle publishes the chosen signals.",
-    "emptyRange": "No signal samples were recorded in this time range.",
-    "emptyRangeDescription": "Expand the range or select another signal to inspect available history.",
-    "histAria": "Historical signal chart",
-    "liveAria": "Live signal stream chart"
-  },
-  "signalStats": {
-    "emptyMessage": "No aggregate statistics are available.",
-    "emptyDescription": "Select a signal with numeric samples or expand the queried time range."
-  },
-  "signalEntropy": {
-    "title": "Signal Entropy",
-    "subtitle": "Quantile-bins a numeric signal and measures how much genuine information it carries, in bits — distinct from gap detection or cross-signal correlation",
-    "pick": "Choose a Signal",
-    "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
-    "signal": "Signal",
-    "choose": "Choose a signal",
-    "kpis": "Entropy metrics",
-    "entropy": "Shannon Entropy",
-    "normalized": "{{n}} normalized",
-    "effectiveStates": "Effective States",
-    "effectiveBins": "{{n}} of {{r}} bins populated",
-    "stuck": "Dominant-State Fraction",
-    "stuckHint": "occupancy of the single most common bin",
-    "changeRate": "Change Rate",
-    "changeRateHint": "{{n}} samples analyzed",
-    "notEnough": "Not enough samples yet for a rolling entropy window on this signal.",
-    "pickOne": "Choose a signal above to compute its entropy.",
-    "rolling": "Rolling Information Density",
-    "rollingHint": "Entropy recomputed over a sliding window using the same global bin edges, so spikes reflect genuinely eventful stretches",
-    "rollingAria": "Line chart of rolling Shannon entropy in bits over time for the selected signal",
-    "col": {
-      "time": "Time",
-      "bits": "Entropy (bits)",
-      "bin": "Bin range",
-      "count": "Samples"
-    },
-    "distribution": "Quantile Bin Distribution",
-    "distributionHint": "Sample counts per equal-frequency bin — a lopsided distribution here explains a low entropy score",
-    "distributionAria": "Bar chart of sample counts across quantile bins for the selected signal",
-    "reading": "Reading the Result",
-    "noReading": "Pick a signal to see how its entropy should be read.",
-    "parked": "Mostly parked",
-    "active": "Informative",
-    "parkedText": "This signal spends almost all of its time in a single quantile bin — most samples are telling you the same thing over and over.",
-    "activeText": "This signal spreads its samples across multiple bins, so each new reading is genuinely informative rather than decoration on a fixed state.",
-    "range": "Observed range",
-    "rangeText": "{{min}} to {{max}} across {{n}} samples in the last {{h}}h window"
-  },
-  "signalTrend": {
-    "title": "Signal Trend",
-    "subtitle": "Robust slope and significance for slow, monotonic drift in a numeric signal — distinct from abrupt change points, anomaly scoring, or cross-signal correlation",
-    "pick": "Choose a Signal",
-    "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
-    "signal": "Signal",
-    "choose": "Choose a signal",
-    "kpis": "Trend metrics",
-    "slope": "Drift Rate",
-    "slopePerHour": "{{v}}/hour",
-    "significance": "Significance",
-    "real": "Real",
-    "noise": "Not significant",
-    "tau": "tau {{tau}} · p {{p}}",
-    "spread": "Residual Spread",
-    "spreadHint": "robust MAD around the fitted line",
-    "samples": "Samples",
-    "span": "{{h}}h span · {{ev}}",
-    "limited": "Evidence-limited",
-    "sufficient": "Sufficient evidence",
-    "notEnough": "Not enough history yet for this signal.",
-    "pickOne": "Choose a signal above to compute its trend.",
-    "chart": "Robust Baseline & Forecast Band",
-    "chartHint": "The forecast is never projected further ahead than the signal has actually been observed, and only appears when the trend is significant",
-    "chartAria": "Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band",
-    "col": {
-      "time": "Time",
-      "actual": "Actual",
-      "baseline": "Baseline",
-      "low": "Forecast low"
-    },
-    "forecastBand": "Forecast band",
-    "reading": "Reading the Result",
-    "noReading": "Pick a signal to see how its trend should be read.",
-    "realText": "The ordering of values is unlikely to be chance, so the fitted slope reflects a genuine slow drift rather than noise.",
-    "noiseText": "The observed ordering does not clear the significance bar, so any apparent slope here is best treated as noise rather than a real trend.",
-    "limitedText": "Too few samples or too short a time span to trust significance or a forecast — the slope alone is shown, withheld from projection.",
-    "sufficientText": "The forecast band is capped at the observed time span itself, never projected further into the future than the signal has actually been watched."
-  },
-  "signalChangePoints": {
-    "title": "Signal Change Points",
-    "subtitle": "Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal Trend) and drive-week regime clustering",
-    "pick": "Choose a Signal",
-    "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
-    "signal": "Signal",
-    "choose": "Choose a signal",
-    "kpis": "Change-point metrics",
-    "count": "Change Points",
-    "minSegment": "min segment {{n}} samples",
-    "biggest": "Biggest Shift",
-    "biggestHint": "{{dir}} · confidence {{conf}}",
-    "up": "up",
-    "down": "down",
-    "noShift": "no shift detected",
-    "segments": "Segments",
-    "segmentsHint": "stable stretches between shifts",
-    "samples": "Samples Analyzed",
-    "noiseScale": "noise scale {{n}}",
-    "notEnough": "Not enough history yet for this signal.",
-    "pickOne": "Choose a signal above to detect its change points.",
-    "timeline": "Regime Timeline",
-    "timelineHint": "Raw values against each segment’s mean; dashed markers are detected change points",
-    "timelineAria": "Line chart of raw signal values overlaid with segment mean levels and detected abrupt change points",
-    "col": {
-      "time": "Time",
-      "value": "Value",
-      "level": "Segment mean"
-    },
-    "reading": "Reading the Result",
-    "noReading": "Pick a signal to see how its change points should be read.",
-    "shifted": "Regime shift detected",
-    "stable": "Stable throughout",
-    "shiftedText": "This signal stepped to a new stable level at least once — a different failure mode from a slow ramp, which would show no alarm here at all.",
-    "stableText": "No abrupt level shift cleared the alarm threshold across the window analyzed; single-sample spikes are deliberately not enough to trigger one.",
-    "scope": "Scope",
-    "scopeText": "This detector looks only at this one signal’s raw sample sequence over {{h}}h — it is not the same as the aggregate drive-week regime clustering elsewhere in the app."
-  },
-  "signalDeadband": {
-    "title": "Signal Deadband",
-    "subtitle": "Estimate a robust numeric noise floor and retain material telemetry changes with fewer redundant emissions",
-    "selection": {
-      "title": "Signal Under Test",
-      "empty": "No telemetry signals have been recorded for this vehicle yet.",
-      "label": "Numeric signal",
-      "placeholder": "Choose a signal",
-      "hint": "Thresholds are analyzed in canonical SI signal units; conversion belongs only at the display boundary."
-    },
-    "kpis": {
-      "label": "Deadband metrics",
-      "noise": "MAD Noise Band",
-      "siUnits": "canonical SI signal units",
-      "redundant": "Redundant Emissions",
-      "unchanged": "{{value}} exactly unchanged",
-      "threshold": "Recommended Deadband",
-      "suppression": "{{value}} noise suppressed",
-      "reduction": "Projected Reduction",
-      "fidelity": "{{value}} reconstruction fidelity"
-    },
-    "curve": {
-      "title": "Cumulative Retained Updates",
-      "subtitle": "Each candidate is simulated against the last retained value, not filtered as isolated adjacent deltas",
-      "aria": "Line chart of retained telemetry updates across candidate deadband thresholds"
-    },
-    "columns": {
-      "threshold": "Deadband (SI)",
-      "retained": "Retained updates",
-      "reduction": "Reduction (%)",
-      "noise": "Noise suppressed (%)",
-      "material": "Material retained (%)",
-      "fidelity": "Fidelity (%)"
-    },
-    "recommendation": {
-      "title": "Retention Audit",
-      "noNumeric": "This signal needs at least three numeric history points.",
-      "empty": "Choose a signal to audit candidate deadbands."
-    },
-    "audit": {
-      "samples": "Numeric samples",
-      "noise": "Noise suppression",
-      "material": "Material retention",
-      "fidelity": "Fidelity"
-    }
-  },
   "signalMutualInformation": {
     "title": "Signal Mutual Information",
     "heatmap": {
@@ -440,5 +397,48 @@
       "contribution": "Contribution (bits)",
       "count": "Aligned samples"
     }
+  },
+  "signalStats": {
+    "emptyMessage": "No aggregate statistics are available.",
+    "emptyDescription": "Select a signal with numeric samples or expand the queried time range."
+  },
+  "signalTrend": {
+    "title": "Signal Trend",
+    "subtitle": "Robust slope and significance for slow, monotonic drift in a numeric signal — distinct from abrupt change points, anomaly scoring, or cross-signal correlation",
+    "pick": "Choose a Signal",
+    "noSignals": "No telemetry signals have been recorded for this vehicle yet.",
+    "signal": "Signal",
+    "choose": "Choose a signal",
+    "kpis": "Trend metrics",
+    "slope": "Drift Rate",
+    "slopePerHour": "{{v}}/hour",
+    "significance": "Significance",
+    "real": "Real",
+    "noise": "Not significant",
+    "tau": "tau {{tau}} · p {{p}}",
+    "spread": "Residual Spread",
+    "spreadHint": "robust MAD around the fitted line",
+    "samples": "Samples",
+    "span": "{{h}}h span · {{ev}}",
+    "limited": "Evidence-limited",
+    "sufficient": "Sufficient evidence",
+    "notEnough": "Not enough history yet for this signal.",
+    "pickOne": "Choose a signal above to compute its trend.",
+    "chart": "Robust Baseline & Forecast Band",
+    "chartHint": "The forecast is never projected further ahead than the signal has actually been observed, and only appears when the trend is significant",
+    "chartAria": "Composed chart of actual signal values, the fitted robust baseline, and an evidence-limited forecast band",
+    "col": {
+      "time": "Time",
+      "actual": "Actual",
+      "baseline": "Baseline",
+      "low": "Forecast low"
+    },
+    "forecastBand": "Forecast band",
+    "reading": "Reading the Result",
+    "noReading": "Pick a signal to see how its trend should be read.",
+    "realText": "The ordering of values is unlikely to be chance, so the fitted slope reflects a genuine slow drift rather than noise.",
+    "noiseText": "The observed ordering does not clear the significance bar, so any apparent slope here is best treated as noise rather than a real trend.",
+    "limitedText": "Too few samples or too short a time span to trust significance or a forecast — the slope alone is shown, withheld from projection.",
+    "sufficientText": "The forecast band is capped at the observed time span itself, never projected further into the future than the signal has actually been watched."
   }
 }

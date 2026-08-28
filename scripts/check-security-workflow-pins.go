@@ -89,26 +89,25 @@ func parseWorkflow(workflow string) (*yaml.Node, []string, error) {
 
 func securityActionRefs(root *yaml.Node, lines []string) []scalarRef {
 	jobs, ok := mappingValue(documentContent(root), "jobs")
-	if !ok {
-		return nil
-	}
-	security, ok := mappingValue(jobs, "security")
-	if !ok {
+	if !ok || jobs.Kind != yaml.MappingNode {
 		return nil
 	}
 
 	refs := make([]scalarRef, 0)
-	if uses, ok := mappingValue(security, "uses"); ok && uses.Kind == yaml.ScalarNode {
-		refs = append(refs, scalarReference(uses, lines))
-	}
-	steps, ok := mappingValue(security, "steps")
-	if !ok || steps.Kind != yaml.SequenceNode {
-		return refs
-	}
-	for _, step := range steps.Content {
-		uses, ok := mappingValue(step, "uses")
-		if ok && uses.Kind == yaml.ScalarNode {
+	for i := 0; i+1 < len(jobs.Content); i += 2 {
+		job := jobs.Content[i+1]
+		if uses, found := mappingValue(job, "uses"); found && uses.Kind == yaml.ScalarNode {
 			refs = append(refs, scalarReference(uses, lines))
+		}
+		steps, found := mappingValue(job, "steps")
+		if !found || steps.Kind != yaml.SequenceNode {
+			continue
+		}
+		for _, step := range steps.Content {
+			uses, found := mappingValue(step, "uses")
+			if found && uses.Kind == yaml.ScalarNode {
+				refs = append(refs, scalarReference(uses, lines))
+			}
 		}
 	}
 	return refs

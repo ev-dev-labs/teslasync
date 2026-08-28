@@ -60,3 +60,26 @@ export function downsampleChartRows<T>(
     },
   };
 }
+
+/**
+ * Apply the device's data-saver policy to a requested point budget (PWA-07).
+ *
+ * Rendering 400 points per cell is cheap on a laptop and expensive on a phone
+ * that already told us it is on a constrained link: every point is DOM/canvas
+ * work, and on a small screen most of them are sub-pixel anyway. Under
+ * low-bandwidth mode the requested budget is clamped to the policy ceiling;
+ * otherwise it is returned unchanged so no existing caller changes behaviour.
+ *
+ * Pure so the clamp is testable without a React tree — {@link useChartPointBudget}
+ * is the hook form.
+ */
+export function resolveChartPointBudget(
+  requested: number,
+  lowBandwidthCeiling: number,
+): number {
+  const safeRequested = Number.isFinite(requested) ? Math.floor(requested) : 0;
+  const safeCeiling = Number.isFinite(lowBandwidthCeiling)
+    ? Math.floor(lowBandwidthCeiling)
+    : safeRequested;
+  return Math.max(2, Math.min(safeRequested, safeCeiling));
+}

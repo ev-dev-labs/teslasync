@@ -8,6 +8,15 @@ metadata:
     app.kubernetes.io/component: export-worker
 spec:
   replicas: {{ .Values.exportWorker.replicaCount }}
+  {{- if .Values.rollout.paused }}
+  paused: true
+  {{- end }}
+  {{- if .Values.rollout.exportWorker.strategy.type }}
+  # OPS-05: only rendered when explicitly opted in, so the default
+  # deployment behaviour (Kubernetes' own RollingUpdate) is unchanged.
+  strategy:
+    type: {{ .Values.rollout.exportWorker.strategy.type }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "teslasync.selectorLabels" . | nindent 6 }}

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next';
 import { RefreshCw } from 'lucide-react';
 
 import { Badge, Button, Text } from '@/components/ui';
+import { useOnlineStatus } from '@/hooks/useOnlineStatus';
+import type { UnavailabilityEvidence } from '@/lib/dataUnavailability';
 import { DataStateNotice, type DataStateKind } from './DataStateNotice';
 
 export type DataSourceStatus =
@@ -23,6 +25,14 @@ export interface DataSourceQuery {
   isFetching?: boolean;
   fetchStatus?: 'fetching' | 'paused' | 'idle';
   refetch?: () => unknown;
+  /**
+   * The query's rejection value, when it has one.
+   *
+   * Call sites already pass whole TanStack query results (`query: someQuery`),
+   * so this arrives for free at every existing caller — which is what lets the
+   * HELP-04 classifier run in production without touching a single page.
+   */
+  error?: unknown;
 }
 
 export interface DataSourceDescriptor {
@@ -39,6 +49,15 @@ export interface DataSourceNoticeProps
   title?: string;
   message?: string;
   retryLabel?: string;
+  /**
+   * HELP-04. Extra evidence a page knows but a query result cannot express —
+   * most usefully `vehicleState`, and `requestedBeforeRetention` /
+   * `filtersActive` for range-scoped views.
+   *
+   * Merged with the evidence derived from the failing sources below, so a page
+   * that supplies nothing still gets error-based classification.
+   */
+  evidence?: UnavailabilityEvidence;
 }
 
 interface ResolvedSource extends DataSourceDescriptor {
@@ -102,9 +121,11 @@ export function DataSourceNotice({
   title,
   message,
   retryLabel,
+  evidence,
   ...props
 }: DataSourceNoticeProps) {
   const { t } = useTranslation();
+  const online = useOnlineStatus();
   const resolved = sources
     .filter((source) => source.enabled !== false)
     .map((source) => ({
@@ -174,10 +195,40 @@ export function DataSourceNotice({
     });
   };
 
+  /**
+   * Evidence for the HELP-04 classifier.
+   *
+   * The first failing source's error is the honest representative: when a
+   * page's queries fail together they almost always fail for the same reason
+   * (one 403, one outage), and picking the first keeps the result
+   * deterministic. Caller-supplied evidence wins on every field it sets —
+   * a page knows things a query result cannot express, such as whether the
+   * vehicle is asleep.
+   */
+  const firstFailure = resolved.find(
+    ({ status, query }) =>
+      (status === 'failed' || status === 'refreshFailed') && query.error != null,
+  );
+  const derivedEvidence: UnavailabilityEvidence = {
+    error: firstFailure?.query.error,
+    online,
+    ...evidence,
+  };
+
   return (
     <DataStateNotice
       {...props}
       state={state}
+      // HELP-04. Every page that declares `dataSources` on <PageContainer>
+      // reaches this line, so the classifier runs across the app without a
+      // single page edit. `DataStateNotice` returns the generic copy unchanged
+      // when nothing explains the failure, so this can never make a notice
+      // worse — only more specific.
+      evidence={derivedEvidence}
+      // Only let the cause drive severity when nothing usable is on screen.
+      // With cached rows still visible, a `service_outage` cause must not
+      // escalate a quiet "Data may be stale" band into a red alert.
+      preserveSeverity={state !== 'unavailable'}
       title={title}
       role={state === 'unavailable' ? 'alert' : 'status'}
       aria-live={state === 'unavailable' ? 'assertive' : 'polite'}

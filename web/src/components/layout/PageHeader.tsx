@@ -57,7 +57,9 @@ export function PageHeader({
               )}
               <Heading
                 level="page"
-                className="font-bold tracking-[-0.025em]"
+                className="font-bold tracking-[-0.025em] outline-none"
+                tabIndex={-1}
+                data-route-focus-target="true"
               >
                 {title}
               </Heading>

@@ -130,7 +130,13 @@ describe('FleetComparisonPanel', () => {
     const onRetry = vi.fn()
     renderPanel({ error: new Error('boom'), onRetry })
 
-    expect(screen.queryByRole('list')).not.toBeInTheDocument()
+    // The shared error card now carries its own "where to look next" list
+    // (HELP-05), so prove the COMPARISON list is suppressed by its testid
+    // rather than by asserting no list exists anywhere on screen.
+    expect(screen.queryByTestId('error-help-links')).toBeInTheDocument()
+    expect(screen.queryAllByRole('listitem').every((li) =>
+      li.closest('[data-testid="error-help-links"]') !== null,
+    )).toBe(true)
     const retry = screen.getByRole('button', { name: /retry/i })
 
     fireEvent.click(retry)

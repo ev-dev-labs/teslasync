@@ -1,0 +1,246 @@
+name: Deploy rollback
+
+# OPS-02 — Measurable, gated rollback.
+#
+# Policy: ops/rollback/policy.yaml
+# Engine: cmd/rollback-evaluator
+#
+# Two modes, both deliberate:
+#
+#   evaluate  Reads release-health signals (Prometheus and/or a
+#             deploy-supplied snapshot) and prints a verdict:
+#             proceed | hold | rollback. Read-only. Safe to run any
+#             time, including from a deploy pipeline during bake.
+#
+#   rollback  Actually rolls the release back. Requires:
+#               * an environment with a protection rule (manual approval),
+#               * an explicit `confirm: ROLLBACK` input,
+#               * a reason string that lands in the run log.
+#             `production` is `mode: advise` in the policy, so an
+#             automated caller can never trigger this — a human must.
+#
+# NOTHING here runs on a schedule or on push. There is no path by which
+# this workflow rolls production back without a person asking it to.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        type: string
+        required: true
+      version:
+        type: string
+        required: true
+      snapshot_artifact:
+        description: 'Artifact name containing the release-health snapshot JSON'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      PROMETHEUS_URL:
+        required: false
+      PROMETHEUS_TOKEN:
+        required: false
+    outputs:
+      verdict:
+        description: 'proceed | hold | rollback'
+        value: ${{ jobs.evaluate.outputs.verdict }}
+
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'evaluate (read-only) or rollback (destructive)'
+        type: choice
+        options:
+          - evaluate
+          - rollback
+        default: evaluate
+      environment:
+        description: 'Target GitHub Environment'
+        type: environment
+        required: true
+      version:
+        description: 'Version being evaluated / rolled back FROM'
+        type: string
+        required: true
+      previous_revision:
+        description: 'Helm revision to roll back to (rollback only)'
+        type: string
+        required: false
+        default: ''
+      confirm:
+        description: 'Type ROLLBACK to authorise a destructive rollback'
+        type: string
+        required: false
+        default: ''
+      reason:
+        description: 'Why (recorded in the run log and the Grafana annotation)'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: deploy-rollback-${{ inputs.environment }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  evaluate:
+    name: Evaluate release health
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: ${{ inputs.environment }}
+    outputs:
+      verdict: ${{ steps.evaluate.outputs.verdict }}
+      automation_allowed: ${{ steps.evaluate.outputs.automation_allowed }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Validate rollback policy
+        run: go run ./cmd/ops-gate -check rollback
+
+      - name: Download release-health snapshot
+        if: inputs.snapshot_artifact != ''
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ${{ inputs.snapshot_artifact }}
+          path: snapshot
+
+      - name: Evaluate
+        id: evaluate
+        env:
+          PROMETHEUS_URL: ${{ secrets.PROMETHEUS_URL }}
+          PROMETHEUS_TOKEN: ${{ secrets.PROMETHEUS_TOKEN }}
+          # Untrusted inputs travel through the environment. This step
+          # holds a Prometheus bearer token; interpolating a
+          # dispatch-supplied string into the script would run it with
+          # that token in scope.
+          ENVIRONMENT: ${{ inputs.environment }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -o pipefail
+          SNAPSHOT_ARG=""
+          if [ -f snapshot/release-health.json ]; then
+            SNAPSHOT_ARG="-snapshot snapshot/release-health.json"
+          fi
+          # The evaluator exits 0 for `proceed`, 2 for `hold`, and 3 for
+          # `rollback`, so the shell can branch without parsing prose.
+          set +e
+          # shellcheck disable=SC2086  # SNAPSHOT_ARG is an intentional word split
+          go run ./cmd/rollback-evaluator \
+            -policy ops/rollback/policy.yaml \
+            -environment "$ENVIRONMENT" \
+            -version "$VERSION" \
+            $SNAPSHOT_ARG \
+            -json decision.json \
+            -summary "$GITHUB_STEP_SUMMARY"
+          CODE=$?
+          set -e
+          VERDICT=$(jq -r '.verdict' decision.json)
+          AUTOMATION=$(jq -r '.automation_allowed' decision.json)
+          echo "verdict=$VERDICT" >> "$GITHUB_OUTPUT"
+          echo "automation_allowed=$AUTOMATION" >> "$GITHUB_OUTPUT"
+          echo "Verdict: $VERDICT (exit $CODE, automation_allowed=$AUTOMATION)"
+          # `hold` must not fail the caller — it is a decision point, not
+          # an error. Only `rollback` is propagated as a failure, which
+          # is why the rollback job below must carry an explicit
+          # !cancelled() rather than relying on the implicit success().
+          if [ "$VERDICT" = "rollback" ]; then exit 1; fi
+
+      - name: Upload decision
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: rollback-decision-${{ github.run_number }}
+          path: decision.json
+          if-no-files-found: warn
+
+  rollback:
+    name: Execute rollback (manual, gated)
+    needs: evaluate
+    # `!cancelled()` is load-bearing, not decoration.
+    #
+    # A job with `needs:` and a custom `if:` still carries an IMPLICIT
+    # success() on its dependencies. The evaluate job deliberately exits
+    # non-zero on a `rollback` verdict — so without an explicit status
+    # function this job was skipped in precisely the situation it exists
+    # for: the operator types ROLLBACK, evaluation confirms the release
+    # is bad, and nothing happens.
+    #
+    # `!cancelled()` rather than `always()` so a cancelled run does not
+    # go on to roll production back.
+    #
+    # Enforced by `go run ./cmd/ops-gate -check workflows`.
+    if: >-
+      !cancelled() &&
+      github.event_name == 'workflow_dispatch' &&
+      inputs.action == 'rollback' &&
+      inputs.confirm == 'ROLLBACK'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    # The GitHub Environment is expected to carry a required-reviewers
+    # protection rule. That approval — not this workflow — is what makes
+    # a production rollback safe.
+    environment: ${{ inputs.environment }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Refuse an unexplained rollback
+        env:
+          REASON: ${{ inputs.reason }}
+        run: |
+          if [ -z "$REASON" ]; then
+            echo "::error::a rollback requires a reason; it becomes the incident record"
+            exit 1
+          fi
+
+      - name: Print the rollback plan
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          VERSION: ${{ inputs.version }}
+        run: |
+          go run ./cmd/rollback-evaluator \
+            -policy ops/rollback/policy.yaml \
+            -environment "$ENVIRONMENT" \
+            -version "$VERSION" \
+            -print-plan \
+            -summary "$GITHUB_STEP_SUMMARY"
+
+      # The actual `helm rollback` is intentionally NOT executed here.
+      # This repository has no committed cluster credentials, and adding
+      # them to make this step "complete" would be worse than the manual
+      # step it replaces. The plan above is the executable artifact; run
+      # it from an operator context that already holds cluster access.
+      - name: Rollback execution notice
+        env:
+          ENVIRONMENT: ${{ inputs.environment }}
+          VERSION: ${{ inputs.version }}
+          PREVIOUS_REVISION: ${{ inputs.previous_revision }}
+          REASON: ${{ inputs.reason }}
+          ACTOR: ${{ github.actor }}
+          VERDICT: ${{ needs.evaluate.outputs.verdict }}
+        run: |
+          {
+            echo "## Rollback authorised"
+            echo ""
+            echo "- Environment: \`${ENVIRONMENT}\`"
+            echo "- From version: \`${VERSION}\`"
+            echo "- Target Helm revision: \`${PREVIOUS_REVISION}\`"
+            echo "- Evaluator verdict: \`${VERDICT}\`"
+            echo "- Reason: ${REASON}"
+            echo "- Authorised by: @${ACTOR}"
+            echo ""
+            echo "Execute the printed plan from an operator context with cluster"
+            echo "credentials, then re-run \`post-deploy-smoke.yml\` against the"
+            echo "restored revision and record the outcome on this run."
+          } >> "$GITHUB_STEP_SUMMARY"

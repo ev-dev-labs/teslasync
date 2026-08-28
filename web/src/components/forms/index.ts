@@ -29,6 +29,11 @@ export {
   type TreeLeaf,
 } from './TreeSelect';
 export { UnitInput, type UnitInputProps } from './UnitInput';
+export {
+  ValidationSummary,
+  type ValidationSummaryProps,
+  type ValidationError,
+} from './ValidationSummary';
 export { VehicleSelect, type VehicleSelectProps } from './VehicleSelect';
 export {
   VehicleMultiSelect,

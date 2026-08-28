@@ -46,6 +46,10 @@ import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import { markCustomizeDashboardCompleted } from '@/features/onboarding/checklist';
+import {
+  DASHBOARD_PRESET_REQUESTED_EVENT,
+  consumePendingDashboardPreset,
+} from '@/lib/dashboardPresets';
 import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 
 import { Icons } from '@/lib/icons';
@@ -236,10 +240,47 @@ export default function DashboardPage() {
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
     reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
-    applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
+    applyPreset, applyRolePreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
     dirty, pinToVehicle,
   } = useDashboardLayout();
+
+  /* ——— HELP-11: adopt a curated role preset the user explicitly requested ———
+   *
+   * The picker lives on /help, which is a different route, so the request is
+   * normally queued while this page is unmounted. Two triggers cover both
+   * orderings without either duplicating a dashboard:
+   *
+   *   • mount — the user picked a role on /help and then navigated here;
+   *   • event — the user has both surfaces open, or picks while this page is
+   *     already mounted.
+   *
+   * The request is a ONE-SHOT record, consumed exactly once. It is emphatically
+   * NOT "preference !== applied": applied state is derived from the live widget
+   * set, so that comparison stayed true forever once a user customised
+   * anything, and every remount silently re-applied the preset — restoring
+   * deleted widgets, reversing undo, and overwriting whichever dashboard the
+   * user had switched to. Navigating to a page must never mutate a layout.
+   *
+   * Re-applying after customising is available, but only as an explicit action
+   * on the Help panel, which queues a fresh request. */
+  const applyRolePresetRef = useRef(applyRolePreset);
+  applyRolePresetRef.current = applyRolePreset;
+
+  useEffect(() => {
+    const adoptPending = () => {
+      // Consume first: a request that is taken and then fails to apply is
+      // dropped, which is strictly safer than one that survives to re-apply on
+      // every future mount.
+      const request = consumePendingDashboardPreset();
+      if (!request) return;
+      applyRolePresetRef.current(request.role);
+    };
+
+    adoptPending();
+    window.addEventListener(DASHBOARD_PRESET_REQUESTED_EVENT, adoptPending);
+    return () => window.removeEventListener(DASHBOARD_PRESET_REQUESTED_EVENT, adoptPending);
+  }, []);
   const [showPicker, setShowPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);

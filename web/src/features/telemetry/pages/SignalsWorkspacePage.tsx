@@ -39,10 +39,12 @@ import {
 
 import { PageContainer } from '@/components/layout/PageContainer';
 import { GlassPanel, Badge, Button, Select, HelpTooltip, CopyButton, TabNav, Accordion, Label, Caption } from '@/components/ui';
+import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { StatCard, BulkActionsToolbar, SavedViewMenu } from '@/components/data-display';
 import type { BulkAction } from '@/components/data-display/BulkActionsToolbar';
 import { EmptyState, AlertBanner, Skeleton } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { FadeIn } from '@/components/motion';
 import { cn } from '@/lib/cn';
 
@@ -397,6 +399,18 @@ export default function SignalsWorkspacePage() {
         />
       ) : null}
 
+      {/* HELP-03. Signal freshness is routinely misread as a health alarm: a
+          sleeping vehicle produces stale signals by design and waking it costs
+          range, so "stale" needs a definition next to the data it labels. */}
+      <p
+        className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+        data-testid="signals-glossary-strip"
+      >
+        <span>{t('signalsWorkspace.glossary.lead', 'Terms on this page:')}</span>
+        <GlossaryTerm term="signal_freshness" />
+        <GlossaryTerm term="soc" />
+      </p>
+
       {/* ── KPI headline strip ─────────────────────────────────── */}
       <FadeIn>
         <section
@@ -689,6 +703,14 @@ export default function SignalsWorkspacePage() {
                         'signalsWorkspace.emptyDesc',
                         'Pick signals from the catalog, choose a time range, then click Run for historical data — or toggle Live to stream in real time.',
                       )}
+                    />
+                    {/* HELP-02 — a sleeping vehicle is the single most common
+                        reason live signals are absent, and it is benign.
+                        Saying so stops users waking the car (which costs
+                        range) to chase a non-problem. */}
+                    <EmptyStateGuidanceDetails
+                      guidanceId="signals.live"
+                      className="mx-auto"
                     />
                   </GlassPanel>
                 </FadeIn>

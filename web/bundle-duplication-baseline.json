@@ -1,0 +1,23 @@
+{
+  "$comment": [
+    "Accepted bundle duplication (web/scripts/check-duplicate-modules.mjs).",
+    "PER FINDING, not a count: a new duplicated package, a new physical copy of an already",
+    "accepted one, a new identical-implementation group, or an accepted group spreading to a",
+    "new path all fail even though the totals may not move.",
+    "An acceptance that no longer matches an observed duplication ALSO fails, so a fix must",
+    "prune its acceptance in the same change instead of leaving the exact duplication",
+    "pre-authorised for a future reintroduction.",
+    "Regenerating only prunes; recording a NEW finding requires --accept-new-duplicates."
+  ],
+  "packageCopies": [],
+  "identicalImplementations": [
+    {
+      "sha256": "a5aa56716c89199c47847ed8eb0fcde6364130cfd54f44dc23122057ce90041b",
+      "paths": [
+        "node_modules/@opentelemetry/instrumentation-fetch/build/esm/semconv.js",
+        "node_modules/@opentelemetry/instrumentation-xml-http-request/build/esm/semconv.js"
+      ],
+      "reason": "Upstream OpenTelemetry ships an identical generated `semconv.js` inside each instrumentation package; both are pulled in by @opentelemetry/auto-instrumentations-web. Not fixable from this repository — it is vendor-internal codegen, not our duplication. Both modules live in the lazily-imported RUM chunk, so they are outside the startup closure."
+    }
+  ]
+}

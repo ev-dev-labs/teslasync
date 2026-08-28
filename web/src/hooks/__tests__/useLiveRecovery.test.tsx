@@ -276,3 +276,257 @@ describe('useLiveRecovery — Redis Pub/Sub has no replay, so we re-read', () =>
     expect(listeners.get('disconnected')?.size ?? 0).toBe(0)
   })
 })
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The cooldown must THROTTLE recoveries, never DISCARD them.
+//
+// The original implementation returned early inside the cooldown window and
+// dropped `pendingRef` on the floor. A second genuine outage landing a few
+// seconds after a recovery therefore lost its outage marker permanently: the
+// state missed during that second outage was never re-read, the connection
+// indicator went green, and the UI silently stayed behind — the exact
+// failure this hook exists to prevent, now wearing a healthy badge.
+//
+// Every case below runs on fake timers so the deferred flush is observed
+// deterministically rather than inferred from a wall-clock race.
+describe('useLiveRecovery — a second outage inside the cooldown is deferred, never dropped', () => {
+  const T0 = 1_700_000_000_000
+  const COOLDOWN = 5_000
+
+  let client: QueryClient
+  let invalidate: ReturnType<typeof vi.fn>
+
+  beforeEach(() => {
+    listeners.clear()
+    hidden = false
+    managerState.state = 'connected'
+    managerState.everConnected = true
+    Object.defineProperty(Document.prototype, 'hidden', {
+      configurable: true,
+      get: () => hidden,
+    })
+    client = new QueryClient()
+    invalidate = vi.fn()
+    client.invalidateQueries = invalidate as unknown as QueryClient['invalidateQueries']
+    vi.useFakeTimers()
+    vi.setSystemTime(T0)
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+    if (hiddenDescriptor) {
+      Object.defineProperty(Document.prototype, 'hidden', hiddenDescriptor)
+    }
+  })
+
+  /** Mount with an explicit cooldown; the pipe is already live at mount. */
+  function mount(cooldownMs = COOLDOWN, onRecover?: (ms: number) => void) {
+    return renderHook(
+      () => useLiveRecovery({ queryKeys: [['vehicle-state']], cooldownMs, onRecover }),
+      { wrapper: wrapper(client) },
+    )
+  }
+
+  /** One complete outage: down for `forMs`, then back up. */
+  function outage(forMs: number) {
+    act(() => { emit('disconnected') })
+    act(() => { vi.advanceTimersByTime(forMs) })
+    act(() => { emit('connected') })
+  }
+
+  it('runs the FIRST recovery immediately even when the clock sits at the epoch', () => {
+    // Regression guard for seeding "never recovered" as `0`: at t≈0 the
+    // elapsed-since-last-recovery arithmetic yielded a value inside the
+    // cooldown, so the very first recovery was needlessly deferred.
+    vi.setSystemTime(0)
+    mount()
+
+    outage(1_000)
+
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('holds the second outage and flushes exactly ONE recovery when the cooldown expires', () => {
+    const onRecover = vi.fn()
+    mount(COOLDOWN, onRecover)
+
+    // Outage #1 — recovers immediately, opening the cooldown window.
+    outage(1_000)
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(onRecover).toHaveBeenLastCalledWith(1_000)
+
+    // Outage #2 — a genuine, separate outage that ends inside the window.
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(2_000)
+
+    // Throttled, not dropped: nothing has fired yet, but a flush is armed.
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(1)
+
+    // Nothing escapes early.
+    act(() => { vi.advanceTimersByTime(1_999) })
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(2) })
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    expect(invalidate).toHaveBeenLastCalledWith({ queryKey: ['vehicle-state'] })
+    expect(onRecover).toHaveBeenCalledTimes(2)
+    // The window reported is the SECOND outage, not the first.
+    expect(onRecover).toHaveBeenLastCalledWith(2_000)
+    // No stray timer survives the flush.
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('collapses three in-window outages into ONE deferred recovery reporting the LONGEST gap', () => {
+    const onRecover = vi.fn()
+    mount(60_000, onRecover)
+
+    outage(500)                                   // recovery #1, opens the window
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(100) })
+    outage(3_000)
+    act(() => { vi.advanceTimersByTime(100) })
+    outage(800)                                   // shorter — must not win
+    act(() => { vi.advanceTimersByTime(100) })
+    outage(5_000)                                 // longest
+
+    // Exactly one flush is armed for all three.
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(vi.getTimerCount()).toBe(1)
+
+    act(() => { vi.advanceTimersByTime(60_000) })
+
+    expect(invalidate).toHaveBeenCalledTimes(2)
+    expect(onRecover).toHaveBeenCalledTimes(2)
+    // An honest window: the operator missed at least 5 s of state.
+    expect(onRecover).toHaveBeenLastCalledWith(5_000)
+  })
+
+  it('keeps the pending recovery when the tab hides BEFORE the deferred flush fires', () => {
+    mount()
+
+    outage(0)                                     // recovery #1 at T0
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(1_000)                                 // ends T0+2000, flush due T0+5000
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    // Tab goes to the background before the flush is due.
+    act(() => {
+      hidden = true
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    act(() => { vi.advanceTimersByTime(10_000) })
+
+    // Hidden tabs issue no traffic — and the pending marker is NOT discarded.
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      hidden = false
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(invalidate).toHaveBeenCalledTimes(2)
+  })
+
+  it('keeps the pending recovery for an in-window outage that happens entirely while hidden', () => {
+    mount()
+
+    outage(0)                                     // recovery #1
+    hidden = true
+
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(1_000)
+
+    // While hidden nothing is even scheduled — the flush is driven by
+    // visibility, so no background timer can leak a request out.
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    act(() => { vi.advanceTimersByTime(60_000) })
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      hidden = false
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(invalidate).toHaveBeenCalledTimes(2)
+  })
+
+  it('never fires a deferred recovery into an unmounted consumer', () => {
+    const onRecover = vi.fn()
+    const { unmount } = mount(COOLDOWN, onRecover)
+
+    outage(0)
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(500)
+    expect(vi.getTimerCount()).toBe(1)
+
+    unmount()
+    // The armed flush is cancelled with the subscription, not left to fire
+    // into a dead tree.
+    expect(vi.getTimerCount()).toBe(0)
+
+    act(() => { vi.advanceTimersByTime(60_000) })
+    expect(invalidate).toHaveBeenCalledTimes(1)
+    expect(onRecover).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-arms a pending recovery when the cooldown option changes mid-window', () => {
+    // The effect cleanup clears the armed timer, so an options change used to
+    // strand an already-deferred recovery for the rest of the session.
+    const { rerender } = renderHook(
+      ({ cd }: { cd: number }) =>
+        useLiveRecovery({ queryKeys: [['vehicle-state']], cooldownMs: cd }),
+      { wrapper: wrapper(client), initialProps: { cd: 60_000 } },
+    )
+
+    outage(0)                                     // recovery #1 at T0
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(1_000)                                 // deferred to T0+60000
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { rerender({ cd: 3_000 }) })
+
+    // Re-armed against the NEW cooldown: due at T0+3000, i.e. 1 s from now.
+    act(() => { vi.advanceTimersByTime(1_001) })
+    expect(invalidate).toHaveBeenCalledTimes(2)
+  })
+
+  it('arms no deferred flush for pre-open failures — there is nothing to recover', () => {
+    managerState.state = 'reconnecting'
+    managerState.everConnected = false
+    mount()
+
+    act(() => { emit('disconnected'); emit('disconnected') })
+    act(() => { emit('connected') })
+
+    expect(invalidate).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+
+    // A REAL outage after that first open still recovers normally.
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(1_000)
+    expect(invalidate).toHaveBeenCalledTimes(1)
+  })
+
+  it('recovers a late-mounted outage immediately and still defers a follow-up outage', () => {
+    // Late subscriber: the `disconnected` fired before mount and is never
+    // replayed, so the outage marker is seeded from the manager's own state.
+    managerState.state = 'reconnecting'
+    managerState.everConnected = true
+    mount()
+
+    act(() => { emit('connected') })
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(1_000) })
+    outage(1_000)
+    expect(invalidate).toHaveBeenCalledTimes(1)
+
+    act(() => { vi.advanceTimersByTime(COOLDOWN) })
+    expect(invalidate).toHaveBeenCalledTimes(2)
+  })
+})

@@ -235,6 +235,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/integrations/nhtsa"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/ops"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -2220,11 +2221,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.Get("/healthz", HealthHandler(db))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
-	// Internal: PreStop flush endpoint for Kubernetes lifecycle hooks
+	// Internal: READ-ONLY drain contract. The mutating drain endpoint
+	// (/internal/flush) is NOT mounted here — it is one-way and
+	// pod-fatal, so a public route would let any caller that reaches the
+	// ingress permanently remove a healthy pod from service. It lives on
+	// the isolated internal listener in internal/app/drain.go, on a port
+	// no Service or Ingress targets.
 	// (Signal store no longer has Postgres flush — Redis + signal_log handle persistence)
-	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
-	})
+	r.Get(ops.DrainStatusPath, DrainStatusHandler(cfg.DrainPort))
 	r.Handle("/metrics", MetricsHandler())
 
 	// Public: Automation webhook receiver (no auth — token IS the auth).
@@ -3542,7 +3546,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
-			r.Get("/events", sse.SSEHandler(automationEventHub))
+			r.Get("/events", sse.SSEHandler(automationEventHub, sse.WithDrainSignal(ShutdownGate.Drained())))
 
 			// Import/Export (static routes before {id} param)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
@@ -3985,7 +3989,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Real-time SSE stream — protected by ForwardAuthMiddleware on the parent /api/v1 group
-		r.Get("/events", sse.SSEHandler(eventHub))
+		r.Get("/events", sse.SSEHandler(eventHub, sse.WithDrainSignal(ShutdownGate.Drained())))
 		// Backward-compat stub: frontend still calls fetchSSEToken until it is removed
 		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"token": ""})

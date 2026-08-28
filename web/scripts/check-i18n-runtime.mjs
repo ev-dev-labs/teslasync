@@ -2,10 +2,19 @@
 /**
  * Owns the preview lifecycle for the headless locale probe so perf gates do
  * not depend on, or leave behind, a developer server.
+ *
+ * On top of the probe's own pass/fail it enforces fallback locality: a route
+ * may pull the grouped bundle its own feature owns, plus any number of
+ * per-namespace `locale-detail-*` chunks. Downloading another feature's
+ * grouped catalog (battery strings while rendering Drives, for example) fails
+ * the gate even when the request count stays inside the probe's cap, and a
+ * cold NotFound hit must download nothing at all.
  */
 import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { dirname, join } from 'node:path'
+import { localityFailures } from '../src/i18n/locale-request-locality.mjs'
+import { collectProcessOutput } from '../src/i18n/probe-process.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const host = '127.0.0.1'
@@ -45,17 +54,32 @@ async function main() {
       {
         cwd: join(__dirname, '..'),
         env: { ...process.env, LOCALE_PROBE_BASE_URL: baseURL },
-        stdio: 'inherit',
+        stdio: ['ignore', 'pipe', 'pipe'],
       },
     )
-    const code = await new Promise((resolve) => probe.once('exit', resolve))
+    // The probe's report is the gate's only evidence, so completion is taken
+    // from `close` (all stdio drained) rather than `exit` (process gone,
+    // pipes possibly still buffered).
+    const { code, output } = await collectProcessOutput(probe, {
+      onStdout: (chunk) => process.stdout.write(chunk),
+      onStderr: (chunk) => process.stderr.write(chunk),
+    })
+    const failures = localityFailures(output)
+    if (failures.length > 0) {
+      console.error(`[i18n-runtime] fallback locality violations:\n  - ${failures.join('\n  - ')}`)
+      process.exitCode = 1
+      return
+    }
+    console.log('[i18n-runtime] fallback locality OK — every route stayed inside its grouped-bundle allowance and request budget')
     process.exitCode = code ?? 1
   } finally {
     if (!preview.killed) preview.kill()
   }
 }
 
-main().catch((error) => {
-  console.error('[i18n-runtime] lifecycle failed:', error)
-  process.exit(1)
-})
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  main().catch((error) => {
+    console.error('[i18n-runtime] lifecycle failed:', error)
+    process.exit(1)
+  })
+}

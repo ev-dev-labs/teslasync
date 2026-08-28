@@ -1,14 +1,10 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { X, ChevronRight, Zap, Settings, Car, CheckCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { COLOR } from '@/lib/colors'
 import { broadcast, subscribe } from '@/lib/broadcast'
-
-const ONBOARDED_KEY = 'teslasync-onboarded'
-
-/** Delay before the intro surfaces so the app can paint and the user can
- *  interact with the nav first (they may dismiss without ever reading it). */
-const REVEAL_DELAY_MS = 1500
+import { useDialogFocus } from '@/hooks/useDialogFocus'
+import { markOnboardingCompleted } from '@/features/onboarding/completion'
 
 interface OnboardingStep {
   /** i18n key + English fallback for the step heading. */
@@ -60,45 +56,62 @@ const steps: OnboardingStep[] = [
   },
 ]
 
-export default function OnboardingWizard() {
+/**
+ * Explicitly-invoked product introduction.
+ *
+ * ## Controlled, never self-opening (HELP-01)
+ *
+ * This used to mount itself, wait 1.5s, and take over the screen on first
+ * run. That is exactly the automatic-modal pattern HELP-01 removed, so the
+ * self-reveal timer and the first-run storage probe are gone: the wizard is
+ * now a controlled dialog that renders only when a caller passes `open`, from
+ * a control the user pressed.
+ *
+ * ## True modal, unlike the tour
+ *
+ * Where `<TourOverlay>` is a non-modal spotlight that must leave the page
+ * reachable, this IS a modal: it covers the app and nothing behind it is
+ * actionable. It therefore uses the shared `useDialogFocus` primitive for the
+ * focus trap, Escape handling, and focus restoration, replacing three
+ * hand-rolled effects that between them had no trap at all, restored focus
+ * nowhere, and focused the container instead of its first control.
+ */
+export interface OnboardingWizardProps {
+  /** Whether the dialog is shown. Required — the wizard never opens itself. */
+  open: boolean
+  /** Called when the user finishes, skips, or dismisses. */
+  onClose: () => void
+}
+
+export default function OnboardingWizard({ open, onClose }: OnboardingWizardProps) {
   const { t } = useTranslation()
-  const [visible, setVisible] = useState(false)
   const [currentStep, setCurrentStep] = useState(0)
   const dialogRef = useRef<HTMLDivElement>(null)
 
+  // Reset to the first slide whenever it is re-opened, so a user who dismissed
+  // at step 3 does not reopen into the middle of an introduction.
   useEffect(() => {
-    let onboarded: string | null = null
-    try {
-      onboarded = localStorage.getItem(ONBOARDED_KEY)
-    } catch {
-      // Storage disabled (private mode / hardened browser) — treat the user
-      // as first-run rather than crashing the shell.
-      onboarded = null
+    if (open) setCurrentStep(0)
+  }, [open])
+
+  const handleClose = useCallback(() => {
+    // Completion is owned by the real onboarding flow (see
+    // features/onboarding/completion.ts); this records it too so an install
+    // whose only introduction was this wizard is still marked complete.
+    // Idempotent, so it does not fight the gate's write.
+    if (markOnboardingCompleted('wizard')) {
+      broadcast({ type: 'onboarded' })
     }
-    if (!onboarded) {
-      // Delay so the app renders first and user can interact with nav
-      const timer = setTimeout(() => setVisible(true), REVEAL_DELAY_MS)
-      return () => clearTimeout(timer)
-    }
-  }, [])
+    onClose()
+  }, [onClose])
 
   // When another tab finishes onboarding, dismiss the wizard here too
   // instead of letting two tabs race the same intro.
   useEffect(() => {
     return subscribe((m) => {
-      if (m.type === 'onboarded') setVisible(false)
+      if (m.type === 'onboarded') onClose()
     })
-  }, [])
-
-  const handleClose = useCallback(() => {
-    try {
-      localStorage.setItem(ONBOARDED_KEY, 'true')
-    } catch {
-      // Best-effort persistence — a peer tab or a later visit will retry.
-    }
-    setVisible(false)
-    broadcast({ type: 'onboarded' })
-  }, [])
+  }, [onClose])
 
   const handleNext = useCallback(() => {
     if (currentStep < steps.length - 1) {
@@ -108,25 +121,12 @@ export default function OnboardingWizard() {
     }
   }, [currentStep, handleClose])
 
-  // Escape-to-dismiss. The previous onKeyDown lived on a non-focusable
-  // wrapper <div>, so it never received the event; a document-level
-  // listener makes the shortcut work regardless of where focus sits.
-  useEffect(() => {
-    if (!visible) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') handleClose()
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [visible, handleClose])
+  // Shared focus primitive: traps Tab inside the dialog, closes on Escape,
+  // focuses `[data-autofocus]` on open, and restores focus to the trigger (or
+  // a route-level fallback when the trigger is gone) on close.
+  useDialogFocus({ open, containerRef: dialogRef, onClose: handleClose })
 
-  // Move focus into the dialog on open so keyboard + screen-reader users
-  // land on the surface and Tab stays within it.
-  useEffect(() => {
-    if (visible) dialogRef.current?.focus()
-  }, [visible])
-
-  if (!visible) return null
+  if (!open) return null
 
   const step = steps[currentStep] ?? steps[0]
   const StepIcon = step.icon
@@ -225,6 +225,7 @@ export default function OnboardingWizard() {
           <button
             type="button"
             onClick={handleNext}
+            data-autofocus
             className="flex items-center gap-2 rounded-xl px-5 py-2.5 text-sm font-medium text-[var(--text-primary)] transition-all"
             style={{
               background: 'linear-gradient(135deg, #00f0ff20, #8b5cf620)',

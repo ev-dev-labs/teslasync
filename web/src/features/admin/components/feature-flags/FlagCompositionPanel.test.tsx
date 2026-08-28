@@ -89,8 +89,11 @@ describe('FlagCompositionPanel — states', () => {
 
     const alert = screen.getByRole('alert');
     expect(alert).toBeInTheDocument();
-    // The composition list must NOT render behind the error.
-    expect(screen.queryByRole('list')).toBeNull();
+    // The composition list must NOT render behind the error. (QueryError itself
+    // renders a help-links list, so target the labelled composition list.)
+    expect(
+      screen.queryByRole('list', { name: 'Flag value-type composition' }),
+    ).toBeNull();
 
     const retry = screen.getByRole('button', { name: 'Retry' });
     fireEvent.click(retry);

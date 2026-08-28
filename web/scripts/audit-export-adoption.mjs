@@ -83,7 +83,13 @@ const ALTERNATIVE_EXPORT_SURFACES = [
   {
     file: 'features/driving/pages/DrivesListPage.tsx',
     label: 'Drive history',
-    markers: ['/export/drives?format=csv', '/export/drives?format=json'],
+    markers: [
+      "scopedPath('/export/drives', exportScope)",
+      "filters: { format: 'csv' }",
+      "filters: { format: 'json' }",
+      'download="teslasync-drives.csv"',
+      'download="teslasync-drives.json"',
+    ],
   },
   {
     file: 'features/charging/pages/ChargingListPage.tsx',

@@ -1,11 +1,9 @@
-import { forwardRef, useEffect, useId, useImperativeHandle, useRef, type HTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, useImperativeHandle, useRef, type HTMLAttributes, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-
-const FOCUSABLE_SELECTOR =
-  'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
+import { useDialogFocus } from '@/hooks/useDialogFocus';
 
 export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
   open: boolean;
@@ -38,77 +36,32 @@ export interface ModalProps extends HTMLAttributes<HTMLDivElement> {
  *   modal context.
  * - When `title` is present, the dialog is labelled by the heading via
  *   `aria-labelledby`. Otherwise the caller may pass `ariaLabel`.
- * - Focus is moved into the dialog when it opens (first focusable element, or
- *   the dialog container itself if none exist). Focus is set once on open and
- *   is NOT re-stolen when the parent re-renders (see `onCloseRef` below).
+ * - Focus is moved into the dialog when it opens (`[data-autofocus]` if the
+ *   caller marks one, else the first focusable element, else the dialog
+ *   container). Focus is set once on open and is NOT re-stolen when the
+ *   parent re-renders.
  * - Tab + Shift+Tab are trapped inside the dialog.
  * - Esc closes the dialog (in addition to the existing backdrop click).
  * - Focus returns to the element that triggered the open when the dialog
- *   closes.
+ *   closes; if that element was removed while the dialog was open, focus
+ *   falls back to the page heading / `<main>` instead of `<body>`.
+ *
+ * All four behaviours come from the shared `useDialogFocus` hook so Modal,
+ * Drawer, and Lightbox cannot drift apart.
  */
 export const Modal = forwardRef<HTMLDivElement, ModalProps>(
   ({ open, onClose, title, size = 'md', className, children, ariaLabel, ...props }, ref) => {
     const { t } = useTranslation();
     const dialogRef = useRef<HTMLDivElement | null>(null);
     const titleId = useId();
-    // Keep the latest onClose in a ref so the focus-trap effect can call the
-    // current callback without listing `onClose` in its dependency array.
-    // Callers routinely pass an inline arrow for `onClose`, so a new reference
-    // arrives on every parent render; depending on it made the effect re-run
-    // and re-focus the first focusable element, yanking focus away from
-    // whatever the user was interacting with inside the open dialog.
-    const onCloseRef = useRef(onClose);
-    onCloseRef.current = onClose;
     // Compose the forwarded ref with our internal ref so callers and the
     // focus-trap effect can both reach the dialog node.
     useImperativeHandle(ref, () => dialogRef.current as HTMLDivElement, []);
 
-    useEffect(() => {
-      if (!open) return;
-      const dialog = dialogRef.current;
-      if (!dialog) return;
-      const previouslyFocused = document.activeElement as HTMLElement | null;
-
-      // Focus the first interactive element, or the dialog container itself
-      // if none are present. The container has `tabIndex={-1}` for this.
-      const focusables = dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-      if (focusables.length > 0) {
-        focusables[0].focus();
-      } else {
-        dialog.focus();
-      }
-
-      const handleKeyDown = (e: KeyboardEvent) => {
-        if (e.key === 'Escape') {
-          e.stopPropagation();
-          onCloseRef.current();
-          return;
-        }
-        if (e.key !== 'Tab') return;
-        const current = dialog.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR);
-        if (current.length === 0) {
-          e.preventDefault();
-          dialog.focus();
-          return;
-        }
-        const first = current[0];
-        const last = current[current.length - 1];
-        if (e.shiftKey && document.activeElement === first) {
-          e.preventDefault();
-          last.focus();
-        } else if (!e.shiftKey && document.activeElement === last) {
-          e.preventDefault();
-          first.focus();
-        }
-      };
-
-      dialog.addEventListener('keydown', handleKeyDown);
-      return () => {
-        dialog.removeEventListener('keydown', handleKeyDown);
-        // Restore focus to the trigger so keyboard users don't lose context.
-        previouslyFocused?.focus?.();
-      };
-    }, [open]);
+    // Shared focus contract (A11Y-04): initial focus, Tab trap, Escape,
+    // and trigger restore with a resilient fallback when the trigger was
+    // removed while the dialog was open.
+    useDialogFocus({ open, containerRef: dialogRef, onClose });
 
     if (!open) return null;
 

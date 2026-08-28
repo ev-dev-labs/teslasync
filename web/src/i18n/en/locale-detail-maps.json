@@ -1,0 +1,18 @@
+{
+  "maps": {
+    "routePlayback": {
+      "empty": "No GPS points to replay for this route.",
+      "mapLabel": "Route playback map"
+    },
+    "layerSwitcher": {
+      "label": "Map style",
+      "dark": "Dark",
+      "satellite": "Satellite",
+      "streets": "Streets",
+      "terrain": "Terrain"
+    },
+    "animatedMarker": {
+      "label": "Vehicle position"
+    }
+  }
+}

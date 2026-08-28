@@ -17,6 +17,12 @@ import {
 } from '@/api/hooks/useSettings';
 import type { DashboardLayoutsPayload } from '@/api/hooks/useSettings';
 import { broadcast, subscribe } from '@/lib/broadcast';
+import {
+  presetWidgetIds,
+  reconcileAppliedPresetRole,
+  setAppliedDashboardPresetRole,
+  type DashboardPresetRole,
+} from '@/lib/dashboardPresets';
 
 const DASHBOARDS_KEY = 'teslasync-dashboards';
 const ACTIVE_KEY = 'teslasync-active-dashboard';
@@ -784,6 +790,74 @@ export function useDashboardLayout() {
     [createDashboard],
   );
 
+  /**
+   * Apply a curated ROLE preset (HELP-11) to the active dashboard, in place.
+   *
+   * Deliberately NOT `applyPreset` above: that one calls `createDashboard`,
+   * which clones a whole new `SavedDashboard`. Role presets are a curation of
+   * the dashboard the user already has — cloning would leave an orphaned copy
+   * behind on every switch and make "which one am I looking at?" a question.
+   *
+   * The composition is rebuilt from `presetWidgetIds` on every application
+   * rather than from a stored snapshot, so improving a preset improves it for
+   * everyone who selected it. Ids are validated against WIDGET_REGISTRY first:
+   * a renamed or removed widget must drop out silently rather than render a
+   * permanently-empty card.
+   *
+   * Existing layout geometry is preserved through `reconcileLayouts` — widgets
+   * the user already had keep their saved size and position, and only the
+   * newcomers get auto-placed.
+   */
+  const applyRolePreset = useCallback(
+    (role: DashboardPresetRole): boolean => {
+      const ids = presetWidgetIds(role).filter((widgetId) =>
+        WIDGET_REGISTRY_IDS.has(widgetId),
+      );
+      if (ids.length === 0) return false;
+
+      const current = activeDashRef.current;
+      // Reuse the existing instance id for a widget that is already on the
+      // dashboard so `reconcileLayouts` recognises it and keeps its geometry.
+      const existingByWidgetId = new Map(
+        current.widgets.map((w) => [w.widgetId, w] as const),
+      );
+      const widgets: WidgetInstance[] = ids.map((widgetId) => {
+        const existing = existingByWidgetId.get(widgetId);
+        return existing ?? { id: generateId(), widgetId };
+      });
+
+      const layouts = reconcileLayouts(current.layouts, widgets);
+      pushSnapshot({ widgets, layouts });
+      updateActive((d) => ({ ...d, widgets, layouts }));
+      // The marker is reconciled from the live widget set by the effect below,
+      // so this is only a fast path for the same-tick read. Undo, switch and
+      // hydration all correct it without going through here.
+      setAppliedDashboardPresetRole(role);
+      return true;
+    },
+    [updateActive, pushSnapshot],
+  );
+
+  /**
+   * Keep the "applied preset" marker honest (HELP-11).
+   *
+   * The marker used to be written once, at apply time, and never revisited —
+   * so it survived undo, a dashboard switch, backend hydration and any manual
+   * add/remove, and the Help panel went on claiming "Selected" for a layout
+   * that no longer existed.
+   *
+   * Deriving it from the ACTIVE dashboard's widget-id set on every change
+   * makes the claim structurally true: it can only say "owner" while the
+   * layout on screen actually is the owner composition. `reconcile…` writes
+   * only when the value changes, so this is cheap to run on every edit.
+   */
+  const activeWidgetIdKey = activeDashboard.widgets.map((w) => w.widgetId).join('|');
+  useEffect(() => {
+    reconcileAppliedPresetRole(activeWidgetIdKey === '' ? [] : activeWidgetIdKey.split('|'));
+    // Keyed on the widget-id string rather than the array so a re-render that
+    // produces an equal-but-new array does not re-run the reconciliation.
+  }, [activeWidgetIdKey]);
+
   const resetToDefault = useCallback(() => {
     persist([{ ...DEFAULT_DASHBOARD }], 'default');
     resetSnapshot({ widgets: DEFAULT_DASHBOARD.widgets, layouts: DEFAULT_DASHBOARD.layouts });
@@ -941,6 +1015,7 @@ export function useDashboardLayout() {
     updateDashboardSettings,
     updateDashboardIcon,
     applyPreset,
+    applyRolePreset,
     resetToDefault,
     // Edit mode
     editMode,

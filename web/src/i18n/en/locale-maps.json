@@ -1,162 +1,4 @@
 {
-  "geofences": {
-    "selectVehicle": "Select a vehicle first",
-    "noPosition": "No position data available for this vehicle",
-    "locationDenied": "Location access denied",
-    "locationFailed": "Failed to get location",
-    "searchPlaceholder": "Search by name…",
-    "noMatches": "No geofences match your search.",
-    "useCurrentLocation": "Use Current Location",
-    "vehicle": "Vehicle",
-    "browser": "Browser",
-    "chooseVehicle": "— Choose vehicle —",
-    "gettingLocation": "Getting location…",
-    "getLocation": "Get Location",
-    "drawOnMap": "Draw on map",
-    "drawHint": "Click the circle tool, then click and drag on the map to draw a fence.",
-    "drawerLabel": "Geofence drawing map",
-    "noun": {
-      "one": "geofence",
-      "other": "geofences"
-    },
-    "bulk": {
-      "delete": "Delete",
-      "deleteConfirm": {
-        "title": "Delete geofences?"
-      }
-    },
-    "filterLabel": {
-      "search": "Search"
-    },
-    "selectGeofence": "Select geofence {{name}}",
-    "error": {
-      "nameTooLong": "Max 120 characters"
-    },
-    "aiSuggest": {
-      "title": "Suggest a geofence for this location",
-      "description": "Propose a typed geofence draft (centroid, radius, and name) for this visited location based on its visit pattern. Review only — Helix never saves the geofence; you confirm and save via the existing baseline Add Geofence form.",
-      "badge": "Helix",
-      "currentLabel": "Current label",
-      "suggestButton": "Suggest geofence",
-      "applyButton": "Apply to form",
-      "proposalLabel": "Proposed geofence",
-      "radiusLabel": "Radius",
-      "rejectedLabel": "Proposal rejected by validator",
-      "pickLocation": "Pick a visited location to draft a geofence around",
-      "pickHint": "Paste a visited-location ID from the Locations page to draft a zone around it."
-    },
-    "toggleGeofence": "Toggle geofence {{name}}",
-    "editGeofence": "Edit geofence {{name}}",
-    "deleteGeofence": "Delete geofence {{name}}",
-    "summaryAria": "Geofence summary",
-    "zonesAria": "Geofence zones",
-    "zonesTitle": "Zones",
-    "zonesCount": "{{count}} defined"
-  },
-  "mapOverview": {
-    "pageTitle": "Map Overview",
-    "colTime": "Time",
-    "colLat": "Lat",
-    "colLon": "Lon",
-    "colSpeed": "Speed",
-    "speedUnit": "mph",
-    "colHeading": "Heading",
-    "title": "Map Overview",
-    "noGps": "GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.",
-    "vehicle": "Vehicle",
-    "currentSpeed": "Current Speed",
-    "heading": "Heading",
-    "latLon": "Lat / Lon",
-    "lastUpdated": "Last Updated",
-    "autoRefresh": "Auto-refreshes every 15 s",
-    "locationDetails": "Location Details",
-    "atHome": "At Home",
-    "yes": "Yes",
-    "no": "No",
-    "unknown": "Unknown",
-    "atWork": "At Work",
-    "homelinkNearby": "HomeLink Nearby",
-    "odometer": "Odometer",
-    "distanceUnit": "mi",
-    "speedUnitValue": "{{unit}}",
-    "distanceUnitValue": "{{unit}}",
-    "noLocation": "No location data available yet",
-    "quickLinks": "Quick Links",
-    "navRoute": "Navigation Route",
-    "geofences": "Geofences",
-    "locations": "Locations",
-    "recentHistory": "Recent Location History",
-    "noHistory": "No location history found.",
-    "noHistoryDescription": "Location history appears after the selected vehicle reports valid GPS positions.",
-    "recentPlayback": "Recent Route Playback",
-    "playbackLabel": "Recent route playback map",
-    "subtitle": "Live vehicle location and recent history",
-    "kpis": "Vehicle status",
-    "noPlayback": "Not enough GPS points to replay a route yet.",
-    "mapRegion": "Live location map"
-  },
-  "navigation": {
-    "noRoute": "No active route selected"
-  },
-  "tempImpact": {
-    "tipCold": "Precondition your cabin in cold weather to reduce battery drain",
-    "tipHot": "Park in shade during hot weather to preserve battery efficiency",
-    "manageVehicles": "Manage vehicles",
-    "title": "Temperature Impact",
-    "subtitle": "How outside temperature affects driving efficiency",
-    "avgEfficiency": "Avg Efficiency",
-    "bestRange": "Best Temp Range",
-    "worstRange": "Worst Temp Range",
-    "totalPoints": "Total Data Points",
-    "scatterTitle": "Temperature vs Efficiency",
-    "temperature": "Temperature",
-    "efficiency": "Efficiency",
-    "scatterName": "Drives",
-    "bucketTitle": "Efficiency by Temperature Range",
-    "avgEff": "Avg Efficiency",
-    "optimalTitle": "Optimal Temperature Analysis",
-    "tipsTitle": "Recommendations",
-    "tipOptimal": "Best efficiency observed in the {{range}} range",
-    "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
-    "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.",
-    "aiNarrative": {
-      "title": "Narrate the cabin-temperature impact",
-      "description": "Ask Helix to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
-      "badge": "Helix",
-      "generateButton": "Narrate impact",
-      "emptyHint": "Select a vehicle to narrate its temperature impact."
-    },
-    "bucketAria": "Average efficiency line chart by temperature range bucket",
-    "monthlyAria": "Monthly drive count bars and average temperature line",
-    "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive"
-  },
-  "locations": {
-    "filterLabel": {
-      "search": "Search"
-    },
-    "empty": {
-      "cta": "View drives"
-    },
-    "resetDateRange": "Reset date range",
-    "inspect": "Inspect {{location}}",
-    "unknown": "Unknown location",
-    "lastVisited": "Last visited",
-    "preview": {
-      "eyebrow": "Location evidence",
-      "lastVisited": "Last visited {{date}}"
-    },
-    "aiAutoName": {
-      "title": "Suggest a name for this location",
-      "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
-      "badge": "Helix",
-      "currentLabel": "Current label",
-      "proposalLabel": "Proposed name",
-      "rejectedLabel": "Proposal rejected by validator",
-      "suggestButton": "Suggest name",
-      "applyButton": "Apply to form",
-      "applied": "Suggested name ready to save:"
-    }
-  },
   "chargingPlaces": {
     "workspace": {
       "title": "Charging Places",
@@ -301,5 +143,163 @@
       "default_estimate": "Default Estimate",
       "unknown": "Unknown"
     }
+  },
+  "geofences": {
+    "selectVehicle": "Select a vehicle first",
+    "noPosition": "No position data available for this vehicle",
+    "locationDenied": "Location access denied",
+    "locationFailed": "Failed to get location",
+    "searchPlaceholder": "Search by name…",
+    "noMatches": "No geofences match your search.",
+    "useCurrentLocation": "Use Current Location",
+    "vehicle": "Vehicle",
+    "browser": "Browser",
+    "chooseVehicle": "— Choose vehicle —",
+    "gettingLocation": "Getting location…",
+    "getLocation": "Get Location",
+    "drawOnMap": "Draw on map",
+    "drawHint": "Click the circle tool, then click and drag on the map to draw a fence.",
+    "drawerLabel": "Geofence drawing map",
+    "noun": {
+      "one": "geofence",
+      "other": "geofences"
+    },
+    "bulk": {
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete geofences?"
+      }
+    },
+    "filterLabel": {
+      "search": "Search"
+    },
+    "selectGeofence": "Select geofence {{name}}",
+    "error": {
+      "nameTooLong": "Max 120 characters"
+    },
+    "aiSuggest": {
+      "title": "Suggest a geofence for this location",
+      "description": "Propose a typed geofence draft (centroid, radius, and name) for this visited location based on its visit pattern. Review only — Helix never saves the geofence; you confirm and save via the existing baseline Add Geofence form.",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "suggestButton": "Suggest geofence",
+      "applyButton": "Apply to form",
+      "proposalLabel": "Proposed geofence",
+      "radiusLabel": "Radius",
+      "rejectedLabel": "Proposal rejected by validator",
+      "pickLocation": "Pick a visited location to draft a geofence around",
+      "pickHint": "Paste a visited-location ID from the Locations page to draft a zone around it."
+    },
+    "toggleGeofence": "Toggle geofence {{name}}",
+    "editGeofence": "Edit geofence {{name}}",
+    "deleteGeofence": "Delete geofence {{name}}",
+    "summaryAria": "Geofence summary",
+    "zonesAria": "Geofence zones",
+    "zonesTitle": "Zones",
+    "zonesCount": "{{count}} defined"
+  },
+  "locations": {
+    "filterLabel": {
+      "search": "Search"
+    },
+    "empty": {
+      "cta": "View drives"
+    },
+    "resetDateRange": "Reset date range",
+    "inspect": "Inspect {{location}}",
+    "unknown": "Unknown location",
+    "lastVisited": "Last visited",
+    "preview": {
+      "eyebrow": "Location evidence",
+      "lastVisited": "Last visited {{date}}"
+    },
+    "aiAutoName": {
+      "title": "Suggest a name for this location",
+      "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "proposalLabel": "Proposed name",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest name",
+      "applyButton": "Apply to form",
+      "applied": "Suggested name ready to save:"
+    }
+  },
+  "mapOverview": {
+    "pageTitle": "Map Overview",
+    "colTime": "Time",
+    "colLat": "Lat",
+    "colLon": "Lon",
+    "colSpeed": "Speed",
+    "speedUnit": "mph",
+    "colHeading": "Heading",
+    "title": "Map Overview",
+    "noGps": "GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.",
+    "vehicle": "Vehicle",
+    "currentSpeed": "Current Speed",
+    "heading": "Heading",
+    "latLon": "Lat / Lon",
+    "lastUpdated": "Last Updated",
+    "autoRefresh": "Auto-refreshes every 15 s",
+    "locationDetails": "Location Details",
+    "atHome": "At Home",
+    "yes": "Yes",
+    "no": "No",
+    "unknown": "Unknown",
+    "atWork": "At Work",
+    "homelinkNearby": "HomeLink Nearby",
+    "odometer": "Odometer",
+    "distanceUnit": "mi",
+    "speedUnitValue": "{{unit}}",
+    "distanceUnitValue": "{{unit}}",
+    "noLocation": "No location data available yet",
+    "quickLinks": "Quick Links",
+    "navRoute": "Navigation Route",
+    "geofences": "Geofences",
+    "locations": "Locations",
+    "recentHistory": "Recent Location History",
+    "noHistory": "No location history found.",
+    "noHistoryDescription": "Location history appears after the selected vehicle reports valid GPS positions.",
+    "recentPlayback": "Recent Route Playback",
+    "playbackLabel": "Recent route playback map",
+    "subtitle": "Live vehicle location and recent history",
+    "kpis": "Vehicle status",
+    "noPlayback": "Not enough GPS points to replay a route yet.",
+    "mapRegion": "Live location map"
+  },
+  "navigation": {
+    "noRoute": "No active route selected"
+  },
+  "tempImpact": {
+    "tipCold": "Precondition your cabin in cold weather to reduce battery drain",
+    "tipHot": "Park in shade during hot weather to preserve battery efficiency",
+    "manageVehicles": "Manage vehicles",
+    "title": "Temperature Impact",
+    "subtitle": "How outside temperature affects driving efficiency",
+    "avgEfficiency": "Avg Efficiency",
+    "bestRange": "Best Temp Range",
+    "worstRange": "Worst Temp Range",
+    "totalPoints": "Total Data Points",
+    "scatterTitle": "Temperature vs Efficiency",
+    "temperature": "Temperature",
+    "efficiency": "Efficiency",
+    "scatterName": "Drives",
+    "bucketTitle": "Efficiency by Temperature Range",
+    "avgEff": "Avg Efficiency",
+    "optimalTitle": "Optimal Temperature Analysis",
+    "tipsTitle": "Recommendations",
+    "tipOptimal": "Best efficiency observed in the {{range}} range",
+    "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
+    "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.",
+    "aiNarrative": {
+      "title": "Narrate the cabin-temperature impact",
+      "description": "Ask Helix to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
+      "badge": "Helix",
+      "generateButton": "Narrate impact",
+      "emptyHint": "Select a vehicle to narrate its temperature impact."
+    },
+    "bucketAria": "Average efficiency line chart by temperature range bucket",
+    "monthlyAria": "Monthly drive count bars and average temperature line",
+    "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive"
   }
 }

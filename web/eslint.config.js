@@ -222,7 +222,7 @@ export default [
     },
     rules: {
       // Permissive defaults. R13 flips to disallow + explicit allow.
-      'boundaries/element-types': [
+      'boundaries/dependencies': [
         'warn',
         {
           default: 'allow',

@@ -18,7 +18,7 @@
  *   7. The default export is the same component as the named export.
  */
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { render, screen, cleanup } from '@testing-library/react';
+import { render, screen, cleanup, within } from '@testing-library/react';
 import '@/i18n';
 
 import type { AlertEvent } from '@/api/types';
@@ -234,8 +234,12 @@ describe('AlertDetailTimeline — timestamp + ordering + wiring', () => {
         events={[makeEvent({ kind: 'created', occurred_at: '2026-07-04T12:00:00Z' })]}
       />,
     );
-    // Year is timezone-stable for a mid-year UTC timestamp.
-    expect(screen.getByText(/2026/)).toBeInTheDocument();
+    // Year is timezone-stable for a mid-year UTC timestamp. Scope the query to
+    // the list: the Timeline also renders an sr-only range summary that repeats
+    // the same formatted timestamps.
+    expect(
+      within(screen.getByRole('list', { name: 'Timeline' })).getByText(/2026/),
+    ).toBeInTheDocument();
   });
 
   it('renders the em-dash placeholder for an unparseable occurred_at', () => {

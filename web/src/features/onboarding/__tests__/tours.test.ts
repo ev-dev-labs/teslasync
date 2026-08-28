@@ -53,17 +53,19 @@ describe('tour registry', () => {
     }
   })
 
-  it('only the main tour declares an autoStart predicate', () => {
+  it('no tour declares an autoStart predicate — every tour is opt-in (HELP-01)', () => {
+    // A tour that can start itself is a tour that can interrupt. Onboarding
+    // that fires without being asked lives in `lib/onboardingTasks` instead:
+    // one inline hint, on the relevant route, only while the task is
+    // outstanding, and never for an experienced user.
     const withAutoStart = listTours().filter((t) => typeof t.autoStart === 'function')
-    expect(withAutoStart).toHaveLength(1)
-    expect(withAutoStart[0]!.id).toBe('main')
+    expect(withAutoStart).toHaveLength(0)
   })
 
-  it('main tour autoStart only matches the dashboard root with at least one vehicle', () => {
+  it('the main tour is reachable only through the launcher', () => {
     const main = getTour('main')!
-    expect(main.autoStart!({ pathname: '/', vehicleCount: 1 })).toBe(true)
-    expect(main.autoStart!({ pathname: '/', vehicleCount: 0 })).toBe(false)
-    expect(main.autoStart!({ pathname: '/vehicles', vehicleCount: 1 })).toBe(false)
+    expect(main.autoStart).toBeUndefined()
+    expect(isRecommendedForRoute(main, '/')).toBe(true)
   })
 
   it('storage round-trips completion status with version namespace', () => {

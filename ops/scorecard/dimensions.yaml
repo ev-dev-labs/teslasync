@@ -1,0 +1,231 @@
+# OPS-13 — Production readiness scorecard definition.
+#
+# `go run ./cmd/readiness-scorecard` renders
+# docs/operations/production-readiness-scorecard.md from THIS file plus
+# the live state of the repository. Nothing in the generated document is
+# hand-written, and nothing here asserts a status — status is derived:
+#
+#   met          every evidence path exists and the named gate passes.
+#   gap          an evidence path is missing or the gate fails.
+#   unverifiable the criterion needs a deployed environment / real
+#                credentials, so CI cannot prove it either way. These are
+#                counted and listed separately, never silently as "met".
+#
+# `gate` values must name a check implemented by cmd/ops-gate.
+version: 1
+
+status_values: [met, gap, unverifiable]
+
+# `requires_human_review: true` marks a criterion whose assessment is a
+# judgement no command can make. CI can only confirm the artifact
+# exists, so these are reported as `unverifiable` and excluded from the
+# score — otherwise "a document exists" would count the same as "a gate
+# passes", and the number would mean nothing. Such criteria MUST use
+# `verification: manual review`; the gate rejects any mismatch.
+
+dimensions:
+  # ── Availability ─────────────────────────────────────────────────────
+  - id: availability
+    title: Availability
+    question: Can we tell when the platform is down, and does a bad deploy get caught before users do?
+    criteria:
+      - id: avail-slo-catalog
+        statement: Every user-facing endpoint has a declarative SLO.
+        evidence: [slo/catalog.yaml, slo/catalog.schema.json]
+        verification: go run ./cmd/slo-coverage-audit
+      - id: avail-burn-alerts
+        statement: SLOs are alerted on with multi-window multi-burn-rate rules, not single-window thresholds.
+        evidence: [helm/teslasync/files/prometheus/alerting-rules.yaml, helm/teslasync/files/prometheus/recording-rules.yaml]
+        verification: helm template test helm/teslasync
+      - id: avail-post-deploy-smoke
+        statement: An authenticated smoke gate runs against the deployment after every release.
+        evidence: [ops/smoke/checks.yaml, cmd/smoke-gate, .github/workflows/post-deploy-smoke.yml]
+        gate: smoke
+        verification: go run ./cmd/ops-gate -check smoke
+      - id: avail-probe-contract
+        statement: Liveness, readiness, and preStop drain endpoints exist and behave correctly under shutdown.
+        evidence: [internal/api/router.go, internal/ops/lifecycle.go, internal/ops/lifecycle_test.go]
+        verification: go test ./internal/ops/...
+      - id: avail-staged-rollout
+        statement: Rollout is staged with canary controls and an explicit pause switch.
+        evidence: [ops/rollout/stages.yaml, helm/teslasync/templates/deployment-canary.yaml]
+        gate: rollout
+        verification: go run ./cmd/ops-gate -check rollout
+
+  # ── Latency ──────────────────────────────────────────────────────────
+  - id: latency
+    title: Latency & performance
+    question: Do we have measured budgets for backend and frontend, and do regressions block a release?
+    criteria:
+      - id: lat-api-budgets
+        statement: API latency SLOs exist with explicit percentile budgets.
+        evidence: [slo/catalog.yaml]
+        verification: go run ./cmd/slo-coverage-audit
+      - id: lat-web-vitals
+        statement: Core Web Vitals (LCP/INP/CLS/FCP/TTFB) are collected from real users and have SLOs.
+        evidence: [slo/catalog.yaml, helm/teslasync/files/grafana/dashboards/frontend-rum-overview.json]
+        verification: go run ./cmd/slo-coverage-audit
+      - id: lat-regression-gate
+        statement: Frontend performance regressions are caught in CI before merge.
+        evidence: [.github/workflows/perf.yml, web/lighthouserc.json]
+        verification: gh workflow view perf.yml
+      - id: lat-rollback-thresholds
+        statement: Latency and Web Vitals thresholds are wired into the automated rollback policy.
+        evidence: [ops/rollback/policy.yaml, cmd/rollback-evaluator]
+        gate: rollback
+        verification: go run ./cmd/ops-gate -check rollback
+      - id: lat-capacity-profiles
+        statement: Repeatable capacity profiles exist for the load shapes that break this system.
+        evidence: [ops/capacity/profiles.yaml, tests/k6/sse_fanout.js, tests/k6/analytics_read.js, tests/k6/export_generation.js]
+        gate: capacity
+        verification: go run ./cmd/ops-gate -check capacity
+      - id: lat-capacity-executed
+        statement: Each capacity profile has been executed against a representative environment and its results recorded.
+        evidence: [ops/capacity/profiles.yaml]
+        requires_deployed_infrastructure: true
+        verification: gh workflow run capacity-test.yml -f profile=<id> -f confirm=RUN
+
+  # ── Security ─────────────────────────────────────────────────────────
+  - id: security
+    title: Security & supply chain
+    question: Can a consumer prove what is in a release, and can an attacker move a tag under us?
+    criteria:
+      - id: sec-scanning
+        statement: SAST, container scanning, secret scanning, and Go vulnerability scanning run in CI.
+        evidence: [.github/workflows/security.yml, .gitleaks.toml]
+        verification: gh workflow view security.yml
+      - id: sec-immutable-actions
+        statement: Security workflow actions and scanner images are SHA/digest pinned.
+        evidence: [scripts/check-security-workflow-pins.go, scripts/check-security-workflow-pins_test.go]
+        verification: go run ./scripts/check-security-workflow-pins.go
+      - id: sec-release-immutability
+        statement: Release workflow actions and images are SHA/digest pinned too.
+        evidence: [ops/release/supply-chain.yaml, .github/workflows/release.yml]
+        gate: supply-chain
+        verification: go run ./cmd/ops-gate -check supply-chain
+      - id: sec-sbom-signing-provenance
+        statement: Every published image ships a signature, an SBOM attestation, and SLSA build provenance.
+        evidence: [.github/workflows/release.yml, ops/release/supply-chain.yaml, docs/operations/release-verification.md]
+        gate: supply-chain
+        verification: go run ./cmd/ops-gate -check supply-chain
+      - id: sec-vuln-status
+        statement: Each release publishes its vulnerability status, and a fixable CRITICAL blocks every public release side effect rather than only the notes.
+        evidence: [.github/workflows/release.yml, ops/release/supply-chain.yaml, ops/workflows/policy.yaml]
+        gate: workflows
+        verification: go run ./cmd/ops-gate -check workflows
+      - id: sec-no-repo-secrets
+        statement: No credential values live in the repository; ops manifests reference env var names only.
+        evidence: [ops/smoke/checks.yaml, .gitleaks.toml]
+        gate: smoke
+        verification: go run ./cmd/ops-gate -check smoke
+      - id: sec-workflow-injection
+        statement: No workflow interpolates an untrusted input into a shell script that holds secrets.
+        evidence: [ops/workflows/policy.yaml, internal/ops/workflows.go]
+        gate: workflows
+        verification: go run ./cmd/ops-gate -check workflows
+      - id: sec-drain-plane-isolated
+        statement: The pod-fatal preStop drain endpoint is not reachable through any Service or Ingress.
+        evidence: [internal/app/drain.go, internal/ops/helmrender.go, ops/rollout/stages.yaml]
+        gate: rollout
+        verification: helm template test helm/teslasync | go run ./cmd/ops-gate -verify-helm-render -
+
+  # ── Accessibility ────────────────────────────────────────────────────
+  - id: accessibility
+    title: Accessibility
+    question: Is the UI usable with a keyboard and a screen reader, and is that enforced?
+    criteria:
+      - id: a11y-guidelines
+        statement: Documented accessibility guidelines exist for contributors.
+        evidence: [docs/A11Y_GUIDELINES.md]
+        verification: manual review
+        requires_human_review: true
+      - id: a11y-automated-gate
+        statement: Automated axe + keyboard checks run in CI on every PR touching the frontend.
+        evidence: [.github/workflows/frontend-quality.yml, web/e2e/axeBaseline.ts]
+        verification: gh workflow view frontend-quality.yml
+      - id: a11y-chart-annotations
+        statement: Data visualisations carry accessible descriptions rather than being image-only.
+        evidence: [web/src/lib/chartA11y.ts, web/scripts/audit-chart-a11y.mjs]
+        verification: node web/scripts/audit-chart-a11y.mjs
+      - id: a11y-audit-record
+        statement: A recorded accessibility audit exists with tracked findings.
+        evidence: [docs/audits/a11y-audit.md]
+        verification: manual review
+        requires_human_review: true
+
+  # ── Recovery ─────────────────────────────────────────────────────────
+  - id: recovery
+    title: Recovery & resilience
+    question: When something breaks, do we know what to do, and have we proved the backups work?
+    criteria:
+      - id: rec-degraded-runbooks
+        statement: Every external dependency has a degraded-mode runbook.
+        evidence: [ops/runbooks/dependencies.yaml, docs/runbooks/degraded-mode-database.md]
+        gate: runbooks
+        verification: go run ./cmd/ops-gate -check runbooks
+      - id: rec-migration-review
+        statement: Every new migration is reviewed for forward compatibility, rollback, duration, and lock risk.
+        evidence: [ops/migrations/manifest.yaml, internal/ops/migrations.go]
+        gate: migrations
+        verification: go run ./cmd/ops-gate -check migrations
+      - id: rec-rollback-policy
+        statement: A measurable rollback policy exists with an ordered, executable remediation plan.
+        evidence: [ops/rollback/policy.yaml, cmd/rollback-evaluator, .github/workflows/deploy-rollback.yml]
+        gate: rollback
+        verification: go run ./cmd/ops-gate -check rollback
+      - id: rec-backup-verification
+        statement: Backup artifacts are verified automatically, not assumed.
+        evidence: [cmd/backup-verify, internal/backupverify]
+        verification: go test ./cmd/backup-verify/...
+      - id: rec-fixtures-executable
+        statement: Every SQL fixture the drill depends on matches the live schema and is executed in CI, not merely checked for existence.
+        evidence: [ops/fixtures/registry.yaml, internal/ops/fixtures.go, scripts/seed-restore-drill.sql, scripts/seed-test-vehicle.sql]
+        gate: fixtures
+        verification: go run ./cmd/ops-gate -check fixtures
+      - id: rec-restore-drill-defined
+        statement: A scheduled restore drill is defined and wired to a workflow.
+        evidence: [ops/restore/drill.yaml, .github/workflows/backup-restore-drill.yml, docs/runbooks/backup-restore-drill.md]
+        gate: restore
+        verification: go run ./cmd/ops-gate -check restore
+      - id: rec-restore-drill-executed
+        statement: A production-artifact restore drill has succeeded and its RTO is recorded.
+        evidence: [ops/restore/drill.yaml]
+        requires_deployed_infrastructure: true
+        verification: gh workflow run backup-restore-drill.yml -f mode=production-artifact
+      - id: rec-graceful-shutdown
+        statement: Shutdown drains in-flight work instead of dropping it, the grace period can hold the whole budget, and both are covered by tests.
+        evidence: [internal/app/run.go, internal/app/drain.go, internal/app/drain_test.go, internal/ops/lifecycle.go, internal/ops/lifecycle_test.go]
+        verification: go test ./internal/ops/... ./internal/app/...
+      - id: rec-config-parity
+        statement: Config cannot drift between Go, Compose, and Helm.
+        evidence: [ops/config/parity.yaml, internal/ops/parity.go]
+        gate: config-parity
+        verification: go run ./cmd/ops-gate -check config-parity
+
+  # ── Cost ─────────────────────────────────────────────────────────────
+  - id: cost
+    title: Cost & resource control
+    question: Can this deployment run away with someone's money or disk?
+    criteria:
+      - id: cost-resource-limits
+        statement: Every workload declares CPU/memory requests and limits.
+        evidence: [helm/teslasync/values.yaml, docker-compose.yml]
+        verification: helm template test helm/teslasync
+      - id: cost-autoscaling-bounds
+        statement: Autoscaling has explicit min/max bounds rather than unbounded growth.
+        evidence: [helm/teslasync/templates/hpa.yaml, helm/teslasync/values.yaml]
+        verification: helm template test helm/teslasync
+      - id: cost-data-retention
+        statement: Time-series retention is bounded so storage cost is finite.
+        evidence: [helm/teslasync/values.yaml, docs/operations/cost-controls.md]
+        verification: manual review
+        requires_human_review: true
+      - id: cost-ai-spend-limits
+        statement: AI provider spend is rate-limited and budgeted per-account.
+        evidence: [internal/ai/limit/cost.go, internal/ai/limit/quota.go]
+        verification: go test ./internal/ai/limit/...
+      - id: cost-capacity-ceilings
+        statement: Capacity tests have hard duration ceilings and cannot be pointed at production.
+        evidence: [ops/capacity/profiles.yaml, .github/workflows/capacity-test.yml]
+        gate: capacity
+        verification: go run ./cmd/ops-gate -check capacity

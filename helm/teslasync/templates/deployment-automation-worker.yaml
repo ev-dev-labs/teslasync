@@ -8,6 +8,15 @@ metadata:
     app.kubernetes.io/component: automation-worker
 spec:
   replicas: {{ .Values.automationWorker.replicaCount }}
+  {{- if .Values.rollout.paused }}
+  paused: true
+  {{- end }}
+  {{- if .Values.rollout.automationWorker.strategy.type }}
+  # OPS-05: only rendered when explicitly opted in, so the default
+  # deployment behaviour (Kubernetes' own RollingUpdate) is unchanged.
+  strategy:
+    type: {{ .Values.rollout.automationWorker.strategy.type }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "teslasync.selectorLabels" . | nindent 6 }}

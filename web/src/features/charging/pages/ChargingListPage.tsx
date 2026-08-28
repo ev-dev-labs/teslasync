@@ -13,6 +13,7 @@ import { FadeIn } from '@/components/motion';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { DataStateNotice, QueryError, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { EmptyStateThreshold } from '@/components/feedback/EmptyStateThreshold';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
@@ -1367,25 +1368,33 @@ export default function ChargingListPage() {
                 />
               </>
             ) : !isLoading && (
-              <EmptyState
-                icon={<Battery className="h-8 w-8" />}
-                title={
-                  collection !== 'all'
-                    ? t('charging.emptyForCollection', 'No charging sessions in this view')
-                    : t('charging.emptyTitle', 'No charging sessions yet')
-                }
-                message={
-                  collection !== 'all'
-                    ? t('charging.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
-                    : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
-                }
-                action={{
-                  label: t('charging.empty.cta', 'Reset filters'),
-                  onClick: () => {
-                    setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
-                  },
-                }}
-              />
+              <>
+                <EmptyState
+                  icon={<Battery className="h-8 w-8" />}
+                  title={
+                    collection !== 'all'
+                      ? t('charging.emptyForCollection', 'No charging sessions in this view')
+                      : t('charging.emptyTitle', 'No charging sessions yet')
+                  }
+                  message={
+                    collection !== 'all'
+                      ? t('charging.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
+                      : t('charging.emptyMessage', 'Charging data will appear here once your vehicle records sessions.')
+                  }
+                  action={{
+                    label: t('charging.empty.cta', 'Reset filters'),
+                    onClick: () => {
+                      setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
+                    },
+                  }}
+                />
+                {/* HELP-02 — governed prerequisite + likely cause. Only for
+                    the unfiltered view; the filtered branch above already
+                    tells the user to clear filters. */}
+                {collection === 'all' && (
+                  <EmptyStateGuidanceDetails guidanceId="charging.list" className="mx-auto" />
+                )}
+              </>
             )}
           </section>
         </FadeIn>

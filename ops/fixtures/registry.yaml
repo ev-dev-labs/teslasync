@@ -1,0 +1,50 @@
+# SQL fixture registry.
+#
+# Every SQL fixture the release/ops tooling depends on is registered
+# here so it cannot rot unnoticed. Two independent checks:
+#
+#   1. `go run ./cmd/ops-gate -check fixtures` reconstructs the effective
+#      schema by replaying CREATE TABLE / ALTER TABLE ADD|DROP|RENAME
+#      COLUMN across migrations/, then verifies every INSERT column list
+#      against it. It also rejects writes to a
+#      `GENERATED ALWAYS AS IDENTITY` column. No database required.
+#
+#   2. The `fixture-execution` job in .github/workflows/ops-gate.yml runs
+#      each fixture FOR REAL against a freshly migrated TimescaleDB and
+#      asserts the declared tables end up non-empty. Column names are
+#      only part of what can be wrong.
+#
+# WHY: scripts/seed-restore-drill.sql and scripts/seed-test-vehicle.sql
+# were both written against the pre-000142 `vehicles` shape — explicit
+# `id`, plus `vehicle_id` / `trim_badging` / `exterior_color` /
+# `wheel_type` / `state` / `healthy`, none of which still exist. Neither
+# would have executed. The restore drill's only gate was "the file
+# exists", so the failure was invisible until someone actually ran it —
+# i.e. during a real recovery.
+version: 1
+
+schema:
+  migrations_dir: migrations
+
+fixtures:
+  - id: restore-drill
+    path: scripts/seed-restore-drill.sql
+    description: >-
+      Representative rows for every table in ops/restore/drill.yaml
+      critical_tables, so the backup restore drill compares real counts
+      instead of 0 against 0.
+    seeds_tables:
+      - vehicles
+      - drives
+      - charging_sessions
+    executed_by: .github/workflows/ops-gate.yml#fixture-execution
+
+  - id: test-vehicle
+    path: scripts/seed-test-vehicle.sql
+    description: >-
+      Minimal "one vehicle exists" seed for local development and signal
+      replay. The richer local fixture (unit history, live state,
+      settings) is tests/fixtures/seed_test_vehicle.sql.
+    seeds_tables:
+      - vehicles
+    executed_by: .github/workflows/ops-gate.yml#fixture-execution

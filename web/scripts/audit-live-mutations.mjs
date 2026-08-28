@@ -241,6 +241,12 @@ const MODE_INDEPENDENT_MUTATIONS = {
   ],
   'hooks/useSettingsBackup.ts': ['useExportSettings', 'useDryRunImport'],
   'hooks/useSharing.ts': ['useCreateShareLink', 'useRevokeShareLink'],
+  // A problem report must be submittable precisely when things are broken —
+  // vehicle asleep, telemetry stalled, an endpoint failing. Gating it on live
+  // mode would silence the reports most worth receiving. The payload is
+  // sanitised client-side and carries no vehicle state, so there is nothing
+  // for a live guard to protect.
+  'hooks/useSupport.ts': ['useSubmitProblemReport'],
   'hooks/useSystemDiagnostic.ts': ['useRunDiagnostic'],
   'hooks/useTOTP.ts': [
     'useTOTPEnroll',

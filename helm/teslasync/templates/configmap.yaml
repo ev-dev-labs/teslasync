@@ -7,6 +7,8 @@ metadata:
 data:
   DATABASE_HOST: {{ include "teslasync.postgresql.host" . | quote }}
   DATABASE_PORT: {{ include "teslasync.postgresql.port" . | quote }}
+  # OPS-09: isolated drain listener port (see values.yaml `drain`).
+  TESLASYNC_DRAIN_PORT: {{ .Values.drain.port | quote }}
   DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}
   DATABASE_NAME: {{ include "teslasync.postgresql.database" . | quote }}
   DATABASE_SSLMODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
@@ -140,16 +142,13 @@ data:
   DLQ_REPLAY_ENABLED: "false"
   DLQ_RING_CAPACITY: "200"
   {{- end }}
-  {{- if not .Values.secrets.existingSecret }}
-  {{- if .Values.config.googleMaps.apiKey }}
-  GOOGLE_MAPS_API_KEY: {{ .Values.config.googleMaps.apiKey | quote }}
-  {{- end }}
-  {{- end }}
-  {{- if not .Values.secrets.existingSecret }}
-  {{- if .Values.config.azureMaps.apiKey }}
-  AZURE_MAPS_API_KEY: {{ .Values.config.azureMaps.apiKey | quote }}
-  {{- end }}
-  {{- end }}
+  # NOTE: GOOGLE_MAPS_API_KEY and AZURE_MAPS_API_KEY are deliberately NOT
+  # rendered here. They are credentials and live in templates/secret.yaml
+  # only; both the ConfigMap and the Secret are mounted via envFrom, so the
+  # container environment is unchanged. Duplicating them into a ConfigMap
+  # made them readable by anything with `get configmaps` and put them in
+  # plaintext `helm get manifest` output.
+  # Enforced by: go run ./cmd/ops-gate -check config-parity
   # Inbound api_call_logs middleware (Phase 38-10).
   # Body capture defaults to OFF; enable only for diagnostic windows.
   {{- if .Values.config.apiLogs }}

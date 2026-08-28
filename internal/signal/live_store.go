@@ -276,30 +276,7 @@ func (s *HybridLiveSignalStore) redisCache() *RedisSignalCache {
 }
 
 func (s *HybridLiveSignalStore) hydrateMissingValues(vehicleID int64, values map[string]*Value) {
-	if len(values) == 0 {
-		return
-	}
-	s.l1.mu.Lock()
-	defer s.l1.mu.Unlock()
-
-	signals, ok := s.l1.vehicles[vehicleID]
-	if !ok {
-		signals = make(map[string]*Value, len(values))
-		s.l1.vehicles[vehicleID] = signals
-	}
-	for name, value := range values {
-		if value == nil || value.Raw == nil {
-			continue
-		}
-		// Live-wins: never overwrite an existing L1 entry with a hydrated
-		// Redis value. Legacy zero-Timestamp values are now restamped via
-		// RedisSignalCache.RestampLegacy before this call, so they carry a
-		// non-zero Timestamp and flow through this hydration path.
-		if _, exists := signals[name]; exists {
-			continue
-		}
-		signals[name] = cloneSignalValue(value)
-	}
+	s.l1.HydrateValues(vehicleID, values)
 }
 
 func validateLiveSignalStoreMode(mode LiveSignalStoreMode) error {

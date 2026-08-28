@@ -1,68 +1,4 @@
 {
-  "pinned": {
-    "section": {
-      "title": "Pinned",
-      "watching": "Watching"
-    },
-    "empty": {
-      "vehicle": "Pin frequently-used vehicles to keep them at the top.",
-      "alert_rule": "Pin alert rules to keep them under \"Watching\".",
-      "widget": "Pin widgets to keep them at the top of your dashboard.",
-      "geofence": "Pin geofences to keep them at the top of the list.",
-      "automation": "Pin automations to keep them at the top of the list.",
-      "default": "Nothing pinned yet."
-    }
-  },
-  "notificationSounds": {
-    "title": "Notification sounds",
-    "subtitle": "Play a short cue when an alert or completion event arrives. Plays even while the tab is visible.",
-    "master": "Enable notification sounds",
-    "categoriesHeading": "Channels",
-    "volume": "Volume",
-    "test": "Test",
-    "testAria": "Test {{name}} sound",
-    "autoplayHint": "Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.",
-    "category": {
-      "critical_alert": "Critical alerts",
-      "warning_alert": "Warning alerts",
-      "info_alert": "Informational alerts",
-      "charge_complete": "Charge complete",
-      "drive_complete": "Drive complete",
-      "automation_run": "Automation runs",
-      "achievement": "Achievements"
-    }
-  },
-  "webpush": {
-    "title": "Browser push",
-    "subtitle": "Get OS-level notifications even when TeslaSync is closed.",
-    "enable": "Enable on this device",
-    "disable": "Disable on this device",
-    "iosNote": "iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.",
-    "status": {
-      "subscribed": "Active on this device",
-      "notSubscribed": "Not subscribed",
-      "unsupported": "Unavailable"
-    },
-    "unsupported": {
-      "notification": "This browser doesn't support notifications.",
-      "pushApi": "This browser doesn't support the Push API.",
-      "permissionDenied": "Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.",
-      "serverDisabled": "Browser push is not configured on this server. Ask your administrator to set the VAPID keys."
-    },
-    "devices": {
-      "title": "Registered devices",
-      "lastUsed": "Last used {{when}}",
-      "neverUsed": "Not yet used",
-      "remove": "Remove this device",
-      "thisDevice": "(this device)",
-      "unknownAgent": "Unknown browser"
-    },
-    "checking": "Checking browser push availability…",
-    "error": {
-      "load": "Couldn't check browser push availability."
-    },
-    "retry": "Retry"
-  },
   "alertRules": {
     "title": "Alert rules",
     "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",
@@ -128,11 +64,6 @@
       "nameTooLong": "Max 120 characters"
     },
     "openStudio": "Open Alert Studio"
-  },
-  "severity": {
-    "info": "Info",
-    "warn": "Warning",
-    "critical": "Critical"
   },
   "notificationBurnRate": {
     "title": "Notification Burn Rate",
@@ -212,5 +143,74 @@
       "measured": "Measured",
       "derived": "Derived"
     }
+  },
+  "notificationSounds": {
+    "title": "Notification sounds",
+    "subtitle": "Play a short cue when an alert or completion event arrives. Plays even while the tab is visible.",
+    "master": "Enable notification sounds",
+    "categoriesHeading": "Channels",
+    "volume": "Volume",
+    "test": "Test",
+    "testAria": "Test {{name}} sound",
+    "autoplayHint": "Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.",
+    "category": {
+      "critical_alert": "Critical alerts",
+      "warning_alert": "Warning alerts",
+      "info_alert": "Informational alerts",
+      "charge_complete": "Charge complete",
+      "drive_complete": "Drive complete",
+      "automation_run": "Automation runs",
+      "achievement": "Achievements"
+    }
+  },
+  "pinned": {
+    "section": {
+      "title": "Pinned",
+      "watching": "Watching"
+    },
+    "empty": {
+      "vehicle": "Pin frequently-used vehicles to keep them at the top.",
+      "alert_rule": "Pin alert rules to keep them under \"Watching\".",
+      "widget": "Pin widgets to keep them at the top of your dashboard.",
+      "geofence": "Pin geofences to keep them at the top of the list.",
+      "automation": "Pin automations to keep them at the top of the list.",
+      "default": "Nothing pinned yet."
+    }
+  },
+  "severity": {
+    "info": "Info",
+    "warn": "Warning",
+    "critical": "Critical"
+  },
+  "webpush": {
+    "title": "Browser push",
+    "subtitle": "Get OS-level notifications even when TeslaSync is closed.",
+    "enable": "Enable on this device",
+    "disable": "Disable on this device",
+    "iosNote": "iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.",
+    "status": {
+      "subscribed": "Active on this device",
+      "notSubscribed": "Not subscribed",
+      "unsupported": "Unavailable"
+    },
+    "unsupported": {
+      "notification": "This browser doesn't support notifications.",
+      "pushApi": "This browser doesn't support the Push API.",
+      "permissionDenied": "Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.",
+      "serverDisabled": "Browser push is not configured on this server. Ask your administrator to set the VAPID keys."
+    },
+    "devices": {
+      "title": "Registered devices",
+      "lastUsed": "Last used {{when}}",
+      "neverUsed": "Not yet used",
+      "remove": "Remove this device",
+      "thisDevice": "(this device)",
+      "unknownAgent": "Unknown browser"
+    },
+    "checking": "Checking browser push availability…",
+    "error": {
+      "load": "Couldn't check browser push availability."
+    },
+    "retry": "Retry"
   }
 }

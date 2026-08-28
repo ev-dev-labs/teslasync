@@ -1,4 +1,4 @@
-import { type ReactNode, type MouseEvent as ReactMouseEvent, useState, useCallback, useEffect, useMemo, useRef } from 'react'
+import { type ReactNode, type MouseEvent as ReactMouseEvent, isValidElement, useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { cn } from '../../lib/cn'
@@ -12,6 +12,8 @@ import { DataTableColumnMenu } from './DataTableColumnMenu'
 import { DataTableBulkBar } from './DataTableBulkBar'
 import { DataTableResizer } from './DataTableResizer'
 import { useContextMenu, type ContextMenuItem } from './ContextMenu'
+import { VisuallyHidden } from '../a11y/VisuallyHidden'
+import { useStatusAnnouncer } from '@/hooks/useStatusAnnouncer'
 import {
   applyColumnLayout,
   defaultColumnLayout,
@@ -33,6 +35,97 @@ import {
 } from '../../lib/csvExport'
 
 type RowKey = string | number
+
+/**
+ * Maximum characters taken from a derived row label.
+ *
+ * A first column that renders a sentence would otherwise turn every
+ * checkbox name into a paragraph, which is slower to listen to than the
+ * generic wording it replaced.
+ */
+const MAX_DERIVED_ROW_LABEL = 60
+
+/** How deep to dig into a cell renderer's JSX looking for its text. */
+const ROW_LABEL_SEARCH_DEPTH = 4
+
+/**
+ * Pull the human-readable text out of whatever a cell renderer returned.
+ *
+ * Cell renderers almost never return a bare string — the overwhelmingly
+ * common shape is `<span className="…">{row.name}</span>`, a badge, or a
+ * flex row with an icon. Reading only `typeof rendered === 'string'`
+ * therefore missed nearly every table, which is why so many selection
+ * checkboxes still fell back to "Select row".
+ *
+ * The walk is shallow (`ROW_LABEL_SEARCH_DEPTH`) and skips
+ * `aria-hidden` subtrees, so decorative icons and screen-reader-hidden
+ * chrome never leak into the name. It never mounts anything — cell
+ * renderers are pure by contract, and this only reads the element tree
+ * they already returned for the row being drawn.
+ *
+ * @returns Trimmed text, or null when the cell has no readable content.
+ */
+export function extractRenderedText(
+  node: ReactNode,
+  depth = 0,
+): string | null {
+  if (node == null || typeof node === 'boolean') return null
+  if (typeof node === 'string') {
+    const trimmed = node.trim()
+    return trimmed || null
+  }
+  if (typeof node === 'number') return String(node)
+  if (Array.isArray(node)) {
+    const parts = node
+      .map((child) => extractRenderedText(child, depth + 1))
+      .filter((part): part is string => Boolean(part))
+    const joined = parts.join(' ').trim()
+    return joined || null
+  }
+  if (depth >= ROW_LABEL_SEARCH_DEPTH) return null
+  if (isValidElement(node)) {
+    const props = node.props as { children?: ReactNode; 'aria-hidden'?: unknown }
+    // Decorative content is hidden from assistive tech on screen; it must
+    // not sneak back in through a checkbox name.
+    if (props?.['aria-hidden'] === true || props?.['aria-hidden'] === 'true') {
+      return null
+    }
+    return extractRenderedText(props?.children, depth + 1)
+  }
+  return null
+}
+
+/**
+ * True when a row key is a machine identifier that must never be spoken.
+ *
+ * Screen readers read an unpronounceable token character by character.
+ * "Select 3 f a 9 c 2 dash 1 b 4 e dash 4 c 7 d …" is strictly worse
+ * than the generic "Select row" — it is longer, conveys nothing, and
+ * cannot be repeated back by a voice-control user.
+ *
+ * Rejected:
+ *   - UUIDs (with or without dashes)
+ *   - hex digests (git SHAs, content hashes)
+ *   - bare numeric primary keys ("Select 4291")
+ *   - anything long enough to be a random token rather than a name
+ *
+ * Kept: short, word-shaped keys such as `drives:list` or `model-3`,
+ * which do read acceptably.
+ */
+export function isOpaqueRowKey(key: string): boolean {
+  const value = key.trim()
+  if (!value) return true
+  if (/^\d+$/.test(value)) return true
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(value)) {
+    return true
+  }
+  // Hex digests: 12+ hex characters with no word structure.
+  if (/^[0-9a-f]{12,}$/i.test(value)) return true
+  // Long opaque tokens (nanoid, base64url, ULID). A genuine human label
+  // this long would contain a space.
+  if (value.length > 24 && !/\s/.test(value)) return true
+  return false
+}
 
 export interface Column<T> {
   key: string
@@ -139,6 +232,25 @@ interface DataTableProps<T> {
   selectable?: 'single' | 'multi' | 'none'
   /** Controlled list of selected row keys. */
   selectedKeys?: RowKey[]
+  /**
+   * Row-identifying text for the selection checkbox's accessible name,
+   * so screen-reader users hear "Select Model 3 — 12 Mar" instead of
+   * forty identical "Select row" checkboxes.
+   *
+   * When omitted, DataTable derives the label from the first visible
+   * column when that column renders plain text, and falls back to the
+   * generic wording when it cannot.
+   */
+  rowLabel?: (row: T) => string
+  /**
+   * Accessible name for the `<table>` element, rendered as a
+   * visually-hidden `<caption>`.
+   *
+   * Defaults to `name`, then `tableId`. Set it explicitly whenever a
+   * page renders more than one table, so the AT elements list can tell
+   * them apart.
+   */
+  caption?: string
   /** Called whenever the selection changes. */
   onSelectionChange?: (keys: RowKey[]) => void
   /** Renders above the header when `selectedKeys.length > 0`. The selected
@@ -294,6 +406,8 @@ export function DataTable<T>({
   tableId,
   selectable = 'none',
   selectedKeys,
+  rowLabel,
+  caption,
   onSelectionChange,
   bulkActions,
   stickyHeader = true,
@@ -478,6 +592,7 @@ export function DataTable<T>({
   }
 
   // ── Selection ───────────────────────────────────────────────────────────
+  const { announceSelection, announceSort } = useStatusAnnouncer()
   const isSelectable = selectable !== 'none'
   const selection = selectedKeys ?? []
   const selectionSet = useMemo(() => new Set(selection), [selection])
@@ -492,8 +607,16 @@ export function DataTable<T>({
   }, [someSelected])
 
   const setSelection = useCallback(
-    (next: RowKey[]) => onSelectionChange?.(next),
-    [onSelectionChange],
+    (next: RowKey[]) => {
+      onSelectionChange?.(next)
+      // A11Y: selection is a state change with no visual focus move, so
+      // without a live-region message a screen-reader user has no idea
+      // whether their Space press registered — or how many rows a
+      // shift-range just swept in. Governed by `useStatusAnnouncer`, so a
+      // fast click-drag across 40 rows speaks once with the final count.
+      announceSelection(next.length, allRowKeys.length)
+    },
+    [onSelectionChange, announceSelection, allRowKeys.length],
   )
 
   const toggleRow = useCallback(
@@ -534,6 +657,22 @@ export function DataTable<T>({
   }, [allSelected, allRowKeys, setSelection])
 
   const clearSelection = useCallback(() => setSelection([]), [setSelection])
+
+  // A11Y: sorting re-orders rows underneath the user with no focus move
+  // and no visible-to-AT cue beyond the `aria-sort` attribute — which is
+  // only discovered by navigating back to the header. Announce the new
+  // order instead. Fires on the sortKey/sortDir edge (never on mount) so
+  // a table that renders pre-sorted stays quiet.
+  const sortSignature = `${sortKey ?? ''}:${sortDir ?? ''}`
+  const lastSortSignature = useRef(sortSignature)
+  useEffect(() => {
+    if (lastSortSignature.current === sortSignature) return
+    lastSortSignature.current = sortSignature
+    if (!sortKey) return
+    const column = columns.find(c => c.key === sortKey)
+    if (!column) return
+    announceSort(column.header, sortDir === 'desc' ? 'desc' : 'asc')
+  }, [sortSignature, sortKey, sortDir, columns, announceSort])
 
   // ── Expansion ───────────────────────────────────────────────────────────
   const expansion = expandedKeys ?? []
@@ -609,6 +748,60 @@ export function DataTable<T>({
   // Total visible column count for colSpan calcs (incl. selection / expand).
   const leadingColCount = (isSelectable ? 1 : 0) + (expandable ? 1 : 0)
   const totalCols = leadingColCount + visibleColumns.length
+
+  // ── Accessible naming (A11Y) ───────────────────────────────────────────
+  // A `<table>` with no name is announced as "table" and nothing else, so
+  // a page with three tables gives the user no way to tell them apart in
+  // the elements list. Prefer an explicit caption, then the boundary
+  // `name`, then the stable `tableId`, and only fall back to a generic
+  // string when a caller supplied none of them.
+  const accessibleTableName =
+    caption ?? name ?? tableId ?? t('table.genericName', 'Data table')
+
+  /**
+   * Row-identifying label for the selection checkbox.
+   *
+   * "Select row" repeated 40 times is useless: the user cannot tell which
+   * row they are about to toggle without leaving the checkbox to read the
+   * cells. Resolution order:
+   *
+   *   1. an explicit `rowLabel(row)` from the call site — always best,
+   *      because only the page knows which field identifies a row;
+   *   2. the first visible column's rendered TEXT, dug out of the JSX
+   *      that renderer returns (see {@link extractRenderedText}); most
+   *      renderers wrap the value in a `<span>` or a badge, so reading
+   *      only a bare string would almost never hit;
+   *   3. the row key — but only if it is human-meaningful.
+   *
+   * Step 3 is deliberately hostile to database identifiers. A UUID
+   * announced by a screen reader is read out character by character —
+   * "Select 3 f a 9 c 2 dash 1 b 4 e dash …" — which is materially worse
+   * than the generic "Select row" it replaced. {@link isOpaqueRowKey}
+   * rejects those, and `null` here means the caller falls back to the
+   * generic wording.
+   */
+  const rowLabelFor = useCallback(
+    (row: T, rowKey: RowKey): string | null => {
+      if (rowLabel) {
+        const explicit = rowLabel(row)?.trim()
+        if (explicit) return explicit
+      }
+      const first = visibleColumns[0]
+      if (first) {
+        const derived = extractRenderedText(first.render(row))
+        if (derived) {
+          return derived.length > MAX_DERIVED_ROW_LABEL
+            ? `${derived.slice(0, MAX_DERIVED_ROW_LABEL).trimEnd()}…`
+            : derived
+        }
+      }
+      if (typeof rowKey === 'string' && !isOpaqueRowKey(rowKey)) {
+        return rowKey.trim()
+      }
+      return null
+    },
+    [rowLabel, visibleColumns],
+  )
 
   // ── Virtualization ─────────────────────────────────────────────────────
   // Only enabled when explicitly opted in AND there's no `expandable` slot
@@ -734,11 +927,17 @@ export function DataTable<T>({
               // Read-only because we drive state via onClick to
               // capture shiftKey for range selection.
               onChange={() => { /* handled in onClick */ }}
-              aria-label={
-                selected
-                  ? t('table.selection.deselectRow', 'Deselect row')
-                  : t('table.selection.selectRow', 'Select row')
-              }
+              aria-label={(() => {
+                const label = rowLabelFor(row, rowKey)
+                if (!label) {
+                  return selected
+                    ? t('table.selection.deselectRow', 'Deselect row')
+                    : t('table.selection.selectRow', 'Select row')
+                }
+                return selected
+                  ? t('table.selection.deselectRowNamed', 'Deselect {{row}}', { row: label })
+                  : t('table.selection.selectRowNamed', 'Select {{row}}', { row: label })
+              })()}
               className={cn(
                 'border-[var(--border-strong)] bg-[var(--surface-2)] text-cyan-500 focus:ring-cyan-500 focus:ring-offset-0',
                 selectable === 'single' ? '' : 'rounded',
@@ -962,7 +1161,14 @@ export function DataTable<T>({
       )}
 
       <div ref={scrollContainerRef} className={wrapperClass} style={wrapperStyle}>
-        <table className={tableTokens.wrapper}>
+        <table className={tableTokens.wrapper} aria-label={accessibleTableName}>
+          {/* A11Y: a `<caption>` is the only table-native accessible name,
+              and screen readers announce it when the user enters the grid
+              ("Drives, table, 8 columns, 24 rows"). It is visually hidden
+              because the surrounding panel already carries a visible
+              heading — duplicating it on screen would be redundant, but
+              omitting it entirely leaves the table anonymous. */}
+          <VisuallyHidden as="caption">{accessibleTableName}</VisuallyHidden>
           <thead>
             <tr className={headRowClass}>
               {/* Selection header */}
@@ -1020,7 +1226,20 @@ export function DataTable<T>({
                       col.className,
                     )}
                     style={w != null ? { width: w, minWidth: w } : undefined}
-                    aria-sort={col.sortable && sortKey === col.key ? (sortDir === 'asc' ? 'ascending' : 'descending') : undefined}
+                    aria-sort={
+                      col.sortable
+                        ? sortKey === col.key
+                          ? sortDir === 'asc'
+                            ? 'ascending'
+                            : 'descending'
+                          // A11Y: `none` (rather than omitting the
+                          // attribute) is what tells the user the column
+                          // IS sortable but is not currently the sort
+                          // key. Omitting it makes a sortable column
+                          // indistinguishable from a static one.
+                          : 'none'
+                        : undefined
+                    }
                   >
                     <span className="inline-flex items-center gap-1">
                       {headerReorderEnabled && (

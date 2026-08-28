@@ -1,8 +1,0 @@
-{
-  "installPrompt": {
-    "title": "Install TeslaSync",
-    "subtitle": "Add to home screen for native experience",
-    "install": "Install",
-    "dismiss": "Dismiss install prompt"
-  }
-}

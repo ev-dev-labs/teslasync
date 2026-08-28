@@ -1,0 +1,166 @@
+# OPS-10 — Repeatable capacity-test profiles.
+#
+# These profiles are DEFINITIONS, not results. Nothing in this file
+# asserts that a load test has been executed. `last_executed: never`
+# means exactly that, and `go run ./cmd/ops-gate -check capacity` fails
+# if a profile claims a result without a recorded run reference.
+#
+# Execution is opt-in and explicitly confirmed:
+#   gh workflow run capacity-test.yml -f profile=telemetry-burst -f confirm=RUN
+# or locally:
+#   go run ./cmd/ops-gate -check capacity            # validate only
+#   k6 run tests/k6/<script>                          # requires a target
+version: 1
+
+safety:
+  # A profile may only target these environments. Production load tests
+  # are structurally impossible without editing this list under review.
+  allowed_environments: [local, ephemeral-ci, staging]
+  # Every execution path must require an explicit confirmation token so
+  # a stray workflow_dispatch cannot generate load.
+  require_confirmation: true
+  confirmation_token: RUN
+  # Hard ceiling applied by the workflow regardless of profile settings.
+  max_duration: 30m
+  # Profiles that write to a datastore must run against a disposable one.
+  destructive_profiles_require_ephemeral_stack: true
+
+profiles:
+  - id: telemetry-burst
+    title: Fleet Telemetry ingest burst
+    description: >-
+      Sustained per-field MQTT publish burst through the phase-42
+      PipelineSubscriber → codec → normalize.Pipeline → router chain,
+      sized to model a whole fleet waking simultaneously after a
+      software update.
+    subsystem: telemetry-ingest
+    driver: mqtt
+    entrypoint: cmd/pub-test-signal
+    destructive: true
+    workload:
+      vehicles: 25
+      fields_per_vehicle: 40
+      publish_rate_per_second: 500
+      ramp_up: 1m
+      duration: 5m
+    thresholds:
+      - metric: teslasync_mqtt_backlog
+        comparison: lt
+        value: 1000
+        rationale: slo/catalog.yaml mqtt_no_backlog treats a persistent backlog as an availability breach.
+      - metric: normalize_pipeline_process_seconds_p99
+        comparison: lt
+        value: 0.25
+        rationale: Ingest must stay well inside the 15s FSM reconciliation tick.
+    observability:
+      dashboards: [slo-normalize_throughput, slo-telemetry_freshness, slo-mqtt_no_backlog]
+    last_executed: never
+
+  - id: sse-fanout
+    title: SSE fan-out under wide subscriber count
+    description: >-
+      Many concurrent EventSource subscribers on /api/v1/events while a
+      steady signal-change stream is broadcast, to size the hub's
+      per-client channel buffers and the Redis Pub/Sub fan-out.
+    subsystem: realtime
+    driver: k6
+    entrypoint: tests/k6/sse_fanout.js
+    destructive: false
+    workload:
+      concurrent_subscribers: 500
+      broadcast_rate_per_second: 50
+      ramp_up: 30s
+      duration: 5m
+    thresholds:
+      - metric: teslasync_sse_connections_active
+        comparison: gte
+        value: 495
+        rationale: Fewer than 99% of subscribers connected means the hub is shedding clients.
+      - metric: sse_event_delivery_latency_p95_seconds
+        comparison: lt
+        value: 1.0
+        rationale: slo/catalog.yaml sse_delivery expects sub-second live updates.
+    observability:
+      dashboards: [slo-sse_delivery]
+    last_executed: never
+
+  - id: analytics-query
+    title: Analytics read amplification
+    description: >-
+      Concurrent reads across the heaviest analytics endpoints
+      (battery degradation, fleet stats, route efficiency) to expose
+      hypertable scan regressions and pgx pool starvation.
+    subsystem: analytics
+    driver: k6
+    entrypoint: tests/k6/analytics_read.js
+    destructive: false
+    workload:
+      virtual_users: 50
+      ramp_up: 1m
+      duration: 5m
+    thresholds:
+      - metric: http_req_duration_p99_seconds
+        comparison: lt
+        value: 1.5
+        rationale: Analytics pages become unusable past ~1.5s p99; slo battery_health_latency_1s targets 1s.
+      - metric: http_req_failed_ratio
+        comparison: lt
+        value: 0.01
+        rationale: Pool exhaustion shows up as 5xx long before latency saturates.
+    observability:
+      dashboards: [slo-api_latency_p99_500ms, slo-battery_health_latency_1s]
+    last_executed: never
+
+  - id: export-generation
+    title: Concurrent export job generation
+    description: >-
+      Parallel large export requests through the export worker to size
+      memory, temp storage, and object-storage upload throughput.
+    subsystem: exports
+    driver: k6
+    entrypoint: tests/k6/export_generation.js
+    destructive: true
+    workload:
+      concurrent_exports: 10
+      rows_per_export: 500000
+      duration: 10m
+    thresholds:
+      - metric: export_job_duration_p95_seconds
+        comparison: lt
+        value: 300
+        rationale: Exports queued behind a 5-minute p95 stop feeling interactive and pile up.
+      - metric: export_job_failed_ratio
+        comparison: lt
+        value: 0.01
+        rationale: OOM or storage backpressure surfaces as job failures first.
+    observability:
+      dashboards: [slo-overview]
+    last_executed: never
+
+  - id: reconnect-storm
+    title: Reconnect storm after dependency flap
+    description: >-
+      Drop MQTT and SSE connections simultaneously (via toxiproxy) and
+      measure recovery: broker resubscription, SSE client reconnect
+      backoff, and signal store rehydration from signal_log.
+    subsystem: resilience
+    driver: chaos
+    entrypoint: cmd/chaos-runner
+    destructive: false
+    workload:
+      concurrent_subscribers: 250
+      flap_count: 5
+      flap_interval: 30s
+      duration: 5m
+    thresholds:
+      - metric: time_to_full_resubscribe_seconds
+        comparison: lt
+        value: 60
+        rationale: Longer than a minute of blind ingest exceeds the telemetry freshness SLO window.
+      - metric: teslasync_sse_connections_active_recovery_ratio
+        comparison: gte
+        value: 0.95
+        rationale: Clients that never reconnect show up to users as a permanently frozen dashboard.
+    observability:
+      dashboards: [slo-telemetry_freshness, slo-sse_delivery]
+    last_executed: never

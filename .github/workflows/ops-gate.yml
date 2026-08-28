@@ -1,0 +1,251 @@
+name: Ops gate
+
+# OPS-01…OPS-13 — static release/operations gates.
+#
+# Everything this workflow runs is deterministic and offline: no cluster,
+# no credentials, no network. It validates the machine-readable manifests
+# under ops/ against the actual state of the repository, so a broken
+# release/operations control fails at PR time rather than during an
+# incident.
+#
+# What it enforces (see `go run ./cmd/ops-gate -list`):
+#   epics · smoke · rollback · restore · migrations · rollout
+#   config-parity · supply-chain · capacity · runbooks · scorecard
+#
+# The migration gate is the one most likely to fail an unrelated PR, and
+# that is intentional: a new migration without a forward-compatibility,
+# rollback, duration, and lock-risk review is exactly what this is for.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ops-gate-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Static ops gates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Run all ops gates
+        run: go run ./cmd/ops-gate -summary "$GITHUB_STEP_SUMMARY"
+
+      - name: Unit tests for the gate implementations
+        run: go test ./internal/ops/... ./cmd/ops-gate/... ./cmd/smoke-gate/... ./cmd/rollback-evaluator/... ./cmd/release-annotate/... ./cmd/readiness-scorecard/...
+
+      - name: Lifecycle behaviour tests (shutdown, readiness, draining, leases, SSE)
+        run: go test ./internal/ops/... ./internal/api/sse/... -run 'Lifecycle|Readiness|PreStop|Drain|Lease|SSEHandler' -v
+
+      # The scorecard is generated, never hand-edited. `-check`
+      # regenerates it in memory and compares content, ignoring the
+      # `Generated:` timestamp — so a stale document fails, but merely
+      # regenerating on a different day does not.
+      - name: Production readiness scorecard is up to date
+        run: go run ./cmd/readiness-scorecard -check
+
+  # ── Fixtures are EXECUTED, not merely inspected ────────────────────
+  #
+  # `-check fixtures` reconstructs the schema from migrations/ and
+  # verifies every INSERT column list offline. That catches dropped and
+  # identity columns — the class of defect that made both seed scripts
+  # unrunnable — but column names are only part of what can be wrong.
+  # This job runs each registered fixture against a freshly migrated
+  # database and asserts the declared tables end up non-empty.
+  fixture-execution:
+    name: Execute SQL fixtures against a migrated database
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        # TimescaleDB, not plain postgres: migration 000142_baseline_typed
+        # does CREATE EXTENSION timescaledb. Digest-pinned per OPS-08.
+        image: timescale/timescaledb-ha@sha256:a693dd7fbb75b51c3d717507a9956501686edb123b48dd90b094fd5612d53abe # pg17
+        env:
+          POSTGRES_USER: fixture
+          POSTGRES_PASSWORD: fixture
+          POSTGRES_DB: teslasync_fixture
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGPASSWORD: fixture
+      DB_URL: postgres://fixture:fixture@localhost:5432/teslasync_fixture?sslmode=disable
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Static fixture/schema check
+        run: go run ./cmd/ops-gate -check fixtures
+
+      - name: Install migrate + psql client
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Apply migrations
+        run: migrate -path migrations -database "$DB_URL" up
+
+      - name: Execute every registered fixture
+        run: |
+          set -euo pipefail
+          FAILED=0
+          for fixture in $(go run ./cmd/ops-gate -print-fixtures); do
+            echo "── executing $fixture"
+            if ! psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$fixture"; then
+              echo "::error file=$fixture::fixture failed to execute against the migrated schema"
+              FAILED=1
+            fi
+          done
+          exit $FAILED
+
+      # Running twice proves idempotency: a fixture that doubles its rows
+      # on re-run makes the drill's parity numbers depend on how many
+      # times it has executed.
+      - name: Re-execute (idempotency)
+        run: |
+          set -euo pipefail
+          for fixture in $(go run ./cmd/ops-gate -print-fixtures); do
+            psql "$DB_URL" -v ON_ERROR_STOP=1 -f "$fixture" > /dev/null
+          done
+
+      - name: Assert the declared tables are non-empty
+        run: |
+          set -euo pipefail
+          FAILED=0
+          for t in $(go run ./cmd/ops-gate -check restore -print-critical-tables); do
+            n=$(psql "$DB_URL" -tAc "SELECT count(*) FROM ${t};" | tr -d '[:space:]')
+            echo "${t}=${n}"
+            if [ "$n" -eq 0 ]; then
+              echo "::error::critical table '${t}' is empty after executing every fixture; the restore drill would compare 0 against 0"
+              FAILED=1
+            fi
+          done
+          exit $FAILED
+
+  helm-rollout:
+    name: Helm rollout controls
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
+        with:
+          version: v3.16.0
+
+      # Default values must render exactly the pre-existing workloads:
+      # no canary Deployment, no paused rollout, api/web on
+      # RollingUpdate 1/0, workers with no strategy block at all.
+      - name: Defaults preserve existing deployment behaviour
+        run: |
+          set -euo pipefail
+          helm template test helm/teslasync > default.yaml
+
+          if grep -q 'teslasync.io/rollout' default.yaml; then
+            echo "::error::default (legacy) selectors must not carry a rollout label"
+            exit 1
+          fi
+          if grep -qE '^\s+paused: true' default.yaml; then
+            echo "::error::rollout.paused defaulted to true"
+            exit 1
+          fi
+          grep -q 'maxSurge: 1' default.yaml
+          grep -q 'maxUnavailable: 0' default.yaml
+
+      # OPS-05/OPS-09 post-template invariants: selector disjointness,
+      # Service selecting both tiers, no Service publishing the drain
+      # port, and a grace period that can hold the shutdown budget.
+      - name: Rendered-manifest assertions (default)
+        run: go run ./cmd/ops-gate -verify-helm-render default.yaml
+
+      - name: Canary requires disjoint selectors
+        run: |
+          set -euo pipefail
+          # With legacy selectors the stable Deployment/HPA/PDB would
+          # also match canary pods, so the chart must refuse to render.
+          if helm template test helm/teslasync --set rollout.api.canary.enabled=true > /dev/null 2>&1; then
+            echo "::error::canary rendered with legacy selectors; the overlap guard is gone"
+            exit 1
+          fi
+          echo "canary correctly refused in legacy selector mode"
+
+      - name: Rendered-manifest assertions (canary + autoscaling + PDB)
+        run: |
+          set -euo pipefail
+          helm template test helm/teslasync \
+            --set rollout.selectorMode=disjoint \
+            --set rollout.api.canary.enabled=true \
+            --set rollout.web.canary.enabled=true \
+            --set rollout.api.canary.replicaCount=2 \
+            --set autoscaling.enabled=true \
+            --set podDisruptionBudget.enabled=true \
+            --set web.podDisruptionBudget.enabled=true > canary.yaml
+
+          grep -q 'name: test-teslasync-api-canary' canary.yaml
+          grep -q 'name: test-teslasync-web-canary' canary.yaml
+          go run ./cmd/ops-gate -verify-helm-render canary.yaml -expect-canary
+
+      - name: Rendered-manifest assertions (disjoint, no canary)
+        run: |
+          set -euo pipefail
+          helm template test helm/teslasync \
+            --set rollout.selectorMode=disjoint \
+            --set autoscaling.enabled=true > disjoint.yaml
+          go run ./cmd/ops-gate -verify-helm-render disjoint.yaml
+
+      - name: Pause switch renders
+        run: |
+          set -euo pipefail
+          helm template test helm/teslasync --set rollout.paused=true > paused.yaml
+          grep -qE '^\s+paused: true' paused.yaml
+
+      - name: No credential is rendered into a ConfigMap
+        env:
+          CANARY_GOOGLE: CANARYVALUEGOOGLE
+          CANARY_AZURE: CANARYVALUEAZURE
+          CANARY_TESLA: CANARYVALUETESLA
+        run: |
+          set -euo pipefail
+          helm template test helm/teslasync \
+            --set config.googleMaps.apiKey="$CANARY_GOOGLE" \
+            --set config.azureMaps.apiKey="$CANARY_AZURE" \
+            --set tesla.clientSecret="$CANARY_TESLA" > secrets.yaml
+
+          # Extract only ConfigMap documents and assert no credential value
+          # appears in any of them.
+          awk 'BEGIN{RS="\n---\n"} /kind: ConfigMap/' secrets.yaml > configmaps.yaml
+          for needle in "$CANARY_GOOGLE" "$CANARY_AZURE" "$CANARY_TESLA"; do
+            if grep -q "$needle" configmaps.yaml; then
+              echo "::error::a credential rendered into a ConfigMap"
+              exit 1
+            fi
+          done
+
+      - name: Lint
+        run: helm lint helm/teslasync --strict

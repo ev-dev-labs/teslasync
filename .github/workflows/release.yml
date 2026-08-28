@@ -20,7 +20,8 @@ concurrency:
 permissions:
   contents: write
   packages: write
-  id-token: write  # Required for cosign keyless signing
+  id-token: write      # Required for cosign keyless signing
+  attestations: write  # Required for actions/attest-build-provenance (OPS-08)
 
 env:
   REGISTRY: ghcr.io
@@ -31,15 +32,17 @@ env:
   AUTOMATION_IMAGE: ghcr.io/${{ github.repository }}-automation-worker
 
 jobs:
-  version-tag:
-    name: Version & Tag
+  version:
+    name: Compute version
     runs-on: ${{ inputs.runner || 'arc-runner' }}
+    permissions:
+      contents: read
     outputs:
       new_tag: ${{ steps.bump.outputs.new_tag }}
       version: ${{ steps.bump.outputs.version }}
       is_prerelease: ${{ steps.bump.outputs.is_prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
@@ -90,17 +93,30 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
 
-      - name: Create and push tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "${{ steps.bump.outputs.new_tag }}" -m "Release ${{ steps.bump.outputs.new_tag }}"
-          git push origin "${{ steps.bump.outputs.new_tag }}"
+      # NOTE: the git tag is NOT pushed here. Tagging is a persistent,
+      # public release side effect, so it happens in `tag-and-release`
+      # AFTER the vulnerability gate. Computing the version early is
+      # side-effect-free and lets the build jobs label their artifacts.
 
-  docker:
-    name: Docker · ${{ matrix.image }}
-    needs: version-tag
+  # ── Stage 1: BUILD AND SCAN — no publish side effects ──────────────
+  #
+  # Builds every image locally (`push: false`, `load: true`) and scans
+  # the loaded image. Nothing leaves the runner. The layers land in the
+  # GHA cache, so the publish stage re-uses them and the second build is
+  # a cache hit rather than a rebuild.
+  #
+  # WHY: previously the docker job pushed :version AND :latest, signed,
+  # attested, and published the Helm chart, and only THEN did
+  # vulnerability-report run — where it could block nothing but the
+  # release notes. A fixable CRITICAL still shipped to every consumer
+  # pulling :latest. The gate has to precede the publish, not the
+  # paperwork.
+  build-scan:
+    name: Build & scan · ${{ matrix.image }}
+    needs: version
     runs-on: ${{ inputs.runner || 'arc-runner' }}
+    permissions:
+      contents: read
     strategy:
       fail-fast: false
       matrix:
@@ -108,68 +124,415 @@ jobs:
           - image: api
             file: Dockerfile
             build-args: |
-              VERSION=${{ needs.version-tag.outputs.new_tag }}
+              VERSION=${{ needs.version.outputs.new_tag }}
               COMMIT=${{ github.sha }}
           - image: web
             file: Dockerfile.web
-            build-args: ""
+            # The SPA's build identity. Threaded HERE, in the one build step
+            # whose output is the promoted archive, so the exact bytes that are
+            # scanned and published carry the release identity — nothing is
+            # rebuilt later.
+            #
+            # VITE_APP_VERSION: without it the SPA fell back to package.json's
+            #   `2.0.0` while the API reported its git tag, so at v2.1 the PWA
+            #   handshake read client 2.0.0 < server 2.1.0 as `assets-stale`
+            #   and raised a NON-DISMISSIBLE update prompt that reloading could
+            #   never clear (the next build embedded 2.0.0 again).
+            # VITE_GIT_SHA: BUILD_ID is `<version>+<sha>` and suffixes every
+            #   versioned Cache Storage bucket. The image has no `.git`, so
+            #   without this arg every deploy reused `…+dev` buckets and the
+            #   previous build's chunks survived `activate()`.
+            # VITE_RELEASE_BUILD: asserts release intent. Only here. It turns a
+            #   half-configured identity (version supplied, SHA missing) from a
+            #   safe degradation into a hard build failure, so a publish can
+            #   never ship `<version>+dev` — while an operator's own
+            #   `docker compose build` stays unbreakable.
+            build-args: |
+              VITE_APP_VERSION=${{ needs.version.outputs.version }}
+              VITE_GIT_SHA=${{ github.sha }}
+              VITE_RELEASE_BUILD=1
           - image: notification-worker
             file: Dockerfile.notification
             build-args: |
-              VERSION=${{ needs.version-tag.outputs.new_tag }}
+              VERSION=${{ needs.version.outputs.new_tag }}
           - image: export-worker
             file: Dockerfile.export-worker
             build-args: |
-              VERSION=${{ needs.version-tag.outputs.new_tag }}
+              VERSION=${{ needs.version.outputs.new_tag }}
           - image: automation-worker
             file: Dockerfile.automation
             build-args: |
-              VERSION=${{ needs.version-tag.outputs.new_tag }}
+              VERSION=${{ needs.version.outputs.new_tag }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: docker/setup-buildx-action@v3
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Prepare the promotion directory
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/promote
+
+      # BUILD ONCE. The output is a docker-archive on disk — no push, no
+      # registry side effect of any kind. Every later stage consumes THIS
+      # tarball; nothing is ever rebuilt, so "the bytes that were scanned"
+      # and "the bytes that were published" are the same bytes by
+      # construction rather than by hoping two builds agree.
+      #
+      # Rebuilding in the publish stage (the previous design) was not
+      # sound: unpinned base tags, cache eviction, and any non-reproducible
+      # layer could make the published image differ from the scanned one,
+      # and the signature/attestation would then describe an image nobody
+      # had scanned.
+      - name: Build ${{ matrix.image }} to a local archive (no push)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          push: false
+          tags: teslasync-scan/${{ matrix.image }}:candidate
+          outputs: type=docker,dest=/tmp/promote/${{ matrix.image }}.tar
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
+          build-args: ${{ matrix.build-args }}
+
+      # The config digest commits to the layer diff_ids, so it uniquely
+      # identifies the image content. Recording it here is what makes the
+      # later "DIGEST CONTINUITY" assertion meaningful.
+      - name: Record the scanned config digest
+        id: scanned
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          TAR="/tmp/promote/${IMAGE}.tar"
+          test -s "$TAR"
+          CONFIG=$(tar -xOf "$TAR" manifest.json | jq -r '.[0].Config')
+          # docker-archive names the config blob after its own digest,
+          # either `<sha256>.json` or `blobs/sha256/<sha256>`.
+          CONFIG_DIGEST="sha256:$(basename "$CONFIG" .json)"
+          LAYERS=$(tar -xOf "$TAR" manifest.json | jq -r '.[0].Layers | length')
+          TAR_SHA=$(sha256sum "$TAR" | cut -d' ' -f1)
+          echo "config_digest=${CONFIG_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "layers=${LAYERS}" >> "$GITHUB_OUTPUT"
+          printf '%s\n' "$CONFIG_DIGEST" > "/tmp/promote/${IMAGE}.config-digest"
+          printf '%s\n' "$LAYERS"        > "/tmp/promote/${IMAGE}.layers"
+          printf '%s\n' "$TAR_SHA"       > "/tmp/promote/${IMAGE}.tar-sha256"
+          echo "scanned config digest: ${CONFIG_DIGEST} (${LAYERS} layers, archive ${TAR_SHA})"
+
+      # Build identity of the SPA, asserted against the promoted archive.
+      #
+      # Read-only: the tarball is loaded into the local daemon (no rebuild, no
+      # push, no registry reference) and the archive file itself is untouched,
+      # so the digest recorded above and the bytes published later are still
+      # the same bytes. The archive SHA is re-checked afterwards to make that
+      # explicit rather than assumed.
+      #
+      # Without this, two silent failures shipped a *successful* build of a
+      # *wrong* image: the SPA reported package.json's version forever (pinning
+      # a non-dismissible "update required" prompt from the first minor release
+      # onward) and BUILD_ID stayed `…+dev` on every deploy (so versioned Cache
+      # Storage buckets never rotated and stale chunks survived `activate()`).
+      - name: Verify the promoted web archive carries the release build identity
+        if: matrix.image == 'web'
+        env:
+          EXPECTED_VERSION: ${{ needs.version.outputs.version }}
+          EXPECTED_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          TAR=/tmp/promote/web.tar
+          BEFORE=$(sha256sum "$TAR" | cut -d' ' -f1)
+          docker load --input "$TAR" >/dev/null
+          SW=$(docker run --rm --entrypoint cat teslasync-scan/web:candidate /usr/share/nginx/html/sw.js)
+
+          fail=0
+          if ! printf '%s' "$SW" | grep -qF "$EXPECTED_VERSION"; then
+            echo "::error::dist/sw.js does not embed release version ${EXPECTED_VERSION} — VITE_APP_VERSION did not reach the build"
+            fail=1
+          fi
+          if ! printf '%s' "$SW" | grep -qF "$EXPECTED_SHA"; then
+            echo "::error::dist/sw.js does not embed build sha ${EXPECTED_SHA} — VITE_GIT_SHA did not reach the build"
+            fail=1
+          fi
+          # `<version>+dev` is the shape that looks like a release but never
+          # rotates its caches. Reject it outright.
+          if printf '%s' "$SW" | grep -qF "${EXPECTED_VERSION}+dev"; then
+            echo "::error::build id ${EXPECTED_VERSION}+dev is not publishable — cache buckets would never rotate"
+            fail=1
+          fi
+
+          AFTER=$(sha256sum "$TAR" | cut -d' ' -f1)
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "::error::the promotion archive changed during identity verification"
+            fail=1
+          fi
+          docker image rm teslasync-scan/web:candidate >/dev/null 2>&1 || true
+          test "$fail" -eq 0
+          echo "web build identity verified in the promoted archive: ${EXPECTED_VERSION}+${EXPECTED_SHA} (archive ${AFTER} unchanged)"
+
+      # Scans the ARCHIVE, not a registry reference, so the scan target
+      # is unambiguously the artifact that will be promoted.
+      #
+      # `exit-code: 0` on purpose: this step REPORTS. The gating decision
+      # is made once, in `vulnerability-report`, from the aggregated JSON
+      # — so one unfixable base-image CVE cannot silently block every
+      # release without anyone seeing why.
+      - name: Scan the candidate archive
+        uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
+        with:
+          input: /tmp/promote/${{ matrix.image }}.tar
+          format: json
+          output: vuln-${{ matrix.image }}.json
+          severity: CRITICAL,HIGH,MEDIUM
+          ignore-unfixed: true
+          exit-code: "0"
+
+      - name: Upload vulnerability scan
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vuln-${{ matrix.image }}-${{ needs.version.outputs.version }}
+          path: vuln-${{ matrix.image }}.json
+          retention-days: 90
+
+      # One artifact per matrix leg, named after the image AND the
+      # version, so legs cannot collide and a publish job cannot pick up
+      # another image's bytes.
+      - name: Upload the promotable image archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: image-${{ matrix.image }}-${{ needs.version.outputs.version }}
+          path: |
+            /tmp/promote/${{ matrix.image }}.tar
+            /tmp/promote/${{ matrix.image }}.config-digest
+            /tmp/promote/${{ matrix.image }}.layers
+            /tmp/promote/${{ matrix.image }}.tar-sha256
+          retention-days: 7
+          compression-level: 0
+          if-no-files-found: error
+
+  # ── Stage 2: THE GATE ───────────────────────────────────────────────
+  vulnerability-report:
+    name: Vulnerability status
+    needs: [version, build-scan]
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    permissions:
+      contents: read
+    outputs:
+      summary: ${{ steps.aggregate.outputs.summary }}
+      blocking: ${{ steps.aggregate.outputs.blocking }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Download vulnerability scans
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          pattern: vuln-*-${{ needs.version.outputs.version }}
+          merge-multiple: true
+          path: vuln
+
+      - name: Aggregate and apply policy
+        id: aggregate
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          declare -A CRIT HIGH MED
+          TOTAL_CRIT=0
+          for f in vuln/*.json; do
+            image=$(basename "$f" .json | sed 's/^vuln-//')
+            c=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="CRITICAL")] | length' "$f")
+            h=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="HIGH")] | length' "$f")
+            m=$(jq '[.Results[]?.Vulnerabilities[]? | select(.Severity=="MEDIUM")] | length' "$f")
+            CRIT[$image]=$c; HIGH[$image]=$h; MED[$image]=$m
+            TOTAL_CRIT=$((TOTAL_CRIT + c))
+          done
+
+          # An empty scan set is a failure, not a clean bill of health:
+          # it means the build stage produced no artifact and nobody
+          # actually looked at the images.
+          if [ "${#CRIT[@]}" -eq 0 ]; then
+            echo "::error::no vulnerability scan artifacts were found; refusing to publish an unscanned release"
+            exit 1
+          fi
+
+          {
+            echo "| Image | Critical | High | Medium |"
+            echo "|-------|---------:|-----:|-------:|"
+            for image in "${!CRIT[@]}"; do
+              echo "| \`$image\` | ${CRIT[$image]} | ${HIGH[$image]} | ${MED[$image]} |"
+            done
+          } > vulnerability-status.md
+
+          cat vulnerability-status.md >> "$GITHUB_STEP_SUMMARY"
+
+          {
+            echo "summary<<VULN_EOF"
+            cat vulnerability-status.md
+            echo "VULN_EOF"
+          } >> "$GITHUB_OUTPUT"
+
+          if [ "$TOTAL_CRIT" -gt 0 ]; then
+            echo "blocking=true" >> "$GITHUB_OUTPUT"
+            echo "::error::${TOTAL_CRIT} fixable CRITICAL vulnerabilities across the release images; nothing will be published (ops/release/supply-chain.yaml vulnerability_policy.fail_on)"
+            exit 1
+          fi
+          echo "blocking=false" >> "$GITHUB_OUTPUT"
+
+      - name: Upload vulnerability status
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: vulnerability-status-${{ needs.version.outputs.version }}
+          path: vulnerability-status.md
+          if-no-files-found: warn
+
+  # ── Stage 3: PUBLISH — gated on the vulnerability verdict ───────────
+  docker:
+    name: Publish · ${{ matrix.image }}
+    needs: [version, vulnerability-report]
+    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        # No `file` / `build-args` here: this stage does NOT build.
+        image: [api, web, notification-worker, export-worker, automation-worker]
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      # crane pushes a docker-archive to a registry blob-for-blob. It is
+      # the promotion mechanism: no rebuild, no re-resolution of base
+      # images, no cache dependency.
+      - name: Install crane
+        run: go install github.com/google/go-containerregistry/cmd/crane@v0.20.2
 
       - name: Log in to GHCR
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Only this image's artifact, so a matrix leg can never promote
+      # another leg's bytes.
+      - name: Download the scanned image archive
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: image-${{ matrix.image }}-${{ needs.version.outputs.version }}
+          path: /tmp/promote
+
       - name: Determine image tags
         id: tags
+        env:
+          IMAGE: ${{ matrix.image }}
+          VERSION: ${{ needs.version.outputs.version }}
+          IS_PRERELEASE: ${{ needs.version.outputs.is_prerelease }}
+          REPO: ${{ github.repository }}
         run: |
-          BASE="ghcr.io/${{ github.repository }}-${{ matrix.image }}"
-          VERSION="${{ needs.version-tag.outputs.version }}"
-          if [ "${{ needs.version-tag.outputs.is_prerelease }}" = "true" ]; then
+          set -euo pipefail
+          BASE="ghcr.io/${REPO}-${IMAGE}"
+          echo "base=${BASE}" >> "$GITHUB_OUTPUT"
+          echo "primary=${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
+          if [ "$IS_PRERELEASE" = "true" ]; then
             echo "tags=${BASE}:${VERSION}" >> "$GITHUB_OUTPUT"
           else
             echo "tags=${BASE}:${VERSION},${BASE}:latest" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Build and push ${{ matrix.image }}
-        uses: docker/build-push-action@v5
-        id: docker-build
-        with:
-          context: .
-          file: ${{ matrix.file }}
-          push: true
-          tags: ${{ steps.tags.outputs.tags }}
-          cache-from: type=gha,scope=${{ matrix.image }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
-          build-args: ${{ matrix.build-args }}
+      # Confirms the artifact that arrived is byte-identical to the one
+      # that was scanned, before anything is pushed.
+      - name: Verify the downloaded archive is the scanned archive
+        env:
+          IMAGE: ${{ matrix.image }}
+        run: |
+          set -euo pipefail
+          TAR="/tmp/promote/${IMAGE}.tar"
+          test -s "$TAR"
+          EXPECTED_TAR_SHA=$(cat "/tmp/promote/${IMAGE}.tar-sha256")
+          ACTUAL_TAR_SHA=$(sha256sum "$TAR" | cut -d' ' -f1)
+          if [ "$EXPECTED_TAR_SHA" != "$ACTUAL_TAR_SHA" ]; then
+            echo "::error::archive checksum mismatch: scanned ${EXPECTED_TAR_SHA}, downloaded ${ACTUAL_TAR_SHA}"
+            exit 1
+          fi
+          echo "archive checksum verified: ${ACTUAL_TAR_SHA}"
+
+      # PROMOTE. `crane push` uploads the archive's existing blobs and
+      # config; it does not rebuild anything, so the published content is
+      # the scanned content.
+      - name: Promote the scanned archive to GHCR
+        id: promote
+        env:
+          IMAGE: ${{ matrix.image }}
+          PRIMARY: ${{ steps.tags.outputs.primary }}
+          BASE: ${{ steps.tags.outputs.base }}
+          IS_PRERELEASE: ${{ needs.version.outputs.is_prerelease }}
+        run: |
+          set -euo pipefail
+          crane push "/tmp/promote/${IMAGE}.tar" "$PRIMARY"
+
+          PUSHED_DIGEST=$(crane digest "$PRIMARY")
+          echo "digest=${PUSHED_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "pushed ${PRIMARY}@${PUSHED_DIGEST}"
+
+          # `latest` is a TAG on the same manifest, never a second build.
+          if [ "$IS_PRERELEASE" != "true" ]; then
+            crane tag "$PRIMARY" latest
+            LATEST_DIGEST=$(crane digest "${BASE}:latest")
+            if [ "$LATEST_DIGEST" != "$PUSHED_DIGEST" ]; then
+              echo "::error::latest resolves to ${LATEST_DIGEST}, not the promoted ${PUSHED_DIGEST}"
+              exit 1
+            fi
+            echo "tagged ${BASE}:latest -> ${PUSHED_DIGEST}"
+          fi
+
+      # DIGEST CONTINUITY — the assertion the whole stage exists for.
+      #
+      # The config digest commits to every layer diff_id, so equality
+      # here means the published image is the image that was scanned. If
+      # it ever diverges, the signature and the SBOM below would be
+      # describing bytes nobody assessed.
+      - name: Assert DIGEST CONTINUITY from scan to push
+        env:
+          IMAGE: ${{ matrix.image }}
+          PRIMARY: ${{ steps.tags.outputs.primary }}
+          PUSHED_DIGEST: ${{ steps.promote.outputs.digest }}
+        run: |
+          set -euo pipefail
+          SCANNED_CONFIG=$(cat "/tmp/promote/${IMAGE}.config-digest")
+          SCANNED_LAYERS=$(cat "/tmp/promote/${IMAGE}.layers")
+          PUSHED_CONFIG=$(crane manifest "${PRIMARY}@${PUSHED_DIGEST}" | jq -r '.config.digest')
+          PUSHED_LAYERS=$(crane manifest "${PRIMARY}@${PUSHED_DIGEST}" | jq -r '.layers | length')
+
+          echo "scanned config: ${SCANNED_CONFIG} (${SCANNED_LAYERS} layers)"
+          echo "pushed  config: ${PUSHED_CONFIG} (${PUSHED_LAYERS} layers)"
+
+          if [ "$SCANNED_CONFIG" != "$PUSHED_CONFIG" ]; then
+            echo "::error::DIGEST CONTINUITY BROKEN — published config ${PUSHED_CONFIG} != scanned ${SCANNED_CONFIG}; the signature would describe unscanned bytes"
+            exit 1
+          fi
+          if [ "$SCANNED_LAYERS" != "$PUSHED_LAYERS" ]; then
+            echo "::error::DIGEST CONTINUITY BROKEN — layer count ${PUSHED_LAYERS} != scanned ${SCANNED_LAYERS}"
+            exit 1
+          fi
+          echo "✅ DIGEST CONTINUITY verified: published bytes == scanned bytes"
 
       - name: Install cosign
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac # v3.9.1
 
       - name: Sign image with cosign (keyless)
         env:
-          DIGEST: ${{ steps.docker-build.outputs.digest }}
-          TAGS: ${{ steps.tags.outputs.tags }}
+          DIGEST: ${{ steps.promote.outputs.digest }}
+          PRIMARY: ${{ steps.tags.outputs.primary }}
         run: |
-          IMAGE=$(echo "$TAGS" | cut -d',' -f1)
-          cosign sign --yes "${IMAGE}@${DIGEST}"
-          echo "✅ Signed ${IMAGE}@${DIGEST}"
+          set -euo pipefail
+          cosign sign --yes "${PRIMARY}@${DIGEST}"
+          echo "✅ Signed ${PRIMARY}@${DIGEST}"
 
       # Phase-53 / p53-sbom — Software Bill of Materials.
       # syft generates a CycloneDX SBOM of the image contents (every
@@ -178,85 +541,146 @@ jobs:
       # consumers can `cosign verify-attestation --type cyclonedx`
       # without trusting any side-channel artifact server.
       - name: Install syft
-        uses: anchore/sbom-action/download-syft@v0.17.8
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
 
       - name: Generate SBOM (CycloneDX)
         env:
-          DIGEST: ${{ steps.docker-build.outputs.digest }}
-          TAGS: ${{ steps.tags.outputs.tags }}
+          DIGEST: ${{ steps.promote.outputs.digest }}
+          PRIMARY: ${{ steps.tags.outputs.primary }}
         run: |
-          IMAGE=$(echo "$TAGS" | cut -d',' -f1)
-          syft "${IMAGE}@${DIGEST}" \
+          set -euo pipefail
+          syft "${PRIMARY}@${DIGEST}" \
             -o cyclonedx-json="sbom-${{ matrix.image }}.cdx.json" \
             -o spdx-json="sbom-${{ matrix.image }}.spdx.json"
-          echo "✅ Generated SBOMs for ${IMAGE}"
+          echo "✅ Generated SBOMs for ${PRIMARY}@${DIGEST}"
           ls -la sbom-${{ matrix.image }}.*.json
 
       - name: Attest SBOM with cosign (keyless)
         env:
-          DIGEST: ${{ steps.docker-build.outputs.digest }}
-          TAGS: ${{ steps.tags.outputs.tags }}
+          DIGEST: ${{ steps.promote.outputs.digest }}
+          PRIMARY: ${{ steps.tags.outputs.primary }}
         run: |
-          IMAGE=$(echo "$TAGS" | cut -d',' -f1)
+          set -euo pipefail
           cosign attest --yes \
             --predicate "sbom-${{ matrix.image }}.cdx.json" \
             --type cyclonedx \
-            "${IMAGE}@${DIGEST}"
-          echo "✅ Attested CycloneDX SBOM to ${IMAGE}@${DIGEST}"
+            "${PRIMARY}@${DIGEST}"
+          echo "✅ Attested CycloneDX SBOM to ${PRIMARY}@${DIGEST}"
 
       - name: Upload SBOM artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: sbom-${{ matrix.image }}-${{ needs.version-tag.outputs.version }}
+          name: sbom-${{ matrix.image }}-${{ needs.version.outputs.version }}
           path: |
             sbom-${{ matrix.image }}.cdx.json
             sbom-${{ matrix.image }}.spdx.json
           retention-days: 90
 
+      # OPS-08 / p53-provenance — SLSA build provenance.
+      #
+      # The cosign signature proves "this repository's workflow signed
+      # this digest". Provenance proves *how* it was built: which
+      # workflow file, which commit, which runner, which inputs. A
+      # consumer verifies it with:
+      #   gh attestation verify oci://<image>@<digest> --repo <owner>/<repo>
+      #
+      # It is bound to the DIGEST, not the tag, so re-tagging cannot
+      # transplant provenance onto different bytes.
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@e8998f949152b193b063cb0ec769d69d929409be # v2.4.0
+        with:
+          subject-name: ghcr.io/${{ github.repository }}-${{ matrix.image }}
+          subject-digest: ${{ steps.promote.outputs.digest }}
+          push-to-registry: true
+
   helm:
     name: Publish Helm Chart
-    needs: [version-tag, docker]
+    needs: [version, docker]
     runs-on: ${{ inputs.runner || 'arc-runner' }}
     permissions:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
       - name: Install Helm
-        uses: azure/setup-helm@v4
+        uses: azure/setup-helm@1a275c3b69536ee54be43f2070a358922e12c8d4 # v4.3.1
         with:
           version: v3.16.0
 
       - name: Log in to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+        env:
+          GHCR_ACTOR: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: echo "$GHCR_TOKEN" | helm registry login ghcr.io -u "$GHCR_ACTOR" --password-stdin
 
       - name: Package and push chart
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+          OWNER: ${{ github.repository_owner }}
         run: |
+          set -euo pipefail
           helm package helm/teslasync \
-            --version ${{ needs.version-tag.outputs.version }} \
-            --app-version ${{ needs.version-tag.outputs.version }}
-          helm push teslasync-*.tgz oci://ghcr.io/${{ github.repository_owner }}/charts
+            --version "$VERSION" \
+            --app-version "$VERSION"
+          helm push teslasync-*.tgz "oci://ghcr.io/${OWNER}/charts"
 
+  # ── Stage 4: TAG AND ANNOUNCE — the last publish side effect ────────
+  #
+  # The git tag is created HERE, not in the version job. A tag is a
+  # persistent, public artifact: pushing it before the vulnerability
+  # verdict meant a blocked release still left a permanent tag behind
+  # claiming a version that was never fit to ship.
   release-notes:
-    name: Create GitHub Release
-    needs: [version-tag, docker, helm]
-    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.helm.result == 'success' }}
+    name: Tag & create GitHub Release
+    needs: [version, docker, helm, vulnerability-report]
+    if: ${{ !cancelled() && needs.docker.result == 'success' && needs.helm.result == 'success' && needs.vulnerability-report.result == 'success' }}
     runs-on: ${{ inputs.runner || 'arc-runner' }}
+    permissions:
+      contents: write
+      packages: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
         with:
           fetch-depth: 0
 
-      - name: Generate release notes
+      - name: Create and push tag
+        env:
+          NEW_TAG: ${{ needs.version.outputs.new_tag }}
         run: |
-          TAG="${{ needs.version-tag.outputs.new_tag }}"
-          VERSION="${{ needs.version-tag.outputs.version }}"
-          IS_PRE="${{ needs.version-tag.outputs.is_prerelease }}"
-          PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TAG}$" | head -1)
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "$NEW_TAG" -m "Release $NEW_TAG"
+          git push origin "$NEW_TAG"
+
+      - name: Generate release notes
+        env:
+          # Job outputs go through the ENVIRONMENT, never into the script
+          # text. `needs.vulnerability-report.outputs.summary` is a
+          # Markdown table whose image names are wrapped in BACKTICKS.
+          # Interpolated into the (expanding) heredoc it became a command
+          # substitution: bash ran `api` as a command, printed
+          # `api: command not found` to stderr, substituted an empty
+          # string into the cell, and still exited 0 — so the release
+          # published a vulnerability table with blank image names and
+          # nothing failed.
+          #
+          # Expanding "$VULN_SUMMARY" instead is safe: bash does not
+          # re-scan the RESULT of a parameter expansion for backticks or
+          # command substitution. `set -euo pipefail` would not have
+          # helped — the substitution "succeeded".
+          TAG: ${{ needs.version.outputs.new_tag }}
+          VERSION: ${{ needs.version.outputs.version }}
+          IS_PRE: ${{ needs.version.outputs.is_prerelease }}
+          REF_NAME: ${{ github.ref_name }}
+          VULN_SUMMARY: ${{ needs.vulnerability-report.outputs.summary }}
+        run: |
+          set -euo pipefail
+          PREV=$(git tag --sort=-v:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -v "^${TAG}$" | head -1 || true)
 
           if [ "$IS_PRE" = "true" ]; then
-            LABEL="⚠️ Pre-release (branch: ${{ github.ref_name }})"
+            LABEL="⚠️ Pre-release (branch: ${REF_NAME})"
           else
             LABEL="🚀 TeslaSync ${TAG}"
           fi
@@ -299,7 +723,7 @@ jobs:
 
           ### 🔐 Image Verification
 
-          All images are signed with [cosign](https://github.com/sigstore/cosign) (keyless, via GitHub OIDC) and ship with a CycloneDX SBOM attestation:
+          All images are signed with [cosign](https://github.com/sigstore/cosign) (keyless, via GitHub OIDC), ship a CycloneDX SBOM attestation, and carry SLSA build provenance:
 
           \`\`\`bash
           # Verify image signature
@@ -314,7 +738,20 @@ jobs:
             --certificate-oidc-issuer="https://token.actions.githubusercontent.com" \\
             ghcr.io/${{ github.repository }}-api:${VERSION} \\
             | jq -r '.payload' | base64 -d | jq '.predicate' > sbom.cdx.json
+
+          # Verify SLSA build provenance (proves WHICH workflow built these bytes)
+          gh attestation verify \\
+            oci://ghcr.io/${{ github.repository }}-api:${VERSION} \\
+            --repo ${{ github.repository }}
           \`\`\`
+
+          See \`docs/operations/release-verification.md\` for the full verification procedure.
+
+          ### 🛡️ Vulnerability status
+
+          Scanned with Trivy at build time (fixable findings only; policy in \`ops/release/supply-chain.yaml\`). A release is blocked on any fixable CRITICAL.
+
+          ${VULN_SUMMARY}
 
           ### 📝 Changes
 
@@ -335,10 +772,39 @@ jobs:
           NOTES_EOF
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2.6.2
         with:
-          tag_name: ${{ needs.version-tag.outputs.new_tag }}
-          name: TeslaSync ${{ needs.version-tag.outputs.new_tag }}
+          tag_name: ${{ needs.version.outputs.new_tag }}
+          name: TeslaSync ${{ needs.version.outputs.new_tag }}
           body_path: release-notes.md
-          prerelease: ${{ needs.version-tag.outputs.is_prerelease == 'true' }}
+          prerelease: ${{ needs.version.outputs.is_prerelease == 'true' }}
           generate_release_notes: false
+
+      # OPS-07 — Grafana release annotation.
+      #
+      # Puts the release boundary on the same time axis as every SLO
+      # dashboard, tagged with the build SHA, version, and environment,
+      # so an operator staring at a burn-rate alert can see "a release
+      # happened here" without cross-referencing a CI log.
+      #
+      # No-ops (exit 0) when GRAFANA_URL is unset. An annotation must
+      # never be able to fail a release.
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Annotate the Grafana release timeline
+        continue-on-error: true
+        env:
+          GRAFANA_URL: ${{ secrets.GRAFANA_URL }}
+          GRAFANA_TOKEN: ${{ secrets.GRAFANA_TOKEN }}
+          VERSION: ${{ needs.version.outputs.version }}
+          ENVIRONMENT: ${{ github.ref_name == 'main' && 'production' || 'prerelease' }}
+        run: |
+          set -euo pipefail
+          go run ./cmd/release-annotate \
+            -action deploy \
+            -version "$VERSION" \
+            -commit "${{ github.sha }}" \
+            -environment "$ENVIRONMENT" \
+            -note "release workflow run ${{ github.run_id }}"

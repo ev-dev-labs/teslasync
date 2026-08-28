@@ -228,6 +228,31 @@ func (r *DriveRepo) Create(ctx context.Context, d *models.Drive) error {
 
 ## Migration Best Practices
 
+### Review manifest (OPS-04) — required for every new migration
+
+Every migration above `baseline_version` in `ops/migrations/manifest.yaml`
+MUST have an entry recording four things, or `go run ./cmd/ops-gate -check migrations`
+fails the build:
+
+| Field | What it must answer |
+|---|---|
+| `forward_compatible` | Can the PREVIOUS application revision still run against the NEW schema? Required for rolling deploys, where both revisions are live at once. `false` demands either a `two_phase_plan` or `requires_downtime: true`. |
+| `rollback_notes` | What an operator must do if the deploy is rolled back after this migration applied. Usually "leave it applied"; say so explicitly. |
+| `expected_duration` + `duration_basis` | How long it takes on production data volumes, and whether that is `measured` or an `estimate`. |
+| `lock_risk` + `lock_details` | `none`/`low`/`medium`/`high`, plus the locks taken and the mitigation. |
+
+The gate also runs static SQL analysis over the `.up.sql` and **fails if
+the declared `lock_risk` is weaker than what it detects** — e.g.
+declaring `low` on a migration that does `CREATE INDEX` on an existing
+table. Detected patterns: index-without-`CONCURRENTLY`, `ADD COLUMN … NOT NULL`
+without `DEFAULT`, `ALTER COLUMN … TYPE`, `DROP COLUMN`/`DROP TABLE`,
+`ADD CONSTRAINT` without `NOT VALID`, and `UPDATE`/`DELETE` without a
+`WHERE` clause.
+
+```bash
+go run ./cmd/ops-gate -check migrations
+```
+
 ### File Naming
 ```
 migrations/000143_add_unit_columns.up.sql

@@ -1,0 +1,521 @@
+# OPS-12 — Accepted release/operations epics.
+#
+# The machine-readable register of what was accepted, who owns it, and
+# what "done" means. Validated by:
+#
+#   go run ./cmd/ops-gate -check epics
+#
+# The gate enforces that every epic has an owner, at least one
+# acceptance criterion, a verification command, and evidence paths that
+# actually exist in the tree. It also enforces honesty about status:
+#
+#   accepted                            scoped, not built
+#   implemented                         built AND fully verifiable in CI
+#   implemented-pending-infrastructure  built, but at least one acceptance
+#                                       criterion needs a deployed
+#                                       environment / real credentials /
+#                                       an executed drill
+#
+# An epic with a `requires_deployed_infrastructure: true` criterion
+# CANNOT be marked `implemented` — the gate rejects it. That is
+# deliberate: "the gate is implemented" and "the drill has been run" are
+# different claims and this file must never conflate them.
+version: 1
+program: TeslaSync release & operations maturity (OPS-01 … OPS-13)
+
+epics:
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-01
+    title: Authenticated post-deploy smoke gate
+    status: implemented-pending-infrastructure
+    owner:
+      role: release-engineering
+      github: "@atulmgupta"
+    summary: >-
+      A declarative smoke manifest executed against a deployed
+      environment with real credentials, failing the deploy when any
+      critical check fails. Covers liveness, readiness, metrics
+      exposition, the preStop drain hook, authenticated API reads, the
+      SSE stream, and the SPA shell + deep-link fallback.
+    artifacts:
+      - ops/smoke/checks.yaml
+      - cmd/smoke-gate
+      - internal/ops/smoke.go
+      - internal/ops/smokerun.go
+      - .github/workflows/post-deploy-smoke.yml
+    acceptance:
+      - id: OPS-01-A1
+        statement: The manifest is complete, credential-free, and covers the availability, frontend, observability, and recovery surfaces.
+        evidence: [ops/smoke/checks.yaml, internal/ops/smoke.go]
+        verification: go run ./cmd/ops-gate -check smoke
+      - id: OPS-01-A2
+        statement: The gate authenticates, and refuses to report a pass when the credential is absent.
+        evidence: [cmd/smoke-gate/main.go, cmd/smoke-gate/main_test.go]
+        verification: go test ./cmd/smoke-gate/...
+      - id: OPS-01-A3
+        statement: A workflow runs the gate against a deployed environment after every release stage.
+        evidence: [.github/workflows/post-deploy-smoke.yml]
+        verification: gh workflow run post-deploy-smoke.yml -f environment=staging -f base_url=https://…
+        requires_deployed_infrastructure: true
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-02
+    title: Measurable automated rollback policy
+    status: implemented-pending-infrastructure
+    owner:
+      role: release-engineering
+      github: "@atulmgupta"
+    summary: >-
+      A thresholded policy over API error rate, API p99 latency,
+      frontend error rate, LCP p75, INP p75, and migration failures,
+      evaluated into a proceed / hold / rollback verdict with an ordered,
+      executable remediation plan. Never proceeds on absent telemetry and
+      never rolls back on a single scrape.
+    depends_on: [OPS-01]
+    artifacts:
+      - ops/rollback/policy.yaml
+      - cmd/rollback-evaluator
+      - internal/ops/rollback.go
+      - .github/workflows/deploy-rollback.yml
+    acceptance:
+      - id: OPS-02-A1
+        statement: Every mandatory signal has a documented rationale and thresholds ordered consistently with its comparison.
+        evidence: [ops/rollback/policy.yaml, internal/ops/rollback.go]
+        verification: go run ./cmd/ops-gate -check rollback
+      - id: OPS-02-A2
+        statement: A sustained breach rolls back, a single spike holds, a failed migration rolls back immediately, and missing or stale telemetry holds.
+        evidence: [cmd/rollback-evaluator/main_test.go, internal/ops/rollback.go]
+        verification: go test ./cmd/rollback-evaluator/...
+      - id: OPS-02-A3
+        statement: Production rollback is advisory-only, the destructive job is gated behind manual approval plus an explicit confirmation token, and it actually runs when evaluation reports a rollback verdict.
+        evidence: [.github/workflows/deploy-rollback.yml, ops/rollback/policy.yaml, ops/workflows/policy.yaml]
+        verification: go test ./cmd/rollback-evaluator/... -run TestRun_ProductionRollbackIsAdvisoryOnly && go run ./cmd/ops-gate -check workflows
+      - id: OPS-02-A4
+        statement: Live evaluation uses a range query, derives real sample counts and trailing breach streaks, and holds on missing or malformed data.
+        evidence: [cmd/rollback-evaluator/main.go, cmd/rollback-evaluator/live_test.go]
+        verification: go test ./cmd/rollback-evaluator/... -run TestLive
+      - id: OPS-02-A5
+        statement: The evaluator has been run against a live Prometheus during a real bake window.
+        evidence: [cmd/rollback-evaluator/main.go]
+        verification: go run ./cmd/rollback-evaluator -prometheus-url https://… -environment staging
+        requires_deployed_infrastructure: true
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-03
+    title: Scheduled backup restore drills
+    status: implemented-pending-infrastructure
+    owner:
+      role: platform-sre
+      github: "@atulmgupta"
+    summary: >-
+      A weekly drill that restores a backup and asserts checksum
+      integrity plus critical-table row parity. The default mode is
+      credential-free and self-contained so the schedule cannot silently
+      no-op; the production-artifact mode is opt-in and skips loudly.
+    artifacts:
+      - ops/restore/drill.yaml
+      - .github/workflows/backup-restore-drill.yml
+      - docs/runbooks/backup-restore-drill.md
+      - cmd/backup-verify
+    acceptance:
+      - id: OPS-03-A1
+        statement: The drill is scheduled, has exactly one credential-free default mode, and declares its pass criteria and escalation path.
+        evidence: [ops/restore/drill.yaml, internal/ops/runbooks.go]
+        verification: go run ./cmd/ops-gate -check restore
+      - id: OPS-03-A2
+        statement: RTO/RPO are recorded as targets with an explicit measurement status, never presented as measured capability.
+        evidence: [ops/restore/drill.yaml, docs/runbooks/backup-restore-drill.md]
+        verification: go run ./cmd/ops-gate -check restore
+      - id: OPS-03-A3
+        statement: >-
+          The drill's SQL fixture is validated against the schema
+          reconstructed from migrations AND executed for real against a
+          freshly migrated database, so it cannot silently rot.
+        evidence: [ops/fixtures/registry.yaml, internal/ops/fixtures.go, scripts/seed-restore-drill.sql]
+        verification: go run ./cmd/ops-gate -check fixtures
+      - id: OPS-03-A4
+        statement: A production-artifact restore has completed and its wall-clock RTO is recorded.
+        evidence: [ops/restore/drill.yaml]
+        verification: gh workflow run backup-restore-drill.yml -f mode=production-artifact
+        requires_deployed_infrastructure: true
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-04
+    title: Migration manifest and review gate
+    status: implemented
+    owner:
+      role: data-platform
+      github: "@atulmgupta"
+    summary: >-
+      Every migration above the manifest baseline must record forward
+      compatibility, rollback notes, expected duration, and lock risk,
+      reviewed by a named person. Static SQL analysis runs over every
+      migration and fails the gate when a declared lock risk is weaker
+      than the detected one.
+    artifacts:
+      - ops/migrations/manifest.yaml
+      - internal/ops/migrations.go
+      - internal/ops/migrations_test.go
+    acceptance:
+      - id: OPS-04-A1
+        statement: A new migration without a complete review record fails the gate.
+        evidence: [internal/ops/migrations.go, internal/ops/migrations_test.go]
+        verification: go test ./internal/ops/... -run TestValidateMigrations
+      - id: OPS-04-A2
+        statement: Static analysis detects index-without-concurrently, NOT NULL without default, type changes, drops, validated constraints, and unqualified DML.
+        evidence: [internal/ops/migrations.go, ops/migrations/manifest.yaml]
+        verification: go test ./internal/ops/... -run TestAnalyzeMigration
+      - id: OPS-04-A3
+        statement: The documented rule set and the executable rule set cannot drift.
+        evidence: [ops/migrations/manifest.yaml, internal/ops/migrations_test.go]
+        verification: go test ./internal/ops/... -run TestStaticRulesAreDocumented
+      - id: OPS-04-A4
+        statement: The whole migrations directory is discoverable and every migration has both an up and a down file.
+        evidence: [migrations, internal/ops/migrations_test.go]
+        verification: go test ./internal/ops/... -run TestRealMigrationsDirectoryIsDiscoverable
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-05
+    title: Staged and canary rollout controls
+    status: implemented-pending-infrastructure
+    owner:
+      role: release-engineering
+      github: "@atulmgupta"
+    summary: >-
+      Per-component rollout strategy, replica-share canary Deployments
+      for api and web, a rollout pause switch, and a registry of
+      high-risk flags with the stage at which each is enabled. Defaults
+      reproduce the pre-existing manifests exactly.
+    depends_on: [OPS-01, OPS-02]
+    artifacts:
+      - ops/rollout/stages.yaml
+      - helm/teslasync/templates/deployment-canary.yaml
+      - helm/teslasync/templates/configmap-rollout.yaml
+      - internal/ops/rollout.go
+    acceptance:
+      - id: OPS-05-A1
+        statement: The rollout manifest and the Helm values cannot drift — every declared component and gate must exist.
+        evidence: [ops/rollout/stages.yaml, helm/teslasync/values.yaml, internal/ops/rollout.go]
+        verification: go run ./cmd/ops-gate -check rollout
+      - id: OPS-05-A2
+        statement: Default values render no canary, no pause, and the same api/web strategies as before.
+        evidence: [helm/teslasync/templates/deployment.yaml, helm/teslasync/templates/deployment-web.yaml, .github/workflows/ops-gate.yml]
+        verification: helm template test helm/teslasync
+      - id: OPS-05-A3
+        statement: Workers are excluded from canary and their strategy block is only rendered when explicitly opted in.
+        evidence: [helm/teslasync/templates/deployment-notification.yaml, ops/rollout/stages.yaml]
+        verification: helm template test helm/teslasync
+      - id: OPS-05-A4
+        statement: >-
+          Stable and canary selectors are provably disjoint, the Service
+          still fronts both, canary is refused in legacy selector mode,
+          and the documented legacy→disjoint migration actually
+          converges.
+        evidence: [helm/teslasync/templates/_helpers.tpl, internal/ops/helmrender.go, internal/ops/helmrender_test.go, docs/runbooks/rollout-selector-migration.md, internal/ops/rereview_test.go]
+        verification: go test ./internal/ops/... -run 'TestVerifyHelmRender|TestValidateSelectorMigration|TestRealSelectorMigration'
+      - id: OPS-05-A5
+        statement: A canary stage has been promoted through to full in a real cluster.
+        evidence: [ops/rollout/stages.yaml]
+        verification: helm upgrade … --set rollout.selectorMode=disjoint --set rollout.api.canary.enabled=true
+        requires_deployed_infrastructure: true
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-06
+    title: Configuration parity gate across Go, Compose, and Helm
+    status: implemented
+    owner:
+      role: platform-sre
+      github: "@atulmgupta"
+    summary: >-
+      Executable enforcement of the "update all three locations" rule.
+      Extracts env vars from internal/config plus point-of-use
+      os.Getenv reads, from the first-party docker-compose services, and
+      from the Helm ConfigMap/Secret, then ratchets against a recorded
+      baseline so new drift fails while pre-existing debt stays visible.
+    artifacts:
+      - ops/config/parity.yaml
+      - internal/ops/parity.go
+      - internal/ops/parity_test.go
+    acceptance:
+      - id: OPS-06-A1
+        statement: A config variable added to fewer than all three deployment targets fails the gate.
+        evidence: [internal/ops/parity.go, internal/ops/parity_test.go]
+        verification: go test ./internal/ops/... -run TestValidateParity
+      - id: OPS-06-A2
+        statement: A credential rendered into the non-secret ConfigMap fails the gate unconditionally, regardless of baseline.
+        evidence: [internal/ops/parity.go, helm/teslasync/templates/configmap.yaml]
+        verification: go run ./cmd/ops-gate -check config-parity
+      - id: OPS-06-A3
+        statement: The baseline can only shrink — a stale entry is an error, so fixed drift must be removed.
+        evidence: [ops/config/parity.yaml, internal/ops/parity_test.go]
+        verification: go test ./internal/ops/... -run TestValidateParity_StaleBaseline
+      - id: OPS-06-A4
+        statement: The extractors handle both compose environment forms, Helm templating, and point-of-use os.Getenv reads.
+        evidence: [internal/ops/parity_test.go]
+        verification: go test ./internal/ops/... -run TestExtract
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-07
+    title: Grafana release annotations
+    status: implemented-pending-infrastructure
+    owner:
+      role: observability
+      github: "@atulmgupta"
+    summary: >-
+      Every deploy, promotion, pause, and rollback posts a Grafana
+      annotation tagged with the build SHA, version, environment,
+      rollout stage, and the high-risk flags enabled, so a release
+      boundary is visible on the same time axis as every SLO dashboard.
+    artifacts:
+      - cmd/release-annotate
+      - .github/workflows/release.yml
+    acceptance:
+      - id: OPS-07-A1
+        statement: The annotation carries build SHA, version, environment, stage, and flag tags.
+        evidence: [cmd/release-annotate/main.go, cmd/release-annotate/main_test.go]
+        verification: go test ./cmd/release-annotate/... -run TestBuildAnnotation
+      - id: OPS-07-A2
+        statement: A missing or misconfigured Grafana can never fail a release.
+        evidence: [cmd/release-annotate/main.go, cmd/release-annotate/main_test.go]
+        verification: go test ./cmd/release-annotate/... -run TestRun_MissingGrafanaIsANoOp
+      - id: OPS-07-A3
+        statement: The release workflow annotates on every published tag.
+        evidence: [.github/workflows/release.yml]
+        verification: grep -n release-annotate .github/workflows/release.yml
+      - id: OPS-07-A4
+        statement: Annotations are visible on the SLO dashboards of a running Grafana.
+        evidence: [helm/teslasync/files/grafana/dashboards/slo-overview.json]
+        verification: GRAFANA_URL=… GRAFANA_TOKEN=… go run ./cmd/release-annotate -action deploy -version … -commit …
+        requires_deployed_infrastructure: true
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-08
+    title: SBOM, signed images, provenance, and vulnerability status per release
+    status: implemented
+    owner:
+      role: security-engineering
+      github: "@atulmgupta"
+    summary: >-
+      Every published image ships a cosign signature, a CycloneDX SBOM
+      attestation, SLSA build provenance, and a published vulnerability
+      status. Every third-party action is SHA-pinned with a reviewable
+      version comment and every pulled image is digest-pinned, enforced
+      by a gate independent of the security workflow's own pin checker.
+    artifacts:
+      - ops/release/supply-chain.yaml
+      - internal/ops/supplychain.go
+      - .github/workflows/release.yml
+      - docs/operations/release-verification.md
+    acceptance:
+      - id: OPS-08-A1
+        statement: A mutable action ref or a floating scanner image fails the gate.
+        evidence: [internal/ops/supplychain.go, internal/ops/manifests_test.go]
+        verification: go test ./internal/ops/... -run TestValidateSupplyChainWorkflow
+      - id: OPS-08-A2
+        statement: The release workflow signs, generates an SBOM, attests it, emits build provenance, and scans for vulnerabilities.
+        evidence: [.github/workflows/release.yml, ops/release/supply-chain.yaml]
+        verification: go run ./cmd/ops-gate -check supply-chain
+      - id: OPS-08-A3
+        statement: Signature, CycloneDX, and SLSA provenance attestations are all mandatory, each with a consumer-runnable verify command.
+        evidence: [ops/release/supply-chain.yaml, docs/operations/release-verification.md]
+        verification: go test ./internal/ops/... -run TestValidateSupplyChain_RequiresAllAttestationTypes
+      - id: OPS-08-A4
+        statement: Vulnerability exceptions expire, and an expired exception fails the gate.
+        evidence: [internal/ops/supplychain.go, internal/ops/manifests_test.go]
+        verification: go test ./internal/ops/... -run TestValidateSupplyChain_RejectsExpiredVulnerabilityException
+      - id: OPS-08-A5
+        statement: >-
+          A fixable CRITICAL blocks every public release side effect —
+          image tags including :latest, the Helm chart, the git tag, and
+          the GitHub release — not merely the release notes.
+        evidence: [.github/workflows/release.yml, ops/workflows/policy.yaml, internal/ops/publishgate_test.go]
+        verification: go run ./cmd/ops-gate -check workflows
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-09
+    title: Lifecycle behaviour tests — shutdown, readiness, draining, worker leases, SSE
+    status: implemented
+    owner:
+      role: platform-sre
+      github: "@atulmgupta"
+    summary: >-
+      Deterministic tests for the process lifecycle, plus the fixes they
+      exposed: the preStop hook now answers GET (kubelet's verb),
+      readiness fails closed while draining, and SSE streams release on a
+      drain signal instead of holding the shutdown open for its whole
+      grace budget.
+    artifacts:
+      - internal/ops/lifecycle.go
+      - internal/ops/lifecycle_test.go
+      - internal/ops/drainplane_test.go
+      - internal/app/drain.go
+      - internal/app/drain_test.go
+      - internal/api/sse/lifecycle_test.go
+      - internal/api/health.go
+    acceptance:
+      - id: OPS-09-A1
+        statement: Readiness fails closed once draining, and the preStop hook answers GET as well as POST.
+        evidence: [internal/ops/lifecycle.go, internal/ops/lifecycle_test.go, internal/api/router.go]
+        verification: go test ./internal/ops/... -run 'TestReadinessGate|TestPreStopFlushHandler'
+      - id: OPS-09-A2
+        statement: Graceful shutdown lets in-flight requests finish, force-closes only after the grace budget, and the pod's terminationGracePeriodSeconds can hold the whole budget.
+        evidence: [internal/ops/lifecycle.go, internal/app/run.go, internal/app/drain_test.go]
+        verification: go test ./internal/ops/... -run TestDrainHTTPServer && go test ./internal/app/... -run TestShutdownBudget
+      - id: OPS-09-A3
+        statement: A worker lease refuses a second owner, is reclaimable after expiry, and cancels the work context when lost.
+        evidence: [internal/ops/lifecycle.go, internal/ops/lifecycle_test.go]
+        verification: go test ./internal/ops/... -run TestLease
+      - id: OPS-09-A4
+        statement: SSE streams end promptly on drain with an explicit shutdown event, so a pod is not held open by long-lived connections.
+        evidence: [internal/api/sse/handler.go, internal/api/sse/lifecycle_test.go]
+        verification: go test ./internal/api/sse/... -run TestSSEHandler
+      - id: OPS-09-A5
+        statement: >-
+          The pod-fatal drain endpoint binds to loopback only, is
+          driven by an exec preStop hook from inside the container, has a
+          single ordered shutdown owner that closes it last, and a pod
+          that drains without terminating self-heals via liveness.
+        evidence: [internal/app/drain.go, internal/app/drain_test.go, internal/app/drainplane_test.go, internal/ops/drainplane_test.go, internal/ops/helmrender.go, cmd/teslasync/drain.go]
+        verification: go test ./internal/app/... -race -run 'Drain|StuckDrain' && go test ./internal/ops/... -run 'TestNewInternalDrainMux|TestDrainStatusHandler|TestVerifyHelmRender'
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-10
+    title: Repeatable capacity-test profiles
+    status: implemented-pending-infrastructure
+    owner:
+      role: platform-sre
+      github: "@atulmgupta"
+    summary: >-
+      Five defined, runnable load shapes — telemetry burst, SSE fan-out,
+      analytics reads, export generation, reconnect storm — each with
+      workload parameters, thresholds, and rationale. Safe by
+      construction: confirmation tokens, a hard duration ceiling, an
+      environment allow-list that cannot contain production, and an
+      ephemeral-stack requirement for destructive profiles.
+    artifacts:
+      - ops/capacity/profiles.yaml
+      - tests/k6/sse_fanout.js
+      - tests/k6/analytics_read.js
+      - tests/k6/export_generation.js
+      - .github/workflows/capacity-test.yml
+    acceptance:
+      - id: OPS-10-A1
+        statement: All five profiles exist with real entrypoints, workload parameters, thresholds, and rationale.
+        evidence: [ops/capacity/profiles.yaml, internal/ops/capacity.go]
+        verification: go run ./cmd/ops-gate -check capacity
+      - id: OPS-10-A2
+        statement: A profile cannot claim an execution without a verifiable run reference, and cannot target production.
+        evidence: [internal/ops/capacity.go, ops/capacity/profiles.yaml]
+        verification: go test ./internal/ops/... -run TestValidateCapacity
+      - id: OPS-10-A3
+        statement: Every runner path requires an explicit confirmation token and is bounded by a hard duration ceiling.
+        evidence: [.github/workflows/capacity-test.yml, tests/k6/sse_fanout.js]
+        verification: go run ./cmd/ops-gate -check capacity
+      - id: OPS-10-A4
+        statement: Each profile has actually been executed and its results recorded.
+        evidence: [ops/capacity/profiles.yaml]
+        verification: gh workflow run capacity-test.yml -f profile=<id> -f confirm=RUN
+        requires_deployed_infrastructure: true
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-11
+    title: Degraded-mode operator runbooks
+    status: implemented
+    owner:
+      role: platform-sre
+      github: "@atulmgupta"
+    summary: >-
+      A dependency register plus a complete runbook for each of
+      database, Redis, MQTT, Tesla API, AI provider, and object storage —
+      each recording the degraded behaviour, the detection signals, the
+      fallback the code actually implements, and a six-section operator
+      procedure.
+    artifacts:
+      - ops/runbooks/dependencies.yaml
+      - docs/runbooks/degraded-mode-database.md
+      - docs/runbooks/degraded-mode-redis.md
+      - docs/runbooks/degraded-mode-mqtt.md
+      - docs/runbooks/degraded-mode-tesla-api.md
+      - docs/runbooks/degraded-mode-ai-provider.md
+      - docs/runbooks/degraded-mode-object-storage.md
+    acceptance:
+      - id: OPS-11-A1
+        statement: Every required dependency is registered with a degraded behaviour, a fallback, and at least one detection signal.
+        evidence: [ops/runbooks/dependencies.yaml, internal/ops/runbooks.go]
+        verification: go run ./cmd/ops-gate -check runbooks
+      - id: OPS-11-A2
+        statement: Every referenced runbook exists and contains all six operator sections with real content.
+        evidence: [docs/runbooks/degraded-mode-database.md, internal/ops/runbooks.go]
+        verification: go run ./cmd/ops-gate -check runbooks
+      - id: OPS-11-A3
+        statement: A stub or TODO-bearing runbook fails the gate.
+        evidence: [internal/ops/runbooks.go, internal/ops/runbooks_test.go]
+        verification: go test ./internal/ops/... -run TestValidateRunbooks
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-12
+    title: Machine-readable accepted epics with owners and acceptance
+    status: implemented
+    owner:
+      role: engineering-management
+      github: "@atulmgupta"
+    summary: >-
+      This file. A validated register of the accepted OPS programme, with
+      an owner and verifiable acceptance criteria per epic, and a status
+      vocabulary that structurally prevents claiming completion for work
+      that has not been verified.
+    artifacts:
+      - ops/epics.yaml
+      - internal/ops/epics.go
+      - internal/ops/epics_test.go
+    acceptance:
+      - id: OPS-12-A1
+        statement: OPS-01 through OPS-13 are all present, each with an owner and at least one acceptance criterion.
+        evidence: [ops/epics.yaml, internal/ops/epics.go]
+        verification: go run ./cmd/ops-gate -check epics
+      - id: OPS-12-A2
+        statement: Every acceptance criterion names a verification command and evidence paths that exist in the tree.
+        evidence: [internal/ops/epics.go, internal/ops/epics_test.go]
+        verification: go test ./internal/ops/... -run TestValidateEpics
+      - id: OPS-12-A3
+        statement: An epic whose acceptance needs deployed infrastructure cannot be marked `implemented`.
+        evidence: [internal/ops/epics.go, internal/ops/epics_test.go]
+        verification: go test ./internal/ops/... -run TestValidateEpics_StatusHonesty
+
+  # ────────────────────────────────────────────────────────────────────
+  - id: OPS-13
+    title: Generated production readiness scorecard
+    status: implemented
+    owner:
+      role: engineering-management
+      github: "@atulmgupta"
+    summary: >-
+      A scorecard covering availability, latency, security,
+      accessibility, recovery, and cost, generated from a definition plus
+      the live state of the repository. Every status is derived from
+      evidence existence and gate results; criteria needing a deployed
+      environment are excluded from the score and listed separately
+      rather than counted as met.
+    depends_on: [OPS-01, OPS-02, OPS-03, OPS-04, OPS-05, OPS-06, OPS-07, OPS-08, OPS-09, OPS-10, OPS-11]
+    artifacts:
+      - ops/scorecard/dimensions.yaml
+      - cmd/readiness-scorecard
+      - internal/ops/scorecard.go
+      - docs/operations/production-readiness-scorecard.md
+    acceptance:
+      - id: OPS-13-A1
+        statement: All six dimensions are covered and every gate reference resolves to an implemented check.
+        evidence: [ops/scorecard/dimensions.yaml, internal/ops/scorecard.go]
+        verification: go run ./cmd/ops-gate -check scorecard
+      - id: OPS-13-A2
+        statement: Status is derived from evidence and gate results, never hand-asserted.
+        evidence: [internal/ops/scorecard.go, internal/ops/manifests_test.go]
+        verification: go test ./internal/ops/... -run TestGenerateScorecard
+      - id: OPS-13-A3
+        statement: Infrastructure-dependent criteria are excluded from the score and listed separately.
+        evidence: [cmd/readiness-scorecard/main_test.go, docs/operations/production-readiness-scorecard.md]
+        verification: go test ./cmd/readiness-scorecard/... -run TestRun_UnverifiableCriteriaAreNeverCountedAsMet
+      - id: OPS-13-A4
+        statement: The committed document is generated and a stale copy fails CI.
+        evidence: [.github/workflows/ops-gate.yml, cmd/readiness-scorecard/main.go]
+        verification: go run ./cmd/readiness-scorecard -check

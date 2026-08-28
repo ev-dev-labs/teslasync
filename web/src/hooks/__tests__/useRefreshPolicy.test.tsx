@@ -1,15 +1,42 @@
-import { describe, it, expect, afterEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
+
+// The connection model has its own suite (`useConnectionModel.test.ts` for the
+// pure reducer, `useConnectionModel.freshness.test.tsx` for the clock). Here it
+// is a controlled INPUT so the wiring can be exercised without jsdom network
+// plumbing.
+const { connectionMock } = vi.hoisted(() => ({ connectionMock: vi.fn() }))
+
+vi.mock('../useConnectionModel', () => ({
+  useConnectionModel: () => connectionMock(),
+}))
 
 import {
   SAVE_DATA_INTERVAL_MULTIPLIER,
   resolveRefreshInterval,
   useDocumentHidden,
+  useRefreshInterval,
   useSaveData,
   type RefreshContext,
 } from '../useRefreshPolicy'
+import type { ConnectionModel } from '../useConnectionModel'
 
 const BASE = 10_000
+
+/** A fully healthy connection model; override only what a case is about. */
+function model(overrides: Partial<ConnectionModel> = {}): ConnectionModel {
+  return {
+    browser: 'online',
+    api: 'ok',
+    stream: 'connected',
+    telemetry: { scope: 'fleet', status: 'fresh', lastTelemetryAt: null, ageMs: 0 },
+    overall: 'live',
+    reason: 'ok',
+    canReachApi: true,
+    isStreaming: false,
+    ...overrides,
+  }
+}
 
 function context(overrides: Partial<RefreshContext> = {}): RefreshContext {
   return {
@@ -170,5 +197,105 @@ describe('useSaveData', () => {
 
     setConnection({ saveData: false, effectiveType: '4g' })
     expect(renderHook(() => useSaveData()).result.current).toBe(false)
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// The hook form is where the four suppression conditions actually meet: the
+// pure matrix above proves the DECISION, these prove the WIRING. A regression
+// that reads the wrong field off the connection model (e.g. `isStreaming`
+// instead of `canReachApi`) leaves every pure test green while the expensive
+// pollers keep hammering a dead backend.
+describe('useRefreshInterval — wiring to the live connection model', () => {
+  const hiddenDescriptor = Object.getOwnPropertyDescriptor(Document.prototype, 'hidden')
+  let hidden = false
+
+  beforeEach(() => {
+    hidden = false
+    connectionMock.mockReturnValue(model())
+    Object.defineProperty(Document.prototype, 'hidden', {
+      configurable: true,
+      get: () => hidden,
+    })
+  })
+
+  afterEach(() => {
+    if (hiddenDescriptor) {
+      Object.defineProperty(Document.prototype, 'hidden', hiddenDescriptor)
+    }
+    Reflect.deleteProperty(navigator as unknown as Record<string, unknown>, 'connection')
+  })
+
+  function setConnection(value: unknown) {
+    Object.defineProperty(navigator, 'connection', { configurable: true, value })
+  }
+
+  it('returns the base cadence on a healthy, visible, unmetered tab', () => {
+    const { result } = renderHook(() => useRefreshInterval(BASE))
+    expect(result.current).toBe(BASE)
+  })
+
+  it('pauses when the tab is hidden and resumes on visibility', () => {
+    const { result } = renderHook(() => useRefreshInterval(BASE))
+    act(() => {
+      hidden = true
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(result.current).toBe(false)
+
+    act(() => {
+      hidden = false
+      document.dispatchEvent(new Event('visibilitychange'))
+    })
+    expect(result.current).toBe(BASE)
+  })
+
+  it('pauses when the device drops off the network', () => {
+    connectionMock.mockReturnValue(model({ browser: 'offline', canReachApi: false }))
+    expect(renderHook(() => useRefreshInterval(BASE)).result.current).toBe(false)
+  })
+
+  it('pauses a standard poller when the API is unreachable but the device is online', () => {
+    connectionMock.mockReturnValue(model({ canReachApi: false }))
+    expect(renderHook(() => useRefreshInterval(BASE)).result.current).toBe(false)
+    // …while an essential poller keeps probing for recovery.
+    expect(
+      renderHook(() => useRefreshInterval(BASE, { priority: 'essential' })).result.current,
+    ).toBe(BASE)
+  })
+
+  it('stretches — not silences — a standard poller under Data Saver', () => {
+    setConnection({ saveData: true })
+    expect(renderHook(() => useRefreshInterval(BASE)).result.current)
+      .toBe(BASE * SAVE_DATA_INTERVAL_MULTIPLIER)
+  })
+
+  it('stretches a standard poller on a 2G connection with no explicit toggle', () => {
+    setConnection({ saveData: false, effectiveType: '2g' })
+    expect(renderHook(() => useRefreshInterval(BASE)).result.current)
+      .toBe(BASE * SAVE_DATA_INTERVAL_MULTIPLIER)
+  })
+
+  it('suppresses decorative pollers entirely under Data Saver', () => {
+    setConnection({ saveData: true })
+    expect(
+      renderHook(() => useRefreshInterval(BASE, { priority: 'background' })).result.current,
+    ).toBe(false)
+  })
+
+  it('halves decorative pollers while SSE is pushing', () => {
+    connectionMock.mockReturnValue(model({ isStreaming: true }))
+    expect(
+      renderHook(() => useRefreshInterval(BASE, { priority: 'background' })).result.current,
+    ).toBe(BASE * 2)
+  })
+
+  it('honours an explicit enabled:false regardless of a healthy connection', () => {
+    expect(renderHook(() => useRefreshInterval(BASE, { enabled: false })).result.current)
+      .toBe(false)
+  })
+
+  it('propagates a caller-supplied false base without inventing a cadence', () => {
+    expect(renderHook(() => useRefreshInterval(false)).result.current).toBe(false)
   })
 })

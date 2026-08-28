@@ -1,0 +1,20 @@
+{
+  "calculationDetails": {
+    "title": "How this was calculated",
+    "provenance": "Provenance",
+    "method": "Method",
+    "sources": "Data sources",
+    "source": "Source",
+    "period": "Analysis period",
+    "coverage": "Data coverage",
+    "version": "Calculation version",
+    "exclusions": "Exclusions and limitations",
+    "unavailable": "Not provided",
+    "sourceUnavailable": "Source metadata unavailable",
+    "periodUnavailable": "Analysis period unavailable",
+    "coverageUnavailable": "Coverage metadata unavailable",
+    "versionUnavailable": "Version metadata unavailable",
+    "exclusionsUnavailable": "No exclusions were provided",
+    "noExclusions": "No additional exclusions were supplied."
+  }
+}

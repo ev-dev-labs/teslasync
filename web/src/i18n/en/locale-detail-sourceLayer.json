@@ -1,0 +1,20 @@
+{
+  "sourceLayer": {
+    "age": "age",
+    "l1": {
+      "desc": "Read from the in-process SignalStore (hot path, freshest)."
+    },
+    "l2": {
+      "desc": "Read from Redis cross-pod cache (legacy entry; freshness unknown)."
+    },
+    "log": {
+      "desc": "Replayed from signal_log (durable history)."
+    },
+    "stale": {
+      "desc": "Redis-backed value older than the 2-minute freshness window."
+    },
+    "unknown": {
+      "desc": "Source layer unknown."
+    }
+  }
+}

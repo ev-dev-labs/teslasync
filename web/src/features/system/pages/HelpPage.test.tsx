@@ -30,8 +30,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { AppSettings } from '@/api/types';
@@ -107,10 +108,20 @@ function settingsPayload(overrides: Partial<AppSettings>) {
 }
 
 function renderHelp() {
+  // The page now mounts query-backed panels (support bundle → /system/version
+  // and /system/health). Every real mount of /help is inside the app's
+  // provider; the test supplies its own so the deterministic baseline below is
+  // asserted against the same tree production renders. Retries are disabled so
+  // a failing query settles immediately instead of holding the render open.
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false, gcTime: 0 } },
+  });
   return render(
-    <MemoryRouter>
-      <HelpPage />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter>
+        <HelpPage />
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -275,7 +286,12 @@ describe('HelpPage', () => {
     expect(
       screen.queryByTestId('ai-feature-rag-help-root'),
     ).not.toBeInTheDocument();
-    expect(screen.getByTestId('help-baseline-links')).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(EXPECTED_LINKS.length);
+    const baseline = screen.getByTestId('help-baseline-links');
+    expect(baseline).toBeInTheDocument();
+    // Scoped to the baseline container: the page now also renders the glossary
+    // and preset panels, which contribute their own links. The invariant this
+    // asserts is "all five curated links survive", not "the page has exactly
+    // five links in total".
+    expect(within(baseline).getAllByRole('link')).toHaveLength(EXPECTED_LINKS.length);
   });
 });

@@ -10,6 +10,7 @@ import (
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 )
@@ -233,16 +234,55 @@ func TestVehicleHandler_Positions_InvalidVehicleID(t *testing.T) {
 	if rec.Code != http.StatusBadRequest {
 		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
 	}
+
 	if fake.gotTimelineCalls != 0 {
 		t.Fatalf("Timeline call count = %d, want 0 (handler must reject before calling reader)", fake.gotTimelineCalls)
+	}
+}
+
+func TestLatestLiveSignalObservation(t *testing.T) {
+	older := time.Date(2026, 8, 26, 10, 0, 0, 0, time.FixedZone("offset", -7*60*60))
+	newer := older.Add(90 * time.Second)
+	values := map[string]*signal.Value{
+		"nil":       nil,
+		"legacy":    {Raw: 1},
+		"older":     {Raw: 2, Timestamp: older},
+		"newer":     {Raw: 3, Timestamp: newer},
+		"also-old":  {Raw: 4, Timestamp: older.Add(30 * time.Second)},
+		"synthetic": {Raw: 5, Timestamp: newer.Add(time.Hour), TimestampSynthetic: true},
+	}
+
+	got := latestLiveSignalObservation(values)
+	if got == nil {
+		t.Fatal("latest observation = nil, want timestamp")
+	}
+	if !got.Equal(newer) {
+		t.Fatalf("latest observation = %v, want %v", got, newer)
+	}
+	if got.Location() != time.UTC {
+		t.Fatalf("latest observation location = %v, want UTC", got.Location())
+	}
+}
+
+func TestLatestLiveSignalObservationUnknownWithoutTimestamp(t *testing.T) {
+	values := map[string]*signal.Value{
+		"nil":       nil,
+		"legacy":    {Raw: "known value"},
+		"synthetic": {Raw: "hydrated value", Timestamp: time.Now().UTC(), TimestampSynthetic: true},
+	}
+	if got := latestLiveSignalObservation(values); got != nil {
+		t.Fatalf("latest observation = %v, want nil for unknown freshness", got)
 	}
 }
 
 type fakeVehicleListFetcher struct {
 	all       []*vehiclemodel.Vehicle
 	page      []*vehiclemodel.Vehicle
+	one       *vehiclemodel.Vehicle
+	getErr    error
 	allCalls  int
 	pageCalls int
+	getCalls  int
 	limit     int
 	offset    int
 }
@@ -257,6 +297,70 @@ func (f *fakeVehicleListFetcher) GetPage(_ context.Context, limit, offset int) (
 	f.limit = limit
 	f.offset = offset
 	return f.page, nil
+}
+
+func (f *fakeVehicleListFetcher) GetByID(context.Context, int64) (*vehiclemodel.Vehicle, error) {
+	f.getCalls++
+	return f.one, f.getErr
+}
+
+type fakeTelemetrySource struct {
+	live signal.LiveSignalStore
+}
+
+func (f fakeTelemetrySource) GetLiveSignalStore() signal.LiveSignalStore {
+	return f.live
+}
+
+func TestVehicleHandler_CurrentStatePreservesLiveSignalProvenance(t *testing.T) {
+	const vehicleID = int64(42)
+	observedAt := time.Now().UTC().Add(-time.Second)
+	local := signal.New()
+	local.Set(vehicleID, "BatteryLevel", 82.0, observedAt)
+	local.Hydrate(vehicleID, map[string]interface{}{"Odometer": 12_345.0})
+	live, err := signal.NewHybridLiveSignalStore(
+		local,
+		nil,
+		signal.LiveSignalStoreModeLocal,
+	)
+	if err != nil {
+		t.Fatalf("create live signal store: %v", err)
+	}
+
+	h := &Handler{
+		vehicleSvc: &service.VehicleService{},
+		vehicleRepo: &fakeVehicleListFetcher{
+			one: &vehiclemodel.Vehicle{ID: vehicleID},
+		},
+		telemetry: fakeTelemetrySource{live: live},
+	}
+	req := httptest.NewRequest(http.MethodGet, "/vehicles/42/state", nil)
+	routeCtx := chi.NewRouteContext()
+	routeCtx.URLParams.Add("vehicleID", "42")
+	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, routeCtx))
+	rec := httptest.NewRecorder()
+
+	h.CurrentState(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var got currentStateResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode current state response: %v", err)
+	}
+	if got.State == nil || got.State.BatteryLevel != 82 || got.State.Odometer != 12_345 {
+		t.Fatalf("state = %#v, want observed battery and hydrated odometer", got.State)
+	}
+	if got.ObservedAt == nil || !got.ObservedAt.Equal(observedAt) {
+		t.Fatalf("observed_at = %v, want %v", got.ObservedAt, observedAt)
+	}
+	if got.Freshness != stateFreshnessFresh {
+		t.Fatalf("freshness = %q, want %q", got.Freshness, stateFreshnessFresh)
+	}
+	if len(got.VerifiedFields) != 1 || got.VerifiedFields[0] != "battery_level" {
+		t.Fatalf("verified_fields = %v, want [battery_level]", got.VerifiedFields)
+	}
 }
 
 func TestVehicleHandler_ListWithoutPaginationReturnsEntireFleet(t *testing.T) {

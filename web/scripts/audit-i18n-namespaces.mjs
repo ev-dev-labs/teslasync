@@ -19,6 +19,9 @@ const WRITE_BASELINE = process.argv.includes('--write-baseline')
 const STRICT = process.argv.includes('--strict')
 const DOTTED_KEY_PATTERN = /\bt\(\s*['"`]([A-Za-z][A-Za-z0-9_-]*)\.[^'"`$]*['"`]/g
 const DOTLESS_KEY_PATTERN = /\bt\(\s*['"`]([A-Za-z][A-Za-z0-9_-]*)['"`]/g
+// t(`ns.thing.${value}`) never matches DOTTED_KEY_PATTERN because of the
+// interpolation, yet it produces exactly the same runtime namespace request.
+const DYNAMIC_KEY_PATTERN = /\bt\(\s*`([A-Za-z][A-Za-z0-9_-]*)\.[^`]*\$\{/g
 
 function walk(directory, files = []) {
   for (const entry of readdirSync(directory, { withFileTypes: true })) {
@@ -40,12 +43,14 @@ function inventoryKeys() {
 
   for (const file of walk(SOURCE_ROOT)) {
     const source = readFileSync(file, 'utf8')
-    for (const match of source.matchAll(DOTTED_KEY_PATTERN)) {
-      const namespace = match[1]
-      if (known.has(namespace)) continue
-      const locations = unknown.get(namespace) ?? []
-      if (locations.length < 3) locations.push(file.slice(WEB_ROOT.length + 1))
-      unknown.set(namespace, locations)
+    for (const pattern of [DOTTED_KEY_PATTERN, DYNAMIC_KEY_PATTERN]) {
+      for (const match of source.matchAll(pattern)) {
+        const namespace = match[1]
+        if (known.has(namespace)) continue
+        const locations = unknown.get(namespace) ?? []
+        if (locations.length < 3) locations.push(file.slice(WEB_ROOT.length + 1))
+        unknown.set(namespace, locations)
+      }
     }
     for (const match of source.matchAll(DOTLESS_KEY_PATTERN)) {
       const key = match[1]
@@ -81,7 +86,7 @@ function main() {
   const newDotless = Object.keys(inventory.dotless).filter((key) => !(key in baselineDotless))
 
   console.log(
-    `[i18n-namespace-audit] ${Object.keys(unknown).length} known dotted misses, ${Object.keys(inventory.dotless).length} dotless labels, ${newMisses.length} new dotted, ${newDotless.length} new dotless`,
+    `[i18n-namespace-audit] ${Object.keys(unknown).length} known dotted misses, ${Object.keys(inventory.dotless).length} dotless labels, ${newMisses.length} new dotted, ${newDotless.length} new dotless, ${resolved.length} newly resolved`,
   )
   if (newMisses.length > 0) {
     console.error('[i18n-namespace-audit] new unresolved namespaces:')
@@ -89,6 +94,13 @@ function main() {
       console.error(`  - ${namespace}: ${unknown[namespace].join(', ')}`)
     }
     if (STRICT) process.exit(1)
+  }
+  // A baseline entry that no longer appears is dead weight: report it so the
+  // reviewed list shrinks instead of silently accumulating stale namespaces.
+  if (resolved.length > 0) {
+    console.log(
+      `[i18n-namespace-audit] baseline entries no longer referenced (rerun with --write-baseline to prune): ${resolved.join(', ')}`,
+    )
   }
   if (newDotless.length > 0) {
     console.log(`[i18n-namespace-audit] new dotless labels stay source-local: ${newDotless.join(', ')}`)

@@ -108,20 +108,36 @@ the registry and direct lucide imports.
 
 ## Auditing
 
-Run the icon audit to see the current direct-import landscape:
+### Bundle constraint (CLEAN-08 — the old audit was archived)
 
-```pwsh
-pwsh scripts/icon-audit.ps1
-```
+`scripts/icon-audit.ps1` and its reports (`docs/audits/icon-audit.md`,
+`docs/audits/lucide-direct-imports.txt`) counted "files importing directly from
+`lucide-react`" and treated that number as debt. **That premise inverted** and
+the audit is archived under
+[`docs/audits/archive/`](audits/archive/README.md).
 
-This regenerates:
+The registry exists for *concept consistency*, not for bundling: a central icon
+module is not tree-shakeable, so every importer of it reaches every icon it
+names. If such a module ever lands in the cold-start closure, ~400 icon modules
+are downloaded before first paint — the same failure that force-grouping
+`lucide-react` in Vite's `manualChunks` produced (`vendor-icons`, since
+removed). Per-route direct imports are what let Rollup place an icon in the
+chunk of the route that renders it.
 
-- `docs/audits/icon-audit.md` — summary + worst offenders + arbitrary sizing
-- `docs/audits/lucide-direct-imports.txt` — full list, sorted by import count
+The property is now enforced by executable gates instead of a report:
 
-The audit is a **reporting tool**, not a gate — direct imports outside the
-registry are not currently a CI failure, but new code reviews should reject
-them.
+| Property | Gate |
+| --- | --- |
+| Icons must not be hoisted into the startup closure | `npm run perf:check` → `check-bundle-size.mjs --strict` (`BUNDLE_STARTUP_ICON_SHARE_LIMIT`, measured from production source maps) |
+| `manualChunks` must not force-group `lucide-react` | `web/src/__tests__/viteChunking.test.ts` |
+
+Startup icon locality is owned entirely by `check-bundle-size.mjs`.
+`check-duplicate-modules.mjs` checks a different property — that a package
+reaches the bundle through a single physical copy — and does not enforce icon
+locality.
+
+Prefer the registry for concept routing, but **never** add a barrel or wrapper
+that makes a shell module reach the whole registry.
 
 ## Migrating a file
 
@@ -145,4 +161,11 @@ them.
    - { id: 'lock', icon: Lock, label: 'Lock' }
    + { id: 'lock', icon: Icons.locked, label: 'Lock' }
    ```
-5. Re-run `pwsh scripts/icon-audit.ps1` to confirm the count dropped.
+5. Confirm the change with a source-map-attributed build rather than the
+   archived `icon-audit.ps1` report:
+   ```bash
+   cd web
+   VITE_SOURCEMAP_MODE=private npm run build   # hidden, CI-only maps
+   npm run perf:check                          # startup icon + feature locality
+   find dist -name '*.map' -delete             # never publish the maps
+   ```

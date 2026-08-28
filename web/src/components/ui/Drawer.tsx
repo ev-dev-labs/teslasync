@@ -5,10 +5,9 @@ import { useTranslation } from 'react-i18next'
 import { X } from 'lucide-react'
 import { cn } from '@/lib/cn'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { useDialogFocus } from '@/hooks/useDialogFocus'
 import { Button } from './Button'
 import { Heading, Text } from './Typography'
-
-const FOCUSABLE_SELECTOR = 'button:not(:disabled), [href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
 
 export type DrawerSize = 'sm' | 'md' | 'lg'
 
@@ -78,46 +77,18 @@ export function Drawer({
   const drawerRef = useRef<HTMLDivElement>(null)
   const titleId = useId()
   const descriptionId = useId()
-  // Keep the latest onClose without re-subscribing the focus-trap effect on
-  // every parent render. Depending on `onClose` here would re-run the effect
-  // whenever a caller passes an inline handler, stealing focus back to the
-  // first control mid-interaction.
-  const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
 
+  // Shared focus contract (A11Y-04) — see `useDialogFocus`. Modal,
+  // Drawer, and Lightbox all route through it so the trap, the Escape
+  // handling, and the trigger restore cannot drift apart.
+  useDialogFocus({ open, containerRef: drawerRef, onClose })
+
+  // Body-scroll lock is Drawer-specific (Modal scrolls its own overlay),
+  // so it stays here rather than in the shared focus hook.
   useEffect(() => {
     if (!open) return
-    const drawer = drawerRef.current
-    if (!drawer) return
-    const previouslyFocused = document.activeElement as HTMLElement | null
     lockBodyScroll()
-
-    // Move focus into the dialog: the first interactive control, or the
-    // dialog container itself (tabIndex={-1}) when the panel has none, so
-    // keyboard focus never lingers behind the scrim.
-    const focusables = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-    if (focusables.length > 0) focusables[0].focus()
-    else drawer.focus()
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.stopPropagation(); onCloseRef.current(); return }
-      if (e.key !== 'Tab') return
-      const current = drawer.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR)
-      if (current.length === 0) { e.preventDefault(); drawer.focus(); return }
-      const first = current[0]
-      const last = current[current.length - 1]
-      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus() }
-      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus() }
-    }
-
-    drawer.addEventListener('keydown', handleKeyDown)
-    return () => {
-      drawer.removeEventListener('keydown', handleKeyDown)
-      // Restore focus to whatever opened the drawer so keyboard users keep
-      // their place in the page.
-      unlockBodyScroll()
-      previouslyFocused?.focus?.()
-    }
+    return unlockBodyScroll
   }, [open])
 
   if (!open) return null

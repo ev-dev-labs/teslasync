@@ -1,0 +1,37 @@
+{{/*
+OPS-05 — Rollout control surface published for deploy tooling.
+
+This ConfigMap is NOT consumed by the application. It exists so that
+deploy automation, the rollback evaluator, and an operator holding only
+`kubectl get configmap` can answer three questions during an incident:
+
+  * which rollout stage is this release in?
+  * is the rollout paused?
+  * which high-risk behaviours are staged, and at which stage do they
+    turn on?
+
+The application continues to read feature flags from its own FlagStore
+(see internal/api flag handlers), so listing a flag name here changes no
+runtime behaviour on its own.
+*/}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-rollout
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: rollout
+data:
+  paused: {{ .Values.rollout.paused | quote }}
+  apiStrategy: {{ .Values.rollout.api.strategy.type | quote }}
+  webStrategy: {{ .Values.rollout.web.strategy.type | quote }}
+  apiCanaryEnabled: {{ .Values.rollout.api.canary.enabled | quote }}
+  apiCanaryReplicas: {{ .Values.rollout.api.canary.replicaCount | quote }}
+  webCanaryEnabled: {{ .Values.rollout.web.canary.enabled | quote }}
+  webCanaryReplicas: {{ .Values.rollout.web.canary.replicaCount | quote }}
+  {{- if .Values.rollout.highRiskFlags }}
+  highRiskFlags: {{ join "," .Values.rollout.highRiskFlags | quote }}
+  {{- else }}
+  highRiskFlags: ""
+  {{- end }}
+  stagesManifest: "ops/rollout/stages.yaml"

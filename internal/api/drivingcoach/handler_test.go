@@ -467,9 +467,9 @@ func TestGetCoaching_HappyPath(t *testing.T) {
 
 	// Three drives in the same ISO week (2026-06-15 is a Monday), newest
 	// first, chosen so every derived field is hand-verifiable.
-	d0 := mkDrive(101, time.Date(2026, 6, 17, 8, 0, 0, 0, time.UTC), 10, 60, 40, 30, 80, 70, 20) // efficient, eff 750
+	d0 := mkDrive(101, time.Date(2026, 6, 17, 8, 0, 0, 0, time.UTC), 10, 60, 40, 30, 80, 70, 20)  // efficient, eff 750
 	d1 := mkDrive(102, time.Date(2026, 6, 16, 8, 0, 0, 0, time.UTC), 20, 90, 85, 120, 90, 60, 10) // moderate, eff 1125
-	d2 := mkDrive(103, time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC), 3, 140, 30, 200, 50, 48, 0)   // aggressive, eff 500
+	d2 := mkDrive(103, time.Date(2026, 6, 15, 8, 0, 0, 0, time.UTC), 3, 140, 30, 200, 50, 48, 0)  // aggressive, eff 500
 
 	repo := &fakeCoachRepo{drives: []driveAnalysis{d0, d1, d2}}
 	h := newHandlerForTest(repo)

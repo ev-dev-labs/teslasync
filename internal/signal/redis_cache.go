@@ -154,9 +154,10 @@ type redisSignalClient interface {
 // production Redis entries remain decodable via the legacy fields alone.
 type redisSignalValueEnvelope struct {
 	// Typed envelope (canonical going forward).
-	Kind protomodel.ValueKind `json:"kind,omitempty"`
-	V    json.RawMessage      `json:"v,omitempty"`
-	TS   int64                `json:"ts,omitempty"`
+	Kind     protomodel.ValueKind `json:"kind,omitempty"`
+	V        json.RawMessage      `json:"v,omitempty"`
+	TS       int64                `json:"ts,omitempty"`
+	Observed *bool                `json:"observed,omitempty"`
 
 	// Legacy envelope (dual-written for old-binary read compatibility).
 	Encoding    string          `json:"encoding,omitempty"`
@@ -327,7 +328,7 @@ func (c *RedisSignalCache) RestampLegacy(ctx context.Context, vehicleID int64) (
 			}
 		}
 
-		encoded, encErr := encodeTimestampedSignalValueForField(field, decoded, now)
+		encoded, encErr := encodeTimestampedSignalValueForFieldWithMetadata(field, decoded, now, true)
 		if encErr != nil {
 			return 0, fmt.Errorf("encode restamped redis signal %s: %w", field, encErr)
 		}
@@ -600,7 +601,14 @@ func decodeSignalValueWithTimestamp(s string) (*Value, error) {
 		if !decoded {
 			return nil, fmt.Errorf("decode envelope value: missing typed v / legacy value field")
 		}
-		return &Value{Raw: value, Timestamp: envelopeTimestamp(envelope)}, nil
+		return &Value{
+			Raw:       value,
+			Timestamp: envelopeTimestamp(envelope),
+			// Envelopes written before provenance was explicit are
+			// conservative unknowns. They may be genuine cache writes or a
+			// legacy scalar that an older binary restamped with time.Now().
+			TimestampSynthetic: envelope.Observed == nil || !*envelope.Observed,
+		}, nil
 	}
 	return &Value{Raw: decodeLegacySignalValue(s), Timestamp: time.Time{}}, nil
 }
@@ -802,15 +810,26 @@ func parseRedisSignalValueEnvelope(s string, strict bool) (redisSignalValueEnvel
 // readers pick up `kind`+`v`+`ts`; old readers ignore them and fall
 // through to `value`/`timestamp` exactly as before.
 func encodeTimestampedSignalValueForField(name string, v interface{}, timestamp time.Time) (string, error) {
+	return encodeTimestampedSignalValueForFieldWithMetadata(name, v, timestamp, false)
+}
+
+func encodeTimestampedSignalValueForFieldWithMetadata(
+	name string,
+	v interface{},
+	timestamp time.Time,
+	synthetic bool,
+) (string, error) {
 	raw, err := json.Marshal(v)
 	if err != nil {
 		return "", fmt.Errorf("marshal value: %w", err)
 	}
 	legacyValue := encodeSignalValue(v)
+	observed := !synthetic
 	envelope := redisSignalValueEnvelope{
-		Kind: inferValueKind(name, v),
-		V:    raw,
-		TS:   timestamp.UTC().UnixNano(),
+		Kind:     inferValueKind(name, v),
+		V:        raw,
+		TS:       timestamp.UTC().UnixNano(),
+		Observed: &observed,
 
 		Encoding:    redisSignalValueEncoding,
 		Value:       raw,

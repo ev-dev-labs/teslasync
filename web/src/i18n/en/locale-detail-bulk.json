@@ -1,0 +1,43 @@
+{
+  "bulk": {
+    "selected": "{{count}} selected",
+    "selected_one": "{{count}} selected",
+    "selected_other": "{{count}} selected",
+    "ofTotal": "of {{total}}",
+    "clear": "Clear selection",
+    "toolbarLabel": "Bulk actions for selected items",
+    "itemDefault": "item",
+    "itemDefault_one": "item",
+    "itemDefault_other": "items",
+    "deleteConfirmTitle": "Delete {{count}} {{noun}}?",
+    "deleteConfirmDescription": "This cannot be undone.",
+    "enableConfirmTitle": "Enable {{count}} {{noun}}?",
+    "disableConfirmTitle": "Disable {{count}} {{noun}}?",
+    "actions": {
+      "delete": "Delete",
+      "archive": "Archive",
+      "markRead": "Mark as read",
+      "acknowledge": "Acknowledge",
+      "enable": "Enable",
+      "disable": "Disable",
+      "export": "Export CSV"
+    },
+    "result": {
+      "ok": "{{count}} {{noun}} updated",
+      "partial": "{{ok}} succeeded, {{failed}} failed"
+    },
+    "noun": {
+      "drive_one": "drive",
+      "drive_other": "drives",
+      "session_one": "charging session",
+      "session_other": "charging sessions",
+      "rule_one": "alert rule",
+      "rule_other": "alert rules",
+      "notification_one": "notification",
+      "notification_other": "notifications"
+    },
+    "selectAll": "Select all",
+    "selectRow": "Select row",
+    "archived": "{{count}} items archived"
+  }
+}

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { SlidersHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
 
@@ -111,9 +112,9 @@ export function FilterSheet({
         {/* Announces the active count to screen readers without duplicating
             the visible badge text (which is aria-hidden to avoid "3 3"). */}
         {activeCount > 0 && (
-          <span className="sr-only">
+          <VisuallyHidden>
             {t('filters.sheetActiveCount', '{{count}} active', { count: activeCount })}
-          </span>
+          </VisuallyHidden>
         )}
       </Button>
 

@@ -1,0 +1,22 @@
+{
+  "climate": {
+    "aiPreheatPrecool": {
+      "title": "Suggest a preheat or precool schedule",
+      "badge": "Helix",
+      "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
+      "generateButton": "Draft schedule",
+      "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule."
+    },
+    "history": {
+      "emptyMessage": "No climate history has been recorded.",
+      "emptyDescription": "Climate snapshots accumulate after the vehicle reports cabin, ambient, or HVAC telemetry.",
+      "temperatureEmpty": "No temperature history has been recorded.",
+      "temperatureEmptyDescription": "Cabin, ambient, and set-point trends appear after the vehicle reports climate samples.",
+      "hvacEmpty": "No HVAC operating history has been recorded.",
+      "hvacEmptyDescription": "AC state and fan-speed trends appear after the vehicle reports active climate samples.",
+      "hvacAria": "AC on/off state and fan speed over time",
+      "temperatureAria": "Cabin, ambient, and driver set-point temperature over time",
+      "title": "Temperature History"
+    }
+  }
+}

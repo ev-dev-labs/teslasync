@@ -349,9 +349,9 @@ type segmentRow struct {
 // loadSegment reads a persisted segment by id.
 func (h *Handler) loadSegment(ctx context.Context, segmentID int64) (segmentRow, error) {
 	var (
-		seg                                    segmentRow
-		startLat, startLon, endLat, endLon     *float64
-		radiusM                                *float64
+		seg                                segmentRow
+		startLat, startLon, endLat, endLon *float64
+		radiusM                            *float64
 	)
 	err := h.db.QueryRow(ctx, loadSegmentSQL, segmentID).Scan(
 		&seg.ID, &seg.VehicleID, &seg.Name, &startLat, &startLon, &endLat, &endLon, &radiusM)

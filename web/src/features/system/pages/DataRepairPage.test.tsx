@@ -197,6 +197,18 @@ function renderPage() {
 
 async function openDiagnostics(): Promise<void> {
   fireEvent.click(await screen.findByRole('tab', { name: 'Diagnostics' }));
+  // RepairDiagnosticsWorkspace is React.lazy, so the tab click only starts a
+  // dynamic import. Under parallel suite load that import can outlive RTL's 1s
+  // default timeout, which made the first post-click assertion flaky. Wait for
+  // the Suspense fallback to clear instead of racing it.
+  await waitFor(
+    () => {
+      expect(
+        screen.queryByRole('status', { name: 'Loading diagnostics workspace' }),
+      ).not.toBeInTheDocument();
+    },
+    { timeout: 5000 },
+  );
 }
 
 beforeEach(() => {

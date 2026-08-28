@@ -69,6 +69,20 @@ func (f *chargeTrackingFakeState) snapshotCalls() []chargeStateCallRecord {
 // Compile-time guarantee.
 var _ signal.StateReader = (*chargeTrackingFakeState)(nil)
 
+func TestFreshChargeCoordinateValueRequiresObservedTimestamp(t *testing.T) {
+	now := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
+	if freshChargeCoordinateValue(&signal.Value{
+		Raw:                37.5,
+		Timestamp:          now,
+		TimestampSynthetic: true,
+	}, now) {
+		t.Fatal("synthetic warmup coordinate reported fresh")
+	}
+	if !freshChargeCoordinateValue(&signal.Value{Raw: 37.5, Timestamp: now}, now) {
+		t.Fatal("observed current coordinate reported stale")
+	}
+}
+
 // TestChargeTracking_SetChargeStateReader_RoundTrip pins the wiring seam
 // installed in this prompt: SetChargeStateReader stashes the reader in
 // the package-level chargeStateRegistry, and chargeStateReader recovers

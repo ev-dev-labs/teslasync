@@ -1,4 +1,5 @@
 {{- if .Values.autoscaling.enabled }}
+{{- include "teslasync.assertCanarySelectors" . }}
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
@@ -7,6 +8,11 @@ metadata:
     {{- include "teslasync.labels" . | nindent 4 }}
     app.kubernetes.io/component: api
 spec:
+  # OPS-05: an HPA reads pod metrics through its target Deployment's
+  # selector. With legacy (overlapping) selectors the stable HPA would
+  # average CPU across canary pods too and scale the stable set on a
+  # canary regression — which is why canary requires
+  # rollout.selectorMode=disjoint.
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment

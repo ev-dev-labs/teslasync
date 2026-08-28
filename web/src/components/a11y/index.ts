@@ -14,3 +14,8 @@ export {
 } from './VisuallyHidden';
 export { AnnouncerRegion } from './AnnouncerRegion';
 export { RouteAnnouncer, type RouteAnnouncerProps } from './RouteAnnouncer';
+export {
+  RouteFocusManager,
+  type RouteFocusManagerProps,
+  FOCUS_TIMEOUT_MS,
+} from './RouteFocusManager';

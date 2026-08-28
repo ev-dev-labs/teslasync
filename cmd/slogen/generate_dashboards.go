@@ -108,6 +108,7 @@ func runGenerateDashboards(args []string) error {
 	fs := flag.NewFlagSet("generate dashboards", flag.ContinueOnError)
 	catalog := fs.String("catalog", "slo/catalog.yaml", "path to SLO catalog YAML")
 	outDir := fs.String("out-dir", defaultDashboardsDir, "output directory for dashboards")
+	check := fs.Bool("check", false, "exit non-zero if any committed dashboard would change; never writes")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -116,8 +117,10 @@ func runGenerateDashboards(args []string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(*outDir, 0o755); err != nil {
-		return err
+	if !*check {
+		if err := os.MkdirAll(*outDir, 0o755); err != nil {
+			return err
+		}
 	}
 
 	written := 0
@@ -127,7 +130,7 @@ func runGenerateDashboards(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := writeFileIdempotent(path, body); err != nil {
+		if err := writeFileIdempotent(path, body, *check); err != nil {
 			return err
 		}
 		written++
@@ -137,10 +140,14 @@ func runGenerateDashboards(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeFileIdempotent(overviewPath, overviewBody); err != nil {
+	if err := writeFileIdempotent(overviewPath, overviewBody, *check); err != nil {
 		return err
 	}
 	written++
+	if *check {
+		fmt.Fprintf(os.Stdout, "ok %d dashboards in %s are current\n", written, *outDir)
+		return nil
+	}
 	fmt.Fprintf(os.Stdout, "wrote %d dashboards to %s\n", written, *outDir)
 	return nil
 }

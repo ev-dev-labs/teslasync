@@ -1,0 +1,37 @@
+{
+  "timeline": {
+    "title": "Timeline",
+    "time": "Time",
+    "fromState": "From State",
+    "toState": "To State",
+    "duration": "Duration",
+    "actions": "Actions",
+    "inspect": "Inspect",
+    "inspectTransition": "Inspect transition {{from}} to {{to}}",
+    "selectVehicle": "Select Vehicle",
+    "subtitle": "Vehicle state history and transitions",
+    "totalTransitions": "Total Transitions",
+    "drivingTime": "Driving Time",
+    "chargingTime": "Charging Time",
+    "idleSleepTime": "Idle / Sleep Time",
+    "stateTimeline": "State Timeline",
+    "dailyBreakdown": "Daily Breakdown",
+    "noDailyData": "No daily data available yet",
+    "driving": "Driving",
+    "charging": "Charging",
+    "idle": "Idle",
+    "sleeping": "Sleeping",
+    "stateTransitions": "State Transitions",
+    "noTransitions": "No state transitions recorded",
+    "preview": {
+      "eyebrow": "State transition",
+      "title": "{{from}} → {{to}}",
+      "fallbackTitle": "Transition details",
+      "description": "Recorded {{time}}",
+      "triggerField": "Trigger field",
+      "triggerValue": "Trigger value"
+    },
+    "dailyBreakdownAria": "Daily transition counts by vehicle state",
+    "day": "Day"
+  }
+}

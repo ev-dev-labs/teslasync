@@ -41,9 +41,19 @@ vi.mock('@/lib/errorReporter', () => ({
 vi.mock('./components/layout/Layout', () => ({ default: () => null }))
 vi.mock('./components/layout/ScrollRestoration', () => ({ ScrollRestoration: () => null }))
 vi.mock('@/features/onboarding/components/OnboardingGate', () => ({ OnboardingGate: () => null }))
+vi.mock('@/features/onboarding/components/TaskOnboardingHost', () => ({
+  TaskOnboardingHost: () => null,
+}))
 vi.mock('@/components/ui/DensityApplier', () => ({ DensityApplier: () => null }))
 vi.mock('@/components/ui/ContextMenu', () => ({ ContextMenuRoot: () => null }))
-vi.mock('@/components/a11y', () => ({ RouteAnnouncer: () => null }))
+// Route-level chrome is stubbed: the announcer and the focus manager both run
+// timers/focus side effects that are covered by their own specs. Everything
+// else in the barrel (VisuallyHidden, AnnouncerRegion) stays real.
+vi.mock('@/components/a11y', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/a11y')>()),
+  RouteAnnouncer: () => null,
+  RouteFocusManager: () => null,
+}))
 
 import App from './App'
 import {

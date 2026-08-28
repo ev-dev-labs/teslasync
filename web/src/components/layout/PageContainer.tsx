@@ -19,6 +19,7 @@ import {
 } from '@/components/data-display/DataFreshness';
 import { OperationalModeBadge } from '@/components/data-display/OperationalModeBadge';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 
 /**
  * Pick the most-degraded query in a list so the single page-tier badge
@@ -99,6 +100,13 @@ export interface PageContainerProps {
    * sections remain on screen.
    */
   dataSources?: readonly DataSourceDescriptor[];
+  /**
+   * Set false to suppress the automatic "loaded" / "could not refresh"
+   * live-region announcement. Use for pages that announce their own,
+   * richer result (e.g. a search page that reports a match count), so
+   * the user does not hear the same event twice.
+   */
+  announce?: boolean;
 }
 
 export function PageContainer({
@@ -107,8 +115,22 @@ export function PageContainer({
   loading, busy, error, empty, emptyMessage,
   breadcrumbLabels,
   children, className, copyLink, query, dataSources,
+  announce = true,
 }: PageContainerProps) {
   const operationalMode = useOperationalMode();
+  // A11Y-06: every page funnels through here, so the "your data finished
+  // loading" / "the refresh failed" announcements can be centralised
+  // instead of asking 140 pages to remember a hook. Fires only on the
+  // loading → settled edge, so background refetches stay silent, and it
+  // is governed (deduped + rate-limited) by `useStatusAnnouncer`.
+  useLoadAnnouncement({
+    label: title,
+    isLoading: Boolean(loading),
+    isError: Boolean(error),
+    count: empty ? 0 : undefined,
+    enabled: announce,
+  });
+
   // Push per-page breadcrumb label overrides up to the global Layout
   // breadcrumb. The Layout itself reads from BreadcrumbOverridesContext +
   // `useBreadcrumbs(...)` and renders the single canonical breadcrumb row
@@ -142,7 +164,18 @@ export function PageContainer({
             aria-hidden="true"
           />
           <div className="min-w-0 py-0.5">
-            <Heading level="page" className="font-bold tracking-[-0.025em]">
+            {/* Route-focus target (A11Y-03). `tabIndex={-1}` makes the
+                heading programmatically focusable without adding it to
+                the tab order, so `RouteFocusManager` can park focus at
+                the start of the new page's content after a client-side
+                navigation. The attribute name is asserted against
+                `ROUTE_FOCUS_TARGET_ATTR` by the PageContainer test. */}
+            <Heading
+              level="page"
+              className="font-bold tracking-[-0.025em] outline-none"
+              tabIndex={-1}
+              data-route-focus-target="true"
+            >
               {title}
             </Heading>
             {subtitle && (

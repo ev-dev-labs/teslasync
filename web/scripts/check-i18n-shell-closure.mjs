@@ -107,17 +107,34 @@ function main() {
     }
   }
 
-  const failures = [...namespaces].filter(
-    (namespace) => manifest.namespaceToBundle[namespace] !== 'shell' || !(namespace in shell),
-  )
+  const failures = [...namespaces].flatMap((namespace) => {
+    const problems = []
+    if (manifest.namespaceToBundle[namespace] !== 'shell') {
+      problems.push(`${namespace} (owned by ${manifest.namespaceToBundle[namespace]})`)
+    } else if (!(namespace in shell)) {
+      problems.push(`${namespace} (missing from shell.json)`)
+    } else if (manifest.namespaceFallbackBundles[namespace] !== `detail-${namespace}`) {
+      problems.push(`${namespace} (fallback ${manifest.namespaceFallbackBundles[namespace]} is not per-namespace)`)
+    }
+    return problems
+  })
+  // A locale chunk inside the static closure would mean a deferred catalog
+  // became part of first paint, which is the regression this gate exists for.
+  const staticLocaleChunks = [...closure].filter((asset) => asset.startsWith('locale-'))
   const shellGzip = gzipSync(readFileSync(join(I18N_DIR, 'shell.json'))).length
+  const runtimeManifest = JSON.parse(readFileSync(join(I18N_DIR, 'runtime-manifest.json'), 'utf8'))
+  const runtimeManifestGzip = gzipSync(readFileSync(join(I18N_DIR, 'runtime-manifest.json'))).length
   console.log(
-    `[i18n-shell-closure] ${closure.size} static assets, ${mappedSources} mapped sources, ${namespaces.size} translated namespaces, ${(shellGzip / 1024).toFixed(1)} KB shell gzip`,
+    `[i18n-shell-closure] ${closure.size} static assets, ${mappedSources} mapped sources, ${namespaces.size} translated namespaces, ${(shellGzip / 1024).toFixed(1)} KB shell gzip, ${(runtimeManifestGzip / 1024).toFixed(1)} KB runtime manifest gzip, ${manifest.detailNamespaces.length} per-namespace fallbacks, ${runtimeManifest.missing.length} suppressed known-missing keys`,
   )
   if (missingMaps.length > 0 || mappedSources === 0 || namespaces.size < MIN_STATIC_NAMESPACES) {
     console.error(
       `[i18n-shell-closure] invalid evidence: missing maps=${missingMaps.join(',') || 'none'}, mapped sources=${mappedSources}, namespaces=${namespaces.size}, minimum=${MIN_STATIC_NAMESPACES}`,
     )
+    process.exit(1)
+  }
+  if (staticLocaleChunks.length > 0) {
+    console.error(`[i18n-shell-closure] deferred locale chunks reached the startup closure: ${staticLocaleChunks.join(', ')}`)
     process.exit(1)
   }
   if (failures.length > 0) {

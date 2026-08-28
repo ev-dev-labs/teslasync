@@ -1,79 +1,182 @@
 {
-  "incidentTimeline": {
-    "aiSummary": {
-      "title": "Helix timeline summary",
-      "description": "Get a 3-6 sentence factual summary of this incident’s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
-      "badge": "Helix",
-      "button": "Summarize"
+  "chatbot": {
+    "title": "Helix",
+    "subtitle": "Evidence-grounded intelligence across your fleet and TeslaSync knowledge",
+    "history": "History",
+    "newChat": "New Chat",
+    "sessions": "Sessions",
+    "noSessions": "No conversations yet",
+    "howCanIHelp": "How can Helix help you?",
+    "askAbout": "Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance",
+    "thinking": "Helix is thinking…",
+    "planning": "Helix is planning the investigation…",
+    "grounding": "Helix is grounding the answer in TeslaSync evidence…",
+    "placeholder": "Ask Helix to investigate, compare, or explain… (Shift+Enter for newline)",
+    "inputLabel": "Message",
+    "aiError": "(AI error: {{message}})",
+    "actions": {
+      "send": "Send message",
+      "stop": "Stop",
+      "stopHint": "Stop reveal (Esc)",
+      "stopStreaming": "Stop streaming",
+      "regenerate": "Regenerate",
+      "edit": "Edit",
+      "cancel": "Cancel",
+      "saveAndResend": "Save & resend"
     },
-    "title": "Incident",
-    "loading": "Loading incident…",
-    "notFound": "Not found",
-    "resource": "Incident",
-    "notFoundTitle": "Incident not found",
-    "notFoundBody": "It may have been deleted or you don't have access.",
-    "backToStatus": "Back to System Status",
-    "back": "Back",
-    "idPrefix": "Incident",
-    "kpis": "Incident metrics",
-    "kpi": {
-      "status": "Status",
-      "duration": "Duration",
-      "updates": "Updates",
-      "affected": "Affected",
-      "source": "Source",
-      "started": "Started"
+    "suggestion": {
+      "readiness": "Give me a fleet readiness briefing using battery, alerts, and recent charging.",
+      "attention": "Which vehicle needs attention first, and what evidence supports it?",
+      "crossDomain": "Compare recent driving efficiency and charging patterns across my vehicles.",
+      "knowledge": "How do I configure alerts in TeslaSync? Cite the relevant documentation."
     },
-    "resolvedFor": "Resolved",
-    "openFor": "Open",
-    "resolve": "Resolve",
-    "noDescription": "No description provided.",
-    "affected": "Affected components",
-    "noAffected": "None recorded",
-    "started": "Started",
-    "resolvedAt": "Resolved",
-    "details": "Details",
-    "detail": {
-      "status": "Status",
-      "source": "Source",
-      "started": "Started",
-      "resolved": "Resolved",
-      "duration": "Duration",
-      "updates": "Updates",
-      "createdBy": "Created by",
-      "updated": "Last updated"
+    "session": {
+      "untitled": "Untitled conversation",
+      "empty": "Empty",
+      "messageCount_one": "{{count}} msg",
+      "messageCount_other": "{{count}} msgs",
+      "messageCount": "{{count}} msgs"
     },
-    "timeline": "Timeline",
-    "noUpdates": "No updates recorded yet.",
-    "postUpdate": "Post an update",
-    "resolvedTitle": "Incident resolved",
-    "resolvedBody": "This incident is closed. The timeline remains available for reference.",
-    "updatePlaceholder": "What's new? Investigation step, mitigation applied, hypothesis…",
-    "updateLabel": "Update message",
-    "changeStatus": "Change status with this update",
-    "keepStatus": "Keep status as",
-    "adding": "Adding…",
-    "addUpdate": "Add update",
-    "status": {
-      "investigating": "Investigating",
-      "identified": "Identified",
-      "monitoring": "Monitoring",
-      "resolved": "Resolved"
+    "delete": {
+      "title": "Delete conversation?",
+      "message": "This will permanently remove this conversation and all its messages.",
+      "confirm": "Delete"
     },
-    "updateRequired": "Update message is required.",
-    "updateAdded": "Update added.",
-    "updateFailed": "Failed to append update",
-    "resolvedToast": "Incident resolved.",
-    "resolveFailed": "Failed to resolve",
-    "confirmTitle": "Resolve incident?",
-    "confirmBody": "This will close the incident and stamp resolved_at. You can still view the timeline.",
-    "cancel": "Cancel",
-    "severity": {
-      "minor": "Minor",
-      "major": "Major",
-      "critical": "Critical"
+    "aria": {
+      "conversation": "Conversation",
+      "suggestions": "Suggested prompts",
+      "copyMessage": "Copy message",
+      "regenerate": "Regenerate response",
+      "edit": "Edit and resend",
+      "editMessage": "Edit message",
+      "renameSession": "Rename conversation",
+      "deleteSession": "Delete conversation",
+      "doubleClickRename": "Double-click to rename",
+      "workspace": "Assistant workspace"
     },
-    "updatesLabel": "Incident updates"
+    "llm": {
+      "indicator": "Helix",
+      "indicatorTooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.",
+      "badge": "Helix"
+    }
+  },
+  "commandHistory": {
+    "title": "Command History",
+    "filterAll": "All",
+    "filterSuccess": "Success",
+    "filterFailed": "Failed",
+    "subtitle": "Audit log of all vehicle commands",
+    "backToCommands": "Commands",
+    "total24h": "Commands (24h)",
+    "successRate": "Success Rate",
+    "mostUsed": "Most Used",
+    "lastSent": "Last Sent",
+    "selectVehicle": "Select vehicle",
+    "searchPlaceholder": "Search commands…",
+    "searchCommands": "Search commands",
+    "timelineTitle": "Command Timeline",
+    "showing": "{{count}} commands",
+    "noFilterResults": "No commands match the current filters",
+    "noCommands": "No commands have been sent yet",
+    "col": {
+      "day": "Day"
+    },
+    "dailyActivityAria": "Stacked bar chart of daily command success and failure counts"
+  },
+  "dataExport": {
+    "csvPreview": "CSV Preview",
+    "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
+    "jsonPreview": "JSON Preview",
+    "jsonDesc": "Structured JSON format for programmatic access",
+    "dataOverview": "Data Overview",
+    "drives": "Drives",
+    "chargingSessions": "Charging Sessions",
+    "unavailable": "Unavailable",
+    "wizardTitle": "New Export",
+    "wizard": {
+      "step1": "STEP 1 — Select Data Type",
+      "step2": "STEP 2 — Choose Format",
+      "step3": "STEP 3 — Select Vehicle",
+      "step4": "STEP 4 — Date Range"
+    },
+    "columns": {
+      "title": "STEP 2½ — Columns",
+      "helperText": "Select which columns to include in the export. Required columns cannot be removed.",
+      "selectAll": "Select all",
+      "clear": "Clear",
+      "alwaysIncluded": "Required",
+      "none": "No columns selected"
+    },
+    "allVehicles": "All Vehicles",
+    "customRange": "Custom Range",
+    "exportHistory": "Export History",
+    "active": "Active",
+    "refresh": "Refresh",
+    "noExports": "No Exports Yet",
+    "noExportsMessage": "Create your first export above to get started.",
+    "noJobs": "No export jobs",
+    "title": "Data Export",
+    "subtitle": "Export vehicle data in CSV or JSON format",
+    "account": {
+      "title": "Download my data",
+      "subtitle": "Get a single ZIP containing every table we store for you — drives, charging, signal history, alerts, settings, and a manifest. Use this for backup, migration, or your personal records.",
+      "vehicle": "Vehicle",
+      "allVehicles": "All vehicles",
+      "startDate": "Start date (optional)",
+      "endDate": "End date (optional)",
+      "warning": "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.",
+      "start": "Start full export"
+    },
+    "scheduled": {
+      "feature": "Scheduled exports",
+      "title": "Scheduled exports",
+      "subtitle": "Cron-driven recurring exports. The server runs each schedule on its cadence and delivers the result via download, email, or webhook.",
+      "newSchedule": "New schedule",
+      "empty": "No schedules yet",
+      "emptyMessage": "Create a schedule to receive recurring exports automatically.",
+      "table": {
+        "name": "Name",
+        "type": "Type",
+        "format": "Format",
+        "cron": "Cron",
+        "delivery": "Delivery",
+        "nextRun": "Next run",
+        "lastRun": "Last run",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "status": {
+        "ok": "OK",
+        "failed": "Failed",
+        "never": "Never"
+      },
+      "actions": {
+        "runNow": "Run now",
+        "edit": "Edit",
+        "delete": "Delete",
+        "enable": "Enable",
+        "disable": "Disable"
+      },
+      "form": {
+        "name": "Name",
+        "namePlaceholder": "Drives weekly",
+        "exportType": "Export type",
+        "format": "Format",
+        "vehicle": "Vehicle (optional)",
+        "scheduleCron": "Cron expression",
+        "scheduleCronHelp": "Standard 5-field cron, e.g. '0 9 * * 0' for 09:00 every Sunday.",
+        "rangeWindow": "Range window",
+        "rangeWindowHelp": "Relative window applied at run time. Format: number + m/h/d (e.g. 7d).",
+        "delivery": "Delivery",
+        "deliveryKind": "Delivery kind",
+        "deliveryTarget": "Delivery target",
+        "deliveryTargetHelp": "Email address (email kind) or HTTPS URL (webhook kind). Ignored for download.",
+        "submit": "Save schedule",
+        "cancel": "Cancel"
+      },
+      "deleteConfirmTitle": "Delete schedule?",
+      "deleteConfirmBody": "This will stop future runs of {{name}}. Past download artifacts are not affected."
+    }
   },
   "dataRepair": {
     "title": "Data Repair",
@@ -451,185 +554,6 @@
       "maxSpeedMph": "Max Speed (mph)"
     }
   },
-  "chatbot": {
-    "title": "Helix",
-    "subtitle": "Evidence-grounded intelligence across your fleet and TeslaSync knowledge",
-    "history": "History",
-    "newChat": "New Chat",
-    "sessions": "Sessions",
-    "noSessions": "No conversations yet",
-    "howCanIHelp": "How can Helix help you?",
-    "askAbout": "Investigate live fleet evidence, compare domains, or ask for cited TeslaSync guidance",
-    "thinking": "Helix is thinking…",
-    "planning": "Helix is planning the investigation…",
-    "grounding": "Helix is grounding the answer in TeslaSync evidence…",
-    "placeholder": "Ask Helix to investigate, compare, or explain… (Shift+Enter for newline)",
-    "inputLabel": "Message",
-    "aiError": "(AI error: {{message}})",
-    "actions": {
-      "send": "Send message",
-      "stop": "Stop",
-      "stopHint": "Stop reveal (Esc)",
-      "stopStreaming": "Stop streaming",
-      "regenerate": "Regenerate",
-      "edit": "Edit",
-      "cancel": "Cancel",
-      "saveAndResend": "Save & resend"
-    },
-    "suggestion": {
-      "readiness": "Give me a fleet readiness briefing using battery, alerts, and recent charging.",
-      "attention": "Which vehicle needs attention first, and what evidence supports it?",
-      "crossDomain": "Compare recent driving efficiency and charging patterns across my vehicles.",
-      "knowledge": "How do I configure alerts in TeslaSync? Cite the relevant documentation."
-    },
-    "session": {
-      "untitled": "Untitled conversation",
-      "empty": "Empty",
-      "messageCount_one": "{{count}} msg",
-      "messageCount_other": "{{count}} msgs",
-      "messageCount": "{{count}} msgs"
-    },
-    "delete": {
-      "title": "Delete conversation?",
-      "message": "This will permanently remove this conversation and all its messages.",
-      "confirm": "Delete"
-    },
-    "aria": {
-      "conversation": "Conversation",
-      "suggestions": "Suggested prompts",
-      "copyMessage": "Copy message",
-      "regenerate": "Regenerate response",
-      "edit": "Edit and resend",
-      "editMessage": "Edit message",
-      "renameSession": "Rename conversation",
-      "deleteSession": "Delete conversation",
-      "doubleClickRename": "Double-click to rename",
-      "workspace": "Assistant workspace"
-    },
-    "llm": {
-      "indicator": "Helix",
-      "indicatorTooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.",
-      "badge": "Helix"
-    }
-  },
-  "commandHistory": {
-    "title": "Command History",
-    "filterAll": "All",
-    "filterSuccess": "Success",
-    "filterFailed": "Failed",
-    "subtitle": "Audit log of all vehicle commands",
-    "backToCommands": "Commands",
-    "total24h": "Commands (24h)",
-    "successRate": "Success Rate",
-    "mostUsed": "Most Used",
-    "lastSent": "Last Sent",
-    "selectVehicle": "Select vehicle",
-    "searchPlaceholder": "Search commands…",
-    "searchCommands": "Search commands",
-    "timelineTitle": "Command Timeline",
-    "showing": "{{count}} commands",
-    "noFilterResults": "No commands match the current filters",
-    "noCommands": "No commands have been sent yet",
-    "col": {
-      "day": "Day"
-    },
-    "dailyActivityAria": "Stacked bar chart of daily command success and failure counts"
-  },
-  "dataExport": {
-    "csvPreview": "CSV Preview",
-    "csvDesc": "Comma-separated values, compatible with Excel and Google Sheets",
-    "jsonPreview": "JSON Preview",
-    "jsonDesc": "Structured JSON format for programmatic access",
-    "dataOverview": "Data Overview",
-    "drives": "Drives",
-    "chargingSessions": "Charging Sessions",
-    "unavailable": "Unavailable",
-    "wizardTitle": "New Export",
-    "wizard": {
-      "step1": "STEP 1 — Select Data Type",
-      "step2": "STEP 2 — Choose Format",
-      "step3": "STEP 3 — Select Vehicle",
-      "step4": "STEP 4 — Date Range"
-    },
-    "columns": {
-      "title": "STEP 2½ — Columns",
-      "helperText": "Select which columns to include in the export. Required columns cannot be removed.",
-      "selectAll": "Select all",
-      "clear": "Clear",
-      "alwaysIncluded": "Required",
-      "none": "No columns selected"
-    },
-    "allVehicles": "All Vehicles",
-    "customRange": "Custom Range",
-    "exportHistory": "Export History",
-    "active": "Active",
-    "refresh": "Refresh",
-    "noExports": "No Exports Yet",
-    "noExportsMessage": "Create your first export above to get started.",
-    "noJobs": "No export jobs",
-    "title": "Data Export",
-    "subtitle": "Export vehicle data in CSV or JSON format",
-    "account": {
-      "title": "Download my data",
-      "subtitle": "Get a single ZIP containing every table we store for you — drives, charging, signal history, alerts, settings, and a manifest. Use this for backup, migration, or your personal records.",
-      "vehicle": "Vehicle",
-      "allVehicles": "All vehicles",
-      "startDate": "Start date (optional)",
-      "endDate": "End date (optional)",
-      "warning": "Large signal histories are capped per table to keep the ZIP under control. Track progress in the floating widget that appears once your export starts.",
-      "start": "Start full export"
-    },
-    "scheduled": {
-      "feature": "Scheduled exports",
-      "title": "Scheduled exports",
-      "subtitle": "Cron-driven recurring exports. The server runs each schedule on its cadence and delivers the result via download, email, or webhook.",
-      "newSchedule": "New schedule",
-      "empty": "No schedules yet",
-      "emptyMessage": "Create a schedule to receive recurring exports automatically.",
-      "table": {
-        "name": "Name",
-        "type": "Type",
-        "format": "Format",
-        "cron": "Cron",
-        "delivery": "Delivery",
-        "nextRun": "Next run",
-        "lastRun": "Last run",
-        "status": "Status",
-        "actions": "Actions"
-      },
-      "status": {
-        "ok": "OK",
-        "failed": "Failed",
-        "never": "Never"
-      },
-      "actions": {
-        "runNow": "Run now",
-        "edit": "Edit",
-        "delete": "Delete",
-        "enable": "Enable",
-        "disable": "Disable"
-      },
-      "form": {
-        "name": "Name",
-        "namePlaceholder": "Drives weekly",
-        "exportType": "Export type",
-        "format": "Format",
-        "vehicle": "Vehicle (optional)",
-        "scheduleCron": "Cron expression",
-        "scheduleCronHelp": "Standard 5-field cron, e.g. '0 9 * * 0' for 09:00 every Sunday.",
-        "rangeWindow": "Range window",
-        "rangeWindowHelp": "Relative window applied at run time. Format: number + m/h/d (e.g. 7d).",
-        "delivery": "Delivery",
-        "deliveryKind": "Delivery kind",
-        "deliveryTarget": "Delivery target",
-        "deliveryTargetHelp": "Email address (email kind) or HTTPS URL (webhook kind). Ignored for download.",
-        "submit": "Save schedule",
-        "cancel": "Cancel"
-      },
-      "deleteConfirmTitle": "Delete schedule?",
-      "deleteConfirmBody": "This will stop future runs of {{name}}. Past download artifacts are not affected."
-    }
-  },
   "dbHealth": {
     "title": "DB Health",
     "table": {
@@ -691,84 +615,6 @@
       "runtime": "Tables and runtime"
     }
   },
-  "roadmap": {
-    "title": "Roadmap",
-    "subtitle": "What's been built, what's in progress, and what's coming next",
-    "overview": "Roadmap overview",
-    "noItems": "No items in this phase yet.",
-    "phase": {
-      "done": "Completed",
-      "current": "In Progress",
-      "next": "Up Next",
-      "future": "Future"
-    },
-    "phaseDesc": {
-      "done": "Shipped and available in your deployment today.",
-      "current": "Actively being built right now.",
-      "next": "Designed and queued for the next development cycle.",
-      "future": "On the long-term vision — not yet scheduled."
-    },
-    "metric": {
-      "total": "Total Initiatives",
-      "featuresShipped": "Features Shipped"
-    },
-    "progress": {
-      "title": "Delivery Progress",
-      "ofTotal": "of {{total}} initiatives shipped",
-      "barLabel": "Roadmap initiatives by phase",
-      "empty": "No roadmap items to display yet."
-    }
-  },
-  "teslaAccount": {
-    "title": "Tesla Account",
-    "subtitle": "Your Tesla account profile synced from the Fleet API",
-    "lastSynced": "Last synced: {{time}}",
-    "neverSynced": "Never synced — click Refresh to fetch from Tesla",
-    "refresh": "Refresh from Tesla",
-    "profile": "Profile",
-    "avatar": "Profile picture",
-    "name": "Name",
-    "email": "Email",
-    "fetchedAt": "Fetched At",
-    "noProfile": "No profile data yet. Click \"Refresh from Tesla\" to sync your account.",
-    "resource": "Tesla profile",
-    "neverSyncedShort": "Not synced yet",
-    "unnamed": "Tesla Driver",
-    "synced": "Synced",
-    "never": "Never synced",
-    "accountId": "Account ID",
-    "image": "Profile Image",
-    "imageAvailable": "Available",
-    "imageNone": "Not set",
-    "noProfileTitle": "No profile synced yet",
-    "detailsEmpty": "No account details yet. Sync to populate your profile.",
-    "kpis": "Account summary",
-    "kpi": {
-      "sync": "Sync Status",
-      "accountId": "Account ID",
-      "accountIdSub": "Fleet API identity",
-      "memberSince": "Member Since",
-      "updated": "Last Updated"
-    },
-    "sync": {
-      "title": "Sync",
-      "lastSynced": "Last synced",
-      "helper": "Fetches your latest account profile from the Tesla Fleet API."
-    },
-    "details": {
-      "title": "Account Details"
-    },
-    "activity": {
-      "title": "Activity",
-      "linked": "Account linked",
-      "linkedSub": "Tesla account connected to TeslaSync",
-      "updated": "Profile updated",
-      "updatedSub": "Most recent change to your profile record",
-      "synced": "Last synced from Tesla",
-      "syncedSub": "Latest fetch from the Fleet API",
-      "empty": "No account activity to show yet."
-    }
-  },
   "debugger": {
     "share": "Share permalink",
     "window": {
@@ -811,43 +657,108 @@
       "copy": "Copy snapshot"
     }
   },
-  "system": {
-    "page": {
-      "title": "System budgets",
-      "subtitle": "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."
+  "incidentTimeline": {
+    "aiSummary": {
+      "title": "Helix timeline summary",
+      "description": "Get a 3-6 sentence factual summary of this incident’s timeline. The summary is grounded in the same deterministic envelope the timeline below shows; the narrator never invents updates and never speculates about root cause.",
+      "badge": "Helix",
+      "button": "Summarize"
     },
-    "toolbar": {
-      "refreshAll": "Refresh all"
+    "title": "Incident",
+    "loading": "Loading incident…",
+    "notFound": "Not found",
+    "resource": "Incident",
+    "notFoundTitle": "Incident not found",
+    "notFoundBody": "It may have been deleted or you don't have access.",
+    "backToStatus": "Back to System Status",
+    "back": "Back",
+    "idPrefix": "Incident",
+    "kpis": "Incident metrics",
+    "kpi": {
+      "status": "Status",
+      "duration": "Duration",
+      "updates": "Updates",
+      "affected": "Affected",
+      "source": "Source",
+      "started": "Started"
     },
-    "overview": {
-      "title": "Health at a glance",
-      "throttleBudgets": "Throttle budgets",
-      "peakUsage": "Peak budget usage",
-      "peakUsageHint": "Of the tightest window",
-      "activeWorkers": "Active workers",
-      "activeWorkersHint": "Reporting heartbeats",
-      "backlog": "Queue backlog",
-      "backlogHint": "Pending + in progress",
-      "succeeded": "Succeeded 24h",
-      "succeededHint": "Jobs completed",
-      "failed": "Failed 24h",
-      "failedHint": "Terminal failures",
-      "noBudgets": "No active budgets",
-      "awaiting": "Awaiting data",
-      "loading": "Loading system health…"
-    },
+    "resolvedFor": "Resolved",
+    "openFor": "Open",
+    "resolve": "Resolve",
+    "noDescription": "No description provided.",
+    "affected": "Affected components",
+    "noAffected": "None recorded",
+    "started": "Started",
+    "resolvedAt": "Resolved",
+    "details": "Details",
     "detail": {
-      "title": "Throttles & workers"
+      "status": "Status",
+      "source": "Source",
+      "started": "Started",
+      "resolved": "Resolved",
+      "duration": "Duration",
+      "updates": "Updates",
+      "createdBy": "Created by",
+      "updated": "Last updated"
     },
-    "empty": {
-      "compression": "No compression statistics are available yet.",
-      "compressionDescription": "Storage savings appear after TimescaleDB compression policies process eligible telemetry chunks.",
-      "exportQueue": "No export jobs are queued.",
-      "exportQueueDescription": "New export requests will appear here while they are pending, processing, or completing.",
-      "notifications": "No notification activity has been recorded.",
-      "notificationsDescription": "Delivery totals and channel health appear after alerts or system messages send notifications.",
-      "telemetry": "Telemetry service health has not reported yet.",
-      "telemetryDescription": "Connection mode, vehicle counts, and signal throughput appear after the telemetry service publishes health data."
+    "timeline": "Timeline",
+    "noUpdates": "No updates recorded yet.",
+    "postUpdate": "Post an update",
+    "resolvedTitle": "Incident resolved",
+    "resolvedBody": "This incident is closed. The timeline remains available for reference.",
+    "updatePlaceholder": "What's new? Investigation step, mitigation applied, hypothesis…",
+    "updateLabel": "Update message",
+    "changeStatus": "Change status with this update",
+    "keepStatus": "Keep status as",
+    "adding": "Adding…",
+    "addUpdate": "Add update",
+    "status": {
+      "investigating": "Investigating",
+      "identified": "Identified",
+      "monitoring": "Monitoring",
+      "resolved": "Resolved"
+    },
+    "updateRequired": "Update message is required.",
+    "updateAdded": "Update added.",
+    "updateFailed": "Failed to append update",
+    "resolvedToast": "Incident resolved.",
+    "resolveFailed": "Failed to resolve",
+    "confirmTitle": "Resolve incident?",
+    "confirmBody": "This will close the incident and stamp resolved_at. You can still view the timeline.",
+    "cancel": "Cancel",
+    "severity": {
+      "minor": "Minor",
+      "major": "Major",
+      "critical": "Critical"
+    },
+    "updatesLabel": "Incident updates"
+  },
+  "roadmap": {
+    "title": "Roadmap",
+    "subtitle": "What's been built, what's in progress, and what's coming next",
+    "overview": "Roadmap overview",
+    "noItems": "No items in this phase yet.",
+    "phase": {
+      "done": "Completed",
+      "current": "In Progress",
+      "next": "Up Next",
+      "future": "Future"
+    },
+    "phaseDesc": {
+      "done": "Shipped and available in your deployment today.",
+      "current": "Actively being built right now.",
+      "next": "Designed and queued for the next development cycle.",
+      "future": "On the long-term vision — not yet scheduled."
+    },
+    "metric": {
+      "total": "Total Initiatives",
+      "featuresShipped": "Features Shipped"
+    },
+    "progress": {
+      "title": "Delivery Progress",
+      "ofTotal": "of {{total}} initiatives shipped",
+      "barLabel": "Roadmap initiatives by phase",
+      "empty": "No roadmap items to display yet."
     }
   },
   "statusApi": {
@@ -918,5 +829,94 @@
     },
     "exampleEmpty": "No example response available.",
     "exampleUnavailable": "Example response is unavailable."
+  },
+  "system": {
+    "page": {
+      "title": "System budgets",
+      "subtitle": "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."
+    },
+    "toolbar": {
+      "refreshAll": "Refresh all"
+    },
+    "overview": {
+      "title": "Health at a glance",
+      "throttleBudgets": "Throttle budgets",
+      "peakUsage": "Peak budget usage",
+      "peakUsageHint": "Of the tightest window",
+      "activeWorkers": "Active workers",
+      "activeWorkersHint": "Reporting heartbeats",
+      "backlog": "Queue backlog",
+      "backlogHint": "Pending + in progress",
+      "succeeded": "Succeeded 24h",
+      "succeededHint": "Jobs completed",
+      "failed": "Failed 24h",
+      "failedHint": "Terminal failures",
+      "noBudgets": "No active budgets",
+      "awaiting": "Awaiting data",
+      "loading": "Loading system health…"
+    },
+    "detail": {
+      "title": "Throttles & workers"
+    },
+    "empty": {
+      "compression": "No compression statistics are available yet.",
+      "compressionDescription": "Storage savings appear after TimescaleDB compression policies process eligible telemetry chunks.",
+      "exportQueue": "No export jobs are queued.",
+      "exportQueueDescription": "New export requests will appear here while they are pending, processing, or completing.",
+      "notifications": "No notification activity has been recorded.",
+      "notificationsDescription": "Delivery totals and channel health appear after alerts or system messages send notifications.",
+      "telemetry": "Telemetry service health has not reported yet.",
+      "telemetryDescription": "Connection mode, vehicle counts, and signal throughput appear after the telemetry service publishes health data."
+    }
+  },
+  "teslaAccount": {
+    "title": "Tesla Account",
+    "subtitle": "Your Tesla account profile synced from the Fleet API",
+    "lastSynced": "Last synced: {{time}}",
+    "neverSynced": "Never synced — click Refresh to fetch from Tesla",
+    "refresh": "Refresh from Tesla",
+    "profile": "Profile",
+    "avatar": "Profile picture",
+    "name": "Name",
+    "email": "Email",
+    "fetchedAt": "Fetched At",
+    "noProfile": "No profile data yet. Click \"Refresh from Tesla\" to sync your account.",
+    "resource": "Tesla profile",
+    "neverSyncedShort": "Not synced yet",
+    "unnamed": "Tesla Driver",
+    "synced": "Synced",
+    "never": "Never synced",
+    "accountId": "Account ID",
+    "image": "Profile Image",
+    "imageAvailable": "Available",
+    "imageNone": "Not set",
+    "noProfileTitle": "No profile synced yet",
+    "detailsEmpty": "No account details yet. Sync to populate your profile.",
+    "kpis": "Account summary",
+    "kpi": {
+      "sync": "Sync Status",
+      "accountId": "Account ID",
+      "accountIdSub": "Fleet API identity",
+      "memberSince": "Member Since",
+      "updated": "Last Updated"
+    },
+    "sync": {
+      "title": "Sync",
+      "lastSynced": "Last synced",
+      "helper": "Fetches your latest account profile from the Tesla Fleet API."
+    },
+    "details": {
+      "title": "Account Details"
+    },
+    "activity": {
+      "title": "Activity",
+      "linked": "Account linked",
+      "linkedSub": "Tesla account connected to TeslaSync",
+      "updated": "Profile updated",
+      "updatedSub": "Most recent change to your profile record",
+      "synced": "Last synced from Tesla",
+      "syncedSub": "Latest fetch from the Fleet API",
+      "empty": "No account activity to show yet."
+    }
   }
 }

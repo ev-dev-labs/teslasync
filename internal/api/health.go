@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/ops"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -32,19 +33,31 @@ type MaintenanceView = apiadminmnt.MaintenanceView
 var startTime = time.Now()
 
 // HealthHandler returns a simple health check.
+//
+// It is the LIVENESS probe, so it is wrapped by the drain watchdog: a
+// pod that latched the one-way drain but was never terminated would
+// otherwise sit forever as "unready but alive" — invisible dead
+// capacity that nothing restarts. See ops.ReadinessGate.GuardLiveness.
 func HealthHandler(db *database.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return ShutdownGate.GuardLiveness(StuckDrainBudget, nil)(func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Health(r.Context()); err != nil {
 			writeError(w, http.StatusServiceUnavailable, "database unhealthy")
 			return
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	}
+	})
 }
 
 // ReadyHandler checks if the service is ready to serve traffic.
+//
+// The returned handler is wrapped by a package-level [ReadinessGate] so
+// that once the preStop hook has fired the endpoint answers 503
+// unconditionally. Without that, the Pod keeps advertising itself as
+// ready for the whole (asynchronous) endpoint-deregistration window and
+// kube-proxy keeps routing new requests into a process that is shutting
+// down.
 func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return ShutdownGate.GuardReadiness(func(w http.ResponseWriter, r *http.Request) {
 		checks := map[string]string{}
 
 		if err := db.Health(r.Context()); err != nil {
@@ -78,7 +91,50 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 			}
 		}
 		writeJSON(w, http.StatusOK, checks)
-	}
+	})
+}
+
+// ShutdownGate is the process-wide readiness gate. The preStop hook
+// (GET/POST /internal/flush on the ISOLATED internal drain listener, see
+// internal/app/drain.go) flips it to draining; [ReadyHandler] then fails
+// closed so Kubernetes removes this Pod from Service endpoints before
+// the container is signalled.
+var ShutdownGate = ops.NewReadinessGate()
+
+// EndpointPropagationDelay is how long the preStop handler holds its
+// response open after flipping the gate, giving the endpoint controller
+// and every kube-proxy a chance to observe the failing readiness probe
+// before the container receives SIGTERM.
+//
+// It is one term of the shutdown budget locked in
+// ops/rollout/stages.yaml `shutdown` and asserted against
+// terminationGracePeriodSeconds by TestShutdownBudgetFitsGracePeriod.
+const EndpointPropagationDelay = 5 * time.Second
+
+// StuckDrainBudget is how long a pod may sit drained before its LIVENESS
+// probe starts failing.
+//
+// A real termination completes inside the shutdown budget (80s) and the
+// container is gone, so this branch is unreachable during intentional
+// shutdown. It only fires for a pod that latched the one-way drain and
+// was then never terminated — an accidental preStop invocation, an
+// operator curl, a bug — which would otherwise remain permanently
+// unready, permanently alive, and permanently invisible. Generous
+// headroom over the 80s budget keeps a slow-but-legitimate shutdown from
+// tripping it.
+const StuckDrainBudget = 3 * time.Minute
+
+// DrainStatusHandler is the READ-ONLY drain contract mounted on the
+// public router at /internal/drain-status.
+//
+// The mutating /internal/flush endpoint is deliberately NOT on this
+// router: it is one-way and pod-fatal (permanent readiness 503, all SSE
+// streams released), so a public route — or a post-deploy smoke probe —
+// could take a healthy pod out of service. It lives on an isolated
+// listener that no Service or Ingress targets; kubelet reaches it by
+// dialling the pod IP directly.
+func DrainStatusHandler(internalPort int) http.HandlerFunc {
+	return ops.DrainStatusHandler(ShutdownGate, internalPort, EndpointPropagationDelay)
 }
 
 // teslaBreakerTimeout mirrors gobreaker.Settings.Timeout from

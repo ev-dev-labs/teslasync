@@ -22,7 +22,7 @@ for (const path of ['/', '/vehicles', '/data-repair']) {
       body: Buffer.from(JSON.stringify(results, null, 2)),
       contentType: 'application/json',
     });
-    const debt = AXE_DEBT_BY_ROUTE[path];
+    const debt = AXE_DEBT_BY_ROUTE[path] ?? [];
     const expectedRules = new Set(debt.map((item) => item.rule));
     const unbaselinedRules = results.violations.filter((item) => !expectedRules.has(item.id));
     expect(unbaselinedRules, unbaselinedRules.map((item) => `${item.id}: ${item.help}`).join('\n'))

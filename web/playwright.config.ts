@@ -5,6 +5,7 @@ const explicitBaseURL = process.env.E2E_BASE_URL;
 const baseURL = explicitBaseURL ?? 'http://127.0.0.1:4173';
 const storageStatePath = resolveStorageState(process.env);
 const sensitiveRun = isSensitiveRun(process.env);
+const mocksEnabled = process.env.E2E_MOCKS !== '0';
 
 const viewportProjects = [390, 768, 1024, 1440, 1920].flatMap((width) =>
   (['dark', 'light'] as const).map((theme) => ({
@@ -41,7 +42,10 @@ export const baseConfig: PlaywrightTestConfig = {
     screenshot: sensitiveRun ? 'off' : 'only-on-failure',
     trace: sensitiveRun ? 'off' : 'retain-on-failure',
     video: sensitiveRun ? 'off' : 'retain-on-failure',
-    serviceWorkers: 'allow',
+    // A controlled service worker can satisfy API reads before page.route()
+    // sees them. Block it for hermetic fixtures; deployed smoke still exercises
+    // the production worker with E2E_MOCKS=0.
+    serviceWorkers: mocksEnabled ? 'block' : 'allow',
     locale: 'en-US',
     timezoneId: 'UTC',
   },

@@ -412,7 +412,12 @@ describe('BatteryCellsPage', () => {
     fireEvent.click(voltageHeaderBtn);
 
     expect(voltageHeaderBtn.closest('th')).toHaveAttribute('aria-sort', 'descending');
-    expect(screen.getByRole('button', { name: 'Cell #' }).closest('th')).not.toHaveAttribute('aria-sort');
+    // A sortable-but-inactive column advertises `aria-sort="none"` rather than
+    // omitting the attribute (otherwise AT cannot tell it is sortable at all).
+    expect(screen.getByRole('button', { name: 'Cell #' }).closest('th')).toHaveAttribute(
+      'aria-sort',
+      'none',
+    );
   });
 });
 

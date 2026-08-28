@@ -277,7 +277,9 @@ describe('ExportsPage — populated', () => {
     const table = screen.getByRole('table');
 
     // One selection checkbox per data row → all six jobs rendered.
-    expect(within(table).getAllByRole('checkbox', { name: 'Select row' })).toHaveLength(6);
+    // Row checkboxes are named after the job, not its UUID (A11Y):
+    // "drives export, 22 Apr 2026". One per data row → all six rendered.
+    expect(within(table).getAllByRole('checkbox', { name: /export,/ })).toHaveLength(6);
 
     // Ready jobs expose a download <a> pointing at the /api/v1 artifact URL.
     const dl = screen.getByRole('link', { name: 'Download export job-ready-1' });
@@ -325,7 +327,7 @@ describe('ExportsPage — bulk delete', () => {
     renderPage();
     const table = screen.getByRole('table');
 
-    fireEvent.click(within(table).getAllByRole('checkbox', { name: 'Select row' })[0]);
+    fireEvent.click(within(table).getAllByRole('checkbox', { name: /export,/ })[0]);
     expect(await screen.findByText('1 selected')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
@@ -342,7 +344,7 @@ describe('ExportsPage — bulk delete', () => {
   it('does not call the mutation when the confirm dialog is cancelled', async () => {
     renderPage();
     const table = screen.getByRole('table');
-    fireEvent.click(within(table).getAllByRole('checkbox', { name: 'Select row' })[0]);
+    fireEvent.click(within(table).getAllByRole('checkbox', { name: /export,/ })[0]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog');
@@ -356,7 +358,7 @@ describe('ExportsPage — bulk delete', () => {
     mutateAsyncSpy.mockRejectedValueOnce(new Error('server exploded'));
     renderPage();
     const table = screen.getByRole('table');
-    fireEvent.click(within(table).getAllByRole('checkbox', { name: 'Select row' })[0]);
+    fireEvent.click(within(table).getAllByRole('checkbox', { name: /export,/ })[0]);
 
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog');

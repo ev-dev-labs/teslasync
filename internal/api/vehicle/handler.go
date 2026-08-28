@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -39,6 +40,28 @@ type Handler struct {
 type vehicleListFetcher interface {
 	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
 	GetPage(ctx context.Context, limit, offset int) ([]*vehiclemodel.Vehicle, error)
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+}
+
+type stateFreshness string
+
+const (
+	stateFreshnessFresh   stateFreshness = "fresh"
+	stateFreshnessStale   stateFreshness = "stale"
+	stateFreshnessUnknown stateFreshness = "unknown"
+)
+
+type currentStateResponse struct {
+	State      *vehiclemodel.VehicleState `json:"state"`
+	Live       bool                       `json:"live"`
+	DataSource string                     `json:"data_source"`
+	// ObservedAt/Freshness describe the live stream's newest real observation.
+	// VerifiedFields separately identifies state values backed by non-synthetic
+	// live signals, so durable fallbacks never inherit that stream freshness.
+	ObservedAt     *time.Time     `json:"observed_at,omitempty"`
+	Freshness      stateFreshness `json:"freshness"`
+	VerifiedFields []string       `json:"verified_fields"`
+	AsOf           *time.Time     `json:"as_of,omitempty"`
 }
 
 // vehiclePositionMappings projects the signal_log change feed into the
@@ -248,7 +271,11 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.Int64("vehicle.id", id))
 
-	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(ctx, id)
+	repo := h.vehicleRepo
+	if repo == nil {
+		repo = h.vehicleSvc.VehicleRepo()
+	}
+	vehicle, err := repo.GetByID(ctx, id)
 	if err != nil || vehicle == nil {
 		apperror.Write(w, r, apperror.ErrVehicleNotFound)
 		return
@@ -285,11 +312,13 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		store := signal.New()
 		store.Hydrate(vehicle.ID, raw)
 		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
-		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-			"state":       state,
-			"live":        false,
-			"data_source": "as_of",
-			"as_of":       asOf.Format(time.RFC3339),
+		httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
+			State:          state,
+			Live:           false,
+			DataSource:     "as_of",
+			Freshness:      stateFreshnessUnknown,
+			VerifiedFields: []string{},
+			AsOf:           &asOf,
 		})
 		return
 	}
@@ -298,28 +327,44 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	if h.telemetry != nil {
 		store := signal.New()
 		var hasLiveSignals bool
+		var observedAt *time.Time
+		freshness := stateFreshnessUnknown
 		if liveStore := h.telemetry.GetLiveSignalStore(); liveStore != nil {
 			values, err := liveStore.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
 			if err != nil {
 				log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle current state: live signal read failed")
 			} else if len(values) > 0 {
-				store.Hydrate(vehicle.ID, liveSignalValuesToRaw(values))
+				store.HydrateValues(vehicle.ID, values)
 				hasLiveSignals = true
+				observedAt = latestLiveSignalObservation(values)
+				if observedAt != nil {
+					freshness = stateFreshnessStale
+					if signal.IsLiveSignalFresh(&signal.Value{Timestamp: *observedAt}, time.Now().UTC()) {
+						freshness = stateFreshnessFresh
+					}
+				}
 			}
 		}
-		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
+		state, verified := h.vehicleSvc.BuildStateFromSignalStoreWithProvenance(store, vehicle)
 		// Enrich with state-since timestamp from vehicle_states table
-		if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
+		if currentState, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
+			state.State = currentState
 			state.Since = since
+			if freshness == stateFreshnessFresh {
+				verified["state"] = true
+			}
 		}
 		dataSource := "live_signal_store"
 		if !hasLiveSignals {
 			dataSource = "db_fallback"
 		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-			"state":       state,
-			"live":        hasLiveSignals,
-			"data_source": dataSource,
+		httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
+			State:          state,
+			Live:           hasLiveSignals,
+			DataSource:     dataSource,
+			ObservedAt:     observedAt,
+			Freshness:      freshness,
+			VerifiedFields: sortedVerifiedFields(verified),
 		})
 		return
 	}
@@ -330,10 +375,12 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
 		state.Since = since
 	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"state":       state,
-		"live":        false,
-		"data_source": "db_fallback",
+	httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
+		State:          state,
+		Live:           false,
+		DataSource:     "db_fallback",
+		Freshness:      stateFreshnessUnknown,
+		VerifiedFields: []string{},
 	})
 }
 
@@ -372,16 +419,37 @@ type TelemetrySource interface {
 	GetLiveSignalStore() signal.LiveSignalStore
 }
 
-// liveSignalValuesToRaw projects a live-store snapshot into the raw
-// map[string]interface{} shape signal.Store.Hydrate expects. Duplicated
-// from internal/api/signal_handler.go for the duration of Phase R2; the
-// parent copy will be deleted when its callers are also carved.
-func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
-	raw := make(map[string]interface{}, len(values))
-	for name, value := range values {
-		if value != nil {
-			raw[name] = value.Raw
+func latestLiveSignalObservation(values map[string]*signal.Value) *time.Time {
+	var latest time.Time
+	for _, value := range values {
+		if !isVerifiedLiveSignal(value) {
+			continue
+		}
+		timestamp := value.Timestamp.UTC()
+		if latest.IsZero() || timestamp.After(latest) {
+			latest = timestamp
 		}
 	}
-	return raw
+	if latest.IsZero() {
+		return nil
+	}
+	return &latest
+}
+
+func isVerifiedLiveSignal(value *signal.Value) bool {
+	return value != nil &&
+		value.Raw != nil &&
+		!value.Timestamp.IsZero() &&
+		!value.TimestampSynthetic
+}
+
+func sortedVerifiedFields(verified map[string]bool) []string {
+	fields := make([]string, 0, len(verified))
+	for field, ok := range verified {
+		if ok {
+			fields = append(fields, field)
+		}
+	}
+	sort.Strings(fields)
+	return fields
 }

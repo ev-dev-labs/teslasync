@@ -1,6 +1,27 @@
+import { prefersReducedMotion } from '@/components/motion/ambient';
+
 /**
  * Shared Recharts props for smoothed Area/Line charts.
  * Spread onto <Area> or <Line> components: {...AREA_DEFAULTS}
+ *
+ * Reduced motion (A11Y-08)
+ * ------------------------
+ * Recharts animates every series by default (`isAnimationActive`
+ * defaults to true) and drives that animation with `requestAnimationFrame`
+ * via react-smooth — so the global
+ * `@media (prefers-reduced-motion: reduce)` block in `index.css` cannot
+ * touch it. Every chart in the app would keep sweeping its lines and
+ * growing its bars for a user who explicitly asked the OS for less
+ * motion.
+ *
+ * The animation props below are **getters**, not literals. Object
+ * spread invokes getters, so `{...AREA_DEFAULTS}` re-reads the
+ * preference on every render at all ~225 call sites — no hook, no
+ * context, and no edit required in the 80 files that already spread
+ * these defaults.
+ *
+ * Charts that do NOT spread `AREA_DEFAULTS` should use
+ * `chartAnimationProps()` from this module instead.
  */
 export const AREA_DEFAULTS = {
   type: 'monotone' as const,
@@ -10,8 +31,35 @@ export const AREA_DEFAULTS = {
   // outages or explicitly unknown measurements.
   connectNulls: false,
   strokeWidth: 2,
-  animationDuration: 300,
-} as const;
+  get animationDuration(): number {
+    return prefersReducedMotion() ? 0 : DEFAULT_ANIMATION_MS;
+  },
+  get isAnimationActive(): boolean {
+    return !prefersReducedMotion();
+  },
+};
+
+/** Entry-animation duration for chart series when motion is allowed. */
+export const DEFAULT_ANIMATION_MS = 300;
+
+/**
+ * Motion-aware animation props for Recharts primitives that do not
+ * spread {@link AREA_DEFAULTS} — `<Bar>`, `<Pie>`, `<Radar>`,
+ * `<Scatter>`, `<RadialBar>`, and friends.
+ *
+ * @example
+ *   <Bar dataKey="wh" {...chartAnimationProps()} />
+ */
+export function chartAnimationProps(): {
+  isAnimationActive: boolean;
+  animationDuration: number;
+} {
+  const reduce = prefersReducedMotion();
+  return {
+    isAnimationActive: !reduce,
+    animationDuration: reduce ? 0 : DEFAULT_ANIMATION_MS,
+  };
+}
 
 /** Opacity used for the top stop when a caller passes none. */
 const DEFAULT_TOP_OPACITY = 0.3;

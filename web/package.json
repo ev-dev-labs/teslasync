@@ -5,13 +5,14 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/buildChangelog.mjs",
+    "predev": "node scripts/buildChangelog.mjs --check",
     "dev": "vite",
-    "prebuild": "node scripts/buildChangelog.mjs",
-    "build": "tsc && vite build",
-    "postbuild": "node scripts/check-bundle-size.mjs && node scripts/check-pwa-precache.mjs",
+    "prebuild": "node scripts/buildChangelog.mjs --check",
+    "generate:changelog": "node scripts/buildChangelog.mjs",
+    "build": "tsc && npm run typecheck:sw && vite build",
+    "postbuild": "node scripts/check-bundle-size.mjs && node scripts/check-pwa-precache.mjs && node scripts/check-pwa-contract.mjs && node scripts/check-source-maps.mjs",
     "preview": "vite preview",
-    "lint": "eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:chart-a11y && npm run audit:chart-frame && npm run audit:chart-safety && npm run audit:chart-legend && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl && npm run audit:bg-polling && npm run audit:export-adoption && npm run audit:live-mutations && npm run audit:inline-help && npm run audit:touch-target && npm run audit:gauge-width && npm run audit:typography",
+    "lint": "eslint . --report-unused-disable-directives --max-warnings 0 && npm run lint:i18n && npm run lint:light-mode && npm run audit:empty-state && npm run audit:tooltip-text && npm run audit:i18n-shadowed && npm run audit:query-signal && npm run audit:datatable-tableid && npm run audit:filterbar-chips && npm run audit:forced-colors && npm run audit:sr-only && npm run audit:accessible-name && npm run audit:landmarks && npm run audit:reduced-motion && npm run audit:chart-a11y && npm run audit:chart-frame && npm run audit:chart-safety && npm run audit:chart-legend && npm run audit:marker-cluster && npm run audit:deferred-filter && npm run audit:prefetch-link && npm run audit:tag-input && npm run audit:required-fields && npm run audit:unit-input && npm run audit:masked-values && npm run audit:rtl && npm run audit:bg-polling && npm run audit:export-adoption && npm run audit:live-mutations && npm run audit:inline-help && npm run audit:touch-target && npm run audit:gauge-width && npm run audit:typography && npm run audit:virtualization && npm run audit:skeletons && npm run audit:motion && npm run audit:palette && npm run audit:help-tooltip && npm run audit:registry && npm run check:release-identity",
     "audit:typography": "node scripts/audit-typography.mjs",
     "lint:i18n": "node scripts/lint-i18n-no-template-literals.mjs",
     "lint:light-mode": "node scripts/audit-light-mode-parity.mjs",
@@ -22,6 +23,10 @@
     "audit:datatable-tableid": "node scripts/audit-datatable-tableid.mjs",
     "audit:filterbar-chips": "node scripts/audit-filterbar-chips.mjs",
     "audit:forced-colors": "node scripts/audit-forced-colors.mjs",
+    "audit:accessible-name": "node scripts/audit-accessible-name.mjs",
+    "audit:landmarks": "node scripts/audit-landmarks.mjs",
+    "audit:reduced-motion": "node scripts/audit-reduced-motion.mjs",
+    "audit:a11y-static": "npm run audit:forced-colors && npm run audit:sr-only && npm run audit:accessible-name && npm run audit:landmarks && npm run audit:reduced-motion && npm run audit:touch-target",
     "audit:sr-only": "node scripts/audit-sr-only.mjs",
     "audit:chart-a11y": "node scripts/audit-chart-a11y.mjs",
     "audit:chart-frame": "node scripts/audit-chart-frame.mjs",
@@ -40,6 +45,8 @@
     "audit:inline-help": "node scripts/audit-inline-help.mjs",
     "audit:touch-target": "node scripts/audit-touch-target.mjs",
     "audit:virtualization": "node scripts/audit-virtualization.mjs",
+    "audit:help-tooltip": "node scripts/audit-help-tooltip-coverage.mjs",
+    "audit:registry": "node scripts/check-audit-registry.mjs",
     "audit:chart-legend": "node scripts/audit-chart-legend-toggle.mjs",
     "audit:skeletons": "node scripts/auditSkeletons.mjs",
     "audit:motion": "node scripts/auditMotionTokens.mjs",
@@ -68,7 +75,12 @@
     "screenshots:docs": "node scripts/capture-docs-screenshots.mjs",
     "e2e:routes": "node scripts/check-e2e-route-registry.mjs",
     "perf:baseline": "node scripts/measure-perf.mjs",
-    "perf:check": "node scripts/check-bundle-size.mjs --strict && node scripts/check-pwa-precache.mjs && node scripts/check-i18n-shell-closure.mjs && node scripts/check-i18n-runtime.mjs",
+    "perf:check": "node scripts/check-bundle-size.mjs --strict && node scripts/check-pwa-precache.mjs && node scripts/check-i18n-shell-closure.mjs && node scripts/check-i18n-runtime.mjs && node scripts/check-duplicate-modules.mjs && node scripts/check-source-maps.mjs",
+    "check:source-maps": "node scripts/check-source-maps.mjs",
+    "check:release-identity": "node scripts/check-release-build-identity.mjs",
+    "check:duplicate-modules": "node scripts/check-duplicate-modules.mjs",
+    "check:generated": "node ../scripts/check-generated-freshness.mjs",
+    "check:vite-deprecations": "node scripts/check-vite-deprecations.mjs",
     "perf:i18n-runtime": "node scripts/check-i18n-runtime.mjs",
     "perf:pwa": "node scripts/check-pwa-precache.mjs",
     "audit:a11y": "pwsh ../scripts/a11y-audit.ps1",
@@ -76,7 +88,9 @@
     "i18n:validate": "node ../scripts/i18n-validate-keys.mjs",
     "i18n:validate:strict": "node ../scripts/i18n-validate-keys.mjs --strict",
     "i18n:extract": "node ../scripts/i18n-validate-keys.mjs --extract",
-    "audit:gauge-width": "node scripts/audit-gauge-width.mjs"
+    "audit:gauge-width": "node scripts/audit-gauge-width.mjs",
+    "typecheck:sw": "tsc -p tsconfig.sw.json --noEmit",
+    "check:pwa-contract": "node scripts/check-pwa-contract.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -115,9 +129,9 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
-    "@tailwindcss/container-queries": "^0.1.1",
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
+    "@tailwindcss/container-queries": "^0.1.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -141,6 +155,7 @@
     "eslint-plugin-jsx-a11y": "^6.10.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.5",
+    "js-yaml": "^4.3.2",
     "jsdom": "^29.0.1",
     "postcss": "^8.4.35",
     "sharp": "^0.34.5",
@@ -149,5 +164,12 @@
     "vite": "^5.1.6",
     "vite-plugin-pwa": "^1.2.0",
     "vitest": "^4.1.0"
+  },
+  "overrides": {
+    "react-grid-layout": {
+      "fast-equals": "^5.4.0"
+    },
+    "lodash": "^4.18.0",
+    "protobufjs": "^8.4.1"
   }
 }

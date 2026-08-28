@@ -18,6 +18,33 @@ fullnameOverride: ""
 # ─────────────────────────────────────────────────────────────────────────────
 replicaCount: 1
 
+# OPS-09 — graceful shutdown budget.
+#
+# Kubernetes defaults terminationGracePeriodSeconds to 30. The API's real
+# shutdown budget is 80s (preStop propagation 5 + telemetry flush 10 +
+# HTTP drain 30 + inbound api_call_logs drain 30 + drain listener 5), so
+# the default SIGKILLed pods 50s into a drain that was still running,
+# dropping in-flight requests on every rollout.
+#
+# The budget is locked three ways — `ops/rollout/stages.yaml` `shutdown`,
+# the constants in `internal/app/run.go`, and this value — and
+# `go run ./cmd/ops-gate -check rollout` fails if they drift.
+terminationGracePeriodSeconds: 90
+
+# OPS-09 — isolated drain plane.
+#
+# The preStop endpoint is one-way and pod-fatal: it flips readiness
+# closed permanently and releases every SSE stream. It therefore binds
+# its OWN listener on this port, which NO Service and NO Ingress targets.
+# Kubelet reaches a preStop httpGet by dialling the pod IP directly, so
+# it needs no Service — but nothing outside the pod network can route to
+# it. The public router keeps only the read-only /internal/drain-status
+# contract.
+#
+# Must differ from service.port; the app refuses to start otherwise.
+drain:
+  port: 8090
+
 image:
   repository: ghcr.io/ev-dev-labs/teslasync-api
   pullPolicy: IfNotPresent
@@ -72,6 +99,95 @@ autoscaling:
 podDisruptionBudget:
   enabled: false
   minAvailable: 1
+
+# ── OPS-05: staged / canary rollout controls ──────────────────────────
+# Defined in ops/rollout/stages.yaml; `go run ./cmd/ops-gate -check
+# rollout` fails if this block and that manifest drift apart.
+#
+# DEFAULTS PRESERVE EXISTING BEHAVIOUR EXACTLY:
+#   * api/web strategies reproduce the previously hard-coded
+#     RollingUpdate maxSurge=1 / maxUnavailable=0.
+#   * worker strategies render nothing (empty `type`), so the Kubernetes
+#     default applies exactly as before.
+#   * every canary is disabled, so no extra workload is created.
+rollout:
+  # Maps to Deployment.spec.paused. Set true to freeze an in-flight
+  # rollout without deleting or scaling anything.
+  paused: false
+
+  # OPS-05 — selector mode.
+  #
+  # `legacy`   stable Deployments keep the selector they have always
+  #            had. Canary is REFUSED in this mode (the chart fails
+  #            rendering) because a canary pod carrying the same
+  #            selector labels would be a superset match: the stable
+  #            Deployment, its HPA, and its PDB would all silently
+  #            adopt canary pods and scale/evict against them.
+  #
+  # `disjoint` stable pods carry `teslasync.io/rollout: stable` and the
+  #            stable Deployment/HPA/PDB select on it, so stable and
+  #            canary are provably disjoint. The Service selector stays
+  #            on the common labels, so it still fronts BOTH.
+  #
+  # `spec.selector` is IMMUTABLE on an existing Deployment, so switching
+  # an already-installed release from legacy to disjoint needs a one-time
+  # migration. The procedure is NOT obvious — `--cascade=orphan` leaves a
+  # live ReplicaSet that recreates every pod you delete — so it lives in
+  # ops/rollout/stages.yaml `selector_migration` (machine-checked
+  # ordering) and docs/runbooks/rollout-selector-migration.md.
+  #
+  # The default stays `legacy` precisely so an unattended `helm upgrade`
+  # never hits the immutable-field error.
+  selectorMode: legacy
+
+  api:
+    strategy:
+      type: RollingUpdate
+      maxSurge: 1
+      maxUnavailable: 0
+    canary:
+      # A canary Deployment shares the api Service selector, so traffic
+      # is split by replica share: 1 canary alongside N stable replicas
+      # receives roughly 1/(N+1) of requests. No service mesh required.
+      enabled: false
+      replicaCount: 1
+      # Empty tag == same image as stable (useful for config-only canaries).
+      image:
+        tag: ""
+      podAnnotations: {}
+
+  web:
+    strategy:
+      type: RollingUpdate
+      maxSurge: 1
+      maxUnavailable: 0
+    canary:
+      enabled: false
+      replicaCount: 1
+      image:
+        tag: ""
+      podAnnotations: {}
+
+  # Workers are single-writer: two revisions consuming the same MQTT
+  # subscription would double-deliver. Canary is therefore unavailable,
+  # and `type: ""` means the chart renders no strategy block at all
+  # (Kubernetes default preserved). Set to `Recreate` to opt in to
+  # strict single-writer rollouts.
+  notificationWorker:
+    strategy:
+      type: ""
+  exportWorker:
+    strategy:
+      type: ""
+  automationWorker:
+    strategy:
+      type: ""
+
+  # High-risk behaviour changes registered in ops/rollout/stages.yaml.
+  # Rendered into the <release>-rollout ConfigMap for deploy tooling and
+  # operators. The application reads its own FlagStore, so listing a name
+  # here changes NO runtime behaviour on its own.
+  highRiskFlags: []
 
 podAnnotations: {}
 podSecurityContext:

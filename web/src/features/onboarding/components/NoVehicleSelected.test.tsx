@@ -35,6 +35,7 @@ vi.mock('react-i18next', () => ({
 }));
 
 import { NoVehicleSelected } from './NoVehicleSelected';
+import { getEmptyStateGuidance } from '@/lib/emptyStateGuidance';
 
 type Props = ComponentProps<typeof NoVehicleSelected>;
 
@@ -153,5 +154,38 @@ describe('NoVehicleSelected', () => {
     // The lucide Car glyph is purely decorative and must be hidden from AT.
     const icon = container.querySelector('svg[aria-hidden="true"]');
     expect(icon).not.toBeNull();
+  });
+
+  // ── HELP-02: the governed explanation ────────────────────────────────────
+  //
+  // "No vehicle selected" has two very different causes — setup was never
+  // finished, or the stored Tesla authorisation was revoked — and the CTA
+  // only addresses the first. Without the explanation rows a user whose token
+  // expired re-runs setup, hits the same wall, and files a support ticket.
+
+  it('explains the prerequisite and the likely cause alongside the message', () => {
+    renderPage();
+    expect(screen.getByTestId('empty-state-guidance')).toHaveAttribute(
+      'data-guidance-id',
+      'vehicles.list',
+    );
+    expect(screen.getByText('What has to happen first')).toBeInTheDocument();
+    expect(screen.getByText('Most likely reason')).toBeInTheDocument();
+    expect(
+      screen.getByText(/stored Tesla authorisation was revoked/i),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps the CTA in lock-step with the governed action for this surface', () => {
+    renderPage();
+    expect(screen.getByRole('link', { name: 'Set up TeslaSync' })).toHaveAttribute(
+      'href',
+      getEmptyStateGuidance('vehicles.list')!.action.to,
+    );
+  });
+
+  it('still offers exactly one action — the explanation adds no second CTA', () => {
+    renderPage();
+    expect(screen.getAllByRole('link')).toHaveLength(1);
   });
 });

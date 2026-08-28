@@ -116,11 +116,15 @@ describe('TourOverlay', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
-  it('renders the tooltip dialog with a localized, interpolated aria-label and content', () => {
+  it('names the dialog from the step heading and keeps the visible counter', () => {
     renderOverlay({ currentStep: 1, totalSteps: 4 });
     const dialog = screen.getByRole('dialog');
     expect(dialog.getAttribute('aria-modal')).toBe('false');
-    expect(dialog.getAttribute('aria-label')).toBe('Tour step 2 of 4');
+    // The accessible name is now the step title rather than "Tour step 2 of
+    // 4": a screen-reader user needs to hear WHAT the step is about, and the
+    // position is still conveyed by the visible counter below.
+    expect(dialog).toHaveAccessibleName('Welcome aboard');
+    expect(dialog.getAttribute('aria-labelledby')).toBeTruthy();
     expect(screen.getByRole('heading', { name: 'Welcome aboard' })).toBeInTheDocument();
     expect(screen.getByText('This is your dashboard.')).toBeInTheDocument();
     expect(screen.getByTestId('tour-counter')).toHaveTextContent('2 / 4');
