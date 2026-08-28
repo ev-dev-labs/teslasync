@@ -34,9 +34,14 @@
       "unnamedVehicle": "Selected vehicle",
       "attention": "{{count}} need attention",
       "ready": "No active exceptions",
+      "checkingFleet": "Checking live state",
+      "checkingState": "Checking live state",
+      "unknownState": "Unknown",
       "activeScope": "Active vehicle scope",
       "scopeHealthy": "Vehicle data is reporting normally. Global pages and filters follow this selection.",
-      "scopeAttention": "This vehicle is degraded or unreachable. Review live state before issuing commands.",
+      "scopeChecking": "Resolving the latest verified telemetry before assessing this vehicle.",
+      "scopeOffline": "The selected vehicle is offline. Last-known records remain available while live controls wait for reconnection.",
+      "scopeAttention": "Current vehicle state could not be verified. Review telemetry health before relying on live controls.",
       "openVehicle": "Open vehicle",
       "workflows": "Primary workflows",
       "metric": {
@@ -46,6 +51,7 @@
         "reportingHelp": "reachable now",
         "attention": "Attention",
         "attentionHelp": "exceptions",
+        "resolvingHelp": "checking live state",
         "scope": "Scope",
         "scopeVehicle": "selected vehicle",
         "scopeFleet": "entire fleet"

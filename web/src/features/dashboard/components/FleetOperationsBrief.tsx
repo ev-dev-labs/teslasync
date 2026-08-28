@@ -1,39 +1,70 @@
 import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
+import {
+  deriveCurrentVehicleStatus,
+  type FleetStateEntry,
+} from '@/api/hooks/useVehicles'
+import { statusVariant } from '@/api/types'
 import { Badge, Caption, Heading, Text } from '@/components/ui'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import type { Vehicle } from '@/api/types'
+import type { Vehicle } from '@/types/vehicle'
 
 interface FleetOperationsBriefProps {
   vehicles: Vehicle[]
   selectedVehicle: Vehicle | null
+  fleetStates: FleetStateEntry[] | undefined
 }
 
-const ACTIVE_STATES = new Set(['online', 'driving', 'charging', 'updating'])
+const ACTIVE_STATES = new Set([
+  'online',
+  'driving',
+  'charging',
+  'parked',
+  'updating',
+])
 
 export function FleetOperationsBrief({
   vehicles,
   selectedVehicle,
+  fleetStates,
 }: FleetOperationsBriefProps) {
   const { t } = useTranslation('dashboard')
-  const onlineCount = vehicles.filter((vehicle) =>
-    ACTIVE_STATES.has((vehicle.state ?? '').toLowerCase()),
-  ).length
-  const attentionCount = vehicles.filter(
-    (vehicle) =>
-      !vehicle.healthy ||
-      ['offline', 'unknown', 'error'].includes(
-        (vehicle.state ?? '').toLowerCase(),
-      ),
-  ).length
+  const liveStateReady = fleetStates !== undefined
+  const stateByVehicleId = new Map(
+    (fleetStates ?? []).map((entry) => [entry.vehicle.id, entry]),
+  )
+  const statusByVehicleId = new Map(
+    vehicles.map((vehicle) => [
+      vehicle.id,
+      deriveCurrentVehicleStatus(stateByVehicleId.get(vehicle.id)),
+    ]),
+  )
+  const reportingCount = liveStateReady
+    ? vehicles.filter((vehicle) =>
+        ACTIVE_STATES.has(statusByVehicleId.get(vehicle.id) ?? ''),
+      ).length
+    : 0
+  const attentionCount = liveStateReady
+    ? vehicles.filter((vehicle) => {
+        const status = statusByVehicleId.get(vehicle.id)
+        return status == null || status === 'offline'
+      }).length
+    : 0
+  const scopeVehicle = selectedVehicle ?? vehicles[0] ?? null
   const selectedName =
-    selectedVehicle?.display_name ||
-    selectedVehicle?.vin ||
+    scopeVehicle?.display_name ||
+    scopeVehicle?.vin ||
     t('operations.unnamedVehicle', 'Selected vehicle')
-  const selectedState = (selectedVehicle?.state || 'unknown').toLowerCase()
-  const selectedHealthy = selectedVehicle?.healthy ?? false
-  const selectedId = selectedVehicle?.id
+  const selectedStatus = scopeVehicle
+    ? statusByVehicleId.get(scopeVehicle.id) ?? null
+    : null
+  const selectedState = !liveStateReady
+    ? t('operations.checkingState', 'Checking live state')
+    : selectedStatus ?? t('operations.unknownState', 'Unknown')
+  const selectedHealthy =
+    liveStateReady && selectedStatus != null && selectedStatus !== 'offline'
+  const selectedId = scopeVehicle?.id
 
   const workflows = [
     {
@@ -91,16 +122,24 @@ export function FleetOperationsBrief({
           </Heading>
         </div>
         <Badge
-          variant={attentionCount > 0 ? 'warning' : 'success'}
+          variant={
+            !liveStateReady
+              ? 'neutral'
+              : attentionCount > 0
+                ? 'warning'
+                : 'success'
+          }
           size="lg"
           dot
           className="self-start sm:self-auto"
         >
-          {attentionCount > 0
-            ? t('operations.attention', '{{count}} need attention', {
-                count: attentionCount,
-              })
-            : t('operations.ready', 'No active exceptions')}
+          {!liveStateReady
+            ? t('operations.checkingFleet', 'Checking live state')
+            : attentionCount > 0
+              ? t('operations.attention', '{{count}} need attention', {
+                  count: attentionCount,
+                })
+              : t('operations.ready', 'No active exceptions')}
         </Badge>
       </div>
 
@@ -114,7 +153,13 @@ export function FleetOperationsBrief({
               <div className="mt-2 flex flex-wrap items-center gap-3">
                 <Heading level="section">{selectedName}</Heading>
                 <Badge
-                  variant={selectedHealthy ? 'success' : 'warning'}
+                  variant={
+                    !liveStateReady
+                      ? 'neutral'
+                      : selectedStatus == null
+                        ? 'warning'
+                        : statusVariant(selectedStatus)
+                  }
                   size="sm"
                   dot
                 >
@@ -126,15 +171,25 @@ export function FleetOperationsBrief({
                 variant="bodySm"
                 className="mt-3 max-w-2xl leading-relaxed"
               >
-                {selectedHealthy
+                {!liveStateReady
                   ? t(
-                      'operations.scopeHealthy',
-                      'Vehicle data is reporting normally. Global pages and filters follow this selection.',
+                      'operations.scopeChecking',
+                      'Resolving the latest verified telemetry before assessing this vehicle.',
                     )
-                  : t(
-                      'operations.scopeAttention',
-                      'This vehicle is degraded or unreachable. Review live state before issuing commands.',
-                    )}
+                  : selectedHealthy
+                    ? t(
+                        'operations.scopeHealthy',
+                        'Vehicle data is reporting normally. Global pages and filters follow this selection.',
+                      )
+                    : selectedStatus === 'offline'
+                      ? t(
+                          'operations.scopeOffline',
+                          'The selected vehicle is offline. Last-known records remain available while live controls wait for reconnection.',
+                        )
+                      : t(
+                          'operations.scopeAttention',
+                          'Current vehicle state could not be verified. Review telemetry health before relying on live controls.',
+                        )}
               </Text>
             </div>
 
@@ -162,14 +217,28 @@ export function FleetOperationsBrief({
             />
             <BriefMetric
               label={t('operations.metric.reporting', 'Reporting')}
-              value={String(onlineCount)}
-              hint={t('operations.metric.reportingHelp', 'reachable now')}
+              value={liveStateReady ? String(reportingCount) : '—'}
+              hint={
+                liveStateReady
+                  ? t('operations.metric.reportingHelp', 'reachable now')
+                  : t('operations.metric.resolvingHelp', 'checking live state')
+              }
             />
             <BriefMetric
               label={t('operations.metric.attention', 'Attention')}
-              value={String(attentionCount)}
-              hint={t('operations.metric.attentionHelp', 'exceptions')}
-              tone={attentionCount > 0 ? 'warning' : 'positive'}
+              value={liveStateReady ? String(attentionCount) : '—'}
+              hint={
+                liveStateReady
+                  ? t('operations.metric.attentionHelp', 'exceptions')
+                  : t('operations.metric.resolvingHelp', 'checking live state')
+              }
+              tone={
+                !liveStateReady
+                  ? 'default'
+                  : attentionCount > 0
+                    ? 'warning'
+                    : 'positive'
+              }
             />
             <BriefMetric
               label={t('operations.metric.scope', 'Scope')}

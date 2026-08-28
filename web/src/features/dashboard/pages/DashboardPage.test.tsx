@@ -33,7 +33,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -111,6 +111,7 @@ const h = vi.hoisted(() => {
     layout,
     kiosk,
     vehicles: undefined as unknown,
+    fleetStates: undefined as unknown,
     auth: { authenticated: true } as unknown,
     themeId: 'aurora' as string,
     syncMutate: vi.fn(),
@@ -152,6 +153,7 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   return {
     ...actual,
     useVehicles: () => h.vehicles,
+    useFleetStates: () => h.fleetStates,
     useSyncVehicles: () => ({ mutate: h.syncMutate, isPending: h.syncPending }),
   };
 });
@@ -298,6 +300,36 @@ function makeQuery(overrides: Record<string, unknown> = {}) {
   };
 }
 
+function makeFleetState(
+  vehicle: Record<string, unknown>,
+  state: Record<string, unknown> = {},
+  verifiedFields: string[] = ['state', 'is_charging', 'speed'],
+  overrides: Record<string, unknown> = {},
+) {
+  const now = Date.now();
+  return {
+    vehicle,
+    state: {
+      vehicle_id: vehicle.id,
+      state: 'online',
+      is_charging: false,
+      speed: 0,
+      ...state,
+    },
+    outcome: 'resolved',
+    freshness: 'fresh',
+    verifiedFields,
+    stale: false,
+    observedAt: now,
+    receivedAt: now,
+    ...overrides,
+  };
+}
+
+function metricValue(brief: HTMLElement, label: string) {
+  return within(brief).getByText(label).parentElement?.querySelector('dd');
+}
+
 function setDashboard(overrides: Record<string, unknown> = {}) {
   h.layout.activeDashboard = {
     id: 'd1',
@@ -338,7 +370,9 @@ beforeEach(() => {
   setDashboard();
   (h.kiosk as Record<string, unknown>).isKiosk = false;
   (h.kiosk as Record<string, unknown>).validIds = ['d1'];
-  h.vehicles = makeQuery({ data: [{ id: 1, display_name: 'Model 3', vin: 'VIN1' }] });
+  const vehicle = { id: 1, display_name: 'Model 3', vin: 'VIN1' };
+  h.vehicles = makeQuery({ data: [vehicle] });
+  h.fleetStates = makeQuery({ data: [makeFleetState(vehicle)] });
   h.auth = { authenticated: true };
   h.themeId = 'aurora';
   h.syncPending = false;
@@ -360,6 +394,89 @@ describe('DashboardPage — shell', () => {
     expect(screen.getByRole('heading', { name: 'Fleet posture' })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: 'Primary workflows' })).toBeInTheDocument();
     expect(screen.queryByText('Recently Viewed')).toBeNull();
+  });
+
+  it('uses verified charging and movement instead of stale inventory posture', () => {
+    const vehicles = [
+      { id: 1, display_name: 'Falcon', vin: 'VIN1', state: 'unknown', healthy: false },
+      { id: 2, display_name: 'Roadrunner', vin: 'VIN2', state: 'unknown', healthy: false },
+      { id: 3, display_name: 'Kestrel', vin: 'VIN3', state: 'online', healthy: true },
+    ];
+    h.vehicles = makeQuery({ data: vehicles });
+    h.fleetStates = makeQuery({
+      data: [
+        makeFleetState(
+          vehicles[0],
+          { state: 'unknown', is_charging: true },
+          ['is_charging'],
+        ),
+        makeFleetState(
+          vehicles[1],
+          { state: 'unknown', speed: 14 },
+          ['speed'],
+        ),
+        makeFleetState(
+          vehicles[2],
+          {},
+          [],
+          {
+            state: null,
+            outcome: 'failed',
+            freshness: 'unknown',
+            observedAt: null,
+            error: new Error('gateway timeout'),
+          },
+        ),
+      ],
+    });
+
+    renderPage();
+
+    const brief = screen.getByTestId('fleet-operations-brief');
+    expect(within(brief).getByText('charging')).toBeInTheDocument();
+    expect(metricValue(brief, 'Reporting')).toHaveTextContent('2');
+    expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
+    expect(within(brief).getByText('1 need attention')).toBeInTheDocument();
+    expect(
+      within(brief).getByText(
+        'Vehicle data is reporting normally. Global pages and filters follow this selection.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a failed selected-vehicle state unknown rather than claiming it is offline', () => {
+    const vehicle = {
+      id: 1,
+      display_name: 'Falcon',
+      vin: 'VIN1',
+      state: 'charging',
+      healthy: true,
+    };
+    h.vehicles = makeQuery({ data: [vehicle] });
+    h.fleetStates = makeQuery({
+      data: [
+        makeFleetState(vehicle, {}, [], {
+          state: null,
+          outcome: 'failed',
+          freshness: 'unknown',
+          observedAt: null,
+          error: new Error('gateway timeout'),
+        }),
+      ],
+    });
+
+    renderPage();
+
+    const brief = screen.getByTestId('fleet-operations-brief');
+    expect(within(brief).getByText('Unknown')).toBeInTheDocument();
+    expect(metricValue(brief, 'Reporting')).toHaveTextContent('0');
+    expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
+    expect(
+      within(brief).getByText(
+        'Current vehicle state could not be verified. Review telemetry health before relying on live controls.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(brief).queryByText('offline')).not.toBeInTheDocument();
   });
 
   it('hides the layout region when there are no saved dashboards', () => {

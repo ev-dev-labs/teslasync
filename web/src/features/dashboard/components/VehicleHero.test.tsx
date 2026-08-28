@@ -197,6 +197,7 @@ describe('VehicleHero', () => {
       },
     });
 
+    expect(screen.getByText('charging')).toBeInTheDocument();
     expect(screen.getByText('Charging')).toBeInTheDocument();
     expect(screen.getByText(/^48(\.0+)? kW$/)).toBeInTheDocument();
     expect(screen.getByText('Charge Rate')).toBeInTheDocument();

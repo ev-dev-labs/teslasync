@@ -17,8 +17,10 @@ import type {
   VehicleManagementResult,
   VehiclePricingVariables,
   VehicleState,
+  VehicleStatus,
 } from '../types';
-export { deriveVehicleStatus as getVehicleStatus } from '../types';
+import { deriveVehicleStatus } from '../types';
+export { deriveVehicleStatus as getVehicleStatus };
 
 export const vehicleKeys = {
   all: ['vehicles'] as const,
@@ -637,6 +639,39 @@ export function isFleetStateFieldCurrent(
 ): boolean {
   return entry.outcome === 'resolved' &&
     isVehicleStateFieldCurrent(entry, field, now)
+}
+
+/**
+ * Derive an operational status only from fields whose live provenance is
+ * current. Charging and movement can establish a status even when the generic
+ * FSM state has not caught up; a missing, failed, retained, or stale reading
+ * remains unknown instead of being mislabeled offline.
+ */
+export function deriveCurrentVehicleStatus(
+  entry: FleetStateEntry | undefined,
+): VehicleStatus | null {
+  if (entry?.state == null) return null
+
+  if (
+    isFleetStateFieldCurrent(entry, 'is_charging') &&
+    entry.state.is_charging
+  ) {
+    return 'charging'
+  }
+  if (
+    isFleetStateFieldCurrent(entry, 'speed') &&
+    (entry.state.speed ?? 0) > 0
+  ) {
+    return 'driving'
+  }
+  if (!isFleetStateFieldCurrent(entry, 'state')) return null
+
+  return deriveVehicleStatus({
+    ...entry.state,
+    // Unverified telemetry must not override the verified FSM state.
+    is_charging: false,
+    speed: 0,
+  })
 }
 
 type VehicleStateTrustMetadata = Pick<

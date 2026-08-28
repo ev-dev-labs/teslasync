@@ -41,7 +41,7 @@ import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useSyncVehicles, useDeleteVehicle, useFleetStates,
-  isFleetStateFieldCurrent, summariseFleetStates,
+  deriveCurrentVehicleStatus, isFleetStateFieldCurrent, summariseFleetStates,
   type FleetStateEntry, type FleetStatesSummary,
 } from '@/api/hooks/useVehicles';
 import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
@@ -68,17 +68,6 @@ import { Icons } from '@/lib/icons';
  * from one retained through a failed refresh.
  */
 type LoadedEntry = FleetStateEntry & { state: VehicleState };
-
-function deriveCurrentVehicleStatus(entry: FleetStateEntry | undefined) {
-  if (entry?.state == null || !isFleetStateFieldCurrent(entry, 'state')) return null;
-  return deriveVehicleStatus({
-    ...entry.state,
-    is_charging: isFleetStateFieldCurrent(entry, 'is_charging')
-      ? entry.state.is_charging
-      : false,
-    speed: isFleetStateFieldCurrent(entry, 'speed') ? entry.state.speed : 0,
-  });
-}
 
 /* ── Loading skeleton ──────────────────────────────────────── */
 

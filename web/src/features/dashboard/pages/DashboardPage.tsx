@@ -4,7 +4,12 @@ import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStatus } from '@/api/hooks/useSettings';
-import { useSyncVehicles, useVehicles } from '@/api/hooks/useVehicles';
+import {
+  FLEET_STATES_QUERY_ROOT,
+  useFleetStates,
+  useSyncVehicles,
+  useVehicles,
+} from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout';
 import { VisuallyHidden } from '@/components/a11y';
 import {
@@ -360,6 +365,7 @@ export default function DashboardPage() {
 
   /* ——— Derived values ——— */
   const vehicleList = vehicles ?? [];
+  const fleetStatesQuery = useFleetStates(vehicleList);
   const dashboardVehicleId =
     activeDashboard.settings?.vehicleId ?? selectedVehicleId ?? undefined;
 
@@ -372,6 +378,7 @@ export default function DashboardPage() {
     setIsRefreshing(true);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['vehicle-state'] }),
+      queryClient.invalidateQueries({ queryKey: [FLEET_STATES_QUERY_ROOT] }),
       queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
       queryClient.invalidateQueries({ queryKey: ['fleet-analytics'] }),
       queryClient.invalidateQueries({ queryKey: ['drives'] }),
@@ -617,6 +624,7 @@ export default function DashboardPage() {
             <FleetOperationsBrief
               vehicles={vehicleList}
               selectedVehicle={selectedVehicle}
+              fleetStates={fleetStatesQuery.data}
             />
           </FadeIn>
         )}

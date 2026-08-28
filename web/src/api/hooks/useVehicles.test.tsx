@@ -82,6 +82,7 @@ import {
   useVehicleConfigLatest,
   useUserPreferenceLatest,
   fetchVehicleState,
+  deriveCurrentVehicleStatus,
   isFleetStateFieldCurrent,
   useFleetStates,
   summariseFleetStates,
@@ -987,6 +988,56 @@ describe('summariseFleetStates', () => {
     expect(isFleetStateFieldCurrent(current, 'state', observedAt + 120_000)).toBe(true);
     expect(isFleetStateFieldCurrent(current, 'state', observedAt + 120_001)).toBe(false);
     expect(isFleetStateFieldCurrent(current, 'battery_level', observedAt + 1)).toBe(false);
+  });
+
+  it('lets verified charging and movement establish status before the FSM state catches up', () => {
+    const charging = entry({
+      state: {
+        vehicle_id: 1,
+        state: 'unknown',
+        is_charging: true,
+        speed: 0,
+      } as VehicleState,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['is_charging'],
+      observedAt: Date.now(),
+    });
+    const driving = entry({
+      state: {
+        vehicle_id: 1,
+        state: 'unknown',
+        is_charging: false,
+        speed: 12,
+      } as VehicleState,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['speed'],
+      observedAt: Date.now(),
+    });
+
+    expect(deriveCurrentVehicleStatus(charging)).toBe('charging');
+    expect(deriveCurrentVehicleStatus(driving)).toBe('driving');
+  });
+
+  it('keeps missing, failed, and stale fleet-state readings explicitly unknown', () => {
+    const failed = entry({ outcome: 'failed' });
+    const stale = entry({
+      state: {
+        vehicle_id: 1,
+        state: 'charging',
+        is_charging: true,
+      } as VehicleState,
+      outcome: 'resolved',
+      freshness: 'stale',
+      verifiedFields: ['state', 'is_charging'],
+      stale: true,
+      observedAt: Date.now() - TELEMETRY_STALE_AFTER_MS - 1,
+    });
+
+    expect(deriveCurrentVehicleStatus(undefined)).toBeNull();
+    expect(deriveCurrentVehicleStatus(failed)).toBeNull();
+    expect(deriveCurrentVehicleStatus(stale)).toBeNull();
   });
 });
 

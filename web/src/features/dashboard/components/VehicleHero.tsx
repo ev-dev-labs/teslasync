@@ -17,6 +17,7 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { cn } from '@/lib/cn';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { deriveVehicleStatus } from '@/api/types';
 import type { Vehicle, VehicleState } from '../types';
 
 interface VehicleHeroProps {
@@ -41,7 +42,7 @@ export function VehicleHero({
 }: VehicleHeroProps) {
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
-  const status = (state?.state ?? 'offline') as string;
+  const status = deriveVehicleStatus(state);
   /* Both ends converted together so the arc means the same thing in °C and
    * °F, with a sub-zero floor so cold outside readings still render. */
   const tempRange = ambientTemperatureGaugeRange(toTemperatureDisplay);
