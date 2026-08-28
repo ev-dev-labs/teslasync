@@ -129,9 +129,23 @@ export function formatRelativeDays(
   const d = new Date(iso)
   if (isNaN(d.getTime())) return '—'
   const targetKey = ymdInTz(d, opts?.tz)
+  if (!targetKey) return '—'
+  return formatRelativeDayKey(targetKey, opts)
+}
+
+/**
+ * Relative day label for an existing `YYYY-MM-DD` calendar key.
+ *
+ * Unlike converting the key to a UTC instant, this preserves the calendar day
+ * chosen by the caller and compares it with "today" in the same target
+ * timezone. Use it for grouped list headers whose keys already came from
+ * {@link ymdInTz}.
+ */
+export function formatRelativeDayKey(dayKey: string, opts?: FormatOptions): string {
+  if (parseYmdToUtcMillis(dayKey) == null) return FALLBACK
   const todayKey = ymdInTz(new Date(), opts?.tz)
-  if (!targetKey || !todayKey) return '—'
-  const diffDays = daysBetweenYmd(targetKey, todayKey)
+  if (!todayKey) return FALLBACK
+  const diffDays = daysBetweenYmd(dayKey, todayKey)
   if (diffDays === 0) return 'Today'
   if (diffDays === 1) return 'Yesterday'
   if (diffDays < 0) return `in ${Math.abs(diffDays)}d`

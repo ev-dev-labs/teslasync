@@ -49,7 +49,7 @@ import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { AINLDriveSearch } from '@/components/ai/AINLDriveSearch';
-import { formatDateTime, formatRelativeDays, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
+import { formatDateTime, formatRelativeDayKey, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
@@ -331,9 +331,8 @@ export default function DrivesListPage() {
       return {
         dateKey: g.dateKey,
         dateLabel: formatDayKey(g.dateKey, { style: 'long' }),
-        // Always-relative label uses the YMD key (no Date arithmetic), so
-        // "Today/Yesterday/Xd ago" agrees with the dateLabel above.
-        relativeLabel: formatRelativeDays(`${g.dateKey}T12:00:00Z`, { tz: 'UTC' }),
+        // Compare the vehicle-local YMD key with "today" in that same zone.
+        relativeLabel: formatRelativeDayKey(g.dateKey, { tz }),
         summary: `${g.items.length} ${noun} · ${distDisplay} ${distanceUnit}`,
         items: g.items,
       };

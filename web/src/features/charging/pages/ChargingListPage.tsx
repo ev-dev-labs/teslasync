@@ -47,7 +47,7 @@ import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
-import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDays } from '@/lib/dateFormat';
+import { formatDateTime, formatDayKey, formatDurationMinutes, formatRelativeDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { buildContextHref } from '@/lib/contextNavigation';
@@ -320,7 +320,7 @@ export default function ChargingListPage() {
         return {
           dateKey,
           dateLabel: formatDayKey(dateKey, { style: 'long' }),
-          relativeLabel: formatRelativeDays(`${dateKey}T12:00:00Z`, { tz: 'UTC' }),
+          relativeLabel: formatRelativeDayKey(dateKey, { tz }),
           summary: `${items.length} ${noun} · ${fmtNumber(totalEnergy)} kWh`,
           items,
         };

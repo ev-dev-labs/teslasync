@@ -29,7 +29,7 @@
  *   - export links carry snake_case `vehicle_id` + the active range.
  *   - empty state offers a reset-filters CTA.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -147,6 +147,15 @@ vi.mock('@/components/mobile', () => ({
 vi.mock('@/components/ai/AINLDriveSearch', () => ({ AINLDriveSearch: () => null }));
 vi.mock('@/components/data-display/SavedViewMenu', () => ({ SavedViewMenu: () => null }));
 vi.mock('@/components/layout/PageHeaderSticky', () => ({ PageHeaderSticky: () => null }));
+
+const timezoneState = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: () => timezoneState.tz,
+  };
+});
 
 // ── Data + environment hooks, driven per test. ──
 vi.mock('@/api/hooks/useDriving', () => ({
@@ -315,6 +324,7 @@ function cardValue(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  timezoneState.tz = 'UTC';
   mockDrives.mockReset();
   mockBulkDelete.mockReset();
   mockSelected.mockReset();
@@ -325,6 +335,10 @@ beforeEach(() => {
   mockSelected.mockReturnValue(selected(7));
   mockUnits.mockReturnValue(makeUnits('km'));
   mockDrives.mockReturnValue(makeQuery({ data: DRIVES }));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('DrivesListPage — no vehicle selected', () => {
@@ -491,6 +505,29 @@ describe('DrivesListPage — populated (km)', () => {
       end: '2026-05-01',
       limit: 1000,
     });
+  });
+
+  it('labels the current vehicle-local day as Today after UTC has rolled over', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T02:23:00Z'));
+    timezoneState.tz = 'America/Los_Angeles';
+    mockDrives.mockReturnValue(makeQuery({
+      data: [
+        makeDrive({
+          id: 27,
+          startTs: '2026-08-28T00:40:00Z',
+          endTs: '2026-08-28T01:26:00Z',
+          distanceM: 22772,
+        }),
+      ],
+    }));
+
+    renderPage(['/drives?from=2026-08-27&to=2026-08-27']);
+
+    const list = listRegion();
+    expect(within(list).getByText('Aug 27, 2026')).toBeInTheDocument();
+    expect(within(list).getByText(/· Today/)).toBeInTheDocument();
+    expect(within(list).queryByText(/· Yesterday/)).not.toBeInTheDocument();
   });
 });
 
