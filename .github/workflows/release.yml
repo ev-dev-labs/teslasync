@@ -279,12 +279,16 @@ jobs:
       - name: Scan the candidate archive
         uses: aquasecurity/trivy-action@b6643a29fecd7f34b3597bc6acb0a98b03d33ff8 # v0.33.1
         with:
+          # The action's v0.65.0 default no longer has downloadable
+          # release assets. Keep this aligned with security.yml.
+          version: v0.74.0
           input: /tmp/promote/${{ matrix.image }}.tar
           format: json
           output: vuln-${{ matrix.image }}.json
           severity: CRITICAL,HIGH,MEDIUM
           ignore-unfixed: true
           exit-code: "0"
+          timeout: 30m
 
       - name: Upload vulnerability scan
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

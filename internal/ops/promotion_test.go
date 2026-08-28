@@ -390,6 +390,50 @@ func TestRealReleaseWorkflowPromotesExactArtifact(t *testing.T) {
 	}
 }
 
+func TestRealReleaseWorkflowPinsTrivyScanContract(t *testing.T) {
+	fsys := repoFSForTest(t)
+	body, err := readRepoFile(fsys, ".github/workflows/release.yml")
+	if err != nil {
+		t.Fatalf("read release workflow: %v", err)
+	}
+	parsed, err := ParseWorkflowJobs(body)
+	if err != nil {
+		t.Fatalf("parse: %v", err)
+	}
+
+	var trivy *workflowStep
+	for _, job := range parsed {
+		if job.Name != "build-scan" {
+			continue
+		}
+		for i := range job.Steps {
+			if job.Steps[i].usesAction("aquasecurity/trivy-action") {
+				trivy = &job.Steps[i]
+				break
+			}
+		}
+	}
+	if trivy == nil {
+		t.Fatal("build-scan has no Trivy action")
+	}
+
+	want := map[string]string{
+		"version":        "v0.74.0",
+		"input":          "/tmp/promote/${{ matrix.image }}.tar",
+		"format":         "json",
+		"output":         "vuln-${{ matrix.image }}.json",
+		"severity":       "CRITICAL,HIGH,MEDIUM",
+		"ignore-unfixed": "true",
+		"exit-code":      "0",
+		"timeout":        "30m",
+	}
+	for input, expected := range want {
+		if got := trivy.With[input]; got != expected {
+			t.Errorf("Trivy input %q = %q, want %q", input, got, expected)
+		}
+	}
+}
+
 // TestRealReleaseWorkflowMutationsAreRejected mutates the COMMITTED
 // workflow in memory and asserts the gate catches each regression. A
 // gate proven only against hand-written fixtures can drift away from the
