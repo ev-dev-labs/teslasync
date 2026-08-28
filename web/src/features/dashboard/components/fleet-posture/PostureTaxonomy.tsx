@@ -84,34 +84,34 @@ export function PostureTaxonomy({ counts, pending }: PostureTaxonomyProps) {
   }
 
   return (
-    <dl
-      className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
-      data-testid="fleet-posture-taxonomy"
-    >
-      {POSTURE_CATEGORIES.map((category) => {
-        const { icon: Icon, tone, dot } = CATEGORY_PRESENTATION[category]
-        return (
-          <div
-            key={category}
-            className="flex min-h-14 items-center gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2"
-            title={hints[category]}
-          >
-            <span className="relative flex h-7 w-7 shrink-0 items-center justify-center">
-              <Icon className={cn('h-4 w-4', tone)} aria-hidden="true" />
-              <span className={cn('absolute -bottom-0.5 -end-0.5 h-1.5 w-1.5 rounded-full', dot)} aria-hidden="true" />
-            </span>
-            <span className="min-w-0">
-              <dt className="truncate text-xs font-medium text-[var(--text-muted)]">
+    <>
+      <dl
+        className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3"
+        data-testid="fleet-posture-taxonomy"
+      >
+        {POSTURE_CATEGORIES.map((category) => {
+          const { icon: Icon, tone, dot } = CATEGORY_PRESENTATION[category]
+          return (
+            <div
+              key={category}
+              className="grid min-h-14 grid-cols-[1.75rem_minmax(0,1fr)] grid-rows-2 items-center gap-x-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2"
+              title={hints[category]}
+            >
+              <dt className="col-span-2 grid min-w-0 grid-cols-[1.75rem_minmax(0,1fr)] items-center gap-x-2 truncate text-xs font-medium text-[var(--text-muted)]">
+                <span className="relative row-span-2 flex h-7 w-7 shrink-0 items-center justify-center">
+                <Icon className={cn('h-4 w-4', tone)} aria-hidden="true" />
+                <span className={cn('absolute -bottom-0.5 -end-0.5 h-1.5 w-1.5 rounded-full', dot)} aria-hidden="true" />
+                </span>
                 {labels[category]}
               </dt>
-              <dd className={cn('text-lg font-semibold tabular-nums leading-tight', tone)}>
+              <dd className={cn('col-start-2 text-lg font-semibold tabular-nums leading-tight', tone)}>
                 {pending ? '—' : counts[category]}
               </dd>
-            </span>
-          </div>
-        )
-      })}
-      <Caption className="col-span-2 sm:col-span-3">
+            </div>
+          )
+        })}
+      </dl>
+      <Caption className="mt-2 block">
         <Text as="span" variant="caption">
           {t(
             'dashboard.fleetPosture.taxonomyHelp',
@@ -119,6 +119,6 @@ export function PostureTaxonomy({ counts, pending }: PostureTaxonomyProps) {
           )}
         </Text>
       </Caption>
-    </dl>
+    </>
   )
 }

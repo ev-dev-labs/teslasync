@@ -625,8 +625,11 @@ export default function DashboardPage() {
               vehicles={vehicleList}
               selectedVehicle={selectedVehicle}
               fleetStates={fleetStatesQuery.data}
+              summary={fleetStatesQuery.summary}
               isPending={fleetStatesQuery.isPending}
               isError={fleetStatesQuery.isError}
+              isRetrying={fleetStatesQuery.isFetching}
+              onRetry={fleetStatesQuery.refetch}
             />
           </FadeIn>
         )}
@@ -690,7 +693,10 @@ export default function DashboardPage() {
               {editMode && (
                 <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-center">
                   <Text as="p" size="sm" color="secondary">
-                    {t('dashboard.editHint', 'Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.')}
+                    {t(
+                      'dashboard.editHint',
+                      'Drag widgets or use Arrange for one-click and keyboard positioning. Resize from edges or the same menu.',
+                    )}
                   </Text>
                 </div>
               )}

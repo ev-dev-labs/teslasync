@@ -4,6 +4,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/prometheus/client_golang/prometheus"
 	dto "github.com/prometheus/client_model/go"
 )
 
@@ -125,6 +126,32 @@ func TestClearVehicleStateConflictOnlyReportsRealTransitions(t *testing.T) {
 	}
 	if got := VehicleStateConflictSnapshot()["charging->parked"]; got != 0 {
 		t.Fatalf("count after clear = %d, want 0", got)
+	}
+}
+
+func TestClearVehicleStateConflictObservesEpisodeDuration(t *testing.T) {
+	ResetVehicleStateConflictsForTests()
+	t.Cleanup(ResetVehicleStateConflictsForTests)
+
+	observer := VehicleStateConflictDuration.WithLabelValues("charging", "parked")
+	histogram, ok := observer.(prometheus.Metric)
+	if !ok {
+		t.Fatalf("conflict duration observer %T does not expose prometheus.Metric", observer)
+	}
+	before := &dto.Metric{}
+	if err := histogram.Write(before); err != nil {
+		t.Fatalf("read conflict duration before clear: %v", err)
+	}
+
+	RecordVehicleStateConflict(42, "charging", "parked")
+	ClearVehicleStateConflict(42)
+
+	after := &dto.Metric{}
+	if err := histogram.Write(after); err != nil {
+		t.Fatalf("read conflict duration after clear: %v", err)
+	}
+	if got, want := after.GetHistogram().GetSampleCount(), before.GetHistogram().GetSampleCount()+1; got != want {
+		t.Fatalf("duration sample count = %d, want %d", got, want)
 	}
 }
 

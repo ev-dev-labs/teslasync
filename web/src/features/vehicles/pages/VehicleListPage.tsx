@@ -1,6 +1,6 @@
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Car, RefreshCw, Battery, Gauge, Zap, Activity, ListChecks,
@@ -8,7 +8,8 @@ import {
   BatteryCharging, Bell, MapPin, Route, Wrench,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout';
+import { PageContainer, PrefetchLink } from '@/components/layout';
+import { VirtualizedVehicleGrid } from '@/components/vehicles';
 import {
   GlassPanel, Badge, Button, ConfirmDialog, PinButton,
   SectionTitle, PanelTitle, Text,
@@ -37,12 +38,12 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { knownNumber } from '@/api/dataState';
 import { useUnits } from '@/hooks/useUnits';
-import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useSyncVehicles, useDeleteVehicle, useFleetStates,
   deriveCurrentVehicleStatus, describeFleetState, isFleetStateFieldCurrent,
   summariseFleetStates,
+  vehicleKeys,
   type FleetStateEntry, type FleetStatesSummary, type VerifiedVehicleStateField,
 } from '@/api/hooks/useVehicles';
 import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
@@ -71,6 +72,7 @@ import type { TFunction } from 'i18next';
  * from one retained through a failed refresh.
  */
 type LoadedEntry = FleetStateEntry & { state: VehicleState };
+const FLEET_VIRTUALIZATION_THRESHOLD = 24;
 
 /* ── Preview trust helpers ─────────────────────────────────── */
 
@@ -550,7 +552,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
-              <Link
+              <PrefetchLink
                 to={`/vehicles/${vehicle.id}`}
                 className={cn(
                   typography.role.panelTitle,
@@ -558,7 +560,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
                 )}
               >
                 {name}
-              </Link>
+              </PrefetchLink>
               <Badge variant={status != null ? statusVariant(status) : 'neutral'} dot size="sm">
                 {statusLabel}
               </Badge>
@@ -650,7 +652,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
 
         {/* Footer actions */}
         <div className="mt-auto flex items-center justify-between gap-2 border-t border-[var(--border-subtle)] pt-3">
-          <Link
+          <PrefetchLink
             to={`/vehicles/${vehicle.id}`}
             aria-label={t('vehicles.openDetail', 'Open {{name}} details', { name })}
             className={cn(
@@ -661,7 +663,7 @@ function VehicleCard({ vehicle, entry, onDelete, onPreview }: VehicleCardProps) 
           >
             <ExternalLink className="h-4 w-4" aria-hidden="true" />
             {t('vehicles.viewDetails', 'View details')}
-          </Link>
+          </PrefetchLink>
           <div className="flex items-center gap-1">
             <Button
               type="button"
@@ -707,10 +709,6 @@ export default function VehicleListPage() {
   // Trust contract for the fleet list: `fatalError` (nothing retained) gates
   // the page-level error surface, everything else degrades non-destructively.
   const vehiclesState = useDataState(vehiclesQuery);
-
-  // Keep the first vehicle's SSE live-state warm for snappy detail navigation.
-  const primaryId = vehicleList[0]?.id;
-  useVehicleLive(primaryId);
 
   const statesQuery = useFleetStates(vehicleList);
   const fleetStates = statesQuery.data;
@@ -863,6 +861,33 @@ export default function VehicleListPage() {
     (fleetStates ?? []).forEach((entry) => map.set(entry.vehicle.id, entry));
     return map;
   }, [fleetStates]);
+  const warmVisibleVehicles = useCallback(
+    (visibleVehicles: readonly Vehicle[]) => {
+      visibleVehicles.forEach((vehicle) => {
+        queryClient.setQueryData<Vehicle>(
+          vehicleKeys.detail(String(vehicle.id)),
+          (existing) => existing ?? vehicle,
+        );
+      });
+    },
+    [queryClient],
+  );
+  const renderVehicleCard = useCallback(
+    (vehicle: Vehicle) => (
+      <VehicleCard
+        vehicle={vehicle}
+        entry={entryById.get(vehicle.id)}
+        onDelete={setDeleteTarget}
+        onPreview={() => {
+          setPreviewTarget({
+            vehicle,
+            entry: entryById.get(vehicle.id),
+          });
+        }}
+      />
+    ),
+    [entryById],
+  );
 
   /* Count vehicles by derived status for the breakdown panel.
    *
@@ -1578,23 +1603,22 @@ export default function VehicleListPage() {
               <Car className="h-4 w-4 text-purple-300" aria-hidden="true" />
               {t('vehicles.allVehicles', 'All Vehicles')}
             </SectionTitle>
-            <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
-              {sortedVehicleList.map((vehicle) => (
-                <StaggerItem key={vehicle.id} className="h-full">
-                  <VehicleCard
-                    vehicle={vehicle}
-                    entry={entryById.get(vehicle.id)}
-                    onDelete={setDeleteTarget}
-                    onPreview={() => {
-                      setPreviewTarget({
-                        vehicle,
-                        entry: entryById.get(vehicle.id),
-                      });
-                    }}
-                  />
-                </StaggerItem>
-              ))}
-            </StaggerContainer>
+            {sortedVehicleList.length > FLEET_VIRTUALIZATION_THRESHOLD ? (
+              <VirtualizedVehicleGrid
+                vehicles={sortedVehicleList}
+                label={t('vehicles.virtualizedFleetLabel', 'Vehicle fleet')}
+                renderVehicle={renderVehicleCard}
+                onVisibleVehiclesChange={warmVisibleVehicles}
+              />
+            ) : (
+              <StaggerContainer className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4">
+                {sortedVehicleList.map((vehicle) => (
+                  <StaggerItem key={vehicle.id} className="h-full">
+                    {renderVehicleCard(vehicle)}
+                  </StaggerItem>
+                ))}
+              </StaggerContainer>
+            )}
           </section>
         </>
       )}

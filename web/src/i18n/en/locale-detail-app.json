@@ -35,6 +35,7 @@
     "timezoneUserHint": "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",
     "electricityCost": "Electricity Cost (per kWh)",
     "gasPrice": "Gas Price (for EV vs ICE comparison)",
+    "gasVolumeUnit": "Fuel volume unit",
     "perGallon": "/ gallon",
     "perLiter": "/ liter",
     "comparisonMPG": "Comparison Vehicle MPG",

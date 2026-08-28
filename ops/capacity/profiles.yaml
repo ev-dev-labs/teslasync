@@ -111,6 +111,38 @@ profiles:
       dashboards: [slo-api_latency_p99_500ms, slo-battery_health_latency_1s]
     last_executed: never
 
+  - id: fleet-state-batch
+    title: Large-fleet canonical state read
+    description: >-
+      Concurrent maximum-page reads through the canonical fleet-state endpoint
+      to exercise roster selection, pipelined Redis reads, set-based signal_log
+      and FSM reconstruction, request coalescing, and one-second micro-caching.
+    subsystem: fleet-state
+    driver: k6
+    entrypoint: tests/k6/fleet_state_batch.js
+    destructive: false
+    workload:
+      vehicles: 500
+      virtual_users: 25
+      ramp_up: 30s
+      duration: 5m
+    thresholds:
+      - metric: fleet_state_batch_p95_seconds
+        comparison: lt
+        value: 0.75
+        rationale: Fleet Posture must remain interactive at the maximum supported 500-vehicle page.
+      - metric: fleet_state_batch_p99_seconds
+        comparison: lt
+        value: 1.5
+        rationale: Tail latency above 1.5 seconds makes route transitions feel stalled.
+      - metric: fleet_state_batch_incomplete_ratio
+        comparison: lt
+        value: 0.01
+        rationale: A fast response that silently omits vehicles is not a successful capacity result.
+    observability:
+      dashboards: [slo-api_latency_p99_500ms, fleet-overview, sse-realtime]
+    last_executed: never
+
   - id: export-generation
     title: Concurrent export job generation
     description: >-
@@ -138,29 +170,30 @@ profiles:
     last_executed: never
 
   - id: reconnect-storm
-    title: Reconnect storm after dependency flap
+    title: Fleet-state recovery after Redis degradation
     description: >-
-      Drop MQTT and SSE connections simultaneously (via toxiproxy) and
-      measure recovery: broker resubscription, SSE client reconnect
-      backoff, and signal store rehydration from signal_log.
+      Inject Redis latency and a full Redis blackhole through toxiproxy while
+      the API remains on the layered L1/durable fallback path, then verify the
+      service returns to health after each toxic is removed.
     subsystem: resilience
     driver: chaos
     entrypoint: cmd/chaos-runner
     destructive: false
     workload:
-      concurrent_subscribers: 250
-      flap_count: 5
-      flap_interval: 30s
-      duration: 5m
+      scenarios: redis_latency_500ms_60s,redis_blackhole_20s
+      latency_ms: 500
+      blackhole_duration: 20s
+      recovery_deadline: 30s
+      duration: 3m
     thresholds:
-      - metric: time_to_full_resubscribe_seconds
+      - metric: time_to_api_recovery_seconds
         comparison: lt
-        value: 60
-        rationale: Longer than a minute of blind ingest exceeds the telemetry freshness SLO window.
-      - metric: teslasync_sse_connections_active_recovery_ratio
-        comparison: gte
-        value: 0.95
-        rationale: Clients that never reconnect show up to users as a permanently frozen dashboard.
+        value: 30
+        rationale: The chaos runner fails unless the API health probe recovers within this deadline after toxic removal.
+      - metric: fleet_state_http_5xx_ratio_during_redis_fault
+        comparison: lte
+        value: 0
+        rationale: Redis is an optional L2; its failure must not turn fleet reads into server errors.
     observability:
-      dashboards: [slo-telemetry_freshness, slo-sse_delivery]
+      dashboards: [fleet-overview, sse-realtime, slo-telemetry_freshness]
     last_executed: never

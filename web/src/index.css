@@ -1070,6 +1070,13 @@ select option:checked {
 }
 
 /* ─── react-grid-layout overrides ─── */
+@media (hover: none) {
+  .edit-mode .widget-edit-toolbar {
+    pointer-events: auto;
+    opacity: 1;
+  }
+}
+
 .react-grid-item {
   overflow: visible !important;
 }

@@ -37,6 +37,7 @@ const {
 
 // Captured OUTSIDE the hoisted block: only dereferenced at test time.
 let capturedOnVehicleUpdate: ((data: unknown) => void) | undefined;
+let capturedOnSignalChange: ((data: unknown) => void) | undefined;
 let capturedRealtimeEnabled: boolean | undefined;
 let capturedRecoveryKeys: readonly (readonly unknown[])[] | undefined;
 let capturedRecoveryEnabled: boolean | undefined;
@@ -46,8 +47,13 @@ vi.mock('../client', () => ({
 }));
 
 vi.mock('@/hooks/useRealtimeEvents', () => ({
-  useRealtimeEvents: (opts: { onVehicleUpdate?: (data: unknown) => void; enabled?: boolean }) => {
+  useRealtimeEvents: (opts: {
+    onVehicleUpdate?: (data: unknown) => void;
+    onSignalChange?: (data: unknown) => void;
+    enabled?: boolean;
+  }) => {
     capturedOnVehicleUpdate = opts.onVehicleUpdate;
+    capturedOnSignalChange = opts.onSignalChange;
     capturedRealtimeEnabled = opts.enabled;
     realtimeSpy(opts);
     return { connected: true, state: 'connected' as const, diagnostics: {} };
@@ -74,6 +80,7 @@ import {
   useFleetStates,
   FLEET_STATE_EVENT_THROTTLE_MS,
   FLEET_STATES_QUERY_ROOT,
+  vehicleKeys,
 } from './useVehicles';
 
 function makeVehicle(id: number): Vehicle {
@@ -125,6 +132,24 @@ function batchFor(url: string, vehicleState: string) {
       limit: 500,
       offset: 0,
       counts: { resolved: ids.length, missing: 0, failed: 0 },
+      summary: {
+        counted: ids.length,
+        verified_count: ids.length,
+        attention_count: 0,
+        operational: {
+          charging: vehicleState === 'charging' ? ids.length : 0,
+          driving: vehicleState === 'driving' ? ids.length : 0,
+          parked: vehicleState === 'parked' ? ids.length : 0,
+          asleep: 0,
+          online: vehicleState === 'online' ? ids.length : 0,
+          offline: 0,
+          other: 0,
+        },
+        attention: { unverified: 0, stale: 0, unknown: 0, missing: 0, failed: 0 },
+        oldest_observed_at: new Date().toISOString(),
+        newest_observed_at: new Date().toISOString(),
+        observed_count: ids.length,
+      },
       vehicles: ids.map((id) => ({
         vehicle_id: id,
         outcome: 'resolved',
@@ -146,12 +171,19 @@ function emit(payload: unknown) {
   });
 }
 
+function emitSignal(payload: unknown) {
+  act(() => {
+    capturedOnSignalChange?.(payload);
+  });
+}
+
 describe('useFleetStates — live transitions without a request storm', () => {
   beforeEach(() => {
     requestMock.mockReset();
     realtimeSpy.mockReset();
     liveRecoverySpy.mockReset();
     capturedOnVehicleUpdate = undefined;
+    capturedOnSignalChange = undefined;
     capturedRealtimeEnabled = undefined;
     capturedRecoveryKeys = undefined;
     capturedRecoveryEnabled = undefined;
@@ -272,5 +304,105 @@ describe('useFleetStates — live transitions without a request storm', () => {
     mounted.unmount();
     await act(async () => { await vi.advanceTimersByTimeAsync(FLEET_STATE_EVENT_THROTTLE_MS * 3); });
     expect(requestMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('patches a sequenced canonical signal immediately, withdraws the stale summary, and seeds the live item cache', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime('2026-08-27T12:00:10Z');
+    const client = makeClient();
+    requestMock.mockImplementation((url: string) => Promise.resolve(batchFor(url, 'online')));
+
+    const { result } = renderHook(() => useFleetStates([makeVehicle(1)]), {
+      wrapper: wrapper(client),
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    expect(result.current.summary).not.toBeNull();
+
+    emitSignal({
+      stream_id: 'api-epoch-a',
+      sequence: 1,
+      vehicle_id: 1,
+      field: 'VehicleSpeed',
+      kind: 'float',
+      value: 12.5,
+      ts: '2026-08-27T12:00:10.500Z',
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+
+    expect(result.current.data?.[0].state?.speed).toBe(12.5);
+    expect(result.current.data?.[0].verifiedFields).toContain('speed');
+    expect(result.current.summary).toBeNull();
+    expect(requestMock).toHaveBeenCalledTimes(1);
+
+    const seeded = client.getQueryData<{
+      state?: { speed?: number };
+      observedAt: number | null;
+    }>(vehicleKeys.state(1));
+    expect(seeded?.state?.speed).toBe(12.5);
+    expect(seeded?.observedAt).toBe(Date.parse('2026-08-27T12:00:10.500Z'));
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLEET_STATE_EVENT_THROTTLE_MS);
+    });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('advances the global sequence before fleet filtering so an unrelated-frame gap recovers authoritatively', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime('2026-08-27T12:00:10Z');
+    requestMock.mockImplementation((url: string) => Promise.resolve(batchFor(url, 'online')));
+
+    renderHook(() => useFleetStates([makeVehicle(1)]), { wrapper: wrapper(makeClient()) });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+    expect(requestMock).toHaveBeenCalledTimes(1);
+
+    emitSignal({
+      stream_id: 'api-epoch-a',
+      sequence: 1,
+      vehicle_id: 999,
+      field: 'Gear',
+      kind: 'string',
+      value: 'D',
+      ts: '2026-08-27T12:00:09Z',
+    });
+    emitSignal({
+      stream_id: 'api-epoch-a',
+      sequence: 3,
+      vehicle_id: 1,
+      field: 'Gear',
+      kind: 'string',
+      value: 'P',
+      ts: '2026-08-27T12:00:09Z',
+    });
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(FLEET_STATE_EVENT_THROTTLE_MS + 1);
+    });
+    expect(requestMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('ignores duplicate sequenced frames instead of regressing an instant patch', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime('2026-08-27T12:00:10Z');
+    requestMock.mockImplementation((url: string) => Promise.resolve(batchFor(url, 'online')));
+
+    const { result } = renderHook(() => useFleetStates([makeVehicle(1)]), {
+      wrapper: wrapper(makeClient()),
+    });
+    await act(async () => { await vi.advanceTimersByTimeAsync(10); });
+
+    const frame = {
+      stream_id: 'api-epoch-a',
+      sequence: 1,
+      vehicle_id: 1,
+      field: 'VehicleSpeed',
+      kind: 'float',
+      ts: '2026-08-27T12:00:10.500Z',
+    };
+    emitSignal({ ...frame, value: 12.5 });
+    emitSignal({ ...frame, value: 99 });
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+
+    expect(result.current.data?.[0].state?.speed).toBe(12.5);
   });
 });

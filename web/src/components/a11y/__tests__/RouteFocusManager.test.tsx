@@ -12,7 +12,10 @@ import { render, act } from '@testing-library/react';
 import { useEffect, useState } from 'react';
 import { MemoryRouter, Routes, Route, useNavigate } from 'react-router-dom';
 import { RouteFocusManager } from '../RouteFocusManager';
-import { ROUTE_FOCUS_TARGET_ATTR } from '@/lib/routeFocus';
+import {
+  ROUTE_FOCUS_SCOPE_ATTR,
+  ROUTE_FOCUS_TARGET_ATTR,
+} from '@/lib/routeFocus';
 
 /**
  * jsdom does not implement `requestAnimationFrame` deterministically
@@ -189,9 +192,26 @@ describe('RouteFocusManager', () => {
         <main id="main-content" tabIndex={-1} data-testid="main" />
         <Routes>
           <Route path="/a" element={<Navigator to="/lazy" />} />
-          <Route path="/lazy" element={<LazyPage title="Lazy" afterFrames={5} />} />
+          <Route
+            path="/lazy"
+            element={
+              <>
+                <div {...{ [ROUTE_FOCUS_SCOPE_ATTR]: '/a' }}>
+                  <PageHeading title="Retained previous route" />
+                </div>
+                <div {...{ [ROUTE_FOCUS_SCOPE_ATTR]: '/lazy' }}>
+                  <LazyPage title="Lazy" afterFrames={5} />
+                </div>
+              </>
+            }
+          />
         </Routes>
       </MemoryRouter>,
+    );
+
+    flushFrames(1);
+    expect(document.activeElement).not.toBe(
+      document.querySelector('[data-testid="h1-Retained previous route"]'),
     );
 
     flushFrames(10);
@@ -249,6 +269,29 @@ describe('RouteFocusManager', () => {
     );
     // …and the heading, once it finally lands, is not retro-focused.
     expect(document.querySelector('[data-testid="h1-Lazy"]')).toBeNull();
+  });
+
+  it('advances provisional main focus to a late heading when focus stayed put', () => {
+    render(
+      <MemoryRouter initialEntries={['/a']}>
+        <RouteFocusManager timeoutMs={1_000} fallbackDelayMs={100} />
+        <main id="main-content" tabIndex={-1} data-testid="main" />
+        <Routes>
+          <Route path="/a" element={<Navigator to="/lazy" />} />
+          <Route path="/lazy" element={<LazyPage title="Lazy" afterFrames={20} />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    flushFrames(8);
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-testid="main"]'),
+    );
+
+    flushFrames(20);
+    expect(document.activeElement).toBe(
+      document.querySelector('[data-testid="h1-Lazy"]'),
+    );
   });
 
   it('leaves focus alone while the user is typing in a field', () => {

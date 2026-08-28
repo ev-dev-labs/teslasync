@@ -76,7 +76,7 @@ dimensions:
         verification: go run ./cmd/ops-gate -check rollback
       - id: lat-capacity-profiles
         statement: Repeatable capacity profiles exist for the load shapes that break this system.
-        evidence: [ops/capacity/profiles.yaml, tests/k6/sse_fanout.js, tests/k6/analytics_read.js, tests/k6/export_generation.js]
+        evidence: [ops/capacity/profiles.yaml, tests/k6/sse_fanout.js, tests/k6/analytics_read.js, tests/k6/fleet_state_batch.js, tests/k6/export_generation.js]
         gate: capacity
         verification: go run ./cmd/ops-gate -check capacity
       - id: lat-capacity-executed

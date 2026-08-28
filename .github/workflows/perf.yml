@@ -94,6 +94,7 @@ jobs:
             http://localhost:4173/drives
             http://localhost:4173/analytics
             http://localhost:4173/charging
+            http://localhost:4173/battery
           uploadArtifacts: true
           temporaryPublicStorage: true
           configPath: ./web/lighthouserc.json

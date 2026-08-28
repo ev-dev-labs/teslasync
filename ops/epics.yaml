@@ -396,6 +396,7 @@ epics:
       - ops/capacity/profiles.yaml
       - tests/k6/sse_fanout.js
       - tests/k6/analytics_read.js
+      - tests/k6/fleet_state_batch.js
       - tests/k6/export_generation.js
       - .github/workflows/capacity-test.yml
     acceptance:

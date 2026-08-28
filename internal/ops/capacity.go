@@ -62,6 +62,7 @@ var requiredCapacityProfiles = []string{
 	"telemetry-burst",
 	"sse-fanout",
 	"analytics-query",
+	"fleet-state-batch",
 	"export-generation",
 	"reconnect-storm",
 }

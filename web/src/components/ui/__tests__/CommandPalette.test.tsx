@@ -1025,6 +1025,37 @@ describe('CommandPalette focus + listbox semantics', () => {
     }).not.toThrow()
   })
 
+  it('does not restore the shell trigger when navigation owns the next focus target', async () => {
+    setPinnedNavPaths(['/drives'])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <LocationProbe />
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input)
+    })
+
+    const pinned = await screen.findByRole('group', { name: 'Pinned' })
+    fireEvent.click(pinned.querySelector<HTMLElement>('[data-palette-row]')!)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/drives')
+      expect(document.activeElement).not.toBe(trigger)
+    })
+  })
+
   it('exposes combobox + listbox semantics with a live active descendant', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })

@@ -11,7 +11,7 @@ Every other page in the product is a deeper dive into one of those questions.
 
 ## Anatomy of the page
 
-The dashboard is a **drag-and-drop canvas** built from a catalogue of 118 widgets organised into 16 categories. You build it your way: every widget is opt-in, every layout is yours, and you can keep as many separate dashboards as you want (one for daily driving, one for long trips, one for the garage workbench, etc.).
+The dashboard is a customizable canvas built from a catalogue of 118 widgets organised into 16 categories. Drag widgets to arrange them, or use each widget's **Arrange** menu for one-click and keyboard move/resize controls. Dashboard tabs likewise provide **Move earlier** and **Move later** actions, so layout editing never requires dragging.
 
 Open the widget catalogue from the floating **+** button (the dashboard's "Add widget" affordance). The dialog lists every widget grouped by category, with a search box that matches against name, description, or category — so typing `battery` jumps you to the 10-widget Battery & Range bucket, and typing `range estimate` jumps you straight to that single widget.
 

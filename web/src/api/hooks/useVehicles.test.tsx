@@ -656,16 +656,18 @@ describe('fetchFleetStates (raw batch helper)', () => {
     requestMock.mockImplementation((url: string) =>
       Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id)))));
 
-    const items = await fetchFleetStates([3, 1, 2]);
+    const batch = await fetchFleetStates([3, 1, 2]);
     expect(requestMock).toHaveBeenCalledTimes(1);
     expect(requestedIds(lastUrl())).toEqual([3, 1, 2]);
     expect(lastUrl()).toContain(`limit=${FLEET_STATE_BATCH_CHUNK}`);
-    expect(items.map((item) => item.vehicle_id)).toEqual([3, 1, 2]);
+    expect(batch.items.map((item) => item.vehicle_id)).toEqual([3, 1, 2]);
   });
 
   it('tolerates a null body without throwing', async () => {
     requestMock.mockResolvedValue(null);
-    await expect(fetchFleetStates([1])).resolves.toEqual([]);
+    // No items AND no summary: a body we could not read carries no posture,
+    // and fabricating a zeroed summary would render as "nothing is verified".
+    await expect(fetchFleetStates([1])).resolves.toEqual({ items: [], summary: null });
   });
 
   it('propagates a transport failure rather than resolving empty', async () => {
@@ -1510,8 +1512,8 @@ describe('useFleetStates — retention survives a fleet membership change', () =
       observedAt: 9_000,
       receivedAt: 9_000,
     };
-    client.setQueryData([FLEET_STATES_QUERY_ROOT, [1, 2]], [newer]);
-    client.setQueryData([FLEET_STATES_QUERY_ROOT, [1]], [stale]);
+    client.setQueryData([FLEET_STATES_QUERY_ROOT, [1, 2]], { entries: [newer], summary: null });
+    client.setQueryData([FLEET_STATES_QUERY_ROOT, [1]], { entries: [stale], summary: null });
 
     requestMock.mockRejectedValue(new Error('ECONNREFUSED'));
     const { result } = renderFleet(client, [makeVehicle(1), makeVehicle(3)]);

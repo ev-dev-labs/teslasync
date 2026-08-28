@@ -13,12 +13,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
@@ -29,12 +31,16 @@ const maxRequestedVehicleIDs = fleetstatesvc.MaxLimit
 
 // FleetStateHandler serves the fleet-wide batch current-state read.
 type FleetStateHandler struct {
-	svc *fleetstatesvc.Service
+	svc          *fleetstatesvc.Service
+	observeBatch func(time.Time, []metrics.FleetStateMetricObservation)
 }
 
 // NewFleetStateHandler wires the handler.
 func NewFleetStateHandler(svc *fleetstatesvc.Service) *FleetStateHandler {
-	return &FleetStateHandler{svc: svc}
+	return &FleetStateHandler{
+		svc:          svc,
+		observeBatch: metrics.ObserveFleetStateBatch,
+	}
 }
 
 // List returns the current state of every requested vehicle in one response.
@@ -80,15 +86,50 @@ func (h *FleetStateHandler) List(w http.ResponseWriter, r *http.Request) {
 		attribute.Int("fleet.resolved", batch.Counts.Resolved),
 		attribute.Int("fleet.missing", batch.Counts.Missing),
 		attribute.Int("fleet.failed", batch.Counts.Failed),
+		attribute.Int("fleet.verified", batch.Summary.VerifiedCount),
+		attribute.Int("fleet.attention", batch.Summary.AttentionCount),
 	)
+	h.observeFleetStateBatch(batch)
 	httputil.Respond(w, http.StatusOK, batch)
+}
+
+func (h *FleetStateHandler) observeFleetStateBatch(batch *fleetstatesvc.Batch) {
+	if h == nil || h.observeBatch == nil || batch == nil {
+		return
+	}
+	observations := make([]metrics.FleetStateMetricObservation, 0, len(batch.Vehicles))
+	for i := range batch.Vehicles {
+		item := &batch.Vehicles[i]
+		evidence := fleetstatesvc.EvidenceOutcomeFor(item, batch.Now)
+		observation := metrics.FleetStateMetricObservation{
+			VehicleID: item.VehicleID,
+			Verified:  evidence == fleetstatesvc.EvidenceVerified,
+			Reason:    string(evidence),
+		}
+		if item.ObservedAt != nil {
+			observation.ObservedAt = item.ObservedAt.UTC()
+		}
+		observations = append(observations, observation)
+	}
+	h.observeBatch(batch.Now, observations)
 }
 
 // parseFleetStateQuery validates every input at the handler boundary and
 // writes the 400 itself. Returns ok=false when a response has been written.
+//
+// # Scope
+//
+// The query is stamped with fleetstatesvc.ScopeGlobalRoster. This deployment
+// serves ONE global roster: the roster read has no tenant/owner predicate and
+// /api/v1/* is gated by an all-or-nothing ForwardAuth (ADR-005), so every
+// authenticated caller is entitled to the same answer to the same normalized
+// question. The field is stamped explicitly — rather than left empty — so that
+// introducing a tenant dimension is a compile-visible change here, and so the
+// coalescing key can never mix two scopes' vehicles.
 func parseFleetStateQuery(w http.ResponseWriter, r *http.Request) (fleetstatesvc.Query, bool) {
 	params := r.URL.Query()
 	out := fleetstatesvc.Query{
+		Scope:  fleetstatesvc.ScopeGlobalRoster,
 		Limit:  fleetstatesvc.DefaultLimit,
 		Offset: 0,
 	}

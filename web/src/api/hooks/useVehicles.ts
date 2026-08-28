@@ -7,10 +7,16 @@ import { queryPolicy } from '../queryPolicy';
 import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
 import { useLiveRecovery } from '@/hooks/useLiveRecovery';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
+import { parseSignalChangeEvent } from '@/hooks/useSSE';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
 import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
+import {
+  advanceSignalSequence,
+  patchFleetStateEntry,
+  type SignalSequenceCursor,
+} from '@/api/fleetStateSSE';
 import type { Vehicle } from '@/types/vehicle';
 import type {
   EnterprisePayerVariables,
@@ -492,7 +498,97 @@ interface FleetStateWireBatch {
   limit?: number
   offset?: number
   counts?: { resolved?: number; missing?: number; failed?: number }
+  summary?: FleetStateWireSummary | null
   vehicles?: FleetStateWireItem[] | null
+}
+
+/**
+ * Server-derived Fleet Posture roll-up (snake_case, matching the Go struct
+ * tags in `internal/app/fleetstatesvc`).
+ *
+ * It is computed on the server from the SAME items, the SAME request-level
+ * `now` and the SAME trust precedence the items carry, so the panel can paint
+ * from it on first frame and can never disagree with the list it summarises.
+ */
+interface FleetStateWireSummary {
+  counted?: number
+  verified_count?: number
+  attention_count?: number
+  operational?: {
+    charging?: number
+    driving?: number
+    parked?: number
+    asleep?: number
+    online?: number
+    offline?: number
+    other?: number
+  } | null
+  attention?: {
+    unverified?: number
+    stale?: number
+    unknown?: number
+    missing?: number
+    failed?: number
+  } | null
+  oldest_observed_at?: string | null
+  newest_observed_at?: string | null
+  observed_count?: number
+}
+
+/** Trusted operational status totals from the server summary. */
+export interface FleetServerOperationalTotals {
+  charging: number
+  driving: number
+  parked: number
+  asleep: number
+  online: number
+  offline: number
+  /** A trusted state outside the backend FSM vocabulary. */
+  other: number
+}
+
+/**
+ * Evidence-problem totals from the server summary.
+ *
+ * Every one of these is a statement about OUR EVIDENCE, never about the
+ * vehicle — which is exactly why `offline` lives in the operational totals and
+ * is unreachable from any of these.
+ */
+export interface FleetServerAttentionTotals {
+  /** Stream is fresh, but the deciding field is not backed by a real observation. */
+  unverified: number
+  /** A real observation exists but is outside the freshness window. */
+  stale: number
+  /** No real observation at all (durable fallback / legacy values only). */
+  unknown: number
+  /** The read succeeded and there is authoritatively no state. */
+  missing: number
+  /** Resolution failed for this vehicle. */
+  failed: number
+}
+
+/**
+ * The server summary, mapped for rendering.
+ *
+ * Instants are converted to epoch ms (never kept as strings) so panels feed
+ * them straight to {@link formatObservationAge} without re-parsing, and
+ * unparseable/absent instants become `null` rather than `NaN` or "now".
+ */
+export interface FleetServerSummary {
+  /** Items in the page the summary describes. */
+  counted: number
+  /** Items carrying a trusted operational status ("N of M verified"). */
+  verifiedCount: number
+  /** counted - verifiedCount. */
+  attentionCount: number
+  operational: FleetServerOperationalTotals
+  attention: FleetServerAttentionTotals
+  /** Oldest REAL observation in the page, or null when there is none. */
+  oldestObservedAt: number | null
+  /** Newest REAL observation in the page, or null when there is none. */
+  newestObservedAt: number | null
+  /** Items carrying a real observation instant. */
+  observedCount: number
 }
 
 /**
@@ -531,11 +627,15 @@ function chunk<T>(values: readonly T[], size: number): T[][] {
  * Rejects on transport failure — a batch that could not be read is NOT an
  * empty fleet, and returning a success-shaped value here is precisely how a
  * dead backend previously rendered as a confident "everything is offline".
+ *
+ * Returns the items alongside the SERVER-DERIVED summary. The summary is never
+ * recomputed here: re-deriving it in the browser is what allowed the panel and
+ * the list to disagree in the first place.
  */
 export async function fetchFleetStates(
   vehicleIds: readonly number[],
   signal?: AbortSignal,
-): Promise<FleetStateWireItem[]> {
+): Promise<{ items: FleetStateWireItem[]; summary: FleetServerSummary | null }> {
   const groups = chunk(vehicleIds, FLEET_STATE_BATCH_CHUNK)
   const responses = await Promise.all(
     groups.map(async (group) => {
@@ -545,10 +645,99 @@ export async function fetchFleetStates(
       })
       const body = await request<unknown>(`/vehicles/states?${params.toString()}`, { signal })
       const batch = unwrapEnvelope<FleetStateWireBatch>(body)
-      return safeArray(batch?.vehicles ?? undefined) as FleetStateWireItem[]
+      return {
+        items: safeArray(batch?.vehicles ?? undefined) as FleetStateWireItem[],
+        summary: mapFleetServerSummary(batch?.summary),
+      }
     }),
   )
-  return responses.flat()
+  return {
+    items: responses.flatMap((response) => response.items),
+    // A chunked fleet still has ONE posture: the chunk summaries are additive
+    // counts plus a min/max over observation instants.
+    summary: responses.reduce<FleetServerSummary | null>(
+      (merged, response) => mergeFleetServerSummaries(merged, response.summary),
+      null,
+    ),
+  }
+}
+
+/** Project the wire summary onto the render-ready shape. */
+function mapFleetServerSummary(
+  wire: FleetStateWireSummary | null | undefined,
+): FleetServerSummary | null {
+  if (wire == null || typeof wire !== 'object') return null
+  const operational = wire.operational ?? {}
+  const attention = wire.attention ?? {}
+  return {
+    counted: wire.counted ?? 0,
+    verifiedCount: wire.verified_count ?? 0,
+    attentionCount: wire.attention_count ?? 0,
+    operational: {
+      charging: operational.charging ?? 0,
+      driving: operational.driving ?? 0,
+      parked: operational.parked ?? 0,
+      asleep: operational.asleep ?? 0,
+      online: operational.online ?? 0,
+      offline: operational.offline ?? 0,
+      other: operational.other ?? 0,
+    },
+    attention: {
+      unverified: attention.unverified ?? 0,
+      stale: attention.stale ?? 0,
+      unknown: attention.unknown ?? 0,
+      missing: attention.missing ?? 0,
+      failed: attention.failed ?? 0,
+    },
+    oldestObservedAt: parseObservedAt(wire.oldest_observed_at),
+    newestObservedAt: parseObservedAt(wire.newest_observed_at),
+    observedCount: wire.observed_count ?? 0,
+  }
+}
+
+/** Combine two chunk summaries into the posture of the whole fleet. */
+function mergeFleetServerSummaries(
+  a: FleetServerSummary | null,
+  b: FleetServerSummary | null,
+): FleetServerSummary | null {
+  if (a == null) return b
+  if (b == null) return a
+  return {
+    counted: a.counted + b.counted,
+    verifiedCount: a.verifiedCount + b.verifiedCount,
+    attentionCount: a.attentionCount + b.attentionCount,
+    operational: {
+      charging: a.operational.charging + b.operational.charging,
+      driving: a.operational.driving + b.operational.driving,
+      parked: a.operational.parked + b.operational.parked,
+      asleep: a.operational.asleep + b.operational.asleep,
+      online: a.operational.online + b.operational.online,
+      offline: a.operational.offline + b.operational.offline,
+      other: a.operational.other + b.operational.other,
+    },
+    attention: {
+      unverified: a.attention.unverified + b.attention.unverified,
+      stale: a.attention.stale + b.attention.stale,
+      unknown: a.attention.unknown + b.attention.unknown,
+      missing: a.attention.missing + b.attention.missing,
+      failed: a.attention.failed + b.attention.failed,
+    },
+    oldestObservedAt: minInstant(a.oldestObservedAt, b.oldestObservedAt),
+    newestObservedAt: maxInstant(a.newestObservedAt, b.newestObservedAt),
+    observedCount: a.observedCount + b.observedCount,
+  }
+}
+
+function minInstant(a: number | null, b: number | null): number | null {
+  if (a == null) return b
+  if (b == null) return a
+  return Math.min(a, b)
+}
+
+function maxInstant(a: number | null, b: number | null): number | null {
+  if (a == null) return b
+  if (b == null) return a
+  return Math.max(a, b)
 }
 
 /**
@@ -922,7 +1111,10 @@ function collectRetainedEntries(
   });
 
   for (const query of cached) {
-    const entries = safeArray(query.state.data as FleetStateEntry[] | undefined);
+    // The cached value pairs the entries with the server summary; retention
+    // only ever reads the entries.
+    const result = query.state.data as FleetStateBatchResult | undefined;
+    const entries = safeArray(result?.entries);
     for (const entry of entries) {
       if (entry?.state == null) continue;
       const id = entry.vehicle?.id;
@@ -984,9 +1176,11 @@ function collectRetainedEntries(
  * Charging/Driving/Parked transitions must show up promptly without turning
  * the SSE stream into a refetch storm:
  *
- *   - typed `vehicle_update` events (never a raw EventSource) mark the batch
- *     stale at most once per {@link FLEET_STATE_EVENT_THROTTLE_MS}, and only
- *     for vehicles that are actually in this fleet;
+ *   - sequenced `signal_change` events patch canonical independent fields
+ *     immediately, then coalesce one authoritative reconciliation;
+ *   - aggregate `vehicle_update` events remain the rolling-upgrade and
+ *     cross-pod fallback, marking the batch stale at most once per
+ *     {@link FLEET_STATE_EVENT_THROTTLE_MS};
  *   - {@link useLiveRecovery} re-reads authoritative state after a reconnect,
  *     because Redis Pub/Sub has no replay;
  *   - the ambient poll remains BOUNDED recovery via {@link useRefreshInterval}
@@ -1003,6 +1197,15 @@ function collectRetainedEntries(
  *
  * The query key is derived from the sorted id set so it stays stable across
  * re-renders and only refetches when the fleet changes.
+ *
+ * ## Server-derived summary
+ *
+ * The returned `summary` is the backend's own posture roll-up, computed from
+ * the same items against the same request-level instant and the same trust
+ * precedence. Panels can use it as the authoritative aggregate for that
+ * resolved snapshot, and it is `null` — never a fabricated zeroed object —
+ * whenever no batch has resolved, so "we have not asked yet" cannot render as
+ * "nothing is verified".
  */
 export function useFleetStates(vehicles: Vehicle[]) {
   const queryClient = useQueryClient();
@@ -1016,12 +1219,12 @@ export function useFleetStates(vehicles: Vehicle[]) {
 
   const query = useQuery({
     queryKey,
-    queryFn: async ({ signal }): Promise<FleetStateEntry[]> => {
+    queryFn: async ({ signal }): Promise<FleetStateBatchResult> => {
       const eligibleIds = new Set(ids);
       const priorById = collectRetainedEntries(queryClient, eligibleIds);
-      let items: Awaited<ReturnType<typeof fetchFleetStates>>;
+      let batch: Awaited<ReturnType<typeof fetchFleetStates>>;
       try {
-        items = await fetchFleetStates(ids, signal);
+        batch = await fetchFleetStates(ids, signal);
       } catch (err) {
         // Transport failure. Reject — but hand the caller the retained
         // readings so trust degrades instead of the panel going blank.
@@ -1032,11 +1235,14 @@ export function useFleetStates(vehicles: Vehicle[]) {
       }
 
       const receivedAt = Date.now();
-      const byId = new Map<number, (typeof items)[number]>();
-      for (const item of items) {
+      const byId = new Map<number, (typeof batch.items)[number]>();
+      for (const item of batch.items) {
         if (typeof item?.vehicle_id === 'number') byId.set(item.vehicle_id, item);
       }
-      return list.map((v) => toFleetStateEntry(v, byId.get(v.id), priorById.get(v.id), receivedAt));
+      return {
+        entries: list.map((v) => toFleetStateEntry(v, byId.get(v.id), priorById.get(v.id), receivedAt)),
+        summary: batch.summary,
+      };
     },
     enabled,
     // Live-tier cache policy; retry deliberately stays with the QueryClient.
@@ -1059,22 +1265,98 @@ export function useFleetStates(vehicles: Vehicle[]) {
   );
   const fleetIdsRef = useRef(fleetIds);
   fleetIdsRef.current = fleetIds;
-  const throttleRef = useRef<{ timer: number | null; lastAt: number }>({ timer: null, lastAt: 0 });
+  const sequenceRef = useRef<SignalSequenceCursor | null>(null);
+  const throttleRef = useRef<{
+    timer: number | null;
+    lastAt: number;
+    vehicleIds: Set<number>;
+  }>({ timer: null, lastAt: Date.now(), vehicleIds: new Set() });
 
-  const onVehicleUpdate = useCallback((payload: unknown) => {
-    // Typed envelope only — a malformed frame must never trigger traffic.
-    const vehicleId = readVehicleUpdateId(payload);
-    if (vehicleId == null || !fleetIdsRef.current.has(vehicleId)) return;
-
+  const scheduleAuthoritativeRecovery = useCallback((vehicleIds: Iterable<number>) => {
     const state = throttleRef.current;
+    for (const vehicleId of vehicleIds) state.vehicleIds.add(vehicleId);
     if (state.timer != null) return; // already scheduled; coalesce
     const wait = Math.max(0, FLEET_STATE_EVENT_THROTTLE_MS - (Date.now() - state.lastAt));
     state.timer = window.setTimeout(() => {
       state.timer = null;
       state.lastAt = Date.now();
+      const recoveringVehicleIds = [...state.vehicleIds];
+      state.vehicleIds.clear();
+
+      // The fleet batch is the one authoritative recovery read. Live
+      // single-vehicle entries are marked stale without starting duplicate
+      // HTTP requests; the successful batch response seeds them immediately.
+      for (const vehicleId of recoveringVehicleIds) {
+        void queryClient.invalidateQueries({
+          queryKey: vehicleKeys.state(vehicleId),
+          exact: true,
+          refetchType: 'none',
+        });
+      }
       void queryClient.invalidateQueries({ queryKey: [FLEET_STATES_QUERY_ROOT] });
     }, wait);
   }, [queryClient]);
+
+  const onVehicleUpdate = useCallback((payload: unknown) => {
+    // Typed envelope only — a malformed frame must never trigger traffic.
+    const vehicleId = readVehicleUpdateId(payload);
+    if (vehicleId == null || !fleetIdsRef.current.has(vehicleId)) return;
+    scheduleAuthoritativeRecovery([vehicleId]);
+  }, [scheduleAuthoritativeRecovery]);
+
+  const onSignalChange = useCallback((payload: unknown) => {
+    const event = parseSignalChangeEvent(payload);
+    if (event == null) return;
+
+    // Advance BEFORE filtering by vehicle. Sequence numbers are global to the
+    // stream, so ignoring another vehicle first would manufacture false gaps.
+    const sequence = advanceSignalSequence(sequenceRef.current, event);
+    sequenceRef.current = sequence.cursor;
+    if (!sequence.accept) return;
+
+    let patchedEntry: FleetStateEntry | null = null;
+    let requiresRecovery = sequence.recover;
+    queryClient.setQueriesData<FleetStateBatchResult>(
+      { queryKey: [FLEET_STATES_QUERY_ROOT] },
+      (current) => {
+        if (current == null) return current;
+        let changed = false;
+        const entries = current.entries.map((entry) => {
+          const patch = patchFleetStateEntry(entry, event);
+          if (patch.kind === 'recover') {
+            requiresRecovery = true;
+            return entry;
+          }
+          if (patch.kind !== 'patched') return entry;
+          changed = true;
+          if (
+            patchedEntry == null ||
+            (patch.entry.observedAt ?? 0) >= (patchedEntry.observedAt ?? 0)
+          ) {
+            patchedEntry = patch.entry;
+          }
+          return patch.entry;
+        });
+        if (!changed) return current;
+
+        // The server summary and item set are one snapshot. Once an item is
+        // patched independently, withdraw the summary until the coalesced
+        // authoritative read can replace both atomically.
+        return { entries, summary: null };
+      },
+    );
+
+    if (patchedEntry != null) {
+      seedVehicleStateCache(queryClient, patchedEntry);
+      requiresRecovery = true;
+    }
+    if (requiresRecovery) {
+      const affected = sequence.recover
+        ? fleetIdsRef.current
+        : [event.vehicle_id];
+      scheduleAuthoritativeRecovery(affected);
+    }
+  }, [queryClient, scheduleAuthoritativeRecovery]);
 
   useEffect(() => () => {
     const state = throttleRef.current;
@@ -1082,16 +1364,20 @@ export function useFleetStates(vehicles: Vehicle[]) {
       window.clearTimeout(state.timer);
       state.timer = null;
     }
+    state.vehicleIds.clear();
   }, []);
 
-  useRealtimeEvents({ onVehicleUpdate, enabled });
+  useRealtimeEvents({ onVehicleUpdate, onSignalChange, enabled });
 
   /* ── Automatic freshness ageing ───────────────────────────────────────── */
   const [freshnessClock, setFreshnessClock] = useState(0);
   const batchError = query.error instanceof FleetStatesBatchError ? query.error : null;
   // A rejected batch supersedes the last successful array: its entries ARE
   // those readings, re-labelled with the honest outcome.
-  const settled = batchError ? batchError.entries : query.data;
+  const settled = batchError ? batchError.entries : query.data?.entries;
+  // A failed batch has no server posture: the summary describes a page we
+  // could not read, so publishing the previous one would age silently.
+  const summary = batchError ? null : (query.data?.summary ?? null);
 
   useEffect(() => {
     const now = Date.now();
@@ -1130,13 +1416,25 @@ export function useFleetStates(vehicles: Vehicle[]) {
   /* ── Seed the per-vehicle cache so widgets do not re-fetch ────────────── */
   useEffect(() => {
     if (!query.isSuccess || query.data == null) return;
-    for (const entry of query.data) {
+    for (const entry of query.data.entries) {
       if (entry.outcome !== 'resolved' || entry.state == null) continue;
       seedVehicleStateCache(queryClient, entry);
     }
   }, [queryClient, query.isSuccess, query.data]);
 
-  return { ...query, data };
+  return { ...query, data, summary };
+}
+
+/**
+ * The cached value of one fleet-state batch.
+ *
+ * The entries and the server summary are stored TOGETHER because they describe
+ * the same page at the same instant; splitting them into two cache entries
+ * would let a panel render a summary from one poll over the items of another.
+ */
+interface FleetStateBatchResult {
+  entries: FleetStateEntry[];
+  summary: FleetServerSummary | null;
 }
 
 /**

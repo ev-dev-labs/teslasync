@@ -30,7 +30,9 @@ on:
         options:
           - sse-fanout
           - analytics-query
+          - fleet-state-batch
           - export-generation
+          - reconnect-storm
         default: sse-fanout
       confirm:
         description: 'Type RUN to confirm you intend to generate load'
@@ -65,9 +67,25 @@ jobs:
       - name: Refuse unconfirmed runs
         env:
           CONFIRM: ${{ inputs.confirm }}
+          DURATION: ${{ inputs.duration }}
         run: |
           if [ "$CONFIRM" != "RUN" ]; then
             echo "::error::confirm must be RUN (ops/capacity/profiles.yaml safety.require_confirmation)"
+            exit 1
+          fi
+          if ! [[ "$DURATION" =~ ^[1-9][0-9]*[sm]$ ]]; then
+            echo "::error::duration must be a positive whole number of seconds or minutes"
+            exit 1
+          fi
+          VALUE=${DURATION%?}
+          UNIT=${DURATION: -1}
+          if [ "$UNIT" = "m" ]; then
+            SECONDS_TOTAL=$((VALUE * 60))
+          else
+            SECONDS_TOTAL=$VALUE
+          fi
+          if [ "$SECONDS_TOTAL" -gt 1800 ]; then
+            echo "::error::duration exceeds safety.max_duration (30m)"
             exit 1
           fi
 
@@ -81,8 +99,17 @@ jobs:
         env:
           POSTGRES_PASSWORD: ci_capacity
           SECRET_KEY: ci_capacity_secret_32chars_minimum_padding
+          PROFILE: ${{ inputs.profile }}
         run: |
-          docker compose up -d timescaledb redis api
+          if [ "$PROFILE" = "reconnect-storm" ]; then
+            docker compose \
+              -f docker-compose.yml \
+              -f tests/chaos/docker-compose.capacity.yml \
+              --profile chaos \
+              up -d postgres redis mosquitto toxiproxy teslasync-api
+          else
+            docker compose up -d postgres redis mosquitto teslasync-api
+          fi
           for i in $(seq 1 90); do
             if curl -fsS http://localhost:8080/healthz -o /dev/null; then
               echo "API up after ${i}s"
@@ -91,10 +118,11 @@ jobs:
             sleep 1
           done
           echo "::error::API failed to start"
-          docker compose logs api >&2
+          docker compose logs teslasync-api >&2
           exit 1
 
       - name: Install k6
+        if: ${{ inputs.profile != 'reconnect-storm' }}
         run: |
           sudo gpg -k
           sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg \
@@ -104,10 +132,34 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y -qq k6
 
+      - name: Seed 500-vehicle fleet
+        if: ${{ inputs.profile == 'fleet-state-batch' }}
+        run: |
+          docker compose exec -T postgres psql \
+            -U teslasync \
+            -d teslasync \
+            -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO vehicles (tesla_id, vin, display_name, model)
+          SELECT
+            9900000000 + fleet_id,
+            'CAP' || lpad(fleet_id::text, 14, '0'),
+            'Capacity Vehicle ' || fleet_id,
+            CASE fleet_id % 4
+              WHEN 0 THEN 'Model S'
+              WHEN 1 THEN 'Model 3'
+              WHEN 2 THEN 'Model X'
+              ELSE 'Model Y'
+            END
+          FROM generate_series(1, 500) AS fleet_id
+          ON CONFLICT (vin) DO NOTHING;
+          SQL
+
       - name: Run profile
         env:
           BASE_URL: http://localhost:8080
           CONFIRM: RUN
+          TARGET_ENV: ephemeral-ci
+          VEHICLES: '500'
           # export-generation is marked destructive; the script refuses to
           # run without this assertion that the stack is disposable.
           EPHEMERAL: '1'
@@ -119,10 +171,18 @@ jobs:
           case "$PROFILE" in
             sse-fanout)        SCRIPT=tests/k6/sse_fanout.js ;;
             analytics-query)   SCRIPT=tests/k6/analytics_read.js ;;
+            fleet-state-batch) SCRIPT=tests/k6/fleet_state_batch.js ;;
             export-generation) SCRIPT=tests/k6/export_generation.js ;;
+            reconnect-storm)
+              TOXIPROXY_URL=http://localhost:8474 \
+              API_BASE_URL=http://localhost:8080 \
+              CHAOS_SCENARIOS=redis_latency_500ms_60s,redis_blackhole_20s \
+                timeout --signal=TERM 30m go run ./cmd/chaos-runner | tee k6-output.txt
+              exit ${PIPESTATUS[0]}
+              ;;
             *) echo "::error::unknown profile"; exit 1 ;;
           esac
-          k6 run "$SCRIPT" | tee k6-output.txt
+          timeout --signal=TERM 30m k6 run "$SCRIPT" | tee k6-output.txt
 
       - name: Publish results
         if: always()
@@ -156,4 +216,9 @@ jobs:
 
       - name: Tear down stack
         if: always()
-        run: docker compose down -v
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f tests/chaos/docker-compose.capacity.yml \
+            --profile chaos \
+            down -v

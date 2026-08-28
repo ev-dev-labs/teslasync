@@ -85,6 +85,9 @@ func TestSSEHandler_NegotiatesStreamHeadersAndSendsConnectedEvent(t *testing.T) 
 	if !strings.Contains(rec.Body.String(), "event: connected") {
 		t.Fatalf("stream did not open with a connected event: %q", rec.Body.String())
 	}
+	if !strings.Contains(rec.Body.String(), `"stream_id":"`+hub.StreamID()+`"`) {
+		t.Fatalf("connected event omitted stream epoch: %q", rec.Body.String())
+	}
 }
 
 // TestSSEHandler_DrainSignalReleasesStreamPromptly is the regression

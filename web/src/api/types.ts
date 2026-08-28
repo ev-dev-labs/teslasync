@@ -2918,6 +2918,10 @@ export interface SignalDescriptor {
  *  Per-signal companion to the existing `vehicle_update` batch event so
  *  dashboards can apply O(1) keyed updates. */
 export interface SignalChangeEvent extends SignalEnvelope {
+  /** Process-lifetime epoch; changes when the serving SSE hub restarts. */
+  stream_id: string
+  /** Monotonic sequence within stream_id, used to detect dropped frames. */
+  sequence: number
   vehicle_id: number
   field: string
 }

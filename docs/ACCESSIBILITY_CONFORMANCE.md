@@ -1,14 +1,14 @@
 # TeslaSync Accessibility Conformance Statement
 
 **Product:** TeslaSync — self-hosted Tesla Fleet Intelligence Platform (React 18 SPA + Go API)
-**Target standard:** WCAG 2.1 Level AA
+**Target standard:** WCAG 2.2 Level AA
 **Statement scope:** the web application served by `teslasync-web` (all routes under `/`), including the standalone `/s/:token`, `/watch`, and `/onboarding` surfaces.
 **Evaluation methods:** automated static audits (repository scripts), automated runtime audits (axe-core via Playwright), component-level unit tests (Vitest), and manual keyboard / screen-reader testing per [`audits/manual-sr-test-protocol.md`](./audits/manual-sr-test-protocol.md).
 
 > **Status: partial conformance.** The automated and structural criteria below
-> are enforced continuously in CI. The criteria marked **Not yet verified**
-> require a human operating a real assistive technology and are pending the
-> manual test pass described in the protocol document. This statement
+> are enforced continuously in CI. The assistive-technology and
+> focus-obscuration gaps named in **Known limitations** require human or
+> route-specific follow-up and remain pending. This statement
 > deliberately does not claim conformance for anything that has not been
 > measured — see [Known limitations](#known-limitations).
 
@@ -16,8 +16,9 @@
 
 ## 1. How each requirement is enforced
 
-Every row names the mechanism that would *fail a build* if the behaviour
-regressed. Every `scripts/audit-*.mjs` referenced below is registered as an
+Every row below covers a criterion with an automated or structural mechanism
+that would *fail a build* if the behaviour regressed. Every
+`scripts/audit-*.mjs` referenced below is registered as an
 npm script and chained from `npm run lint`, which `.github/workflows/ci.yml`
 runs on every push (`npm run audit:a11y-static` runs the whole static set
 locally). A requirement with no enforcement mechanism is listed as
@@ -47,7 +48,9 @@ manual-only and appears in [Known limitations](#known-limitations).
 | 2.4.3 Focus Order | Route changes move focus to the new page's `<h1>`; dialogs restore focus to their trigger | `lib/__tests__/routeFocus.test.ts`, `components/a11y/__tests__/RouteFocusManager.test.tsx`, `hooks/useDialogFocus.test.tsx` |
 | 2.4.6 Headings and Labels | Exactly one `<h1>` per page; every landmark named | `scripts/audit-landmarks.mjs` |
 | 2.4.7 Focus Visible | A focus indicator survives forced-colors mode | `src/index.css` (`*:focus-visible { outline: 2px solid Highlight }`) + forced-colors contract test |
-| 2.5.5 Target Size | ≥ 44 × 44 px below the `md` breakpoint | `scripts/audit-touch-target.mjs` |
+| 2.4.11 Focus Not Obscured (Minimum) | Focused controls must not be fully hidden by sticky application chrome | Keyboard runtime journeys cover principal workflows; complete route/state coverage remains manual-only |
+| 2.5.7 Dragging Movements | Drag features require a non-drag alternative | `DataTable` column reordering exposes move-up/down menu actions; `DataTableResizer` exposes arrow-key resizing; dashboard widgets expose one-click move/resize actions; dashboard tabs expose move-earlier/later actions. Covered by `DashboardGrid.test.tsx`, `LayoutManager.test.tsx`, and `e2e/keyboard.smoke.spec.ts` |
+| 2.5.8 Target Size (Minimum) | ≥ 24 × 24 px or sufficient spacing; shared mobile controls target ≥ 44 × 44 px | `scripts/audit-touch-target.mjs`; axe `target-size` is explicitly enabled (it is disabled by axe by default) across all quality routes in `e2e/accessibility.smoke.spec.ts` |
 
 ### 1.3 Understandable
 
@@ -57,6 +60,7 @@ manual-only and appears in [Known limitations](#known-limitations).
 | 3.2.2 On Input | Filter inputs update the URL without stealing focus | `lib/routeFocus.ts` (`text-entry-in-progress` / `same-path` suppression) + tests |
 | 3.3.1 Error Identification | Failed submits surface a focusable summary listing every error | `components/forms/ValidationSummary.test.tsx` |
 | 3.3.2 Labels or Instructions | Every form control has a persistent name — placeholders are never the only label | `scripts/audit-accessible-name.mjs`; `SearchInput` guarantees a name at the component level |
+| 3.3.8 Accessible Authentication (Minimum) | No cognitive-function test is introduced by TeslaSync | Authentication is delegated to the deployment's ForwardAuth provider and is outside the scoped SPA; that provider requires a separate conformance evaluation |
 
 ### 1.4 Robust
 
@@ -164,23 +168,30 @@ These are stated plainly rather than papered over.
    makes sense — cannot be measured by axe or Vitest. The protocol in
    [`audits/manual-sr-test-protocol.md`](./audits/manual-sr-test-protocol.md)
    exists to close this gap and has not yet been executed against a build.
-2. **Accepted axe debt.** A small, reviewed set of runtime violations is
-   baselined per route in `web/e2e/axeBaseline.ts`. The suite fails on any
-   *new* violation and on any change to the known targets, so the debt cannot
-   grow silently — but the baselined items are, today, non-conformances.
-3. **AAA contrast (7 : 1) is out of scope.** The brand palette cannot reach
+2. **The automated runtime matrix is representative, not exhaustive.** Axe
+   runs with WCAG 2.2 AA tags and the explicitly enabled `target-size` rule on
+   Dashboard, Vehicles, Drives, Charging, Battery, Notifications, Settings,
+   and Data Repair. The zero-tolerance registry in
+   `web/e2e/axeBaseline.ts` is currently empty. Other routes and every
+   possible dialog/error state still require manual or route-specific
+   evidence.
+3. **Focus-not-obscured evidence is journey-based, not exhaustive.** The
+   keyboard suite covers route changes, filters, tabs, tables, drawers, and
+   dialogs. It does not yet enumerate every sticky-header/modal combination
+   on every route, so SC 2.4.11 retains a manual verification requirement.
+4. **AAA contrast (7 : 1) is out of scope.** The brand palette cannot reach
    it. AA only.
-4. **Charts rely on a fallback data table, not on sonification or a
+5. **Charts rely on a fallback data table, not on sonification or a
    described trend.** A user who cannot see the chart gets the numbers, not
    the shape.
-5. **Maps expose a summary sentence, not a navigable route.** A screen-reader
+6. **Maps expose a summary sentence, not a navigable route.** A screen-reader
    user learns the endpoints, distance, duration, and sample count; they
    cannot step through the path.
-6. **`role="application"` on the route-playback map** suppresses the screen
+7. **`role="application"` on the route-playback map** suppresses the screen
    reader's browse mode inside that widget. This is deliberate (the playback
    controls are keyboard-driven), but it means the widget must be exited to
    resume normal reading.
-7. **Third-party map tiles** are raster images supplied by the configured tile
+8. **Third-party map tiles** are raster images supplied by the configured tile
    provider and are not described.
 
 ---

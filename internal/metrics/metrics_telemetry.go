@@ -94,4 +94,10 @@ var (
 		Name:      "sse_bytes_sent_total",
 		Help:      "Total bytes sent via SSE connections",
 	})
+
+	SSEClientBufferSaturationRatio = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "sse_client_buffer_saturation_ratio",
+		Help:      "Highest current occupancy ratio among connected SSE client buffers, from 0 (empty) to 1 (full)",
+	})
 )

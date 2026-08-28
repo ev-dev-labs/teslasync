@@ -38,6 +38,8 @@ const last = () => FakeEventSource.instances[FakeEventSource.instances.length - 
 
 const wire = (overrides: Record<string, unknown> = {}): string =>
   JSON.stringify({
+    stream_id: 'stream-a',
+    sequence: 41,
     vehicle_id: 7,
     field: 'VehicleSpeed',
     kind: 'float',
@@ -62,6 +64,8 @@ describe('parseSignalChangeEvent', () => {
       })
       expect(out).not.toBeNull()
       expect(out).toEqual<SignalChangeEvent>({
+        stream_id: '',
+        sequence: 0,
         vehicle_id: 7,
         field: 'VehicleSpeed',
         kind: 'float',
@@ -237,6 +241,8 @@ describe('useSignalChangeStream', () => {
 
     expect(handler).toHaveBeenCalledTimes(1)
     expect(handler).toHaveBeenCalledWith({
+      stream_id: 'stream-a',
+      sequence: 41,
       vehicle_id: 7,
       field: 'VehicleSpeed',
       kind: 'float',

@@ -250,6 +250,7 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
@@ -616,10 +617,15 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// cannot report different truths for the same car. `liveSignalStore` is
 	// the same L1+L2 boundary the single read uses (a no-op store when no
 	// telemetry source is configured) — no snapshot tables are involved.
+	//
+	// CacheTTL enables coalescing + a 1s successful-result micro-cache: the
+	// SPA's multi-tab / SSE-burst thundering herd collapses into ONE storage
+	// read. Failures are never cached and every caller gets its own copy.
 	fleetStateHandler := v1handlers.NewFleetStateHandler(fleetstatesvc.New(fleetstatesvc.Options{
 		Vehicles: vehicledb.NewVehicleRepo(db),
 		Resolver: vehicleSvc,
 		Live:     liveSignalStore,
+		CacheTTL: fleetstatesvc.DefaultCacheTTL,
 		OnResolverError: func(ctx context.Context, vehicleID int64, err error) {
 			span := trace.SpanFromContext(ctx)
 			log.Warn().
@@ -635,6 +641,27 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				Interface("panic", recovered).
 				Str("trace_id", span.SpanContext().TraceID().String()).
 				Msg("fleet state: vehicle resolution panicked; reported as a failed item")
+		},
+		OnPrefetchError: func(ctx context.Context, err error) {
+			span := trace.SpanFromContext(ctx)
+			log.Warn().
+				Err(err).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("fleet state: bulk prefetch unavailable; falling back to per-vehicle reads")
+		},
+		OnCacheOutcome: func(ctx context.Context, outcome fleetstatesvc.CacheOutcome) {
+			// Span attributes only: a per-request log line here would be pure
+			// noise on the hot path, and cache behaviour is a latency story
+			// that belongs on the trace.
+			span := trace.SpanFromContext(ctx)
+			if !span.IsRecording() {
+				return
+			}
+			span.SetAttributes(
+				attribute.Bool("fleet.cache_hit", outcome.Hit),
+				attribute.Bool("fleet.cache_coalesced", outcome.Coalesced),
+				attribute.Float64("fleet.cache_age_seconds", outcome.Age.Seconds()),
+			)
 		},
 	}))
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)

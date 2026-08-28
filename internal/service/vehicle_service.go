@@ -168,6 +168,19 @@ func (s *VehicleService) BuildStateFromSignalStoreWithProvenanceContext(
 	store *signal.Store,
 	vehicle *vehiclemodel.Vehicle,
 ) (*vehiclemodel.VehicleState, map[string]bool, error) {
+	return s.buildStateFromSignalStoreWithProvenance(ctx, store, vehicle, nil)
+}
+
+// buildStateFromSignalStoreWithProvenance is the assembler both the
+// single-vehicle and the fleet-batch paths share. `pre` supplies the durable
+// signal_log and FSM fallbacks when they were read in bulk for a whole batch;
+// a nil prefetch reads them per vehicle exactly as before.
+func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
+	ctx context.Context,
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+	pre *CurrentStatePrefetch,
+) (*vehiclemodel.VehicleState, map[string]bool, error) {
 	state := &vehiclemodel.VehicleState{
 		VehicleID: vehicle.ID,
 	}
@@ -383,8 +396,11 @@ func (s *VehicleService) BuildStateFromSignalStoreWithProvenanceContext(
 	// store; reading from snapshot tables (positions, state_snapshots,
 	// battery_snapshots, climate_snapshots, etc.) is forbidden. Live values
 	// always win — the fallback only fills holes.
-	if s.state != nil {
-		snap, err := s.state.State(ctx, vehicle.ID, time.Now().UTC())
+	//
+	// In a fleet batch the snapshot arrives from ONE set-based signal_log
+	// query taken for the whole page (see CurrentStatePrefetch); the read is
+	// the same read, just not repeated per vehicle.
+	if snap, err, attempted := s.durableSnapshot(ctx, vehicle.ID, pre); attempted {
 		if err != nil {
 			if ctxErr := ctx.Err(); ctxErr != nil {
 				return state, verified, fmt.Errorf("read signal_log fallback for vehicle %d: %w", vehicle.ID, ctxErr)
@@ -398,8 +414,8 @@ func (s *VehicleService) BuildStateFromSignalStoreWithProvenanceContext(
 	// Fall back to fsm_transitions for the vehicle state string so handlers
 	// that build state from a cold SignalStore still get a non-empty State after
 	// a pod restart.
-	if state.State == "" && s.stateProvider != nil {
-		if currentState, _, err := s.stateProvider.GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
+	if state.State == "" {
+		if currentState, err := s.fallbackFSMState(ctx, vehicle.ID, pre); err == nil && currentState != "" {
 			state.State = currentState
 		}
 		if ctxErr := ctx.Err(); ctxErr != nil {

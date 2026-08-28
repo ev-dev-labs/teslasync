@@ -12,7 +12,7 @@ test.beforeEach(async ({ page }) => {
   await seedBrowserState(page, 'dark');
 });
 
-test('shell and command palette are keyboard operable', async ({ page }) => {
+test('shell command navigation restores route focus and announces the destination', async ({ page }) => {
   const mockApi = await installApiMocks(page, 'populated');
   await page.goto('/', { waitUntil: 'domcontentloaded' });
   await waitForHarnessReady(page, mockApi);
@@ -29,6 +29,9 @@ test('shell and command palette are keyboard operable', async ({ page }) => {
   await page.keyboard.press('Enter');
   await expect(page).toHaveURL(/\/data-repair$/);
   await expect(page.locator('main')).toBeVisible();
+  await expect(palette).toBeHidden();
+  await expect(page.locator('[data-route-focus-target="true"]')).toBeFocused();
+  await expect(page.getByTestId('route-announcer')).toContainText(/data repair/i);
   await assertMockApiComplete(page, mockApi);
 });
 
@@ -77,5 +80,38 @@ test('Data Repair table, drawer, and dialog preserve focus and actions', async (
   await expectDialogsInsideViewport(page);
   await page.keyboard.press('Escape');
   await expect(confirm).toBeHidden();
+  await assertMockApiComplete(page, mockApi);
+});
+
+test('dashboard widgets can be resized without dragging', async ({ page }) => {
+  const mockApi = await installApiMocks(page, 'populated');
+  await page.goto('/', { waitUntil: 'domcontentloaded' });
+  await waitForHarnessReady(page, mockApi);
+
+  const customize = page.getByRole('button', { name: 'Customize' });
+  await customize.focus();
+  await page.keyboard.press('Enter');
+
+  const arrange = page.getByRole('button', { name: 'Arrange Quick Navigation' });
+  await arrange.focus();
+  await page.keyboard.press('Enter');
+  const dialog = page.getByRole('dialog', { name: 'Arrange Quick Navigation' });
+  await expect(dialog).toBeVisible();
+  const narrower = dialog.getByRole('button', { name: 'Narrower' });
+  // The popover focuses its first enabled action. Traverse only with the
+  // keyboard to the resize command; disabled boundary actions are skipped by
+  // native tab order.
+  for (
+    let step = 0;
+    step < 8 && !(await narrower.evaluate((node) => node === document.activeElement));
+    step += 1
+  ) {
+    await page.keyboard.press('Tab');
+  }
+  await expect(narrower).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page.getByText('Quick Navigation made narrower')).toBeAttached();
+  await expect(dialog).toBeHidden();
+  await expect(arrange).toBeFocused();
   await assertMockApiComplete(page, mockApi);
 });

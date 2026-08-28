@@ -212,7 +212,7 @@ Do **not** re-test by hand what CI already proves. These run on every build:
 | Forced-colour cascade | `npm run audit:forced-colors` |
 | Visually-hidden discipline | `npm run audit:sr-only` |
 | Touch targets | `npm run audit:touch-target` |
-| Runtime axe (WCAG 2.1 AA) | `npm run e2e:a11y` |
+| Runtime axe (WCAG 2.2 AA, including explicit target-size) | `npm run e2e:a11y` |
 | Component contracts | `npx vitest run src/components/a11y src/hooks/useDialogFocus.test.tsx src/lib/__tests__/routeFocus.test.ts` |
 
 All of the above are chained from `npm run lint`, which

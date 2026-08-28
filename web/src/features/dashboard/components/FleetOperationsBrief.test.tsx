@@ -21,6 +21,8 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, within, cleanup } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { ToastProvider } from '@/components/feedback'
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -33,7 +35,7 @@ vi.mock('react-i18next', () => ({
   }),
 }))
 
-import type { FleetStateEntry } from '@/api/hooks/useVehicles'
+import type { FleetServerSummary, FleetStateEntry } from '@/api/hooks/useVehicles'
 import type { Vehicle } from '@/types/vehicle'
 import { FleetOperationsBrief } from './FleetOperationsBrief'
 
@@ -70,17 +72,45 @@ function entry(vehicle: Vehicle, over: Partial<FleetStateEntry> = {}): FleetStat
 
 function renderBrief(props: Partial<React.ComponentProps<typeof FleetOperationsBrief>> = {}) {
   const vehicles = props.vehicles ?? [makeVehicle(1)]
+  const queryClient = new QueryClient({
+    defaultOptions: {
+      queries: { retry: false },
+      mutations: { retry: false },
+    },
+  })
   return render(
-    <MemoryRouter>
-      <FleetOperationsBrief
-        vehicles={vehicles}
-        selectedVehicle={props.selectedVehicle ?? null}
-        fleetStates={props.fleetStates}
-        isPending={props.isPending}
-        isError={props.isError}
-      />
-    </MemoryRouter>,
+    <QueryClientProvider client={queryClient}>
+      <ToastProvider>
+        <MemoryRouter>
+          <FleetOperationsBrief
+            vehicles={vehicles}
+            selectedVehicle={props.selectedVehicle ?? null}
+            fleetStates={props.fleetStates}
+            summary={props.summary}
+            isPending={props.isPending}
+            isError={props.isError}
+            onRetry={props.onRetry}
+            isRetrying={props.isRetrying}
+          />
+        </MemoryRouter>
+      </ToastProvider>
+    </QueryClientProvider>,
   )
+}
+
+/** A server-derived summary, as `useFleetStates` publishes it. */
+function serverSummary(over: Partial<FleetServerSummary> = {}): FleetServerSummary {
+  return {
+    counted: 4,
+    verifiedCount: 3,
+    attentionCount: 1,
+    operational: { charging: 1, driving: 1, parked: 1, asleep: 0, online: 0, offline: 0, other: 0 },
+    attention: { unverified: 1, stale: 0, unknown: 0, missing: 0, failed: 0 },
+    oldestObservedAt: Date.now() - 90_000,
+    newestObservedAt: Date.now() - 5_000,
+    observedCount: 3,
+    ...over,
+  }
 }
 
 /** Taxonomy/metric value for a label, read out of its own <dd>. */
@@ -192,6 +222,108 @@ describe('FleetOperationsBrief — taxonomy', () => {
   })
 })
 
+describe('FleetOperationsBrief — server-derived summary', () => {
+  it('uses authoritative totals from the same resolved snapshot', () => {
+    const vehicles = [1, 2, 3, 4].map((id) => makeVehicle(id))
+    renderBrief({
+      vehicles,
+      fleetStates: [
+        entry(vehicles[0]),
+        entry(vehicles[1]),
+        entry(vehicles[2]),
+        entry(vehicles[3], { verifiedFields: [] }),
+      ],
+      summary: serverSummary(),
+    })
+
+    expect(valueFor('Reporting')).toBe('3')
+    expect(valueFor('Offline')).toBe('0')
+    expect(valueFor('Unverified')).toBe('1')
+    expect(valueFor('Verified')).toContain('3/4')
+    expect(valueFor('Attention')).toContain('1')
+    expect(screen.getByText('3 of 4 verified')).toBeInTheDocument()
+    expect(valueFor('Oldest reading')).toContain('1m ago')
+  })
+
+  it('counts unknown evidence without turning it into an offline vehicle', () => {
+    const vehicles = [1, 2, 3].map((id) => makeVehicle(id))
+    const observedAt = Date.now() - 90_000
+    renderBrief({
+      vehicles,
+      fleetStates: [
+        entry(vehicles[0], { observedAt, verifiedFields: [] }),
+        entry(vehicles[1], {
+          freshness: 'unknown',
+          observedAt: null,
+          verifiedFields: [],
+        }),
+        entry(vehicles[2], {
+          outcome: 'missing',
+          state: null,
+          freshness: 'unknown',
+          observedAt: null,
+          verifiedFields: [],
+        }),
+      ],
+      summary: serverSummary({
+        counted: 3,
+        verifiedCount: 0,
+        attentionCount: 3,
+        operational: { charging: 0, driving: 0, parked: 0, asleep: 0, online: 0, offline: 0, other: 0 },
+        attention: { unverified: 1, stale: 0, unknown: 1, missing: 1, failed: 0 },
+        oldestObservedAt: observedAt,
+        newestObservedAt: observedAt,
+        observedCount: 1,
+      }),
+    })
+
+    expect(valueFor('Offline')).toBe('0')
+    expect(valueFor('Unverified')).toBe('2')
+    expect(valueFor('No state')).toBe('1')
+    expect(valueFor('Attention')).toContain('3')
+    expect(valueFor('Oldest reading')).toContain('1m ago')
+  })
+
+  it('does not present a detached summary as resolved vehicle data', () => {
+    const vehicle = makeVehicle(1)
+    renderBrief({
+      vehicles: [vehicle],
+      selectedVehicle: vehicle,
+      fleetStates: undefined,
+      isPending: true,
+      summary: serverSummary({ counted: 1, verifiedCount: 1, attentionCount: 0 }),
+    })
+
+    expect(screen.getByText('Checking')).toBeInTheDocument()
+    expect(valueFor('Reporting')).toBe('—')
+  })
+
+  it('prefers the client derivation once freshness no longer matches the summary', () => {
+    const vehicles = [makeVehicle(1), makeVehicle(2)]
+    renderBrief({
+      vehicles,
+      fleetStates: [
+        entry(vehicles[0]),
+        entry(vehicles[1], { freshness: 'stale', stale: true }),
+      ],
+      // A stale summary from an earlier batch must not override what the
+      // client can now see (and age) for itself.
+      summary: serverSummary({ counted: 2, verifiedCount: 2, attentionCount: 0 }),
+    })
+
+    expect(valueFor('Verified')).toContain('1/2')
+    expect(valueFor('Unverified')).toBe('1')
+  })
+
+  it('falls back to em dashes when neither entries nor a summary exist', () => {
+    renderBrief({ vehicles: [makeVehicle(1)], fleetStates: undefined, summary: null, isPending: true })
+
+    expect(valueFor('Reporting')).toBe('—')
+    expect(valueFor('Verified')).toContain('—')
+    expect(screen.getByText('Checking live state')).toBeInTheDocument()
+  })
+})
+
 describe('FleetOperationsBrief — trust and accessibility', () => {
   it('announces the posture headline in a polite live region', () => {
     const vehicles = [makeVehicle(1), makeVehicle(2)]
@@ -245,6 +377,22 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
     expect(
       screen.getByText('No verified observation time for this vehicle'),
     ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Retry live-state read' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Run system diagnostic' })).toBeInTheDocument()
+  })
+
+  it('offers a scoped wake action only for verified offline telemetry', () => {
+    const vehicle = makeVehicle(1, 'Falcon')
+    renderBrief({
+      vehicles: [vehicle],
+      selectedVehicle: vehicle,
+      fleetStates: [entry(vehicle, {
+        state: { vehicle_id: 1, state: 'offline' } as FleetStateEntry['state'],
+      })],
+    })
+
+    expect(screen.getByRole('button', { name: 'Wake scoped vehicle' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Run system diagnostic' })).not.toBeInTheDocument()
   })
 
   it('pairs every taxonomy category with an icon so colour is never the only signal', () => {

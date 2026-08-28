@@ -20,6 +20,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
@@ -40,6 +41,7 @@ func (s stubRoster) GetAll(context.Context) ([]*vehiclemodel.Vehicle, error) {
 type stubResolver struct {
 	failFor map[int64]bool
 	nilFor  map[int64]bool
+	state   map[int64]service.CurrentState
 }
 
 func (s stubResolver) ResolveCurrentState(
@@ -53,6 +55,9 @@ func (s stubResolver) ResolveCurrentState(
 	}
 	if s.nilFor[vehicle.ID] {
 		return service.CurrentState{}, nil
+	}
+	if state, ok := s.state[vehicle.ID]; ok {
+		return state, nil
 	}
 	observed := now.Add(-3 * time.Second)
 	return service.CurrentState{
@@ -111,7 +116,7 @@ func TestFleetStateHandlerReturnsProvenanceForEveryVehicle(t *testing.T) {
 	}
 
 	data := decodeBatch(t, rec)
-	for _, key := range []string{"now", "total", "limit", "offset", "counts", "vehicles"} {
+	for _, key := range []string{"now", "total", "limit", "offset", "counts", "summary", "vehicles"} {
 		if _, ok := data[key]; !ok {
 			t.Fatalf("batch missing snake_case key %q: %v", key, data)
 		}
@@ -186,6 +191,140 @@ func TestFleetStateHandlerKeepsPartialFailuresPerItem(t *testing.T) {
 	counts := data["counts"].(map[string]any)
 	if counts["resolved"] != float64(1) || counts["failed"] != float64(1) || counts["missing"] != float64(1) {
 		t.Fatalf("counts = %v, want 1/1/1", counts)
+	}
+}
+
+// TestFleetStateHandlerPublishesTheServerDerivedSummary pins the summary's
+// wire shape. The SPA paints Fleet Posture from these keys, so their names and
+// their taxonomy are part of the contract — not an implementation detail.
+func TestFleetStateHandlerPublishesTheServerDerivedSummary(t *testing.T) {
+	h := newFleetStateHandler(
+		[]*vehiclemodel.Vehicle{{ID: 1}, {ID: 2}, {ID: 3}},
+		stubResolver{failFor: map[int64]bool{2: true}, nilFor: map[int64]bool{3: true}},
+	)
+	rec := doGet(t, h, "/api/v1/vehicles/states")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	summary, ok := decodeBatch(t, rec)["summary"].(map[string]any)
+	if !ok {
+		t.Fatalf("summary missing or not an object: %v", decodeBatch(t, rec)["summary"])
+	}
+	for _, key := range []string{
+		"counted", "verified_count", "attention_count", "operational",
+		"attention", "oldest_observed_at", "newest_observed_at", "observed_count",
+	} {
+		if _, present := summary[key]; !present {
+			t.Fatalf("summary missing snake_case key %q: %v", key, summary)
+		}
+	}
+
+	operational := summary["operational"].(map[string]any)
+	for _, key := range []string{"charging", "driving", "parked", "asleep", "online", "offline", "other"} {
+		if _, present := operational[key]; !present {
+			t.Fatalf("operational totals missing %q: %v", key, operational)
+		}
+	}
+	if operational["charging"] != float64(1) {
+		t.Fatalf("charging = %v, want the one verified charging vehicle", operational["charging"])
+	}
+	if operational["offline"] != float64(0) {
+		t.Fatalf("offline = %v — a failed or missing read must never be reported offline", operational["offline"])
+	}
+
+	attention := summary["attention"].(map[string]any)
+	for _, key := range []string{"unverified", "stale", "unknown", "missing", "failed"} {
+		if _, present := attention[key]; !present {
+			t.Fatalf("attention totals missing %q: %v", key, attention)
+		}
+	}
+	if attention["failed"] != float64(1) || attention["missing"] != float64(1) {
+		t.Fatalf("attention = %v, want 1 failed and 1 missing", attention)
+	}
+	if summary["verified_count"] != float64(1) || summary["attention_count"] != float64(2) {
+		t.Fatalf("coverage = %v verified / %v attention, want 1/2", summary["verified_count"], summary["attention_count"])
+	}
+	if summary["counted"] != float64(3) {
+		t.Fatalf("counted = %v, want 3", summary["counted"])
+	}
+}
+
+func TestFleetStateHandlerPublishesBatchMetricsFromSummaryTrustRules(t *testing.T) {
+	now := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
+	staleAt := now.Add(-5 * time.Minute)
+	freshAt := now.Add(-5 * time.Second)
+	vehicles := make([]*vehiclemodel.Vehicle, 6)
+	for i := range vehicles {
+		vehicles[i] = &vehiclemodel.Vehicle{ID: int64(i + 1)}
+	}
+	svc := fleetstatesvc.New(fleetstatesvc.Options{
+		Vehicles: stubRoster{vehicles: vehicles},
+		Resolver: stubResolver{
+			failFor: map[int64]bool{4: true},
+			nilFor:  map[int64]bool{3: true},
+			state: map[int64]service.CurrentState{
+				2: {
+					State:          &vehiclemodel.VehicleState{VehicleID: 2, State: "parked"},
+					DataSource:     service.DataSourceDBFallback,
+					ObservedAt:     &staleAt,
+					Freshness:      service.FreshnessStale,
+					VerifiedFields: []string{"state"},
+				},
+				5: {
+					State:      &vehiclemodel.VehicleState{VehicleID: 5, State: "parked"},
+					DataSource: service.DataSourceLiveSignalStore,
+					ObservedAt: &freshAt,
+					Freshness:  service.FreshnessFresh,
+				},
+				6: {
+					State:          &vehiclemodel.VehicleState{VehicleID: 6, State: "parked"},
+					DataSource:     service.DataSourceDBFallback,
+					Freshness:      service.FreshnessUnknown,
+					VerifiedFields: []string{"state"},
+				},
+			},
+		},
+		Now: func() time.Time { return now },
+	})
+	handler := NewFleetStateHandler(svc)
+
+	var observedNow time.Time
+	var observations []metrics.FleetStateMetricObservation
+	handler.observeBatch = func(at time.Time, got []metrics.FleetStateMetricObservation) {
+		observedNow = at
+		observations = append(observations, got...)
+	}
+
+	rec := doGet(t, handler, "/api/v1/vehicles/states")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	if !observedNow.Equal(now) {
+		t.Fatalf("observed batch at %s, want %s", observedNow, now)
+	}
+	if len(observations) != 6 {
+		t.Fatalf("observations = %d, want 6", len(observations))
+	}
+
+	wantReason := map[int64]string{
+		1: "verified",
+		2: "stale",
+		3: "missing",
+		4: "failed",
+		5: "unverified",
+		6: "unknown",
+	}
+	for _, observation := range observations {
+		if got := observation.Reason; got != wantReason[observation.VehicleID] {
+			t.Errorf("vehicle %d reason = %q, want %q", observation.VehicleID, got, wantReason[observation.VehicleID])
+		}
+		if got := observation.Verified; got != (observation.VehicleID == 1) {
+			t.Errorf("vehicle %d verified = %v", observation.VehicleID, got)
+		}
+	}
+	if !observations[1].ObservedAt.Equal(staleAt) {
+		t.Fatalf("stale observation time = %s, want %s", observations[1].ObservedAt, staleAt)
 	}
 }
 

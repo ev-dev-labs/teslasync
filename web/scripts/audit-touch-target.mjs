@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * Touch-target audit (WCAG 2.5.5).
+ * Touch-target audit (WCAG 2.5.8).
  *
- * Forward-looking guard against cramped clickable controls. WCAG 2.5.5
- * (Target Size, AAA) and the Mobile Accessibility Task Force baseline
- * call for ≥ 24 × 24 CSS-px hit areas; Apple HIG recommends 44 px and
- * Material 48 px. This script blocks regressions where a clickable
+ * WCAG 2.5.8 (Target Size Minimum, AA) calls for ≥ 24 × 24 CSS-px hit
+ * areas or sufficient spacing; Apple HIG recommends 44 px and Material
+ * 48 px. This script blocks regressions where a clickable
  * element clearly collapses to icon size (16 × 16) without padding
  * or where the element itself is sized below 32 px tall on the visual
  * dimension.
@@ -27,7 +26,7 @@
  * `p-3|4|5|6|7|8|10|12`, `py-…`, `px-…`, `size-11|12|14|16|20|24`,
  * or the new `touch-target` utility — OR a Button `size="lg|md|auto"`
  * prop. (`md` is the Button default and resolves to `h-10` = 40 px,
- * which exceeds WCAG 2.5.5 AA 24 × 24.)
+ * which exceeds the WCAG 2.5.8 AA 24 × 24 floor.)
  * 5. PASS for `<Button>` with NO `size=` prop at all (default `md`).
  * 6. FAIL when the opening tag has an explicitly tiny dimension
  * (`h-3|4|5|6|7|8|w-3|4|5|6|7|8|min-h-…|min-w-…|size-…`) on the
@@ -688,11 +687,11 @@ if (isMainModule) {
       `allowlist=${allowlist.length}; failures=${failures.length}`,
   );
   if (failures.length === 0) {
-    console.log('[audit:touch-target] OK — every clickable element meets the WCAG 2.5.5 floor.');
+    console.log('[audit:touch-target] OK — every clickable element meets the WCAG 2.5.8 floor.');
     process.exit(0);
   }
   console.error('');
-  console.error('[audit:touch-target] FAIL — the following clickable elements are below the WCAG 2.5.5 24×24 floor:');
+  console.error('[audit:touch-target] FAIL — the following clickable elements are below the WCAG 2.5.8 24×24 floor:');
   for (const f of failures) {
     console.error(`  ✗ ${f.file}:${f.line} <${f.elementName}> — ${f.detail}`);
   }

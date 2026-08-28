@@ -8,17 +8,15 @@
  * fallback for the previous raw-string value shape.
  *
  * The legacy aggregate hooks (`useRealtimeEvents`, `useVehicleLive`)
- * still subscribe through the singleton `sseManager` which only listens
- * for the batched `vehicle_update` channel. To keep the typed channel
- * routing isolated, this hook opens its own `EventSource` against
- * `/api/v1/events` and listens specifically for
- * the `signal_change` event. Browsers multiplex an HTTP/2 connection,
- * so the second EventSource shares the same TCP socket.
+ * share the singleton `sseManager`, including this typed channel. A custom
+ * endpoint remains available for isolated tests and uses a dedicated
+ * EventSource only for that explicit override.
  */
 
 import { useEffect, useRef } from 'react'
 import type { SignalChangeEvent } from '@/api/types'
 import { normalizeSignalKind } from '@/api/hooks/useSignals'
+import { sseManager } from '@/lib/sseManager'
 
 export interface UseSignalChangeStreamOptions {
   /** Disable the subscription (e.g., behind a feature flag). Defaults to true. */
@@ -37,6 +35,8 @@ export interface UseSignalChangeStreamOptions {
 }
 
 interface RawSignalChangePayload {
+  stream_id?: string
+  sequence?: number
   vehicle_id?: number
   field?: string
   kind?: unknown
@@ -59,6 +59,10 @@ export function parseSignalChangeEvent(raw: unknown): SignalChangeEvent | null {
   const kind = normalizeSignalKind(payload.kind)
   const value = coerceValue(payload.value, kind)
   return {
+    stream_id: typeof payload.stream_id === 'string' ? payload.stream_id : '',
+    sequence: typeof payload.sequence === 'number' && Number.isSafeInteger(payload.sequence)
+      ? payload.sequence
+      : 0,
     vehicle_id: payload.vehicle_id,
     field: payload.field,
     kind,
@@ -112,8 +116,21 @@ export function useSignalChangeStream(
   useEffect(() => {
     if (!enabled) return
 
-    const source = new EventSource(endpoint)
+    const dispatch = (raw: unknown) => {
+      const event = parseSignalChangeEvent(raw)
+      if (!event) return
+      if (vehicleId != null && event.vehicle_id !== vehicleId) return
+      handlerRef.current(event)
+    }
 
+    if (endpoint === '/api/v1/events') {
+      sseManager.subscribe('signal_change', dispatch)
+      return () => {
+        sseManager.unsubscribe('signal_change', dispatch)
+      }
+    }
+
+    const source = new EventSource(endpoint)
     const onMessage = (ev: MessageEvent<string>) => {
       let parsed: unknown = null
       try {
@@ -121,12 +138,8 @@ export function useSignalChangeStream(
       } catch {
         return
       }
-      const event = parseSignalChangeEvent(parsed)
-      if (!event) return
-      if (vehicleId != null && event.vehicle_id !== vehicleId) return
-      handlerRef.current(event)
+      dispatch(parsed)
     }
-
     source.addEventListener('signal_change', onMessage as EventListener)
 
     return () => {

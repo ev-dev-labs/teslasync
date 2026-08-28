@@ -2,6 +2,7 @@ package metrics
 
 import (
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
@@ -47,6 +48,13 @@ var (
 		Name:      "vehicle_state_conflict_transitions_total",
 		Help:      "Distinct episodes where a vehicle entered a telemetry-vs-FSM state disagreement, by (telemetry_state, fsm_state). Counts episodes, not reads.",
 	}, []string{"telemetry_state", "fsm_state"})
+
+	VehicleStateConflictDuration = promauto.NewHistogramVec(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "vehicle_state_conflict_duration_seconds",
+		Help:      "Duration of resolved telemetry-vs-FSM disagreement episodes, by bounded state pair",
+		Buckets:   []float64{5, 15, 30, 60, 120, 300, 900, 1800, 3600},
+	}, []string{"telemetry_state", "fsm_state"})
 )
 
 // stateConflictKey is the bounded label pair a conflict maps onto.
@@ -79,9 +87,14 @@ func conflictStateLabel(state string) string {
 
 var (
 	stateConflictMu        sync.Mutex
-	stateConflictByVehicle = map[int64]stateConflictKey{}
+	stateConflictByVehicle = map[int64]stateConflictEpisode{}
 	stateConflictCounts    = map[stateConflictKey]int{}
 )
+
+type stateConflictEpisode struct {
+	Key       stateConflictKey
+	StartedAt time.Time
+}
 
 // RecordVehicleStateConflict marks vehicleID as being in the given
 // disagreement and returns true only when that is a CHANGE (the vehicle was
@@ -97,16 +110,20 @@ func RecordVehicleStateConflict(vehicleID int64, telemetryState, fsmState string
 
 	stateConflictMu.Lock()
 	previous, had := stateConflictByVehicle[vehicleID]
-	if had && previous == key {
+	if had && previous.Key == key {
 		stateConflictMu.Unlock()
 		return false
 	}
 	if had {
-		decrementConflictLocked(previous)
-		VehicleStateConflictCurrent.WithLabelValues(previous.Telemetry, previous.FSM).
-			Set(float64(stateConflictCounts[previous]))
+		decrementConflictLocked(previous.Key)
+		VehicleStateConflictCurrent.WithLabelValues(previous.Key.Telemetry, previous.Key.FSM).
+			Set(float64(stateConflictCounts[previous.Key]))
+		observeConflictDuration(previous, time.Now())
 	}
-	stateConflictByVehicle[vehicleID] = key
+	stateConflictByVehicle[vehicleID] = stateConflictEpisode{
+		Key:       key,
+		StartedAt: time.Now(),
+	}
 	stateConflictCounts[key]++
 	current := stateConflictCounts[key]
 	VehicleStateConflictCurrent.WithLabelValues(key.Telemetry, key.FSM).Set(float64(current))
@@ -126,11 +143,22 @@ func ClearVehicleStateConflict(vehicleID int64) bool {
 		return false
 	}
 	delete(stateConflictByVehicle, vehicleID)
-	decrementConflictLocked(previous)
-	current := stateConflictCounts[previous]
-	VehicleStateConflictCurrent.WithLabelValues(previous.Telemetry, previous.FSM).Set(float64(current))
+	decrementConflictLocked(previous.Key)
+	current := stateConflictCounts[previous.Key]
+	VehicleStateConflictCurrent.WithLabelValues(previous.Key.Telemetry, previous.Key.FSM).Set(float64(current))
+	observeConflictDuration(previous, time.Now())
 	stateConflictMu.Unlock()
 	return true
+}
+
+func observeConflictDuration(episode stateConflictEpisode, endedAt time.Time) {
+	duration := endedAt.Sub(episode.StartedAt).Seconds()
+	if duration < 0 {
+		duration = 0
+	}
+	VehicleStateConflictDuration.
+		WithLabelValues(episode.Key.Telemetry, episode.Key.FSM).
+		Observe(duration)
 }
 
 // decrementConflictLocked drops one vehicle from a bucket. Caller holds the
@@ -165,6 +193,6 @@ func ResetVehicleStateConflictsForTests() {
 	for key := range stateConflictCounts {
 		VehicleStateConflictCurrent.WithLabelValues(key.Telemetry, key.FSM).Set(0)
 	}
-	stateConflictByVehicle = map[int64]stateConflictKey{}
+	stateConflictByVehicle = map[int64]stateConflictEpisode{}
 	stateConflictCounts = map[stateConflictKey]int{}
 }

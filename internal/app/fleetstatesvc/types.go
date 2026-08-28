@@ -69,7 +69,12 @@ type Batch struct {
 	Offset int `json:"offset"`
 	// Counts is the per-outcome roll-up of Vehicles, so a caller can size an
 	// alert without walking the array.
-	Counts   OutcomeCounts      `json:"counts"`
+	Counts OutcomeCounts `json:"counts"`
+	// Summary is the server-derived Fleet Posture roll-up of THIS page. It is
+	// computed from the same items, the same request-level Now and the same
+	// trust precedence, so a client can paint the posture panel without
+	// re-deriving anything — and cannot disagree with the list.
+	Summary  Summary            `json:"summary"`
 	Vehicles []VehicleStateItem `json:"vehicles"`
 }
 
@@ -80,8 +85,106 @@ type OutcomeCounts struct {
 	Failed   int `json:"failed"`
 }
 
+// Summary is the server-derived Fleet Posture roll-up.
+//
+// # Taxonomy invariant
+//
+// Every item lands in EXACTLY ONE bucket:
+//
+//	sum(Operational) + sum(Attention) == Counted == len(Batch.Vehicles)
+//
+// An item is counted in Operational only when its status is TRUSTED — the
+// same precedence the per-item verified_fields + freshness metadata expresses,
+// applied here so the totals cannot drift from the items. Everything else is
+// an Attention bucket describing OUR EVIDENCE, never the vehicle. In
+// particular `offline` is reachable only from a trusted FSM state: a missing,
+// stale, unverified or failed read is NEVER reported as offline.
+type Summary struct {
+	// Counted is the number of items in this page the summary describes. It
+	// is len(Batch.Vehicles), not Batch.Total, because a summary can only
+	// speak for the vehicles actually read.
+	Counted int `json:"counted"`
+	// VerifiedCount is the number of items carrying a trusted operational
+	// status: the "N of M verified" coverage Fleet Posture renders.
+	VerifiedCount int `json:"verified_count"`
+	// AttentionCount is Counted - VerifiedCount.
+	AttentionCount int `json:"attention_count"`
+	// Operational totals the TRUSTED status claims only.
+	Operational OperationalTotals `json:"operational"`
+	// Attention totals the evidence problems.
+	Attention AttentionTotals `json:"attention"`
+	// OldestObservedAt is the oldest REAL live observation among items that
+	// have one — a fleet summary is only as fresh as its stalest member.
+	// Null when no item carries a real observation; never a fetch time.
+	OldestObservedAt *time.Time `json:"oldest_observed_at"`
+	// NewestObservedAt is the newest REAL live observation among items that
+	// have one. Null when no item carries one.
+	NewestObservedAt *time.Time `json:"newest_observed_at"`
+	// ObservedCount is the number of items carrying a real observation
+	// instant, so a client can tell "no observations at all" from "one very
+	// old observation".
+	ObservedCount int `json:"observed_count"`
+}
+
+// OperationalTotals counts TRUSTED operational statuses.
+//
+// The vocabulary is the backend FSM's (internal/enums): driving, charging,
+// parked, asleep, online, offline. `updating` is a Tesla-API/front-end-only
+// label with no FSM transition behind it, so it is deliberately absent rather
+// than reported as a permanent zero; any trusted state outside the vocabulary
+// is counted in Other so the taxonomy invariant still holds.
+type OperationalTotals struct {
+	Charging int `json:"charging"`
+	Driving  int `json:"driving"`
+	Parked   int `json:"parked"`
+	Asleep   int `json:"asleep"`
+	Online   int `json:"online"`
+	Offline  int `json:"offline"`
+	Other    int `json:"other"`
+}
+
+// AttentionTotals counts items with NO trusted operational status, split by
+// the reason we cannot make a claim. These are statements about our evidence.
+type AttentionTotals struct {
+	// Unverified — state was returned and the stream IS fresh, but the field
+	// that would establish the status is not backed by a real observation.
+	Unverified int `json:"unverified"`
+	// Stale — a real observation exists but it is outside the freshness
+	// window. Old evidence, not absent evidence, and not offline.
+	Stale int `json:"stale"`
+	// Unknown — state was returned with NO real observation behind it at all
+	// (durable fallback only, or legacy zero-timestamp values).
+	Unknown int `json:"unknown"`
+	// Missing — the read succeeded and there is authoritatively no state.
+	Missing int `json:"missing"`
+	// Failed — resolution failed for this vehicle. A fact about us.
+	Failed int `json:"failed"`
+}
+
+// ScopeGlobalRoster is the default request scope.
+//
+// # Scope assumption (documented, not invented)
+//
+// This deployment has exactly ONE global vehicle roster: the roster read is
+// vehicleRepo.GetAll(ctx) with no tenant/owner predicate, and authorization is
+// an all-or-nothing ForwardAuth gate in front of /api/v1/* (ADR-005). There is
+// therefore no per-caller vehicle visibility to leak BETWEEN callers, and
+// every authenticated caller asking the same normalized question is entitled
+// to the same answer.
+//
+// Query.Scope exists anyway, and is part of every cache key, so that the day a
+// tenant/owner dimension is introduced it MUST be threaded through this field
+// — a new scope simply cannot collide with the global one. Leaving it empty
+// means the global roster; it is never silently mapped to some other tenant.
+const ScopeGlobalRoster = "global"
+
 // Query selects and pages the fleet.
 type Query struct {
+	// Scope names the roster the caller is entitled to. Empty means
+	// ScopeGlobalRoster — see the constant for the deployment assumption.
+	// It participates in the coalescing/micro-cache key so results can never
+	// cross scopes.
+	Scope string
 	// VehicleIDs restricts the batch to a caller-supplied set. Empty means
 	// the whole fleet. The SPA always sends its current fleet membership so
 	// the response and its cache key describe the same set of cars.

@@ -301,6 +301,20 @@ paths:
         and provenance, so a single unreadable vehicle degrades that item only —
         it never fails the batch and is never reported as "offline". All items in
         one response are classified against a single request-level `now`.
+
+
+        Storage reads are BULK: one pipelined Redis read (L2), one set-based
+        signal_log query (durable last-known values) and one set-based
+        fsm_transitions query cover the whole page, instead of three round
+        trips per vehicle. The layering and every per-vehicle verdict are
+        unchanged.
+
+
+        Concurrent IDENTICAL requests are coalesced into one execution and a
+        successful result is micro-cached for ~1s (never more than 2s).
+        Failures are never cached, and the cache key carries every dimension
+        that changes the result (scope, the exact id set, limit, offset), so
+        results can never cross scopes.
       tags: [Vehicles]
       parameters:
         - name: vehicle_ids
@@ -333,7 +347,7 @@ paths:
                 properties:
                   data:
                     type: object
-                    required: [now, total, limit, offset, counts, vehicles]
+                    required: [now, total, limit, offset, counts, summary, vehicles]
                     properties:
                       now:
                         type: string
@@ -352,6 +366,90 @@ paths:
                           resolved: { type: integer }
                           missing: { type: integer }
                           failed: { type: integer }
+                      summary:
+                        type: object
+                        description: >-
+                          Server-derived Fleet Posture roll-up of THIS page,
+                          computed from the same items, the same request-level
+                          `now` and the same trust precedence (verified
+                          charging → verified motion → verified FSM state), so
+                          a client can paint the posture panel on first frame
+                          without re-deriving anything. Every item lands in
+                          exactly one bucket:
+                          sum(operational) + sum(attention) == counted ==
+                          length(vehicles). Operational totals count only
+                          TRUSTED claims; `offline` is reachable only from a
+                          verified, currently-fresh FSM state and is NEVER
+                          inferred from missing, stale, unverified or failed
+                          data.
+                        required:
+                          [counted, verified_count, attention_count, operational,
+                           attention, oldest_observed_at, newest_observed_at, observed_count]
+                        properties:
+                          counted:
+                            type: integer
+                            description: Items in this page the summary describes (length of vehicles, not total).
+                          verified_count:
+                            type: integer
+                            description: Items carrying a trusted operational status ("N of M verified").
+                          attention_count:
+                            type: integer
+                            description: counted - verified_count.
+                          operational:
+                            type: object
+                            description: >-
+                              Trusted operational status totals. The vocabulary
+                              is the backend FSM's (internal/enums); `updating`
+                              is a Tesla-API/front-end-only label with no FSM
+                              transition behind it and is therefore absent
+                              rather than reported as a permanent zero. Any
+                              trusted state outside the vocabulary is counted
+                              in `other`.
+                            required: [charging, driving, parked, asleep, online, offline, other]
+                            properties:
+                              charging: { type: integer }
+                              driving: { type: integer }
+                              parked: { type: integer }
+                              asleep: { type: integer }
+                              online: { type: integer }
+                              offline: { type: integer }
+                              other: { type: integer }
+                          attention:
+                            type: object
+                            description: >-
+                              Items with NO trusted operational status, split by
+                              the reason. These are statements about our
+                              EVIDENCE, never about the vehicle.
+                            required: [unverified, stale, unknown, missing, failed]
+                            properties:
+                              unverified:
+                                type: integer
+                                description: Stream is fresh but the deciding field is not backed by a real observation.
+                              stale:
+                                type: integer
+                                description: A real observation exists but is outside the freshness window.
+                              unknown:
+                                type: integer
+                                description: No real observation at all (durable fallback / legacy values only).
+                              missing:
+                                type: integer
+                                description: The read succeeded and there is authoritatively no state.
+                              failed:
+                                type: integer
+                                description: Resolution failed for this vehicle. A fact about us.
+                          oldest_observed_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: Oldest REAL observation among items that have one; null when none does. Never a fetch time.
+                          newest_observed_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: Newest REAL observation among items that have one; null when none does.
+                          observed_count:
+                            type: integer
+                            description: Items carrying a real observation instant.
                       vehicles:
                         type: array
                         items:

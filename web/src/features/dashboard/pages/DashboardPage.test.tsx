@@ -36,6 +36,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 
 // ── Hoisted, per-test controllable state ──────────────────────────────
@@ -348,9 +349,11 @@ function renderPage() {
   const invalidateSpy = vi.spyOn(qc, 'invalidateQueries');
   const utils = render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter>
+          <DashboardPage />
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
   return { ...utils, qc, invalidateSpy };

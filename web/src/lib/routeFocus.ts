@@ -38,6 +38,9 @@ export const ROUTE_FOCUS_TARGET_ATTR = 'data-route-focus-target';
 /** Selector for the primary route-focus target (the page `<h1>`). */
 export const ROUTE_FOCUS_TARGET_SELECTOR = `[${ROUTE_FOCUS_TARGET_ATTR}]`;
 
+/** Attribute binding a mounted route transition surface to its pathname. */
+export const ROUTE_FOCUS_SCOPE_ATTR = 'data-route-focus-scope';
+
 /** Fallback target when a route renders no page heading. */
 export const ROUTE_FOCUS_FALLBACK_SELECTOR = '#main-content';
 

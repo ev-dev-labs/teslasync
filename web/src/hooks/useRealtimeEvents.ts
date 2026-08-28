@@ -16,6 +16,7 @@ export interface SSEDiagnostics {
 
 interface SSEOptions {
   onVehicleUpdate?: (data: unknown) => void
+  onSignalChange?: (data: unknown) => void
   onAlert?: (data: unknown) => void
   onExportStatus?: (data: unknown) => void
   onAchievementUnlocked?: (data: unknown) => void
@@ -47,6 +48,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     setState(sseManager.getState())
 
     const onVehicleUpdate = (data: unknown) => callbacksRef.current.onVehicleUpdate?.(data)
+    const onSignalChange = (data: unknown) => callbacksRef.current.onSignalChange?.(data)
     const onAlert = (data: unknown) => callbacksRef.current.onAlert?.(data)
     const onExportStatus = (data: unknown) => callbacksRef.current.onExportStatus?.(data)
     const onAchievementUnlocked = (data: unknown) => callbacksRef.current.onAchievementUnlocked?.(data)
@@ -64,6 +66,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
     }
 
     sseManager.subscribe('vehicle_update', onVehicleUpdate)
+    sseManager.subscribe('signal_change', onSignalChange)
     sseManager.subscribe('alert', onAlert)
     sseManager.subscribe('export_status', onExportStatus)
     sseManager.subscribe('achievement_unlocked', onAchievementUnlocked)
@@ -72,6 +75,7 @@ export function useRealtimeEvents(options: SSEOptions = {}) {
 
     return () => {
       sseManager.unsubscribe('vehicle_update', onVehicleUpdate)
+      sseManager.unsubscribe('signal_change', onSignalChange)
       sseManager.unsubscribe('alert', onAlert)
       sseManager.unsubscribe('export_status', onExportStatus)
       sseManager.unsubscribe('achievement_unlocked', onAchievementUnlocked)

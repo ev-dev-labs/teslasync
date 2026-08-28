@@ -5,18 +5,25 @@ import {
 } from 'react-grid-layout';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
-import {
-  GripHorizontal, X, Settings, Maximize2, Minimize2,
-} from 'lucide-react';
+import { Maximize2, Minimize2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { GlassPanel, Button as UiButton } from '@/components/ui';
+import { Button as UiButton, GlassPanel } from '@/components/ui';
 import { EmptyState, Skeleton, SectionErrorBoundary } from '@/components/feedback';
 import { getWidgetDef } from '../widgets/registry';
 import {
   GRID_BREAKPOINTS, GRID_COLS, ROW_HEIGHT, GRID_MARGIN,
 } from '../hooks/useDashboardLayout';
 import type { SavedDashboard, WidgetDef, WidgetInstance, RGLLayout, RGLLayouts } from '../widgets/types';
+import {
+  WidgetEditChrome,
+} from './WidgetEditChrome';
+import {
+  applyWidgetArrangeAction,
+  widgetArrangeAvailability,
+  type WidgetArrangeAction,
+  type WidgetArrangeAvailability,
+} from './dashboardLayoutActions';
 
 /* ─── Types ─── */
 interface DashboardGridProps {
@@ -42,69 +49,6 @@ interface DashboardGridProps {
    the reference stays stable across renders (memo/effect deps don't churn). */
 const EMPTY_WIDGETS: WidgetInstance[] = [];
 const EMPTY_LAYOUTS: RGLLayouts = {};
-
-/* ─── Widget Chrome (edit mode overlay) ─── */
-function WidgetChrome({
-  def,
-  onRemove,
-  onSettings,
-}: {
-  widget: WidgetInstance;
-  def: WidgetDef;
-  onRemove: () => void;
-  onSettings: () => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <div className="absolute inset-0 z-10 pointer-events-none group-hover:pointer-events-auto">
-      {/* Drag handle at top */}
-      <div
-        className="widget-drag-handle absolute top-0 left-0 right-0 h-8
-          bg-gradient-to-b from-black/60 to-transparent
-          flex items-center justify-between px-3 cursor-grab active:cursor-grabbing
-          opacity-0 group-hover:opacity-100 transition-opacity rounded-t-xl"
-      >
-        <div className="flex items-center gap-2">
-          <GripHorizontal className="h-3.5 w-3.5 text-[var(--text-muted)]" />
-          <span className="text-xs text-[var(--text-secondary)] font-medium">{def.name}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <UiButton
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); onSettings(); }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="h-auto p-1 rounded text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)] transition-colors"
-            aria-label={t('dashboard.grid.settingsLabel', 'Settings for {{name}}', { name: def.name })}
-          >
-            <Settings className="h-3.5 w-3.5" />
-          </UiButton>
-          <UiButton
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={(e) => { e.stopPropagation(); onRemove(); }}
-            onMouseDown={(e) => e.stopPropagation()}
-            className="h-auto p-1 rounded text-[var(--text-muted)] hover:bg-red-500/20 hover:text-red-400 transition-colors"
-            aria-label={t('dashboard.grid.removeLabel', 'Remove {{name}}', { name: def.name })}
-          >
-            <X className="h-3.5 w-3.5" />
-          </UiButton>
-        </div>
-      </div>
-
-      {/* Resize indicator */}
-      <div className="absolute bottom-1 right-1 opacity-0 group-hover:opacity-50 transition-opacity">
-        <Maximize2 className="h-3 w-3 text-[var(--text-muted)]" />
-      </div>
-
-      {/* Hover border */}
-      <div className="absolute inset-0 rounded-xl border-2 border-transparent
-        group-hover:border-[var(--theme-primary)]/30 transition-colors pointer-events-none" />
-    </div>
-  );
-}
 
 /* ─── Fullscreen Overlay ─── */
 interface FullscreenOverlayProps {
@@ -264,6 +208,7 @@ export function DashboardGrid({
     }
     return 'xs' as const;
   }, [width]);
+  const isMobileStack = activeBreakpoint === 'xs';
 
   // Compute widget size from live layouts so widgets adapt during resize.
   // Reads from the *active* breakpoint's layout (not always lg) so widgets
@@ -277,6 +222,62 @@ export function DashboardGrid({
     const def = widget ? getWidgetDef(widget.widgetId) : undefined;
     return def?.defaultSize ?? { cols: 1, rows: 1 };
   }, [liveLayouts, widgets, activeBreakpoint]);
+
+  const getArrangeAvailability = useCallback((
+    instanceId: string,
+    def: WidgetDef,
+  ): WidgetArrangeAvailability => {
+    const cols = GRID_COLS[activeBreakpoint];
+    const layout = (
+      liveLayouts[activeBreakpoint]
+      ?? liveLayouts.lg
+      ?? []
+    ) as RGLLayout[];
+    return widgetArrangeAvailability(
+      layout,
+      instanceId,
+      def,
+      cols,
+      isMobileStack,
+    );
+  }, [activeBreakpoint, isMobileStack, liveLayouts]);
+
+  const arrangeWidget = useCallback((
+    instanceId: string,
+    action: WidgetArrangeAction,
+  ): boolean => {
+    const cols = GRID_COLS[activeBreakpoint];
+    const current = (
+      layoutRef.current[activeBreakpoint]
+      ?? liveLayouts[activeBreakpoint]
+      ?? layoutRef.current.lg
+      ?? liveLayouts.lg
+      ?? []
+    ).map((item) => ({ ...item }));
+    const widget = widgets.find((candidate) => candidate.id === instanceId);
+    const def = widget ? getWidgetDef(widget.widgetId) : undefined;
+    if (!def) return false;
+    const result = applyWidgetArrangeAction(
+      current,
+      instanceId,
+      def,
+      cols,
+      action,
+      isMobileStack,
+    );
+    if (!result.changed) return false;
+
+    const nextLayouts = {
+      ...layoutRef.current,
+      [activeBreakpoint]: result.layout,
+    };
+    layoutRef.current = nextLayouts;
+    setLiveLayouts(nextLayouts);
+    persistCountRef.current += 1;
+    syncedCountRef.current = persistCountRef.current;
+    onLayoutChange(nextLayouts);
+    return true;
+  }, [activeBreakpoint, isMobileStack, liveLayouts, onLayoutChange, widgets]);
 
   // ── Mobile (xs) stack mode ────────────────────────────────────────────
   //
@@ -294,8 +295,6 @@ export function DashboardGrid({
   // need a definite parent height to compute against. The wrapper is a
   // flex column so descendants relying on `h-full` resolve via flex
   // stretch (default `align-items: stretch`).
-  const isMobileStack = activeBreakpoint === 'xs';
-
   // Preserve the user's saved mobile order if they ever rearranged on
   // mobile (xs layout y/x); otherwise fall back to widget insertion
   // order so freshly-added widgets keep showing up at the bottom.
@@ -359,14 +358,14 @@ export function DashboardGrid({
           mobile && 'flex flex-col min-h-[12rem]',
         )}
       >
-        {/* Edit mode chrome — drag handle has no effect on touch, kept
-            for the settings/remove icons it also exposes. */}
+        {/* Edit mode chrome provides both drag handles and discrete layout controls. */}
         {editMode && (
-          <WidgetChrome
-            widget={widget}
+          <WidgetEditChrome
             def={def}
             onRemove={() => onRemoveWidget(widget.id)}
             onSettings={() => onOpenSettings(widget.id)}
+            onArrange={(action) => arrangeWidget(widget.id, action)}
+            arrangeAvailability={getArrangeAvailability(widget.id, def)}
           />
         )}
 
@@ -425,7 +424,8 @@ export function DashboardGrid({
     );
   }, [
     t, editMode, getWidgetSizeLive, dashboardVehicleId, kioskPanelStyle,
-    showWidgetBorders, onRemoveWidget, onOpenSettings,
+    showWidgetBorders, onRemoveWidget, onOpenSettings, arrangeWidget,
+    getArrangeAvailability,
   ]);
 
   return (

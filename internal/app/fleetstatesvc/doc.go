@@ -24,4 +24,15 @@
 //   - No snapshot tables. Assembly goes through service.ResolveCurrentState,
 //     which reads the L1/L2 live store plus the signal_log last-known-value
 //     fallback (ADR-001 / ADR-007).
+//   - Bulk storage reads. When the resolver exposes the bulk capability, the
+//     batch takes ONE pipelined Redis read, ONE set-based signal_log query and
+//     ONE set-based fsm_transitions query for the whole page instead of three
+//     round trips per vehicle. The layering, the merge rule and every
+//     per-vehicle verdict are unchanged — only the number of round trips is.
+//   - Server-derived summary. Fleet Posture's totals are computed here, from
+//     the same request-level `now` and the same trust precedence the items
+//     use, so the panel cannot disagree with the list it summarises.
+//   - Coalesced identical reads. Concurrent identical requests share one
+//     execution and a 1–2s successful-result micro-cache; failures are never
+//     cached and every caller receives its own deep copy.
 package fleetstatesvc

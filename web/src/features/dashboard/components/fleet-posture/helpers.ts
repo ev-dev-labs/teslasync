@@ -1,6 +1,7 @@
 import {
   describeFleetState,
   summariseFleetStates,
+  type FleetServerSummary,
   type FleetStateCondition,
   type FleetStateEntry,
   type FleetStatesSummary,
@@ -63,6 +64,18 @@ export interface FleetPosture {
   /** True until the first batch resolves. Not a claim about any vehicle. */
   pending: boolean
   summary: FleetStatesSummary
+  /**
+   * The instant the panel must present: the OLDEST real observation, because a
+   * summary is only as fresh as its stalest member. Null when nothing has been
+   * observed. Never a fetch time.
+   */
+  oldestObservedAt: number | null
+  /**
+   * True when the aggregate numbers above came from the SERVER summary rather
+   * than from per-vehicle client derivation. Exposed so a panel can be honest
+   * about which derivation it is showing.
+   */
+  fromServerSummary: boolean
 }
 
 function emptyCounts(): Record<PostureCategory, number> {
@@ -70,15 +83,52 @@ function emptyCounts(): Record<PostureCategory, number> {
 }
 
 /**
+ * Project the server summary onto the panel's six-way taxonomy.
+ *
+ * The server reports TRUSTED operational statuses plus evidence problems; the
+ * panel groups every trusted non-offline status as `reporting`. `stale` on the
+ * client additionally means "a retained reading after a failed refresh", which
+ * the server cannot know about — so a server-only posture reports its own
+ * `stale` (an observation outside the freshness window) and nothing else.
+ * Server `unknown` means a state exists without a real observation; that is
+ * the same operator-facing `unverified` category the client uses for an
+ * untrusted state, so it must be included rather than dropped.
+ */
+function countsFromServerSummary(summary: FleetServerSummary): Record<PostureCategory, number> {
+  const { operational, attention } = summary
+  return {
+    reporting:
+      operational.charging +
+      operational.driving +
+      operational.parked +
+      operational.asleep +
+      operational.online +
+      operational.other,
+    offline: operational.offline,
+    unverified: attention.unverified + attention.unknown,
+    stale: attention.stale,
+    missing: attention.missing,
+    failed: attention.failed,
+  }
+}
+
+/**
  * Classify a fleet from its trust-aware entries.
  *
  * Pure and exported so the taxonomy is unit-testable without mounting the
  * panel, and so every consumer derives the same counts from the same rule.
+ *
+ * `serverSummary` is the backend's own roll-up of the SAME page, derived
+ * against the request-level instant with the same trust precedence. It is used
+ * for aggregate numbers when it covers the current roster and still agrees
+ * with the client-visible classifications. The client derivation wins after a
+ * reading ages across a freshness boundary between polls.
  */
 export function buildFleetPosture(
   vehicles: readonly Vehicle[],
   entries: readonly FleetStateEntry[] | undefined,
   now = Date.now(),
+  serverSummary?: FleetServerSummary | null,
 ): FleetPosture {
   const entryById = new Map((entries ?? []).map((entry) => [entry.vehicle.id, entry]))
   const counts = emptyCounts()
@@ -115,6 +165,35 @@ export function buildFleetPosture(
     })
   }
 
+  const clientSummary = summariseFleetStates(entries ?? [])
+  const pending = vehicles.length > 0 && pendingCount === vehicles.length
+  if (serverSummary != null && serverSummary.counted === vehicles.length && pendingCount === 0) {
+    const serverCounts = countsFromServerSummary(serverSummary)
+    const serverStillMatchesEntries = POSTURE_CATEGORIES.every(
+      (category) => serverCounts[category] === counts[category],
+    )
+    if (serverStillMatchesEntries) {
+      const attentionCount =
+        serverCounts.offline +
+        serverCounts.unverified +
+        serverCounts.stale +
+        serverCounts.missing +
+        serverCounts.failed
+      return {
+        vehicles: list,
+        byVehicleId: new Map(list.map((item) => [item.vehicle.id, item])),
+        counts: serverCounts,
+        verifiedCount: serverSummary.verifiedCount,
+        total: vehicles.length,
+        attentionCount,
+        pending,
+        summary: clientSummary,
+        oldestObservedAt: serverSummary.oldestObservedAt,
+        fromServerSummary: true,
+      }
+    }
+  }
+
   const attentionCount = ATTENTION_CATEGORIES.reduce((sum, key) => sum + counts[key], 0)
 
   return {
@@ -124,8 +203,10 @@ export function buildFleetPosture(
     verifiedCount,
     total: vehicles.length,
     attentionCount,
-    pending: vehicles.length > 0 && pendingCount === vehicles.length,
-    summary: summariseFleetStates(entries ?? []),
+    pending,
+    summary: clientSummary,
+    oldestObservedAt: clientSummary.oldestObservedAt,
+    fromServerSummary: false,
   }
 }
 

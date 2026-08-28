@@ -1,7 +1,7 @@
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
 import { Caption, Text } from '@/components/ui'
+import { PrefetchLink } from '@/components/layout'
 import { Icons } from '@/lib/icons'
 
 interface PostureDrillThroughProps {
@@ -71,7 +71,7 @@ export function PostureDrillThrough({ vehicleId }: PostureDrillThroughProps) {
       className="mt-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-1"
     >
       {links.map((link) => (
-        <Link
+        <PrefetchLink
           key={link.to}
           to={link.to}
           className="group flex min-h-14 items-center gap-3 rounded-shape-md border border-transparent px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
@@ -87,7 +87,7 @@ export function PostureDrillThrough({ vehicleId }: PostureDrillThroughProps) {
             className="h-4 w-4 shrink-0 text-[var(--text-muted)] transition-transform group-hover:-translate-y-0.5 group-hover:text-[var(--text-secondary)]"
             aria-hidden="true"
           />
-        </Link>
+        </PrefetchLink>
       ))}
     </nav>
   )

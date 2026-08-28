@@ -175,6 +175,10 @@ type redisSignalValueEnvelope struct {
 type RedisSignalCache struct {
 	rdb        redisSignalClient
 	staleAfter time.Duration
+	// batch is the optional bulk (pipelined) read seam used by
+	// GetAllValuesBulk. Installed by NewRedisSignalCache from the concrete
+	// client; see redis_cache_bulk.go.
+	batch redisHashBatchReader
 }
 
 // RedisSignalCacheOption configures a RedisSignalCache at construction.
@@ -197,6 +201,14 @@ func NewRedisSignalCache(rdb *redis.Client, opts ...RedisSignalCacheOption) *Red
 	c := &RedisSignalCache{
 		rdb:        rdb,
 		staleAfter: LiveSignalFreshnessThreshold,
+	}
+	if rdb != nil {
+		// Bulk reads (GetAllValuesBulk) pipeline N HGETALLs into one round
+		// trip. Wiring the seam here — rather than type-asserting the
+		// interface field — keeps the batching available to production
+		// without widening the redisSignalClient contract every fake
+		// implements.
+		c.batch = pipelinedHashBatchReader{rdb: rdb}
 	}
 	for _, opt := range opts {
 		opt(c)

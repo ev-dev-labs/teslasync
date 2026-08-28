@@ -31,10 +31,11 @@
  * including it in the search would make the retry loop unreachable —
  * frame one would always find `<main>`, focus it, and stop, and a
  * heading that arrived two frames later would never be used. `<main>`
- * is resolved only once the budget has genuinely expired, which is the
- * case it exists for: routes that render no page header at all, or a
- * chunk so slow that landing the user *somewhere* beats leaving focus
- * stranded on a removed nav link.
+ * receives focus after {@link FOCUS_FALLBACK_DELAY_MS}, but the manager
+ * continues watching for the heading. If it arrives later and the user has
+ * not moved away from `<main>`, focus advances to the heading. This keeps
+ * headerless routes responsive without losing the correct target on a cold
+ * or CPU-constrained lazy load.
  *
  * Why a separate component from `<RouteAnnouncer>`
  * -----------------------------------------------
@@ -50,24 +51,29 @@ import { useLocation, useNavigationType } from 'react-router-dom';
 import {
   decideRouteFocus,
   ROUTE_FOCUS_FALLBACK_SELECTOR,
+  ROUTE_FOCUS_SCOPE_ATTR,
   ROUTE_FOCUS_TARGET_SELECTOR,
   type RouteNavigationKind,
 } from '@/lib/routeFocus';
 
 /**
- * How long to keep looking for the route-focus target before giving up
- * and using the `<main>` fallback. Roughly 20 frames at 60 Hz — long
- * enough for a lazy chunk that is already in the HTTP cache, short
- * enough that the user is not still waiting when focus finally lands.
+ * How long to keep looking for the route-focus target before giving up.
+ * A cold route chunk can take materially longer than one animation frame on
+ * constrained devices, so the hard ceiling is intentionally generous.
  */
-export const FOCUS_TIMEOUT_MS = 350;
+export const FOCUS_TIMEOUT_MS = 5_000;
+
+/** When to give the stable `<main>` landmark provisional focus. */
+export const FOCUS_FALLBACK_DELAY_MS = 350;
 
 export interface RouteFocusManagerProps {
   /**
-   * Override the search budget. Tests drive this with fake timers;
+   * Override the hard heading search budget. Tests drive this with fake timers;
    * production should leave the default.
    */
   timeoutMs?: number;
+  /** Override the provisional `<main>` fallback delay. */
+  fallbackDelayMs?: number;
 }
 
 /**
@@ -82,9 +88,26 @@ export interface RouteFocusManagerProps {
  * never used. The fallback is resolved only once the search budget has
  * genuinely expired (see {@link resolveFallbackTarget}).
  */
-function findHeadingTarget(): HTMLElement | null {
+function findHeadingTarget(pathname: string): HTMLElement | null {
   if (typeof document === 'undefined') return null;
-  return document.querySelector<HTMLElement>(ROUTE_FOCUS_TARGET_SELECTOR);
+  const candidates = Array.from(
+    document.querySelectorAll<HTMLElement>(ROUTE_FOCUS_TARGET_SELECTOR),
+  );
+  const scoped = candidates.find(
+    (candidate) =>
+      candidate
+        .closest<HTMLElement>(`[${ROUTE_FOCUS_SCOPE_ATTR}]`)
+        ?.getAttribute(ROUTE_FOCUS_SCOPE_ATTR) === pathname,
+  );
+  if (scoped) return scoped;
+
+  // Routes outside the standard application layout (for example public share
+  // views) have no RouteTransition scope. They remain valid only when the
+  // heading itself is unscoped; a retained heading from another scoped route
+  // must never win this fallback.
+  return candidates.find(
+    (candidate) => !candidate.closest(`[${ROUTE_FOCUS_SCOPE_ATTR}]`),
+  ) ?? null;
 }
 
 /** The `<main>` landmark, used only after the heading search times out. */
@@ -95,6 +118,7 @@ function resolveFallbackTarget(): HTMLElement | null {
 
 export function RouteFocusManager({
   timeoutMs = FOCUS_TIMEOUT_MS,
+  fallbackDelayMs = FOCUS_FALLBACK_DELAY_MS,
 }: RouteFocusManagerProps = {}) {
   const { pathname } = useLocation();
   const navigationType = useNavigationType() as RouteNavigationKind;
@@ -123,39 +147,58 @@ export function RouteFocusManager({
     if (!upfront.shouldFocus) return;
 
     const scheduledFrom = document.activeElement;
-    const deadline = Date.now() + timeoutMs;
+    const startedAt = Date.now();
+    const fallbackAt = startedAt + Math.min(fallbackDelayMs, timeoutMs);
+    const deadline = startedAt + timeoutMs;
     let frame = 0;
     let cancelled = false;
+    let provisionalTarget: HTMLElement | null = null;
 
     const attempt = () => {
       if (cancelled) return;
-      const heading = findHeadingTarget();
+      const heading = findHeadingTarget(pathname);
+      const now = Date.now();
       const expired = Date.now() >= deadline;
-      // Keep looking while the budget lasts. The heading lives inside a
-      // lazily-loaded route chunk, so on a cold navigation it appears
-      // several frames after `useLocation()` fires.
-      if (!heading && !expired) {
-        frame = requestAnimationFrame(attempt);
+
+      if (heading) {
+        const decision = decideRouteFocus({
+          navigationKind: navigationType,
+          isFirstRender: false,
+          isSamePath: false,
+          documentHasFocus:
+            typeof document.hasFocus === 'function' ? document.hasFocus() : true,
+          activeElement: document.activeElement,
+          scheduledFromElement: provisionalTarget ?? scheduledFrom,
+        });
+        if (!decision.shouldFocus) return;
+
+        // `preventScroll` keeps ScrollRestoration authoritative: focusing
+        // the heading must not scroll the container out from under a
+        // restored position or an anchor jump.
+        heading.focus({ preventScroll: true });
         return;
       }
-      const target = heading ?? resolveFallbackTarget();
-      if (!target) return;
 
-      const decision = decideRouteFocus({
-        navigationKind: navigationType,
-        isFirstRender: false,
-        isSamePath: false,
-        documentHasFocus:
-          typeof document.hasFocus === 'function' ? document.hasFocus() : true,
-        activeElement: document.activeElement,
-        scheduledFromElement: scheduledFrom,
-      });
-      if (!decision.shouldFocus) return;
+      if (!provisionalTarget && (now >= fallbackAt || expired)) {
+        const fallback = resolveFallbackTarget();
+        if (fallback) {
+          const decision = decideRouteFocus({
+            navigationKind: navigationType,
+            isFirstRender: false,
+            isSamePath: false,
+            documentHasFocus:
+              typeof document.hasFocus === 'function' ? document.hasFocus() : true,
+            activeElement: document.activeElement,
+            scheduledFromElement: scheduledFrom,
+          });
+          if (!decision.shouldFocus) return;
+          fallback.focus({ preventScroll: true });
+          provisionalTarget = fallback;
+        }
+      }
 
-      // `preventScroll` keeps ScrollRestoration authoritative: focusing
-      // the heading must not scroll the container out from under a
-      // restored position or an anchor jump.
-      target.focus({ preventScroll: true });
+      if (expired) return;
+      frame = requestAnimationFrame(attempt);
     };
 
     frame = requestAnimationFrame(attempt);
@@ -163,7 +206,7 @@ export function RouteFocusManager({
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [pathname, navigationType, timeoutMs]);
+  }, [pathname, navigationType, timeoutMs, fallbackDelayMs]);
 
   return null;
 }

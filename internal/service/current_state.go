@@ -134,6 +134,29 @@ func (s *VehicleService) ResolveCurrentState(
 	live signal.LiveSignalStore,
 	now time.Time,
 ) (CurrentState, error) {
+	return s.ResolveCurrentStateWith(ctx, vehicle, live, now, nil)
+}
+
+// ResolveCurrentStateWith is ResolveCurrentState reading its storage inputs
+// from a batch-level CurrentStatePrefetch instead of issuing its own
+// per-vehicle round trips.
+//
+// A nil prefetch is exactly ResolveCurrentState: every layer reads for itself.
+// A non-nil prefetch supplies whichever layers were successfully read in bulk;
+// layers the prefetch does not cover are still read per vehicle here, so a
+// deployment whose store lacks a bulk capability keeps working unchanged.
+//
+// The VERDICTS are identical either way — same merge rule, same freshness
+// window, same provenance, same telemetry-vs-FSM conflict detection — because
+// the prefetch only changes where the inputs came from, never how they are
+// interpreted.
+func (s *VehicleService) ResolveCurrentStateWith(
+	ctx context.Context,
+	vehicle *vehiclemodel.Vehicle,
+	live signal.LiveSignalStore,
+	now time.Time,
+	pre *CurrentStatePrefetch,
+) (CurrentState, error) {
 	if s == nil {
 		return CurrentState{}, errors.New("resolve current state: nil vehicle service")
 	}
@@ -152,11 +175,11 @@ func (s *VehicleService) ResolveCurrentState(
 	if live == nil {
 		// No telemetry source configured: durable records only. There is no
 		// live stream, so freshness is unknown and nothing is verified.
-		state, err := s.BuildStateFromSignalStoreContext(ctx, nil, vehicle)
+		state, _, err := s.buildStateFromSignalStoreWithProvenance(ctx, nil, vehicle, pre)
 		if err != nil {
 			return CurrentState{}, fmt.Errorf("resolve durable state (vehicle %d): %w", vehicle.ID, err)
 		}
-		if _, since, err := s.fsmStateLookup().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
+		if _, since, err := s.currentFSMState(ctx, vehicle.ID, pre); err == nil && since != nil {
 			state.Since = since
 		}
 		if ctxErr := ctx.Err(); ctxErr != nil {
@@ -179,7 +202,7 @@ func (s *VehicleService) ResolveCurrentState(
 	)
 	freshness := FreshnessUnknown
 
-	values, err := live.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
+	values, err := s.liveSignalValues(ctx, vehicle.ID, live, pre)
 	if err != nil {
 		if ctxErr := ctx.Err(); ctxErr != nil {
 			return CurrentState{}, fmt.Errorf("read live signals (vehicle %d): %w", vehicle.ID, ctxErr)
@@ -200,7 +223,7 @@ func (s *VehicleService) ResolveCurrentState(
 		}
 	}
 
-	state, verified, err := s.BuildStateFromSignalStoreWithProvenanceContext(ctx, store, vehicle)
+	state, verified, err := s.buildStateFromSignalStoreWithProvenance(ctx, store, vehicle, pre)
 	if err != nil {
 		return CurrentState{}, fmt.Errorf("assemble current state (vehicle %d): %w", vehicle.ID, err)
 	}
@@ -210,7 +233,7 @@ func (s *VehicleService) ResolveCurrentState(
 	telemetryState, conflictReason := telemetryDerivedState(state, verified, freshness)
 
 	fsmState := ""
-	if currentState, since, err := s.fsmStateLookup().GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
+	if currentState, since, err := s.currentFSMState(ctx, vehicle.ID, pre); err == nil && currentState != "" {
 		fsmState = currentState
 		state.State = currentState
 		state.Since = since

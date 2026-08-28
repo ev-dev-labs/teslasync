@@ -304,7 +304,7 @@ jobs:
           E2E_SENSITIVE: '1'
         run: |
           set +e
-          npx playwright test --project=chromium-smoke cross-browser.smoke.spec.ts
+          npx playwright test --project=chromium-smoke cross-browser.smoke.spec.ts production-journeys.smoke.spec.ts
           EXIT_CODE=$?
           echo "exit_code=$EXIT_CODE" >> "$GITHUB_OUTPUT"
           STATUS=$([ "$EXIT_CODE" -eq 0 ] && echo passed || echo failed)

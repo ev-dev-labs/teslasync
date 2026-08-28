@@ -1,0 +1,10 @@
+services:
+  teslasync-api:
+    environment:
+      DATABASE_HOST: toxiproxy
+      DATABASE_PORT: 25432
+      REDIS_HOST: toxiproxy
+      REDIS_PORT: 26379
+    depends_on:
+      toxiproxy:
+        condition: service_started

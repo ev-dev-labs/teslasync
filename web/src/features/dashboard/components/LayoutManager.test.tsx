@@ -27,19 +27,32 @@
  * the component needs neither Router nor QueryClient.
  */
 
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ComponentProps } from 'react';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
-    t: (key: string, defaultValue?: string | Record<string, unknown>) =>
-      typeof defaultValue === 'string' ? defaultValue : key,
+    t: (
+      key: string,
+      defaultValue?: string | Record<string, unknown>,
+      values?: Record<string, unknown>,
+    ) => {
+      if (typeof defaultValue !== 'string') return key;
+      return Object.entries(values ?? {}).reduce(
+        (copy, [name, value]) => copy.replaceAll(`{{${name}}}`, String(value)),
+        defaultValue,
+      );
+    },
   }),
 }));
 
 import { LayoutManager } from './LayoutManager';
 import type { SavedDashboard } from '../widgets/types';
+import {
+  __resetAnnouncerForTests,
+  subscribeAnnouncer,
+} from '@/hooks/useAnnouncer';
 
 type Props = ComponentProps<typeof LayoutManager>;
 
@@ -60,6 +73,7 @@ const THREE = (): SavedDashboard[] => [
   makeDash({ id: 'b', name: 'Bravo' }),
   makeDash({ id: 'c', name: 'Charlie' }),
 ];
+const announcementListener = vi.fn();
 
 function renderManager(over: Partial<Props> = {}) {
   const props: Props = {
@@ -89,11 +103,24 @@ function makeDataTransfer(): DataTransfer {
   } as unknown as DataTransfer;
 }
 
-const tab = (name: RegExp) => screen.getByRole('button', { name });
+const tab = (name: RegExp) => {
+  const match = screen
+    .getAllByRole('button', { name })
+    .find((element) => element.getAttribute('draggable') === 'true');
+  if (!match) throw new Error(`Dashboard tab not found: ${name}`);
+  return match;
+};
 
 afterEach(() => {
   cleanup();
+  __resetAnnouncerForTests();
   vi.clearAllMocks();
+});
+
+beforeEach(() => {
+  __resetAnnouncerForTests();
+  announcementListener.mockReset();
+  subscribeAnnouncer(announcementListener);
 });
 
 describe('LayoutManager — tab rendering', () => {
@@ -221,36 +248,51 @@ describe('LayoutManager — create flow', () => {
 });
 
 describe('LayoutManager — context menu', () => {
+  it('opens from a one-click actions button and reorders without dragging', async () => {
+    const { props } = renderManager();
+
+    const trigger = screen.getByRole('button', { name: 'Actions for Bravo' });
+    fireEvent.click(trigger);
+    expect(screen.getByRole('menu', { name: 'Actions for Bravo' })).toBeInTheDocument();
+    expect(screen.getAllByRole('separator')).toHaveLength(2);
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Move earlier' }));
+
+    expect(props.onReorder).toHaveBeenCalledWith(1, 0);
+    expect(announcementListener.mock.lastCall?.[0]).toContain('Bravo moved earlier');
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
+    await waitFor(() => expect(trigger).toHaveFocus());
+  });
+
   it('opens on right-click and exposes rename / duplicate / settings / delete', () => {
     renderManager();
     fireEvent.contextMenu(tab(/Bravo/));
 
-    expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Duplicate' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Settings' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Delete' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Duplicate' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Delete' })).toBeInTheDocument();
   });
 
   it('wires Duplicate to onDuplicate with the right id and closes the menu', () => {
     const { props } = renderManager();
     fireEvent.contextMenu(tab(/Bravo/));
-    fireEvent.click(screen.getByRole('button', { name: 'Duplicate' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Duplicate' }));
 
     expect(props.onDuplicate).toHaveBeenCalledWith('b');
-    expect(screen.queryByRole('button', { name: 'Duplicate' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Duplicate' })).not.toBeInTheDocument();
   });
 
   it('wires Settings to onOpenSettings with the right id', () => {
     const { props } = renderManager();
     fireEvent.contextMenu(tab(/Charlie/));
-    fireEvent.click(screen.getByRole('button', { name: 'Settings' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Settings' }));
     expect(props.onOpenSettings).toHaveBeenCalledWith('c');
   });
 
   it('wires Delete to onDelete for a non-default layout', () => {
     const { props } = renderManager();
     fireEvent.contextMenu(tab(/Bravo/));
-    const del = screen.getByRole('button', { name: 'Delete' });
+    const del = screen.getByRole('menuitem', { name: 'Delete' });
     expect(del).not.toBeDisabled();
     fireEvent.click(del);
     expect(props.onDelete).toHaveBeenCalledWith('b');
@@ -261,7 +303,7 @@ describe('LayoutManager — context menu', () => {
       dashboards: [makeDash({ id: 'a', name: 'Alpha', isDefault: true })],
     });
     fireEvent.contextMenu(tab(/Alpha/));
-    const del = screen.getByRole('button', { name: 'Delete' });
+    const del = screen.getByRole('menuitem', { name: 'Delete' });
     expect(del).toBeDisabled();
     expect(del.className).toContain('text-red-400');
     fireEvent.click(del);
@@ -272,14 +314,14 @@ describe('LayoutManager — context menu', () => {
     renderManager();
 
     fireEvent.contextMenu(tab(/Alpha/));
-    expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
     fireEvent.keyDown(document, { key: 'Escape' });
-    expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Rename' })).not.toBeInTheDocument();
 
     fireEvent.contextMenu(tab(/Alpha/));
-    expect(screen.getByRole('button', { name: 'Rename' })).toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: 'Rename' })).toBeInTheDocument();
     fireEvent.mouseDown(document.body);
-    expect(screen.queryByRole('button', { name: 'Rename' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'Rename' })).not.toBeInTheDocument();
   });
 });
 
@@ -287,7 +329,7 @@ describe('LayoutManager — rename flow', () => {
   it('enters inline rename from the menu and renames with a trimmed value on Enter', () => {
     const { props } = renderManager();
     fireEvent.contextMenu(tab(/Alpha/));
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
 
     const input = screen.getByRole('textbox') as HTMLInputElement;
     expect(input.value).toBe('Alpha');
@@ -301,7 +343,7 @@ describe('LayoutManager — rename flow', () => {
   it('does not rename to an empty value but still exits edit mode', () => {
     const { props } = renderManager();
     fireEvent.contextMenu(tab(/Alpha/));
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
 
     const input = screen.getByRole('textbox');
     fireEvent.change(input, { target: { value: '   ' } });
@@ -315,13 +357,13 @@ describe('LayoutManager — rename flow', () => {
     const { props } = renderManager();
 
     fireEvent.contextMenu(tab(/Alpha/));
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Nope' } });
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'Escape' });
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
 
     fireEvent.contextMenu(tab(/Alpha/));
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Nope2' } });
     fireEvent.click(screen.getByRole('button', { name: 'Cancel rename' }));
 
@@ -332,7 +374,7 @@ describe('LayoutManager — rename flow', () => {
   it('renames via the confirm button', () => {
     const { props } = renderManager();
     fireEvent.contextMenu(tab(/Charlie/));
-    fireEvent.click(screen.getByRole('button', { name: 'Rename' }));
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Rename' }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Gamma' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirm rename' }));
     expect(props.onRename).toHaveBeenCalledWith('c', 'Gamma');

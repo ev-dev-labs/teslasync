@@ -1,10 +1,10 @@
 import { useMemo } from 'react'
-import { Link } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 
-import { type FleetStateEntry } from '@/api/hooks/useVehicles'
+import { type FleetServerSummary, type FleetStateEntry } from '@/api/hooks/useVehicles'
 import { statusVariant } from '@/api/types'
 import { Badge, Caption, Heading, Text } from '@/components/ui'
+import { PrefetchLink } from '@/components/layout'
 import { VisuallyHidden } from '@/components/a11y'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
@@ -12,6 +12,7 @@ import type { Vehicle } from '@/types/vehicle'
 
 import {
   PostureDrillThrough,
+  PostureActions,
   PostureTaxonomy,
   PostureWorkflows,
   buildFleetPosture,
@@ -22,6 +23,16 @@ interface FleetOperationsBriefProps {
   vehicles: Vehicle[]
   selectedVehicle: Vehicle | null
   fleetStates: FleetStateEntry[] | undefined
+  /**
+   * The SERVER's own posture roll-up of the same batch, derived against the
+   * request-level instant with the same trust precedence as the items.
+   *
+   * The panel uses it as the authoritative aggregate while it still agrees
+   * with the same response's per-vehicle classifications. The client
+   * derivation takes over after a reading ages across the freshness boundary
+   * between polls.
+   */
+  summary?: FleetServerSummary | null
   /** True while the first fleet-state batch is still in flight. */
   isPending?: boolean
   /**
@@ -30,6 +41,10 @@ interface FleetOperationsBriefProps {
    * so instead of rendering a confident, fully-populated fleet of unknowns.
    */
   isError?: boolean
+  /** Re-read the authoritative fleet-state batch after an operator action. */
+  onRetry?: () => Promise<unknown> | void
+  /** True while the authoritative retry is in flight. */
+  isRetrying?: boolean
 }
 
 /**
@@ -56,17 +71,28 @@ export function FleetOperationsBrief({
   vehicles,
   selectedVehicle,
   fleetStates,
+  summary = null,
   isPending = false,
   isError = false,
+  onRetry = () => undefined,
+  isRetrying = false,
 }: FleetOperationsBriefProps) {
   const { t } = useTranslation()
 
   const posture = useMemo(
-    () => buildFleetPosture(vehicles, fleetStates),
-    [vehicles, fleetStates],
+    () => buildFleetPosture(vehicles, fleetStates, Date.now(), summary),
+    [vehicles, fleetStates, summary],
   )
+  // Two different questions, and collapsing them is what would make the panel
+  // lie in one direction or the other:
+  //   `resolving`      — nothing has been classified yet, so per-vehicle
+  //                      claims (the active scope block) are still unknown;
+  //   `totalsPending`  — nothing can be TOTALLED yet. A server summary is
+  //                      usable only with the entries from the same resolved
+  //                      snapshot, never as a detached success-shaped fallback.
   const resolving = isPending || posture.pending
-  const oldestObservedLabel = formatObservationAge(posture.summary.oldestObservedAt, t)
+  const totalsPending = resolving && !posture.fromServerSummary
+  const oldestObservedLabel = formatObservationAge(posture.oldestObservedAt, t)
 
   const scopeVehicle = selectedVehicle ?? vehicles[0] ?? null
   const selectedName =
@@ -78,7 +104,7 @@ export function FleetOperationsBrief({
   const scopedAge = formatObservationAge(scoped?.observedAt ?? null, t)
 
   /** One sentence an operator (or a screen reader) can act on. */
-  const headline = resolving
+  const headline = totalsPending
     ? t('dashboard.fleetPosture.headline.resolving', 'Resolving live state for {{count}} vehicle(s).', {
       count: posture.total,
     })
@@ -101,7 +127,7 @@ export function FleetOperationsBrief({
           total: posture.total,
         })
 
-  const BadgeIcon = resolving
+  const BadgeIcon = totalsPending
     ? Icons.clock
     : isError || posture.attentionCount > 0
       ? Icons.warning
@@ -129,14 +155,14 @@ export function FleetOperationsBrief({
         {/* Icon + text: the badge never signals by colour alone. */}
         <Badge
           variant={
-            resolving ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'
+            totalsPending ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'
           }
           size="lg"
           className="inline-flex max-w-full items-center gap-1.5 self-start sm:self-auto"
         >
           <BadgeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
           <span className="truncate">
-            {resolving
+            {totalsPending
               ? t('dashboard.fleetPosture.badge.resolving', 'Checking live state')
               : isError
                 ? t('dashboard.fleetPosture.badge.unavailable', 'Live state unavailable')
@@ -186,7 +212,7 @@ export function FleetOperationsBrief({
             </div>
 
             {scopeVehicle != null && (
-              <Link
+              <PrefetchLink
                 to={`/vehicles/${scopeVehicle.id}`}
                 className={cn(
                   'inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-shape-md border px-4 text-sm font-medium transition-colors',
@@ -197,7 +223,7 @@ export function FleetOperationsBrief({
               >
                 {t('dashboard.fleetPosture.openVehicle', 'Open vehicle')}
                 <Icons.drillThrough className="h-4 w-4" aria-hidden="true" />
-              </Link>
+              </PrefetchLink>
             )}
           </div>
 
@@ -209,23 +235,23 @@ export function FleetOperationsBrief({
             />
             <BriefMetric
               label={t('dashboard.fleetPosture.metric.verified', 'Verified')}
-              value={resolving ? '—' : `${posture.verifiedCount}/${posture.total}`}
+              value={totalsPending ? '—' : `${posture.verifiedCount}/${posture.total}`}
               hint={
-                resolving
+                totalsPending
                   ? t('dashboard.fleetPosture.metric.resolvingHelp', 'checking live state')
                   : t('dashboard.fleetPosture.metric.verifiedHelp', 'current telemetry')
               }
-              tone={resolving ? 'default' : posture.verifiedCount === posture.total ? 'positive' : 'warning'}
+              tone={totalsPending ? 'default' : posture.verifiedCount === posture.total ? 'positive' : 'warning'}
             />
             <BriefMetric
               label={t('dashboard.fleetPosture.metric.attention', 'Attention')}
-              value={resolving ? '—' : String(posture.attentionCount)}
+              value={totalsPending ? '—' : String(posture.attentionCount)}
               hint={
-                resolving
+                totalsPending
                   ? t('dashboard.fleetPosture.metric.resolvingHelp', 'checking live state')
                   : t('dashboard.fleetPosture.metric.attentionHelp', 'exceptions')
               }
-              tone={resolving ? 'default' : posture.attentionCount > 0 ? 'warning' : 'positive'}
+              tone={totalsPending ? 'default' : posture.attentionCount > 0 ? 'warning' : 'positive'}
             />
             <BriefMetric
               label={t('dashboard.fleetPosture.metric.oldest', 'Oldest reading')}
@@ -238,13 +264,19 @@ export function FleetOperationsBrief({
             />
           </dl>
 
-          <PostureTaxonomy counts={posture.counts} pending={resolving} />
+          <PostureTaxonomy counts={posture.counts} pending={totalsPending} />
         </div>
 
         <div className="p-4 sm:p-5 lg:p-6">
           <Caption className="font-semibold uppercase tracking-[0.1em]">
             {t('dashboard.fleetPosture.investigate', 'Investigate')}
           </Caption>
+          <PostureActions
+            posture={posture}
+            vehicleId={scopeVehicle?.id}
+            retrying={isRetrying}
+            onRetry={onRetry}
+          />
           <PostureDrillThrough vehicleId={scopeVehicle?.id} />
           <PostureWorkflows />
         </div>

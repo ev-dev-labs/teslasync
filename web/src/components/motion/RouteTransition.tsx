@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { type ReactNode, useRef } from 'react'
 import { matchPath, useLocation } from 'react-router-dom'
 import { useMotionPreference } from '@/hooks/useMotionPreference'
+import { ROUTE_FOCUS_SCOPE_ATTR } from '@/lib/routeFocus'
 
 /**
  * Route patterns where the page-transition cross-fade is suppressed. Drilling
@@ -77,6 +78,7 @@ export function RouteTransition({ children, skipPattern = DEFAULT_SKIP_PATTERNS 
   return (
     <motion.div
       key={newPath}
+      {...{ [ROUTE_FOCUS_SCOPE_ATTR]: newPath }}
       initial={animateEntry ? { opacity: 0, y: 4 } : false}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: effectiveDurationMs / 1000, ease: 'easeOut' }}

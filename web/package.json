@@ -62,6 +62,8 @@
     "e2e:quality:run": "playwright test --project=chromium-*-* --project=chromium-smoke",
     "e2e:performance": "node scripts/run-e2e-suite.mjs e2e:performance:run",
     "e2e:performance:run": "playwright test --project=chromium-performance --workers=1",
+    "e2e:synthetic": "node scripts/run-e2e-suite.mjs e2e:synthetic:run",
+    "e2e:synthetic:run": "playwright test --project=chromium-smoke production-journeys.smoke.spec.ts --workers=1",
     "e2e:a11y": "node scripts/run-e2e-suite.mjs e2e:a11y:run",
     "e2e:a11y:run": "playwright test --project=chromium-a11y --workers=1",
     "e2e:contract": "playwright test --config=playwright.contract.config.ts",

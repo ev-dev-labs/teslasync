@@ -19,6 +19,7 @@
 type SSEListener = (data: unknown) => void
 type SSEEventType =
   | 'vehicle_update'
+  | 'signal_change'
   | 'alert'
   | 'export_status'
   | 'achievement_unlocked'
@@ -115,6 +116,11 @@ function doConnect() {
   es.addEventListener('vehicle_update', (e) => {
     markServerMessage()
     emit('vehicle_update', safeParse(e.data))
+  })
+
+  es.addEventListener('signal_change', (e) => {
+    markServerMessage()
+    emit('signal_change', safeParse(e.data))
   })
 
   es.addEventListener('alert', (e) => {

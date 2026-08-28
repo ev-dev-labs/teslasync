@@ -403,6 +403,20 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
 
   const bumpRecent = useCallback(() => setRecentVersion(v => v + 1), [])
 
+  const handFocusToDestination = useCallback(() => {
+    clearPendingInputFocus()
+    focusIntentRef.current = false
+    returnFocusRef.current = null
+
+    const active = document.activeElement
+    if (
+      active instanceof HTMLElement &&
+      panelRef.current?.contains(active)
+    ) {
+      active.blur()
+    }
+  }, [clearPendingInputFocus])
+
   const go = useCallback((path: string) => {
     addRecentCommand({ kind: 'nav', path })
     recordCommandUse(path)
@@ -411,9 +425,13 @@ export function CommandPalette({ onOpen, initialOpen = false }: CommandPalettePr
     // onto destinations that own those controls, so a palette jump does not
     // silently reset the user's scope. Deep links and back/forward keep
     // working because the scope lives in the URL either way.
+    // A route change owns the next focus destination. Clear the palette's
+    // ordinary trigger restoration before navigation so it cannot race the
+    // route-focus manager and strand keyboard users back in the shell.
+    handFocusToDestination()
     navigate(preserveWorkspaceScope(path, location.search))
     close()
-  }, [navigate, close, bumpRecent, location.search])
+  }, [navigate, close, bumpRecent, handFocusToDestination, location.search])
 
   const executeCommand = useCallback((command: string, vehicleId: number) => {
     commandMutation.mutate({ vehicleId, command })

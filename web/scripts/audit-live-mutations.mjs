@@ -53,6 +53,7 @@ const LIVE_ONLY_MUTATIONS = {
   'hooks/useDriving.ts': ['useBulkDeleteDrives'],
   'hooks/useEnergy.ts': ['useUpdateTOUSettings'],
   'hooks/useFeatureFlags.ts': ['useSetFlag', 'useDeleteFlag'],
+  'hooks/useFleetRemediation.ts': ['useWakeVehiclesBulk'],
   'hooks/useFleetOps.ts': ['useFleetMutation'],
   'hooks/useGuard.ts': [
     'useSetGuardConfig',

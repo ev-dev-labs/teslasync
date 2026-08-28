@@ -1,6 +1,7 @@
 export { PostureTaxonomy } from './PostureTaxonomy'
 export { PostureDrillThrough } from './PostureDrillThrough'
 export { PostureWorkflows } from './PostureWorkflows'
+export { PostureActions } from './PostureActions'
 export {
   buildFleetPosture,
   formatObservationAge,

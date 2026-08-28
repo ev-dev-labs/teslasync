@@ -14,6 +14,8 @@
  * `internal/api/sse_handler.go::SignalChangeEvent` is the on-wire shape:
  *
  *   {
+ *     "stream_id":  <server-epoch>,
+ *     "sequence":   <monotonic integer>,
  *     "vehicle_id": <int64>,
  *     "field":      <proto-name>,
  *     "kind":       <protomodel.ValueKind>,
@@ -86,6 +88,8 @@ export type SIValue =
  * a string. Callers can parse it with `Date.parse(ts)` when needed.
  */
 export interface SignalEnvelope {
+  stream_id: string
+  sequence: number
   vehicle_id: number
   field: string
   kind: SignalKind
@@ -211,6 +215,10 @@ export function parseEnvelope(raw: string): SignalEnvelope | Error {
     return new Error('sse: missing or invalid vehicle_id')
   }
   return {
+    stream_id: typeof payload.stream_id === 'string' ? payload.stream_id : '',
+    sequence: typeof payload.sequence === 'number' && Number.isSafeInteger(payload.sequence)
+      ? payload.sequence
+      : 0,
     vehicle_id: payload.vehicle_id,
     field: payload.field,
     kind,

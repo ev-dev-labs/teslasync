@@ -2,6 +2,12 @@ import { expect, type Page, type Request as PlaywrightRequest, type Route } from
 import { ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
 
+export type E2EUIDensity = 'compact' | 'comfortable' | 'spacious';
+
+export interface BrowserSeedOptions {
+  density?: E2EUIDensity;
+}
+
 const NOW = '2026-08-26T16:00:00.000Z';
 const STALE = '2026-08-19T16:00:00.000Z';
 
@@ -28,6 +34,62 @@ const vehicle = {
   wheel_type: 'Gemini', state: 'online', healthy: true, timezone: 'UTC',
   created_at: NOW, updated_at: NOW,
 };
+
+const LARGE_FLEET_SIZE = 120;
+
+function largeFleetVehicles() {
+  return Array.from({ length: LARGE_FLEET_SIZE }, (_, index) => {
+    const id = index + vehicle.id;
+    const state = ['online', 'asleep', 'offline'][index % 3];
+    return {
+      ...vehicle,
+      id,
+      vehicle_id: id,
+      vin: `5YJMOCK${String(id).padStart(10, '0')}`,
+      display_name: `Fleet Vehicle ${String(index + 1).padStart(3, '0')}`,
+      model: index % 4 === 0 ? 'Model 3' : index % 4 === 1 ? 'Model Y' : index % 4 === 2 ? 'Model S' : 'Model X',
+      state,
+      healthy: state !== 'offline',
+    };
+  });
+}
+
+function largeFleetStates(observedAt: string) {
+  return largeFleetVehicles().map((fleetVehicle, index) => {
+    const charging = index % 11 === 0;
+    const driving = index % 7 === 0 && !charging;
+    return {
+      vehicle_id: fleetVehicle.id,
+      outcome: 'resolved',
+      state: {
+        vehicle_id: fleetVehicle.id,
+        state: charging ? 'charging' : driving ? 'driving' : fleetVehicle.state,
+        latitude: 37.4 + index * 0.001,
+        longitude: -122.1 - index * 0.001,
+        speed: driving ? 18 : 0,
+        power: charging ? -7_200 : driving ? 14_000 : 0,
+        battery_level: 35 + (index % 61),
+        rated_range: 300_000 + index * 800,
+        ideal_range: 315_000 + index * 800,
+        odometer: 12_000_000 + index * 110_000,
+        inside_temp: 21,
+        outside_temp: 18,
+        is_climate_on: index % 13 === 0,
+        is_charging: charging,
+        locked: !driving,
+        sentry_mode: index % 9 === 0,
+        plugged_in: charging,
+        charge_port_door_open: charging,
+        timestamp: observedAt,
+      },
+      live: true,
+      data_source: 'signal_store',
+      observed_at: observedAt,
+      freshness: 'fresh',
+      verified_fields: ['state', 'battery_level', 'speed', 'is_charging', 'timestamp'],
+    };
+  });
+}
 
 const drive = {
   id: 101, vehicle_id: 7, start_ts: '2026-08-25T08:00:00.000Z',
@@ -147,6 +209,7 @@ export function resolveApiFixture(
   method: string,
   scenario: DataScenario,
   theme: 'dark' | 'light' = 'dark',
+  density: E2EUIDensity = 'comfortable',
 ): MockResolution {
   const observedAt = scenario === 'stale' ? STALE : NOW;
   if (method !== 'GET') {
@@ -155,7 +218,7 @@ export function resolveApiFixture(
     ) return matched({});
     return { matched: false };
   }
-  if (path === '/settings') return matched({ ...settings, mode: theme });
+  if (path === '/settings') return matched({ ...settings, mode: theme, ui_density: density });
   if (path === '/system/auth-mode') return matched({ mode: 'open', forward_auth: false });
   if (path === '/auth/status') return matched({ authenticated: false, connected: false });
   if (path === '/auth/session') {
@@ -175,7 +238,106 @@ export function resolveApiFixture(
   if (path === '/settings/dashboard-layouts') return matched({ layouts: [], active_layout_id: null });
   if (path.startsWith('/user-preferences/latest?')) return matched(null);
   if (/^\/signals\/7\/live/.test(path)) return matched({});
-  if (path === '/vehicles') return matched(listFor(scenario, scenario === 'partial' ? { ...vehicle, model: '', trim_badging: '' } : vehicle));
+  if (path === '/vehicles') {
+    if (scenario === 'large-fleet') return matched(largeFleetVehicles());
+    return matched(listFor(scenario, scenario === 'partial' ? { ...vehicle, model: '', trim_badging: '' } : vehicle));
+  }
+  if (/^\/vehicles\/states\?/.test(path)) {
+    if (scenario === 'large-fleet') {
+      const liveObservedAt = new Date().toISOString();
+      const vehicles = largeFleetStates(liveObservedAt);
+      const operational = vehicles.reduce<Record<string, number>>((counts, item) => {
+        const status = item.state.state;
+        counts[status] = (counts[status] ?? 0) + 1;
+        return counts;
+      }, {});
+      return matched({
+        data: {
+          now: liveObservedAt,
+          total: LARGE_FLEET_SIZE,
+          limit: 500,
+          offset: 0,
+          counts: {
+            resolved: LARGE_FLEET_SIZE,
+            missing: 0,
+            failed: 0,
+          },
+          summary: {
+            counted: LARGE_FLEET_SIZE,
+            verified_count: LARGE_FLEET_SIZE,
+            attention_count: 0,
+            operational: {
+              charging: operational.charging ?? 0,
+              driving: operational.driving ?? 0,
+              parked: operational.parked ?? 0,
+              asleep: operational.asleep ?? 0,
+              online: operational.online ?? 0,
+              offline: operational.offline ?? 0,
+              other: 0,
+            },
+            attention: {
+              unverified: 0,
+              stale: 0,
+              unknown: 0,
+              missing: 0,
+              failed: 0,
+            },
+            oldest_observed_at: liveObservedAt,
+            newest_observed_at: liveObservedAt,
+            observed_count: LARGE_FLEET_SIZE,
+          },
+          vehicles,
+        },
+      });
+    }
+    const hasState = scenario !== 'empty';
+    const outcome = hasState ? 'resolved' : 'missing';
+    return matched({
+      data: {
+        now: NOW,
+        total: 1,
+        limit: 500,
+        offset: 0,
+        counts: {
+          resolved: hasState ? 1 : 0,
+          missing: hasState ? 0 : 1,
+          failed: 0,
+        },
+        vehicles: [{
+          vehicle_id: 7,
+          outcome,
+          state: hasState ? {
+            vehicle_id: 7,
+            state: 'online',
+            latitude: 37.4,
+            longitude: -122.1,
+            speed: 0,
+            power: 0,
+            battery_level: 72,
+            rated_range: 410000,
+            ideal_range: 430000,
+            odometer: 32100000,
+            inside_temp: 21,
+            outside_temp: 18,
+            is_climate_on: false,
+            is_charging: false,
+            locked: true,
+            sentry_mode: false,
+            plugged_in: false,
+            charge_port_door_open: false,
+            timestamp: observedAt,
+          } : null,
+          live: hasState && scenario !== 'stale',
+          data_source: hasState ? 'signal_store' : 'unavailable',
+          observed_at: hasState ? observedAt : null,
+          freshness: hasState ? (scenario === 'stale' ? 'stale' : 'fresh') : 'unknown',
+          verified_fields: hasState
+            ? ['state', 'battery_level', 'speed', 'is_charging', 'timestamp']
+            : [],
+        }],
+      },
+    });
+  }
   if (/^\/vehicles\/7\/state/.test(path)) {
     return matched({ live: scenario !== 'stale', state: {
       vehicle_id: 7, state: 'online', latitude: 37.4, longitude: -122.1,
@@ -358,6 +520,7 @@ async function fulfill(
   scenario: DataScenario,
   controller: MockApiController,
   theme: 'dark' | 'light',
+  density: E2EUIDensity,
   sseOrigin: string,
 ): Promise<void> {
   controller.pending += 1;
@@ -380,7 +543,7 @@ async function fulfill(
       await fulfillSse(route, path, controller, sseOrigin);
       return;
     }
-    const resolution = resolveApiFixture(path, request.method(), scenario, theme);
+    const resolution = resolveApiFixture(path, request.method(), scenario, theme, density);
     if (!resolution.matched) {
       controller.unmatched.add(
         `${request.method()} ${url.pathname}${url.search ? '?<redacted>' : ''}`,
@@ -448,6 +611,7 @@ export async function installApiMocks(
   page: Page,
   scenario: DataScenario = 'populated',
   theme: 'dark' | 'light' = 'dark',
+  density: E2EUIDensity = 'comfortable',
 ): Promise<MockApiController | null> {
   if (process.env.E2E_MOCKS === '0') return null;
   const sseServer = await ensureMockSseServer();
@@ -467,7 +631,7 @@ export async function installApiMocks(
     requestRecord(controller, request);
   });
   await page.route('**/api/**', (route) =>
-    fulfill(route, scenario, controller, theme, sseServer.origin));
+    fulfill(route, scenario, controller, theme, density, sseServer.origin));
   return controller;
 }
 
@@ -618,8 +782,10 @@ export async function seedBrowserState(
   page: Page,
   theme: 'dark' | 'light',
   routePath = '/',
+  options: BrowserSeedOptions = {},
 ): Promise<void> {
-  await page.addInitScript(({ selectedTheme, activePath, allowedBeaconPaths, maxBeaconBytes }) => {
+  const density = options.density ?? 'comfortable';
+  await page.addInitScript(({ selectedTheme, selectedDensity, activePath, allowedBeaconPaths, maxBeaconBytes }) => {
     const beaconRecords: CapturedBeacon[] = [];
     const NativeBlob = Blob;
     const blobBodies = new WeakMap<Blob, string | null>();
@@ -813,6 +979,7 @@ export async function seedBrowserState(
     localStorage.setItem('teslasync:onboarding:skipped:v1', '1');
     localStorage.setItem('teslasync-theme', 'neon-cyan');
     localStorage.setItem('teslasync-mode', selectedTheme);
+    localStorage.setItem('teslasync-density', selectedDensity);
     localStorage.setItem('teslasync:themeFirstRunDismissed:v1', '1');
     localStorage.setItem('teslasync-font-family', 'system');
     localStorage.setItem('teslasync-font-mono', 'system');
@@ -854,6 +1021,7 @@ export async function seedBrowserState(
     localStorage.setItem('teslasync-active-dashboard', 'e2e');
   }, {
     selectedTheme: theme,
+    selectedDensity: density,
     activePath: routePath,
     allowedBeaconPaths: [...ALLOWED_BEACON_PATHS],
     maxBeaconBytes: MAX_BEACON_BYTES,
