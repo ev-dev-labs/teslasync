@@ -194,7 +194,10 @@ func (h *ChatbotHandler) queryBatteryStatus(ctx context.Context) string {
 		// Build current state through the layered live-state contract:
 		// SignalStore L1 → Redis L2 → signal_log L3 fallback.
 		// Never read battery_level directly from snapshot tables.
-		state := h.vehicleSvc.BuildStateFromSignalStore(nil, v)
+		state, stateErr := h.vehicleSvc.BuildStateFromSignalStoreContext(ctx, nil, v)
+		if stateErr != nil {
+			return "I couldn't retrieve battery info right now."
+		}
 		if state != nil && state.BatteryLevel > 0 {
 			rangeStr := ""
 			if state.RatedRange > 0 {

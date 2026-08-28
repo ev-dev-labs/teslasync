@@ -1,8 +1,15 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
-import { useVehicles, useVehicleState } from '@/api/hooks/useVehicles';
+import { INTERVALS } from '@/lib/constants';
+import {
+  resolveVehicleStateFreshness,
+  useVehicles,
+  useVehicleState,
+} from '@/api/hooks/useVehicles';
+import type { VerifiedVehicleStateField } from '@/api/hooks/useVehicles';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 import { useUnits } from '@/hooks/useUnits';
 import {
   convertDistanceFromSI,
@@ -15,6 +22,9 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import type { Vehicle, VehicleState } from '../types';
 
+/** Stable identity so an unresolved read never re-renders VehicleHero. */
+const EMPTY_VERIFIED_FIELDS: readonly VerifiedVehicleStateField[] = [];
+
 export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
   const { t } = useTranslation('dashboard');
   const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
@@ -23,8 +33,49 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     : vehicles?.[0];
 
   const id = vehicle?.id ?? 0;
-  const { data: stateData, isFetching, isStale, isError, dataUpdatedAt, refetch } = useVehicleState(id);
+  /* The fleet batch (`useFleetStates`) seeds `vehicleKeys.state(id)` on every
+   * successful poll, so an ambient per-vehicle poll on top of it is pure
+   * duplication — the exact N+1 the batch endpoint exists to remove.
+   *
+   * The per-vehicle read therefore polls only as BOUNDED RECOVERY: it stands
+   * down while the seeded reading is confirmed fresh, and resumes the moment
+   * that reading ages out (batch not mounted on this surface, or failing).
+   * Manual refresh and SSE reconnect recovery are unaffected. */
+  const [recoveryInterval, setRecoveryInterval] = useState<number | false>(INTERVALS.STANDARD);
+  const { data: stateData, isFetching, isError, refetch } = useVehicleState(id, {
+    refetchInterval: recoveryInterval,
+  });
   const { state: live } = useVehicleLive(vehicle?.id);
+  /* Freshness must describe the OBSERVATION, not the request.
+   *
+   * `dataUpdatedAt` is when the fetch completed, so a vehicle that has not
+   * emitted telemetry in an hour still rendered "updated just now" on every
+   * poll — and after a failed poll TanStack keeps the previous data while the
+   * timestamp of the *next* success moves again. `observedAt` comes from the
+   * backend's newest real live signal and never advances on a failed read. */
+  const observedAt = stateData?.observedAt ?? undefined;
+  const [freshnessClock, setFreshnessClock] = useState(0);
+  const freshness = useMemo(
+    () => resolveVehicleStateFreshness(
+      stateData?.freshness,
+      observedAt ?? null,
+    ),
+    [stateData?.freshness, observedAt, freshnessClock],
+  );
+  const trusted = freshness === 'fresh';
+  useEffect(() => {
+    if (stateData?.freshness !== 'fresh' || observedAt == null) return undefined;
+    const remaining = observedAt + TELEMETRY_STALE_AFTER_MS - Date.now();
+    if (remaining <= 0) return undefined;
+    const timer = window.setTimeout(
+      () => setFreshnessClock((version) => version + 1),
+      remaining + 1,
+    );
+    return () => window.clearTimeout(timer);
+  }, [stateData?.freshness, observedAt]);
+  useEffect(() => {
+    setRecoveryInterval(trusted ? false : INTERVALS.STANDARD);
+  }, [trusted]);
   /* State values arrive in SI units: range/odometer in meters, speed in m/s,
    * and temperatures in °C. Wrap SI-aware converters so VehicleHero receives
    * display-unit values without changing its component contract. The callbacks
@@ -60,9 +111,13 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
     <WidgetShell
       loading={vehiclesLoading}
       noPadding
-      updatedAt={dataUpdatedAt}
+      // `0` means "no verified observation" to WidgetShell (it renders the
+      // freshness control with a null timestamp). Passing `undefined` would
+      // HIDE the freshness + refresh control entirely — exactly when the user
+      // most needs it.
+      updatedAt={observedAt ?? 0}
       isFetching={isFetching}
-      isStale={isStale}
+      isStale={!trusted}
       isError={isError}
       onRefresh={handleRefresh}
     >
@@ -71,7 +126,9 @@ export default function VehicleHeroWidget({ vehicleId }: WidgetProps) {
           vehicle={vehicle as unknown as Vehicle}
           state={(stateData?.state ?? null) as VehicleState | null}
           firmwareVersion={firmwareVersion}
-          lastFetchedAt={dataUpdatedAt}
+          observedAt={observedAt}
+          freshness={freshness}
+          verifiedFields={stateData?.verifiedFields ?? EMPTY_VERIFIED_FIELDS}
           toDistanceDisplay={toDistanceDisplay}
           toSpeedDisplay={toSpeedDisplay}
           toTemperatureDisplay={toTemperatureDisplay}

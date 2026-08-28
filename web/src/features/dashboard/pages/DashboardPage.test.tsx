@@ -433,10 +433,18 @@ describe('DashboardPage — shell', () => {
     renderPage();
 
     const brief = screen.getByTestId('fleet-operations-brief');
+    // Verified charging outranks the stale inventory `state: 'unknown'`.
     expect(within(brief).getByText('charging')).toBeInTheDocument();
-    expect(metricValue(brief, 'Reporting')).toHaveTextContent('2');
+    // Two verified readings, one unreachable vehicle.
+    expect(metricValue(brief, 'Verified')).toHaveTextContent('2/3');
     expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
-    expect(within(brief).getByText('1 need attention')).toBeInTheDocument();
+    // The taxonomy separates "we cannot read it" from "it is offline".
+    expect(metricValue(brief, 'Reporting')).toHaveTextContent('2');
+    expect(metricValue(brief, 'Unreachable')).toHaveTextContent('1');
+    expect(metricValue(brief, 'Offline')).toHaveTextContent('0');
+    expect(
+      within(brief).getByTestId('fleet-posture-announcement'),
+    ).toHaveTextContent('2 of 3 vehicles verified. 1 need attention.');
     expect(
       within(brief).getByText(
         'Vehicle data is reporting normally. Global pages and filters follow this selection.',
@@ -469,11 +477,15 @@ describe('DashboardPage — shell', () => {
 
     const brief = screen.getByTestId('fleet-operations-brief');
     expect(within(brief).getByText('Unknown')).toBeInTheDocument();
-    expect(metricValue(brief, 'Reporting')).toHaveTextContent('0');
+    expect(metricValue(brief, 'Verified')).toHaveTextContent('0/1');
     expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
+    // A failed request is categorised as UNREACHABLE — a fact about our
+    // pipeline — and never folded into the Offline count.
+    expect(metricValue(brief, 'Unreachable')).toHaveTextContent('1');
+    expect(metricValue(brief, 'Offline')).toHaveTextContent('0');
     expect(
       within(brief).getByText(
-        'Current vehicle state could not be verified. Review telemetry health before relying on live controls.',
+        'The live-state request failed. This is a fact about our pipeline, not about the vehicle.',
       ),
     ).toBeInTheDocument();
     expect(within(brief).queryByText('offline')).not.toBeInTheDocument();

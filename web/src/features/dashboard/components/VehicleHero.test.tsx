@@ -60,6 +60,23 @@ type Props = ComponentProps<typeof VehicleHero>;
 
 const identity = (n: number) => n;
 
+/**
+ * Every state field, marked as backed by a real live signal.
+ *
+ * VehicleHero no longer derives a status from a bare `VehicleState`: an
+ * unverified or expired reading now renders "Unknown" rather than silently
+ * claiming an operational state. The default fixture is therefore a FULLY
+ * VERIFIED, currently-fresh observation — the ordinary live case these tests
+ * describe — and the Unknown branch is covered explicitly below.
+ */
+const ALL_VERIFIED_FIELDS = [
+  'vehicle_id', 'state', 'since', 'latitude', 'longitude', 'heading', 'speed',
+  'power', 'battery_level', 'rated_range', 'ideal_range', 'odometer',
+  'inside_temp', 'outside_temp', 'is_climate_on', 'is_charging',
+  'charger_power', 'charge_rate', 'time_to_full_charge', 'is_locked',
+  'sentry_mode', 'software_version',
+] as const;
+
 const baseVehicle: Vehicle = {
   id: 7,
   vehicle_id: 7,
@@ -111,7 +128,9 @@ function renderHero(overrides: Partial<Props> = {}) {
     distanceUnit: 'km',
     speedUnit: 'km/h',
     tempUnit: '°C',
-    lastFetchedAt: undefined,
+    observedAt: Date.now(),
+    freshness: 'fresh',
+    verifiedFields: ALL_VERIFIED_FIELDS,
     ...overrides,
   };
   return render(
@@ -146,8 +165,10 @@ describe('VehicleHero', () => {
 
     expect(screen.getByText(/Vehicle asleep/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Wake Up' })).toBeInTheDocument();
-    // Status degrades to offline and the gauge grid is not rendered.
-    expect(screen.getByText('offline')).toBeInTheDocument();
+    // No reading is UNKNOWN, not offline. Reporting "offline" here is the
+    // exact lie that made the hero and Fleet Posture disagree about a car.
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('offline')).not.toBeInTheDocument();
     expect(screen.queryByText('Battery')).not.toBeInTheDocument();
   });
 
@@ -365,5 +386,64 @@ describe('VehicleHero — design-system consistency', () => {
       Object.values(gaugeTone).map((c) => (c.startsWith('#') ? hexToRgb(c) : c)),
     );
     for (const c of iconColors) expect(allowed).toContain(c);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Trust contract.
+//
+// The hero and Fleet Posture must never disagree about the same car, which
+// means the hero has to apply the SAME precedence and the SAME evidence rules:
+// verified charging → verified motion → verified FSM state, and Unknown
+// otherwise. These cases pin the branches that used to silently claim a state
+// from an unverified reading.
+describe('VehicleHero — trust-aware status', () => {
+  it('reports Unknown when the stream is stale, however confident the values look', () => {
+    renderHero({
+      state: { ...baseState, state: 'online', is_charging: true },
+      freshness: 'stale',
+      observedAt: Date.now() - 60 * 60_000,
+    });
+
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+    expect(screen.queryByText('charging')).not.toBeInTheDocument();
+    // Charge banner is gated on the trusted status, so it must not appear.
+    expect(screen.queryByText('Charge Rate')).not.toBeInTheDocument();
+  });
+
+  it('reports Unknown when the field backing the claim was never verified', () => {
+    renderHero({
+      state: { ...baseState, state: 'online', is_charging: true },
+      freshness: 'fresh',
+      observedAt: Date.now(),
+      verifiedFields: [],
+    });
+
+    expect(screen.getByText('Unknown')).toBeInTheDocument();
+  });
+
+  it('lets verified charging outrank the FSM state', () => {
+    renderHero({
+      state: { ...baseState, state: 'parked', is_charging: true, charger_power: 11 },
+      freshness: 'fresh',
+      observedAt: Date.now(),
+      verifiedFields: ['state', 'is_charging'],
+    });
+
+    expect(screen.getByText('charging')).toBeInTheDocument();
+    expect(screen.queryByText('parked')).not.toBeInTheDocument();
+  });
+
+  it('states provenance explicitly in a polite live region', () => {
+    const { container } = renderHero({ freshness: 'fresh', observedAt: Date.now() });
+    const live = container.querySelector('[aria-live="polite"]');
+    expect(live).not.toBeNull();
+    expect(live?.textContent).toContain('Live telemetry');
+
+    cleanup();
+    const stale = renderHero({ freshness: 'stale', observedAt: Date.now() - 60_000 });
+    expect(
+      stale.container.querySelector('[aria-live="polite"]')?.textContent,
+    ).toContain('Last known reading');
   });
 });

@@ -291,6 +291,127 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /vehicles/states:
+    get:
+      operationId: getFleetVehicleStates
+      summary: Batch current state for the fleet
+      description: >-
+        Returns the current state of every requested vehicle in ONE request,
+        replacing the per-vehicle fan-out. Every item carries its own outcome
+        and provenance, so a single unreadable vehicle degrades that item only —
+        it never fails the batch and is never reported as "offline". All items in
+        one response are classified against a single request-level `now`.
+      tags: [Vehicles]
+      parameters:
+        - name: vehicle_ids
+          in: query
+          required: false
+          description: Comma-separated positive vehicle ids. Omitted means the whole fleet. Ids outside the caller's fleet are silently dropped.
+          schema:
+            type: string
+            example: "1,2,3"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 200
+            minimum: 1
+            maximum: 500
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: Batch of per-vehicle current states
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [now, total, limit, offset, counts, vehicles]
+                    properties:
+                      now:
+                        type: string
+                        format: date-time
+                        description: The single instant every item was classified against.
+                      total:
+                        type: integer
+                        description: Matching vehicles before pagination.
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      counts:
+                        type: object
+                        properties:
+                          resolved: { type: integer }
+                          missing: { type: integer }
+                          failed: { type: integer }
+                      vehicles:
+                        type: array
+                        items:
+                          type: object
+                          required: [vehicle_id, outcome, state, live, data_source, freshness, verified_fields]
+                          properties:
+                            vehicle_id:
+                              type: integer
+                              format: int64
+                            outcome:
+                              type: string
+                              enum: [resolved, missing, failed]
+                              description: >-
+                                resolved = a state was assembled; missing = the read
+                                succeeded and there is authoritatively no state;
+                                failed = resolution failed for this vehicle. A null
+                                state is never an offline classification.
+                            state:
+                              type: object
+                              nullable: true
+                              description: Assembled vehicle state; null for missing/failed items.
+                            live:
+                              type: boolean
+                            data_source:
+                              type: string
+                              enum: [live_signal_store, db_fallback, unavailable]
+                              description: >-
+                                Provenance of a resolved state. Missing and
+                                failed items use unavailable because no state
+                                source can be asserted.
+                            observed_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: Instant of the newest real live observation. Absent when unknown.
+                            freshness:
+                              type: string
+                              enum: [fresh, stale, unknown]
+                            verified_fields:
+                              type: array
+                              items:
+                                type: string
+                              description: State fields backed by real live signals.
+                            error:
+                              type: string
+                              enum: [state_unavailable]
+                              description: Stable machine code; present only for failed items.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Fleet state subsystem not configured on this deployment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /vehicles/{vehicleID}:
     get:
       operationId: getVehicle

@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Thermometer, Lock, Unlock, Shield, Zap, Activity, Navigation,
-  Gauge, Clock, Eye, MapPin, BatteryCharging, Monitor,
+  Gauge, Clock, Eye, MapPin, BatteryCharging, Monitor, HelpCircle,
   type LucideIcon,
 } from 'lucide-react';
 import { GlassPanel } from '@/components/ui/GlassPanel';
@@ -17,7 +17,12 @@ import { Skeleton } from '@/components/feedback/Skeleton';
 import { cn } from '@/lib/cn';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { useDateFormat } from '@/hooks/useDateFormat';
-import { deriveVehicleStatus } from '@/api/types';
+import { deriveTrustedVehicleStatus } from '@/api/hooks/useVehicles';
+import type {
+  VehicleStateFreshness,
+  VerifiedVehicleStateField,
+} from '@/api/hooks/useVehicles';
+import type { VehicleStatus } from '@/api/types';
 import type { Vehicle, VehicleState } from '../types';
 
 interface VehicleHeroProps {
@@ -30,19 +35,42 @@ interface VehicleHeroProps {
   distanceUnit: string;
   speedUnit: string;
   tempUnit: string;
-  /** TanStack Query dataUpdatedAt (ms epoch) — overrides vehicle.updated_at for freshness */
-  lastFetchedAt?: number;
+  /**
+   * Backend observation instant (ms epoch) of the newest REAL live signal.
+   *
+   * Deliberately not the query's `dataUpdatedAt`: that is when the request
+   * completed, which advances on every poll even when the car has said
+   * nothing for an hour and never regresses after a failed refresh.
+   */
+  observedAt?: number;
+  /** Backend freshness classification of the live stream. */
+  freshness?: VehicleStateFreshness;
+  /** State fields backed by real live signals. */
+  verifiedFields?: readonly VerifiedVehicleStateField[];
 }
+
+const NO_VERIFIED_FIELDS: readonly VerifiedVehicleStateField[] = [];
 
 export function VehicleHero({
   vehicle, state, firmwareVersion,
   toDistanceDisplay, toSpeedDisplay, toTemperatureDisplay,
   distanceUnit, speedUnit, tempUnit,
-  lastFetchedAt,
+  observedAt,
+  freshness = 'unknown',
+  verifiedFields = NO_VERIFIED_FIELDS,
 }: VehicleHeroProps) {
   const { t } = useTranslation('dashboard');
   const { formatTime } = useDateFormat();
-  const status = deriveVehicleStatus(state);
+  /* THE shared precedence: verified charging → verified motion → verified FSM
+   * state. `null` means Unknown and is rendered as such — it must never fall
+   * through to "offline", which is what made the hero and Fleet Posture
+   * disagree about the same car. */
+  const status = deriveTrustedVehicleStatus(state, {
+    freshness,
+    observedAt: observedAt ?? null,
+    verifiedFields,
+  });
+  const unknownStatus = status == null;
   /* Both ends converted together so the arc means the same thing in °C and
    * °F, with a sub-zero floor so cold outside readings still render. */
   const tempRange = ambientTemperatureGaugeRange(toTemperatureDisplay);
@@ -52,17 +80,44 @@ export function VehicleHero({
       <div className="absolute inset-0 bg-gradient-to-br from-[var(--surface-2)] via-transparent to-transparent" />
       <div className="relative p-4 sm:p-6 lg:p-8">
         {/* Vehicle name + status */}
-        <div className="flex items-center gap-3 mb-1">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1">
           <Heading level="section" className="text-2xl">
             {vehicle.display_name || vehicle.vin}
           </Heading>
-          <StatusBadge status={status} size="md" />
+          {unknownStatus ? (
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full border border-[var(--border-default)] bg-[var(--surface-2)] px-2.5 py-1 text-xs font-medium text-[var(--text-secondary)]"
+              title={t('hero.unknownHelp', 'No current, verified telemetry backs an operational state for this vehicle.')}
+            >
+              <HelpCircle className="h-3.5 w-3.5" aria-hidden="true" />
+              {t('hero.unknownStatus', 'Unknown')}
+            </span>
+          ) : (
+            <StatusBadge status={status} size="md" />
+          )}
           <FreshnessIndicator
-            timestamp={lastFetchedAt ? new Date(lastFetchedAt).toISOString() : vehicle.updated_at}
+            timestamp={observedAt != null ? new Date(observedAt).toISOString() : null}
           />
         </div>
         <Text as="p" size="sm" color="secondary">
           {vehicle.model} {vehicle.trim_badging} · <span className="font-mono">{vehicle.vin}</span>
+        </Text>
+        {/* Provenance line — always rendered so "we don't know" is as visible
+            as a confident answer, and announced politely on change. */}
+        <Text
+          as="p"
+          size="2xs"
+          color="muted"
+          className="mt-1"
+          aria-live="polite"
+        >
+          {freshness === 'fresh'
+            ? t('hero.provenanceLive', 'Live telemetry · {{count}} verified field(s)', {
+                count: verifiedFields.length,
+              })
+            : freshness === 'stale'
+              ? t('hero.provenanceStale', 'Last known reading — telemetry has gone quiet')
+              : t('hero.provenanceUnknown', 'No verified observation time — showing last durable record')}
         </Text>
 
         {state ? (
@@ -79,13 +134,13 @@ export function VehicleHero({
                 value={Math.round(toDistanceDisplay(state.rated_range ?? 0))} max={600}
                 label={t('hero.range', 'Range')} unit={distanceUnit} tone="accent" size={70}
               />
-              {(status === 'driving' || (state.speed ?? 0) > 0) && (
+              {status === 'driving' && (
                 <LinearGauge
                   value={Math.round(toSpeedDisplay(state.speed ?? 0))} max={250}
                   label={t('hero.speed', 'Speed')} unit={speedUnit} tone="purple" size={70}
                 />
               )}
-              {state.is_charging && (
+              {status === 'charging' && (
                 <LinearGauge
                   value={Math.round(state.charger_power ?? 0)} max={250}
                   label={t('hero.power', 'Power')} unit="kW" tone="success" size={70}
@@ -102,7 +157,7 @@ export function VehicleHero({
             </div>
 
             {/* Charging details — only when charging */}
-            {state.is_charging && (
+            {status === 'charging' && (
               <div className={cn('mb-4 p-3 rounded-xl border', severityTokens.success.bg, severityTokens.success.border)}>
                 <div className="flex items-center gap-2 mb-2">
                   <BatteryCharging className={cn('h-4 w-4 animate-pulse', severityTokens.success.fg)} aria-hidden />
@@ -143,7 +198,7 @@ export function VehicleHero({
               {buildStatCards(vehicle, state, firmwareVersion, {
                 toDistanceDisplay, toSpeedDisplay, toTemperatureDisplay,
                 distanceUnit, speedUnit, tempUnit,
-              }, t).map((item) => (
+              }, t, status).map((item) => (
                 <div
                   key={item.label}
                   className="flex items-center gap-2 p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--border-subtle)]"
@@ -205,6 +260,7 @@ function buildStatCards(
   u: { toDistanceDisplay: (v: number) => number; toSpeedDisplay: (v: number) => number; toTemperatureDisplay: (v: number) => number;
        distanceUnit: string; speedUnit: string; tempUnit: string },
   t: (key: string, fallback: string) => string,
+  status: VehicleStatus | null,
 ): StatItem[] {
   // Null-safe SI reads — the API declares these non-optional, but a partial
   // telemetry frame can leave a field null; defaulting here keeps every derived
@@ -213,8 +269,11 @@ function buildStatCards(
   const power = s.power ?? 0;
   const odometer = s.odometer ?? 0;
   const idealRange = s.ideal_range ?? 0;
-  const isDriving = s.state === 'driving' || speed > 0;
-  const isCharging = s.is_charging;
+  // Context selection follows the SHARED trusted status. When the status is
+  // Unknown we fall through to the neutral tile set rather than inventing a
+  // driving context from an unverified speed reading.
+  const isDriving = status === 'driving';
+  const isCharging = status === 'charging';
   const cards: StatItem[] = [];
 
   // Single source of truth for the Power tile so it can appear in the driving

@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sort"
 	"strconv"
 	"time"
 
@@ -43,12 +42,15 @@ type vehicleListFetcher interface {
 	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
 }
 
+// stateFreshness mirrors service.StateFreshness on the wire. The alias keeps
+// the existing JSON contract (a bare string) while the classification itself
+// is owned by the shared resolver.
 type stateFreshness string
 
 const (
-	stateFreshnessFresh   stateFreshness = "fresh"
-	stateFreshnessStale   stateFreshness = "stale"
-	stateFreshnessUnknown stateFreshness = "unknown"
+	stateFreshnessFresh   = stateFreshness(service.FreshnessFresh)
+	stateFreshnessStale   = stateFreshness(service.FreshnessStale)
+	stateFreshnessUnknown = stateFreshness(service.FreshnessUnknown)
 )
 
 type currentStateResponse struct {
@@ -311,11 +313,20 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		}
 		store := signal.New()
 		store.Hydrate(vehicle.ID, raw)
-		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
+		state, stateErr := h.vehicleSvc.BuildStateFromSignalStoreContext(ctx, store, vehicle)
+		if stateErr != nil {
+			log.Error().
+				Err(stateErr).
+				Int64("vehicle_id", vehicle.ID).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("vehicle current state: assemble snapshot failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to assemble snapshot")
+			return
+		}
 		httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
 			State:          state,
 			Live:           false,
-			DataSource:     "as_of",
+			DataSource:     service.DataSourceAsOf,
 			Freshness:      stateFreshnessUnknown,
 			VerifiedFields: []string{},
 			AsOf:           &asOf,
@@ -323,64 +334,31 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// PRIMARY: Build state from the live signal boundary + DB fallbacks.
+	// Live-first assembly + provenance + telemetry-vs-FSM conflict
+	// observability all live in service.ResolveCurrentState, which the fleet
+	// batch endpoint (GET /api/v1/vehicles/states) also calls. Sharing the
+	// resolver is what keeps the single-vehicle and fleet-wide answers
+	// byte-identical instead of drifting into two subtly different truths.
+	var liveStore signal.LiveSignalStore
 	if h.telemetry != nil {
-		store := signal.New()
-		var hasLiveSignals bool
-		var observedAt *time.Time
-		freshness := stateFreshnessUnknown
-		if liveStore := h.telemetry.GetLiveSignalStore(); liveStore != nil {
-			values, err := liveStore.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
-			if err != nil {
-				log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle current state: live signal read failed")
-			} else if len(values) > 0 {
-				store.HydrateValues(vehicle.ID, values)
-				hasLiveSignals = true
-				observedAt = latestLiveSignalObservation(values)
-				if observedAt != nil {
-					freshness = stateFreshnessStale
-					if signal.IsLiveSignalFresh(&signal.Value{Timestamp: *observedAt}, time.Now().UTC()) {
-						freshness = stateFreshnessFresh
-					}
-				}
-			}
-		}
-		state, verified := h.vehicleSvc.BuildStateFromSignalStoreWithProvenance(store, vehicle)
-		// Enrich with state-since timestamp from vehicle_states table
-		if currentState, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
-			state.State = currentState
-			state.Since = since
-			if freshness == stateFreshnessFresh {
-				verified["state"] = true
-			}
-		}
-		dataSource := "live_signal_store"
-		if !hasLiveSignals {
-			dataSource = "db_fallback"
-		}
-		httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
-			State:          state,
-			Live:           hasLiveSignals,
-			DataSource:     dataSource,
-			ObservedAt:     observedAt,
-			Freshness:      freshness,
-			VerifiedFields: sortedVerifiedFields(verified),
-		})
+		liveStore = h.telemetry.GetLiveSignalStore()
+	}
+	resolved, err := h.vehicleSvc.ResolveCurrentState(ctx, vehicle, liveStore, time.Now().UTC())
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("vehicle current state: resolution failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve vehicle state")
 		return
 	}
-
-	// SECONDARY: Build state from DB records (fleet telemetry snapshot tables)
-	// Only reached when telemetryHandler is nil (no MQTT configured)
-	state := h.vehicleSvc.BuildStateFromSignalStore(nil, vehicle)
-	if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
-		state.Since = since
-	}
 	httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
-		State:          state,
-		Live:           false,
-		DataSource:     "db_fallback",
-		Freshness:      stateFreshnessUnknown,
-		VerifiedFields: []string{},
+		State:          resolved.State,
+		Live:           resolved.Live,
+		DataSource:     resolved.DataSource,
+		ObservedAt:     resolved.ObservedAt,
+		Freshness:      stateFreshness(resolved.Freshness),
+		VerifiedFields: resolved.VerifiedFields,
 	})
 }
 
@@ -420,36 +398,17 @@ type TelemetrySource interface {
 }
 
 func latestLiveSignalObservation(values map[string]*signal.Value) *time.Time {
-	var latest time.Time
-	for _, value := range values {
-		if !isVerifiedLiveSignal(value) {
-			continue
-		}
-		timestamp := value.Timestamp.UTC()
-		if latest.IsZero() || timestamp.After(latest) {
-			latest = timestamp
-		}
-	}
-	if latest.IsZero() {
-		return nil
-	}
-	return &latest
+	// Thin delegation: the implementation lives beside the shared resolver so
+	// the single-vehicle and fleet-batch surfaces cannot classify freshness
+	// differently. The wrapper exists because this package's tests pin the
+	// behaviour at the handler boundary.
+	return service.LatestLiveSignalObservation(values)
 }
 
 func isVerifiedLiveSignal(value *signal.Value) bool {
-	return value != nil &&
-		value.Raw != nil &&
-		!value.Timestamp.IsZero() &&
-		!value.TimestampSynthetic
+	return service.IsObservedLiveSignal(value)
 }
 
 func sortedVerifiedFields(verified map[string]bool) []string {
-	fields := make([]string, 0, len(verified))
-	for field, ok := range verified {
-		if ok {
-			fields = append(fields, field)
-		}
-	}
-	sort.Strings(fields)
-	return fields
+	return service.SortedVerifiedFields(verified)
 }

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -36,6 +37,11 @@ type VehicleService struct {
 	settingsRepo  *settingsdb.SettingsRepo
 	stateProvider *vehicleStateProvider
 	state         SignalStateReader
+	// fsmState overrides the persisted FSM "current state + since" lookup.
+	// Nil in production (stateProvider is used); the seam exists so the
+	// telemetry-vs-FSM conflict contract in current_state.go is testable
+	// without a live fsm_transitions table.
+	fsmState fsmStateSource
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
@@ -123,8 +129,20 @@ func (p *vehicleStateProvider) GetCurrentStateSince(ctx context.Context, vehicle
 // NEVER returns nil — always builds a complete state from whatever data
 // is available (SignalStore → snapshot tables → zero defaults).
 func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *vehiclemodel.Vehicle) *vehiclemodel.VehicleState {
-	state, _ := s.BuildStateFromSignalStoreWithProvenance(store, vehicle)
+	state, _ := s.BuildStateFromSignalStoreContext(context.Background(), store, vehicle)
 	return state
+}
+
+// BuildStateFromSignalStoreContext is the cancellation-aware production path.
+// Callers with a request context must use it so signal_log and FSM fallback
+// reads cannot outlive the request.
+func (s *VehicleService) BuildStateFromSignalStoreContext(
+	ctx context.Context,
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+) (*vehiclemodel.VehicleState, error) {
+	state, _, err := s.BuildStateFromSignalStoreWithProvenanceContext(ctx, store, vehicle)
+	return state, err
 }
 
 // BuildStateFromSignalStoreWithProvenance assembles the same state while
@@ -135,6 +153,21 @@ func (s *VehicleService) BuildStateFromSignalStoreWithProvenance(
 	store *signal.Store,
 	vehicle *vehiclemodel.Vehicle,
 ) (*vehiclemodel.VehicleState, map[string]bool) {
+	state, verified, _ := s.BuildStateFromSignalStoreWithProvenanceContext(
+		context.Background(),
+		store,
+		vehicle,
+	)
+	return state, verified
+}
+
+// BuildStateFromSignalStoreWithProvenanceContext is the cancellation-aware
+// provenance assembler used by live HTTP state reads.
+func (s *VehicleService) BuildStateFromSignalStoreWithProvenanceContext(
+	ctx context.Context,
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+) (*vehiclemodel.VehicleState, map[string]bool, error) {
 	state := &vehiclemodel.VehicleState{
 		VehicleID: vehicle.ID,
 	}
@@ -350,10 +383,12 @@ func (s *VehicleService) BuildStateFromSignalStoreWithProvenance(
 	// store; reading from snapshot tables (positions, state_snapshots,
 	// battery_snapshots, climate_snapshots, etc.) is forbidden. Live values
 	// always win — the fallback only fills holes.
-	ctx := context.Background()
 	if s.state != nil {
 		snap, err := s.state.State(ctx, vehicle.ID, time.Now().UTC())
 		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return state, verified, fmt.Errorf("read signal_log fallback for vehicle %d: %w", vehicle.ID, ctxErr)
+			}
 			log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle service: signal_log fallback read failed")
 		} else if len(snap) > 0 {
 			fillStateFromSnapshot(state, snap, selected, verified)
@@ -367,12 +402,15 @@ func (s *VehicleService) BuildStateFromSignalStoreWithProvenance(
 		if currentState, _, err := s.stateProvider.GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
 			state.State = currentState
 		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return state, verified, fmt.Errorf("read FSM fallback for vehicle %d: %w", vehicle.ID, ctxErr)
+		}
 	}
 	if state.State == "" {
 		state.State = enums.StateOnline
 	}
 
-	return state, verified
+	return state, verified, nil
 }
 
 // fillStateFromSnapshot backfills VehicleState fields that are still at their

@@ -34,6 +34,26 @@ slos:
     owner: platform
     tags: [http, latency]
 
+  - name: fleet_state_batch_availability
+    description: "Fleet batch current-state reads (GET /api/v1/vehicles/states) must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/vehicles/states\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/vehicles/states\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, fleet, live-state]
+
+  - name: fleet_state_batch_latency_1s
+    description: "The fleet batch current-state read must complete within one second so the SPA posture panel stays responsive at fleet scale."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/states\",le=\"1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/states\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, fleet, latency]
+
   - name: battery_health_latency_1s
     description: "Battery health analytics requests must complete within one second."
     sli:

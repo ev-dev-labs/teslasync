@@ -41,22 +41,25 @@ import { useVehicleLive } from '@/hooks/useVehicleLive';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import {
   useVehicles, useSyncVehicles, useDeleteVehicle, useFleetStates,
-  deriveCurrentVehicleStatus, isFleetStateFieldCurrent, summariseFleetStates,
-  type FleetStateEntry, type FleetStatesSummary,
+  deriveCurrentVehicleStatus, describeFleetState, isFleetStateFieldCurrent,
+  summariseFleetStates,
+  type FleetStateEntry, type FleetStatesSummary, type VerifiedVehicleStateField,
 } from '@/api/hooks/useVehicles';
 import { useFleetWorkOrders } from '@/api/hooks/useFleetOps';
 import { usePinned } from '@/api/hooks/usePinned';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
+import { formatObservationAge } from '@/lib/observationAge';
 import { batteryColor, statusHexColor } from '@/lib/colors';
 import { typography } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
-import { deriveVehicleStatus, statusVariant } from '@/api/types';
+import { statusVariant } from '@/api/types';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { VisuallyHidden } from '@/components/a11y';
 import { Icons } from '@/lib/icons';
+import type { TFunction } from 'i18next';
 
 /* ── Types ─────────────────────────────────────────────────── */
 
@@ -68,6 +71,106 @@ import { Icons } from '@/lib/icons';
  * from one retained through a failed refresh.
  */
 type LoadedEntry = FleetStateEntry & { state: VehicleState };
+
+/* ── Preview trust helpers ─────────────────────────────────── */
+
+/**
+ * Render a preview field ONLY when that exact field is currently backed by
+ * live telemetry.
+ *
+ * The drawer used to print every value straight off a retained `state`, so a
+ * reading kept alive through a failed refresh looked exactly like a live one.
+ * Tesla Fleet Telemetry is a sparse change feed: an em dash here means "not
+ * currently verified", not "zero". The last known value is still surfaced —
+ * in `detail`, explicitly labelled and dated — so nothing is hidden, it is
+ * just no longer presented as current.
+ */
+function currentFieldValue(
+  entry: FleetStateEntry | undefined,
+  field: VerifiedVehicleStateField,
+  render: (state: VehicleState) => string,
+  t: TFunction,
+): { value: string; detail?: string } {
+  if (entry?.state == null) {
+    return {
+      value: '—',
+      detail: t('vehicles.preview.noReading', 'No reading available for this vehicle'),
+    };
+  }
+  if (isFleetStateFieldCurrent(entry, field)) {
+    return { value: render(entry.state) };
+  }
+  const age = formatObservationAge(entry.observedAt, t);
+  return {
+    value: '—',
+    detail: age
+      ? t('vehicles.preview.lastKnownAged', 'Last known: {{value}} ({{age}}) — not currently verified', {
+          value: render(entry.state),
+          age,
+        })
+      : t('vehicles.preview.lastKnown', 'Last known: {{value}} — not currently verified', {
+          value: render(entry.state),
+        }),
+  };
+}
+
+/** One-line trust summary shown at the top of the preview drawer. */
+function previewTrustSummary(
+  entry: FleetStateEntry | undefined,
+  t: TFunction,
+): { label: string; detail: string } {
+  const descriptor = describeFleetState(entry);
+  const age = formatObservationAge(descriptor.observedAt, t);
+  const dated = (base: string) =>
+    age
+      ? t('vehicles.preview.observedAt', '{{summary}} · last real observation {{age}}', { summary: base, age })
+      : t('vehicles.preview.observedUnknown', '{{summary}} · no verified observation time', { summary: base });
+
+  switch (descriptor.condition) {
+    case 'live':
+      return {
+        label: t('vehicles.preview.trust.live', 'Live'),
+        detail: dated(t('vehicles.preview.trust.liveHelp', 'Current, verified telemetry')),
+      };
+    case 'unverified':
+      return {
+        label: t('vehicles.preview.trust.unverified', 'Unverified'),
+        detail: dated(t(
+          'vehicles.preview.trust.unverifiedHelp',
+          'State returned, but nothing current backs it',
+        )),
+      };
+    case 'stale':
+      return {
+        label: t('vehicles.preview.trust.stale', 'Last known'),
+        detail: dated(t(
+          'vehicles.preview.trust.staleHelp',
+          'Refresh failed; a retained reading is being shown',
+        )),
+      };
+    case 'failed':
+      return {
+        label: t('vehicles.preview.trust.failed', 'Unreachable'),
+        detail: t(
+          'vehicles.preview.trust.failedHelp',
+          'The live-state request failed. This is a fact about our pipeline, not the vehicle.',
+        ),
+      };
+    case 'missing':
+      return {
+        label: t('vehicles.preview.trust.missing', 'No state'),
+        detail: t(
+          'vehicles.preview.trust.missingHelp',
+          'The backend answered and has no state yet. Unknown, not offline.',
+        ),
+      };
+    default:
+      return {
+        label: t('vehicles.preview.trust.checking', 'Checking'),
+        detail: t('vehicles.preview.trust.checkingHelp', 'Resolving live state…'),
+      };
+  }
+}
 
 /* ── Loading skeleton ──────────────────────────────────────── */
 
@@ -748,15 +851,13 @@ export default function VehicleListPage() {
     };
   }, [fleetStates]);
 
-  /* O(1) live-state lookup by vehicle id, shared by the status breakdown and
-     the card grid so neither rescans the fleet-state array once per row.
+  /* O(1) fleet-entry lookup by vehicle id, shared by the status breakdown, the
+     card grid and the preview drawer so none of them rescans the fleet-state
+     array once per row.
      A vehicle absent from this map has NO reading — which is not the same as
-     a reading that says "offline". */
-  const stateById = useMemo(() => {
-    const map = new Map<number, VehicleState | null>();
-    (fleetStates ?? []).forEach((e) => map.set(e.vehicle.id, e.state));
-    return map;
-  }, [fleetStates]);
+     a reading that says "offline". The map holds the FULL entry (not a bare
+     `state`) so every consumer keeps the outcome/freshness/verified-field
+     provenance attached to the values it renders. */
   const entryById = useMemo(() => {
     const map = new Map<number, FleetStateEntry>();
     (fleetStates ?? []).forEach((entry) => map.set(entry.vehicle.id, entry));
@@ -1098,8 +1199,22 @@ export default function VehicleListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Vehicle | null>(null);
   const [previewTarget, setPreviewTarget] = useState<{
     vehicle: Vehicle;
-    state: VehicleState | null;
+    /**
+     * The FULL fleet entry, not a bare `state`.
+     *
+     * The drawer used to store the raw state and call `deriveVehicleStatus`,
+     * which happily reported a reading retained through a failed refresh as
+     * the vehicle's CURRENT status and rendered every stale metric as if it
+     * were live. Keeping the entry keeps the outcome + freshness +
+     * verified-field provenance attached to the numbers they qualify.
+     */
+    entry: FleetStateEntry | undefined;
   } | null>(null);
+  /* Status and trust for the drawer come from the SHARED contract, so the
+   * preview can never claim a retained reading is the vehicle's current
+   * state — the exact defect this replaces. */
+  const previewStatus = deriveCurrentVehicleStatus(previewTarget?.entry);
+  const previewTrust = previewTrustSummary(previewTarget?.entry, t);
 
   const handleSync = () => {
     syncMut.mutate(undefined, {
@@ -1473,7 +1588,7 @@ export default function VehicleListPage() {
                     onPreview={() => {
                       setPreviewTarget({
                         vehicle,
-                        state: stateById.get(vehicle.id) ?? null,
+                        entry: entryById.get(vehicle.id),
                       });
                     }}
                   />
@@ -1520,58 +1635,88 @@ export default function VehicleListPage() {
         }
         statusLabel={
           previewTarget
-            ? (previewTarget.state != null
-                ? deriveVehicleStatus(previewTarget.state)
-                : t('vehicles.statusUnknown', 'Unknown'))
+            ? previewStatus ?? t('vehicles.statusUnknown', 'Unknown')
             : undefined
         }
-        statusTone={
-          previewTarget?.state != null
-            ? statusVariant(deriveVehicleStatus(previewTarget.state))
-            : 'neutral'
-        }
+        statusTone={previewStatus != null ? statusVariant(previewStatus) : 'neutral'}
         fields={
           previewTarget
             ? [
                 {
+                  key: 'telemetry',
+                  label: t('vehicles.preview.telemetry', 'Telemetry'),
+                  value: previewTrust.label,
+                  detail: previewTrust.detail,
+                },
+                {
                   key: 'battery',
                   label: t('vehicles.battery', 'Battery'),
-                  value: previewTarget.state?.battery_level != null
-                    ? `${fmtNumber(previewTarget.state.battery_level)}%`
-                    : '—',
+                  ...currentFieldValue(
+                    previewTarget.entry,
+                    'battery_level',
+                    (state) => (state.battery_level != null
+                      ? `${fmtNumber(state.battery_level)}%`
+                      : '—'),
+                    t,
+                  ),
                 },
                 {
                   key: 'range',
                   label: t('vehicles.range', 'Range'),
-                  value: previewTarget.state?.rated_range != null
-                    ? formatDistance(previewTarget.state.rated_range)
-                    : '—',
+                  ...currentFieldValue(
+                    previewTarget.entry,
+                    'rated_range',
+                    (state) => (state.rated_range != null
+                      ? formatDistance(state.rated_range)
+                      : '—'),
+                    t,
+                  ),
                 },
                 {
                   key: 'odometer',
                   label: t('vehicles.odometer', 'Odometer'),
-                  value: previewTarget.state?.odometer != null
-                    ? formatDistance(previewTarget.state.odometer)
-                    : '—',
+                  ...currentFieldValue(
+                    previewTarget.entry,
+                    'odometer',
+                    (state) => (state.odometer != null
+                      ? formatDistance(state.odometer)
+                      : '—'),
+                    t,
+                  ),
                 },
                 {
                   key: 'software',
                   label: t('vehicles.software', 'Software'),
-                  value: previewTarget.state?.software_version || '—',
+                  ...currentFieldValue(
+                    previewTarget.entry,
+                    'software_version',
+                    (state) => state.software_version || '—',
+                    t,
+                  ),
                 },
                 {
                   key: 'security',
                   label: t('vehicles.preview.security', 'Security'),
-                  value: previewTarget.state?.is_locked
-                    ? t('vehicles.locked', 'Locked')
-                    : t('vehicles.unlocked', 'Unlocked'),
+                  ...currentFieldValue(
+                    previewTarget.entry,
+                    'is_locked',
+                    (state) => (state.is_locked
+                      ? t('vehicles.locked', 'Locked')
+                      : t('vehicles.unlocked', 'Unlocked')),
+                    t,
+                  ),
                 },
                 {
                   key: 'charging',
                   label: t('vehicles.preview.charging', 'Charging'),
-                  value: previewTarget.state?.is_charging
-                    ? t('common.active', 'Active')
-                    : t('common.inactive', 'Inactive'),
+                  ...currentFieldValue(
+                    previewTarget.entry,
+                    'is_charging',
+                    (state) => (state.is_charging
+                      ? t('common.active', 'Active')
+                      : t('common.inactive', 'Inactive')),
+                    t,
+                  ),
                 },
               ]
             : []

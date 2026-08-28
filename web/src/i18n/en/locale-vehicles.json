@@ -741,7 +741,27 @@
       "title": "Vehicle details",
       "security": "Security",
       "charging": "Charging",
-      "openDetails": "Open vehicle details"
+      "openDetails": "Open vehicle details",
+      "telemetry": "Telemetry",
+      "noReading": "No reading available for this vehicle",
+      "lastKnownAged": "Last known: {{value}} ({{age}}) — not currently verified",
+      "lastKnown": "Last known: {{value}} — not currently verified",
+      "observedAt": "{{summary}} · last real observation {{age}}",
+      "observedUnknown": "{{summary}} · no verified observation time",
+      "trust": {
+        "live": "Live",
+        "liveHelp": "Current, verified telemetry",
+        "unverified": "Unverified",
+        "unverifiedHelp": "State returned, but nothing current backs it",
+        "stale": "Last known",
+        "staleHelp": "Refresh failed; a retained reading is being shown",
+        "failed": "Unreachable",
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not the vehicle.",
+        "missing": "No state",
+        "missingHelp": "The backend answered and has no state yet. Unknown, not offline.",
+        "checking": "Checking",
+        "checkingHelp": "Resolving live state…"
+      }
     },
     "aiPaintPreview": {
       "title": "Draft a Helix paint preview",

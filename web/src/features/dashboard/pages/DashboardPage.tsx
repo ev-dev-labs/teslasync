@@ -625,6 +625,8 @@ export default function DashboardPage() {
               vehicles={vehicleList}
               selectedVehicle={selectedVehicle}
               fleetStates={fleetStatesQuery.data}
+              isPending={fleetStatesQuery.isPending}
+              isError={fleetStatesQuery.isError}
             />
           </FadeIn>
         )}

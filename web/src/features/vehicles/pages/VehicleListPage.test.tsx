@@ -609,8 +609,56 @@ describe('VehicleListPage — accessibility & derived per-card data', () => {
     });
   });
 
-  it('shows the no-live-data placeholder and an UNKNOWN badge for a stateless vehicle', async () => {
+  it('labels a verified preview as Live and shows its per-field values', async () => {
     renderPage();
+    const grid = cardGrid();
+    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+
+    const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
+    expect(within(drawer).getByText('Telemetry')).toBeInTheDocument();
+    expect(within(drawer).getByText('Live')).toBeInTheDocument();
+    expect(within(drawer).getByText('80.00%')).toBeInTheDocument();
+  });
+
+  it('never renders a RETAINED reading as if it were current', async () => {
+    // The defect: the drawer stored the raw `state` and called
+    // `deriveVehicleStatus`, so a reading kept alive through a failed refresh
+    // was rendered exactly like a live one — the numbers looked current and
+    // the badge claimed an operational status we had no evidence for.
+    const stale = retainedEntry(V1, S1, OBSERVED_AT - 3 * 60 * 60_000);
+    mockFleetStates.mockReturnValue(qr({ data: [stale, resolvedEntry(V2, S2), missingEntry(V3)] }));
+    renderPage();
+    const grid = cardGrid();
+    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+
+    const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
+    // Status is Unknown, never the state embedded in the retained reading.
+    expect(within(drawer).getByText('Unknown')).toBeInTheDocument();
+    // The trust line names the condition rather than implying freshness.
+    expect(within(drawer).getByText('Last known')).toBeInTheDocument();
+    // Per-field values are em dashes; the retained value is disclosed in the
+    // explanatory detail line instead of being presented as current.
+    expect(within(drawer).queryByText('80.00%')).toBeNull();
+    expect(
+      within(drawer).getByText(/Last known: 80\.00% .* not currently verified/),
+    ).toBeInTheDocument();
+  });
+
+  it('explains a failed preview as a pipeline fact, not a vehicle state', async () => {
+    mockFleetStates.mockReturnValue(qr({ data: [failedEntry(V1), resolvedEntry(V2, S2), missingEntry(V3)] }));
+    renderPage();
+    const grid = cardGrid();
+    fireEvent.click(await within(grid).findByRole('button', { name: 'Quick view Model 3 Alpha' }));
+
+    const drawer = await screen.findByRole('dialog', { name: 'Model 3 Alpha' });
+    expect(within(drawer).getByText('Unreachable')).toBeInTheDocument();
+    expect(within(drawer).queryByText('offline')).toBeNull();
+    expect(
+      within(drawer).getAllByText('No reading available for this vehicle').length,
+    ).toBeGreaterThan(0);
+  });
+
+  it('shows the no-live-data placeholder and an UNKNOWN badge for a stateless vehicle', async () => {    renderPage();
     await screen.findByRole('heading', { level: 1, name: 'Fleet' });
     const grid = cardGrid();
     // Only V3 (no snapshot) shows the placeholder; V1/V2 show live stat chips.

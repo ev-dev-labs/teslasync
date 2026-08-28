@@ -22,7 +22,7 @@
  * end-to-end. Every data hook is mocked so the network is never touched.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 
@@ -37,10 +37,14 @@ vi.mock('react-i18next', () => ({
 }));
 
 // ── Data hooks + the display-boundary unit bridge, driven per test. ──
-vi.mock('@/api/hooks/useVehicles', () => ({
-  useVehicles: vi.fn(),
-  useVehicleState: vi.fn(),
-}));
+vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/api/hooks/useVehicles')>();
+  return {
+    ...actual,
+    useVehicles: vi.fn(),
+    useVehicleState: vi.fn(),
+  };
+});
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 vi.mock('@/hooks/useVehicleLive', () => ({ useVehicleLive: vi.fn() }));
 // Override the global setup's useSettings stub with a controllable spy while
@@ -60,7 +64,9 @@ vi.mock('../components/VehicleHero', () => ({
     distanceUnit: string;
     speedUnit: string;
     tempUnit: string;
-    lastFetchedAt?: number;
+    observedAt?: number;
+    freshness?: string;
+    verifiedFields?: readonly string[];
     toDistanceDisplay: (meters: number) => number;
     toSpeedDisplay: (mps: number) => number;
     toTemperatureDisplay: (celsius: number) => number;
@@ -72,7 +78,8 @@ vi.mock('../components/VehicleHero', () => ({
       <span data-testid="hero-speed-unit">{props.speedUnit}</span>
       <span data-testid="hero-temp-unit">{props.tempUnit}</span>
       <span data-testid="hero-has-state">{props.state ? 'yes' : 'no'}</span>
-      <span data-testid="hero-last-fetched">{String(props.lastFetchedAt)}</span>
+      <span data-testid="hero-observed-at">{String(props.observedAt)}</span>
+      <span data-testid="hero-freshness">{String(props.freshness)}</span>
       {/* SI inputs → the widget's wired display converters. */}
       <span data-testid="hero-conv-distance">{props.toDistanceDisplay(1000)}</span>
       <span data-testid="hero-conv-speed">{props.toSpeedDisplay(10)}</span>
@@ -126,8 +133,15 @@ function makeVehicle(over: { id?: number; display_name?: string; vin?: string } 
   };
 }
 
-function makeStateData(over: { software_version?: string; hasState?: boolean } = {}) {
-  if (over.hasState === false) return { state: undefined, live: false };
+function makeStateData(over: {
+  software_version?: string;
+  hasState?: boolean;
+  observedAt?: number | null;
+  freshness?: 'fresh' | 'stale' | 'unknown';
+} = {}) {
+  if (over.hasState === false) {
+    return { state: undefined, live: false, observedAt: null, freshness: 'unknown', verifiedFields: [] };
+  }
   return {
     state: {
       vehicle_id: 1,
@@ -135,6 +149,11 @@ function makeStateData(over: { software_version?: string; hasState?: boolean } =
       software_version: over.software_version ?? '2024.44.25',
     },
     live: true,
+    // Freshness is a property of the OBSERVATION, not of the request; the
+    // widget passes this through instead of `dataUpdatedAt`.
+    observedAt: over.observedAt === undefined ? Date.now() : over.observedAt,
+    freshness: over.freshness ?? 'fresh',
+    verifiedFields: ['state', 'software_version'],
   };
 }
 
@@ -211,7 +230,7 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
     });
     render(<VehicleHeroWidget vehicleId={7} size={STANDARD} />);
 
-    expect(mockVehicleState).toHaveBeenCalledWith(7);
+    expect(mockVehicleState).toHaveBeenCalledWith(7, expect.objectContaining({ refetchInterval: expect.anything() }));
     expect(screen.getByTestId('hero-name').textContent).toBe('Seven');
   });
 
@@ -219,7 +238,7 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
     setup({ vehicles: makeQuery({ data: [makeVehicle({ id: 3, display_name: 'Three' })] }) });
     render(<VehicleHeroWidget vehicleId={99} size={STANDARD} />);
 
-    expect(mockVehicleState).toHaveBeenCalledWith(3);
+    expect(mockVehicleState).toHaveBeenCalledWith(3, expect.objectContaining({ refetchInterval: expect.anything() }));
     expect(screen.getByTestId('hero-name').textContent).toBe('Three');
   });
 
@@ -231,7 +250,7 @@ describe('VehicleHeroWidget — vehicle resolution', () => {
     });
     render(<VehicleHeroWidget size={STANDARD} />);
 
-    expect(mockVehicleState).toHaveBeenCalledWith(5);
+    expect(mockVehicleState).toHaveBeenCalledWith(5, expect.objectContaining({ refetchInterval: expect.anything() }));
     expect(screen.getByTestId('hero-name').textContent).toBe('Five');
   });
 
@@ -336,11 +355,77 @@ describe('VehicleHeroWidget — state, freshness and degraded states', () => {
     expect(screen.getByTestId('hero-has-state').textContent).toBe('no');
   });
 
-  it('passes the state query dataUpdatedAt to the hero as lastFetchedAt', () => {
-    setup({ state: makeQuery({ data: makeStateData(), dataUpdatedAt: 1_234_567 }) });
+  it('passes the backend observation instant to the hero, never the fetch time', () => {
+    // The regression: `dataUpdatedAt` is when the REQUEST completed, so a car
+    // that has been silent for an hour still rendered "just now" on every
+    // poll. The hero must receive the backend's own observation instant.
+    setup({
+      state: makeQuery({
+        data: makeStateData({ observedAt: 1_234_567 }),
+        dataUpdatedAt: 9_999_999,
+      }),
+    });
     render(<VehicleHeroWidget size={STANDARD} />);
 
-    expect(screen.getByTestId('hero-last-fetched').textContent).toBe('1234567');
+    expect(screen.getByTestId('hero-observed-at').textContent).toBe('1234567');
+  });
+
+  it('marks the widget stale whenever the observation is not currently fresh', () => {
+    setup({
+      state: makeQuery({
+        // A successful, recent REQUEST carrying a stale OBSERVATION.
+        data: makeStateData({ freshness: 'stale', observedAt: 1_000 }),
+        isStale: false,
+        dataUpdatedAt: Date.now(),
+      }),
+    });
+    render(<VehicleHeroWidget size={STANDARD} />);
+
+    expect(screen.getByTestId('hero-freshness').textContent).toBe('stale');
+  });
+
+  it('stands the per-vehicle poll down while the batch keeps the reading fresh', async () => {
+    // The fleet batch seeds this exact cache key, so an ambient per-vehicle
+    // poll on top of it is the N+1 the batch endpoint exists to remove.
+    setup({ state: makeQuery({ data: makeStateData({ freshness: 'fresh' }) }) });
+    render(<VehicleHeroWidget size={STANDARD} />);
+
+    await waitFor(() => {
+      expect(mockVehicleState).toHaveBeenLastCalledWith(1, { refetchInterval: false });
+    });
+  });
+
+  it('resumes the per-vehicle poll as bounded recovery once the reading ages out', async () => {
+    vi.useFakeTimers();
+    const now = Date.parse('2026-08-27T12:00:00Z');
+    vi.setSystemTime(now);
+    setup({
+      state: makeQuery({
+        data: makeStateData({
+          freshness: 'fresh',
+          observedAt: now - 119_000,
+        }),
+      }),
+    });
+
+    try {
+      render(<VehicleHeroWidget size={STANDARD} />);
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(mockVehicleState).toHaveBeenLastCalledWith(1, { refetchInterval: false });
+      expect(screen.getByTestId('hero-freshness').textContent).toBe('fresh');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_002);
+      });
+
+      const last = mockVehicleState.mock.calls.at(-1);
+      expect(last?.[1]).toEqual({ refetchInterval: expect.any(Number) });
+      expect(screen.getByTestId('hero-freshness').textContent).toBe('stale');
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('shows the "No vehicle data" empty state — not an infinite skeleton — for an empty vehicle list', () => {

@@ -250,6 +250,7 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/trace"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 
@@ -383,6 +384,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
@@ -608,6 +610,33 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
 	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
+	// Fleet-wide batch current-state read (ADR-009: handler/v1 + app/*svc).
+	// It shares service.VehicleService.ResolveCurrentState with the
+	// single-vehicle GET /vehicles/{id}/state above, so the two surfaces
+	// cannot report different truths for the same car. `liveSignalStore` is
+	// the same L1+L2 boundary the single read uses (a no-op store when no
+	// telemetry source is configured) — no snapshot tables are involved.
+	fleetStateHandler := v1handlers.NewFleetStateHandler(fleetstatesvc.New(fleetstatesvc.Options{
+		Vehicles: vehicledb.NewVehicleRepo(db),
+		Resolver: vehicleSvc,
+		Live:     liveSignalStore,
+		OnResolverError: func(ctx context.Context, vehicleID int64, err error) {
+			span := trace.SpanFromContext(ctx)
+			log.Warn().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("fleet state: vehicle resolution failed; reported as a failed item")
+		},
+		OnResolverPanic: func(ctx context.Context, vehicleID int64, recovered any) {
+			span := trace.SpanFromContext(ctx)
+			log.Error().
+				Int64("vehicle_id", vehicleID).
+				Interface("panic", recovered).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("fleet state: vehicle resolution panicked; reported as a failed item")
+		},
+	}))
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
@@ -3104,6 +3133,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/onboarding/status", onboardingHandler.Status)
 		r.Route("/vehicles", func(r chi.Router) {
 			r.Get("/", vehicleHandler.List)
+			// Batch current state for the whole fleet in ONE request.
+			// Registered as a STATIC segment inside this group so chi's trie
+			// resolves it ahead of the /{vehicleID} parameter node below
+			// (same precedence the existing static /sync route relies on).
+			r.Get("/states", fleetStateHandler.List)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)

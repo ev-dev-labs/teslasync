@@ -4984,6 +4984,89 @@
     }
   },
   "dashboard": {
+    "fleetPosture": {
+      "eyebrow": "Operational brief",
+      "title": "Fleet posture",
+      "unnamedVehicle": "Selected vehicle",
+      "activeScope": "Active vehicle scope",
+      "openVehicle": "Open vehicle",
+      "investigate": "Investigate",
+      "workflows": "Primary workflows",
+      "workflow": {
+        "live": "Live map",
+        "liveHelp": "Position and movement",
+        "alerts": "Review alerts",
+        "alertsHelp": "Exceptions requiring attention",
+        "charging": "Charging",
+        "chargingHelp": "Sessions, cost, and readiness",
+        "battery": "Battery",
+        "batteryHelp": "Capacity and health evidence"
+      },
+      "taxonomyHelp": "Unverified, last-known, no-state and unreachable are statements about our evidence — only Offline is a statement about the vehicle.",
+      "badge": {
+        "resolving": "Checking live state",
+        "unavailable": "Live state unavailable",
+        "verified": "{{verified}} of {{total}} verified"
+      },
+      "headline": {
+        "resolving": "Resolving live state for {{count}} vehicle(s).",
+        "unavailable": "Live state could not be read. Showing the last known readings, which are no longer being refreshed.",
+        "attention": "{{verified}} of {{total}} vehicles verified. {{attention}} need attention.",
+        "ok": "All {{total}} vehicles verified from current telemetry."
+      },
+      "category": {
+        "reporting": "Reporting",
+        "offline": "Offline",
+        "unverified": "Unverified",
+        "stale": "Last known",
+        "missing": "No state",
+        "failed": "Unreachable"
+      },
+      "hint": {
+        "reporting": "Current, verified telemetry",
+        "offline": "The vehicle reported itself offline",
+        "unverified": "State returned, but nothing current backs it",
+        "stale": "Showing a retained reading after a failed refresh",
+        "missing": "Answered with no state yet — not offline",
+        "failed": "The request failed; this is about us, not the car"
+      },
+      "metric": {
+        "fleet": "Fleet",
+        "fleetHelp": "registered",
+        "verified": "Verified",
+        "verifiedHelp": "current telemetry",
+        "attention": "Attention",
+        "attentionHelp": "exceptions",
+        "oldest": "Oldest reading",
+        "oldestHelp": "observed, not fetched",
+        "oldestNone": "no verified observation",
+        "resolvingHelp": "checking live state"
+      },
+      "scope": {
+        "checking": "Checking",
+        "unknown": "Unknown",
+        "observed": "Last real observation {{age}}",
+        "noObservation": "No verified observation time for this vehicle",
+        "resolvingHelp": "Resolving the latest verified telemetry before assessing this vehicle.",
+        "healthyHelp": "Vehicle data is reporting normally. Global pages and filters follow this selection.",
+        "offlineHelp": "The vehicle reported itself offline. Last-known records remain available while live controls wait for reconnection.",
+        "unverifiedHelp": "State was returned, but nothing current backs it. Values shown elsewhere may be a durable record rather than live telemetry.",
+        "staleHelp": "The refresh failed, so the last real reading is being retained. Its age keeps growing until telemetry returns.",
+        "missingHelp": "The backend answered and has no state for this vehicle yet. That is unknown, not offline.",
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle."
+      },
+      "drill": {
+        "title": "Investigate fleet posture",
+        "signals": "Signal evidence",
+        "signalsHelp": "What each vehicle last emitted, and when",
+        "system": "System diagnostics",
+        "systemHelp": "Ingest and API health behind an unreachable read",
+        "liveSignals": "Live signal inspector",
+        "liveSignalsHelp": "The raw live-state boundary for a suspected cache gap",
+        "vehicle": "Open scoped vehicle",
+        "vehicleHelp": "Full detail for the vehicle in scope"
+      }
+    },
     "title": "Fleet Operations",
     "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
     "personalWorkspace": "Personal workspace",
@@ -11380,6 +11463,12 @@
     "compactMode": "Compact mode (smaller gaps)"
   },
   "freshness": {
+    "age": {
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
     "justNow": "just now",
     "seconds": "{{s}}s ago",
     "minutes": "{{m}}m ago",
@@ -11826,6 +11915,11 @@
     "blank": "Blank Dashboard"
   },
   "hero": {
+    "unknownStatus": "Unknown",
+    "unknownHelp": "No current, verified telemetry backs an operational state for this vehicle.",
+    "provenanceLive": "Live telemetry · {{count}} verified field(s)",
+    "provenanceStale": "Last known reading — telemetry has gone quiet",
+    "provenanceUnknown": "No verified observation time — showing last durable record",
     "battery": "Battery",
     "range": "Range",
     "speed": "Speed",
@@ -16896,7 +16990,27 @@
       "title": "Vehicle details",
       "security": "Security",
       "charging": "Charging",
-      "openDetails": "Open vehicle details"
+      "openDetails": "Open vehicle details",
+      "telemetry": "Telemetry",
+      "noReading": "No reading available for this vehicle",
+      "lastKnownAged": "Last known: {{value}} ({{age}}) — not currently verified",
+      "lastKnown": "Last known: {{value}} — not currently verified",
+      "observedAt": "{{summary}} · last real observation {{age}}",
+      "observedUnknown": "{{summary}} · no verified observation time",
+      "trust": {
+        "live": "Live",
+        "liveHelp": "Current, verified telemetry",
+        "unverified": "Unverified",
+        "unverifiedHelp": "State returned, but nothing current backs it",
+        "stale": "Last known",
+        "staleHelp": "Refresh failed; a retained reading is being shown",
+        "failed": "Unreachable",
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not the vehicle.",
+        "missing": "No state",
+        "missingHelp": "The backend answered and has no state yet. Unknown, not offline.",
+        "checking": "Checking",
+        "checkingHelp": "Resolving live state…"
+      }
     },
     "aiPaintPreview": {
       "title": "Draft a Helix paint preview",

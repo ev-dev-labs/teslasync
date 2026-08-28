@@ -1,5 +1,11 @@
 {
   "freshness": {
+    "age": {
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
     "justNow": "just now",
     "seconds": "{{s}}s ago",
     "minutes": "{{m}}m ago",

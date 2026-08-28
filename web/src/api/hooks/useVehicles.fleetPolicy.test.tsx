@@ -1,21 +1,22 @@
 /**
  * `useFleetStates` refresh-policy wiring.
  *
- * The fleet-state query is the most expensive poll in the SPA: it fans out ONE
- * request per vehicle on every tick. Left on a fixed `refetchInterval` it kept
- * firing N requests every 30 s into a backgrounded tab, an offline device, a
- * dead backend, and a metered 2G connection — the four situations where the
- * poll is guaranteed to be either wasted or actively harmful.
+ * The fleet-state query is the SPA's fleet-wide live read. It used to fan out
+ * ONE request per vehicle on every tick; it now issues a single batch request
+ * per tick against `GET /vehicles/states`. Either way, left on a fixed
+ * `refetchInterval` it keeps firing into a backgrounded tab, an offline
+ * device, a dead backend, and a metered 2G connection — the four situations
+ * where the poll is guaranteed to be either wasted or actively harmful.
  *
  * The matrix itself is proven in `hooks/__tests__/useRefreshPolicy.test.tsx`
  * against the pure `resolveRefreshInterval`. What THIS file proves is the
  * wiring, which no pure test can reach:
  *
- *   1. the fan-out asks the connection-aware policy for its cadence, at
+ *   1. the batch read asks the connection-aware policy for its cadence, at
  *      `standard` priority (not `essential` — a fleet list is not a live
  *      drive) and with the STANDARD base interval;
  *   2. the value the policy returns actually reaches the scheduler, so a
- *      `false` verdict really does stop the fan-out and a numeric verdict
+ *      `false` verdict really does stop the poll and a numeric verdict
  *      really does drive it;
  *   3. the policy hook is called unconditionally, so hook order is stable even
  *      for an empty fleet where the query itself is disabled.
@@ -93,14 +94,33 @@ function makeClient(): QueryClient {
  */
 const POLL_MS = 10_000;
 
-describe('useFleetStates — expensive fan-out obeys the connection-aware refresh policy', () => {
+describe('useFleetStates — the fleet read obeys the connection-aware refresh policy', () => {
   beforeEach(() => {
     requestMock.mockReset();
     refreshIntervalMock.mockReset();
     refreshIntervalMock.mockReturnValue(false);
     requestMock.mockImplementation((url: string) => {
-      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
-      return Promise.resolve({ state: { vehicle_id: id, state: 'online' }, live: true });
+      const query = String(url).split('?')[1] ?? '';
+      const raw = new URLSearchParams(query).get('vehicle_ids') ?? '';
+      const ids = raw === '' ? [] : raw.split(',').map(Number);
+      return Promise.resolve({
+        data: {
+          now: new Date().toISOString(),
+          total: ids.length,
+          limit: 500,
+          offset: 0,
+          counts: { resolved: ids.length, missing: 0, failed: 0 },
+          vehicles: ids.map((id) => ({
+            vehicle_id: id,
+            outcome: 'resolved',
+            state: { vehicle_id: id, state: 'online' },
+            live: true,
+            data_source: 'live_signal_store',
+            freshness: 'unknown',
+            verified_fields: [],
+          })),
+        },
+      });
     });
   });
 
@@ -132,7 +152,7 @@ describe('useFleetStates — expensive fan-out obeys the connection-aware refres
     expect(requestMock).not.toHaveBeenCalled();
   });
 
-  it('issues no repeat fan-out at all while the policy suppresses polling', async () => {
+  it('issues no repeat read at all while the policy suppresses polling', async () => {
     vi.useFakeTimers();
     refreshIntervalMock.mockReturnValue(false);
 
@@ -140,15 +160,16 @@ describe('useFleetStates — expensive fan-out obeys the connection-aware refres
       wrapper: wrapper(makeClient()),
     });
     await act(async () => { await vi.advanceTimersByTimeAsync(10); });
-    expect(requestMock).toHaveBeenCalledTimes(2);
+    // ONE request for the whole fleet — the batch endpoint's whole point.
+    expect(requestMock).toHaveBeenCalledTimes(1);
 
     // Ten STANDARD periods of a hidden / offline / unreachable / save-data
-    // tab. A fleet of two must not have issued a single extra request.
+    // tab. Not a single extra request may go out.
     await act(async () => { await vi.advanceTimersByTimeAsync(INTERVALS.STANDARD * 10); });
-    expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(requestMock).toHaveBeenCalledTimes(1);
   });
 
-  it('drives the fan-out at exactly the cadence the policy returns', async () => {
+  it('drives the fleet read at exactly the cadence the policy returns', async () => {
     vi.useFakeTimers();
     // Above the `live` tier's storm-safety floor so the policy's own clamp
     // cannot be mistaken for the cadence under test.
@@ -158,16 +179,16 @@ describe('useFleetStates — expensive fan-out obeys the connection-aware refres
       wrapper: wrapper(makeClient()),
     });
     await act(async () => { await vi.advanceTimersByTimeAsync(10); });
-    expect(requestMock).toHaveBeenCalledTimes(2);
+    expect(requestMock).toHaveBeenCalledTimes(1);
 
-    // Two vehicles per tick, so each period adds exactly two requests.
+    // One batch per tick regardless of fleet size.
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
-    expect(requestMock).toHaveBeenCalledTimes(4);
+    expect(requestMock).toHaveBeenCalledTimes(2);
     await act(async () => { await vi.advanceTimersByTimeAsync(POLL_MS); });
-    expect(requestMock).toHaveBeenCalledTimes(6);
+    expect(requestMock).toHaveBeenCalledTimes(3);
   });
 
-  it('stops the fan-out as soon as the policy withdraws its cadence mid-session', async () => {
+  it('stops the fleet read as soon as the policy withdraws its cadence mid-session', async () => {
     vi.useFakeTimers();
     refreshIntervalMock.mockReturnValue(POLL_MS);
 

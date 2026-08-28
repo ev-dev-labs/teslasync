@@ -1,10 +1,12 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery, useMutation, useQueryClient, type QueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { queryPolicy } from '../queryPolicy';
 import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
+import { useLiveRecovery } from '@/hooks/useLiveRecovery';
+import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useAsOfDate, AS_OF_QUERY_PARAM } from '@/hooks/useAsOfDate';
@@ -151,7 +153,7 @@ function parseObservedAt(raw: string | null | undefined): number | null {
   return Number.isFinite(parsed) ? parsed : null
 }
 
-function stateResponseFreshness(
+export function resolveVehicleStateFreshness(
   raw: VehicleStateFreshness | undefined,
   observedAt: number | null,
   now = Date.now(),
@@ -195,7 +197,7 @@ function mapVehicleStateResponse(
   }
   const live = res.live ?? false
   const observedAt = parseObservedAt(res.observed_at)
-  const freshness = stateResponseFreshness(res.freshness, observedAt)
+  const freshness = resolveVehicleStateFreshness(res.freshness, observedAt)
   const verifiedFields = parseVerifiedFields(res.verified_fields)
   if (res.state && typeof res.state === 'object' && 'vehicle_id' in res.state) {
     return { state: res.state, live, observedAt, freshness, verifiedFields }
@@ -447,13 +449,106 @@ export function useUserPreferenceLatest(vehicleId: number, refetchInterval?: num
   });
 }
 
-/** Raw async function for fetching vehicle state — use in batch queries where hooks can't be used */
+/**
+ * Raw single-vehicle state read.
+ *
+ * Still exported and still the right tool for a caller that genuinely needs
+ * ONE vehicle outside a React hook (imperative prefetch, a drawer opened for a
+ * car that is not in the current fleet page). It is deliberately NOT what
+ * {@link useFleetStates} uses any more: fanning this out was N requests per
+ * poll, which at fleet scale is the single most expensive thing the SPA does.
+ */
 export async function fetchVehicleState(
   vehicleId: number,
   signal?: AbortSignal,
 ): Promise<MappedVehicleStateResponse> {
   const res = await request<RawStateResponse | null>(`/vehicles/${vehicleId}/state`, { signal })
   return mapVehicleStateResponse(res, vehicleId)
+}
+
+/* ── Fleet batch current state ───────────────────────────────────────────── */
+
+/** Per-item outcome vocabulary of `GET /vehicles/states`. Mirrors the Go enum. */
+export type FleetStateWireOutcome = 'resolved' | 'missing' | 'failed'
+
+/** One vehicle's slot in a `GET /vehicles/states` response. */
+interface FleetStateWireItem {
+  vehicle_id?: number
+  outcome?: string
+  state?: VehicleState | null
+  live?: boolean
+  data_source?: string
+  observed_at?: string | null
+  freshness?: VehicleStateFreshness
+  verified_fields?: string[] | null
+  /** Stable machine code (`state_unavailable`); never internal error text. */
+  error?: string
+}
+
+/** Wire shape of `GET /vehicles/states`. */
+interface FleetStateWireBatch {
+  now?: string
+  total?: number
+  limit?: number
+  offset?: number
+  counts?: { resolved?: number; missing?: number; failed?: number }
+  vehicles?: FleetStateWireItem[] | null
+}
+
+/**
+ * `handler/v1` writes through the platform `httputil.Respond` envelope
+ * (`{data: T}`); handlers still living in `internal/api` write the payload
+ * bare. The shared `request()` client cannot unwrap for everyone without
+ * breaking the latter, so the unwrap happens here — mirroring
+ * `useOperatorConfidence.fetchEnvelope`.
+ */
+function unwrapEnvelope<T>(body: unknown): T | null {
+  if (body == null || typeof body !== 'object') return null
+  const record = body as Record<string, unknown>
+  if ('data' in record) return (record.data ?? null) as T | null
+  return body as T
+}
+
+/**
+ * Backend caps both `vehicle_ids` and `limit` at 500
+ * (`fleetstatesvc.MaxLimit`). A fleet larger than that is chunked rather than
+ * silently truncated — losing the tail would look exactly like "those vehicles
+ * have no state", which is the lie this whole contract exists to prevent.
+ */
+export const FLEET_STATE_BATCH_CHUNK = 500
+
+function chunk<T>(values: readonly T[], size: number): T[][] {
+  if (values.length <= size) return [[...values]]
+  const out: T[][] = []
+  for (let i = 0; i < values.length; i += size) out.push(values.slice(i, i + size))
+  return out
+}
+
+/**
+ * Read the current state of every supplied vehicle in ONE request (or one per
+ * 500-vehicle chunk).
+ *
+ * Rejects on transport failure — a batch that could not be read is NOT an
+ * empty fleet, and returning a success-shaped value here is precisely how a
+ * dead backend previously rendered as a confident "everything is offline".
+ */
+export async function fetchFleetStates(
+  vehicleIds: readonly number[],
+  signal?: AbortSignal,
+): Promise<FleetStateWireItem[]> {
+  const groups = chunk(vehicleIds, FLEET_STATE_BATCH_CHUNK)
+  const responses = await Promise.all(
+    groups.map(async (group) => {
+      const params = new URLSearchParams({
+        vehicle_ids: group.join(','),
+        limit: String(FLEET_STATE_BATCH_CHUNK),
+      })
+      const body = await request<unknown>(`/vehicles/states?${params.toString()}`, { signal })
+      const batch = unwrapEnvelope<FleetStateWireBatch>(body)
+      return safeArray(batch?.vehicles ?? undefined) as FleetStateWireItem[]
+    }),
+  )
+  return responses.flat()
 }
 
 /**
@@ -646,32 +741,123 @@ export function isFleetStateFieldCurrent(
  * current. Charging and movement can establish a status even when the generic
  * FSM state has not caught up; a missing, failed, retained, or stale reading
  * remains unknown instead of being mislabeled offline.
+ *
+ * THE shared contract. Fleet Posture, the dashboard hero/widgets and the
+ * vehicle list preview all route through it (via this function or
+ * {@link deriveTrustedVehicleStatus}) so the same car can never be "Charging"
+ * in one panel and "Unknown" in another.
  */
 export function deriveCurrentVehicleStatus(
   entry: FleetStateEntry | undefined,
+  now = Date.now(),
 ): VehicleStatus | null {
-  if (entry?.state == null) return null
+  // A retained / failed / missing entry is not evidence about the car.
+  if (entry == null || entry.outcome !== 'resolved') return null
+  return deriveTrustedVehicleStatus(entry.state, entry, now)
+}
 
-  if (
-    isFleetStateFieldCurrent(entry, 'is_charging') &&
-    entry.state.is_charging
-  ) {
+/**
+ * The precedence rule itself, decoupled from the fleet-entry envelope so a
+ * single-vehicle caller (dashboard hero widget) applies the IDENTICAL logic to
+ * a `useVehicleState` response.
+ *
+ * Precedence: verified charging → verified positive speed → verified FSM
+ * state. Anything unverified, expired, or absent yields `null` (Unknown) — it
+ * NEVER falls through to `offline`, because `deriveVehicleStatus(null)` used to
+ * do exactly that and turned "we don't know" into "the car is dead".
+ */
+export function deriveTrustedVehicleStatus(
+  state: VehicleState | null | undefined,
+  trust: VehicleStateTrustMetadata | null | undefined,
+  now = Date.now(),
+): VehicleStatus | null {
+  if (state == null) return null
+
+  if (isVehicleStateFieldCurrent(trust, 'is_charging', now) && state.is_charging) {
     return 'charging'
   }
-  if (
-    isFleetStateFieldCurrent(entry, 'speed') &&
-    (entry.state.speed ?? 0) > 0
-  ) {
+  if (isVehicleStateFieldCurrent(trust, 'speed', now) && (state.speed ?? 0) > 0) {
     return 'driving'
   }
-  if (!isFleetStateFieldCurrent(entry, 'state')) return null
+  if (!isVehicleStateFieldCurrent(trust, 'state', now)) return null
 
   return deriveVehicleStatus({
-    ...entry.state,
+    ...state,
     // Unverified telemetry must not override the verified FSM state.
     is_charging: false,
     speed: 0,
   })
+}
+
+/**
+ * The operational taxonomy a panel must be able to render without collapsing
+ * distinct facts into one badge.
+ *
+ *   `pending`    — no batch has resolved yet. Not a claim about any vehicle.
+ *   `live`       — a verified, currently-fresh reading; `status` is usable.
+ *   `unverified` — the backend answered with state, but nothing current backs
+ *                  an operational claim (stale stream, durable fallback only).
+ *   `stale`      — a prior real reading retained through a failed refresh.
+ *   `missing`    — the backend answered and authoritatively has no state.
+ *   `failed`     — the read failed and nothing was retained.
+ *
+ * Note `offline` is NOT a condition here: it is a legitimate `status` value
+ * reachable only through `live`, i.e. only when the backend actually said so.
+ */
+export type FleetStateCondition =
+  | 'pending'
+  | 'live'
+  | 'unverified'
+  | 'stale'
+  | 'missing'
+  | 'failed'
+
+export interface FleetStateDescriptor {
+  condition: FleetStateCondition
+  /** Non-null only for `live`. Never inferred from an untrusted reading. */
+  status: VehicleStatus | null
+  /** Backend observation instant of the reading, if any. Never a fetch time. */
+  observedAt: number | null
+  /** True when an operational claim is currently defensible. */
+  verified: boolean
+  /** True when SOME reading exists, verified or not. */
+  hasReading: boolean
+}
+
+/** Classify one fleet entry into the taxonomy above. Pure and unit-testable. */
+export function describeFleetState(
+  entry: FleetStateEntry | undefined,
+  now = Date.now(),
+): FleetStateDescriptor {
+  if (entry == null) {
+    return { condition: 'pending', status: null, observedAt: null, verified: false, hasReading: false }
+  }
+  const hasReading = entry.state != null
+  if (entry.outcome === 'missing') {
+    return { condition: 'missing', status: null, observedAt: null, verified: false, hasReading: false }
+  }
+  if (entry.outcome === 'failed') {
+    return {
+      condition: hasReading ? 'stale' : 'failed',
+      status: null,
+      // Retained readings keep their ORIGINAL age so the panel can say how
+      // old the data it is still showing actually is.
+      observedAt: entry.observedAt,
+      verified: false,
+      hasReading,
+    }
+  }
+  const status = deriveCurrentVehicleStatus(entry, now)
+  if (status == null) {
+    return {
+      condition: hasReading ? 'unverified' : 'missing',
+      status: null,
+      observedAt: entry.observedAt,
+      verified: false,
+      hasReading,
+    }
+  }
+  return { condition: 'live', status, observedAt: entry.observedAt, verified: true, hasReading: true }
 }
 
 type VehicleStateTrustMetadata = Pick<
@@ -689,7 +875,7 @@ export function isVehicleStateFieldCurrent(
   // the vehicle's stream has another real observation inside the freshness
   // window; the field's own change timestamp may legitimately be older.
   return response != null &&
-    stateResponseFreshness(response.freshness, response.observedAt, now) === 'fresh' &&
+    resolveVehicleStateFreshness(response.freshness, response.observedAt, now) === 'fresh' &&
     response.verifiedFields.includes(field)
 }
 
@@ -755,23 +941,33 @@ function collectRetainedEntries(
 }
 
 /**
- * Batch-fetch the latest live state for every vehicle in the fleet. Powers the
- * Fleet list page's battery-summary panel, status breakdown, and per-card
- * badges from a single query.
+ * Batch-fetch the latest live state for every vehicle in the fleet in ONE
+ * request. Powers Fleet Posture, the fleet list's battery-summary panel, the
+ * status breakdown, and the per-card badges.
  *
- * `fetchVehicleState` is the sanctioned raw helper for batch reads where a
- * per-vehicle hook can't be used (one query fans out to N requests). Each
- * vehicle resolves independently — a single failing vehicle must not reject
- * the whole batch, so one unreachable car never blanks the fleet summary.
+ * ## Why a batch endpoint
  *
- * ## Failures are recorded, not success-shaped
+ * This hook used to fan out `fetchVehicleState` once per vehicle. A 100-car
+ * fleet on the STANDARD poll issued 200 requests a minute from a single open
+ * tab, each repeating the same vehicle lookup, live-store round trip and FSM
+ * query. `GET /vehicles/states` collapses that into one request while keeping
+ * every per-vehicle fact — including the per-vehicle FAILURE facts —
+ * individually addressable. {@link fetchVehicleState} stays exported for
+ * legitimate single-vehicle callers.
  *
- * Every per-vehicle rejection used to become `{ state: null }`, which made the
- * batch indistinguishable from a successful "no snapshot yet" response and
- * left `isError` permanently `false`. A total API outage therefore rendered as
- * a confident, fully-populated "every vehicle is Offline" fleet view. Each
- * entry now carries its {@link FleetStateOutcome} (and the error), and
- * {@link summariseFleetStates} exposes the aggregate.
+ * ## Failures are recorded, never success-shaped
+ *
+ * Two different failures, two different treatments:
+ *
+ *   - PER-ITEM: the backend answered but could not read one car. That arrives
+ *     as `outcome: 'failed'` inside a successful batch, exactly as before.
+ *   - TRANSPORT: the batch request itself failed. The query REJECTS, so
+ *     `isError` is true. It does not resolve to an array of nulls — that is
+ *     precisely how a dead backend previously rendered as a confident
+ *     "every vehicle is Offline". The rejection carries the retained entries
+ *     (see {@link FleetStatesBatchError}) so the UI can keep showing the last
+ *     real readings, correctly labelled `failed` + `stale`, WITHOUT the query
+ *     pretending it succeeded.
  *
  * ## Retained prior readings
  *
@@ -783,15 +979,27 @@ function collectRetainedEntries(
  * exact current key, because a change in fleet membership mints a new key and
  * would otherwise drop the readings for every unchanged vehicle.
  *
- * ## Refresh policy
+ * ## Live transitions and recovery
  *
- * The fan-out is N requests per tick, which makes it the most expensive poll
- * on the page and the least useful one to run against a dead backend. The
- * cadence therefore goes through {@link useRefreshInterval} at `standard`
- * priority: it pauses while the tab is hidden, while the device is offline and
- * while the API is unreachable, and stretches 4× under Data Saver / 2G.
- * Recovery is unaffected — SSE reconnect and mutation invalidation both
- * refetch explicitly regardless of the interval.
+ * Charging/Driving/Parked transitions must show up promptly without turning
+ * the SSE stream into a refetch storm:
+ *
+ *   - typed `vehicle_update` events (never a raw EventSource) mark the batch
+ *     stale at most once per {@link FLEET_STATE_EVENT_THROTTLE_MS}, and only
+ *     for vehicles that are actually in this fleet;
+ *   - {@link useLiveRecovery} re-reads authoritative state after a reconnect,
+ *     because Redis Pub/Sub has no replay;
+ *   - the ambient poll remains BOUNDED recovery via {@link useRefreshInterval}
+ *     at `standard` priority: it pauses while the tab is hidden, while the
+ *     device is offline and while the API is unreachable, and stretches 4×
+ *     under Data Saver / 2G.
+ *
+ * ## Cache sharing
+ *
+ * Every resolved item seeds `vehicleKeys.state(id)` so dashboard widgets
+ * reading a selected vehicle through {@link useVehicleState} are served from
+ * the batch instead of issuing a duplicate request. Seeding is guarded: it
+ * never overwrites an individually-fetched entry that is NEWER than the batch.
  *
  * The query key is derived from the sorted id set so it stays stable across
  * re-renders and only refetches when the fleet changes.
@@ -804,85 +1012,90 @@ export function useFleetStates(vehicles: Vehicle[]) {
   const list = safeArray(vehicles);
   const ids = list.map((v) => v.id).sort((a, b) => a - b);
   const queryKey = [FLEET_STATES_QUERY_ROOT, ids] as const;
+  const enabled = list.length > 0;
+
   const query = useQuery({
     queryKey,
-    queryFn: ({ signal }) => {
+    queryFn: async ({ signal }): Promise<FleetStateEntry[]> => {
       const eligibleIds = new Set(ids);
       const priorById = collectRetainedEntries(queryClient, eligibleIds);
+      let items: Awaited<ReturnType<typeof fetchFleetStates>>;
+      try {
+        items = await fetchFleetStates(ids, signal);
+      } catch (err) {
+        // Transport failure. Reject — but hand the caller the retained
+        // readings so trust degrades instead of the panel going blank.
+        throw new FleetStatesBatchError(
+          list.map((v) => retainedFleetEntry(v, priorById.get(v.id), toFleetError(err))),
+          toFleetError(err),
+        );
+      }
+
       const receivedAt = Date.now();
-      return Promise.all(
-        list.map(async (v): Promise<FleetStateEntry> => {
-          try {
-            const {
-              state,
-              observedAt,
-              freshness,
-              verifiedFields,
-            } = await fetchVehicleState(v.id, signal);
-            if (state == null) {
-              // Successful response, no snapshot. Explicitly NOT offline.
-              return {
-                vehicle: v,
-                state: null,
-                outcome: 'missing',
-                freshness: 'unknown',
-                verifiedFields: [],
-                stale: false,
-                observedAt: null,
-                receivedAt,
-              };
-            }
-            return {
-              vehicle: v,
-              state,
-              outcome: 'resolved',
-              freshness,
-              verifiedFields,
-              stale: freshness !== 'fresh',
-              observedAt,
-              receivedAt,
-            };
-          } catch (err) {
-            const prior = priorById.get(v.id);
-            if (prior?.state != null) {
-              return {
-                vehicle: v,
-                state: prior.state,
-                outcome: 'failed',
-                freshness: 'stale',
-                verifiedFields: prior.verifiedFields,
-                stale: true,
-                // Carried forward UNCHANGED: the reading is as old as it ever
-                // was, and a failed refresh must never reset its age.
-                observedAt: prior.observedAt,
-                receivedAt,
-                error: toFleetError(err),
-              };
-            }
-            return {
-              vehicle: v,
-              state: null,
-              outcome: 'failed',
-              freshness: 'unknown',
-              verifiedFields: [],
-              stale: false,
-              observedAt: null,
-              receivedAt,
-              error: toFleetError(err),
-            };
-          }
-        }),
-      );
+      const byId = new Map<number, (typeof items)[number]>();
+      for (const item of items) {
+        if (typeof item?.vehicle_id === 'number') byId.set(item.vehicle_id, item);
+      }
+      return list.map((v) => toFleetStateEntry(v, byId.get(v.id), priorById.get(v.id), receivedAt));
     },
-    enabled: list.length > 0,
+    enabled,
     // Live-tier cache policy; retry deliberately stays with the QueryClient.
     ...queryPolicy('live', { refetchInterval }),
   });
 
+  /* ── Recovery: re-read authoritative state after an SSE outage ────────── */
+  useLiveRecovery({
+    queryKeys: FLEET_STATE_RECOVERY_KEYS,
+    enabled,
+  });
+
+  /* ── Prompt transitions without a request storm ───────────────────────── */
+  // Derived purely from the joined key so the memo has an honest dependency
+  // and the identity is stable across re-renders of the same fleet.
+  const fleetIdsKey = ids.join(',');
+  const fleetIds = useMemo(
+    () => new Set(fleetIdsKey === '' ? [] : fleetIdsKey.split(',').map(Number)),
+    [fleetIdsKey],
+  );
+  const fleetIdsRef = useRef(fleetIds);
+  fleetIdsRef.current = fleetIds;
+  const throttleRef = useRef<{ timer: number | null; lastAt: number }>({ timer: null, lastAt: 0 });
+
+  const onVehicleUpdate = useCallback((payload: unknown) => {
+    // Typed envelope only — a malformed frame must never trigger traffic.
+    const vehicleId = readVehicleUpdateId(payload);
+    if (vehicleId == null || !fleetIdsRef.current.has(vehicleId)) return;
+
+    const state = throttleRef.current;
+    if (state.timer != null) return; // already scheduled; coalesce
+    const wait = Math.max(0, FLEET_STATE_EVENT_THROTTLE_MS - (Date.now() - state.lastAt));
+    state.timer = window.setTimeout(() => {
+      state.timer = null;
+      state.lastAt = Date.now();
+      void queryClient.invalidateQueries({ queryKey: [FLEET_STATES_QUERY_ROOT] });
+    }, wait);
+  }, [queryClient]);
+
+  useEffect(() => () => {
+    const state = throttleRef.current;
+    if (state.timer != null) {
+      window.clearTimeout(state.timer);
+      state.timer = null;
+    }
+  }, []);
+
+  useRealtimeEvents({ onVehicleUpdate, enabled });
+
+  /* ── Automatic freshness ageing ───────────────────────────────────────── */
   const [freshnessClock, setFreshnessClock] = useState(0);
+  const batchError = query.error instanceof FleetStatesBatchError ? query.error : null;
+  // A rejected batch supersedes the last successful array: its entries ARE
+  // those readings, re-labelled with the honest outcome.
+  const settled = batchError ? batchError.entries : query.data;
+
   useEffect(() => {
     const now = Date.now();
-    const nextBoundary = (query.data ?? [])
+    const nextBoundary = (settled ?? [])
       .filter((entry) =>
         entry.outcome === 'resolved' &&
         entry.freshness === 'fresh' &&
@@ -901,22 +1114,188 @@ export function useFleetStates(vehicles: Vehicle[]) {
       Math.max(1, nextBoundary - now + 1),
     );
     return () => window.clearTimeout(timer);
-  }, [query.data, freshnessClock]);
+  }, [settled, freshnessClock]);
 
   const data = useMemo(
-    () => query.data?.map((entry) => {
+    () => settled?.map((entry) => {
       if (entry.outcome !== 'resolved' || entry.freshness !== 'fresh') return entry;
-      const freshness = stateResponseFreshness(entry.freshness, entry.observedAt);
+      const freshness = resolveVehicleStateFreshness(entry.freshness, entry.observedAt);
       return freshness === 'fresh'
         ? entry
         : { ...entry, freshness, stale: true };
     }),
-    [query.data, freshnessClock],
+    [settled, freshnessClock],
   );
+
+  /* ── Seed the per-vehicle cache so widgets do not re-fetch ────────────── */
+  useEffect(() => {
+    if (!query.isSuccess || query.data == null) return;
+    for (const entry of query.data) {
+      if (entry.outcome !== 'resolved' || entry.state == null) continue;
+      seedVehicleStateCache(queryClient, entry);
+    }
+  }, [queryClient, query.isSuccess, query.data]);
 
   return { ...query, data };
 }
 
+/**
+ * Minimum gap between two SSE-triggered fleet refetches.
+ *
+ * A moving vehicle emits `vehicle_update` several times a second. Invalidating
+ * per event would turn one driving car into a continuous batch-refetch loop,
+ * which is worse than the per-vehicle fan-out this endpoint replaced. Two
+ * seconds keeps a Charging→Driving transition visibly prompt while capping the
+ * cost at one request per throttle window no matter how chatty the fleet is.
+ */
+export const FLEET_STATE_EVENT_THROTTLE_MS = 2_000;
+
+/** Query keys re-read after an SSE reconnect. Prefix-matched by TanStack. */
+const FLEET_STATE_RECOVERY_KEYS = [[FLEET_STATES_QUERY_ROOT], ['vehicle-state']] as const;
+
+/**
+ * Transport failure of the whole batch, carrying the readings worth keeping.
+ *
+ * Modelled as an Error (not a resolved value) so `isError` is TRUE: a batch we
+ * could not read must never be indistinguishable from a fleet with no data.
+ */
+export class FleetStatesBatchError extends Error {
+  readonly entries: FleetStateEntry[];
+  readonly reason: Error;
+
+  constructor(entries: FleetStateEntry[], reason: Error) {
+    super(reason.message);
+    this.name = 'FleetStatesBatchError';
+    this.entries = entries;
+    this.reason = reason;
+  }
+}
+
+/** Extract a numeric `vehicle_id` from a typed `vehicle_update` SSE payload. */
+function readVehicleUpdateId(payload: unknown): number | null {
+  if (payload == null || typeof payload !== 'object') return null;
+  const raw = (payload as { vehicle_id?: unknown }).vehicle_id;
+  return typeof raw === 'number' && Number.isFinite(raw) ? raw : null;
+}
+
+/**
+ * Build the entry for a vehicle whose refresh failed: carry the prior reading
+ * forward when there is one, with its ORIGINAL observation instant.
+ */
+function retainedFleetEntry(
+  vehicle: Vehicle,
+  prior: FleetStateEntry | undefined,
+  error: Error,
+): FleetStateEntry {
+  const receivedAt = Date.now();
+  if (prior?.state != null) {
+    return {
+      vehicle,
+      state: prior.state,
+      outcome: 'failed',
+      freshness: 'stale',
+      verifiedFields: prior.verifiedFields,
+      stale: true,
+      // Carried forward UNCHANGED: the reading is as old as it ever was, and
+      // a failed refresh must never reset its age.
+      observedAt: prior.observedAt,
+      receivedAt,
+      error,
+    };
+  }
+  return {
+    vehicle,
+    state: null,
+    outcome: 'failed',
+    freshness: 'unknown',
+    verifiedFields: [],
+    stale: false,
+    observedAt: null,
+    receivedAt,
+    error,
+  };
+}
+
+/** Project one wire item onto the trust-aware fleet entry the UI consumes. */
+function toFleetStateEntry(
+  vehicle: Vehicle,
+  item: FleetStateWireItem | undefined,
+  prior: FleetStateEntry | undefined,
+  receivedAt: number,
+): FleetStateEntry {
+  // A vehicle the backend omitted entirely is an ABSENCE, not a failure: the
+  // request succeeded and simply carried nothing for this car.
+  if (item == null) {
+    return {
+      vehicle,
+      state: null,
+      outcome: 'missing',
+      freshness: 'unknown',
+      verifiedFields: [],
+      stale: false,
+      observedAt: null,
+      receivedAt,
+    };
+  }
+
+  if (item.outcome === 'failed') {
+    return { ...retainedFleetEntry(vehicle, prior, toFleetError(item.error)), receivedAt };
+  }
+
+  const state = item.state ?? null;
+  if (item.outcome === 'missing' || state == null) {
+    return {
+      vehicle,
+      state: null,
+      outcome: 'missing',
+      freshness: 'unknown',
+      verifiedFields: [],
+      stale: false,
+      observedAt: null,
+      receivedAt,
+    };
+  }
+
+  const observedAt = parseObservedAt(item.observed_at);
+  const freshness = resolveVehicleStateFreshness(item.freshness, observedAt);
+  return {
+    vehicle,
+    state,
+    outcome: 'resolved',
+    freshness,
+    verifiedFields: parseVerifiedFields(item.verified_fields),
+    stale: freshness !== 'fresh',
+    observedAt,
+    receivedAt,
+  };
+}
+
+/**
+ * Publish a batch reading into the single-vehicle cache.
+ *
+ * Guarded on `observedAt` so a batch can never roll BACK a newer individual
+ * read; both shapes are `MappedVehicleStateResponse`, so this is type-safe
+ * rather than a structural coincidence.
+ */
+function seedVehicleStateCache(queryClient: QueryClient, entry: FleetStateEntry): void {
+  if (entry.state == null) return;
+  const key = vehicleKeys.state(entry.vehicle.id);
+  const existing = queryClient.getQueryData<MappedVehicleStateResponse>(key);
+  if (
+    existing?.observedAt != null &&
+    entry.observedAt != null &&
+    existing.observedAt > entry.observedAt
+  ) {
+    return;
+  }
+  queryClient.setQueryData<MappedVehicleStateResponse>(key, {
+    state: entry.state,
+    live: entry.freshness === 'fresh',
+    observedAt: entry.observedAt,
+    freshness: entry.freshness,
+    verifiedFields: entry.verifiedFields,
+  });
+}
 // ---------- Vehicle Info (mobile enabled, options, specs) ----------
 
 interface MobileEnabledData {

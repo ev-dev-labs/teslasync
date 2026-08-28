@@ -20,12 +20,13 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
   - `/api/v1/benchmarks/releases`
   - `/api/v1/fleet-ops/utilization-forecast`
   - `/api/v1/service-intelligence/vehicles/{vehicleID}`
+  - `/api/v1/vehicles/states`
   - `/api/v1/vehicles/{vehicleID}/state`
   - `/api/v1/web-vitals`
 
 ## Findings
 
-All 225 user-facing routes are covered.
+All 226 user-facing routes are covered.
 
 ## Per-route coverage table
 
@@ -215,6 +216,7 @@ All 225 user-facing routes are covered.
 | `/sse-token` | transitive (api_availability) |
 | `/stale-sessions` | transitive (api_availability) |
 | `/state` | transitive (api_availability) |
+| `/states` | transitive (api_availability) |
 | `/stats` | transitive (api_availability) |
 | `/status` | transitive (api_availability) |
 | `/stream` | transitive (api_availability) |
