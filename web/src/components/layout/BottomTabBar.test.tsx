@@ -22,7 +22,9 @@
  *      a native, focusable anchor with a WCAG 2.5.5 touch target.
  *   6. The active underline indicator renders only for the active tab.
  *   7. Route prefetch is wired: hovering a tab prefetches its lazy chunk.
- *   8. The `BOTTOM_TAB_PATHS` export is the exact set of destinations.
+ *   8. Theme surfaces keep inactive text readable and the active state
+ *      distinguishable without relying on color alone.
+ *   9. The `BOTTOM_TAB_PATHS` export is the exact set of destinations.
  *
  * react-i18next is stubbed with a passthrough `t(key, fallback)` spy (the same
  * convention as QuickNav.test.tsx) so the DOM shows English defaults AND we can
@@ -54,11 +56,11 @@ const mockedPrefetch = vi.mocked(prefetchRoute)
 // Declared order of TABS — the rendered link order is deterministic, so the
 // index-based assertions below are stable.
 const TABS = [
-  { path: '/', label: 'Home', key: 'nav.dashboard' },
-  { path: '/drives', label: 'Drives', key: 'nav.drives' },
-  { path: '/charging', label: 'Charging', key: 'nav.charging' },
-  { path: '/battery', label: 'Battery', key: 'nav.battery' },
-  { path: '/live', label: 'Map', key: 'nav.liveMap' },
+  { path: '/', label: 'Home', key: 'nav.mobileHome' },
+  { path: '/drives', label: 'Drives', key: 'nav.mobileDrives' },
+  { path: '/charging', label: 'Charging', key: 'nav.mobileCharging' },
+  { path: '/battery', label: 'Battery', key: 'nav.mobileBattery' },
+  { path: '/live', label: 'Map', key: 'nav.mobileMap' },
 ] as const
 
 function renderBar(pathname = '/') {
@@ -194,6 +196,27 @@ describe('BottomTabBar', () => {
     expect(
       indicatorsWithin(screen.getByRole('link', { name: 'Charging' })),
     ).toHaveLength(0)
+  })
+
+  it('uses readable theme surfaces and a non-color-only active state', () => {
+    renderBar('/charging')
+
+    const nav = screen.getByRole('navigation', { name: 'Quick navigation' })
+    expect(nav.className).toContain('bg-[var(--surface-1)]')
+    expect(nav.className).toContain('dark:bg-[var(--surface-overlay)]')
+    expect(nav.className).toContain('border-[var(--border-default)]')
+    expect(nav.className).toContain('shadow-e3')
+
+    const active = screen.getByRole('link', { name: 'Charging' })
+    expect(active.className).toContain('text-[var(--text-primary)]')
+    expect(active.className).toContain('bg-[rgba(var(--theme-primary-rgb),0.10)]')
+    expect(active.className).toContain('font-semibold')
+    expect(active.querySelector('svg')).toHaveAttribute('stroke-width', '2.4')
+
+    const inactive = screen.getByRole('link', { name: 'Drives' })
+    expect(inactive.className).toContain('text-[var(--text-secondary)]')
+    expect(inactive.className).not.toContain('text-[var(--text-muted)]')
+    expect(inactive.querySelector('svg')).toHaveAttribute('stroke-width', '2')
   })
 
   it('shows no underline indicator when the route is off the bar', () => {
