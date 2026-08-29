@@ -147,7 +147,7 @@ describe('SpeedTrendChart — panel shell + a11y', () => {
       screen.getByText('Monthly average DC vs AC charge rate'),
     ).toBeInTheDocument();
     expect(
-      within(figure).getByRole('img', { name: ARIA_LABEL }),
+      within(figure).getByRole('group', { name: ARIA_LABEL }),
     ).toBeInTheDocument();
   });
 });

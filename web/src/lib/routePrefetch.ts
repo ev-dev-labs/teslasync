@@ -73,6 +73,7 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/energy-products': () => import('../features/battery/pages/EnergyProductsPage'),
   '/exports': () => import('../features/exports/pages/ExportsPage'),
   '/fleet-api': () => import('../features/admin/pages/FleetAPIPage'),
+  '/fsd': () => import('../features/driving/pages/FSDInsightsPage'),
   '/geofences': () => import('../features/maps/pages/GeofencesPage'),
   '/glance': () => import('../features/dashboard/pages/GlancePage'),
   '/guard-mode': () => import('../features/vehicle-systems/pages/GuardModePage'),

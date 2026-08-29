@@ -20,6 +20,7 @@ export const QUALITY_ROUTE_BY_NAME = {
   drives: { name: 'drives', path: '/drives', scenarios: ['empty', 'stale', 'partial', 'populated'], visual: true },
   charging: { name: 'charging', path: '/charging', scenarios: ['empty', 'stale', 'partial', 'populated'], visual: true },
   battery: { name: 'battery', path: '/battery', scenarios: ['loading', 'error', 'partial', 'populated'], visual: true },
+  fsd: { name: 'fsd', path: '/fsd', scenarios: ['loading', 'error', 'empty', 'partial', 'populated'], visual: true },
   notifications: { name: 'notifications', path: '/notifications/inbox', scenarios: ['empty', 'populated'], visual: true },
   settings: { name: 'settings', path: '/settings', scenarios: ['error', 'populated'], visual: true },
   dataRepair: { name: 'data-repair', path: '/data-repair', scenarios: ['loading', 'error', 'stale', 'populated'], visual: true },

@@ -142,7 +142,8 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
   )
 }
 
-export interface ChartLegendProps {
+export interface ChartLegendProps
+  extends Omit<React.ComponentPropsWithoutRef<typeof Legend>, 'formatter' | 'onClick'> {
   /**
    * Optional toggle source. When omitted, the legend pulls state from the
    * surrounding `<ChartContainer chartKey="…">` via
@@ -151,12 +152,6 @@ export interface ChartLegendProps {
    * passively (no click-to-hide UX, no dimming).
    */
   state?: ChartLegendToggleSource
-  /** Recharts wrapper-style override (font size, margin, etc.). */
-  wrapperStyle?: React.CSSProperties
-  /** Vertical alignment passed through to recharts. */
-  verticalAlign?: 'top' | 'middle' | 'bottom'
-  /** Horizontal alignment passed through to recharts. */
-  align?: 'left' | 'center' | 'right'
 }
 
 /**
@@ -173,17 +168,13 @@ export interface ChartLegendProps {
  */
 export function ChartLegend({
   state,
-  wrapperStyle,
-  verticalAlign,
-  align,
+  ...legendProps
 }: ChartLegendProps) {
   const contextState = useChartHiddenSeries()
   const resolved: ChartLegendToggleSource | null = state ?? contextState
   return (
     <Legend
-      wrapperStyle={wrapperStyle}
-      verticalAlign={verticalAlign}
-      align={align}
+      {...legendProps}
       onClick={(data) => toggleFromLegend(resolved, data as LegendPayloadEntry)}
       formatter={(value, entry) => (
         <LegendSeriesLabel
@@ -195,3 +186,6 @@ export function ChartLegend({
     />
   )
 }
+
+// Recharts discovers declarative children by displayName before rendering them.
+ChartLegend.displayName = Legend.displayName

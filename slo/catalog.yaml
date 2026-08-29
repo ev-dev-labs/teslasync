@@ -371,3 +371,23 @@ slos:
     window: 30d
     owner: platform
     tags: [http, geofences, pricing, writes]
+
+  - name: fsd_insights_availability
+    description: "Supervised self-driving insights reads (GET /api/v1/analytics/fsd) must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: analytics
+    tags: [http, analytics, fsd]
+
+  - name: fsd_insights_latency_1s
+    description: "Server-side FSD Insights aggregation over signal_log must complete within one second."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{method=\"GET\",route=\"/api/v1/analytics/fsd\",le=\"1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: analytics
+    tags: [http, analytics, fsd, latency]

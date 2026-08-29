@@ -1518,6 +1518,92 @@
           "values": false
         }
       }
+    },
+    {
+      "id": 36,
+      "type": "stat",
+      "title": "fsd_insights_availability",
+      "description": "Objective: 99.5%; owner: analytics",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 18,
+        "y": 32,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:fsd_insights_availability:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 37,
+      "type": "stat",
+      "title": "fsd_insights_latency_1s",
+      "description": "Objective: 99%; owner: analytics",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 36,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:fsd_insights_latency_1s:ratio_rate1h",
+          "legendFormat": "1h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      },
+      "options": {
+        "colorMode": "value",
+        "orientation": "horizontal",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        }
+      }
     }
   ],
   "templating": {

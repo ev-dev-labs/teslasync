@@ -1111,6 +1111,8 @@
     }
   },
   "safety": {
+    "openFsdInsights": "Open FSD Insights",
+    "openFsdInsightsHint": "Daily trend & data confidence",
     "liveSignals": "Live Safety Signals",
     "selectVehicleCta": "Go to vehicles",
     "buckled": "Buckled",

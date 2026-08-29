@@ -32,6 +32,11 @@ import (
 // never sees them, and the unknown / invalid kinds are dropped upstream
 // per protomodel/datum_decoder_gen.go:33-47.
 const (
+	// signalLogNormalizationVersion identifies rows written after the
+	// field-specific Tesla wire-unit rules have been applied. Legacy writers
+	// omit the nullable column added by migration 000232, leaving NULL.
+	signalLogNormalizationVersion int16 = 1
+
 	signalLogKindString int16 = 1
 	signalLogKindBool   int16 = 2
 	signalLogKindInt32  int16 = 3
@@ -88,21 +93,27 @@ var _ signalLogPool = (*pgxpool.Pool)(nil)
 // $1 = VIN (string), $2 = ts (time.Time), $3 = field (string),
 // $4 = value_kind (int16), $5 = str_value (any/nil), $6 = bool_value
 // (any/nil), $7 = int_value (any/nil), $8 = float_value (any/nil),
-// $9 = time_value (any/nil).
+// $9 = time_value (any/nil), $10 = normalization_version (int16).
 const signalLogInsertSQL = `INSERT INTO signal_log (
 	vehicle_id, ts, field, value_kind,
-	str_value, bool_value, int_value, float_value, time_value
+	str_value, bool_value, int_value, float_value, time_value,
+	normalization_version, normalization_write_token
 )
-SELECT v.id, $2, $3, $4, $5, $6, $7, $8, $9
+SELECT v.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE
 FROM vehicles v
 WHERE v.vin = $1
 ON CONFLICT (vehicle_id, ts, field) DO UPDATE SET
-	value_kind  = EXCLUDED.value_kind,
-	str_value   = EXCLUDED.str_value,
-	bool_value  = EXCLUDED.bool_value,
-	int_value   = EXCLUDED.int_value,
-	float_value = EXCLUDED.float_value,
-	time_value  = EXCLUDED.time_value`
+	value_kind            = EXCLUDED.value_kind,
+	str_value             = EXCLUDED.str_value,
+	bool_value            = EXCLUDED.bool_value,
+	int_value             = EXCLUDED.int_value,
+	float_value           = EXCLUDED.float_value,
+	time_value            = EXCLUDED.time_value,
+	normalization_version = EXCLUDED.normalization_version,
+	normalization_write_token = NOT COALESCE(
+		signal_log.normalization_write_token,
+		FALSE
+	)`
 
 // signalLogWriter is the bespoke router.Writer for destination
 // signal_log. It is NOT composed from snapshotWriter because signal_log
@@ -211,6 +222,7 @@ func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 		bound.integer,
 		bound.float,
 		bound.timeVal,
+		signalLogNormalizationVersion,
 	)
 	if err != nil {
 		return fmt.Errorf("signalLogWriter.%s: %w", atom.Field, err)

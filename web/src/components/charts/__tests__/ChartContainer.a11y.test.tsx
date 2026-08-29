@@ -411,6 +411,25 @@ describe('ChartContainer accessibility contract', () => {
     expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();
   });
 
+  it('keeps empty-state navigation controls outside image semantics', () => {
+    renderChart(
+      <ChartContainer
+        title="Vehicle trend"
+        ariaLabel="Vehicle trend chart"
+        empty
+        emptyMessage="Select a vehicle to continue."
+        emptyActionTo={{ label: 'Choose a vehicle', to: '/vehicles' }}
+      >
+        <div data-testid="hidden-chart">chart</div>
+      </ChartContainer>,
+    );
+
+    const link = screen.getByRole('link', { name: 'Choose a vehicle' });
+    expect(link).toHaveAttribute('href', '/vehicles');
+    expect(link.closest('[role="img"]')).toBeNull();
+    expect(screen.queryByRole('img', { name: 'Vehicle trend chart' })).toBeNull();
+  });
+
   it('contains initial query failures and keeps retry inside the chart frame', () => {
     const onRetry = vi.fn();
     renderChart(
@@ -427,7 +446,9 @@ describe('ChartContainer accessibility contract', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByRole('img', { name: 'Unavailable chart' })).toBeNull();
     expect(screen.queryByTestId('hidden-chart')).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    const retry = screen.getByRole('button', { name: 'Retry' });
+    expect(retry.closest('[role="img"]')).toBeNull();
+    fireEvent.click(retry);
     expect(onRetry).toHaveBeenCalledTimes(1);
   });
 

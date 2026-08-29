@@ -1,8 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopeKey, scopedPath, type QueryScope } from '../scope';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES } from '@/lib/constants';
+import { browserTimezone } from '@/lib/timezone';
 import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse } from '@/types/analytics';
+import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
 
 export const analyticsKeys = {
@@ -19,6 +23,7 @@ export const analyticsKeys = {
   lifetime: (vehicleId?: string) => ['analytics', 'lifetime', vehicleId] as const,
   batteryCells: (vehicleId: string) => ['analytics', 'battery-cells', vehicleId] as const,
   temperatureImpact: (vehicleId: string) => ['analytics', 'temperature-impact', vehicleId] as const,
+  fsdInsights: (scope: QueryScope) => ['analytics', 'fsd', ...scopeKey(scope)] as const,
 };
 
 export function useAnalyticsSummary(days = 30) {
@@ -438,5 +443,48 @@ export function useTemperatureImpact(vehicleId: string) {
         { signal },
       ),
     enabled: !!vehicleId,
+  });
+}
+
+/* ── FSD Insights ───────────────────────────────────────────────── */
+
+/**
+ * GET /analytics/fsd — server-side rollup of the two resettable SI-meter
+ * distance counters (`SelfDrivingMilesSinceReset` / `MilesSinceReset`) into a
+ * dense per-local-day series plus explicit data-quality metadata.
+ *
+ * Why the timezone travels: the backend attributes each observed counter delta
+ * to the LOCAL calendar day of the later sample, so the day labels only line up
+ * with what the operator experienced if the browser's IANA zone is sent.
+ * `browserTimezone()` falls back to `'UTC'` when `Intl` is unavailable, which is
+ * also the backend's default — so a degraded environment gets a coherent (if
+ * UTC-labelled) answer instead of an error.
+ *
+ * Returns RAW SI: `*_m` fields are meters. Conversion belongs at the render
+ * boundary (`useUnits()` + `lib/unitConversion`), never here.
+ *
+ * `historical` volatility tier: signal_log is append-only, so the rollup for a
+ * given period only changes when new telemetry lands.
+ */
+export function useFsdInsights(
+  vehicleId: string | undefined,
+  days: number = FSD_DEFAULT_PERIOD_DAYS,
+  timezone: string = browserTimezone(),
+) {
+  const scope: QueryScope = {
+    vehicleId: vehicleId ?? null,
+    timezone,
+    filters: { days },
+  };
+
+  return useQuery({
+    queryKey: analyticsKeys.fsdInsights(scope),
+    queryFn: ({ signal }) =>
+      request<FsdInsights>(
+        scopedPath('/analytics/fsd', scope, { includePresentation: true }),
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    ...queryPolicy('historical'),
   });
 }

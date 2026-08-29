@@ -105,6 +105,12 @@ export interface ChartContainerProps {
   emptyTitle?: string;
   emptyMessage?: string;
   emptyDescription?: string;
+  /** Optional empty-state illustration rendered inside the chart viewport. */
+  emptyIcon?: React.ReactNode;
+  /** Imperative empty-state recovery action. */
+  emptyAction?: { label: string; onClick: () => void };
+  /** Navigation empty-state recovery action; takes priority over `emptyAction`. */
+  emptyActionTo?: { label: string; to: string };
   action?: React.ReactNode;
   children: ChartContainerChildren;
   className?: string;
@@ -282,6 +288,9 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
       emptyTitle,
       emptyMessage,
       emptyDescription,
+      emptyIcon,
+      emptyAction,
+      emptyActionTo,
       action,
       children,
       className,
@@ -625,12 +634,10 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             // readers.
             'forced-colors:hidden',
           )}
-          // The figure ancestor already provides the accessible name via
-          // `aria-labelledby={titleId}`; this inner wrapper still carries
-          // `role="img" aria-label` so a focus-stop on the chart body
-          // re-states the summary the user heard at the figure boundary
-          // (browsers don't always re-announce ancestor regions).
-          role={loading || error || empty ? undefined : 'img'}
+          // Charts with toggleable legends contain focusable controls, which
+          // cannot live inside role="img". Expose those viewports as named
+          // groups while static charts retain image semantics.
+          role={loading || error || empty ? undefined : chartKey ? 'group' : 'img'}
           aria-label={loading || error || empty ? undefined : ariaLabel}
         >
           {loading ? (
@@ -646,7 +653,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
               className="h-full"
             />
           ) : empty ? (
-            <EmptyState /* no-action: chart cannot meaningfully recover without data — show prose only */
+            <EmptyState
+              icon={emptyIcon}
               title={emptyTitle}
               message={emptyMessage ?? t('chart.noData', 'No data available')}
               description={
@@ -656,6 +664,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
                   'No chartable observations are available for the current selection yet.',
                 )
               }
+              action={emptyAction}
+              actionTo={emptyActionTo}
               className="h-full py-8"
             />
           ) : (

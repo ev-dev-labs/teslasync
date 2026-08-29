@@ -95,6 +95,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/mileage': 'Odometer log with monthly and yearly totals.',
   '/lifetime-stats': 'Every drive ever — distance, energy, and time totals.',
   '/drive-score': 'Smoothness rating per drive (acceleration, braking, cornering).',
+  '/fsd': 'Supervised self-driving distance, usage share, and data confidence.',
   '/speed-profile': 'Speed-vs-time chart for any drive.',
   '/driving-dynamics': 'G-forces, lateral and longitudinal acceleration analysis.',
   '/regen-efficiency': 'How much energy regenerative braking recaptures.',

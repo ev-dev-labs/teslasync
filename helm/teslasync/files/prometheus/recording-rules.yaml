@@ -1086,3 +1086,65 @@ groups:
           window: "30d"
           owner: "platform"
           objective: "99"
+  - name: slo_fsd_insights_availability
+    interval: 30s
+    rules:
+      - record: slo:fsd_insights_availability:ratio_rate5m
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\",status_class!=\"5xx\"}[5m]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_availability"
+          window: "5m"
+          owner: "analytics"
+          objective: "99.5"
+      - record: slo:fsd_insights_availability:ratio_rate1h
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\",status_class!=\"5xx\"}[1h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[1h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[1h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_availability"
+          window: "1h"
+          owner: "analytics"
+          objective: "99.5"
+      - record: slo:fsd_insights_availability:ratio_rate6h
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\",status_class!=\"5xx\"}[6h]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[6h])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[6h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_availability"
+          window: "6h"
+          owner: "analytics"
+          objective: "99.5"
+      - record: slo:fsd_insights_availability:ratio_rate30d
+        expr: "(((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\",status_class!=\"5xx\"}[30d]))) / (sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[30d])))) and on() ((sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[30d]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_availability"
+          window: "30d"
+          owner: "analytics"
+          objective: "99.5"
+  - name: slo_fsd_insights_latency_1s
+    interval: 30s
+    rules:
+      - record: slo:fsd_insights_latency_1s:ratio_rate5m
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{method=\"GET\",route=\"/api/v1/analytics/fsd\",le=\"1\"}[5m]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_latency_1s"
+          window: "5m"
+          owner: "analytics"
+          objective: "99"
+      - record: slo:fsd_insights_latency_1s:ratio_rate1h
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{method=\"GET\",route=\"/api/v1/analytics/fsd\",le=\"1\"}[1h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[1h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[1h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_latency_1s"
+          window: "1h"
+          owner: "analytics"
+          objective: "99"
+      - record: slo:fsd_insights_latency_1s:ratio_rate6h
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{method=\"GET\",route=\"/api/v1/analytics/fsd\",le=\"1\"}[6h]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[6h])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[6h]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_latency_1s"
+          window: "6h"
+          owner: "analytics"
+          objective: "99"
+      - record: slo:fsd_insights_latency_1s:ratio_rate30d
+        expr: "(((sum(rate(teslasync_red_http_request_duration_seconds_bucket{method=\"GET\",route=\"/api/v1/analytics/fsd\",le=\"1\"}[30d]))) / (sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[30d])))) and on() ((sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[30d]))) > 0)) or on() vector(1)"
+        labels:
+          slo: "fsd_insights_latency_1s"
+          window: "30d"
+          owner: "analytics"
+          objective: "99"

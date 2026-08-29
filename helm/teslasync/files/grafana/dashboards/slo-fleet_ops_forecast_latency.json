@@ -206,7 +206,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m])))",
           "legendFormat": "p99",
           "exemplar": true
         }

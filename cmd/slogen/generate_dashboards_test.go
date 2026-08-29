@@ -47,6 +47,50 @@ func TestRenderOverviewDashboard_OnePanelPerSLO(t *testing.T) {
 	}
 }
 
+func TestLatencyPanelExpression_InheritsMethodAndRouteScope(t *testing.T) {
+	t.Parallel()
+	s := SLO{
+		SLI: SLI{
+			ValidEvents: `sum(rate(teslasync_red_http_requests_total{method="GET",route=~"/api/v1/(analytics/fsd|fleet/\{id\})",status_class!="5xx"}[5m]))`,
+		},
+	}
+
+	got := latencyPanelExpression(s)
+	want := `teslasync_red_http_request_duration_seconds_bucket{method="GET",route=~"/api/v1/(analytics/fsd|fleet/\{id\})"}[5m]`
+	if !strings.Contains(got, want) {
+		t.Fatalf("latency expression = %q, want scoped selector %q", got, want)
+	}
+	if strings.Contains(got, "status_class") {
+		t.Errorf("latency expression must not inherit result labels: %q", got)
+	}
+}
+
+func TestLatencyPanelExpression_UsesRouteScopeFromDurationDenominator(t *testing.T) {
+	t.Parallel()
+	s := SLO{
+		SLI: SLI{
+			ValidEvents: `sum(rate(teslasync_red_http_request_duration_seconds_count{route="/api/v1/analytics/fsd",method="GET"}[5m]))`,
+		},
+	}
+
+	got := latencyPanelExpression(s)
+	want := `teslasync_red_http_request_duration_seconds_bucket{route="/api/v1/analytics/fsd",method="GET"}[5m]`
+	if !strings.Contains(got, want) {
+		t.Fatalf("latency expression = %q, want %q", got, want)
+	}
+}
+
+func TestLatencyPanelExpression_KeepsGlobalFallbackWithoutHTTPScope(t *testing.T) {
+	t.Parallel()
+	s := SLO{SLI: SLI{ValidEvents: `sum(rate(teslasync_red_http_requests_total[5m]))`}}
+
+	got := latencyPanelExpression(s)
+	want := "teslasync_red_http_request_duration_seconds_bucket[5m]"
+	if !strings.Contains(got, want) {
+		t.Fatalf("latency expression = %q, want global fallback %q", got, want)
+	}
+}
+
 func TestRunGenerateDashboards_Idempotent(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

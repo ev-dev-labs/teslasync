@@ -305,7 +305,7 @@ describe('BatteryDegradationPage — populated (km)', () => {
 
     // soh 91 (> 90) → "Excellent".
     expect(within(hero).getByText('Excellent')).toBeInTheDocument();
-    expect(within(hero).getByRole('img', { name: TREND_IMG })).toBeInTheDocument();
+    expect(within(hero).getByRole('group', { name: TREND_IMG })).toBeInTheDocument();
   });
 
   it('renders the prediction block and the charging-habits banner', () => {
@@ -479,7 +479,7 @@ describe('BatteryDegradationPage — a11y + interaction', () => {
 
     expect(screen.getByRole('region', { name: 'Battery health summary' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Health Trend & Projection' })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: TREND_IMG })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: TREND_IMG })).toBeInTheDocument();
 
     const picker = screen.getByRole('combobox', { name: 'Select vehicle' });
     expect(picker).toHaveValue('7');

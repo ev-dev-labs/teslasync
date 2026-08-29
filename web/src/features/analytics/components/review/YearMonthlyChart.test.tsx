@@ -234,9 +234,9 @@ describe('YearMonthlyChart — populated (metric / km)', () => {
     expect(screen.getByRole('heading', { level: 3, name: 'Monthly activity' })).toBeInTheDocument();
     // Subtitle interpolates the average-per-week count.
     expect(screen.getByText('3 drives per week on average')).toBeInTheDocument();
-    // The chart body re-states the summary via role="img" + aria-label.
+    // The interactive chart body is a named group for its legend controls.
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: 'Bar and line chart of monthly drives and distance across the year',
       }),
     ).toBeInTheDocument();
@@ -327,7 +327,7 @@ describe('YearMonthlyChart — empty state', () => {
     // The title stays mounted while the empty state replaces the chart image.
     expect(screen.getByRole('heading', { level: 3, name: 'Monthly activity' })).toBeInTheDocument();
     expect(
-      screen.queryByRole('img', {
+      screen.queryByRole('group', {
         name: 'Bar and line chart of monthly drives and distance across the year',
       }),
     ).toBeNull();

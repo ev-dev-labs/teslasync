@@ -165,7 +165,7 @@ describe('YearlyTrendChart — chrome + a11y', () => {
 
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
     expect(screen.getByText(SUBTITLE)).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: ARIA_LABEL })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: ARIA_LABEL })).toBeInTheDocument();
   });
 
   it('builds the SR fallback table with all four localized columns', () => {
@@ -212,7 +212,7 @@ describe('YearlyTrendChart — empty branch (regression: no export over empty da
     expect(screen.getByText('No data available')).toBeInTheDocument();
     // Title + accessible frame stay mounted (the panel is never truly blank).
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: ARIA_LABEL })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: ARIA_LABEL })).not.toBeInTheDocument();
     // No fallback data table and no export menu when there's nothing to show.
     expect(screen.queryByText(`${TITLE} — data table`)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();

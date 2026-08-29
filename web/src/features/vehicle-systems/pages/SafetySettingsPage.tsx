@@ -11,7 +11,7 @@ import {
   Car,
   RefreshCw,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageContainer, PrefetchLink } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -743,6 +743,20 @@ export default function SafetySettingsPage() {
                   }
                   subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
                 />
+                {/* Contextual drill-through: this card shows the CURRENT
+                    counter reading; FSD Insights turns the same signal into a
+                    per-day trend with explicit data-confidence metadata. */}
+                <PrefetchLink
+                  to="/fsd"
+                  className="flex min-h-11 items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:bg-[var(--control-bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                >
+                  <Text as="span" size="sm" weight="medium">
+                    {t('safety.openFsdInsights', 'Open FSD Insights')}
+                  </Text>
+                  <Caption className="shrink-0">
+                    {t('safety.openFsdInsightsHint', 'Daily trend & data confidence')}
+                  </Caption>
+                </PrefetchLink>
               </div>
             )}
           </GlassPanel>

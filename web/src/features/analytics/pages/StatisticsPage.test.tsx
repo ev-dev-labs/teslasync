@@ -589,7 +589,7 @@ describe('StatisticsPage', () => {
       screen.getByRole('img', { name: 'Vehicle state distribution pie chart' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: 'Distance and energy bar chart comparing all vehicles in the fleet',
       }),
     ).toBeInTheDocument();

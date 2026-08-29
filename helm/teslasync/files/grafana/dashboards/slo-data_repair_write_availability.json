@@ -206,7 +206,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket[5m])))",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[5m])))",
           "legendFormat": "p99",
           "exemplar": true
         }

@@ -117,6 +117,9 @@ const WhatIf = lazy(() => import('./features/driving/pages/WhatIfPage'))
 const TripLogbook = lazy(() => import('./features/driving/pages/TripLogbookPage'))
 const RangeBuffer = lazy(() => import('./features/driving/pages/RangeBufferPage'))
 const DrivingRhythm = lazy(() => import('./features/driving/pages/DrivingRhythmPage'))
+// FSD Insights — supervised self-driving distance telemetry
+// (SelfDrivingMilesSinceReset). Code-split like every other route page.
+const FSDInsights = lazy(() => import('./features/driving/pages/FSDInsightsPage'))
 const SpeedSweetSpot = lazy(() => import('./features/driving/pages/SpeedSweetSpotPage'))
 const ParkingAnalytics = lazy(() => import('./features/vehicles/pages/ParkingAnalyticsPage'))
 const MileageBudget = lazy(() => import('./features/analytics/pages/MileageBudgetPage'))
@@ -765,6 +768,7 @@ export default function App() {
                 <Route path="logbook" element={<SafeRoute name="TripLogbook"><TripLogbook /></SafeRoute>} />
                 <Route path="range-buffer" element={<SafeRoute name="RangeBuffer"><RangeBuffer /></SafeRoute>} />
                 <Route path="driving-rhythm" element={<SafeRoute name="DrivingRhythm"><DrivingRhythm /></SafeRoute>} />
+                <Route path="fsd" element={<SafeRoute name="FSDInsights"><FSDInsights /></SafeRoute>} />
                 <Route path="speed-sweetspot" element={<SafeRoute name="SpeedSweetSpot"><SpeedSweetSpot /></SafeRoute>} />
                 <Route path="parking" element={<SafeRoute name="ParkingAnalytics"><ParkingAnalytics /></SafeRoute>} />
                 <Route path="mileage-budget" element={<SafeRoute name="MileageBudget"><MileageBudget /></SafeRoute>} />

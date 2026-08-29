@@ -362,7 +362,7 @@ describe('CostAnalysisPage', () => {
     // The forecast query is independent and succeeded — its confidence-band
     // chart still renders, proving graceful degradation.
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: /Historical and projected monthly charging cost/i,
       }),
     ).toBeInTheDocument()

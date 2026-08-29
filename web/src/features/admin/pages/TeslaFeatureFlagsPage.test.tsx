@@ -219,8 +219,8 @@ describe('TeslaFeatureFlagsPage', () => {
 
     // KPI skeleton renders no metric labels yet...
     expect(within(kpiRegion()).queryByText('Total Features')).toBeNull();
-    // ...and the composition chart (image role) only exists once data lands.
-    expect(screen.queryByRole('img', { name: /Enabled versus disabled/i })).toBeNull();
+    // ...and the interactive composition chart only exists once data lands.
+    expect(screen.queryByRole('group', { name: /Enabled versus disabled/i })).toBeNull();
   });
 
   it('renders truthful KPIs, the gauge, the composition chart, and every feature row', async () => {
@@ -240,7 +240,7 @@ describe('TeslaFeatureFlagsPage', () => {
     // Overview bento: the enabled-rate gauge label + the grouped-bar chart.
     expect(within(overviewRegion()).getByText('Enabled Rate')).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: /Enabled versus disabled feature counts/i }),
+      screen.getByRole('group', { name: /Enabled versus disabled feature counts/i }),
     ).toBeInTheDocument();
 
     // The table lists every parsed key and the running tally.
@@ -390,7 +390,7 @@ describe('TeslaFeatureFlagsPage', () => {
     expect(screen.getByRole('region', { name: 'Feature summary metrics' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Feature overview' })).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: /Enabled versus disabled feature counts/i }),
+      screen.getByRole('group', { name: /Enabled versus disabled feature counts/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('searchbox', { name: 'Search features' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument();

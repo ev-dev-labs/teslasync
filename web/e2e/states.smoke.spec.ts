@@ -23,6 +23,15 @@ for (const { route, scenario } of FIXTURE_MATRIX) {
       await expect(page.getByText(/failure|could not|unable|unavailable|error/i).first()).toBeVisible();
     }
     await waitForHarnessReady(page, mockApi);
+    if (route.name === 'fsd') {
+      const focusableInsideChartImage = page
+        .locator('[role="img"]')
+        .locator('a, button, input, select, textarea, [tabindex]:not([tabindex="-1"])');
+      await expect(
+        focusableInsideChartImage,
+        'FSD chart recovery controls must stay outside role="img"',
+      ).toHaveCount(0);
+    }
     await assertMockApiComplete(page, mockApi);
   });
 }

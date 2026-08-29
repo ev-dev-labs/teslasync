@@ -46,10 +46,22 @@ func assertSignalLogCallShape(t *testing.T, call recordedCall) {
 	// rather than the full LHS=EXCLUDED.RHS clause so the assertion
 	// stays robust against future alignment-spacing changes in
 	// signalLogInsertSQL.
-	for _, col := range []string{"value_kind", "str_value", "bool_value", "int_value", "float_value", "time_value"} {
+	for _, col := range []string{
+		"value_kind",
+		"str_value",
+		"bool_value",
+		"int_value",
+		"float_value",
+		"time_value",
+		"normalization_version",
+	} {
 		if !strings.Contains(call.SQL, "EXCLUDED."+col) {
 			t.Errorf("SQL missing EXCLUDED.%s in update list: %q", col, call.SQL)
 		}
+	}
+	if !strings.Contains(signalLogInsertSQL, "normalization_write_token") ||
+		!strings.Contains(signalLogInsertSQL, "NOT COALESCE") {
+		t.Error("conflict update must toggle normalization_write_token so legacy overwrites can be detected")
 	}
 }
 
@@ -140,8 +152,8 @@ func TestSignalLogWriter_TypeMatrix(t *testing.T) {
 			call := rec.calls[0]
 			assertSignalLogCallShape(t, call)
 
-			if got := len(call.Args); got != 9 {
-				t.Fatalf("Args=%d, want 9 ($1 vin .. $9 time_value)", got)
+			if got := len(call.Args); got != 10 {
+				t.Fatalf("Args=%d, want 10 ($1 vin .. $9 time_value, $10 normalization_version)", got)
 			}
 			if got := call.Args[0]; got != vin {
 				t.Errorf("$1 vin = %v, want %v", got, vin)
@@ -169,6 +181,9 @@ func TestSignalLogWriter_TypeMatrix(t *testing.T) {
 				} else if got != nil {
 					t.Errorf("$%d %s = %v (%T), want nil (cold-path invariant: exactly one typed column non-null)", argIndex+1, col, got, got)
 				}
+			}
+			if got := call.Args[9]; got != signalLogNormalizationVersion {
+				t.Errorf("$10 normalization_version = %v, want %d", got, signalLogNormalizationVersion)
 			}
 		})
 	}

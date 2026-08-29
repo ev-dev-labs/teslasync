@@ -390,15 +390,18 @@ describe('DrivingTab — populated', () => {
     expect(screen.getByTestId('series-scatter')).toBeInTheDocument();
   });
 
-  it('exposes each chart as an accessible image with a unit-aware label', () => {
+  it('exposes each chart with accessible semantics and unit-aware labels', () => {
     renderTab(makeQuery({ data: populated() }));
 
-    expect(screen.getAllByRole('img')).toHaveLength(7);
+    expect(screen.getAllByRole('img')).toHaveLength(5);
+    expect(
+      screen.getByRole('group', { name: 'Drives and distance by hour of day' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Trip count by speed range' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Daily driving distance and drive count (km)' }),
+      screen.getByRole('group', { name: 'Daily driving distance and drive count (km)' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Daily efficiency trend (Wh/km)' }),
@@ -447,7 +450,7 @@ describe('DrivingTab — miles preference', () => {
 
     // Accessible labels reflect the active units.
     expect(
-      screen.getByRole('img', { name: 'Daily driving distance and drive count (mi)' }),
+      screen.getByRole('group', { name: 'Daily driving distance and drive count (mi)' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Daily efficiency trend (Wh/mi)' }),

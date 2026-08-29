@@ -23,7 +23,7 @@ const PROFILE_ROUTES: Record<VisualProfile, ReadonlySet<string>> = {
   density: new Set(['drives', 'charging']),
   'long-content': new Set(['settings', 'battery']),
   'large-fleet': new Set(['fleet']),
-  degraded: new Set(['dashboard', 'fleet', 'battery', 'data-repair']),
+  degraded: new Set(['dashboard', 'fleet', 'battery', 'fsd', 'data-repair']),
   'forced-colors': new Set(['dashboard']),
 };
 
@@ -31,6 +31,7 @@ const DEGRADED_SCENARIOS: Readonly<Record<string, DataScenario>> = {
   dashboard: 'empty',
   fleet: 'partial',
   battery: 'error',
+  fsd: 'partial',
   'data-repair': 'stale',
 };
 

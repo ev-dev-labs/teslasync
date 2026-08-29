@@ -344,10 +344,15 @@ describe('BatteryTab — populated', () => {
     expect(screen.getByTestId('series-cycle_count')).toBeInTheDocument();
   });
 
-  it('exposes each chart as an accessible image with a descriptive label', () => {
+  it('exposes each chart with accessible semantics and descriptive labels', () => {
     renderTab(makeQuery({ data: analytics(TREND) }));
 
-    expect(screen.getAllByRole('img')).toHaveLength(4);
+    expect(screen.getAllByRole('img')).toHaveLength(3);
+    expect(
+      screen.getByRole('group', {
+        name: 'Battery degradation and charge cycle count over time',
+      }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Battery health score trend over time' }),
     ).toBeInTheDocument();

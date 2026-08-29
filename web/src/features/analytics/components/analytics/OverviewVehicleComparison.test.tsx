@@ -340,16 +340,17 @@ describe('OverviewVehicleComparison — populated', () => {
   it('exposes each chart as an accessible image with a unit-aware donut label', () => {
     renderCmp(makeQuery({ data: analytics(TWO) }));
 
-    // Exactly the three chart panels are images; the leaderboard is not.
-    expect(screen.getAllByRole('img')).toHaveLength(3);
+    // The static donut is an image; charts with interactive legends are groups.
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+    expect(screen.getAllByRole('group')).toHaveLength(2);
     expect(
       screen.getByRole('img', { name: 'Fleet distance share by vehicle (km)' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Normalized vehicle metric comparison' }),
+      screen.getByRole('group', { name: 'Normalized vehicle metric comparison' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Energy and drive count by vehicle' }),
+      screen.getByRole('group', { name: 'Energy and drive count by vehicle' }),
     ).toBeInTheDocument();
   });
 
@@ -440,8 +441,10 @@ describe('OverviewVehicleComparison — radar threshold', () => {
     expect(screen.getByTestId('chart-pie')).toBeInTheDocument();
     expect(screen.getByTestId('chart-bar')).toBeInTheDocument();
     expect(screen.getByText('#1 Solo')).toBeInTheDocument();
-    // Two chart images (donut + energy); the radar is an empty state.
-    expect(screen.getAllByRole('img')).toHaveLength(2);
+    // The donut is an image, the interactive energy chart is a group, and
+    // the radar is an empty state.
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'Energy and drive count by vehicle' })).toBeInTheDocument();
   });
 });
 

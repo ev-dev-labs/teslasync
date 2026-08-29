@@ -130,3 +130,31 @@ migrations:
     reversible: true
     reviewed_by: ops-gate-backfill
     reviewed_on: "2026-08-26"
+
+  - version: 232
+    name: signal_log_normalization_version
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds two nullable provenance columns and a defensive update trigger to
+      `signal_log`. The previous application revision omits both columns, so
+      old and new pods can write concurrently during a rolling deployment.
+      If an old pod overwrites a row written by a new pod, the unchanged
+      attestation token causes the trigger to clear the trusted version.
+    rollback_notes: >-
+      Leave the migration applied if the application is rolled back. Older
+      revisions ignore the nullable column, while dropping it destroys the
+      provenance needed to keep legacy unit conversions out of analytics.
+      Only run the down migration if the provenance contract is permanently
+      abandoned.
+    expected_duration: seconds to minutes
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: >-
+      ALTER TABLE ADD COLUMN takes an ACCESS EXCLUSIVE lock on the signal_log
+      hypertable and TimescaleDB propagates the nullable metadata columns and
+      trigger to existing chunks. There is no default, validation scan, or row
+      rewrite, so hold time should be brief; deploy during a low-ingest window
+      and let the migration complete before starting new pods.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-08-28"

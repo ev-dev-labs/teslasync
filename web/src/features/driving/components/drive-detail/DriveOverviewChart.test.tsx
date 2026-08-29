@@ -110,7 +110,7 @@ describe('DriveOverviewChart', () => {
     renderChart([point({ speed: 10 }), point({ speed: 20 })]);
     expect(screen.getByRole('heading', { name: 'Drive Overview' })).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: /drive overview composed chart/i }),
+      screen.getByRole('group', { name: /drive overview composed chart/i }),
     ).toBeInTheDocument();
   });
 

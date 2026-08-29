@@ -479,14 +479,18 @@ describe('DestinationTransitionsPage', () => {
   it('provides accessible summaries for every chart', () => {
     renderPage();
 
+    expect(
+      screen.getByRole('img', {
+        name: 'Visit share for the most common normalized end destinations',
+      }),
+    ).toBeInTheDocument();
     for (const label of [
-      'Visit share for the most common normalized end destinations',
       'Transition concentration index and historical leading successor share by origin',
       'Twelve-bin vehicle-local profile of accepted transition counts and concentration',
       'Seven-day vehicle-timezone profile of accepted transition counts and concentration',
       'Vehicle-local monthly trend of accepted transition counts and concentration',
     ]) {
-      expect(screen.getByRole('img', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: label })).toBeInTheDocument();
     }
   });
 });

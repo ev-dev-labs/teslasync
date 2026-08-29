@@ -124,6 +124,7 @@ import (
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
 	apifleetops "github.com/ev-dev-labs/teslasync/internal/api/fleetops"
 	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
+	apifsd "github.com/ev-dev-labs/teslasync/internal/api/fsd"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
@@ -1036,6 +1037,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	dataRepairHandler := apidatarepair.NewDataRepairHandler(db, dataRepairOpts...)
 	tempImpactHandler := tempimpact.NewHandler(db)
+	// FSD Insights reads the two resettable SI-meter distance counters
+	// (SelfDrivingMilesSinceReset / MilesSinceReset) straight off the
+	// signal_log change feed and derives reset-safe per-local-day deltas
+	// server-side, so the browser never downloads a raw counter history.
+	fsdInsightsHandler := apifsd.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
 	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
 	segmentsHandler := apisegments.NewSegmentsHandler(db)
@@ -3665,6 +3671,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
 		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
 		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
+		// Supervised self-driving distance analytics. Server-side
+		// aggregation keeps the raw counter change feed off the wire; the
+		// response is canonical SI meters plus explicit data-quality
+		// metadata (baselines, resets, coverage).
+		r.Get("/analytics/fsd", fsdInsightsHandler.Insights)
 		r.Get("/analytics/route-efficiency", routeEfficiencyHandler.List)
 		r.Get("/analytics/route-efficiency/detail", routeEfficiencyHandler.Detail)
 		r.Get("/analytics/battery-cells", batteryCellsHandler.Get)

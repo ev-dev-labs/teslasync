@@ -204,7 +204,7 @@ describe('ChargerTypeChart — chrome + a11y', () => {
 
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
     expect(screen.getByText('Average kW and kWh per charger category')).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: ARIA_LABEL })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: ARIA_LABEL })).toBeInTheDocument();
   });
 
   it('builds the SR fallback table with all five localized columns', () => {
@@ -265,7 +265,7 @@ describe('ChargerTypeChart — empty branch (regression: never a blank panel)', 
     expect(screen.getByText('No data available')).toBeInTheDocument();
     // The title stays mounted while the empty state replaces the chart image.
     expect(screen.getByRole('heading', { level: 3, name: TITLE })).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: ARIA_LABEL })).toBeNull();
+    expect(screen.queryByRole('group', { name: ARIA_LABEL })).toBeNull();
     // No fallback data table and no export menu when there's nothing to show.
     expect(screen.queryByText(`${TITLE} — data table`)).toBeNull();
     expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();

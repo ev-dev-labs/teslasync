@@ -126,6 +126,126 @@ const repairCase = {
   resolution_note: null, first_seen_at: NOW, last_seen_at: NOW, created_at: NOW, updated_at: NOW,
 };
 
+function fsdInsightsFixture(scenario: DataScenario) {
+  const empty = scenario === 'empty';
+  const partial = scenario === 'partial';
+  const shareBasisAvailable = !empty && !partial;
+  const start = Date.UTC(2026, 6, 28);
+  const daily = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(start + index * 86_400_000).toISOString().slice(0, 10);
+    const hasCounterObservation = !empty && index % 2 === 0;
+    const fsdEmitted =
+      hasCounterObservation && index % 6 === 0 && (!partial || index >= 6);
+    const measured = hasCounterObservation && index >= (partial ? 12 : 0);
+    const reset = partial && index === 18;
+    const fsdDistanceM = measured
+      ? fsdEmitted && !reset
+        ? 3_200 + index * 75
+        : 0
+      : null;
+    const drivingDistanceM = hasCounterObservation ? 11_000 + index * 250 : null;
+    return {
+      date,
+      fsd_distance_m: fsdDistanceM,
+      driving_distance_m: drivingDistanceM,
+      fsd_share_pct:
+        shareBasisAvailable &&
+        fsdDistanceM != null &&
+        drivingDistanceM != null &&
+        drivingDistanceM > 0
+          ? Math.round((fsdDistanceM / drivingDistanceM) * 10_000) / 100
+          : null,
+      fsd_observation_count: fsdEmitted ? 1 : 0,
+      driving_observation_count: hasCounterObservation ? 1 : 0,
+      reset_count: reset ? 1 : 0,
+      has_counter_observation: hasCounterObservation,
+    };
+  });
+  const measuredDays = daily.filter((day) => day.fsd_distance_m != null);
+  const activeDays = measuredDays.filter((day) => (day.fsd_distance_m ?? 0) > 0);
+  const fsdDistanceM = empty
+    ? null
+    : measuredDays.reduce((sum, day) => sum + (day.fsd_distance_m ?? 0), 0);
+  const drivingDistanceM = empty
+    ? null
+    : daily.reduce((sum, day) => sum + (day.driving_distance_m ?? 0), 0);
+  const bestDay = activeDays
+    .slice()
+    .sort((a, b) => (b.fsd_distance_m ?? 0) - (a.fsd_distance_m ?? 0))[0];
+  const counterObservationDays = daily.filter((day) => day.has_counter_observation).length;
+
+  return {
+    vehicle_id: 7,
+    period: {
+      days: 30,
+      start_date: '2026-07-28',
+      end_date: '2026-08-26',
+      timezone: 'UTC',
+    },
+    totals: {
+      fsd_distance_m: fsdDistanceM,
+      driving_distance_m: drivingDistanceM,
+      fsd_share_pct:
+        shareBasisAvailable &&
+        fsdDistanceM != null &&
+        drivingDistanceM != null &&
+        drivingDistanceM > 0
+          ? Math.round((fsdDistanceM / drivingDistanceM) * 10_000) / 100
+          : null,
+      active_days: activeDays.length,
+      measured_days: measuredDays.length,
+      days_in_period: 30,
+      avg_measured_day_fsd_distance_m:
+        fsdDistanceM != null && measuredDays.length > 0
+          ? fsdDistanceM / measuredDays.length
+          : null,
+      avg_active_day_fsd_distance_m:
+        fsdDistanceM != null && activeDays.length > 0
+          ? fsdDistanceM / activeDays.length
+          : null,
+      best_day: bestDay
+        ? {
+            date: bestDay.date,
+            fsd_distance_m: bestDay.fsd_distance_m,
+            driving_distance_m: bestDay.driving_distance_m,
+            fsd_share_pct: shareBasisAvailable ? bestDay.fsd_share_pct : null,
+          }
+        : null,
+    },
+    quality: {
+      fsd_sample_count: daily.reduce((sum, day) => sum + day.fsd_observation_count, 0),
+      driving_sample_count: empty ? 0 : counterObservationDays,
+      fsd_invalid_sample_count: 0,
+      driving_invalid_sample_count: 0,
+      fsd_duplicate_sample_count: 0,
+      driving_duplicate_sample_count: 0,
+      fsd_reset_count: partial ? 1 : 0,
+      driving_reset_count: 0,
+      fsd_baseline_available: !empty && !partial,
+      driving_baseline_available: !empty,
+      fsd_reported_in_period: !empty,
+      driving_reported_in_period: !empty,
+      fsd_distance_derivable: !empty,
+      driving_denominator_available: !empty,
+      share_basis_available: shareBasisAvailable,
+      fsd_measured_days: measuredDays.length,
+      historical_data_guarded: true,
+      required_normalization_version: 1,
+      fsd_untrusted_sample_count: partial ? 3 : 0,
+      driving_untrusted_sample_count: partial ? 2 : 0,
+      counter_observation_days: counterObservationDays,
+      days_without_counter_observation: 30 - counterObservationDays,
+      counter_observation_day_pct: Math.round((counterObservationDays / 30) * 10_000) / 100,
+      first_observation_at: empty ? null : '2026-07-28T08:00:00Z',
+      last_observation_at: empty ? null : '2026-08-25T18:00:00Z',
+      fsd_first_observation_at: empty ? null : partial ? '2026-08-03T08:00:00Z' : '2026-07-28T08:00:00Z',
+      fsd_last_observation_at: empty ? null : '2026-08-21T18:00:00Z',
+      share_clamped: false,
+    },
+    daily,
+  };
+}
+
 function listFor<T>(scenario: DataScenario, value: T): T[] {
   return scenario === 'empty' ? [] : [value];
 }
@@ -360,6 +480,9 @@ export function resolveApiFixture(
       ? { ...charging, ended_at: null, end_soc_pct: null, avg_power_w: null, live: true }
       : { ...charging, started_at: scenario === 'stale' ? STALE : charging.started_at };
     return matched(listFor(scenario, value));
+  }
+  if (path.startsWith('/analytics/fsd')) {
+    return matched(fsdInsightsFixture(scenario));
   }
   if (path.startsWith('/analytics/charging-optimizer')) {
     return matched({ recommended_start_hour: 1, estimated_savings: 4.2, confidence: 0.84 });

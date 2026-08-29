@@ -469,7 +469,7 @@ describe('ArrivalReliabilityPage', () => {
       'Seven-day vehicle-timezone profile of route-normalized duration, observed allowance share, and samples',
       'Vehicle-local monthly trend of route-normalized duration, observed allowance share, and samples',
     ]) {
-      expect(screen.getByRole('img', { name: label })).toBeInTheDocument();
+      expect(screen.getByRole('group', { name: label })).toBeInTheDocument();
     }
   });
 });

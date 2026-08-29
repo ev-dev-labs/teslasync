@@ -321,7 +321,7 @@ describe('PowerFlowDashboardPage — populated (charging / importing)', () => {
 
     // Charts expose the accessible chart surfaces.
     expect(
-      within(historyRegion()).getByRole('img', { name: /stacked area chart/i }),
+      within(historyRegion()).getByRole('group', { name: /stacked area chart/i }),
     ).toBeInTheDocument();
     expect(
       within(historyRegion()).getByRole('img', { name: /line chart/i }),
@@ -446,8 +446,8 @@ describe('PowerFlowDashboardPage — history query error', () => {
     // Live overview is unaffected — the SOC gauge still renders.
     expect(within(overviewRegion()).getByText('State of Charge')).toBeInTheDocument();
 
-    // Charts lose their image surface and show a retry CTA instead.
-    expect(within(historyRegion()).queryByRole('img', { name: /stacked area chart/i })).toBeNull();
+    // Charts lose their semantic surface and show a retry CTA instead.
+    expect(within(historyRegion()).queryByRole('group', { name: /stacked area chart/i })).toBeNull();
     const retries = within(historyRegion()).getAllByRole('button', { name: 'Retry' });
     expect(retries.length).toBeGreaterThanOrEqual(1);
 

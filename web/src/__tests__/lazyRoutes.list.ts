@@ -214,6 +214,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'TripLogbook', load: () => import('../features/driving/pages/TripLogbookPage') },
   { name: 'RangeBuffer', load: () => import('../features/driving/pages/RangeBufferPage') },
   { name: 'DrivingRhythm', load: () => import('../features/driving/pages/DrivingRhythmPage') },
+  { name: 'FSDInsights', load: () => import('../features/driving/pages/FSDInsightsPage') },
   { name: 'SpeedSweetSpot', load: () => import('../features/driving/pages/SpeedSweetSpotPage') },
   { name: 'ParkingAnalytics', load: () => import('../features/vehicles/pages/ParkingAnalyticsPage') },
   { name: 'MileageBudget', load: () => import('../features/analytics/pages/MileageBudgetPage') },

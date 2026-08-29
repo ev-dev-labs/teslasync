@@ -233,8 +233,8 @@ describe('TemperatureSection — chart chrome + a11y', () => {
     const heading = screen.getByRole('heading', { level: 3, name: 'Temperatures' });
     expect(heading).toBeInTheDocument();
 
-    // The chart body re-states the summary for a focus-stop on the graphic.
-    const body = screen.getByRole('img', {
+    // The named group re-states the summary and can contain legend controls.
+    const body = screen.getByRole('group', {
       name: /Inside, outside, driver and passenger temperature lines/,
     });
     expect(body).toBeInTheDocument();

@@ -15,6 +15,7 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
   - `/api/v1/action-center/{recommendationID}/actions`
   - `/api/v1/activity`
   - `/api/v1/analytics/battery-health`
+  - `/api/v1/analytics/fsd`
   - `/api/v1/benchmarks/privacy`
   - `/api/v1/benchmarks/privacy/consent`
   - `/api/v1/benchmarks/releases`
@@ -26,7 +27,7 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
 
 ## Findings
 
-All 226 user-facing routes are covered.
+All 227 user-facing routes are covered.
 
 ## Per-route coverage table
 
@@ -54,6 +55,7 @@ All 226 user-facing routes are covered.
 | `/analytics/driving-coach` | transitive (api_availability) |
 | `/analytics/energy` | transitive (api_availability) |
 | `/analytics/fleet` | transitive (api_availability) |
+| `/analytics/fsd` | transitive (api_availability) |
 | `/analytics/lifetime` | transitive (api_availability) |
 | `/analytics/period-stats` | transitive (api_availability) |
 | `/analytics/range-projection` | transitive (api_availability) |

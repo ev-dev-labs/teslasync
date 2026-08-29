@@ -247,9 +247,9 @@ describe('DiskForecastPage', () => {
       screen.getByRole('region', { name: 'Fleet disk summary' }),
     ).toBeInTheDocument()
 
-    // Charts are announced to assistive tech via role=img + descriptive labels.
+    // Interactive charts are named groups; static charts retain image semantics.
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: /stacked bar chart of the largest hypertables/i,
       }),
     ).toBeInTheDocument()

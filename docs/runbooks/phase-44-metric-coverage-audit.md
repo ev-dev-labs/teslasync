@@ -16,7 +16,7 @@ go run ./cmd/metric-coverage-audit -report docs/runbooks/phase-44-metric-coverag
 
 ## Route coverage
 
-- Routes detected in router.go: **367** (threshold ≥ 100)
+- Routes detected in router.go: **369** (threshold ≥ 100)
 - Coverage strategy: chi `r.Use(apimw.Metrics)` is registered at the root router so every subsequently-declared route inherits the RED middleware.
 
 ## Findings

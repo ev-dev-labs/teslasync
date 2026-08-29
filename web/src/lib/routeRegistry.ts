@@ -126,6 +126,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/firmware-impact', name: 'FirmwareImpact', label: 'Firmware Impact', i18nKey: 'routes.firmwareImpact' },
   { path: '/fleet-api', name: 'FleetAPI', label: 'Fleet API', i18nKey: 'routes.fleetAPI' },
   { path: '/fleet-operations', name: 'FleetOperations', label: 'Fleet Operations', i18nKey: 'routes.fleetOperations' },
+  { path: '/fsd', name: 'FSDInsights', label: 'FSD Insights', i18nKey: 'routes.fSDInsights' },
   { path: '/gas-price', name: 'GasPriceAutoPoll', label: 'Gas Price Auto Poll', i18nKey: 'routes.gasPriceAutoPoll' },
   { path: '/geofences', name: 'Geofences', label: 'Geofences', i18nKey: 'routes.geofences' },
   { path: '/glance', name: 'Glance', label: 'Glance', i18nKey: 'routes.glance' },

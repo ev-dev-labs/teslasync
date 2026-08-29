@@ -399,8 +399,8 @@ describe('ChargeAdvisorPage', () => {
   it('uses descriptive terminology and chart accessibility data', () => {
     renderPage();
     expect(screen.queryByText(/Plug in|Skip it|no reserve risk|forecast probability/i)).not.toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Mean and calendar-day p75 battery percentage paths/ })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /Observed daily drive-associated/ })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Mean and calendar-day p75 battery percentage paths/ })).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Observed daily drive-associated/ })).toBeInTheDocument();
     expect(screen.getByText(/Omitted inputs/)).toBeInTheDocument();
   });
 

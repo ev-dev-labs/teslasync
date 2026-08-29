@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import {
   assertMockApiComplete,
   expectThemeApplied,
@@ -29,6 +29,12 @@ for (const route of QUALITY_ROUTES) {
     await expectThemeApplied(page, theme);
     await expectNoHorizontalOverflow(page);
     await expectStableChartHeights(page);
+    if (route.name === 'fsd') {
+      const legendLabels = page
+        .getByTestId('fsd-distance-trend')
+        .locator('.recharts-legend-item-text');
+      await expect(legendLabels).toHaveCount(2);
+    }
     if (route.name === 'data-repair') {
       await page.getByRole('button', { name: /review case 301/i }).click();
       await expectDialogsInsideViewport(page);

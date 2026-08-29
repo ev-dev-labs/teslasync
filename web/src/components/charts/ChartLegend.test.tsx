@@ -37,12 +37,14 @@ const H = vi.hoisted(() => ({
 
 vi.mock('recharts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('recharts')>()
+  const Legend = (props: Record<string, unknown>) => {
+    H.legendProps = props
+    return null
+  }
+  Legend.displayName = 'Legend'
   return {
     ...actual,
-    Legend: (props: Record<string, unknown>) => {
-      H.legendProps = props
-      return null
-    },
+    Legend,
   }
 })
 
@@ -208,6 +210,10 @@ describe('ChartLegend — recharts wiring', () => {
     if (!p) throw new Error('Legend was not rendered')
     return p as never
   }
+
+  it('uses the recharts display name so categorical charts discover it', () => {
+    expect(ChartLegend.displayName).toBe('Legend')
+  })
 
   it('passes wrapperStyle / verticalAlign / align straight through to recharts <Legend>', () => {
     const style = { fontSize: 12 }
