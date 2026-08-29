@@ -28,6 +28,7 @@ import {
 } from '../apiCachePolicy'
 import { PAGE_TO_SW, SW_TO_PAGE } from '../swProtocol'
 import { DEFAULT_DEVICE_NOTIFICATION_PREFS } from '../notificationPolicy'
+import { TRIP_SHARE_CACHE_URL } from '../../lib/tripShareTarget'
 
 vi.mock('workbox-precaching', () => ({
   precacheAndRoute: vi.fn(),
@@ -423,6 +424,79 @@ describe('authenticated API read caching', () => {
     const stored = await apiCache()?.match(`${ORIGIN}/api/v1/vehicles`)
     expect(stored).toBeDefined()
     expect(Number(stored?.headers.get(CACHED_AT_HEADER))).toBeGreaterThan(0)
+  })
+
+  describe('PWA trip share target', () => {
+    it('stores a private share payload and redirects with only an opaque marker', async () => {
+      const body = new FormData()
+      body.set('title', 'Service Center')
+      body.set('text', '37.3947, -122.1503')
+      body.set('url', 'https://maps.example/place')
+
+      const response = await dispatchFetch(
+        new Request(`${ORIGIN}/share-target`, { method: 'POST', body }),
+      )
+
+      expect(response?.status).toBe(303)
+      expect(response?.headers.get('location')).toBe(
+        `${ORIGIN}/trip-planner?share_target=1`,
+      )
+      expect(response?.headers.get('location')).not.toContain('37.3947')
+
+      const cache = cacheStorage.caches.get(cacheName('share-target'))
+      const stored = await cache?.match(TRIP_SHARE_CACHE_URL)
+      await expect(stored?.json()).resolves.toMatchObject({
+        version: 1,
+        title: 'Service Center',
+        text: '37.3947, -122.1503',
+        url: 'https://maps.example/place',
+      })
+    })
+
+    it('redirects an empty share without storing a payload', async () => {
+      const staleCache = await cacheStorage.open(cacheName('share-target'))
+      await staleCache.put(
+        TRIP_SHARE_CACHE_URL,
+        new Response(JSON.stringify({ text: 'stale destination' })),
+      )
+
+      const response = await dispatchFetch(
+        new Request(`${ORIGIN}/share-target`, {
+          method: 'POST',
+          body: new FormData(),
+        }),
+      )
+
+      expect(response?.status).toBe(303)
+      expect(response?.headers.get('location')).toBe(
+        `${ORIGIN}/trip-planner?share_target=empty`,
+      )
+      expect(cacheStorage.caches.has(cacheName('share-target'))).toBe(false)
+    })
+
+    it('recovers from malformed multipart data and clears stale payloads', async () => {
+      const staleCache = await cacheStorage.open(cacheName('share-target'))
+      await staleCache.put(
+        TRIP_SHARE_CACHE_URL,
+        new Response(JSON.stringify({ text: 'stale destination' })),
+      )
+
+      const response = await dispatchFetch(
+        new Request(`${ORIGIN}/share-target`, {
+          method: 'POST',
+          headers: {
+            'content-type': 'multipart/form-data; boundary=broken',
+          },
+          body: 'not-a-valid-multipart-body',
+        }),
+      )
+
+      expect(response?.status).toBe(303)
+      expect(response?.headers.get('location')).toBe(
+        `${ORIGIN}/trip-planner?share_target=empty`,
+      )
+      expect(cacheStorage.caches.has(cacheName('share-target'))).toBe(false)
+    })
   })
 
   it('does not intercept a mutation at all', async () => {

@@ -468,7 +468,7 @@ function checkViteConfig() {
   if (!/registerType:\s*'prompt'/.test(source)) {
     fail("vite.config.ts must set registerType: 'prompt'")
   }
-  for (const key of ['id:', 'scope:', 'display_override:', 'launch_handler:']) {
+  for (const key of ['id:', 'scope:', 'display_override:', 'launch_handler:', 'share_target:']) {
     if (!source.includes(key)) {
       fail(`vite.config.ts manifest is missing "${key}" (PWA-01)`)
     }
@@ -541,6 +541,18 @@ function checkManifest() {
     fail(`manifest.short_name "${manifest.short_name}" exceeds the 12-character home-screen budget`)
   }
 
+  const shareTarget = manifest.share_target
+  if (
+    shareTarget?.action !== '/share-target'
+    || shareTarget?.method !== 'POST'
+    || shareTarget?.enctype !== 'multipart/form-data'
+    || shareTarget?.params?.title !== 'title'
+    || shareTarget?.params?.text !== 'text'
+    || shareTarget?.params?.url !== 'url'
+  ) {
+    fail('manifest share_target must POST title/text/url as multipart/form-data to /share-target')
+  }
+
   const icons = Array.isArray(manifest.icons) ? manifest.icons : []
   const seen = new Set()
   for (const icon of icons) {
@@ -587,7 +599,9 @@ function checkManifest() {
     }
   }
 
-  notes.push(`manifest: ${icons.length} icons, ${(manifest.shortcuts ?? []).length} shortcuts`)
+  notes.push(
+    `manifest: ${icons.length} icons, ${(manifest.shortcuts ?? []).length} shortcuts, share target enabled`,
+  )
 }
 
 function checkBuiltIndexHtml() {

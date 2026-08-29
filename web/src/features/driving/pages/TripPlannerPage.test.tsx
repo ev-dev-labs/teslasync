@@ -26,7 +26,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
-import type { ReactNode } from 'react';
+import { StrictMode, type ReactNode } from 'react';
 import type {
   TripPlan,
   TripPlanRoute,
@@ -78,6 +78,10 @@ vi.mock('@/api/hooks/useDriving', async (importActual) => {
 vi.mock('@/api/hooks/useVehicleCommand', () => ({
   useVehicleCommand: vi.fn(),
 }));
+vi.mock('@/lib/tripShareTarget', async (importActual) => {
+  const actual = await importActual<typeof import('@/lib/tripShareTarget')>();
+  return { ...actual, consumeTripSharePayload: vi.fn() };
+});
 
 // Feature-child doubles — surface the page-computed props the assertions care
 // about. AddressInput exposes a "select" button so the test can drive an
@@ -180,11 +184,13 @@ if (typeof window.matchMedia !== 'function') {
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePlanTrip } from '@/api/hooks/useDriving';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
+import { consumeTripSharePayload } from '@/lib/tripShareTarget';
 import TripPlannerPage from './TripPlannerPage';
 
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 const mockUsePlanTrip = vi.mocked(usePlanTrip);
 const mockUseVehicleCommand = vi.mocked(useVehicleCommand);
+const mockConsumeTripSharePayload = vi.mocked(consumeTripSharePayload);
 
 // The plan mutation double: `mutate` forwards to the caller's onSuccess with
 // whatever `nextPlan` is primed to, mirroring a resolved TanStack mutation.
@@ -267,17 +273,18 @@ function makePlan(
 
 /* ── harness ──────────────────────────────────────────────── */
 
-function renderPage() {
+function renderPage(initialEntry = '/trip-planner', strictMode = false) {
   const qc = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
-  return render(
+  const page = (
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <TripPlannerPage />
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  return render(strictMode ? <StrictMode>{page}</StrictMode> : page);
 }
 
 function selectOriginAndDestination() {
@@ -295,6 +302,10 @@ function planWith(plan: TripPlan) {
 beforeEach(() => {
   vi.clearAllMocks();
   nextPlan = null;
+  Object.defineProperty(window, 'caches', {
+    configurable: true,
+    value: {} as CacheStorage,
+  });
   mockSelectedVehicle.mockReturnValue({
     vehicleId: 1,
     vehicle: { id: 1, display_name: 'Car One', vin: 'VIN1', battery_level: 72 } as never,
@@ -313,6 +324,7 @@ beforeEach(() => {
     mutate: commandMutate,
     isPending: false,
   } as never);
+  mockConsumeTripSharePayload.mockResolvedValue(null);
 });
 
 /* ── structure & a11y ─────────────────────────────────────── */
@@ -412,6 +424,88 @@ describe('TripPlannerPage — plan-button gating', () => {
     renderPage();
     selectOriginAndDestination();
     expect(screen.getByRole('button', { name: /Plan Trip/i })).toBeDisabled();
+  });
+});
+
+describe('TripPlannerPage — PWA share target', () => {
+  it('imports trusted coordinates without exposing the destination in the URL', async () => {
+    mockConsumeTripSharePayload.mockResolvedValue({
+      version: 1,
+      title: 'Service Center',
+      text: '',
+      url: 'https://maps.example/?query=37.3947,-122.1503',
+      captured_at: Date.now(),
+    });
+
+    renderPage('/trip-planner?share_target=1');
+
+    expect(
+      await screen.findByText(
+        'Destination coordinates imported. Review the route settings before planning.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('address-To-value')).toHaveTextContent('Service Center');
+    expect(screen.getByTestId('map-dest')).toHaveTextContent('Service Center');
+
+    fireEvent.click(screen.getByTestId('address-select-From'));
+    fireEvent.click(screen.getByRole('button', { name: /Plan Trip/i }));
+    expect(planMutate.mock.calls[0][0].destination).toEqual({
+      lat: 37.3947,
+      lng: -122.1503,
+      name: 'Service Center',
+    });
+  });
+
+  it('imports exactly once when React Strict Mode replays the effect', async () => {
+    mockConsumeTripSharePayload.mockResolvedValue({
+      version: 1,
+      title: 'Service Center',
+      text: '',
+      url: 'https://maps.example/?query=37.3947,-122.1503',
+      captured_at: Date.now(),
+    });
+
+    renderPage('/trip-planner?share_target=1', true);
+
+    expect(
+      await screen.findByText(
+        'Destination coordinates imported. Review the route settings before planning.',
+      ),
+    ).toBeInTheDocument();
+    expect(mockConsumeTripSharePayload).toHaveBeenCalledTimes(1);
+  });
+
+  it('prefills text shares but still requires a geocoded selection', async () => {
+    mockConsumeTripSharePayload.mockResolvedValue({
+      version: 1,
+      title: '',
+      text: 'Tesla Fremont Factory',
+      url: '',
+      captured_at: Date.now(),
+    });
+
+    renderPage('/trip-planner?share_target=1');
+
+    expect(
+      await screen.findByText(
+        'Destination prefilled. Choose a matching search result to confirm its coordinates.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('address-To-value')).toHaveTextContent(
+      'Tesla Fremont Factory',
+    );
+    fireEvent.click(screen.getByTestId('address-select-From'));
+    expect(screen.getByRole('button', { name: /Plan Trip/i })).toBeDisabled();
+  });
+
+  it('surfaces an explicit recovery message when the shared payload is missing', async () => {
+    renderPage('/trip-planner?share_target=1');
+
+    expect(
+      await screen.findByText(
+        'The shared item was empty, expired, or could not be read. Share it again or enter the destination manually.',
+      ),
+    ).toBeInTheDocument();
   });
 });
 

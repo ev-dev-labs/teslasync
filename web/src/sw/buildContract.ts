@@ -88,6 +88,7 @@ export const VERSIONED_BUCKETS = [
   'app-route-assets',
   'app-route-images',
   'api-reads',
+  'share-target',
 ] as const
 
 /**

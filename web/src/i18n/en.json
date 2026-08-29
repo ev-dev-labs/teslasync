@@ -13730,6 +13730,14 @@
       "chargeSummary": "{{from}}% → {{to}}% ({{min}} min)"
     },
     "title": "Trip Planner",
+    "share": {
+      "title": "Shared destination",
+      "loading": "Importing the destination shared with TeslaSync…",
+      "coordinates": "Destination coordinates imported. Review the route settings before planning.",
+      "text": "Destination prefilled. Choose a matching search result to confirm its coordinates.",
+      "errorTitle": "Shared destination unavailable",
+      "error": "The shared item was empty, expired, or could not be read. Share it again or enter the destination manually."
+    },
     "speed": {
       "relaxed": "Relaxed (−20%)",
       "normal": "Normal",

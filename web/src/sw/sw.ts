@@ -53,6 +53,10 @@ import {
   type CachedApiEntry,
   type SwStatusMessage,
 } from './swProtocol'
+import {
+  TRIP_SHARE_TARGET_PATH,
+  handleTripShareTargetRequest,
+} from '../lib/tripShareTarget'
 
 declare const self: ServiceWorkerGlobalScope & {
   __WB_MANIFEST: Array<{ url: string; revision: string | null }>
@@ -322,6 +326,22 @@ async function handleApiRead(event: FetchEvent): Promise<Response> {
 }
 
 self.addEventListener('fetch', (event: FetchEvent) => {
+  const requestURL = new URL(event.request.url)
+  if (
+    event.request.method === 'POST'
+    && requestURL.origin === self.location.origin
+    && requestURL.pathname === TRIP_SHARE_TARGET_PATH
+  ) {
+    event.respondWith(
+      handleTripShareTargetRequest(
+        event.request,
+        self.caches,
+        self.location.origin,
+      ),
+    )
+    return
+  }
+
   const decision = classifyApiRequest({
     method: event.request.method,
     url: event.request.url,
