@@ -649,13 +649,17 @@ func (s *PipelineSubscriber) IsHealthy() bool {
 // pahomqtt.Message. handlePayload takes this struct so unit tests can
 // exercise the full handler logic without instantiating a paho client.
 type mqttPayload struct {
-	Topic     string
-	Payload   []byte
-	MessageID uint16
-	Ack       func()
+	Topic      string
+	Payload    []byte
+	MessageID  uint16
+	ReceivedAt time.Time
+	Ack        func()
 }
 
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
+	// Capture receipt time before any parsing, VIN resolution, or tracing.
+	// This is the subscriber boundary, not a later pipeline-processing time.
+	receivedAt := time.Now().UTC()
 	var acked atomic.Bool
 	ack := func() {
 		if acked.CompareAndSwap(false, true) {
@@ -699,10 +703,11 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 		}
 	}()
 	s.handlePayload(ctx, mqttPayload{
-		Topic:     msg.Topic(),
-		Payload:   msg.Payload(),
-		MessageID: msg.MessageID(),
-		Ack:       ack,
+		Topic:      msg.Topic(),
+		Payload:    msg.Payload(),
+		MessageID:  msg.MessageID(),
+		ReceivedAt: receivedAt,
+		Ack:        ack,
 	})
 }
 
@@ -804,7 +809,12 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	// historical replays). time.Now() is the right call here — we are
 	// the boundary that just received the bytes; substituting any other
 	// clock would silently misattribute event-time.
-	receivedAt := time.Now().UTC()
+	receivedAt := msg.ReceivedAt
+	if receivedAt.IsZero() {
+		// Direct unit-test callers do not pass through Paho's receive
+		// boundary. Production always supplies ReceivedAt above.
+		receivedAt = time.Now().UTC()
+	}
 
 	atomics, err := codec.DecodeJSONFieldCtx(ctx, field, msg.Payload, vin, receivedAt)
 	if err != nil {
@@ -825,6 +835,10 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 		msg.Ack()
 		return
 	}
+	// Stamp only final, flattened atomics. Bare production JSON has no
+	// SourceEmittedAt (its EmittedAt is receivedAt for ordering), while a
+	// valid replay-envelope ts remains the decoder's source evidence.
+	atomics = codec.StampTransport(atomics, codec.IngestOriginFleetTelemetryMQTT, receivedAt)
 	if err := s.pipeline.ProcessAtomics(ctx, atomics, vehicleID); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
 		return

@@ -354,6 +354,9 @@
     "emptyMessage": "No signal data matches the selected signals and time range.",
     "emptyDescription": "Expand the time range or choose another signal, then run the query again."
   },
+  "signalLog": {
+    "records": "records"
+  },
   "signalMutualInformation": {
     "title": "Signal Mutual Information",
     "heatmap": {
@@ -401,6 +404,35 @@
   "signalStats": {
     "emptyMessage": "No aggregate statistics are available.",
     "emptyDescription": "Select a signal with numeric samples or expand the queried time range."
+  },
+  "signalTransportAgreement": {
+    "title": "HTTP / MQTT Agreement",
+    "description": "Compares only SI-normalized observations with producer timestamps from both Fleet Telemetry transports.",
+    "measured": "Measured",
+    "notMeasured": "Not measured",
+    "runQuery": "Run a signal query to audit HTTP and MQTT evidence for the same time window.",
+    "resource": "transport agreement evidence",
+    "unavailable": "Transport agreement evidence is not available for this query.",
+    "windowLimitTitle": "Agreement is limited to seven days",
+    "windowLimitDescription": "Cross-transport agreement is evaluated over at most {{limitDays}} days ({{limitHours}} hours). This query covers {{requestedDays}} days and is kept exactly as submitted — the signal history below is unchanged. Re-run with a shorter range to audit HTTP and MQTT evidence.",
+    "partialTitle": "Partial evidence window",
+    "partialDescription": "The audit reached its {{limit}}-row safety limit. Results describe only the bounded sample and do not prove full-window agreement.",
+    "invalidRows": "Excluded malformed typed rows: {{count}}.",
+    "agreement": "Agreement",
+    "sourceTimeOnly": "Producer time only; receipt fallbacks excluded",
+    "comparablePairs": "Comparable pairs",
+    "pairTolerance": "Within {{seconds}} seconds",
+    "httpEvidence": "HTTP evidence",
+    "mqttEvidence": "MQTT evidence",
+    "noEvidenceTitle": "No eligible evidence",
+    "noEvidenceDescription": "No normalized observations with producer timestamps were recorded in this window.",
+    "overlapTitle": "Not enough overlapping evidence",
+    "overlapDescription": "Agreement needs HTTP and MQTT observations for the same signal within the source-time tolerance. Missing overlap is unknown, not 0% agreement.",
+    "fieldTitle": "Per-signal evidence",
+    "fieldCount": "Showing {{shown}} of {{total}} signals",
+    "fieldEvidence": "{{pairs}} pairs / {{http}} HTTP / {{mqtt}} MQTT",
+    "disagreements": "Disagreements: {{count}}",
+    "noFields": "No eligible per-signal evidence is available."
   },
   "signalTrend": {
     "title": "Signal Trend",

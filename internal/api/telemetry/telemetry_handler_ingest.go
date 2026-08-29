@@ -108,6 +108,9 @@ type telemetryPayload struct {
 // effects — they happen exactly once via the pipeline.
 func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 	start := time.Now().UTC()
+	// Receipt evidence belongs to the HTTP boundary, before body decoding or
+	// vehicle lookup. It is not a substitute for a producer timestamp.
+	receivedAt := start
 	var payload telemetryPayload
 
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
@@ -144,7 +147,7 @@ func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 	// payload.CreatedAt falls back to time.Now() rather than failing
 	// the whole batch — consistent with the legacy spine which never
 	// rejected a batch on a bad CreatedAt.
-	batchEmittedAt := parseBatchTimestamp(payload.CreatedAt, time.Now().UTC())
+	batchEmittedAt, batchSourceEmittedAt := timestampOrReceipt(payload.CreatedAt, receivedAt)
 
 	// Build []codec.Atomic from the JSON wire format. payload.Signals
 	// preserves Tesla emission order; payload.Data is a key/value map
@@ -156,12 +159,15 @@ func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 	atomics := make([]codec.Atomic, 0, len(payload.Signals)+len(payload.Data))
 	signals := make(map[string]interface{}, len(payload.Signals)+len(payload.Data))
 	for _, sig := range payload.Signals {
-		emittedAt := parseSignalTimestamp(sig.Timestamp, batchEmittedAt)
+		emittedAt, sourceEmittedAt := timestampOrFallback(sig.Timestamp, batchEmittedAt, batchSourceEmittedAt)
 		atomics = append(atomics, codec.Atomic{
-			Field:     sig.Name,
-			Value:     sig.Value,
-			EmittedAt: emittedAt,
-			VehicleID: payload.VIN,
+			Field:           sig.Name,
+			Value:           sig.Value,
+			EmittedAt:       emittedAt,
+			VehicleID:       payload.VIN,
+			IngestOrigin:    codec.IngestOriginFleetTelemetryHTTP,
+			SourceEmittedAt: sourceEmittedAt,
+			ReceivedAt:      &receivedAt,
 		})
 		signals[sig.Name] = sig.Value
 	}
@@ -170,10 +176,13 @@ func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 		atomics = append(atomics, codec.Atomic{
-			Field:     k,
-			Value:     v,
-			EmittedAt: batchEmittedAt,
-			VehicleID: payload.VIN,
+			Field:           k,
+			Value:           v,
+			EmittedAt:       batchEmittedAt,
+			VehicleID:       payload.VIN,
+			IngestOrigin:    codec.IngestOriginFleetTelemetryHTTP,
+			SourceEmittedAt: batchSourceEmittedAt,
+			ReceivedAt:      &receivedAt,
 		})
 		signals[k] = v
 	}
@@ -266,38 +275,32 @@ func (h *Handler) TelemetryIngest(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// parseBatchTimestamp parses payload.CreatedAt as RFC3339 (with or without
-// nanoseconds). Falls back to the supplied default on parse failure so a
-// malformed CreatedAt never drops the whole batch — the legacy spine had
-// the same defensive behaviour.
-func parseBatchTimestamp(raw string, fallback time.Time) time.Time {
+// timestampOrReceipt keeps HTTP ingest defensive: malformed or absent
+// timestamps use the supplied receipt/order fallback, but return nil source
+// evidence so callers can never mistake that fallback for producer time.
+func timestampOrReceipt(raw string, receipt time.Time) (time.Time, *time.Time) {
 	if raw == "" {
-		return fallback
+		return receipt, nil
 	}
 	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
-		return t.UTC()
+		t = t.UTC()
+		return t, &t
 	}
 	if t, err := time.Parse(time.RFC3339, raw); err == nil {
-		return t.UTC()
+		t = t.UTC()
+		return t, &t
 	}
-	return fallback
+	return receipt, nil
 }
 
-// parseSignalTimestamp parses a per-signal Timestamp string with the same
-// dual RFC3339 / RFC3339Nano fallback as parseBatchTimestamp. Returns the
-// supplied batch-level fallback if the per-signal Timestamp is empty or
-// malformed.
-func parseSignalTimestamp(raw string, fallback time.Time) time.Time {
-	if raw == "" {
-		return fallback
+// timestampOrFallback prefers a valid per-signal timestamp, then valid
+// payload CreatedAt evidence, and only then a receipt fallback.
+func timestampOrFallback(raw string, fallback time.Time, fallbackSource *time.Time) (time.Time, *time.Time) {
+	t, source := timestampOrReceipt(raw, fallback)
+	if source != nil {
+		return t, source
 	}
-	if t, err := time.Parse(time.RFC3339Nano, raw); err == nil {
-		return t.UTC()
-	}
-	if t, err := time.Parse(time.RFC3339, raw); err == nil {
-		return t.UTC()
-	}
-	return fallback
+	return fallback, fallbackSource
 }
 
 // recordStreamingHealth updates the per-VIN streaming health record read by

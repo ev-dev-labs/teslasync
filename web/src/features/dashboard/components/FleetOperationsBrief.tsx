@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { type FleetServerSummary, type FleetStateEntry } from '@/api/hooks/useVehicles'
 import { statusVariant } from '@/api/types'
 import { Badge, Caption, Heading, Text } from '@/components/ui'
+import { DataProvenanceBadge } from '@/components/data-display'
 import { PrefetchLink } from '@/components/layout'
 import { VisuallyHidden } from '@/components/a11y'
 import { Icons } from '@/lib/icons'
@@ -132,6 +133,13 @@ export function FleetOperationsBrief({
     : isError || posture.attentionCount > 0
       ? Icons.warning
       : Icons.success
+  const hasRetainedState = (fleetStates ?? []).some((entry) => entry.state != null)
+  const dataProvenance = totalsPending
+    ? 'unknown'
+    : isError
+      ? hasRetainedState ? 'cached' : 'unknown'
+      : 'live'
+  const dataStatus = totalsPending ? 'initial' : isError ? 'stale' : 'ok'
 
   return (
     <section
@@ -152,26 +160,33 @@ export function FleetOperationsBrief({
             {t('dashboard.fleetPosture.title', 'Fleet posture')}
           </Heading>
         </div>
-        {/* Icon + text: the badge never signals by colour alone. */}
-        <Badge
-          variant={
-            totalsPending ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'
-          }
-          size="lg"
-          className="inline-flex max-w-full items-center gap-1.5 self-start sm:self-auto"
-        >
-          <BadgeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-          <span className="truncate">
-            {totalsPending
-              ? t('dashboard.fleetPosture.badge.resolving', 'Checking live state')
-              : isError
-                ? t('dashboard.fleetPosture.badge.unavailable', 'Live state unavailable')
-                : t('dashboard.fleetPosture.badge.verified', '{{verified}} of {{total}} verified', {
-                  verified: posture.verifiedCount,
-                  total: posture.total,
-                })}
-          </span>
-        </Badge>
+        <div className="flex flex-wrap items-center gap-2">
+          <DataProvenanceBadge
+            provenance={dataProvenance}
+            status={dataStatus}
+            updatedAt={posture.oldestObservedAt}
+          />
+          {/* Icon + text: the badge never signals by colour alone. */}
+          <Badge
+            variant={
+              totalsPending ? 'neutral' : isError || posture.attentionCount > 0 ? 'warning' : 'success'
+            }
+            size="lg"
+            className="inline-flex max-w-full items-center gap-1.5 self-start sm:self-auto"
+          >
+            <BadgeIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span className="truncate">
+              {totalsPending
+                ? t('dashboard.fleetPosture.badge.resolving', 'Checking live state')
+                : isError
+                  ? t('dashboard.fleetPosture.badge.unavailable', 'Live state unavailable')
+                  : t('dashboard.fleetPosture.badge.verified', '{{verified}} of {{total}} verified', {
+                    verified: posture.verifiedCount,
+                    total: posture.total,
+                  })}
+            </span>
+          </Badge>
+        </div>
       </div>
 
       {/* Posture changes are announced, not just repainted. */}

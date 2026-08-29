@@ -1,0 +1,65 @@
+# Machine-verifiable Fleet API spend-control contract.
+#
+# The gate cross-checks configuration parity, endpoint price estimates,
+# durable atomic reservation, production wiring, and operator visibility:
+#
+#   go run ./cmd/ops-gate -check fleet-api-budget
+version: 1
+
+daily_budget:
+  environment_variable: TESLA_API_DAILY_BUDGET_USD
+  config_field: DailyBudgetUSD
+  helm_value: dailyBudgetUsd
+  default_usd: 0.30
+
+command_reserve:
+  environment_variable: TESLA_API_COMMAND_RESERVE_USD
+  config_field: CommandReserveUSD
+  helm_value: commandReserveUsd
+  default_usd: 0.05
+
+pricing_micro_usd:
+  vehicle_data: 2000
+  wake_up: 20000
+  command: 1000
+  vehicle_specs: 100000
+  other: 1000
+
+integration_test:
+  schema: public
+  table: tesla_api_budget_usage
+  forbid_temp_table: true
+  minimum_connections: 2
+
+pacing_contract:
+  poll_engine_required:
+    - MarkBudgetExhausted
+    - MarkBudgetUnavailable
+    - ApplyBudgetPacing
+    - ReconcileFleet
+  poll_lifecycle_call: PollEngine.ReconcileFleet(vins)
+
+sources:
+  go_config: internal/config/config.go
+  compose: docker-compose.yml
+  helm_values: helm/teslasync/values.yaml
+  helm_template: helm/teslasync/templates/configmap.yaml
+  client: internal/tesla/client.go
+  partner_client: internal/tesla/client_auth.go
+  command_client: internal/tesla/client_commands.go
+  budget: internal/tesla/budget.go
+  repository: internal/database/teslabudget/repo.go
+  repository_test: internal/database/teslabudget/repo_test.go
+  ci_workflow: .github/workflows/ops-gate.yml
+  migration: migrations/000233_tesla_api_budget_usage.up.sql
+  poll_engine: internal/polling/engine.go
+  polling_state: internal/polling/state.go
+  poll_worker: internal/worker/worker_jobs.go
+  poll_lifecycle: internal/worker/worker_lifecycle.go
+  worker_config: internal/worker/worker.go
+  app_wiring: internal/app/new.go
+  automation_wiring: cmd/automation-worker/main.go
+  resubscribe_wiring: cmd/resubscribe/main.go
+  status_handler: internal/api/ratelimit/handler.go
+  api_usage_handler: internal/api/health.go
+  documentation: docs/operations/fleet-api-budget.md

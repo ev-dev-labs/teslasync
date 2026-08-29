@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/signal/agreement"
 )
 
 // fakeLiveSignalStore is a lightweight implementation of
@@ -57,6 +58,27 @@ func (f *fakeLiveSignalStore) LocalVehicleIDs() []int64 { return nil }
 
 var _ signal.LiveSignalStore = (*fakeLiveSignalStore)(nil)
 
+type fakeTransportAgreementReader struct {
+	samples   []agreement.Sample
+	truncated bool
+	err       error
+	from      time.Time
+	to        time.Time
+	limit     int
+}
+
+func (f *fakeTransportAgreementReader) AgreementEvidence(
+	_ context.Context,
+	_ int64,
+	from, to time.Time,
+	limit int,
+) ([]agreement.Sample, bool, error) {
+	f.from = from
+	f.to = to
+	f.limit = limit
+	return f.samples, f.truncated, f.err
+}
+
 // signalRequestWithVehicleID wires {vehicleID} onto the chi route context so
 // chi.URLParam returns it inside the handler — same pattern the alert handler
 // tests use.
@@ -67,6 +89,96 @@ func signalRequestWithVehicleID(t *testing.T, method, target, vehicleID string) 
 	rctx.URLParams.Add("vehicleID", vehicleID)
 	req = req.WithContext(context.WithValue(req.Context(), chi.RouteCtxKey, rctx))
 	return req
+}
+
+func TestTransportAgreementReturnsMeasuredSourceTimeEvidence(t *testing.T) {
+	t.Parallel()
+	sourceAt := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
+	value := 27.7
+	repo := &fakeTransportAgreementReader{
+		samples: []agreement.Sample{
+			{
+				Field:           "VehicleSpeed",
+				Origin:          agreement.OriginHTTP,
+				SourceEmittedAt: sourceAt,
+				Value:           agreement.Value{Kind: 6, Float: &value},
+			},
+			{
+				Field:           "VehicleSpeed",
+				Origin:          agreement.OriginMQTT,
+				SourceEmittedAt: sourceAt.Add(time.Second),
+				Value:           agreement.Value{Kind: 6, Float: &value},
+			},
+		},
+	}
+	handler := &Handler{transportAgreement: repo}
+	req := signalRequestWithVehicleID(
+		t,
+		http.MethodGet,
+		"/signals/7/transport-agreement?from=2026-08-27T00:00:00Z&to=2026-08-28T00:00:00Z",
+		"7",
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.TransportAgreement(recorder, req)
+
+	if recorder.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", recorder.Code, recorder.Body.String())
+	}
+	var response transportAgreementResponse
+	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if response.Status != agreement.StatusMeasured || response.ComparablePairs != 1 {
+		t.Fatalf("unexpected report: %+v", response.Report)
+	}
+	if response.AgreementPct == nil || *response.AgreementPct != 100 {
+		t.Fatalf("agreement_pct = %v, want 100", response.AgreementPct)
+	}
+	if !response.SourceTimeOnly || response.PairToleranceMS != 2000 {
+		t.Fatalf("provenance contract missing: %+v", response)
+	}
+	if repo.limit != transportAgreementRowLimit {
+		t.Fatalf("repo limit = %d, want %d", repo.limit, transportAgreementRowLimit)
+	}
+}
+
+func TestTransportAgreementRejectsInvalidRange(t *testing.T) {
+	t.Parallel()
+	handler := &Handler{transportAgreement: &fakeTransportAgreementReader{}}
+	req := signalRequestWithVehicleID(
+		t,
+		http.MethodGet,
+		"/signals/7/transport-agreement?from=2026-08-28T00:00:00Z&to=2026-08-27T00:00:00Z",
+		"7",
+	)
+	recorder := httptest.NewRecorder()
+
+	handler.TransportAgreement(recorder, req)
+
+	if recorder.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400", recorder.Code)
+	}
+}
+
+func TestSignalHistoryPoint_ProvenanceFieldsRemainNullableInJSON(t *testing.T) {
+	body, err := json.Marshal(signalHistoryPoint{
+		Ts:    time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC),
+		Kind:  "Float",
+		Value: 12.5,
+	})
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	var decoded map[string]any
+	if err := json.Unmarshal(body, &decoded); err != nil {
+		t.Fatalf("Unmarshal: %v", err)
+	}
+	for _, key := range []string{"ingest_origin", "source_emitted_at", "received_at", "normalization_version"} {
+		if value, ok := decoded[key]; !ok || value != nil {
+			t.Errorf("%s = %v (present=%t), want explicit null", key, value, ok)
+		}
+	}
 }
 
 // TestLiveStateClassifiesSourceL1 verifies fresh values with non-zero

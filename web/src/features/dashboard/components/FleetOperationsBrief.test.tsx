@@ -129,6 +129,10 @@ describe('FleetOperationsBrief — taxonomy', () => {
     expect(screen.getByTestId('fleet-operations-brief')).toBeInTheDocument()
     expect(screen.getByTestId('fleet-posture-taxonomy')).toBeInTheDocument()
     expect(screen.getByText('Checking live state')).toBeInTheDocument()
+    expect(document.querySelector('[data-provenance="unknown"]')).toHaveAttribute(
+      'data-data-status',
+      'initial',
+    )
     // Counts are em dashes, not a confident zero.
     expect(valueFor('Reporting')).toBe('—')
     expect(valueFor('Offline')).toBe('—')
@@ -335,6 +339,10 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
     const announcement = screen.getByTestId('fleet-posture-announcement')
     expect(announcement).toHaveAttribute('aria-live', 'polite')
     expect(announcement).toHaveTextContent('All 2 vehicles verified from current telemetry.')
+    expect(document.querySelector('[data-provenance="live"]')).toHaveAttribute(
+      'data-data-status',
+      'ok',
+    )
   })
 
   it('distinguishes a transport failure from a fleet of offline cars', () => {
@@ -356,6 +364,10 @@ describe('FleetOperationsBrief — trust and accessibility', () => {
     )
     expect(valueFor('Offline')).toBe('0')
     expect(valueFor('Last known')).toBe('1')
+    expect(document.querySelector('[data-provenance="cached"]')).toHaveAttribute(
+      'data-data-status',
+      'stale',
+    )
   })
 
   it('keeps the scoped vehicle Unknown rather than claiming offline', () => {

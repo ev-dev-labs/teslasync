@@ -103,6 +103,7 @@ slos:
     objective: 99.5
     window: 30d
     owner: platform
+    fast_burn_severity: ticket
     tags: [http, red]
 `
 	c, err := parseCatalog(src)
@@ -122,8 +123,31 @@ slos:
 	if len(got.Tags) != 2 || got.Tags[0] != "http" || got.Tags[1] != "red" {
 		t.Fatalf("tags: %v", got.Tags)
 	}
+	if got.FastBurnSeverity != "ticket" {
+		t.Fatalf("fast_burn_severity: got %q want ticket", got.FastBurnSeverity)
+	}
 	if err := validateCatalog(c); err != nil {
 		t.Fatalf("validate: %v", err)
+	}
+}
+
+func TestValidateCatalog_BadFastBurnSeverity(t *testing.T) {
+	t.Parallel()
+	cat := &Catalog{
+		Version: 1,
+		SLOs: []SLO{{
+			Name:             "budget_signal",
+			Description:      "Budget planning signal for operators",
+			SLI:              SLI{GoodEvents: "x", ValidEvents: "y"},
+			Objective:        99,
+			Window:           "7d",
+			Owner:            "platform",
+			FastBurnSeverity: "email",
+		}},
+	}
+	err := validateCatalog(cat)
+	if err == nil || !strings.Contains(err.Error(), "fast_burn_severity") {
+		t.Fatalf("expected fast_burn_severity error, got %v", err)
 	}
 }
 

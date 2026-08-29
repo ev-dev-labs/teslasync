@@ -9,6 +9,8 @@ import { useToast } from '@/components/feedback';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Pagination } from '@/components/ui';
+import { DataProvenanceBadge } from '@/components/data-display';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useOperationalMode } from '@/hooks/useOperationalMode';
@@ -41,6 +43,7 @@ export default function ActionCenterPage() {
   }));
   const [pending, setPending] = useState<PendingAction | null>(null);
   const query = useActionCenter(filter);
+  const actionCenterState = useDataState(query, { provenance: 'inferred' });
   const applyAction = useApplyActionCenterAction();
   usePageTitle(t('actionCenter.page.title', 'Action Center'));
 
@@ -161,15 +164,22 @@ export default function ActionCenterPage() {
   const page = Math.floor((filter.offset ?? 0) / pageSize) + 1;
   const RefreshIcon = Icons.refresh;
   const refreshAction = (
-    <Button
-      type="button"
-      variant="secondary"
-      icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
-      onClick={() => void query.refetch()}
-      loading={query.isFetching}
-    >
-      {t('actionCenter.actions.refresh', 'Refresh evidence')}
-    </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      <DataProvenanceBadge
+        provenance={actionCenterState.provenance}
+        status={actionCenterState.status}
+        updatedAt={actionCenterState.updatedAt}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
+        onClick={() => void query.refetch()}
+        loading={query.isFetching}
+      >
+        {t('actionCenter.actions.refresh', 'Refresh evidence')}
+      </Button>
+    </div>
   );
 
   return (

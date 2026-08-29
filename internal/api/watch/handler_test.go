@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"math"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiauthctx"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/redis/go-redis/v9"
 )
 
@@ -820,6 +822,67 @@ func TestHandlerCommand(t *testing.T) {
 			}
 			if tt.wantVIN != "" && tt.tesla.sentVIN != tt.wantVIN {
 				t.Errorf("sent VIN = %q, want %q", tt.tesla.sentVIN, tt.wantVIN)
+			}
+		})
+	}
+}
+
+// TestHandlerCommand_BudgetErrors pins the structured 429/503 surface for
+// Fleet API budget errors: unlike a generic SendCommand failure (which
+// stays a 200 success:false envelope so watch clients don't hard-fail on
+// transient issues), errors wrapping tesla.ErrBudgetExceeded /
+// tesla.ErrBudgetUnavailable must be reported as their real HTTP status
+// with the repository's derived error code so callers can distinguish
+// "budget exhausted, don't retry" from "command failed, maybe retry".
+func TestHandlerCommand_BudgetErrors(t *testing.T) {
+	veh := &vehiclemodel.Vehicle{ID: 1, VIN: "VIN1", DisplayName: "My Tesla"}
+	repo := &fakeVehicleRepo{
+		byID: map[int64]*vehiclemodel.Vehicle{1: veh},
+		all:  []*vehiclemodel.Vehicle{veh},
+	}
+
+	tests := []struct {
+		name       string
+		sendErr    error
+		wantStatus int
+		wantCode   string
+	}{
+		{
+			name:       "budget exceeded -> 429 RATE_LIMITED",
+			sendErr:    fmt.Errorf("send command: %w", tesla.ErrBudgetExceeded),
+			wantStatus: http.StatusTooManyRequests,
+			wantCode:   "RATE_LIMITED",
+		},
+		{
+			name:       "budget evidence unavailable -> 503 SERVICE_UNAVAILABLE",
+			sendErr:    fmt.Errorf("read budget snapshot: %w", tesla.ErrBudgetUnavailable),
+			wantStatus: http.StatusServiceUnavailable,
+			wantCode:   "SERVICE_UNAVAILABLE",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tc := &fakeTesla{validToken: true, sendErr: tt.sendErr}
+			h := newTestHandler(repo, &fakeSettings{}, tc, nil)
+			req := httptest.NewRequest(http.MethodPost, "/watch/command", strings.NewReader(`{"vehicle_id":1,"command":"lock"}`))
+			req = req.WithContext(apiauthctx.WithPermissions(req.Context(), "admin"))
+			rr := httptest.NewRecorder()
+			h.Command(rr, req)
+
+			if rr.Code != tt.wantStatus {
+				t.Fatalf("status = %d, want %d (body: %s)", rr.Code, tt.wantStatus, rr.Body.String())
+			}
+			var resp map[string]string
+			mustJSON(t, rr, &resp)
+			if resp["code"] != tt.wantCode {
+				t.Errorf("code = %q, want %q", resp["code"], tt.wantCode)
+			}
+			if resp["error"] == "" {
+				t.Error("response should carry a human-readable error message")
+			}
+			if tc.sentCount != 1 {
+				t.Errorf("SendCommand called %d times, want 1", tc.sentCount)
 			}
 		})
 	}

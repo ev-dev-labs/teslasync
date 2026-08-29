@@ -38,42 +38,42 @@ func (p advancedProvider) Recommendations(
 		*filter.SourceFeature != actiondomain.SourceAdvancedIntelligence {
 		return []actiondomain.Candidate{}, nil
 	}
-	vehicles, err := p.source.ListSignalHealth(
-		ctx,
-		filter.VehicleID,
-		now.Add(-30*24*time.Hour),
-		now,
-		advancedVehicleLimit,
-	)
+	// Advanced intelligence must evaluate the vehicle ROSTER, not the
+	// signal-health findings feed. ListSignalHealth narrows to vehicles that
+	// produced a freshness or normalization-provenance finding, so reusing it
+	// here silently skipped every healthy, fully version-attested vehicle —
+	// exactly the fleet that firmware canary / component survival / road
+	// hazard / behavioral sentiment evidence is most meaningful for.
+	vehicles, err := p.source.ListActiveVehicles(ctx, filter.VehicleID, advancedVehicleLimit)
 	if err != nil {
 		return nil, fmt.Errorf("list advanced-intelligence vehicles: %w", err)
 	}
 
 	items := make([]actiondomain.Candidate, 0)
 	for _, vehicle := range vehicles {
-		firmware, err := p.advanced.FirmwareCanary(ctx, vehicle.Vehicle.ID, 1, 0)
+		firmware, err := p.advanced.FirmwareCanary(ctx, vehicle.ID, 1, 0)
 		if err != nil {
-			return nil, fmt.Errorf("load firmware canary for vehicle %d: %w", vehicle.Vehicle.ID, err)
+			return nil, fmt.Errorf("load firmware canary for vehicle %d: %w", vehicle.ID, err)
 		}
-		items = append(items, firmwareCandidates(vehicle.Vehicle, firmware, now)...)
+		items = append(items, firmwareCandidates(vehicle, firmware, now)...)
 
-		survival, err := p.advanced.ComponentSurvival(ctx, vehicle.Vehicle.ID, 10, 0)
+		survival, err := p.advanced.ComponentSurvival(ctx, vehicle.ID, 10, 0)
 		if err != nil {
-			return nil, fmt.Errorf("load component survival for vehicle %d: %w", vehicle.Vehicle.ID, err)
+			return nil, fmt.Errorf("load component survival for vehicle %d: %w", vehicle.ID, err)
 		}
-		items = append(items, survivalCandidates(vehicle.Vehicle, survival, now)...)
+		items = append(items, survivalCandidates(vehicle, survival, now)...)
 
-		hazards, err := p.advanced.RoadHazards(ctx, vehicle.Vehicle.ID, 25, 0)
+		hazards, err := p.advanced.RoadHazards(ctx, vehicle.ID, 25, 0)
 		if err != nil {
-			return nil, fmt.Errorf("load road hazards for vehicle %d: %w", vehicle.Vehicle.ID, err)
+			return nil, fmt.Errorf("load road hazards for vehicle %d: %w", vehicle.ID, err)
 		}
-		items = append(items, hazardCandidates(vehicle.Vehicle, hazards, now)...)
+		items = append(items, hazardCandidates(vehicle, hazards, now)...)
 
-		sentinel, err := p.advanced.BehavioralSentinel(ctx, vehicle.Vehicle.ID, 25, 0)
+		sentinel, err := p.advanced.BehavioralSentinel(ctx, vehicle.ID, 25, 0)
 		if err != nil {
-			return nil, fmt.Errorf("load behavioral sentinel for vehicle %d: %w", vehicle.Vehicle.ID, err)
+			return nil, fmt.Errorf("load behavioral sentinel for vehicle %d: %w", vehicle.ID, err)
 		}
-		items = append(items, sentinelCandidates(vehicle.Vehicle, sentinel, now)...)
+		items = append(items, sentinelCandidates(vehicle, sentinel, now)...)
 	}
 	return items, nil
 }

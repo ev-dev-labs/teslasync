@@ -42,13 +42,14 @@ type Catalog struct {
 }
 
 type SLO struct {
-	Name        string
-	Description string
-	SLI         SLI
-	Objective   float64
-	Window      string
-	Owner       string
-	Tags        []string
+	Name             string
+	Description      string
+	SLI              SLI
+	Objective        float64
+	Window           string
+	Owner            string
+	FastBurnSeverity string
+	Tags             []string
 
 	line int // 1-based line number of the `- name:` marker, used in errors.
 }
@@ -158,6 +159,9 @@ func validateSLO(idx int, s SLO) error {
 	}
 	if s.Owner == "" {
 		return fmt.Errorf("%s: required", tag("owner"))
+	}
+	if s.FastBurnSeverity != "" && s.FastBurnSeverity != "page" && s.FastBurnSeverity != "ticket" {
+		return fmt.Errorf("%s: %q must be page or ticket", tag("fast_burn_severity"), s.FastBurnSeverity)
 	}
 	tagSet := make(map[string]struct{}, len(s.Tags))
 	for _, t := range s.Tags {
@@ -303,6 +307,9 @@ func parseCatalog(text string) (*Catalog, error) {
 			inSLI = false
 		case "owner":
 			current.Owner = unquote(val)
+			inSLI = false
+		case "fast_burn_severity":
+			current.FastBurnSeverity = unquote(val)
 			inSLI = false
 		case "tags":
 			tags, err := parseInlineArray(val)

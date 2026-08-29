@@ -27,6 +27,7 @@ import (
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
@@ -155,6 +156,12 @@ func main() {
 
 	// ── Tesla Client ──────────────────────────────────────────────────
 	teslaClient := tesla.NewClient(cfg.Tesla)
+	budgetPolicy := tesla.NewBudgetPolicy(cfg.Tesla.DailyBudgetUSD, cfg.Tesla.CommandReserveUSD)
+	if budgetPolicy.Enabled() {
+		teslaClient.SetRequestBudget(teslabudgetdb.New(db.Pool, budgetPolicy))
+	} else {
+		log.Warn().Msg("Tesla Fleet API request budget disabled; automation spend is unbounded")
+	}
 	log.Info().Msg("Tesla client initialised")
 
 	// ── Repositories ──────────────────────────────────────────────────

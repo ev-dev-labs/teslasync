@@ -146,3 +146,59 @@ dependencies:
       - signal: export job failure ratio
         note: Export worker job outcomes.
     runbook: docs/runbooks/degraded-mode-object-storage.md
+
+# ── Lifecycle procedures ─────────────────────────────────────────────
+#
+# Not degraded-mode dependencies: these are operations that are UNSAFE as
+# a bare `helm upgrade` / `helm rollback` because of a limitation in the
+# tooling itself. They are registered here so the warning cannot drift
+# away from the chart it protects — `go run ./cmd/ops-gate -check
+# runbooks` fails if the runbook loses a required section, a required
+# command, a required warning, or a cross-link from the generic
+# documentation that would otherwise send an operator down the dangerous
+# path.
+lifecycle_procedures:
+  - id: migration-gate-lifecycle
+    title: Migration gate hook <-> ordinary manifest transitions
+    why: >-
+      Helm tracks hook resources and ordinary manifests separately and
+      offers no supported in-place transition between them. Converting a
+      secret source into a hook, rolling back across that boundary, or
+      leaving hook mode each leave the release manifest and the live
+      cluster disagreeing about who manages the credentials. This is a
+      property of Helm, not something the chart can template away, so it
+      must be carried as an explicit operator procedure.
+    runbook: docs/runbooks/migration-gate-lifecycle.md
+    required_sections:
+      - "## Preflight: remove a pre-fix ExternalSecret ownerReference"
+      - "## Procedure 1 — First conversion (ordinary source -> hook mode)"
+      - "## Procedure 2 — Rollback across a conversion boundary"
+      - "## Procedure 3 — Leaving hook mode (hook -> none/require)"
+      - "## Uninstall"
+      - "## Escalation"
+    required_commands:
+      # Preflight: inspect, then remove ONLY the ExternalSecret ownership.
+      - "TARGET=${TARGET:-$RELEASE}"
+      - "kubectl -n \"$NS\" get secret \"$TARGET\" \\\n  -o jsonpath='{.metadata.ownerReferences}'"
+      - "select(.kind != \"ExternalSecret\")"
+      - "kubectl -n \"$NS\" patch secret \"$TARGET\" --type=merge"
+      # Rollback: delete the hook source before rolling back.
+      - "kubectl -n \"$NS\" delete externalsecret \"$RELEASE\""
+      - "helm -n \"$NS\" rollback \"$RELEASE\" \"$PRE_CONVERSION_REVISION\""
+    required_warnings:
+      # The rendered Orphan value must never be claimed as retroactive.
+      - "does **not** retroactively strip an\nownerReference"
+      # A bare rollback across the boundary must be called out.
+      - "bare `helm rollback` across a conversion boundary can abort"
+      # hook -> none/require must be named as sticky, not a values change.
+      - "Hook mode is sticky for a source identity"
+      # `none` must not be sold as a general escape hatch.
+      - "not a\ngeneral escape hatch"
+    cross_links:
+      # Any generic rollback guidance must point at this procedure, or an
+      # operator following the README alone destroys the secret source.
+      - path: helm/teslasync/README.md
+        section: "## Rollback"
+        must_reference: docs/runbooks/migration-gate-lifecycle.md
+      - path: helm/teslasync/values.yaml
+        must_reference: docs/runbooks/migration-gate-lifecycle.md

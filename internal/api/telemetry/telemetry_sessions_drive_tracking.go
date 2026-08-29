@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 )
 
@@ -794,9 +795,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// init point (line ~826) where it can be inserted into the map.
 	var distanceMeters float64
 	if active.StartOdometer != nil && active.LastOdometer != nil {
-		distanceMeters = *active.LastOdometer - *active.StartOdometer
-		if distanceMeters < 0 {
-			distanceMeters = 0
+		change := signalcounter.Compare(*active.StartOdometer, *active.LastOdometer)
+		if change.Kind == signalcounter.ChangeAdvanced {
+			distanceMeters = change.Delta
 		}
 	}
 
@@ -1040,9 +1041,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		// reported in kWh; convert to SI Wh for the energy_used_wh column.
 		if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
 			if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
-				energyUsedDisplay := endEnergy - startEnergy
-				if energyUsedDisplay > 0 {
-					enhancedFields["energy_used_wh"] = energyUsedDisplay * 1000.0
+				change := signalcounter.Compare(startEnergy, endEnergy)
+				if change.Kind == signalcounter.ChangeAdvanced {
+					enhancedFields["energy_used_wh"] = change.Delta * 1000.0
 				}
 			}
 		}

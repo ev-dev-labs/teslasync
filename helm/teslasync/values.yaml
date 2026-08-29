@@ -427,18 +427,159 @@ encryption:
 # ─────────────────────────────────────────────────────────────────────────────
 # Secrets
 #
-# By default the chart creates a K8s Secret with credentials from values.
-# Set secrets.existingSecret to the name of a pre-created Secret to skip
-# chart-managed secret creation. Useful for GitOps setups with SOPS,
-# External Secrets Operator, or Sealed Secrets.
+# By default the chart references a pre-created <release>-teslasync Secret and
+# does not render credential material. This keeps `helm template`, Argo CD, and
+# Flux output deterministic and prevents offline renders from rotating values.
+#
+# Set secrets.existingSecret for a differently named Secret (for example from
+# SOPS or Sealed Secrets), or enable externalSecrets below. Chart-managed
+# Secrets are opt-in with secrets.create=true and require explicit strong
+# PostgreSQL and Grafana passwords; the chart never generates random values.
+# These modes are mutually exclusive.
 #
 # The existing Secret must contain these keys:
 #   TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, DATABASE_PASS,
-#   REDIS_PASSWORD, ENCRYPTION_KEY, GAS_PRICE_API_KEY,
-#   AZURE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY, MONGODB_URI
+#   and GRAFANA_ADMIN_PASSWORD when bundled Grafana is enabled. Optional
+#   integrations need their corresponding REDIS_PASSWORD, ENCRYPTION_KEY,
+#   GAS_PRICE_API_KEY, AZURE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY, MONGODB_URI,
+#   MQTT_PASSWORD, AUTH_JWT_SECRET, TESLASYNC_VAPID_PRIVATE_KEY,
+#   TESLASYNC_VAPID_SUBJECT, TESLASYNC_GITHUB_TOKEN, and
+#   TESLASYNC_OPERATOR_TOKEN keys.
 # ─────────────────────────────────────────────────────────────────────────────
 secrets:
+  create: false
   existingSecret: ""
+
+# External Secrets Operator integration. The referenced SecretStore or
+# ClusterSecretStore is intentionally managed outside this application chart
+# because its workload identity and provider permissions are cluster concerns.
+externalSecrets:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreRef:
+    name: ""
+    kind: ClusterSecretStore
+  target:
+    # Empty uses the normal <release>-teslasync Secret name.
+    name: ""
+    # Only "" or "Orphan" are accepted; the chart renders Orphan in EVERY
+    # migrationGate mode. Anything else is a render-time error.
+    #
+    # Any owning policy makes ESO stamp .metadata.ownerReferences onto the
+    # target Secret at creation time. That is a time bomb in every mode, not
+    # just hook mode: a release installed today under `none` or `require`
+    # carries the reference, and the day it enters hook mode the
+    # `before-hook-creation` delete of the ExternalSecret garbage-collects the
+    # credentials out from under every running pod.
+    #
+    # deletionPolicy does NOT protect against this. Per the ESO API reference
+    # it "specifies what happens to the Secret when data fields are deleted
+    # from the provider" — it says nothing about deletion of the
+    # ExternalSecret object itself.
+    #
+    # Orphan "creates the Secret but does not set .metadata.ownerReferences"
+    # and updates it if it already exists, so the target survives the CR being
+    # recreated and the default refreshPolicy: Periodic resumes refreshing it.
+    #
+    # LIMIT: this governs FUTURE reconciles only. It does not remove an
+    # ownerReference that an earlier Owner-managed reconcile already wrote onto
+    # a live Secret, and ESO does not retract references it has already set. A
+    # release that ran with Owner before this change MUST complete the one-time
+    # preflight in docs/runbooks/migration-gate-lifecycle.md before its first
+    # conversion into hook mode.
+    #
+    # Trade-off: because the target Secret is orphaned it is not
+    # garbage-collected when the release goes away. See "Uninstall" in the
+    # chart README for the explicit cleanup.
+    creationPolicy: ""
+    deletionPolicy: Retain
+  # Use either data, dataFrom, or both. Remote values must produce the
+  # environment-variable keys documented above.
+  data: []
+  # - secretKey: DATABASE_PASS
+  #   remoteRef:
+  #     key: teslasync/production/database-password
+  dataFrom: []
+  # - extract:
+  #     key: teslasync/production
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Migration hook secret gate
+#
+# The database migration Job runs as a `pre-install,pre-upgrade` Helm hook and
+# reads DATABASE_PASS from the runtime Secret via `envFrom`. Helm applies hooks
+# BEFORE the release's ordinary manifests, so any Secret source the chart
+# renders as an ordinary manifest does not exist yet when that Job is
+# scheduled:
+#
+#   * externalSecrets — on a fresh install the ExternalSecret is applied after
+#     the hook, so External Secrets Operator has not been asked to fetch
+#     anything. The Job's pod sits in CreateContainerConfigError until the hook
+#     times out, with nothing in the output pointing at the cause.
+#   * secrets.create — the chart-managed Secret has the same ordering problem.
+#   * secrets.existingSecret — provisioned out of band, so nothing to order.
+#
+# Hook weights alone do not fix this. Weights only order resources that are
+# themselves hooks, and even once an ExternalSecret exists, ESO still has to
+# reach the provider and write the target Secret. The contract therefore has
+# two halves: make the source exist before the hook, then actually wait for the
+# data.
+#
+# One question decides which mode is valid: DOES THIS CHART RENDER THE SECRET
+# SOURCE? (externalSecrets.enabled=true or secrets.create=true)
+#
+# mode:
+#   auto     `hook` when the chart renders the source, `none` otherwise.
+#            Default.
+#   hook     REQUIRES a chart-rendered source. Renders it as a
+#            pre-install/pre-upgrade hook at weight -10 (the migration Job is
+#            weight 0), with `helm.sh/resource-policy: keep` so converting a
+#            previously ordinary manifest is not deleted by Helm's regular
+#            removal phase, AND makes the Job wait for the required keys.
+#   require  REQUIRES that no source is chart-rendered — the Secret is
+#            genuinely provisioned outside this release (secrets.existingSecret,
+#            or an ExternalSecret applied by a GitOps controller). Combining it
+#            with externalSecrets.enabled or secrets.create is a render-time
+#            error: an ordinary manifest cannot be applied until the pre-install
+#            hooks have finished, so the migration Job would time out on every
+#            fresh install by construction.
+#            Enforced at the hook boundary by the readiness wait below, which
+#            fails the migration Job — and so the release — within
+#            timeoutSeconds, naming the Secret and the missing keys. The chart
+#            deliberately does NOT `lookup` the Secret at render time: that
+#            would make rendering depend on cluster state and on the Helm client
+#            holding RBAC to read Secrets, which many GitOps service accounts do
+#            not have.
+#   none     No ordering, no wait. NOT a general escape hatch — it does not make
+#            the race safe, it only stops the chart from managing it, and for a
+#            chart-rendered source it is a known-broken fresh install. It exists
+#            for one case: a release whose Secret is already present and stable,
+#            where you are deliberately deferring the conversion.
+#
+# LIFECYCLE WARNING. Helm tracks hook resources and ordinary manifests
+# separately and offers no supported in-place transition between them. All three
+# of these need an explicit operator procedure and are NOT safe as a bare
+# `helm upgrade` / `helm rollback`:
+#   1. the first conversion of a pre-fix ordinary source into hook mode;
+#   2. rolling back from a hook-mode revision to a pre-conversion revision;
+#   3. leaving hook mode — hook mode is STICKY for a source identity.
+# See docs/runbooks/migration-gate-lifecycle.md, registered in
+# ops/runbooks/dependencies.yaml so the warning cannot drift away.
+#
+# The wait runs as an initContainer that mounts the target Secret with
+# `optional: true` and polls its own mounted files, so it needs no API access
+# and no extra RBAC. On timeout it names the Secret, the missing keys, and the
+# `kubectl get externalsecret` command that shows why ESO has not synced.
+migrationGate:
+  mode: auto
+  # Total time the migration Job will wait for the runtime Secret. Must exceed
+  # the worst-case ESO reconciliation for your provider.
+  timeoutSeconds: 300
+  pollIntervalSeconds: 5
+  # Keys the migration itself cannot start without. DATABASE_PASS is the
+  # minimum; add others if your deployment needs them before migrating.
+  requiredKeys:
+    - DATABASE_PASS
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fleet Telemetry (Tesla streaming data)
@@ -920,6 +1061,10 @@ tesla:
   authUrl: "https://auth.tesla.com"
   # -- Timeout for Tesla API requests
   timeout: "30s"
+  # -- UTC-daily estimated Fleet API spend ceiling in USD. Set 0 to disable.
+  dailyBudgetUsd: 0.30
+  # -- Portion of dailyBudgetUsd protected from background reads for commands.
+  commandReserveUsd: 0.05
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PostgreSQL
@@ -967,7 +1112,9 @@ postgresql:
 
   auth:
     username: teslasync
-    password: teslasync
+    # Used only when secrets.create=true, where a non-empty strong value is
+    # required. Existing/external Secret modes keep this blank.
+    password: ""
     database: teslasync
 
   service:
@@ -1133,12 +1280,13 @@ mqtt:
 # Phase-42 operator surface
 #
 # These knobs power the resubscribe + unit-drift workflows introduced in
-# Phase-42 (ADR-004 #5 + #9). Both cmd/resubscribe and cmd/unit-drift-validator
-# refuse to run without `operator.token` — leave it empty to keep them disabled.
+# Phase-42 (ADR-004 #5 + #9). Both cmd/resubscribe and
+# cmd/unit-drift-validator require TESLASYNC_OPERATOR_TOKEN in the selected
+# runtime Secret. operator.token is used only when secrets.create=true.
 # ─────────────────────────────────────────────────────────────────────────────
 operator:
   # -- Operator token used by cmd/resubscribe and cmd/unit-drift-validator.
-  # Rendered into the Secret as TESLASYNC_OPERATOR_TOKEN when non-empty.
+  # Rendered into the chart-managed Secret when secrets.create=true.
   # Generate with `openssl rand -hex 32` and store in your secret manager.
   token: ""
 
@@ -1184,13 +1332,16 @@ unitDriftValidator:
 # Controls how long historical data is kept before automatic cleanup.
 # ─────────────────────────────────────────────────────────────────────────────
 retention:
-  # Days to keep general data (drives, charges, positions, etc.)
-  # Uncomment to enable automatic cleanup:
-  # dataDays: 365
-  # Days to keep high-frequency position data
-  # positionDays: 90
-  # Days to keep per-signal telemetry history (Postgres signal_history table)
-  # signalHistoryDays: 7
+  # Legacy vehicle-state cleanup compatibility setting. The current
+  # vehicle_live_state table is current state, not retained history.
+  dataDays: 0
+  # The positions table is legacy and receives no canonical telemetry writes.
+  positionDays: 0
+  # Raw signal_log history. Continuous aggregates retain long-range trends.
+  signalHistoryDays: 365
+  # Destructive retention is inactive until an operator verifies a recoverable
+  # backup and explicitly acknowledges the configured history window.
+  signalHistoryAcknowledged: false
   # Days to keep audit_logs entries (Phase-40 / Prompt 49). Hard delete after.
   # Set to 0 to disable cleanup. Default in the API server is 365.
   auditDays: 365
@@ -1265,7 +1416,8 @@ grafana:
   image: grafana/grafana:10.4.0
 
   adminUser: admin
-  adminPassword: teslasync
+  # Required only when Grafana is enabled with secrets.create=true.
+  adminPassword: ""
 
   # This chart does not bundle Prometheus. Point the provisioned datasource
   # at the Prometheus service already present in the cluster.

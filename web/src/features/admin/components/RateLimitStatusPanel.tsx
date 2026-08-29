@@ -15,11 +15,11 @@ import { useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw, AlertTriangle } from 'lucide-react'
 
-import { GlassPanel, Button } from '@/components/ui'
-import { Heading, Text, Caption } from '@/components/ui/Typography'
+import { GlassPanel, Button, Heading, Text, Caption } from '@/components/ui'
 import { MetricBar } from '@/components/data-display'
 import { ListSkeleton } from '@/components/feedback'
-import { fmtNumber } from '@/lib/numberFormat'
+import { formatCurrencyValue } from '@/lib/currencyFormat'
+import { fmtNumber, getGlobalLocale } from '@/lib/numberFormat'
 import { formatRelative, formatDurationMsLong } from '@/lib/dateFormat'
 import {
   useRateLimitStatus,
@@ -52,28 +52,41 @@ function RateLimitRow({ scope }: RateLimitRowProps) {
   const color = SEVERITY_COLOR[scope.severity]
   const toneClass = SEVERITY_TONE_CLASS[scope.severity]
 
+  const formatValue = (value: number) =>
+    scope.unit === 'usd'
+      ? formatCurrencyValue(value, 'USD', getGlobalLocale(), 3, { useGrouping: true })
+      : fmtNumber(value)
   const usageLabel = t('rateLimitStatus.usage', '{{current}} / {{limit}}', {
-    current: fmtNumber(scope.current),
-    limit: fmtNumber(scope.limit),
+    current: formatValue(scope.current),
+    limit: formatValue(scope.limit),
   })
 
   const windowLabel = useMemo(() => {
+    if (scope.unit === 'usd') {
+      return t('rateLimitStatus.windowUtcDay', 'UTC day')
+    }
     if (!scope.window_seconds || scope.window_seconds <= 0) {
       return t('rateLimitStatus.windowInstant', 'Live snapshot')
     }
     return t('rateLimitStatus.windowSeconds', 'Last {{seconds}}s window', {
       seconds: scope.window_seconds,
     })
-  }, [scope.window_seconds, t])
+  }, [scope.unit, scope.window_seconds, t])
 
   const resetLabel = useMemo(() => {
     if (!scope.reset_at) return null
     const ms = new Date(scope.reset_at).getTime() - Date.now()
     if (!Number.isFinite(ms) || ms <= 0) return null
-    return t('rateLimitStatus.resetIn', 'Refills in {{duration}}', {
+    const key = scope.unit === 'usd'
+      ? 'rateLimitStatus.budgetResetIn'
+      : 'rateLimitStatus.resetIn'
+    const fallback = scope.unit === 'usd'
+      ? 'Resets in {{duration}}'
+      : 'Refills in {{duration}}'
+    return t(key, fallback, {
       duration: formatDurationMsLong(ms),
     })
-  }, [scope.reset_at, t])
+  }, [scope.reset_at, scope.unit, t])
 
   const severityLabel = t(
     `rateLimitStatus.severity.${scope.severity}`,
@@ -134,6 +147,7 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
   const refetch = query.refetch
 
   const scopes = data?.scopes ?? []
+  const warnings = data?.warnings ?? []
 
   const updatedLabel = useMemo(() => {
     if (!data?.generated_at) return null
@@ -152,7 +166,7 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
           <Text variant="bodySm" className="text-[var(--text-secondary)] max-w-[80ch]">
             {t(
               'rateLimitStatus.subtitle',
-              'Live view of every server-side throttle that affects this TeslaSync deployment. Bars climb as the window fills; colour switches from green to amber at 50% and to red at 80%.',
+              'Live view of active request throttles and the shared UTC-daily Tesla Fleet API spend guard. Cost rows are conservative estimates reserved before outbound calls.',
             )}
           </Text>
           {updatedLabel ? (
@@ -172,6 +186,22 @@ export function RateLimitStatusPanel({ testHookOverride }: RateLimitStatusPanelP
           {t('rateLimitStatus.refresh', 'Refresh')}
         </Button>
       </div>
+
+      {warnings.length > 0 ? (
+        <div
+          className="mb-4 flex items-start gap-3 rounded-md border border-amber-500/30 bg-amber-500/5 p-3"
+          data-testid="rate-limit-warning"
+        >
+          <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" aria-hidden />
+          <div className="space-y-1">
+            {warnings.map((warning) => (
+              <Text key={warning} variant="bodySm">
+                {warning}
+              </Text>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {isLoading ? (
         <ListSkeleton

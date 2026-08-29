@@ -52,9 +52,28 @@ var (
 		Namespace: "teslasync",
 		Name:      "red_http_request_duration_seconds",
 		Help:      "HTTP request latency in seconds (RED duration). Observed by Metrics middleware exactly once per request.",
-		Buckets:   []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		Buckets:   REDLatencyBuckets,
 	}, []string{"method", "route"})
 )
+
+// REDLatencyBuckets are the histogram boundaries for
+// teslasync_red_http_request_duration_seconds.
+//
+// Every `le=` boundary referenced by a latency SLO in slo/catalog.yaml MUST
+// appear here verbatim. A Prometheus histogram_bucket series only exists for
+// configured boundaries, so an SLI selecting an absent `le` matches nothing —
+// and because the SLO ratio expression falls back to vector(1) on an empty
+// result, the SLO would silently report a permanent, fabricated 100 %.
+//
+// The 2 bucket backs the named 2-second objectives (signal transport
+// agreement, admin data-quality reads). Adding the exact boundary is preferred
+// over retargeting those objectives to the neighbouring 2.5 bucket, because
+// the objective name and the runbook threshold are the contract operators
+// reason about; silently monitoring 2.5s under a name that says 2s is worse
+// than one extra series per route.
+//
+// Pinned by TestREDLatencyBucketsCoverCatalogSLOs.
+var REDLatencyBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2, 2.5, 5, 10}
 
 // statusClass converts a HTTP status code to its RED bucket label
 // (1xx/2xx/3xx/4xx/5xx). Codes outside the 100..599 range collapse to "5xx"

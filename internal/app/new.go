@@ -35,6 +35,7 @@ import (
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
+	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -588,6 +589,19 @@ func (a *App) initEncryptor() {
 
 func (a *App) initTeslaClient() {
 	a.TeslaClient = tesla.NewClient(a.Cfg.Tesla)
+	policy := tesla.NewBudgetPolicy(
+		a.Cfg.Tesla.DailyBudgetUSD,
+		a.Cfg.Tesla.CommandReserveUSD,
+	)
+	if policy.Enabled() {
+		a.TeslaClient.SetRequestBudget(teslabudgetdb.New(a.DB.Pool, policy))
+		log.Info().
+			Float64("daily_limit_usd", a.Cfg.Tesla.DailyBudgetUSD).
+			Float64("command_reserve_usd", a.Cfg.Tesla.CommandReserveUSD).
+			Msg("shared Tesla Fleet API request budget enabled")
+	} else {
+		log.Warn().Msg("Tesla Fleet API request budget disabled; outbound spend is unbounded")
+	}
 }
 
 func (a *App) initAPILogging() {
@@ -1162,7 +1176,13 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 		return
 	}
 	if a.Cfg.Retention.SignalHistoryRetentionDays <= 0 {
-		log.Info().Msg("signal_history TTL cleanup DISABLED (SIGNAL_HISTORY_RETENTION_DAYS not set)")
+		log.Warn().Msg("signal_log retention cleanup disabled; storage growth is unbounded")
+		return
+	}
+	if !a.Cfg.Retention.SignalHistoryRetentionAcknowledged {
+		log.Warn().
+			Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).
+			Msg("signal_log retention cleanup awaiting explicit backup acknowledgement")
 		return
 	}
 	go func() {
@@ -1179,7 +1199,7 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 			}
 		}
 	}()
-	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
+	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("signal_log retention cleanup scheduled")
 }
 
 // signalHistoryCleaner is the minimal contract runSignalHistoryCleanupTick
@@ -1190,9 +1210,9 @@ type signalHistoryCleaner interface {
 }
 
 func runSignalHistoryCleanupTick(ctx context.Context, writer signalHistoryCleaner, retentionDays int) {
-	tickCtx, span := appBackgroundTracer().Start(ctx, "signal_history.cleanup_tick",
+	tickCtx, span := appBackgroundTracer().Start(ctx, "signal_log.cleanup_tick",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
-		oteltrace.WithAttributes(attribute.Int("signal_history.retention_days", retentionDays)),
+		oteltrace.WithAttributes(attribute.Int("signal_log.retention_days", retentionDays)),
 	)
 	defer span.End()
 	writer.Cleanup(tickCtx, retentionDays)

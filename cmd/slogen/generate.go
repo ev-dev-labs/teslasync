@@ -120,9 +120,15 @@ func ratioExpr(s SLO, window string) string {
 	// one-request-per-second denominator floor turns healthy low-volume APIs
 	// into false outages. Windows with no valid events are explicitly healthy
 	// (1) because no reliability budget was consumed.
+	//
+	// The numerator is coalesced to `0 * valid` so a numerator that selects
+	// NOTHING (e.g. a latency SLI pinned to an `le=` histogram bucket that
+	// does not exist) cannot fall through to the vector(1) tail and report a
+	// permanent, fabricated 100 %. With traffic present such an SLI now reads
+	// 0 and fails loudly. Mirrors internal/slo.nonZeroTrafficRatioExpr.
 	return fmt.Sprintf(
-		"(((%s) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
-		good, valid, valid,
+		"(((((%s) or on() (0 * (%s)))) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
+		good, valid, valid, valid,
 	)
 }
 

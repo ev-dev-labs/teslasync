@@ -162,6 +162,13 @@ func (w *Worker) pollAllVehicles(ctx context.Context) {
 		log.Error().Err(err).Msg("failed to list vehicles for polling")
 		return
 	}
+	if w.PollEngine != nil {
+		vins := make([]string, 0, len(vehicles))
+		for _, vehicle := range vehicles {
+			vins = append(vins, vehicle.VIN)
+		}
+		w.PollEngine.ReconcileFleet(vins)
+	}
 
 	for _, vehicle := range vehicles {
 		// Fleet Telemetry Primary Mode: if vehicle is actively streaming,

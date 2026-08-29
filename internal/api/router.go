@@ -4626,6 +4626,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
+				r.Get("/transport-agreement", signalHandler.TransportAgreement)
 				r.Get("/{signalName}/history", signalHandler.History)
 			} else {
 				// No telemetry handler at all — register with DB-only fallbacks
@@ -4643,6 +4644,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
+				r.Get("/transport-agreement", signalHandler.TransportAgreement)
 				r.Get("/{signalName}/history", signalHandler.History)
 			}
 		})

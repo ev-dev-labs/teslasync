@@ -198,6 +198,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'SchemaDrift', load: () => import('../features/admin/pages/SchemaDriftPage') },
   { name: 'SlowQueriesAdmin', load: () => import('../features/admin/pages/SlowQueriesPage') },
   { name: 'VehicleCostAdmin', load: () => import('../features/admin/pages/VehicleCostPage') },
+  { name: 'DataQualityAdmin', load: () => import('../features/admin/pages/DataQualityPage') },
   { name: 'DiskForecast', load: () => import('../features/admin/pages/DiskForecastPage') },
   { name: 'SecretRotation', load: () => import('../features/admin/pages/SecretRotationPage') },
   { name: 'AuditLogAdmin', load: () => import('../features/admin/pages/AuditLogPage') },

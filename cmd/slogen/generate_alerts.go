@@ -89,6 +89,10 @@ func renderAlerts(cat *Catalog) string {
 
 func emitBurnAlert(b *strings.Builder, s SLO, t burnTier) {
 	threshold := errorBudgetBurnThreshold(s.Objective, t.burnRate)
+	severity := t.severity
+	if t.name == "FastBurn" && s.FastBurnSeverity != "" {
+		severity = s.FastBurnSeverity
+	}
 	expr := fmt.Sprintf(
 		"(1 - %s) > %s and (1 - %s) > %s",
 		burnRatioExpr(s, t.longWindow), threshold,
@@ -98,7 +102,7 @@ func emitBurnAlert(b *strings.Builder, s SLO, t burnTier) {
 	fmt.Fprintf(b, "        expr: %s\n", quoteScalar(expr))
 	fmt.Fprintf(b, "        for: %s\n", t.for_)
 	b.WriteString("        labels:\n")
-	fmt.Fprintf(b, "          severity: %s\n", t.severity)
+	fmt.Fprintf(b, "          severity: %s\n", severity)
 	fmt.Fprintf(b, "          slo: %q\n", s.Name)
 	fmt.Fprintf(b, "          owner: %q\n", s.Owner)
 	fmt.Fprintf(b, "          burn_rate: %q\n", trimFloat(t.burnRate))

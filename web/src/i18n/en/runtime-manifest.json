@@ -183,6 +183,22 @@
     "watchFaceNL"
   ],
   "grouped": {
+    "telemetry": [
+      "liveMonitor",
+      "mqtt",
+      "signalChangePoints",
+      "signalChart",
+      "signalDeadband",
+      "signalDiff",
+      "signalEntropy",
+      "signalGap",
+      "signalHistory",
+      "signalLog",
+      "signalMutualInformation",
+      "signalStats",
+      "signalTransportAgreement",
+      "signalTrend"
+    ],
     "unreferenced": [
       "AC",
       "AEB",
@@ -647,20 +663,6 @@
       "mapOverview",
       "navigation",
       "tempImpact"
-    ],
-    "telemetry": [
-      "liveMonitor",
-      "mqtt",
-      "signalChangePoints",
-      "signalChart",
-      "signalDeadband",
-      "signalDiff",
-      "signalEntropy",
-      "signalGap",
-      "signalHistory",
-      "signalMutualInformation",
-      "signalStats",
-      "signalTrend"
     ],
     "trips": [
       "trips"

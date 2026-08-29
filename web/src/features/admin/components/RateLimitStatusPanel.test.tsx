@@ -67,6 +67,7 @@ function makeScope(
   limit: number,
   severity: RateLimitSeverity,
   windowSeconds = 60,
+  unit?: 'usd',
 ): ScopeBudget {
   return {
     id,
@@ -75,6 +76,7 @@ function makeScope(
     limit,
     window_seconds: windowSeconds,
     severity,
+    unit,
     detail: `${id} detail`,
   }
 }
@@ -181,6 +183,54 @@ describe('RateLimitStatusPanel — Phase-46 / Prompt 40', () => {
       'rate-limit-severity-api.write.minute',
     )
     expect(critSeverity.className).toMatch(/text-rose-300/)
+  })
+
+  it('formats Fleet API spend scopes as USD with sub-cent precision', async () => {
+    const resetAt = new Date(Date.now() + 60_000).toISOString()
+    mockedRequest.mockResolvedValueOnce(
+      buildResponse({
+        scopes: [
+          {
+            ...makeScope(
+              'tesla.fleet_api.daily_spend',
+              0.002,
+              0.3,
+              'ok',
+              86_400,
+              'usd',
+            ),
+            reset_at: resetAt,
+          },
+        ],
+      }),
+    )
+    renderPanel()
+
+    await waitFor(() => {
+      expect(
+        screen.getByTestId('rate-limit-row-tesla.fleet_api.daily_spend'),
+      ).toBeInTheDocument()
+    })
+    expect(screen.getByText('$0.002 / $0.300')).toBeInTheDocument()
+    expect(screen.getByText('UTC day')).toBeInTheDocument()
+    expect(screen.getByText(/Resets in/)).toBeInTheDocument()
+  })
+
+  it('shows partial-evidence warnings without hiding healthy scopes', async () => {
+    mockedRequest.mockResolvedValueOnce(
+      buildResponse({
+        warnings: ['Fleet API spend evidence is unavailable.'],
+      }),
+    )
+    renderPanel()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('rate-limit-warning')).toBeInTheDocument()
+    })
+    expect(
+      screen.getByText('Fleet API spend evidence is unavailable.'),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('rate-limit-rows')).toBeInTheDocument()
   })
 
   it('shows the empty state when the backend returns zero scopes', async () => {

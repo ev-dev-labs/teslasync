@@ -533,43 +533,71 @@ func MetricsCatalogHandler() http.HandlerFunc {
 // estimated costs based on the Tesla Fleet API pricing.
 func APIUsageHandler(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		costPerRequest := 0.00222 // ~$10 / 4500 requests
-		monthlyCredit := 10.0
-
 		ctx := r.Context()
-		var totalRequests int
-		err := db.Pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW())`).Scan(&totalRequests)
+		rows, err := db.Pool.Query(ctx, `
+			SELECT http_method, endpoint, status_code
+			FROM api_call_logs
+			WHERE ts >= date_trunc('month', NOW())
+			  AND service IN ('tesla-api', 'tesla-fleet')`)
 		if err != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"total_requests":      0,
-				"skipped_polls":       0,
-				"estimated_cost":      0.0,
-				"cost_per_request":    costPerRequest,
-				"monthly_credit":      monthlyCredit,
-				"estimated_remaining": monthlyCredit,
-			})
+			writeJSON(w, http.StatusOK, newAPIUsageSummary())
 			return
 		}
-		var skippedPolls int
-		_ = db.Pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW()) AND (status_code = 408 OR status_code = 504)`).Scan(&skippedPolls)
+		defer rows.Close()
 
-		estimatedCost := float64(totalRequests) * costPerRequest
-		remaining := monthlyCredit - estimatedCost
-		if remaining < 0 {
-			remaining = 0
+		summary := newAPIUsageSummary()
+		for rows.Next() {
+			var method, endpoint string
+			var statusCode int
+			if err := rows.Scan(&method, &endpoint, &statusCode); err != nil {
+				writeJSON(w, http.StatusOK, newAPIUsageSummary())
+				return
+			}
+			summary.add(method, endpoint, statusCode)
+		}
+		if rows.Err() != nil {
+			writeJSON(w, http.StatusOK, newAPIUsageSummary())
+			return
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"total_requests":      totalRequests,
-			"skipped_polls":       skippedPolls,
-			"estimated_cost":      estimatedCost,
-			"cost_per_request":    costPerRequest,
-			"monthly_credit":      monthlyCredit,
-			"estimated_remaining": remaining,
-		})
+		summary.complete()
+		writeJSON(w, http.StatusOK, summary)
 	}
+}
+
+const teslaMonthlyCreditUSD = 10.0
+
+type apiUsageSummary struct {
+	TotalRequests      int     `json:"total_requests"`
+	SkippedPolls       int     `json:"skipped_polls"`
+	EstimatedCost      float64 `json:"estimated_cost"`
+	CostPerRequest     float64 `json:"cost_per_request"`
+	MonthlyCredit      float64 `json:"monthly_credit"`
+	EstimatedRemaining float64 `json:"estimated_remaining"`
+}
+
+func newAPIUsageSummary() *apiUsageSummary {
+	return &apiUsageSummary{
+		CostPerRequest:     tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData),
+		MonthlyCredit:      teslaMonthlyCreditUSD,
+		EstimatedRemaining: teslaMonthlyCreditUSD,
+	}
+}
+
+func (s *apiUsageSummary) add(method, endpoint string, statusCode int) {
+	s.TotalRequests++
+	if statusCode == http.StatusRequestTimeout || statusCode == http.StatusGatewayTimeout {
+		s.SkippedPolls++
+	}
+	charge := tesla.ClassifyBudgetCharge(method, endpoint)
+	s.EstimatedCost += tesla.EstimatedCostUSD(charge.Category)
+}
+
+func (s *apiUsageSummary) complete() {
+	if s.TotalRequests > 0 {
+		s.CostPerRequest = s.EstimatedCost / float64(s.TotalRequests)
+	}
+	s.EstimatedRemaining = max(0, s.MonthlyCredit-s.EstimatedCost)
 }
 
 // CompressionStatsHandler returns position table statistics including

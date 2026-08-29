@@ -1,7 +1,8 @@
-// Package backupverify exercises the most recent backup artifact by
-// downloading it through the same StorageProvider the backup
-// processor uses, verifying its checksum, decoding the table dump,
-// and asserting a small set of invariants over the restored data.
+// Package backupverify validates the most recent backup artifact by
+// downloading it through the same StorageProvider the backup processor uses,
+// verifying its checksum, decoding the table dump, and asserting a small set
+// of content invariants. Package backuprestore owns database import and
+// service-level recovery drills.
 //
 // The verifier is a separate package rather than a Processor method for
 // two reasons:
@@ -33,12 +34,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 
 	"github.com/ev-dev-labs/teslasync/internal/backup"
 )
+
+var sha256Pattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
 // Verifier runs the backup drill. Construct via NewVerifier.
 type Verifier struct {
@@ -63,15 +67,17 @@ type BackupConfigsLookup interface {
 
 // Result summarises a single verification run.
 type Result struct {
-	RunID          int64         `json:"run_id"`
-	BackupAt       time.Time     `json:"backup_at"`
-	VerifiedAt     time.Time     `json:"verified_at"`
-	DurationMs     int64         `json:"duration_ms"`
-	OK             bool          `json:"ok"`
-	Error          string        `json:"error,omitempty"`
-	TablesVerified []TableResult `json:"tables_verified"`
-	ChecksumOK     bool          `json:"checksum_ok"`
-	AgeSeconds     float64       `json:"age_seconds"`
+	RunID          int64                      `json:"run_id"`
+	BackupAt       time.Time                  `json:"backup_at"`
+	VerifiedAt     time.Time                  `json:"verified_at"`
+	DurationMs     int64                      `json:"duration_ms"`
+	OK             bool                       `json:"ok"`
+	Error          string                     `json:"error,omitempty"`
+	TablesVerified []TableResult              `json:"tables_verified"`
+	ChecksumOK     bool                       `json:"checksum_ok"`
+	ArtifactSHA256 string                     `json:"artifact_sha256,omitempty"`
+	AgeSeconds     float64                    `json:"age_seconds"`
+	RestoredData   map[string]json.RawMessage `json:"-"`
 }
 
 // TableResult records the per-table verification outcome.
@@ -154,6 +160,11 @@ func (v *Verifier) VerifyLatest(ctx context.Context) (*Result, error) {
 		res.DurationMs = v.now().Sub(start).Milliseconds()
 		return res, errors.New(res.Error)
 	}
+	if run.Checksum == nil || !sha256Pattern.MatchString(*run.Checksum) {
+		res.Error = "backup run has no valid SHA-256 checksum"
+		res.DurationMs = v.now().Sub(start).Milliseconds()
+		return res, errors.New(res.Error)
+	}
 	cfg, err := v.configsRepo.GetByID(ctx, *run.ConfigID)
 	if err != nil {
 		res.Error = fmt.Sprintf("lookup config: %v", err)
@@ -173,6 +184,8 @@ func (v *Verifier) VerifyLatest(ctx context.Context) (*Result, error) {
 		return res, err
 	}
 	res.ChecksumOK = true // RestoreBackup returns an error when checksum verification fails.
+	res.ArtifactSHA256 = *run.Checksum
+	res.RestoredData = restored
 
 	res.TablesVerified = make([]TableResult, 0, len(v.criticals))
 	allOK := true
@@ -185,6 +198,7 @@ func (v *Verifier) VerifyLatest(ctx context.Context) (*Result, error) {
 			res.TablesVerified = append(res.TablesVerified, tr)
 			continue
 		}
+
 		count, err := countRows(raw)
 		if err != nil {
 			tr.Reason = fmt.Sprintf("parse: %v", err)

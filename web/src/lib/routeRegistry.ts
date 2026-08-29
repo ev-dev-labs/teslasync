@@ -27,6 +27,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/action-center', name: 'ActionCenter', label: 'Action Center', i18nKey: 'routes.actionCenter' },
   { path: '/activity', name: 'ActivityTimeline', label: 'Activity Timeline', i18nKey: 'routes.activityTimeline' },
   { path: '/admin/audit-log', name: 'AuditLog', label: 'Audit Log', i18nKey: 'routes.auditLog' },
+  { path: '/admin/data-quality', name: 'DataQuality', label: 'Data Quality', i18nKey: 'routes.dataQuality' },
   { path: '/admin/disk-forecast', name: 'DiskForecast', label: 'Disk Forecast', i18nKey: 'routes.diskForecast' },
   { path: '/admin/dlq', name: 'DLQInspector', label: 'DLQ Inspector', i18nKey: 'routes.dLQInspector' },
   { path: '/admin/feedback', name: 'FeedbackQueue', label: 'Feedback Queue', i18nKey: 'routes.feedbackQueue' },

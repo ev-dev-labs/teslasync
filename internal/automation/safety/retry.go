@@ -69,6 +69,24 @@ func ClassifyError(err error) ErrorClass {
 	if errors.Is(err, tesla.ErrVehicleAsleep) {
 		return ErrorRetryable
 	}
+	// Fleet API daily budget exhausted — permanent for THIS automation
+	// run: the shared UTC-day budget cannot clear by retrying sooner, so
+	// retrying only burns the remaining retry budget for no chance of
+	// success before the reset documented in tesla.BudgetExceededError.
+	// Checked ahead of the generic domain.ErrRateLimited classification
+	// below so a Fleet-API-specific budget error is never mistaken for an
+	// ordinary transient rate limit.
+	if errors.Is(err, tesla.ErrBudgetExceeded) {
+		return ErrorPermanent
+	}
+	// Budget evidence store unavailable — the client failed the
+	// reservation closed rather than risk an unmetered spend, but the
+	// underlying store outage may resolve before the next attempt, so
+	// this stays retryable (matches worker_jobs.go's short backoff for
+	// the same sentinel on the polling path).
+	if errors.Is(err, tesla.ErrBudgetUnavailable) {
+		return ErrorRetryable
+	}
 	if errors.Is(err, domain.ErrRateLimited) {
 		return ErrorRetryable
 	}

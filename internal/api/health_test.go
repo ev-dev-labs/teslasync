@@ -1,12 +1,56 @@
 package api
 
 import (
+	"math"
+	"net/http"
 	"testing"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/sony/gobreaker"
 )
+
+func TestAPIUsageSummaryUsesCanonicalCategoryPricing(t *testing.T) {
+	summary := newAPIUsageSummary()
+	calls := []struct {
+		method     string
+		endpoint   string
+		statusCode int
+	}{
+		{http.MethodGet, "/api/1/vehicles/123/vehicle_data", http.StatusOK},
+		{http.MethodPost, "/api/1/vehicles/123/wake_up", http.StatusRequestTimeout},
+		{http.MethodPost, "/api/1/vehicles/123/command/door_lock", http.StatusOK},
+		{http.MethodGet, "/api/1/vehicles/123/specs", http.StatusGatewayTimeout},
+		{http.MethodGet, "/api/1/vehicles", http.StatusOK},
+	}
+	for _, call := range calls {
+		summary.add(call.method, call.endpoint, call.statusCode)
+	}
+	summary.complete()
+
+	wantCost := tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData) +
+		tesla.EstimatedCostUSD(tesla.BudgetCategoryWakeUp) +
+		tesla.EstimatedCostUSD(tesla.BudgetCategoryCommand) +
+		tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleSpecs) +
+		tesla.EstimatedCostUSD(tesla.BudgetCategoryOther)
+	if math.Abs(summary.EstimatedCost-wantCost) > 1e-12 {
+		t.Fatalf("estimated cost = %.6f, want %.6f", summary.EstimatedCost, wantCost)
+	}
+	if summary.TotalRequests != len(calls) || summary.SkippedPolls != 2 {
+		t.Fatalf("usage counts = %+v, want total=%d skipped=2", summary, len(calls))
+	}
+	if math.Abs(summary.CostPerRequest-wantCost/float64(len(calls))) > 1e-12 {
+		t.Fatalf("cost per request = %.6f, want weighted category average", summary.CostPerRequest)
+	}
+}
+
+func TestAPIUsageSummaryEmptyFallbackUsesCanonicalVehicleDataPrice(t *testing.T) {
+	summary := newAPIUsageSummary()
+	if got, want := summary.CostPerRequest, tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData); got != want {
+		t.Fatalf("empty cost per request = %.6f, want canonical vehicle-data price %.6f", got, want)
+	}
+}
 
 func TestMQTTSystemStatusPrefersWatchdogState(t *testing.T) {
 	got := mqttSystemStatus(nil, map[string]*resilience.Component{

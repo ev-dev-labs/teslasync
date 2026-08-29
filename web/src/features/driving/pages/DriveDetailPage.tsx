@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { Button, PrintButton, Text } from '@/components/ui';
-import { DateTime } from '@/components/data-display';
+import { DataProvenanceBadge, DateTime } from '@/components/data-display';
 import { SectionErrorBoundary, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
@@ -92,6 +92,11 @@ export default function DriveDetailPage() {
       }}
       actions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
+          <DataProvenanceBadge
+            provenance={driveState.provenance}
+            status={driveState.status}
+            updatedAt={driveState.updatedAt}
+          />
           <Link to="/drives">
             <Button
               variant="ghost"

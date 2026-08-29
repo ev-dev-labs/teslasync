@@ -6,6 +6,38 @@
     "spacious": "Spacious",
     "groupLabel": "List density"
   },
+  "signalTransportAgreement": {
+    "title": "HTTP / MQTT Agreement",
+    "description": "Compares only SI-normalized observations with producer timestamps from both Fleet Telemetry transports.",
+    "measured": "Measured",
+    "notMeasured": "Not measured",
+    "runQuery": "Run a signal query to audit HTTP and MQTT evidence for the same time window.",
+    "resource": "transport agreement evidence",
+    "unavailable": "Transport agreement evidence is not available for this query.",
+    "windowLimitTitle": "Agreement is limited to seven days",
+    "windowLimitDescription": "Cross-transport agreement is evaluated over at most {{limitDays}} days ({{limitHours}} hours). This query covers {{requestedDays}} days and is kept exactly as submitted — the signal history below is unchanged. Re-run with a shorter range to audit HTTP and MQTT evidence.",
+    "partialTitle": "Partial evidence window",
+    "partialDescription": "The audit reached its {{limit}}-row safety limit. Results describe only the bounded sample and do not prove full-window agreement.",
+    "invalidRows": "Excluded malformed typed rows: {{count}}.",
+    "agreement": "Agreement",
+    "sourceTimeOnly": "Producer time only; receipt fallbacks excluded",
+    "comparablePairs": "Comparable pairs",
+    "pairTolerance": "Within {{seconds}} seconds",
+    "httpEvidence": "HTTP evidence",
+    "mqttEvidence": "MQTT evidence",
+    "noEvidenceTitle": "No eligible evidence",
+    "noEvidenceDescription": "No normalized observations with producer timestamps were recorded in this window.",
+    "overlapTitle": "Not enough overlapping evidence",
+    "overlapDescription": "Agreement needs HTTP and MQTT observations for the same signal within the source-time tolerance. Missing overlap is unknown, not 0% agreement.",
+    "fieldTitle": "Per-signal evidence",
+    "fieldCount": "Showing {{shown}} of {{total}} signals",
+    "fieldEvidence": "{{pairs}} pairs / {{http}} HTTP / {{mqtt}} MQTT",
+    "disagreements": "Disagreements: {{count}}",
+    "noFields": "No eligible per-signal evidence is available."
+  },
+  "signalLog": {
+    "records": "records"
+  },
   "route": {
     "noLocationData": "No location data",
     "roundTrip": "round trip"
@@ -33,10 +65,22 @@
       "label": "Workspace profile"
     },
     "personas": {
-      "owner": { "label": "Owner", "description": "Keep the most useful everyday vehicle information close at hand." },
-      "fleetOperator": { "label": "Fleet operator", "description": "Prioritize active fleet operations and current vehicle state." },
-      "analyst": { "label": "Analyst", "description": "Prioritize trends, reports, and historical analysis." },
-      "administrator": { "label": "Administrator", "description": "Prioritize system administration and operational controls." }
+      "owner": {
+        "label": "Owner",
+        "description": "Keep the most useful everyday vehicle information close at hand."
+      },
+      "fleetOperator": {
+        "label": "Fleet operator",
+        "description": "Prioritize active fleet operations and current vehicle state."
+      },
+      "analyst": {
+        "label": "Analyst",
+        "description": "Prioritize trends, reports, and historical analysis."
+      },
+      "administrator": {
+        "label": "Administrator",
+        "description": "Prioritize system administration and operational controls."
+      }
     },
     "defaultVehicle": {
       "label": "Default vehicle",
@@ -8108,6 +8152,54 @@
     },
     "slowQueries": {
       "colQuery": "Query"
+    },
+    "dataQuality": {
+      "pageTitle": "Data Quality",
+      "subtitle": "Per-field signal freshness, gaps and duplicates, with normalization-version provenance for the same bounded window.",
+      "notConfigured": "The data-quality scorer is not configured on this deployment. Scoring requires the signal_log hypertable connection to be wired.",
+      "unknown": "Unknown",
+      "windowSub": "Window: {{mins}} min",
+      "kpiRegion": "Normalization coverage totals",
+      "kpiTotal": "Samples in window",
+      "kpiVersioned": "Version-attested",
+      "kpiVersionedSub": "Rows carrying a normalization version",
+      "kpiUnversioned": "Unattested",
+      "kpiUnversionedSub": "Legacy or below-contract provenance",
+      "kpiCoverage": "Attested coverage",
+      "kpiCoverageSub": "{{versioned}} of {{total}} rows",
+      "kpiCoverageUnknownSub": "No samples were observed in this window",
+      "kpiRequiredVersion": "Required version",
+      "kpiRequiredVersionSub": "Minimum attested SI contract",
+      "kpiCriticalFields": "Critical fields",
+      "kpiCriticalFieldsSub": "Composite score below 50",
+      "versionsTitle": "Normalization version distribution",
+      "versionsSubtitle": "Row counts per normalization contract version over the scoring window.",
+      "versionsEmptyTitle": "No version evidence",
+      "versionsEmptyMessage": "No signal rows were persisted in this window, so no normalization version could be observed.",
+      "legacyVersion": "Legacy / unknown",
+      "versionAttested": "Attested",
+      "versionUnattested": "Unattested",
+      "versionRows": "{{rows}} rows",
+      "versionShare": "{{share}}% of window",
+      "shareUnknown": "Share unknown",
+      "tableTitle": "Per-field quality and provenance",
+      "tableSubtitle": "Worst-scoring fields first. Coverage is the share of this field’s rows carrying a normalization version.",
+      "colField": "Field",
+      "colFieldSamples": "{{samples}} samples",
+      "colSeverity": "Quality",
+      "colFreshness": "Freshness",
+      "colMaxGap": "Max gap",
+      "colDuplicates": "Duplicates",
+      "colVersioned": "Attested",
+      "colUnversioned": "Unattested",
+      "colCoverage": "Coverage",
+      "trustComplete": "Fully attested",
+      "trustPartial": "Partially attested",
+      "trustNone": "Unattested",
+      "trustUnknown": "Unknown",
+      "fieldsEmptyTitle": "No field scores",
+      "fieldsEmptyMessage": "No signal fields were persisted during this scoring window.",
+      "fieldsEmptyTable": "No field scores"
     }
   },
   "apiLogs": {
@@ -18381,6 +18473,7 @@
     "refresh": "Refresh",
     "lastUpdated": "Updated {{when}}",
     "windowSeconds": "Last {{seconds}}s window",
+    "windowUtcDay": "UTC day",
     "windowInstant": "Live snapshot",
     "resetIn": "Refills in {{duration}}",
     "usage": "{{current}} / {{limit}}",

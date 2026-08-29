@@ -40,6 +40,52 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 		}
 		return
 	}
+	if errors.Is(err, tesla.ErrBudgetExceeded) {
+		now := time.Now().UTC()
+		backoffUntil := now.Add(time.Hour)
+		var budgetErr *tesla.BudgetExceededError
+		if errors.As(err, &budgetErr) && budgetErr.Snapshot.ResetAt.After(now) {
+			backoffUntil = budgetErr.Snapshot.ResetAt
+		}
+		logger.Warn().
+			Time("backoff_until", backoffUntil).
+			Msg("Tesla Fleet API daily budget reached — pausing vehicle polling")
+		if w.PollEngine != nil {
+			w.PollEngine.MarkBudgetExhausted(vehicle.VIN, backoffUntil)
+		} else {
+			w.mu.Lock()
+			vh, ok := w.vehicleHealth[vehicle.ID]
+			if !ok {
+				vh = &vehicleHealth{}
+				w.vehicleHealth[vehicle.ID] = vh
+			}
+			vh.backoffUntil = backoffUntil
+			w.mu.Unlock()
+		}
+		metrics.PollsTotal.WithLabelValues("budget_limited").Inc()
+		return
+	}
+	if errors.Is(err, tesla.ErrBudgetUnavailable) {
+		backoffUntil := time.Now().Add(time.Minute)
+		logger.Error().
+			Err(err).
+			Time("backoff_until", backoffUntil).
+			Msg("Tesla Fleet API budget evidence unavailable — failing closed")
+		if w.PollEngine != nil {
+			w.PollEngine.MarkBudgetUnavailable(vehicle.VIN, backoffUntil)
+		} else {
+			w.mu.Lock()
+			vh, ok := w.vehicleHealth[vehicle.ID]
+			if !ok {
+				vh = &vehicleHealth{}
+				w.vehicleHealth[vehicle.ID] = vh
+			}
+			vh.backoffUntil = backoffUntil
+			w.mu.Unlock()
+		}
+		metrics.PollsTotal.WithLabelValues("budget_unavailable").Inc()
+		return
+	}
 	if errors.Is(err, tesla.ErrRateLimited) {
 		logger.Warn().Msg("Tesla API rate limited (429) — backing off without counting as failure")
 		w.mu.Lock()
@@ -96,6 +142,17 @@ func (w *Worker) pollVehicle(ctx context.Context, vehicle *vehiclemodel.Vehicle)
 	// Feed response to the adaptive polling engine for next-interval decision
 	if w.PollEngine != nil {
 		decision := w.PollEngine.Assess(vehicle.VIN, data)
+		if snapshot, enabled, budgetErr := w.teslaClient.BudgetSnapshot(ctx); budgetErr != nil {
+			logger.Warn().Err(budgetErr).Msg("could not calculate Fleet API budget pacing")
+		} else if enabled {
+			if pacedInterval := w.PollEngine.ApplyBudgetPacing(vehicle.VIN, snapshot); pacedInterval > decision.NextInterval {
+				decision.NextInterval = pacedInterval
+				decision.Reasons = append(
+					decision.Reasons,
+					"Fleet API budget pacing preserves coverage through the UTC day",
+				)
+			}
+		}
 		logger.Debug().
 			Str("state", data.State).
 			Int("battery", data.ChargeState.BatteryLevel).

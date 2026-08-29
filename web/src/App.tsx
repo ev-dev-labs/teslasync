@@ -265,6 +265,7 @@ const LiveSignalInspector = lazy(() => import('./features/admin/pages/LiveSignal
 const SchemaDrift = lazy(() => import('./features/admin/pages/SchemaDriftPage'))
 const SlowQueriesAdmin = lazy(() => import('./features/admin/pages/SlowQueriesPage'))
 const VehicleCostAdmin = lazy(() => import('./features/admin/pages/VehicleCostPage'))
+const DataQualityAdmin = lazy(() => import('./features/admin/pages/DataQualityPage'))
 const DiskForecast = lazy(() => import('./features/admin/pages/DiskForecastPage'))
 const SecretRotation = lazy(() => import('./features/admin/pages/SecretRotationPage'))
 const AuditLogAdmin = lazy(() => import('./features/admin/pages/AuditLogPage'))
@@ -647,6 +648,7 @@ export default function App() {
         <Route path="admin/schema-drift" element={<SafeRoute name="SchemaDrift"><SchemaDrift /></SafeRoute>} />
         <Route path="admin/slow-queries" element={<SafeRoute name="SlowQueries"><SlowQueriesAdmin /></SafeRoute>} />
         <Route path="admin/vehicle-cost" element={<SafeRoute name="VehicleCost"><VehicleCostAdmin /></SafeRoute>} />
+        <Route path="admin/data-quality" element={<SafeRoute name="DataQuality"><DataQualityAdmin /></SafeRoute>} />
         <Route path="admin/disk-forecast" element={<SafeRoute name="DiskForecast"><DiskForecast /></SafeRoute>} />
         <Route path="admin/secret-rotation" element={<SafeRoute name="SecretRotation"><SecretRotation /></SafeRoute>} />
         <Route path="admin/audit-log" element={<SafeRoute name="AuditLog"><AuditLogAdmin /></SafeRoute>} />

@@ -1,3 +1,5 @@
+{{- include "teslasync.validateMigrationGate" . -}}
+{{- $gate := .Values.migrationGate | default dict -}}
 apiVersion: batch/v1
 kind: Job
 metadata:
@@ -7,8 +9,15 @@ metadata:
     app.kubernetes.io/component: migrate
   annotations:
     "helm.sh/hook": pre-upgrade,pre-install
+    # Weight 0 — the runtime secret source is rendered at weight -10 when
+    # migrationGate is in `hook` mode, so it is applied first.
     "helm.sh/hook-weight": "0"
     "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+    # The effective secret-ordering contract, recorded on the object so it
+    # is auditable after the fact (`kubectl get job -o jsonpath=...`) and
+    # checkable by `ops-gate -verify-helm-render`, which cannot otherwise
+    # tell a deliberate `require` contract from the ordering defect.
+    "teslasync.io/migration-gate": {{ include "teslasync.migrationGate.mode" . | quote }}
 spec:
   backoffLimit: 3
   ttlSecondsAfterFinished: 300
@@ -24,11 +33,78 @@ spec:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       restartPolicy: Never
       initContainers:
+        {{- if include "teslasync.migrationGate.waits" . }}
+        # OPS-03 — wait for the runtime Secret to actually carry data.
+        #
+        # Ordering the secret source ahead of this hook is not enough for
+        # External Secrets: the ExternalSecret existing says nothing about
+        # whether ESO has reached the provider and written the target
+        # Secret. Without this gate the migration container starts against
+        # a Secret with no keys and fails as an opaque
+        # CreateContainerConfigError, or worse, against a Secret that
+        # exists but is still empty.
+        #
+        # The Secret is mounted `optional: true` so the pod schedules even
+        # before it exists; the kubelet populates the volume as soon as it
+        # appears. No API access and therefore no extra RBAC is needed —
+        # the container only reads its own mounted files — and the failure
+        # message names the Secret and the missing keys.
+        - name: wait-for-runtime-secret
+          image: busybox:1.36
+          securityContext:
+            {{- toYaml .Values.initSecurityContext | nindent 12 }}
+          env:
+            - name: SECRET_NAME
+              value: {{ include "teslasync.secretName" . | quote }}
+            - name: REQUIRED_KEYS
+              value: {{ join " " ($gate.requiredKeys | default (list "DATABASE_PASS")) | quote }}
+            - name: TIMEOUT_SECONDS
+              value: {{ $gate.timeoutSeconds | default 300 | quote }}
+            - name: POLL_SECONDS
+              value: {{ $gate.pollIntervalSeconds | default 5 | quote }}
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              DIR=/var/run/teslasync-runtime-secret
+              DEADLINE=$(( $(date +%s) + TIMEOUT_SECONDS ))
+              while :; do
+                MISSING=""
+                for key in $REQUIRED_KEYS; do
+                  [ -s "$DIR/$key" ] || MISSING="$MISSING $key"
+                done
+                if [ -z "$MISSING" ]; then
+                  echo "runtime Secret $SECRET_NAME carries every required key; running migrations"
+                  exit 0
+                fi
+                if [ "$(date +%s)" -ge "$DEADLINE" ]; then
+                  echo "ERROR: timed out after ${TIMEOUT_SECONDS}s waiting for Secret '$SECRET_NAME' keys:$MISSING" >&2
+                  echo "The pre-install/pre-upgrade migration hook needs these keys before it can connect to the database." >&2
+                  echo "With External Secrets, check: kubectl get externalsecret $SECRET_NAME -o jsonpath='{.status.conditions}'" >&2
+                  echo "A SecretSyncedError there means the SecretStore, its credentials, or the remote key path is wrong." >&2
+                  exit 1
+                fi
+                echo "waiting for Secret '$SECRET_NAME' keys:$MISSING"
+                sleep "$POLL_SECONDS"
+              done
+          volumeMounts:
+            - name: runtime-secret
+              mountPath: /var/run/teslasync-runtime-secret
+              readOnly: true
+        {{- end }}
         - name: wait-for-db
           image: busybox:1.36
           securityContext:
             {{- toYaml .Values.initSecurityContext | nindent 12 }}
           command: ['sh', '-c', 'until nc -z {{ include "teslasync.postgresql.host" . }} {{ include "teslasync.postgresql.port" . }}; do echo "waiting for database..."; sleep 2; done']
+      {{- if include "teslasync.migrationGate.waits" . }}
+      volumes:
+        - name: runtime-secret
+          secret:
+            secretName: {{ include "teslasync.secretName" . }}
+            optional: true
+      {{- end }}
       containers:
         - name: migrate
           securityContext:

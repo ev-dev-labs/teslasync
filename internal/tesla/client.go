@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +31,8 @@ type Client struct {
 	redirectURI     string
 	cb              *gobreaker.CircuitBreaker
 	limiter         *rate.Limiter
+	budgetMu        sync.RWMutex
+	requestBudget   RequestBudget
 
 	mu          sync.RWMutex
 	accessToken string
@@ -56,9 +59,9 @@ func NewClient(cfg config.TeslaConfig) *Client {
 		},
 	}
 
-	// Rate limiter: ~10 requests/second with burst of 5.
-	// Tesla allows 200 req/10min for vehicle_data endpoints but some
-	// endpoints have lower limits. This keeps us well within budget.
+	// Process-local burst smoother. This is intentionally not described as
+	// Tesla's quota: Fleet API limits vary by endpoint and vehicle, while the
+	// durable request budget below is the account-wide cost control.
 	limiter := rate.NewLimiter(rate.Every(100*time.Millisecond), 5)
 
 	// HTTP client for the Vehicle Command Proxy (self-signed TLS in Docker)
@@ -82,6 +85,10 @@ func NewClient(cfg config.TeslaConfig) *Client {
 		cb:              gobreaker.NewCircuitBreaker(cbSettings),
 		limiter:         limiter,
 	}
+	policy := NewBudgetPolicy(cfg.DailyBudgetUSD, cfg.CommandReserveUSD)
+	if policy.Enabled() {
+		c.requestBudget = NewMemoryRequestBudget(policy)
+	}
 
 	if c.commandProxyURL != "" {
 		log.Info().Str("proxy_url", c.commandProxyURL).Msg("vehicle command proxy configured — signed commands enabled")
@@ -95,6 +102,56 @@ func NewClient(cfg config.TeslaConfig) *Client {
 // SetLogCallback sets the callback function for logging API calls.
 func (c *Client) SetLogCallback(cb func(method, url string, statusCode int, reqBody, respBody []byte, durationMs int, err error)) {
 	c.logCallback = cb
+}
+
+// SetRequestBudget replaces the process-local budget with a shared durable
+// implementation. Composition roots with a database must call this before
+// issuing Fleet API requests.
+func (c *Client) SetRequestBudget(budget RequestBudget) {
+	if c == nil {
+		return
+	}
+	c.budgetMu.Lock()
+	c.requestBudget = budget
+	c.budgetMu.Unlock()
+}
+
+// BudgetSnapshot returns the current UTC-day cost reservation state.
+func (c *Client) BudgetSnapshot(ctx context.Context) (BudgetSnapshot, bool, error) {
+	if c == nil {
+		return BudgetSnapshot{}, false, nil
+	}
+	c.budgetMu.RLock()
+	budget := c.requestBudget
+	c.budgetMu.RUnlock()
+	if budget == nil {
+		return BudgetSnapshot{}, false, nil
+	}
+	snapshot, err := budget.Snapshot(ctx)
+	return snapshot, true, err
+}
+
+func (c *Client) reserveBudget(ctx context.Context, method, path string) error {
+	c.budgetMu.RLock()
+	budget := c.requestBudget
+	c.budgetMu.RUnlock()
+	if budget == nil {
+		return nil
+	}
+	if _, err := budget.Reserve(ctx, ClassifyBudgetCharge(method, path)); err != nil {
+		if errors.Is(err, ErrBudgetExceeded) || errors.Is(err, ErrInvalidBudgetCharge) {
+			return fmt.Errorf("reserve Fleet API request budget: %w", err)
+		}
+		return fmt.Errorf("%w: %w", ErrBudgetUnavailable, err)
+	}
+	return nil
+}
+
+func budgetHTTPStatus(err error) int {
+	if errors.Is(err, ErrBudgetExceeded) {
+		return http.StatusTooManyRequests
+	}
+	return http.StatusServiceUnavailable
 }
 
 // CircuitBreakerState returns the current state of the Tesla API circuit breaker.
@@ -124,12 +181,8 @@ func (c *Client) CircuitBreakerCounts() map[string]interface{} {
 // when Tokens drops to zero, the next outbound call will block on
 // limiter.Wait until the bucket refills at Limit tokens/sec.
 //
-// Note: this snapshot describes the CLIENT-SIDE token bucket
-// configured in NewClient (currently 10 req/s, burst 5). Tesla's
-// SERVER-SIDE per-account daily quota is not exposed by their API
-// and cannot be observed here — the panel surfaces the client-side
-// budget as the closest proxy. See `internal/api/rate_limit_handler.go`
-// for the rationale baked into the ScopeBudget detail string.
+// This is only the process-local burst smoother. Account-wide estimated
+// spend is exposed separately through BudgetSnapshot.
 type BucketSnapshot struct {
 	// Tokens is the number of tokens currently available in the bucket.
 	// Reads x/time/rate.Limiter.Tokens(); may be fractional and may
@@ -227,6 +280,9 @@ func (c *Client) doRequest(ctx context.Context, method, path string, body io.Rea
 
 	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
 		return nil, 0, fmt.Errorf("rate limiter: %w", waitErr)
+	}
+	if budgetErr := c.reserveBudget(ctx, method, path); budgetErr != nil {
+		return nil, budgetHTTPStatus(budgetErr), budgetErr
 	}
 
 	url := c.baseURL + path

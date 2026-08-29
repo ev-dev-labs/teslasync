@@ -1,6 +1,6 @@
 {{- if .Values.unitDriftValidator.enabled }}
-{{- if not (and .Values.operator .Values.operator.token) }}
-{{- fail "unitDriftValidator.enabled=true but operator.token is empty — the validator binary refuses to start without TESLASYNC_OPERATOR_TOKEN. Set operator.token (and rotate it on admin offboarding)." }}
+{{- if and .Values.secrets.create (not (and .Values.operator .Values.operator.token)) }}
+{{- fail "unitDriftValidator.enabled=true with secrets.create=true requires operator.token; existing and external Secret modes provide TESLASYNC_OPERATOR_TOKEN through the selected runtime Secret." }}
 {{- end }}
 apiVersion: batch/v1
 kind: CronJob

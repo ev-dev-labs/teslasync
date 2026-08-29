@@ -65,7 +65,7 @@ type ParitySnapshot struct {
 }
 
 var (
-	goEnvRe       = regexp.MustCompile(`env(?:Str|Bool|Int|Int64|Float|Duration|StringSlice|CSV)\(\s*"([A-Z][A-Z0-9_]*)"`)
+	goEnvRe       = regexp.MustCompile(`env(?:Str|Bool|Int|Int64|Float|Float64|Duration|StringSlice|CSV)\(\s*"([A-Z][A-Z0-9_]*)"`)
 	goGetenvRe    = regexp.MustCompile(`(?:os\.Getenv|getenv|LookupEnv)\(\s*"([A-Z][A-Z0-9_]*)"`)
 	helmDataKeyRe = regexp.MustCompile(`(?m)^\s{2}([A-Z][A-Z0-9_]*):`)
 	composeKVRe   = regexp.MustCompile(`^([A-Z][A-Z0-9_]*)\s*[:=]`)

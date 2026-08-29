@@ -240,18 +240,21 @@ func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 
 	var ackCalls atomic.Int32
 	body := []byte("75.5") // Soc is a float field; "75.5" is valid JSON for it.
+	receivedAt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
 
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/5YJ3E1EA1LF000001/v/Soc",
-		Payload:   body,
-		MessageID: 42,
-		Ack:       func() { ackCalls.Add(1) },
+		Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:    body,
+		MessageID:  42,
+		ReceivedAt: receivedAt,
+		Ack:        func() { ackCalls.Add(1) },
 	})
 
 	calls := pipe.Calls()
 	if len(calls) != 1 {
 		t.Fatalf("Pipeline.ProcessAtomics called %d times, want 1", len(calls))
 	}
+
 	if got := len(calls[0].Atomics); got != 1 {
 		t.Fatalf("atomics len = %d, want 1", got)
 	}
@@ -261,11 +264,50 @@ func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 	if got := calls[0].Atomics[0].Field; got != "Soc" {
 		t.Errorf("atomic field = %q, want %q", got, "Soc")
 	}
+	atom := calls[0].Atomics[0]
+	if atom.IngestOrigin != codec.IngestOriginFleetTelemetryMQTT {
+		t.Errorf("ingest origin = %q, want fleet_telemetry_mqtt", atom.IngestOrigin)
+	}
+	if atom.ReceivedAt == nil || !atom.ReceivedAt.Equal(receivedAt) {
+		t.Errorf("received_at = %v, want subscriber boundary %v", atom.ReceivedAt, receivedAt)
+	}
+	if atom.SourceEmittedAt != nil {
+		t.Errorf("bare MQTT SourceEmittedAt = %v, want nil", atom.SourceEmittedAt)
+	}
 	if got := ackCalls.Load(); got != 1 {
 		t.Errorf("ack called %d times, want 1", got)
 	}
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries = %d, want 0", got)
+	}
+}
+
+func TestPipelineSubscriber_ReplayEnvelopeRetainsSourceTimeEvidence(t *testing.T) {
+	pipe := &fakePipeline{}
+	sub := newTestSubscriber(t, pipe, &fakeDLQ{}, staticResolver(42))
+	receivedAt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	sourceAt := time.Date(2026, 8, 29, 9, 58, 0, 0, time.UTC)
+
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:    []byte(`{"value":75.5,"ts":"2026-08-29T09:58:00Z"}`),
+		ReceivedAt: receivedAt,
+		Ack:        func() {},
+	})
+
+	calls := pipe.Calls()
+	if len(calls) != 1 || len(calls[0].Atomics) != 1 {
+		t.Fatalf("pipeline calls = %#v, want one atomic", calls)
+	}
+	atom := calls[0].Atomics[0]
+	if !atom.EmittedAt.Equal(sourceAt) {
+		t.Errorf("EmittedAt = %v, want replay source %v", atom.EmittedAt, sourceAt)
+	}
+	if atom.SourceEmittedAt == nil || !atom.SourceEmittedAt.Equal(sourceAt) {
+		t.Errorf("SourceEmittedAt = %v, want replay source %v", atom.SourceEmittedAt, sourceAt)
+	}
+	if atom.ReceivedAt == nil || !atom.ReceivedAt.Equal(receivedAt) {
+		t.Errorf("ReceivedAt = %v, want subscriber receipt %v", atom.ReceivedAt, receivedAt)
 	}
 }
 

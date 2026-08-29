@@ -54,6 +54,46 @@ slos:
     owner: platform
     tags: [http, fleet, latency]
 
+  - name: signal_transport_agreement_availability
+    description: "Bounded source-time cross-transport agreement audits must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/signals/{vehicleID}/transport-agreement\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/signals/{vehicleID}/transport-agreement\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, telemetry, data-quality]
+
+  - name: signal_transport_agreement_latency_2s
+    description: "Bounded source-time cross-transport agreement audits must complete within two seconds."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/signals/{vehicleID}/transport-agreement\",le=\"2\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/signals/{vehicleID}/transport-agreement\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, telemetry, data-quality, latency]
+
+  - name: data_quality_read_availability
+    description: "Bounded admin data-quality scoring reads must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/admin/observability/data-quality\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/admin/observability/data-quality\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, admin, observability, data-quality]
+
+  - name: data_quality_read_latency_2s
+    description: "Bounded admin data-quality scoring reads must complete within two seconds."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/admin/observability/data-quality\",le=\"2\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/admin/observability/data-quality\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, admin, observability, data-quality, latency]
+
   - name: battery_health_latency_1s
     description: "Battery health analytics requests must complete within one second."
     sli:
@@ -204,6 +244,27 @@ slos:
     owner: platform
     tags: [upstream, breaker]
 
+  - name: fleet_api_budget_evidence_availability
+    description: "Fleet API polling must retain access to shared budget evidence rather than failing closed."
+    sli:
+      good_events: "sum(rate(teslasync_polls_total{result!=\"budget_unavailable\"}[5m]))"
+      valid_events: "sum(rate(teslasync_polls_total[5m]))"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    tags: [upstream, polling, budget]
+
+  - name: fleet_api_polling_budget_continuity
+    description: "Fleet API polling should retain daily budget headroom so no current-fleet vehicle remains paused."
+    sli:
+      good_events: "sum_over_time((max(teslasync_polling_budget_paused_vehicles) == bool 0)[5m:30s])"
+      valid_events: "count_over_time((max(teslasync_polling_budget_paused_vehicles))[5m:30s])"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    fast_burn_severity: ticket
+    tags: [upstream, polling, budget]
+
   - name: sse_delivery
     description: "Server-sent-events broadcast latency p95 must remain under 2 seconds."
     sli:
@@ -305,7 +366,7 @@ slos:
   - name: fleet_ops_forecast_latency
     description: "Small-fleet utilization forecasts must complete within one second."
     sli:
-      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1\"}[5m]))"
       valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m]))"
     objective: 99.0
     window: 30d

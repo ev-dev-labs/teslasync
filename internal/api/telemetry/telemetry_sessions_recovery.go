@@ -15,6 +15,7 @@ import (
 	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 )
 
@@ -713,9 +714,9 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 	var distanceMeters float64
 	if startOdo, ok := snapFloat(startSnap, "Odometer"); ok {
 		if endOdo, ok := snapFloat(endSnap, "Odometer"); ok {
-			d := endOdo - startOdo
-			if d > 0 {
-				distanceMeters = d
+			change := signalcounter.Compare(startOdo, endOdo)
+			if change.Kind == signalcounter.ChangeAdvanced {
+				distanceMeters = change.Delta
 				enhancedFields["distance_m"] = distanceMeters
 			}
 		}
@@ -757,9 +758,9 @@ func (t *TelemetrySessionTracker) completeRecoveredDrive(ctx context.Context, dr
 	// Energy: delta of cumulative LifetimeEnergyUsed counter (kWh) → Wh.
 	if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
 		if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
-			energyKwh := endEnergy - startEnergy
-			if energyKwh > 0 {
-				enhancedFields["energy_used_wh"] = energyKwh * 1000.0
+			change := signalcounter.Compare(startEnergy, endEnergy)
+			if change.Kind == signalcounter.ChangeAdvanced {
+				enhancedFields["energy_used_wh"] = change.Delta * 1000.0
 			}
 		}
 	}
@@ -843,10 +844,10 @@ func (t *TelemetrySessionTracker) completeRecoveredCharge(ctx context.Context, c
 	var energyAdded float64
 	if startEnergy, ok := snapFloat(startSnap, "ACChargingEnergyIn"); ok {
 		if endEnergy, ok := snapFloat(endSnap, "ACChargingEnergyIn"); ok {
-			delta := endEnergy - startEnergy
-			if delta > 0 {
-				energyAdded = delta
-				enhancedFields["total_energy_added_wh"] = delta
+			change := signalcounter.Compare(startEnergy, endEnergy)
+			if change.Kind == signalcounter.ChangeAdvanced {
+				energyAdded = change.Delta
+				enhancedFields["total_energy_added_wh"] = change.Delta
 			}
 		}
 	}

@@ -2,12 +2,15 @@ package httpx_test
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // TestWriteTeslaTokenExpired_PropagatesCode verifies the contract
@@ -55,5 +58,63 @@ func TestErrCodeTeslaTokenExpired_ConstantPin(t *testing.T) {
 	if httpx.ErrCodeTeslaTokenExpired != "TESLA_TOKEN_EXPIRED" {
 		t.Errorf("ErrCodeTeslaTokenExpired = %q, want %q (frontend resilience.ts depends on this exact string)",
 			httpx.ErrCodeTeslaTokenExpired, "TESLA_TOKEN_EXPIRED")
+	}
+}
+
+func TestClassifyTeslaBudgetError(t *testing.T) {
+	tests := []struct {
+		name         string
+		err          error
+		wantStatus   int
+		wantCategory string
+		wantMatched  bool
+	}{
+		{
+			name:         "wrapped budget exceeded",
+			err:          fmt.Errorf("send command: %w", tesla.ErrBudgetExceeded),
+			wantStatus:   http.StatusTooManyRequests,
+			wantCategory: "budget_exceeded",
+			wantMatched:  true,
+		},
+		{
+			name:         "typed budget exceeded",
+			err:          &tesla.BudgetExceededError{Category: tesla.BudgetCategoryCommand},
+			wantStatus:   http.StatusTooManyRequests,
+			wantCategory: "budget_exceeded",
+			wantMatched:  true,
+		},
+		{
+			name:         "wrapped budget evidence unavailable",
+			err:          fmt.Errorf("query budget table: %w", tesla.ErrBudgetUnavailable),
+			wantStatus:   http.StatusServiceUnavailable,
+			wantCategory: "budget_unavailable",
+			wantMatched:  true,
+		},
+		{
+			name:        "unrelated error",
+			err:         errors.New("vehicle offline"),
+			wantMatched: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			failure, matched := httpx.ClassifyTeslaBudgetError(tt.err)
+			if matched != tt.wantMatched {
+				t.Fatalf("matched = %v, want %v", matched, tt.wantMatched)
+			}
+			if !matched {
+				return
+			}
+			if failure.StatusCode != tt.wantStatus {
+				t.Errorf("status = %d, want %d", failure.StatusCode, tt.wantStatus)
+			}
+			if failure.Category != tt.wantCategory {
+				t.Errorf("category = %q, want %q", failure.Category, tt.wantCategory)
+			}
+			if failure.Message == "" || strings.Contains(failure.Message, "query budget table") {
+				t.Errorf("public message = %q, want non-empty sanitized text", failure.Message)
+			}
+		})
 	}
 }

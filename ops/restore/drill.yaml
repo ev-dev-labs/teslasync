@@ -14,9 +14,10 @@
 #                on every schedule tick and gates nothing in production.
 #
 #   production-artifact — restores the newest real production backup
-#                artifact into a scratch database. Requires credentials
-#                that only exist in the deployed environment, so it is
-#                opt-in and skips (loudly) when they are absent.
+#                artifact into an isolated CI TimescaleDB, validates row
+#                parity, boots the API against it, and records structured
+#                evidence. Requires read-only production backup metadata
+#                access, so it is manual and opt-in.
 version: 1
 
 schedule:
@@ -40,12 +41,12 @@ modes:
     requires_credentials: true
     credential_env:
       - BACKUP_DRILL_DATABASE_URL
-      - BACKUP_DRILL_STORAGE_PROVIDER
-      - BACKUP_DRILL_STORAGE_CONFIG
     description: >-
       Downloads the newest successful production backup_run artifact and
-      restores it into a scratch database. Never writes to production.
-    target: scratch database provisioned by the operator
+      imports every included table into an isolated CI TimescaleDB, validates
+      critical rows, and boots the API against the restored database. Never
+      writes to production.
+    target: guarded ephemeral CI TimescaleDB
 
 # Tables whose row counts must survive the round trip. Kept small and
 # high-signal: one core entity, one time-series, one config table.
@@ -57,7 +58,7 @@ critical_tables:
 success_criteria:
   - id: artifact-round-trips
     statement: The uploaded artifact downloads with a matching checksum and decompresses cleanly.
-    implemented_by: internal/backupverify.Verifier.VerifyLatest
+    implemented_by: internal/backupverify.Verifier.VerifyLatest + cmd/backup-restore-drill
   - id: critical-tables-non-empty
     statement: >-
       Every table in critical_tables is non-empty in the SOURCE before
@@ -65,11 +66,49 @@ success_criteria:
       empty fixture cannot pass as 0-vs-0 parity.
     implemented_by: .github/workflows/backup-restore-drill.yml + scripts/seed-restore-drill.sql
   - id: row-parity
-    statement: Restored row counts equal the source counts for every critical table.
-    implemented_by: .github/workflows/backup-restore-drill.yml (roundtrip mode)
-  - id: rto-recorded
-    statement: Wall-clock restore duration is recorded on every drill so the RTO estimate stays evidence-based.
+    statement: Restored row counts equal the artifact counts for every imported table.
+    implemented_by: internal/backuprestore.Restorer
+  - id: api-health
+    statement: The TeslaSync API boots against the restored scratch database and returns HTTP 200 from /healthz.
     implemented_by: .github/workflows/backup-restore-drill.yml
+  - id: rto-recorded
+    statement: Production-artifact evidence records the full scratch provisioning, import, and API-health duration.
+    implemented_by: .github/workflows/backup-restore-drill.yml
+  - id: immutable-evidence
+    statement: >-
+      Measured recovery claims require a committed structured result tied to
+      one immutable workflow run, commit SHA, artifact checksum, restored row
+      counts, and API health result.
+    implemented_by: internal/ops.validateRestoreEvidence
+  - id: scratch-reset-is-scoped-and-measured
+    statement: >-
+      The scratch database is fully migrated, and a migrated schema is NOT
+      empty (migrations seed `settings`). The import therefore resets the
+      target first, but only the explicitly allowlisted restorable tables,
+      in reverse foreign-key order, inside the same transaction as the
+      import, with foreign keys still ENFORCED so a RESTRICT-referencing
+      non-restorable row fails the drill loudly instead of being orphaned.
+      Rows removed by the schema's own ON DELETE CASCADE rules are counted
+      before and after and published as `collateral_rows_cleared`.
+    implemented_by: internal/backuprestore.Restorer + internal/backuprestore restore_realschema_test.go
+  - id: identity-columns-preserved
+    statement: >-
+      `vehicles`, `alert_rules`, `geofences`, and `notification_channels`
+      declare `id bigint GENERATED ALWAYS AS IDENTITY`. The import uses
+      OVERRIDING SYSTEM VALUE for exactly those tables so the artifact's
+      production primary keys survive and the restored foreign keys still
+      resolve; sequences are then advanced past the imported maximum so the
+      first post-restore insert does not collide.
+    implemented_by: internal/backuprestore.scratchTable.insertStatement + resetTableSequences
+  - id: restore-contract-tested-on-real-schema
+    statement: >-
+      The restore contract is exercised against the real `migrations/` tree,
+      not a simplified fixture schema. A three-column fixture cannot
+      reproduce seeded rows or identity columns and previously passed while
+      the production-artifact drill could not import a single row.
+    implemented_by: >-
+      .github/workflows/backup-restore-drill.yml (Restore contract tests step)
+      + internal/backuprestore/restore_realschema_test.go
 
 # The fixture that makes critical_tables non-empty. Validated to exist by
 # `go run ./cmd/ops-gate -check restore`.
@@ -79,9 +118,26 @@ fixture: scripts/seed-restore-drill.sql
 # records actual durations into the job summary; nothing here claims a
 # measured value.
 objectives:
+  scope: Durable vehicle history and API service restoration
   rto_target: 1h
   rpo_target: 24h
+  recovery_point_source: Newest checksum-verified production backup artifact
   measurement_status: pending-first-drill
+  last_measured_at: ""
+  last_measured_rto: ""
+  last_measured_rpo: ""
+  last_drill_reference: ""
+
+# Roles, not people, keep the policy valid for every self-hosted deployment.
+# One person may hold multiple roles in a small install, but every
+# responsibility must still be explicitly assigned during an incident.
+ownership:
+  accountable_role: deployment-owner
+  incident_commander_role: platform-on-call
+  recovery_lead_role: database-on-call
+  communications_role: deployment-owner
+  fallback_role: repository-maintainers
+  handoff_interval: 30m
 
 escalation:
   on_failure: >-

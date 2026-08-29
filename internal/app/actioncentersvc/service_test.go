@@ -3,6 +3,8 @@ package actioncentersvc
 import (
 	"context"
 	"errors"
+	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -19,6 +21,7 @@ type fakeSource struct {
 	workOrders  []domain.WorkOrderRecord
 	commands    []domain.CommandReliabilityRecord
 	signals     []domain.SignalHealthRecord
+	vehicles    []domain.VehicleRef
 	incidents   []domain.SystemIncidentRecord
 	alertErr    error
 	batteryErr  error
@@ -27,7 +30,15 @@ type fakeSource struct {
 	workErr     error
 	commandErr  error
 	signalErr   error
+	vehicleErr  error
 	incidentErr error
+
+	// signalHealthCalls counts ListSignalHealth invocations so a test can
+	// prove the advanced-intelligence provider no longer routes its vehicle
+	// roster through the findings feed.
+	signalHealthCalls  int
+	activeVehicleCalls int
+	activeVehicleLimit int
 }
 
 func (f *fakeSource) ListActiveAlerts(
@@ -76,7 +87,16 @@ func (f *fakeSource) ListCommandReliability(
 func (f *fakeSource) ListSignalHealth(
 	context.Context, *int64, time.Time, time.Time, int,
 ) ([]domain.SignalHealthRecord, error) {
+	f.signalHealthCalls++
 	return f.signals, f.signalErr
+}
+
+func (f *fakeSource) ListActiveVehicles(
+	_ context.Context, _ *int64, limit int,
+) ([]domain.VehicleRef, error) {
+	f.activeVehicleCalls++
+	f.activeVehicleLimit = limit
+	return f.vehicles, f.vehicleErr
 }
 
 func (f *fakeSource) ListOpenSystemIncidents(
@@ -328,9 +348,14 @@ func TestAdvancedIntelligenceFindingsFlowIntoActionCenter(t *testing.T) {
 	now := time.Date(2026, 2, 20, 12, 0, 0, 0, time.UTC)
 	vehicle := domain.VehicleRef{ID: 7, DisplayName: "Orion"}
 	version := "2026.4.1"
-	source := &fakeSource{signals: []domain.SignalHealthRecord{{
-		Vehicle: vehicle, LatestSignalAt: testTimePtr(now.Add(-time.Hour)), CheckedAt: now,
-	}}}
+	// The advanced-intelligence provider draws its roster from the vehicle
+	// list, NOT from the signal-health findings feed, so seed the roster.
+	source := &fakeSource{
+		vehicles: []domain.VehicleRef{vehicle},
+		signals: []domain.SignalHealthRecord{{
+			Vehicle: vehicle, LatestSignalAt: testTimePtr(now.Add(-time.Hour)), CheckedAt: now,
+		}},
+	}
 	advanced := &fakeAdvancedIntelligence{
 		firmware: &advanceddomain.Page[advanceddomain.FirmwareCanary]{
 			Items: []advanceddomain.FirmwareCanary{{
@@ -424,6 +449,278 @@ func TestSignalProviderIgnoresRoutineVehicleSleep(t *testing.T) {
 	}
 	if len(items) != 0 {
 		t.Fatalf("routine sleep produced %d recommendation(s)", len(items))
+	}
+}
+
+func TestSignalProviderSurfacesNormalizationProvenanceIncident(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	latestUnversionedAt := now.Add(-12 * time.Minute)
+	source := &fakeSource{signals: []domain.SignalHealthRecord{{
+		Vehicle:                domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+		LatestSignalAt:         testTimePtr(now.Add(-10 * time.Minute)),
+		LatestUnversionedAt:    &latestUnversionedAt,
+		SampleCount:            100,
+		VersionedSampleCount:   80,
+		UnversionedSampleCount: 20,
+		CheckedAt:              now,
+	}}}
+
+	items, err := (signalProvider{source: source}).Recommendations(
+		context.Background(),
+		ListFilter{},
+		now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %d, want one normalization incident", len(items))
+	}
+	item := items[0]
+	if item.DedupKey != "7:signal_normalization_provenance" {
+		t.Errorf("dedup key = %q", item.DedupKey)
+	}
+	if item.Title != "Review telemetry normalization provenance" {
+		t.Errorf("title = %q", item.Title)
+	}
+	if item.Priority != domain.PriorityHigh {
+		t.Errorf("priority = %q, want high for 20%% unattested rows", item.Priority)
+	}
+	if len(item.Evidence) != 2 || item.Evidence[0].Kind != "normalization_provenance" {
+		t.Fatalf("evidence = %+v", item.Evidence)
+	}
+	if item.ObservedAt == nil || !item.ObservedAt.Equal(latestUnversionedAt) ||
+		item.Evidence[0].ObservedAt == nil || !item.Evidence[0].ObservedAt.Equal(latestUnversionedAt) {
+		t.Errorf("normalization observation time = %v/%v, want %v",
+			item.ObservedAt, item.Evidence[0].ObservedAt, latestUnversionedAt)
+	}
+	if item.NavigationPath == nil || *item.NavigationPath != "/signal-log?vehicle_id=7" {
+		t.Errorf("navigation = %v", item.NavigationPath)
+	}
+}
+
+func TestSignalFindingsKeepIndependentIdentityAndState(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	latestSignalAt := now.Add(-48 * time.Hour)
+	latestUnversionedAt := now.Add(-49 * time.Hour)
+	source := &fakeSource{signals: []domain.SignalHealthRecord{{
+		Vehicle:                domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+		LatestSignalAt:         &latestSignalAt,
+		LatestUnversionedAt:    &latestUnversionedAt,
+		SampleCount:            100,
+		VersionedSampleCount:   80,
+		UnversionedSampleCount: 20,
+		CheckedAt:              now,
+	}}}
+	states := newFakeStates()
+	service := New(source, states)
+	service.now = func() time.Time { return now }
+
+	page, err := service.List(context.Background(), "user-1", ListFilter{})
+	if err != nil {
+		t.Fatalf("List() error = %v", err)
+	}
+	if len(page.Items) != 2 {
+		t.Fatalf("signal recommendations = %d, want freshness and normalization", len(page.Items))
+	}
+	first, second := page.Items[0], page.Items[1]
+	if first.ID == second.ID {
+		t.Fatalf("recommendation IDs collide: %q", first.ID)
+	}
+
+	_, err = service.ApplyAction(context.Background(), "user-1", ActionRequest{
+		RecommendationID: first.ID,
+		Fingerprint:      first.Fingerprint,
+		Action:           domain.ActionAcknowledge,
+		ExpectedVersion:  0,
+		Confirmed:        true,
+	})
+	if err != nil {
+		t.Fatalf("ApplyAction() error = %v", err)
+	}
+
+	page, err = service.List(context.Background(), "user-1", ListFilter{})
+	if err != nil {
+		t.Fatalf("List() after action error = %v", err)
+	}
+	statuses := make(map[string]domain.State)
+	for _, item := range page.Items {
+		statuses[item.ID] = item.CurrentState.Status
+	}
+	if statuses[first.ID] != domain.StateAcknowledged {
+		t.Errorf("acted-on state = %q, want acknowledged", statuses[first.ID])
+	}
+	if statuses[second.ID] != domain.StateOpen {
+		t.Errorf("independent state = %q, want open", statuses[second.ID])
+	}
+}
+
+func TestSignalProviderSkipsFullyAttestedFreshTelemetry(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{signals: []domain.SignalHealthRecord{{
+		Vehicle:              domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+		LatestSignalAt:       testTimePtr(now.Add(-10 * time.Minute)),
+		SampleCount:          100,
+		VersionedSampleCount: 100,
+		CheckedAt:            now,
+	}}}
+
+	items, err := (signalProvider{source: source}).Recommendations(
+		context.Background(),
+		ListFilter{},
+		now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 0 {
+		t.Fatalf("fully attested fresh telemetry produced %d recommendation(s)", len(items))
+	}
+}
+
+// A vehicle with zero persisted samples in the bounded window has NO coverage
+// measurement — absence of rows is not evidence of missing provenance. The
+// provider must not invent a 0%-coverage incident from an empty window (the
+// stale-telemetry finding is the honest signal there).
+func TestSignalProviderDoesNotFabricateCoverageFromZeroSamples(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	source := &fakeSource{signals: []domain.SignalHealthRecord{
+		{
+			// Fresh but silent window: nothing to attest, nothing to claim.
+			Vehicle:                domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+			LatestSignalAt:         testTimePtr(now.Add(-10 * time.Minute)),
+			SampleCount:            0,
+			VersionedSampleCount:   0,
+			UnversionedSampleCount: 0,
+			CheckedAt:              now,
+		},
+		{
+			// No signal at all: stale finding only, still no coverage claim.
+			Vehicle:                domain.VehicleRef{ID: 8, DisplayName: "Vega"},
+			LatestSignalAt:         nil,
+			SampleCount:            0,
+			VersionedSampleCount:   0,
+			UnversionedSampleCount: 0,
+			CheckedAt:              now,
+		},
+	}}
+
+	items, err := (signalProvider{source: source}).Recommendations(
+		context.Background(),
+		ListFilter{},
+		now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != 1 {
+		t.Fatalf("items = %d, want only the no-signal freshness finding", len(items))
+	}
+	if items[0].DedupKey != "8:signal_freshness" {
+		t.Errorf("dedup key = %q, want the freshness finding for vehicle 8", items[0].DedupKey)
+	}
+	for _, item := range items {
+		if strings.Contains(item.DedupKey, "signal_normalization_provenance") {
+			t.Errorf("zero-sample window fabricated a coverage incident: %q", item.DedupKey)
+		}
+	}
+}
+
+// Coverage priority must be evidence-proportional: a materially low coverage
+// escalates, a marginal gap does not.
+func TestSignalProviderScalesCoveragePriorityWithEvidence(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name        string
+		versioned   int64
+		unversioned int64
+		want        domain.Priority
+	}{
+		{"marginal gap stays medium", 995, 5, domain.PriorityMedium},
+		{"materially low coverage escalates", 800, 200, domain.PriorityHigh},
+		{"no coverage at all escalates", 0, 1000, domain.PriorityHigh},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			source := &fakeSource{signals: []domain.SignalHealthRecord{{
+				Vehicle:                domain.VehicleRef{ID: 7, DisplayName: "Orion"},
+				LatestSignalAt:         testTimePtr(now.Add(-10 * time.Minute)),
+				LatestUnversionedAt:    testTimePtr(now.Add(-11 * time.Minute)),
+				SampleCount:            tt.versioned + tt.unversioned,
+				VersionedSampleCount:   tt.versioned,
+				UnversionedSampleCount: tt.unversioned,
+				CheckedAt:              now,
+			}}}
+			items, err := (signalProvider{source: source}).Recommendations(
+				context.Background(), ListFilter{}, now,
+			)
+			if err != nil {
+				t.Fatalf("Recommendations() error = %v", err)
+			}
+			if len(items) != 1 {
+				t.Fatalf("items = %d, want 1", len(items))
+			}
+			if items[0].Priority != tt.want {
+				t.Errorf("priority = %q, want %q", items[0].Priority, tt.want)
+			}
+			// The summary must carry the raw counts, never a bare percentage.
+			if !strings.Contains(items[0].Summary, strconv.FormatInt(tt.unversioned, 10)) ||
+				!strings.Contains(items[0].Summary, strconv.FormatInt(tt.versioned+tt.unversioned, 10)) {
+				t.Errorf("summary %q must state the unversioned/total counts", items[0].Summary)
+			}
+			if items[0].Severity != domain.SeverityWarning {
+				t.Errorf("severity = %q, want warning", items[0].Severity)
+			}
+		})
+	}
+}
+
+// Every vehicle here yields BOTH a stale finding and a coverage finding, so
+// the provider must still honour providerLimit rather than returning 2N.
+func TestSignalProviderBoundsCombinedFindingsToProviderLimit(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 8, 29, 12, 0, 0, 0, time.UTC)
+	signals := make([]domain.SignalHealthRecord, 0, providerLimit)
+	for i := range providerLimit {
+		id := int64(i + 1)
+		signals = append(signals, domain.SignalHealthRecord{
+			Vehicle:                domain.VehicleRef{ID: id},
+			LatestSignalAt:         testTimePtr(now.Add(-96 * time.Hour)),
+			LatestUnversionedAt:    testTimePtr(now.Add(-97 * time.Hour)),
+			SampleCount:            10,
+			VersionedSampleCount:   4,
+			UnversionedSampleCount: 6,
+			CheckedAt:              now,
+		})
+	}
+	source := &fakeSource{signals: signals}
+
+	items, err := (signalProvider{source: source}).Recommendations(
+		context.Background(), ListFilter{}, now,
+	)
+	if err != nil {
+		t.Fatalf("Recommendations() error = %v", err)
+	}
+	if len(items) != providerLimit {
+		t.Fatalf("items = %d, want exactly providerLimit (%d)", len(items), providerLimit)
+	}
+	// Both finding kinds must be representable within the bound; dedup keys
+	// must stay unique so the bounded page cannot collapse two findings.
+	seen := make(map[string]struct{}, len(items))
+	for _, item := range items {
+		if item.SourceFeature != domain.SourceSignalHealth {
+			t.Errorf("source feature = %q, want SourceSignalHealth", item.SourceFeature)
+		}
+		if _, dup := seen[item.DedupKey]; dup {
+			t.Fatalf("duplicate dedup key %q inside the bounded page", item.DedupKey)
+		}
+		seen[item.DedupKey] = struct{}{}
 	}
 }
 

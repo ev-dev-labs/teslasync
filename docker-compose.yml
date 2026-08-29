@@ -42,6 +42,8 @@ services:
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - TESLA_API_DAILY_BUDGET_USD=${TESLA_API_DAILY_BUDGET_USD:-0.30}
+      - TESLA_API_COMMAND_RESERVE_USD=${TESLA_API_COMMAND_RESERVE_USD:-0.05}
       - WORKER_POLL_INTERVAL=${WORKER_POLL_INTERVAL:-30s}
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
@@ -74,6 +76,13 @@ services:
       # Data quality scoring over signal_log.
       - DATA_QUALITY_ENABLED=${DATA_QUALITY_ENABLED:-true}
       - DATA_QUALITY_WINDOW_MINS=${DATA_QUALITY_WINDOW_MINS:-60}
+      # Bounded by default; set explicitly only after accepting the storage risk.
+      - DATA_RETENTION_DAYS=${DATA_RETENTION_DAYS:-0}
+      - POSITION_RETENTION_DAYS=${POSITION_RETENTION_DAYS:-0}
+      - SIGNAL_HISTORY_RETENTION_DAYS=${SIGNAL_HISTORY_RETENTION_DAYS:-365}
+      # Set true only after verifying a recoverable backup. Existing installs
+      # remain non-destructive when upgrading to the bounded-retention release.
+      - SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED=${SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED:-false}
       # Synthetic monitoring (outside-in probes). Opt-in.
       - SYNTHETIC_ENABLED=${SYNTHETIC_ENABLED:-false}
       - SYNTHETIC_INTERVAL_SECONDS=${SYNTHETIC_INTERVAL_SECONDS:-60}
@@ -490,6 +499,8 @@ services:
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - TESLA_API_DAILY_BUDGET_USD=${TESLA_API_DAILY_BUDGET_USD:-0.30}
+      - TESLA_API_COMMAND_RESERVE_USD=${TESLA_API_COMMAND_RESERVE_USD:-0.05}
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8083
       - OTEL_ENABLED=${OTEL_ENABLED:-false}

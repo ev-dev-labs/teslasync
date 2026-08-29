@@ -259,6 +259,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/admin/schema-drift': 'Detect divergence between code models and the live DB schema.',
   '/admin/slow-queries': 'Top slow SQL queries with explain plans.',
   '/admin/vehicle-cost': 'Per-vehicle infrastructure cost attribution.',
+  '/admin/data-quality': 'Signal freshness, gaps, duplicates, and normalization provenance.',
   '/admin/disk-forecast': 'When will the database run out of disk?',
   '/admin/secret-rotation': 'Track and rotate secrets, tokens, and credentials.',
   '/admin/audit-log': 'Every privileged action with actor, target, and timestamp.',

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useFsdInsights } from '@/api/hooks/useAnalytics';
 import { StaleRefreshWarning } from '@/components/feedback';
+import { DataProvenanceBadge } from '@/components/data-display';
 import { VehicleSelect } from '@/components/forms';
 import { Grid, PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
@@ -98,6 +99,11 @@ export default function FSDInsightsPage() {
       copyLink
       contextActions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
+          <DataProvenanceBadge
+            provenance={insightsState.provenance}
+            status={insightsState.status}
+            updatedAt={insightsState.updatedAt}
+          />
           <VehicleSelect />
           <FsdPeriodControl value={days} onChange={setDays} disabled={vehicleId == null} />
         </div>

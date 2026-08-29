@@ -224,6 +224,9 @@ func (c *Client) doProxyRequest(ctx context.Context, path string, body io.Reader
 	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
 		return fmt.Errorf("rate limiter: %w", waitErr)
 	}
+	if budgetErr := c.reserveBudget(ctx, http.MethodPost, path); budgetErr != nil {
+		return budgetErr
+	}
 
 	reqURL := c.commandProxyURL + path
 
@@ -298,6 +301,9 @@ func (c *Client) doProxyRequestWithResponse(ctx context.Context, method, path st
 
 	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
 		return nil, 0, fmt.Errorf("rate limiter: %w", waitErr)
+	}
+	if budgetErr := c.reserveBudget(ctx, method, path); budgetErr != nil {
+		return nil, budgetHTTPStatus(budgetErr), budgetErr
 	}
 
 	reqURL := c.commandProxyURL + path

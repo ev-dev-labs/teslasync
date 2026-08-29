@@ -100,7 +100,11 @@ func decodePayload(p *ftproto.Payload) []Atomic {
 	if p == nil {
 		return nil
 	}
-	emittedAt := payloadEmittedAt(p)
+	sourceEmittedAt := payloadSourceEmittedAt(p)
+	emittedAt := time.Time{}
+	if sourceEmittedAt != nil {
+		emittedAt = *sourceEmittedAt
+	}
 	vin := p.GetVin()
 	data := p.GetData()
 	out := make([]Atomic, 0, len(data)*2)
@@ -138,21 +142,27 @@ func decodePayload(p *ftproto.Payload) []Atomic {
 		}
 		out = append(out, atoms...)
 	}
+	// Decode is transport-agnostic. A caller that owns a concrete transport
+	// boundary must stamp it after decoding; otherwise provenance remains
+	// explicitly unknown while a valid payload CreatedAt is retained as source
+	// evidence for every flattened child.
+	for i := range out {
+		out[i].IngestOrigin = IngestOriginUnknown
+		out[i].SourceEmittedAt = sourceEmittedAt
+	}
 	return out
 }
 
-// payloadEmittedAt extracts the Payload-level CreatedAt as a Go time.Time.
-// Returns the zero Time if the producer omitted CreatedAt; downstream
-// callers (the router and signal.Store) check for this and may
-// substitute their own clock or drop the row, but the codec does not
-// silently substitute time.Now() because that would corrupt historical
-// replays.
-func payloadEmittedAt(p *ftproto.Payload) time.Time {
+// payloadSourceEmittedAt returns source-time evidence only for a present,
+// protobuf-valid CreatedAt. A malformed or omitted timestamp is not replaced
+// here: receipt fallback is a transport concern and is never source evidence.
+func payloadSourceEmittedAt(p *ftproto.Payload) *time.Time {
 	ts := p.GetCreatedAt()
-	if ts == nil {
-		return time.Time{}
+	if ts == nil || ts.CheckValid() != nil {
+		return nil
 	}
-	return ts.AsTime()
+	t := ts.AsTime().UTC()
+	return &t
 }
 
 // flattenIfCompound dispatches on the Go runtime type of value, calling

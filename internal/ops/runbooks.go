@@ -1,7 +1,10 @@
 package ops
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/fs"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -14,6 +17,11 @@ type RunbookManifest struct {
 	Version               int          `yaml:"version"`
 	RequiredCriticalities []string     `yaml:"required_criticalities"`
 	Dependencies          []Dependency `yaml:"dependencies"`
+	// LifecycleProcedures are operations that are unsafe as a bare
+	// `helm upgrade` / `helm rollback` because of a limitation in the
+	// tooling rather than in this codebase. They are registered here so
+	// the warning cannot drift away from the chart it protects.
+	LifecycleProcedures []LifecycleProcedure `yaml:"lifecycle_procedures"`
 }
 
 // Dependency is one external system the platform can lose.
@@ -127,6 +135,7 @@ func ValidateRunbooks(fsys fs.FS, m *RunbookManifest) []Finding {
 			out = append(out, errf(check, RunbookManifestPath, "missing mandatory dependency %q", id))
 		}
 	}
+	out = append(out, validateLifecycleProcedures(fsys, m)...)
 	return out
 }
 
@@ -184,6 +193,7 @@ type RestoreDrill struct {
 	SuccessCriteria []RestoreCriterion `yaml:"success_criteria"`
 	Fixture         string             `yaml:"fixture"`
 	Objectives      RestoreObjectives  `yaml:"objectives"`
+	Ownership       RestoreOwnership   `yaml:"ownership"`
 	Escalation      RestoreEscalation  `yaml:"escalation"`
 	Workflow        string             `yaml:"workflow"`
 }
@@ -214,9 +224,52 @@ type RestoreCriterion struct {
 
 // RestoreObjectives are the RTO/RPO targets.
 type RestoreObjectives struct {
-	RTOTarget         string `yaml:"rto_target"`
-	RPOTarget         string `yaml:"rpo_target"`
-	MeasurementStatus string `yaml:"measurement_status"`
+	Scope               string `yaml:"scope"`
+	RTOTarget           string `yaml:"rto_target"`
+	RPOTarget           string `yaml:"rpo_target"`
+	RecoveryPointSource string `yaml:"recovery_point_source"`
+	MeasurementStatus   string `yaml:"measurement_status"`
+	LastMeasuredAt      string `yaml:"last_measured_at"`
+	LastMeasuredRTO     string `yaml:"last_measured_rto"`
+	LastMeasuredRPO     string `yaml:"last_measured_rpo"`
+	LastDrillReference  string `yaml:"last_drill_reference"`
+}
+
+// RestoreDrillEvidence is the immutable, non-sensitive result committed after
+// a successful production-artifact workflow run.
+type RestoreDrillEvidence struct {
+	Version                 int              `json:"version"`
+	Mode                    string           `json:"mode"`
+	Outcome                 string           `json:"outcome"`
+	Repository              string           `json:"repository"`
+	WorkflowRunID           int64            `json:"workflow_run_id"`
+	WorkflowRunAttempt      int              `json:"workflow_run_attempt"`
+	WorkflowRunURL          string           `json:"workflow_run_url"`
+	WorkflowArtifactName    string           `json:"workflow_artifact_name"`
+	CommitSHA               string           `json:"commit_sha"`
+	ArtifactRunID           int64            `json:"artifact_run_id"`
+	ArtifactSHA256          string           `json:"artifact_sha256"`
+	BackupCreatedAt         string           `json:"backup_created_at"`
+	DrillStartedAt          string           `json:"drill_started_at"`
+	DrillCompletedAt        string           `json:"drill_completed_at"`
+	RestoreDurationSeconds  int64            `json:"restore_duration_seconds"`
+	RecoveryPointAgeSeconds int64            `json:"recovery_point_age_seconds"`
+	TargetDatabase          string           `json:"target_database"`
+	DatabaseImported        bool             `json:"database_imported"`
+	SchemaMigrated          bool             `json:"schema_migrated"`
+	CriticalTableRows       map[string]int64 `json:"critical_table_rows"`
+	APIHealthPath           string           `json:"api_health_path"`
+	APIHealthStatus         int              `json:"api_health_status"`
+}
+
+// RestoreOwnership assigns every decision and execution responsibility.
+type RestoreOwnership struct {
+	AccountableRole       string        `yaml:"accountable_role"`
+	IncidentCommanderRole string        `yaml:"incident_commander_role"`
+	RecoveryLeadRole      string        `yaml:"recovery_lead_role"`
+	CommunicationsRole    string        `yaml:"communications_role"`
+	FallbackRole          string        `yaml:"fallback_role"`
+	HandoffInterval       time.Duration `yaml:"handoff_interval"`
 }
 
 // RestoreEscalation is what to do when a drill fails.
@@ -317,13 +370,60 @@ func ValidateRestore(fsys fs.FS, d *RestoreDrill) []Finding {
 		}
 	}
 
-	if d.Objectives.RTOTarget == "" || d.Objectives.RPOTarget == "" {
-		out = append(out, errf(check, "objectives", "both rto_target and rpo_target are required"))
+	if strings.TrimSpace(d.Objectives.Scope) == "" {
+		out = append(out, errf(check, "objectives.scope", "required"))
+	}
+	if strings.TrimSpace(d.Objectives.RecoveryPointSource) == "" {
+		out = append(out, errf(check, "objectives.recovery_point_source", "required so the RPO has an evidence source"))
+	}
+	rtoTarget, rtoErr := time.ParseDuration(d.Objectives.RTOTarget)
+	if rtoErr != nil || rtoTarget <= 0 {
+		out = append(out, errf(check, "objectives.rto_target", "%q must be a positive duration", d.Objectives.RTOTarget))
+	}
+	rpoTarget, rpoErr := time.ParseDuration(d.Objectives.RPOTarget)
+	if rpoErr != nil || rpoTarget <= 0 {
+		out = append(out, errf(check, "objectives.rpo_target", "%q must be a positive duration", d.Objectives.RPOTarget))
 	}
 	switch d.Objectives.MeasurementStatus {
-	case "pending-first-drill", "measured":
+	case "pending-first-drill":
+		if d.Objectives.LastMeasuredAt != "" || d.Objectives.LastMeasuredRTO != "" ||
+			d.Objectives.LastMeasuredRPO != "" || d.Objectives.LastDrillReference != "" {
+			out = append(out, errf(check, "objectives", "pending-first-drill cannot carry measurement evidence"))
+		}
+	case "measured":
+		if _, err := time.Parse("2006-01-02", d.Objectives.LastMeasuredAt); err != nil {
+			out = append(out, errf(check, "objectives.last_measured_at", "last_measured_at %q must be an ISO date when measurement_status is measured", d.Objectives.LastMeasuredAt))
+		}
+		measuredRTO, err := time.ParseDuration(d.Objectives.LastMeasuredRTO)
+		if err != nil || measuredRTO <= 0 {
+			out = append(out, errf(check, "objectives.last_measured_rto", "last_measured_rto %q must be a positive duration when measurement_status is measured", d.Objectives.LastMeasuredRTO))
+		} else if rtoErr == nil && rtoTarget > 0 && measuredRTO > rtoTarget {
+			out = append(out, errf(check, "objectives.last_measured_rto", "last_measured_rto %s exceeds the RTO target %s", measuredRTO, rtoTarget))
+		}
+		measuredRPO, err := time.ParseDuration(d.Objectives.LastMeasuredRPO)
+		if err != nil || measuredRPO < 0 {
+			out = append(out, errf(check, "objectives.last_measured_rpo", "last_measured_rpo %q must be a non-negative duration when measurement_status is measured", d.Objectives.LastMeasuredRPO))
+		} else if rpoErr == nil && rpoTarget > 0 && measuredRPO > rpoTarget {
+			out = append(out, errf(check, "objectives.last_measured_rpo", "last_measured_rpo %s exceeds the RPO target %s", measuredRPO, rpoTarget))
+		}
+		out = append(out, validateRestoreEvidence(fsys, d, measuredRTO, measuredRPO)...)
 	default:
 		out = append(out, errf(check, "objectives.measurement_status", "must be `pending-first-drill` or `measured` (got %q) — targets must never be presented as measurements", d.Objectives.MeasurementStatus))
+	}
+
+	for field, value := range map[string]string{
+		"accountable_role":        d.Ownership.AccountableRole,
+		"incident_commander_role": d.Ownership.IncidentCommanderRole,
+		"recovery_lead_role":      d.Ownership.RecoveryLeadRole,
+		"communications_role":     d.Ownership.CommunicationsRole,
+		"fallback_role":           d.Ownership.FallbackRole,
+	} {
+		if strings.TrimSpace(value) == "" {
+			out = append(out, errf(check, "ownership."+field, "%s is required", field))
+		}
+	}
+	if d.Ownership.HandoffInterval <= 0 || d.Ownership.HandoffInterval > 4*time.Hour {
+		out = append(out, errf(check, "ownership.handoff_interval", "must be positive and no more than 4h"))
 	}
 
 	if strings.TrimSpace(d.Escalation.OnFailure) == "" {
@@ -340,6 +440,130 @@ func ValidateRestore(fsys fs.FS, d *RestoreDrill) []Finding {
 		if !exists(fsys, path) {
 			out = append(out, errf(check, label, "%s does not exist", path))
 		}
+	}
+	return out
+}
+
+var (
+	restoreCommitSHA = regexp.MustCompile(`^[0-9a-f]{40}$`)
+	restoreChecksum  = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	restoreRepo      = regexp.MustCompile(`^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$`)
+)
+
+func validateRestoreEvidence(fsys fs.FS, drill *RestoreDrill, measuredRTO, measuredRPO time.Duration) []Finding {
+	const check = "restore"
+	var out []Finding
+	reference := drill.Objectives.LastDrillReference
+	reference = strings.TrimSpace(reference)
+	if !strings.HasPrefix(reference, "ops/restore/evidence/") || !strings.HasSuffix(reference, ".json") {
+		return []Finding{errf(check, "objectives.last_drill_reference",
+			"last_drill_reference must reference a committed JSON result under ops/restore/evidence")}
+	}
+	raw, err := fs.ReadFile(fsys, reference)
+	if err != nil {
+		return []Finding{errf(check, "objectives.last_drill_reference",
+			"read immutable drill evidence %s: %v", reference, err)}
+	}
+	var evidence RestoreDrillEvidence
+	if err := json.Unmarshal(raw, &evidence); err != nil {
+		return []Finding{errf(check, "objectives.last_drill_reference",
+			"parse immutable drill evidence %s: %v", reference, err)}
+	}
+
+	if evidence.Version != 1 {
+		out = append(out, errf(check, reference, "evidence version is %d, want 1", evidence.Version))
+	}
+	if evidence.Mode != "production-artifact" || evidence.Outcome != "succeeded" {
+		out = append(out, errf(check, reference,
+			"evidence must record a succeeded production-artifact drill"))
+	}
+	if !restoreRepo.MatchString(evidence.Repository) {
+		out = append(out, errf(check, reference, "repository %q is not owner/name", evidence.Repository))
+	}
+	if evidence.WorkflowRunID <= 0 || evidence.WorkflowRunAttempt <= 0 {
+		out = append(out, errf(check, reference, "workflow run ID and attempt must be positive"))
+	}
+	expectedReference := fmt.Sprintf(
+		"ops/restore/evidence/%d-%d.json",
+		evidence.WorkflowRunID,
+		evidence.WorkflowRunAttempt,
+	)
+	if reference != expectedReference {
+		out = append(out, errf(check, reference,
+			"evidence path must be %s for this workflow run", expectedReference))
+	}
+	expectedRunURL := fmt.Sprintf(
+		"https://github.com/%s/actions/runs/%d",
+		evidence.Repository,
+		evidence.WorkflowRunID,
+	)
+	if evidence.WorkflowRunURL != expectedRunURL {
+		out = append(out, errf(check, reference,
+			"workflow_run_url must be the immutable run URL %s", expectedRunURL))
+	}
+	expectedArtifactName := fmt.Sprintf(
+		"restore-drill-%d-%d",
+		evidence.WorkflowRunID,
+		evidence.WorkflowRunAttempt,
+	)
+	if evidence.WorkflowArtifactName != expectedArtifactName {
+		out = append(out, errf(check, reference,
+			"workflow_artifact_name must be %s", expectedArtifactName))
+	}
+	if !restoreCommitSHA.MatchString(evidence.CommitSHA) {
+		out = append(out, errf(check, reference, "commit_sha must be a 40-character lowercase Git SHA"))
+	}
+	if evidence.ArtifactRunID <= 0 || !restoreChecksum.MatchString(evidence.ArtifactSHA256) {
+		out = append(out, errf(check, reference,
+			"artifact run ID and SHA-256 must identify the restored production backup"))
+	}
+
+	backupAt, backupErr := time.Parse(time.RFC3339, evidence.BackupCreatedAt)
+	startedAt, startedErr := time.Parse(time.RFC3339, evidence.DrillStartedAt)
+	completedAt, completedErr := time.Parse(time.RFC3339, evidence.DrillCompletedAt)
+	if backupErr != nil || startedErr != nil || completedErr != nil {
+		out = append(out, errf(check, reference,
+			"backup_created_at, drill_started_at, and drill_completed_at must be RFC3339 timestamps"))
+	} else {
+		actualRTO := completedAt.Sub(startedAt)
+		actualRPO := startedAt.Sub(backupAt)
+		if actualRTO <= 0 || actualRPO < 0 {
+			out = append(out, errf(check, reference, "measured recovery durations are not chronologically valid"))
+		}
+		if evidence.RestoreDurationSeconds != int64(actualRTO/time.Second) ||
+			measuredRTO != time.Duration(evidence.RestoreDurationSeconds)*time.Second {
+			out = append(out, errf(check, reference,
+				"restore duration does not match timestamps and objectives.last_measured_rto"))
+		}
+		if evidence.RecoveryPointAgeSeconds != int64(actualRPO/time.Second) ||
+			measuredRPO != time.Duration(evidence.RecoveryPointAgeSeconds)*time.Second {
+			out = append(out, errf(check, reference,
+				"recovery-point age does not match timestamps and objectives.last_measured_rpo"))
+		}
+		if drill.Objectives.LastMeasuredAt != completedAt.UTC().Format(time.DateOnly) {
+			out = append(out, errf(check, reference,
+				"objectives.last_measured_at must match the evidence completion date"))
+		}
+	}
+
+	if !evidence.DatabaseImported || !evidence.SchemaMigrated {
+		out = append(out, errf(check, reference,
+			"evidence must prove scratch database import and schema migration"))
+	}
+	for _, table := range drill.CriticalTables {
+		if evidence.CriticalTableRows[table] <= 0 {
+			out = append(out, errf(check, reference,
+				"critical table %s lacks a positive restored row count", table))
+		}
+	}
+	if evidence.APIHealthPath != "/healthz" || evidence.APIHealthStatus != 200 {
+		out = append(out, errf(check, reference,
+			"evidence must prove the restored API returned HTTP 200 from /healthz"))
+	}
+	if !strings.HasPrefix(evidence.TargetDatabase, "teslasync_drill_") &&
+		!strings.HasSuffix(evidence.TargetDatabase, "_restore_drill") {
+		out = append(out, errf(check, reference,
+			"target_database must identify an isolated restore-drill database"))
 	}
 	return out
 }

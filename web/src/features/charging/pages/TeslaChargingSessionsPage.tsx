@@ -19,6 +19,7 @@ import {
   StatCard,
   MetricBar,
   DataFreshnessAuto,
+  DataProvenanceBadge,
   OperationalBrief,
   type OperationalAttention,
 } from '@/components/data-display';
@@ -50,6 +51,7 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -137,6 +139,7 @@ export default function TeslaChargingSessionsPage() {
     isLoading: sessionsLoading,
     error,
   } = sessionsQuery;
+  const sessionsDataState = useDataState(sessionsQuery, { provenance: 'historical' });
   const isLoading = vehiclesLoading || sessionsLoading;
   const refreshMutation = useRefreshTeslaChargingSessions();
 
@@ -652,13 +655,20 @@ export default function TeslaChargingSessionsPage() {
           </>
         }
         freshness={
-          <DataFreshnessAuto
-            query={sessionsQuery}
-            source={t(
-              'operations.charging.fleetNarrative.source',
-              'Tesla Fleet Charging sessions',
-            )}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <DataProvenanceBadge
+              provenance={sessionsDataState.provenance}
+              status={sessionsDataState.status}
+              updatedAt={sessionsDataState.updatedAt}
+            />
+            <DataFreshnessAuto
+              query={sessionsQuery}
+              source={t(
+                'operations.charging.fleetNarrative.source',
+                'Tesla Fleet Charging sessions',
+              )}
+            />
+          </div>
         }
         metrics={[
           {

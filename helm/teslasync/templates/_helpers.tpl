@@ -63,18 +63,289 @@ app.kubernetes.io/instance: {{ .Release.Name }}
 {{/*
 Name of the K8s Secret that holds sensitive env vars.
 When secrets.existingSecret is set, the chart skips secret creation
-and references the user-supplied secret name.
+and references the user-supplied secret name. With the safe defaults, the
+chart references the release fullname and expects that Secret to be
+provisioned outside an offline/GitOps render.
 */}}
 {{- define "teslasync.secretName" -}}
-{{- if .Values.secrets.existingSecret }}
+{{- if .Values.externalSecrets.enabled }}
+{{- .Values.externalSecrets.target.name | default (include "teslasync.fullname" .) }}
+{{- else if .Values.secrets.existingSecret }}
 {{- .Values.secrets.existingSecret }}
 {{- else }}
 {{- include "teslasync.fullname" . }}
 {{- end }}
 {{- end }}
 
-{{/* ── imagePullSecrets helper ─────────────────────────────────────────── */}}
+{{/*
+Validate mutually exclusive secret modes and refuse known weak credentials.
+Offline/GitOps-safe mode references an existing Secret and never generates
+random values during rendering.
+*/}}
+{{- define "teslasync.validateSecretConfiguration" -}}
+{{- $existing := .Values.secrets.existingSecret | default "" -}}
+{{- $external := .Values.externalSecrets.enabled -}}
+{{- $managed := .Values.secrets.create | default false -}}
+{{- if and $existing $external -}}
+{{- fail "secrets.existingSecret and externalSecrets.enabled are mutually exclusive" -}}
+{{- end -}}
+{{- if and $managed (or $existing $external) -}}
+{{- fail "secrets.create cannot be combined with secrets.existingSecret or externalSecrets.enabled" -}}
+{{- end -}}
+{{- if $external -}}
+  {{- if not .Values.externalSecrets.secretStoreRef.name -}}
+  {{- fail "externalSecrets.secretStoreRef.name is required when externalSecrets.enabled=true" -}}
+  {{- end -}}
+  {{- if not (has .Values.externalSecrets.secretStoreRef.kind (list "SecretStore" "ClusterSecretStore")) -}}
+  {{- fail "externalSecrets.secretStoreRef.kind must be SecretStore or ClusterSecretStore" -}}
+  {{- end -}}
+  {{- if and (eq (len .Values.externalSecrets.data) 0) (eq (len .Values.externalSecrets.dataFrom) 0) -}}
+  {{- fail "externalSecrets.data or externalSecrets.dataFrom is required when externalSecrets.enabled=true" -}}
+  {{- end -}}
+{{- end -}}
 
+{{- $weak := list "teslasync" "changeme" "password" "postgres" "admin" -}}{{- if $managed -}}
+  {{- $databasePassword := ternary (.Values.postgresql.auth.password | default "") (.Values.postgresql.external.password | default "") .Values.postgresql.enabled -}}
+  {{- if not $databasePassword -}}
+  {{- fail "an explicit PostgreSQL password is required when secrets.create=true; use an existing or external Secret for GitOps" -}}
+  {{- end -}}
+  {{- if and $databasePassword (or (has (lower $databasePassword) $weak) (eq (lower $databasePassword) (lower (include "teslasync.postgresql.username" .)))) -}}
+  {{- fail "refusing known weak PostgreSQL password; provide a strong value or use externalSecrets/secrets.existingSecret" -}}
+  {{- end -}}
+  {{- $grafanaPassword := .Values.grafana.adminPassword | default "" -}}
+  {{- if and .Values.grafana.enabled (not $grafanaPassword) -}}
+  {{- fail "grafana.adminPassword is required when Grafana is enabled with secrets.create=true" -}}
+  {{- end -}}
+  {{- if and .Values.grafana.enabled $grafanaPassword (or (has (lower $grafanaPassword) $weak) (eq (lower $grafanaPassword) (lower (.Values.grafana.adminUser | default "admin")))) -}}
+  {{- fail "refusing known weak Grafana admin password; provide a strong value or use an existing or external Secret" -}}
+  {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/* ── Migration hook secret gate ──────────────────────────────────────── */}}
+{{/*
+The database migration Job runs as a `pre-install,pre-upgrade` Helm hook,
+and it takes DATABASE_PASS from the runtime Secret via `envFrom`.
+
+Helm applies hooks BEFORE the release's ordinary manifests, so any Secret
+source that the chart renders as an ordinary manifest does not exist yet
+when the hook Job is scheduled:
+
+  * externalSecrets mode — the ExternalSecret is applied after the hook,
+    so on a fresh install ESO has not even been told to fetch anything,
+    let alone finished reconciling. The Job's pod sits in
+    CreateContainerConfigError until the hook times out, with no message
+    that points at the real cause.
+  * secrets.create mode — the chart-managed Secret has the same ordering
+    problem for exactly the same reason.
+  * secrets.existingSecret mode — the Secret is provisioned out of band by
+    definition, so there is nothing to order.
+
+Hook weights alone cannot fix this: weights only order resources that are
+themselves hooks, and even once an ExternalSecret exists, ESO still has to
+reconcile it before the target Secret has any data. The contract therefore
+has two halves — make the source exist before the hook, and then actually
+wait for the data to appear.
+
+Modes, and the single question that decides which one is valid: DOES THIS
+CHART RENDER THE SECRET SOURCE?
+
+  hook     The chart renders the source (externalSecrets.enabled or
+           secrets.create). It is emitted as a pre-install/pre-upgrade
+           hook at weight -10 — ahead of the migration Job at weight 0 —
+           and the Job waits for the required keys.
+           REQUIRES a chart-rendered source.
+  require  The chart does NOT render the source; the Secret is genuinely
+           provisioned outside this release (secrets.existingSecret, or
+           an ExternalSecret applied by a GitOps controller). The Job
+           still waits, and that wait is the enforcement.
+           REQUIRES that no source is chart-rendered — combining it with
+           externalSecrets.enabled or secrets.create guarantees a
+           fresh-install timeout, because the ordinary manifest cannot be
+           applied until after the pre-install hooks have finished.
+  none     No ordering, no wait. NOT a general escape hatch: it does not
+           make the race safe, it only stops the chart from managing it,
+           and for a chart-rendered source it is a KNOWN-BROKEN fresh
+           install. It exists for one case — a release whose Secret is
+           already present and stable, where you are deliberately
+           deferring the conversion. Once a release has been in `hook`
+           mode, moving it to `none` or `require` is a manifest-membership
+           transition, not a values change: see
+           docs/runbooks/migration-gate-lifecycle.md, Procedure 3.
+  auto     hook when the chart renders the source, none otherwise. Default.
+
+LIFECYCLE WARNING. Helm tracks hook resources and ordinary manifests
+separately, and there is no supported in-place transition between them.
+Converting a source into a hook, rolling back across that boundary, or
+leaving hook mode all require an explicit operator procedure — they are
+NOT safe as a bare `helm upgrade` / `helm rollback`. The procedures live
+in docs/runbooks/migration-gate-lifecycle.md and are registered in
+ops/runbooks/dependencies.yaml so they cannot quietly drift.
+*/}}
+
+{{/*
+Non-empty when THIS CHART renders the runtime Secret's source. The whole
+mode contract turns on this one fact.
+*/}}
+{{- define "teslasync.migrationGate.rendersSource" -}}
+{{- if or .Values.externalSecrets.enabled .Values.secrets.create -}}
+{{- "true" -}}
+{{- end -}}
+{{- end }}
+
+{{- define "teslasync.migrationGate.mode" -}}
+{{- $gate := .Values.migrationGate | default dict -}}
+{{- $mode := $gate.mode | default "auto" -}}
+{{- if eq $mode "auto" -}}
+  {{- if include "teslasync.migrationGate.rendersSource" . -}}
+  {{- "hook" -}}
+  {{- else -}}
+  {{- "none" -}}
+  {{- end -}}
+{{- else -}}
+{{- $mode -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Non-empty when the migration Job must wait for the runtime Secret.
+*/}}
+{{- define "teslasync.migrationGate.waits" -}}
+{{- if ne (include "teslasync.migrationGate.mode" .) "none" -}}
+{{- "true" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Non-empty when the secret source itself must be rendered as a pre-hook.
+*/}}
+{{- define "teslasync.migrationGate.hookSource" -}}
+{{- if eq (include "teslasync.migrationGate.mode" .) "hook" -}}
+{{- "true" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Hook annotations for the secret source.
+
+Weight -10 places it strictly before the migration Job (weight 0).
+
+`before-hook-creation` is not optional: Helm CREATES hook resources rather
+than patching them (`KubeClient.Create`), so a second upgrade would fail
+with "already exists" without it.
+
+`helm.sh/resource-policy: keep` is emitted by the templates themselves
+rather than here, because the Secret needs it in every mode while the
+ExternalSecret needs it only in hook mode. Repeating it in this helper
+would render a duplicate YAML key.
+*/}}
+{{- define "teslasync.migrationGate.hookAnnotations" -}}
+"helm.sh/hook": pre-install,pre-upgrade
+"helm.sh/hook-weight": "-10"
+"helm.sh/hook-delete-policy": before-hook-creation
+{{- end }}
+
+{{/*
+Effective ExternalSecret target creationPolicy: always Orphan, in every
+migrationGate mode, whenever this chart renders an ExternalSecret.
+
+`Owner` is not merely wrong in hook mode — it is a TIME BOMB in every
+mode. ESO sets `.metadata.ownerReferences` on the target Secret at
+creation time. A release installed today in `none` or `require` mode
+therefore stamps an ownerReference onto the target; the day that release
+later moves to hook mode, `before-hook-creation` deletes the
+ExternalSecret and Kubernetes garbage-collects the Secret through that
+pre-existing reference. Rendering Orphan only "when it matters" leaves
+the hazard latent in exactly the states that precede the conversion.
+
+`deletionPolicy: Retain` does NOT protect against this. Per the ESO API
+reference, deletionPolicy "specifies what happens to the Secret when data
+fields are deleted from the provider"; it says nothing about deletion of
+the ExternalSecret object itself.
+
+IMPORTANT, and not something this template can fix: rendering `Orphan`
+governs FUTURE states only. It does not retroactively strip an
+ownerReference that a previous `Owner`-managed reconcile already wrote
+onto a live Secret, and ESO does not remove ownerReferences it has
+already set. A release that ran with `Owner` before this change must go
+through the one-time preflight in
+docs/runbooks/migration-gate-lifecycle.md before its first conversion.
+
+The value is kept configurable only so an operator who has pinned it
+explicitly gets a loud failure instead of a silent override.
+*/}}
+{{- define "teslasync.externalSecrets.creationPolicy" -}}
+{{- $explicit := .Values.externalSecrets.target.creationPolicy | default "" -}}
+{{- if and $explicit (ne $explicit "Orphan") -}}
+{{- fail (printf "externalSecrets.target.creationPolicy=%q is not supported; this chart renders Orphan in every migrationGate mode. Any owning policy makes ESO stamp .metadata.ownerReferences onto the target Secret, and the day this release enters hook mode the before-hook-creation delete of the ExternalSecret garbage-collects those credentials out from under every running pod. deletionPolicy: Retain does not prevent it — it only governs provider-side data deletion. Leave the value empty, or set it to Orphan." $explicit) -}}
+{{- end -}}
+{{- "Orphan" -}}
+{{- end }}
+
+{{/*
+Validate the gate.
+
+Note what this does NOT do: it does not `lookup` the Secret in the cluster.
+`internal/ops` forbids cluster lookups in this file, for good reasons that
+apply here too — a lookup makes the render depend on cluster state and on
+the Helm client holding RBAC to read Secrets, which many GitOps service
+accounts deliberately do not have.
+
+`require` mode is therefore enforced where it can be enforced honestly: at
+the hook boundary, by the `wait-for-runtime-secret` initContainer, which
+fails the migration Job (and so the release) within
+`migrationGate.timeoutSeconds` and names the Secret, the missing keys, and
+the command that shows why ESO has not synced.
+*/}}
+{{- define "teslasync.validateMigrationGate" -}}
+{{- $gate := .Values.migrationGate | default dict -}}
+{{- $declared := $gate.mode | default "auto" -}}
+{{- if not (has $declared (list "auto" "hook" "require" "none")) -}}
+{{- fail (printf "migrationGate.mode must be auto, hook, require, or none (got %q)" $declared) -}}
+{{- end -}}
+{{- $timeout := $gate.timeoutSeconds | default 300 | int -}}
+{{- $poll := $gate.pollIntervalSeconds | default 5 | int -}}
+{{- if le $timeout 0 -}}
+{{- fail "migrationGate.timeoutSeconds must be greater than 0" -}}
+{{- end -}}
+{{- if le $poll 0 -}}
+{{- fail "migrationGate.pollIntervalSeconds must be greater than 0" -}}
+{{- end -}}
+{{- if ge $poll $timeout -}}
+{{- fail (printf "migrationGate.pollIntervalSeconds (%d) must be smaller than timeoutSeconds (%d), otherwise the gate never polls" $poll $timeout) -}}
+{{- end -}}
+{{- if eq (len ($gate.requiredKeys | default list)) 0 -}}
+{{- fail "migrationGate.requiredKeys must name at least one key the migration needs (DATABASE_PASS)" -}}
+{{- end -}}
+
+{{- $rendersSource := include "teslasync.migrationGate.rendersSource" . -}}
+
+{{/*
+hook can only order what this chart renders. Asking it to order an
+out-of-band Secret produces a contract the chart cannot honour.
+*/}}
+{{- if eq $declared "hook" -}}
+  {{- if .Values.secrets.existingSecret -}}
+  {{- fail "migrationGate.mode=hook cannot manage secrets.existingSecret: the Secret is provisioned outside this chart, so there is nothing for the chart to order ahead of the migration hook. Use require — the migration Job then waits for it and fails with a diagnostic — or none." -}}
+  {{- end -}}
+  {{- if not $rendersSource -}}
+  {{- fail "migrationGate.mode=hook requires a chart-rendered secret source (externalSecrets.enabled=true or secrets.create=true). With a pre-provisioned Secret there is nothing for the chart to render as a hook. Use require, which waits for the Secret and fails with a diagnostic if it never appears." -}}
+  {{- end -}}
+{{- end -}}
+
+{{/*
+require is the mirror image, and getting it wrong is worse than a
+mis-configuration — it is a GUARANTEED fresh-install failure. An ordinary
+manifest cannot be applied until every pre-install hook has completed, so
+the migration Job would wait the full timeout for a Secret whose source
+Helm is holding back until the Job finishes.
+*/}}
+{{- if and (eq $declared "require") $rendersSource -}}
+{{- fail (printf "migrationGate.mode=require is incompatible with a chart-rendered secret source (externalSecrets.enabled=%v, secrets.create=%v). require means the Secret is provisioned OUTSIDE this release; here the chart renders the source as an ordinary manifest, which Helm cannot apply until after the pre-install hooks finish — so the migration Job would time out on every fresh install by construction. Use hook to have the chart order the source ahead of the migration, or move the source out of this release." .Values.externalSecrets.enabled .Values.secrets.create) -}}
+{{- end -}}
+{{- end }}
+
+{{/* ── imagePullSecrets helper ─────────────────────────────────────────── */}}
 {{- define "teslasync.imagePullSecrets" -}}
 {{- $secrets := concat (.Values.global.imagePullSecrets | default list) (.Values.imagePullSecrets | default list) }}
 {{- if $secrets }}

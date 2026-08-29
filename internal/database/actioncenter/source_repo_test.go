@@ -106,6 +106,46 @@ func TestEvidenceQueriesUseCurrentCanonicalSources(t *testing.T) {
 			forbidden: []string{"distance_mi", "energy_used_kwh"},
 		},
 		{
+			name:  "signal normalization health",
+			query: listSignalHealthQuery,
+			required: []string{
+				"FROM signal_log",
+				"normalization_version >= 1",
+				"normalization_version IS NULL",
+				"normalization_version < 1",
+				"sl.ts >= $1",
+				"sl.ts <= $2",
+				"latest_unversioned_at",
+				"normalization_candidates",
+				"freshness_candidates",
+				"LIMIT GREATEST(($4 + 1) / 2, 1)",
+				"LIMIT GREATEST($4 / 2, 1)",
+			},
+			forbidden: []string{"value_float", "value_text"},
+		},
+		{
+			name:  "active vehicle roster",
+			query: listActiveVehiclesQuery,
+			required: []string{
+				"FROM vehicles v",
+				"v.archived_at IS NULL",
+				"($1::bigint IS NULL OR v.id = $1)",
+				"ORDER BY v.id ASC",
+				"LIMIT $2",
+			},
+			// The roster must NOT inherit the findings feed's evidence
+			// filters. Any of these would silently drop healthy,
+			// fully-version-attested vehicles from advanced-intelligence
+			// evaluation — the exact regression this query exists to fix.
+			forbidden: []string{
+				"signal_log",
+				"normalization_version",
+				"latest_unversioned_at",
+				"unversioned_sample_count",
+				"candidate_ids",
+			},
+		},
+		{
 			name:  "command reliability",
 			query: commandReliabilityQuery,
 			required: []string{

@@ -12,10 +12,15 @@
  * slicing of the already-fetched batch (≤ per-page × 10 rows per signal),
  * which is cheap. Every results section owns its loading/empty state.
  * `vehicleId` is driven by `useSelectedVehicle`.
+ *
+ * The submitted range is immutable and is never narrowed to satisfy a
+ * downstream limit: `TransportAgreementPanel` receives the exact window the
+ * operator submitted and renders an explicit seven-day agreement-limit state
+ * for the 30/90-day/all presets instead of issuing a request the audit API
+ * caps at 168 hours. Signal history itself keeps the full range.
  */
 
 import { useState, useMemo, useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Database, AlertCircle, Activity } from 'lucide-react';
 
@@ -31,15 +36,17 @@ import { useUrlArray } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignals } from '@/api/hooks/useTelemetry';
-import { request } from '@/api/client';
-import { adaptSignalHistoryResp, type SignalLogEntry } from '@/components/SignalQueryControls';
-import type { SignalHistoryResp } from '@/api/types';
+import { useSignalHistoryBatch } from '@/api/hooks/useSignals';
+import { adaptSignalHistoryPoint, type SignalLogEntry } from '@/components/SignalQueryControls';
+import { DataProvenanceBadge } from '@/components/data-display';
+import { useDataState } from '@/hooks/useDataState';
 
 import { SignalSelector } from '../components/SignalSelector';
 import { SignalChartPanel } from '../components/SignalChartPanel';
 import { SignalHistoryTable } from '../components/SignalHistoryTable';
 import { SignalLogKpiBand } from '../components/SignalLogKpiBand';
 import { SignalLogBreakdownPanel } from '../components/SignalLogBreakdownPanel';
+import { TransportAgreementPanel } from '../components/TransportAgreementPanel';
 import {
   summarizeSignalLog,
   buildSignalChartData,
@@ -52,6 +59,16 @@ const PER_PAGE_OPTIONS = [
   { value: '100', label: '100' },
   { value: '500', label: '500' },
 ];
+
+interface SubmittedSignalQuery {
+  revision: number;
+  vehicleId: number;
+  signals: string[];
+  from: string;
+  to: string;
+  perPage: number;
+  limit: number;
+}
 
 export default function SignalLogViewerPage() {
   const { t } = useTranslation();
@@ -76,15 +93,9 @@ export default function SignalLogViewerPage() {
   // bounded slice() of the already-fetched result set. There is no free-text
   // input whose every character would re-filter a large list, so
   // useDeferredValue would defer nothing.
-  const [queryKey, setQueryKey] = useState<number | null>(null);
+  const [submittedQuery, setSubmittedQuery] = useState<SubmittedSignalQuery | null>(null);
 
   const canQuery = selectedSignals.length > 0 && !!start && !!end && vehicleId > 0;
-
-  const handleQuery = useCallback(() => {
-    if (!canQuery) return;
-    setPage(1);
-    setQueryKey(Date.now());
-  }, [canQuery]);
 
   const fromIso = useMemo(
     () => (start ? new Date(`${start}T00:00:00`).toISOString() : ''),
@@ -95,42 +106,50 @@ export default function SignalLogViewerPage() {
     [end],
   );
 
-  const signalLogQuery = useQuery<SignalLogEntry[]>({
-    queryKey: ['signal-log', vehicleId, queryKey],
-    queryFn: async ({ signal }) => {
-      const results = await Promise.all(
-        selectedSignals.map((sig) =>
-          request<SignalHistoryResp>(
-            `/signals/${vehicleId}/${encodeURIComponent(sig)}/history?from=${fromIso}&to=${toIso}&limit=${perPage * 10}`,
-            { signal },
-          ),
-        ),
-      );
-      return results
-        .flatMap((resp) => adaptSignalHistoryResp(resp))
-        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-    },
-    enabled: queryKey !== null,
-  });
+  const handleQuery = useCallback(() => {
+    if (!canQuery) return;
+    setPage(1);
+    setSubmittedQuery((current) => ({
+      revision: (current?.revision ?? 0) + 1,
+      vehicleId,
+      signals: [...selectedSignals],
+      from: fromIso,
+      to: toIso,
+      perPage,
+      limit: perPage * 10,
+    }));
+  }, [canQuery, fromIso, perPage, selectedSignals, toIso, vehicleId]);
 
-  const { data: allRows, isLoading, isFetching, error: dataError } = signalLogQuery;
+  const signalLogQuery = useSignalHistoryBatch(submittedQuery);
+  const signalLogState = useDataState(signalLogQuery, { provenance: 'historical' });
+  const { data: historyResponses, isLoading, isFetching, error: dataError } = signalLogQuery;
 
-  const rowsAll = useMemo(() => allRows ?? [], [allRows]);
-  const hasQueried = queryKey !== null;
+  const rowsAll = useMemo<SignalLogEntry[]>(
+    () =>
+      (historyResponses ?? [])
+        .flatMap((response) =>
+          response.data.map((point) => adaptSignalHistoryPoint(point, response.signal)),
+        )
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()),
+    [historyResponses],
+  );
+  const hasQueried = submittedQuery !== null;
   const anyError = (signalsError ?? dataError) as Error | undefined;
+  const resultSignals = submittedQuery?.signals ?? [];
+  const resultPageSize = submittedQuery?.perPage ?? perPage;
 
   const summary = useMemo(
-    () => summarizeSignalLog(rowsAll, selectedSignals),
-    [rowsAll, selectedSignals],
+    () => summarizeSignalLog(rowsAll, resultSignals),
+    [resultSignals, rowsAll],
   );
   const chartData = useMemo(() => buildSignalChartData(rowsAll), [rowsAll]);
   const chartStats = useMemo(() => buildSignalStats(rowsAll), [rowsAll]);
 
   const totalRecords = rowsAll.length;
   const pageRows = useMemo(() => {
-    const startIdx = (page - 1) * perPage;
-    return rowsAll.slice(startIdx, startIdx + perPage);
-  }, [rowsAll, page, perPage]);
+    const startIdx = (page - 1) * resultPageSize;
+    return rowsAll.slice(startIdx, startIdx + resultPageSize);
+  }, [page, resultPageSize, rowsAll]);
 
   return (
     <PageContainer
@@ -194,9 +213,16 @@ export default function SignalLogViewerPage() {
                     {t('signalLog.query', 'Query')}
                   </Button>
                   {hasQueried ? (
-                    <Caption className="pb-2">
-                      {fmtInt(totalRecords)} {t('signalLog.records', 'records')}
-                    </Caption>
+                    <>
+                      <DataProvenanceBadge
+                        provenance={signalLogState.provenance}
+                        status={signalLogState.status}
+                        updatedAt={signalLogState.updatedAt}
+                      />
+                      <Caption className="pb-2">
+                        {fmtInt(totalRecords)} {t('signalLog.records', 'records')}
+                      </Caption>
+                    </>
                   ) : null}
                 </div>
               </div>
@@ -206,11 +232,18 @@ export default function SignalLogViewerPage() {
           {/* 2 — KPI band: derived counters, full-width responsive grid */}
           <SignalLogKpiBand summary={summary} loading={isLoading} />
 
+          <TransportAgreementPanel
+            vehicleId={submittedQuery?.vehicleId ?? 0}
+            from={submittedQuery?.from ?? ''}
+            to={submittedQuery?.to ?? ''}
+            enabled={submittedQuery != null}
+          />
+
           {/* 3 — Bento: signal chart (hero, 2fr) + value composition (1fr) */}
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
             <div className="xl:col-span-2">
               <SignalChartPanel
-                selectedSignals={selectedSignals}
+                selectedSignals={resultSignals}
                 data={chartData}
                 stats={chartStats}
                 loading={isLoading}
@@ -228,9 +261,9 @@ export default function SignalLogViewerPage() {
           {/* 4 — Detail band: full-width paginated history table */}
           <SignalHistoryTable
             rows={pageRows}
-            selectedSignals={selectedSignals}
+            selectedSignals={resultSignals}
             page={page}
-            pageSize={perPage}
+            pageSize={resultPageSize}
             totalRows={totalRecords}
             onPageChange={setPage}
             loading={isLoading}

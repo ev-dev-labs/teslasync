@@ -187,29 +187,113 @@ func (r *SourceRepository) ListActiveWorkOrders(
 	return items, nil
 }
 
+const listSignalHealthQuery = `
+	WITH signal_stats AS (
+		SELECT sl.vehicle_id,
+		       MAX(sl.ts) AS latest_at,
+		       MAX(sl.ts) FILTER (
+		         WHERE sl.normalization_version IS NULL
+		            OR sl.normalization_version < 1
+		       ) AS latest_unversioned_at,
+		       COUNT(*) AS sample_count,
+		       COUNT(*) FILTER (
+		         WHERE sl.normalization_version >= 1
+		       ) AS versioned_sample_count,
+		       COUNT(*) FILTER (
+		         WHERE sl.normalization_version IS NULL
+		            OR sl.normalization_version < 1
+		       ) AS unversioned_sample_count
+		FROM signal_log sl
+		WHERE sl.ts >= $1
+		  AND sl.ts <= $2
+		GROUP BY sl.vehicle_id
+	), eligible AS MATERIALIZED (
+		SELECT v.id, v.display_name, stats.latest_at,
+		       stats.latest_unversioned_at,
+		       COALESCE(stats.sample_count, 0) AS sample_count,
+		       COALESCE(stats.versioned_sample_count, 0) AS versioned_sample_count,
+		       COALESCE(stats.unversioned_sample_count, 0) AS unversioned_sample_count
+		FROM vehicles v
+		LEFT JOIN signal_stats stats ON stats.vehicle_id = v.id
+		WHERE v.archived_at IS NULL
+		  AND ($3::bigint IS NULL OR v.id = $3)
+	), normalization_candidates AS (
+		SELECT id
+		FROM eligible
+		WHERE unversioned_sample_count > 0
+		ORDER BY latest_unversioned_at DESC, id ASC
+		LIMIT GREATEST(($4 + 1) / 2, 1)
+	), freshness_candidates AS (
+		SELECT id
+		FROM eligible
+		WHERE latest_at IS NULL OR latest_at <= $2 - INTERVAL '24 hours'
+		ORDER BY latest_at ASC NULLS FIRST, id ASC
+		LIMIT GREATEST($4 / 2, 1)
+	), candidate_ids AS (
+		SELECT id FROM normalization_candidates
+		UNION
+		SELECT id FROM freshness_candidates
+	)
+	SELECT eligible.id, eligible.display_name, eligible.latest_at,
+	       eligible.latest_unversioned_at, eligible.sample_count,
+	       eligible.versioned_sample_count, eligible.unversioned_sample_count
+	FROM eligible
+	JOIN candidate_ids USING (id)
+	ORDER BY eligible.latest_unversioned_at DESC NULLS LAST,
+	         eligible.latest_at ASC NULLS FIRST,
+	         eligible.id ASC
+	LIMIT $4`
+
+// listActiveVehiclesQuery enumerates the vehicle roster with NO evidence
+// filter. This is deliberately separate from listSignalHealthQuery: that query
+// narrows to vehicles carrying a signal-health finding, so it is a findings
+// feed, not a roster. Consumers that must evaluate every vehicle (advanced
+// intelligence: firmware canary, component survival, road hazards, behavioral
+// sentinel) use this method so a fresh, fully version-attested vehicle is
+// still evaluated.
+//
+// Ordering is `id ASC` — deterministic and stable across calls, so a bounded
+// LIMIT always yields the same prefix rather than a shifting sample.
+const listActiveVehiclesQuery = `
+	SELECT v.id, v.display_name
+	FROM vehicles v
+	WHERE v.archived_at IS NULL
+	  AND ($1::bigint IS NULL OR v.id = $1)
+	ORDER BY v.id ASC
+	LIMIT $2`
+
+func (r *SourceRepository) ListActiveVehicles(
+	ctx context.Context,
+	vehicleID *int64,
+	limit int,
+) ([]domain.VehicleRef, error) {
+	rows, err := r.q.Query(ctx, listActiveVehiclesQuery, vehicleID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("list action center active vehicles: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]domain.VehicleRef, 0)
+	for rows.Next() {
+		var item domain.VehicleRef
+		if err := rows.Scan(&item.ID, &item.DisplayName); err != nil {
+			return nil, fmt.Errorf("scan action center active vehicle: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate action center active vehicles: %w", err)
+	}
+	return items, nil
+}
+
 func (r *SourceRepository) ListSignalHealth(
 	ctx context.Context,
 	vehicleID *int64,
 	from, to time.Time,
 	limit int,
 ) ([]domain.SignalHealthRecord, error) {
-	const query = `
-		SELECT v.id, v.display_name, latest.latest_at
-		FROM vehicles v
-		LEFT JOIN LATERAL (
-			SELECT sl.ts AS latest_at
-			FROM signal_log sl
-			WHERE sl.vehicle_id = v.id
-			  AND sl.ts >= $1
-			  AND sl.ts <= $2
-			ORDER BY sl.ts DESC
-			LIMIT 1
-		) latest ON true
-		WHERE v.archived_at IS NULL
-		  AND ($3::bigint IS NULL OR v.id = $3)
-		ORDER BY latest.latest_at ASC NULLS FIRST, v.id ASC
-		LIMIT $4`
-	rows, err := r.q.Query(ctx, query, from, to, vehicleID, limit)
+	rows, err := r.q.Query(ctx, listSignalHealthQuery, from, to, vehicleID, limit)
 	if err != nil {
 		return nil, fmt.Errorf("list action center signal health: %w", err)
 	}
@@ -218,7 +302,15 @@ func (r *SourceRepository) ListSignalHealth(
 	items := make([]domain.SignalHealthRecord, 0)
 	for rows.Next() {
 		var item domain.SignalHealthRecord
-		if err := rows.Scan(&item.Vehicle.ID, &item.Vehicle.DisplayName, &item.LatestSignalAt); err != nil {
+		if err := rows.Scan(
+			&item.Vehicle.ID,
+			&item.Vehicle.DisplayName,
+			&item.LatestSignalAt,
+			&item.LatestUnversionedAt,
+			&item.SampleCount,
+			&item.VersionedSampleCount,
+			&item.UnversionedSampleCount,
+		); err != nil {
 			return nil, fmt.Errorf("scan action center signal health: %w", err)
 		}
 		item.CheckedAt = to

@@ -118,6 +118,12 @@ func TestDecode_MixedPayload(t *testing.T) {
 		if !a.EmittedAt.Equal(wantTs) {
 			t.Errorf("atom %q EmittedAt = %v, want %v", a.Field, a.EmittedAt, wantTs)
 		}
+		if a.IngestOrigin != IngestOriginUnknown {
+			t.Errorf("atom %q IngestOrigin = %q, want unknown before a transport stamp", a.Field, a.IngestOrigin)
+		}
+		if a.SourceEmittedAt == nil || !a.SourceEmittedAt.Equal(wantTs) {
+			t.Errorf("atom %q SourceEmittedAt = %v, want %v", a.Field, a.SourceEmittedAt, wantTs)
+		}
 	}
 
 	// Spot-check the scalar carry-throughs preserve their decoded type.

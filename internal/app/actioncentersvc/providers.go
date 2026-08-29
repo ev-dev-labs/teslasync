@@ -266,74 +266,152 @@ func (p signalProvider) Recommendations(
 	if err != nil {
 		return nil, err
 	}
-	items := make([]domain.Candidate, 0, len(rows))
+	items := make([]domain.Candidate, 0, len(rows)*2)
 	for _, row := range rows {
-		if row.LatestSignalAt != nil && now.Sub(*row.LatestSignalAt) < 24*time.Hour {
-			continue
+		if row.LatestSignalAt == nil || now.Sub(*row.LatestSignalAt) >= 24*time.Hour {
+			items = append(items, signalFreshnessCandidate(row, now))
 		}
-		priority := domain.PriorityMedium
-		confidence := 0.76
-		confidenceBasis := []string{"Direct latest signal timestamp within a bounded 30-day window"}
-		evidenceSummary := "No signal was observed in the bounded 30-day review window."
-		observedAt := row.LatestSignalAt
-		if observedAt != nil {
-			evidenceSummary = "Latest persisted signal is " + coarseDuration(now.Sub(*observedAt)) + " old."
-			if now.Sub(*observedAt) >= 72*time.Hour {
-				priority = domain.PriorityHigh
-			}
-		} else {
-			confidence = 0.42
-			confidenceBasis = []string{
-				"Bounded query found no signal in the last 30 days",
-				"Telemetry before the review window was not inspected",
-			}
+		if row.SampleCount > 0 && row.UnversionedSampleCount > 0 {
+			items = append(items, signalNormalizationCandidate(row, now))
 		}
-		nav := fmt.Sprintf("/signals?vehicle_id=%d", row.Vehicle.ID)
-		checkedAt := row.CheckedAt.UTC()
-		items = append(items, domain.Candidate{
-			SourceFeature:   domain.SourceSignalHealth,
-			SourceKey:       fmt.Sprintf("vehicle:%d", row.Vehicle.ID),
-			DedupKey:        fmt.Sprintf("%d:signal_freshness", row.Vehicle.ID),
-			Vehicle:         &row.Vehicle,
-			Title:           "Review telemetry freshness",
-			Summary:         evidenceSummary,
-			Rationale:       "Recent persisted telemetry helps TeslaSync keep vehicle findings current.",
-			Priority:        priority,
-			Severity:        domain.SeverityWarning,
-			BaseConfidence:  confidence,
-			ConfidenceBasis: confidenceBasis,
-			Evidence: []domain.EvidenceItem{{
-				ID:      fmt.Sprintf("signal_window:%d", row.Vehicle.ID),
-				Kind:    "signal_freshness",
-				Summary: evidenceSummary,
-				Provenance: domain.EvidenceProvenance{
-					Source:   "signal_log",
-					RecordID: fmt.Sprintf("vehicle:%d:30d_window", row.Vehicle.ID),
-				},
-				ObservedAt: observedAt,
-			}, {
-				ID:      fmt.Sprintf("signal_check:%d", row.Vehicle.ID),
-				Kind:    "bounded_query",
-				Summary: "The signal freshness query completed at this timestamp.",
-				Provenance: domain.EvidenceProvenance{
-					Source:   "action_center_signal_provider",
-					RecordID: fmt.Sprintf("vehicle:%d", row.Vehicle.ID),
-				},
-				ObservedAt: &checkedAt,
-			}},
-			SafeActions:    defaultActions(),
-			NavigationPath: &nav,
-			ObservedAt:     observedAt,
-			FreshFor:       24 * time.Hour,
-			AgingFor:       7 * 24 * time.Hour,
-			ExpiresAt:      now.Add(6 * time.Hour),
-			Limitations: []string{
-				"Stale telemetry may reflect vehicle sleep, connectivity, or ingestion delay; it is not a connectivity diagnosis.",
-				"The no-signal check is intentionally bounded to 30 days.",
-			},
-		})
+	}
+	if len(items) > providerLimit {
+		items = items[:providerLimit]
 	}
 	return items, nil
+}
+
+func signalFreshnessCandidate(row domain.SignalHealthRecord, now time.Time) domain.Candidate {
+	priority := domain.PriorityMedium
+	confidence := 0.76
+	confidenceBasis := []string{"Direct latest signal timestamp within a bounded 30-day window"}
+	evidenceSummary := "No signal was observed in the bounded 30-day review window."
+	observedAt := row.LatestSignalAt
+	if observedAt != nil {
+		evidenceSummary = "Latest persisted signal is " + coarseDuration(now.Sub(*observedAt)) + " old."
+		if now.Sub(*observedAt) >= 72*time.Hour {
+			priority = domain.PriorityHigh
+		}
+	} else {
+		confidence = 0.42
+		confidenceBasis = []string{
+			"Bounded query found no signal in the last 30 days",
+			"Telemetry before the review window was not inspected",
+		}
+	}
+	nav := fmt.Sprintf("/signals?vehicle_id=%d", row.Vehicle.ID)
+	checkedAt := row.CheckedAt.UTC()
+	return domain.Candidate{
+		SourceFeature: domain.SourceSignalHealth,
+		// Deterministic identity contract: the freshness incident has used
+		// `vehicle:<id>` since it shipped, and deterministicID() hashes
+		// SourceFeature|SourceKey|VehicleID. Re-keying it would mint a NEW
+		// recommendation ID and orphan every existing acknowledgement,
+		// snooze and dismissal for this finding. Only the newer
+		// normalization-provenance candidate gets a distinct key.
+		SourceKey:       fmt.Sprintf("vehicle:%d", row.Vehicle.ID),
+		DedupKey:        fmt.Sprintf("%d:signal_freshness", row.Vehicle.ID),
+		Vehicle:         &row.Vehicle,
+		Title:           "Review telemetry freshness",
+		Summary:         evidenceSummary,
+		Rationale:       "Recent persisted telemetry helps TeslaSync keep vehicle findings current.",
+		Priority:        priority,
+		Severity:        domain.SeverityWarning,
+		BaseConfidence:  confidence,
+		ConfidenceBasis: confidenceBasis,
+		Evidence: []domain.EvidenceItem{{
+			ID:      fmt.Sprintf("signal_window:%d", row.Vehicle.ID),
+			Kind:    "signal_freshness",
+			Summary: evidenceSummary,
+			Provenance: domain.EvidenceProvenance{
+				Source:   "signal_log",
+				RecordID: fmt.Sprintf("vehicle:%d:30d_window", row.Vehicle.ID),
+			},
+			ObservedAt: observedAt,
+		}, {
+			ID:      fmt.Sprintf("signal_check:%d", row.Vehicle.ID),
+			Kind:    "bounded_query",
+			Summary: "The signal freshness query completed at this timestamp.",
+			Provenance: domain.EvidenceProvenance{
+				Source:   "action_center_signal_provider",
+				RecordID: fmt.Sprintf("vehicle:%d", row.Vehicle.ID),
+			},
+			ObservedAt: &checkedAt,
+		}},
+		SafeActions:    defaultActions(),
+		NavigationPath: &nav,
+		ObservedAt:     observedAt,
+		FreshFor:       24 * time.Hour,
+		AgingFor:       7 * 24 * time.Hour,
+		ExpiresAt:      now.Add(6 * time.Hour),
+		Limitations: []string{
+			"Stale telemetry may reflect vehicle sleep, connectivity, or ingestion delay; it is not a connectivity diagnosis.",
+			"The no-signal check is intentionally bounded to 30 days.",
+		},
+	}
+}
+
+func signalNormalizationCandidate(row domain.SignalHealthRecord, now time.Time) domain.Candidate {
+	missingPct := float64(row.UnversionedSampleCount) / float64(row.SampleCount) * 100
+	coveragePct := float64(row.VersionedSampleCount) / float64(row.SampleCount) * 100
+	priority := domain.PriorityMedium
+	if missingPct >= 10 {
+		priority = domain.PriorityHigh
+	}
+	summary := fmt.Sprintf(
+		"%d of %d persisted samples (%.1f%%) lack normalization-version evidence in the bounded 30-day window.",
+		row.UnversionedSampleCount,
+		row.SampleCount,
+		missingPct,
+	)
+	nav := fmt.Sprintf("/signal-log?vehicle_id=%d", row.Vehicle.ID)
+	checkedAt := row.CheckedAt.UTC()
+	observedAt := row.LatestUnversionedAt
+	return domain.Candidate{
+		SourceFeature:  domain.SourceSignalHealth,
+		SourceKey:      fmt.Sprintf("signal_normalization_provenance:vehicle:%d", row.Vehicle.ID),
+		DedupKey:       fmt.Sprintf("%d:signal_normalization_provenance", row.Vehicle.ID),
+		Vehicle:        &row.Vehicle,
+		Title:          "Review telemetry normalization provenance",
+		Summary:        summary,
+		Rationale:      "Only version-attested rows prove which normalization rules produced persisted signal values.",
+		Priority:       priority,
+		Severity:       domain.SeverityWarning,
+		BaseConfidence: 0.99,
+		ConfidenceBasis: []string{
+			"Direct counts from normalization_version in signal_log",
+			"Explicitly bounded 30-day evidence window",
+		},
+		Evidence: []domain.EvidenceItem{{
+			ID:      fmt.Sprintf("signal_normalization:%d", row.Vehicle.ID),
+			Kind:    "normalization_provenance",
+			Summary: fmt.Sprintf("%d normalized, %d unversioned, %.1f%% attested coverage.", row.VersionedSampleCount, row.UnversionedSampleCount, coveragePct),
+			Provenance: domain.EvidenceProvenance{
+				Source:   "signal_log",
+				RecordID: fmt.Sprintf("vehicle:%d:normalization:30d_window", row.Vehicle.ID),
+			},
+			ObservedAt: observedAt,
+		}, {
+			ID:      fmt.Sprintf("signal_normalization_check:%d", row.Vehicle.ID),
+			Kind:    "bounded_query",
+			Summary: "The normalization-provenance query completed at this timestamp.",
+			Provenance: domain.EvidenceProvenance{
+				Source:   "action_center_signal_provider",
+				RecordID: fmt.Sprintf("vehicle:%d", row.Vehicle.ID),
+			},
+			ObservedAt: &checkedAt,
+		}},
+		SafeActions:    defaultActions(),
+		NavigationPath: &nav,
+		ObservedAt:     observedAt,
+		FreshFor:       6 * time.Hour,
+		AgingFor:       24 * time.Hour,
+		ExpiresAt:      now.Add(6 * time.Hour),
+		Limitations: []string{
+			"An unversioned row is legacy or unattested; it does not prove that the stored value is numerically wrong.",
+			"The review is intentionally bounded to the last 30 days.",
+		},
+	}
 }
 
 func defaultActions() []domain.ActionType {

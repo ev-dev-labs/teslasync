@@ -30,6 +30,70 @@ func TestLoad_Defaults(t *testing.T) {
 	}
 }
 
+func TestLoad_SignalHistoryRetentionIsBoundedByDefault(t *testing.T) {
+	t.Setenv("SIGNAL_HISTORY_RETENTION_DAYS", "")
+	t.Setenv("SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.Retention.SignalHistoryRetentionDays != 365 {
+		t.Fatalf("SignalHistoryRetentionDays = %d, want 365", cfg.Retention.SignalHistoryRetentionDays)
+	}
+	if cfg.Retention.SignalHistoryRetentionAcknowledged {
+		t.Fatal("SignalHistoryRetentionAcknowledged = true, want safe upgrade default false")
+	}
+}
+
+func TestLoad_TeslaAPIBudgetDefaults(t *testing.T) {
+	t.Setenv("TESLA_API_DAILY_BUDGET_USD", "")
+	t.Setenv("TESLA_API_COMMAND_RESERVE_USD", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.Tesla.DailyBudgetUSD != 0.30 {
+		t.Fatalf("DailyBudgetUSD = %v, want 0.30", cfg.Tesla.DailyBudgetUSD)
+	}
+	if cfg.Tesla.CommandReserveUSD != 0.05 {
+		t.Fatalf("CommandReserveUSD = %v, want 0.05", cfg.Tesla.CommandReserveUSD)
+	}
+}
+
+func TestLoad_TeslaAPIBudgetOverrides(t *testing.T) {
+	t.Setenv("TESLA_API_DAILY_BUDGET_USD", "1.75")
+	t.Setenv("TESLA_API_COMMAND_RESERVE_USD", "0.25")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.Tesla.DailyBudgetUSD != 1.75 {
+		t.Fatalf("DailyBudgetUSD = %v, want 1.75", cfg.Tesla.DailyBudgetUSD)
+	}
+	if cfg.Tesla.CommandReserveUSD != 0.25 {
+		t.Fatalf("CommandReserveUSD = %v, want 0.25", cfg.Tesla.CommandReserveUSD)
+	}
+}
+
+func TestLoad_TeslaAPIBudgetRejectsInvalidNegativeValues(t *testing.T) {
+	t.Setenv("TESLA_API_DAILY_BUDGET_USD", "-1")
+	t.Setenv("TESLA_API_COMMAND_RESERVE_USD", "NaN")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.Tesla.DailyBudgetUSD != 0.30 {
+		t.Fatalf("DailyBudgetUSD = %v, want safe default 0.30", cfg.Tesla.DailyBudgetUSD)
+	}
+	if cfg.Tesla.CommandReserveUSD != 0.05 {
+		t.Fatalf("CommandReserveUSD = %v, want safe default 0.05", cfg.Tesla.CommandReserveUSD)
+	}
+}
+
 func TestLoad_DatabaseDefaults(t *testing.T) {
 	cfg, err := Load()
 	if err != nil {

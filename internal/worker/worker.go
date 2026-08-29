@@ -91,7 +91,7 @@ func New(db *database.DB, tc *tesla.Client, mc *mqtt.Client, cfg config.WorkerCo
 		cfg:               cfg,
 		sessionSvc:        service.NewSessionService(db, eb),
 		vehicleHealth:     make(map[int64]*vehicleHealth),
-		discoveryInterval: 5 * time.Minute,
+		discoveryInterval: time.Hour,
 	}
 }
 

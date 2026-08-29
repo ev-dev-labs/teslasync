@@ -18,6 +18,7 @@
 //	ops/config/parity.yaml         OPS-06  config parity classification+baseline
 //	ops/release/supply-chain.yaml  OPS-08  immutability + attestation policy
 //	ops/capacity/profiles.yaml     OPS-10  capacity test profiles
+//	ops/retention/policy.yaml      OP-04   bounded telemetry storage retention
 //	ops/runbooks/dependencies.yaml OPS-11  degraded-mode runbook coverage
 //	ops/scorecard/dimensions.yaml  OPS-13  readiness scorecard definition
 //

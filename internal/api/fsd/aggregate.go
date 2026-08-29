@@ -4,6 +4,8 @@ import (
 	"math"
 	"sort"
 	"time"
+
+	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 )
 
 // dayLayout is the local calendar-day grouping key used everywhere in the
@@ -140,7 +142,7 @@ func validCounterValue(v *float64) (float64, bool) {
 		return 0, false
 	}
 	f := *v
-	if math.IsNaN(f) || math.IsInf(f, 0) || f < 0 {
+	if !signalcounter.Valid(f) {
 		return 0, false
 	}
 	return f, true
@@ -211,14 +213,14 @@ func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterS
 			if state.firstAttributedDay == "" {
 				state.firstAttributedDay = day
 			}
-			delta := value - *prev
-			switch {
-			case delta < 0:
+			change := signalcounter.Compare(*prev, value)
+			switch change.Kind {
+			case signalcounter.ChangeReset:
 				state.resets++
 				state.perDayResets[day]++
-			case delta > 0:
-				state.perDayMeters[day] += delta
-				state.totalMeters += delta
+			case signalcounter.ChangeAdvanced:
+				state.perDayMeters[day] += change.Delta
+				state.totalMeters += change.Delta
 			}
 		}
 

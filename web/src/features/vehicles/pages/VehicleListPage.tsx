@@ -17,6 +17,7 @@ import {
 import {
   AnimatedNumber,
   DataFreshnessAuto,
+  DataProvenanceBadge,
   MetricBar,
   MetricCard,
   OperationalBrief,
@@ -1402,10 +1403,16 @@ export default function VehicleListPage() {
             narrative={narrative}
             freshness={
               <div className="flex flex-wrap items-center gap-2">
+                <DataProvenanceBadge
+                  provenance={fleetStateData.provenance}
+                  status={fleetStateData.status}
+                  updatedAt={fleetStateData.updatedAt}
+                />
                 <DataFreshnessAuto
                   query={fleetFreshnessQuery}
                   source={t('operations.vehicles.liveStateSource', 'Live vehicle state')}
                 />
+                <DataProvenanceBadge provenance="historical" />
                 <DataFreshnessAuto
                   query={workOrdersQuery}
                   source={t('operations.vehicles.workOrdersSource', 'Fleet work orders')}

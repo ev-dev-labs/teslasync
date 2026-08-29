@@ -40,6 +40,11 @@ func runbookManifest(mutate func(*Dependency)) *RunbookManifest {
 		}
 		m.Dependencies = append(m.Dependencies, d)
 	}
+	// The register is only complete with the mandatory lifecycle
+	// procedures: Helm's hook/ordinary manifest boundary is a standing
+	// operational hazard, so its procedure may not be deregistered.
+	lifecycle, _ := lifecycleFixture()
+	m.LifecycleProcedures = lifecycle.LifecycleProcedures
 	return m
 }
 
@@ -47,6 +52,10 @@ func runbookFS(overrides map[string]string) fstest.MapFS {
 	out := fstest.MapFS{}
 	for _, id := range requiredDependencies {
 		out["docs/runbooks/degraded-mode-"+id+".md"] = &fstest.MapFile{Data: []byte(completeRunbook())}
+	}
+	_, lifecycleFS := lifecycleFixture()
+	for path, file := range lifecycleFS {
+		out[path] = file
 	}
 	for path, body := range overrides {
 		out[path] = &fstest.MapFile{Data: []byte(body)}
@@ -140,8 +149,22 @@ func restoreDrill(mutate func(*RestoreDrill)) *RestoreDrill {
 		SuccessCriteria: []RestoreCriterion{
 			{ID: "a", Statement: "s", ImplementedBy: "somewhere"},
 		},
-		Fixture:    "fixture.sql",
-		Objectives: RestoreObjectives{RTOTarget: "1h", RPOTarget: "24h", MeasurementStatus: "pending-first-drill"},
+		Fixture: "fixture.sql",
+		Objectives: RestoreObjectives{
+			Scope:               "durable data",
+			RTOTarget:           "1h",
+			RPOTarget:           "24h",
+			RecoveryPointSource: "verified artifact",
+			MeasurementStatus:   "pending-first-drill",
+		},
+		Ownership: RestoreOwnership{
+			AccountableRole:       "deployment-owner",
+			IncidentCommanderRole: "platform-on-call",
+			RecoveryLeadRole:      "database-on-call",
+			CommunicationsRole:    "deployment-owner",
+			FallbackRole:          "repository-maintainers",
+			HandoffInterval:       30 * time.Minute,
+		},
 		Escalation: RestoreEscalation{OnFailure: "open an issue", Runbook: "runbook.md"},
 		Workflow:   "workflow.yml",
 	}
@@ -155,7 +178,31 @@ func restoreFS() fstest.MapFS {
 	return fstest.MapFS{
 		"runbook.md":   &fstest.MapFile{Data: []byte("x")},
 		"workflow.yml": &fstest.MapFile{Data: []byte("x")},
-		"fixture.sql":  &fstest.MapFile{Data: []byte("INSERT INTO vehicles …")},
+		"fixture.sql":  &fstest.MapFile{Data: []byte("INSERT INTO vehicles ...")},
+		"ops/restore/evidence/123-1.json": &fstest.MapFile{Data: []byte(`{
+			"version": 1,
+			"mode": "production-artifact",
+			"outcome": "succeeded",
+			"repository": "ev-dev-labs/teslasync",
+			"workflow_run_id": 123,
+			"workflow_run_attempt": 1,
+			"workflow_run_url": "https://github.com/ev-dev-labs/teslasync/actions/runs/123",
+			"workflow_artifact_name": "restore-drill-123-1",
+			"commit_sha": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+			"artifact_run_id": 42,
+			"artifact_sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+			"backup_created_at": "2026-08-27T00:00:00Z",
+			"drill_started_at": "2026-08-27T01:00:00Z",
+			"drill_completed_at": "2026-08-27T01:30:00Z",
+			"restore_duration_seconds": 1800,
+			"recovery_point_age_seconds": 3600,
+			"target_database": "teslasync_drill_restored",
+			"database_imported": true,
+			"schema_migrated": true,
+			"critical_table_rows": {"vehicles": 1},
+			"api_health_path": "/healthz",
+			"api_health_status": 200
+		}`)},
 	}
 }
 
@@ -179,6 +226,10 @@ func TestValidateRestore_RejectsBrokenDrills(t *testing.T) {
 		{"credentials without env names", func(d *RestoreDrill) { d.Modes[1].CredentialEnv = nil }, "credential_env naming the variables"},
 		{"no critical tables", func(d *RestoreDrill) { d.CriticalTables = nil }, "at least one table"},
 		{"criterion without implementation", func(d *RestoreDrill) { d.SuccessCriteria[0].ImplementedBy = "" }, "implemented_by is required"},
+		{"invalid RTO", func(d *RestoreDrill) { d.Objectives.RTOTarget = "soon" }, "must be a positive duration"},
+		{"missing recovery point", func(d *RestoreDrill) { d.Objectives.RecoveryPointSource = "" }, "RPO has an evidence source"},
+		{"missing incident commander", func(d *RestoreDrill) { d.Ownership.IncidentCommanderRole = "" }, "incident_commander_role is required"},
+		{"unbounded handoff", func(d *RestoreDrill) { d.Ownership.HandoffInterval = 0 }, "must be positive and no more than 4h"},
 		{"missing runbook", func(d *RestoreDrill) { d.Escalation.Runbook = "nope.md" }, "nope.md does not exist"},
 		{"missing workflow", func(d *RestoreDrill) { d.Workflow = "nope.yml" }, "nope.yml does not exist"},
 	}
@@ -200,6 +251,80 @@ func TestValidateRestore_RejectsFabricatedMeasurement(t *testing.T) {
 	}))
 	if !hasMessage(findings, "targets must never be presented as measurements") {
 		t.Fatalf("fabricated measurement status accepted: %+v", findings)
+	}
+}
+
+func TestValidateRestore_RequiresMeasuredEvidenceAndTargetCompliance(t *testing.T) {
+	findings := ValidateRestore(restoreFS(), restoreDrill(func(d *RestoreDrill) {
+		d.Objectives.MeasurementStatus = "measured"
+	}))
+	for _, want := range []string{"last_measured_at", "last_measured_rto", "last_measured_rpo", "last_drill_reference"} {
+		if !hasMessage(findings, want) {
+			t.Fatalf("missing measured-evidence finding %q: %+v", want, findings)
+		}
+	}
+
+	findings = ValidateRestore(restoreFS(), restoreDrill(func(d *RestoreDrill) {
+		d.Objectives.MeasurementStatus = "measured"
+		d.Objectives.LastMeasuredAt = "2026-08-27"
+		d.Objectives.LastMeasuredRTO = "2h"
+		d.Objectives.LastMeasuredRPO = "1h"
+		d.Objectives.LastDrillReference = "ops/restore/evidence/123-1.json"
+	}))
+	if !hasMessage(findings, "exceeds the RTO target") {
+		t.Fatalf("missed RTO target was accepted: %+v", findings)
+	}
+
+	findings = ValidateRestore(restoreFS(), restoreDrill(func(d *RestoreDrill) {
+		d.Objectives.MeasurementStatus = "pending-first-drill"
+		d.Objectives.LastMeasuredRTO = "30m"
+	}))
+	if !hasMessage(findings, "cannot carry measurement evidence") {
+		t.Fatalf("pending status with evidence was accepted: %+v", findings)
+	}
+
+	findings = ValidateRestore(restoreFS(), restoreDrill(func(d *RestoreDrill) {
+		d.Objectives.MeasurementStatus = "measured"
+		d.Objectives.LastMeasuredAt = "2026-08-27"
+		d.Objectives.LastMeasuredRTO = "30m"
+		d.Objectives.LastMeasuredRPO = "25h"
+		d.Objectives.LastDrillReference = "ops/restore/evidence/123-1.json"
+	}))
+	if !hasMessage(findings, "exceeds the RPO target") {
+		t.Fatalf("missed RPO target was accepted: %+v", findings)
+	}
+}
+
+func TestValidateRestore_AcceptsStructuredImmutableMeasurementEvidence(t *testing.T) {
+	findings := ValidateRestore(restoreFS(), restoreDrill(func(d *RestoreDrill) {
+		d.Objectives.MeasurementStatus = "measured"
+		d.Objectives.LastMeasuredAt = "2026-08-27"
+		d.Objectives.LastMeasuredRTO = "30m"
+		d.Objectives.LastMeasuredRPO = "1h"
+		d.Objectives.LastDrillReference = "ops/restore/evidence/123-1.json"
+	}))
+	if len(findings) != 0 {
+		t.Fatalf("valid immutable evidence was rejected: %+v", findings)
+	}
+}
+
+func TestValidateRestore_RejectsArbitraryMeasurementReferences(t *testing.T) {
+	for _, reference := range []string{
+		"https://github.com/ev-dev-labs/teslasync/actions/runs/123",
+		"fixture.sql",
+	} {
+		t.Run(reference, func(t *testing.T) {
+			findings := ValidateRestore(restoreFS(), restoreDrill(func(d *RestoreDrill) {
+				d.Objectives.MeasurementStatus = "measured"
+				d.Objectives.LastMeasuredAt = "2026-08-27"
+				d.Objectives.LastMeasuredRTO = "30m"
+				d.Objectives.LastMeasuredRPO = "1h"
+				d.Objectives.LastDrillReference = reference
+			}))
+			if !hasMessage(findings, "committed JSON result under ops/restore/evidence") {
+				t.Fatalf("arbitrary evidence reference %q was accepted: %+v", reference, findings)
+			}
+		})
 	}
 }
 

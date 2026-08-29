@@ -400,6 +400,15 @@ func (h *Handler) Apply(w http.ResponseWriter, r *http.Request) {
 	startMinutes := plan.ScheduledStart.Hour()*60 + plan.ScheduledStart.Minute()
 	if failedCmd, err := h.applyChargeScheduleToVehicle(ctx, vehicle.VIN, plan.TargetSOC, startMinutes); err != nil {
 		log.Error().Err(err).Str("vin", vehicle.VIN).Str("command", failedCmd).Msg("failed to apply charge schedule")
+		// Fleet API daily budget errors are a distinct, structured failure
+		// mode: ErrBudgetExceeded cannot succeed by retrying until the next
+		// UTC reset, and ErrBudgetUnavailable means the budget evidence
+		// store itself could not be read. Surface both as their real HTTP
+		// status instead of the generic 500 below.
+		if failure, matched := httpx.ClassifyTeslaBudgetError(err); matched {
+			httpx.WriteError(w, failure.StatusCode, failure.Message)
+			return
+		}
 		switch failedCmd {
 		case "set_charge_limit":
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to set charge limit")

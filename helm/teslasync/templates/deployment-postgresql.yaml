@@ -58,7 +58,7 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "teslasync.fullname" . }}
+                  name: {{ include "teslasync.secretName" . }}
                   key: DATABASE_PASS
             - name: PGDATA
               value: {{ .Values.postgresql.persistence.pgdataPath | quote }}

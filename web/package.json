@@ -59,7 +59,7 @@
     "e2e:build": "vite build --outDir e2e/.app-dist",
     "e2e:list": "playwright test --list",
     "e2e:quality": "node scripts/run-e2e-suite.mjs e2e:quality:run",
-    "e2e:quality:run": "playwright test --project=chromium-*-* --project=chromium-smoke",
+    "e2e:quality:run": "playwright test --project=chromium-*-* --project=chromium-smoke --workers=2",
     "e2e:performance": "node scripts/run-e2e-suite.mjs e2e:performance:run",
     "e2e:performance:run": "playwright test --project=chromium-performance --workers=1",
     "e2e:synthetic": "node scripts/run-e2e-suite.mjs e2e:synthetic:run",

@@ -19,6 +19,7 @@ import { gaugeTone, severityTokens, type GaugeTone, type Severity } from '@/lib/
 import { LinearGauge } from '@/components/charts';
 import {
   DataFreshnessAuto,
+  DataProvenanceBadge,
   MetricCard,
   MetricBar,
   LiveIndicator,
@@ -35,6 +36,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { cn } from '@/lib/cn';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
@@ -189,6 +191,7 @@ export default function BatteryHealthPage() {
   /* ── Data fetching ─────────────────────────────────────────────── */
   const healthQuery = useBatteryHealthAnalytics(vehicleIdStr);
   const { data: health, isLoading: healthLoading, error: healthError } = healthQuery;
+  const healthDataState = useDataState(healthQuery, { provenance: 'inferred' });
   const { data: chargingLive } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived: insights & recommendations ───────────────────────── */
@@ -483,10 +486,17 @@ export default function BatteryHealthPage() {
         narrative={narrative}
         metricColumns={3}
         freshness={
-          <DataFreshnessAuto
-            query={healthQuery}
-            source={t('operations.battery.analyticsSource', 'Battery analytics')}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <DataProvenanceBadge
+              provenance={healthDataState.provenance}
+              status={healthDataState.status}
+              updatedAt={healthDataState.updatedAt}
+            />
+            <DataFreshnessAuto
+              query={healthQuery}
+              source={t('operations.battery.analyticsSource', 'Battery analytics')}
+            />
+          </div>
         }
         scope={
           <Badge variant="neutral" size="sm">

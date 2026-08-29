@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
@@ -199,6 +200,33 @@ func TestProcessBatch_PipelineNotWiredSentinel(t *testing.T) {
 // sentinel itself outside the package.
 func wrapPipelineNotWired() error {
 	return errors.Join(errPipelineNotWired, errors.New("downstream context"))
+}
+
+func TestTimestampProvenance_PrefersValidSignalThenPayloadThenReceipt(t *testing.T) {
+	receipt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	payloadTime := "2026-08-29T09:59:00Z"
+	signalTime := "2026-08-29T09:59:30Z"
+
+	batch, batchSource := timestampOrReceipt(payloadTime, receipt)
+	if batchSource == nil || !batchSource.Equal(batch) {
+		t.Fatalf("valid CreatedAt source = %v, want %v", batchSource, batch)
+	}
+	got, source := timestampOrFallback(signalTime, batch, batchSource)
+	if source == nil || !source.Equal(got) || got.Equal(batch) {
+		t.Fatalf("valid per-signal Timestamp = (%v, %v), want distinct source evidence", got, source)
+	}
+	got, source = timestampOrFallback("malformed", batch, batchSource)
+	if source == nil || !got.Equal(batch) || !source.Equal(batch) {
+		t.Fatalf("malformed per-signal Timestamp = (%v, %v), want valid payload source %v", got, source, batch)
+	}
+	batch, batchSource = timestampOrReceipt("malformed", receipt)
+	if batchSource != nil || !batch.Equal(receipt) {
+		t.Fatalf("malformed CreatedAt = (%v, %v), want receipt fallback with nil source", batch, batchSource)
+	}
+	got, source = timestampOrFallback("", batch, batchSource)
+	if source != nil || !got.Equal(receipt) {
+		t.Fatalf("missing timestamps = (%v, %v), want receipt fallback with nil source", got, source)
+	}
 }
 
 // TestProcessBatch_DispatchesToPipeline asserts that when a pipeline

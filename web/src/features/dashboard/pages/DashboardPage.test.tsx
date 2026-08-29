@@ -671,8 +671,13 @@ describe('DashboardPage — status ownership', () => {
   it('does not duplicate the global alert or live status controls in the page header', () => {
     h.layout.editMode = true;
     renderPage();
-    expect(screen.queryByRole('link', { name: /unread alerts/i })).toBeNull();
-    expect(screen.queryByText('Live')).toBeNull();
+    const pageHeader = screen
+      .getByRole('heading', { level: 1, name: 'Fleet Operations' })
+      .closest('[data-role="page-header"]');
+    if (!pageHeader) throw new Error('Dashboard page header was not rendered');
+
+    expect(within(pageHeader).queryByRole('link', { name: /unread alerts/i })).toBeNull();
+    expect(within(pageHeader).queryByText('Live')).toBeNull();
   });
 });
 

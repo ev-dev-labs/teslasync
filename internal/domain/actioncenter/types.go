@@ -332,9 +332,13 @@ type WorkOrderRecord struct {
 }
 
 type SignalHealthRecord struct {
-	Vehicle        VehicleRef
-	LatestSignalAt *time.Time
-	CheckedAt      time.Time
+	Vehicle                VehicleRef
+	LatestSignalAt         *time.Time
+	LatestUnversionedAt    *time.Time
+	SampleCount            int64
+	VersionedSampleCount   int64
+	UnversionedSampleCount int64
+	CheckedAt              time.Time
 }
 
 type BatteryHealthRecord struct {

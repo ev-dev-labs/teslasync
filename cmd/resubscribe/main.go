@@ -50,6 +50,7 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
@@ -204,6 +205,10 @@ func run(args []string, stdout, stderr *os.File, getenv func(string) string) int
 	defer db.Close()
 
 	teslaClient := tesla.NewClient(cfg.Tesla)
+	budgetPolicy := tesla.NewBudgetPolicy(cfg.Tesla.DailyBudgetUSD, cfg.Tesla.CommandReserveUSD)
+	if budgetPolicy.Enabled() {
+		teslaClient.SetRequestBudget(teslabudgetdb.New(db.Pool, budgetPolicy))
+	}
 	vehicleRepo := vehicledb.NewVehicleRepo(db)
 
 	rc := runConfig{

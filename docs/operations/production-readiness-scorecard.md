@@ -4,9 +4,9 @@
      Source of truth: ops/scorecard/dimensions.yaml
      Regenerate with: go run ./cmd/readiness-scorecard -write -->
 
-Generated: 2026-08-27T10:01:33Z
+Generated: 2026-08-29T13:38:03Z
 
-Commit: `6e0a536adbbcde9a6bcd9a26535ca868ddbd349d`
+Commit: `c1b59bbaaa78f7fe9b4470b3bd5bb60f36b0d62d`
 
 ## How to read this
 
@@ -18,7 +18,7 @@ Every status below is **derived**, never asserted:
 | `gap` | Evidence is missing or the gate fails. |
 | `unverifiable` | The criterion needs a deployed environment, real credentials, or a human judgement. CI cannot prove it either way, so it is **excluded from the score** and listed explicitly rather than counted as met. |
 
-Score is `met / (met + gap)`. Overall: **100%** (32 met, 0 gap, 5 unverifiable).
+Score is `met / (met + gap)`. Overall: **100%** (37 met, 0 gap, 4 unverifiable).
 
 ## Summary
 
@@ -26,10 +26,10 @@ Score is `met / (met + gap)`. Overall: **100%** (32 met, 0 gap, 5 unverifiable).
 |---|---:|---:|---:|---:|
 | Availability | 100% | 5 | 0 | 0 |
 | Latency & performance | 100% | 5 | 0 | 1 |
-| Security & supply chain | 100% | 8 | 0 | 0 |
+| Security & supply chain | 100% | 10 | 0 | 0 |
 | Accessibility | 100% | 2 | 0 | 2 |
-| Recovery & resilience | 100% | 8 | 0 | 1 |
-| Cost & resource control | 100% | 4 | 0 | 1 |
+| Recovery & resilience | 100% | 9 | 0 | 1 |
+| Cost & resource control | 100% | 6 | 0 | 0 |
 
 ## Availability
 
@@ -70,6 +70,8 @@ Score is `met / (met + gap)`. Overall: **100%** (32 met, 0 gap, 5 unverifiable).
 | No credential values live in the repository; ops manifests reference env var names only.<br/><sub>`sec-no-repo-secrets`</sub> | `met` | `go run ./cmd/ops-gate -check smoke` | gate "smoke" passes |
 | No workflow interpolates an untrusted input into a shell script that holds secrets.<br/><sub>`sec-workflow-injection`</sub> | `met` | `go run ./cmd/ops-gate -check workflows` | gate "workflows" passes |
 | The pod-fatal preStop drain endpoint is not reachable through any Service or Ingress.<br/><sub>`sec-drain-plane-isolated`</sub> | `met` | `helm template test helm/teslasync \| go run ./cmd/ops-gate -verify-helm-render -` | gate "rollout" passes |
+| The Helm chart ships no static database or Grafana password and rejects known weak overrides.<br/><sub>`sec-generated-chart-credentials`</sub> | `met` | `go run ./cmd/ops-gate -check helm-secrets` | gate "helm-secrets" passes |
+| Workloads can consume one Secret materialized from Vault or a cloud secret manager without credentials in Helm values.<br/><sub>`sec-external-secret-sources`</sub> | `met` | `go run ./cmd/ops-gate -check helm-secrets` | gate "helm-secrets" passes |
 
 ## Accessibility
 
@@ -94,6 +96,7 @@ Score is `met / (met + gap)`. Overall: **100%** (32 met, 0 gap, 5 unverifiable).
 | Backup artifacts are verified automatically, not assumed.<br/><sub>`rec-backup-verification`</sub> | `met` | `go test ./cmd/backup-verify/...` | — |
 | Every SQL fixture the drill depends on matches the live schema and is executed in CI, not merely checked for existence.<br/><sub>`rec-fixtures-executable`</sub> | `met` | `go run ./cmd/ops-gate -check fixtures` | gate "fixtures" passes |
 | A scheduled restore drill is defined and wired to a workflow.<br/><sub>`rec-restore-drill-defined`</sub> | `met` | `go run ./cmd/ops-gate -check restore` | gate "restore" passes |
+| Recovery has finite RTO/RPO targets, evidence semantics, and explicitly assigned incident roles.<br/><sub>`rec-objectives-and-ownership`</sub> | `met` | `go run ./cmd/ops-gate -check restore` | gate "restore" passes |
 | A production-artifact restore drill has succeeded and its RTO is recorded.<br/><sub>`rec-restore-drill-executed`</sub> | `unverifiable` | `gh workflow run backup-restore-drill.yml -f mode=production-artifact` | needs a deployed environment or real credentials; CI cannot prove this either way |
 | Shutdown drains in-flight work instead of dropping it, the grace period can hold the whole budget, and both are covered by tests.<br/><sub>`rec-graceful-shutdown`</sub> | `met` | `go test ./internal/ops/... ./internal/app/...` | — |
 | Config cannot drift between Go, Compose, and Helm.<br/><sub>`rec-config-parity`</sub> | `met` | `go run ./cmd/ops-gate -check config-parity` | gate "config-parity" passes |
@@ -106,7 +109,8 @@ Score is `met / (met + gap)`. Overall: **100%** (32 met, 0 gap, 5 unverifiable).
 |---|---|---|---|
 | Every workload declares CPU/memory requests and limits.<br/><sub>`cost-resource-limits`</sub> | `met` | `helm template test helm/teslasync` | — |
 | Autoscaling has explicit min/max bounds rather than unbounded growth.<br/><sub>`cost-autoscaling-bounds`</sub> | `met` | `helm template test helm/teslasync` | — |
-| Time-series retention is bounded so storage cost is finite.<br/><sub>`cost-data-retention`</sub> | `unverifiable` | `manual review` | the artifact exists, but the assessment is a human judgement; CI cannot score it |
+| The default signal_log retention is finite and wired to an executable cleanup schedule.<br/><sub>`cost-data-retention`</sub> | `met` | `go run ./cmd/ops-gate -check retention` | gate "retention" passes |
+| Fleet API calls reserve against a shared daily spend ceiling while preserving command capacity.<br/><sub>`cost-fleet-api-budget`</sub> | `met` | `go run ./cmd/ops-gate -check fleet-api-budget` | gate "fleet-api-budget" passes |
 | AI provider spend is rate-limited and budgeted per-account.<br/><sub>`cost-ai-spend-limits`</sub> | `met` | `go test ./internal/ai/limit/...` | — |
 | Capacity tests have hard duration ceilings and cannot be pointed at production.<br/><sub>`cost-capacity-ceilings`</sub> | `met` | `go run ./cmd/ops-gate -check capacity` | gate "capacity" passes |
 
@@ -122,4 +126,3 @@ These are **not** claimed as done by CI. Each needs a real environment, a real d
 - **a11y-guidelines** (Accessibility) — Documented accessibility guidelines exist for contributors. — run: `manual review`
 - **a11y-audit-record** (Accessibility) — A recorded accessibility audit exists with tracked findings. — run: `manual review`
 - **rec-restore-drill-executed** (Recovery & resilience) — A production-artifact restore drill has succeeded and its RTO is recorded. — run: `gh workflow run backup-restore-drill.yml -f mode=production-artifact`
-- **cost-data-retention** (Cost & resource control) — Time-series retention is bounded so storage cost is finite. — run: `manual review`

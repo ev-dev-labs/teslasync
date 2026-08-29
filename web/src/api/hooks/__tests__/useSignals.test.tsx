@@ -6,6 +6,7 @@ import {
   useAvailableSignals,
   useLiveSignals,
   useSignalHistory,
+  useTransportAgreement,
   normalizeSignalKind,
   normalizeUnitKind,
   normalizeEnvelope,
@@ -169,7 +170,15 @@ describe('useSignalHistory', () => {
       from: '2026-01-01T00:00:00Z',
       to: '2026-01-02T00:00:00Z',
       count: 1,
-      data: [{ kind: 'ValueKindFloat', value: 27.7, ts: '2026-01-01T00:00:00Z' }],
+      data: [{
+        kind: 'ValueKindFloat',
+        value: 27.7,
+        ts: '2026-01-01T00:00:00Z',
+        ingest_origin: 'fleet_telemetry_mqtt',
+        source_emitted_at: null,
+        received_at: '2026-01-01T00:00:01Z',
+        normalization_version: 1,
+      }],
     })
     const { result } = renderHook(
       () => useSignalHistory(7, 'VehicleSpeed', { hours: 24 }),
@@ -183,6 +192,9 @@ describe('useSignalHistory', () => {
     const point = result.current.data?.data?.[0]
     expect(point?.kind).toBe('float')
     expect(point?.value).toBe(27.7)
+    expect(point?.ingest_origin).toBe('fleet_telemetry_mqtt')
+    expect(point?.source_emitted_at).toBeNull()
+    expect(point?.normalization_version).toBe(1)
   })
 
   it('prefers explicit from/to when both are supplied', async () => {
@@ -210,6 +222,54 @@ describe('useSignalHistory', () => {
 
   it('skips the request when signal name is empty', () => {
     renderHook(() => useSignalHistory(7, ''), { wrapper: makeWrapper() })
+    expect(requestMock).not.toHaveBeenCalled()
+  })
+})
+
+describe('useTransportAgreement', () => {
+  beforeEach(() => requestMock.mockReset())
+
+  it('uses the static route with encoded source-time parameters', async () => {
+    requestMock.mockResolvedValue({
+      vehicle_id: 7,
+      from: '2026-08-27T00:00:00Z',
+      to: '2026-08-28T00:00:00Z',
+      pair_tolerance_ms: 2000,
+      row_limit: 10000,
+      truncated: false,
+      source_time_only: true,
+      generated_at: '2026-08-28T00:00:01Z',
+      status: 'insufficient_overlap',
+      agreement_pct: null,
+      scanned_rows: 1,
+      invalid_value_rows: 0,
+      http_evidence_rows: 0,
+      mqtt_evidence_rows: 1,
+      comparable_pairs: 0,
+      agreeing_pairs: 0,
+      disagreeing_pairs: 0,
+      fields: [],
+    })
+    const { result } = renderHook(
+      () => useTransportAgreement(7, {
+        from: '2026-08-27T00:00:00Z',
+        to: '2026-08-28T00:00:00Z',
+      }),
+      { wrapper: makeWrapper() },
+    )
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+    const url = requestMock.mock.calls[0]?.[0] as string
+    expect(url.startsWith('/signals/7/transport-agreement?')).toBe(true)
+    expect(url).not.toContain('/api/v1')
+    const params = new URLSearchParams(url.split('?')[1])
+    expect(params.get('from')).toBe('2026-08-27T00:00:00Z')
+    expect(params.get('to')).toBe('2026-08-28T00:00:00Z')
+    expect(params.has('hours')).toBe(false)
+  })
+
+  it('does not request without a valid vehicle', () => {
+    renderHook(() => useTransportAgreement(0), { wrapper: makeWrapper() })
     expect(requestMock).not.toHaveBeenCalled()
   })
 })

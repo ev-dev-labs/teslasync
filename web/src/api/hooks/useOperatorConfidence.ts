@@ -13,6 +13,7 @@
  *   GET    /admin/observability/vehicle-cost     → VehicleCostResponse
  *   GET    /admin/observability/disk-forecast    → DiskForecastResponse
  *   GET    /admin/observability/secret-rotation  → SecretRotationResponse
+ *   GET    /admin/observability/data-quality     → DataQualitySnapshot
  *   GET    /admin/audit-log                      → AuditLogListResponse
  *   GET    /admin/audit-log/categories           → AuditCategoriesResponse
  *   GET    /admin/audit-log/actions              → AuditActionsResponse
@@ -62,6 +63,7 @@ import type {
   AuditChainVerifyResponse,
   AuditLogListResponse,
   AuditLogQueryParams,
+  DataQualitySnapshot,
   DiskForecastResponse,
   GDPRExportArtifact,
   SchemaDriftResponse,
@@ -79,6 +81,7 @@ export const operatorConfidenceKeys = {
     ['admin', 'observability', 'vehicle-cost', sinceISO, limit] as const,
   diskForecast: ['admin', 'observability', 'disk-forecast'] as const,
   secretRotation: ['admin', 'observability', 'secret-rotation'] as const,
+  dataQuality: ['admin', 'observability', 'data-quality'] as const,
   auditLogList: (params: AuditLogQueryParams) =>
     ['admin', 'audit-log', 'list', params] as const,
   auditCategories: ['admin', 'audit-log', 'categories'] as const,
@@ -195,6 +198,36 @@ export function useSecretRotation() {
       fetchEnvelope<SecretRotationResponse>(
         request('/admin/observability/secret-rotation', { signal }),
       ),
+    staleTime: STALE_TIMES.STANDARD,
+    refetchInterval: INTERVALS.SLOW,
+    refetchIntervalInBackground: false,
+    retry: 1,
+  });
+}
+
+// ---------- Data quality ---------------------------------------------------
+
+/**
+ * Bounded per-field signal_log quality scores (freshness / gaps / duplicates)
+ * plus the normalization-version coverage aggregate for the same window.
+ *
+ * Route: GET /admin/observability/data-quality (internal/api/router.go),
+ * served by internal/api/dataquality.Handler.Score. That handler writes a
+ * FLAT body through internal/api/httpx.WriteJSON — there is no `{data: …}`
+ * envelope — so this hook intentionally does NOT use `fetchEnvelope`.
+ *
+ * Polled at SLOW (60 s): the scorer aggregates a bounded window server-side,
+ * so a tighter interval would just re-run the same TimescaleDB scan. The query
+ * carries no parameters — the window is a server-side deployment concern.
+ *
+ * Returns 503 + `code: 'SUBSYSTEM_NOT_CONFIGURED'` when the signal_log pool
+ * was not wired; callers branch on `error.status === 503`.
+ */
+export function useDataQuality() {
+  return useQuery({
+    queryKey: operatorConfidenceKeys.dataQuality,
+    queryFn: ({ signal }) =>
+      request<DataQualitySnapshot>('/admin/observability/data-quality', { signal }),
     staleTime: STALE_TIMES.STANDARD,
     refetchInterval: INTERVALS.SLOW,
     refetchIntervalInBackground: false,

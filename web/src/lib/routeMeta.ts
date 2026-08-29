@@ -112,6 +112,7 @@ const PARENT_OVERRIDES: Record<string, string> = {
 
   // ── Administration & developer surfaces ────────────────────────────────
   '/admin/audit-log': '/dev-tools',
+  '/admin/data-quality': '/dev-tools',
   '/admin/disk-forecast': '/dev-tools',
   '/admin/dlq': '/dev-tools',
   '/admin/feedback': '/dev-tools',

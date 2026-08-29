@@ -33,6 +33,7 @@ import {
 import {
   Currency,
   DataFreshnessAuto,
+  DataProvenanceBadge,
   SavedViewMenu,
   MetricCard,
   MetricTile,
@@ -52,6 +53,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
@@ -281,6 +283,7 @@ export default function EnergyPage() {
   const {
     data: stats, isLoading, error: statsError, refetch,
   } = statsQuery;
+  const statsDataState = useDataState(statsQuery, { provenance: 'inferred' });
 
   const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
     limit: 100, start: startDate, end: endDate,
@@ -986,10 +989,17 @@ export default function EnergyPage() {
           </Badge>
         }
         freshness={
-          <DataFreshnessAuto
-            query={statsQuery}
-            source={t('operations.energy.consumptionSource', 'Drive consumption')}
-          />
+          <div className="flex flex-wrap items-center gap-2">
+            <DataProvenanceBadge
+              provenance={statsDataState.provenance}
+              status={statsDataState.status}
+              updatedAt={statsDataState.updatedAt}
+            />
+            <DataFreshnessAuto
+              query={statsQuery}
+              source={t('operations.energy.consumptionSource', 'Drive consumption')}
+            />
+          </div>
         }
         metrics={[
           {

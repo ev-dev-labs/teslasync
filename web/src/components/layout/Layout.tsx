@@ -612,6 +612,7 @@ export const navSections = [
       { to: '/admin/schema-drift', icon: Icons.fingerprint, label: 'Schema Drift', color: 'text-purple-400' },
       { to: '/admin/slow-queries', icon: Icons.timer, label: 'Slow Queries', color: 'text-amber-400' },
       { to: '/admin/vehicle-cost', icon: Icons.wallet, label: 'Vehicle Cost', color: 'text-lime-400' },
+      { to: '/admin/data-quality', icon: Icons.scanSearch, label: 'Data Quality', color: 'text-sky-400' },
       { to: '/admin/disk-forecast', icon: Icons.hardDrive, label: 'Disk Forecast', color: 'text-teal-400' },
       { to: '/admin/secret-rotation', icon: Icons.securityCheck, label: 'Secret Rotation', color: 'text-cyan-400' },
       { to: '/admin/audit-log', icon: Icons.history, label: 'Audit Log', color: 'text-indigo-400' },

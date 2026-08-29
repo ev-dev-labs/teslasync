@@ -12,7 +12,9 @@
 package ratelimit
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -23,9 +25,28 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
+type failingRequestBudget struct{}
+
+func (failingRequestBudget) Reserve(context.Context, tesla.BudgetCharge) (tesla.BudgetSnapshot, error) {
+	return tesla.BudgetSnapshot{}, errors.New("budget store unavailable")
+}
+
+func (failingRequestBudget) Snapshot(context.Context) (tesla.BudgetSnapshot, error) {
+	return tesla.BudgetSnapshot{}, errors.New("budget store unavailable")
+}
+
+func buildForTest(t *testing.T, h *Handler) RateLimitStatusResponse {
+	t.Helper()
+	resp, err := h.Build(context.Background())
+	if err != nil {
+		t.Fatalf("Build() error = %v", err)
+	}
+	return resp
+}
+
 func TestHandler_OmitsScopesWithNilDeps(t *testing.T) {
 	h := NewHandler(RateLimitHandlerConfig{})
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	if len(resp.Scopes) != 0 {
 		t.Fatalf("nil deps: want 0 scopes, got %d", len(resp.Scopes))
 	}
@@ -54,7 +75,7 @@ func TestHandler_AllScopesPresent(t *testing.T) {
 		WriteCounter: write,
 	})
 
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	if len(resp.Scopes) != 3 {
 		t.Fatalf("want 3 scopes, got %d", len(resp.Scopes))
 	}
@@ -91,7 +112,7 @@ func TestHandler_TeslaScopeBurstMath(t *testing.T) {
 		Timeout: 5 * time.Second,
 	})
 	h := NewHandler(RateLimitHandlerConfig{TeslaClient: tc})
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	if len(resp.Scopes) != 1 {
 		t.Fatalf("want 1 scope (tesla), got %d", len(resp.Scopes))
 	}
@@ -145,7 +166,7 @@ func TestHandler_APIScopeWindowSeconds(t *testing.T) {
 		APICounter:   api,
 		WriteCounter: write,
 	})
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	for _, s := range resp.Scopes {
 		if s.ID == RateLimitScopeAPIInternalMinute || s.ID == RateLimitScopeAPIWriteMinute {
 			if s.WindowSeconds != 60 {
@@ -160,7 +181,7 @@ func TestHandler_DefaultLimitsApplied(t *testing.T) {
 		APICounter:   platform.NewWindowCounter(),
 		WriteCounter: platform.NewWindowCounter(),
 	})
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	for _, s := range resp.Scopes {
 		switch s.ID {
 		case RateLimitScopeAPIInternalMinute:
@@ -217,6 +238,36 @@ func TestHandler_ServeHTTPRejectsNonGet(t *testing.T) {
 	}
 }
 
+func TestHandler_ServeHTTPRetainsPartialEvidenceWhenBudgetIsUnavailable(t *testing.T) {
+	tc := tesla.NewClient(config.TeslaConfig{
+		BaseURL: "https://example.invalid",
+		Timeout: 5 * time.Second,
+	})
+	tc.SetRequestBudget(failingRequestBudget{})
+	h := NewHandler(RateLimitHandlerConfig{
+		TeslaClient: tc,
+		APICounter:  platform.NewWindowCounter(),
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/system/rate-limits", nil)
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status: want 200 with partial evidence, got %d", w.Code)
+	}
+	var resp RateLimitStatusResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Scopes) != 2 {
+		t.Fatalf("scopes = %d, want burst and internal API evidence", len(resp.Scopes))
+	}
+	if len(resp.Warnings) != 1 || resp.Warnings[0] != fleetAPIBudgetUnavailableWarning {
+		t.Fatalf("warnings = %v, want budget-unavailable warning", resp.Warnings)
+	}
+}
+
 func TestHandler_TeslaResetAtAdvancesAfterUse(t *testing.T) {
 	tc := tesla.NewClient(config.TeslaConfig{
 		BaseURL: "https://example.invalid",
@@ -231,7 +282,7 @@ func TestHandler_TeslaResetAtAdvancesAfterUse(t *testing.T) {
 	// initial state. As a weaker assertion: ResetAt is either nil or
 	// in the (near) future.
 	h := NewHandler(RateLimitHandlerConfig{TeslaClient: tc})
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	if len(resp.Scopes) != 1 {
 		t.Fatalf("want 1 scope, got %d", len(resp.Scopes))
 	}
@@ -245,10 +296,43 @@ func TestHandler_TeslaScopeNilClientOmitted(t *testing.T) {
 	h := NewHandler(RateLimitHandlerConfig{
 		APICounter: platform.NewWindowCounter(),
 	})
-	resp := h.Build()
+	resp := buildForTest(t, h)
 	for _, s := range resp.Scopes {
 		if s.ID == RateLimitScopeTeslaFleetAPIBurst {
 			t.Fatalf("tesla scope must be omitted when client is nil")
 		}
+	}
+}
+
+func TestHandler_TeslaDailyBudgetScopes(t *testing.T) {
+	tc := tesla.NewClient(config.TeslaConfig{
+		BaseURL:           "https://example.invalid",
+		Timeout:           5 * time.Second,
+		DailyBudgetUSD:    0.30,
+		CommandReserveUSD: 0.05,
+	})
+	budget := tesla.NewMemoryRequestBudget(tesla.NewBudgetPolicy(0.30, 0.05))
+	tc.SetRequestBudget(budget)
+	if _, err := budget.Reserve(context.Background(), tesla.ClassifyBudgetCharge(
+		http.MethodGet,
+		"/api/1/vehicles/VIN/vehicle_data",
+	)); err != nil {
+		t.Fatalf("reserve: %v", err)
+	}
+
+	resp := buildForTest(t, NewHandler(RateLimitHandlerConfig{TeslaClient: tc}))
+	if len(resp.Scopes) != 3 {
+		t.Fatalf("want burst + 2 spend scopes, got %d", len(resp.Scopes))
+	}
+	daily := resp.Scopes[1]
+	if daily.ID != RateLimitScopeTeslaDailySpend || daily.Unit != "usd" {
+		t.Fatalf("daily scope = %+v", daily)
+	}
+	if daily.Current != 0.002 || daily.Limit != 0.30 {
+		t.Fatalf("daily usage = %v/%v, want 0.002/0.30", daily.Current, daily.Limit)
+	}
+	background := resp.Scopes[2]
+	if background.ID != RateLimitScopeTeslaBackground || background.Limit != 0.25 {
+		t.Fatalf("background scope = %+v", background)
 	}
 }

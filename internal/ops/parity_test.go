@@ -16,6 +16,7 @@ func Load() (*Config, error) {
 		Enabled:  envBool("FEATURE_ENABLED", false),
 		Timeout:  envDuration("REQUEST_TIMEOUT", 0),
 		Ratio:    envFloat("SAMPLE_RATIO", 1),
+		Ratio64:  envFloat64("DAILY_BUDGET", 0.3),
 		Secret:   envStr("API_TOKEN", ""),
 		// lowercase and non-literal calls must be ignored
 		Other: envStr(someVar, ""),
@@ -103,7 +104,7 @@ func parityManifest() *ParityManifest {
 
 func TestExtractGoEnvVars(t *testing.T) {
 	got := ExtractGoEnvVars(configGoFixture)
-	want := []string{"API_TOKEN", "FEATURE_ENABLED", "REQUEST_TIMEOUT", "SAMPLE_RATIO", "TESLASYNC_LOG_LEVEL", "TESLASYNC_PORT"}
+	want := []string{"API_TOKEN", "DAILY_BUDGET", "FEATURE_ENABLED", "REQUEST_TIMEOUT", "SAMPLE_RATIO", "TESLASYNC_LOG_LEVEL", "TESLASYNC_PORT"}
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("got %v, want %v", got, want)
 	}

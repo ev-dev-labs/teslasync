@@ -158,3 +158,57 @@ migrations:
     reversible: true
     reviewed_by: "@atulmgupta"
     reviewed_on: "2026-08-28"
+
+  - version: 233
+    name: tesla_api_budget_usage
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Purely additive: creates one new aggregate table that previous application
+      revisions do not read or write. Old and new pods can coexist during a
+      rolling deployment without changing any existing query or write path.
+    rollback_notes: >-
+      Leave the table applied when rolling the application back. Older
+      revisions ignore it, while retaining the rows preserves the current
+      billing-period evidence. Drop it only if Fleet API budget enforcement is
+      permanently removed; doing so deletes spend counters for prior UTC days.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: >-
+      CREATE TABLE and COMMENT operate only on a new relation and take no lock
+      on tables serving live traffic.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-08-28"
+
+  - version: 234
+    name: signal_log_ingest_provenance
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds nullable signal_log metadata, a NOT VALID CHECK constraint, and the
+      independent signal_transport_evidence hypertable. Previous writers omit
+      the columns and cannot populate the evidence table. If one overwrites a
+      new writer's typed payload, the guard clears source-time/receipt evidence
+      before the capture trigger runs, preventing a false transport claim.
+      New writers retain one HTTP and one MQTT observation per source key
+      without changing signal_log's canonical primary key.
+    rollback_notes: >-
+      Prefer leaving this additive migration applied during an application
+      rollback; older writers safely ignore the nullable columns and the guard
+      prevents them from retaining trusted provenance after a payload change.
+      Down drops the capture trigger and evidence hypertable, then restores the
+      exact 000232 normalization-only trigger body before dropping DT-01
+      columns. This permanently removes independent transport evidence.
+    expected_duration: seconds to minutes
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: >-
+      ALTER TABLE metadata and CREATE TRIGGER take an ACCESS EXCLUSIVE lock on
+      signal_log and may propagate to TimescaleDB chunks. The new hypertable
+      and its vehicle/source-time-leading primary index contain no existing
+      rows. Existing columns have no defaults and the CHECK is NOT VALID, so
+      there is no signal_log rewrite or validation scan; deploy in a
+      low-ingest window before rolling new pods.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-08-29"

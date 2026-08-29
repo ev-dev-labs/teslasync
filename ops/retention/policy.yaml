@@ -1,0 +1,30 @@
+# Machine-verifiable storage-retention contract.
+#
+# The retention gate cross-checks this policy against the Go default, Docker
+# Compose, Helm values/template, the signal_log cleanup query, and its scheduler:
+#
+#   go run ./cmd/ops-gate -check retention
+version: 1
+maximum_default_days: 3650
+
+store:
+  id: signal-log
+  table: signal_log
+  timestamp_column: ts
+  environment_variable: SIGNAL_HISTORY_RETENTION_DAYS
+  config_field: SignalHistoryRetentionDays
+  helm_value: signalHistoryDays
+  acknowledgement_environment_variable: SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED
+  acknowledgement_config_field: SignalHistoryRetentionAcknowledged
+  helm_acknowledgement_value: signalHistoryAcknowledged
+  default_days: 365
+  cleanup_method: Cleanup
+  scheduler_method: initSignalHistoryCleanup
+
+sources:
+  go_config: internal/config/config.go
+  compose: docker-compose.yml
+  helm_values: helm/teslasync/values.yaml
+  helm_template: helm/teslasync/templates/configmap.yaml
+  cleanup: internal/database/signal/history_writer.go
+  scheduler: internal/app/new.go

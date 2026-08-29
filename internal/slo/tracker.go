@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
+	"strings"
 	"time"
 
 	promapi "github.com/prometheus/client_golang/api"
@@ -274,9 +274,24 @@ func goodRatioExpr(s SLO, window string) string {
 }
 
 func nonZeroTrafficRatioExpr(good, valid string) string {
+	// A missing numerator must NOT read as a perfect ratio.
+	//
+	// The `or on() vector(1)` tail exists so a window with genuinely zero
+	// traffic scores 1 (no reliability budget was consumed). But if the
+	// numerator selects a series that does not exist — the classic case is a
+	// latency SLI pinned to an `le=` histogram bucket boundary that was never
+	// configured — then `good` is an empty vector, `good / valid` is empty,
+	// and the whole expression collapses straight to vector(1). The SLO then
+	// reports 100 % forever and silently monitors nothing.
+	//
+	// Coalescing the numerator to `0 * valid` keeps a real series present
+	// whenever there IS traffic, so a missing bucket surfaces as ratio 0 (a
+	// loud, immediate failure) instead of a fabricated pass. vector(1) now
+	// only applies when `valid` itself is absent or zero, which is the one
+	// case it was written for.
 	return fmt.Sprintf(
-		"(((%s) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
-		good, valid, valid,
+		"(((((%s) or on() (0 * (%s)))) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
+		good, valid, valid, valid,
 	)
 }
 
@@ -286,13 +301,16 @@ func badRatioExpr(s SLO, window string) string {
 	return fmt.Sprintf("1 - (%s)", goodRatioExpr(s, window))
 }
 
-// rewriteWindow swaps [5m] in the SLI body for the requested window.
-// Catalog convention is that all SLIs use [5m] as the reference
-// window; recording rules + alerts then re-render the same expression
-// against the desired window. If the SLI does not use [5m] we leave it
-// alone.
+// rewriteWindow swaps the reference window in the SLI body for the requested
+// window. Catalog convention is that all SLIs use [5m] as the reference
+// window; recording rules + alerts then re-render the same expression against
+// the desired window. Both the plain range `[5m]` and the subquery form
+// `[5m:30s]` are handled, in that order, so a continuity SLI built on a
+// subquery re-windows identically at runtime and at codegen time. Divergence
+// from cmd/slogen here would make the admin board disagree with the alerts
+// that actually fire.
 func rewriteWindow(expr, window string) string {
-	return windowSubRE.ReplaceAllString(expr, "["+window+"]")
+	expr = strings.ReplaceAll(expr, "[5m:30s]", "["+window+":30s]")
+	expr = strings.ReplaceAll(expr, "[5m]", "["+window+"]")
+	return expr
 }
-
-var windowSubRE = regexp.MustCompile(`\[5m\]`)

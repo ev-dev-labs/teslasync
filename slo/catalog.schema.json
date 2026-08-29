@@ -65,6 +65,11 @@
           "type": "string",
           "minLength": 1
         },
+        "fast_burn_severity": {
+          "type": "string",
+          "enum": ["page", "ticket"],
+          "description": "Optional routing override for the fast-burn alert. Defaults to page."
+        },
         "tags": {
           "type": "array",
           "items": {"type": "string", "minLength": 1},

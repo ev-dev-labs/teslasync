@@ -2534,6 +2534,48 @@ export interface SignalHistoryPoint {
   /** Row's source-of-truth ValueKind (e.g. "ValueKindDouble"). */
   kind: string
   value: number | string | boolean | null
+  ingest_origin: SignalIngestOrigin | null
+  source_emitted_at: string | null
+  received_at: string | null
+  normalization_version: number | null
+}
+
+export type TransportAgreementStatus =
+  | 'measured'
+  | 'insufficient_overlap'
+  | 'no_evidence'
+
+export interface TransportAgreementField {
+  field: string
+  status: TransportAgreementStatus
+  agreement_pct: number | null
+  http_evidence_rows: number
+  mqtt_evidence_rows: number
+  comparable_pairs: number
+  agreeing_pairs: number
+  disagreeing_pairs: number
+}
+
+/** Bounded source-time comparison from /signals/{vehicleID}/transport-agreement. */
+export interface TransportAgreementResponse {
+  vehicle_id: number
+  from: string
+  to: string
+  pair_tolerance_ms: number
+  row_limit: number
+  truncated: boolean
+  source_time_only: true
+  generated_at: string
+  status: TransportAgreementStatus
+  agreement_pct: number | null
+  scanned_rows: number
+  invalid_value_rows: number
+  http_evidence_rows: number
+  mqtt_evidence_rows: number
+  comparable_pairs: number
+  agreeing_pairs: number
+  disagreeing_pairs: number
+  fields: TransportAgreementField[]
 }
 
 export interface AutomationHistoryListResponse {
@@ -2891,6 +2933,20 @@ export interface SignalEnvelope {
   ts: string
 }
 
+/** Closed provenance vocabulary persisted by signal_log. */
+export type SignalIngestOrigin =
+  | 'unknown'
+  | 'fleet_telemetry_mqtt'
+  | 'fleet_telemetry_http'
+
+/** A typed history row with durable ingest/source-time evidence. */
+export interface SignalHistoryEnvelope extends SignalEnvelope {
+  ingest_origin: SignalIngestOrigin | null
+  source_emitted_at: string | null
+  received_at: string | null
+  normalization_version: number | null
+}
+
 /** UnitKind discriminator surfaced by /signals/{vehicleID}/available.
  *  Mirrors `protomodel.UnitKind` (none/distance/temperature/pressure/
  *  charge); `speed` is included so the frontend can flag distance-derived
@@ -2950,7 +3006,7 @@ export interface SignalHistoryResponseTyped {
   from: string
   to: string
   count: number
-  data: SignalEnvelope[]
+  data: SignalHistoryEnvelope[]
 }
 
 /** One row of the per-category routing destination map served by
@@ -3159,6 +3215,8 @@ export interface ScopeBudget {
   reset_at?: string | null
   /** Colour band the panel renders. */
   severity: RateLimitSeverity
+  /** Display unit. Omitted for request/token counts. */
+  unit?: 'usd'
   /** Operator-facing footnote shown under the row. */
   detail?: string
 }
@@ -3167,6 +3225,8 @@ export interface ScopeBudget {
 export interface RateLimitStatusResponse {
   generated_at: string
   scopes: ScopeBudget[]
+  /** Explicit partial-evidence notices; unaffected scope rows remain usable. */
+  warnings?: string[]
 }
 
 // === Job queue status ===

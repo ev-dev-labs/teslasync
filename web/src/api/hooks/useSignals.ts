@@ -19,15 +19,18 @@
 import { useQuery } from '@tanstack/react-query'
 import { request } from '../client'
 import { INTERVALS, STALE_TIMES } from '@/lib/constants'
+import { queryPolicy } from '../queryPolicy'
 import type {
   AvailableSignalsResponse,
   LiveSignalsResponse,
   SignalDescriptor,
   SignalEnvelope,
+  SignalHistoryEnvelope,
   SignalHistoryResponseTyped,
   SignalKind,
   SignalUnitKind,
   SignalValue,
+  TransportAgreementResponse,
 } from '../types'
 
 export const signalKeys = {
@@ -35,6 +38,16 @@ export const signalKeys = {
   live: (vehicleId: number) => ['typed-signals', 'live', vehicleId] as const,
   history: (vehicleId: number, name: string, hours: number, from?: string, to?: string, limit?: number) =>
     ['typed-signals', 'history', vehicleId, name, hours, from ?? '', to ?? '', limit ?? 0] as const,
+  transportAgreement: (vehicleId: number, hours: number, from?: string, to?: string) =>
+    ['typed-signals', 'transport-agreement', vehicleId, hours, from ?? '', to ?? ''] as const,
+  historyBatch: (
+    revision: number,
+    vehicleId: number,
+    signals: readonly string[],
+    from: string,
+    to: string,
+    limit: number,
+  ) => ['typed-signals', 'history-batch', revision, vehicleId, signals, from, to, limit] as const,
 }
 
 /** Time window for /history queries. `hours` (default) is converted into
@@ -44,6 +57,21 @@ export interface SignalHistoryRange {
   from?: string
   to?: string
   limit?: number
+}
+
+export interface TransportAgreementRange {
+  hours?: number
+  from?: string
+  to?: string
+}
+
+export interface SignalHistoryBatchRequest {
+  revision: number
+  vehicleId: number
+  signals: readonly string[]
+  from: string
+  to: string
+  limit: number
 }
 
 // ---------------------------------------------------------------------------
@@ -268,7 +296,33 @@ interface RawHistoryResponse {
   from: string
   to: string
   count: number
-  data?: RawSignalEnvelope[]
+  data?: RawHistoryEnvelope[]
+}
+
+interface RawHistoryEnvelope extends RawSignalEnvelope {
+  ingest_origin?: string | null
+  source_emitted_at?: string | null
+  received_at?: string | null
+  normalization_version?: number | null
+}
+
+function normalizeHistoryEnvelope(raw: RawHistoryEnvelope): SignalHistoryEnvelope {
+  const envelope = normalizeEnvelope(raw)
+  const ingestOrigin = raw.ingest_origin
+  return {
+    ...envelope,
+    ingest_origin:
+      ingestOrigin === 'unknown' ||
+      ingestOrigin === 'fleet_telemetry_mqtt' ||
+      ingestOrigin === 'fleet_telemetry_http'
+        ? ingestOrigin
+        : null,
+    source_emitted_at: raw.source_emitted_at ?? null,
+    received_at: raw.received_at ?? null,
+    normalization_version: typeof raw.normalization_version === 'number'
+      ? raw.normalization_version
+      : null,
+  }
 }
 
 /**
@@ -301,7 +355,7 @@ export function useSignalHistory(
         `/signals/${vehicleId}/${signalName}/history${qs ? `?${qs}` : ''}`,
         { signal },
       )
-      const data = (raw.data ?? []).map((row) => normalizeEnvelope(row))
+      const data = (raw.data ?? []).map(normalizeHistoryEnvelope)
       return {
         vehicle_id: raw.vehicle_id,
         signal: raw.signal,
@@ -314,5 +368,75 @@ export function useSignalHistory(
     },
     enabled: vehicleId > 0 && !!signalName,
     staleTime: STALE_TIMES.STANDARD,
+  })
+}
+
+/** Fetches one immutable, explicitly submitted history request across signals. */
+export function useSignalHistoryBatch(batch: SignalHistoryBatchRequest | null) {
+  const revision = batch?.revision ?? 0
+  const vehicleId = batch?.vehicleId ?? 0
+  const signals = batch?.signals ?? []
+  const from = batch?.from ?? ''
+  const to = batch?.to ?? ''
+  const limit = batch?.limit ?? 0
+
+  return useQuery({
+    queryKey: signalKeys.historyBatch(revision, vehicleId, signals, from, to, limit),
+    queryFn: async ({ signal }): Promise<SignalHistoryResponseTyped[]> => {
+      const results = await Promise.all(
+        signals.map(async (signalName) => {
+          const params = new URLSearchParams({ from, to, limit: String(limit) })
+          const raw = await request<RawHistoryResponse>(
+            `/signals/${vehicleId}/${encodeURIComponent(signalName)}/history?${params.toString()}`,
+            { signal },
+          )
+          return {
+            vehicle_id: raw.vehicle_id,
+            signal: raw.signal,
+            expected_kind: raw.expected_kind,
+            from: raw.from,
+            to: raw.to,
+            count: raw.count,
+            data: (raw.data ?? []).map(normalizeHistoryEnvelope),
+          }
+        }),
+      )
+      return results
+    },
+    enabled:
+      batch != null &&
+      vehicleId > 0 &&
+      signals.length > 0 &&
+      from !== '' &&
+      to !== '' &&
+      limit > 0,
+    ...queryPolicy('historical'),
+  })
+}
+
+/** GET /signals/{vehicleID}/transport-agreement — source-time-only audit. */
+export function useTransportAgreement(
+  vehicleId: number,
+  range: TransportAgreementRange = { hours: 24 },
+  enabled = true,
+) {
+  const hours = range.hours ?? 24
+  return useQuery({
+    queryKey: signalKeys.transportAgreement(vehicleId, hours, range.from, range.to),
+    queryFn: ({ signal }): Promise<TransportAgreementResponse> => {
+      const params = new URLSearchParams()
+      if (range.from && range.to) {
+        params.set('from', range.from)
+        params.set('to', range.to)
+      } else {
+        params.set('hours', String(hours))
+      }
+      return request<TransportAgreementResponse>(
+        `/signals/${vehicleId}/transport-agreement?${params.toString()}`,
+        { signal },
+      )
+    },
+    enabled: enabled && vehicleId > 0,
+    ...queryPolicy('historical'),
   })
 }

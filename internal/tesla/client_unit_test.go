@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -220,6 +221,63 @@ func TestDoRequest500(t *testing.T) {
 	_, err := c.ListVehicles(context.Background())
 	if err == nil {
 		t.Fatal("expected server error")
+	}
+}
+
+func TestDoRequestStopsBeforeNetworkWhenBudgetIsExceeded(t *testing.T) {
+	var requests atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := NewClient(config.TeslaConfig{
+		BaseURL:           server.URL,
+		AuthURL:           server.URL,
+		Timeout:           5 * time.Second,
+		DailyBudgetUSD:    0.0005,
+		CommandReserveUSD: 0,
+	})
+	_, err := c.ListVehicles(context.Background())
+	if !errors.Is(err, ErrBudgetExceeded) {
+		t.Fatalf("ListVehicles error = %v, want ErrBudgetExceeded", err)
+	}
+	if got := requests.Load(); got != 0 {
+		t.Fatalf("network requests = %d, want 0", got)
+	}
+}
+
+type unavailableRequestBudget struct{}
+
+func (unavailableRequestBudget) Reserve(context.Context, BudgetCharge) (BudgetSnapshot, error) {
+	return BudgetSnapshot{}, errors.New("database unavailable")
+}
+
+func (unavailableRequestBudget) Snapshot(context.Context) (BudgetSnapshot, error) {
+	return BudgetSnapshot{}, errors.New("database unavailable")
+}
+
+func TestDoRequestMapsBudgetStoreFailureToServiceUnavailable(t *testing.T) {
+	var requests atomic.Int64
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		requests.Add(1)
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	c := newTestClient(server)
+	c.SetRequestBudget(unavailableRequestBudget{})
+
+	_, status, err := c.doRequest(context.Background(), http.MethodGet, "/api/1/vehicles", nil)
+	if !errors.Is(err, ErrBudgetUnavailable) {
+		t.Fatalf("doRequest error = %v, want ErrBudgetUnavailable", err)
+	}
+	if status != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", status, http.StatusServiceUnavailable)
+	}
+	if got := requests.Load(); got != 0 {
+		t.Fatalf("network requests = %d, want 0", got)
 	}
 }
 

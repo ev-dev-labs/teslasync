@@ -39,7 +39,7 @@ spec:
             - name: GF_SECURITY_ADMIN_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "teslasync.fullname" . }}
+                  name: {{ include "teslasync.secretName" . }}
                   key: GRAFANA_ADMIN_PASSWORD
           livenessProbe:
             httpGet:

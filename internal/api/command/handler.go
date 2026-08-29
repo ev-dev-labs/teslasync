@@ -223,6 +223,37 @@ func (h *CommandHandler) SendCommand(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Fleet API daily budget errors are a distinct, structured failure mode:
+	// they cannot succeed by retrying the same request (ErrBudgetExceeded
+	// cannot clear until the next UTC reset) or indicate the budget evidence
+	// store itself is unreachable (ErrBudgetUnavailable). Surface both as
+	// their real HTTP status instead of falling through to the generic
+	// network/500 classification below, matching WriteTeslaTokenExpired's
+	// precedent for distinguishing Tesla sentinel errors.
+	if cmdErr != nil {
+		if failure, matched := httpx.ClassifyTeslaBudgetError(cmdErr); matched {
+			fsm.MarkFailed(&cmdFSM.CommandError{
+				StatusCode: failure.StatusCode,
+				Message:    failure.Message,
+				Category:   failure.Category,
+			})
+			cl := &vehiclemodel.CommandLog{
+				VehicleID: vehicleID,
+				Command:   body.Command,
+				Params:    string(paramsJSON),
+				Status:    "failed",
+				Error:     cmdErr.Error(),
+			}
+			if logErr := h.commandRepo.Create(r.Context(), cl); logErr != nil {
+				log.Error().Err(logErr).Msg("failed to log command")
+			}
+			log.Warn().Err(cmdErr).Int64("vehicle_id", vehicleID).Str("command", body.Command).
+				Str("category", failure.Category).Msg("Tesla command rejected: Fleet API budget constraint")
+			httpx.WriteError(w, failure.StatusCode, failure.Message)
+			return
+		}
+	}
+
 	if cmdErr != nil {
 		category := "network"
 		fsm.MarkFailed(&cmdFSM.CommandError{

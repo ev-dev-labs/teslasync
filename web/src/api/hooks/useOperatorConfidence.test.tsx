@@ -44,6 +44,7 @@ import {
   useVehicleCost,
   useDiskForecast,
   useSecretRotation,
+  useDataQuality,
   useAuditLog,
   useAuditCategories,
   useAuditActions,
@@ -56,6 +57,7 @@ import type {
   VehicleCostResponse,
   DiskForecastResponse,
   SecretRotationResponse,
+  DataQualitySnapshot,
   AuditLogListResponse,
   AuditCategoriesResponse,
   AuditActionsResponse,
@@ -113,6 +115,11 @@ describe('operatorConfidenceKeys', () => {
       'admin',
       'observability',
       'secret-rotation',
+    ]);
+    expect(operatorConfidenceKeys.dataQuality).toEqual([
+      'admin',
+      'observability',
+      'data-quality',
     ]);
     expect(operatorConfidenceKeys.auditCategories).toEqual([
       'admin',
@@ -257,6 +264,101 @@ describe('useSecretRotation', () => {
     expect(firstUrl()).toBe('/admin/observability/secret-rotation');
     expect(result.current.data?.items[0].kind).toBe('tesla_token');
     expect(result.current.data?.items[0].severity).toBe('warn');
+  });
+});
+
+describe('useDataQuality', () => {
+  const payload: DataQualitySnapshot = {
+    generated_at: '2026-08-29T12:00:00Z',
+    window_start: '2026-08-29T11:00:00Z',
+    window_end: '2026-08-29T12:00:00Z',
+    window_mins: 60,
+    required_normalization_version: 1,
+    normalization: {
+      required_version: 1,
+      total_sample_count: 1000,
+      versioned_sample_count: 800,
+      unversioned_sample_count: 200,
+      coverage_pct: 80,
+      coverage_state: 'measured',
+      versions: [
+        { version: null, sample_count: 200, share_pct: 20 },
+        { version: 1, sample_count: 800, share_pct: 80 },
+      ],
+    },
+    firmware_assignment: 'latest_version_at_window_end',
+    firmware_segments: [],
+    fields: [
+      {
+        field: 'VehicleSpeed',
+        sample_count: 1000,
+        last_seen_at: '2026-08-29T11:59:50Z',
+        freshness_seconds: 10,
+        max_gap_seconds: 2,
+        duplicate_ratio: 0.01,
+        versioned_sample_count: 800,
+        unversioned_sample_count: 200,
+        normalization_coverage_pct: 80,
+        normalization_coverage_state: 'measured',
+        composite_score: 92,
+        severity: 'ok',
+      },
+    ],
+  };
+
+  it('GETs the data-quality route with no /api/v1 prefix and threads the signal', async () => {
+    // This handler writes a FLAT body (internal/api/httpx.WriteJSON), so the
+    // hook must NOT try to unwrap a {data:…} envelope.
+    requestMock.mockResolvedValueOnce(payload);
+    const { result } = renderHook(() => useDataQuality(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(firstUrl()).toBe('/admin/observability/data-quality');
+    expect(firstUrl().startsWith('/api/v1')).toBe(false);
+    expect(firstOpts().signal).toBeInstanceOf(AbortSignal);
+    expect(result.current.data?.normalization.coverage_pct).toBe(80);
+    expect(result.current.data?.fields[0].field).toBe('VehicleSpeed');
+  });
+
+  it('preserves a null aggregate coverage rather than coercing it to 0', async () => {
+    requestMock.mockResolvedValueOnce({
+      ...payload,
+      normalization: {
+        required_version: 1,
+        total_sample_count: 0,
+        versioned_sample_count: 0,
+        unversioned_sample_count: 0,
+        coverage_pct: null,
+        coverage_state: 'unknown',
+        versions: [],
+      },
+      fields: [],
+    } satisfies DataQualitySnapshot);
+    const { result } = renderHook(() => useDataQuality(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.normalization.coverage_pct).toBeNull();
+    expect(result.current.data?.normalization.coverage_state).toBe('unknown');
+  });
+
+  it('preserves the null legacy version bucket distinctly from version 0', async () => {
+    requestMock.mockResolvedValueOnce({
+      ...payload,
+      normalization: {
+        ...payload.normalization,
+        versions: [
+          { version: null, sample_count: 100, share_pct: 10 },
+          { version: 0, sample_count: 100, share_pct: 10 },
+          { version: 1, sample_count: 800, share_pct: 80 },
+        ],
+      },
+    } satisfies DataQualitySnapshot);
+    const { result } = renderHook(() => useDataQuality(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    const versions = result.current.data?.normalization.versions ?? [];
+    expect(versions[0].version).toBeNull();
+    expect(versions[1].version).toBe(0);
   });
 });
 

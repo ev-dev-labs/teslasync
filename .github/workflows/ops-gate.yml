@@ -10,7 +10,8 @@ name: Ops gate
 #
 # What it enforces (see `go run ./cmd/ops-gate -list`):
 #   epics · smoke · rollback · restore · migrations · rollout
-#   config-parity · supply-chain · capacity · runbooks · scorecard
+#   config-parity · helm-secrets · supply-chain · capacity · retention
+#   runbooks · scorecard
 #
 # The migration gate is the one most likely to fail an unrelated PR, and
 # that is intentional: a new migration without a forward-compatibility,
@@ -106,6 +107,9 @@ jobs:
 
       - name: Apply migrations
         run: migrate -path migrations -database "$DB_URL" up
+
+      - name: Execute Fleet API budget reservation contract
+        run: TESLASYNC_TEST_DSN="$DB_URL" go test ./internal/database/teslabudget -run TestRepoReserveAgainstPostgres -count=1 -v
 
       - name: Execute every registered fixture
         run: |
@@ -247,5 +251,164 @@ jobs:
             fi
           done
 
+      - name: Secret management contracts
+        env:
+          TEST_DATABASE_PASSWORD: CIOnlyDatabasePassword-2026
+          TEST_GRAFANA_PASSWORD: CIOnlyGrafanaPassword-2026
+          TEST_OPERATOR_TOKEN: CIOnlyOperatorToken-2026
+        run: |
+          set -euo pipefail
+
+          # Offline/GitOps renders are deterministic and only reference a
+          # pre-provisioned runtime Secret.
+          helm template test helm/teslasync > default-again.yaml
+          cmp default.yaml default-again.yaml
+          if grep -q '^kind: Secret$' default.yaml; then
+            echo "::error::default offline render emitted credential material"
+            exit 1
+          fi
+
+          if helm template test helm/teslasync \
+            --set secrets.create=true \
+            --set-string postgresql.auth.password=teslasync >/dev/null 2>&1; then
+            echo "::error::known weak PostgreSQL password was accepted"
+            exit 1
+          fi
+
+          helm template test helm/teslasync \
+            --set secrets.create=true \
+            --set-string postgresql.auth.password="$TEST_DATABASE_PASSWORD" \
+            --set-string grafana.adminPassword="$TEST_GRAFANA_PASSWORD" \
+            --set-string operator.token="$TEST_OPERATOR_TOKEN" \
+            --set unitDriftValidator.enabled=true \
+            > chart-managed-secret.yaml
+          grep -q '^kind: Secret$' chart-managed-secret.yaml
+          grep -q 'TESLASYNC_OPERATOR_TOKEN:' chart-managed-secret.yaml
+
+          helm template test helm/teslasync \
+            --set-string secrets.existingSecret=teslasync-runtime \
+            --set unitDriftValidator.enabled=true \
+            > existing-secret.yaml
+          grep -q 'kind: CronJob' existing-secret.yaml
+          grep -q 'name: teslasync-runtime' existing-secret.yaml
+          if grep -q '^kind: Secret$' existing-secret.yaml; then
+            echo "::error::chart-managed Secret rendered in existing Secret mode"
+            exit 1
+          fi
+
+          helm template test helm/teslasync \
+            --set externalSecrets.enabled=true \
+            --set-string externalSecrets.secretStoreRef.name=production-secrets \
+            --set-string externalSecrets.target.name=teslasync-runtime \
+            --set-string 'externalSecrets.dataFrom[0].extract.key=teslasync/production' \
+            --set unitDriftValidator.enabled=true \
+            > external-secret.yaml
+
+          grep -q '^kind: ExternalSecret$' external-secret.yaml
+          grep -q 'name: teslasync-runtime' external-secret.yaml
+          grep -q 'kind: CronJob' external-secret.yaml
+          if grep -q '^kind: Secret$' external-secret.yaml; then
+            echo "::error::chart-managed Secret rendered alongside ExternalSecret"
+            exit 1
+          fi
+
       - name: Lint
         run: helm lint helm/teslasync --strict
+
+      # OPS-03 — migration hook secret gate.
+      #
+      # The migration Job is a pre-install/pre-upgrade hook that reads
+      # DATABASE_PASS from the runtime Secret via envFrom. Helm applies
+      # hooks BEFORE ordinary manifests, so an ExternalSecret rendered as
+      # an ordinary manifest did not exist when the Job was scheduled: on
+      # a fresh install ESO had not been asked to fetch anything and the
+      # pod sat in CreateContainerConfigError until the hook timed out.
+      #
+      # Every supported secret mode is rendered and checked here, plus the
+      # negative controls, because this invariant only exists after
+      # templating.
+      - name: Migration hook secret gate
+        run: |
+          set -euo pipefail
+          go test ./internal/ops/ -run 'MigrationGate|RealChart' -count=1
+
+          # Belt and braces: assert the rendered shapes directly so a
+          # regression is visible even if the Go test is skipped.
+          helm template test helm/teslasync \
+            --set externalSecrets.enabled=true \
+            --set-string externalSecrets.secretStoreRef.name=production-secrets \
+            --set-string externalSecrets.target.name=teslasync-runtime \
+            --set-string 'externalSecrets.dataFrom[0].extract.key=teslasync/production' \
+            > gate-external.yaml
+          go run ./cmd/ops-gate -verify-helm-render gate-external.yaml
+          grep -q 'wait-for-runtime-secret' gate-external.yaml
+          grep -q 'optional: true' gate-external.yaml
+          # Ordinary -> hook conversion must survive Helm's regular
+          # removal phase, and the hook recreate must not garbage-collect
+          # the target Secret.
+          grep -q 'helm.sh/resource-policy: keep' gate-external.yaml
+          grep -q 'creationPolicy: "Orphan"' gate-external.yaml
+
+          helm template test helm/teslasync \
+            --set secrets.create=true \
+            --set-string postgresql.auth.password="$TEST_DATABASE_PASSWORD" \
+            --set-string grafana.adminPassword="$TEST_GRAFANA_PASSWORD" \
+            > gate-managed.yaml
+          go run ./cmd/ops-gate -verify-helm-render gate-managed.yaml
+          grep -q 'helm.sh/resource-policy: keep' gate-managed.yaml
+
+          helm template test helm/teslasync > gate-default.yaml
+          go run ./cmd/ops-gate -verify-helm-render gate-default.yaml
+          if grep -q 'wait-for-runtime-secret' gate-default.yaml; then
+            echo "::error::default render gained a migration gate wait; existing behaviour changed"
+            exit 1
+          fi
+
+          helm template test helm/teslasync \
+            --set-string secrets.existingSecret=teslasync-runtime > gate-existing.yaml
+          go run ./cmd/ops-gate -verify-helm-render gate-existing.yaml
+
+          helm template test helm/teslasync \
+            --set-string secrets.existingSecret=teslasync-runtime \
+            --set migrationGate.mode=require > gate-require.yaml
+          go run ./cmd/ops-gate -verify-helm-render gate-require.yaml
+          grep -q 'wait-for-runtime-secret' gate-require.yaml
+
+          # ── Combinations the chart must refuse to render ───────────
+          refuse() {
+            local label="$1"; shift
+            if helm template test helm/teslasync "$@" > /dev/null 2>&1; then
+              echo "::error::${label} rendered; the migration gate contract is not enforced"
+              exit 1
+            fi
+            echo "refused: ${label}"
+          }
+          # require + a chart-rendered source is a guaranteed
+          # fresh-install timeout: Helm cannot apply an ordinary manifest
+          # until the pre-install hooks have finished.
+          refuse 'require + externalSecrets' \
+            --set externalSecrets.enabled=true \
+            --set-string externalSecrets.secretStoreRef.name=s \
+            --set-string 'externalSecrets.dataFrom[0].extract.key=k' \
+            --set migrationGate.mode=require
+          refuse 'require + secrets.create' \
+            --set secrets.create=true \
+            --set-string postgresql.auth.password="$TEST_DATABASE_PASSWORD" \
+            --set-string grafana.adminPassword="$TEST_GRAFANA_PASSWORD" \
+            --set migrationGate.mode=require
+          refuse 'hook + no chart-rendered source' --set migrationGate.mode=hook
+          refuse 'hook + existingSecret' \
+            --set-string secrets.existingSecret=teslasync-runtime \
+            --set migrationGate.mode=hook
+          # Owner sets ownerReferences, so the hook recreate would
+          # garbage-collect the target Secret.
+          refuse 'hook + creationPolicy Owner' \
+            --set externalSecrets.enabled=true \
+            --set-string externalSecrets.secretStoreRef.name=s \
+            --set-string 'externalSecrets.dataFrom[0].extract.key=k' \
+            --set-string externalSecrets.target.creationPolicy=Owner
+
+          echo "migration hook secret gate contracts hold"
+        env:
+          TEST_DATABASE_PASSWORD: CIOnlyDatabasePassword-2026
+          TEST_GRAFANA_PASSWORD: CIOnlyGrafanaPassword-2026

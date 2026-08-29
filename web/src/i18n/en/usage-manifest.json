@@ -1,6 +1,8 @@
 {
   "namespaceToBundle": {
     "density": "shell",
+    "signalTransportAgreement": "telemetry",
+    "signalLog": "telemetry",
     "route": "shared",
     "emptyState": "shell",
     "sortControl": "shared",
@@ -664,6 +666,22 @@
       "vehicleSelect",
       "workspace"
     ],
+    "telemetry": [
+      "liveMonitor",
+      "mqtt",
+      "signalChangePoints",
+      "signalChart",
+      "signalDeadband",
+      "signalDiff",
+      "signalEntropy",
+      "signalGap",
+      "signalHistory",
+      "signalLog",
+      "signalMutualInformation",
+      "signalStats",
+      "signalTransportAgreement",
+      "signalTrend"
+    ],
     "shared": [
       "activity",
       "annotation",
@@ -1168,20 +1186,6 @@
       "mapOverview",
       "navigation",
       "tempImpact"
-    ],
-    "telemetry": [
-      "liveMonitor",
-      "mqtt",
-      "signalChangePoints",
-      "signalChart",
-      "signalDeadband",
-      "signalDiff",
-      "signalEntropy",
-      "signalGap",
-      "signalHistory",
-      "signalMutualInformation",
-      "signalStats",
-      "signalTrend"
     ],
     "trips": [
       "trips"
@@ -2253,6 +2257,7 @@
     "routes.dashcamIntelligence",
     "routes.dataExport",
     "routes.dataGovernance",
+    "routes.dataQuality",
     "routes.dataRepair",
     "routes.departureForecast",
     "routes.destinationTransitions",
@@ -3048,6 +3053,8 @@
   ],
   "namespaceFallbackBundles": {
     "density": "detail-density",
+    "signalTransportAgreement": "telemetry",
+    "signalLog": "telemetry",
     "route": "detail-route",
     "emptyState": "detail-emptyState",
     "sortControl": "detail-sortControl",
@@ -4467,6 +4474,7 @@
     "routes.dashcamIntelligence",
     "routes.dataExport",
     "routes.dataGovernance",
+    "routes.dataQuality",
     "routes.dataRepair",
     "routes.departureForecast",
     "routes.destinationTransitions",

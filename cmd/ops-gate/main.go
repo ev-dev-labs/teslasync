@@ -11,6 +11,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -215,6 +216,13 @@ func verifyHelmRender(opt *options, stdout, stderr io.Writer) int {
 		defer fh.Close()
 		src = fh
 	}
+	// Buffered once: both checks need the whole stream, and stdin can
+	// only be consumed a single time.
+	render, err := io.ReadAll(src)
+	if err != nil {
+		fmt.Fprintf(stderr, "ops-gate: read render: %v\n", err)
+		return 2
+	}
 
 	exp := ops.DefaultRenderExpectations()
 	exp.DrainPort = opt.drainPort
@@ -222,7 +230,8 @@ func verifyHelmRender(opt *options, stdout, stderr io.Writer) int {
 	exp.ExpectCanary = opt.expectCanary
 
 	res := &ops.Result{}
-	res.Add(ops.VerifyHelmRender(src, exp)...)
+	res.Add(ops.VerifyHelmRender(bytes.NewReader(render), exp)...)
+	res.Add(ops.VerifyMigrationGate(string(render))...)
 	res.Sort()
 	if !opt.quiet {
 		writeReport(stdout, res)

@@ -28,7 +28,7 @@ import { ListExportMenu } from '@/components/forms/ListExportMenu';
 import {
   SavedViewMenu,
   KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
-  BulkActionsToolbar, DataFreshnessAuto, OperationalBrief, type BulkAction,
+  BulkActionsToolbar, DataFreshnessAuto, DataProvenanceBadge, OperationalBrief, type BulkAction,
   EntityPreviewDrawer, type OperationalAttention,
 } from '@/components/data-display';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
@@ -136,8 +136,9 @@ export default function ChargingListPage() {
   const { data: sessions, isLoading, error, refetch } = chargingQuery;
   /* Retained sessions survive a failed background refresh: only an initial
    * failure (nothing cached) is allowed to replace the list with an error. */
-  const chargingState = useDataState(chargingQuery);
+  const chargingState = useDataState(chargingQuery, { provenance: 'historical' });
   const vehicleStateQuery = useVehicleState(vehicleId ?? 0);
+  const vehicleStateDataState = useDataState(vehicleStateQuery, { provenance: 'live' });
   const liveState = vehicleStateQuery.data?.state;
   const [previewSession, setPreviewSession] = useState<ChargingSession | null>(null);
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
@@ -856,9 +857,19 @@ export default function ChargingListPage() {
           scope={<Badge variant="neutral" size="sm">{periodLabel}</Badge>}
           freshness={
             <div className="flex flex-wrap items-center gap-2">
+              <DataProvenanceBadge
+                provenance={vehicleStateDataState.provenance}
+                status={vehicleStateDataState.status}
+                updatedAt={vehicleStateDataState.updatedAt}
+              />
               <DataFreshnessAuto
                 query={vehicleStateQuery}
                 source={t('operations.charging.liveStateSource', 'Live vehicle state')}
+              />
+              <DataProvenanceBadge
+                provenance={chargingState.provenance}
+                status={chargingState.status}
+                updatedAt={chargingState.updatedAt}
               />
               <DataFreshnessAuto
                 query={chargingQuery}

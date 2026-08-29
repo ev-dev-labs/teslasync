@@ -14,6 +14,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 )
 
 // chargeStateRegistry holds the per-tracker signal.StateReader injected by
@@ -80,11 +81,15 @@ func stateToLegacyMap(s signal.State) map[string]interface{} {
 
 // streamingCharge tracks comprehensive data during an active charging session.
 type streamingCharge struct {
-	SessionID   int64
-	VehicleID   int64
-	StartTime   time.Time
-	LastSeen    time.Time
-	EnergyAdded float64
+	SessionID            int64
+	VehicleID            int64
+	StartTime            time.Time
+	LastSeen             time.Time
+	EnergyAdded          float64
+	EnergyCounterField   string
+	EnergyCounterStartWh *float64
+	EnergyCounterLastWh  *float64
+	EnergyCounterReset   bool
 
 	// Signal accumulator (same pattern as streamingDrive)
 	accumulatedSignals map[string]interface{}
@@ -120,6 +125,81 @@ type streamingCharge struct {
 	// was installed via SetChargeStateReader — the enrichment code path
 	// then degrades gracefully to empty snapshot maps.
 	state signal.StateReader
+}
+
+func chargeEnergyCounterValue(signals map[string]interface{}, preferredField string) (string, float64, bool) {
+	if preferredField != "" {
+		value, ok := signalFloat(signals, preferredField)
+		return preferredField, value, ok
+	}
+	for _, field := range []string{"DCChargingEnergyIn", "ACChargingEnergyIn"} {
+		if value, ok := signalFloat(signals, field); ok {
+			return field, value, true
+		}
+	}
+	return "", 0, false
+}
+
+func observeChargeEnergyCounter(active *streamingCharge, signals map[string]interface{}) {
+	field, value, ok := chargeEnergyCounterValue(signals, active.EnergyCounterField)
+	if !ok || !signalcounter.Valid(value) {
+		return
+	}
+
+	if active.EnergyCounterStartWh == nil {
+		active.EnergyCounterField = field
+		active.EnergyCounterStartWh = floatPtr(value)
+	}
+	if active.EnergyCounterLastWh != nil {
+		change := signalcounter.Compare(*active.EnergyCounterLastWh, value)
+		if change.Kind == signalcounter.ChangeReset {
+			active.EnergyCounterReset = true
+		}
+	}
+	active.EnergyCounterLastWh = floatPtr(value)
+}
+
+func snapshotChargeEnergyDelta(
+	startSnap, endSnap map[string]interface{},
+	preferredField string,
+) (float64, signalcounter.ChangeKind, bool) {
+	fields := []string{"DCChargingEnergyIn", "ACChargingEnergyIn"}
+	if preferredField != "" {
+		fields = append([]string{preferredField}, fields...)
+	}
+	seen := make(map[string]struct{}, len(fields))
+	for _, field := range fields {
+		if _, duplicate := seen[field]; duplicate {
+			continue
+		}
+		seen[field] = struct{}{}
+
+		start, startOK := snapFloat(startSnap, field)
+		end, endOK := snapFloat(endSnap, field)
+		if !startOK || !endOK {
+			continue
+		}
+		change := signalcounter.Compare(start, end)
+		return change.Delta, change.Kind, true
+	}
+	return 0, signalcounter.ChangeInvalid, false
+}
+
+func trackedChargeEnergyDelta(active *streamingCharge) (float64, bool) {
+	if active.EnergyCounterReset ||
+		active.EnergyCounterStartWh == nil ||
+		active.EnergyCounterLastWh == nil {
+		return 0, false
+	}
+	change := signalcounter.Compare(*active.EnergyCounterStartWh, *active.EnergyCounterLastWh)
+	switch change.Kind {
+	case signalcounter.ChangeAdvanced:
+		return change.Delta, true
+	case signalcounter.ChangeUnchanged:
+		return 0, true
+	default:
+		return 0, false
+	}
 }
 
 func freshChargeCoordinateValue(v *signal.Value, at time.Time) bool {
@@ -188,6 +268,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		// Even without charge state, accumulate signals for active charge
 		t.mu.Lock()
 		if active, ok := t.activeCharges[vehicleID]; ok {
+			observeChargeEnergyCounter(active, signals)
 			active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
 			active.LastSeen = time.Now().UTC()
 			t.maybeFlushChargeTelemetry(ctx, active)
@@ -261,6 +342,8 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		if startRange > 0 {
 			sc.StartRangeKm = floatPtr(startRange)
 		}
+		observeChargeEnergyCounter(sc, accumulatedSignals)
+		observeChargeEnergyCounter(sc, signals)
 
 		t.activeCharges[vehicleID] = sc
 		metrics.ChargeSessionsActive.Inc()
@@ -309,11 +392,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		}
 
 		// Track energy
-		if ea, ok := signalFloat(signals, "DCChargingEnergyIn"); ok {
-			active.EnergyAdded = ea
-		} else if ea, ok := signalFloat(signals, "ACChargingEnergyIn"); ok {
-			active.EnergyAdded = ea
-		}
+		observeChargeEnergyCounter(active, signals)
 
 		// Track charger details
 		if v, ok := signalInt(signals, "ChargerPhases"); ok {
@@ -361,6 +440,7 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 
 	} else if !isCharging && hasCharge {
 		// === CHARGE ENDED ===
+		observeChargeEnergyCounter(active, signals)
 		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok &&
 			t.chargeLocationIsFresh(
 				vehicleID,
@@ -465,10 +545,9 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	// the SI replacement — it reconstructs full signal state at a point in
 	// time using last-known values (ADR-002).
 
-	// Estimate energy from battery% diff if direct energy signal unavailable
-	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
-		estimatedWh := float64(endBattery-active.StartBatteryLevel) * 750
-		active.EnergyAdded = estimatedWh
+	active.EnergyAdded = 0
+	if energyDelta, ok := trackedChargeEnergyDelta(active); ok {
+		active.EnergyAdded = energyDelta
 	}
 
 	// Build enhanced fields (only columns that exist in charging_sessions)
@@ -528,14 +607,16 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 			endBattery = int(bl)
 		}
 
-		// Energy added: difference in cumulative energy counter
-		if startEnergy, ok := snapFloat(startSnap, "ACChargingEnergyIn"); ok {
-			if endEnergy, ok := snapFloat(endSnap, "ACChargingEnergyIn"); ok {
-				energyDelta := endEnergy - startEnergy
-				if energyDelta > 0 {
-					active.EnergyAdded = energyDelta
-					enhancedFields["total_energy_added_wh"] = energyDelta
-				}
+		// Energy added: difference in one consistent cumulative counter.
+		if energyDelta, kind, ok := snapshotChargeEnergyDelta(
+			startSnap,
+			endSnap,
+			active.EnergyCounterField,
+		); ok {
+			active.EnergyAdded = 0
+			if !active.EnergyCounterReset && kind == signalcounter.ChangeAdvanced {
+				active.EnergyAdded = energyDelta
+				enhancedFields["total_energy_added_wh"] = energyDelta
 			}
 		}
 
@@ -617,6 +698,13 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 				}
 			}
 		}
+	}
+
+	// A counter reset, invalid sample, or missing baseline makes direct energy
+	// unavailable. Preserve the existing independent SOC-based estimate rather
+	// than persisting an absolute counter value as session energy.
+	if active.EnergyAdded == 0 && active.StartBatteryLevel > 0 && endBattery > active.StartBatteryLevel {
+		active.EnergyAdded = float64(endBattery-active.StartBatteryLevel) * 750
 	}
 
 	// cost_currency / cost_decimal / geofence_id / rate_id / cost_source are

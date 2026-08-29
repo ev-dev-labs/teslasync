@@ -128,6 +128,16 @@ dimensions:
         evidence: [internal/app/drain.go, internal/ops/helmrender.go, ops/rollout/stages.yaml]
         gate: rollout
         verification: helm template test helm/teslasync | go run ./cmd/ops-gate -verify-helm-render -
+      - id: sec-generated-chart-credentials
+        statement: The Helm chart ships no static database or Grafana password and rejects known weak overrides.
+        evidence: [helm/teslasync/templates/_helpers.tpl, helm/teslasync/values.yaml, internal/ops/helmsecrets.go]
+        gate: helm-secrets
+        verification: go run ./cmd/ops-gate -check helm-secrets
+      - id: sec-external-secret-sources
+        statement: Workloads can consume one Secret materialized from Vault or a cloud secret manager without credentials in Helm values.
+        evidence: [helm/teslasync/templates/externalsecret.yaml, docs/operations/secret-management.md]
+        gate: helm-secrets
+        verification: go run ./cmd/ops-gate -check helm-secrets
 
   # ── Accessibility ────────────────────────────────────────────────────
   - id: accessibility
@@ -187,6 +197,11 @@ dimensions:
         evidence: [ops/restore/drill.yaml, .github/workflows/backup-restore-drill.yml, docs/runbooks/backup-restore-drill.md]
         gate: restore
         verification: go run ./cmd/ops-gate -check restore
+      - id: rec-objectives-and-ownership
+        statement: Recovery has finite RTO/RPO targets, evidence semantics, and explicitly assigned incident roles.
+        evidence: [ops/restore/drill.yaml, docs/runbooks/backup-restore-drill.md, internal/ops/runbooks.go]
+        gate: restore
+        verification: go run ./cmd/ops-gate -check restore
       - id: rec-restore-drill-executed
         statement: A production-artifact restore drill has succeeded and its RTO is recorded.
         evidence: [ops/restore/drill.yaml]
@@ -216,10 +231,15 @@ dimensions:
         evidence: [helm/teslasync/templates/hpa.yaml, helm/teslasync/values.yaml]
         verification: helm template test helm/teslasync
       - id: cost-data-retention
-        statement: Time-series retention is bounded so storage cost is finite.
-        evidence: [helm/teslasync/values.yaml, docs/operations/cost-controls.md]
-        verification: manual review
-        requires_human_review: true
+        statement: The default signal_log retention is finite and wired to an executable cleanup schedule.
+        evidence: [ops/retention/policy.yaml, internal/ops/retention.go, docs/operations/cost-controls.md]
+        gate: retention
+        verification: go run ./cmd/ops-gate -check retention
+      - id: cost-fleet-api-budget
+        statement: Fleet API calls reserve against a shared daily spend ceiling while preserving command capacity.
+        evidence: [ops/fleet-api-budget/policy.yaml, internal/tesla/budget.go, internal/database/teslabudget/repo.go, docs/operations/fleet-api-budget.md]
+        gate: fleet-api-budget
+        verification: go run ./cmd/ops-gate -check fleet-api-budget
       - id: cost-ai-spend-limits
         statement: AI provider spend is rate-limited and budgeted per-account.
         evidence: [internal/ai/limit/cost.go, internal/ai/limit/quota.go]

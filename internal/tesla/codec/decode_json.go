@@ -149,6 +149,7 @@ func DecodeJSONField(field string, body []byte, vin string, fallbackTs time.Time
 // The body slice MUST NOT be retained beyond the call (a bytes.NewReader
 // is captured for one Unmarshal, then released to the caller's pool).
 func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin string, fallbackTs time.Time) (atoms []Atomic, err error) {
+	var sourceEmittedAt *time.Time
 	_, span := otel.Tracer(codecTracerName).Start(
 		ctx,
 		"codec.decode_json_field",
@@ -159,6 +160,14 @@ func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin stri
 		),
 	)
 	defer func() {
+		// DecodeJSONField is transport-agnostic. The MQTT subscriber stamps
+		// the final atomics at the actual receipt boundary; direct callers
+		// remain explicitly unknown. This post-decode pass deliberately runs
+		// after compound flattening so every child retains provenance.
+		for i := range atoms {
+			atoms[i].IngestOrigin = IngestOriginUnknown
+			atoms[i].SourceEmittedAt = sourceEmittedAt
+		}
 		span.SetAttributes(attribute.Int("atomics_emitted", len(atoms)))
 		if err != nil {
 			span.RecordError(err)
@@ -174,7 +183,7 @@ func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin stri
 		return nil, nil
 	}
 
-	body, ts, err := unwrapEnvelope(body, fallbackTs)
+	body, ts, sourceEmittedAt, err := unwrapEnvelope(body, fallbackTs)
 	if err != nil {
 		jsonDecodeErrorsTotal.WithLabelValues(field).Inc()
 		span.SetAttributes(attribute.String("outcome", "envelope_error"))
@@ -299,34 +308,36 @@ func decodeJSONFieldStrict(meta *protomodel.SignalMeta, field string, body []byt
 // upstream proto NEVER places "value" as a Field name and getProtoValue's
 // returnAsToplevel collapse hides intermediate wrapper objects, so
 // "value" can only mean the envelope.
-func unwrapEnvelope(body []byte, fallbackTs time.Time) ([]byte, time.Time, error) {
+func unwrapEnvelope(body []byte, fallbackTs time.Time) ([]byte, time.Time, *time.Time, error) {
 	trimmed := bytes.TrimSpace(body)
 	if len(trimmed) == 0 || trimmed[0] != '{' {
-		return body, fallbackTs, nil
+		return body, fallbackTs, nil, nil
 	}
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(trimmed, &probe); err != nil {
 		// Not a parseable object — let the per-kind decoder report the
 		// real error against the original body for a clearer message.
-		return body, fallbackTs, nil
+		return body, fallbackTs, nil, nil
 	}
 	raw, ok := probe["value"]
 	if !ok {
-		return body, fallbackTs, nil
+		return body, fallbackTs, nil, nil
 	}
 	ts := fallbackTs
+	var sourceEmittedAt *time.Time
 	if rawTs, hasTs := probe["ts"]; hasTs {
 		var s string
 		if err := json.Unmarshal(rawTs, &s); err != nil {
-			return nil, time.Time{}, fmt.Errorf("envelope ts: %v", err)
+			return nil, time.Time{}, nil, fmt.Errorf("envelope ts: %v", err)
 		}
 		parsed, err := time.Parse(time.RFC3339Nano, s)
 		if err != nil {
-			return nil, time.Time{}, fmt.Errorf("envelope ts %q: %v", s, err)
+			return nil, time.Time{}, nil, fmt.Errorf("envelope ts %q: %v", s, err)
 		}
-		ts = parsed
+		ts = parsed.UTC()
+		sourceEmittedAt = &ts
 	}
-	return raw, ts, nil
+	return raw, ts, sourceEmittedAt, nil
 }
 
 // isJSONNull reports whether body is the literal JSON null token. Used to

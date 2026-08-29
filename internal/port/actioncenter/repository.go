@@ -29,6 +29,13 @@ type SourceReader interface {
 	ListActiveWorkOrders(ctx context.Context, vehicleID *int64, limit int) ([]actioncenter.WorkOrderRecord, error)
 	ListCommandReliability(ctx context.Context, vehicleID *int64, since, checkedAt time.Time, limit int) ([]actioncenter.CommandReliabilityRecord, error)
 	ListSignalHealth(ctx context.Context, vehicleID *int64, from, to time.Time, limit int) ([]actioncenter.SignalHealthRecord, error)
+	// ListActiveVehicles enumerates non-archived vehicles independently of
+	// any evidence filter. ListSignalHealth deliberately narrows to vehicles
+	// that produced a signal-health FINDING (stale telemetry or unattested
+	// normalization rows); reusing it as a vehicle roster would silently drop
+	// healthy, fully-versioned vehicles from unrelated evaluations.
+	// Ordering is deterministic (id ASC) and the result is bounded by limit.
+	ListActiveVehicles(ctx context.Context, vehicleID *int64, limit int) ([]actioncenter.VehicleRef, error)
 	ListOpenSystemIncidents(ctx context.Context, limit int) ([]actioncenter.SystemIncidentRecord, error)
 }
 

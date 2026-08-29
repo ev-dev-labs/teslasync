@@ -101,6 +101,11 @@ vi.mock('@/api/hooks/useTelemetry', async (importActual) => {
   return { ...actual, useSignals: vi.fn() };
 });
 
+vi.mock('@/api/hooks/useSignals', async (importActual) => {
+  const actual = await importActual<typeof import('@/api/hooks/useSignals')>();
+  return { ...actual, useTransportAgreement: vi.fn() };
+});
+
 vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   const actual = await importActual<typeof import('@/hooks/useSelectedVehicle')>();
   return { ...actual, useSelectedVehicle: vi.fn() };
@@ -122,12 +127,14 @@ if (typeof window.matchMedia !== 'function') {
 
 import { request } from '@/api/client';
 import { useSignals } from '@/api/hooks/useTelemetry';
+import { useTransportAgreement } from '@/api/hooks/useSignals';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { ToastProvider } from '@/components/feedback/Toast';
 import SignalLogViewerPage from './SignalLogViewerPage';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 const mockSignals = vi.mocked(useSignals);
+const mockTransportAgreement = vi.mocked(useTransportAgreement);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 
 // ── Builders ──────────────────────────────────────────────────────────────
@@ -175,6 +182,12 @@ beforeEach(() => {
   window.localStorage.clear();
   mockSelectedVehicle.mockReturnValue(makeSelected(7, [veh(7)]));
   mockSignals.mockReturnValue(signalsResult());
+  mockTransportAgreement.mockReturnValue({
+    data: undefined,
+    error: null,
+    isLoading: false,
+    refetch: vi.fn(),
+  } as unknown as ReturnType<typeof useTransportAgreement>);
 });
 
 describe('SignalLogViewerPage', () => {
@@ -216,6 +229,9 @@ describe('SignalLogViewerPage', () => {
       screen.getByText('Run a query to see the value-type breakdown.'),
     ).toBeInTheDocument();
     expect(screen.getByText('No signal data matches the selected signals and time range.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Run a signal query to audit HTTP and MQTT evidence for the same time window.'),
+    ).toBeInTheDocument();
 
     // No fetch was triggered.
     expect(mockedRequest).not.toHaveBeenCalled();
@@ -244,6 +260,7 @@ describe('SignalLogViewerPage', () => {
 
     // One request per selected signal.
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(document.querySelector('[data-provenance="historical"]')).toBeInTheDocument();
 
     // Request contract: `/signals/{id}/{signal}/history` with snake-ish params,
     // limit = perPage(50) × 10, NO `/api/v1` double-prefix, and the TanStack
@@ -309,6 +326,85 @@ describe('SignalLogViewerPage', () => {
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
     expect(mockedRequest.mock.calls[0][0]).toContain('limit=1000');
     expect(mockedRequest.mock.calls[0][0]).not.toContain('limit=500');
+  });
+
+  it('keeps results tied to the submitted vehicle, signals, range, and page size until Query runs again', async () => {
+    mockedRequest.mockImplementation(async (url: string) => {
+      if (url.includes('/speed/history')) {
+        return resp('speed', [pt('2026-07-01T10:00:00Z', 'submitted-speed-value')]);
+      }
+      return resp('soc', [pt('2026-07-01T10:01:00Z', 'resubmitted-soc-value')]);
+    });
+
+    renderPage(`?signals=speed&${RANGE}`);
+    fireEvent.click(screen.getByRole('button', { name: 'Query' }));
+    await screen.findByText('submitted-speed-value');
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    const submittedAgreementRange = mockTransportAgreement.mock.calls.at(-1)?.[1];
+
+    // Change every readily mutable cockpit scope without submitting. The
+    // already-rendered evidence must continue to describe the original query.
+    mockSelectedVehicle.mockReturnValue(makeSelected(8, [veh(7), veh(8)]));
+    fireEvent.change(screen.getByLabelText('Per Page'), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Remove speed' }));
+    const signalInput = screen.getByRole('combobox', { name: 'Signals' });
+    fireEvent.focus(signalInput);
+    fireEvent.click(await screen.findByRole('option', { name: 'soc' }));
+    fireEvent.click(screen.getByTestId('signal-log-range'));
+    fireEvent.click(await screen.findByRole('option', { name: 'Last 7 days' }));
+
+    expect(mockedRequest).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('submitted-speed-value')).toBeInTheDocument();
+    const agreementArgs = mockTransportAgreement.mock.calls.at(-1);
+    expect(agreementArgs?.[0]).toBe(7);
+    expect(agreementArgs?.[1]).toEqual(submittedAgreementRange);
+    expect(agreementArgs?.[2]).toBe(true);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Query' }));
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    expect(mockedRequest.mock.calls[1][0]).toContain('/signals/8/soc/history');
+    expect(mockedRequest.mock.calls[1][0]).toContain('limit=1000');
+    expect(mockedRequest.mock.calls[1][0]).not.toContain('2026-07-01');
+    await screen.findByText('resubmitted-soc-value');
+  });
+
+  // ── Defect 3: long-range presets must not truncate the submitted window ──
+  // The agreement API caps its audit at 168 h, but that cap belongs to the
+  // panel's own limit state — the page must keep the submitted range exactly
+  // as the operator chose it for BOTH the history fetch and the agreement
+  // props, so nothing is silently narrowed behind their back.
+  it.each([
+    ['Last 30 days', 30],
+    ['Last 90 days', 90],
+  ])('keeps the full %s window for history and agreement without truncating to 168 hours', async (presetLabel, minDays) => {
+    mockedRequest.mockResolvedValue(resp('speed', [pt('2026-07-01T10:00:00Z', 42)]));
+
+    renderPage(`?signals=speed&${RANGE}`);
+
+    fireEvent.click(screen.getByTestId('signal-log-range'));
+    fireEvent.click(await screen.findByRole('option', { name: presetLabel }));
+    fireEvent.click(screen.getByRole('button', { name: 'Query' }));
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(1));
+
+    // 1 — Signal history keeps the whole range; it is never clamped to 7 days.
+    const url = new URL(mockedRequest.mock.calls[0][0] as string, 'https://example.invalid');
+    const historyFrom = url.searchParams.get('from') as string;
+    const historyTo = url.searchParams.get('to') as string;
+    expect(historyFrom).toBeTruthy();
+    expect(historyTo).toBeTruthy();
+    const historyHours =
+      (Date.parse(historyTo) - Date.parse(historyFrom)) / 3_600_000;
+    expect(historyHours).toBeGreaterThan(168);
+    // Presets end "now", so allow the sub-second rounding of the preset edge.
+    expect(historyHours).toBeGreaterThan(minDays * 24 - 1);
+
+    // 2 — The agreement panel receives that identical untruncated window.
+    //     (The panel decides to withhold the request; the page never lies
+    //     about which range was submitted.)
+    const agreementArgs = mockTransportAgreement.mock.calls.at(-1);
+    expect(agreementArgs?.[0]).toBe(7);
+    expect(agreementArgs?.[1]).toEqual({ from: historyFrom, to: historyTo });
   });
 
   it('surfaces the catalog error in a danger banner without crashing the cockpit', () => {

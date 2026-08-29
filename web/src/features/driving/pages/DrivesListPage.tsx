@@ -16,7 +16,7 @@ import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
   BulkActionsToolbar, type BulkAction,
   KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
-  DataFreshnessAuto, EntityPreviewDrawer,
+  DataFreshnessAuto, DataProvenanceBadge, EntityPreviewDrawer,
   type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
@@ -117,7 +117,7 @@ export default function DrivesListPage() {
    * rows already on screen. `fatalError` is non-null only when the very first
    * load failed with nothing retained, so it is the only error allowed to
    * reach <PageContainer error={...}> (which replaces all page content). */
-  const drivesState = useDataState(drivesQuery);
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
   const [previewDrive, setPreviewDrive] = useState<Drive | null>(null);
 
   /* Single source of truth for the vehicle + date window every scoped read and
@@ -877,10 +877,17 @@ export default function DrivesListPage() {
             </Badge>
           }
           freshness={(
-            <DataFreshnessAuto
-              query={drivesQuery}
-              source={t('operations.drives.historySource', 'Drive history')}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <DataProvenanceBadge
+                provenance={drivesState.provenance}
+                status={drivesState.status}
+                updatedAt={drivesState.updatedAt}
+              />
+              <DataFreshnessAuto
+                query={drivesQuery}
+                source={t('operations.drives.historySource', 'Drive history')}
+              />
+            </div>
           )}
           metricColumns={3}
           metrics={[
