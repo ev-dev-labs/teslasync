@@ -1,6 +1,6 @@
 # Build Tesla Fleet Telemetry from a pinned upstream revision, applying the
 # TeslaSync MQTT event-time envelope patch before compilation.
-FROM golang:1.26-bookworm AS build
+FROM golang:1.27-bookworm AS build
 
 ARG FLEET_TELEMETRY_REF=8fbaa100bd365936dab6ecbf0e2d7070c4d765cb
 ARG FLEET_TELEMETRY_ARCHIVE_SHA256=8a0e2cc31a3c962b4e6296687e75b5fb208fbbe53ccf928af220ec2bf7fdb355
