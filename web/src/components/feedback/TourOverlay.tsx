@@ -1,10 +1,11 @@
-import { useEffect } from 'react';
+import { useEffect, useId, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui';
+import { Button } from '@/components/ui/runtime';
 import { X, ArrowLeft, ArrowRight } from 'lucide-react';
 import type { TourStep } from '@/hooks/useTour';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { isFocusRestorable } from '@/hooks/useDialogFocus';
 
 interface TourOverlayProps {
   step: TourStep;
@@ -22,6 +23,81 @@ export function TourOverlay({
 }: TourOverlayProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
+  const tooltipRef = useRef<HTMLDivElement>(null);
+  const titleId = useId();
+  const descId = useId();
+
+  /**
+   * A11y — announcement without a focus trap.
+   *
+   * This is a NON-modal spotlight (`aria-modal="false"`): the whole point is
+   * that the highlighted element stays reachable, so trapping focus inside the
+   * tooltip would defeat the feature and strand keyboard users away from the
+   * thing being explained.
+   *
+   * What it does instead: move focus to the tooltip container when it appears
+   * AND on every step change. Focus is the announcement mechanism here — a
+   * screen reader reads the container's accessible name (`aria-labelledby` →
+   * the step heading) and description (`aria-describedby` → the step body) on
+   * arrival, so each step is announced exactly once without an `aria-live`
+   * region fighting the tour's own DOM updates.
+   *
+   * ## Why `hasTooltip` is in the dependency list
+   *
+   * In production this component mounts with `targetRect === null` — `useTour`
+   * measures the spotlight target in an effect *after* the first render — so
+   * the component early-returns and there is no tooltip yet. An effect keyed
+   * on `[currentStep]` alone therefore ran once against a null ref, no-oped,
+   * and never re-ran when the rect arrived (the step had not changed). Result:
+   * step 1 was never announced, and only steps 2..n worked. Tests that passed
+   * a rect on first render could not see this.
+   *
+   * Keying on tooltip *availability* rather than on `targetRect` itself is
+   * deliberate: the rect object is replaced on every scroll and resize, so
+   * depending on it would yank focus back to the tooltip continuously while
+   * the user scrolls. A boolean only flips when the tooltip appears or
+   * disappears.
+   */
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const hasTooltip = targetRect !== null;
+  useEffect(() => {
+    if (previouslyFocusedRef.current === null) {
+      const active = document.activeElement as HTMLElement | null;
+      // Never record the tooltip itself as the restore target (it is about to
+      // be focused), and never record `<body>` — restoring to body restarts
+      // the next Tab at the top of the document.
+      if (active && active !== document.body && !tooltipRef.current?.contains(active)) {
+        previouslyFocusedRef.current = active;
+      }
+    }
+    if (!hasTooltip) return;
+    tooltipRef.current?.focus();
+  }, [currentStep, hasTooltip]);
+
+  /**
+   * Restore focus on teardown (finish, skip, or unmount).
+   *
+   * Runs once, on unmount only — a per-step restore would fight the per-step
+   * focus effect above. Mirrors the fallback chain used by `useDialogFocus`
+   * without importing its trap: the trigger if it survived, otherwise the
+   * route heading, otherwise `<main>`.
+   */
+  useEffect(() => {
+    return () => {
+      const previous = previouslyFocusedRef.current;
+      if (isFocusRestorable(previous)) {
+        previous.focus();
+        return;
+      }
+      const routeHeading = document.querySelector<HTMLElement>('[data-route-focus-target]');
+      if (isFocusRestorable(routeHeading)) {
+        routeHeading.focus();
+        return;
+      }
+      const main = document.querySelector<HTMLElement>('main');
+      if (isFocusRestorable(main)) main.focus();
+    };
+  }, []);
 
   // Keyboard operability: Esc dismisses the tour, matching the close
   // button and the backdrop click. The listener is only registered while
@@ -92,18 +168,25 @@ export function TourOverlay({
 
       {/* Tooltip */}
       <div
+        ref={tooltipRef}
         className={cn(
           'absolute max-w-sm p-4 rounded-xl bg-[var(--bg-secondary)]',
           'border border-[var(--border-subtle)] shadow-2xl backdrop-blur-xl',
+          'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
           reduce ? '' : 'animate-in fade-in slide-in-from-bottom-2 duration-normal',
         )}
         style={tooltipStyle}
         role="dialog"
+        // Non-modal by design: the spotlight target must stay reachable, so
+        // assistive tech is explicitly told the rest of the page is NOT inert.
         aria-modal="false"
-        aria-label={t('tour.dialogLabel', 'Tour step {{current}} of {{total}}', {
-          current: currentStep + 1,
-          total: totalSteps,
-        })}
+        aria-labelledby={titleId}
+        aria-describedby={descId}
+        // Programmatically focusable but not a tab stop of its own — focus
+        // arrives here on open and on each step change, then Tab proceeds
+        // naturally into the tooltip's own controls.
+        tabIndex={-1}
+        data-testid="tour-tooltip"
       >
         {/* Close button — 44px touch target for mobile */}
         <button
@@ -115,7 +198,7 @@ export function TourOverlay({
           aria-label={t('tour.close', 'Close tour')}
           data-testid="tour-close"
         >
-          <X className="h-4 w-4" />
+          <X className="h-4 w-4" aria-hidden="true" />
         </button>
 
         {/* Step counter */}
@@ -123,9 +206,25 @@ export function TourOverlay({
           {currentStep + 1} / {totalSteps}
         </div>
 
-        {/* Content */}
-        <h4 className="text-sm font-semibold text-[var(--text-primary)] mb-1">{step.title}</h4>
-        <p className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4">{step.description}</p>
+        {/* Content.
+            The heading is an <h2> rather than an <h4>: it is the accessible
+            name of the dialog, and a screen-reader user navigating by heading
+            level must not have to skip two levels to reach it. Visual size is
+            set by the class, not by the tag. */}
+        <h2
+          id={titleId}
+          className="text-sm font-semibold text-[var(--text-primary)] mb-1"
+          data-testid="tour-title"
+        >
+          {step.title}
+        </h2>
+        <p
+          id={descId}
+          className="text-xs text-[var(--text-secondary)] leading-relaxed mb-4"
+          data-testid="tour-description"
+        >
+          {step.description}
+        </p>
 
         {/* Navigation */}
         <div className="flex items-center justify-between">

@@ -16,7 +16,6 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
@@ -49,6 +48,8 @@ export default function MotorHistoryCharts({ vehicleId }: MotorHistoryChartsProp
   // power-vs-regen trace; users often want to isolate one or the other
   // when looking at a regen-heavy descent or a sustained throttle pull.
   const powerHidden = useHiddenSeries('motor-power-history');
+  const torqueHidden = useHiddenSeries('motor-torque-history');
+  const rpmHidden = useHiddenSeries('motor-rpm-history');
 
   const powerChartData = useMemo(
     () =>
@@ -151,6 +152,7 @@ export default function MotorHistoryCharts({ vehicleId }: MotorHistoryChartsProp
           height={280}
           exportable
           exportFilename="torque-history"
+          chartKey="motor-torque-history"
         >
           {torqueHasData ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -159,9 +161,9 @@ export default function MotorHistoryCharts({ vehicleId }: MotorHistoryChartsProp
                 <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" Nm" />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#3b82f6" name={t('dynamics.torqueFront', 'Front Torque')} />
-                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.torqueRear', 'Rear Torque')} />
+                <ChartLegend state={torqueHidden} wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#3b82f6" name={t('dynamics.torqueFront', 'Front Torque')} hide={torqueHidden.isHidden('front')} />
+                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.torqueRear', 'Rear Torque')} hide={torqueHidden.isHidden('rear')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (
@@ -180,6 +182,7 @@ export default function MotorHistoryCharts({ vehicleId }: MotorHistoryChartsProp
           height={280}
           exportable
           exportFilename="motor-rpm"
+          chartKey="motor-rpm-history"
         >
           {rpmHasData ? (
             <ResponsiveContainer width="100%" height={280}>
@@ -188,9 +191,9 @@ export default function MotorHistoryCharts({ vehicleId }: MotorHistoryChartsProp
                 <XAxis dataKey="time" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} />
                 <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 11 }} unit=" RPM" />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
-                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#06b6d4" name={t('dynamics.rpmFront', 'Front RPM')} />
-                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.rpmRear', 'Rear RPM')} />
+                <ChartLegend state={rpmHidden} wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+                <Line {...AREA_DEFAULTS} dataKey="front" stroke="#06b6d4" name={t('dynamics.rpmFront', 'Front RPM')} hide={rpmHidden.isHidden('front')} />
+                <Line {...AREA_DEFAULTS} dataKey="rear" stroke="#a855f7" name={t('dynamics.rpmRear', 'Rear RPM')} hide={rpmHidden.isHidden('rear')} />
               </LineChart>
             </ResponsiveContainer>
           ) : (

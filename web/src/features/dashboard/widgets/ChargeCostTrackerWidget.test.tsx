@@ -408,7 +408,7 @@ describe('ChargeCostTrackerWidget — interactions & a11y', () => {
     const q = setQuery({ data: [makeSession()] });
     renderWidget(FULL);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     expect(q.refetch).toHaveBeenCalledTimes(1);

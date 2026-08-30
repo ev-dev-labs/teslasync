@@ -52,6 +52,7 @@ import { FadeIn } from '@/components/motion';
 import {
   EmptyState,
   AlertBanner,
+  DataStateNotice,
   QueryError,
   Skeleton,
   SectionErrorBoundary,
@@ -281,15 +282,15 @@ export default function AuditLogPage() {
       query={logQuery}
     >
       {subsystemMissing && (
-        <AlertBanner
-          variant="warning"
-          title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}
+        <DataStateNotice
+          state="unsupported"
+          title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}
         >
           {t(
             'admin.auditLog.notConfigured',
             'The audit log subsystem is not configured on this deployment.',
           )}
-        </AlertBanner>
+        </DataStateNotice>
       )}
 
       {/* 1 — KPI band: derived, full-width responsive metric grid */}

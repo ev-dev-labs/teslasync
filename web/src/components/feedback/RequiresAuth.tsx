@@ -31,6 +31,7 @@ import { LockKeyhole } from 'lucide-react';
 import { useAuthMode } from '@/api/hooks/useAuthMode';
 import { Heading, Text } from '@/components/ui/Typography';
 import { cn } from '@/lib/cn';
+import { PermissionGuidanceNotice } from './PermissionGuidanceNotice';
 import type { AuthModeCapabilities } from '@/api/types';
 
 /**
@@ -163,6 +164,15 @@ function RequiresAuthPlaceholder({
       <Text variant="bodySm" as="p" className="max-w-md">
         {body}
       </Text>
+      {/* HELP-10. The copy above explains WHY the section is unavailable; this
+          adds WHO can change it and WHAT to say when asking. "Set
+          FORWARD_AUTH_HEADER" is actionable for an operator reading their own
+          install and useless to everyone else, who need to know which person
+          to go to. */}
+      <PermissionGuidanceNotice
+        kind="open_mode"
+        className="mt-1 w-full max-w-md text-left"
+      />
     </div>
   );
 }

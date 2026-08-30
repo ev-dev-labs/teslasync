@@ -346,7 +346,7 @@ describe('SleepEfficiencyWidget refresh', () => {
   it('re-issues the read when the freshness refresh control is activated', async () => {
     renderWidget({ vehicleId: 1 });
 
-    const refresh = await screen.findByRole('button', { name: 'Refresh' });
+    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     const before = sleepCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

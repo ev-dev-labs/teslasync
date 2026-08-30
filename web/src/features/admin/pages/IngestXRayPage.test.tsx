@@ -94,13 +94,16 @@ vi.mock('framer-motion', () => {
   };
 });
 
-// ── Vehicle list: two vehicles, statically returned ───────────────────────────
+// ── Vehicle list: mutable so the empty-fleet state remains covered ────────────
+const vehicleHook = vi.hoisted(() => ({
+  data: [
+    { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
+    { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
+  ],
+}));
 vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({
-    data: [
-      { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
-      { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
-    ],
+    data: vehicleHook.data,
     isLoading: false,
   }),
 }));
@@ -192,13 +195,18 @@ beforeEach(() => {
   // reset the xray behaviour so each test starts from a clean slate.
   mockedRequest.mockClear();
   xrayFn.mockReset();
+  vehicleHook.data = [
+    { id: 1, display_name: 'Falcon', vin: 'TESLA0000000001' },
+    { id: 2, display_name: 'Hawk', vin: 'TESLA0000000002' },
+  ];
 });
 
 describe('IngestXRayPage', () => {
-  it('keeps the query disabled and shows dashes (not a fake 0) before a vehicle is picked', () => {
+  it('keeps the query disabled and shows dashes (not a fake 0) for an empty fleet', () => {
+    vehicleHook.data = [];
     renderPage();
 
-    // Query is gated on a selected vehicle → the X-Ray endpoint must not fire.
+    // Query is gated until the canonical selection can resolve a vehicle.
     expect(xrayFn).not.toHaveBeenCalled();
 
     // The "select a vehicle" CTA banner is visible.

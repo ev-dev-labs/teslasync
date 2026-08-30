@@ -196,10 +196,10 @@ const catalog: SignalMeta[] = [
   { name: 'ForwardCollisionWarning', category: 'Safety', type: 'string', description: 'Forward collision warning sensitivity', enumValues: ['Off', 'Late', 'Average', 'Early'] },
   { name: 'LaneDepartureAvoidance', category: 'Safety', type: 'string', description: 'Lane departure avoidance mode', enumValues: ['Off', 'Warning', 'Assist'] },
   { name: 'Locked', category: 'Security', type: 'boolean', description: 'Vehicle locked state' },
-  { name: 'MilesSinceReset', category: 'Driving', type: 'number', unit: 'mi', description: 'Miles since trip reset' },
+  { name: 'MilesSinceReset', category: 'Driving', type: 'number', unit: 'm', description: 'Resettable trip distance counter since the last reset. Normalized to SI meters on ingest despite the "Miles" proto name.' },
   { name: 'PassengerSeatBelt', category: 'Safety', type: 'boolean', description: 'Passenger seat belt buckled' },
   { name: 'PinToDriveEnabled', category: 'Security', type: 'boolean', description: 'PIN to Drive enabled' },
-  { name: 'SelfDrivingMilesSinceReset', category: 'Driving', type: 'number', unit: 'mi', description: 'Self-driving miles since trip reset' },
+  { name: 'SelfDrivingMilesSinceReset', category: 'Driving', type: 'number', unit: 'm', description: 'Resettable supervised self-driving distance counter. Normalized to SI meters on ingest despite the "Miles" proto name; it does not describe interventions or safety.' },
   { name: 'SpeedLimitWarning', category: 'Safety', type: 'string', description: 'Speed limit warning mode', enumValues: ['Off', 'Display', 'Chime'] },
 
   // ── Service / Tire Pressure ───────────────────────────────────────────

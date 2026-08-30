@@ -24,7 +24,8 @@ import {
   useTestAlertRule,
   useToggleAlertRule,
 } from '@/api/hooks/useNotifications'
-import type { AlertRuleKind, ComputedMetricOp } from '@/api/types'
+import { useAvailableSignals } from '@/api/hooks/useSignals'
+import type { AlertRuleKind, ComputedMetricOp, SignalUnitKind } from '@/api/types'
 import type { SignalValueType } from '@/types/signals'
 import { GlassPanel, Badge, Button as UiButton, Checkbox, ConfirmDialog, Input as UiInput, Select as UiSelect, Modal, HelpIcon, Tabs, Toggle, Text, PanelTitle, Caption, HelperText, ErrorText } from '@/components/ui'
 import { BulkActionsToolbar, type BulkAction, MetricCard, SeverityBadge, SeverityIcon } from '@/components/data-display'
@@ -634,6 +635,7 @@ export default function AlertStudio() {
   const { confirm: confirmDelete, dialogProps: deleteDialogProps } = useConfirm()
   const { confirm: confirmDiscard, dialogProps: discardDialogProps } = useConfirm()
   const { vehicleId: aiVehicleId } = useSelectedVehicle()
+  const availableSignalsQuery = useAvailableSignals(aiVehicleId ?? 0)
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   // Multi-row selection for bulk enable/disable.
@@ -977,6 +979,65 @@ export default function AlertStudio() {
   }, [editor.signal_name, editor.value_kind])
 
   const selectedSignalType = selectedSignal?.value_type ?? 'numeric'
+  const selectedSignalDescriptor = useMemo(
+    () => availableSignalsQuery.data?.signals.find(
+      signal => signal.name === editor.signal_name,
+    ) ?? null,
+    [availableSignalsQuery.data?.signals, editor.signal_name],
+  )
+  const canonicalUnitHint = useMemo(() => {
+    if (!aiVehicleId) {
+      return t(
+        'notifications.alertStudio.editor.canonicalUnitNoVehicle',
+        'Enter the canonical SI value emitted by Fleet Telemetry. Select a vehicle in the status line to load exact unit metadata.',
+      )
+    }
+    if (availableSignalsQuery.isLoading) {
+      return t(
+        'notifications.alertStudio.editor.canonicalUnitLoading',
+        'Loading the canonical unit for this signal…',
+      )
+    }
+    const hints: Record<SignalUnitKind, string> = {
+      distance: t(
+        'notifications.alertStudio.editor.canonicalUnitDistance',
+        'Canonical SI input: meters (m).',
+      ),
+      temperature: t(
+        'notifications.alertStudio.editor.canonicalUnitTemperature',
+        'Canonical input: degrees Celsius (°C).',
+      ),
+      pressure: t(
+        'notifications.alertStudio.editor.canonicalUnitPressure',
+        'Canonical SI input: pascals (Pa).',
+      ),
+      charge: t(
+        'notifications.alertStudio.editor.canonicalUnitCharge',
+        'Canonical input: percent from 0 to 100.',
+      ),
+      speed: t(
+        'notifications.alertStudio.editor.canonicalUnitSpeed',
+        'Canonical SI input: meters per second (m/s).',
+      ),
+      none: t(
+        'notifications.alertStudio.editor.canonicalUnitFallback',
+        'Enter the canonical numeric value emitted by Fleet Telemetry; this signal has no registered unit dimension.',
+      ),
+    }
+    if (availableSignalsQuery.isError || !selectedSignalDescriptor) {
+      return t(
+        'notifications.alertStudio.editor.canonicalUnitUnavailable',
+        'Unit metadata is unavailable for this signal. Enter the canonical numeric value emitted by Fleet Telemetry.',
+      )
+    }
+    return hints[selectedSignalDescriptor.unit_kind]
+  }, [
+    aiVehicleId,
+    availableSignalsQuery.isError,
+    availableSignalsQuery.isLoading,
+    selectedSignalDescriptor,
+    t,
+  ])
 
   const signalSelectOptions = useMemo(() => {
     const options = signalCatalog.map(signal => ({
@@ -1282,65 +1343,57 @@ export default function AlertStudio() {
     if (valueKind === 'range') {
       return (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div>
-            <label htmlFor="alert-value-min" className={fieldLabelCls}>
-              {t('notifications.alertStudio.editor.minValueLabel', 'Minimum Value')}
-            </label>
-            <UiInput
-              id="alert-value-min"
-              type="number"
-              className="w-full"
-              value={editor.value_min}
-              onChange={e => setEditor(s => ({ ...s, value_min: e.target.value }))}
-            />
-          </div>
-          <div>
-            <label htmlFor="alert-value-max" className={fieldLabelCls}>
-              {t('notifications.alertStudio.editor.maxValueLabel', 'Maximum Value')}
-            </label>
-            <UiInput
-              id="alert-value-max"
-              type="number"
-              className="w-full"
-              value={editor.value_max}
-              onChange={e => setEditor(s => ({ ...s, value_max: e.target.value }))}
-            />
-          </div>
+          <UiInput
+            id="alert-value-min"
+            label={t('notifications.alertStudio.editor.minValueLabel', 'Minimum Value')}
+            type="number"
+            step="any"
+            className="w-full"
+            value={editor.value_min}
+            onChange={e => setEditor(s => ({ ...s, value_min: e.target.value }))}
+            hint={canonicalUnitHint}
+            required
+          />
+          <UiInput
+            id="alert-value-max"
+            label={t('notifications.alertStudio.editor.maxValueLabel', 'Maximum Value')}
+            type="number"
+            step="any"
+            className="w-full"
+            value={editor.value_max}
+            onChange={e => setEditor(s => ({ ...s, value_max: e.target.value }))}
+            hint={canonicalUnitHint}
+            required
+          />
         </div>
       )
     }
 
     if (valueKind === 'text') {
       return (
-        <div>
-          <label htmlFor="alert-value-text" className={fieldLabelCls}>
-            {t('notifications.alertStudio.editor.textValueLabel', 'Text Value')}
-          </label>
-          <UiInput
-            id="alert-value-text"
-            className="w-full"
-            placeholder={t('notifications.alertStudio.editor.textValuePlaceholder', 'Value to compare')}
-            value={editor.value_text}
-            onChange={e => setEditor(s => ({ ...s, value_text: e.target.value }))}
-          />
-        </div>
+        <UiInput
+          id="alert-value-text"
+          label={t('notifications.alertStudio.editor.textValueLabel', 'Text Value')}
+          className="w-full"
+          placeholder={t('notifications.alertStudio.editor.textValuePlaceholder', 'Value to compare')}
+          value={editor.value_text}
+          onChange={e => setEditor(s => ({ ...s, value_text: e.target.value }))}
+          required
+        />
       )
     }
 
     if (valueKind === 'bool') {
       return (
-        <div>
-          <label htmlFor="alert-value-bool" className={fieldLabelCls}>
-            {t('notifications.alertStudio.editor.booleanValueLabel', 'Boolean Value')}
-          </label>
-          <UiSelect
-            id="alert-value-bool"
-            className="w-full"
-            value={String(editor.value_bool)}
-            onChange={e => setEditor(s => ({ ...s, value_bool: e.target.value === 'true' }))}
-            options={boolOptions}
-          />
-        </div>
+        <UiSelect
+          id="alert-value-bool"
+          label={t('notifications.alertStudio.editor.booleanValueLabel', 'Boolean Value')}
+          className="w-full"
+          value={String(editor.value_bool)}
+          onChange={e => setEditor(s => ({ ...s, value_bool: e.target.value === 'true' }))}
+          options={boolOptions}
+          required
+        />
       )
     }
 
@@ -1355,18 +1408,17 @@ export default function AlertStudio() {
     }
 
     return (
-      <div>
-        <label htmlFor="alert-value-num" className={fieldLabelCls}>
-          {t('notifications.alertStudio.editor.numericValueLabel', 'Numeric Value')}
-        </label>
-        <UiInput
-          id="alert-value-num"
-          type="number"
-          className="w-full"
-          value={editor.value_num}
-          onChange={e => setEditor(s => ({ ...s, value_num: e.target.value }))}
-        />
-      </div>
+      <UiInput
+        id="alert-value-num"
+        label={t('notifications.alertStudio.editor.numericValueLabel', 'Numeric Value')}
+        type="number"
+        step="any"
+        className="w-full"
+        value={editor.value_num}
+        onChange={e => setEditor(s => ({ ...s, value_num: e.target.value }))}
+        hint={canonicalUnitHint}
+        required
+      />
     )
   }
 

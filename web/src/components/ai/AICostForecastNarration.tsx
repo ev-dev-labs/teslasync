@@ -121,6 +121,14 @@ function InnerSection({ vehicleId, months }: InnerSectionProps) {
     url: '/ai/charging/costs/forecast/narrate',
     body,
     onEvent: noopEvent,
+    // AI-01: vehicle + forecast-window scope is part of stream
+    // identity — switching the active vehicle OR the months window
+    // aborts any in-flight narration and clears the previous scope's
+    // narrative before the new scope streams in.
+    scopeKey:
+      Number.isFinite(numericVehicleId) && numericVehicleId > 0
+        ? `${numericVehicleId}:${body.months ?? 0}`
+        : null,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
 

@@ -25,6 +25,42 @@ permissions:
   contents: read
 
 jobs:
+  generated:
+    name: Generated artifacts are current
+    # CLEAN-05: proves every committed generated file is reproducible from its
+    # source AND that verifying it does not touch the worktree. Before this
+    # gate, `npm run prebuild` re-ran the changelog generator in WRITE mode, so
+    # a build could silently rewrite a committed source file.
+    #
+    # Needs both toolchains: the registry spans Node generators (changelog,
+    # route registry, i18n split) and Go generators (route templates, the AI
+    # feature mirror, the SLO rules/dashboards).
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - run: npm ci --legacy-peer-deps
+        working-directory: web
+      - name: Registry coverage + freshness + non-mutation
+        run: node scripts/check-generated-freshness.mjs
+      - name: Worktree is byte-identical after the gate
+        run: |
+          if [ -n "$(git status --porcelain -uall)" ]; then
+            echo "::error::the freshness gate mutated the worktree"
+            git --no-pager status --porcelain -uall
+            git --no-pager diff
+            exit 1
+          fi
+          echo "worktree clean"
+
   backend:
     name: Backend (lint + test + build)
     # Pinned to ubuntu-latest (not the arc-runner default) because `go test
@@ -202,6 +238,12 @@ jobs:
       - run: npm ci --legacy-peer-deps
       - name: Lint
         run: npm run lint
+      - name: Transform pipeline uses no deprecated Vite options
+        # CLEAN-02: Vitest 4 resolves its own nested Vite 8 (rolldown/OXC),
+        # where the esbuild-era options @vitejs/plugin-react@4 sets are
+        # deprecated. Static config assertions cannot see a *dependency* start
+        # doing this after an upgrade; this boots the real runtime.
+        run: npm run check:vite-deprecations
       - name: Test
         run: npx vitest run --coverage --reporter=verbose
 
@@ -237,6 +279,13 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: No source maps in the publishable build
+        # CLEAN-04: `npm run build` sets no VITE_SOURCEMAP_MODE, so
+        # `build.sourcemap` is false and dist/ must contain zero `.map` files
+        # and zero sourceMappingURL references. postbuild already runs this;
+        # repeated here as an explicit, greppable CI assertion.
+        run: npm run check:source-maps
+
   docker:
     name: Docker · ${{ matrix.image }}
     # Pin to ubuntu-latest because self-hosted arc-runner pods have been
@@ -256,15 +305,65 @@ jobs:
             file: Dockerfile.notification
           - image: export-worker
             file: Dockerfile.export-worker
+          - image: fleet-telemetry
+            file: Dockerfile.fleet-telemetry
+          - image: web
+            file: Dockerfile.web
     steps:
       - uses: actions/checkout@v4
       - uses: docker/setup-buildx-action@v3
 
       - name: Build ${{ matrix.image }}
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: ${{ matrix.file }}
           push: false
+          load: ${{ matrix.image == 'web' }}
+          tags: teslasync-${{ matrix.image }}:ci
           cache-from: type=gha,scope=ci-${{ matrix.image }}
           cache-to: type=gha,mode=max,scope=ci-${{ matrix.image }}
+
+      - name: Web image ships no source maps
+        # CLEAN-04: the runtime stage copies dist/ straight into the nginx
+        # document root, so this inspects the actual IMAGE, not just the build
+        # directory. `vite.config.ts` (sourcemap false) and the Dockerfile
+        # prune step are two layers; this is the assertion that they held.
+        if: matrix.image == 'web'
+        run: |
+          set -euo pipefail
+          maps=$(docker run --rm --entrypoint sh teslasync-web:ci -c \
+            "find /usr/share/nginx/html -name '*.map' -print | head -50")
+          if [ -n "$maps" ]; then
+            echo "::error::web image ships source maps in the nginx document root"
+            echo "$maps"
+            exit 1
+          fi
+          # BusyBox grep has no --include, so filter with find.
+          refs=$(docker run --rm --entrypoint sh teslasync-web:ci -c \
+            "find /usr/share/nginx/html \( -name '*.js' -o -name '*.css' \) -exec grep -lE '[#@][[:space:]]*sourceMappingURL[[:space:]]*=' {} + 2>/dev/null | head -50" || true)
+          if [ -n "$refs" ]; then
+            echo "::error::web image assets reference a source map"
+            echo "$refs"
+            exit 1
+          fi
+          echo "web image: 0 source maps, 0 sourceMappingURL references"
+
+      - name: Web image build identity is unversioned-and-harmless
+        # CI builds are NOT releases: no VITE_APP_VERSION / VITE_GIT_SHA build
+        # args are passed. The resulting SPA must therefore report an
+        # UNPARSEABLE version. If it ever reports a bare `X.Y.Z` again, the
+        # PWA handshake would read it as older than a newer API and pin a
+        # non-dismissible "update required" prompt that reloading can never
+        # clear — the exact defect release.yml's build args now prevent for
+        # real releases, and this asserts for every other build.
+        if: matrix.image == 'web'
+        run: |
+          set -euo pipefail
+          PKG_VERSION=$(node -p "require('./web/package.json').version")
+          SW=$(docker run --rm --entrypoint cat teslasync-web:ci /usr/share/nginx/html/sw.js)
+          if ! printf '%s' "$SW" | grep -qF "dev-${PKG_VERSION}"; then
+            echo "::error::unversioned web build must report dev-${PKG_VERSION}; a bare parseable version goes permanently stale against the API"
+            exit 1
+          fi
+          echo "unversioned web image reports dev-${PKG_VERSION} (unparseable → handshake verdict 'unknown')"

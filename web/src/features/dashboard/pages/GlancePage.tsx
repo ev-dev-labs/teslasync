@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Battery,
   BatteryCharging,
@@ -46,6 +46,8 @@ import {
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useRefreshInterval } from '@/hooks/useRefreshPolicy';
 import { fmtNumber } from '@/lib/numberFormat';
 import { batteryColor, COLOR } from '@/lib/colors';
 import { cn } from '@/lib/cn';
@@ -145,28 +147,25 @@ export default function GlancePage() {
   const title = t('glance.title', 'Quick Glance');
   usePageTitle(title);
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const vehicleIdParam = searchParams.get('vehicle_id');
-
   const {
-    data: vehicles,
     isLoading: vehiclesLoading,
     error: vehiclesError,
   } = useVehicles();
+  const {
+    vehicle,
+    vehicleId: selectedVehicleId,
+    vehicles,
+    setVehicleId,
+  } = useSelectedVehicle();
+  const vehicleId = selectedVehicleId ?? 0;
 
-  // Support ?vehicle_id= query param; fall back to first vehicle.
-  const vehicle = useMemo(() => {
-    if (!vehicles?.length) return null;
-    if (vehicleIdParam) {
-      const found = vehicles.find((v) => String(v.id) === vehicleIdParam);
-      if (found) return found;
-    }
-    return vehicles[0];
-  }, [vehicles, vehicleIdParam]);
-
-  const vehicleId = vehicle?.id ?? 0;
-
-  const stateQuery = useVehicleState(vehicleId, { refetchInterval: 10_000 });
+  /* Connection-aware poll cadence: pauses while the tab is hidden, while the
+   * device is offline, while the API is unreachable, and stretches 4× when
+   * the user (or a 2G link) has asked for reduced data usage. Returning
+   * `false` — rather than a large number — stops TanStack from arming a timer
+   * at all. */
+  const liveInterval = useRefreshInterval(10_000);
+  const stateQuery = useVehicleState(vehicleId, { refetchInterval: liveInterval });
   const {
     data: stateData,
     dataUpdatedAt,
@@ -204,9 +203,8 @@ export default function GlancePage() {
   );
 
   const onPickVehicle = (id: string) => {
-    const next = new URLSearchParams(searchParams);
-    next.set('vehicle_id', id);
-    setSearchParams(next, { replace: true });
+    const next = Number(id);
+    setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
   };
 
   const actions = (
@@ -253,9 +251,21 @@ export default function GlancePage() {
     >
       {!vehicle ? (
         <GlassPanel className="p-8">
-          <EmptyState /* no-action: transient empty state — surfaces when no vehicles are registered */
+          <EmptyState
             icon={<Battery className="h-8 w-8" />}
-            message={t('glance.noVehicle', 'No vehicle found')}
+            title={t('glance.noVehicleTitle', 'No vehicle available')}
+            message={t(
+              'glance.noVehicle',
+              'Register or sync a Tesla vehicle before opening the live glance workspace.',
+            )}
+            description={t(
+              'glance.noVehicleDescription',
+              'Vehicle status, charging, climate, security, and location evidence will appear after the first telemetry check-in.',
+            )}
+            actionTo={{
+              label: t('glance.manageVehicles', 'Manage vehicles'),
+              to: '/vehicles',
+            }}
           />
         </GlassPanel>
       ) : (

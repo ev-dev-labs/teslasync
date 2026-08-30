@@ -9,7 +9,7 @@
  *       · populated  — one row per stat, locale-formatted min/max/avg/count,
  *                      full header set, default + overridden title
  *       · loading    — four skeletons, no table, title still shown
- *       · empty      — the "No stats available" caption
+ *       · empty      — guided no-statistics state
  *       · gaps       — `selectedSignals` fills missing signals with labelled
  *                      `—` placeholders + a "No data in range" subtitle, and
  *                      the Hide-empty toggle collapses them (down to the empty
@@ -167,9 +167,10 @@ describe('SignalStatsPanel — loading', () => {
 
 // ── empty ────────────────────────────────────────────────────────────────
 describe('SignalStatsPanel — empty', () => {
-  it('renders the empty caption when there are no stats and no selection', () => {
+  it('renders guidance when there are no stats and no selection', () => {
     renderPanel({ stats: [] });
-    expect(screen.getByText('No stats available')).toBeInTheDocument();
+    expect(screen.getByText('No aggregate statistics are available.')).toBeInTheDocument();
+    expect(screen.getByText(/Select a signal with numeric samples/)).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
   });
 });
@@ -209,23 +210,23 @@ describe('SignalStatsPanel — selected signals with gaps', () => {
     expect(screen.queryByText('phantom')).toBeNull();
   });
 
-  it('falls back to the empty caption when every selected signal is a gap', () => {
+  it('falls back to the guided empty state when every selected signal is a gap', () => {
     renderPanel({ stats: [], selectedSignals: ['ghost_a', 'ghost_b'] });
     expect(screen.getByText('ghost_a')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('switch', { name: /Hide empty \(2\)/ }));
-    expect(screen.getByText('No stats available')).toBeInTheDocument();
+    expect(screen.getByText('No aggregate statistics are available.')).toBeInTheDocument();
     expect(screen.queryByText('ghost_a')).toBeNull();
   });
 });
 
 // ── null-safety (hardening) ──────────────────────────────────────────────
 describe('SignalStatsPanel — null safety', () => {
-  it('does not throw and shows the empty caption when stats is undefined', () => {
+  it('does not throw and shows the empty guidance when stats is undefined', () => {
     // A page may thread `data?.stats` through before its query resolves.
     expect(() =>
       renderPanel({ stats: undefined as unknown as SignalStat[] }),
     ).not.toThrow();
-    expect(screen.getByText('No stats available')).toBeInTheDocument();
+    expect(screen.getByText('No aggregate statistics are available.')).toBeInTheDocument();
   });
 
   it('still fills placeholder rows when stats is undefined but signals are selected', () => {

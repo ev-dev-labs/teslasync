@@ -125,10 +125,10 @@ export function AppearanceSettings() {
     },
     {
       id: 'notion',
-      label: t('theme.sidebarStyle.notion', 'Compact'),
+      label: t('theme.sidebarStyle.notion', 'All groups'),
       help: t(
         'theme.sidebarStyle.notionHelp',
-        'Tighter rows with collapsible sections. Best for fitting many pages on screen.',
+        'Complete navigation catalog with collapsible sections. Best when you want every group available in the sidebar.',
       ),
     },
     {
@@ -435,15 +435,20 @@ export function AppearanceSettings() {
           <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <Text as="p" variant="body" className="font-medium">
+                <Text id="statusbar-enabled-label" as="p" variant="body" className="font-medium">
                   {t('theme.statusBar.show', 'Show status bar')}
                 </Text>
-                <HelperText>
-                  {t('theme.statusBar.showHelp', 'Always-on footer with API health, live telemetry, vehicle, and version.')}
+                <HelperText id="statusbar-enabled-help">
+                  {t(
+                    'theme.statusBar.showHelp',
+                    'Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.',
+                  )}
                 </HelperText>
               </div>
               <Toggle
                 data-testid="statusbar-toggle-enabled"
+                aria-labelledby="statusbar-enabled-label"
+                aria-describedby="statusbar-enabled-help"
                 checked={statusBarPrefs.enabled}
                 onChange={(next) => {
                   setStatusBarPrefs({ enabled: next })
@@ -457,11 +462,14 @@ export function AppearanceSettings() {
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <Text as="p" variant="body" className={cn('font-medium', !statusBarPrefs.enabled && 'opacity-50')}>
+                <Text id="statusbar-icon-only-label" as="p" variant="body" className={cn('font-medium', !statusBarPrefs.enabled && 'opacity-50')}>
                   {t('theme.statusBar.iconOnly', 'Always icon-only')}
                 </Text>
-                <HelperText className={cn(!statusBarPrefs.enabled && 'opacity-50')}>
-                  {t('theme.statusBar.iconOnlyHelp', 'Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.')}
+                <HelperText id="statusbar-icon-only-help" className={cn(!statusBarPrefs.enabled && 'opacity-50')}>
+                  {t(
+                    'theme.statusBar.iconOnlyHelp',
+                    'Hide labels at all widths. Lower-priority tools move into More on constrained screens.',
+                  )}
                 </HelperText>
               </div>
               <Toggle
@@ -475,6 +483,9 @@ export function AppearanceSettings() {
                   setStatusBarPrefs({ iconOnly: next })
                 }}
                 aria-disabled={!statusBarPrefs.enabled}
+                aria-labelledby="statusbar-icon-only-label"
+                aria-describedby="statusbar-icon-only-help"
+                disabled={!statusBarPrefs.enabled}
                 data-testid="statusbar-toggle-icon-only"
               />
             </div>
@@ -494,60 +505,68 @@ export function AppearanceSettings() {
           <div className="space-y-3 rounded-xl border border-[var(--glass-border)] bg-[var(--surface-2)] p-4">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
-                <Text as="p" variant="body" className="font-medium">
+                <Text id="celebration-toasts-label" as="p" variant="body" className="font-medium">
                   {t('achievements.showToasts', 'Show celebration toasts')}
                 </Text>
-                <HelperText>
+                <HelperText id="celebration-toasts-help">
                   {t('achievements.showToastsHelp', 'Pop a celebratory toast with confetti when you unlock an achievement.')}
                 </HelperText>
               </div>
               <Toggle
                 data-testid="celebration-toggle-toasts"
+                aria-labelledby="celebration-toasts-label"
+                aria-describedby="celebration-toasts-help"
                 checked={celebrationPrefs.showToasts}
                 onChange={(next) => setAchievementCelebrationPrefs({ showToasts: next })}
               />
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <Text as="p" variant="body" className="font-medium">
+                <Text id="celebration-sound-label" as="p" variant="body" className="font-medium">
                   {t('achievements.playSound', 'Play sound on unlock')}
                 </Text>
-                <HelperText>
+                <HelperText id="celebration-sound-help">
                   {t('achievements.playSoundHelp', 'Play a short chime alongside the celebration toast. Off by default.')}
                 </HelperText>
               </div>
               <Toggle
                 data-testid="celebration-toggle-sound"
+                aria-labelledby="celebration-sound-label"
+                aria-describedby="celebration-sound-help"
                 checked={celebrationPrefs.playSound}
                 onChange={(next) => setAchievementCelebrationPrefs({ playSound: next })}
               />
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <Text as="p" variant="body" className="font-medium">
+                <Text id="celebration-dashboard-label" as="p" variant="body" className="font-medium">
                   {t('achievements.showOnDashboard', 'Show recently unlocked on dashboard')}
                 </Text>
-                <HelperText>
+                <HelperText id="celebration-dashboard-help">
                   {t('achievements.showOnDashboardHelp', "Surface your latest unlocks in the dashboard's recently-unlocked widget.")}
                 </HelperText>
               </div>
               <Toggle
                 data-testid="celebration-toggle-dashboard"
+                aria-labelledby="celebration-dashboard-label"
+                aria-describedby="celebration-dashboard-help"
                 checked={celebrationPrefs.showOnDashboard}
                 onChange={(next) => setAchievementCelebrationPrefs({ showOnDashboard: next })}
               />
             </div>
             <div className="flex items-center justify-between gap-4 border-t border-[var(--glass-border)] pt-3">
               <div className="min-w-0">
-                <Text as="p" variant="body" className="font-medium">
+                <Text id="celebration-push-label" as="p" variant="body" className="font-medium">
                   {t('achievements.pushOnUnlock', 'Send push notifications for achievements')}
                 </Text>
-                <HelperText>
+                <HelperText id="celebration-push-help">
                   {t('achievements.pushOnUnlockHelp', 'Deliver a web push notification when an achievement unlocks while the tab is closed.')}
                 </HelperText>
               </div>
               <Toggle
                 data-testid="celebration-toggle-push"
+                aria-labelledby="celebration-push-label"
+                aria-describedby="celebration-push-help"
                 checked={celebrationPrefs.pushOnUnlock}
                 onChange={(next) => setAchievementCelebrationPrefs({ pushOnUnlock: next })}
               />

@@ -25,7 +25,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
-import { AlertBanner } from '@/components/feedback';
+import { DataStateNotice } from '@/components/feedback';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicleCost } from '@/api/hooks/useOperatorConfidence';
 import { isApiError } from '@/lib/resilience';
@@ -107,15 +107,15 @@ export default function VehicleCostPage() {
     >
       <div className="space-y-6">
         {subsystemMissing && (
-          <AlertBanner
-            variant="warning"
-            title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}
+          <DataStateNotice
+            state="unsupported"
+            title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}
           >
             {t(
               'admin.vehicleCost.notConfigured',
               'The ingest-x-ray subsystem is not configured on this deployment. Vehicle cost reporting requires the signal_log hypertable to be populated.',
             )}
-          </AlertBanner>
+          </DataStateNotice>
         )}
 
         {/* 1 — Fleet-total KPI band */}

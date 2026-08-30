@@ -58,9 +58,11 @@ vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
 //    the series/axis bindings for direct assertion. `chartGrid` is a renderable
 //    node in the real barrel — the component drops it in as a child, so the
 //    double must be a valid node too (null renders nothing). ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Inert = () => null;
   return {
+    ...chartTestDoubles,
     chartGrid: null,
     axisTickSm: { fontSize: 10 },
     ChartTooltip: Inert,

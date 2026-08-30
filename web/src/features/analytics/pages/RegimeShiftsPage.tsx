@@ -10,7 +10,7 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import {
-  ChartContainer, ChartTooltip,
+  ChartContainer, ChartLegend, ChartTooltip,
   ComposedChart, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
@@ -154,6 +154,7 @@ export default function RegimeShiftsPage() {
             title={t('regimes.chart', 'Weekly Consumption & Detected Regimes')}
             subtitle={t('regimes.chartHint', 'The stepped line is each regime’s mean; vertical lines mark detected shifts')}
             ariaLabel={t('regimes.chart.aria', 'Weekly consumption line with stepped regime means and changepoint markers')}
+            chartKey="regime-shifts-weekly-consumption"
             loading={isLoading}
             empty={chartData.length === 0}
             height={360}
@@ -164,12 +165,14 @@ export default function RegimeShiftsPage() {
               { key: 'regime', label: t('regimes.col.regime', 'Regime mean') },
             ]}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={chartData}>
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                 <XAxis dataKey="week" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} domain={['auto', 'auto']} />
                 <Tooltip content={<ChartTooltip />} />
+                <ChartLegend />
                 {summary.shifts.map((s) => (
                   <ReferenceLine
                     key={s.weekStart}
@@ -187,6 +190,7 @@ export default function RegimeShiftsPage() {
                   strokeWidth={1.5}
                   strokeOpacity={0.7}
                   dot={{ r: 2 }}
+                  hide={hiddenSeries?.isHidden('consumption')}
                 />
                 <Line
                   type="stepAfter"
@@ -195,9 +199,11 @@ export default function RegimeShiftsPage() {
                   stroke={chartTokens.series[2]}
                   strokeWidth={2.5}
                   dot={false}
+                  hide={hiddenSeries?.isHidden('regime')}
                 />
-              </ComposedChart>
-            </ResponsiveContainer>
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
           </ChartContainer>
         )}
       </FadeIn>

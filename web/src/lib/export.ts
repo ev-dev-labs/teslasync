@@ -4,6 +4,7 @@
  * Provides CSV and JSON export from in-memory data arrays,
  * as well as helpers for server-side export URL construction.
  */
+import { redactExportValue, redactSensitiveData } from './privacy'
 
 /** Build a server-side export URL with optional filters */
 export function buildExportUrl(
@@ -30,12 +31,16 @@ export function exportAsCSV<T extends Record<string, unknown>>(
   const header = cols.map(c => c.label).join(',')
   const rows = data.map(row =>
     cols.map(c => {
-      const val = row[c.key]
+      const val = redactExportValue(String(c.key), row[c.key])
       if (val === null || val === undefined) return ''
-      if (typeof val === 'string' && (val.includes(',') || val.includes('"') || val.includes('\n'))) {
-        return `"${val.replace(/"/g, '""')}"`
+      const text = String(val)
+      const safeText = typeof val === 'string' && /^[\t\r\n ]*[=+\-@]/.test(text)
+        ? `'${text}`
+        : text
+      if (safeText.includes(',') || safeText.includes('"') || safeText.includes('\n')) {
+        return `"${safeText.replace(/"/g, '""')}"`
       }
-      return String(val)
+      return safeText
     }).join(',')
   )
   const csv = [header, ...rows].join('\n')
@@ -44,7 +49,7 @@ export function exportAsCSV<T extends Record<string, unknown>>(
 
 /** Export an array of objects as a JSON file download */
 export function exportAsJSON<T>(data: T[], filename: string) {
-  const json = JSON.stringify(data, null, 2)
+  const json = JSON.stringify(redactSensitiveData(data), null, 2)
   downloadBlob(json, filename, 'application/json')
 }
 

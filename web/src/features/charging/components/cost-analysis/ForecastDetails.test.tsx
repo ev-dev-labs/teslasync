@@ -84,8 +84,10 @@ vi.mock('react-i18next', async () => {
 // data-display / ui barrels that transitively touch charts still resolve.
 vi.mock('@/components/charts', async () => {
   const actual = await vi.importActual<typeof import('@/components/charts')>('@/components/charts');
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     ChartTooltip: () => null,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     PieChart: ({ children }: { children?: ReactNode }) => <div data-testid="pie-chart">{children}</div>,

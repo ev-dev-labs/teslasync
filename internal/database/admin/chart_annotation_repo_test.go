@@ -139,11 +139,11 @@ func TestChartAnnotationRepo_GetByID(t *testing.T) {
 	a := sampleAnnotation()
 
 	tests := []struct {
-		name     string
-		row      pgx.Row
-		wantNil  bool
-		wantErr  bool
-		errFrag  string
+		name    string
+		row     pgx.Row
+		wantNil bool
+		wantErr bool
+		errFrag string
 	}{
 		{name: "found", row: fakeRow{vals: annRow(a)}},
 		{name: "not found", row: noRow(), wantNil: true},

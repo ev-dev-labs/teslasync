@@ -14,14 +14,35 @@
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Clock, Hash, Trophy, Navigation, Building2 } from 'lucide-react';
+import {
+  Activity,
+  BatteryCharging,
+  Bell,
+  Building2,
+  Car,
+  Clock,
+  Eye,
+  Hash,
+  MapPin,
+  Navigation,
+  Route,
+  Trophy,
+  Wrench,
+} from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Pagination, PanelTitle, Text } from '@/components/ui';
-import { MetricCard } from '@/components/data-display';
+import { Button, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
+import { EntityPreviewDrawer, MetricCard } from '@/components/data-display';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
+import {
+  SearchInput,
+  FilterBar,
+  ActiveFilterChips,
+  RangePicker,
+  VehicleSelect,
+  type FilterChipDescriptor,
+} from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlNumber, useUrlString } from '@/hooks/useUrlState';
@@ -32,6 +53,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDate } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { buildContextHref } from '@/lib/contextNavigation';
 import { request } from '@/api/client';
 import { AIAutoNameUnnamedLocations } from '@/components/ai/AIAutoNameUnnamedLocations';
 import { LocationLeaderboardPanel, type LeaderboardDatum } from '../components/LocationLeaderboardPanel';
@@ -89,15 +111,11 @@ export default function LocationsPage() {
   usePageTitle(t('locations.title', 'Visited Locations'));
   const { formatDuration } = useUnits();
 
-  const [, setUrlVehicleId] = useUrlNumber('vehicle_id', 0);
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
-  const onPickVehicle = (id: number) => {
-    setVehicleId(id);
-    setUrlVehicleId(id);
-  };
+  const { vehicleId } = useSelectedVehicle();
   const [page, setPage] = useUrlNumber('page', 1);
   const pageSize = 50;
   const [search, setSearch] = useUrlString('q', '');
+  const [previewLocation, setPreviewLocation] = useState<VisitedLocation | null>(null);
   // AI applied-name pending hand-off — when the user clicks Apply on
   // an AI proposal, the proposed name is parked here keyed by
   // location.id. The user then writes it into the canonical
@@ -189,14 +207,9 @@ export default function LocationsPage() {
 
   const actions = (
     <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
-      {vehicles.length > 0 && (
-        <Select
-          aria-label={t('locations.selectVehicle', 'Select vehicle')}
-          value={String(vehicleId ?? '')}
-          onChange={(e) => onPickVehicle(Number(e.target.value))}
-          options={vehicles.map((v) => ({ value: String(v.id), label: v.display_name || v.vin }))}
-        />
-      )}
+      <VehicleSelect
+        ariaLabel={t('locations.selectVehicle', 'Select vehicle')}
+      />
       <RangePicker
         value={{ start, end }}
         onChange={(r) => {
@@ -381,6 +394,20 @@ export default function LocationsPage() {
                           <Hash className="h-3 w-3" aria-hidden="true" />
                           {visits}
                         </Text>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-9 w-9 shrink-0 p-0"
+                          aria-label={t(
+                            'locations.inspect',
+                            'Inspect {{location}}',
+                            { location: loc.address_name || t('locations.unknown', 'unknown location') },
+                          )}
+                          onClick={() => setPreviewLocation(loc)}
+                        >
+                          <Eye className="h-4 w-4" aria-hidden="true" />
+                        </Button>
                       </GlassPanel>
                       {isUnnamedLocation(loc.address_name) && (
                         <AIAutoNameUnnamedLocations
@@ -403,6 +430,102 @@ export default function LocationsPage() {
           )}
         </GlassPanel>
       </FadeIn>
+
+      <EntityPreviewDrawer
+        open={previewLocation !== null}
+        onClose={() => setPreviewLocation(null)}
+        eyebrow={t('locations.preview.eyebrow', 'Location evidence')}
+        title={previewLocation?.address_name || t('locations.unknown', 'Unknown location')}
+        description={
+          previewLocation?.last_visited
+            ? t('locations.preview.lastVisited', 'Last visited {{date}}', {
+                date: formatDate(previewLocation.last_visited),
+              })
+            : undefined
+        }
+        fields={
+          previewLocation
+            ? [
+                {
+                  key: 'visits',
+                  label: t('locations.totalVisits', 'Total Visits'),
+                  value: previewLocation.visit_count ?? 0,
+                },
+                {
+                  key: 'time',
+                  label: t('locations.totalTime', 'Total Time'),
+                  value: formatDuration(previewLocation.total_duration_s ?? 0),
+                },
+                {
+                  key: 'average',
+                  label: t('locations.avgVisit', 'Avg Visit'),
+                  value: formatDuration(
+                    previewLocation.visit_count > 0
+                      ? previewLocation.total_duration_s / previewLocation.visit_count
+                      : 0,
+                  ),
+                },
+                {
+                  key: 'last-visited',
+                  label: t('locations.lastVisited', 'Last visited'),
+                  value: previewLocation.last_visited
+                    ? formatDate(previewLocation.last_visited)
+                    : '—',
+                },
+              ]
+            : []
+        }
+        relatedActions={
+          previewLocation && vehicleId != null
+            ? [
+                {
+                  key: 'vehicle',
+                  label: t('entityContext.vehicle', 'Vehicle'),
+                  to: `/vehicles/${vehicleId}`,
+                  icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'drives',
+                  label: t('entityContext.drives', 'Drive history'),
+                  to: buildContextHref('/drives', {
+                    q: previewLocation.address_name,
+                    from: start,
+                    to: end,
+                  }),
+                  icon: <Route className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'charging',
+                  label: t('entityContext.charging', 'Charging sessions'),
+                  to: buildContextHref('/charging', {
+                    q: previewLocation.address_name,
+                    from: start,
+                    to: end,
+                  }),
+                  icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'alerts',
+                  label: t('entityContext.alerts', 'Alerts'),
+                  to: buildContextHref('/notifications/alerts', { from: start, to: end }),
+                  icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'service',
+                  label: t('entityContext.service', 'Service history'),
+                  to: '/maintenance',
+                  icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                },
+                {
+                  key: 'telemetry',
+                  label: t('entityContext.telemetry', 'Telemetry evidence'),
+                  to: buildContextHref('/signals', { from: start, to: end }),
+                  icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                },
+              ]
+            : []
+        }
+      />
     </PageContainer>
   );
 }

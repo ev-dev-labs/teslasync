@@ -5,11 +5,21 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, PanelTitle, Text, StatusPill, SelectableCard } from '@/components/ui';
+import {
+  Button,
+  DataTable,
+  GlassPanel,
+  PanelTitle,
+  SelectableCard,
+  StatusPill,
+  Text,
+  type Column,
+} from '@/components/ui';
 import { VehicleSelect } from '@/components/forms';
 import {
   ComposedChart, LineChart, Line, Area, XAxis, YAxis, Tooltip, ReferenceLine,
-  ResponsiveContainer, ChartGradient, ChartTooltip, chartGrid, axisTick,
+  ResponsiveContainer, ChartGradient, ChartTooltip, ChartLegend, chartGrid, axisTick,
+  EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -158,6 +168,14 @@ export default function SegmentsPage() {
     ghost.b.series.forEach((p) => put(p.fraction_of_distance, 'b', p.elapsed_s));
     return [...grid.values()].sort((x, y) => x.frac - y.frac);
   }, [ghost]);
+  const raceSeriesA = useMemo(() => (ghost?.a.series ?? []).map((point) => ({
+    frac: point.fraction_of_distance,
+    a: point.elapsed_s,
+  })), [ghost]);
+  const raceSeriesB = useMemo(() => (ghost?.b.series ?? []).map((point) => ({
+    frac: point.fraction_of_distance,
+    b: point.elapsed_s,
+  })), [ghost]);
 
   /* "Time gap": the A-vs-B split at each shared fraction (delta_s < 0 → A ahead),
      already aligned by the backend. */
@@ -249,20 +267,18 @@ export default function SegmentsPage() {
               {/* by-time / by-efficiency toggle */}
               <div className="inline-flex rounded-lg border border-[var(--border-subtle)] bg-[var(--surface-elevated)] p-0.5" role="group" aria-label={t('segments.board.orderBy', 'Order by')}>
                 {(['time', 'efficiency'] as const).map((mode) => (
-                  <button
+                  <Button
                     key={mode}
                     type="button"
+                    variant={board === mode ? 'secondary' : 'ghost'}
+                    size="sm"
                     onClick={() => setBoard(mode)}
                     aria-pressed={board === mode}
-                    className={cn(
-                      'rounded-md px-3 py-1 text-sm font-medium transition-colors',
-                      board === mode ? 'bg-[var(--surface-3)] text-[var(--text-primary)]' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                    )}
                   >
                     {mode === 'time'
                       ? t('segments.board.byTime', 'By time')
                       : t('segments.board.byEfficiency', 'By efficiency')}
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>
@@ -351,51 +367,63 @@ export default function SegmentsPage() {
                   <Text as="p" variant="label" className="mb-2">
                     {t('segments.ghost.elapsed', 'Elapsed time along the route')}
                   </Text>
-                  <div
-                    role="img"
-                    aria-label={t('segments.ghost.elapsedAria', 'Line chart of elapsed time versus distance for both attempts; the lower line is ahead')}
-                    className="h-64 sm:h-72"
-                  >
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={raceData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
-                        {chartGrid}
-                        <XAxis
-                          dataKey="frac"
-                          type="number"
-                          domain={[0, 1]}
-                          ticks={[0, 0.25, 0.5, 0.75, 1]}
-                          tickFormatter={pctTick}
-                          tick={axisTick}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <YAxis
-                          width={52}
-                          tick={axisTick}
-                          tickLine={false}
-                          axisLine={false}
-                          tickFormatter={(v: number) => clock(v)}
-                        />
-                        <Tooltip content={
-                          <ChartTooltip
-                            labelFormatter={(l) => pctTick(Number(l))}
-                            valueFormatter={(v) => clock(Number(v))}
-                          />
-                        } />
-                        <Line
-                          type="monotone" dataKey="a" connectNulls
-                          stroke={COLOR_A} strokeWidth={2} dot={false}
-                          name={t('segments.ghost.racerA', 'Attempt A')}
-                          animationDuration={700}
-                        />
-                        <Line
-                          type="monotone" dataKey="b" connectNulls
-                          stroke={COLOR_B} strokeWidth={2} dot={false}
-                          name={t('segments.ghost.racerB', 'Attempt B')}
-                          animationDuration={700}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
+                  <div className="h-64 sm:h-72">
+                    {/* chart-a11y:no-table dense route telemetry trace — variable-length, not meaningfully tabular */}
+                    <EmbeddedChart
+                      chartKey="segment-ghost-elapsed"
+                      title={t('segments.ghost.elapsed', 'Elapsed time along the route')}
+                      ariaLabel={t('segments.ghost.elapsedAria', 'Line chart of elapsed time versus distance for both attempts; the lower line is ahead')}
+                      fluid
+                    >
+                      {({ hiddenSeries }) => (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={raceData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
+                            {chartGrid}
+                            <XAxis
+                              dataKey="frac"
+                              type="number"
+                              allowDuplicatedCategory={false}
+                              domain={[0, 1]}
+                              ticks={[0, 0.25, 0.5, 0.75, 1]}
+                              tickFormatter={pctTick}
+                              tick={axisTick}
+                              tickLine={false}
+                              axisLine={false}
+                            />
+                            <YAxis
+                              width={52}
+                              tick={axisTick}
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(v: number) => clock(v)}
+                            />
+                            <Tooltip content={
+                              <ChartTooltip
+                                labelFormatter={(l) => pctTick(Number(l))}
+                                valueFormatter={(v) => clock(Number(v))}
+                              />
+                            } />
+                            <ChartLegend verticalAlign="top" align="right" />
+                            <Line
+                              type="monotone" dataKey="a" connectNulls={false}
+                              data={raceSeriesA}
+                              stroke={COLOR_A} strokeWidth={2} dot={false}
+                              name={t('segments.ghost.racerA', 'Attempt A')}
+                              animationDuration={700}
+                              hide={hiddenSeries?.isHidden('a') ?? false}
+                            />
+                            <Line
+                              type="monotone" dataKey="b" connectNulls={false}
+                              data={raceSeriesB}
+                              stroke={COLOR_B} strokeWidth={2} dot={false}
+                              name={t('segments.ghost.racerB', 'Attempt B')}
+                              animationDuration={700}
+                              hide={hiddenSeries?.isHidden('b') ?? false}
+                            />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                    </EmbeddedChart>
                   </div>
                 </div>
 
@@ -405,50 +433,53 @@ export default function SegmentsPage() {
                     <Text as="p" variant="label" className="mb-2">
                       {t('segments.ghost.gap', 'Time gap (A vs B)')}
                     </Text>
-                    <div
-                      role="img"
-                      aria-label={t('segments.ghost.gapAria', 'Area chart of the A-versus-B time gap along the route; below the zero line means A is ahead')}
-                      className="h-48 sm:h-56"
-                    >
-                      <ResponsiveContainer width="100%" height="100%">
-                        <ComposedChart data={gapData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
-                          <defs>
-                            <ChartGradient id="segGapGrad" color={COLOR_A} opacity={0.3} />
-                          </defs>
-                          {chartGrid}
-                          <XAxis
-                            dataKey="frac"
-                            type="number"
-                            domain={[0, 1]}
-                            ticks={[0, 0.25, 0.5, 0.75, 1]}
-                            tickFormatter={pctTick}
-                            tick={axisTick}
-                            tickLine={false}
-                            axisLine={false}
-                          />
-                          <YAxis
-                            width={52}
-                            tick={axisTick}
-                            tickLine={false}
-                            axisLine={false}
-                            tickFormatter={(v: number) => signedDelta(v)}
-                          />
-                          <Tooltip content={
-                            <ChartTooltip
-                              labelFormatter={(l) => pctTick(Number(l))}
-                              valueFormatter={(v) => signedDelta(Number(v))}
+                    <div className="h-48 sm:h-56">
+                      {/* chart-a11y:no-table route-fraction time-gap area — dense trace, not tabular */}
+                      <EmbeddedChart
+                        title={t('segments.ghost.gap', 'Time gap (A vs B)')}
+                        ariaLabel={t('segments.ghost.gapAria', 'Area chart of the A-versus-B time gap along the route; below the zero line means A is ahead')}
+                        fluid
+                      >
+                        <ResponsiveContainer width="100%" height="100%">
+                          <ComposedChart data={gapData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
+                            <defs>
+                              <ChartGradient id="segGapGrad" color={COLOR_A} opacity={0.3} />
+                            </defs>
+                            {chartGrid}
+                            <XAxis
+                              dataKey="frac"
+                              type="number"
+                              domain={[0, 1]}
+                              ticks={[0, 0.25, 0.5, 0.75, 1]}
+                              tickFormatter={pctTick}
+                              tick={axisTick}
+                              tickLine={false}
+                              axisLine={false}
                             />
-                          } />
-                          <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 3" strokeOpacity={0.7} />
-                          <Area
-                            type="monotone" dataKey="delta"
-                            stroke={COLOR_A} strokeWidth={2}
-                            fill="url(#segGapGrad)"
-                            name={t('segments.ghost.gap', 'Time gap (A vs B)')}
-                            isAnimationActive={false}
-                          />
-                        </ComposedChart>
-                      </ResponsiveContainer>
+                            <YAxis
+                              width={52}
+                              tick={axisTick}
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(v: number) => signedDelta(v)}
+                            />
+                            <Tooltip content={
+                              <ChartTooltip
+                                labelFormatter={(l) => pctTick(Number(l))}
+                                valueFormatter={(v) => signedDelta(Number(v))}
+                              />
+                            } />
+                            <ReferenceLine y={0} stroke="#94a3b8" strokeDasharray="4 3" strokeOpacity={0.7} />
+                            <Area
+                              type="monotone" dataKey="delta"
+                              stroke={COLOR_A} strokeWidth={2}
+                              fill="url(#segGapGrad)"
+                              name={t('segments.ghost.gap', 'Time gap (A vs B)')}
+                              isAnimationActive={false}
+                            />
+                          </ComposedChart>
+                        </ResponsiveContainer>
+                      </EmbeddedChart>
                     </div>
                     <Text as="p" variant="caption" className="mt-2">
                       {t('segments.ghost.gapHelp', 'Below the line, Attempt A is ahead; above it, Attempt B leads.')}
@@ -552,61 +583,101 @@ interface LeaderboardTableProps {
 }
 
 function LeaderboardTable({ rows, board, racerA, racerB, onPickA, onPickB, t }: LeaderboardTableProps) {
+  const columns = useMemo<Column<LeaderboardRow>[]>(() => [
+    {
+      key: 'rank',
+      header: '#',
+      visibleOnMobile: true,
+      render: (row) => (
+        <Text variant="bodySm" color="secondary" className="tabular-nums">
+          {row.rank}
+        </Text>
+      ),
+    },
+    {
+      key: 'date',
+      header: t('segments.table.date', 'Date'),
+      visibleOnMobile: true,
+      render: (row) => (
+        <span className="inline-flex items-center gap-2">
+          {formatDateShort(row.started_at)}
+          {row.is_pr ? (
+            <StatusPill color="bg-amber-400">{t('segments.table.pr', 'PR')}</StatusPill>
+          ) : null}
+        </span>
+      ),
+    },
+    {
+      key: 'time',
+      header: t('segments.table.time', 'Time'),
+      align: 'right',
+      render: (row) => (
+        <Text
+          variant="bodySm"
+          weight={board === 'time' ? 'semibold' : 'regular'}
+          className="tabular-nums"
+        >
+          {clock(row.duration_s)}
+        </Text>
+      ),
+    },
+    {
+      key: 'efficiency',
+      header: t('segments.table.eff', 'Wh/km'),
+      align: 'right',
+      render: (row) => (
+        <Text
+          variant="bodySm"
+          weight={board === 'efficiency' ? 'semibold' : 'regular'}
+          className="tabular-nums"
+        >
+          {whPerKm(row.wh_per_km)}
+        </Text>
+      ),
+    },
+    {
+      key: 'delta',
+      header: t('segments.table.delta', 'Δ to best'),
+      align: 'right',
+      render: (row) => (
+        <Text variant="bodySm" color="muted" className="tabular-nums">
+          {row.delta_to_best_s === 0 ? DASH : signedDelta(row.delta_to_best_s)}
+        </Text>
+      ),
+    },
+    {
+      key: 'race',
+      header: t('segments.table.race', 'Race'),
+      align: 'right',
+      visibleOnMobile: true,
+      render: (row) => (
+        <div className="inline-flex gap-1">
+          <RaceButton
+            active={racerA === row.drive_id}
+            color="cyan"
+            onClick={() => onPickA(row.drive_id)}
+            label="A"
+          />
+          <RaceButton
+            active={racerB === row.drive_id}
+            color="fuchsia"
+            onClick={() => onPickB(row.drive_id)}
+            label="B"
+          />
+        </div>
+      ),
+    },
+  ], [board, onPickA, onPickB, racerA, racerB, t]);
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-[var(--border-subtle)] text-left text-[var(--text-muted)]">
-            <th scope="col" className="py-2 pr-3 font-medium">#</th>
-            <th scope="col" className="py-2 pr-3 font-medium">{t('segments.table.date', 'Date')}</th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">{t('segments.table.time', 'Time')}</th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">{t('segments.table.eff', 'Wh/km')}</th>
-            <th scope="col" className="py-2 pr-3 text-right font-medium">{t('segments.table.delta', 'Δ to best')}</th>
-            <th scope="col" className="py-2 text-right font-medium">{t('segments.table.race', 'Race')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => {
-            const isA = racerA === r.drive_id;
-            const isB = racerB === r.drive_id;
-            return (
-              <tr
-                key={r.drive_id}
-                className={cn(
-                  'border-b border-[var(--border-subtle)] transition-colors',
-                  (isA || isB) && 'bg-[var(--surface-elevated)]',
-                )}
-              >
-                <td className="py-2 pr-3 tabular-nums text-[var(--text-secondary)]">{r.rank}</td>
-                <td className="py-2 pr-3">
-                  <span className="inline-flex items-center gap-2">
-                    {formatDateShort(r.started_at)}
-                    {r.is_pr ? (
-                      <StatusPill color="bg-amber-400">{t('segments.table.pr', 'PR')}</StatusPill>
-                    ) : null}
-                  </span>
-                </td>
-                <td className={cn('py-2 pr-3 text-right tabular-nums', board === 'time' && 'font-semibold text-[var(--text-primary)]')}>
-                  {clock(r.duration_s)}
-                </td>
-                <td className={cn('py-2 pr-3 text-right tabular-nums', board === 'efficiency' && 'font-semibold text-[var(--text-primary)]')}>
-                  {whPerKm(r.wh_per_km)}
-                </td>
-                <td className="py-2 pr-3 text-right tabular-nums text-[var(--text-muted)]">
-                  {r.delta_to_best_s === 0 ? DASH : signedDelta(r.delta_to_best_s)}
-                </td>
-                <td className="py-2 text-right">
-                  <div className="inline-flex gap-1">
-                    <RaceButton active={isA} color="cyan" onClick={() => onPickA(r.drive_id)} label="A" />
-                    <RaceButton active={isB} color="fuchsia" onClick={() => onPickB(r.drive_id)} label="B" />
-                  </div>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
+    <DataTable
+      columns={columns}
+      data={rows}
+      keyExtractor={(row) => row.drive_id}
+      tableId="segments:leaderboard"
+      mobileColumns={['rank', 'date', 'race']}
+      compact
+    />
   );
 }
 
@@ -622,18 +693,20 @@ function RaceButton({ active, color, onClick, label }: RaceButtonProps) {
     ? 'bg-cyan-400/20 text-cyan-200 ring-1 ring-cyan-400/50'
     : 'bg-fuchsia-400/20 text-fuchsia-200 ring-1 ring-fuchsia-400/50';
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={onClick}
       aria-pressed={active}
       aria-label={`${label}${active ? ' (selected)' : ''}`}
       className={cn(
-        'h-7 w-7 rounded-md text-xs font-bold transition-colors',
+        'h-7 w-7 p-0 text-xs font-bold',
         active ? on : 'bg-[var(--surface-elevated)] text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
       )}
     >
       {label}
-    </button>
+    </Button>
   );
 }
 

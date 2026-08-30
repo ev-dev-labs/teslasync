@@ -24,6 +24,8 @@
  *   8. URL-backed filters flow into the request query as SI-clean, snake_case
  *      params with no `/api/v1` double-prefix.
  *   9. Right-click opens the per-row context menu with the correct items.
+ *  10. CSV / JSON export supports visible rows, selected rows, and grouped
+ *      thread summaries without flattening the inbox into a table.
  *
  * Network is mocked at the `@/api/client` boundary (repo convention — see
  * ArchivedPage.test.tsx). `react-i18next` is stubbed to echo the inline
@@ -51,6 +53,11 @@ vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
   return { ...actual, request: vi.fn() };
 });
+
+vi.mock('@/lib/export', () => ({
+  exportAsCSV: vi.fn(),
+  exportAsJSON: vi.fn(),
+}));
 
 // Echo the inline fallback and interpolate `{{var}}` from either the trailing
 // options object (`t('k','{{count}} x', { count })`) or an options-only call
@@ -112,11 +119,14 @@ vi.mock('framer-motion', () => ({
 import { request } from '@/api/client';
 import { ToastProvider } from '@/components/feedback/Toast';
 import { ContextMenuRoot } from '@/components/ui';
+import { exportAsCSV, exportAsJSON } from '@/lib/export';
 import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 import type { NotificationLog, NotificationLogGroup, AlertRule, Vehicle } from '@/api/types';
 import { InboxBody } from './InboxBody';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
+const mockedExportAsCSV = vi.mocked(exportAsCSV);
+const mockedExportAsJSON = vi.mocked(exportAsJSON);
 
 const MARK_ON_OPEN = 'teslasync.notifications.markOnOpen';
 
@@ -240,6 +250,8 @@ function renderInbox(opts: { archived?: boolean; route?: string } = {}): RenderR
 
 beforeEach(() => {
   mockedRequest.mockReset();
+  mockedExportAsCSV.mockReset();
+  mockedExportAsJSON.mockReset();
   localStorage.clear();
   // Quiet default: opt OUT of auto-mark-read so the mark-read endpoint is only
   // exercised by the tests that explicitly cover it. Individual tests opt back
@@ -327,6 +339,9 @@ describe('InboxBody — grouped view', () => {
     expect(await screen.findByTestId('notification-groups')).toBeInTheDocument();
     expect(screen.getByText('Battery thread')).toBeInTheDocument();
     expect(screen.getByText('One-off ping')).toBeInTheDocument();
+    expect(screen.getByTestId('inbox-result-count')).toHaveTextContent(
+      '2 threads · 4 deliveries',
+    );
 
     // Grouped endpoint used; the flat endpoint stays untouched.
     expect(groupedCalls().length).toBeGreaterThanOrEqual(1);
@@ -342,7 +357,67 @@ describe('InboxBody — grouped view', () => {
   });
 });
 
-/* ── 3. View toggle ───────────────────────────────────── */
+/* ── 3. Export ────────────────────────────────────────── */
+
+describe('InboxBody — export', () => {
+  it('exports selected flat rows while retaining visible-scope controls', async () => {
+    installRequest({
+      logs: () =>
+        Promise.resolve([
+          makeLog({ id: 7, title: 'Selected row' }),
+          makeLog({ id: 8, title: 'Visible row' }),
+        ]),
+    });
+    renderInbox({ route: '/notifications/inbox?view=flat' });
+
+    await screen.findByText('Selected row');
+    fireEvent.click(screen.getAllByLabelText('Select notification')[0]);
+    fireEvent.click(screen.getByTestId('notification-export-trigger'));
+
+    expect(screen.getByTestId('notification-export-scope-selected')).toBeChecked();
+    expect(screen.getByTestId('notification-export-scope-visible')).not.toBeChecked();
+    fireEvent.click(screen.getByTestId('notification-export-csv'));
+
+    expect(mockedExportAsCSV).toHaveBeenCalledWith(
+      [expect.objectContaining({ id: 7, title: 'Selected row' })],
+      expect.stringMatching(/^teslasync-notifications-\d{4}-\d{2}-\d{2}\.csv$/),
+    );
+  });
+
+  it('exports grouped view as thread summaries with delivery metadata', async () => {
+    installRequest({
+      groups: () =>
+        Promise.resolve([
+          makeGroup({
+            count: 4,
+            unread_count: 3,
+            vehicle_ids: [1, 2],
+            latest: makeLog({ id: 11, title: 'Battery thread' }),
+          }),
+        ]),
+    });
+    renderInbox({ route: '/notifications/inbox' });
+
+    await screen.findByText('Battery thread');
+    fireEvent.click(screen.getByTestId('notification-export-trigger'));
+    fireEvent.click(screen.getByTestId('notification-export-json'));
+
+    expect(mockedExportAsJSON).toHaveBeenCalledWith(
+      [
+        expect.objectContaining({
+          id: 11,
+          title: 'Battery thread',
+          thread_count: 4,
+          unread_count: 3,
+          vehicle_ids: '1,2',
+        }),
+      ],
+      expect.stringMatching(/^teslasync-notifications-\d{4}-\d{2}-\d{2}\.json$/),
+    );
+  });
+});
+
+/* ── 4. View toggle ───────────────────────────────────── */
 
 describe('InboxBody — view toggle', () => {
   it('exposes accessible grouped/flat toggles and switches the rendered list', async () => {
@@ -368,7 +443,7 @@ describe('InboxBody — view toggle', () => {
   });
 });
 
-/* ── 4. Archived mode ─────────────────────────────────── */
+/* ── 5. Archived mode ─────────────────────────────────── */
 
 describe('InboxBody — archived mode', () => {
   it('hides the view toggle and swaps the bulk action set to Restore', async () => {
@@ -395,7 +470,7 @@ describe('InboxBody — archived mode', () => {
   });
 });
 
-/* ── 5. Bulk selection ────────────────────────────────── */
+/* ── 6. Bulk selection ────────────────────────────────── */
 
 describe('InboxBody — bulk selection', () => {
   it('drives the select-all header checkbox through none → some (indeterminate) → all', async () => {
@@ -447,7 +522,7 @@ describe('InboxBody — bulk selection', () => {
   });
 });
 
-/* ── 6. Auto-mark-read on open ────────────────────────── */
+/* ── 7. Auto-mark-read on open ────────────────────────── */
 
 describe('InboxBody — auto-mark-read on open', () => {
   it('marks the unread rows read on open (flat, non-archived) by default', async () => {
@@ -480,7 +555,7 @@ describe('InboxBody — auto-mark-read on open', () => {
   });
 });
 
-/* ── 7. Mark all read ─────────────────────────────────── */
+/* ── 8. Mark all read ─────────────────────────────────── */
 
 describe('InboxBody — mark all read', () => {
   it('fires the { all: true } variant from the header action', async () => {
@@ -501,7 +576,7 @@ describe('InboxBody — mark all read', () => {
   });
 });
 
-/* ── 8. URL-backed filters ────────────────────────────── */
+/* ── 9. URL-backed filters ────────────────────────────── */
 
 describe('InboxBody — URL filters', () => {
   it('applies a visible seven-day range when the URL has no dates', async () => {
@@ -540,7 +615,7 @@ describe('InboxBody — URL filters', () => {
   });
 });
 
-/* ── 9. Row context menu ──────────────────────────────── */
+/* ── 10. Row context menu ─────────────────────────────── */
 
 describe('InboxBody — row context menu', () => {
   it('opens a per-row context menu with mark-read + delete items on right-click', async () => {

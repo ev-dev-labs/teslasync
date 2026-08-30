@@ -1,0 +1,239 @@
+{{/*
+OPS-05 — Canary Deployments.
+
+Rendered ONLY when .Values.rollout.<component>.canary.enabled is true,
+which is false by default, so an unchanged values file produces an
+unchanged manifest set.
+
+Traffic splitting is by replica share: the canary carries the same
+selector labels as the stable Deployment, so it is picked up by the
+existing Service and receives roughly replicas_canary /
+(replicas_stable + replicas_canary) of requests. That is deliberately
+dependency-free — no service mesh, no ingress weighting, nothing extra
+to operate during an incident.
+
+The canary carries `teslasync.io/rollout: canary` so Prometheus,
+`kubectl get pods -l`, and the rollback evaluator can tell the two
+revisions apart.
+*/}}
+{{- include "teslasync.assertCanarySelectors" . }}
+{{- if .Values.rollout.api.canary.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-api-canary
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: api
+    teslasync.io/rollout: canary
+spec:
+  replicas: {{ .Values.rollout.api.canary.replicaCount }}
+  {{- if .Values.rollout.paused }}
+  paused: true
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: api
+      teslasync.io/rollout: canary
+  strategy:
+    type: {{ .Values.rollout.api.strategy.type }}
+    {{- if eq .Values.rollout.api.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.rollout.api.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.rollout.api.strategy.maxUnavailable }}
+    {{- end }}
+  template:
+    metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.rollout.api.canary.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: api
+        teslasync.io/rollout: canary
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      initContainers:
+        {{- include "teslasync.dependencyWaitInitContainer" (dict "root" . "name" "database" "host" (include "teslasync.postgresql.host" .) "port" (include "teslasync.postgresql.port" .)) | nindent 8 }}
+        {{- if .Values.redis.enabled }}
+        {{- include "teslasync.dependencyWaitInitContainer" (dict "root" . "name" "redis" "host" (include "teslasync.redis.host" .) "port" (include "teslasync.redis.port" .)) | nindent 8 }}
+        {{- end }}
+      # OPS-09: the canary runs the same binary, so it needs the same
+      # shutdown budget as the stable set.
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          {{- if .Values.rollout.api.canary.image.tag }}
+          image: "{{ .Values.image.repository }}:{{ .Values.rollout.api.canary.image.tag }}"
+          {{- else }}
+          image: {{ include "teslasync.backend.image" . | quote }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+
+          envFrom:
+            - configMapRef:
+                name: {{ include "teslasync.fullname" . }}
+            - secretRef:
+                name: {{ include "teslasync.secretName" . }}
+          env:
+            - name: TESLASYNC_ROLLOUT_STAGE
+              value: canary
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          lifecycle:
+            preStop:
+              exec:
+                command: ["/usr/local/bin/teslasync", "drain"]
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}
+{{- if and .Values.web.enabled .Values.rollout.web.canary.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "teslasync.fullname" . }}-web-canary
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: web
+    teslasync.io/rollout: canary
+spec:
+  replicas: {{ .Values.rollout.web.canary.replicaCount }}
+  {{- if .Values.rollout.paused }}
+  paused: true
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: web
+      teslasync.io/rollout: canary
+  strategy:
+    type: {{ .Values.rollout.web.strategy.type }}
+    {{- if eq .Values.rollout.web.strategy.type "RollingUpdate" }}
+    rollingUpdate:
+      maxSurge: {{ .Values.rollout.web.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.rollout.web.strategy.maxUnavailable }}
+    {{- end }}
+  template:
+    metadata:
+      annotations:
+        {{- with .Values.web.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.rollout.web.canary.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      labels:
+        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: web
+        teslasync.io/rollout: canary
+    spec:
+      {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.web.podSecurityContext | nindent 8 }}
+      terminationGracePeriodSeconds: {{ .Values.web.terminationGracePeriodSeconds | default 30 }}
+      containers:
+        - name: web
+          securityContext:
+            {{- toYaml .Values.web.securityContext | nindent 12 }}
+          {{- if .Values.rollout.web.canary.image.tag }}
+          image: "{{ .Values.web.image.repository }}:{{ .Values.rollout.web.canary.image.tag }}"
+          {{- else }}
+          image: {{ include "teslasync.web.image" . | quote }}
+          {{- end }}
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+          livenessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          resources:
+            {{- toYaml .Values.web.resources | nindent 12 }}
+          volumeMounts:
+            - name: nginx-cache
+              mountPath: /var/cache/nginx
+            - name: nginx-run
+              mountPath: /var/run
+            - name: nginx-tmp
+              mountPath: /tmp
+            - name: nginx-conf
+              mountPath: /etc/nginx/conf.d
+      volumes:
+        - name: nginx-cache
+          emptyDir: {}
+        - name: nginx-run
+          emptyDir: {}
+        - name: nginx-tmp
+          emptyDir: {}
+        - name: nginx-conf
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-nginx
+      {{- with .Values.web.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.web.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

@@ -13,7 +13,8 @@
  *   4. History table renders run rows and only exposes the download / verify /
  *      preview actions on *completed* runs.
  *   5. Empty states render for both data sources.
- *   6. A failed configs query surfaces the QueryError recovery UI.
+ *   6. A failed configs query names the unavailable source while preserving
+ *      runs and the section-level QueryError recovery UI.
  *   7. Quick Backup fires POST /backup/quick and toasts.
  *   8. Create flow: the Create button is gated on a non-empty name, submits the
  *      form body, closes the modal and toasts.
@@ -383,9 +384,15 @@ describe('BackupRestorePage — data rendering', () => {
     renderPage();
     await waitForLoaded();
 
-    // Network-style failure → retry affordance, and no config rows rendered.
-    expect(await screen.findByRole('button', { name: /retry/i })).toBeInTheDocument();
+    expect(await screen.findByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByText('Backup configurations')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Backup runs')).toBeInTheDocument();
+    expect(screen.getByText('Ready')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry unavailable sources' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
     expect(screen.queryByText('Nightly Full')).not.toBeInTheDocument();
+    expect(screen.getByText('backup-101.sql.gz')).toBeInTheDocument();
   });
 });
 

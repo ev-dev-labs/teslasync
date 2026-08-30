@@ -126,7 +126,15 @@ export function Popover({
       wasOpenRef.current = true;
     } else if (wasOpenRef.current) {
       wasOpenRef.current = false;
-      anchorRef.current?.focus?.();
+      const activeElement = document.activeElement;
+      const focusStayedWithPopover =
+        !activeElement ||
+        activeElement === document.body ||
+        activeElement === anchorRef.current ||
+        contentRef.current?.contains(activeElement);
+      if (focusStayedWithPopover) {
+        anchorRef.current?.focus?.();
+      }
     }
   }, [open, anchorRef]);
 

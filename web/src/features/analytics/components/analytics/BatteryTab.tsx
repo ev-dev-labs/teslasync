@@ -4,16 +4,17 @@ import { Heart, Battery, TrendingUp, MapPin, Activity } from 'lucide-react';
 import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
+  ChartLegend,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   LineChart, Line, AreaChart, Area, ComposedChart,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
-import { convertDistanceFromSI } from '@/lib/unitConversion';
+import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { AnalyticsPanel } from './AnalyticsPanel';
+import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { MetricBandSkeleton } from './helpers';
 import type { FleetAnalyticsQuery } from './constants';
 
@@ -37,9 +38,14 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
 
   // Range trend is plotted in the user's distance unit; derive once instead of
   // building a fresh array literal inline on every render.
-  const rangeData = useMemo(
-    () => trend.map((d) => ({ ...d, range: fromKm(safe(d.range_km)) })),
-    [trend, fromKm],
+  const displayTrend = useMemo(
+    () =>
+      trend.map((d) => ({
+        ...d,
+        capacity: convertEnergyFromSI(safe(d.capacity_wh), unitPrefs.energy),
+        range: fromKm(safe(d.range_km)),
+      })),
+    [trend, fromKm, unitPrefs.energy],
   );
 
   return (
@@ -90,7 +96,7 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
         className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5 2xl:grid-cols-3"
       >
         {/* Health Score Timeline — hero band */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-3"
           title={t('analytics.battery.healthTimeline', 'Health Score Timeline')}
           icon={<Heart className="h-4 w-4" />}
@@ -99,30 +105,31 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
-          emptyIcon={<Battery className="h-10 w-10" />}
+          ariaLabel={t('analytics.battery.healthChartAria', 'Battery health score trend over time')}
+          size="detail"
+          data={displayTrend}
+          dataColumns={[
+            { key: 'date', label: t('chart.col.date', 'Date') },
+            { key: 'health_score', label: t('analytics.battery.health', 'Health %') },
+          ]}
+          exportFilename="fleet-battery-health"
         >
-          <div
-            className="h-72 sm:h-80"
-            role="img"
-            aria-label={t('analytics.battery.healthChartAria', 'Battery health score trend over time')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={trend} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={axisTick} domain={[80, 100]} />
-                <Tooltip content={<ChartTooltip />} />
-                <defs>
-                  <ChartGradient id="healthGrad" color={CHART_COLORS[1]} />
-                </defs>
-                <Area {...AREA_DEFAULTS} dataKey="health_score" name={t('analytics.battery.health', 'Health %')} stroke={CHART_COLORS[1]} fill="url(#healthGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={displayTrend} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
+              <YAxis tick={axisTick} domain={[80, 100]} />
+              <Tooltip content={<ChartTooltip />} />
+              <defs>
+                <ChartGradient id="healthGrad" color={CHART_COLORS[1]} />
+              </defs>
+              <Area {...AREA_DEFAULTS} dataKey="health_score" name={t('analytics.battery.health', 'Health %')} stroke={CHART_COLORS[1]} fill="url(#healthGrad)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Capacity Trend */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.battery.capacityTrend', 'Capacity Trend')}
           icon={<Battery className="h-4 w-4" />}
           loading={isLoading}
@@ -130,26 +137,31 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
+          ariaLabel={t('analytics.battery.capacityChartAria', 'Battery capacity trend over time')}
+          size="standard"
+          data={displayTrend}
+          dataColumns={[
+            { key: 'date', label: t('chart.col.date', 'Date') },
+            {
+              key: 'capacity',
+              label: `${t('analytics.battery.capacity', 'Capacity')} (${unitPrefs.energy})`,
+            },
+          ]}
+          exportFilename="fleet-battery-capacity"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={t('analytics.battery.capacityChartAria', 'Battery capacity trend over time')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={trend} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Line {...AREA_DEFAULTS} dataKey="capacity_wh" name={t('analytics.battery.capacity', 'Capacity')} stroke={CHART_COLORS[0]} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={displayTrend} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
+              <YAxis tick={axisTick} unit={` ${unitPrefs.energy}`} />
+              <Tooltip content={<ChartTooltip />} />
+              <Line {...AREA_DEFAULTS} dataKey="capacity" name={`${t('analytics.battery.capacity', 'Capacity')} (${unitPrefs.energy})`} stroke={CHART_COLORS[0]} />
+            </LineChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Range Trend */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.battery.rangeTrend', 'Range Trend')}
           icon={<MapPin className="h-4 w-4" />}
           loading={isLoading}
@@ -157,30 +169,35 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
+          ariaLabel={`${t('analytics.battery.rangeChartAria', 'Battery range trend over time')} (${distanceUnit})`}
+          size="standard"
+          data={displayTrend}
+          dataColumns={[
+            { key: 'date', label: t('chart.col.date', 'Date') },
+            {
+              key: 'range',
+              label: `${t('analytics.battery.range', 'Range')} (${distanceUnit})`,
+            },
+          ]}
+          exportFilename="fleet-battery-range"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={`${t('analytics.battery.rangeChartAria', 'Battery range trend over time')} (${distanceUnit})`}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart
-                data={rangeData}
-                margin={chartMarginLabeled}
-                {...chartAnimation}
-              >
-                {chartGrid}
-                <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Line {...AREA_DEFAULTS} dataKey="range" name={`${t('analytics.battery.range', 'Range')} (${distanceUnit})`} stroke={CHART_COLORS[2]} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart
+              data={displayTrend}
+              margin={chartMarginLabeled}
+              {...chartAnimation}
+            >
+              {chartGrid}
+              <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
+              <YAxis tick={axisTick} unit={` ${distanceUnit}`} />
+              <Tooltip content={<ChartTooltip />} />
+              <Line {...AREA_DEFAULTS} dataKey="range" name={`${t('analytics.battery.range', 'Range')} (${distanceUnit})`} stroke={CHART_COLORS[2]} />
+            </LineChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Degradation & Cycles */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-1"
           title={t('analytics.battery.degradationCycles', 'Degradation & Cycles')}
           icon={<TrendingUp className="h-4 w-4" />}
@@ -189,29 +206,38 @@ export function BatteryTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={isEmpty}
           emptyMessage={t('analytics.battery.noData', 'No battery trend data available')}
+          ariaLabel={t('analytics.battery.degradationChartAria', 'Battery degradation and charge cycle count over time')}
+          size="standard"
+          data={displayTrend}
+          dataColumns={[
+            { key: 'date', label: t('chart.col.date', 'Date') },
+            {
+              key: 'degradation_pct',
+              label: t('analytics.battery.degradPct', 'Degradation %'),
+            },
+            { key: 'cycle_count', label: t('analytics.battery.cycleCount', 'Cycle Count') },
+          ]}
+          exportFilename="fleet-battery-degradation-cycles"
+          chartKey="analytics-battery-degradation-cycles"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={t('analytics.battery.degradationChartAria', 'Battery degradation and charge cycle count over time')}
-          >
+          {({ hiddenSeries }) => (
             <ResponsiveContainer width="100%" height="100%">
-              <ComposedChart data={trend} margin={chartMarginLabeled} {...chartAnimation}>
+              <ComposedChart data={displayTrend} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
                 <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
                 <YAxis yAxisId="left" tick={axisTick} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
+                <ChartLegend />
                 <defs>
                   <ChartGradient id="degradGrad" color={CHART_COLORS[5]} />
                 </defs>
-                <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="degradation_pct" name={t('analytics.battery.degradPct', 'Degradation %')} stroke={CHART_COLORS[5]} fill="url(#degradGrad)" />
-                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="cycle_count" name={t('analytics.battery.cycleCount', 'Cycle Count')} stroke={CHART_COLORS[4]} />
+                <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="degradation_pct" name={t('analytics.battery.degradPct', 'Degradation %')} stroke={CHART_COLORS[5]} fill="url(#degradGrad)" hide={hiddenSeries?.isHidden('degradation_pct')} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="cycle_count" name={t('analytics.battery.cycleCount', 'Cycle Count')} stroke={CHART_COLORS[4]} hide={hiddenSeries?.isHidden('cycle_count')} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          )}
+        </AnalyticsChartPanel>
       </section>
     </FadeIn>
   );

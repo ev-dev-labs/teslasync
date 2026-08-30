@@ -161,10 +161,11 @@ describe('RegexTesterTool', () => {
     typePattern('[') // unterminated character class
     typeTestString('abc')
 
-    const alert = screen.getByRole('alert')
-    expect(alert).toBeInTheDocument()
+    // Two alerts now: field-level + engine/result. Find the one with the error message.
+    const engineAlert = screen.getAllByRole('alert').find(el => /invalid/i.test(el.textContent ?? ''))!
+    expect(engineAlert).toBeInTheDocument()
     // The real runtime message is shown for the developer.
-    expect(alert).toHaveTextContent(/invalid/i)
+    expect(engineAlert).toHaveTextContent(/invalid/i)
     // The input is flagged and the count badge is replaced (not a silent "0").
     expect(screen.getByLabelText('Pattern')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.getByText('Invalid pattern')).toBeInTheDocument()
@@ -176,7 +177,7 @@ describe('RegexTesterTool', () => {
 
     typePattern('(') // unterminated group, no test string yet
 
-    expect(screen.getByRole('alert')).toBeInTheDocument()
+    expect(screen.getAllByRole('alert').length).toBeGreaterThan(0)
     expect(screen.getByLabelText('Pattern')).toHaveAttribute('aria-invalid', 'true')
     expect(screen.queryByText(/Matches$/)).toBeNull()
   })

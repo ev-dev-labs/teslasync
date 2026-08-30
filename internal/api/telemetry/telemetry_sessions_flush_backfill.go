@@ -9,6 +9,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 )
 
@@ -25,45 +26,175 @@ func (t *TelemetrySessionTracker) DriveBufferLen() int { return 0 }
 // ChargeBufferLen is retained for caller compatibility (router.go).
 func (t *TelemetrySessionTracker) ChargeBufferLen() int { return 0 }
 
-// CleanupStaleSessions closes sessions that have been open too long without updates.
-// Also cleans up orphaned DB sessions (open sessions with no in-memory tracker,
-// e.g. from before a restart).
+// CleanupStaleSessions reviews in-memory sessions that have stopped receiving
+// updates. It closes only from a definitive, timestamped boundary in durable
+// telemetry history. Ambiguous and orphaned database rows remain open for the
+// evidence-based data-repair workflow.
 func (t *TelemetrySessionTracker) CleanupStaleSessions(ctx context.Context, staleTimeout time.Duration) {
+	if t.db == nil {
+		return
+	}
+
 	t.mu.Lock()
 	defer t.mu.Unlock()
 
 	now := time.Now().UTC()
+	evidence := datarepairdb.NewRepo(t.db)
 	for vehicleID, drive := range t.activeDrives {
 		if now.Sub(drive.LastSeen) > staleTimeout {
-			log.Warn().Int64("vehicle_id", vehicleID).Int64("drive_id", drive.DriveID).
-				Dur("idle", now.Sub(drive.LastSeen)).Msg("telemetry: closing stale drive session")
-			t.completeDriveLocked(ctx, vehicleID, drive, nil, time.Time{}, nil)
+			evidenceUntil, err := driveRecoveryEvidenceUntil(
+				ctx,
+				evidence,
+				vehicleID,
+				drive.StartTime,
+				drive.DriveID,
+				now,
+			)
+			if err != nil {
+				log.Warn().Err(err).
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", drive.DriveID).
+					Msg("telemetry: failed to resolve stale drive evidence window")
+				continue
+			}
+			boundary, err := finalParkBoundary(
+				ctx,
+				evidence,
+				vehicleID,
+				drive.StartTime,
+				evidenceUntil,
+			)
+			if err != nil {
+				log.Warn().Err(err).
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", drive.DriveID).
+					Msg("telemetry: failed to query stale drive boundary evidence")
+				continue
+			}
+			contradiction, contradictionErr := driveRecoveryContradiction(
+				ctx,
+				evidence,
+				vehicleID,
+				drive.StartTime,
+				evidenceUntil,
+			)
+			if contradictionErr != nil {
+				log.Warn().Err(contradictionErr).
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", drive.DriveID).
+					Msg("telemetry: failed to query stale drive contradiction evidence")
+				continue
+			}
+			if !terminalEvidencePrecedesContradiction(boundary, contradiction) {
+				if contradiction != nil {
+					delete(t.activeDrives, vehicleID)
+					log.Warn().
+						Int64("vehicle_id", vehicleID).
+						Int64("drive_id", drive.DriveID).
+						Time("contradiction_ts", contradiction.Ts).
+						Str("contradiction_field", contradiction.Field).
+						Msg("telemetry: detached ambiguous stale drive for operator review")
+					continue
+				}
+				log.Debug().
+					Int64("vehicle_id", vehicleID).
+					Int64("drive_id", drive.DriveID).
+					Dur("idle", now.Sub(drive.LastSeen)).
+					Msg("telemetry: stale drive has no definitive boundary; leaving open for review")
+				continue
+			}
+			log.Warn().
+				Int64("vehicle_id", vehicleID).
+				Int64("drive_id", drive.DriveID).
+				Time("boundary_ts", boundary.Ts).
+				Msg("telemetry: closing stale drive from timestamped parked-gear evidence")
+			t.completeDriveLocked(
+				ctx,
+				vehicleID,
+				drive,
+				map[string]interface{}{boundary.Field: boundary.Value},
+				boundary.Ts,
+				map[string]time.Time{boundary.Field: boundary.Ts},
+			)
 		}
 	}
 	for vehicleID, charge := range t.activeCharges {
 		if now.Sub(charge.LastSeen) > staleTimeout {
-			log.Warn().Int64("vehicle_id", vehicleID).Int64("session_id", charge.SessionID).
-				Dur("idle", now.Sub(charge.LastSeen)).Msg("telemetry: closing stale charge session")
-			t.completeChargeLocked(ctx, vehicleID, charge, nil, time.Time{})
+			evidenceUntil, err := chargingRecoveryEvidenceUntil(
+				ctx,
+				evidence,
+				vehicleID,
+				charge.StartTime,
+				charge.SessionID,
+				now,
+			)
+			if err != nil {
+				log.Warn().Err(err).
+					Int64("vehicle_id", vehicleID).
+					Int64("session_id", charge.SessionID).
+					Msg("telemetry: failed to resolve stale charging evidence window")
+				continue
+			}
+			boundary, err := evidence.FirstChargeStateObservation(
+				ctx,
+				vehicleID,
+				recoveryChargeStateFields,
+				recoveryTerminalStates,
+				charge.StartTime,
+				evidenceUntil,
+			)
+			if err != nil {
+				log.Warn().Err(err).
+					Int64("vehicle_id", vehicleID).
+					Int64("session_id", charge.SessionID).
+					Msg("telemetry: failed to query stale charging boundary evidence")
+				continue
+			}
+			contradiction, contradictionErr := chargingRecoveryContradiction(
+				ctx,
+				evidence,
+				vehicleID,
+				charge.StartTime,
+				evidenceUntil,
+			)
+			if contradictionErr != nil {
+				log.Warn().Err(contradictionErr).
+					Int64("vehicle_id", vehicleID).
+					Int64("session_id", charge.SessionID).
+					Msg("telemetry: failed to query stale charging contradiction evidence")
+				continue
+			}
+			if !terminalEvidencePrecedesContradiction(boundary, contradiction) {
+				if contradiction != nil {
+					delete(t.activeCharges, vehicleID)
+					log.Warn().
+						Int64("vehicle_id", vehicleID).
+						Int64("session_id", charge.SessionID).
+						Time("contradiction_ts", contradiction.Ts).
+						Str("contradiction_field", contradiction.Field).
+						Msg("telemetry: detached ambiguous stale charging session for operator review")
+					continue
+				}
+				log.Debug().
+					Int64("vehicle_id", vehicleID).
+					Int64("session_id", charge.SessionID).
+					Dur("idle", now.Sub(charge.LastSeen)).
+					Msg("telemetry: stale charge has no definitive boundary; leaving open for review")
+				continue
+			}
+			log.Warn().
+				Int64("vehicle_id", vehicleID).
+				Int64("session_id", charge.SessionID).
+				Time("boundary_ts", boundary.Ts).
+				Msg("telemetry: closing stale charge from timestamped terminal-state evidence")
+			t.completeChargeLocked(
+				ctx,
+				vehicleID,
+				charge,
+				map[string]interface{}{boundary.Field: boundary.Value},
+				boundary.Ts,
+			)
 		}
-	}
-
-	// Close orphaned DB sessions — drives/charges with NULL ended_at that started
-	// more than staleTimeout ago and have no in-memory tracker (e.g. from pre-restart).
-	// SI-canonical columns: started_at, ended_at, duration_s.
-	cutoff := now.Add(-staleTimeout)
-	_, err := t.db.Pool.Exec(ctx,
-		`UPDATE drives SET ended_at = $1,
-		 duration_s = EXTRACT(EPOCH FROM ($1 - started_at))::BIGINT
-		 WHERE ended_at IS NULL AND started_at < $2`, now, cutoff)
-	if err != nil {
-		log.Warn().Err(err).Msg("telemetry: failed to close orphaned drives")
-	}
-	_, err = t.db.Pool.Exec(ctx,
-		`UPDATE charging_sessions SET ended_at = $1
-		 WHERE ended_at IS NULL AND started_at < $2`, now, cutoff)
-	if err != nil {
-		log.Warn().Err(err).Msg("telemetry: failed to close orphaned charges")
 	}
 }
 

@@ -46,6 +46,7 @@ import {
   ScrollText,
   Trash2,
 } from 'lucide-react';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import { PageContainer } from '@/components/layout';
 import {
@@ -153,6 +154,112 @@ function extractVehicleId(
     if (typeof v === 'number') return String(v);
   }
   return null;
+}
+
+/**
+ * CANONICAL_POSITIVE_INTEGER_RE matches the ONLY string shapes this
+ * page accepts as a committed vehicle id: one or more ASCII digits,
+ * whose first digit is non-zero. No sign, no decimal point, no
+ * exponent, no internal or surrounding whitespace (callers trim
+ * first).
+ *
+ * Decision (documented): leading zeros are REJECTED, not silently
+ * normalized. `"007"` is not the canonical textual form of vehicle id
+ * `7` — the canonical form is `"7"` — and silently accepting
+ * non-canonical digit strings would reopen exactly the class of bug
+ * this regex exists to close (a syntactically-different string
+ * quietly resolving to the same numeric value). A user who means
+ * vehicle 7 must type `"7"`.
+ */
+const CANONICAL_POSITIVE_INTEGER_RE = /^[1-9][0-9]*$/;
+
+/**
+ * parseCanonicalVehicleId converts committed-filter text into a
+ * vehicle id, or `null` when the text is not a canonical positive
+ * integer digit string.
+ *
+ * This is the single choke point between free-typed filter text and
+ * `Number(...)` for vehicle scope. `Number()` alone is far too
+ * permissive to gate a real scope change: `Number("1e2")` is `100`,
+ * `Number("1.0")` is `1`, `Number("+7")` is `7` — every one of those
+ * would silently become a committed vehicle id under a bare
+ * `Number.isInteger(Number(text)) && n > 0` check, even though NONE
+ * of them is the canonical digit string a real vehicle id ever takes.
+ * Validating the STRING SHAPE first — before any `Number` conversion
+ * — closes that loophole: only a plain run of digits with a non-zero
+ * leading digit converts to an id at all. `Number.isSafeInteger` is a
+ * final belt-and-suspenders guard against a digit string so long it
+ * would lose precision as a JS number.
+ *
+ * Exported for direct unit testing; production code reaches it only
+ * through {@link commitVehicleFilter} inside {@link default LiveLogsPage}.
+ */
+export function parseCanonicalVehicleId(text: string): number | null {
+  const trimmed = text.trim();
+  if (!CANONICAL_POSITIVE_INTEGER_RE.test(trimmed)) return null;
+  const n = Number(trimmed);
+  if (!Number.isSafeInteger(n) || n <= 0) return null;
+  return n;
+}
+
+/**
+ * deriveAiVehicleScope computes the vehicle scope handed to
+ * AILogTraceSummarization. It MUST track the same committed/validated
+ * identity {@link commitVehicleFilter}-equivalent logic produces — a
+ * positive integer id that is a member of `vehicles` — never the raw
+ * in-progress `vehicleFilter` draft text.
+ *
+ * Rationale: `vehicleFilter` updates on every keystroke. Deriving AI
+ * scope straight from it (a bare `Number(trimmed)` parse) let an
+ * un-committed, invalid, or unknown draft silently become "AI scope":
+ * a fractional value like `"1.5"` or scientific notation like `"1e2"`
+ * parses to a finite positive number and would be sent to the backend
+ * as if it were a real vehicle id, and an id that is not in `vehicles`
+ * would "broaden" the AI request to a vehicle the user never actually
+ * selected. Because AILogTraceSummarization keys its useAiStream
+ * scopeKey on this value (AI-01), every one of those keystrokes would
+ * ALSO abort an in-flight summary or wipe a completed one — well
+ * before the user ever committed anything. {@link parseCanonicalVehicleId}
+ * additionally closes the loophole at the COMMIT boundary itself: even
+ * a blurred/Entered `"1e2"` can never become a committed vehicleId in
+ * the first place, so this function never has a "1e2-shaped" committed
+ * value to reflect.
+ *
+ * Only two outcomes are valid AI scope:
+ *
+ *   1. The filter is cleared to empty — an unambiguous, immediate
+ *      request for fleet-wide scope, mirroring how `filteredEvents`
+ *      already treats an empty filter as "show every vehicle" with no
+ *      commit required.
+ *   2. The filter is non-empty — AI scope tracks the already-
+ *      committed `vehicleId`, re-validated with the EXACT same
+ *      positive-integer + known-vehicle membership check
+ *      `commitVehicleFilter` uses. Until the user blurs/Enters a
+ *      valid, known id, the draft has no effect on AI scope — the
+ *      prior committed scope (or fleet-wide, if none was committed)
+ *      is preserved, so an active/completed summary is never
+ *      disturbed by in-progress typing, and a fractional/scientific-
+ *      notation/unknown draft is never sent to the backend.
+ *
+ * Exported for direct unit testing; production code reaches it only
+ * through the `aiVehicleId` memo in {@link default LiveLogsPage}.
+ */
+export function deriveAiVehicleScope(
+  vehicleFilter: string,
+  vehicleId: number | null,
+  vehicles: ReadonlyArray<{ id: number }>,
+): number | undefined {
+  const trimmed = vehicleFilter.trim();
+  if (trimmed.length === 0) return undefined;
+  if (
+    typeof vehicleId === 'number'
+    && Number.isInteger(vehicleId)
+    && vehicleId > 0
+    && vehicles.some((candidate) => candidate.id === vehicleId)
+  ) {
+    return vehicleId;
+  }
+  return undefined;
 }
 
 function downloadFilename(template: string): string {
@@ -329,9 +436,32 @@ export default function LiveLogsPage({
   const [grep, setGrep] = useState('');
   const [grepDraft, setGrepDraft] = useState('');
   const [vehicleFilter, setVehicleFilter] = useState('');
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
   const [paused, setPaused] = useState(false);
   const [autoscroll, setAutoscroll] = useState(true);
   const [enabled, setEnabled] = useState(true);
+
+  useEffect(() => {
+    setVehicleFilter(vehicleId == null ? '' : String(vehicleId));
+  }, [vehicleId]);
+
+  // commitVehicleFilter is the ONLY path that turns typed filter text
+  // into a real, committed vehicle selection. It gates on
+  // {@link parseCanonicalVehicleId} (canonical digit-string shape,
+  // checked BEFORE any Number conversion) rather than a bare
+  // `Number(text)` parse, so a non-canonical draft like `"1e2"`
+  // (scientific notation), `"1.5"` (fractional), `"+7"` (signed), or
+  // `"007"` (leading zero — see parseCanonicalVehicleId's doc for why
+  // that is rejected too) can never commit, no matter what numeric
+  // value it would coincidentally evaluate to.
+  const commitVehicleFilter = useCallback(() => {
+    const parsed = parseCanonicalVehicleId(vehicleFilter);
+    if (parsed == null) return;
+    const isKnownVehicle = vehicles.some((candidate) => candidate.id === parsed);
+    if (isKnownVehicle && parsed !== vehicleId) {
+      setVehicleId(parsed);
+    }
+  }, [setVehicleId, vehicleFilter, vehicleId, vehicles]);
 
   const stream = useLogStream({
     level,
@@ -371,13 +501,15 @@ export default function LiveLogsPage({
     return { aiFromUnix: fromUnix, aiToUnix: toUnix };
   }, [stream.events]);
 
-  const aiVehicleId = useMemo(() => {
-    const trimmed = vehicleFilter.trim();
-    if (trimmed.length === 0) return undefined;
-    const n = Number(trimmed);
-    if (!Number.isFinite(n) || n <= 0) return undefined;
-    return n;
-  }, [vehicleFilter]);
+  // aiVehicleId is the vehicle scope handed to AILogTraceSummarization.
+  // See {@link deriveAiVehicleScope} for the full rationale: it tracks
+  // the committed/validated vehicleId (never the raw draft text) so
+  // in-progress typing can never broaden scope, send a fractional/
+  // unknown id, or abort/reset an active or completed AI summary.
+  const aiVehicleId = useMemo(
+    () => deriveAiVehicleScope(vehicleFilter, vehicleId, vehicles),
+    [vehicleFilter, vehicleId, vehicles],
+  );
 
   // Find the scrollable container the DataTable renders inside so we
   // can pin the view to the bottom when autoscroll is on. The
@@ -681,6 +813,13 @@ export default function LiveLogsPage({
           label={t('liveLogs.filters.vehicleId', 'Vehicle ID')}
           value={vehicleFilter}
           onChange={(e) => setVehicleFilter(e.target.value.trim())}
+          onBlur={commitVehicleFilter}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              commitVehicleFilter();
+            }
+          }}
           placeholder={t(
             'liveLogs.filters.vehicleIdPlaceholder',
             'Numeric — applied client-side',

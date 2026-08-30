@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/enums"
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/rs/zerolog/log"
 )
@@ -16,13 +17,21 @@ import (
 // Adding a new signal is as simple as implementing SignalEvaluator and
 // calling engine.AddEvaluator().
 type PollEngine struct {
-	mu          sync.RWMutex
-	evaluators  []SignalEvaluator
-	predictor   *Predictor
-	costTracker *CostTracker
-	vehicles    map[string]*VehiclePollingState // keyed by VIN
-	config      EngineConfig
+	mu                sync.RWMutex
+	evaluators        []SignalEvaluator
+	predictor         *Predictor
+	costTracker       *CostTracker
+	vehicles          map[string]*VehiclePollingState // keyed by VIN
+	absentFleetCycles map[string]uint8
+	fleetSize         int
+	config            EngineConfig
 }
+
+const (
+	budgetExhaustedReason        = "Fleet API daily budget exhausted"
+	budgetUnavailableReason      = "Fleet API budget evidence unavailable"
+	fleetPruneAfterMissingCycles = 2
+)
 
 // NewPollEngine creates an engine with the default evaluator pipeline.
 func NewPollEngine(cfg EngineConfig) *PollEngine {
@@ -36,16 +45,18 @@ func NewPollEngine(cfg EngineConfig) *PollEngine {
 		cfg.Intervals = DefaultIntervalConfig()
 	}
 	if cfg.CostPerRequest <= 0 {
-		cfg.CostPerRequest = 0.00222
+		cfg.CostPerRequest = tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData)
 	}
 	if cfg.MonthlyCredit <= 0 {
 		cfg.MonthlyCredit = 10.0
 	}
 
 	e := &PollEngine{
-		vehicles:    make(map[string]*VehiclePollingState),
-		config:      cfg,
-		costTracker: NewCostTracker(cfg.CostPerRequest, cfg.MonthlyCredit),
+		vehicles:          make(map[string]*VehiclePollingState),
+		absentFleetCycles: make(map[string]uint8),
+		fleetSize:         1,
+		config:            cfg,
+		costTracker:       NewCostTracker(cfg.CostPerRequest, cfg.MonthlyCredit),
 	}
 
 	// Register the default evaluator pipeline
@@ -79,18 +90,67 @@ func (e *PollEngine) CostTracker() *CostTracker {
 	return e.costTracker
 }
 
+// SetFleetSize supplies the number of vehicles sharing the process budget so
+// pacing reserves a fair share of the remaining UTC-day calls for each one.
+func (e *PollEngine) SetFleetSize(size int) {
+	if size < 1 {
+		size = 1
+	}
+	e.mu.Lock()
+	e.fleetSize = size
+	e.mu.Unlock()
+}
+
+// ReconcileFleet updates budget pacing and drops state only after consecutive
+// absences so a transient empty or partial database read cannot erase a pause.
+func (e *PollEngine) ReconcileFleet(vins []string) {
+	active := make(map[string]struct{}, len(vins))
+	for _, vin := range vins {
+		active[vin] = struct{}{}
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	e.fleetSize = len(active)
+	if e.fleetSize < 1 {
+		e.fleetSize = 1
+	}
+	for vin := range e.vehicles {
+		if _, ok := active[vin]; ok {
+			delete(e.absentFleetCycles, vin)
+			continue
+		}
+		e.absentFleetCycles[vin]++
+		if e.absentFleetCycles[vin] >= fleetPruneAfterMissingCycles {
+			delete(e.vehicles, vin)
+			delete(e.absentFleetCycles, vin)
+		}
+	}
+	e.updateBudgetPausedGaugeLocked(time.Now())
+}
+
 // ShouldPoll checks whether enough time has elapsed for the next poll of
 // the given vehicle. Returns false with a decision explaining why the poll
 // was skipped.
 func (e *PollEngine) ShouldPoll(vin string) (bool, PollDecision) {
-	e.mu.RLock()
+	now := time.Now()
+	e.mu.Lock()
 	vs, exists := e.vehicles[vin]
-	e.mu.RUnlock()
-
-	// Record baseline tick (what would happen without the engine)
-	e.costTracker.RecordBaselineTick()
+	if exists && !vs.BudgetPausedUntil.IsZero() && !now.Before(vs.BudgetPausedUntil) {
+		e.clearBudgetPauseLocked(vs)
+	}
+	if exists && !now.Before(vs.NextPollAfter) {
+		vs.BackoffReason = ""
+	}
+	var state VehiclePollingState
+	if exists {
+		state = *vs
+	}
+	e.mu.Unlock()
 
 	if !exists {
+		e.costTracker.RecordBaselineTick()
 		// First time seeing this vehicle — always poll
 		return true, PollDecision{
 			ShouldPoll:   true,
@@ -101,32 +161,41 @@ func (e *PollEngine) ShouldPoll(vin string) (bool, PollDecision) {
 		}
 	}
 
-	now := time.Now()
-	if now.Before(vs.NextPollAfter) {
-		remaining := vs.NextPollAfter.Sub(now)
+	if now.Before(state.NextPollAfter) {
+		remaining := state.NextPollAfter.Sub(now)
 		reason := "backoff active"
 		skipReason := "idle"
 
-		if vs.CurrentProfile == ProfileSleeping {
+		if !state.BudgetPausedUntil.IsZero() && now.Before(state.BudgetPausedUntil) {
+			reason = budgetExhaustedReason
+			skipReason = "budget"
+		} else if state.BackoffReason != "" {
+			reason = state.BackoffReason
+			skipReason = ""
+		} else if state.CurrentProfile == ProfileSleeping {
 			reason = "vehicle is sleeping"
 			skipReason = "sleep"
 		}
 
-		e.costTracker.RecordSkip(skipReason)
+		if skipReason != "" {
+			e.costTracker.RecordBaselineTick()
+			e.costTracker.RecordSkip(skipReason)
+		}
 
 		return false, PollDecision{
 			ShouldPoll:   false,
 			NextInterval: remaining,
-			Activity:     vs.CurrentActivity,
-			Profile:      vs.CurrentProfile,
+			Activity:     state.CurrentActivity,
+			Profile:      state.CurrentProfile,
 			Reasons:      []string{reason},
 		}
 	}
 
+	e.costTracker.RecordBaselineTick()
 	return true, PollDecision{
 		ShouldPoll:   true,
-		Activity:     vs.CurrentActivity,
-		Profile:      vs.CurrentProfile,
+		Activity:     state.CurrentActivity,
+		Profile:      state.CurrentProfile,
 		NextInterval: 0,
 	}
 }
@@ -140,6 +209,8 @@ func (e *PollEngine) Assess(vin string, data *tesla.VehicleDataResponse) PollDec
 		vs = &VehiclePollingState{VIN: vin}
 		e.vehicles[vin] = vs
 	}
+	e.clearBudgetPauseLocked(vs)
+	vs.BackoffReason = ""
 	previous := vs.LastResponse
 	lastPollTime := vs.LastPollTime
 	e.mu.Unlock()
@@ -224,13 +295,14 @@ func (e *PollEngine) Assess(vin string, data *tesla.VehicleDataResponse) PollDec
 	vs.CurrentProfile = profile
 	vs.LastBatteryLevel = data.ChargeState.BatteryLevel
 	vs.LastOdometer = data.VehicleState.Odometer
-	vs.LastDecision = &decision
+	storedDecision := clonePollDecision(decision)
+	vs.LastDecision = &storedDecision
 
 	// Append to decision history ring buffer
 	if len(vs.DecisionHistory) >= e.config.DecisionHistorySize {
 		vs.DecisionHistory = vs.DecisionHistory[1:]
 	}
-	vs.DecisionHistory = append(vs.DecisionHistory, decision)
+	vs.DecisionHistory = append(vs.DecisionHistory, clonePollDecision(decision))
 	e.mu.Unlock()
 
 	// Record the poll with cost tracker
@@ -309,10 +381,145 @@ func (e *PollEngine) MarkSleeping(vin string) {
 		vs = &VehiclePollingState{VIN: vin}
 		e.vehicles[vin] = vs
 	}
+	e.clearBudgetPauseLocked(vs)
+	vs.BackoffReason = ""
 	vs.CurrentActivity = Sleeping
 	vs.CurrentProfile = ProfileSleeping
 	vs.NextPollAfter = time.Now().Add(e.config.MaxBackoff)
 	e.costTracker.RecordSkip("sleep")
+}
+
+// MarkBudgetExhausted pauses a vehicle until the shared UTC-day budget resets.
+func (e *PollEngine) MarkBudgetExhausted(vin string, until time.Time) {
+	now := time.Now()
+	if !until.After(now) {
+		return
+	}
+
+	e.mu.Lock()
+	vs, exists := e.vehicles[vin]
+	if !exists {
+		vs = &VehiclePollingState{VIN: vin, CurrentProfile: ProfileIdle}
+		e.vehicles[vin] = vs
+	}
+	if until.After(vs.BudgetPausedUntil) {
+		vs.BudgetPausedUntil = until
+	}
+	if until.After(vs.NextPollAfter) {
+		vs.NextPollAfter = until
+	}
+	vs.BackoffReason = ""
+	remaining := time.Until(vs.BudgetPausedUntil)
+	decision := PollDecision{
+		ShouldPoll:   false,
+		NextInterval: remaining,
+		Activity:     vs.CurrentActivity,
+		Profile:      vs.CurrentProfile,
+		Reasons:      []string{budgetExhaustedReason},
+	}
+	vs.LastDecision = &decision
+	if len(vs.DecisionHistory) >= e.config.DecisionHistorySize {
+		vs.DecisionHistory = vs.DecisionHistory[1:]
+	}
+	vs.DecisionHistory = append(vs.DecisionHistory, decision)
+	e.updateBudgetPausedGaugeLocked(now)
+	e.mu.Unlock()
+}
+
+// MarkBudgetUnavailable applies a short retry delay when the shared budget
+// store cannot prove allowance. It does not claim the daily cap was consumed.
+func (e *PollEngine) MarkBudgetUnavailable(vin string, until time.Time) {
+	now := time.Now()
+	if !until.After(now) {
+		return
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	vs, exists := e.vehicles[vin]
+	if !exists {
+		vs = &VehiclePollingState{VIN: vin, CurrentProfile: ProfileIdle}
+		e.vehicles[vin] = vs
+	}
+	if until.After(vs.NextPollAfter) {
+		vs.NextPollAfter = until
+	}
+	vs.BackoffReason = budgetUnavailableReason
+	decision := PollDecision{
+		ShouldPoll:   false,
+		NextInterval: time.Until(vs.NextPollAfter),
+		Activity:     vs.CurrentActivity,
+		Profile:      vs.CurrentProfile,
+		Reasons:      []string{budgetUnavailableReason},
+	}
+	vs.LastDecision = &decision
+	if len(vs.DecisionHistory) >= e.config.DecisionHistorySize {
+		vs.DecisionHistory = vs.DecisionHistory[1:]
+	}
+	vs.DecisionHistory = append(vs.DecisionHistory, decision)
+}
+
+// ApplyBudgetPacing stretches the next interval when the remaining background
+// allowance would otherwise be exhausted before the UTC-day reset.
+func (e *PollEngine) ApplyBudgetPacing(vin string, snapshot tesla.BudgetSnapshot) time.Duration {
+	now := time.Now()
+	if !snapshot.ResetAt.After(now) {
+		return 0
+	}
+
+	remainingMicroUSD := snapshot.RemainingBackgroundMicroUSD()
+	requestCost := tesla.EstimatedCostMicroUSD(tesla.BudgetCategoryVehicleData)
+	if requestCost <= 0 {
+		return 0
+	}
+	remainingCalls := remainingMicroUSD / requestCost
+	if remainingCalls <= 0 {
+		e.MarkBudgetExhausted(vin, snapshot.ResetAt)
+		return time.Until(snapshot.ResetAt)
+	}
+
+	e.mu.Lock()
+	defer e.mu.Unlock()
+
+	callsPerVehicle := remainingCalls / int64(e.fleetSize)
+	if callsPerVehicle < 1 {
+		callsPerVehicle = 1
+	}
+	timeRemaining := snapshot.ResetAt.Sub(now)
+	minimumInterval := timeRemaining / time.Duration(callsPerVehicle)
+	if timeRemaining%time.Duration(callsPerVehicle) != 0 {
+		minimumInterval++
+	}
+
+	vs, exists := e.vehicles[vin]
+	if !exists {
+		vs = &VehiclePollingState{VIN: vin, CurrentProfile: ProfileIdle}
+		e.vehicles[vin] = vs
+	}
+	budgetNextPoll := now.Add(minimumInterval)
+	if !budgetNextPoll.After(vs.NextPollAfter) {
+		return 0
+	}
+
+	vs.NextPollAfter = budgetNextPoll
+	if vs.LastDecision != nil {
+		decision := clonePollDecision(*vs.LastDecision)
+		decision.NextInterval = minimumInterval
+		decision.Reasons = append(
+			decision.Reasons,
+			"Fleet API budget pacing preserves coverage through the UTC day",
+		)
+		vs.LastDecision = &decision
+	}
+	if last := len(vs.DecisionHistory) - 1; last >= 0 {
+		vs.DecisionHistory[last].NextInterval = minimumInterval
+		vs.DecisionHistory[last].Reasons = append(
+			vs.DecisionHistory[last].Reasons,
+			"Fleet API budget pacing preserves coverage through the UTC day",
+		)
+	}
+	return minimumInterval
 }
 
 // MarkStreamingSkip records that a vehicle was skipped because fleet telemetry
@@ -327,11 +534,31 @@ func (e *PollEngine) ResetVehicle(vin string) {
 	defer e.mu.Unlock()
 
 	if vs, ok := e.vehicles[vin]; ok {
+		e.clearBudgetPauseLocked(vs)
 		vs.ConsecIdle = 0
 		vs.CurrentActivity = Active
 		vs.CurrentProfile = ProfileDriving
 		vs.NextPollAfter = time.Time{}
+		vs.BackoffReason = ""
 	}
+}
+
+func (e *PollEngine) clearBudgetPauseLocked(vs *VehiclePollingState) {
+	if vs.BudgetPausedUntil.IsZero() {
+		return
+	}
+	vs.BudgetPausedUntil = time.Time{}
+	e.updateBudgetPausedGaugeLocked(time.Now())
+}
+
+func (e *PollEngine) updateBudgetPausedGaugeLocked(now time.Time) {
+	paused := 0
+	for _, state := range e.vehicles {
+		if !state.BudgetPausedUntil.IsZero() && now.Before(state.BudgetPausedUntil) {
+			paused++
+		}
+	}
+	metrics.PollingBudgetPausedVehicles.Set(float64(paused))
 }
 
 // GetVehicleState returns the current polling state for a vehicle. Thread-safe.
@@ -342,10 +569,7 @@ func (e *PollEngine) GetVehicleState(vin string) (*VehiclePollingState, bool) {
 	if !ok {
 		return nil, false
 	}
-	// Return a copy to avoid data races
-	cp := *vs
-	cp.LastResponse = nil // don't leak full response
-	return &cp, true
+	return cloneVehiclePollingState(vs), true
 }
 
 // GetAllVehicleStates returns a snapshot of all tracked vehicles.
@@ -354,11 +578,32 @@ func (e *PollEngine) GetAllVehicleStates() map[string]*VehiclePollingState {
 	defer e.mu.RUnlock()
 	result := make(map[string]*VehiclePollingState, len(e.vehicles))
 	for vin, vs := range e.vehicles {
-		cp := *vs
-		cp.LastResponse = nil
-		result[vin] = &cp
+		result[vin] = cloneVehiclePollingState(vs)
 	}
 	return result
+}
+
+func cloneVehiclePollingState(state *VehiclePollingState) *VehiclePollingState {
+	copyState := *state
+	copyState.LastResponse = nil
+	if state.LastDecision != nil {
+		decision := clonePollDecision(*state.LastDecision)
+		copyState.LastDecision = &decision
+	}
+	copyState.DecisionHistory = make([]PollDecision, len(state.DecisionHistory))
+	for index := range state.DecisionHistory {
+		copyState.DecisionHistory[index] = clonePollDecision(state.DecisionHistory[index])
+	}
+	return &copyState
+}
+
+func clonePollDecision(decision PollDecision) PollDecision {
+	decision.Reasons = append([]string(nil), decision.Reasons...)
+	if decision.Prediction != nil {
+		prediction := *decision.Prediction
+		decision.Prediction = &prediction
+	}
+	return decision
 }
 
 // GetDecisionHistory returns recent decisions for a vehicle.

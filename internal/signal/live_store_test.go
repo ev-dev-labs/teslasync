@@ -2,6 +2,7 @@ package signal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -91,6 +92,60 @@ func TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2(t *testing.
 	assertFloat64(t, local.Get(8, "BatteryLevel").Raw, 45)
 	redisValue := waitForRedisSignalValue(t, redisCache, 8, "BatteryLevel")
 	assertFloat64(t, redisValue.Raw, 45)
+}
+
+func TestHybridLiveSignalStoreUpdateValuesNonBlockingPreservesEventTime(t *testing.T) {
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	eventTime := time.Date(2026, 8, 22, 10, 0, 0, 123456789, time.UTC)
+
+	if err := liveStore.UpdateValuesNonBlocking(ctx, 8, map[string]*Value{
+		"BatteryLevel": {Raw: 45.0, Timestamp: eventTime},
+	}); err != nil {
+		t.Fatalf("UpdateValuesNonBlocking() error = %v", err)
+	}
+
+	localValue := local.Get(8, "BatteryLevel")
+	if localValue == nil || !localValue.Timestamp.Equal(eventTime) {
+		t.Fatalf("L1 timestamp = %v, want %v", localValue, eventTime)
+	}
+	redisValue := waitForRedisSignalValue(t, redisCache, 8, "BatteryLevel")
+	if !redisValue.Timestamp.Equal(eventTime) {
+		t.Fatalf("L2 timestamp = %v, want %v", redisValue.Timestamp, eventTime)
+	}
+}
+
+func TestRedisSignalCacheUpdateValuesRejectsOlderReplay(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+	newer := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	older := newer.Add(-7 * 24 * time.Hour)
+
+	if err := cache.UpdateValues(ctx, 9, map[string]*Value{
+		"BatteryLevel": {Raw: 80.0, Timestamp: newer},
+	}); err != nil {
+		t.Fatalf("UpdateValues(newer) error = %v", err)
+	}
+	if err := cache.UpdateValues(ctx, 9, map[string]*Value{
+		"BatteryLevel": {Raw: 20.0, Timestamp: older},
+	}); err != nil {
+		t.Fatalf("UpdateValues(older) error = %v", err)
+	}
+
+	got, err := cache.GetSignalValue(ctx, 9, "BatteryLevel")
+	if err != nil {
+		t.Fatalf("GetSignalValue() error = %v", err)
+	}
+	if got == nil || got.Raw != 80.0 || !got.Timestamp.Equal(newer) {
+		t.Fatalf("Redis value = %#v, want newer value 80 at %v", got, newer)
+	}
 }
 
 func TestHybridLiveSignalStoreLocalModeDoesNotUseRedisBackedReadsOrWrites(t *testing.T) {
@@ -299,6 +354,9 @@ func TestHybridLiveSignalStoreWarmHydratesL1FromRedis(t *testing.T) {
 
 	assertFloat64(t, local.Get(15, "BatteryLevel").Raw, 77)
 	assertString(t, local.Get(15, "ShiftState").Raw, "N")
+	if local.Get(15, "BatteryLevel").TimestampSynthetic {
+		t.Fatal("ordinary Redis cache write was marked synthetic after Warm")
+	}
 }
 
 func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T) {
@@ -341,6 +399,9 @@ func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T)
 		if value.Timestamp.IsZero() {
 			t.Fatalf("%s Timestamp is zero after restamp, want non-zero envelope timestamp", name)
 		}
+		if !value.TimestampSynthetic {
+			t.Fatalf("%s timestamp was presented as an observation after legacy restamp", name)
+		}
 		if value.Timestamp.Before(before) || value.Timestamp.After(after) {
 			t.Fatalf("%s Timestamp = %v, want within [%v, %v]", name, value.Timestamp, before, after)
 		}
@@ -351,6 +412,7 @@ func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T)
 		raw := rawHash[field]
 		for _, want := range []string{
 			`"encoding":"teslasync.signal.v1"`,
+			`"observed":false`,
 			`"timestamp"`,
 			`"source":"redis_signal_cache"`,
 		} {
@@ -358,6 +420,42 @@ func TestHybridLiveSignalStoreWarmRestampsLegacyScalarsToEnvelopes(t *testing.T)
 				t.Fatalf("restamped %s raw = %q does not contain %q", field, raw, want)
 			}
 		}
+	}
+}
+
+func TestRedisEnvelopeWithoutObservationMarkerIsConservativelySynthetic(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	vehicleID := int64(46)
+	encoded, err := encodeTimestampedSignalValueForField(
+		"BatteryLevel",
+		72.0,
+		time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC),
+	)
+	if err != nil {
+		t.Fatalf("encode envelope: %v", err)
+	}
+	var envelope map[string]interface{}
+	if err := json.Unmarshal([]byte(encoded), &envelope); err != nil {
+		t.Fatalf("decode envelope fixture: %v", err)
+	}
+	delete(envelope, "observed")
+	legacyBytes, err := json.Marshal(envelope)
+	if err != nil {
+		t.Fatalf("encode pre-marker envelope: %v", err)
+	}
+	redisClient.hashes[redisSignalKey(vehicleID)] = map[string]string{
+		"BatteryLevel": string(legacyBytes),
+	}
+
+	cache := &RedisSignalCache{rdb: redisClient}
+	values, err := cache.GetAllValues(ctx, vehicleID)
+	if err != nil {
+		t.Fatalf("GetAllValues() error = %v", err)
+	}
+	value := values["BatteryLevel"]
+	if value == nil || !value.TimestampSynthetic {
+		t.Fatalf("pre-marker envelope = %#v, want conservative synthetic provenance", value)
 	}
 }
 
@@ -623,6 +721,10 @@ type failingRedisSignalClient struct {
 
 func (f failingRedisSignalClient) HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd {
 	return redis.NewIntResult(0, f.err)
+}
+
+func (f failingRedisSignalClient) Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd {
+	return redis.NewCmdResult(nil, f.err)
 }
 
 func (f failingRedisSignalClient) Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd {

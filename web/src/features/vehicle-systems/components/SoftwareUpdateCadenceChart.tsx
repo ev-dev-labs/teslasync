@@ -11,7 +11,7 @@
  * `img` role + label so assistive tech announces it as a single figure.
  */
 
-import { BarChart3 } from 'lucide-react';
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import {
@@ -21,11 +21,12 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
+  EmbeddedChart,
+  type ChartDataColumn,
   ResponsiveContainer,
   ChartTooltip,
   axisTickSm,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
 
 export interface CadencePoint {
@@ -52,49 +53,62 @@ export function SoftwareUpdateCadenceChart({ data }: SoftwareUpdateCadenceChartP
   const { t } = useTranslation();
   const points = data ?? [];
 
-  if (points.length === 0) {
-    return (
-      <EmptyState /* no-action: defensive only — the sole caller (SoftwareUpdatesPage) already checks `cadence.length === 0` and renders its own EmptyState before ever mounting this chart with data. */
-        icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
-        message={t('softwareUpdates.cadence.empty', 'No update activity in this range')}
-      />
-    );
-  }
+  const dataColumns = useMemo<ChartDataColumn[]>(
+    () => [
+      { key: 'label', label: t('softwareUpdates.cadence.colMonth', 'Month') },
+      {
+        key: 'count',
+        label: t('softwareUpdates.cadence.series', 'Updates'),
+        format: (v) => String(v ?? 0),
+      },
+    ],
+    [t],
+  );
+  const chartRows = useMemo(
+    () => points.map(({ label, count }) => ({ label, count })),
+    [points],
+  );
 
   return (
-    <div
-      role="img"
-      aria-label={t('softwareUpdates.cadence.aria', 'Software updates per calendar month')}
-      className="h-56 sm:h-64 xl:h-72"
-    >
-      <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={points} margin={CHART_MARGIN}>
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke={chartTokens.gridStroke}
-            strokeOpacity={0.4}
-          />
-          <XAxis
-            dataKey="label"
-            tick={axisTickSm}
-            interval="preserveStartEnd"
-          />
-          <YAxis
-            allowDecimals={false}
-            tick={axisTickSm}
-            width={28}
-          />
-          <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
-          <Bar
-            dataKey="count"
-            name={t('softwareUpdates.cadence.series', 'Updates')}
-            fill={chartTokens.series[5]}
-            fillOpacity={0.85}
-            radius={BAR_RADIUS}
-            maxBarSize={56}
-          />
-        </BarChart>
-      </ResponsiveContainer>
+    <div className="h-56 sm:h-64 xl:h-72">
+      <EmbeddedChart
+        title={t('softwareUpdates.cadence.title', 'Update Cadence')}
+        ariaLabel={t('softwareUpdates.cadence.aria', 'Software updates per calendar month')}
+        empty={points.length === 0}
+        emptyMessage={t('softwareUpdates.cadence.empty', 'No update activity in this range')}
+        data={chartRows}
+        dataColumns={dataColumns}
+        fluid
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={points} margin={CHART_MARGIN}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={chartTokens.gridStroke}
+              strokeOpacity={0.4}
+            />
+            <XAxis
+              dataKey="label"
+              tick={axisTickSm}
+              interval="preserveStartEnd"
+            />
+            <YAxis
+              allowDecimals={false}
+              tick={axisTickSm}
+              width={28}
+            />
+            <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
+            <Bar
+              dataKey="count"
+              name={t('softwareUpdates.cadence.series', 'Updates')}
+              fill={chartTokens.series[5]}
+              fillOpacity={0.85}
+              radius={BAR_RADIUS}
+              maxBarSize={56}
+            />
+          </BarChart>
+        </ResponsiveContainer>
+      </EmbeddedChart>
     </div>
   );
 }

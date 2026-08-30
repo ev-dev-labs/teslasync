@@ -4,6 +4,7 @@ import { Text, Caption } from '@/components/ui';
 import { useFormatting } from '@/hooks/useFormatting';
 import {
   ChartTooltip, PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
+  EmbeddedChart,
 } from '@/components/charts';
 import { fmtNumber, fmtInt, fmtWithUnit } from '@/lib/numberFormat';
 import { CostSection } from './CostSection';
@@ -45,13 +46,28 @@ export function ChargerTypeBreakdown({
     >
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Pie chart */}
-        <div
-          className="flex items-center justify-center lg:col-span-1"
-          role="img"
-          aria-label={t(
+        <EmbeddedChart
+          title={t('costAnalysis.chargerType.title', 'Cost by Charger Type')}
+          ariaLabel={t(
             'costAnalysis.chargerType.chartAria',
             'Pie chart of charging cost by charger type.',
           )}
+          data={rows.map(({ name, cost, energy, sessions }) => ({
+            name: name ?? '—',
+            cost: cost ?? 0,
+            energy: energy ?? 0,
+            sessions: sessions ?? 0,
+          }))}
+          dataColumns={[
+            { key: 'name', label: t('costAnalysis.chargerType.type', 'Charger type') },
+            { key: 'cost', label: t('costAnalysis.chargerType.cost', 'Cost') },
+            { key: 'energy', label: t('costAnalysis.chargerType.energy', 'Energy (kWh)') },
+            { key: 'sessions', label: t('costAnalysis.chargerType.sessions', 'Sessions') },
+          ]}
+          fluid={false}
+          mobileHeight={280}
+          height={280}
+          className="flex items-center justify-center lg:col-span-1"
         >
           <ResponsiveContainer width="100%" height={280}>
             <PieChart>
@@ -74,7 +90,7 @@ export function ChargerTypeBreakdown({
               <Tooltip content={<ChartTooltip />} />
             </PieChart>
           </ResponsiveContainer>
-        </div>
+        </EmbeddedChart>
 
         {/* Detail breakdown bars */}
         <div className="space-y-3 lg:col-span-2">

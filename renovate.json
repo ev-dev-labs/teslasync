@@ -1,0 +1,24 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/\\.github/workflows/security\\.yml$/"],
+      "matchStrings": [
+        "TRIVY_IMAGE:\\s*(?<depName>aquasec/trivy)@(?<currentDigest>sha256:[a-f0-9]{64})\\s*#\\s*(?<currentValue>v?[0-9.]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    },
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/\\.github/workflows/security\\.yml$/"],
+      "matchStrings": [
+        "GITLEAKS_IMAGE:\\s*(?<depName>zricethezav/gitleaks)@(?<currentDigest>sha256:[a-f0-9]{64})\\s*#\\s*(?<currentValue>v?[0-9.]+)"
+      ],
+      "datasourceTemplate": "docker",
+      "versioningTemplate": "docker"
+    }
+  ]
+}

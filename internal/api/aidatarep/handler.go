@@ -23,6 +23,9 @@ import (
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
+	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
 	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
@@ -53,9 +56,7 @@ const aiDataRepairSuggestionsMaxIterations = 8
 // the AI surface in one place.
 const aiDataRepairSuggestionsStaleCutoff = 24 * time.Hour
 
-// aiDataRepairMaxBodyBytes caps the request body. The body is
-// expected to be empty or "{}", so any over-large body is a
-// programming bug; bound it cheaply.
+// aiDataRepairMaxBodyBytes caps the optional vehicle-scope request body.
 const aiDataRepairMaxBodyBytes = 16 * 1024
 
 func writeError(w http.ResponseWriter, status int, msg string) {
@@ -117,30 +118,72 @@ func NewHandler(
 	}
 }
 
-// parseDataRepairSuggestionsRequest drains the body. The body is
-// optional and may be empty / "null" / "{}". DisallowUnknownFields
-// is OFF because the handler has nothing meaningful to do with
-// body fields. Returns (ok, true) when the body is acceptable.
-func parseDataRepairSuggestionsRequest(w http.ResponseWriter, r *http.Request) bool {
+type dataRepairSuggestionsRequest struct {
+	VehicleID *int64 `json:"vehicle_id,omitempty"`
+}
+
+// parseDataRepairSuggestionsRequest decodes the optional vehicle scope.
+// Empty, null, and unknown-field-only objects remain valid for compatibility.
+func parseDataRepairSuggestionsRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+) (dataRepairSuggestionsRequest, bool) {
+	var request dataRepairSuggestionsRequest
 	if r.Body == nil {
-		return true
+		return request, true
 	}
 	defer r.Body.Close()
 	bodyBytes, readErr := io.ReadAll(io.LimitReader(r.Body, aiDataRepairMaxBodyBytes))
 	if readErr != nil {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("failed to read body: %v", readErr))
-		return false
+		return request, false
 	}
 	trimmed := strings.TrimSpace(string(bodyBytes))
 	if trimmed == "" || trimmed == "null" {
-		return true
+		return request, true
 	}
-	var probe map[string]any
-	if err := json.Unmarshal(bodyBytes, &probe); err != nil {
+	if err := json.Unmarshal(bodyBytes, &request); err != nil {
 		writeError(w, http.StatusBadRequest, fmt.Sprintf("invalid JSON body: %v", err))
-		return false
+		return dataRepairSuggestionsRequest{}, false
 	}
-	return true
+	if request.VehicleID != nil && *request.VehicleID <= 0 {
+		writeError(w, http.StatusBadRequest, "vehicle_id must be greater than zero")
+		return dataRepairSuggestionsRequest{}, false
+	}
+	return request, true
+}
+
+func scopeStaleInventory(
+	vehicleID *int64,
+	charging []*chargingmodel.ChargingSession,
+	drives []*drivemodel.Drive,
+) ([]*chargingmodel.ChargingSession, []*drivemodel.Drive) {
+	scopedCharging := make([]*chargingmodel.ChargingSession, 0, len(charging))
+	for _, session := range charging {
+		if session != nil && (vehicleID == nil || session.VehicleID == *vehicleID) {
+			scopedCharging = append(scopedCharging, session)
+		}
+	}
+	scopedDrives := make([]*drivemodel.Drive, 0, len(drives))
+	for _, drive := range drives {
+		if drive != nil && (vehicleID == nil || drive.VehicleID == *vehicleID) {
+			scopedDrives = append(scopedDrives, drive)
+		}
+	}
+	return scopedCharging, scopedDrives
+}
+
+func recordHandlerError(ctx context.Context, err error) {
+	if err == nil {
+		return
+	}
+	span := trace.SpanFromContext(ctx)
+	span.RecordError(err)
+	span.SetStatus(codes.Error, err.Error())
+}
+
+func activeTraceID(ctx context.Context) string {
+	return trace.SpanContextFromContext(ctx).TraceID().String()
 }
 
 // ServeHTTP implements [http.Handler]. The body is parsed, the
@@ -150,9 +193,14 @@ func parseDataRepairSuggestionsRequest(w http.ResponseWriter, r *http.Request) b
 // (when the writer has been opened) or a plain JSON 4xx/5xx
 // (before it has).
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.ai.data_repair_suggestions")
+	defer span.End()
+	r = r.WithContext(ctx)
+
 	// 1) Parse + validate the request body (empty / {} / null
 	// accepted; anything else 400).
-	if !parseDataRepairSuggestionsRequest(w, r) {
+	requestBody, ok := parseDataRepairSuggestionsRequest(w, r)
+	if !ok {
 		return
 	}
 
@@ -161,7 +209,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// without restart. A resolve failure must NOT open the SSE
 	// stream — emit JSON 502 so the frontend falls back gracefully.
 	if _, err := h.registry.For(r.Context(), datarepairsuggestions.FeatureID); err != nil {
-		log.Error().Err(err).Msg("ai data-repair-suggestions: provider.For failed")
+		recordHandlerError(r.Context(), err)
+		log.Error().Err(err).
+			Str("trace_id", activeTraceID(r.Context())).
+			Msg("ai data-repair-suggestions: provider.For failed")
 		writeError(w, http.StatusBadGateway, "ai provider unavailable")
 		return
 	}
@@ -173,7 +224,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cutoff := h.now().UTC().Add(-aiDataRepairSuggestionsStaleCutoff)
 	charging, drives, err := h.source.StaleSessions(r.Context(), cutoff)
 	if err != nil {
-		log.Error().Err(err).Msg("ai data-repair-suggestions: source.StaleSessions failed")
+		recordHandlerError(r.Context(), err)
+		log.Error().Err(err).
+			Str("trace_id", activeTraceID(r.Context())).
+			Msg("ai data-repair-suggestions: source.StaleSessions failed")
 		writeError(w, http.StatusInternalServerError, "failed to load stale-session inventory")
 		return
 	}
@@ -184,6 +238,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if drives == nil {
 		drives = make([]*drivemodel.Drive, 0)
 	}
+	charging, drives = scopeStaleInventory(requestBody.VehicleID, charging, drives)
 
 	chargingIDs := make([]int64, 0, len(charging))
 	for _, c := range charging {
@@ -202,14 +257,17 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// plus the per-request scope binding (defence against
 	// prompt-injection exfiltration).
 	subject, _ := tsauth.SubjectFromRequest(r, h.headerName)
-	ctx := provider.WithSubject(r.Context(), subject)
+	ctx = provider.WithSubject(r.Context(), subject)
 	ctx = provider.WithFeatureID(ctx, datarepairsuggestions.FeatureID)
 	ctx = diagnostic.WithScopedDataRepairIDs(ctx, chargingIDs, driveIDs)
 
 	// 5) Open the SSE writer.
 	sseW, ctx, err := stream.New(ctx, w, stream.WithFeatureID(datarepairsuggestions.FeatureID))
 	if err != nil {
-		log.Error().Err(err).Msg("ai data-repair-suggestions: stream.New failed (non-flushable writer)")
+		recordHandlerError(ctx, err)
+		log.Error().Err(err).
+			Str("trace_id", activeTraceID(ctx)).
+			Msg("ai data-repair-suggestions: stream.New failed (non-flushable writer)")
 		writeError(w, http.StatusInternalServerError, "streaming not supported")
 		return
 	}
@@ -218,7 +276,10 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// context.
 	prov, err := h.registry.For(ctx, datarepairsuggestions.FeatureID)
 	if err != nil {
-		log.Error().Err(err).Msg("ai data-repair-suggestions: provider.For (post-stream) failed")
+		recordHandlerError(ctx, err)
+		log.Error().Err(err).
+			Str("trace_id", activeTraceID(ctx)).
+			Msg("ai data-repair-suggestions: provider.For (post-stream) failed")
 		_ = sseW.WriteError(err)
 		return
 	}
@@ -242,7 +303,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		History:     nil,
 	}
 	if err := d.Run(ctx, h.strategy, in, sseW); err != nil {
+		recordHandlerError(ctx, err)
 		log.Error().Err(err).
+			Str("trace_id", activeTraceID(ctx)).
 			Int("charging_in_scope", len(chargingIDs)).
 			Int("drives_in_scope", len(driveIDs)).
 			Msg("ai data-repair-suggestions: dispatcher returned error")
@@ -260,7 +323,7 @@ func buildDataRepairSuggestionsUserMessage(now time.Time, charging []*chargingmo
 	b.WriteString("(1) call draft_data_repair_plan with the typed RepairPlan you propose; ")
 	b.WriteString("(2) call validate_data_repair_plan with the same RepairPlan to confirm it would be accepted by the canonical handler; ")
 	b.WriteString("(3) write one rationale sentence and stop. ")
-	b.WriteString("Do NOT claim the plan was applied — the user reviews the proposal in the AI side panel and clicks the canonical Save / Close / Discard button on the baseline form to apply it. ")
+	b.WriteString("Do NOT claim the plan was applied — the user reviews the proposal in the AI side panel and clicks the canonical Save / Close / Quarantine button on the baseline form to apply it. ")
 
 	// Sort by ID so prompt hashing is stable regardless of UI ordering.
 	sortedCharging := append([]*chargingmodel.ChargingSession(nil), charging...)

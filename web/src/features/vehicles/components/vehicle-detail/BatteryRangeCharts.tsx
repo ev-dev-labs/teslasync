@@ -7,8 +7,8 @@ import { AnimatedNumber } from '@/components/data-display'
 import {
   LinearGauge, ChartTooltip, CHART_COLORS,
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
-  AREA_DEFAULTS, areaGradient,
+  Tooltip, ResponsiveContainer, ChartLegend,
+  AREA_DEFAULTS, areaGradient, EmbeddedChart, type ChartDataColumn,
 } from '@/components/charts'
 import { EmptyState } from '@/components/feedback'
 import { useUnits } from '@/hooks/useUnits'
@@ -55,6 +55,31 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
     [ratedRange, unitPrefs.distance],
   )
 
+  const batteryColumns = useMemo<ChartDataColumn[]>(
+    () => [
+      { key: 'name', label: t('common.category', 'Category') },
+      { key: 'value', label: t('common.percentage', '%'), format: (v) => `${v}%` },
+    ],
+    [t],
+  );
+
+  const driveColumns = useMemo<ChartDataColumn[]>(
+    () => [
+      { key: 'date', label: t('common.date', 'Date') },
+      {
+        key: 'distance',
+        label: `${t('common.distance', 'Distance')} (${unitPrefs.distance})`,
+        format: (v) => String(v ?? 0),
+      },
+      {
+        key: 'duration',
+        label: t('common.duration', 'Duration (min)'),
+        format: (v) => String(v ?? 0),
+      },
+    ],
+    [t, unitPrefs.distance],
+  );
+
   return (
     <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
       {/* Battery bar chart */}
@@ -90,15 +115,23 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
           </div>
         </div>
         <div className="h-48">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={batteryChartData}>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-              <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={12} />
-              <YAxis stroke="rgba(255,255,255,0.4)" fontSize={12} domain={[0, 100]} />
-              <Tooltip content={<ChartTooltip />} />
-              <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          <EmbeddedChart
+            title={t('vehicles.detail.batteryOverview', 'Battery Overview')}
+            ariaLabel={t('vehicles.detail.batteryAria', 'Battery current and remaining levels bar chart')}
+            data={batteryChartData}
+            dataColumns={batteryColumns}
+            fluid
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={batteryChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                <XAxis dataKey="name" stroke="rgba(255,255,255,0.4)" fontSize={12} />
+                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={12} domain={[0, 100]} />
+                <Tooltip content={<ChartTooltip />} />
+                <Bar dataKey="value" fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </EmbeddedChart>
         </div>
       </GlassPanel>
 
@@ -110,31 +143,44 @@ export function BatteryRangeCharts({ state, drives }: BatteryRangeChartsProps) {
         </PanelTitle>
         {driveChartData.length > 0 ? (
           <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={driveChartData}>
-                {areaGradient('driveTrendDistGrad', CHART_COLORS[0])}
-                {areaGradient('driveTrendDurGrad', CHART_COLORS[1])}
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
-                <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <Area
-                  {...AREA_DEFAULTS}
-                  dataKey="distance"
-                  name={`${t('common.distance', 'Distance')} (${unitPrefs.distance})`}
-                  stroke={CHART_COLORS[0]}
-                  fill="url(#driveTrendDistGrad)"
-                />
-                <Area
-                  {...AREA_DEFAULTS}
-                  dataKey="duration"
-                  name={t('common.duration', 'Duration')}
-                  stroke={CHART_COLORS[1]}
-                  fill="url(#driveTrendDurGrad)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <EmbeddedChart
+              chartKey="battery-drive-trend"
+              title={t('vehicles.detail.driveTrend', 'Drive Distance Trend')}
+              ariaLabel={t('vehicles.detail.driveTrendAria', 'Recent drive distance and duration area chart')}
+              data={driveChartData}
+              dataColumns={driveColumns}
+              fluid
+            >
+              {({ hiddenSeries }) => (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={driveChartData}>
+                    {areaGradient('driveTrendDistGrad', CHART_COLORS[0])}
+                    {areaGradient('driveTrendDurGrad', CHART_COLORS[1])}
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                    <XAxis dataKey="date" stroke="rgba(255,255,255,0.4)" fontSize={11} />
+                    <YAxis stroke="rgba(255,255,255,0.4)" fontSize={11} />
+                    <Tooltip content={<ChartTooltip />} />
+                    <ChartLegend />
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="distance"
+                      name={`${t('common.distance', 'Distance')} (${unitPrefs.distance})`}
+                      stroke={CHART_COLORS[0]}
+                      fill="url(#driveTrendDistGrad)"
+                      hide={hiddenSeries?.isHidden('distance') ?? false}
+                    />
+                    <Area
+                      {...AREA_DEFAULTS}
+                      dataKey="duration"
+                      name={t('common.duration', 'Duration')}
+                      stroke={CHART_COLORS[1]}
+                      fill="url(#driveTrendDurGrad)"
+                      hide={hiddenSeries?.isHidden('duration') ?? false}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              )}
+            </EmbeddedChart>
           </div>
         ) : (
           <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

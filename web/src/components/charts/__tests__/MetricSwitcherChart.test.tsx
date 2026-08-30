@@ -129,6 +129,7 @@ describe('MetricSwitcherChart', () => {
       />,
     );
     expect(screen.getByText('Nothing to show')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export chart' })).toBeNull();
   });
 
   it('falls back to the first metric when active is unknown', () => {
@@ -145,5 +146,24 @@ describe('MetricSwitcherChart', () => {
     );
     // Tablist still renders both options regardless of active.
     expect(screen.getByRole('tab', { name: 'Drives' })).toBeInTheDocument();
+  });
+
+  it('uses the compact chart preset and exposes the active metric as a fallback table', () => {
+    renderWithProviders(
+      <MetricSwitcherChart
+        title="x"
+        ariaLabel="x"
+        series={series}
+        metrics={metrics}
+        activeMetric="distance"
+        onMetricChange={() => undefined}
+        emptyMessage="No data"
+      />,
+    );
+
+    expect(screen.getByRole('figure')).toHaveAttribute('data-chart-size', 'compact');
+    expect(screen.getByRole('table')).toHaveTextContent('Date');
+    expect(screen.getByRole('table')).toHaveTextContent('Distance');
+    expect(screen.getByRole('table')).toHaveTextContent('5 mi');
   });
 });

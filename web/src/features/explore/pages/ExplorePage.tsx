@@ -5,17 +5,14 @@
  * top of the existing sidebar IA — we re-use `navSections` verbatim, decorate
  * each entry with a 1-line description (see featureCatalog.ts), and render the
  * whole catalog as a categorized, filterable, full-width bento of cards that
- * reflows into more columns on wide monitors (1 → 6 across the breakpoint
- * ladder) so ultra-wide screens never leave dead margins.
+ * reflows into more columns on wide monitors without compressing descriptions.
  *
  * Page anatomy (top → bottom):
  *   1. KPI overview band — derived, at-a-glance counts (features / categories /
  *      showing / vehicles). No new API; computed from the same catalog.
- *   2. Recently-visited strip — reuses the `recentPages` localStorage registry
- *      the command palette maintains. Hidden while filtering (would be noise).
- *   3. Sticky search panel — stays pinned as you scroll the ~95 cards, with
+ *   2. Sticky search panel — stays pinned as you scroll the catalog, with
  *      section-anchor chips (with match counts) for quick jumping.
- *   4. Results — per-section card bands, or a helpful empty state with
+ *   3. Results — per-section card bands, or a helpful empty state with
  *      "did you mean" suggestions from the Levenshtein route engine.
  *
  * Design rules preserved:
@@ -28,7 +25,7 @@
  *   - Every result region owns its own empty state; nothing is gated behind a
  *     single `{data && …}`.
  */
-import { useMemo, useRef, useEffect, useState } from 'react';
+import { useMemo, useRef, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
@@ -50,11 +47,6 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useIsForwardAuth } from '@/api/hooks/useAuthMode';
 import { cn } from '@/lib/cn';
-import {
-  getRecentPages,
-  subscribeRecentPages,
-  type RecentEntry,
-} from '@/lib/recentPages';
 import { closestRoutes } from '@/lib/closestRoute';
 import { ROUTE_REGISTRY } from '@/lib/routeRegistry';
 
@@ -65,11 +57,9 @@ import {
   type FeatureCatalogEntry,
 } from '../featureCatalog';
 
-const RECENT_LIMIT = 6;
-
-/** Full-width card-grid reflow: 1 col on phone → 6 on 3xl (no dead margins). */
+/** Full-width card-grid reflow with a readable minimum card width. */
 const CARD_GRID =
-  'grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 3xl:grid-cols-6';
+  'grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5';
 
 export default function ExplorePage() {
   const { t } = useTranslation();
@@ -116,33 +106,6 @@ export default function ExplorePage() {
     else params.delete('q');
     setSearchParams(params, { replace: true });
   };
-
-  // ── Recently visited ────────────────────────────────────────────────
-  // Subscribed via useState + useEffect (not useSyncExternalStore) because
-  // `getRecentPages()` returns a freshly-allocated array each call, which
-  // breaks USE's Object.is snapshot equality and triggers an infinite
-  // re-render loop ("Maximum update depth exceeded"). Storing the array
-  // in component state keeps the reference stable until the store fires.
-  const [recent, setRecent] = useState<RecentEntry[]>(() => getRecentPages(RECENT_LIMIT));
-  useEffect(() => {
-    const unsubscribe = subscribeRecentPages(() => {
-      setRecent(getRecentPages(RECENT_LIMIT));
-    });
-    return unsubscribe;
-  }, []);
-  const visibleByTo = useMemo(() => {
-    const map = new Map<string, FeatureCatalogEntry>();
-    for (const e of visibleCatalog) map.set(e.to, e);
-    return map;
-  }, [visibleCatalog]);
-  const recentResolved = useMemo(
-    () =>
-      recent
-        .map((r) => visibleByTo.get(r.path))
-        .filter((x): x is FeatureCatalogEntry => Boolean(x))
-        .slice(0, RECENT_LIMIT),
-    [recent, visibleByTo],
-  );
 
   // ── "/" focuses the search box (Tesla-app muscle memory). ⌘K continues
   // to open the command palette — global handler upstream owns that.
@@ -219,19 +182,7 @@ export default function ExplorePage() {
           </section>
         </FadeIn>
 
-        {/* 2 — Recently visited — only when not filtering. Filtering implies
-            the user wants to narrow the full catalog; recents would be
-            noise in that mode. */}
-        {!query && recentResolved.length > 0 && (
-          <FadeIn delay={0.05}>
-            <RecentStrip
-              entries={recentResolved}
-              onNavigate={(to) => navigate(to)}
-            />
-          </FadeIn>
-        )}
-
-        {/* 3 — Sticky search panel. Left un-wrapped by FadeIn on purpose: a
+        {/* 2 — Sticky search panel. Left un-wrapped by FadeIn on purpose: a
             motion transform on an ancestor breaks `position: sticky`. `top-0`
             works because Layout's main scroll container is the page itself.
             `z-30` keeps us under modals (z-90+) and the command palette
@@ -302,59 +253,6 @@ export default function ExplorePage() {
         </FadeIn>
       </div>
     </PageContainer>
-  );
-}
-
-// ─── Recently visited ────────────────────────────────────────────────
-
-function RecentStrip({
-  entries,
-  onNavigate,
-}: {
-  entries: FeatureCatalogEntry[];
-  onNavigate: (to: string) => void;
-}) {
-  const { t } = useTranslation();
-  return (
-    <section
-      aria-labelledby="explore-recent-heading"
-      data-testid="explore-recent-strip"
-    >
-      <div className="mb-3 flex items-baseline justify-between gap-3">
-        <SectionTitle id="explore-recent-heading">
-          {t('explore.recent.heading', 'Recently visited')}
-        </SectionTitle>
-        <Caption className="tabular-nums">{entries.length}</Caption>
-      </div>
-      <ul className="flex flex-wrap gap-2">
-        {entries.map((entry) => {
-          const Icon = entry.icon;
-          return (
-            <li key={entry.to}>
-              <a
-                href={entry.to}
-                data-testid={`explore-recent-${entry.to}`}
-                onClick={(e) => {
-                  if (e.metaKey || e.ctrlKey || e.shiftKey || e.button !== 0) return;
-                  e.preventDefault();
-                  onNavigate(entry.to);
-                }}
-                className={cn(
-                  'inline-flex min-h-11 items-center gap-2 rounded-full px-3.5 py-2',
-                  'border border-[var(--glass-border)] bg-[var(--surface-1)]',
-                  'hover:bg-[var(--surface-2)]',
-                  'outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
-                  'transition-colors',
-                )}
-              >
-                <Icon className={cn('h-4 w-4 shrink-0', entry.color)} aria-hidden="true" />
-                <Text variant="body">{entry.label}</Text>
-              </a>
-            </li>
-          );
-        })}
-      </ul>
-    </section>
   );
 }
 

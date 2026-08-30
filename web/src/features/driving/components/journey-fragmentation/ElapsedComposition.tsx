@@ -17,7 +17,7 @@ export function ElapsedComposition({ result, loading = false }: JourneyFragmenta
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.elapsed.subtitle', 'Driving time and observed parking time allocated only across linked journey pairs.')}</Text>
       </div>
       {result.journeyCount === 0 ? (
-        <EmptyState icon={<Clock3 className="h-7 w-7" />} message={t('journeyFragmentation.elapsed.empty', 'Elapsed composition will appear when included drives are returned.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<Clock3 className="h-7 w-7" />} message={t('journeyFragmentation.elapsed.empty', 'Elapsed composition will appear when included drives are returned.')} />
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">

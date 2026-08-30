@@ -2,9 +2,8 @@ import { useTranslation } from 'react-i18next';
 import { Calendar, Plug } from 'lucide-react';
 import { GlassPanel } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { EmptyState } from '@/components/feedback';
 import {
-  ChartTooltip, ChartGradient, chartGrid, axisTickSm,
+  ChartLegend, ChartTooltip, ChartGradient, EmbeddedChart, chartGrid, axisTickSm,
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
   AREA_DEFAULTS,
@@ -43,8 +42,29 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
             <Calendar className="h-4 w-4 text-neon-cyan" aria-hidden="true" />
             {t('charging.charts.energyCostTrend', 'Energy & Cost Trend')}
           </h3>
-          {hasTrend ? (
-            <div className="h-40 sm:h-52">
+          <EmbeddedChart
+            title={t('charging.charts.energyCostTrend', 'Energy & Cost Trend')}
+            ariaLabel={t(
+              'charging.charts.energyCostTrendAria',
+              'Charging energy and cost trend',
+            )}
+            data={trend.map(({ date, energy, cost }) => ({ date, energy, cost }))}
+            dataColumns={[
+              { key: 'date', label: t('charging.charts.date', 'Date') },
+              { key: 'energy', label: energySeriesName },
+              { key: 'cost', label: costSeriesName },
+            ]}
+            chartKey="charging-list-energy-cost-trend"
+            empty={!hasTrend}
+            emptyMessage={t(
+              'charging.charts.noTrendData',
+              'No charging trend data available yet.',
+            )}
+            fluid={false}
+            mobileHeight={160}
+            height={208}
+          >
+            {({ hiddenSeries }) => (
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={trend}>
                   <defs>
@@ -54,15 +74,13 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
                   <XAxis dataKey="date" tick={axisTickSm} />
                   <YAxis tick={axisTickSm} />
                   <Tooltip content={<ChartTooltip />} />
-                  <Area {...AREA_DEFAULTS} dataKey="energy" name={energySeriesName} stroke="#10b981" fill="url(#eGrad)" />
-                  <Area {...AREA_DEFAULTS} dataKey="cost" name={costSeriesName} stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" />
+                  <ChartLegend />
+                  <Area {...AREA_DEFAULTS} dataKey="energy" name={energySeriesName} stroke="#10b981" fill="url(#eGrad)" hide={hiddenSeries?.isHidden('energy')} />
+                  <Area {...AREA_DEFAULTS} dataKey="cost" name={costSeriesName} stroke="#f59e0b" fill="transparent" strokeWidth={1.5} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('cost')} />
                 </AreaChart>
               </ResponsiveContainer>
-            </div>
-          ) : (
-            // no-action: ChartsRow is orphaned — only its own test + the barrel import reference it; no live page renders this trend chart.
-            <EmptyState message={t('charging.charts.noTrendData', 'No charging trend data available yet.')} />
-          )}
+            )}
+          </EmbeddedChart>
         </GlassPanel>
       </FadeIn>
 
@@ -73,9 +91,28 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
             <Plug className="h-4 w-4 text-neon-purple" aria-hidden="true" />
             {t('charging.charts.chargerBreakdown', 'Charger Breakdown')}
           </h3>
-          {hasBreakdown ? (
-            <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
-              <div className="h-36 w-36 sm:h-48 sm:w-48 shrink-0">
+          <div className="flex flex-col sm:flex-row items-center gap-4 sm:gap-6">
+              <EmbeddedChart
+                title={t('charging.charts.chargerBreakdown', 'Charger Breakdown')}
+                ariaLabel={t(
+                  'charging.charts.chargerBreakdownAria',
+                  'Charging sessions by charger type',
+                )}
+                data={breakdown.map(({ name, value }) => ({ name, value }))}
+                dataColumns={[
+                  { key: 'name', label: t('charging.charts.chargerType', 'Charger type') },
+                  { key: 'value', label: t('charging.charts.sessions', 'Sessions') },
+                ]}
+                empty={!hasBreakdown}
+                emptyMessage={t(
+                  'charging.charts.noBreakdownData',
+                  'No charger breakdown data available yet.',
+                )}
+                fluid={false}
+                mobileHeight={144}
+                height={192}
+                className="w-36 shrink-0 sm:w-48"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie data={breakdown} cx="50%" cy="50%" innerRadius={40} outerRadius={70} paddingAngle={3} dataKey="value">
@@ -86,7 +123,7 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
                     <Tooltip content={<ChartTooltip />} />
                   </PieChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
               <div className="flex-1 space-y-3">
                 {costs.map((ct) => (
                   <div key={ct.name}>
@@ -101,11 +138,7 @@ export function ChartsRow({ energyTrend, chargerBreakdown, costByType }: ChartsR
                   </div>
                 ))}
               </div>
-            </div>
-          ) : (
-            // no-action: ChartsRow is orphaned — only its own test + the barrel import reference it; no live page renders this breakdown chart.
-            <EmptyState message={t('charging.charts.noBreakdownData', 'No charger breakdown data available yet.')} />
-          )}
+          </div>
         </GlassPanel>
       </FadeIn>
     </div>

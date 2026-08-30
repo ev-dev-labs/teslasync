@@ -106,6 +106,7 @@ export function useDrives(vehicleId?: string, options?: DriveWindow | number) {
     enabled: !!vehicleId,
     select: safeArray,
     refetchInterval: opts.refetchInterval,
+    staleTime: STALE_TIMES.FAST,
   });
 }
 
@@ -324,6 +325,7 @@ export function useBulkDeleteDrives() {
     mutationFn: (ids: number[]) =>
       request<BulkOperationResult>('/drives/bulk', {
         method: 'DELETE',
+        requiresLiveMode: true,
         body: JSON.stringify({ ids }),
       }),
     onSuccess: (res) => {

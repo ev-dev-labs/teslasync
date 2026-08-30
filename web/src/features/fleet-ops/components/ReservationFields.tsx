@@ -20,9 +20,15 @@ export interface ReservationFormState {
   status: ReservationStatus;
 }
 
+export type ReservationFieldErrors = Partial<Record<
+  'title' | 'purpose' | 'vehicleId' | 'driverId' | 'startsAt' | 'endsAt',
+  string
+>>;
+
 interface ReservationFieldsProps {
   item: FleetReservation | null;
   value: ReservationFormState;
+  errors: ReservationFieldErrors;
   onChange: (patch: Partial<ReservationFormState>) => void;
   vehicles: VehicleChoice[];
   assignments: FleetAssignment[];
@@ -39,6 +45,7 @@ const transitions: Record<ReservationStatus, ReservationStatus[]> = {
 export function ReservationFields({
   item,
   value,
+  errors,
   onChange,
   vehicles,
   assignments,
@@ -74,6 +81,7 @@ export function ReservationFields({
         value={value.title}
         maxLength={160}
         onChange={(event) => onChange({ title: event.target.value })}
+        error={errors.title}
         required
       />
       <Textarea
@@ -82,12 +90,14 @@ export function ReservationFields({
         maxLength={500}
         rows={2}
         onChange={(event) => onChange({ purpose: event.target.value })}
+        error={errors.purpose}
       />
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Select
           label={t('fleetOps.reservationDialog.vehicle', 'Vehicle')}
           value={value.vehicleId}
           onChange={(event) => onChange({ vehicleId: event.target.value, driverId: '' })}
+          error={errors.vehicleId}
           options={vehicles.map((vehicle) => ({
             value: String(vehicle.id),
             label: vehicle.display_name || vehicle.vin || String(vehicle.id),
@@ -99,6 +109,7 @@ export function ReservationFields({
           label={t('fleetOps.reservationDialog.driver', 'Driver')}
           value={value.driverId}
           onChange={(event) => onChange({ driverId: event.target.value })}
+          error={errors.driverId}
           options={driverOptions}
           placeholder={t('fleetOps.reservationDialog.unassigned', 'Leave unassigned')}
         />
@@ -123,6 +134,7 @@ export function ReservationFields({
           label={t('fleetOps.reservationDialog.starts', 'Starts')}
           value={value.startsAt}
           onChange={(event) => onChange({ startsAt: event.target.value })}
+          error={errors.startsAt}
           required
         />
         <Input
@@ -130,6 +142,7 @@ export function ReservationFields({
           label={t('fleetOps.reservationDialog.ends', 'Ends')}
           value={value.endsAt}
           onChange={(event) => onChange({ endsAt: event.target.value })}
+          error={errors.endsAt}
           required
         />
       </div>

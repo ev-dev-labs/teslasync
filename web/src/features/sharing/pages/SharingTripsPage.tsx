@@ -27,14 +27,15 @@
 //     surface drafts an image prompt; the user still uses the existing
 //     per-drive Share workflow to publish a static share card.
 
-import { useCallback, useMemo, useState, type ChangeEvent } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Route as RouteIcon, Share2, Zap, Car, RefreshCw } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
-import { GlassPanel, Button, Select, PanelTitle, Text } from '@/components/ui'
+import { GlassPanel, Button, PanelTitle, Text } from '@/components/ui'
 import { MetricCard } from '@/components/data-display'
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback'
+import { VehicleSelect } from '@/components/forms'
 import { FadeIn } from '@/components/motion'
 import { useTrips } from '@/api/hooks/useTrips'
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
@@ -52,7 +53,7 @@ export default function SharingTripsPage() {
   const { t } = useTranslation()
   usePageTitle(t('sharing.trips.title', 'Share a trip'))
 
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle()
+  const { vehicleId } = useSelectedVehicle()
   const { formatDistance, formatEnergy } = useUnits()
 
   const tripsQuery = useTrips({ vehicle_id: vehicleId ?? undefined, limit: 20 })
@@ -77,34 +78,11 @@ export default function SharingTripsPage() {
   // error.
   const showError = !!error && allTrips.length === 0
 
-  const vehicleOptions = useMemo(
-    () =>
-      vehicles.map((v) => ({
-        value: String(v.id),
-        label: v.display_name || v.vin,
-      })),
-    [vehicles],
-  )
-
-  const handleVehicleChange = useCallback(
-    (e: ChangeEvent<HTMLSelectElement>) => {
-      const n = Number(e.target.value)
-      if (Number.isFinite(n) && n > 0) setVehicleId(n)
-    },
-    [setVehicleId],
-  )
-
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      {vehicles.length > 0 && (
-        <Select
-          options={vehicleOptions}
-          value={vehicleId != null ? String(vehicleId) : ''}
-          onChange={handleVehicleChange}
-          placeholder={t('sharing.trips.selectVehicle', 'Select vehicle')}
-          aria-label={t('sharing.trips.selectVehicle', 'Select vehicle')}
-        />
-      )}
+      <VehicleSelect
+        ariaLabel={t('sharing.trips.selectVehicle', 'Select vehicle')}
+      />
       <Button
         variant="ghost"
         onClick={() => refetch()}

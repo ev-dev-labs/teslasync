@@ -19,7 +19,13 @@ import { LAZY_ROUTE_IMPORTS } from './lazyRoutes.list'
  *      the exact bug this elevation fixed (13 admin/settings/explore routes had
  *      been added to App.tsx but never mirrored here, leaving the parity smoke
  *      test red and 13 chunks un-exercised),
- *   5. a real, callable loader that resolves to a module with a default export.
+ *   5. **the drift check can see every lazy() call** — a route written with a
+ *      specifier form the regex misses would pass the set comparison and fail
+ *      only the count, with a message that names neither the route nor the
+ *      cause,
+ *   6. **names match App.tsx bindings** — a mirrored-but-misnamed entry sends
+ *      whoever reads a smoke failure to the wrong route,
+ *   7. a real, callable loader that resolves to a module with a default export.
  *
  * Paths/specifiers are parsed from source text (via fs) rather than from
  * `load.toString()` because Vite's SSR/test transform rewrites dynamic
@@ -34,6 +40,13 @@ const appSource = fs.readFileSync(path.join(here, '..', 'App.tsx'), 'utf8')
 const LIST_IMPORT_RE = /load:\s*\(\)\s*=>\s*import\(\s*['"](\.\.\/[^'"]+)['"]\s*\)/g
 // `const X = lazy(() => import('./features/…'))`
 const APP_LAZY_RE = /lazy\(\s*\(\)\s*=>\s*import\(\s*['"](\.\/[^'"]+)['"]\s*\)\s*\)/g
+// Same, but capturing the binding name so the manifest's `name` can be checked
+// against what App.tsx actually calls the route.
+const APP_LAZY_NAMED_RE =
+  /const\s+(\w+)\s*=\s*lazy\(\s*\(\)\s*=>\s*import\(\s*['"](\.\/[^'"]+)['"]\s*\)\s*\)/g
+// Every lazy() call site, regardless of specifier form. Used to prove the two
+// regexes above see ALL of them.
+const APP_LAZY_ANY_RE = /lazy\(\s*\(\)/g
 
 const specifiersFrom = (source: string, re: RegExp): string[] => {
   const out: string[] = []
@@ -52,6 +65,19 @@ const resolvesOnDisk = (spec: string): boolean => {
 
 const listSpecifiers = specifiersFrom(listSource, LIST_IMPORT_RE)
 const appSpecifiers = specifiersFrom(appSource, APP_LAZY_RE)
+
+/** `features/x/pages/YPage` → the `const Y` App.tsx binds it to. */
+const appNamesByKey = new Map<string, string>()
+for (const m of appSource.matchAll(APP_LAZY_NAMED_RE)) {
+  appNamesByKey.set(toKey(m[2]), m[1])
+}
+
+/** `features/x/pages/YPage` → the `name` the manifest gives it. */
+const listNamesByKey = new Map<string, string>()
+for (const entry of LAZY_ROUTE_IMPORTS) {
+  const spec = listSpecifiers[LAZY_ROUTE_IMPORTS.indexOf(entry)]
+  if (spec) listNamesByKey.set(toKey(spec), entry.name)
+}
 
 describe('LAZY_ROUTE_IMPORTS manifest', () => {
   it('exports a non-empty array of well-formed { name, load } entries', () => {
@@ -113,6 +139,45 @@ describe('LAZY_ROUTE_IMPORTS manifest', () => {
     // caught here too (App.tsx counts `lazy(()` occurrences).
     const appLazyCount = (appSource.match(/lazy\(\s*\(\)/g) ?? []).length
     expect(LAZY_ROUTE_IMPORTS.length).toBe(appLazyCount)
+  })
+
+  it('sees EVERY lazy() call in App.tsx — no specifier form escapes the drift check', () => {
+    // The drift check above compares *parsed specifier sets*, while the count
+    // check compares *totals*. If a route is added with a specifier form the
+    // specifier regex cannot see — an alias (`@/features/…`), a template
+    // literal, a multi-line import — the set comparison silently passes and
+    // only the count fails, with a message that says nothing about which
+    // route or why.
+    //
+    // Pinning "the specifier regex captures all N call sites" turns that into
+    // an explicit failure at the point of the mistake, and documents that
+    // `const X = lazy(() => import('./…'))` is the required form.
+    const totalLazyCalls = (appSource.match(APP_LAZY_ANY_RE) ?? []).length
+    expect(appSpecifiers).toHaveLength(totalLazyCalls)
+    expect(appNamesByKey.size).toBe(totalLazyCalls)
+  })
+
+  it('names every entry exactly as App.tsx binds it', () => {
+    // The manifest's `name` is what the smoke test prints when a chunk throws.
+    // A mirrored-but-misnamed entry still satisfies the drift check while
+    // sending whoever reads the failure to the wrong route.
+    const mismatched: string[] = []
+    for (const [key, appName] of appNamesByKey) {
+      const listName = listNamesByKey.get(key)
+      if (listName !== undefined && listName !== appName) {
+        mismatched.push(`${key}: App.tsx=${appName} manifest=${listName}`)
+      }
+    }
+    expect(mismatched).toEqual([])
+  })
+
+  it('includes the /help route (drift regression guard)', () => {
+    // `/help` hosts the help index, glossary, release notes, support bundle
+    // and dashboard presets. It was lazy-loaded from App.tsx without a
+    // manifest entry, which broke both lazy-route suites and left the chunk
+    // un-exercised — precisely the class of miss this manifest exists to stop.
+    expect(listSpecifiers).toContain('../features/system/pages/HelpPage')
+    expect(LAZY_ROUTE_IMPORTS.some((r) => r.name === 'Help')).toBe(true)
   })
 
   it('includes the phase-45/phase-50 admin, settings & explore routes (drift regression guard)', () => {

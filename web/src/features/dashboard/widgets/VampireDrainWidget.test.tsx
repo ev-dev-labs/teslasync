@@ -20,11 +20,10 @@
  *     negative span). The fix clamps to 0 → a consistent "0m"; the tests assert
  *     that below.
  *
- * It also locks in the three responsive layouts, the loading / empty states,
- * the removed-endpoint error degradation (both `/vampire-drain*` routes were
- * deleted in Phase-42, so the queries always error and the widget must fall
- * back to a non-blank empty state rather than crash), the refresh interaction,
- * and vehicle-id resolution (prop → first-vehicle fallback → null).
+ * It also locks in the three responsive layouts, the loading / empty / error
+ * states, the canonical derived-history response shape, the refresh
+ * interaction, and vehicle-id resolution (prop → first-vehicle fallback →
+ * null).
  *
  * Network is never touched — the two energy hooks and `useVehicles` are mocked
  * and driven per-test. `react-i18next` is stubbed to echo fallback strings. The
@@ -98,41 +97,42 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 
 function makeStats(over: Partial<VampireDrainStats> = {}): VampireDrainStats {
   return {
-    // 0.1 %/hour → 2.4 %/day headline (amber).
-    avg_drain_rate: 0.1,
-    total_range_lost: 20,
-    total_hours: 48,
+    avg_drain_pct_per_day: 2.4,
+    median_drain_pct_per_day: 1.8,
+    p95_drain_pct_per_day: 4.8,
+    total_observed_hours: 48,
     event_count: 12,
-    avg_sentry_drain: 0.15,
-    avg_nosentry_drain: 0.08,
+    sample_window_days: 90,
     ...over,
   };
 }
 
-// A critical (red) sentry event: 8% lost over 3h at 0.2 %/h → 4.8 %/day.
+// A critical (red) parked window: 8% lost over 40h → 4.8 %/day.
 function criticalEvent(over: Partial<VampireDrainEvent> = {}): VampireDrainEvent {
   return {
-    id: 1,
-    start_date: '2020-01-01T00:00:00Z',
-    duration_hours: 3,
-    battery_lost: 8,
-    drain_rate_pct_per_hour: 0.2,
-    outside_temp_avg: 10,
-    sentry_mode: true,
+    started_at: '2020-01-01T00:00:00Z',
+    ended_at: '2020-01-02T16:00:00Z',
+    duration_hours: 40,
+    start_battery_pct: 80,
+    end_battery_pct: 72,
+    drain_pct: 8,
+    drain_pct_per_day: 4.8,
+    ambient_temp_c_avg: 10,
     ...over,
   };
 }
 
-// A low (green) non-sentry event: 1% over 30m at 0.025 %/h → 0.6 %/day.
+// A low (green) parked window: 1% over 40h → 0.6 %/day.
 function lowEvent(over: Partial<VampireDrainEvent> = {}): VampireDrainEvent {
   return {
-    id: 2,
-    start_date: '2020-01-02T00:00:00Z',
-    duration_hours: 0.5,
-    battery_lost: 1,
-    drain_rate_pct_per_hour: 0.025,
-    outside_temp_avg: 5,
-    sentry_mode: false,
+    started_at: '2020-01-03T00:00:00Z',
+    ended_at: '2020-01-04T16:00:00Z',
+    duration_hours: 40,
+    start_battery_pct: 70,
+    end_battery_pct: 69,
+    drain_pct: 1,
+    drain_pct_per_day: 0.6,
+    ambient_temp_c_avg: 5,
     ...over,
   };
 }
@@ -206,19 +206,18 @@ describe('VampireDrainWidget — standard layout (2 col)', () => {
     expect(screen.getByText('2.4%/day')).toBeInTheDocument();
     expect(screen.getByText('12 events · 48h total')).toBeInTheDocument();
 
-    // Event feed: title (%, duration, sentry) + %/day subtitle for each event.
-    expect(screen.getByText(`8.0% ${DOT} 3.0h ${DOT} Sentry`)).toBeInTheDocument();
+    // Event feed: measured loss + duration and normalized %/day.
+    expect(screen.getByText(`8.0% ${DOT} 40.0h`)).toBeInTheDocument();
     expect(screen.getByText('4.8%/day')).toBeInTheDocument();
-    expect(screen.getByText(`1.0% ${DOT} 30m`)).toBeInTheDocument();
+    expect(screen.getByText(`1.0% ${DOT} 40.0h`)).toBeInTheDocument();
     expect(screen.getByText('0.6%/day')).toBeInTheDocument();
   });
 
-  it('omits the sentry suffix for non-sentry events', () => {
+  it('does not invent a Sentry attribution absent from the endpoint', () => {
     mockEvents.mockReturnValue(makeQuery({ data: [lowEvent()] }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    expect(screen.getByText(`1.0% ${DOT} 30m`)).toBeInTheDocument();
-    // The lone event carries no Sentry marker.
+    expect(screen.getByText(`1.0% ${DOT} 40.0h`)).toBeInTheDocument();
     expect(screen.queryByText(/Sentry/)).not.toBeInTheDocument();
   });
 
@@ -252,13 +251,14 @@ describe('VampireDrainWidget — compact layout (1 col)', () => {
     expect(screen.queryByRole('heading', { name: 'Vampire Drain' })).not.toBeInTheDocument();
   });
 
-  it('falls back to 0.0% when only events (no stats) are available', () => {
+  it('does not fabricate a zero average when only events are available', () => {
     mockStats.mockReturnValue(makeQuery({ data: undefined }));
     mockEvents.mockReturnValue(makeQuery({ data: [criticalEvent()] }));
     renderWidget({ size: { cols: 1, rows: 1 } });
 
-    // avg_drain_rate is absent → headline coalesces to 0.0%, still non-blank.
-    expect(screen.getByText('0.0%')).toBeInTheDocument();
+    expect(screen.getByText('—')).toBeInTheDocument();
+    expect(screen.getByText('Average unavailable')).toBeInTheDocument();
+    expect(screen.queryByText('0.0%')).not.toBeInTheDocument();
   });
 });
 
@@ -270,7 +270,7 @@ describe('VampireDrainWidget — wide layout (>=3 col)', () => {
     expect(screen.getByText('Daily drain rate (last 30)')).toBeInTheDocument();
     // Two samples → a real sparkline (role=img) is drawn.
     expect(container.querySelector('svg[role="img"]')).not.toBeNull();
-    expect(screen.getByText(`8.0% ${DOT} 3.0h ${DOT} Sentry`)).toBeInTheDocument();
+    expect(screen.getByText(`8.0% ${DOT} 40.0h`)).toBeInTheDocument();
   });
 
   it('omits the sparkline when there are fewer than two events to plot', () => {
@@ -304,16 +304,31 @@ describe('VampireDrainWidget — loading / empty / error', () => {
     expect(screen.queryByText('Avg Drain')).not.toBeInTheDocument();
   });
 
-  it('degrades to the empty state (never a crash) when the removed endpoints error', () => {
-    // /vampire-drain/{stats,} were dropped in Phase-42, so these queries always
-    // error in production — the widget must stay non-blank and retryable.
+  it('treats a nullable empty distribution as unavailable rather than zero drain', () => {
+    mockStats.mockReturnValue(makeQuery({
+      data: makeStats({
+        event_count: 0,
+        total_observed_hours: 0,
+        avg_drain_pct_per_day: null,
+        median_drain_pct_per_day: null,
+        p95_drain_pct_per_day: null,
+      }),
+    }));
+    mockEvents.mockReturnValue(makeQuery({ data: [] }));
+    renderWidget({ size: { cols: 2, rows: 2 } });
+
+    expect(screen.getByText('No vampire drain data')).toBeInTheDocument();
+    expect(screen.queryByText('0.0%/day')).not.toBeInTheDocument();
+  });
+
+  it('degrades to the empty state (never a crash) when the derived-history endpoints error', () => {
     mockStats.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('404') }));
     mockEvents.mockReturnValue(makeQuery({ data: undefined, isError: true, error: new Error('404') }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
     expect(screen.getByText('No vampire drain data')).toBeInTheDocument();
     // The refresh control stays available so the user can retry.
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh data/ })).toBeInTheDocument();
   });
 });
 
@@ -325,7 +340,7 @@ describe('VampireDrainWidget — refresh + vehicle resolution', () => {
     mockEvents.mockReturnValue(makeQuery({ data: [criticalEvent()], refetch: eventsRefetch }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh data/ }));
     expect(statsRefetch).toHaveBeenCalledTimes(1);
     expect(eventsRefetch).toHaveBeenCalledTimes(1);
   });

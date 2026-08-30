@@ -359,7 +359,7 @@ describe('TripReplayPage postures', () => {
     driveMock.mockReturnValue(makeDriveQuery({ isLoading: true }));
     renderPage();
 
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: 'Loading…' })).toBeInTheDocument();
     // The title renders above the loading gate; the data sections do not.
     expect(screen.getByRole('heading', { level: 1, name: 'Trip Replay' })).toBeInTheDocument();
     expect(screen.queryByText('Distance')).not.toBeInTheDocument();
@@ -370,7 +370,9 @@ describe('TripReplayPage postures', () => {
     driveMock.mockReturnValue(makeDriveQuery({ error: new Error('drive fetch failed') }));
     renderPage();
 
-    expect(screen.getByText('drive fetch failed')).toBeInTheDocument();
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByTestId('trip-replay-map')).not.toBeInTheDocument();
     expect(captured.map).toBeUndefined();
   });

@@ -23,7 +23,7 @@
  *      (snake_case order keys, numeric limit) exactly.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -227,7 +227,9 @@ describe('SlowQueriesPage — populated view', () => {
     expect(screen.getAllByText('90.0%').length).toBeGreaterThanOrEqual(1);
 
     // Detail table: a row that only appears in the table (no cache stats).
-    expect(screen.getByText('VACUUM analyze')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Top queries' })).getByText('VACUUM analyze'),
+    ).toBeInTheDocument();
     // Column headers.
     expect(screen.getByText('Mean (ms)')).toBeInTheDocument();
     expect(screen.getByText('Query fingerprint')).toBeInTheDocument();
@@ -277,7 +279,7 @@ describe('SlowQueriesPage — non-happy states', () => {
 
     renderPage();
 
-    expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(screen.getByText(/pg_stat_statements is not installed/i)).toBeInTheDocument();
     // The generic QueryError must NOT show for the 503 branch.
     expect(screen.queryByText("Can't reach server")).toBeNull();
@@ -312,7 +314,9 @@ describe('SlowQueriesPage — non-happy states', () => {
 
     renderPage();
 
-    expect(screen.getByText('VACUUM analyze')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Top queries' })).getByText('VACUUM analyze'),
+    ).toBeInTheDocument();
     expect(metricValue('Queries analyzed')).toBe('3');
     expect(screen.queryByText("Can't reach server")).toBeNull();
   });

@@ -1,0 +1,866 @@
+{
+  "dotted": {
+    "accessGuidance": [
+      "src\\components\\feedback\\PermissionGuidanceNotice.tsx",
+      "src\\components\\feedback\\PermissionGuidanceNotice.tsx"
+    ],
+    "account": [
+      "src\\features\\settings\\components\\privacy\\ConsentControlPanel.tsx",
+      "src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx",
+      "src\\features\\settings\\components\\privacy\\PrivacyGuaranteesPanel.tsx"
+    ],
+    "alertFatigue": [
+      "src\\features\\notifications\\pages\\AlertFatiguePage.tsx",
+      "src\\features\\notifications\\pages\\AlertFatiguePage.tsx",
+      "src\\features\\notifications\\pages\\AlertFatiguePage.tsx"
+    ],
+    "anomalies": [
+      "src\\features\\driving\\pages\\DriveAnomaliesPage.tsx",
+      "src\\features\\driving\\pages\\DriveAnomaliesPage.tsx",
+      "src\\features\\driving\\pages\\DriveAnomaliesPage.tsx"
+    ],
+    "audit": [
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx"
+    ],
+    "chargerHealth": [
+      "src\\features\\charging\\pages\\ChargerHealthPage.tsx",
+      "src\\features\\charging\\pages\\ChargerHealthPage.tsx",
+      "src\\features\\charging\\pages\\ChargerHealthPage.tsx"
+    ],
+    "charts": [
+      "src\\components\\feedback\\ChartSkeleton.tsx"
+    ],
+    "commandReliability": [
+      "src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "src\\features\\system\\pages\\CommandReliabilityPage.tsx",
+      "src\\features\\system\\pages\\CommandReliabilityPage.tsx"
+    ],
+    "dashboardPresets": [
+      "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+      "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx",
+      "src\\features\\system\\components\\help-index\\DashboardPresetPanel.tsx"
+    ],
+    "dataUnavailable": [
+      "src\\components\\feedback\\DataUnavailableNotice.tsx"
+    ],
+    "demoMode": [
+      "src\\components\\feedback\\DemoModeBanner.tsx"
+    ],
+    "energyAnatomy": [
+      "src\\features\\driving\\pages\\EnergyAnatomyPage.tsx",
+      "src\\features\\driving\\pages\\EnergyAnatomyPage.tsx",
+      "src\\features\\driving\\pages\\EnergyAnatomyPage.tsx"
+    ],
+    "energyLedger": [
+      "src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+      "src\\features\\battery\\pages\\EnergyLedgerPage.tsx",
+      "src\\features\\battery\\pages\\EnergyLedgerPage.tsx"
+    ],
+    "errorHelp": [
+      "src\\components\\feedback\\ErrorHelpLinks.tsx"
+    ],
+    "explore": [
+      "src\\features\\explore\\pages\\ExplorePage.tsx",
+      "src\\features\\explore\\pages\\ExplorePage.tsx",
+      "src\\features\\explore\\pages\\ExplorePage.tsx"
+    ],
+    "feedbackTriage": [
+      "src\\components\\ai\\AIFeedbackQueueTriage.tsx",
+      "src\\components\\ai\\AIFeedbackQueueTriage.tsx",
+      "src\\components\\ai\\AIFeedbackQueueTriage.tsx"
+    ],
+    "firmwareImpact": [
+      "src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+      "src\\features\\analytics\\pages\\FirmwareImpactPage.tsx",
+      "src\\features\\analytics\\pages\\FirmwareImpactPage.tsx"
+    ],
+    "glossary": [
+      "src\\components\\ui\\GlossaryTerm.tsx",
+      "src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx",
+      "src\\features\\system\\components\\help-index\\HelpGlossaryPanel.tsx"
+    ],
+    "helpIndex": [
+      "src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      "src\\features\\system\\components\\help-index\\HelpSearch.tsx",
+      "src\\features\\system\\components\\help-index\\HelpSearch.tsx"
+    ],
+    "landscape": [
+      "src\\features\\driving\\pages\\EfficiencyLandscapePage.tsx",
+      "src\\features\\driving\\pages\\EfficiencyLandscapePage.tsx",
+      "src\\features\\driving\\pages\\EfficiencyLandscapePage.tsx"
+    ],
+    "metricCard": [
+      "src\\components\\data-display\\MetricCard.tsx"
+    ],
+    "metrics": [
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx",
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx"
+    ],
+    "modal": [
+      "src\\components\\ui\\Modal.tsx"
+    ],
+    "overview": [
+      "src\\features\\settings\\pages\\SettingsPage.tsx",
+      "src\\features\\settings\\pages\\SettingsPage.tsx",
+      "src\\features\\settings\\pages\\SettingsPage.tsx"
+    ],
+    "powerDashboards": [
+      "src\\components\\ai\\AINLDashboardComposer.tsx",
+      "src\\components\\ai\\AINLDashboardComposer.tsx",
+      "src\\components\\ai\\AINLDashboardComposer.tsx"
+    ],
+    "powerGrafana": [
+      "src\\components\\ai\\AINLGrafanaPanel.tsx",
+      "src\\components\\ai\\AINLGrafanaPanel.tsx",
+      "src\\components\\ai\\AINLGrafanaPanel.tsx"
+    ],
+    "powerSql": [
+      "src\\components\\ai\\AINLSqlPlayground.tsx",
+      "src\\components\\ai\\AINLSqlPlayground.tsx",
+      "src\\components\\ai\\AINLSqlPlayground.tsx"
+    ],
+    "preferences": [
+      "src\\features\\settings\\pages\\SettingsPage.tsx"
+    ],
+    "preview": [
+      "src\\features\\dashboard\\components\\MiniGridPreview.tsx",
+      "src\\features\\dashboard\\components\\MiniGridPreview.tsx"
+    ],
+    "problemReport": [
+      "src\\components\\feedback\\ProblemReportModal.tsx",
+      "src\\components\\feedback\\ProblemReportModal.tsx",
+      "src\\components\\feedback\\ProblemReportModal.tsx"
+    ],
+    "progressRing": [
+      "src\\components\\data-display\\ProgressRing.tsx"
+    ],
+    "quickActions": [
+      "src\\features\\settings\\pages\\SettingsPage.tsx",
+      "src\\features\\settings\\pages\\SettingsPage.tsx"
+    ],
+    "quickNav": [
+      "src\\features\\dashboard\\components\\QuickNav.tsx"
+    ],
+    "rangeSim": [
+      "src\\features\\battery\\pages\\RangeSimulatorPage.tsx",
+      "src\\features\\battery\\pages\\RangeSimulatorPage.tsx",
+      "src\\features\\battery\\pages\\RangeSimulatorPage.tsx"
+    ],
+    "regimes": [
+      "src\\features\\analytics\\pages\\RegimeShiftsPage.tsx",
+      "src\\features\\analytics\\pages\\RegimeShiftsPage.tsx",
+      "src\\features\\analytics\\pages\\RegimeShiftsPage.tsx"
+    ],
+    "releaseNotes": [
+      "src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+      "src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx",
+      "src\\features\\system\\components\\help-index\\ReleaseNotesPanel.tsx"
+    ],
+    "runtimeHealth": [
+      "src\\components\\feedback\\RuntimeHealthBanner.tsx",
+      "src\\components\\feedback\\RuntimeHealthBanner.tsx",
+      "src\\components\\feedback\\RuntimeHealthBanner.tsx"
+    ],
+    "score": [
+      "src\\components\\data-display\\ScoreBadge.tsx"
+    ],
+    "segments": [
+      "src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "src\\features\\driving\\pages\\SegmentsPage.tsx",
+      "src\\features\\driving\\pages\\SegmentsPage.tsx"
+    ],
+    "serviceStatus": [
+      "src\\components\\data-display\\ServiceStatus.tsx",
+      "src\\components\\data-display\\ServiceStatus.tsx",
+      "src\\components\\data-display\\ServiceStatus.tsx"
+    ],
+    "signalCatalog": [
+      "src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+      "src\\features\\telemetry\\components\\SignalCatalogPanel.tsx",
+      "src\\features\\telemetry\\components\\SignalCatalogPanel.tsx"
+    ],
+    "signalConfig": [
+      "src\\components\\ui\\SignalConfigModal.tsx",
+      "src\\components\\ui\\SignalConfigModal.tsx",
+      "src\\components\\ui\\SignalConfigModal.tsx"
+    ],
+    "signalCorrelation": [
+      "src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+      "src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx",
+      "src\\features\\telemetry\\pages\\SignalCorrelationPage.tsx"
+    ],
+    "signalLog": [
+      "src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx",
+      "src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx",
+      "src\\features\\telemetry\\components\\SignalLogBreakdownPanel.tsx"
+    ],
+    "signals": [
+      "src\\features\\telemetry\\components\\SignalCategoryTree.tsx",
+      "src\\features\\telemetry\\components\\SignalCategoryTree.tsx",
+      "src\\features\\telemetry\\components\\SignalCategoryTree.tsx"
+    ],
+    "signalsWorkspace": [
+      "src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+      "src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx",
+      "src\\features\\telemetry\\pages\\SignalsWorkspacePage.tsx"
+    ],
+    "smallMultiples": [
+      "src\\components\\charts\\SmallMultiplesChart.tsx"
+    ],
+    "sparkline": [
+      "src\\components\\charts\\Sparkline.tsx"
+    ],
+    "supportBundle": [
+      "src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+      "src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx",
+      "src\\features\\system\\components\\help-index\\SupportBundlePanel.tsx"
+    ],
+    "systemStatus": [
+      "src\\features\\system\\components\\status\\IncidentForm.tsx",
+      "src\\features\\system\\components\\status\\IncidentForm.tsx",
+      "src\\features\\system\\components\\status\\IncidentForm.tsx"
+    ],
+    "timezones": [
+      "src\\features\\automations\\pages\\ConditionBuilder.tsx",
+      "src\\features\\automations\\pages\\TriggerConfigurator.tsx"
+    ],
+    "transitionArrow": [
+      "src\\components\\data-display\\TransitionArrow.tsx"
+    ],
+    "typography": [
+      "src\\features\\settings\\components\\TypographySettings.tsx",
+      "src\\features\\settings\\components\\TypographySettings.tsx",
+      "src\\features\\settings\\components\\TypographySettings.tsx"
+    ]
+  },
+  "dotless": {
+    "Acquired": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "Action": [
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "active": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Active": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "AEB": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Affects": [
+      "src\\features\\system\\components\\status\\IncidentsCard.tsx"
+    ],
+    "Alerts": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "All": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Authenticated": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Auto": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Avg": [
+      "src\\features\\telemetry\\components\\SignalStatsPanel.tsx"
+    ],
+    "Backups": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "BSC": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "BSCW": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Cancel": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "src\\features\\system\\components\\status\\SLOTrackingCard.tsx"
+    ],
+    "Capacity": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx"
+    ],
+    "celsius": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "CFD": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Channels": [
+      "src\\features\\system\\components\\status\\OperationsSection.tsx",
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Code": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Comfortable": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Completed": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Component": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx"
+    ],
+    "Compressed": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Config": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Configured": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Connect": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Connected": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx",
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "Count": [
+      "src\\features\\telemetry\\components\\SignalStatsPanel.tsx"
+    ],
+    "Create": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "Created": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Critical": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Database": [
+      "src\\features\\system\\components\\status\\HealthProbesSection.tsx",
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Date": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx"
+    ],
+    "Decode": [
+      "src\\features\\admin\\components\\devtools\\tools\\UrlEncoder.tsx"
+    ],
+    "Defrost": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Degraded": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx"
+    ],
+    "Delete": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "Description": [
+      "src\\features\\admin\\components\\devtools\\tools\\CronParser.tsx"
+    ],
+    "Details": [
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "Disabled": [
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Disconnected": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx",
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "distance": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "Distance": [
+      "src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx"
+    ],
+    "Domain": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Download": [
+      "src\\features\\system\\pages\\DataExportPage.tsx"
+    ],
+    "Duration": [
+      "src\\features\\system\\pages\\DataExportPage.tsx"
+    ],
+    "Edit": [
+      "src\\features\\system\\components\\status\\SLOTrackingCard.tsx"
+    ],
+    "ELDA": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "enabled": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Enabled": [
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Encode": [
+      "src\\features\\admin\\components\\devtools\\tools\\UrlEncoder.tsx"
+    ],
+    "Endpoint": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "Error": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "events": [
+      "src\\features\\telemetry\\components\\SignalChartPanel.tsx"
+    ],
+    "Excellent": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Explore": [
+      "src\\features\\telemetry\\pages\\SignalExplorerPage.tsx"
+    ],
+    "fahrenheit": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "Failed": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx",
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Failures": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx"
+    ],
+    "Fan": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "FCW": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "File": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Flags": [
+      "src\\features\\admin\\components\\devtools\\tools\\RegexTester.tsx"
+    ],
+    "Format": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx",
+      "src\\features\\system\\pages\\DataExportPage.tsx"
+    ],
+    "free": [
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx"
+    ],
+    "Generate": [
+      "src\\features\\admin\\components\\devtools\\tools\\UuidGenerator.tsx"
+    ],
+    "Geofences": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx",
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "Good": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx"
+    ],
+    "Goroutines": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx",
+      "src\\features\\system\\components\\status\\HealthProbesSection.tsx"
+    ],
+    "Group": [
+      "src\\features\\admin\\components\\devtools\\tools\\UnixPermissionTool.tsx"
+    ],
+    "Health": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "healthy": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx"
+    ],
+    "Home": [
+      "src\\features\\charging\\components\\cost-analysis\\ForecastDetails.tsx",
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "Hostname": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "HVAC": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Idle": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx",
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx",
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx"
+    ],
+    "Inactive": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Info": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Infrastructure": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "Inside": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "kilometers": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "Latency": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx",
+      "src\\features\\system\\components\\status\\HealthProbesSection.tsx",
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx"
+    ],
+    "Latitude": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "LDA": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Level": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Live": [
+      "src\\features\\system\\components\\status\\HealthProbesSection.tsx"
+    ],
+    "Longitude": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "Manage": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Manual": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Matches": [
+      "src\\features\\admin\\components\\devtools\\tools\\RegexTester.tsx"
+    ],
+    "Max": [
+      "src\\features\\telemetry\\components\\SignalStatsPanel.tsx"
+    ],
+    "Message": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "Method": [
+      "src\\features\\admin\\components\\devtools\\tools\\TeslaApiRefTool.tsx"
+    ],
+    "miles": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "Min": [
+      "src\\features\\telemetry\\components\\SignalStatsPanel.tsx"
+    ],
+    "Mode": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx",
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx"
+    ],
+    "Moderate": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Name": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "Next": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "No": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "Notifications": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Odometer": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx"
+    ],
+    "Off": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "On": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Open": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx"
+    ],
+    "Operations": [
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "Other": [
+      "src\\features\\admin\\components\\devtools\\tools\\UnixPermissionTool.tsx"
+    ],
+    "Outside": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Owner": [
+      "src\\features\\admin\\components\\devtools\\tools\\UnixPermissionTool.tsx"
+    ],
+    "Page": [
+      "src\\features\\telemetry\\components\\SignalHistoryTable.tsx"
+    ],
+    "Path": [
+      "src\\features\\admin\\components\\devtools\\tools\\TeslaApiRefTool.tsx"
+    ],
+    "Pattern": [
+      "src\\features\\admin\\components\\devtools\\tools\\RegexTester.tsx"
+    ],
+    "Pending": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx",
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "PIN": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "points": [
+      "src\\features\\telemetry\\components\\SignalChartPanel.tsx"
+    ],
+    "Poor": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Port": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Prerequisites": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Presets": [
+      "src\\features\\admin\\components\\devtools\\tools\\UnixPermissionTool.tsx"
+    ],
+    "pressure": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "Previous": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Processing": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Progress": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Protocol": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "quickView": [
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx",
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx"
+    ],
+    "Range": [
+      "src\\features\\battery\\pages\\BatteryDegradationPage.tsx"
+    ],
+    "Re-authenticate": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx",
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Ready": [
+      "src\\features\\system\\components\\status\\HealthProbesSection.tsx"
+    ],
+    "Records": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx",
+      "src\\features\\system\\pages\\DataExportPage.tsx"
+    ],
+    "Refresh": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Regions": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Register": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Resource": [
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "Running": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Save": [
+      "src\\features\\system\\components\\status\\SLOTrackingCard.tsx"
+    ],
+    "saved": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Savings": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "Score": [
+      "src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx",
+      "src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx"
+    ],
+    "scoreAria": [
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx"
+    ],
+    "selectSession": [
+      "src\\features\\charging\\components\\ChargingSessionCard.tsx"
+    ],
+    "Services": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Signal": [
+      "src\\features\\telemetry\\components\\SignalHistoryTable.tsx",
+      "src\\features\\telemetry\\components\\SignalStatsPanel.tsx"
+    ],
+    "Signals": [
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx",
+      "src\\features\\telemetry\\components\\SignalSelector.tsx",
+      "src\\features\\telemetry\\components\\SignalSelector.tsx"
+    ],
+    "Size": [
+      "src\\features\\system\\pages\\DataExportPage.tsx"
+    ],
+    "SLW": [
+      "src\\features\\vehicle-systems\\pages\\SafetySettingsPage.tsx"
+    ],
+    "Standby": [
+      "src\\features\\system\\components\\status\\InfrastructureSection.tsx"
+    ],
+    "Started": [
+      "src\\features\\system\\components\\status\\IncidentsCard.tsx"
+    ],
+    "State": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Status": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx",
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx"
+    ],
+    "streaming": [
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx"
+    ],
+    "Streaming": [
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx"
+    ],
+    "Style": [
+      "src\\features\\driving\\components\\driving-dynamics\\DrivingCoachSection.tsx"
+    ],
+    "Subscribe": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "subtitle": [
+      "src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "src\\features\\settings\\pages\\SettingsPage.tsx"
+    ],
+    "Success": [
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "Supercharger": [
+      "src\\features\\charging\\components\\cost-analysis\\ForecastDetails.tsx"
+    ],
+    "Tables": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "Target": [
+      "src\\features\\system\\components\\status\\SLOTrackingCard.tsx"
+    ],
+    "Telemetry": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ],
+    "temperature": [
+      "src\\features\\settings\\components\\GeneralSettings.tsx"
+    ],
+    "Temperature": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Time": [
+      "src\\features\\notifications\\pages\\AuditLogPage.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx",
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "Timestamp": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\telemetry\\components\\SignalHistoryTable.tsx"
+    ],
+    "title": [
+      "src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "src\\features\\dashboard\\pages\\DashboardPage.tsx",
+      "src\\features\\settings\\pages\\SettingsPage.tsx"
+    ],
+    "Title": [
+      "src\\features\\system\\components\\status\\OperationsSection.tsx"
+    ],
+    "total": [
+      "src\\features\\telemetry\\components\\SignalHistoryTable.tsx"
+    ],
+    "Total": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Type": [
+      "src\\features\\system\\components\\status\\DataPipelineSection.tsx",
+      "src\\features\\system\\pages\\DataExportPage.tsx",
+      "src\\features\\telemetry\\components\\SignalHistoryTable.tsx"
+    ],
+    "Unit": [
+      "src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx"
+    ],
+    "Unknown": [
+      "src\\features\\admin\\components\\devtools\\tools\\VinDecoder.tsx",
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "Unread": [
+      "src\\features\\notifications\\components\\AlertCard.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Update": [
+      "src\\features\\maps\\pages\\GeofencesPage.tsx"
+    ],
+    "updates": [
+      "src\\features\\system\\components\\status\\IncidentsCard.tsx"
+    ],
+    "Uptime": [
+      "src\\features\\system\\components\\status\\BackendStatusSection.tsx",
+      "src\\features\\system\\components\\status\\HealthProbesSection.tsx"
+    ],
+    "Value": [
+      "src\\features\\admin\\components\\devtools\\tools\\ByteSizeConverter.tsx",
+      "src\\features\\telemetry\\components\\SignalHistoryTable.tsx"
+    ],
+    "Vehicle": [
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx",
+      "src\\features\\admin\\components\\devtools\\FleetApiSection.tsx"
+    ],
+    "Ventilation": [
+      "src\\features\\vehicle-systems\\pages\\ClimateControlPage.tsx"
+    ],
+    "View": [
+      "src\\components\\data-display\\SavedViewMenu.tsx"
+    ],
+    "Vin": [
+      "src\\features\\admin\\components\\devtools\\tools\\VinDecoder.tsx"
+    ],
+    "VIN": [
+      "src\\features\\system\\components\\status\\ServiceHealthSection.tsx"
+    ],
+    "Warning": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx",
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Warnings": [
+      "src\\features\\notifications\\pages\\AlertsListPage.tsx"
+    ],
+    "Workers": [
+      "src\\features\\system\\pages\\SystemStatusPage.tsx"
+    ]
+  }
+}

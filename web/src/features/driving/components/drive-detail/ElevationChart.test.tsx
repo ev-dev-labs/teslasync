@@ -88,7 +88,7 @@ vi.mock('@/components/charts', () => {
     CartesianGrid: Inert,
     XAxis: Inert,
     YAxis: Inert,
-    Legend: Inert,
+    ChartLegend: Inert,
     ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
     ChartContainer: ({
       title,
@@ -101,18 +101,25 @@ vi.mock('@/components/charts', () => {
       ariaLabel?: string;
       height?: number;
       className?: string;
-      children?: ReactNode;
-    }) => (
-      <section
-        aria-label="chart-container"
-        data-height={String(height ?? '')}
-        className={className}
-      >
-        <h3>{title}</h3>
-        <div role="img" aria-label={ariaLabel} />
-        {children}
-      </section>
-    ),
+      children?: ReactNode | ((context: {
+        hiddenSeries: { isHidden: (key: string) => boolean };
+      }) => ReactNode);
+    }) => {
+      const content = typeof children === 'function'
+        ? children({ hiddenSeries: { isHidden: () => false } })
+        : children;
+      return (
+        <section
+          aria-label="chart-container"
+          data-height={String(height ?? '')}
+          className={className}
+        >
+          <h3>{title}</h3>
+          <div role="img" aria-label={ariaLabel} />
+          {content}
+        </section>
+      );
+    },
     ComposedChart: ({
       data,
       syncId,

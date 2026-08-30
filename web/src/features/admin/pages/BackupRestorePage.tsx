@@ -20,7 +20,13 @@ import {
   type Column,
 } from '@/components/ui';
 import { MetricCard, MetricBar, TimeStamp } from '@/components/data-display';
-import { Skeleton, EmptyState, QueryError, InlineCallout, Spinner } from '@/components/feedback';
+import {
+  EmptyState,
+  InlineCallout,
+  QueryError,
+  Skeleton,
+  TableSkeleton,
+} from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useToast } from '@/components/feedback/Toast';
@@ -213,6 +219,21 @@ export default function BackupRestorePage() {
       return 30000;
     },
   });
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'backup-configurations',
+        label: t('dataSources.labels.backupConfigurations', 'Backup configurations'),
+        query: configsQuery,
+      },
+      {
+        id: 'backup-runs',
+        label: t('dataSources.labels.backupRuns', 'Backup runs'),
+        query: runsQuery,
+      },
+    ],
+    [configsQuery, runsQuery, t],
+  );
 
   const configs = configsQuery.data ?? [];
   const runs = runsQuery.data ?? [];
@@ -647,6 +668,7 @@ export default function BackupRestorePage() {
       title={t('backup.title', 'Backup & Restore')}
       subtitle={t('backup.subtitle', 'Manage automated backups and restore points')}
       query={[configsQuery, runsQuery]}
+      dataSources={dataSources}
       actions={
         <div className="flex flex-wrap gap-2">
           <Button
@@ -1086,10 +1108,11 @@ export default function BackupRestorePage() {
             </div>
           </div>
         ) : (
-          <div className="flex flex-col items-center gap-2 py-12 text-center">
-            <Spinner size="md" />
-            <Text as="p" variant="caption">{t('backup.loadingPreview', 'Loading preview…')}</Text>
-          </div>
+          <TableSkeleton
+            rows={5}
+            cols={2}
+            className="py-4"
+          />
         )}
       </Modal>
     </PageContainer>

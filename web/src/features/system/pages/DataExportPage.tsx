@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 
@@ -36,6 +36,7 @@ import { FadeIn } from '@/components/motion';
 import { useToast } from '@/components/feedback/Toast';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { request } from '@/api/client';
 import {
   useCreateAccountExport,
@@ -544,9 +545,15 @@ function ExportWizard({
   isPending: boolean;
 }) {
   const { t } = useTranslation();
+  const {
+    vehicleId: globalVehicleId,
+    setVehicleId: setGlobalVehicleId,
+  } = useSelectedVehicle();
   const [exportType, setExportType] = useState<ExportType>('drives');
   const [exportFormat, setExportFormat] = useState<ExportFormat>('csv');
-  const [vehicleId, setVehicleId] = useState('');
+  const [vehicleId, setVehicleId] = useState(
+    globalVehicleId == null ? '' : String(globalVehicleId),
+  );
   const [presetDays, setPresetDays] = useState(30);
   const [customStart, setCustomStart] = useState('');
   const [customEnd, setCustomEnd] = useState('');
@@ -556,6 +563,21 @@ function ExportWizard({
   // legacy byte-for-byte behaviour". A non-null value is the explicit
   // ordered allowlist the backend should honour.
   const [selectedColumns, setSelectedColumns] = useState<string[] | null>(null);
+
+  useEffect(() => {
+    setVehicleId(globalVehicleId == null ? '' : String(globalVehicleId));
+  }, [globalVehicleId]);
+
+  const handleVehicleChange = useCallback(
+    (value: string) => {
+      setVehicleId(value);
+      const parsed = Number(value);
+      if (Number.isInteger(parsed) && parsed > 0 && parsed !== globalVehicleId) {
+        setGlobalVehicleId(parsed);
+      }
+    },
+    [globalVehicleId, setGlobalVehicleId],
+  );
 
   // Reset the column selection whenever the export type changes — a
   // catalog from the previous type is meaningless against the new one.
@@ -633,7 +655,7 @@ function ExportWizard({
           <Select
             options={vehicleOptions}
             value={vehicleId}
-            onChange={(e) => setVehicleId(e.target.value)}
+            onChange={(e) => handleVehicleChange(e.target.value)}
             placeholder={t('dataExport.allVehicles', 'All Vehicles')}
           />
         </div>
@@ -1038,11 +1060,32 @@ interface AccountExportPanelProps {
 
 function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
   const { t } = useTranslation();
-  const [vehicleId, setVehicleId] = useState<string>('all');
+  const {
+    vehicleId: globalVehicleId,
+    setVehicleId: setGlobalVehicleId,
+  } = useSelectedVehicle();
+  const [vehicleId, setVehicleId] = useState<string>(
+    globalVehicleId == null ? 'all' : String(globalVehicleId),
+  );
   const [startDate, setStartDate] = useState<string>('');
   const [endDate, setEndDate] = useState<string>('');
 
   const createAccount = useCreateAccountExport();
+
+  useEffect(() => {
+    setVehicleId(globalVehicleId == null ? 'all' : String(globalVehicleId));
+  }, [globalVehicleId]);
+
+  const handleVehicleChange = useCallback(
+    (value: string) => {
+      setVehicleId(value);
+      const parsed = Number(value);
+      if (Number.isInteger(parsed) && parsed > 0 && parsed !== globalVehicleId) {
+        setGlobalVehicleId(parsed);
+      }
+    },
+    [globalVehicleId, setGlobalVehicleId],
+  );
 
   const handleStart = useCallback(() => {
     const payload: { vehicle_id?: number; start?: string; end?: string } = {};
@@ -1087,7 +1130,7 @@ function AccountExportPanel({ vehicles }: AccountExportPanelProps) {
         <Select
           label={t('dataExport.account.vehicle', 'Vehicle')}
           value={vehicleId}
-          onChange={(e) => setVehicleId(e.target.value)}
+          onChange={(e) => handleVehicleChange(e.target.value)}
           options={vehicleOptions}
         />
         <Input

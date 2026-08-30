@@ -5,6 +5,20 @@ import (
 	"time"
 )
 
+func TestSessionFSMEventTimeControlsLifecycleTimestamps(t *testing.T) {
+	start := time.Date(2026, 8, 22, 9, 0, 0, 0, time.UTC)
+	end := start.Add(35 * time.Minute)
+	m := NewSessionFSMAt(7, "VIN", 11, start)
+
+	if got := m.Context().StartTime; !got.Equal(start) {
+		t.Fatalf("StartTime = %v, want %v", got, start)
+	}
+	m.TriggerEndingAt(nil, end)
+	if got := m.Context().EndTime; !got.Equal(end) {
+		t.Fatalf("EndTime = %v, want %v", got, end)
+	}
+}
+
 func TestPending_AllStartFieldsPresent_TransitionsToActive(t *testing.T) {
 	m := NewSessionFSM(1, "VIN001", 100)
 	m.ProcessSignals(map[string]interface{}{

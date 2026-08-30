@@ -478,7 +478,7 @@ describe('StateMachineDebuggerPage — loading', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'FSM Debugger' })).toBeInTheDocument();
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument();
+    expect(screen.getByRole('status', { name: /Loading/i })).toBeInTheDocument();
     // The KPI band is replaced by the spinner while loading.
     expect(screen.queryByText('Total Transitions')).toBeNull();
   });

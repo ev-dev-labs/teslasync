@@ -1,8 +1,8 @@
 package notification
 
 import (
-	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"encoding/json"
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"net/http"
 	"strconv"
 

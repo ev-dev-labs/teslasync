@@ -4,13 +4,14 @@ import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
 import { Button, PrintButton, Text } from '@/components/ui';
-import { DateTime } from '@/components/data-display';
-import { SectionErrorBoundary, AlertBanner } from '@/components/feedback';
+import { DataProvenanceBadge, DateTime } from '@/components/data-display';
+import { SectionErrorBoundary, AlertBanner, StaleRefreshWarning } from '@/components/feedback';
 import { ChartTimeRangeProvider } from '@/components/charts';
 import { ShareDriveDialog } from '../components/ShareDriveDialog';
 import { AIDriveCoaching } from '@/components/ai/AIDriveCoaching';
 import { AISpeedProfileInsights } from '@/components/ai/AISpeedProfileInsights';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
 import {
   useDriveDetailData,
   DriveDetailSkeleton,
@@ -38,9 +39,13 @@ export default function DriveDetailPage() {
   usePageTitle(t('driveDetail.title', 'Drive Detail'));
 
   const {
-    drive, vehicle, isLoading, error,
+    drive, vehicle, isLoading, driveQuery,
     chartData, stats, trail, startPos, endPos, centerPos, speedSegments, speedHistData,
   } = useDriveDetailData(id ?? '');
+  /* A drive is an immutable historical record. A failed refresh must not
+   * delete the one the operator is reading — only a first load with nothing
+   * retained may replace the page. */
+  const driveState = useDataState(driveQuery, { provenance: 'historical' });
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
@@ -74,8 +79,8 @@ export default function DriveDetailPage() {
   return (
     <PageContainer
       title={routeTitle}
-      error={error as Error | null}
-      empty={!error && !drive}
+      error={driveState.fatalError}
+      empty={driveState.fatalError == null && !drive}
       emptyMessage={t(
         'driveDetail.notFound',
         'This drive could not be found. It may have been deleted, or the link is incorrect.',
@@ -87,6 +92,11 @@ export default function DriveDetailPage() {
       }}
       actions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
+          <DataProvenanceBadge
+            provenance={driveState.provenance}
+            status={driveState.status}
+            updatedAt={driveState.updatedAt}
+          />
           <Link to="/drives">
             <Button
               variant="ghost"
@@ -116,6 +126,10 @@ export default function DriveDetailPage() {
         </div>
       }
     >
+      <StaleRefreshWarning
+        state={driveState}
+        label={t('driveDetail.title', 'Drive Detail')}
+      />
       {drive && stats && (
         <>
           {/* Meta line — vehicle + drive window, replaces the redundant custom

@@ -1,13 +1,21 @@
 {{- if .Values.ingress.enabled -}}
+{{- $securityAnnotations := dict }}
+{{- range $key, $value := .Values.ingress.annotations }}
+{{- $_ := set $securityAnnotations $key $value }}
+{{- end }}
+{{- if .Values.ingress.tls }}
+{{- $_ := set $securityAnnotations "nginx.ingress.kubernetes.io/force-ssl-redirect" "true" }}
+{{- $_ := set $securityAnnotations "nginx.ingress.kubernetes.io/ssl-redirect" "true" }}
+{{- end }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: {{ include "teslasync.fullname" . }}
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
-  {{- with .Values.ingress.annotations }}
+  {{- if $securityAnnotations }}
   annotations:
-    {{- toYaml . | nindent 4 }}
+    {{- toYaml $securityAnnotations | nindent 4 }}
   {{- end }}
 spec:
   {{- if .Values.ingress.className }}

@@ -55,70 +55,74 @@ vi.mock('react-i18next', async () => {
 });
 
 /* ── charts: surface the derived data + per-series props for inspection. ── */
-vi.mock('@/components/charts', () => ({
-  ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-  BarChart: ({
-    data,
-    children,
-  }: {
-    data?: SentryDayBucket[];
-    children?: ReactNode;
-  }) => (
-    <div data-testid="bar-chart" data-bar-count={String((data ?? []).length)}>
-      <ul data-testid="bar-data">
-        {(data ?? []).map((d, i) => (
-          <li
-            key={i}
-            data-testid="bar-datum"
-            data-date={String(d.date)}
-            data-on={String(d.sentryOn)}
-            data-off={String(d.sentryOff)}
-          />
-        ))}
-      </ul>
-      {children}
-    </div>
-  ),
-  Bar: ({
-    name,
-    dataKey,
-    fill,
-    stackId,
-  }: {
-    name?: string;
-    dataKey?: string;
-    fill?: string;
-    stackId?: string;
-  }) => (
-    <div
-      data-testid="bar"
-      data-name={String(name)}
-      data-key={String(dataKey)}
-      data-fill={String(fill)}
-      data-stack={String(stackId)}
-    />
-  ),
-  XAxis: ({
-    dataKey,
-    tickFormatter,
-  }: {
-    dataKey?: string;
-    tickFormatter?: (v: string) => string;
-  }) => (
-    <div
-      data-testid="x-axis"
-      data-key={String(dataKey)}
-      data-sample={tickFormatter ? tickFormatter('2026-04-30T12:00:00Z') : ''}
-    />
-  ),
-  YAxis: () => <div data-testid="y-axis" />,
-  CartesianGrid: () => null,
-  Tooltip: () => <div data-testid="tooltip" />,
-  Legend: () => <div data-testid="legend" />,
-  ChartTooltip: () => null,
-}));
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartLegend: chartTestDoubles.ChartLegend,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
+    BarChart: ({
+      data,
+      children,
+    }: {
+      data?: SentryDayBucket[];
+      children?: ReactNode;
+    }) => (
+      <div data-testid="bar-chart" data-bar-count={String((data ?? []).length)}>
+        <ul data-testid="bar-data">
+          {(data ?? []).map((d, i) => (
+            <li
+              key={i}
+              data-testid="bar-datum"
+              data-date={String(d.date)}
+              data-on={String(d.sentryOn)}
+              data-off={String(d.sentryOff)}
+            />
+          ))}
+        </ul>
+        {children}
+      </div>
+    ),
+    Bar: ({
+      name,
+      dataKey,
+      fill,
+      stackId,
+    }: {
+      name?: string;
+      dataKey?: string;
+      fill?: string;
+      stackId?: string;
+    }) => (
+      <div
+        data-testid="bar"
+        data-name={String(name)}
+        data-key={String(dataKey)}
+        data-fill={String(fill)}
+        data-stack={String(stackId)}
+      />
+    ),
+    XAxis: ({
+      dataKey,
+      tickFormatter,
+    }: {
+      dataKey?: string;
+      tickFormatter?: (v: string) => string;
+    }) => (
+      <div
+        data-testid="x-axis"
+        data-key={String(dataKey)}
+        data-sample={tickFormatter ? tickFormatter('2026-04-30T12:00:00Z') : ''}
+      />
+    ),
+    YAxis: () => <div data-testid="y-axis" />,
+    CartesianGrid: () => null,
+    Tooltip: () => <div data-testid="tooltip" />,
+    ChartTooltip: () => null,
+  };
+});
 
 import { SentryModeChart } from './SentryModeChart';
 
@@ -230,17 +234,16 @@ describe('SentryModeChart — ready state', () => {
     expect(sample).toMatch(/\d/);
 
     expect(screen.getByTestId('tooltip')).toBeInTheDocument();
-    expect(screen.getByTestId('legend')).toBeInTheDocument();
+    expect(screen.getByTestId('chart-legend')).toBeInTheDocument();
   });
 });
 
 describe('SentryModeChart — loading + error states', () => {
-  it('shows a 256px skeleton (not the chart) while loading', () => {
+  it('shows a skeleton (not the chart) while loading', () => {
     const { container } = renderChart({ isLoading: true, sentryBuckets: [] });
 
     const skeleton = container.querySelector('.animate-pulse');
     expect(skeleton).not.toBeNull();
-    expect(skeleton).toHaveStyle({ height: '256px' });
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -278,7 +281,10 @@ describe('SentryModeChart — empty + null safety', () => {
   it('shows the empty state (no chart) when there are no buckets', () => {
     renderChart({ sentryBuckets: [] });
 
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(
+      screen.getByText('No Sentry Mode activity is recorded in this history window.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/security snapshots record Sentry Mode/)).toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
   });
 
@@ -291,10 +297,11 @@ describe('SentryModeChart — empty + null safety', () => {
       }),
     ).not.toThrow();
 
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(
+      screen.getByText('No Sentry Mode activity is recorded in this history window.'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).not.toBeInTheDocument();
-  });
-});
+  });});
 
 describe('SentryModeChart — styling passthrough', () => {
   it('forwards className onto the glass panel wrapper (alongside the base padding)', () => {

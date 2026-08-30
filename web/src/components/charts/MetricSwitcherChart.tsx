@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   BarChart, Bar, AreaChart, Area, LineChart, Line,
   XAxis, YAxis, Tooltip, ResponsiveContainer,
@@ -8,7 +9,6 @@ import { ChartTooltip } from './ChartTooltip';
 import { chartGrid, axisTick } from './chartUtils';
 import { AREA_DEFAULTS, areaGradient } from './chartDefaults';
 import { PillFilterBar, type PillItem } from '@/components/forms/PillFilterBar';
-import { EmptyState } from '@/components/feedback/EmptyState';
 
 /**
  * Definition of one switchable metric inside {@link MetricSwitcherChart}.
@@ -62,7 +62,7 @@ export interface MetricSwitcherChartProps<P> {
   metrics: readonly MetricSwitcherMetric<P>[];
   activeMetric: string;
   onMetricChange: (key: string) => void;
-  /** Optional override for chart height. Defaults to 220. */
+  /** Optional desktop-height override. The shared compact preset is used by default. */
   height?: number;
   /**
    * Optional X-axis tick formatter. Receives the raw `date` value (a
@@ -110,12 +110,13 @@ export function MetricSwitcherChart<P extends { date: string }>({
   metrics,
   activeMetric,
   onMetricChange,
-  height = 220,
+  height,
   formatXTick,
   emptyMessage,
   action,
   testId,
 }: MetricSwitcherChartProps<P>) {
+  const { t } = useTranslation();
   const active = metrics.find((m) => m.key === activeMetric) ?? metrics[0];
   const data = active ? (series[active.key] ?? []) : [];
   const valueKey = '__value';
@@ -158,7 +159,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
     : undefined;
 
   const chartType = active?.chart ?? 'bar';
-  const color = active?.color ?? '#00f0ff';
+  const color = active?.color ?? 'var(--theme-primary, #3b82f6)';
   const gradId = `metricSwitcherGrad-${active?.key ?? 'x'}`;
 
   const switcher = (
@@ -182,20 +183,32 @@ export function MetricSwitcherChart<P extends { date: string }>({
   );
 
   return (
-    // chart-a11y:no-table caller supplies N independent metric series and chooses
-    // one at a time via a pill switcher — there is no single tabular projection
-    // we can render; per-metric tabular access is provided by upstream pages.
+    // chart-legend-audit:skip only one conditional metric series renders at a time.
     <ChartContainer
       title={title}
       ariaLabel={ariaLabel}
+      size="compact"
       height={height}
       action={combinedAction}
+      empty={projected.length === 0}
+      emptyMessage={emptyMessage}
+      data={projected}
+      dataColumns={[
+        { key: DEFAULT_X_KEY, label: t('chart.col.date', 'Date') },
+        {
+          key: valueKey,
+          label: active?.label ?? t('chart.col.value', 'Value'),
+          format: (value) => {
+            const numeric = typeof value === 'number' ? value : Number(value);
+            return active?.formatValue && Number.isFinite(numeric)
+              ? active.formatValue(numeric)
+              : String(value ?? '—');
+          },
+        },
+      ]}
       data-testid={testId}
     >
-      {projected.length === 0 ? (
-        <EmptyState message={emptyMessage} className="py-8" />
-      ) : (
-        <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer width="100%" height="100%">
           {chartType === 'bar' ? (
             <BarChart data={projected}>
               {chartGrid}
@@ -249,8 +262,7 @@ export function MetricSwitcherChart<P extends { date: string }>({
               <Line type="monotone" dataKey={valueKey} name={active?.label ?? ''} stroke={color} strokeWidth={2} dot={false} />
             </LineChart>
           )}
-        </ResponsiveContainer>
-      )}
+      </ResponsiveContainer>
     </ChartContainer>
   );
 }

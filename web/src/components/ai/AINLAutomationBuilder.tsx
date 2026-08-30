@@ -51,6 +51,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/automations/draft',
     body,
     onEvent: () => {},
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight draft and clears the previous
+    // vehicle's proposal before the new scope streams in.
+    scopeKey: numericVehicleId > 0 ? numericVehicleId : null,
   })
 
   // Empty-state affordance: when the Draft button is disabled, explain

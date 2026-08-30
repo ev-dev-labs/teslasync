@@ -1,0 +1,216 @@
+{
+  "alertRules": {
+    "title": "Alert rules",
+    "subtitle": "Bulk-manage alert rules. Click a rule to edit it in Alert Studio.",
+    "kpis": "Alert rule metrics",
+    "noun": {
+      "one": "rule",
+      "other": "rules"
+    },
+    "kpi": {
+      "total": "Total rules",
+      "computed": "Computed"
+    },
+    "status": {
+      "snoozed": "Snoozed"
+    },
+    "insights": {
+      "severity": "Severity distribution",
+      "noSeverity": "No rules to summarise yet",
+      "status": "Status breakdown",
+      "noStatus": "No rules to summarise yet",
+      "topSignals": "Top monitored signals",
+      "noSignals": "No monitored signals yet",
+      "ruleCount": "Rules",
+      "severityLabel": "Severity"
+    },
+    "kind": {
+      "signal": "Signal",
+      "metric": "Metric"
+    },
+    "scope": {
+      "all": "All vehicles",
+      "count": "{{count}} vehicles",
+      "none": "—"
+    },
+    "table": {
+      "title": "All rules",
+      "empty": "No alert rules match"
+    },
+    "bulk": {
+      "enable": "Enable",
+      "disable": "Disable",
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete alert rules?",
+        "body": "These rules will stop firing immediately. This cannot be undone."
+      }
+    },
+    "empty": {
+      "title": "No alert rules yet",
+      "body": "Create your first alert rule in the Alert Studio.",
+      "cta": "Open Alert Studio"
+    },
+    "col": {
+      "name": "Name",
+      "type": "Type",
+      "signal": "Signal",
+      "severity": "Severity",
+      "scope": "Scope",
+      "status": "Status"
+    },
+    "selectRule": "Select rule {{name}}",
+    "error": {
+      "nameTooLong": "Max 120 characters"
+    },
+    "openStudio": "Open Alert Studio"
+  },
+  "notificationBurnRate": {
+    "title": "Notification Burn Rate",
+    "subtitle": "Track notification delivery reliability against a 99% SLO with short and long error-budget windows",
+    "kpis": {
+      "label": "Delivery SLO metrics",
+      "delivery": "24h Delivery SLO",
+      "objective": "99% objective",
+      "shortBurn": "1h Burn Rate",
+      "multiplier": "{{value}}×",
+      "shortOutcomes": "{{count}} delivery outcomes",
+      "longBurn": "24h Burn Rate",
+      "failures": "{{failed}} failed · {{sent}} sent",
+      "status": "Budget Status",
+      "deferred": "{{count}} deferred by DND"
+    },
+    "timeline": {
+      "title": "Delivery Outcomes by Hour",
+      "subtitle": "Deferred quiet-hours notifications remain visible but never consume delivery error budget",
+      "aria": "Stacked bar chart of sent, failed, and do-not-disturb deferred notifications by hour"
+    },
+    "columns": {
+      "time": "Hour",
+      "sent": "Sent",
+      "failed": "Failed",
+      "deferred": "Deferred DND",
+      "pending": "Pending",
+      "delivery": "Delivery (%)",
+      "burn": "Burn rate"
+    },
+    "severity": {
+      "title": "Severity Breakdown",
+      "empty": "No notification outcomes are available in the last 24 hours.",
+      "outcomes": "{{sent}} sent · {{failed}} failed · {{deferred}} deferred · {{pending}} pending"
+    }
+  },
+  "notificationLatency": {
+    "title": "Notification Latency",
+    "units": {
+      "ms": "{{value}} ms"
+    },
+    "histogram": {
+      "over": "> {{value}} ms",
+      "upTo": "≤ {{value}} ms",
+      "title": "Latency Distribution",
+      "subtitle": "Apdex bands are anchored to the documented 1-second satisfied threshold",
+      "aria": "Bar chart of notification deliveries grouped into latency ranges"
+    },
+    "subtitle": "Measure delivery speed from backend latency or created-to-sent timestamps, including percentiles, Apdex, cohorts, and tail records",
+    "kpis": {
+      "label": "Notification latency metrics",
+      "p50": "p50 Latency",
+      "trimmed": "trimmed mean {{value}}",
+      "p95": "p95 Latency",
+      "samples": "{{count}} measured deliveries",
+      "p99": "p99 Latency",
+      "tail": "{{value}} slower than 4 seconds",
+      "apdex": "Delivery Apdex",
+      "apdexThreshold": "T = 1 s · tolerating through 4 s"
+    },
+    "columns": {
+      "range": "Latency range",
+      "count": "Deliveries",
+      "share": "Share (%)"
+    },
+    "cohorts": {
+      "title": "Severity and Status Cohorts",
+      "empty": "No notification records include a usable delivery latency yet.",
+      "severity": "By severity",
+      "status": "By status",
+      "samples": "{{count}} samples · {{tail}} tail"
+    },
+    "slowest": {
+      "title": "Slowest Delivery Records",
+      "empty": "No slow delivery records are available.",
+      "meta": "{{severity}} · {{status}} · {{date}}",
+      "measured": "Measured",
+      "derived": "Derived"
+    }
+  },
+  "notificationSounds": {
+    "title": "Notification sounds",
+    "subtitle": "Play a short cue when an alert or completion event arrives. Plays even while the tab is visible.",
+    "master": "Enable notification sounds",
+    "categoriesHeading": "Channels",
+    "volume": "Volume",
+    "test": "Test",
+    "testAria": "Test {{name}} sound",
+    "autoplayHint": "Some browsers require a click before audio is allowed. Use the Test buttons below once to authorise playback.",
+    "category": {
+      "critical_alert": "Critical alerts",
+      "warning_alert": "Warning alerts",
+      "info_alert": "Informational alerts",
+      "charge_complete": "Charge complete",
+      "drive_complete": "Drive complete",
+      "automation_run": "Automation runs",
+      "achievement": "Achievements"
+    }
+  },
+  "pinned": {
+    "section": {
+      "title": "Pinned",
+      "watching": "Watching"
+    },
+    "empty": {
+      "vehicle": "Pin frequently-used vehicles to keep them at the top.",
+      "alert_rule": "Pin alert rules to keep them under \"Watching\".",
+      "widget": "Pin widgets to keep them at the top of your dashboard.",
+      "geofence": "Pin geofences to keep them at the top of the list.",
+      "automation": "Pin automations to keep them at the top of the list.",
+      "default": "Nothing pinned yet."
+    }
+  },
+  "severity": {
+    "info": "Info",
+    "warn": "Warning",
+    "critical": "Critical"
+  },
+  "webpush": {
+    "title": "Browser push",
+    "subtitle": "Get OS-level notifications even when TeslaSync is closed.",
+    "enable": "Enable on this device",
+    "disable": "Disable on this device",
+    "iosNote": "iOS Safari requires version 16.4 or later, and you must add TeslaSync to your Home Screen.",
+    "status": {
+      "subscribed": "Active on this device",
+      "notSubscribed": "Not subscribed",
+      "unsupported": "Unavailable"
+    },
+    "unsupported": {
+      "notification": "This browser doesn't support notifications.",
+      "pushApi": "This browser doesn't support the Push API.",
+      "permissionDenied": "Notifications are blocked for this site. Re-enable them in your browser settings to use browser push.",
+      "serverDisabled": "Browser push is not configured on this server. Ask your administrator to set the VAPID keys."
+    },
+    "devices": {
+      "title": "Registered devices",
+      "lastUsed": "Last used {{when}}",
+      "neverUsed": "Not yet used",
+      "remove": "Remove this device",
+      "thisDevice": "(this device)",
+      "unknownAgent": "Unknown browser"
+    },
+    "checking": "Checking browser push availability…",
+    "error": {
+      "load": "Couldn't check browser push availability."
+    },
+    "retry": "Retry"
+  }
+}

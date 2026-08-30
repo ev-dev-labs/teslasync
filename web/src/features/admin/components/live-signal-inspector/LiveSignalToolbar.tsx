@@ -12,10 +12,12 @@ import { Select, type SelectOption } from '@/components/ui';
 import type { Vehicle } from '@/types/vehicle';
 
 interface LiveSignalToolbarProps {
-  vehicles: Vehicle[];
+  vehicles?: Vehicle[];
   vehicleId: number | null;
   onChange: (id: number | null) => void;
 }
+
+const EMPTY_VEHICLES: Vehicle[] = [];
 
 export function LiveSignalToolbar({
   vehicles,
@@ -23,19 +25,19 @@ export function LiveSignalToolbar({
   onChange,
 }: LiveSignalToolbarProps) {
   const { t } = useTranslation();
+  const vehicleList = vehicles ?? EMPTY_VEHICLES;
 
-  // Placeholder + one option per vehicle. Memoised because the page polls the
-  // live snapshot every second, so the parent re-renders constantly; without
-  // this the option list (and every `<option>`) is rebuilt on each tick even
-  // when the fleet is unchanged. `vehicles ?? []` guards the `.map` so a
-  // not-yet-resolved vehicles query can never crash the header.
+  // Keep a placeholder while canonical selection is unresolved, but remove it
+  // once a vehicle is active so the local control cannot clear global scope.
   const options = useMemo<SelectOption[]>(
     () => [
-      {
-        value: '',
-        label: t('admin.liveSignals.controls.selectVehicle', 'Select vehicle…'),
-      },
-      ...(vehicles ?? []).map((v) => ({
+      ...(vehicleId === null || vehicleList.length === 0
+        ? [{
+            value: '',
+            label: t('admin.liveSignals.controls.selectVehicle', 'Select vehicle…'),
+          }]
+        : []),
+      ...vehicleList.map((v) => ({
         value: String(v.id),
         label:
           v.display_name ||
@@ -43,12 +45,10 @@ export function LiveSignalToolbar({
           `${t('common.vehicle', 'Vehicle')} ${v.id}`,
       })),
     ],
-    [vehicles, t],
+    [vehicleId, vehicleList, t],
   );
 
-  // An empty value is the placeholder (→ `null`); any other value is a real
-  // vehicle id. Comparing against `''` rather than truthiness keeps id `0`
-  // (a valid, if unusual, primary key) distinct from "no selection".
+  // An empty value exists only for the empty-fleet placeholder.
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLSelectElement>) => {
       const raw = e.target.value;

@@ -1,0 +1,9 @@
+{
+  "signalExplorer": {
+    "start": {
+      "title": "Pick signals and click Explore",
+      "message": "Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.",
+      "description": "Historical queries use the selected range; Live begins streaming new samples without changing it."
+    }
+  }
+}

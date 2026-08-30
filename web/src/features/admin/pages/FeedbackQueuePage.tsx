@@ -13,14 +13,18 @@ import {
   type Column,
 } from '@/components/ui'
 import { PageContainer } from '@/components/layout'
-import { EmptyState, QueryError, Skeleton, Spinner } from '@/components/feedback'
+import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { UserCell } from '@/components/data-display'
 import { Icons } from '@/lib/icons'
 import { type NeonColor } from '@/lib/tokens'
 import { usePageTitle } from '@/hooks/usePageTitle'
 import { useDateFormat } from '@/hooks/useDateFormat'
-import { useFeedbackList, useUpdateFeedback } from '@/api/hooks/useFeedback'
+import {
+  useBulkUpdateFeedback,
+  useFeedbackList,
+  useUpdateFeedback,
+} from '@/api/hooks/useFeedback'
 import type { FeedbackCategory, FeedbackEntry, FeedbackStatus } from '@/api/types'
 import {
   BridgeStatus,
@@ -53,6 +57,8 @@ export default function FeedbackQueuePage() {
   // DataTable expansion is controlled — without this wiring the row-drawer
   // triage controls (status change, GitHub URL, forward) are unreachable.
   const [expandedRows, setExpandedRows] = useState<(string | number)[]>([])
+  const [selectedKeys, setSelectedKeys] = useState<(string | number)[]>([])
+  const [bulkTargetStatus, setBulkTargetStatus] = useState<FeedbackStatus | null>(null)
 
   const listQuery = useFeedbackList({
     status: statusFilter || undefined,
@@ -62,6 +68,7 @@ export default function FeedbackQueuePage() {
   })
   const { data, isLoading, isError, error, refetch, isFetching } = listQuery
   const update = useUpdateFeedback()
+  const bulkUpdate = useBulkUpdateFeedback()
 
   // Whole-queue counts (independent of the table filter). Each call is a cheap
   // limit:1 read whose `.total` is the count for that facet.
@@ -231,16 +238,76 @@ export default function FeedbackQueuePage() {
     [t, formatDateTime],
   )
 
+  const handleBulkStatus = useCallback(
+    async (rows: FeedbackEntry[], status: FeedbackStatus) => {
+      setBulkTargetStatus(status)
+      try {
+        await bulkUpdate.mutateAsync({
+          ids: rows.map((row) => row.id),
+          update: { status },
+        })
+        setSelectedKeys([])
+      } catch {
+        // The mutation surfaces the error and refreshes partial results. Keep
+        // selection intact so the operator can retry only the intended rows.
+      } finally {
+        setBulkTargetStatus(null)
+      }
+    },
+    [bulkUpdate],
+  )
+
+  const renderBulkActions = useCallback(
+    (rows: FeedbackEntry[]) => (
+      <>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          icon={<Icons.success className="h-4 w-4" aria-hidden="true" />}
+          loading={bulkTargetStatus === 'triaged'}
+          disabled={bulkUpdate.isPending || rows.every((row) => row.status === 'triaged')}
+          onClick={() => void handleBulkStatus(rows, 'triaged')}
+        >
+          {t('feedback.queue.bulk.triage', 'Mark triaged')}
+        </Button>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          icon={<Icons.archive className="h-4 w-4" aria-hidden="true" />}
+          loading={bulkTargetStatus === 'closed'}
+          disabled={bulkUpdate.isPending || rows.every((row) => row.status === 'closed')}
+          onClick={() => void handleBulkStatus(rows, 'closed')}
+        >
+          {t('feedback.queue.bulk.close', 'Close selected')}
+        </Button>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          icon={<Icons.undo className="h-4 w-4" aria-hidden="true" />}
+          loading={bulkTargetStatus === 'new'}
+          disabled={bulkUpdate.isPending || rows.every((row) => row.status === 'new')}
+          onClick={() => void handleBulkStatus(rows, 'new')}
+        >
+          {t('feedback.queue.bulk.reopen', 'Reopen selected')}
+        </Button>
+      </>
+    ),
+    [bulkTargetStatus, bulkUpdate.isPending, handleBulkStatus, t],
+  )
+
   const actions = (
     <Button
       variant="ghost"
       size="sm"
       onClick={handleRefreshAll}
-      disabled={isRefreshing}
+      loading={isRefreshing}
       aria-label={t('common.refresh', 'Refresh')}
+      icon={<Icons.refresh className="h-4 w-4" aria-hidden="true" />}
     >
-      {isRefreshing ? <Spinner size="sm" /> : <Icons.refresh className="h-4 w-4" aria-hidden="true" />}
-      <span className="ml-1">{t('common.refresh', 'Refresh')}</span>
+      {t('common.refresh', 'Refresh')}
     </Button>
   )
 
@@ -366,6 +433,19 @@ export default function FeedbackQueuePage() {
                 columns={columns}
                 data={items}
                 keyExtractor={(r) => r.id}
+                selectable="multi"
+                // A11Y: without this every checkbox announces the same
+                // "Select row"; the first column is a timestamp, which
+                // is not distinguishing on a busy queue.
+                rowLabel={(r) =>
+                  t('feedback.queue.rowLabel', '{{category}}: {{title}}', {
+                    category: r.category,
+                    title: r.title || t('feedback.queue.untitled', 'Untitled feedback'),
+                  })
+                }
+                selectedKeys={selectedKeys}
+                onSelectionChange={setSelectedKeys}
+                bulkActions={renderBulkActions}
                 emptyMessage={t('feedback.queue.empty', 'No feedback yet')}
                 expandable
                 expandedKeys={expandedRows}

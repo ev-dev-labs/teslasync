@@ -17,17 +17,17 @@ const DYNAMIC_MARK = 'data-dynamic-app-icon'
  * Default fallback colour used when the manifest theme-color meta is missing.
  * Matches the build-time `background_color` in `vite.config.ts`.
  */
-const FALLBACK_BG = '#0a0a0f'
+const FALLBACK_BG = '#0b0d12'
 
 /**
  * Re-tints the browser tab favicon, the iOS apple-touch-icon, the
- * `<meta name="theme-color">` tag, AND the PWA manifest icons in real time
- * whenever the user switches themes (or tweaks the custom primary/accent
- * pickers in Appearance settings).
+ * `<meta name="theme-color">` tag, AND the PWA manifest icons in real time.
+ * The icon accent follows the chosen theme while browser chrome follows the
+ * active surface mode, keeping both dark and light installs visually calm.
  *
  * Layer 1 — favicon (instant, every browser):
  *   Mutates every `<link rel="icon">` to a base64-encoded SVG data URL with
- *   the active primary→accent gradient. Inlines a `data-dynamic-app-icon`
+ *   the active framed brand mark. Inlines a `data-dynamic-app-icon`
  *   marker so `useFaviconBadge` knows it can re-snapshot the live href
  *   instead of restoring to the build-time default.
  *
@@ -49,7 +49,7 @@ const FALLBACK_BG = '#0a0a0f'
  * back to the build-time SVG.
  */
 export function useDynamicAppIcon(): void {
-  const { theme } = useTheme()
+  const { theme, mode } = useTheme()
   const lastBlobUrlRef = useRef<string | null>(null)
   const lastSignatureRef = useRef<string>('')
 
@@ -58,7 +58,8 @@ export function useDynamicAppIcon(): void {
 
     const primary = theme.primary
     const accent = theme.accent
-    const signature = `${primary}|${accent}`
+    const chromeColor = mode.bg || FALLBACK_BG
+    const signature = `${primary}|${accent}|${chromeColor}`
     if (signature === lastSignatureRef.current) return
     lastSignatureRef.current = signature
 
@@ -87,7 +88,7 @@ export function useDynamicAppIcon(): void {
       themeColorMeta.setAttribute('name', 'theme-color')
       document.head.appendChild(themeColorMeta)
     }
-    themeColorMeta.setAttribute('content', primary)
+    themeColorMeta.setAttribute('content', chromeColor)
     themeColorMeta.setAttribute(DYNAMIC_MARK, 'true')
 
     // ── Layer 2: apple-touch-icon ────────────────────────────────────────
@@ -137,8 +138,8 @@ export function useDynamicAppIcon(): void {
         short_name: 'TeslaSync',
         start_url: '/',
         display: 'standalone',
-        background_color: FALLBACK_BG,
-        theme_color: primary,
+        background_color: chromeColor,
+        theme_color: chromeColor,
         orientation: 'any',
         categories: ['auto', 'utilities'],
         icons: [
@@ -164,7 +165,7 @@ export function useDynamicAppIcon(): void {
       lastBlobUrlRef.current = url
       if (previous) URL.revokeObjectURL(previous)
     })
-  }, [theme.primary, theme.accent])
+  }, [theme.primary, theme.accent, mode.bg])
 
   // Revoke the final manifest blob URL when the host component unmounts so
   // we don't leak across HMR cycles in dev or test re-mounts.

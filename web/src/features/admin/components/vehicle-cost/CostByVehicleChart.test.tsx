@@ -46,6 +46,32 @@ vi.mock('@/hooks/useOnlineStatus', () => ({
   useOnlineStatus: () => true,
 }));
 
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const Inert = () => null;
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartTooltip: Inert,
+    CartesianGrid: Inert,
+    Tooltip: Inert,
+    axisTick: {},
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+    BarChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
+      <div data-testid="bar-chart" data-count={String((data ?? []).length)}>
+        {children}
+      </div>
+    ),
+    Bar: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="bar">{children}</div>
+    ),
+    Cell: ({ fill }: { fill?: string }) => (
+      <div data-testid="cell" data-fill={String(fill ?? '')} />
+    ),
+    XAxis: Inert,
+    YAxis: Inert,
+  };
+});
+
 import { CostByVehicleChart } from './CostByVehicleChart';
 import type { VehicleCostBar } from './helpers';
 
@@ -171,7 +197,7 @@ describe('CostByVehicleChart — empty state', () => {
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText(EMPTY_COPY)).toBeInTheDocument();
     // No chart region and no skeleton in the settled-empty branch.
-    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
   });
 });
 
@@ -193,14 +219,14 @@ describe('CostByVehicleChart — null-safety', () => {
 
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.getByText(EMPTY_COPY)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
   });
 
   it('treats null bars as empty without crashing', () => {
     renderChart({ bars: null as unknown as VehicleCostBar[] });
 
     expect(screen.getByRole('status')).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
   });
 
   it('falls through to the skeleton when loading with null bars (no crash)', () => {

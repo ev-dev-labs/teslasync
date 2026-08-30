@@ -10,13 +10,15 @@ import (
 	"testing"
 	"time"
 
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
+	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
 // recoveryStateCallRecord captures one StateReader.State invocation made by
 // the crash-recovery path so tests can assert wire-up: which vehicleID was
-// queried at which timestamp anchor (drive.StartTs, charge.StartTs, or
-// lastSignalTs from signal_log.LatestTimestamp). The "at" anchor is
+// queried at which timestamp anchor (drive.StartTs, charge.StartTs, or the
+// definitive terminal evidence timestamp). The "at" anchor is
 // load-bearing — a regression that swaps drive start/end anchors would
 // silently zero out odometer / energy / lat-lng deltas on every recovered
 // session, exactly the bug the StateReader migration was meant to fix.
@@ -70,6 +72,77 @@ func (f *recoveryFakeState) snapshotCalls() []recoveryStateCallRecord {
 
 // Compile-time guarantee.
 var _ signal.StateReader = (*recoveryFakeState)(nil)
+
+type recoveryEvidenceFake struct {
+	lastDrivingFn          func(time.Time, time.Time) (*datarepairdb.Observation, error)
+	firstGearFn            func([]string, time.Time, time.Time) (*datarepairdb.Observation, error)
+	firstChargeStateFn     func([]string, time.Time, time.Time) (*datarepairdb.Observation, error)
+	firstChargingSessionFn func(time.Time) (*datarepairdb.Observation, error)
+	firstDriveFn           func(time.Time) (*datarepairdb.Observation, error)
+}
+
+func (f *recoveryEvidenceFake) LastDrivingObservation(
+	_ context.Context,
+	_ int64,
+	_ []string,
+	from, to time.Time,
+) (*datarepairdb.Observation, error) {
+	if f.lastDrivingFn == nil {
+		return nil, nil
+	}
+	return f.lastDrivingFn(from, to)
+}
+
+func (f *recoveryEvidenceFake) FirstGearObservation(
+	_ context.Context,
+	_ int64,
+	gears []string,
+	after, until time.Time,
+) (*datarepairdb.Observation, error) {
+	if f.firstGearFn == nil {
+		return nil, nil
+	}
+	return f.firstGearFn(gears, after, until)
+}
+
+func (f *recoveryEvidenceFake) FirstChargeStateObservation(
+	_ context.Context,
+	_ int64,
+	_ []string,
+	values []string,
+	after, until time.Time,
+) (*datarepairdb.Observation, error) {
+	if f.firstChargeStateFn == nil {
+		return nil, nil
+	}
+	return f.firstChargeStateFn(values, after, until)
+}
+
+func (f *recoveryEvidenceFake) FirstChargingSessionAfter(
+	_ context.Context,
+	_ int64,
+	after time.Time,
+	_ int64,
+) (*datarepairdb.Observation, error) {
+	if f.firstChargingSessionFn == nil {
+		return nil, nil
+	}
+	return f.firstChargingSessionFn(after)
+}
+
+func (f *recoveryEvidenceFake) FirstDriveAfter(
+	_ context.Context,
+	_ int64,
+	after time.Time,
+	_ int64,
+) (*datarepairdb.Observation, error) {
+	if f.firstDriveFn == nil {
+		return nil, nil
+	}
+	return f.firstDriveFn(after)
+}
+
+var _ recoveryEvidence = (*recoveryEvidenceFake)(nil)
 
 // TestRecovery_RebuildsStateFromForwardFold pins the core contract of the
 // migration: the snapshot used to enrich a recovered drive/charge session
@@ -167,8 +240,8 @@ func TestRecovery_RebuildsStateFromForwardFold(t *testing.T) {
 	ctx := context.Background()
 
 	// Mirror the production call shape from RecoverIncompleteSessions:
-	// driveR.state.State at drive.StartTs and lastSignalTs (driveEnd here),
-	// then chargeR.state.State at charge.StartTs and lastSignalTs (chargeEnd).
+	// driveR.state.State at drive.StartTs and its parked-gear boundary, then
+	// chargeR.state.State at charge.StartTs and its terminal-state boundary.
 	driveStartSnap, err := driveR.state.State(ctx, driveVehicleID, driveStart)
 	if err != nil {
 		t.Fatalf("driveR.state.State(start) err = %v", err)
@@ -193,7 +266,7 @@ func TestRecovery_RebuildsStateFromForwardFold(t *testing.T) {
 
 	// Anchor pinning: the per-call (vehicleID, at) pairs must match the
 	// production code's plumbing. A regression that uses time.Now() for
-	// the end anchor (instead of lastSignalTs) would corrupt deltas on
+	// the end anchor (instead of the evidence timestamp) would corrupt deltas on
 	// every recovered session — the equality checks below catch that.
 	wantPairs := []recoveryStateCallRecord{
 		{vehicleID: driveVehicleID, at: driveStart},
@@ -301,6 +374,230 @@ func TestRecovery_AllFourCallsMigrated(t *testing.T) {
 		t.Fatalf("found %d %q call sites in %s, want at least 4 "+
 			"(drive start, drive end, charge start, charge end)",
 			count, required, file)
+	}
+}
+
+func TestCleanupWithoutDurableReaderLeavesSessionsOpen(t *testing.T) {
+	t.Parallel()
+
+	lastSeen := time.Now().UTC().Add(-time.Hour)
+	tracker := &TelemetrySessionTracker{
+		localSignals: signal.New(),
+		activeDrives: map[int64]*streamingDrive{
+			7: {
+				DriveID:   11,
+				VehicleID: 7,
+				StartTime: lastSeen.Add(-time.Hour),
+				LastSeen:  lastSeen,
+			},
+		},
+		activeCharges: map[int64]*streamingCharge{
+			8: {
+				SessionID: 21,
+				VehicleID: 8,
+				StartTime: lastSeen.Add(-time.Hour),
+				LastSeen:  lastSeen,
+			},
+		},
+	}
+
+	tracker.CleanupStaleSessions(context.Background(), 5*time.Minute)
+
+	if _, ok := tracker.activeDrives[7]; !ok {
+		t.Fatal("ambiguous stale drive was removed without terminal evidence")
+	}
+	if _, ok := tracker.activeCharges[8]; !ok {
+		t.Fatal("ambiguous stale charging session was removed without terminal evidence")
+	}
+}
+
+func TestValidateRecoveredSessionsDetachesAmbiguousContradictions(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
+	startedAt := now.Add(-2 * time.Hour)
+	evidence := &recoveryEvidenceFake{
+		firstChargeStateFn: func(values []string, _, _ time.Time) (*datarepairdb.Observation, error) {
+			for _, value := range values {
+				if value == "Charging" {
+					return &datarepairdb.Observation{
+						Ts:    startedAt.Add(time.Hour),
+						Field: "DetailedChargeState",
+						Value: "Charging",
+					}, nil
+				}
+			}
+			return nil, nil
+		},
+		firstDriveFn: func(time.Time) (*datarepairdb.Observation, error) {
+			return &datarepairdb.Observation{
+				Ts:    startedAt.Add(90 * time.Minute),
+				Field: "drive.started_at",
+			}, nil
+		},
+	}
+	tracker := &TelemetrySessionTracker{
+		activeDrives: map[int64]*streamingDrive{
+			7: {DriveID: 11, VehicleID: 7, StartTime: startedAt},
+		},
+		activeCharges: map[int64]*streamingCharge{
+			8: {SessionID: 21, VehicleID: 8, StartTime: startedAt},
+		},
+	}
+
+	tracker.validateRecoveredWithEvidence(context.Background(), evidence, now)
+
+	if _, ok := tracker.activeDrives[7]; ok {
+		t.Fatal("drive contradicted by charging evidence remained active in memory")
+	}
+	if _, ok := tracker.activeCharges[8]; ok {
+		t.Fatal("charging session contradicted by a later drive remained active in memory")
+	}
+}
+
+func TestValidateRecoveredDriveIgnoresParkAfterNextDriveStarts(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
+	startedAt := now.Add(-3 * time.Hour)
+	nextDrive := startedAt.Add(time.Hour)
+	laterPark := startedAt.Add(2 * time.Hour)
+	evidence := &recoveryEvidenceFake{
+		firstDriveFn: func(time.Time) (*datarepairdb.Observation, error) {
+			return &datarepairdb.Observation{Ts: nextDrive, Field: "drive.started_at"}, nil
+		},
+		firstGearFn: func(gears []string, _, until time.Time) (*datarepairdb.Observation, error) {
+			for _, gear := range gears {
+				if gear == enums.GearPark && !laterPark.After(until) {
+					return &datarepairdb.Observation{
+						Ts: laterPark, Field: "Gear", Value: enums.GearPark,
+					}, nil
+				}
+			}
+			return nil, nil
+		},
+	}
+	tracker := &TelemetrySessionTracker{
+		activeDrives: map[int64]*streamingDrive{
+			7: {DriveID: 11, VehicleID: 7, StartTime: startedAt},
+		},
+		activeCharges: map[int64]*streamingCharge{},
+	}
+
+	tracker.validateRecoveredWithEvidence(context.Background(), evidence, now)
+
+	if _, ok := tracker.activeDrives[7]; !ok {
+		t.Fatal("Park from a later drive closed or detached the earlier drive")
+	}
+}
+
+func TestValidateRecoveredChargeIgnoresTerminalStateAfterNextChargeStarts(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
+	startedAt := now.Add(-3 * time.Hour)
+	nextCharge := startedAt.Add(time.Hour)
+	laterTerminal := startedAt.Add(2 * time.Hour)
+	evidence := &recoveryEvidenceFake{
+		firstChargingSessionFn: func(time.Time) (*datarepairdb.Observation, error) {
+			return &datarepairdb.Observation{Ts: nextCharge, Field: "charging_session.started_at"}, nil
+		},
+		firstChargeStateFn: func(values []string, _, until time.Time) (*datarepairdb.Observation, error) {
+			for _, value := range values {
+				if value == enums.ChargeStateComplete && !laterTerminal.After(until) {
+					return &datarepairdb.Observation{
+						Ts: laterTerminal, Field: "DetailedChargeState", Value: enums.ChargeStateComplete,
+					}, nil
+				}
+			}
+			return nil, nil
+		},
+	}
+	tracker := &TelemetrySessionTracker{
+		activeDrives: map[int64]*streamingDrive{},
+		activeCharges: map[int64]*streamingCharge{
+			7: {SessionID: 21, VehicleID: 7, StartTime: startedAt},
+		},
+	}
+
+	tracker.validateRecoveredWithEvidence(context.Background(), evidence, now)
+
+	if _, ok := tracker.activeCharges[7]; !ok {
+		t.Fatal("terminal state from a later charge closed or detached the earlier charge")
+	}
+}
+
+func TestValidateRecoveredDrivePrefersEarlierContradictionOverLaterPark(t *testing.T) {
+	t.Parallel()
+
+	now := time.Date(2026, 8, 25, 12, 0, 0, 0, time.UTC)
+	startedAt := now.Add(-3 * time.Hour)
+	chargingStarted := startedAt.Add(time.Hour)
+	laterPark := startedAt.Add(2 * time.Hour)
+	evidence := &recoveryEvidenceFake{
+		firstGearFn: func(gears []string, _, _ time.Time) (*datarepairdb.Observation, error) {
+			for _, gear := range gears {
+				if gear == enums.GearPark {
+					return &datarepairdb.Observation{
+						Ts: laterPark, Field: "Gear", Value: enums.GearPark,
+					}, nil
+				}
+			}
+			return nil, nil
+		},
+		firstChargeStateFn: func(values []string, _, _ time.Time) (*datarepairdb.Observation, error) {
+			for _, value := range values {
+				if value == enums.ChargeStateCharging {
+					return &datarepairdb.Observation{
+						Ts: chargingStarted, Field: "DetailedChargeState", Value: enums.ChargeStateCharging,
+					}, nil
+				}
+			}
+			return nil, nil
+		},
+	}
+	tracker := &TelemetrySessionTracker{
+		activeDrives: map[int64]*streamingDrive{
+			7: {DriveID: 11, VehicleID: 7, StartTime: startedAt},
+		},
+		activeCharges: map[int64]*streamingCharge{},
+	}
+
+	tracker.validateRecoveredWithEvidence(context.Background(), evidence, now)
+
+	if _, ok := tracker.activeDrives[7]; ok {
+		t.Fatal("later Park overrode an earlier cross-kind contradiction")
+	}
+}
+
+func TestRecoveryDoesNotInventBoundaries(t *testing.T) {
+	t.Parallel()
+
+	recovery, err := os.ReadFile("telemetry_sessions_recovery.go")
+	if err != nil {
+		t.Fatalf("read recovery source: %v", err)
+	}
+	cleanup, err := os.ReadFile("telemetry_sessions_flush_backfill.go")
+	if err != nil {
+		t.Fatalf("read cleanup source: %v", err)
+	}
+
+	for _, banned := range []string{"LatestTimestamp(", "completing drive with no signal_log data", "auto-closing stale"} {
+		if strings.Contains(string(recovery), banned) {
+			t.Errorf("recovery source contains unsafe boundary heuristic %q", banned)
+		}
+	}
+	if strings.Contains(string(recovery), "localSignals") ||
+		strings.Contains(string(cleanup), "localSignals") {
+		t.Error("recovery boundary decisions must not use hydration-time SignalStore timestamps")
+	}
+	if got := strings.Count(string(recovery), ".GetOpenSince(ctx,"); got != 2 {
+		t.Errorf("recovery uses GetOpenSince %d times, want 2 (drive + charging)", got)
+	}
+	for _, banned := range []string{"UPDATE drives SET ended_at", "UPDATE charging_sessions SET ended_at"} {
+		if strings.Contains(string(cleanup), banned) {
+			t.Errorf("cleanup source contains unsafe wall-clock mass update %q", banned)
+		}
 	}
 }
 

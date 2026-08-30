@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { CalendarPlus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -14,8 +14,10 @@ import {
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { Button } from '@/components/ui';
 import { Grid, PageContainer } from '@/components/layout';
+import { OperationalWriteNotice } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import {
   AssignmentRoster,
   CancelReservationDialog,
@@ -48,6 +50,7 @@ export default function FleetOperationsPage() {
   const [editor, setEditor] = useState<FleetEditor | null>(null);
   const [cancelTarget, setCancelTarget] = useState<FleetReservation | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FleetDeleteTarget | null>(null);
+  const operationalMode = useOperationalMode();
   const window = useMemo(forecastWindow, []);
   const vehiclesQuery = useVehicles();
   const driversQuery = useFleetDrivers({ limit: 100 });
@@ -82,6 +85,12 @@ export default function FleetOperationsPage() {
     setEditor(null);
     setCancelTarget(null);
   };
+  useEffect(() => {
+    if (operationalMode.canWrite) return;
+    setEditor(null);
+    setCancelTarget(null);
+    setDeleteTarget(null);
+  }, [operationalMode.canWrite]);
   const refreshAndCloseEditor = () => {
     refreshFleetOps();
     setEditor(null);
@@ -96,7 +105,12 @@ export default function FleetOperationsPage() {
           type="button"
           icon={<CalendarPlus className="h-4 w-4" />}
           onClick={() => setEditor({ kind: 'reservation', item: null })}
-          disabled={vehiclesQuery.isLoading || (vehiclesQuery.data ?? []).length === 0}
+          disabled={
+            !operationalMode.canWrite
+            || vehiclesQuery.isLoading
+            || (vehiclesQuery.data ?? []).length === 0
+          }
+          title={operationalMode.writeBlockReason ?? undefined}
         >
           {t('fleetOps.actions.reserve', 'New reservation')}
         </Button>
@@ -111,6 +125,10 @@ export default function FleetOperationsPage() {
         forecastQuery,
       ]}
     >
+      <OperationalWriteNotice
+        title={t('fleetOps.readOnly.title', 'Fleet Operations is read-only')}
+      />
+
       <FadeIn>
         <FleetKpis
           reservations={reservations}
@@ -131,6 +149,8 @@ export default function FleetOperationsPage() {
           onEdit={(item) => setEditor({ kind: 'reservation', item })}
           onCancel={setCancelTarget}
           onDelete={(item) => setDeleteTarget({ kind: 'reservation', item })}
+          actionsDisabled={!operationalMode.canWrite}
+          actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
         />
       </FadeIn>
 
@@ -144,6 +164,8 @@ export default function FleetOperationsPage() {
             onAdd={() => setEditor({ kind: 'driver', item: null })}
             onEdit={(item) => setEditor({ kind: 'driver', item })}
             onDelete={(item) => setDeleteTarget({ kind: 'driver', item })}
+            actionsDisabled={!operationalMode.canWrite}
+            actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
           />
         </FadeIn>
         <FadeIn delay={0.06}>
@@ -155,6 +177,8 @@ export default function FleetOperationsPage() {
             onAdd={() => setEditor({ kind: 'assignment', item: null })}
             onEdit={(item) => setEditor({ kind: 'assignment', item })}
             onDelete={(item) => setDeleteTarget({ kind: 'assignment', item })}
+            actionsDisabled={!operationalMode.canWrite}
+            actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
           />
         </FadeIn>
         <FadeIn delay={0.07}>
@@ -172,6 +196,8 @@ export default function FleetOperationsPage() {
             onAdd={() => setEditor({ kind: 'cost_center', item: null })}
             onEdit={(item) => setEditor({ kind: 'cost_center', item })}
             onDelete={(item) => setDeleteTarget({ kind: 'cost_center', item })}
+            actionsDisabled={!operationalMode.canWrite}
+            actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
           />
         </FadeIn>
       </Grid>
@@ -185,6 +211,8 @@ export default function FleetOperationsPage() {
           onAdd={() => setEditor({ kind: 'charging_policy', item: null })}
           onEdit={(item) => setEditor({ kind: 'charging_policy', item })}
           onDelete={(item) => setDeleteTarget({ kind: 'charging_policy', item })}
+          actionsDisabled={!operationalMode.canWrite}
+          actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
         />
       </FadeIn>
 
@@ -197,6 +225,8 @@ export default function FleetOperationsPage() {
           onAdd={() => setEditor({ kind: 'work_order', item: null })}
           onEdit={(item) => setEditor({ kind: 'work_order', item })}
           onDelete={(item) => setDeleteTarget({ kind: 'work_order', item })}
+          actionsDisabled={!operationalMode.canWrite}
+          actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
         />
       </FadeIn>
 
@@ -209,7 +239,7 @@ export default function FleetOperationsPage() {
         />
       </FadeIn>
 
-      {editor && (
+      {operationalMode.canWrite && editor && (
         <FleetResourceEditorDialog
           key={`${editor.kind}-${editor.item?.id ?? 'new'}`}
           editor={editor}
@@ -223,7 +253,7 @@ export default function FleetOperationsPage() {
           onRefresh={refreshFleetOps}
         />
       )}
-      {cancelTarget && (
+      {operationalMode.canWrite && cancelTarget && (
         <CancelReservationDialog
           item={cancelTarget}
           onClose={() => setCancelTarget(null)}
@@ -231,7 +261,7 @@ export default function FleetOperationsPage() {
           onRefresh={refreshAndCloseEditor}
         />
       )}
-      {deleteTarget && (
+      {operationalMode.canWrite && deleteTarget && (
         <DeleteFleetResourceDialog
           target={deleteTarget}
           onClose={() => setDeleteTarget(null)}

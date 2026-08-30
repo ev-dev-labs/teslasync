@@ -151,10 +151,29 @@ function InnerSection({
     }
   }, [])
 
+  // Stable content keys used both as the stream's scopeKey and by the
+  // local proposal-clearing cleanup below. Keyed on CONTENT, not
+  // array *reference*: parents routinely pass a freshly built array
+  // on every render (e.g. `severities={filters.severities}` or
+  // `ruleIds={selected.map(...)}`). Depending on the raw arrays would
+  // treat every unrelated parent re-render as a scope change. Mirrors
+  // the ruleIdsKey pattern in AICrossRuleConflictDetection.
+  const severitiesKey = useMemo(
+    () => (severities ?? []).join(','),
+    [severities],
+  )
+  const ruleIdsKey = useMemo(() => (ruleIds ?? []).join(','), [ruleIds])
+
   const stream = useAiStream({
     url: '/ai/alerts/inbox/categorize',
     body,
     onEvent: handleEvent,
+    // AI-01: the inbox filter scope (vehicle + window + severities +
+    // rule ids) is part of stream identity — changing any of them
+    // aborts an in-flight categorization and clears the stream's own
+    // completed output in addition to the local `proposal` state
+    // cleared below.
+    scopeKey: `${vehicleId ?? ''}:${windowDays ?? ''}:${severitiesKey}:${ruleIdsKey}`,
   })
 
   // Pull cancel out so the cleanup effect's deps stay narrow.
@@ -165,25 +184,11 @@ function InnerSection({
   // the captured proposal mid-stream.
   const { cancel: cancelStream } = stream
 
-  // Stable content keys for the scope-change cleanup below. The
-  // cleanup must fire on the CONTENT of severities / ruleIds, not
-  // on the array *reference*: parents routinely pass a freshly
-  // built array on every render (e.g. `severities={filters.severities}`
-  // or `ruleIds={selected.map(...)}`). Depending on the raw arrays
-  // would run the cleanup on every unrelated parent re-render —
-  // aborting an in-flight stream and wiping a just-captured
-  // proposal. Mirrors the ruleIdsKey pattern in
-  // AICrossRuleConflictDetection.
-  const severitiesKey = useMemo(
-    () => (severities ?? []).join(','),
-    [severities],
-  )
-  const ruleIdsKey = useMemo(() => (ruleIds ?? []).join(','), [ruleIds])
-
-  // Cancel + reset whenever the inbox scope changes so a stale
-  // stream from a previous filter cannot bleed proposals into the
-  // current view. Dedicated effect so the cleanup deps stay
-  // explicit and easy to audit.
+  // Reset the locally-captured proposal whenever the inbox scope
+  // changes so a stale proposal from a previous filter cannot bleed
+  // into the current view. The stream's own text/activity/usage
+  // reset is now handled by useAiStream's scopeKey above;
+  // cancelStream() here only covers unmount.
   useEffect(() => {
     return () => {
       cancelStream()

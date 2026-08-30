@@ -30,7 +30,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 
@@ -56,6 +56,7 @@ vi.mock('@/lib/queryBroadcast', () => ({
 }));
 
 import { ApiError } from '@/lib/resilience';
+import { TELEMETRY_STALE_AFTER_MS } from '@/hooks/useTelemetryFreshness';
 import type { Vehicle } from '@/types/vehicle';
 import type { VehicleState } from '@/api/types';
 import {
@@ -81,7 +82,16 @@ import {
   useVehicleConfigLatest,
   useUserPreferenceLatest,
   fetchVehicleState,
+  fetchFleetStates,
+  deriveCurrentVehicleStatus,
+  deriveTrustedVehicleStatus,
+  describeFleetState,
+  isFleetStateFieldCurrent,
   useFleetStates,
+  summariseFleetStates,
+  FLEET_STATES_QUERY_ROOT,
+  FLEET_STATE_BATCH_CHUNK,
+  type FleetStateEntry,
   useVehicleMobileEnabled,
   useRefreshVehicleMobileEnabled,
   useVehicleOptions,
@@ -135,11 +145,17 @@ function lastUrl(): string {
   return requestMock.mock.calls.at(-1)?.[0] as string;
 }
 /** Second positional arg of the most recent request() call = fetch options. */
-function lastOpts(): { signal?: unknown; method?: string; body?: unknown } {
+function lastOpts(): {
+  signal?: unknown;
+  method?: string;
+  body?: unknown;
+  requiresLiveMode?: boolean;
+} {
   return (requestMock.mock.calls.at(-1)?.[1] ?? {}) as {
     signal?: unknown;
     method?: string;
     body?: unknown;
+    requiresLiveMode?: boolean;
   };
 }
 /** A disabled query must never fetch — give React Query a tick to prove it. */
@@ -160,6 +176,30 @@ function makeVehicle(id: number, overrides: Partial<Vehicle> = {}): Vehicle {
     created_at: '2025-01-01T00:00:00Z',
     updated_at: '2025-01-01T00:00:00Z',
     ...overrides,
+  };
+}
+
+const FRESH_OBSERVED_AT = new Date(Date.now() - 1_000).toISOString();
+const VERIFIED_FIELDS = [
+  'state',
+  'battery_level',
+  'rated_range',
+  'speed',
+  'is_charging',
+  'software_version',
+] as const;
+
+function freshStateResponse(
+  id: number,
+  state: Partial<VehicleState> = {},
+  live = true,
+) {
+  return {
+    state: { vehicle_id: id, ...state },
+    live,
+    observed_at: FRESH_OBSERVED_AT,
+    freshness: 'fresh' as const,
+    verified_fields: VERIFIED_FIELDS,
   };
 }
 
@@ -328,14 +368,26 @@ describe('useVehicleState', () => {
     const { result } = renderH(() => useVehicleState(3));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.isError).toBe(false);
-    expect(result.current.data).toEqual({ state: undefined, live: false });
+    expect(result.current.data).toEqual({
+      state: undefined,
+      live: false,
+      observedAt: null,
+      freshness: 'unknown',
+      verifiedFields: [],
+    });
   });
 
   it('handles the neither-vehicle-nor-position branch by echoing state + live', async () => {
     requestMock.mockResolvedValueOnce({ live: true });
     const { result } = renderH(() => useVehicleState(3));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(result.current.data).toEqual({ state: undefined, live: true });
+    expect(result.current.data).toEqual({
+      state: undefined,
+      live: true,
+      observedAt: null,
+      freshness: 'unknown',
+      verifiedFields: [],
+    });
   });
 
   it('appends the encoded ?as_of= param when the time-machine URL is set', async () => {
@@ -358,11 +410,14 @@ describe('useVehicleState', () => {
 // ─────────────────────────────────────────────────────────────────────────────
 describe('fetchVehicleState (raw batch helper)', () => {
   it('passes through the pre-assembled state shape', async () => {
-    requestMock.mockResolvedValueOnce({ state: { vehicle_id: 9, state: 'asleep' }, live: true });
+    requestMock.mockResolvedValueOnce(freshStateResponse(9, { state: 'asleep' }));
     const out = await fetchVehicleState(9);
     expect(lastUrl()).toBe('/vehicles/9/state');
     expect(out.state?.vehicle_id).toBe(9);
     expect(out.live).toBe(true);
+    expect(out.observedAt).toBe(Date.parse(FRESH_OBSERVED_AT));
+    expect(out.freshness).toBe('fresh');
+    expect(out.verifiedFields).toEqual(VERIFIED_FIELDS);
   });
 
   it('composes vehicle + position and defaults the live flag to false', async () => {
@@ -378,7 +433,33 @@ describe('fetchVehicleState (raw batch helper)', () => {
 
   it('returns an empty live-less state (never throws) for a null body', async () => {
     requestMock.mockResolvedValueOnce(null);
-    await expect(fetchVehicleState(9)).resolves.toEqual({ state: undefined, live: false });
+    await expect(fetchVehicleState(9)).resolves.toEqual({
+      state: undefined,
+      live: false,
+      observedAt: null,
+      freshness: 'unknown',
+      verifiedFields: [],
+    });
+  });
+
+  it('does not infer freshness when the backend omits or corrupts observation metadata', async () => {
+    requestMock
+      .mockResolvedValueOnce({ state: { vehicle_id: 9 }, live: true, freshness: 'fresh' })
+      .mockResolvedValueOnce({
+        state: { vehicle_id: 9 },
+        live: true,
+        observed_at: 'not-a-timestamp',
+        freshness: 'fresh',
+      });
+
+    await expect(fetchVehicleState(9)).resolves.toMatchObject({
+      observedAt: null,
+      freshness: 'unknown',
+    });
+    await expect(fetchVehicleState(9)).resolves.toMatchObject({
+      observedAt: null,
+      freshness: 'unknown',
+    });
   });
 });
 
@@ -471,35 +552,354 @@ describe.each(latestFamily)('$label', ({ hook, route }) => {
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Batch fleet-state helpers.
+//
+// `useFleetStates` reads ONE endpoint — GET /vehicles/states — which answers
+// through the platform `{data: ...}` envelope. Every helper below builds the
+// REAL wire shape (snake_case, per-item outcome + provenance) so the tests
+// exercise the actual decode rather than a convenient stand-in.
+
+/** The ids a batch request asked for, parsed out of the query string. */
+function requestedIds(url: string): number[] {
+  const query = String(url).split('?')[1] ?? '';
+  const raw = new URLSearchParams(query).get('vehicle_ids') ?? '';
+  return raw === '' ? [] : raw.split(',').map(Number);
+}
+
+type WireItem = Record<string, unknown>;
+
+function resolvedItem(
+  id: number,
+  state: Partial<VehicleState> = {},
+  over: WireItem = {},
+): WireItem {
+  return {
+    vehicle_id: id,
+    outcome: 'resolved',
+    state: { vehicle_id: id, ...state },
+    live: true,
+    data_source: 'live_signal_store',
+    observed_at: FRESH_OBSERVED_AT,
+    freshness: 'fresh',
+    verified_fields: VERIFIED_FIELDS,
+    ...over,
+  };
+}
+
+function missingItem(id: number): WireItem {
+  return {
+    vehicle_id: id,
+    outcome: 'missing',
+    state: null,
+    live: false,
+    data_source: 'db_fallback',
+    freshness: 'unknown',
+    verified_fields: [],
+  };
+}
+
+function failedItem(id: number): WireItem {
+  return {
+    vehicle_id: id,
+    outcome: 'failed',
+    state: null,
+    live: false,
+    data_source: 'db_fallback',
+    freshness: 'unknown',
+    verified_fields: [],
+    error: 'state_unavailable',
+  };
+}
+
+/** Wrap items in the `{data: ...}` envelope handler/v1 writes. */
+function batchBody(items: WireItem[]) {
+  return {
+    data: {
+      now: new Date().toISOString(),
+      total: items.length,
+      limit: 500,
+      offset: 0,
+      counts: {
+        resolved: items.filter((i) => i.outcome === 'resolved').length,
+        missing: items.filter((i) => i.outcome === 'missing').length,
+        failed: items.filter((i) => i.outcome === 'failed').length,
+      },
+      vehicles: items,
+    },
+  };
+}
+
+/** Default mock: every requested vehicle resolves fresh. */
+function mockResolvedBatch(state: Partial<VehicleState> = { state: 'online' }) {
+  requestMock.mockImplementation((url: string) =>
+    Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id, state)))));
+}
+
+/**
+ * A client that actually KEEPS cache entries. The default `makeClient()` uses
+ * `gcTime: 0`, which collects an observer-less key the instant it is written —
+ * fine for request-shape assertions, fatal for anything asserting on the
+ * seeded single-vehicle cache.
+ */
+function cacheRetainingClient(): QueryClient {
+  return new QueryClient({
+    defaultOptions: {
+      queries: { retry: false, gcTime: 5 * 60_000 },
+      mutations: { retry: false },
+    },
+  });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('fetchFleetStates (raw batch helper)', () => {
+  it('asks for exactly the requested ids and returns the wire items', async () => {
+    requestMock.mockImplementation((url: string) =>
+      Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id)))));
+
+    const batch = await fetchFleetStates([3, 1, 2]);
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(lastUrl())).toEqual([3, 1, 2]);
+    expect(lastUrl()).toContain(`limit=${FLEET_STATE_BATCH_CHUNK}`);
+    expect(batch.items.map((item) => item.vehicle_id)).toEqual([3, 1, 2]);
+  });
+
+  it('tolerates a null body without throwing', async () => {
+    requestMock.mockResolvedValue(null);
+    // No items AND no summary: a body we could not read carries no posture,
+    // and fabricating a zeroed summary would render as "nothing is verified".
+    await expect(fetchFleetStates([1])).resolves.toEqual({ items: [], summary: null });
+  });
+
+  it('propagates a transport failure rather than resolving empty', async () => {
+    requestMock.mockRejectedValue(new Error('ECONNREFUSED'));
+    await expect(fetchFleetStates([1])).rejects.toThrow('ECONNREFUSED');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('deriveTrustedVehicleStatus (single-vehicle contract)', () => {
+  const now = Date.now();
+  const trust = (verified: string[], freshness: 'fresh' | 'stale' | 'unknown' = 'fresh') => ({
+    freshness,
+    observedAt: now - 1_000,
+    verifiedFields: verified as never,
+  });
+
+  it('applies the same precedence the fleet entry contract does', () => {
+    const state = { vehicle_id: 1, state: 'parked', is_charging: true, speed: 30 } as VehicleState;
+    expect(deriveTrustedVehicleStatus(state, trust(['state', 'is_charging', 'speed']), now))
+      .toBe('charging');
+    expect(deriveTrustedVehicleStatus({ ...state, is_charging: false }, trust(['state', 'speed']), now))
+      .toBe('driving');
+    expect(deriveTrustedVehicleStatus(
+      { ...state, is_charging: false, speed: 0 }, trust(['state']), now,
+    )).toBe('parked');
+  });
+
+  it('returns null — never offline — for an unverified or expired reading', () => {
+    const state = { vehicle_id: 1, state: 'parked', is_charging: true } as VehicleState;
+    expect(deriveTrustedVehicleStatus(state, trust([]), now)).toBeNull();
+    expect(deriveTrustedVehicleStatus(state, trust(['state', 'is_charging'], 'stale'), now)).toBeNull();
+    expect(deriveTrustedVehicleStatus(null, trust(['state']), now)).toBeNull();
+    expect(deriveTrustedVehicleStatus(state, null, now)).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
 describe('useFleetStates', () => {
-  it('fans out one request per vehicle and pairs each with its state', async () => {
-    requestMock.mockImplementation((url: string) => {
-      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
-      return Promise.resolve({ state: { vehicle_id: id, state: 'online' }, live: true });
-    });
+  it('reads the whole fleet in ONE request and pairs each vehicle with its state', async () => {
+    mockResolvedBatch({ state: 'online' });
     const vehicles = [makeVehicle(1), makeVehicle(2)];
     const { result } = renderH(() => useFleetStates(vehicles));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(requestMock).toHaveBeenCalledTimes(2);
-    expect(result.current.data?.[0]).toEqual({
+
+    // The regression this endpoint exists to kill: one request per vehicle.
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(lastUrl()).toContain('/vehicles/states');
+    expect(requestedIds(lastUrl())).toEqual([1, 2]);
+    expect(lastOpts().signal).toBeDefined();
+
+    expect(result.current.data?.[0]).toMatchObject({
       vehicle: vehicles[0],
       state: { vehicle_id: 1, state: 'online' },
+      outcome: 'resolved',
+      freshness: 'fresh',
+      stale: false,
+      observedAt: Date.parse(FRESH_OBSERVED_AT),
     });
     expect(result.current.data?.[1].state?.vehicle_id).toBe(2);
+    expect(result.current.data?.[1].outcome).toBe('resolved');
   });
 
-  it('isolates a single failing vehicle as a null state instead of rejecting the batch', async () => {
-    requestMock.mockImplementation((url: string) => {
-      const id = Number(/\/vehicles\/(\d+)\/state/.exec(url)?.[1] ?? 0);
-      return id === 2
-        ? Promise.reject(new Error('offline'))
-        : Promise.resolve({ state: { vehicle_id: id }, live: true });
+  it('reads a 120-vehicle fleet with a single request (fleet-scale regression)', async () => {
+    mockResolvedBatch({ state: 'online' });
+    const vehicles = Array.from({ length: 120 }, (_, i) => makeVehicle(i + 1));
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(result.current.data?.length).toBe(120);
+    expect(requestedIds(lastUrl())).toHaveLength(120);
+    expect(summariseFleetStates(result.current.data ?? [])).toMatchObject({
+      total: 120,
+      resolvedCount: 120,
+      status: 'ok',
     });
+  });
+
+  it('chunks a fleet larger than the backend cap instead of truncating it', async () => {
+    mockResolvedBatch({ state: 'online' });
+    const vehicles = Array.from({ length: 600 }, (_, i) => makeVehicle(i + 1));
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    // 600 > FLEET_STATE_BATCH_CHUNK, so exactly two requests — and every car
+    // still gets an entry. Dropping the tail would look identical to "those
+    // 100 vehicles have no state".
+    expect(requestMock).toHaveBeenCalledTimes(2);
+    const sizes = requestMock.mock.calls.map((call) => requestedIds(call[0] as string).length);
+    expect(sizes).toEqual([FLEET_STATE_BATCH_CHUNK, 100]);
+    expect(result.current.data?.length).toBe(600);
+    expect(summariseFleetStates(result.current.data ?? []).resolvedCount).toBe(600);
+  });
+
+  it('preserves backend observation age and never restamps a successful stale response', async () => {
+    const observedAt = '2026-08-26T09:00:00Z';
+    requestMock.mockResolvedValue(batchBody([
+      resolvedItem(1, { state: 'online' }, { observed_at: observedAt, freshness: 'stale' }),
+    ]));
+
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[0]).toMatchObject({
+      outcome: 'resolved',
+      freshness: 'stale',
+      stale: true,
+      observedAt: Date.parse(observedAt),
+    });
+    expect(summariseFleetStates(result.current.data ?? [])).toMatchObject({
+      resolvedCount: 1,
+      unverifiedCount: 1,
+      status: 'partial',
+      oldestObservedAt: Date.parse(observedAt),
+    });
+  });
+
+  it('ages a fresh response at the exact observation boundary without another request', async () => {
+    vi.useFakeTimers();
+    const now = Date.parse('2026-08-26T12:00:00Z');
+    vi.setSystemTime(now);
+    const observedAt = now - TELEMETRY_STALE_AFTER_MS + 1_000;
+    requestMock.mockResolvedValue(batchBody([
+      resolvedItem(1, { state: 'online' }, {
+        observed_at: new Date(observedAt).toISOString(),
+        freshness: 'fresh',
+        verified_fields: ['state'],
+      }),
+    ]));
+
+    const mounted = renderH(() => useFleetStates([makeVehicle(1)]));
+    try {
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(0);
+      });
+      expect(mounted.result.current.data?.[0].freshness).toBe('fresh');
+
+      await act(async () => {
+        await vi.advanceTimersByTimeAsync(1_001);
+      });
+      expect(mounted.result.current.data?.[0]).toMatchObject({
+        freshness: 'stale',
+        stale: true,
+      });
+      expect(requestMock).toHaveBeenCalledTimes(1);
+    } finally {
+      mounted.unmount();
+      vi.useRealTimers();
+    }
+  });
+
+  it('treats successful fallback state without an observation timestamp as unknown', async () => {
+    requestMock.mockResolvedValue(batchBody([
+      resolvedItem(1, { state: 'online' }, {
+        live: false,
+        data_source: 'db_fallback',
+        observed_at: null,
+        freshness: 'unknown',
+        verified_fields: [],
+      }),
+    ]));
+
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[0]).toMatchObject({
+      outcome: 'resolved',
+      freshness: 'unknown',
+      stale: true,
+      observedAt: null,
+    });
+    expect(summariseFleetStates(result.current.data ?? [])).toMatchObject({
+      unverifiedCount: 1,
+      status: 'partial',
+      oldestObservedAt: null,
+    });
+  });
+
+  it('isolates a single failing vehicle without hiding the rest of the fleet', async () => {
+    requestMock.mockResolvedValue(batchBody([
+      resolvedItem(1),
+      failedItem(2),
+    ]));
     const vehicles = [makeVehicle(1), makeVehicle(2)];
     const { result } = renderH(() => useFleetStates(vehicles));
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(result.current.data?.[0].state?.vehicle_id).toBe(1);
     expect(result.current.data?.[1].state).toBeNull();
+    expect(result.current.data?.[1].outcome).toBe('failed');
+  });
+
+  it('seeds the single-vehicle cache so widgets do not issue a duplicate read', async () => {
+    mockResolvedBatch({ state: 'online' });
+    // Real gcTime: seeding writes into an observer-less key, which a
+    // zero-gc client would collect before the assertion could read it.
+    const client = cacheRetainingClient();
+    const { result } = renderH(() => useFleetStates([makeVehicle(1), makeVehicle(2)]), { client });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    await waitFor(() => {
+      expect(client.getQueryData(vehicleKeys.state(1))).toMatchObject({
+        state: { vehicle_id: 1, state: 'online' },
+        freshness: 'fresh',
+        observedAt: Date.parse(FRESH_OBSERVED_AT),
+      });
+    });
+    // Seeded under the LIVE key (no as_of segment) so the time-machine view is
+    // never contaminated by a live batch.
+    expect(client.getQueryData(vehicleKeys.state(2))).toBeDefined();
+  });
+
+  it('never rolls a newer individual reading back to an older batch reading', async () => {
+    const client = cacheRetainingClient();
+    const newer = Date.parse(FRESH_OBSERVED_AT) + 60_000;
+    client.setQueryData(vehicleKeys.state(1), {
+      state: { vehicle_id: 1, state: 'driving' },
+      live: true,
+      observedAt: newer,
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+    });
+    mockResolvedBatch({ state: 'online' });
+
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]), { client });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    await act(async () => { await tick(); });
+
+    expect(client.getQueryData(vehicleKeys.state(1))).toMatchObject({
+      observedAt: newer,
+      state: { vehicle_id: 1, state: 'driving' },
+    });
   });
 
   it('is disabled for an empty fleet and never fetches', async () => {
@@ -515,6 +915,683 @@ describe('useFleetStates', () => {
     await tick();
     expect(requestMock).not.toHaveBeenCalled();
     expect(result.current.fetchStatus).toBe('idle');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Fleet-state PROVENANCE. Every case below drives the real hook through the
+// real request path — no mocked `isError` — because the defect being guarded
+// is precisely that a fleet read can look successful while telling the
+// operator nothing true. Two failure shapes now exist and must stay distinct:
+// a PER-ITEM failure inside a successful batch, and a TRANSPORT failure of the
+// batch itself.
+describe('useFleetStates — outcome provenance', () => {
+  it('rejects on a transport failure instead of resolving to an empty fleet', async () => {
+    requestMock.mockRejectedValue(new Error('ECONNREFUSED'));
+    const vehicles = [makeVehicle(1), makeVehicle(2)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isError).toBe(true));
+
+    // The whole point: a batch we could not read is NOT a successful answer.
+    expect(result.current.isSuccess).toBe(false);
+    for (const entry of result.current.data ?? []) {
+      expect(entry.outcome).toBe('failed');
+      expect(entry.state).toBeNull();
+      expect(entry.error).toBeInstanceOf(Error);
+    }
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      total: 2,
+      resolvedCount: 0,
+      missingCount: 0,
+      failedCount: 2,
+      statefulCount: 0,
+      unresolvedCount: 2,
+      status: 'unavailable',
+      oldestObservedAt: null,
+    });
+  });
+
+  it('marks a per-item empty snapshot as missing, not failed', async () => {
+    requestMock.mockImplementation((url: string) =>
+      Promise.resolve(batchBody(requestedIds(url).map((id) => missingItem(id)))));
+    const vehicles = [makeVehicle(1), makeVehicle(2)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    for (const entry of result.current.data ?? []) {
+      expect(entry.outcome).toBe('missing');
+      expect(entry.state).toBeNull();
+      expect(entry.error).toBeUndefined();
+    }
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      resolvedCount: 0,
+      missingCount: 2,
+      failedCount: 0,
+      // Authoritative absence, NOT an outage. Collapsing the two would tell
+      // an operator the API is down when the fleet simply has no snapshots.
+      status: 'absent',
+    });
+  });
+
+  it('distinguishes partial success from partial failure in the same batch', async () => {
+    requestMock.mockResolvedValue(batchBody([
+      resolvedItem(1, { state: 'online' }),
+      missingItem(2),
+      failedItem(3),
+    ]));
+    const vehicles = [makeVehicle(1), makeVehicle(2), makeVehicle(3)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(requestMock).toHaveBeenCalledTimes(1);
+    expect(result.current.data?.map((e) => e.outcome)).toEqual([
+      'resolved', 'missing', 'failed',
+    ]);
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      total: 3,
+      resolvedCount: 1,
+      missingCount: 1,
+      failedCount: 1,
+      statefulCount: 1,
+      unresolvedCount: 2,
+      status: 'partial',
+    });
+  });
+
+  it('treats a vehicle the backend omitted entirely as missing, never as offline', async () => {
+    // The backend answered; it just carried nothing for vehicle 2. That is an
+    // absence of evidence, not evidence the car is dead.
+    requestMock.mockResolvedValue(batchBody([resolvedItem(1, { state: 'online' })]));
+    const { result } = renderH(() => useFleetStates([makeVehicle(1), makeVehicle(2)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.[1]).toMatchObject({
+      outcome: 'missing',
+      state: null,
+      observedAt: null,
+    });
+    expect(deriveCurrentVehicleStatus(result.current.data?.[1])).toBeNull();
+  });
+
+  it('carries only the stable machine code for a per-item failure', async () => {
+    requestMock.mockResolvedValue(batchBody([failedItem(1)]));
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const entry = result.current.data?.[0];
+    expect(entry?.outcome).toBe('failed');
+    expect(entry?.error?.message).toBe('state_unavailable');
+  });
+
+  it('retains the prior real reading when the batch refresh fails', async () => {
+    let failing = false;
+    requestMock.mockImplementation((url: string) => {
+      if (failing) return Promise.reject(new Error('gateway timeout'));
+      return Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id, { state: 'online' }))));
+    });
+    const vehicles = [makeVehicle(1)];
+    const { result } = renderH(() => useFleetStates(vehicles));
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('resolved'));
+    const firstObservedAt = result.current.data?.[0].observedAt;
+    expect(firstObservedAt).toBeTypeOf('number');
+
+    failing = true;
+    await act(async () => { await result.current.refetch(); });
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('failed'));
+
+    const entry = result.current.data?.[0];
+    // The reading survives the blip, but is explicitly no longer confirmed.
+    expect(entry?.state).toEqual({ vehicle_id: 1, state: 'online' });
+    expect(entry?.stale).toBe(true);
+    expect(entry?.error).toBeInstanceOf(Error);
+    // The observation instant is NOT restamped — the reading is as old as it
+    // ever was.
+    expect(entry?.observedAt).toBe(firstObservedAt);
+
+    const summary = summariseFleetStates(result.current.data ?? []);
+    expect(summary).toMatchObject({
+      resolvedCount: 0,
+      failedCount: 1,
+      retainedCount: 1,
+      statefulCount: 1,
+      unresolvedCount: 0,
+      status: 'partial',
+      oldestObservedAt: firstObservedAt,
+    });
+  });
+
+  it('never refreshes the displayed observation age across repeated failed polls', async () => {
+    // The defect: the wrapper batch used to resolve successfully on every
+    // poll, so `query.dataUpdatedAt` advanced every 30 s and the freshness
+    // chip showed a green "just now" over readings that had not moved.
+    let failing = false;
+    requestMock.mockImplementation((url: string) => {
+      if (failing) return Promise.reject(new Error('ECONNREFUSED'));
+      return Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id, { state: 'online' }))));
+    });
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('resolved'));
+    const observedAt = result.current.data?.[0].observedAt;
+
+    failing = true;
+    for (let poll = 0; poll < 4; poll += 1) {
+      await act(async () => { await result.current.refetch(); });
+      // The observation instant does not move, however many times we retry.
+      expect(result.current.data?.[0].observedAt).toBe(observedAt);
+      expect(summariseFleetStates(result.current.data ?? []).oldestObservedAt)
+        .toBe(observedAt);
+    }
+  });
+
+  it('stamps observedAt only for readings, never for missing or failed entries', async () => {
+    requestMock.mockResolvedValue(batchBody([
+      resolvedItem(1),
+      missingItem(2),
+      failedItem(3),
+    ]));
+    const { result } = renderH(() =>
+      useFleetStates([makeVehicle(1), makeVehicle(2), makeVehicle(3)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [resolved, missing, failed] = result.current.data ?? [];
+    expect(resolved?.observedAt).toBeTypeOf('number');
+    expect(missing?.observedAt).toBeNull();
+    expect(failed?.observedAt).toBeNull();
+    // Every entry records WHEN the batch ran, even without a reading.
+    for (const entry of result.current.data ?? []) {
+      expect(entry.receivedAt).toBeTypeOf('number');
+    }
+  });
+
+  it('keeps an explicit backend "offline" snapshot as a resolved reading', async () => {
+    // The ONLY legitimate route to an offline classification.
+    requestMock.mockImplementation((url: string) =>
+      Promise.resolve(batchBody(requestedIds(url).map((id) =>
+        resolvedItem(id, { state: 'offline' }, { live: false })))));
+    const { result } = renderH(() => useFleetStates([makeVehicle(1)]));
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const entry = result.current.data?.[0];
+    expect(entry?.outcome).toBe('resolved');
+    expect(entry?.state?.state).toBe('offline');
+    expect(summariseFleetStates(result.current.data ?? [])).toMatchObject({
+      resolvedCount: 1,
+      status: 'ok',
+    });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+describe('describeFleetState (shared operational taxonomy)', () => {
+  const base: FleetStateEntry = {
+    vehicle: makeVehicle(1),
+    state: null,
+    outcome: 'missing',
+    freshness: 'unknown',
+    verifiedFields: [],
+    stale: false,
+    observedAt: null,
+    receivedAt: 1_000,
+  };
+
+  it('reports pending before any batch has resolved', () => {
+    expect(describeFleetState(undefined)).toMatchObject({
+      condition: 'pending',
+      status: null,
+      hasReading: false,
+    });
+  });
+
+  it('separates missing, failed, and retained-stale', () => {
+    expect(describeFleetState(base).condition).toBe('missing');
+    expect(describeFleetState({ ...base, outcome: 'failed' }).condition).toBe('failed');
+    expect(describeFleetState({
+      ...base,
+      outcome: 'failed',
+      state: { vehicle_id: 1, state: 'online' } as never,
+      observedAt: 4_000,
+      stale: true,
+    })).toMatchObject({ condition: 'stale', status: null, observedAt: 4_000, hasReading: true });
+  });
+
+  it('reports a resolved-but-unverified reading as unverified, never offline', () => {
+    const descriptor = describeFleetState({
+      ...base,
+      outcome: 'resolved',
+      state: { vehicle_id: 1, state: 'online' } as never,
+      freshness: 'stale',
+      observedAt: 7_000,
+    });
+    expect(descriptor).toMatchObject({ condition: 'unverified', status: null, verified: false });
+  });
+
+  it('reports a verified reading as live with a usable status', () => {
+    const now = Date.now();
+    const descriptor = describeFleetState({
+      ...base,
+      outcome: 'resolved',
+      state: { vehicle_id: 1, state: 'parked', is_charging: true } as never,
+      freshness: 'fresh',
+      verifiedFields: ['state', 'is_charging'],
+      observedAt: now - 1_000,
+    }, now);
+    // Charging outranks the FSM state, exactly as the hero does.
+    expect(descriptor).toMatchObject({ condition: 'live', status: 'charging', verified: true });
+  });
+});
+
+describe('summariseFleetStates', () => {
+  const entry = (over: Partial<FleetStateEntry>): FleetStateEntry => ({
+    vehicle: makeVehicle(1),
+    state: null,
+    outcome: 'missing',
+    freshness: 'unknown',
+    verifiedFields: [],
+    stale: false,
+    observedAt: null,
+    receivedAt: 1_000,
+    ...over,
+  });
+
+  it('reports empty for a zero-vehicle batch', () => {
+    expect(summariseFleetStates([]).status).toBe('empty');
+  });
+
+  it('reports ok only when every vehicle resolved fresh', () => {
+    const resolved = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+      observedAt: 5_000,
+    });
+    expect(summariseFleetStates([resolved, resolved]).status).toBe('ok');
+  });
+
+  it('reports successful stale or unknown snapshots as partial, never fully current', () => {
+    const stale = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'resolved',
+      freshness: 'stale',
+      stale: true,
+      observedAt: 5_000,
+    });
+    const unknown = entry({
+      state: { vehicle_id: 2 } as never,
+      outcome: 'resolved',
+      freshness: 'unknown',
+      stale: true,
+    });
+    expect(summariseFleetStates([stale, unknown])).toMatchObject({
+      resolvedCount: 2,
+      unverifiedCount: 2,
+      status: 'partial',
+    });
+  });
+
+  it('separates a transport outage from an authoritative absence', () => {
+    expect(summariseFleetStates([entry({ outcome: 'failed' })]).status).toBe('unavailable');
+    expect(summariseFleetStates([entry({ outcome: 'missing' })]).status).toBe('absent');
+    // A mixed batch with nothing readable is still an outage: at least one
+    // request failed, so we genuinely do not know.
+    expect(
+      summariseFleetStates([entry({ outcome: 'missing' }), entry({ outcome: 'failed' })]).status,
+    ).toBe('unavailable');
+  });
+
+  it('counts a retained reading as stateful but not as resolved', () => {
+    const retained = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'failed',
+      freshness: 'stale',
+      stale: true,
+      observedAt: 5_000,
+    });
+    expect(summariseFleetStates([retained])).toMatchObject({
+      resolvedCount: 0,
+      retainedCount: 1,
+      statefulCount: 1,
+      unresolvedCount: 0,
+      status: 'partial',
+    });
+  });
+
+  it('reports the OLDEST observation as the batch freshness', () => {
+    const old = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+      observedAt: 1_000,
+    });
+    const recent = entry({
+      state: { vehicle_id: 2 } as never,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+      observedAt: 9_000,
+    });
+    expect(summariseFleetStates([recent, old])).toMatchObject({
+      oldestObservedAt: 1_000,
+      newestObservedAt: 9_000,
+    });
+  });
+
+  it('ignores observation instants from entries with no reading', () => {
+    expect(summariseFleetStates([entry({ observedAt: 42 })]).oldestObservedAt).toBeNull();
+  });
+
+  it('requires field verification and a not-expired observation for current claims', () => {
+    const observedAt = 10_000;
+    const current = entry({
+      state: { vehicle_id: 1 } as never,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+      observedAt,
+    });
+
+    expect(isFleetStateFieldCurrent(current, 'state', observedAt + 120_000)).toBe(true);
+    expect(isFleetStateFieldCurrent(current, 'state', observedAt + 120_001)).toBe(false);
+    expect(isFleetStateFieldCurrent(current, 'battery_level', observedAt + 1)).toBe(false);
+  });
+
+  it('lets verified charging and movement establish status before the FSM state catches up', () => {
+    const charging = entry({
+      state: {
+        vehicle_id: 1,
+        state: 'unknown',
+        is_charging: true,
+        speed: 0,
+      } as VehicleState,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['is_charging'],
+      observedAt: Date.now(),
+    });
+    const driving = entry({
+      state: {
+        vehicle_id: 1,
+        state: 'unknown',
+        is_charging: false,
+        speed: 12,
+      } as VehicleState,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['speed'],
+      observedAt: Date.now(),
+    });
+
+    expect(deriveCurrentVehicleStatus(charging)).toBe('charging');
+    expect(deriveCurrentVehicleStatus(driving)).toBe('driving');
+  });
+
+  it('keeps missing, failed, and stale fleet-state readings explicitly unknown', () => {
+    const failed = entry({ outcome: 'failed' });
+    const stale = entry({
+      state: {
+        vehicle_id: 1,
+        state: 'charging',
+        is_charging: true,
+      } as VehicleState,
+      outcome: 'resolved',
+      freshness: 'stale',
+      verifiedFields: ['state', 'is_charging'],
+      stale: true,
+      observedAt: Date.now() - TELEMETRY_STALE_AFTER_MS - 1,
+    });
+
+    expect(deriveCurrentVehicleStatus(undefined)).toBeNull();
+    expect(deriveCurrentVehicleStatus(failed)).toBeNull();
+    expect(deriveCurrentVehicleStatus(stale)).toBeNull();
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Retention across a CHANGING FLEET ID SET.
+//
+// The fleet-state cache key is derived from the sorted id set, so any change
+// in membership — a sync adding a car, a delete removing one — mints a brand
+// new key. Retention originally read only the exact `[root, ids]` key, so the
+// moment membership changed it found nothing and silently dropped the readings
+// for every vehicle that had NOT changed: adding one car to a fleet of ten
+// erased the other nine as soon as a refresh failed.
+//
+// The batch endpoint does not change any of this. It changes only WHERE the
+// failure comes from (one transport failure instead of N), so every case below
+// still has to hold.
+//
+// The contract these tests pin:
+//   - unchanged vehicles keep their reading (and its ORIGINAL observedAt)
+//     across a membership change;
+//   - a removed vehicle is never resurrected from an older key;
+//   - only fleet-state keys can donate a reading;
+//   - the NEWEST reading wins when several cached keys hold one;
+//   - nothing crosses a QueryClient boundary (no cross-account bleed).
+describe('useFleetStates — retention survives a fleet membership change', () => {
+  /** Real gcTime: retention reads the cache, so zero-gc would erase the point. */
+  function retentionClient(): QueryClient {
+    return new QueryClient({
+      defaultOptions: {
+        queries: { retry: false, gcTime: 5 * 60_000 },
+        mutations: { retry: false },
+      },
+    });
+  }
+
+  function renderFleet(client: QueryClient, initial: Vehicle[]) {
+    return renderHook(({ vs }: { vs: Vehicle[] }) => useFleetStates(vs), {
+      wrapper: makeWrapper(client),
+      initialProps: { vs: initial },
+    });
+  }
+
+  function entriesById(data: FleetStateEntry[] | undefined) {
+    return new Map((data ?? []).map((e) => [e.vehicle.id, e]));
+  }
+
+  it('keeps the readings of unchanged vehicles when a new vehicle joins the fleet', async () => {
+    let failing = false;
+    requestMock.mockImplementation((url: string) =>
+      failing
+        ? Promise.reject(new Error('ECONNREFUSED'))
+        : Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id, { state: 'online' })))));
+
+    const client = retentionClient();
+    const { result, rerender } = renderFleet(client, [makeVehicle(1), makeVehicle(2)]);
+    await waitFor(() => expect(result.current.data?.length).toBe(2));
+    const before = entriesById(result.current.data);
+    expect(before.get(1)?.outcome).toBe('resolved');
+
+    // A sync adds a third car AND the backend goes down at the same moment:
+    // a brand-new cache key with nothing in it, plus a total failure.
+    failing = true;
+    rerender({ vs: [makeVehicle(1), makeVehicle(2), makeVehicle(3)] });
+    await waitFor(() => expect(result.current.data?.length).toBe(3));
+
+    const after = entriesById(result.current.data);
+    for (const id of [1, 2]) {
+      expect(after.get(id)?.outcome).toBe('failed');
+      expect(after.get(id)?.stale).toBe(true);
+      expect(after.get(id)?.state).toEqual({ vehicle_id: id, state: 'online' });
+      // The age keeps growing — a failed refresh never restamps a reading.
+      expect(after.get(id)?.observedAt).toBe(before.get(id)?.observedAt);
+    }
+    // The newcomer has no history, so it honestly has no reading.
+    expect(after.get(3)?.outcome).toBe('failed');
+    expect(after.get(3)?.state).toBeNull();
+    expect(after.get(3)?.observedAt).toBeNull();
+
+    expect(summariseFleetStates(result.current.data ?? [])).toMatchObject({
+      total: 3,
+      resolvedCount: 0,
+      failedCount: 3,
+      retainedCount: 2,
+      statefulCount: 2,
+      unresolvedCount: 1,
+      status: 'partial',
+    });
+  });
+
+  it('never resurrects a vehicle that was removed from the fleet', async () => {
+    let failing = false;
+    requestMock.mockImplementation((url: string) =>
+      failing
+        ? Promise.reject(new Error('ECONNREFUSED'))
+        : Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id, { state: 'online' })))));
+
+    const client = retentionClient();
+    const { result, rerender } = renderFleet(client, [makeVehicle(1), makeVehicle(2)]);
+    await waitFor(() => expect(result.current.data?.length).toBe(2));
+
+    failing = true;
+    rerender({ vs: [makeVehicle(1)] });
+    await waitFor(() => expect(result.current.data?.length).toBe(1));
+
+    const after = entriesById(result.current.data);
+    expect([...after.keys()]).toEqual([1]);
+    // The deleted car keeps its reading in the OLD cache entry, but it must
+    // never leak into a batch it is no longer part of.
+    expect(after.has(2)).toBe(false);
+    expect(summariseFleetStates(result.current.data ?? []).total).toBe(1);
+  });
+
+  it('keeps retaining across repeated membership churn without restamping the age', async () => {
+    let failing = false;
+    requestMock.mockImplementation((url: string) =>
+      failing
+        ? Promise.reject(new Error('gateway timeout'))
+        : Promise.resolve(batchBody(requestedIds(url).map((id) => resolvedItem(id, { state: 'online' })))));
+
+    const client = retentionClient();
+    const { result, rerender } = renderFleet(client, [makeVehicle(1), makeVehicle(2)]);
+    await waitFor(() => expect(result.current.data?.length).toBe(2));
+    const observedAt = entriesById(result.current.data).get(1)?.observedAt;
+    expect(observedAt).toBeTypeOf('number');
+
+    failing = true;
+    // Three successive membership changes, each minting a fresh key.
+    for (const vs of [
+      [makeVehicle(1), makeVehicle(2), makeVehicle(3)],
+      [makeVehicle(1), makeVehicle(3)],
+      [makeVehicle(1), makeVehicle(3), makeVehicle(4)],
+    ]) {
+      rerender({ vs });
+      await waitFor(() => expect(result.current.data?.length).toBe(vs.length));
+      const entry = entriesById(result.current.data).get(1);
+      expect(entry?.stale).toBe(true);
+      // Hops key to key without ever pretending to be newer than it is.
+      expect(entry?.observedAt).toBe(observedAt);
+    }
+  });
+
+  it('prefers the NEWEST cached reading when several fleet keys hold one', async () => {
+    const client = retentionClient();
+    // Two historical batches for overlapping id sets. Cache insertion order is
+    // deliberately the reverse of observation order, because "most recently
+    // written key" is NOT the same question as "newest reading".
+    const stale: FleetStateEntry = {
+      vehicle: makeVehicle(1),
+      state: { vehicle_id: 1, state: 'asleep' } as never,
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+      stale: false,
+      observedAt: 1_000,
+      receivedAt: 1_000,
+    };
+    const newer: FleetStateEntry = {
+      ...stale,
+      state: { vehicle_id: 1, state: 'online' } as never,
+      observedAt: 9_000,
+      receivedAt: 9_000,
+    };
+    client.setQueryData([FLEET_STATES_QUERY_ROOT, [1, 2]], { entries: [newer], summary: null });
+    client.setQueryData([FLEET_STATES_QUERY_ROOT, [1]], { entries: [stale], summary: null });
+
+    requestMock.mockRejectedValue(new Error('ECONNREFUSED'));
+    const { result } = renderFleet(client, [makeVehicle(1), makeVehicle(3)]);
+    await waitFor(() => expect(result.current.data?.length).toBe(2));
+
+    const entry = entriesById(result.current.data).get(1);
+    expect(entry?.state).toEqual({ vehicle_id: 1, state: 'online' });
+    expect(entry?.observedAt).toBe(9_000);
+  });
+
+  it('accepts no donation from a non-fleet-state cache key', async () => {
+    const client = retentionClient();
+    // A look-alike payload parked under an unrelated root must be invisible:
+    // retention is scoped to the fleet-state root precisely so no other query
+    // can inject a reading into the fleet view.
+    client.setQueryData(['vehicle-state', 1], [{
+      vehicle: makeVehicle(1),
+      state: { vehicle_id: 1, state: 'online' },
+      outcome: 'resolved',
+      freshness: 'fresh',
+      verifiedFields: ['state'],
+      stale: false,
+      observedAt: 9_000,
+      receivedAt: 9_000,
+    }]);
+
+    requestMock.mockRejectedValue(new Error('ECONNREFUSED'));
+    const { result } = renderFleet(client, [makeVehicle(1)]);
+    await waitFor(() => expect(result.current.data?.length).toBe(1));
+
+    expect(result.current.data?.[0].state).toBeNull();
+    expect(result.current.data?.[0].observedAt).toBeNull();
+  });
+
+  it('never bleeds a reading across QueryClients (session / account boundary)', async () => {
+    mockResolvedBatch({ state: 'online' });
+
+    // Account A resolves a reading for vehicle 1.
+    const clientA = retentionClient();
+    const a = renderFleet(clientA, [makeVehicle(1)]);
+    await waitFor(() => expect(a.result.current.data?.[0].outcome).toBe('resolved'));
+
+    // Account B is a different QueryClient — a logout/login mints a new cache,
+    // which is exactly what scopes retention to the current identity.
+    requestMock.mockRejectedValue(new Error('401'));
+    const clientB = retentionClient();
+    const b = renderFleet(clientB, [makeVehicle(1)]);
+    await waitFor(() => expect(b.result.current.data?.length).toBe(1));
+
+    expect(b.result.current.data?.[0].outcome).toBe('failed');
+    expect(b.result.current.data?.[0].state).toBeNull();
+    expect(b.result.current.data?.[0].observedAt).toBeNull();
+    expect(summariseFleetStates(b.result.current.data ?? []).status).toBe('unavailable');
+  });
+
+  it('does not retain for a vehicle whose prior entry carried no reading', async () => {
+    // "Missing" is not a reading. Retaining it would turn an authoritative
+    // absence into a phantom stale value.
+    let missing = true;
+    requestMock.mockImplementation((url: string) =>
+      missing
+        ? Promise.resolve(batchBody(requestedIds(url).map((id) => missingItem(id))))
+        : Promise.reject(new Error('boom')));
+
+    const client = retentionClient();
+    const { result, rerender } = renderFleet(client, [makeVehicle(1)]);
+    await waitFor(() => expect(result.current.data?.[0].outcome).toBe('missing'));
+
+    missing = false;
+    rerender({ vs: [makeVehicle(1), makeVehicle(2)] });
+    await waitFor(() => expect(result.current.data?.length).toBe(2));
+
+    for (const entry of result.current.data ?? []) {
+      expect(entry.outcome).toBe('failed');
+      expect(entry.state).toBeNull();
+      expect(entry.stale).toBe(false);
+    }
+    expect(summariseFleetStates(result.current.data ?? []).status).toBe('unavailable');
   });
 });
 
@@ -855,6 +1932,7 @@ describe('official vehicle-management partner hooks', () => {
 
     expect(lastUrl()).toBe('/vehicles/5/enterprise-payer');
     expect(lastOpts().method).toBe('POST');
+    expect(lastOpts().requiresLiveMode).toBe(true);
     expect(JSON.parse(String(lastOpts().body))).toEqual({
       payload,
       confirmed: true,

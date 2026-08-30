@@ -91,6 +91,12 @@ vi.mock('@/hooks/useSettings', async () => {
 vi.mock('@/api/hooks/useAnalytics', () => ({ useMonthlyMileage: vi.fn() }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import MonthlyMileageWidget, { shortMonth, currentMonthKey } from './MonthlyMileageWidget';
@@ -377,7 +383,7 @@ describe('MonthlyMileageWidget — refresh + vehicle resolution', () => {
     );
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

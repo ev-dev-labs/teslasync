@@ -92,9 +92,19 @@ export function SecurityStatistics({
       ) : (
         <EmptyState
           icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-          message={t('common.noData', 'No data available')}
+          message={t(
+            'admin.security.statsEmpty',
+            'No security events are available in this history window.',
+          )}
+          description={t(
+            'admin.security.statsEmptyDescription',
+            'Lock, door, window, HomeLink, and Sentry statistics appear after security state changes are recorded.',
+          )}
           className="py-8"
-          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
+          action={onRetry ? {
+            label: t('admin.security.refreshHistory', 'Refresh security history'),
+            onClick: onRetry,
+          } : undefined}
         />
       )}
     </GlassPanel>

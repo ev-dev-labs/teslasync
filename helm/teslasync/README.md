@@ -1,9 +1,9 @@
 # TeslaSync Helm Chart
 
 <!-- badges -->
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square)
+![Version: 0.6.2](https://img.shields.io/badge/Version-0.6.2-informational?style=flat-square)
 ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
-![AppVersion: 1.0.0](https://img.shields.io/badge/AppVersion-1.0.0-informational?style=flat-square)
+![AppVersion: 1.1.0](https://img.shields.io/badge/AppVersion-1.1.0-informational?style=flat-square)
 
 Helm chart for deploying TeslaSync — a Tesla fleet intelligence platform.
 
@@ -11,7 +11,7 @@ Helm chart for deploying TeslaSync — a Tesla fleet intelligence platform.
 
 - Kubernetes 1.24+
 - Helm 3.12+
-- PV provisioner support (for PostgreSQL, Redis, Grafana persistence)
+- PV provisioner support (for PostgreSQL, Redis, Mosquitto, Grafana, and optional MongoDB/Tempo persistence)
 - Optional: Traefik for IngressRoute support
 
 ## Quick Start
@@ -68,7 +68,7 @@ The following table lists all configurable parameters and their default values.
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Backend replicas | `1` |
-| `image.repository` | Backend image repository | `ghcr.io/ev-dev-labs/teslasync` |
+| `image.repository` | Backend image repository | `ghcr.io/ev-dev-labs/teslasync-api` |
 | `image.pullPolicy` | Backend image pull policy | `IfNotPresent` |
 | `image.tag` | Backend image tag (defaults to chart appVersion) | `""` |
 | `web.enabled` | Enable frontend deployment | `true` |
@@ -86,6 +86,9 @@ The following table lists all configurable parameters and their default values.
 | `web.resources.limits.memory` | Frontend memory limit | `128Mi` |
 | `web.resources.requests.cpu` | Frontend CPU request | `50m` |
 | `web.resources.requests.memory` | Frontend memory request | `64Mi` |
+| `fleetTelemetry.image` | Optional complete Fleet Telemetry image override | `""` |
+| `fleetTelemetry.imageRepository` | Event-time-preserving Fleet Telemetry image | `ghcr.io/ev-dev-labs/teslasync-fleet-telemetry` |
+| `fleetTelemetry.imageTag` | Fleet Telemetry image tag (defaults to chart appVersion) | `""` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 | `nameOverride` | Override chart name | `""` |
 | `fullnameOverride` | Override full release name | `""` |
@@ -111,16 +114,18 @@ The following table lists all configurable parameters and their default values.
 | `ingress.hosts` | Ingress host rules | See `values.yaml` |
 | `ingress.tls` | Ingress TLS configuration | `[]` |
 | `resources.limits.cpu` | Backend CPU limit | `500m` |
-| `resources.limits.memory` | Backend memory limit | `256Mi` |
+| `resources.limits.memory` | Backend memory limit | `512Mi` |
 | `resources.requests.cpu` | Backend CPU request | `100m` |
 | `resources.requests.memory` | Backend memory request | `128Mi` |
 | `autoscaling.enabled` | Enable HPA | `false` |
 | `autoscaling.minReplicas` | Minimum replicas | `1` |
-| `autoscaling.maxReplicas` | Maximum replicas | `3` |
+| `autoscaling.maxReplicas` | Maximum replicas | `5` |
 | `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilization | `80` |
-| `nodeSelector` | Node selector labels | `{}` |
+| `nodeSelector` | Node selector labels | `kubernetes.io/hostname: carbon` |
 | `tolerations` | Pod tolerations | `[]` |
 | `affinity` | Pod affinity rules | `{}` |
+| `nodeRecovery.enforcePersistentState` | Reject ephemeral bundled stateful services | `true` |
+| `nodeRecovery.dependencyWait.maxAttempts` | Five-second dependency checks before retry | `120` |
 | `config.logLevel` | Application log level | `info` |
 | `config.pollInterval` | Vehicle polling interval | `30s` |
 | `config.apiEndpoint` | Internal API endpoint for Nginx proxy_pass and frontend API base URL. Nginx proxies `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics` to this address. Also injected into the frontend at runtime via Nginx `sub_filter` as `window.__TESLASYNC_API_BASE__`. Defaults to auto-derived `http://<release>-api:<port>` if empty. | `""` |
@@ -131,26 +136,208 @@ The following table lists all configurable parameters and their default values.
 | `tesla.apiBaseUrl` | Fleet API base URL (NA/EU/CN) | `https://fleet-api.prd.na.vn.cloud.tesla.com` |
 | `fleetTelemetry.enabled` | Enable Fleet Telemetry status monitoring | `false` |
 | `fleetTelemetry.host` | Fleet Telemetry server hostname | `` |
-| `fleetTelemetry.port` | Fleet Telemetry server port | `4443` |
+| `fleetTelemetry.service.port` | Fleet Telemetry server port | `4443` |
 | `postgresql.enabled` | Deploy bundled PostgreSQL | `true` |
 | `postgresql.auth.username` | PostgreSQL username | `teslasync` |
-| `postgresql.auth.password` | PostgreSQL password | `teslasync` |
+| `postgresql.auth.password` | PostgreSQL password when chart-managed secrets are enabled | `""` |
 | `postgresql.auth.database` | PostgreSQL database name | `teslasync` |
-| `postgresql.primary.persistence.size` | PostgreSQL PVC size | `10Gi` |
+| `postgresql.persistence.size` | PostgreSQL PVC size | `50Gi` |
 | `redis.enabled` | Deploy bundled Redis | `true` |
-| `redis.auth.enabled` | Enable Redis authentication | `false` |
-| `redis.master.persistence.size` | Redis PVC size | `1Gi` |
+| `redis.persistence.size` | Redis PVC size | `1Gi` |
 | `mqtt.enabled` | Deploy bundled MQTT broker | `true` |
 | `mqtt.service.port` | MQTT service port | `1883` |
 | `grafana.enabled` | Deploy bundled Grafana | `true` |
 | `grafana.adminUser` | Grafana admin username | `admin` |
-| `grafana.adminPassword` | Grafana admin password | `teslasync` |
+| `grafana.adminPassword` | Grafana admin password when chart-managed secrets are enabled | `""` |
 | `grafana.service.port` | Grafana service port | `3000` |
 | `notificationWorker.enabled` | Deploy notification worker | `true` |
 | `notificationWorker.replicaCount` | Notification worker replicas | `1` |
-| `notificationWorker.image.repository` | Notification worker image | `ghcr.io/your-org/teslasync-notification-worker` |
+| `notificationWorker.image.repository` | Notification worker image | `ghcr.io/ev-dev-labs/teslasync-notification-worker` |
 | `notificationWorker.resources.limits.memory` | Worker memory limit | `128Mi` |
 | `encryption.key` | Custom encryption key for sensitive data | `""` |
+
+## Secrets and the migration hook
+
+The database migration Job runs as a `pre-install,pre-upgrade` Helm hook and
+reads `DATABASE_PASS` from the runtime Secret through `envFrom`.
+
+**Helm applies hooks before the release's ordinary manifests.** Any Secret
+source the chart renders as an ordinary manifest therefore does not exist yet
+when that Job is scheduled. With `externalSecrets.enabled=true` this produced a
+failure that pointed nowhere: on a fresh install the ExternalSecret had not been
+applied, External Secrets Operator had not been asked to fetch anything, and the
+Job's pod sat in `CreateContainerConfigError` until the hook timed out.
+
+Hook weights alone do not fix it. Weights only order resources that are
+themselves hooks, and an ExternalSecret *existing* says nothing about whether
+ESO has reached the provider and written the target Secret. The contract has two
+halves — make the source exist before the hook, then wait for the data.
+
+| `migrationGate.mode` | Ordering | Readiness wait | Valid when |
+|---|---|---|---|
+| `auto` (default) | resolves per secret source | resolves per secret source | always |
+| `hook` | the secret source is rendered as a hook at weight `-10` (the Job is `0`) | yes | **requires** a chart-rendered source (`externalSecrets.enabled` or `secrets.create`) |
+| `require` | none — the source lives outside this release | yes (this is the enforcement) | **requires** that no source is chart-rendered (`secrets.existingSecret`, or a GitOps-applied ExternalSecret) |
+| `none` | none | no | NOT a general escape hatch — see below |
+
+`auto` resolves to `hook` when `externalSecrets.enabled=true` or
+`secrets.create=true`, and to `none` for `secrets.existingSecret` and the default
+pre-provisioned Secret, where there is nothing for the chart to order.
+
+The `hook`/`require` split is not a preference — the wrong one is a guaranteed
+failure, so the chart refuses to render it:
+
+* `require` **with** a chart-rendered source fails every fresh install by
+  construction. An ordinary manifest cannot be applied until all pre-install
+  hooks have completed, so the migration Job would wait the full
+  `timeoutSeconds` for a Secret whose source Helm is holding back until the Job
+  finishes.
+* `hook` **without** a chart-rendered source has nothing to order.
+
+In `require` mode the chart does **not** look the Secret up at render time. A
+`lookup` would make rendering depend on cluster state and on the Helm client
+holding RBAC to read Secrets, which many GitOps service accounts deliberately do
+not have — and `internal/ops` forbids cluster lookups in the chart helpers for
+the same reason. `require` is enforced where it can be enforced honestly: at the
+hook boundary, by the readiness wait, which fails the migration Job (and so the
+release) within `migrationGate.timeoutSeconds`.
+
+The readiness wait is an initContainer that mounts the target Secret with
+`optional: true` and polls its own mounted files, so it needs no API access and
+no extra RBAC. On timeout it names the Secret, the missing keys, and the
+`kubectl get externalsecret` command that shows why ESO has not synced.
+
+```yaml
+externalSecrets:
+  enabled: true
+  secretStoreRef:
+    name: production-secrets
+    kind: ClusterSecretStore
+  dataFrom:
+    - extract:
+        key: teslasync/production
+  target:
+    creationPolicy: ""    # empty -> Orphan in hook mode (see below)
+
+migrationGate:
+  mode: auto            # -> hook
+  timeoutSeconds: 300   # must exceed worst-case ESO reconciliation
+  pollIntervalSeconds: 5
+  requiredKeys:
+    - DATABASE_PASS
+```
+
+### Lifecycle guarantees in `hook` mode
+
+`hook` mode changes how two objects are managed, and both changes carry a
+lifecycle hazard that the chart closes explicitly.
+
+**1. Converting an existing ordinary manifest into a hook must not destroy it.**
+Upgrading a release that previously rendered the Secret (or ExternalSecret) as an
+ordinary manifest is a two-step self-destruct without protection:
+`before-hook-creation` deletes and recreates the object during pre-upgrade, and
+then Helm reconciles the ordinary manifests, finds the object in the **old**
+release manifest but not the new one, and deletes the object it just created.
+
+The chart therefore emits `helm.sh/resource-policy: keep` on every hook-rendered
+secret source. Helm's `kube.Client.Update` calls `info.Get()` and skips the
+deletion when the **live** object carries that annotation, while
+`kube.Client.Delete` — the path hook delete policies use — never consults it. So
+the conversion is protected and `before-hook-creation` still works.
+
+**2. Recreating the ExternalSecret must not garbage-collect its target Secret.**
+`before-hook-creation` deletes the ExternalSecret on every upgrade. Per the ESO
+API reference, `creationPolicy: Owner` "sets `.metadata.ownerReferences`. If the
+ExternalSecret is deleted, the Secret will also be deleted" — so with the ESO
+default, that upgrade would pull the credentials out from under every running
+pod.
+
+`deletionPolicy: Retain` does **not** prevent this. It "specifies what happens to
+the Secret when data fields are deleted **from the provider**"; it says nothing
+about deletion of the ExternalSecret object itself. Treating it as CR-deletion
+protection is the trap.
+
+The chart therefore renders `creationPolicy: Orphan` **in every
+`migrationGate.mode`**, not only in hook mode. `Owner` is a time bomb in every
+mode: a release installed today under `none` or `require` stamps an
+ownerReference onto the target, and the day it later enters hook mode the
+`before-hook-creation` delete collects the Secret through that pre-existing
+reference. Setting `externalSecrets.target.creationPolicy` to anything other than
+`""` or `Orphan` is a **render-time error in all modes**.
+
+> ⚠️ **This governs future reconciles only.** Rendering `Orphan` does **not**
+> retroactively strip an ownerReference that an earlier `Owner`-managed reconcile
+> already wrote onto a live Secret, and ESO does not retract references it has
+> already set. A release that ran with `Owner` before this change **must**
+> complete the one-time preflight in
+> [docs/runbooks/migration-gate-lifecycle.md](../../docs/runbooks/migration-gate-lifecycle.md)
+> — which inspects the target's `ownerReferences`, removes only the
+> ExternalSecret entry, verifies the Secret survives, and backs out safely —
+> before its first conversion into hook mode.
+
+### Lifecycle transitions are operator procedures, not values changes
+
+Helm tracks hook resources and ordinary manifests separately and offers **no
+supported in-place transition between them**. That is a property of Helm; the
+chart cannot template it away. Three operations are therefore **not** safe as a
+bare `helm upgrade` / `helm rollback`:
+
+1. **First conversion** of a pre-fix ordinary source into `hook` mode.
+2. **Rollback** from a hook-mode revision to any pre-conversion revision — you
+   must back up and inspect the source object, delete the hook source
+   immediately before `helm rollback` so Helm sees `NotFound` and recreates the
+   ordinary target, then verify the runtime Secret and workloads. Retention
+   differs by source kind: an ExternalSecret's orphaned target survives, while a
+   chart-managed Secret **is** the credential and deleting it opens an outage
+   window.
+3. **Leaving hook mode.** `hook` mode is **sticky** for a source identity.
+   Flipping `migrationGate.mode` to `none` or `require` in values is not a
+   supported transition — the render stops emitting the object while the live
+   object persists as a kept hook resource that nothing manages. Use the staged
+   path (delete the hook source, hand the source to GitOps, upgrade to
+   `require`) or install under a new release name.
+
+`none` is **not a general escape hatch**. It does not make the ordering race
+safe; it only stops the chart from managing it, and for a chart-rendered source
+it is a known-broken fresh install.
+
+Full procedures, verification steps, and back-outs:
+[docs/runbooks/migration-gate-lifecycle.md](../../docs/runbooks/migration-gate-lifecycle.md).
+They are registered in `ops/runbooks/dependencies.yaml` and enforced by
+`go run ./cmd/ops-gate -check runbooks`, so the warnings, the commands, and the
+cross-links from the generic Upgrading/Rollback sections above cannot drift away.
+
+### Uninstall and manual cleanup
+
+`resource-policy: keep` and `creationPolicy: Orphan` both trade automatic cleanup
+for safety, so `helm uninstall` deliberately leaves objects behind (the orphaned
+target Secret in every mode; the kept source as well in `hook` mode):
+
+```bash
+# 1. the hook-rendered secret source (Secret or ExternalSecret)
+kubectl delete externalsecret <release>-teslasync   # externalSecrets mode
+kubectl delete secret        <release>-teslasync    # secrets.create mode
+
+# 2. the target Secret, orphaned by creationPolicy: Orphan
+kubectl delete secret <target-name>
+
+# 3. nothing else — the migration Job is removed by hook-succeeded
+```
+
+For the chart-managed Secret this preserves the original intent of
+`helm.sh/resource-policy: keep`, which the chart still emits in every mode.
+
+The effective contract is recorded on the Job as
+`teslasync.io/migration-gate`, so it is auditable after the fact:
+
+```bash
+kubectl get job -l app.kubernetes.io/component=migrate \
+  -o jsonpath='{.items[0].metadata.annotations.teslasync\.io/migration-gate}'
+```
+
+`go run ./cmd/ops-gate -verify-helm-render <render.yaml>` asserts the invariant
+over `helm template` output and fails on a non-hook secret source, an equal or
+higher hook weight, a missing or unbounded wait, or a non-optional Secret mount.
 
 ## Using External Services
 
@@ -303,9 +490,17 @@ Browser → Traefik/Ingress → teslasync-web (Nginx :80)
 helm upgrade teslasync teslasync/teslasync -f values.yaml
 ```
 
-- **Rolling update strategy** — pods are replaced one at a time for zero-downtime deployments.
-- **Database migrations** run automatically on startup via init containers.
+- **Workload-aware update strategy** — stateless API/web workloads use
+  `RollingUpdate`; the API switches to `Recreate` while it owns Fleet
+  Telemetry, and stable-ID MQTT workers always use `Recreate`.
+- **Database migrations** run through the chart's pre-install/pre-upgrade Job.
 - **PVCs are retained** on uninstall so your data is not lost.
+
+> ⚠️ **Not for migration-gate transitions.** A bare `helm upgrade` is only safe
+> while the secret source stays in the same Helm category. The FIRST upgrade
+> that moves a source into `hook` mode crosses Helm's hook/ordinary manifest
+> boundary and needs the explicit procedure in
+> [docs/runbooks/migration-gate-lifecycle.md](../../docs/runbooks/migration-gate-lifecycle.md).
 
 ## Rollback
 
@@ -316,6 +511,43 @@ helm history teslasync
 # Roll back to a specific revision
 helm rollback teslasync [REVISION]
 ```
+
+> ⚠️ **Stop before rolling back across a migration-gate conversion.** If the
+> current revision renders the secret source as a Helm hook and the target
+> revision rendered it as an ordinary manifest, the command above leaves the
+> release believing it manages an ordinary source that is in fact still a kept
+> hook resource — and the live object is managed by nobody.
+>
+> You must back up and inspect the source object, delete the hook source
+> immediately before the rollback so Helm sees `NotFound` and recreates the
+> ordinary target, then verify the runtime Secret and the workloads. Retention
+> differs between a chart-managed Secret (deleting it deletes the live
+> credentials) and an ExternalSecret (its orphaned target survives).
+>
+> Full procedure, including the back-out:
+> [docs/runbooks/migration-gate-lifecycle.md](../../docs/runbooks/migration-gate-lifecycle.md)
+> — Procedure 2.
+>
+> Check which category you are in before running anything:
+>
+> ```bash
+> kubectl get job -l app.kubernetes.io/component=migrate \
+>   -o jsonpath='{.items[0].metadata.annotations.teslasync\.io/migration-gate}'
+> ```
+
+## Node reboot recovery
+
+The default chart targets TeslaSync's self-hosted homelab topology:
+single-instance stateful services on retained PVCs, with workloads pinned to
+the `carbon` node. Startup probes allow WAL, AOF, and MQTT session replay to
+finish, and dependency init containers hold consumers until PostgreSQL and
+Mosquitto are reachable.
+
+This protects a same-node reboot with the same disk. It is not permanent-node
+or disk-failure high availability; local-path storage cannot move its data to
+another host. Use the preflight, planned-drain, recovery-order, and integrity
+checks in
+[docs/runbooks/kubernetes-node-reboot.md](../../docs/runbooks/kubernetes-node-reboot.md).
 
 ## Testing
 

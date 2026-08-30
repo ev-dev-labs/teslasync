@@ -58,10 +58,10 @@ function getBackdrop(): HTMLElement {
   return backdrop as HTMLElement;
 }
 
-/** Query the sliding panel (the element with the max-w-md sizing class). */
+/** Query the sliding panel through its stable slot marker. */
 function getPanel(): HTMLElement {
   const dialog = screen.getByRole('dialog');
-  const panel = dialog.querySelector('.max-w-md');
+  const panel = dialog.querySelector('[data-drawer-panel]');
   if (!panel) throw new Error('panel not found');
   return panel as HTMLElement;
 }
@@ -118,7 +118,7 @@ describe('<Drawer>', () => {
     expect(screen.queryByRole('dialog', { name: 'Panel' })).not.toBeInTheDocument();
   });
 
-  it('renders children and conditionally renders the footer region', () => {
+  it('renders children and standardizes custom, default, and suppressed footers', () => {
     const { rerender } = render(
       <Drawer
         open
@@ -132,7 +132,7 @@ describe('<Drawer>', () => {
     expect(screen.getByText('Drawer body content')).toBeInTheDocument();
     expect(screen.getByTestId('drawer-footer')).toBeInTheDocument();
 
-    // Dropping the footer prop removes the footer region but keeps the body.
+    // Dropping the footer prop installs the standard read-only Close action.
     rerender(
       <Drawer open onClose={vi.fn()} title="Filters">
         <p>Drawer body content</p>
@@ -140,6 +140,17 @@ describe('<Drawer>', () => {
     );
     expect(screen.getByText('Drawer body content')).toBeInTheDocument();
     expect(screen.queryByTestId('drawer-footer')).not.toBeInTheDocument();
+    expect(screen.getByText('Drawer body content').closest('[data-drawer-body]')).not.toBeNull();
+    expect(screen.getAllByRole('button', { name: 'Close' })).toHaveLength(2);
+
+    // Explicit null is the escape hatch for a panel that genuinely has no
+    // action footer; the header Close control remains available.
+    rerender(
+      <Drawer open onClose={vi.fn()} title="Filters" footer={null}>
+        <p>Drawer body content</p>
+      </Drawer>,
+    );
+    expect(screen.getByRole('dialog').querySelector('[data-drawer-footer]')).toBeNull();
   });
 
   it('exposes an accessible, non-submitting Close control that calls onClose', () => {
@@ -149,7 +160,7 @@ describe('<Drawer>', () => {
         <p>Body</p>
       </Drawer>,
     );
-    const closeBtn = screen.getByRole('button', { name: 'Close' });
+    const closeBtn = screen.getAllByRole('button', { name: 'Close' })[0];
     // type="button" so an enclosing <form> is never accidentally submitted.
     expect(closeBtn).toHaveAttribute('type', 'button');
     fireEvent.click(closeBtn);
@@ -195,7 +206,7 @@ describe('<Drawer>', () => {
       </Drawer>,
     );
     // The header Close button is the first focusable in DOM order.
-    const closeBtn = screen.getByRole('button', { name: 'Close' });
+    const closeBtn = screen.getAllByRole('button', { name: 'Close' })[0];
     expect(document.activeElement).toBe(closeBtn);
   });
 
@@ -207,35 +218,32 @@ describe('<Drawer>', () => {
       </Drawer>,
     );
     const dialog = screen.getByRole('dialog');
-    const closeBtn = screen.getByRole('button', { name: 'Close' });
-    const beta = screen.getByRole('button', { name: 'Beta' });
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
+    const closeBtn = closeButtons[0];
+    const footerClose = closeButtons[closeButtons.length - 1];
 
-    // Tab off the last focusable wraps back to the first (Close).
-    act(() => beta.focus());
+    // Tab off the last focusable wraps back to the first (header Close).
+    act(() => footerClose.focus());
     fireEvent.keyDown(dialog, { key: 'Tab' });
     expect(document.activeElement).toBe(closeBtn);
 
-    // Shift+Tab off the first focusable wraps to the last (Beta).
+    // Shift+Tab off the first focusable wraps to the footer Close.
     act(() => closeBtn.focus());
     fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true });
-    expect(document.activeElement).toBe(beta);
+    expect(document.activeElement).toBe(footerClose);
   });
 
-  it('parks focus on the dialog container when the panel has no focusable child', () => {
+  it('keeps a close control available even when the panel has no title or body controls', () => {
     render(
       <Drawer open onClose={vi.fn()}>
         <span>Read-only content</span>
       </Drawer>,
     );
     const dialog = screen.getByRole('dialog');
-    // With nothing focusable, focus lands on the container itself.
-    expect(document.activeElement).toBe(dialog);
+    const closeButtons = screen.getAllByRole('button', { name: 'Close' });
+    expect(closeButtons).toHaveLength(2);
+    expect(document.activeElement).toBe(closeButtons[0]);
     expect(dialog).toHaveAttribute('tabindex', '-1');
-
-    // Tab is swallowed (preventDefault) so focus cannot leak behind the scrim.
-    const notCancelled = fireEvent.keyDown(dialog, { key: 'Tab' });
-    expect(notCancelled).toBe(false);
-    expect(document.activeElement).toBe(dialog);
   });
 
   it('restores focus to the opener when the drawer closes', () => {
@@ -306,5 +314,64 @@ describe('<Drawer>', () => {
     const leftPanel = getPanel();
     expect(leftPanel.className).toContain('left-0');
     expect(leftPanel.className).not.toContain('right-0');
+  });
+
+  it('uses named widths with a full-width mobile fallback', () => {
+    const { rerender } = render(
+      <Drawer open onClose={vi.fn()} title="Filters" size="sm">
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(getPanel()).toHaveAttribute('data-drawer-size', 'sm');
+    expect(getPanel()).toHaveClass('w-full', 'max-w-none', 'sm:max-w-sm');
+
+    rerender(
+      <Drawer open onClose={vi.fn()} title="Filters" size="lg">
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(getPanel()).toHaveAttribute('data-drawer-size', 'lg');
+    expect(getPanel()).toHaveClass('sm:max-w-2xl');
+  });
+
+  it('renders header metadata and tabs in stable slots', () => {
+    render(
+      <Drawer
+        open
+        onClose={vi.fn()}
+        eyebrow="Evidence"
+        title="Drive 42"
+        description="Completed 10 minutes ago"
+        headerMeta={<span>Complete</span>}
+        tabs={<div role="tablist">Tabs</div>}
+      >
+        <p>Body</p>
+      </Drawer>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Drive 42' });
+    expect(dialog).toHaveAttribute('aria-describedby');
+    expect(dialog.querySelector('[data-drawer-header]')).toHaveTextContent(
+      'EvidenceDrive 42CompleteCompleted 10 minutes ago',
+    );
+    expect(dialog.querySelector('[data-drawer-tabs]')).toContainElement(
+      screen.getByRole('tablist'),
+    );
+  });
+
+  it('locks background scrolling while open and restores it on close', () => {
+    document.body.style.overflow = 'auto';
+    const { rerender } = render(
+      <Drawer open onClose={vi.fn()} title="Filters">
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(document.body.style.overflow).toBe('hidden');
+
+    rerender(
+      <Drawer open={false} onClose={vi.fn()} title="Filters">
+        <p>Body</p>
+      </Drawer>,
+    );
+    expect(document.body.style.overflow).toBe('auto');
   });
 });

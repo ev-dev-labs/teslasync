@@ -386,7 +386,7 @@ describe('RecentDrivesListWidget — states & interaction', () => {
     setup({ drives: makeQuery({ data: [makeDrive()], refetch }) });
     renderWidget({ size: STANDARD });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

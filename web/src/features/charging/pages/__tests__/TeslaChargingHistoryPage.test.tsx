@@ -27,6 +27,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>, <MetricBar>, the
 // ToastProvider, and the PageContainer freshness chip) reads it at module load.
 vi.hoisted(() => {
@@ -214,12 +220,13 @@ function renderPage() {
   );
 }
 
-// Read a KPI card's value <p> by its label text (MetricCard renders the label
-// span and the value <p class="text-xl"> as siblings inside a `.rounded-xl` card).
+// Read a KPI card's value by its label text via MetricCard's stable semantic
+// hooks: the card root is `[data-role="metric-card"]` and its value node is
+// `[data-role="metric-value"]` (both siblings of `[data-role="metric-label"]`).
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('.rounded-xl');
+  const card = screen.getByText(label).closest('[data-role="metric-card"]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('p.text-xl');
+  const value = card!.querySelector('[data-role="metric-value"]');
   expect(value).not.toBeNull();
   return value!.textContent ?? '';
 }
@@ -440,30 +447,35 @@ describe('TeslaChargingHistoryPage — loading / error / empty branches', () => 
 
 // ── Component — data contract & toolbar ─────────────────────────────────────
 describe('TeslaChargingHistoryPage — data contract & toolbar', () => {
-  it('requests /tesla/charging/history with no /api/v1 prefix and no camelCase params', async () => {
+  it('requests the globally selected VIN with no /api/v1 prefix or camelCase params', async () => {
     installRequest();
     renderPage();
     await screen.findByText('Total Sessions');
 
     const calls = historyCalls();
     expect(calls.length).toBeGreaterThan(0);
-    // First (unscoped) call carries no query string.
-    expect(calls).toContain('/tesla/charging/history');
+    expect(calls).toContain(
+      '/tesla/charging/history?vin=5YJ3E1EA1KF000001',
+    );
     expect(calls.every((u) => !u.includes('/api/v1'))).toBe(true);
     expect(calls.every((u) => !/vehicleId=/.test(u))).toBe(true);
   });
 
-  it('re-scopes the feed to the selected vehicle via a ?vin= query', async () => {
+  it('re-scopes the feed when a different vehicle is selected', async () => {
     installRequest();
     renderPage();
     await screen.findByText('Total Sessions');
 
-    expect(historyCalls().some((u) => u.includes('vin=5YJ3E1EA1KF000001'))).toBe(false);
+    expect(historyCalls()).toContain(
+      '/tesla/charging/history?vin=5YJ3E1EA1KF000001',
+    );
     fireEvent.change(screen.getByRole('combobox', { name: 'Select vehicle' }), {
-      target: { value: '5YJ3E1EA1KF000001' },
+      target: { value: '5YJYGDEE5MF000002' },
     });
     await waitFor(() =>
-      expect(historyCalls().some((u) => u.includes('vin=5YJ3E1EA1KF000001'))).toBe(true),
+      expect(historyCalls()).toContain(
+        '/tesla/charging/history?vin=5YJYGDEE5MF000002',
+      ),
     );
   });
 

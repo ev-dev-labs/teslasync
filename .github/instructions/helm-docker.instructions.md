@@ -85,7 +85,9 @@ FLEET_TELEMETRY_HOST=
 
 Enable with: `docker compose --profile telemetry up -d`
 
-- Uses official `tesla/fleet-telemetry:latest` image
+- Uses TeslaSync's pinned `ghcr.io/ev-dev-labs/teslasync-fleet-telemetry`
+  image, which preserves the upstream `Payload.CreatedAt` timestamp in every
+  MQTT field envelope
 - Config mounted from `fleet-telemetry-config.json`
 - TLS cert/key mounted from paths in `.env`
 - Dispatches vehicle data to `http://teslasync:8080/api/v1/telemetry`
@@ -140,6 +142,73 @@ helm/teslasync/
 ```bash
 helm upgrade --install teslasync helm/teslasync
 ```
+
+## Rollout controls (OPS-05)
+
+Staged/canary rollout lives under `.Values.rollout.*` and is defined in
+`ops/rollout/stages.yaml`. `go run ./cmd/ops-gate -check rollout` fails
+if the manifest and the chart drift apart, and
+`helm template … | go run ./cmd/ops-gate -verify-helm-render -` asserts
+the post-template invariants.
+
+```yaml
+terminationGracePeriodSeconds: 90   # must hold the 80s shutdown budget
+drain:
+  port: 8090                        # isolated preStop listener; no Service targets it
+rollout:
+  paused: false                     # → Deployment.spec.paused
+  selectorMode: legacy              # legacy | disjoint (canary requires disjoint)
+  api:
+    strategy: {type: RollingUpdate, maxSurge: 1, maxUnavailable: 0}
+    canary:  {enabled: false, replicaCount: 1, image: {tag: ""}}
+  web: { … same shape … }
+  notificationWorker: {strategy: {type: ""}}   # "" = render nothing, K8s default applies
+  exportWorker:       {strategy: {type: ""}}
+  automationWorker:   {strategy: {type: ""}}
+  highRiskFlags: []
+```
+
+```
+❌ DO NOT change a rollout default — the defaults reproduce the
+   pre-existing manifests exactly (no canary, not paused, api/web on
+   RollingUpdate 1/0, workers with no strategy block at all).
+❌ DO NOT enable canary without rollout.selectorMode=disjoint. A
+   Deployment selector is a SUPERSET match, so a canary pod carrying the
+   common selector labels is adopted by the stable Deployment — and by
+   its HPA (which reads pod metrics through that selector) and its PDB.
+   The chart refuses to render rather than producing that silently.
+❌ DO NOT publish the drain port through a Service or Ingress. The
+   preStop endpoint is one-way and pod-fatal; kubelet reaches it by
+   dialling the pod IP, which needs no Service.
+❌ DO NOT enable canary for a worker. Workers share one MQTT
+   subscription; two revisions would double-deliver.
+✅ DO use replica-share canary: the canary Deployment carries the same
+   Service selector labels (minus the rollout discriminator), so 1
+   canary alongside N stable replicas takes ~1/(N+1) of traffic.
+✅ DO follow the documented one-time migration when switching an
+   existing release from legacy to disjoint selectors —
+   `spec.selector` is immutable, so it needs
+   `kubectl delete deployment <release>-api --cascade=orphan` first.
+   The steps are in values.yaml under `rollout.selectorMode`.
+✅ DO keep terminationGracePeriodSeconds >= the budget in
+   `ops/rollout/stages.yaml` `shutdown`. Kubernetes' 30s default cannot
+   hold an 80s drain, and the kubelet SIGKILLs mid-drain if it is short.
+```
+
+## Configuration parity (OPS-06)
+
+Adding, renaming, or removing an environment variable requires all three
+targets in the same commit — `internal/config/config.go`,
+`docker-compose.yml`, and `helm/teslasync/templates/`. This is enforced:
+
+```bash
+go run ./cmd/ops-gate -check config-parity
+```
+
+Credentials go in `templates/secret.yaml` **only**. A secret-classified
+variable rendered into `templates/configmap.yaml` fails the gate
+unconditionally — a ConfigMap is readable by anything with
+`get configmaps` and appears in plaintext `helm get manifest` output.
 
 ## Volumes
 

@@ -79,13 +79,14 @@ vi.mock('react-i18next', () => ({
 }));
 
 // Surface the gauge props as data-attributes so the SI→display conversion,
-// gauge scaling and battery colour threshold are directly assertable.
+// gauge scaling and battery tone threshold are directly assertable.
 vi.mock('@/components/charts/LinearGauge', () => ({
   LinearGauge: (p: {
     value: number;
     max: number;
     label: string;
     unit?: string;
+    tone?: string;
     color?: string;
   }) => (
     <div
@@ -94,6 +95,7 @@ vi.mock('@/components/charts/LinearGauge', () => ({
       data-value={String(p.value)}
       data-max={String(p.max)}
       data-unit={String(p.unit)}
+      data-tone={String(p.tone)}
       data-color={String(p.color)}
     />
   ),
@@ -193,7 +195,7 @@ describe('VehicleHeroCard — status derivation (toStatus)', () => {
   });
 });
 
-describe('VehicleHeroCard — gauges (SI→display conversion, scaling & colour)', () => {
+describe('VehicleHeroCard — gauges (SI→display conversion, scaling & tone)', () => {
   it('renders four gauges with km/°C values, unit suffixes and scaled maxima', () => {
     renderCard({
       vehicleState: makeState({
@@ -210,7 +212,10 @@ describe('VehicleHeroCard — gauges (SI→display conversion, scaling & colour)
     expect(battery).toHaveAttribute('data-value', '72');
     expect(battery).toHaveAttribute('data-max', '100');
     expect(battery).toHaveAttribute('data-unit', '%');
-    expect(battery).toHaveAttribute('data-color', '#22d3ee'); // >20 → cyan
+    expect(battery).toHaveAttribute('data-tone', 'accent'); // >20 → theme accent
+    // No raw hex is passed any more: the tone map owns the colour so warm /
+    // light presets re-tint the bar instead of pinning it to a fixed cyan.
+    expect(battery).toHaveAttribute('data-color', 'undefined');
 
     const range = gauge('Range');
     expect(range).toHaveAttribute('data-value', '400'); // 400,000 m → 400 km
@@ -222,9 +227,9 @@ describe('VehicleHeroCard — gauges (SI→display conversion, scaling & colour)
     expect(gauge('Outside')).toHaveAttribute('data-value', '14');
   });
 
-  it('colours the battery gauge red at or below the 20% threshold', () => {
+  it('tones the battery gauge danger at or below the 20% threshold', () => {
     renderCard({ vehicleState: makeState({ battery_level: 20 }) });
-    expect(gauge('Battery')).toHaveAttribute('data-color', '#ef4444');
+    expect(gauge('Battery')).toHaveAttribute('data-tone', 'danger');
     expect(gauge('Battery')).toHaveAttribute('data-value', '20');
   });
 
@@ -325,11 +330,11 @@ describe('VehicleHeroCard — navigation actions', () => {
 });
 
 describe('VehicleHeroCard — null safety (regression guards)', () => {
-  it('renders a zeroed, red battery gauge (no NaN) when battery_level is null', () => {
+  it('renders a zeroed, danger-toned battery gauge (no NaN) when battery_level is null', () => {
     renderCard({ vehicleState: makeState({ battery_level: null as unknown as number }) });
     const battery = gauge('Battery');
     expect(battery).toHaveAttribute('data-value', '0');
-    expect(battery).toHaveAttribute('data-color', '#ef4444');
+    expect(battery).toHaveAttribute('data-tone', 'danger');
     expect(battery.getAttribute('data-value')).not.toContain('NaN');
   });
 

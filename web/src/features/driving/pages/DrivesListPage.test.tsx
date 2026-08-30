@@ -29,9 +29,9 @@
  *   - export links carry snake_case `vehicle_id` + the active range.
  *   - empty state offers a reset-filters CTA.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import type { Drive } from '@/types/driving';
@@ -148,6 +148,15 @@ vi.mock('@/components/ai/AINLDriveSearch', () => ({ AINLDriveSearch: () => null 
 vi.mock('@/components/data-display/SavedViewMenu', () => ({ SavedViewMenu: () => null }));
 vi.mock('@/components/layout/PageHeaderSticky', () => ({ PageHeaderSticky: () => null }));
 
+const timezoneState = vi.hoisted(() => ({ tz: 'UTC' }));
+vi.mock('@/lib/timezone', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/timezone')>();
+  return {
+    ...actual,
+    useTimezone: () => timezoneState.tz,
+  };
+});
+
 // ── Data + environment hooks, driven per test. ──
 vi.mock('@/api/hooks/useDriving', () => ({
   useDrives: vi.fn(),
@@ -213,7 +222,7 @@ function makeDrive(over: Partial<Drive> & Pick<Drive, 'id' | 'startTs' | 'distan
 
 /**
  * Fixture: 4 April-2026 drives. Home↔Office is a 3× commute (d1/d2/d3, each a
- * grade-B 40 km trip); d4 is a 100 km grade-D anomaly (also the longest, so it
+ * measured grade-B 40 km trip); d4 is a 100 km grade-D anomaly (also the longest, so it
  * is the sole "notable"). Raw aggregates are asserted against below.
  */
 const DRIVES: Drive[] = [
@@ -221,33 +230,37 @@ const DRIVES: Drive[] = [
     id: 1, startTs: '2026-04-24T15:00:00Z', endTs: '2026-04-24T16:00:00Z',
     distanceM: 40000, durationS: 3600,
     startAddress: 'Home', endAddress: 'Office',
-    startBatteryPct: 80, endBatteryPct: 70, maxSpeedMps: 30, avgSpeedMps: 20,
+    startBatteryPct: 80, endBatteryPct: 70, energyUsedWh: 7500,
+    maxSpeedMps: 30, avgSpeedMps: 20,
   }),
   makeDrive({
     id: 2, startTs: '2026-04-23T09:00:00Z', endTs: '2026-04-23T10:00:00Z',
     distanceM: 40000, durationS: 3600,
     startAddress: 'Office', endAddress: 'Home',
-    startBatteryPct: 70, endBatteryPct: 60, maxSpeedMps: 25, avgSpeedMps: 18,
+    startBatteryPct: 70, endBatteryPct: 60, energyUsedWh: 7500,
+    maxSpeedMps: 25, avgSpeedMps: 18,
   }),
   makeDrive({
     id: 3, startTs: '2026-04-22T09:00:00Z', endTs: '2026-04-22T10:00:00Z',
     distanceM: 40000, durationS: 3600,
     startAddress: 'Home', endAddress: 'Office',
-    startBatteryPct: 90, endBatteryPct: 80, maxSpeedMps: 28, avgSpeedMps: 19,
+    startBatteryPct: 90, endBatteryPct: 80, energyUsedWh: 7500,
+    maxSpeedMps: 28, avgSpeedMps: 19,
   }),
   makeDrive({
     id: 4, startTs: '2026-04-20T12:00:00Z', endTs: '2026-04-20T14:00:00Z',
     distanceM: 100000, durationS: 7200,
     startAddress: 'Home', endAddress: 'Beach',
-    startBatteryPct: 90, endBatteryPct: 55, maxSpeedMps: 60, avgSpeedMps: 25,
+    startBatteryPct: 90, endBatteryPct: 55, energyUsedWh: 26250,
+    maxSpeedMps: 60, avgSpeedMps: 25,
   }),
 ];
 
 // Known raw aggregates (what the page must independently derive from DRIVES).
 const TOTAL_M = 40000 * 3 + 100000; // 220000
 const TOTAL_S = 3600 * 3 + 7200; // 18000
-const AVG_EFF_WH_KM = (187.5 * 3 + 262.5) / 4; // 206.25
-const TOTAL_KWH = (10 + 10 + 10 + 35) * 0.75; // 48.75
+const TOTAL_WH = 7500 * 3 + 26250; // 48.75 kWh
+const AVG_EFF_WH_KM = TOTAL_WH / (TOTAL_M / 1000); // distance weighted
 const COST_PER_KWH = 0.12; // matches the global useSettings stub
 
 const FLEET = [{ id: 7, display_name: 'Model 3', vin: 'VIN7' }] as unknown as Vehicle[];
@@ -274,10 +287,16 @@ function makeUnits(distance: 'km' | 'mi') {
       locale: 'en-US',
       precision: 2,
     },
+    formatEnergy: (wh: number) => `${fmtNumber(wh / 1000)} kWh`,
   };
 }
 
 const DEFAULT_RANGE = '/drives?from=2026-04-01&to=2026-04-30';
+
+function LocationProbe() {
+  const location = useLocation();
+  return <output data-testid="location">{`${location.pathname}${location.search}`}</output>;
+}
 
 function renderPage(initialEntries: string[] = [DEFAULT_RANGE]) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -286,6 +305,7 @@ function renderPage(initialEntries: string[] = [DEFAULT_RANGE]) {
       <QueryClientProvider client={client}>
         <ToastProvider>
           <DrivesListPage />
+          <LocationProbe />
         </ToastProvider>
       </QueryClientProvider>
     </MemoryRouter>,
@@ -304,6 +324,7 @@ function cardValue(region: HTMLElement, label: string): string {
 }
 
 beforeEach(() => {
+  timezoneState.tz = 'UTC';
   mockDrives.mockReset();
   mockBulkDelete.mockReset();
   mockSelected.mockReset();
@@ -314,6 +335,10 @@ beforeEach(() => {
   mockSelected.mockReturnValue(selected(7));
   mockUnits.mockReturnValue(makeUnits('km'));
   mockDrives.mockReturnValue(makeQuery({ data: DRIVES }));
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 describe('DrivesListPage — no vehicle selected', () => {
@@ -351,10 +376,34 @@ describe('DrivesListPage — primary error', () => {
     mockDrives.mockReturnValue(makeQuery({ data: undefined, error: new Error('Drives request failed'), isError: true }));
     renderPage();
 
-    expect(screen.getByText('Drives request failed')).toBeInTheDocument();
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     // PageContainer replaces its children with the error box.
     expect(screen.queryByRole('region', { name: 'Drive list' })).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Overview', level: 3 })).toBeNull();
+  });
+
+  it('keeps the retained drive list when a BACKGROUND refetch fails', () => {
+    // The bug this guards: `error` reaching <PageContainer error={...}> swaps
+    // a populated, perfectly readable table for a full-bleed error card the
+    // moment one background poll 502s.
+    mockDrives.mockReturnValue(
+      makeQuery({
+        data: DRIVES,
+        error: new Error('Drives refresh failed'),
+        isError: true,
+      }),
+    );
+    renderPage();
+
+    // The list and the overview survive…
+    expect(screen.getByRole('region', { name: 'Drive list' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Overview', level: 3 })).toBeInTheDocument();
+    // …the page-level error surface stays away…
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+    // …and a non-blocking notice explains why the numbers may lag.
+    expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument();
   });
 });
 
@@ -366,9 +415,52 @@ describe('DrivesListPage — populated (km)', () => {
     expect(cardValue(kpi, 'Drives')).toBe(fmtCompact(4));
     expect(cardValue(kpi, 'Distance (km)')).toBe(fmtCompact(convertDistanceFromSI(TOTAL_M, 'km'), 10000));
     expect(cardValue(kpi, 'Drive time')).toBe(formatDurationMinutes(TOTAL_S / 60));
-    expect(cardValue(kpi, 'Avg score')).toBe('B');
-    expect(cardValue(kpi, 'Efficiency (Wh/km)')).toBe(fmtInt(AVG_EFF_WH_KM));
-    expect(cardValue(kpi, 'Cost')).toBe(`$${fmtNumber(TOTAL_KWH * COST_PER_KWH, 2)}`);
+    expect(cardValue(kpi, 'Efficiency grade')).toBe('D');
+    expect(cardValue(kpi, 'Energy intensity (Wh/km)')).toBe(fmtInt(AVG_EFF_WH_KM));
+    expect(cardValue(kpi, 'Measured energy / cost')).toBe(
+      `${fmtNumber(TOTAL_WH / 1000)} kWh · $${fmtNumber((TOTAL_WH / 1000) * COST_PER_KWH, 2)}`,
+    );
+  });
+
+  it('presents a six-signal decision brief with freshness and evidence coverage', () => {
+    renderPage();
+    const brief = screen.getByTestId('drives-operational-brief');
+
+    for (const label of [
+      'Drives',
+      'Distance (km)',
+      'Energy intensity (Wh/km)',
+      'Efficiency movement',
+      'Efficiency exceptions',
+      'Route context',
+    ]) {
+      expect(within(brief).getByText(label)).toBeInTheDocument();
+    }
+    expect(within(brief).getByText('4 of 4 drives have measured energy and sufficient distance.'))
+      .toBeInTheDocument();
+    expect(within(brief).getByText('100%')).toBeInTheDocument();
+    expect(
+      within(brief).getByRole('button', { name: /Source: Drive history/ }),
+    ).toBeInTheDocument();
+    expect(within(brief).getByRole('button', { name: 'Compare drives' })).toBeInTheDocument();
+  });
+
+  it('keeps activity visible and names partial measured-energy coverage', () => {
+    mockDrives.mockReturnValue(makeQuery({
+      data: DRIVES.map((drive, index) => (
+        index === 0 ? { ...drive, energyUsedWh: null } : drive
+      )),
+    }));
+
+    renderPage();
+
+    expect(screen.getByText('Efficiency evidence is partial')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '3 of 4 drives include measured energy and at least 1 km of distance. Activity, route, and timing evidence remain complete.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(listRegion()).getAllByRole('link')).not.toHaveLength(0);
   });
 
   it('labels the period + the empty prior window, and fills the highlights', () => {
@@ -414,6 +506,52 @@ describe('DrivesListPage — populated (km)', () => {
       limit: 1000,
     });
   });
+
+  it('labels the current vehicle-local day as Today after UTC has rolled over', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T02:23:00Z'));
+    timezoneState.tz = 'America/Los_Angeles';
+    mockDrives.mockReturnValue(makeQuery({
+      data: [
+        makeDrive({
+          id: 27,
+          startTs: '2026-08-28T00:40:00Z',
+          endTs: '2026-08-28T01:26:00Z',
+          distanceM: 22772,
+        }),
+      ],
+    }));
+
+    renderPage(['/drives?from=2026-08-27&to=2026-08-27']);
+
+    const list = listRegion();
+    expect(within(list).getByText('Aug 27, 2026')).toBeInTheDocument();
+    expect(within(list).getByText(/· Today/)).toBeInTheDocument();
+    expect(within(list).queryByText(/· Yesterday/)).not.toBeInTheDocument();
+  });
+});
+
+describe('DrivesListPage — contextual links', () => {
+  it('preserves the drive vehicle and time window across related workflows', async () => {
+    renderPage();
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Quick view drive' }))[0]);
+
+    const drawer = await screen.findByRole('dialog', { name: 'Home → Office' });
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/7');
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute('href', '/charging?from=2026-04-24&to=2026-04-24');
+    expect(within(drawer).getByRole('link', { name: 'Start location' }))
+      .toHaveAttribute(
+        'href',
+        '/locations?q=Home&from=2026-04-24&to=2026-04-24',
+      );
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2026-04-24&to=2026-04-24&signals=VehicleSpeed%2CBatteryLevel',
+      );
+  });
 });
 
 describe('DrivesListPage — unit boundary (miles)', () => {
@@ -423,7 +561,7 @@ describe('DrivesListPage — unit boundary (miles)', () => {
     const kpi = kpiRegion();
 
     expect(cardValue(kpi, 'Distance (mi)')).toBe(fmtCompact(convertDistanceFromSI(TOTAL_M, 'mi'), 10000));
-    expect(within(kpi).getByText('Efficiency (Wh/mi)')).toBeInTheDocument();
+    expect(within(kpi).getByText('Energy intensity (Wh/mi)')).toBeInTheDocument();
     // Longest highlight now reads in miles, not kilometres.
     expect(
       within(analysisRegion()).getByText(`${fmtNumber(convertDistanceFromSI(100000, 'mi'))} mi`),
@@ -481,8 +619,13 @@ describe('DrivesListPage — search', () => {
     expect(within(list).queryByText('40.00 km')).toBeNull();
   });
 
-  it('honours structured score: and distance: tokens', () => {
-    // score:d → only the grade-D anomaly.
+  it('honours the structured grade: token', () => {
+    renderPage([`${DEFAULT_RANGE}&q=${encodeURIComponent('grade:d')}`]);
+    expect(within(listRegion()).getByText('100.00 km')).toBeInTheDocument();
+    expect(within(listRegion()).queryByText('40.00 km')).toBeNull();
+  });
+
+  it('preserves the legacy score: token for saved searches', () => {
     renderPage([`${DEFAULT_RANGE}&q=${encodeURIComponent('score:d')}`]);
     expect(within(listRegion()).getByText('100.00 km')).toBeInTheDocument();
     expect(within(listRegion()).queryByText('40.00 km')).toBeNull();
@@ -526,6 +669,25 @@ describe('DrivesListPage — trend switcher', () => {
 });
 
 describe('DrivesListPage — bulk delete', () => {
+  it('opens comparison with exactly two selected drives encoded in the URL', async () => {
+    renderPage();
+
+    const checkboxes = within(listRegion()).getAllByRole('checkbox');
+    fireEvent.click(checkboxes[0]);
+    expect(await screen.findByRole('button', { name: 'Compare selected' })).toBeDisabled();
+
+    fireEvent.click(within(listRegion()).getAllByRole('checkbox')[1]);
+    const compare = screen.getByRole('button', { name: 'Compare selected' });
+    await waitFor(() => expect(compare).toBeEnabled());
+    fireEvent.click(compare);
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/drive-compare?drive_a=1&drive_b=2',
+      );
+    });
+  });
+
   it('selects a drive, confirms, and calls the mutation with numeric ids', async () => {
     renderPage();
 
@@ -566,10 +728,17 @@ describe('DrivesListPage — export links', () => {
     const json = screen.getByRole('link', { name: 'JSON' });
 
     const csvHref = csv.getAttribute('href') ?? '';
-    expect(csvHref).toContain('/export/drives?format=csv');
+    // Param ORDER is deliberately not asserted: `scopedPath` sorts keys so the
+    // same scope always yields a byte-identical URL. Only presence + casing
+    // are contractual.
+    expect(csvHref).toContain('/export/drives?');
+    expect(csvHref).toContain('format=csv');
     expect(csvHref).toContain('vehicle_id=7');
     expect(csvHref).toContain('start=2026-04-01');
     expect(csvHref).toContain('end=2026-04-30');
+    // Never double-prefixed, and never camelCase.
+    expect(csvHref).not.toContain('/api/v1/api/v1');
+    expect(csvHref.split('?')[1] ?? '').not.toMatch(/[?&]?[a-z]+[A-Z]/);
     expect(json.getAttribute('href') ?? '').toContain('format=json');
   });
 });

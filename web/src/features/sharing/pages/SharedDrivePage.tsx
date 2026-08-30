@@ -7,7 +7,7 @@ import {
 import { GlassPanel } from '@/components/ui';
 import { Grid } from '@/components/layout';
 import { StatCard } from '@/components/data-display';
-import { Spinner, EmptyState } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import {
   ChartContainer, ChartGradient, chartGrid, axisTick,
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -82,7 +82,11 @@ function ExpiredShareView() {
         <div className="w-16 h-16 mx-auto rounded-full bg-white/[0.03] flex items-center justify-center">
           <MapPin className="h-8 w-8 text-[var(--text-muted)]" />
         </div>
-        <h1 className="text-xl font-bold text-[var(--text-primary)]">
+        <h1
+          className="text-xl font-bold text-[var(--text-primary)] outline-none"
+          tabIndex={-1}
+          data-route-focus-target="true"
+        >
           {t('share.expired.title', 'Share Link Unavailable')}
         </h1>
         <p className="text-[var(--text-secondary)] text-sm">
@@ -94,6 +98,44 @@ function ExpiredShareView() {
         >
           {t('share.expired.home', 'Go to TeslaSync')}
         </a>
+      </div>
+    </div>
+  );
+}
+
+function SharedDriveLoading() {
+  const { t } = useTranslation();
+
+  return (
+    <div
+      role="status"
+      aria-busy="true"
+      aria-label={t('share.loading', 'Loading shared drive report…')}
+      className="min-h-screen bg-[var(--bg-primary)]"
+    >
+      <header className="border-b border-[var(--border-subtle)] p-4">
+        <div className="flex items-center gap-2">
+          <Logo />
+          <span className="text-sm text-[var(--text-muted)]">
+            {t('share.header', 'Shared Drive Report')}
+          </span>
+        </div>
+      </header>
+      <Skeleton className="h-[50vh] rounded-none" />
+      <div className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-72 max-w-full" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-3">
+          {Array.from({ length: 6 }).map((_, index) => (
+            <Skeleton key={index} className="h-24 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid gap-6 md:grid-cols-2">
+          <Skeleton className="h-72 rounded-xl" />
+          <Skeleton className="h-72 rounded-xl" />
+        </div>
       </div>
     </div>
   );
@@ -164,11 +206,7 @@ export default function SharedDrivePage() {
 
   /* ---- Loading state ---- */
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-[var(--bg-primary)] flex items-center justify-center">
-        <Spinner className="h-8 w-8" />
-      </div>
-    );
+    return <SharedDriveLoading />;
   }
 
   /* ---- Error / expired ---- */
@@ -229,7 +267,16 @@ export default function SharedDrivePage() {
         {/* Title */}
         <FadeIn>
           <div className="space-y-1">
-            <h1 className="text-2xl font-bold text-[var(--text-primary)]">{data.title}</h1>
+            {/* a11y-landmark-ok: the "share link unavailable" heading above
+                lives in a mutually-exclusive early-return branch, so only
+                one of the two <h1> elements can ever be rendered. */}
+            <h1
+              className="text-2xl font-bold text-[var(--text-primary)] outline-none"
+              tabIndex={-1}
+              data-route-focus-target="true"
+            >
+              {data.title}
+            </h1>
             {data.description && (
               <p className="text-[var(--text-secondary)]">{data.description}</p>
             )}

@@ -13,7 +13,7 @@
 
 import { useMemo, useState } from 'react';
 import type { FreshnessQuery } from '@/components/data-display';
-import { useVehicles, useFleetStates, type FleetStateEntry } from '@/api/hooks/useVehicles';
+import { useVehicles, useFleetStates, summariseFleetStates, type FleetStateEntry } from '@/api/hooks/useVehicles';
 import {
   useTeslaEnergySites,
   useTeslaEnergySiteInfo,
@@ -35,8 +35,7 @@ function vehicleDisplayName(v: Vehicle): string {
   return (v.display_name && v.display_name.trim()) || v.vin || `#${v.id}`;
 }
 
-function resolveCurrentSocPct(vehicle: Vehicle, fleetEntry: FleetStateEntry | undefined): number {
-  const fromState = fleetEntry?.state?.battery_level;
+function resolveCurrentSocPct(vehicle: Vehicle, fleetEntry: FleetStateEntry | undefined): number {  const fromState = fleetEntry?.state?.battery_level;
   if (typeof fromState === 'number' && Number.isFinite(fromState)) return fromState;
   const fromList = vehicle.battery_level ?? vehicle.batteryLevel;
   if (typeof fromList === 'number' && Number.isFinite(fromList)) return fromList;
@@ -192,13 +191,32 @@ export function useHomeEnergyOrchestration(): HomeEnergyOrchestration {
 
   const result = useMemo(() => optimizeHomeEnergy(input), [input]);
 
-  const queries = [vehiclesQuery, fleetStatesQuery, sitesQuery, siteInfoQuery, liveStatusQuery, historyQuery].map((q) => ({
-    isFetching: q.isFetching,
-    isError: q.isError,
-    isStale: q.isStale,
-    dataUpdatedAt: q.dataUpdatedAt,
-    refetch: q.refetch,
-  }));
+  /* `useFleetStates` resolves successfully even when every per-vehicle request
+   * failed, so its own `dataUpdatedAt` / `isError` describe the WRAPPER, not
+   * the readings. Substituting the observation-based model keeps this page's
+   * freshness chips from reporting "just now" over data that has not moved. */
+  const fleetSummary = useMemo(
+    () => summariseFleetStates(fleetStatesQuery.data ?? []),
+    [fleetStatesQuery.data],
+  );
+  const fleetFreshness = useMemo(() => ({
+    isFetching: fleetStatesQuery.isFetching,
+    isError: fleetSummary.failedCount > 0,
+    isStale: fleetStatesQuery.isStale || fleetSummary.retainedCount > 0,
+    dataUpdatedAt: fleetSummary.oldestObservedAt ?? 0,
+    refetch: fleetStatesQuery.refetch,
+  }), [fleetStatesQuery, fleetSummary]);
+
+  const queries: FreshnessQuery[] = [
+    ...[vehiclesQuery, sitesQuery, siteInfoQuery, liveStatusQuery, historyQuery].map((q) => ({
+      isFetching: q.isFetching,
+      isError: q.isError,
+      isStale: q.isStale,
+      dataUpdatedAt: q.dataUpdatedAt,
+      refetch: q.refetch,
+    })),
+    fleetFreshness,
+  ];
 
   return {
     isLoading: vehiclesQuery.isLoading,

@@ -48,6 +48,78 @@ export interface SettingsEntry {
  */
 export function getSettingsIndex(t: TFunction): SettingsEntry[] {
   return [
+    // ── Workspace preferences ───────────────────────────────────────
+    {
+      id: 'workspace.persona',
+      href: '/settings#workspace',
+      section: 'workspace',
+      title: t(
+        'search.entries.workspace.persona.title',
+        'Workspace profile',
+      ),
+      description: t(
+        'search.entries.workspace.persona.desc',
+        'Prioritize navigation for an owner, fleet operator, analyst, or administrator.',
+      ),
+      keywords: ['persona', 'role', 'priorities', 'operator', 'analyst'],
+    },
+    {
+      id: 'workspace.landing',
+      href: '/settings#workspace',
+      section: 'workspace',
+      title: t(
+        'search.entries.workspace.landing.title',
+        'Preferred landing page',
+      ),
+      description: t(
+        'search.entries.workspace.landing.desc',
+        'Choose the first page shown when TeslaSync opens.',
+      ),
+      keywords: ['startup', 'home', 'dashboard', 'default page'],
+    },
+    {
+      id: 'workspace.vehicle',
+      href: '/settings#workspace',
+      section: 'workspace',
+      title: t(
+        'search.entries.workspace.vehicle.title',
+        'Default active vehicle',
+      ),
+      description: t(
+        'search.entries.workspace.vehicle.desc',
+        'Choose the vehicle used for the global scope on a fresh app load.',
+      ),
+      keywords: ['car', 'fleet', 'selector', 'vehicle scope'],
+    },
+    {
+      id: 'workspace.range',
+      href: '/settings#workspace',
+      section: 'workspace',
+      title: t(
+        'search.entries.workspace.range.title',
+        'Default analysis window',
+      ),
+      description: t(
+        'search.entries.workspace.range.desc',
+        'Choose the default time range used by global analysis controls.',
+      ),
+      keywords: ['date', 'time', 'period', '7 days', '30 days'],
+    },
+    {
+      id: 'workspace.discovery',
+      href: '/settings#workspace',
+      section: 'workspace',
+      title: t(
+        'search.entries.workspace.discovery.title',
+        'Help and release highlights',
+      ),
+      description: t(
+        'search.entries.workspace.discovery.desc',
+        'Control contextual explanations and product-change highlights.',
+      ),
+      keywords: ['help', 'tooltips', 'what is new', 'changelog', 'release'],
+    },
+
     // ── Tesla account ───────────────────────────────────────────────
     {
       id: 'tesla.connect',
@@ -428,9 +500,9 @@ export function getSettingsIndex(t: TFunction): SettingsEntry[] {
       title: t('search.entries.privacy.recentPagesClear.title', 'Clear recently viewed pages'),
       description: t(
         'search.entries.privacy.recentPagesClear.desc',
-        'Wipe the local list of pages used by the dashboard widget and the Recent section in the command palette.',
+        'Wipe the local list of pages used by the status bar and the Recent section in the command palette.',
       ),
-      keywords: ['recent', 'history', 'clear', 'wipe', 'pages', 'palette', 'dashboard'],
+      keywords: ['recent', 'history', 'clear', 'wipe', 'pages', 'palette', 'status bar', 'footer'],
     },
     {
       id: 'privacy.consent.manage',

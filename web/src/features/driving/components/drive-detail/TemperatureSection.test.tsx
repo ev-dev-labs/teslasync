@@ -106,6 +106,17 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
 
+// TemperatureSection calls useHiddenSeries at component scope; stub it to avoid
+// needing a <Router> wrapper in every test (the hook calls useSearchParams).
+vi.mock('@/hooks/useHiddenSeries', () => ({
+  useHiddenSeries: () => ({
+    hidden: new Set<string>(),
+    toggle: () => undefined,
+    isHidden: () => false,
+    reset: () => undefined,
+  }),
+}));
+
 import { TemperatureSection } from './TemperatureSection';
 
 /** A minimal chart sample; only `chartData.length` gates the chart branch. */
@@ -222,8 +233,8 @@ describe('TemperatureSection — chart chrome + a11y', () => {
     const heading = screen.getByRole('heading', { level: 3, name: 'Temperatures' });
     expect(heading).toBeInTheDocument();
 
-    // The chart body re-states the summary for a focus-stop on the graphic.
-    const body = screen.getByRole('img', {
+    // The named group re-states the summary and can contain legend controls.
+    const body = screen.getByRole('group', {
       name: /Inside, outside, driver and passenger temperature lines/,
     });
     expect(body).toBeInTheDocument();

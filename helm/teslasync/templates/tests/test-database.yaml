@@ -16,7 +16,10 @@ spec:
       image: postgres:17-alpine
       env:
         - name: PGPASSWORD
-          value: {{ include "teslasync.postgresql.password" . | quote }}
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "teslasync.secretName" . }}
+              key: DATABASE_PASS
       command: ['sh', '-c']
       args:
         - |

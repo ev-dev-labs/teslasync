@@ -27,10 +27,8 @@ import {
   VEHICLE_PHOTO_ALLOWED_MIME,
   VEHICLE_PHOTO_MAX_BYTES,
 } from '@/api/hooks/useVehiclePhoto';
-import { Button } from '@/components/ui/Button';
-import { ConfirmDialog } from '@/components/ui/ConfirmDialog';
-import { GlassPanel } from '@/components/ui/GlassPanel';
-import { Spinner } from '@/components/feedback/Spinner';
+import { Button, ConfirmDialog, GlassPanel, Input } from '@/components/ui';
+import { Skeleton } from '@/components/feedback';
 import { useToast } from '@/components/feedback/Toast';
 import { cn } from '@/lib/cn';
 
@@ -157,9 +155,6 @@ export function VehiclePhotoUpload({ vehicleId, className }: VehiclePhotoUploadP
         <h3 className="text-base font-semibold text-[var(--text-primary)]">
           {t('vehicles.photos.upload.title', 'Vehicle photo')}
         </h3>
-        {meta.isLoading ? (
-          <Spinner size="sm" />
-        ) : null}
       </div>
 
       <div
@@ -174,7 +169,17 @@ export function VehiclePhotoUpload({ vehicleId, className }: VehiclePhotoUploadP
             : 'border-[var(--border-subtle)] bg-[var(--surface-2)]',
         )}
       >
-        {currentUrl ? (
+        {meta.isLoading ? (
+          <div
+            role="status"
+            aria-busy="true"
+            aria-label={t('vehicles.photos.loading', 'Loading vehicle photo…')}
+            className="w-full space-y-3"
+          >
+            <Skeleton className="mx-auto h-36 w-full max-w-sm rounded-lg" />
+            <Skeleton className="mx-auto h-4 w-48" />
+          </div>
+        ) : currentUrl ? (
           <img
             data-testid="vehicle-photo-preview"
             src={currentUrl}
@@ -191,7 +196,7 @@ export function VehiclePhotoUpload({ vehicleId, className }: VehiclePhotoUploadP
           {t('vehicles.photos.upload.constraints', 'JPEG or PNG — up to {{max}} MB', { max: maxMB })}
         </p>
 
-        <input
+        <Input
           ref={fileInputRef}
           data-testid="vehicle-photo-input"
           type="file"
@@ -205,6 +210,7 @@ export function VehiclePhotoUpload({ vehicleId, className }: VehiclePhotoUploadP
             data-testid="vehicle-photo-choose"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
+            loading={isUploading}
             variant="primary"
             size="sm"
           >

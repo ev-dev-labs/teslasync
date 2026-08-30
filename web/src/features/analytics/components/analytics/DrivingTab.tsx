@@ -3,15 +3,16 @@ import { useTranslation } from 'react-i18next';
 import { Gauge, MapPin, Clock, Thermometer, TrendingUp, Timer, Activity } from 'lucide-react';
 import {
   ChartTooltip, ChartGradient,
+  ChartLegend,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, ComposedChart, Line, AreaChart, Area, ScatterChart, Scatter,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend, ZAxis,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, ZAxis,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
-import { AnalyticsPanel } from './AnalyticsPanel';
+import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { DrivingPerformanceCards } from './DrivingPerformanceCards';
 import { DrivingTemperatureStats } from './DrivingTemperatureStats';
 import type { FleetAnalyticsQuery } from './constants';
@@ -90,7 +91,7 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
         className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:gap-5 2xl:grid-cols-3"
       >
         {/* Speed Distribution */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.driving.speedDist', 'Speed Distribution')}
           icon={<Gauge className="h-4 w-4" />}
           loading={isLoading}
@@ -98,26 +99,27 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={speedDist.length === 0}
           emptyMessage={t('analytics.driving.noSpeed', 'No speed data')}
+          ariaLabel={t('analytics.driving.speedDistAria', 'Trip count by speed range')}
+          data={speedDist}
+          dataColumns={[
+            { key: 'range', label: t('analytics.driving.speedRange', 'Speed range') },
+            { key: 'count', label: t('analytics.driving.trips', 'Trips') },
+          ]}
+          exportFilename="fleet-speed-distribution"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={t('analytics.driving.speedDistAria', 'Trip count by speed range')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={speedDist} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="range" tick={axisTickSm} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={speedDist} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="range" tick={axisTickSm} />
+              <YAxis tick={axisTick} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Trip Distance Distribution */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.driving.distDist', 'Trip Distance Distribution')}
           icon={<MapPin className="h-4 w-4" />}
           loading={isLoading}
@@ -125,26 +127,27 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={distDist.length === 0}
           emptyMessage={t('analytics.driving.noDistDist', 'No distance distribution data')}
+          ariaLabel={t('analytics.driving.distDistAria', 'Trip count by distance range')}
+          data={distDist}
+          dataColumns={[
+            { key: 'range', label: t('analytics.driving.distanceRange', 'Distance range') },
+            { key: 'count', label: t('analytics.driving.trips', 'Trips') },
+          ]}
+          exportFilename="fleet-distance-distribution"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={t('analytics.driving.distDistAria', 'Trip count by distance range')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={distDist} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="range" tick={axisTickSm} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={distDist} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="range" tick={axisTickSm} />
+              <YAxis tick={axisTick} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name={t('analytics.driving.trips', 'Trips')} fill={CHART_COLORS[2]} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Hourly Driving Pattern */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.driving.hourlyPattern', 'Hourly Driving Pattern')}
           icon={<Clock className="h-4 w-4" />}
           loading={isLoading}
@@ -152,12 +155,20 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={hourly.length === 0}
           emptyMessage={t('analytics.driving.noHourly', 'No hourly data')}
+          ariaLabel={t('analytics.driving.hourlyPatternAria', 'Drives and distance by hour of day')}
+          data={hourlyData}
+          dataColumns={[
+            { key: 'hour', label: t('analytics.driving.hour', 'Hour') },
+            { key: 'drives', label: t('analytics.driving.drives', 'Drives') },
+            {
+              key: 'distance',
+              label: `${t('analytics.driving.distance', 'Distance')} (${distanceUnit})`,
+            },
+          ]}
+          exportFilename="fleet-hourly-driving"
+          chartKey="analytics-hourly-driving"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={t('analytics.driving.hourlyPatternAria', 'Drives and distance by hour of day')}
-          >
+          {({ hiddenSeries }) => (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={hourlyData} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -165,16 +176,16 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
                 <YAxis yAxisId="left" tick={axisTick} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
-                <Bar yAxisId="left" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} />
-                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="distance" name={t('analytics.driving.distance', 'Distance')} stroke={CHART_COLORS[3]} />
+                <ChartLegend />
+                <Bar yAxisId="left" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[0]} radius={[3, 3, 0, 0]} hide={hiddenSeries?.isHidden('drives')} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="distance" name={`${t('analytics.driving.distance', 'Distance')} (${distanceUnit})`} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('distance')} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          )}
+        </AnalyticsChartPanel>
 
         {/* Temp vs Efficiency */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.driving.tempVsEff', 'Temperature vs Efficiency')}
           icon={<Thermometer className="h-4 w-4" />}
           loading={isLoading}
@@ -182,27 +193,32 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={tempEff.length === 0}
           emptyMessage={t('analytics.driving.noTempEff', 'No temperature data')}
+          ariaLabel={`${t('analytics.driving.tempVsEffAria', 'Efficiency versus outside temperature')} (${efficiencyUnit})`}
+          data={tempEffData}
+          dataColumns={[
+            { key: 'temp', label: `${t('analytics.driving.temp', 'Temp')} (${tempUnit})` },
+            {
+              key: 'efficiency',
+              label: `${t('analytics.driving.efficiency', 'Efficiency')} (${efficiencyUnit})`,
+            },
+            { key: 'distance', label: `${t('analytics.driving.distance', 'Distance')} (${distanceUnit})` },
+          ]}
+          exportFilename="fleet-temperature-efficiency"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={`${t('analytics.driving.tempVsEffAria', 'Efficiency versus outside temperature')} (${efficiencyUnit})`}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <ScatterChart margin={chartMarginLabeled}>
-                {chartGrid}
-                <XAxis dataKey="temp" name={t('analytics.driving.temp', 'Temp')} tick={axisTick} unit={tempUnit} type="number" />
-                <YAxis dataKey="efficiency" name={t('analytics.driving.efficiency', 'Efficiency')} tick={axisTick} unit={` ${efficiencyUnit}`} type="number" />
-                <ZAxis dataKey="distance" range={[30, 300]} name={distanceUnit} />
-                <Tooltip content={<ChartTooltip />} />
-                <Scatter data={tempEffData} fill={CHART_COLORS[1]} />
-              </ScatterChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <ScatterChart margin={chartMarginLabeled}>
+              {chartGrid}
+              <XAxis dataKey="temp" name={t('analytics.driving.temp', 'Temp')} tick={axisTick} unit={tempUnit} type="number" />
+              <YAxis dataKey="efficiency" name={t('analytics.driving.efficiency', 'Efficiency')} tick={axisTick} unit={` ${efficiencyUnit}`} type="number" />
+              <ZAxis dataKey="distance" range={[30, 300]} name={distanceUnit} />
+              <Tooltip content={<ChartTooltip />} />
+              <Scatter data={tempEffData} fill={CHART_COLORS[1]} />
+            </ScatterChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Daily Driving Trend */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.driving.dailyTrend', 'Daily Driving Trend')}
           icon={<TrendingUp className="h-4 w-4" />}
           loading={isLoading}
@@ -210,12 +226,17 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={dailyTrend.length === 0}
           emptyMessage={t('analytics.driving.noDailyTrend', 'No daily trend data')}
+          ariaLabel={`${t('analytics.driving.dailyTrendAria', 'Daily driving distance and drive count')} (${distanceUnit})`}
+          data={dailyTrendData}
+          dataColumns={[
+            { key: 'date', label: t('chart.col.date', 'Date') },
+            { key: 'distance', label: `${t('analytics.driving.distance', 'Distance')} (${distanceUnit})` },
+            { key: 'drives', label: t('analytics.driving.drives', 'Drives') },
+          ]}
+          exportFilename="fleet-daily-driving"
+          chartKey="analytics-daily-driving"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={`${t('analytics.driving.dailyTrendAria', 'Daily driving distance and drive count')} (${distanceUnit})`}
-          >
+          {({ hiddenSeries }) => (
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={dailyTrendData} margin={chartMarginLabeled} {...chartAnimation}>
                 {chartGrid}
@@ -223,19 +244,19 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
                 <YAxis yAxisId="left" tick={axisTick} />
                 <YAxis yAxisId="right" orientation="right" tick={axisTick} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
+                <ChartLegend />
                 <defs>
                   <ChartGradient id="dailyDistGrad" color={CHART_COLORS[0]} />
                 </defs>
-                <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="distance" name={distanceUnit} stroke={CHART_COLORS[0]} fill="url(#dailyDistGrad)" />
-                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} stroke={CHART_COLORS[3]} />
+                <Area {...AREA_DEFAULTS} yAxisId="left" dataKey="distance" name={`${t('analytics.driving.distance', 'Distance')} (${distanceUnit})`} stroke={CHART_COLORS[0]} fill="url(#dailyDistGrad)" hide={hiddenSeries?.isHidden('distance')} />
+                <Line {...AREA_DEFAULTS} yAxisId="right" dataKey="drives" name={t('analytics.driving.drives', 'Drives')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('drives')} />
               </ComposedChart>
             </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          )}
+        </AnalyticsChartPanel>
 
         {/* Drive Duration Distribution */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           title={t('analytics.driving.durationDist', 'Drive Duration Distribution')}
           icon={<Timer className="h-4 w-4" />}
           loading={isLoading}
@@ -243,26 +264,27 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={durationDist.length === 0}
           emptyMessage={t('analytics.driving.noDurationData', 'Not enough drive data for distribution chart')}
+          ariaLabel={t('analytics.driving.durationDistAria', 'Drive count by duration range')}
+          data={durationDist}
+          dataColumns={[
+            { key: 'range', label: t('analytics.driving.durationRange', 'Duration range') },
+            { key: 'count', label: t('analytics.driving.drives', 'Drives') },
+          ]}
+          exportFilename="fleet-drive-duration-distribution"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={t('analytics.driving.durationDistAria', 'Drive count by duration range')}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={durationDist} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="range" tick={axisTickSm} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="count" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={durationDist} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="range" tick={axisTickSm} />
+              <YAxis tick={axisTick} />
+              <Tooltip content={<ChartTooltip />} />
+              <Bar dataKey="count" name={t('analytics.driving.drives', 'Drives')} fill={CHART_COLORS[4]} radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
 
         {/* Efficiency Trend — hero band */}
-        <AnalyticsPanel
+        <AnalyticsChartPanel
           className="md:col-span-2 2xl:col-span-3"
           title={t('analytics.driving.effTrend', 'Efficiency Trend')}
           icon={<Activity className="h-4 w-4" />}
@@ -271,26 +293,28 @@ export function DrivingTab({ query }: { query: FleetAnalyticsQuery }) {
           onRetry={refetch}
           isEmpty={effTrend.length === 0}
           emptyMessage={t('analytics.driving.noEffTrend', 'No efficiency trend data')}
+          ariaLabel={`${t('analytics.driving.effTrendAria', 'Daily efficiency trend')} (${efficiencyUnit})`}
+          size="detail"
+          data={effTrend}
+          dataColumns={[
+            { key: 'date', label: t('chart.col.date', 'Date') },
+            { key: 'efficiency', label: `${t('analytics.driving.efficiency', 'Efficiency')} (${efficiencyUnit})` },
+          ]}
+          exportFilename="fleet-efficiency-trend"
         >
-          <div
-            className="h-64 sm:h-72"
-            role="img"
-            aria-label={`${t('analytics.driving.effTrendAria', 'Daily efficiency trend')} (${efficiencyUnit})`}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={effTrend} margin={chartMarginLabeled} {...chartAnimation}>
-                {chartGrid}
-                <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
-                <YAxis tick={axisTick} />
-                <Tooltip content={<ChartTooltip />} />
-                <defs>
-                  <ChartGradient id="effTrendGrad" color={CHART_COLORS[1]} />
-                </defs>
-                <Area {...AREA_DEFAULTS} dataKey="efficiency" name={efficiencyUnit} stroke={CHART_COLORS[1]} fill="url(#effTrendGrad)" />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-        </AnalyticsPanel>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={effTrend} margin={chartMarginLabeled} {...chartAnimation}>
+              {chartGrid}
+              <XAxis dataKey="date" tick={axisTickSm} tickFormatter={(v: string) => v.slice(5)} />
+              <YAxis tick={axisTick} unit={` ${efficiencyUnit}`} />
+              <Tooltip content={<ChartTooltip />} />
+              <defs>
+                <ChartGradient id="effTrendGrad" color={CHART_COLORS[1]} />
+              </defs>
+              <Area {...AREA_DEFAULTS} dataKey="efficiency" name={efficiencyUnit} stroke={CHART_COLORS[1]} fill="url(#effTrendGrad)" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </AnalyticsChartPanel>
       </section>
 
       <DrivingTemperatureStats query={query} />

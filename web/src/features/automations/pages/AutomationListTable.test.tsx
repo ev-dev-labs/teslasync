@@ -259,10 +259,17 @@ describe('AutomationListTable — controlled sorting', () => {
 describe('AutomationListTable — controlled selection', () => {
   it('emits the row key when an unselected row checkbox is toggled', () => {
     const { onSelectionChange } = renderTable();
-    const rowCheckboxes = screen.getAllByRole('checkbox', { name: 'Select row' });
+    // Each checkbox is named after its automation (A11Y): "Select Alpha",
+    // not three indistinguishable "Select row" controls.
+    const rowCheckboxes = screen.getAllByRole('checkbox', { name: /^Select (?!all)/ });
     expect(rowCheckboxes).toHaveLength(3);
     fireEvent.click(rowCheckboxes[0]); // Alpha (id 1) — first row in name-asc order
     expect(onSelectionChange).toHaveBeenCalledWith([1]);
+  });
+
+  it('names each row checkbox after the automation it selects', () => {
+    renderTable();
+    expect(screen.getByRole('checkbox', { name: 'Select Alpha' })).toBeInTheDocument();
   });
 
   it('emits every visible key when the header select-all is toggled', () => {
@@ -273,7 +280,7 @@ describe('AutomationListTable — controlled selection', () => {
 
   it('removes a key when an already-selected row is toggled off', () => {
     const { onSelectionChange } = renderTable({ selectedKeys: [1] });
-    fireEvent.click(screen.getByRole('checkbox', { name: 'Deselect row' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /^Deselect / }));
     expect(onSelectionChange).toHaveBeenCalledWith([]);
   });
 });

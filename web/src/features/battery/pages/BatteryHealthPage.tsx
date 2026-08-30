@@ -14,8 +14,18 @@ import {
   GlassPanel, Badge, Button,
   SectionTitle, PanelTitle, Text, MetricLabel,
 } from '@/components/ui';
+import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
+import { gaugeTone, severityTokens, type GaugeTone, type Severity } from '@/lib/tokens';
 import { LinearGauge } from '@/components/charts';
-import { MetricCard, MetricBar, LiveIndicator } from '@/components/data-display';
+import {
+  DataFreshnessAuto,
+  DataProvenanceBadge,
+  MetricCard,
+  MetricBar,
+  LiveIndicator,
+  OperationalBrief,
+  type OperationalTone,
+} from '@/components/data-display';
 import { Skeleton, EmptyState, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { AIBatteryHealthForecastNarrative } from '@/components/ai/AIBatteryHealthForecastNarrative';
@@ -26,15 +36,15 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useDataState } from '@/hooks/useDataState';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { cn } from '@/lib/cn';
 import { fmtNumber, fmtPercent, fmtInt } from '@/lib/numberFormat';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import DeferredBatterySection from '../components/battery-health/DeferredBatterySection';
 import {
   buildInsights,
   buildRecommendations,
-  degradationColor,
-  gaugeColor,
   healthLabel,
   healthVariant,
   isProjectionTrustworthy,
@@ -57,17 +67,40 @@ const BatteryChargingCharts = lazy(
   () => import('../components/battery-health/BatteryChargingCharts'),
 );
 
-const insightPanelClass = {
-  good: 'border-neon-green/20 bg-neon-green/5',
-  warning: 'border-neon-amber/20 bg-neon-amber/5',
-  critical: 'border-neon-red/20 bg-neon-red/5',
-} as const;
+/**
+ * Insight status → canonical severity.
+ *
+ * The page used to carry its own neon panel/icon maps (`border-neon-green/20
+ * bg-neon-green/5`), which meant a "critical" battery insight looked nothing
+ * like a critical alert anywhere else in the app and its neon fill did not
+ * survive the light themes. Routing through `severityTokens` makes the three
+ * insight states the same three states the rest of the app already speaks.
+ */
+const insightSeverity: Record<'good' | 'warning' | 'critical', Severity> = {
+  good: 'success',
+  warning: 'warn',
+  critical: 'critical',
+};
 
-const insightIconClass = {
-  good: 'text-emerald-300',
-  warning: 'text-amber-300',
-  critical: 'text-rose-300',
-} as const;
+/**
+ * Health score → semantic gauge tone.
+ *
+ * Mirrors the bands `gaugeColor()` uses, but expressed as meaning rather than
+ * as a palette index so the gauge stays consistent with every other status bar
+ * in the app.
+ */
+export function healthTone(score: number): GaugeTone {
+  if (score >= 90) return 'success';
+  if (score >= 70) return 'warning';
+  return 'danger';
+}
+
+/** Degradation rate → semantic gauge tone (≤5 %/yr good, ≤15 %/yr watch). */
+export function degradationTone(pct: number): GaugeTone {
+  if (pct <= 5) return 'success';
+  if (pct <= 15) return 'warning';
+  return 'danger';
+}
 
 const QUICK_LINKS: { to: string; labelKey: string; fallback: string }[] = [
   { to: '/battery-cells', labelKey: 'battery.links.cells', fallback: 'Battery Cells' },
@@ -156,8 +189,9 @@ export default function BatteryHealthPage() {
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : null;
 
   /* ── Data fetching ─────────────────────────────────────────────── */
-  const { data: health, isLoading: healthLoading, error: healthError } =
-    useBatteryHealthAnalytics(vehicleIdStr);
+  const healthQuery = useBatteryHealthAnalytics(vehicleIdStr);
+  const { data: health, isLoading: healthLoading, error: healthError } = healthQuery;
+  const healthDataState = useDataState(healthQuery, { provenance: 'inferred' });
   const { data: chargingLive } = useChargingTelemetryLatest(vehicleId ?? 0);
 
   /* ── Derived: insights & recommendations ───────────────────────── */
@@ -187,11 +221,11 @@ export default function BatteryHealthPage() {
     return <NoVehicleSelected pageTitle={t('battery.title', 'Battery Health')} />;
   }
 
-  const pageActions = (
-    <span className="flex items-center gap-3">
+  const pageContextActions = (
+    <>
       <VehicleSelect />
       <LiveIndicator variant="compact" />
-    </span>
+    </>
   );
 
   /* ── Empty / error ─────────────────────────────────────────────── */
@@ -201,7 +235,7 @@ export default function BatteryHealthPage() {
         title={t('battery.title', 'Battery Health')}
         subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
         error={healthLoading ? null : healthError as Error | null}
-        actions={pageActions}
+        contextActions={pageContextActions}
       >
         <LiveStaleDataBanner />
         <FadeIn>
@@ -210,7 +244,7 @@ export default function BatteryHealthPage() {
         {healthLoading ? (
           <BatteryHealthSkeleton />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             icon={<Battery className="h-10 w-10" aria-hidden="true" />}
             message={t('battery.empty', 'No battery health data available yet.')}
           />
@@ -227,15 +261,329 @@ export default function BatteryHealthPage() {
   // access so the "New vs Now" range cells degrade to a placeholder instead
   // of throwing on `.length` / `[0]`.
   const history = health.history ?? [];
+  const rangeSnapshotCount = history.filter(
+    (point) => Number.isFinite(point.range_m) && point.range_m > 0,
+  ).length;
+  const rangeConfidence =
+    projectionTrustworthy && rangeSnapshotCount >= 3
+      ? 'high'
+      : rangeSnapshotCount >= 2
+        ? 'developing'
+        : 'limited';
+  const rangeConfidenceLabel =
+    rangeConfidence === 'high'
+      ? t('operations.battery.rangeConfidenceHigh', 'High')
+      : rangeConfidence === 'developing'
+        ? t('operations.battery.rangeConfidenceDeveloping', 'Developing')
+        : t('operations.battery.rangeConfidenceLimited', 'Limited');
+  const rangeConfidenceDetail =
+    rangeConfidence === 'high'
+      ? t('operations.battery.rangeConfidenceHighDetail', {
+          count: rangeSnapshotCount,
+          years: yearsTo80,
+          defaultValue:
+            '{{count}} historical range samples support a stable {{years}}-year threshold forecast.',
+        })
+      : rangeConfidence === 'developing'
+        ? t('operations.battery.rangeConfidenceDevelopingDetail', {
+            count: rangeSnapshotCount,
+            defaultValue:
+              '{{count}} historical range samples are available; more history will tighten the forecast.',
+          })
+        : t('operations.battery.rangeConfidenceLimitedDetail', {
+            count: rangeSnapshotCount,
+            defaultValue:
+              'Only {{count}} usable range samples are available; treat projections as directional.',
+          });
+  const chargingStressTone: OperationalTone =
+    health.stress_level === 'Low'
+      ? 'success'
+      : health.stress_level === 'Medium'
+        ? 'warning'
+        : 'danger';
+  const chargingStressLabel =
+    health.stress_level === 'Low'
+      ? t('operations.battery.chargingStressLow', 'Low')
+      : health.stress_level === 'Medium'
+        ? t('operations.battery.chargingStressMedium', 'Medium')
+        : t('operations.battery.chargingStressHigh', 'High');
+  const thermalExposureTone: OperationalTone =
+    health.temp_exposure_score == null
+      ? 'neutral'
+      : health.temp_exposure_score <= 25
+        ? 'success'
+        : health.temp_exposure_score <= 50
+          ? 'warning'
+          : 'danger';
+  const healthOperationalTone: OperationalTone =
+    health.current_soh >= 90
+      ? 'success'
+      : health.current_soh >= 70
+        ? 'warning'
+        : 'danger';
+  const healthAttention = insights.slice(0, 4).map((item, index) => ({
+    key: `battery-insight-${index}`,
+    title: t('operations.battery.signalTitle', 'Signal: {{title}}', {
+      title: item.title,
+    }),
+    description: item.description,
+    tone: item.status === 'good'
+      ? 'success' as const
+      : item.status === 'warning'
+        ? 'warning' as const
+        : 'danger' as const,
+  }));
+  const narrativeEvidence: OperationalNarrative['evidence'] = history
+    .slice(-5)
+    .reverse()
+    .map((snapshot) => ({
+      id: `battery-health-${snapshot.date}`,
+      summary: t(
+        'operations.battery.narrative.snapshotSummary',
+        '{{date}}: {{health}} state of health with {{capacity}} estimated usable capacity.',
+        {
+          date: snapshot.date,
+          health: fmtPercent(snapshot.soh_pct),
+          capacity: formatEnergy(snapshot.capacity_wh),
+        },
+      ),
+      observedAt: snapshot.date,
+      provenance: {
+        source: t('operations.battery.narrative.historySource', 'Battery health history'),
+        recordId: snapshot.date,
+        method: t(
+          'operations.battery.narrative.snapshotMethod',
+          'Direct capacity and range snapshot retained by battery analytics.',
+        ),
+      },
+    }));
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.battery.narrative.whatChanged',
+      'Modeled pack health is {{health}}, with {{rate}} annualized degradation across the available history.',
+      {
+        health: fmtPercent(health.current_soh),
+        rate: `${fmtNumber(health.degradation_rate_pct_per_year, 2)}%`,
+      },
+    ),
+    whyItMatters:
+      healthAttention[0]?.description
+      ?? t(
+        'operations.battery.narrative.healthyImpact',
+        'Stable capacity preserves usable range and reduces near-term service uncertainty.',
+      ),
+    confidence: {
+      label:
+        rangeConfidence === 'high'
+          ? 'high'
+          : rangeConfidence === 'developing'
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.battery.narrative.snapshotBasis',
+          '{{count}} retained battery-health snapshots support this assessment.',
+          { count: history.length },
+        ),
+        projectionTrustworthy
+          ? t(
+              'operations.battery.narrative.projectionBasis',
+              'The degradation projection passed the page stability bounds.',
+            )
+          : t(
+              'operations.battery.narrative.projectionLimitedBasis',
+              'The projection is withheld because the available trend did not pass stability bounds.',
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      health.current_soh < 70
+        ? t(
+            'operations.battery.narrative.serviceResponse',
+            'Arrange an independent battery-health review and preserve the supporting snapshots.',
+          )
+        : chargingStressTone === 'danger'
+          ? t(
+              'operations.battery.narrative.chargingResponse',
+              'Review repeated fast charging and deep discharge exposure before the pattern continues.',
+            )
+          : t(
+              'operations.battery.narrative.monitorResponse',
+              'Continue monitoring capacity, thermal exposure, and charging stress as new snapshots arrive.',
+            ),
+    limitations: [
+      t(
+        'operations.battery.narrative.causeLimitation',
+        'Capacity history can identify a trend but does not diagnose the physical cause of degradation.',
+      ),
+      ...(health.temp_exposure_score == null
+        ? [
+            t(
+              'operations.battery.narrative.temperatureLimitation',
+              'Temperature history is insufficient to score thermal exposure.',
+            ),
+          ]
+        : []),
+      ...(!projectionTrustworthy
+        ? [
+            t(
+              'operations.battery.narrative.projectionLimitation',
+              'Time-to-threshold projections remain directional until a stable trend is available.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.battery.narrative.evidenceLimit',
+        'Supporting evidence is limited to the five most recent retained snapshots.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.battery.analyticsSource', 'Battery analytics'),
+        method: t(
+          'operations.battery.narrative.analyticsMethod',
+          'Models state of health and degradation from retained battery snapshots.',
+        ),
+      },
+      {
+        source: t('operations.battery.narrative.chargingSource', 'Charging history'),
+        method: t(
+          'operations.battery.narrative.chargingMethod',
+          'Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions.',
+        ),
+      },
+    ],
+  };
 
   /* ── Main render ───────────────────────────────────────────────── */
   return (
     <PageContainer
       title={t('battery.title', 'Battery Health')}
       subtitle={t('battery.subtitle', 'Degradation tracking, prediction, charging habits & longevity insights')}
-      actions={pageActions}
+      contextActions={pageContextActions}
     >
       <LiveStaleDataBanner />
+
+      <OperationalBrief
+        testId="battery-operational-brief"
+        eyebrow={t('operations.battery.eyebrow', 'Battery posture')}
+        title={t('operations.battery.title', 'Long-term pack health remains measurable and actionable')}
+        description={t(
+          'operations.battery.description',
+          'Health, degradation, range confidence, charging stress, thermal impact, and cycle exposure are summarized before the deeper evidence.',
+        )}
+        statusLabel={
+          health.current_soh >= 90
+            ? t('operations.battery.statusHealthy', 'Healthy')
+            : health.current_soh >= 70
+              ? t('operations.battery.statusMonitor', 'Monitor')
+              : t('operations.battery.statusService', 'Service review')
+        }
+        statusTone={healthOperationalTone}
+        narrative={narrative}
+        metricColumns={3}
+        freshness={
+          <div className="flex flex-wrap items-center gap-2">
+            <DataProvenanceBadge
+              provenance={healthDataState.provenance}
+              status={healthDataState.status}
+              updatedAt={healthDataState.updatedAt}
+            />
+            <DataFreshnessAuto
+              query={healthQuery}
+              source={t('operations.battery.analyticsSource', 'Battery analytics')}
+            />
+          </div>
+        }
+        scope={
+          <Badge variant="neutral" size="sm">
+            {t('operations.scope.lifetime', 'Lifetime model')}
+          </Badge>
+        }
+        metrics={[
+          {
+            key: 'health',
+            label: t('operations.battery.packScore', 'Pack score'),
+            value: fmtPercent(health.current_soh),
+            detail: t(
+              'operations.battery.healthDetail',
+              'Current modeled health relative to the original usable pack.',
+            ),
+            tone: healthOperationalTone,
+          },
+          {
+            key: 'degradation',
+            label: t('operations.battery.degradationPace', 'Degradation pace'),
+            value: `${fmtNumber(health.degradation_rate_pct_per_year, 2)}%/${t('battery.yr', 'yr')}`,
+            detail: t(
+              'operations.battery.degradationDetail',
+              'Annualized capacity change inferred from available history.',
+            ),
+            tone: health.degradation_rate_pct_per_year <= 5 ? 'success' : 'warning',
+          },
+          {
+            key: 'range-confidence',
+            label: t('operations.battery.rangeConfidence', 'Range confidence'),
+            value: rangeConfidenceLabel,
+            detail: rangeConfidenceDetail,
+            tone:
+              rangeConfidence === 'high'
+                ? 'success'
+                : rangeConfidence === 'developing'
+                  ? 'info'
+                  : 'warning',
+          },
+          {
+            key: 'charging-stress',
+            label: t('operations.battery.chargingStress', 'Charging stress'),
+            value: chargingStressLabel,
+            detail: t('operations.battery.chargingStressDetail', {
+              fast: fmtPercent(health.fast_charge_pct),
+              depth: fmtPercent(health.avg_depth_of_discharge_pct),
+              defaultValue:
+                '{{fast}} fast-charge sessions; {{depth}} average depth of discharge.',
+            }),
+            tone: chargingStressTone,
+          },
+          {
+            key: 'thermal-impact',
+            label: t('operations.battery.thermalImpact', 'Thermal impact'),
+            value:
+              health.temp_exposure_score == null
+                ? '—'
+                : `${fmtInt(health.temp_exposure_score)} / 100`,
+            detail:
+              health.temp_exposure_score == null
+                ? t(
+                    'operations.battery.thermalImpactUnavailable',
+                    'More temperature history is required to estimate thermal exposure.',
+                  )
+                : t(
+                    'operations.battery.thermalImpactDetail',
+                    'Lower exposure is better; sustained high temperatures increase pack wear.',
+                  ),
+            tone: thermalExposureTone,
+          },
+          {
+            key: 'cycles',
+            label: t('operations.battery.cycleExposure', 'Cycle exposure'),
+            value: fmtNumber(health.total_cycles, 0),
+            detail: t(
+              'operations.battery.cyclesDetail',
+              'Equivalent full cycles accumulated across charging activity.',
+            ),
+            tone: 'neutral',
+          },
+        ]}
+        attention={healthAttention}
+        provenance={t(
+          'operations.battery.provenance',
+          'Calculated from battery-health snapshots, charging history, and the latest available BMS telemetry.',
+        )}
+      />
 
       {/* AI battery-health forecast narrator. Hidden when ai_mode='off' or
           the per-feature toggle is off; baseline chart remains. */}
@@ -246,11 +594,27 @@ export default function BatteryHealthPage() {
       {/* ── 1. KPI band — summary metrics ─────────────────────────── */}
       <SectionErrorBoundary name="battery:summary-cards" fallbackTitle={t('battery.section.summaryCardsFailed', 'Summary metrics failed to load')}>
         <FadeIn>
+          {/* HELP-03. These four words drive most of the misreadings on this
+              page: SoH looks like a fault code, degradation looks like a
+              defect, rated range looks like a measurement, and SOC looks like
+              a fuel gauge. Defining them where they are used — rather than
+              only in the Help glossary — is the whole point of the inline
+              affordance. Each `<GlossaryTerm>` self-gates on the user's
+              contextual-help preference and degrades to plain text. */}
+          <p
+            className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+            data-testid="battery-glossary-strip"
+          >
+            <span>{t('battery.glossary.lead', 'Terms on this page:')}</span>
+            <GlossaryTerm term="state_of_health" />
+            <GlossaryTerm term="degradation" />
+            <GlossaryTerm term="soc" />
+            <GlossaryTerm term="rated_range" />
+          </p>
           <section
             aria-label={t('battery.section.kpis', 'Battery health summary metrics')}
             className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-7"
-          >
-            <MetricCard
+          >            <MetricCard
               label={t('battery.metric.soh', 'State of Health')}
               value={fmtPercent(health.current_soh)}
               icon={<Heart className="h-5 w-5" aria-hidden="true" />}
@@ -327,7 +691,7 @@ export default function BatteryHealthPage() {
                     unit="/100"
                     hideScale
                     size={130}
-                    color={gaugeColor(health.current_soh)}
+                    tone={healthTone(health.current_soh)}
                   />
                   <Badge variant={healthVariant(health.current_soh)} className="mt-2">
                     {healthLabel(health.current_soh, t)}
@@ -338,21 +702,21 @@ export default function BatteryHealthPage() {
                   max={100}
                   label={t('battery.gauge.capacity', 'Capacity')}
                   unit="%"
-                  color="#00f0ff"
+                  tone="info"
                 />
                 <LinearGauge
                   value={health.degradation_rate_pct_per_year}
                   max={10}
                   label={t('battery.gauge.degradation', 'Degradation')}
                   unit="%/yr"
-                  color={degradationColor(health.degradation_rate_pct_per_year)}
+                  tone={degradationTone(health.degradation_rate_pct_per_year)}
                 />
                 <LinearGauge
                   value={health.total_cycles}
                   max={1500}
                   label={t('battery.gauge.cycles', 'Cycles')}
                   unit=""
-                  color="#a855f7"
+                  tone="purple"
                 />
                 <div className="flex flex-col items-center justify-center text-center">
                   <Text as="p" size="3xl" weight="bold" color="primary" className="tabular-nums">{yearsTo80}</Text>
@@ -375,7 +739,7 @@ export default function BatteryHealthPage() {
                     label={t('battery.bar.capacity', 'Current Capacity')}
                     value={Math.round(capacityNowPct)}
                     max={100}
-                    color="#00f0ff"
+                    color={gaugeTone.info}
                   />
                   <Text as="p" size="2xs" color="muted" className="mt-1">
                     {formatEnergy(health.estimated_capacity_wh, { precision: 1 })} / {formatEnergy(health.original_capacity_wh, { precision: 1 })}
@@ -386,7 +750,7 @@ export default function BatteryHealthPage() {
                     label={t('battery.bar.degradation', 'Degradation')}
                     value={health.degradation_rate_pct_per_year}
                     max={10}
-                    color={degradationColor(health.degradation_rate_pct_per_year)}
+                    color={gaugeTone[degradationTone(health.degradation_rate_pct_per_year)]}
                   />
                   <Text as="p" size="2xs" color="muted" className="mt-1">
                     {fmtNumber(health.degradation_rate_pct_per_year, 2)}% {t('battery.perYear', 'per year')}
@@ -397,7 +761,7 @@ export default function BatteryHealthPage() {
                     label={t('battery.bar.cycles', 'Charge Cycles')}
                     value={health.total_cycles}
                     max={1500}
-                    color="#a855f7"
+                    color={gaugeTone.purple}
                   />
                   <Text as="p" size="2xs" color="muted" className="mt-1">
                     {t('battery.warrantyLimit', 'Tesla warranty: 1,500 cycles / 70%')}
@@ -430,10 +794,10 @@ export default function BatteryHealthPage() {
         >
           <SectionErrorBoundary name="battery:thermal" fallbackTitle={t('battery.section.thermalFailed', 'Thermal monitoring failed to load')}>
             <GlassPanel className="h-full p-4 sm:p-5">
-              <SectionTitle className="mb-4 flex items-center gap-2">
+              <PanelTitle className="mb-4 flex items-center gap-2">
                 <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
                 {t('battery.thermal.title', 'Thermal Monitoring')}
-              </SectionTitle>
+              </PanelTitle>
               <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <MetricCard
                   label={t('battery.thermal.moduleTempMax', 'Module Temp (Max)')}
@@ -501,10 +865,10 @@ export default function BatteryHealthPage() {
 
           <SectionErrorBoundary name="battery:capacity-range" fallbackTitle={t('battery.section.capacityRangeFailed', 'Capacity & range comparison failed to load')}>
             <GlassPanel className="h-full p-4 sm:p-5">
-              <SectionTitle className="mb-4 flex items-center gap-2">
+              <PanelTitle className="mb-4 flex items-center gap-2">
                 <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
                 {t('battery.newVsNow.title', 'Capacity & Range: New vs Now')}
-              </SectionTitle>
+              </PanelTitle>
               <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
                 <StatCell
                   label={t('battery.newVsNow.capNew', 'Capacity When New')}
@@ -563,20 +927,24 @@ export default function BatteryHealthPage() {
             </SectionTitle>
             {insights.length > 0 ? (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
-                {insights.map((ins, i) => (
-                  <GlassPanel
-                    key={i}
-                    className={cn('border p-4 transition-all duration-normal', insightPanelClass[ins.status])}
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={cn('mt-0.5', insightIconClass[ins.status])}>{ins.icon}</div>
-                      <div className="min-w-0">
-                        <Text as="p" size="sm" weight="medium" color="primary">{ins.title}</Text>
-                        <Text as="p" variant="bodySm" className="mt-0.5">{ins.description}</Text>
+                {insights.map((ins, i) => {
+                  const sev = severityTokens[insightSeverity[ins.status]];
+                  return (
+                    <GlassPanel
+                      key={i}
+                      data-severity={insightSeverity[ins.status]}
+                      className={cn('border p-4 transition-all duration-normal', sev.border, sev.bg)}
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className={cn('mt-0.5', sev.fg)}>{ins.icon}</div>
+                        <div className="min-w-0">
+                          <Text as="p" size="sm" weight="medium" color="primary">{ins.title}</Text>
+                          <Text as="p" variant="bodySm" className="mt-0.5">{ins.description}</Text>
+                        </div>
                       </div>
-                    </div>
-                  </GlassPanel>
-                ))}
+                    </GlassPanel>
+                  );
+                })}
               </div>
             ) : (
               <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */

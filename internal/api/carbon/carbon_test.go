@@ -98,9 +98,9 @@ func TestGasEquivCO2Kg(t *testing.T) {
 func TestGreenScore(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name              string
-		realized, lo, hi  float64
-		want              float64
+		name             string
+		realized, lo, hi float64
+		want             float64
 	}{
 		{"always greenest ⇒ 100", 200, 200, 500, 100},
 		{"always dirtiest ⇒ 0", 500, 200, 500, 0},
@@ -317,9 +317,9 @@ func TestGreenestWindow(t *testing.T) {
 func TestPotentialSaving(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name                     string
-		energy, current, window  float64
-		wantKg, wantPct          float64
+		name                    string
+		energy, current, window float64
+		wantKg, wantPct         float64
 	}{
 		{"clear saving", 100, 300, 200, 10, (100.0 / 300.0) * 100},
 		{"large saving", 50, 500, 200, 15, 60},

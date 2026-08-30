@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import '@/i18n';
 import { RangePicker } from '../RangePicker';
+import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
 
 const baseProps = {
   value: { start: '2025-01-01', end: '2025-01-07' },
@@ -15,6 +16,26 @@ describe('<RangePicker /> trigger', () => {
     expect(trigger).toHaveTextContent('Custom range');
     // The readout always renders the resolved dates.
     expect(trigger).toHaveTextContent(/jan/i);
+  });
+
+  describe('<RangePicker /> workspace ownership', () => {
+    it('defers to the managed shell range without rendering a duplicate trigger', () => {
+      render(
+        <WorkspaceScopeProvider scope={{ range: true, vehicle: false }}>
+          <RangePicker {...baseProps} onChange={vi.fn()} />
+        </WorkspaceScopeProvider>,
+      );
+      expect(screen.queryByRole('button', { name: /date range/i })).toBeNull();
+    });
+
+    it('keeps intentionally local ranges visible under a managed shell', () => {
+      render(
+        <WorkspaceScopeProvider scope={{ range: true, vehicle: false }}>
+          <RangePicker {...baseProps} onChange={vi.fn()} scope="local" />
+        </WorkspaceScopeProvider>,
+      );
+      expect(screen.getByRole('button', { name: /date range/i })).toBeInTheDocument();
+    });
   });
 
   it('toggles the popover open/closed on click', () => {

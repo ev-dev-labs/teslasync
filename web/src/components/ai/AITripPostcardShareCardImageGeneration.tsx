@@ -77,6 +77,11 @@ function InnerSection({ tripId, styleHint }: InnerSectionProps) {
     url: '/ai/share-cards/trip-image/draft',
     body,
     onEvent: () => {},
+    // AI-01: trip + style-hint scope is part of stream identity —
+    // changing either aborts an in-flight draft and clears the
+    // previous scope's postcard prompt before the new scope streams
+    // in.
+    scopeKey: numericTripId > 0 ? `${numericTripId}:${styleHint ?? ''}` : null,
   })
   const haveInputs = numericTripId > 0
   return (

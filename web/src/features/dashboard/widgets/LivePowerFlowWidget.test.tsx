@@ -495,7 +495,7 @@ describe('LivePowerFlowWidget — interactions & a11y', () => {
     const live = setLive({ data: makeLive() });
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(sites.refetch).toHaveBeenCalledTimes(1);
     expect(live.refetch).toHaveBeenCalledTimes(1);
@@ -506,7 +506,7 @@ describe('LivePowerFlowWidget — interactions & a11y', () => {
     const live = setLive({ data: undefined });
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(sites.refetch).toHaveBeenCalledTimes(1);
     expect(live.refetch).not.toHaveBeenCalled();

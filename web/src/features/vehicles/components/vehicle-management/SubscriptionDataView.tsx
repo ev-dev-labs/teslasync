@@ -92,7 +92,7 @@ export function SubscriptionDataView({
   if (eligibility.offers.length === 0) {
     return (
       <div>
-        <EmptyState
+        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
           title={t(
             'vehicleManagement.subscriptions.emptyTitle',
             'No eligible subscriptions returned',

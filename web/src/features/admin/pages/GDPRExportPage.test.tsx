@@ -19,7 +19,7 @@
  *   3. Deep link — a `?id=` on mount auto-fetches and mirrors the id into the
  *      input.
  *   4. 404 → the "Artifact not found" danger banner (no KPI band).
- *   5. 503 → the "Subsystem unavailable" warning banner (SUBSYSTEM_NOT_CONFIGURED).
+ *   5. 503 → the unsupported-deployment notice (SUBSYSTEM_NOT_CONFIGURED).
  *   6. 5xx → a recoverable QueryError; Retry refetches and the artifact paints.
  *   7. `failed` status → the "Export failed" banner carries the backend error,
  *      the download panel explains no bundle is available, and the lifecycle
@@ -311,7 +311,7 @@ describe('GDPRExportPage — error branches', () => {
     wire({ [ART_A]: () => Promise.reject(new ApiError('nope', 503)) });
     renderPage([`/admin/gdpr-exports?id=${ART_A}`]);
 
-    expect(await screen.findByText('Subsystem unavailable')).toBeInTheDocument();
+    expect(await screen.findByText('Feature not supported')).toBeInTheDocument();
     expect(
       screen.getByText(/GDPR export subsystem is not configured/),
     ).toBeInTheDocument();

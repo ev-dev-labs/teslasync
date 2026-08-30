@@ -76,7 +76,10 @@ vi.mock('react-i18next', () => ({
 // dataKey / tick marker / tickFormatter output, and the tooltip formatter output
 // for inspection. Only the chart library is stubbed — the widget's own series
 // wiring, axis config, and formatters still run.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+  ...chartTestDoubles,
   ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
@@ -139,7 +142,8 @@ vi.mock('@/components/charts', () => ({
   axisTick: { __id: 'tick-lg' },
   axisTickSm: { __id: 'tick-sm' },
   fmt: (v: number, d = 0) => Number(v).toFixed(d),
-}));
+  };
+});
 
 const { useSitesMock, useHistoryMock } = vi.hoisted(() => ({
   useSitesMock: vi.fn(),

@@ -367,7 +367,7 @@ describe('RegenEfficiencyWidget — refresh wiring', () => {
     mockRegen.mockReturnValue(qr({ data: makeData(), refetch }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -377,7 +377,7 @@ describe('RegenEfficiencyWidget — refresh wiring', () => {
     mockRegen.mockReturnValue(qr({ data: makeData(), refetch }));
     renderWidget(COMPACT);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

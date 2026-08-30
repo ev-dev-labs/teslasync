@@ -417,6 +417,25 @@ describe('DriveScorePage', () => {
     ).not.toBeInTheDocument();
   });
 
+  it('keeps scored evidence visible while naming drives excluded for missing measurements', () => {
+    h.drives = makeQuery({
+      data: [
+        driveGreat,
+        makeDrive({ id: 99, energyUsedWh: null, avgPowerW: null, maxSpeedMps: null }),
+      ],
+    });
+
+    renderPage();
+
+    expect(screen.getByText('Score evidence is partial')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        '1 drive is excluded because measured energy, average power, or maximum speed is unavailable.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByText('Best Drive')).toBeInTheDocument();
+  });
+
   it('empties every section when an out-of-range date window is committed', () => {
     renderPage();
 
@@ -467,7 +486,7 @@ describe('scoreDrive', () => {
     });
   });
 
-  it('falls back to battery-delta energy, 200 Wh/km, and default power/speed for null SI fields', () => {
+  it('returns null rather than inventing missing energy, power, or speed evidence', () => {
     const score = scoreDrive(
       makeDrive({
         energyUsedWh: null,
@@ -478,29 +497,21 @@ describe('scoreDrive', () => {
         endBatteryPct: null,
       }),
     );
-    // distanceM null → division-by-zero guard yields the 200 Wh/km default;
-    // avgPowerW null → 30 kW default; maxSpeedMps null → 80 mph default.
-    expect(score).toEqual({
-      total: 67,
-      efficiency: 17,
-      smoothness: 20,
-      speed: 30,
-      grade: 'C',
-      whPerKm: 200,
-    });
+    expect(score).toBeNull();
   });
 
   it('floors efficiency and smoothness at zero for an aggressive drive', () => {
     const score = scoreDrive(
       makeDrive({ energyUsedWh: 40_000, distanceM: 100_000, avgPowerW: 120_000, maxSpeedMps: 60 }),
     );
-    expect(score.efficiency).toBe(0);
-    expect(score.smoothness).toBe(0);
-    expect(score.whPerKm).toBe(400);
-    expect(score.grade).toBe('F');
-    expect(score.total).toBeLessThan(15);
-    expect(score.speed).toBeGreaterThan(0);
-    expect(score.speed).toBeLessThan(30);
+    expect(score).not.toBeNull();
+    expect(score?.efficiency).toBe(0);
+    expect(score?.smoothness).toBe(0);
+    expect(score?.whPerKm).toBe(400);
+    expect(score?.grade).toBe('F');
+    expect(score?.total).toBeLessThan(15);
+    expect(score?.speed).toBeGreaterThan(0);
+    expect(score?.speed).toBeLessThan(30);
   });
 });
 

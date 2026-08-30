@@ -170,7 +170,7 @@ describe('SchemaDriftPage', () => {
 
     renderPage();
 
-    expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(
       screen.getByText(/subsystem is not configured on this deployment/i),
     ).toBeInTheDocument();
@@ -199,7 +199,7 @@ describe('SchemaDriftPage', () => {
     expect(retries.length).toBeGreaterThanOrEqual(3);
     expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(3);
     // A generic error is NOT the "not configured" banner.
-    expect(screen.queryByText('Subsystem unavailable')).toBeNull();
+    expect(screen.queryByText('Feature not supported')).toBeNull();
 
     fireEvent.click(retries[0]);
     expect(refetch).toHaveBeenCalledTimes(1);

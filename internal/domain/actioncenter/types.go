@@ -8,15 +8,20 @@ type SourceFeature string
 const (
 	SourceActiveAlerts         SourceFeature = "active_alerts"
 	SourceAdvancedIntelligence SourceFeature = "advanced_intelligence"
+	SourceBatteryHealth        SourceFeature = "battery_health"
 	SourceChargingReliability  SourceFeature = "charging_reliability"
+	SourceDriveEfficiency      SourceFeature = "drive_efficiency"
 	SourceFleetMaintenance     SourceFeature = "fleet_maintenance"
 	SourceSignalHealth         SourceFeature = "signal_health"
+	SourceSystemHealth         SourceFeature = "system_health"
+	SourceVehicleReadiness     SourceFeature = "vehicle_readiness"
 )
 
 func (v SourceFeature) Valid() bool {
 	switch v {
-	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceChargingReliability,
-		SourceFleetMaintenance, SourceSignalHealth:
+	case SourceActiveAlerts, SourceAdvancedIntelligence, SourceBatteryHealth,
+		SourceChargingReliability, SourceDriveEfficiency, SourceFleetMaintenance,
+		SourceSignalHealth, SourceSystemHealth, SourceVehicleReadiness:
 		return true
 	default:
 		return false
@@ -327,7 +332,53 @@ type WorkOrderRecord struct {
 }
 
 type SignalHealthRecord struct {
-	Vehicle        VehicleRef
-	LatestSignalAt *time.Time
-	CheckedAt      time.Time
+	Vehicle                VehicleRef
+	LatestSignalAt         *time.Time
+	LatestUnversionedAt    *time.Time
+	SampleCount            int64
+	VersionedSampleCount   int64
+	UnversionedSampleCount int64
+	CheckedAt              time.Time
+}
+
+type BatteryHealthRecord struct {
+	LedgerID             int64
+	Vehicle              VehicleRef
+	SohPct               float64
+	EquivalentFullCycles *float64
+	IssuedAt             time.Time
+}
+
+type DriveEfficiencyRecord struct {
+	DriveID               int64
+	Vehicle               VehicleRef
+	StartedAt             time.Time
+	EndedAt               time.Time
+	DistanceM             float64
+	EnergyUsedWh          float64
+	EnergyIntensityWhPerM float64
+	BaselineWhPerM        float64
+	BaselineSampleCount   int64
+	IntensityRatio        float64
+	ExcessEnergyWh        float64
+}
+
+type CommandReliabilityRecord struct {
+	Vehicle         VehicleRef
+	AttemptCount    int64
+	FailureCount    int64
+	LatestFailureAt time.Time
+	WindowStart     time.Time
+	CheckedAt       time.Time
+}
+
+type SystemIncidentRecord struct {
+	ID                 int64
+	Title              string
+	Description        string
+	Severity           string
+	Status             string
+	AffectedComponents []string
+	StartedAt          time.Time
+	UpdatedAt          time.Time
 }

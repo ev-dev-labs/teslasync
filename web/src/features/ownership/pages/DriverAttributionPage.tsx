@@ -14,6 +14,7 @@ import {
   CartesianGrid,
   Cell,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -32,6 +33,7 @@ import type { Column } from '@/components/ui';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveFingerprint, DriverCluster, DriverProfile } from '@/types/ownership';
@@ -88,6 +90,8 @@ export default function DriverAttributionPage() {
   const [assignDraft, setAssignDraft] = useState({ drive_id: 0, driver_profile_id: 0 });
 
   usePageTitle(t('ownership.driver.navTitle', 'Driver Fingerprinting'));
+
+  const driverAttrHidden = useHiddenSeries('driver-attribution-chart');
 
   const reportQuery = useDriverAttribution(vehicleId, windowDays, 100, 0);
   const profilesQuery = useDriverProfiles(vehicleId);
@@ -513,6 +517,7 @@ export default function DriverAttributionPage() {
               },
             ]}
             height={280}
+            chartKey="driver-attribution-chart"
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={shareData} margin={chartMargin}>
@@ -520,7 +525,13 @@ export default function DriverAttributionPage() {
                 <XAxis dataKey="name" tick={axisTick} />
                 <YAxis tick={axisTick} unit="%" />
                 <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="share" radius={[4, 4, 0, 0]}>
+                <ChartLegend state={driverAttrHidden} />
+                <Bar
+                  dataKey="share"
+                  name={t('ownership.driver.chart.col.share', 'Share of drives')}
+                  radius={[4, 4, 0, 0]}
+                  hide={driverAttrHidden.isHidden('share')}
+                >
                   {shareData.map((entry, index) => (
                     <Cell
                       key={`share-${index}`}
@@ -528,7 +539,13 @@ export default function DriverAttributionPage() {
                     />
                   ))}
                 </Bar>
-                <Bar dataKey="aggression" fill="rgba(251,191,36,0.35)" radius={[4, 4, 0, 0]} />
+                <Bar
+                  dataKey="aggression"
+                  name={t('ownership.driver.chart.col.aggression', 'Aggression score')}
+                  fill="rgba(251,191,36,0.35)"
+                  radius={[4, 4, 0, 0]}
+                  hide={driverAttrHidden.isHidden('aggression')}
+                />
               </BarChart>
             </ResponsiveContainer>
           </ChartContainer>

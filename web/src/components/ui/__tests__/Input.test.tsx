@@ -101,3 +101,37 @@ describe('Input — readable disabled state', () => {
     expect(input.className).not.toContain('disabled:opacity-50');
   });
 });
+
+describe('Input — feedback association', () => {
+  it('generates a stable id for an unlabelled error field', () => {
+    render(<Input aria-label="Threshold" error="Enter a value" />);
+    const input = screen.getByRole('textbox', { name: 'Threshold' });
+    expect(input.id).toMatch(/^input-/);
+    expect(input).toHaveAttribute('aria-describedby', `${input.id}-error`);
+    expect(document.getElementById(`${input.id}-error`)).toHaveTextContent(
+      'Enter a value',
+    );
+  });
+
+  it('preserves caller descriptions while adding field feedback', () => {
+    render(
+      <>
+        <span id="external-help">External help</span>
+        <Input
+          label="Threshold"
+          aria-describedby="external-help"
+          hint="Use a whole number"
+        />
+      </>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Threshold' })).toHaveAttribute(
+      'aria-describedby',
+      'external-help threshold-hint',
+    );
+  });
+
+  it('announces validation errors through an alert role', () => {
+    render(<Input label="Threshold" error="Out of range" />);
+    expect(screen.getByRole('alert')).toHaveTextContent('Out of range');
+  });
+});

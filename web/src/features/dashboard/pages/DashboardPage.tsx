@@ -1,20 +1,37 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuthStatus } from '@/api/hooks/useSettings';
-import { useSyncVehicles, useVehicles } from '@/api/hooks/useVehicles';
-import { useAlerts } from '@/api/hooks/useAlerts';
+import {
+  FLEET_STATES_QUERY_ROOT,
+  useFleetStates,
+  useSyncVehicles,
+  useVehicles,
+} from '@/api/hooks/useVehicles';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, PrintButton, Heading, Text, Caption } from '@/components/ui';
+import { VisuallyHidden } from '@/components/a11y';
+import {
+  Badge,
+  Button,
+  BUTTON_BASE,
+  BUTTON_VARIANTS,
+  Caption,
+  GlassPanel,
+  Heading,
+  Popover,
+  PrintButton,
+  Text,
+} from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AlertBanner, LiveStaleDataBanner, Skeleton } from '@/components/feedback';
-import { LiveIndicator, DataFreshnessAuto } from '@/components/data-display';
 import { useRealtimeEvents } from '@/hooks/useRealtimeEvents';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTheme } from '@/components/ui/ThemeProvider';
 import { Palette } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { DashboardGrid } from '../components/DashboardGrid';
 import { WidgetPicker } from '../components/WidgetPicker';
 import { WidgetSettingsModal } from '../components/WidgetSettingsModal';
@@ -24,17 +41,20 @@ import { TemplateGallery } from '../components/TemplateGallery';
 import { ExportModal } from '../components/ExportModal';
 import { ImportPreviewModal } from '../components/ImportPreviewModal';
 import { DashboardSettingsModal } from '../components/DashboardSettingsModal';
-import { KioskOverlay } from '../components/KioskOverlay';
 import { KioskSettingsModal } from '../components/KioskSettingsModal';
 import { AddWidgetButton } from '../components/AddWidgetButton';
 import { WidgetCatalogueDialog } from '../components/WidgetCatalogueDialog';
-import { RecentlyViewedWidget } from '../components/RecentlyViewedWidget';
+import { FleetOperationsBrief } from '../components/FleetOperationsBrief';
 import { useDashboardLayout } from '../hooks/useDashboardLayout';
 import { useLayoutKeyboard } from '../hooks/useLayoutKeyboard';
 import { useKioskMode } from '../hooks/useKioskMode';
 import { fromUrlSafeBase64 } from '../hooks/validateImport';
 import { getWidgetDef } from '../widgets/registry';
 import { markCustomizeDashboardCompleted } from '@/features/onboarding/checklist';
+import {
+  DASHBOARD_PRESET_REQUESTED_EVENT,
+  consumePendingDashboardPreset,
+} from '@/lib/dashboardPresets';
 import type { WidgetConfig, SavedDashboard } from '../widgets/types';
 
 import { Icons } from '@/lib/icons';
@@ -109,9 +129,9 @@ function ThemeFirstRunBanner() {
       title={t('theme.firstRunTitle', 'Personalize TeslaSync')}
       onClose={persistDismiss}
     >
-      <div className="flex flex-wrap items-center gap-3">
-        <span className="flex-1 min-w-0">{t('theme.firstRunBody', 'Pick a color theme that fits your style.')}</span>
-        <div className="flex gap-2 shrink-0">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="min-w-0 sm:flex-1">{t('theme.firstRunBody', 'Pick a color theme that fits your style.')}</span>
+        <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">
           <Button variant="primary" size="sm" onClick={openPicker}>
             {t('theme.firstRunOpen', 'Open theme picker')}
           </Button>
@@ -124,9 +144,97 @@ function ThemeFirstRunBanner() {
   );
 }
 
+function DashboardMoreMenu({
+  onExport,
+  onImport,
+  onKiosk,
+}: {
+  onExport: () => void;
+  onImport: () => void;
+  onKiosk: () => void;
+}) {
+  const { t } = useTranslation('dashboard');
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const run = (action: () => void) => {
+    setOpen(false);
+    action();
+  };
+
+  return (
+    <>
+      <Button
+        ref={triggerRef}
+        type="button"
+        variant="ghost"
+        size="sm"
+        onClick={() => setOpen((value) => !value)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={t('dashboard.moreActions', 'More dashboard actions')}
+      >
+        <Icons.moreInline className="h-4 w-4" aria-hidden="true" />
+        <span className="hidden xl:inline">{t('dashboard.more', 'More')}</span>
+      </Button>
+      <Popover
+        open={open}
+        onClose={() => setOpen(false)}
+        anchorRef={triggerRef}
+        align="end"
+        ariaLabel={t('dashboard.moreActions', 'More dashboard actions')}
+        className="w-64 p-2"
+      >
+        <div className="px-2 pb-2 pt-1">
+          <Heading level="panel">{t('dashboard.dashboardTools', 'Dashboard tools')}</Heading>
+          <Caption className="mt-0.5 block">
+            {t('dashboard.dashboardToolsHelp', 'Manage, present, or share this layout.')}
+          </Caption>
+        </div>
+        <div className="space-y-1 border-t border-[var(--border-subtle)] pt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => run(onExport)}
+            className="w-full justify-start"
+          >
+            <Icons.download className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('dashboard.export', 'Export dashboard')}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => run(onImport)}
+            className="w-full justify-start"
+          >
+            <Icons.upload className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('dashboard.import', 'Import dashboard')}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => run(onKiosk)}
+            className="w-full justify-start"
+          >
+            <Icons.tv className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+            {t('dashboard.kiosk', 'Kiosk mode')}
+          </Button>
+          <PrintButton
+            label={t('dashboard.printSnapshot', 'Print snapshot')}
+            beforePrint={() => setOpen(false)}
+            className="w-full justify-start"
+          />
+        </div>
+      </Popover>
+    </>
+  );
+}
+
 export default function DashboardPage() {
   const { t } = useTranslation('dashboard');
-  usePageTitle(t('title', 'Command Center'));
+  usePageTitle(t('title', 'Fleet Operations'));
   const queryClient = useQueryClient();
 
   /* ——— Dashboard layout state ——— */
@@ -137,10 +245,47 @@ export default function DashboardPage() {
     updateLayouts, autoArrange, getWidgetSize,
     switchDashboard, createDashboard, renameDashboard, deleteDashboard,
     reorderDashboards, duplicateDashboard, updateDashboardSettings, updateDashboardIcon,
-    applyPreset, resetToDefault, exportDashboard, importDashboardFromData,
+    applyPreset, applyRolePreset, resetToDefault, exportDashboard, importDashboardFromData,
     canUndo, canRedo, undoCount, undo, redo,
     dirty, pinToVehicle,
   } = useDashboardLayout();
+
+  /* ——— HELP-11: adopt a curated role preset the user explicitly requested ———
+   *
+   * The picker lives on /help, which is a different route, so the request is
+   * normally queued while this page is unmounted. Two triggers cover both
+   * orderings without either duplicating a dashboard:
+   *
+   *   • mount — the user picked a role on /help and then navigated here;
+   *   • event — the user has both surfaces open, or picks while this page is
+   *     already mounted.
+   *
+   * The request is a ONE-SHOT record, consumed exactly once. It is emphatically
+   * NOT "preference !== applied": applied state is derived from the live widget
+   * set, so that comparison stayed true forever once a user customised
+   * anything, and every remount silently re-applied the preset — restoring
+   * deleted widgets, reversing undo, and overwriting whichever dashboard the
+   * user had switched to. Navigating to a page must never mutate a layout.
+   *
+   * Re-applying after customising is available, but only as an explicit action
+   * on the Help panel, which queues a fresh request. */
+  const applyRolePresetRef = useRef(applyRolePreset);
+  applyRolePresetRef.current = applyRolePreset;
+
+  useEffect(() => {
+    const adoptPending = () => {
+      // Consume first: a request that is taken and then fails to apply is
+      // dropped, which is strictly safer than one that survives to re-apply on
+      // every future mount.
+      const request = consumePendingDashboardPreset();
+      if (!request) return;
+      applyRolePresetRef.current(request.role);
+    };
+
+    adoptPending();
+    window.addEventListener(DASHBOARD_PRESET_REQUESTED_EVENT, adoptPending);
+    return () => window.removeEventListener(DASHBOARD_PRESET_REQUESTED_EVENT, adoptPending);
+  }, []);
   const [showPicker, setShowPicker] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
@@ -195,17 +340,16 @@ export default function DashboardPage() {
   /* ——— Kiosk mode ——— */
   const {
     config: kioskConfig, updateConfig: updateKioskConfig,
-    isKiosk, enterKiosk, exitKiosk,
-    isDimmed, isCursorHidden, rotateIndex, validIds,
+    isKiosk, enterKiosk,
   } = useKioskMode(dashboards, activeId, switchDashboard);
 
   /* ——— Auth status ——— */
-  const { data: auth } = useAuthStatus();
+  const { data: auth, isLoading: authLoading } = useAuthStatus();
   const syncVehicles = useSyncVehicles();
 
   /* ——— SSE real-time connection ——— */
   // Keep the SSE pipe wired up for cross-tab cache invalidation; live-pipe
-  // health is rendered via `<LiveIndicator>` (uses `useLiveConnection`).
+  // health is rendered by the global status line.
   useRealtimeEvents({
     onVehicleUpdate: () => queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
     onFallbackToPolling: () => queryClient.invalidateQueries(),
@@ -214,12 +358,16 @@ export default function DashboardPage() {
   /* ——— Core data queries (shared TanStack hooks) ——— */
   const vehiclesQuery = useVehicles();
   const { data: vehicles, isLoading: vehiclesLoading, error: vehiclesError } = vehiclesQuery;
-  const { data: alerts, error: alertsError } = useAlerts();
+  const {
+    vehicleId: selectedVehicleId,
+    vehicle: selectedVehicle,
+  } = useSelectedVehicle();
 
   /* ——— Derived values ——— */
   const vehicleList = vehicles ?? [];
-  const unreadAlerts = (alerts ?? []).filter((a) => !a.is_read).length;
-  const anyError = [vehiclesError, alertsError].find(Boolean) as Error | undefined;
+  const fleetStatesQuery = useFleetStates(vehicleList);
+  const dashboardVehicleId =
+    activeDashboard.settings?.vehicleId ?? selectedVehicleId ?? undefined;
 
   /* ——— Refresh logic ——— */
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -230,6 +378,7 @@ export default function DashboardPage() {
     setIsRefreshing(true);
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ['vehicle-state'] }),
+      queryClient.invalidateQueries({ queryKey: [FLEET_STATES_QUERY_ROOT] }),
       queryClient.invalidateQueries({ queryKey: ['vehicles'] }),
       queryClient.invalidateQueries({ queryKey: ['fleet-analytics'] }),
       queryClient.invalidateQueries({ queryKey: ['drives'] }),
@@ -316,7 +465,7 @@ export default function DashboardPage() {
 
   /* ——— Header actions ——— */
   const headerActions = (
-    <div data-print-hide className="flex items-center gap-2 flex-wrap">
+    <div data-print-hide className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
       {editMode ? (
         <>
           <div className="flex items-center gap-1 me-1">
@@ -369,147 +518,140 @@ export default function DashboardPage() {
       ) : (
         <>
           <Button
-            variant="ghost"
+            variant="secondary"
             size="sm"
             onClick={handleRefresh}
             loading={isRefreshing}
             aria-label={t('dashboard.refresh', 'Refresh data')}
           >
-            <Icons.refresh className={`h-3.5 w-3.5 ${isRefreshing ? 'animate-spin' : ''}`} />
+            <Icons.refresh className={cn('h-4 w-4', isRefreshing && 'animate-spin')} aria-hidden="true" />
+            <span>{t('dashboard.refreshShort', 'Refresh')}</span>
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowExportModal(true)}
-            className="hidden sm:flex"
-            aria-label={t('dashboard.export', 'Export dashboard')}
-          >
-            <Icons.download className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => { setImportJson(null); setShowImportModal(true); }}
-            className="hidden sm:flex"
-            aria-label={t('dashboard.import', 'Import dashboard')}
-          >
-            <Icons.upload className="h-3.5 w-3.5" />
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setShowKioskSettings(true)} className="hidden sm:flex">
-            <Icons.tv className="h-3.5 w-3.5 me-1" />
-            {t('dashboard.kiosk', 'Kiosk')}
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => setEditMode(true)} data-tour="edit-mode-btn">
-            <Icons.settings className="h-3.5 w-3.5 sm:me-1" />
-            <span className="hidden sm:inline">{t('dashboard.customize', 'Customize')}</span>
-          </Button>
+          {vehicleList.length > 0 && (
+            <>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setEditMode(true)}
+                data-tour="edit-mode-btn"
+              >
+                <Icons.settings className="h-4 w-4" aria-hidden="true" />
+                <span>{t('dashboard.customize', 'Customize')}</span>
+              </Button>
+              <DashboardMoreMenu
+                onExport={() => setShowExportModal(true)}
+                onImport={() => {
+                  setImportJson(null);
+                  setShowImportModal(true);
+                }}
+                onKiosk={() => setShowKioskSettings(true)}
+              />
+            </>
+          )}
         </>
-      )}
-      {!editMode && unreadAlerts > 0 && (
-        <Link
-          to="/notifications/alerts"
-          className="relative rounded-lg p-1 text-[var(--text-secondary)] transition-colors hover:text-[var(--text-primary)]"
-          aria-label={t('dashboard.unreadAlerts', '{{count}} unread alerts', { count: unreadAlerts })}
-        >
-          <Icons.notifications className="h-5 w-5" aria-hidden="true" />
-          <Text
-            as="span"
-            size="2xs"
-            weight="bold"
-            className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full border border-neon-red/30 bg-neon-red/90 px-1 tabular-nums text-rose-50 forced-colors:text-[CanvasText]"
-          >
-            {unreadAlerts > 99 ? '99+' : unreadAlerts}
-          </Text>
-        </Link>
-      )}
-      <LiveIndicator variant="compact" />
-      <DataFreshnessAuto query={vehiclesQuery} />
-      {!editMode && (
-        <PrintButton label={t('dashboard.printSnapshot', 'Print snapshot')} />
       )}
     </div>
   );
 
   return (
     <PageContainer
-      title={t('title', 'Command Center')}
-      subtitle={t('subtitle', 'Real-time fleet intelligence and control')}
+      title={t('title', 'Fleet Operations')}
+      subtitle={t(
+        'subtitle',
+        'Monitor readiness, investigate exceptions, and act from one workspace',
+      )}
       actions={headerActions}
+      query={vehiclesQuery}
+      error={!authLoading && auth?.authenticated !== false ? vehiclesError : null}
     >
       <div className="space-y-6">
         {/* Transient banner cluster — first-run theme prompt, live-pipe
             stale warning, customize hint, load error, and Tesla auth
             warning. Each child self-hides when its condition is inactive. */}
-        <div className="space-y-3">
-          <ThemeFirstRunBanner />
-          <LiveStaleDataBanner />
+        {vehicleList.length > 0 && (
+          <div className="space-y-3">
+            <ThemeFirstRunBanner />
+            <LiveStaleDataBanner />
 
           {/* Soft hint that the dashboard is customizable. Shows after
               CUSTOMIZE_HINT_DELAY_MS for users still on the seeded default
               layout, and disappears the moment they add a widget or dismiss. */}
-          {hintReady && !editMode && (
-            <AlertBanner
-              variant="info"
-              icon={<Icons.add className="h-4 w-4" />}
-              onClose={dismissHint}
-            >
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="min-w-0 flex-1">
-                  {t(
-                    'dashboard.customizeHint',
-                    'You can customize this dashboard. Tap the + to add widgets.',
-                  )}
-                </span>
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => {
-                    setCatalogueOpen(true);
-                    dismissHint();
-                  }}
-                >
-                  {t('dashboard.customizeHintCta', 'Add widgets')}
-                </Button>
-              </div>
-            </AlertBanner>
-          )}
+            {hintReady && !editMode && (
+              <AlertBanner
+                variant="info"
+                icon={<Icons.add className="h-4 w-4" />}
+                onClose={dismissHint}
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+                  <span className="min-w-0 sm:flex-1">
+                    {t(
+                      'dashboard.customizeHint',
+                      'You can customize this dashboard. Add the signals and workflows your team uses most.',
+                    )}
+                  </span>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => {
+                      setCatalogueOpen(true);
+                      dismissHint();
+                    }}
+                  >
+                    {t('dashboard.customizeHintCta', 'Add widgets')}
+                  </Button>
+                </div>
+              </AlertBanner>
+            )}
 
-          {anyError && (
-            <AlertBanner variant="danger" icon={<Icons.alertCircle className="h-5 w-5" />}>
-              {t('error.loadFailed', 'Failed to load data')}: {anyError.message}
-            </AlertBanner>
-          )}
+            {auth && !auth.authenticated && (
+              <AlertBanner
+                variant="warning"
+                icon={<Icons.alertCircle className="h-5 w-5" />}
+                title={t('auth.notConnected', 'Tesla account not connected')}
+              >
+                {t('auth.connectPrompt', 'Reconnect your account in')}{' '}
+                <Link to="/settings" className="font-medium text-cyan-300 hover:underline">
+                  {t('auth.settings', 'Settings')}
+                </Link>{' '}
+                {t('auth.toResume', 'to resume live updates.')}
+              </AlertBanner>
+            )}
+          </div>
+        )}
 
-          {auth && !auth.authenticated && (
-            <AlertBanner
-              variant="warning"
-              icon={<Icons.alertCircle className="h-5 w-5" />}
-              title={t('auth.notConnected', 'Tesla account not connected')}
-            >
-              {t('auth.connectPrompt', 'Connect your account in')}{' '}
-              <Link to="/settings" className="text-cyan-300 hover:underline">
-                {t('auth.settings', 'Settings')}
-              </Link>{' '}
-              {t('auth.toStart', 'to start tracking.')}
-            </AlertBanner>
-          )}
-        </div>
-
-        {/* Recently viewed — renders an empty placeholder for first-run
-            users so they still discover the affordance. */}
-        <FadeIn>
-          <section aria-label={t('dashboard.recentlyViewed', 'Recently viewed')}>
-            <RecentlyViewedWidget />
-          </section>
-        </FadeIn>
+        {!vehiclesLoading && vehicleList.length > 0 && (
+          <FadeIn delay={0.025}>
+            <FleetOperationsBrief
+              vehicles={vehicleList}
+              selectedVehicle={selectedVehicle}
+              fleetStates={fleetStatesQuery.data}
+              summary={fleetStatesQuery.summary}
+              isPending={fleetStatesQuery.isPending}
+              isError={fleetStatesQuery.isError}
+              isRetrying={fleetStatesQuery.isFetching}
+              onRetry={fleetStatesQuery.refetch}
+            />
+          </FadeIn>
+        )}
 
         {/* Layout switcher + manager — shown whenever saved dashboards exist. */}
-        {dashboards.length > 0 && (
+        {dashboards.length > 0 && vehicleList.length > 0 && !vehiclesLoading && (
           <FadeIn delay={0.05}>
             <section
               aria-label={t('dashboard.layoutsRegion', 'Dashboard layouts')}
-              className="space-y-2"
+              className="space-y-3 border-t border-[var(--border-default)] pt-5"
             >
+              <div>
+                <Caption className="font-semibold uppercase tracking-[0.1em]">
+                  {t('dashboard.personalWorkspace', 'Personal workspace')}
+                </Caption>
+                <Text as="p" variant="caption" className="mt-1">
+                  {t(
+                    'dashboard.personalWorkspaceHelp',
+                    'Arrange the live modules your team checks most often.',
+                  )}
+                </Text>
+              </div>
               <LayoutSwitcher
                 dashboards={dashboards}
                 activeId={activeId}
@@ -551,7 +693,10 @@ export default function DashboardPage() {
               {editMode && (
                 <div className="rounded-xl border border-dashed border-[var(--border-subtle)] bg-white/[0.02] px-4 py-3 text-center">
                   <Text as="p" size="sm" color="secondary">
-                    {t('dashboard.editHint', 'Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.')}
+                    {t(
+                      'dashboard.editHint',
+                      'Drag widgets or use Arrange for one-click and keyboard positioning. Resize from edges or the same menu.',
+                    )}
                   </Text>
                 </div>
               )}
@@ -564,7 +709,7 @@ export default function DashboardPage() {
                   onRemoveWidget={removeWidget}
                   onOpenSettings={setSettingsWidgetId}
                   getWidgetSize={getWidgetSize}
-                  dashboardVehicleId={activeDashboard.settings?.vehicleId}
+                  dashboardVehicleId={dashboardVehicleId}
                   compactMode={activeDashboard.settings?.compactMode}
                   showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
                 />
@@ -651,7 +796,7 @@ export default function DashboardPage() {
       {/* Discoverable add-widget surface. The FAB is
           hidden in kiosk mode and edit mode; the catalogue is the lightweight
           alternative to the full WidgetPicker drawer. */}
-      {!isKiosk && (
+      {!isKiosk && vehicleList.length > 0 && (
         <AddWidgetButton onClick={() => setCatalogueOpen(true)} isEditing={editMode} />
       )}
       <WidgetCatalogueDialog
@@ -681,18 +826,10 @@ export default function DashboardPage() {
             onRemoveWidget={() => {}}
             onOpenSettings={() => {}}
             getWidgetSize={getWidgetSize}
-            dashboardVehicleId={activeDashboard.settings?.vehicleId}
+            dashboardVehicleId={dashboardVehicleId}
             compactMode={activeDashboard.settings?.compactMode}
             showWidgetBorders={activeDashboard.settings?.showWidgetBorders}
             kioskWidgetOpacity={kioskConfig.widgetOpacity ?? 1}
-          />
-          <KioskOverlay
-            config={kioskConfig}
-            isDimmed={isDimmed}
-            isCursorHidden={isCursorHidden}
-            dashboardCount={validIds.length}
-            currentIndex={rotateIndex}
-            onExit={exitKiosk}
           />
         </div>,
         document.body,
@@ -709,54 +846,162 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
 }) {
   const { t } = useTranslation('dashboard');
   const features = [
-    { icon: Icons.efficiency, label: t('onboarding.tracking', 'Real-time Tracking'), tone: 'text-cyan-300' },
-    { icon: Icons.drive, label: t('onboarding.drives', 'Drive History'), tone: 'text-purple-300' },
-    { icon: Icons.batteryCharging, label: t('onboarding.charging', 'Charge Analytics'), tone: 'text-emerald-300' },
-    { icon: Icons.security, label: t('onboarding.control', 'Vehicle Control'), tone: 'text-rose-300' },
+    {
+      icon: Icons.efficiency,
+      label: t('onboarding.tracking', 'Live telemetry'),
+      description: t('onboarding.trackingHelp', 'See current vehicle state and data freshness.'),
+      tone: 'text-cyan-300',
+    },
+    {
+      icon: Icons.drive,
+      label: t('onboarding.drives', 'Drive intelligence'),
+      description: t('onboarding.drivesHelp', 'Review routes, efficiency, and driving patterns.'),
+      tone: 'text-purple-300',
+    },
+    {
+      icon: Icons.batteryCharging,
+      label: t('onboarding.charging', 'Energy analytics'),
+      description: t('onboarding.chargingHelp', 'Understand charging cost and battery health.'),
+      tone: 'text-emerald-300',
+    },
+    {
+      icon: Icons.security,
+      label: t('onboarding.control', 'Fleet operations'),
+      description: t('onboarding.controlHelp', 'Manage alerts, automations, and vehicle actions.'),
+      tone: 'text-rose-300',
+    },
   ];
+  const setupSteps = [
+    {
+      label: t('onboarding.stepAccount', 'Connect Tesla account'),
+      detail: t('onboarding.stepAccountHelp', 'Authorize TeslaSync through the account settings.'),
+      complete: authenticated,
+    },
+    {
+      label: t('onboarding.stepVehicles', 'Sync vehicle inventory'),
+      detail: t('onboarding.stepVehiclesHelp', 'Import the vehicles available to your account.'),
+      complete: false,
+    },
+    {
+      label: t('onboarding.stepWorkspace', 'Activate your workspace'),
+      detail: t('onboarding.stepWorkspaceHelp', 'Live dashboards populate as telemetry arrives.'),
+      complete: false,
+    },
+  ];
+  const connectLinkClasses = cn(
+    BUTTON_BASE,
+    BUTTON_VARIANTS.primary,
+    'h-10 px-4 text-sm',
+  );
+
   return (
-    <GlassPanel className="relative overflow-hidden p-6 text-center sm:p-10">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 bg-gradient-to-br from-neon-cyan/[0.03] via-transparent to-neon-purple/[0.03]"
-      />
-      <div className="relative space-y-8">
-        <div className="mx-auto max-w-lg space-y-3">
-          <Heading level="section">
+    <GlassPanel padding="none" className="overflow-hidden">
+      <div className="grid xl:grid-cols-[minmax(0,1.2fr)_minmax(22rem,0.8fr)]">
+        <div className="p-6 sm:p-8 xl:p-10">
+          <Badge variant={authenticated ? 'success' : 'info'} size="lg" dot>
             {authenticated
-              ? t('onboarding.syncTitle', 'Sync Your Vehicles')
-              : t('onboarding.title', 'Welcome to TeslaSync')}
-          </Heading>
-          <Text as="p" size="base" color="secondary">
-            {authenticated
-              ? t('onboarding.syncDesc', 'Your Tesla account is connected. Sync your vehicles to start tracking.')
-              : t('onboarding.desc', 'The next-generation Tesla fleet intelligence platform. Connect your Tesla account to start real-time monitoring, analytics, and vehicle control.')}
-          </Text>
-          <div className="flex items-center justify-center gap-4 pt-1">
+              ? t('onboarding.accountConnected', 'Account connected')
+              : t('onboarding.setupRequired', 'Workspace setup')}
+          </Badge>
+          <div className="mt-6 max-w-2xl">
+            <Heading level="section">
+              {authenticated
+                ? t('onboarding.syncTitle', 'Bring your vehicles into TeslaSync')
+                : t('onboarding.title', 'Build a live operating picture of your Tesla fleet')}
+            </Heading>
+            <Text as="p" variant="bodySm" className="mt-3 max-w-xl leading-relaxed">
+              {authenticated
+                ? t('onboarding.syncDesc', 'Your account is authorized. Sync the vehicle inventory to activate live status, analytics, and operational workflows.')
+                : t('onboarding.desc', 'Connect your Tesla account to create a private, self-hosted workspace for live monitoring, historical analysis, and fleet operations.')}
+            </Text>
+          </div>
+          <div className="mt-7 flex flex-wrap items-center gap-3">
             {authenticated ? (
-              <Button onClick={onSync} loading={isSyncing} icon={<Icons.refresh className="h-4 w-4" />}>
-                {t('onboarding.sync', 'Sync Vehicles')}
+              <Button
+                onClick={onSync}
+                loading={isSyncing}
+                icon={<Icons.refresh className="h-4 w-4" />}
+              >
+                {t('onboarding.sync', 'Sync vehicles')}
               </Button>
             ) : (
-              <Link to="/settings">
-                <Button variant="primary">
-                  {t('onboarding.connect', 'Connect Tesla Account')}{' '}
-                  <Icons.drillThrough className="ms-1 inline-block h-4 w-4" aria-hidden="true" />
-                </Button>
+              <Link to="/settings" className={connectLinkClasses}>
+                {t('onboarding.connect', 'Connect Tesla account')}
+                <Icons.drillThrough className="h-4 w-4" aria-hidden="true" />
               </Link>
             )}
+            <Link
+              to="/explore"
+              className={cn(
+                BUTTON_BASE,
+                BUTTON_VARIANTS.ghost,
+                'h-10 px-4 text-sm',
+              )}
+            >
+              {t('onboarding.explore', 'Explore capabilities')}
+            </Link>
+          </div>
+          <div className="mt-8 flex items-start gap-3 rounded-shape-lg border border-[var(--border-subtle)] bg-[var(--surface-2)] p-4">
+            <Icons.securityCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-300" aria-hidden="true" />
+            <div>
+              <Text as="p" weight="medium">
+                {t('onboarding.privateTitle', 'Private by design')}
+              </Text>
+              <Text as="p" variant="caption" className="mt-1 leading-relaxed">
+                {t('onboarding.privateHelp', 'Your fleet data stays in the infrastructure you control.')}
+              </Text>
+            </div>
           </div>
         </div>
 
-        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-4">
+        <aside className="border-t border-[var(--border-default)] bg-[var(--surface-2)] p-6 sm:p-8 xl:border-s xl:border-t-0">
+          <Caption className="font-semibold uppercase tracking-[0.08em]">
+            {t('onboarding.progress.label', 'Setup progress')}
+          </Caption>
+          <ol className="mt-5 space-y-5">
+            {setupSteps.map((step, index) => {
+              const active = !step.complete && setupSteps.slice(0, index).every((item) => item.complete);
+              return (
+                <li key={step.label} className="flex gap-3">
+                  <span
+                    className={cn(
+                      'flex h-8 w-8 shrink-0 items-center justify-center rounded-pill border text-sm font-semibold',
+                      step.complete
+                        ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                        : active
+                          ? 'border-[var(--theme-primary)] bg-[rgba(var(--theme-primary-rgb),0.12)] text-[var(--theme-primary)]'
+                          : 'border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-muted)]',
+                    )}
+                    aria-hidden="true"
+                  >
+                    {step.complete ? <Icons.confirm className="h-4 w-4" /> : index + 1}
+                  </span>
+                  <div className="min-w-0 pt-0.5">
+                    <Text as="p" weight="medium" color={active || step.complete ? 'primary' : 'secondary'}>
+                      {step.label}
+                    </Text>
+                    <Text as="p" variant="caption" className="mt-1 leading-relaxed">
+                      {step.detail}
+                    </Text>
+                  </div>
+                </li>
+              );
+            })}
+          </ol>
+        </aside>
+      </div>
+
+      <div className="border-t border-[var(--border-default)] bg-[var(--surface-1)] px-6 py-5 sm:px-8">
+        <ul className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {features.map((f) => (
-            <li key={f.label}>
-              <GlassPanel className="flex h-full flex-col items-center gap-2 p-4 text-center">
-                <f.icon className={`h-6 w-6 ${f.tone}`} aria-hidden="true" />
-                <Text as="span" size="xs" weight="medium" color="secondary">
-                  {f.label}
-                </Text>
-              </GlassPanel>
+            <li key={f.label} className="flex gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)]">
+                <f.icon className={cn('h-5 w-5', f.tone)} aria-hidden="true" />
+              </div>
+              <div className="min-w-0">
+                <Text as="p" weight="medium">{f.label}</Text>
+                <Text as="p" variant="caption" className="mt-1 leading-relaxed">{f.description}</Text>
+              </div>
             </li>
           ))}
         </ul>
@@ -767,13 +1012,32 @@ function EmptyOnboarding({ authenticated, onSync, isSyncing }: {
 
 /* ——— Loading Skeleton — mirrors the switcher strip + widget bento ——— */
 function LoadingSkeleton() {
+  const { t } = useTranslation('dashboard');
+  const loadingLabel = t('dashboard.loading', 'Loading command center');
+
   return (
-    <div className="space-y-4" aria-hidden="true">
-      <Skeleton className="h-10 w-full sm:w-2/3" />
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
-          <Skeleton key={i} className="h-40" />
+    <div
+      className="space-y-5"
+      role="status"
+      aria-label={loadingLabel}
+      data-testid="dashboard-loading-skeleton"
+    >
+      <VisuallyHidden>{loadingLabel}</VisuallyHidden>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Skeleton className="h-10 w-full rounded-shape-lg sm:w-72" />
+        <Skeleton className="h-10 w-40 rounded-shape-lg" />
+      </div>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {[1, 2, 3, 4].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-panel" />
         ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-12">
+        <Skeleton className="h-64 rounded-panel xl:col-span-8" />
+        <Skeleton className="h-64 rounded-panel xl:col-span-4" />
+        <Skeleton className="h-52 rounded-panel xl:col-span-4" />
+        <Skeleton className="h-52 rounded-panel xl:col-span-4" />
+        <Skeleton className="h-52 rounded-panel xl:col-span-4" />
       </div>
     </div>
   );

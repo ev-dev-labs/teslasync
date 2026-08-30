@@ -135,7 +135,9 @@ func TestPinnedRepo_GetByID(t *testing.T) {
 
 func TestPinnedRepo_Create(t *testing.T) {
 	t.Parallel()
-	insertRow := func() pgx.Row { return fakeRow{vals: []any{int64(11), int(0), time.Date(2026, 5, 5, 5, 0, 0, 0, time.UTC)}} }
+	insertRow := func() pgx.Row {
+		return fakeRow{vals: []any{int64(11), int(0), time.Date(2026, 5, 5, 5, 0, 0, 0, time.UTC)}}
+	}
 
 	t.Run("begin error", func(t *testing.T) {
 		t.Parallel()

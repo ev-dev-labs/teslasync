@@ -72,6 +72,8 @@ describe('parseEnvelope', () => {
   it('returns a typed envelope for a float value (compact kind)', () => {
     const out = parseEnvelope(
       JSON.stringify({
+        stream_id: 'stream-a',
+        sequence: 41,
         vehicle_id: 7,
         field: 'VehicleSpeed',
         kind: 'float',
@@ -82,6 +84,8 @@ describe('parseEnvelope', () => {
     expect(out).not.toBeInstanceOf(Error)
     const env = out as SignalEnvelope
     expect(env.vehicle_id).toBe(7)
+    expect(env.stream_id).toBe('stream-a')
+    expect(env.sequence).toBe(41)
     expect(env.field).toBe('VehicleSpeed')
     expect(env.kind).toBe('float')
     expect(env.value.kind).toBe('number')

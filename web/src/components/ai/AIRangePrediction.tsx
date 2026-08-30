@@ -81,6 +81,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/ml/range/train',
     body,
     onEvent: noop,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight training run and clears the
+    // previous vehicle's narrative before the new scope streams in.
+    scopeKey: canStart ? (vehicleId ?? null) : null,
   })
   // Computed disabled — never literal-true. The explicit boolean expression
   // also keeps the on-mode wiring test honest: a regression that

@@ -128,8 +128,8 @@ func TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog(t *testing.T) {
 		"Version":           "2026.8.6",
 		"IdealBatteryRange": 310.0,
 		"RatedRange":        305.0,
-		"Latitude":          37.4419,
-		"Longitude":         -122.1430,
+		"LocationLatitude":  37.4419,
+		"LocationLongitude": -122.1430,
 	}}
 	svc := newSvc(fake)
 
@@ -176,6 +176,79 @@ func TestBuildStateFromSignalStore_FillsZeroFieldsFromSignalLog(t *testing.T) {
 	}
 	if fake.lastAt.Before(before.Add(-2*time.Second)) || fake.lastAt.After(after.Add(2*time.Second)) {
 		t.Errorf("State at: want within ±2s of now, got %v (now ≈ %v)", fake.lastAt, before)
+	}
+}
+
+func TestBuildStateFromSignalStoreWithProvenanceTracksWinningSources(t *testing.T) {
+	const vehicleID int64 = 17
+	observedAt := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
+	store := signal.New()
+	store.Set(vehicleID, "BatteryLevel", 82.0, observedAt)
+	store.Set(vehicleID, "VehicleSpeed", 0.0, observedAt)
+	store.Set(vehicleID, "LocationLatitude", 37.4, observedAt)
+	store.Set(vehicleID, "LocationLongitude", -122.1, observedAt)
+	// A legacy bare coordinate must not override the canonical flattened
+	// signal, even when the compatibility value was hydrated later.
+	store.Hydrate(vehicleID, map[string]interface{}{"Latitude": 40.0})
+
+	reader := &fakeStateReader{snapshot: signal.State{
+		"VehicleSpeed": 31.0,
+		"BatteryLevel": 55.0,
+	}}
+	svc := newSvc(reader)
+	state, verified := svc.BuildStateFromSignalStoreWithProvenance(
+		store,
+		&vehiclemodel.Vehicle{ID: vehicleID},
+	)
+
+	if state.BatteryLevel != 82 || !verified["battery_level"] {
+		t.Fatalf("battery = %d, verified=%v; want live 82 verified", state.BatteryLevel, verified["battery_level"])
+	}
+	if state.Speed != 0 || !verified["speed"] {
+		t.Fatalf("speed = %v, verified=%v; want observed live zero", state.Speed, verified["speed"])
+	}
+	if state.Latitude != 37.4 || !verified["latitude"] {
+		t.Fatalf("latitude = %v, verified=%v; want canonical live coordinate", state.Latitude, verified["latitude"])
+	}
+	if state.Longitude != -122.1 || !verified["longitude"] {
+		t.Fatalf("longitude = %v, verified=%v; want live composite verified", state.Longitude, verified["longitude"])
+	}
+	if verified["state"] {
+		t.Fatal("state provenance was fabricated by the assembler")
+	}
+}
+
+func TestBuildStateFromSignalStoreWithProvenanceHonorsLiveFallbackPrecedence(t *testing.T) {
+	const vehicleID int64 = 18
+	observedAt := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
+	store := signal.New()
+	store.Set(vehicleID, "BatteryLevel", 0.0, observedAt)
+	store.Set(vehicleID, "RatedRange", 0.0, observedAt)
+	store.Set(vehicleID, "InsideTemp", 0.0, observedAt)
+	store.Set(vehicleID, "DetailedChargeState", "Disconnected", observedAt)
+	store.Hydrate(vehicleID, map[string]interface{}{"ChargeAmps": 32.0})
+
+	reader := &fakeStateReader{snapshot: signal.State{
+		"BatteryLevel": 82.0,
+		"RatedRange":   300_000.0,
+		"InsideTemp":   21.0,
+	}}
+	state, verified := newSvc(reader).BuildStateFromSignalStoreWithProvenance(
+		store,
+		&vehiclemodel.Vehicle{ID: vehicleID},
+	)
+
+	if state.BatteryLevel != 0 || !verified["battery_level"] {
+		t.Fatalf("battery = %d, verified=%v; want observed live zero", state.BatteryLevel, verified["battery_level"])
+	}
+	if state.RatedRange != 0 || !verified["rated_range"] {
+		t.Fatalf("range = %v, verified=%v; want observed live zero", state.RatedRange, verified["rated_range"])
+	}
+	if state.InsideTemp != 0 || !verified["inside_temp"] {
+		t.Fatalf("inside temp = %v, verified=%v; want observed live zero", state.InsideTemp, verified["inside_temp"])
+	}
+	if state.IsCharging || !verified["is_charging"] {
+		t.Fatalf("charging = %v, verified=%v; want observed disconnected state", state.IsCharging, verified["is_charging"])
 	}
 }
 
@@ -335,16 +408,28 @@ func TestBuildStateFromSignalStore_FieldToSignalNameMapping(t *testing.T) {
 					t.Errorf("RatedRange: secondary fallback failed, got %v", s.RatedRange)
 				}
 			}},
-		{"Latitude", signal.State{"Latitude": 37.4419},
+		{"LocationLatitude", signal.State{"LocationLatitude": 37.4419},
 			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.Latitude != 37.4419 {
 					t.Errorf("Latitude: got %v", s.Latitude)
 				}
 			}},
-		{"Longitude", signal.State{"Longitude": -122.143},
+		{"LocationLongitude", signal.State{"LocationLongitude": -122.143},
 			func(t *testing.T, s *vehiclemodel.VehicleState) {
 				if s.Longitude != -122.143 {
 					t.Errorf("Longitude: got %v", s.Longitude)
+				}
+			}},
+		{"Latitude legacy fallback", signal.State{"Latitude": 37.4419},
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
+				if s.Latitude != 37.4419 {
+					t.Errorf("Latitude legacy fallback: got %v", s.Latitude)
+				}
+			}},
+		{"Longitude legacy fallback", signal.State{"Longitude": -122.143},
+			func(t *testing.T, s *vehiclemodel.VehicleState) {
+				if s.Longitude != -122.143 {
+					t.Errorf("Longitude legacy fallback: got %v", s.Longitude)
 				}
 			}},
 		{"BatteryLevel (BatteryLevel)", signal.State{"BatteryLevel": 80.0},
@@ -437,8 +522,8 @@ func TestBuildStateFromSignalStore_AcceptsPhase42CodecNumericTypes(t *testing.T)
 		"RatedRange":            float32(305.5),
 		"InsideTemp":            float32(22.75),
 		"OutsideTemp":           float32(14.5),
-		"Latitude":              float32(37.4419),
-		"Longitude":             float32(-122.143),
+		"LocationLatitude":      float32(37.4419),
+		"LocationLongitude":     float32(-122.143),
 		"ACChargingPower":       float32(7200),
 		"ChargeRateMilePerHour": float32(28.5),
 		"TimeToFullCharge":      float32(2.5),

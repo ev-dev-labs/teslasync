@@ -1,0 +1,165 @@
+{
+  "activity": {
+    "drive": "drive",
+    "charged": "charged",
+    "title": "Recent Activity",
+    "viewAll": "View all",
+    "empty": "No activity yet. Start driving!",
+    "myActivity": {
+      "title": "My Activity",
+      "subtitle": "Recent actions you have taken in TeslaSync.",
+      "empty": "No recent activity in this window.",
+      "disabled": {
+        "title": "Activity feed disabled",
+        "description": "Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER."
+      },
+      "unauthorized": {
+        "title": "Identity required",
+        "description": "Your request did not include an identity header. Sign in through your identity provider and try again."
+      },
+      "error": {
+        "title": "Could not load activity"
+      },
+      "kpi": {
+        "aria": "Activity summary",
+        "total": "Total actions",
+        "activeDays": "Active days",
+        "actionTypes": "Action types",
+        "entities": "Entities touched",
+        "lastActive": "Last active"
+      },
+      "trend": {
+        "title": "Activity over time",
+        "series": "Actions",
+        "empty": "No activity recorded in this window.",
+        "colDay": "Day"
+      },
+      "topActions": {
+        "title": "Top actions",
+        "empty": "No actions in this window."
+      },
+      "byCategory": {
+        "title": "By category",
+        "other": "System / other",
+        "empty": "No categories to break down yet."
+      },
+      "byHour": {
+        "title": "By hour of day",
+        "series": "Actions",
+        "empty": "No activity to chart by hour yet.",
+        "colHour": "Hour"
+      },
+      "breakdowns": {
+        "aria": "Activity breakdowns"
+      },
+      "feed": {
+        "title": "Activity feed"
+      }
+    },
+    "action": {
+      "unknown": "Activity",
+      "vehicleCommand": "Vehicle command",
+      "vehicleCommandWake": "Wake vehicle",
+      "vehicleCommandHonk": "Honk horn",
+      "vehicleCommandFlash": "Flash lights",
+      "vehicleCommandLock": "Lock vehicle",
+      "vehicleCommandUnlock": "Unlock vehicle",
+      "vehicleCommandClimate": "Climate command",
+      "vehicleCommandCharge": "Charging command",
+      "settings": "Settings change",
+      "settingsUpdate": "Settings updated",
+      "alert": "Alert change",
+      "alertRuleCreate": "Alert rule created",
+      "alertRuleUpdate": "Alert rule updated",
+      "alertRuleDelete": "Alert rule deleted",
+      "automation": "Automation change",
+      "automationCreate": "Automation created",
+      "automationUpdate": "Automation updated",
+      "automationDelete": "Automation deleted",
+      "dashboard": "Dashboard change",
+      "dashboardLayoutSave": "Dashboard layout saved",
+      "dataExport": "Data export",
+      "dataExportCreate": "Data export requested",
+      "apiKey": "API key change",
+      "apiKeyCreate": "API key created",
+      "apiKeyUpdate": "API key updated",
+      "apiKeyDelete": "API key revoked",
+      "auth": "Authentication",
+      "authLogin": "Signed in",
+      "authLogout": "Signed out",
+      "automationCreated": "Automation created",
+      "automationUpdated": "Automation updated",
+      "automationDeleted": "Automation deleted",
+      "automationEnabled": "Automation enabled",
+      "automationDisabled": "Automation disabled",
+      "automationReEnabled": "Automation re-enabled",
+      "automationTestRun": "Automation test run",
+      "automationUndo": "Automation undone",
+      "automationImported": "Automations imported",
+      "automationExported": "Automations exported",
+      "automationExecuted": "Automation ran",
+      "automationFailed": "Automation failed",
+      "automationAutoDisabled": "Automation auto-disabled"
+    },
+    "timeline": {
+      "title": "Activity Timeline",
+      "subtitle": "A unified timeline of drives, charging, alerts, software updates, and your annotations.",
+      "empty": "No activity in this window.",
+      "loadMore": "Older",
+      "loadNewer": "Newer",
+      "provenance": "Source: {{source}}",
+      "sourceRecord": "{{source}} record {{id}}",
+      "serviceHistoryLimitation": "Dated service records will join this timeline when a verified service-history source is available.",
+      "item": {
+        "drive": "Drive",
+        "driveInProgress": "Drive in progress",
+        "charging": "Charging session",
+        "chargingInProgress": "Charging in progress",
+        "software": "Software update",
+        "softwareVersion": "Software update {{version}}",
+        "alert": "Alert",
+        "annotation": "Annotation",
+        "socChange": "{{start}}% → {{end}}%"
+      },
+      "source": {
+        "drive": "Driving history",
+        "charging": "Charging history",
+        "alert": "Alert delivery log",
+        "software_update": "Software update history",
+        "annotation": "User annotation"
+      },
+      "severity": {
+        "info": "Info",
+        "warn": "Warning",
+        "critical": "Critical"
+      },
+      "status": {
+        "completed": "Completed",
+        "in_progress": "In progress",
+        "sent": "Sent",
+        "pending": "Pending",
+        "failed": "Failed",
+        "deferred_dnd": "Deferred by quiet hours",
+        "installed": "Installed",
+        "installing": "Installing",
+        "downloading": "Downloading",
+        "available": "Available",
+        "milestone": "Milestone",
+        "maintenance": "Maintenance",
+        "trip": "Trip",
+        "issue": "Issue",
+        "upgrade": "Upgrade",
+        "custom": "Custom"
+      },
+      "kindFilter": {
+        "aria": "Filter by activity kind",
+        "all": "All",
+        "drive": "Drive",
+        "charging": "Charging",
+        "alert": "Alert",
+        "software_update": "Software Update",
+        "annotation": "Annotation"
+      }
+    }
+  }
+}

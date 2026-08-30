@@ -35,6 +35,25 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
 }));
 
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const Inert = () => null;
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartTooltip: Inert,
+    CartesianGrid: Inert,
+    Tooltip: Inert,
+    areaGradient: () => null,
+    AreaChart: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="area-chart">{children}</div>
+    ),
+    Area: Inert,
+    XAxis: Inert,
+    YAxis: Inert,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  };
+});
+
 const CHART_LABEL = 'Live signals per second over the recent window';
 const WAITING = 'Waiting for live throughput…';
 const OFFLINE = 'Stream disconnected — no live throughput';
@@ -100,13 +119,12 @@ describe('LiveThroughputPanel', () => {
   it('shows the "waiting" empty state (not offline) when connected with no plottable data', () => {
     renderPanel({ connected: true, history: [] });
 
-    // The empty-state message must be exposed to AT (role=status), not hidden
-    // inside a role="img" wrapper.
+    // The empty-state message must be exposed to AT (role=status).
     const status = screen.getByRole('status');
     expect(status).toHaveTextContent(WAITING);
     expect(screen.queryByText(OFFLINE)).toBeNull();
-    // No chart is drawn, so the labelled chart region is absent entirely.
-    expect(screen.queryByRole('img')).toBeNull();
+    // No chart is drawn, so the area chart double is absent.
+    expect(screen.queryByTestId('area-chart')).toBeNull();
   });
 
   it('swaps to the offline empty state when the stream is disconnected', () => {
@@ -114,14 +132,14 @@ describe('LiveThroughputPanel', () => {
 
     expect(screen.getByText(OFFLINE)).toBeInTheDocument();
     expect(screen.queryByText(WAITING)).toBeNull();
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByTestId('area-chart')).toBeNull();
   });
 
   it('treats a single sample as not enough to plot (needs >= 2 points)', () => {
     renderPanel({ connected: true, history: points(1) });
 
     expect(screen.getByText(WAITING)).toBeInTheDocument();
-    expect(screen.queryByRole('img', { name: CHART_LABEL })).toBeNull();
+    expect(screen.queryByTestId('area-chart')).toBeNull();
   });
 
   it('renders the labelled chart region once there are at least two samples', () => {

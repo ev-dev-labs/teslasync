@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
 
 // HTTP tests for GuardHandler.
@@ -640,6 +641,73 @@ func TestGuard_Panic_PartialFailureReturns502(t *testing.T) {
 	}
 	if body.Results[2].Command != "flash_lights" || !body.Results[2].OK {
 		t.Errorf("results[2] = %+v, want flash_lights OK", body.Results[2])
+	}
+}
+
+// TestGuard_Panic_BudgetExceededAbortsRemainingCommands pins the
+// structured 429 surface + early-abort behavior for Fleet API daily
+// budget exhaustion: unlike an ordinary per-command failure (which
+// continues through the remaining commands and returns a 502 with
+// partial results), a budget error is systemic — every remaining
+// command shares the same exhausted daily budget — so the handler
+// must stop immediately and report the real HTTP status instead of
+// masking it behind the generic degraded-success envelope.
+func TestGuard_Panic_BudgetExceededAbortsRemainingCommands(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+	cmd := &fakeGuardCommandClient{
+		errByCommand: map[string]error{
+			"sentry_on": fmt.Errorf("send command: %w", tesla.ErrBudgetExceeded),
+		},
+	}
+	vehicles := &fakeGuardVehicles{
+		byID: map[int64]*vehiclemodel.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KF000001"}},
+	}
+	h := newGuardHandlerForTest(&fakeGuardRepo{}, vehicles, cmd, true, now)
+	rec := httptest.NewRecorder()
+	h.Panic(rec, guardRequest(http.MethodPost, "/vehicles/42/guard/panic", "42", ""))
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429, body=%s", rec.Code, rec.Body.String())
+	}
+	if len(cmd.gotCalls) != 1 {
+		t.Errorf("commands sent = %d, want 1 (must abort after budget error)", len(cmd.gotCalls))
+	}
+	var resp map[string]string
+	mustDecode(t, rec.Body.Bytes(), &resp)
+	if resp["code"] != "RATE_LIMITED" {
+		t.Errorf("code = %q, want RATE_LIMITED", resp["code"])
+	}
+}
+
+// TestGuard_Panic_BudgetUnavailableAbortsRemainingCommands mirrors the
+// exceeded-budget case for the budget-evidence-store-unavailable
+// sentinel: 503 instead of 429, otherwise identical abort semantics.
+func TestGuard_Panic_BudgetUnavailableAbortsRemainingCommands(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+	cmd := &fakeGuardCommandClient{
+		errByCommand: map[string]error{
+			"sentry_on": fmt.Errorf("read budget snapshot: %w", tesla.ErrBudgetUnavailable),
+		},
+	}
+	vehicles := &fakeGuardVehicles{
+		byID: map[int64]*vehiclemodel.Vehicle{42: {ID: 42, VIN: "5YJ3E1EA0KF000001"}},
+	}
+	h := newGuardHandlerForTest(&fakeGuardRepo{}, vehicles, cmd, true, now)
+	rec := httptest.NewRecorder()
+	h.Panic(rec, guardRequest(http.MethodPost, "/vehicles/42/guard/panic", "42", ""))
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want 503, body=%s", rec.Code, rec.Body.String())
+	}
+	if len(cmd.gotCalls) != 1 {
+		t.Errorf("commands sent = %d, want 1 (must abort after budget error)", len(cmd.gotCalls))
+	}
+	var resp map[string]string
+	mustDecode(t, rec.Body.Bytes(), &resp)
+	if resp["code"] != "SERVICE_UNAVAILABLE" {
+		t.Errorf("code = %q, want SERVICE_UNAVAILABLE", resp["code"])
 	}
 }
 

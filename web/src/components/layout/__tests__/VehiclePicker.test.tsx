@@ -93,6 +93,13 @@ describe('VehiclePicker', () => {
     expect(screen.queryByRole('combobox')).toBeNull();
   });
 
+  it('can keep a single vehicle visible as the active shell context', () => {
+    mockVehicles = [makeVehicle({ id: 1, display_name: 'Solo' })];
+    mockVehicleId = 1;
+    render(<VehiclePicker hideWhenSingle={false} />);
+    expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toHaveValue('1');
+  });
+
   it('renders an accessible select with one option per vehicle for a multi-vehicle fleet', () => {
     mockVehicles = [
       makeVehicle({ id: 1, display_name: 'Roadster' }),

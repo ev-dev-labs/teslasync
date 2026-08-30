@@ -147,12 +147,14 @@ export function SessionList({
                       />
                     </div>
                   ) : (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={() => onSelect(session.id)}
                       onDoubleClick={() => startRename(session)}
                       className={cn(
-                        'w-full text-left px-3 py-2 pr-8 rounded-lg flex flex-col gap-0.5',
+                        'h-auto w-full items-start px-3 py-2 pr-8 text-left rounded-lg flex-col gap-0.5',
                         'focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40',
                       )}
                       aria-current={isActive ? 'true' : undefined}
@@ -177,18 +179,20 @@ export function SessionList({
                           count: session.message_count,
                         })}
                       </Text>
-                    </button>
+                    </Button>
                   )}
 
                   {!isRenaming && (
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="sm"
                       onClick={(e) => {
                         e.stopPropagation();
                         setPendingDelete(session);
                       }}
                       className={cn(
-                        'absolute top-1.5 right-1.5 p-1.5 rounded',
+                        'absolute top-1.5 right-1.5 h-auto p-1.5 rounded',
                         'opacity-0 group-hover:opacity-100 focus:opacity-100',
                         'text-[var(--text-muted)] hover:text-rose-300 hover:bg-rose-500/10',
                         'focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/40',
@@ -196,7 +200,7 @@ export function SessionList({
                       aria-label={t('chatbot.aria.deleteSession', 'Delete conversation')}
                     >
                       <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    </Button>
                   )}
                 </div>
               );

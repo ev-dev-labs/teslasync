@@ -136,12 +136,13 @@ describe('QueueJobDrawer', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 
-  it('shows the loading branch with an accessible spinner', () => {
+  it('shows the loading branch with an accessible list skeleton', () => {
     renderDrawer({ testHookOverride: makeQuery({ isLoading: true }) })
 
     expect(screen.getByTestId('queue-job-drawer-loading')).toBeInTheDocument()
-    expect(screen.getByRole('status')).toBeInTheDocument()
-    expect(screen.getByText('Loading recent jobs…')).toBeInTheDocument()
+    expect(
+      screen.getByRole('status', { name: 'Loading recent jobs…' }),
+    ).toHaveAttribute('aria-busy', 'true')
     expect(
       screen.queryByTestId('queue-job-drawer-list'),
     ).not.toBeInTheDocument()
@@ -308,7 +309,7 @@ describe('QueueJobDrawer', () => {
       testHookOverride: makeQuery({ data: jobsData([]) }),
     })
 
-    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+    fireEvent.click(screen.getAllByRole('button', { name: 'Close' })[0])
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

@@ -57,7 +57,7 @@ jobs:
         run: |
           # Bring up only the services k6 actually exercises; skip
           # MQTT + Tesla pipeline so the stack starts faster.
-          docker compose up -d timescaledb redis api
+          docker compose up -d postgres redis mosquitto teslasync-api
           # Wait for the API to report healthy.
           for i in $(seq 1 60); do
             if curl -fsS http://localhost:8080/healthz -o /dev/null; then
@@ -67,7 +67,7 @@ jobs:
             sleep 1
           done
           echo "API failed to start" >&2
-          docker compose logs api >&2
+          docker compose logs teslasync-api >&2
           exit 1
 
       - name: Run k6

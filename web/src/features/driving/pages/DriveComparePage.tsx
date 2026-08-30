@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 
 import { useDrive, useDrives } from '@/api/hooks/useDriving';
 import { VehicleSelect } from '@/components/forms';
@@ -42,11 +43,38 @@ export default function DriveComparePage() {
   const drivesQuery = useDrives(vehicleIdStr, DRIVE_HISTORY_WINDOW);
   const drives = useMemo<Drive[]>(() => drivesQuery.data ?? [], [drivesQuery.data]);
 
-  const [idA, setIdA] = useState('');
-  const [idB, setIdB] = useState('');
+  const [searchParams, setSearchParams] = useSearchParams();
   const hasDrive = (id: string) => drives.some((drive) => String(drive.id) === id);
-  const activeA = idA && hasDrive(idA) ? idA : (drives[0] ? String(drives[0].id) : '');
-  const activeB = idB && hasDrive(idB) ? idB : (drives[1] ? String(drives[1].id) : '');
+  const requestedA = searchParams.get('drive_a') ?? '';
+  const requestedB = searchParams.get('drive_b') ?? '';
+  const activeA = requestedA && hasDrive(requestedA)
+    ? requestedA
+    : drives[0]
+      ? String(drives[0].id)
+      : '';
+  const fallbackB = drives.find((drive) => String(drive.id) !== activeA);
+  const activeB = requestedB && hasDrive(requestedB)
+    ? requestedB
+    : fallbackB
+      ? String(fallbackB.id)
+      : '';
+
+  useEffect(() => {
+    if (!activeA) return;
+    const canonical = new URLSearchParams(searchParams);
+    canonical.set('drive_a', activeA);
+    if (activeB) canonical.set('drive_b', activeB);
+    else canonical.delete('drive_b');
+    if (canonical.toString() !== searchParams.toString()) {
+      setSearchParams(canonical, { replace: true });
+    }
+  }, [activeA, activeB, searchParams, setSearchParams]);
+
+  const updateSelection = (key: 'drive_a' | 'drive_b', value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set(key, value);
+    setSearchParams(next, { replace: true });
+  };
 
   const driveAQuery = useDrive(activeA);
   const driveBQuery = useDrive(activeB);
@@ -138,14 +166,14 @@ export default function DriveComparePage() {
               <Select
                 aria-label={t('driveCompare.pickA', 'Choose drive A')}
                 value={activeA}
-                onChange={(event) => setIdA(event.target.value)}
+                onChange={(event) => updateSelection('drive_a', event.target.value)}
                 options={driveOptions}
                 size="sm"
               />
               <Select
                 aria-label={t('driveCompare.pickB', 'Choose drive B')}
                 value={activeB}
-                onChange={(event) => setIdB(event.target.value)}
+                onChange={(event) => updateSelection('drive_b', event.target.value)}
                 options={driveOptions}
                 size="sm"
               />

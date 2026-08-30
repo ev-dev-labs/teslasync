@@ -67,6 +67,22 @@ export const FONT_MONO_STACKS: Record<Exclude<MonoFamilyId, 'custom'>, string> =
   system: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
 }
 
+const GOOGLE_SANS_QUERIES: Partial<Record<FontFamilyId, string>> = {
+  inter: 'Inter:wght@300;400;500;600;700;800;900',
+  roboto: 'Roboto:wght@400;500;700',
+  source: 'Source+Sans+3:wght@400;500;600;700',
+  plex: 'IBM+Plex+Sans:wght@400;500;600;700',
+  atkinson: 'Atkinson+Hyperlegible:wght@400;700',
+}
+
+const GOOGLE_MONO_QUERIES: Partial<Record<MonoFamilyId, string>> = {
+  jetbrains: 'JetBrains+Mono:wght@400;500;600',
+  fira: 'Fira+Code:wght@400;500;600',
+  'plex-mono': 'IBM+Plex+Mono:wght@400;500;600',
+}
+
+const ACTIVE_FONT_STYLESHEET_ID = 'teslasync-active-fonts'
+
 /** Fallback appended to a user's custom stack so the app stays legible. */
 const CUSTOM_SANS_FALLBACK = 'system-ui, -apple-system, sans-serif'
 const CUSTOM_MONO_FALLBACK = 'ui-monospace, monospace'
@@ -199,6 +215,34 @@ export function applyFontCSS(prefs: FontPrefs): void {
   root.style.setProperty('--font-weight-bold', String(prefs.headingWeight))
 }
 
+export function fontStylesheetHref(prefs: FontPrefs): string | null {
+  const queries = [
+    GOOGLE_SANS_QUERIES[prefs.sans],
+    GOOGLE_MONO_QUERIES[prefs.mono],
+  ].filter((query): query is string => Boolean(query))
+
+  if (queries.length === 0) return null
+  return `https://fonts.googleapis.com/css2?${queries.map((query) => `family=${query}`).join('&')}&display=swap`
+}
+
+function syncFontStylesheet(prefs: FontPrefs): void {
+  if (typeof document === 'undefined') return
+  const href = fontStylesheetHref(prefs)
+  const existing = document.getElementById(ACTIVE_FONT_STYLESHEET_ID) as HTMLLinkElement | null
+
+  if (!href) {
+    existing?.remove()
+    return
+  }
+  if (existing?.href === href) return
+
+  const link = existing ?? document.createElement('link')
+  link.id = ACTIVE_FONT_STYLESHEET_ID
+  link.rel = 'stylesheet'
+  link.href = href
+  if (!existing) document.head.appendChild(link)
+}
+
 /** Read the persisted preferences from localStorage, falling back to defaults. */
 export function readStoredFontPrefs(): FontPrefs {
   if (typeof localStorage === 'undefined') return { ...DEFAULT_FONT_PREFS }
@@ -305,6 +349,7 @@ export function FontProvider({ children }: { children: ReactNode }) {
   // setters below so peer tabs read fresh values on the `font.changed` hint.
   useEffect(() => {
     applyFontCSS(prefs)
+    syncFontStylesheet(prefs)
   }, [prefs])
 
   // Load persisted font prefs from backend settings on first mount. Raw fetch,

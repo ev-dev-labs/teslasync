@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
-import { useMutationToast } from './_toastHelpers';
+import { useDeferredMutationToast, useMutationToast } from './_toastHelpers';
 import { STALE_TIMES } from '@/lib/constants';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import type {
@@ -38,6 +38,7 @@ export interface AnnotationListParams {
   scope?: AnnotationScope;
   from?: string;
   to?: string;
+  enabled?: boolean;
 }
 
 export interface CreateAnnotationInput {
@@ -83,6 +84,7 @@ export function useChartAnnotations(params: AnnotationListParams = {}) {
     queryKey: annotationKeys.list(params),
     queryFn: ({ signal }) => request<ChartAnnotationRow[]>(`/annotations${buildQuery(params)}`, { signal }),
     staleTime: STALE_TIMES.SLOW,
+    enabled: params.enabled ?? true,
   });
 }
 
@@ -104,7 +106,7 @@ export function useChartAnnotationsAsData(params: AnnotationListParams = {}): {
 } {
   const { data, isLoading, isError, error } = useChartAnnotations(params);
   const annotations = useMemo<DataAnnotation[]>(
-    () => (data ?? []).map(toDataAnnotation),
+    () => (Array.isArray(data) ? data : []).map(toDataAnnotation),
     [data],
   );
   return { annotations, isLoading, isError, error };
@@ -112,7 +114,7 @@ export function useChartAnnotationsAsData(params: AnnotationListParams = {}): {
 
 export function useCreateAnnotation() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, error } = useDeferredMutationToast();
   return useMutation({
     mutationFn: (input: CreateAnnotationInput) =>
       request<ChartAnnotationRow>('/annotations', {
@@ -146,7 +148,7 @@ export function useUpdateAnnotation() {
 
 export function useDeleteAnnotation() {
   const qc = useQueryClient();
-  const { success, error } = useMutationToast();
+  const { success, error } = useDeferredMutationToast();
   return useMutation({
     mutationFn: (id: number) =>
       request<void>(`/annotations/${id}`, { method: 'DELETE' }),

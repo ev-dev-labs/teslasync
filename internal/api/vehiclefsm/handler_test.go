@@ -533,6 +533,34 @@ func TestHandler_ProcessSignals_LogsTransitions(t *testing.T) {
 	}
 }
 
+func TestHandler_ProcessSignalsAt_WakeTransitionUsesEventTime(t *testing.T) {
+	h := NewHandler(nil, nil)
+	fake := &fakeTransitionLogger{}
+	h.transRepo = fake
+	ctx := context.Background()
+	const vehicleID = int64(22)
+
+	h.getOrCreate(ctx, vehicleID)
+	h.HandleTimeout(ctx, vehicleID)
+	fake.mu.Lock()
+	fake.calls = nil
+	fake.mu.Unlock()
+
+	eventTime := time.Date(2026, 8, 22, 10, 30, 0, 0, time.UTC)
+	h.ProcessSignalsAt(ctx, vehicleID, map[string]interface{}{"BatteryLevel": float32(80)}, eventTime, nil)
+
+	calls := fake.snapshot()
+	if len(calls) != 1 {
+		t.Fatalf("logged %d wake transitions, want 1", len(calls))
+	}
+	if calls[0].from != string(fsm.Asleep) || calls[0].to != string(fsm.Online) {
+		t.Fatalf("wake transition = %s -> %s, want asleep -> online", calls[0].from, calls[0].to)
+	}
+	if !calls[0].ts.Equal(eventTime) {
+		t.Fatalf("wake timestamp = %v, want source event time %v", calls[0].ts, eventTime)
+	}
+}
+
 func TestHandler_reconcileVehicle(t *testing.T) {
 	ctx := context.Background()
 

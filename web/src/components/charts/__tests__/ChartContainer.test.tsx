@@ -102,6 +102,8 @@ describe('ChartContainer chartKey + ChartLegend toggle (Phase-46/67)', () => {
       </ChartContainer>,
     );
     expect(screen.getByTestId('render-prop').dataset.hasState).toBe('true');
+    expect(screen.getByRole('group', { name: 'Test chart' })).toBeInTheDocument();
+    expect(screen.queryByRole('img', { name: 'Test chart' })).toBeNull();
   });
 
   it('passes hiddenSeries=null in the render-prop when chartKey is omitted', () => {

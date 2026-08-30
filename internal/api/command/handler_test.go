@@ -1,6 +1,12 @@
 package command
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	cmdFSM "github.com/ev-dev-labs/teslasync/internal/fsm/command"
+	"github.com/ev-dev-labs/teslasync/internal/tesla"
+)
 
 func TestAllowedCommandsWhitelist(t *testing.T) {
 	allowed := []string{"lock", "unlock", "wake_up", "climate_on", "climate_off",
@@ -45,5 +51,30 @@ func TestCommandWhitelistCovers(t *testing.T) {
 		if allowedCommands[cmd] {
 			t.Errorf("command %q should NOT be in whitelist", cmd)
 		}
+	}
+}
+
+// TestClassifyBudgetError_CommandErrorRetryability confirms the chosen
+// category strings, combined with cmdFSM.CommandError.IsRetryable's
+// StatusCode>=500 fallback, yield the correct retry semantics even
+// though "budget_exceeded"/"budget_unavailable" are not part of that
+// type's documented category enum.
+func TestClassifyBudgetError_CommandErrorRetryability(t *testing.T) {
+	failure, matched := httpx.ClassifyTeslaBudgetError(tesla.ErrBudgetExceeded)
+	if !matched {
+		t.Fatal("expected budget exceeded to match")
+	}
+	exceeded := &cmdFSM.CommandError{StatusCode: failure.StatusCode, Category: failure.Category}
+	if exceeded.IsRetryable() {
+		t.Error("budget_exceeded (429) must be classified non-retryable")
+	}
+
+	failure, matched = httpx.ClassifyTeslaBudgetError(tesla.ErrBudgetUnavailable)
+	if !matched {
+		t.Fatal("expected budget unavailable to match")
+	}
+	unavailable := &cmdFSM.CommandError{StatusCode: failure.StatusCode, Category: failure.Category}
+	if !unavailable.IsRetryable() {
+		t.Error("budget_unavailable (503) must be classified retryable")
 	}
 }

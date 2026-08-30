@@ -13,11 +13,11 @@ import { cn } from '@/lib/cn';
  * broke every one of them even though the component was correct.
  */
 export const BADGE_VARIANTS = {
-  info: 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200',
-  success: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
-  warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
-  danger: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
-  neutral: 'bg-[var(--control-bg)] text-[var(--text-primary)]',
+  info: 'border border-sky-500/20 bg-blue-100 text-blue-800 dark:bg-sky-500/10 dark:text-sky-300',
+  success: 'border border-emerald-500/20 bg-green-100 text-green-800 dark:bg-emerald-500/10 dark:text-emerald-300',
+  warning: 'border border-amber-500/20 bg-yellow-100 text-yellow-800 dark:bg-amber-500/10 dark:text-amber-300',
+  danger: 'border border-rose-500/20 bg-red-100 text-red-800 dark:bg-rose-500/10 dark:text-rose-300',
+  neutral: 'border border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-secondary)]',
 } as const;
 
 const variants = BADGE_VARIANTS;

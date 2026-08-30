@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"time"
@@ -9,7 +10,19 @@ import (
 
 // Config holds all application configuration.
 type Config struct {
-	Port                 int
+	Port int
+	// DrainPort is the port of the ISOLATED internal drain listener that
+	// serves the Kubernetes preStop hook (POST/GET /internal/flush).
+	//
+	// It is deliberately separate from Port: the drain endpoint is
+	// one-way and pod-fatal (permanent readiness 503, every SSE stream
+	// released), so it must never be reachable through the Service or
+	// the Ingress. Kubelet reaches it by dialling the pod IP directly,
+	// which needs no Service at all.
+	//
+	// See internal/app/drain.go and the exposure assertions in
+	// .github/workflows/ops-gate.yml.
+	DrainPort            int
 	LogLevel             string
 	CORSOrigins          string
 	VehiclePhotoDir      string
@@ -239,6 +252,12 @@ type SyntheticConfig struct {
 	// probes so /admin/observability/synthetic returns an empty
 	// snapshot.
 	ProbeURLs string
+	// JourneyBaseURL, when set, registers the canonical critical-operator
+	// journey probe (dashboard/fleet state -> vehicle inspect -> battery
+	// health -> charging history — see
+	// internal/synthetic.OperatorChainJourneySteps) against this base URL
+	// (e.g. "http://localhost:8080"). Default empty — disabled.
+	JourneyBaseURL string
 }
 
 // HomeAssistantConfig controls the MQTT discovery publisher that emits a
@@ -330,6 +349,12 @@ type TeslaConfig struct {
 	RedirectURI     string
 	CommandProxyURL string // Vehicle Command Proxy URL for signed commands
 	Timeout         time.Duration
+	// DailyBudgetUSD is a conservative UTC-daily estimated Fleet API spend
+	// ceiling shared across API and worker processes. Zero disables the guard.
+	DailyBudgetUSD float64
+	// CommandReserveUSD protects part of the daily ceiling from background
+	// reads so user and automation commands retain capacity late in the day.
+	CommandReserveUSD float64
 }
 
 type MQTTConfig struct {
@@ -381,6 +406,9 @@ type RetentionConfig struct {
 	DataRetentionDays          int
 	PositionRetentionDays      int
 	SignalHistoryRetentionDays int
+	// SignalHistoryRetentionAcknowledged must be enabled explicitly after
+	// verifying a recoverable backup; this keeps upgrades non-destructive.
+	SignalHistoryRetentionAcknowledged bool
 	// AuditRetentionDays is the maximum age (in days) of rows kept in
 	// audit_logs. Default 365. Set to 0 to disable automatic cleanup.
 	AuditRetentionDays int
@@ -400,6 +428,7 @@ type RetentionConfig struct {
 func Load() (*Config, error) {
 	cfg := &Config{
 		Port:                 envInt("TESLASYNC_PORT", 4000),
+		DrainPort:            envInt("TESLASYNC_DRAIN_PORT", 8090),
 		LogLevel:             envStr("TESLASYNC_LOG_LEVEL", "info"),
 		CORSOrigins:          envStr("CORS_ORIGINS", ""),
 		VehiclePhotoDir:      envStr("TESLASYNC_VEHICLE_PHOTO_DIR", "/var/lib/teslasync/photos"),
@@ -431,13 +460,15 @@ func Load() (*Config, error) {
 		},
 
 		Tesla: TeslaConfig{
-			ClientID:        envStr("TESLA_CLIENT_ID", ""),
-			ClientSecret:    envStr("TESLA_CLIENT_SECRET", ""),
-			BaseURL:         envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
-			AuthURL:         envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
-			RedirectURI:     envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
-			CommandProxyURL: envStr("TESLA_COMMAND_PROXY_URL", ""),
-			Timeout:         envDuration("TESLA_TIMEOUT", 30*time.Second),
+			ClientID:          envStr("TESLA_CLIENT_ID", ""),
+			ClientSecret:      envStr("TESLA_CLIENT_SECRET", ""),
+			BaseURL:           envStr("TESLA_API_BASE_URL", "https://fleet-api.prd.na.vn.cloud.tesla.com"),
+			AuthURL:           envStr("TESLA_AUTH_URL", "https://auth.tesla.com"),
+			RedirectURI:       envStr("TESLA_REDIRECT_URI", "http://localhost:4000/api/v1/auth/callback"),
+			CommandProxyURL:   envStr("TESLA_COMMAND_PROXY_URL", ""),
+			Timeout:           envDuration("TESLA_TIMEOUT", 30*time.Second),
+			DailyBudgetUSD:    envFloat64("TESLA_API_DAILY_BUDGET_USD", 0.30),
+			CommandReserveUSD: envFloat64("TESLA_API_COMMAND_RESERVE_USD", 0.05),
 		},
 
 		MQTT: MQTTConfig{
@@ -472,11 +503,12 @@ func Load() (*Config, error) {
 		},
 
 		Retention: RetentionConfig{
-			DataRetentionDays:          envInt("DATA_RETENTION_DAYS", 0),
-			PositionRetentionDays:      envInt("POSITION_RETENTION_DAYS", 0),
-			SignalHistoryRetentionDays: envInt("SIGNAL_HISTORY_RETENTION_DAYS", 0),
-			AuditRetentionDays:         envInt("AUDIT_RETENTION_DAYS", 365),
-			AuditIPRetentionDays:       envInt("AUDIT_IP_RETENTION_DAYS", 30),
+			DataRetentionDays:                  envInt("DATA_RETENTION_DAYS", 0),
+			PositionRetentionDays:              envInt("POSITION_RETENTION_DAYS", 0),
+			SignalHistoryRetentionDays:         envInt("SIGNAL_HISTORY_RETENTION_DAYS", 365),
+			SignalHistoryRetentionAcknowledged: envBool("SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED", false),
+			AuditRetentionDays:                 envInt("AUDIT_RETENTION_DAYS", 365),
+			AuditIPRetentionDays:               envInt("AUDIT_IP_RETENTION_DAYS", 30),
 		},
 
 		FleetTelemetry: FleetTelemetryConfig{
@@ -534,6 +566,7 @@ func Load() (*Config, error) {
 			IntervalSeconds: envInt("SYNTHETIC_INTERVAL_SECONDS", 60),
 			TimeoutSeconds:  envInt("SYNTHETIC_TIMEOUT_SECONDS", 30),
 			ProbeURLs:       envStr("SYNTHETIC_PROBE_URLS", ""),
+			JourneyBaseURL:  envStr("SYNTHETIC_JOURNEY_BASE_URL", ""),
 		},
 
 		HomeAssistant: HomeAssistantConfig{
@@ -595,6 +628,15 @@ func envInt(key string, fallback int) int {
 	if v := os.Getenv(key); v != "" {
 		if i, err := strconv.Atoi(v); err == nil {
 			return i
+		}
+	}
+	return fallback
+}
+
+func envFloat64(key string, fallback float64) float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f >= 0 && !math.IsInf(f, 0) && !math.IsNaN(f) {
+			return f
 		}
 	}
 	return fallback

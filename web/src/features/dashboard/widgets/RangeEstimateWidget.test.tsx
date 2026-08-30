@@ -289,7 +289,7 @@ describe('RangeEstimateWidget — lifecycle + empty states', () => {
     const refetch = vi.fn();
     renderWidget({ vehicleId: 7, query: makeQuery({ refetch, isFetching: false }) });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

@@ -25,10 +25,16 @@
  * []` transition reproduces the banner-suppression bug the fix addresses.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
+
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
 
 // jsdom lacks matchMedia; framer-motion (reached via <FadeIn> + PageContainer's
 // freshness chip) reads it at module load. Install before any import evaluates.
@@ -361,12 +367,8 @@ describe('PeriodComparePage — disambiguation banner', () => {
     installRequest({ vehicles: TWO_VEHICLES });
     renderPage();
 
-    const bannerText = await screen.findByText(/Looking to compare two vehicles instead\?/);
-    const banner = bannerText.closest('.rounded-xl') as HTMLElement;
-    expect(banner).not.toBeNull();
-
-    // The AlertBanner's only button is its icon close control.
-    fireEvent.click(within(banner).getByRole('button'));
+    await screen.findByText(/Looking to compare two vehicles instead\?/);
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
 
     await waitFor(() =>
       expect(screen.queryByText(/Looking to compare two vehicles instead\?/)).toBeNull(),

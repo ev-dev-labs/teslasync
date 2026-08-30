@@ -19,6 +19,7 @@
 //	  9. fsm_transitions           → fsm.Engine.Fire span via tracing.NewFSMTracer adapter
 //	 10. in_api_workers            → per-iteration spans for the in-API background tickers
 //	 11. ai_inference              → AI dispatcher / strategy spans (existing)
+//	 12. data_repair_scan           → scheduled tick → locked scanner → DB materialization
 //
 // For each flow we look for at least 4 distinct files containing
 // `tracer.Start(`, `otel.Tracer(`, `otelhttp.NewHandler(`, or
@@ -62,7 +63,7 @@ var flows = []flow{
 		Name:        "vehicle_state_read",
 		Description: "GET /vehicles/{id}/state",
 		GlobPatterns: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/database/database.go",
 			"internal/platform/httputil/timeout.go",
 			"internal/platform/httputil/client.go",
@@ -71,7 +72,7 @@ var flows = []flow{
 		},
 		MinSpanFiles: 4,
 		RequiredFiles: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/database/database.go",
 		},
 	},
@@ -79,7 +80,7 @@ var flows = []flow{
 		Name:        "wake_command",
 		Description: "POST /commands/{vehicleId}/wake",
 		GlobPatterns: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/tesla/client.go",
 			"internal/tesla/client_commands.go",
 			"internal/tesla/client_auth.go",
@@ -89,7 +90,7 @@ var flows = []flow{
 		},
 		MinSpanFiles: 4,
 		RequiredFiles: []string{
-			"internal/api/middleware.go",
+			"internal/api/middleware/observability.go",
 			"internal/tesla/client_commands.go",
 		},
 	},
@@ -210,6 +211,19 @@ var flows = []flow{
 		MinSpanFiles: 1,
 		RequiredFiles: []string{
 			"internal/ai/provider/trace.go",
+		},
+	},
+	{
+		Name:        "data_repair_scan",
+		Description: "Scheduled data-repair tick → advisory-locked scan → durable case materialization",
+		GlobPatterns: []string{
+			"internal/app/new.go",
+			"internal/api/datarepair/scanner.go",
+		},
+		MinSpanFiles: 2,
+		RequiredFiles: []string{
+			"internal/app/new.go",
+			"internal/api/datarepair/scanner.go",
 		},
 	},
 
@@ -429,7 +443,7 @@ func renderReport(results []flowResult) string {
 		}
 		b.WriteString("\n")
 	}
-	return b.String()
+	return strings.TrimRight(b.String(), "\n") + "\n"
 }
 
 func writeReport(path, body string) error {

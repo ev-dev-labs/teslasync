@@ -16,8 +16,8 @@
  *       sentinel for null entity_type).
  *   4.  Loaded — the feed lists entries with entity click-through links.
  *   5.  Empty — every section shows its own empty state, KPIs read zero.
- *   6.  503 hard-gate — "Activity feed disabled" notice; sections suppressed.
- *   7.  401 hard-gate — "Identity required" notice; sections suppressed.
+ *   6.  503 hard-gate — unsupported-deployment notice; sections suppressed.
+ *   7.  401 hard-gate — sign-in-required notice; sections suppressed.
  *   8.  Non-gate 500 — each section shows an inline error + Retry; the gate
  *       notice is NOT shown, and Retry re-issues the query.
  *   9.  Default window — the request carries a 30-day ISO range + limit=200.
@@ -182,7 +182,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     // The page header + every panel title mount immediately (never gated on
     // data), while the KPI numbers stay hidden behind their skeletons.
     expect(screen.getByText('My Activity')).toBeInTheDocument();
-    expect(screen.getByText('Activity over time')).toBeInTheDocument();
+    expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
     expect(screen.queryByText('Total actions')).toBeNull();
     expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0);
@@ -256,7 +256,7 @@ describe('MyActivityPage — Project Apex elevation', () => {
     activityError = new ApiError('forward auth not configured', 503, 'AUTH_MODE_OPEN');
     renderPage();
 
-    expect(await screen.findByText('Activity feed disabled')).toBeInTheDocument();
+    expect(await screen.findByText('Activity feed is not supported')).toBeInTheDocument();
     expect(screen.getByText(/ForwardAuth/)).toBeInTheDocument();
 
     // Hard gate replaces the whole bento — no panels, no KPI band.
@@ -264,18 +264,29 @@ describe('MyActivityPage — Project Apex elevation', () => {
     expect(screen.queryByText('Activity over time')).toBeNull();
     expect(screen.queryByText('Total actions')).toBeNull();
     // ...and it is NOT mistaken for the 401 branch.
-    expect(screen.queryByText('Identity required')).toBeNull();
+    expect(screen.queryByText('Sign in required')).toBeNull();
   });
 
   it('surfaces the identity-required notice on a 401 and suppresses the sections', async () => {
     activityError = new ApiError('no identity header', 401);
     renderPage();
 
-    expect(await screen.findByText('Identity required')).toBeInTheDocument();
-    expect(screen.getByText(/identity header/)).toBeInTheDocument();
+    expect(await screen.findByText('Sign in required')).toBeInTheDocument();
+    expect(screen.getByText(/session has expired/i)).toBeInTheDocument();
 
     expect(screen.queryByText('Activity feed')).toBeNull();
-    expect(screen.queryByText('Activity feed disabled')).toBeNull();
+    expect(screen.queryByText('Activity feed is not supported')).toBeNull();
+  });
+
+  it('keeps sections visible and reports permission denial on a 403', async () => {
+    activityError = new ApiError('activity scope denied', 403);
+    renderPage();
+
+    expect((await screen.findAllByText('Permission denied')).length).toBeGreaterThan(0);
+    expect(screen.getByText('Activity feed')).toBeInTheDocument();
+    expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
+    expect(screen.queryByText('Sign in required')).toBeNull();
+    expect(screen.queryByText('Activity feed is not supported')).toBeNull();
   });
 
   it('renders inline section errors (not the gate) on a non-gate 500 and retries on demand', async () => {
@@ -289,11 +300,11 @@ describe('MyActivityPage — Project Apex elevation', () => {
 
     // Sections remain mounted around the errors.
     expect(screen.getByText('Activity feed')).toBeInTheDocument();
-    expect(screen.getByText('Activity over time')).toBeInTheDocument();
+    expect(screen.getAllByText('Activity over time').length).toBeGreaterThan(0);
 
     // The hard-gate notices are NOT shown for a plain server error.
-    expect(screen.queryByText('Activity feed disabled')).toBeNull();
-    expect(screen.queryByText('Identity required')).toBeNull();
+    expect(screen.queryByText('Activity feed is not supported')).toBeNull();
+    expect(screen.queryByText('Sign in required')).toBeNull();
 
     const before = activityCalls().length;
     fireEvent.click(screen.getAllByRole('button', { name: 'Retry' })[0]);

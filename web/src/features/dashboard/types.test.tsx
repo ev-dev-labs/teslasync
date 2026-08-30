@@ -134,6 +134,9 @@ function renderHero(state: VehicleState | null) {
         distanceUnit="mi"
         speedUnit="mph"
         tempUnit="°C"
+        observedAt={Date.now()}
+        freshness="fresh"
+        verifiedFields={['speed']}
       />
     </MemoryRouter>,
   );

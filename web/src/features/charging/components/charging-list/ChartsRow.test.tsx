@@ -37,6 +37,12 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import { ChartsRow } from './ChartsRow';
 import type {
   EnergyTrendPoint,

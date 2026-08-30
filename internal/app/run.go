@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 	"runtime"
 	"time"
@@ -12,11 +13,43 @@ import (
 
 	apirouter "github.com/ev-dev-labs/teslasync/internal/api"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
+	"github.com/ev-dev-labs/teslasync/internal/ops"
+)
+
+// ── Shutdown budget (OPS-09 / OPS-05) ────────────────────────────────
+//
+// These four budgets plus the preStop endpoint-propagation delay are the
+// complete wall-clock cost of a graceful shutdown. Their sum has to fit
+// inside the pod's terminationGracePeriodSeconds, or the kubelet SIGKILLs
+// the container mid-drain and every in-flight request is dropped —
+// exactly the failure the graceful path exists to prevent.
+//
+// Kubernetes' default grace period is 30s, which the old budgets
+// (5 + 10 + 30 + 30 = 75s) blew through by 45s. The chart now sets
+// terminationGracePeriodSeconds explicitly from
+// .Values.terminationGracePeriodSeconds, and the three-way lock is
+// enforced by:
+//
+//   - ops/rollout/stages.yaml `shutdown` records each budget,
+//   - TestShutdownBudgetMatchesManifest asserts these constants equal it,
+//   - `go run ./cmd/ops-gate -check rollout` asserts the recorded sum
+//     plus headroom fits the chart's grace period.
+//
+// Changing any one of the three without the others fails a gate.
+const (
+	// TelemetryFlushBudget bounds the session-tracker buffer flush.
+	TelemetryFlushBudget = 10 * time.Second
+	// ServerDrainBudget bounds in-flight HTTP request completion.
+	ServerDrainBudget = 30 * time.Second
+	// InboundLogDrainBudget bounds the api_call_logs writer drain.
+	InboundLogDrainBudget = 30 * time.Second
+	// DrainListenerBudget bounds the isolated drain listener shutdown.
+	DrainListenerBudget = 5 * time.Second
 )
 
 // Run constructs the HTTP router (via internal/api), starts the
 // http.Server, records startup metrics, kicks off the uptime ticker
-// goroutine, and blocks until ctx is cancelled or ListenAndServe
+// goroutine, and blocks until ctx is cancelled or Serve
 // returns. On ctx cancellation it performs the explicit shutdown
 // sequence (cancel context → telemetry handler shutdown → server
 // shutdown → inbound api_call_logs drain) before returning. The
@@ -30,14 +63,21 @@ import (
 //
 // so that Close() runs after Run() returns.
 func (a *App) Run(ctx context.Context) error {
+	runCtx, cancelRun := context.WithCancel(ctx)
+	defer cancelRun()
+
 	r := apirouter.NewRouter(a.DB, a.TeslaClient, a.MQTT, a.Cfg, a.Health, a.StateReader, apirouter.RouterOptions{
-		AppVersion:       a.Build.Version,
-		Encryptor:        a.Encryptor,
-		TelemetryHandler: a.TelemetryHandler,
-		GasPriceWorker:   a.GasPriceWorker,
-		PollEngine:       a.PollEngine,
-		SignalStore:      a.SignalStore,
-		CacheStore:       a.Cache,
+		AppVersion:        a.Build.Version,
+		Encryptor:         a.Encryptor,
+		TelemetryHandler:  a.TelemetryHandler,
+		GasPriceWorker:    a.GasPriceWorker,
+		PollEngine:        a.PollEngine,
+		SignalStore:       a.SignalStore,
+		CacheStore:        a.Cache,
+		DataRepairScanner: a.DataRepairScanner,
+		LivenessChecks: []apirouter.LivenessCheck{
+			{Component: "mqtt_pipeline", Check: a.mqttPipelineLivenessError},
+		},
 
 		// Dead-letter and feature-flag observability.
 		DLQInspector:           a.DLQInspector,
@@ -72,12 +112,32 @@ func (a *App) Run(ctx context.Context) error {
 	metrics.AppInfo.WithLabelValues(a.Build.Version, runtime.Version(), a.Build.Commit).Set(1)
 	metrics.StartupDuration.Set(time.Since(a.startupStart).Seconds())
 
+	// The isolated drain plane must be listening BEFORE the public
+	// server accepts traffic: a pod that is serving requests but cannot
+	// answer its preStop hook would be killed without draining.
+	if _, err := a.startDrainListener(runCtx); err != nil {
+		return err
+	}
+	// SINGLE SHUTDOWN OWNER. This deferred call is the only place the
+	// drain plane is torn down, and being a defer it runs after BOTH
+	// exit paths below — including the Serve-failed path, which
+	// the previous ctx.Done() watcher goroutine never covered. Deferring
+	// it here also guarantees it runs LAST, after the telemetry, server,
+	// and inbound-log drains, so kubelet can still retry the preStop
+	// hook while the main server is draining.
+	defer a.shutdownDrainListener()
+
+	listener, err := (&net.ListenConfig{KeepAlive: 3 * time.Minute}).Listen(runCtx, "tcp", a.server.Addr)
+	if err != nil {
+		return fmt.Errorf("listen on %s: %w", a.server.Addr, err)
+	}
+
 	go func() {
 		ticker := time.NewTicker(15 * time.Second)
 		defer ticker.Stop()
 		for {
 			select {
-			case <-ctx.Done():
+			case <-runCtx.Done():
 				return
 			case <-ticker.C:
 				metrics.UptimeSeconds.Set(time.Since(a.startupStart).Seconds())
@@ -87,16 +147,30 @@ func (a *App) Run(ctx context.Context) error {
 
 	errCh := make(chan error, 1)
 	go func() {
-		log.Info().Int("port", a.Cfg.Port).Msg("HTTP server listening")
-		errCh <- a.server.ListenAndServe()
+		log.Info().Str("bind", listener.Addr().String()).Msg("HTTP server listening")
+		errCh <- a.server.Serve(listener)
 	}()
+	// Start self-probes only after the listener is bound. Starting them during
+	// construction records a guaranteed connection failure against this same
+	// process before it can accept requests.
+	if a.SyntheticRunner != nil {
+		a.SyntheticRunner.Start(runCtx)
+	}
 
 	select {
 	case <-ctx.Done():
 		log.Info().Str("signal", ctx.Err().Error()).Msg("initiating graceful shutdown")
+		// Fail readiness closed and release long-lived SSE streams
+		// BEFORE draining the listener. http.Server.Shutdown does not
+		// cancel in-flight handler contexts, so an attached SSE client
+		// would otherwise hold the shutdown open for the entire 30s
+		// grace budget. In Kubernetes the preStop hook already did this;
+		// this covers plain SIGTERM (docker compose, local runs).
+		apirouter.ShutdownGate.Drain()
 		a.shutdownTelemetry()
 		a.shutdownServer()
 		a.shutdownInboundAPILogger()
+		// The drain plane closes LAST, via the defer above — not here.
 		log.Info().Msg("TeslaSync stopped cleanly")
 		return nil
 	case err := <-errCh:
@@ -120,7 +194,7 @@ func (a *App) shutdownTelemetry() {
 	}
 	a.TelemetryHandler.Shutdown()
 	if st := a.TelemetryHandler.SessionTracker(); st != nil {
-		flushCtx, flushCancel := context.WithTimeout(context.Background(), 10*time.Second)
+		flushCtx, flushCancel := context.WithTimeout(context.Background(), TelemetryFlushBudget)
 		st.FlushBuffers(flushCtx)
 		flushCancel()
 	}
@@ -132,11 +206,8 @@ func (a *App) shutdownServer() {
 	if a.server == nil {
 		return
 	}
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-	if err := a.server.Shutdown(shutdownCtx); err != nil {
-		log.Error().Err(err).Msg("HTTP server shutdown error — forcing close")
-		_ = a.server.Close()
+	if err := ops.DrainHTTPServer(context.Background(), a.server, ServerDrainBudget); err != nil {
+		log.Error().Err(err).Msg("HTTP server shutdown error — connections were force-closed")
 	}
 }
 
@@ -147,7 +218,7 @@ func (a *App) shutdownInboundAPILogger() {
 	if a.InboundAPILogger == nil {
 		return
 	}
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), InboundLogDrainBudget)
 	defer cancel()
 	if err := a.InboundAPILogger.Shutdown(shutdownCtx); err != nil {
 		log.Warn().Err(err).Msg("inbound api_call_logs writer shutdown timed out — pending entries may have been dropped")

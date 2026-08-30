@@ -305,7 +305,7 @@ describe('VersionInfoWidget — shell states', () => {
     mockVersion.mockReturnValue(qr({ data: makeVersion(), refetch }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

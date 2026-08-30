@@ -134,7 +134,7 @@ export function OvernightParkingContext({
       >
         <ParkingSectionBody state={state} className="h-full min-h-0">
           {!hasData ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={<Moon className="h-8 w-8" aria-hidden="true" />}
               message={t(

@@ -18,7 +18,7 @@ export interface SparklineProps {
 /** Tiny inline SVG line chart for showing trends in a compact space. */
 export function Sparkline({
   data,
-  color = '#00f0ff',
+  color = 'var(--theme-primary, #3b82f6)',
   height = 30,
   width = 100,
   ariaLabel,
@@ -72,7 +72,6 @@ export function Sparkline({
         fill="none"
         stroke={color}
         strokeWidth={1.5}
-        style={{ filter: `drop-shadow(0 0 3px ${color})` }}
       />
       <polyline
         points={`0,${height} ${points} ${width},${height}`}

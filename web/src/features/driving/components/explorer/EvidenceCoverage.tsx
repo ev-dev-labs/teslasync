@@ -61,7 +61,7 @@ export function EvidenceCoverage({
 
         <ExplorerSectionBody state={state} className="mt-4 min-h-80">
           {eligibility.observed === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={<Rows3 className="h-8 w-8" aria-hidden="true" />}
               message={t(

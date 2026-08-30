@@ -87,6 +87,37 @@ describe('commandRegistry', () => {
     expect(ids.has('action.shortcuts')).toBe(true)
   })
 
+  it('includes every workspace range and density command', () => {
+    const ids = new Set(commandRegistry.map(c => c.id))
+    const workspaceIds = [
+      'workspace.range.today',
+      'workspace.range.7d',
+      'workspace.range.30d',
+      'workspace.range.90d',
+      'workspace.range.1y',
+      'workspace.range.all',
+      'workspace.density.compact',
+      'workspace.density.comfortable',
+      'workspace.density.spacious',
+    ]
+    for (const id of workspaceIds) {
+      expect(ids.has(id)).toBe(true)
+    }
+  })
+
+  it('includes the primary operational workflow commands', () => {
+    const ids = new Set(commandRegistry.map(c => c.id))
+    expect(ids.has('action.center')).toBe(true)
+    expect(ids.has('action.export')).toBe(true)
+    expect(ids.has('action.compare.fleet')).toBe(true)
+    expect(ids.has('action.compare.period')).toBe(true)
+    expect(
+      commandRegistry
+        .find(c => c.id === 'action.system.status')
+        ?.keywords,
+    ).toContain('diagnostics')
+  })
+
   it('the shortcuts command has a "?" shortcut hint', () => {
     const c = commandRegistry.find(c => c.id === 'action.shortcuts')
     expect(c?.shortcut).toBe('?')

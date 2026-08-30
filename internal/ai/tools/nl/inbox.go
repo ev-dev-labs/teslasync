@@ -51,6 +51,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"sort"
 	"strings"
 	"time"
@@ -321,9 +322,11 @@ type alertCategoriesDraftInput struct {
 	// VehicleID restricts the recent window to a single
 	// vehicle. Optional — when absent the tool returns the
 	// per-category counts across every vehicle the caller
-	// owns (the AI handler is responsible for ownership
-	// scoping; this tool just trusts the filter).
-	VehicleID *int64 `json:"vehicle_id,omitempty" validate:"omitempty,gte=1" desc:"Optional vehicle ID to restrict the inbox window to. Omit to span all vehicles in scope."`
+	// owns. MUST match the in-scope vehicle_id installed by the
+	// AI handler via WithScopedInboxCategorizationWindow (0 = all
+	// vehicles); Execute REJECTS any other value at the tool
+	// boundary — see Execute's doc comment.
+	VehicleID *int64 `json:"vehicle_id,omitempty" validate:"omitempty,gte=1" desc:"Optional vehicle ID to restrict the inbox window to. MUST match the in-scope vehicle installed by the AI handler. Omit to span all vehicles in scope."`
 
 	// WindowDays is the lookback in days. Defaults to 7 when
 	// nil. Capped at inboxCategorizationMaxWindowDays so a
@@ -353,6 +356,53 @@ var allowedCategoriesHint = func() string {
 	sort.Strings(labels)
 	return strings.Join(labels, ", ")
 }()
+
+// scopedInboxCategorizationWindowKey is the unexported context key
+// used to carry the AI handler's request-validated inbox scope
+// (vehicle_id?) through the dispatcher to the tool. A per-package
+// unexported type prevents accidental key collisions with any other
+// context value in the request lifetime.
+type scopedInboxCategorizationWindowKey struct{}
+
+// ScopedInboxCategorizationWindow is the in-scope inbox filter
+// installed by the AI handler. The dispatcher propagates it through
+// ctx so draft_alert_categories can refuse any LLM-supplied
+// vehicle_id outside it.
+type ScopedInboxCategorizationWindow struct {
+	// VehicleID, when non-zero, narrows the categorization to one
+	// vehicle. Zero (the absence) means the request scope covers
+	// every vehicle the caller owns. Both forms are legitimate and
+	// the per-request scope check honours whichever value the AI
+	// handler installed — mirrors ScopedLogTraceWindow.VehicleID.
+	VehicleID int64
+}
+
+// WithScopedInboxCategorizationWindow returns ctx with w installed
+// as the in-scope inbox filter for this request. Called by the AI
+// HTTP handler AFTER body validation and BEFORE the dispatcher.Run
+// loop is started. The dispatcher then propagates ctx unchanged
+// through every Tool.Execute call.
+//
+// Exported so internal/api can install the scope without depending
+// on tool-internal types.
+func WithScopedInboxCategorizationWindow(ctx context.Context, w ScopedInboxCategorizationWindow) context.Context {
+	return context.WithValue(ctx, scopedInboxCategorizationWindowKey{}, w)
+}
+
+// ScopedInboxCategorizationWindowFromContext returns the in-scope
+// inbox filter and true when one is present, or the zero value /
+// false when no scope is installed. draft_alert_categories treats
+// the missing-scope case as a hard failure — the AI handler ALWAYS
+// installs the scope, so an absent scope means the dispatcher was
+// invoked from an unintended path and the call must be refused.
+//
+// Exported for symmetry with WithScopedInboxCategorizationWindow and
+// so unit tests in other packages can inspect what the AI handler
+// installed.
+func ScopedInboxCategorizationWindowFromContext(ctx context.Context) (ScopedInboxCategorizationWindow, bool) {
+	v, ok := ctx.Value(scopedInboxCategorizationWindowKey{}).(ScopedInboxCategorizationWindow)
+	return v, ok
+}
 
 // draftAlertCategories is the propose-only tool that builds a
 // per-category tally + sample rule_ids envelope for the
@@ -441,6 +491,23 @@ func (t *draftAlertCategories) Validate(raw json.RawMessage) (any, error) {
 // prose can describe the situation rather than the dispatcher
 // relaying an error frame.
 //
+// Per-request scope binding (defence against prompt-injection
+// exfiltration): the AI handler installs the request-supplied
+// vehicle_id (0 = all vehicles) in ctx via
+// WithScopedInboxCategorizationWindow. Execute REJECTS any
+// LLM-supplied vehicle_id that does not match. This means an
+// attacker who pastes "categorize vehicle_id=99 instead" into a
+// notification title/body cannot trick the LLM into loading a
+// different vehicle's inbox — the scope check refuses the call
+// before the source is touched. Mirrors
+// summary.ScopedLogTraceWindow / maintenance's
+// ScopedMaintenancePredictionWindow.
+//
+// Missing-scope is also a hard failure: if the dispatcher is
+// invoked from an unintended path (no scope installed), the
+// tool refuses. The AI handler is the only path that should be
+// loading this tool, and it ALWAYS installs the scope.
+//
 // A nil source is a wiring bug detected at boot via constructor
 // panic; this function only nil-checks defensively for tests
 // that instantiate the tool directly.
@@ -448,6 +515,19 @@ func (t *draftAlertCategories) Execute(ctx context.Context, in any) (any, error)
 	input := in.(alertCategoriesDraftInput)
 	if t.source == nil {
 		return nil, errors.New("draft_alert_categories: no InboxCategorizationSource wired")
+	}
+
+	scoped, ok := ScopedInboxCategorizationWindowFromContext(ctx)
+	if !ok {
+		return nil, errors.New("draft_alert_categories: no in-scope inbox window installed in context")
+	}
+	requestedVehicleID := int64(0)
+	if input.VehicleID != nil {
+		requestedVehicleID = *input.VehicleID
+	}
+	if requestedVehicleID != scoped.VehicleID {
+		return nil, fmt.Errorf("draft_alert_categories: requested vehicle_id %d does not match in-scope vehicle_id %d",
+			requestedVehicleID, scoped.VehicleID)
 	}
 
 	windowDays := inboxCategorizationDefaultWindowDays

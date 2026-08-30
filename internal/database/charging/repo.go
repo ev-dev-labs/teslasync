@@ -86,7 +86,9 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY started_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	// ID is a deterministic tie-breaker for sessions with the same
+	// telemetry timestamp, keeping offset pagination stable between requests.
+	query += fmt.Sprintf(" ORDER BY started_at DESC, id DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -155,6 +157,33 @@ ORDER BY started_at DESC`
 	return sessions, nil
 }
 
+// GetOpenSince returns open charging sessions that started at or after cutoff.
+// Restart recovery restores only these plausible live sessions; abandoned
+// historical rows remain available for evidence-based operator review.
+func (r *ChargingRepo) GetOpenSince(ctx context.Context, cutoff time.Time) ([]*chargingmodel.ChargingSession, error) {
+	query := `SELECT ` + chargingColumns + ` FROM charging_sessions
+WHERE ended_at IS NULL AND started_at >= $1
+ORDER BY started_at DESC`
+	rows, err := r.db.Pool.Query(ctx, query, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("get open charging sessions since %s: %w", cutoff.Format(time.RFC3339), err)
+	}
+	defer rows.Close()
+
+	var sessions []*chargingmodel.ChargingSession
+	for rows.Next() {
+		c, err := scanChargingSession(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan open charging session: %w", err)
+		}
+		sessions = append(sessions, c)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate open charging sessions: %w", err)
+	}
+	return sessions, nil
+}
+
 // resolveCurrentGeofenceNames overlays the latest user-defined geofence name
 // onto a session's stored start_place fallback. Renaming an auto-discovered
 // place therefore improves historical charging labels without rewriting
@@ -205,7 +234,6 @@ func (r *ChargingRepo) resolveCurrentGeofenceNames(ctx context.Context, sessions
 }
 
 var ChargingPartialAllowed = map[string]string{
-	"ended_at":              "ended_at",
 	"start_soc_pct":         "start_soc_pct",
 	"end_soc_pct":           "end_soc_pct",
 	"delta_soc_pct":         "delta_soc_pct",
@@ -246,9 +274,55 @@ func (r *ChargingRepo) PartialUpdate(ctx context.Context, id int64, fields map[s
 	return err
 }
 
+const updateRepairBoundaryIfUnchangedSQL = `
+	UPDATE charging_sessions
+	SET ended_at = $3
+	WHERE id = $1
+	  AND ended_at IS NOT DISTINCT FROM $2`
+
+// UpdateRepairBoundaryIfUnchanged atomically applies a reviewed data-repair
+// boundary only when ended_at still matches the value observed during review.
+// IS NOT DISTINCT FROM gives NULL-safe compare-and-swap semantics.
+func (r *ChargingRepo) UpdateRepairBoundaryIfUnchanged(
+	ctx context.Context,
+	id int64,
+	expectedEndedAt *time.Time,
+	endedAt time.Time,
+) (bool, error) {
+	return r.UpdateRepairBoundaryIfUnchangedWithTx(
+		ctx, r.db.Pool, id, expectedEndedAt, endedAt,
+	)
+}
+
+// UpdateRepairBoundaryIfUnchangedWithTx applies the boundary through the
+// supplied transaction so the repair and its audit row can commit atomically.
+func (r *ChargingRepo) UpdateRepairBoundaryIfUnchangedWithTx(
+	ctx context.Context,
+	tx database.DBTX,
+	id int64,
+	expectedEndedAt *time.Time,
+	endedAt time.Time,
+) (bool, error) {
+	tag, err := tx.Exec(ctx, updateRepairBoundaryIfUnchangedSQL,
+		id, expectedEndedAt, endedAt.UTC())
+	if err != nil {
+		return false, fmt.Errorf("update charging session %d repair boundary: %w", id, err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 func (r *ChargingRepo) Delete(ctx context.Context, id int64) error {
-	_, err := r.db.Pool.Exec(ctx, "DELETE FROM charging_sessions WHERE id=$1", id)
+	_, err := r.DeleteWithTx(ctx, r.db.Pool, id)
 	return err
+}
+
+// DeleteWithTx deletes through the supplied transaction.
+func (r *ChargingRepo) DeleteWithTx(ctx context.Context, tx database.DBTX, id int64) (bool, error) {
+	tag, err := tx.Exec(ctx, "DELETE FROM charging_sessions WHERE id=$1", id)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 func (r *ChargingRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]int64, error) {
@@ -272,20 +346,41 @@ func (r *ChargingRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]in
 }
 
 func (r *ChargingRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
-	if len(ids) == 0 {
-		return 0, nil
+	deleted, err := r.BulkDeleteReturning(ctx, ids)
+	if err != nil {
+		return 0, err
 	}
-	var deleted int64
+	return int64(len(deleted)), nil
+}
+
+// BulkDeleteReturning removes sessions in a single transaction and returns
+// the IDs that actually changed. This closes the preflight/delete race for
+// callers that need a truthful partial-result response.
+func (r *ChargingRepo) BulkDeleteReturning(ctx context.Context, ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return []int64{}, nil
+	}
+	deleted := make([]int64, 0, len(ids))
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM charging_sessions WHERE id = ANY($1)`, ids)
+		rows, err := tx.Query(ctx, `DELETE FROM charging_sessions WHERE id = ANY($1) RETURNING id`, ids)
 		if err != nil {
-			return err
+			return fmt.Errorf("delete charging sessions: %w", err)
 		}
-		deleted = tag.RowsAffected()
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("scan deleted charging session: %w", err)
+			}
+			deleted = append(deleted, id)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("iterate deleted charging sessions: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("bulk delete charging sessions: %w", err)
+		return nil, fmt.Errorf("bulk delete charging sessions: %w", err)
 	}
 	return deleted, nil
 }
@@ -314,6 +409,26 @@ func (r *ChargingRepo) PartialUpdateWithTx(ctx context.Context, tx database.DBTX
 	}
 	_, err := tx.Exec(ctx, query, args...)
 	return err
+}
+
+// PartialUpdateForRepairWithTx applies a reviewed non-boundary repair and
+// reports whether the target row still existed.
+func (r *ChargingRepo) PartialUpdateForRepairWithTx(
+	ctx context.Context,
+	tx database.DBTX,
+	id int64,
+	fields map[string]interface{},
+) (bool, error) {
+	siFields := filterChargingPartialFields(fields)
+	query, args := database.BuildPartialUpdate("charging_sessions", id, siFields, ChargingPartialAllowed)
+	if query == "" {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 func (r *ChargingRepo) BackfillChargingTelemetrySessionIDInTx(ctx context.Context, tx database.DBTX, sessionID, vehicleID int64, startTs, endTs time.Time) (int64, error) {

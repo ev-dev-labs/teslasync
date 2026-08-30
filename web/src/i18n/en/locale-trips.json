@@ -1,0 +1,112 @@
+{
+  "trips": {
+    "detail": {
+      "title": "Trip Detail",
+      "distance": "Distance",
+      "energy": "Energy Used",
+      "efficiency": "Efficiency",
+      "cost": "Cost",
+      "tripId": "Trip ID",
+      "name": "Name",
+      "started": "Started",
+      "ended": "Ended",
+      "drives": "Drives",
+      "charges": "Charges",
+      "notFound": "Trip not found",
+      "aiSuggestName": {
+        "title": "Suggest a trip name",
+        "description": "Get a short, propose-only name suggestion grounded in this trip’s route context (start and end places, drive count, distance, time window). The suggestion is never saved automatically — review the proposed name in the panel and click Save to apply it.",
+        "badge": "Helix",
+        "generateButton": "Suggest a name"
+      },
+      "duration": "Duration",
+      "vehicle": "Vehicle",
+      "created": "Created",
+      "notes": "Notes",
+      "inProgress": "In progress",
+      "overview": "Overview",
+      "resourceName": "Trip",
+      "tripNumber": "Trip #{{id}}",
+      "drivesTitle": "Drives in this trip",
+      "drivesEmpty": "No drives recorded for this trip",
+      "kpi": {
+        "label": "Trip summary metrics",
+        "driveCount": "{{count}} drives",
+        "chargeCount": "{{count}} charges"
+      },
+      "chart": {
+        "title": "Distance by Drive",
+        "aria": "Distance travelled per drive within this trip, as a horizontal bar chart",
+        "driveLabel": "Drive {{n}}",
+        "col": {
+          "drive": "Drive"
+        }
+      },
+      "table": {
+        "route": "Route",
+        "started": "Started",
+        "distance": "Distance",
+        "energy": "Energy",
+        "duration": "Duration"
+      }
+    },
+    "title": "Trips",
+    "subtitle": "Multi-drive trip reports with distance and cost tracking",
+    "vehicle": "Vehicle",
+    "stats": {
+      "distance": "Total Distance",
+      "tripCount": "{{count}} trips",
+      "energy": "Energy Used",
+      "driveCount": "{{count}} drives",
+      "cost": "Total Cost",
+      "total": "Total Trips",
+      "totalDrives": "{{count}} total drives",
+      "avgPerTrip": "Avg / Trip",
+      "avgPerTripSub": "distance per trip",
+      "charges": "Total Charges",
+      "chargeSessions": "{{count}} charge sessions",
+      "costPer": "{{cost}}/100{{unit}}",
+      "aria": "Trip summary metrics"
+    },
+    "chart": {
+      "title": "Top Trips by Distance",
+      "distance": "Distance",
+      "empty": "No trip data to chart",
+      "col": {
+        "trip": "Trip"
+      },
+      "aria": "Top trips ranked by distance horizontal bar chart"
+    },
+    "export": {
+      "csv": "CSV",
+      "json": "JSON"
+    },
+    "list": {
+      "heading": "All Trips",
+      "empty": "No trips recorded yet",
+      "aria": "All trips",
+      "count": "{{count}} trips"
+    },
+    "row": {
+      "trip": "Trip",
+      "drives": "{{count}} drives",
+      "charges": "{{count}} charges",
+      "cost": "cost"
+    },
+    "energy": {
+      "title": "Top Trips by Energy",
+      "empty": "No energy data to rank yet"
+    },
+    "primary": {
+      "aria": "Trip distance and energy breakdown"
+    },
+    "card": {
+      "inProgress": "In progress",
+      "drives": "{{count}} drives",
+      "charges": "{{count}} charges",
+      "distance": "Distance",
+      "energy": "Energy",
+      "cost": "Cost"
+    }
+  }
+}

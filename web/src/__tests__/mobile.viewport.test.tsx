@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, renderHook, act, cleanup } from '@testing-library/react';
+import { render, renderHook, act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { I18nextProvider, initReactI18next } from 'react-i18next';
 import i18n from 'i18next';
 
 import { Modal } from '@/components/ui/Modal';
+import { Drawer } from '@/components/ui/Drawer';
+import { Accordion } from '@/components/ui/Accordion';
 import { DataTable, type Column } from '@/components/ui/DataTable';
 import { BottomTabBar } from '@/components/layout/BottomTabBar';
 import { PageHeader } from '@/components/layout/PageHeader';
+import { FilterBar, FilterSheet, ComboboxMulti } from '@/components/forms';
 import { useMediaQuery, useIsCoarsePointer, useIsMobile } from '@/hooks/useMediaQuery';
 
 /**
@@ -132,8 +135,8 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     const nav = document.querySelector('nav[aria-label]') as HTMLElement | null;
     expect(nav).not.toBeNull();
     expect(nav!.className).toMatch(/safe-bottom/);
-    // Hidden on `lg`+ — it's a mobile-only bar.
-    expect(nav!.className).toMatch(/lg:hidden/);
+    // Hidden once the full desktop workspace shell takes over.
+    expect(nav!.className).toMatch(/xl:hidden/);
     // Every tab link must satisfy WCAG 2.5.5 minimum touch-target size.
     const tabs = nav!.querySelectorAll('a[aria-label]');
     expect(tabs.length).toBeGreaterThanOrEqual(5);
@@ -143,7 +146,7 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
     });
   });
 
-  it('PageHeader stacks vertically on mobile, row on ≥ sm', () => {
+  it('PageHeader stacks vertically until the large-screen action layout', () => {
     patchMatchMedia(() => false);
     const { container } = render(
       <I18nextProvider i18n={i18n}>
@@ -151,12 +154,13 @@ describe('mobile.viewport :: shared primitives at 375px', () => {
       </I18nextProvider>,
     );
     // The flex container is the first descendant of the FadeIn wrapper.
-    const flex = container.querySelector('.flex.flex-col.sm\\:flex-row') as HTMLElement | null;
+    const flex = container.querySelector('.flex.flex-col.xl\\:flex-row') as HTMLElement | null;
     expect(flex).not.toBeNull();
-    // Subtitle should use small text scaling at < sm (`text-xs sm:text-sm`).
+    // Subtitle uses a readable text-sm size regardless of viewport (no
+    // shrunken text-xs on mobile — PageHeader subtitles stay legible).
     const subtitle = container.querySelector('p');
-    expect(subtitle?.className).toMatch(/text-xs/);
-    expect(subtitle?.className).toMatch(/sm:text-sm/);
+    expect(subtitle?.className).toMatch(/text-sm/);
+    expect(subtitle?.className).not.toMatch(/text-xs/);
   });
 
   it('DataTable with mobileColumns hides non-essential columns at < md', () => {
@@ -236,3 +240,193 @@ describe('mobile.viewport :: useMediaQuery hook', () => {
     expect(unsubscribed).toContain('(min-width: 1024px)');
   });
 });
+
+/**
+ * Breakpoint matrix — 390 / 768 / 1440.
+ *
+ * jsdom cannot evaluate real `@media` rules, so — matching the file-level
+ * convention documented above — each width is exercised by driving the
+ * `matchMedia` queries the shared primitives actually read (`useMediaQuery`
+ * for `<FilterSheet>`, and `window.innerWidth` for anything that only reads
+ * it directly) rather than by asserting a literal layout width. 390 px
+ * (a common notched-phone width, distinct from the 375 px iPhone SE used
+ * elsewhere in this file) and 1440 px (a common laptop width) round out the
+ * canonical mobile / tablet / desktop trio the design-system primitives are
+ * gated on.
+ */
+describe('mobile.viewport :: breakpoint matrix (390 / 768 / 1440)', () => {
+  it('390px — FilterSheet renders the sheet trigger, not inline controls', () => {
+    patchMatchMedia(() => false); // narrower than the 768px `md` gate
+    render(
+      <I18nextProvider i18n={i18n}>
+        <FilterSheet activeCount={1}>
+          <div data-testid="filters">controls</div>
+        </FilterSheet>
+      </I18nextProvider>,
+    );
+    expect(document.querySelector('[data-testid="filters"]')).toBeNull();
+    expect(document.querySelector('button[aria-haspopup="dialog"]')).not.toBeNull();
+  });
+
+  it('768px — FilterSheet flips to inline controls once `md` matches', () => {
+    patchMatchMedia((q) => q === '(min-width: 768px)');
+    render(
+      <I18nextProvider i18n={i18n}>
+        <FilterSheet activeCount={1}>
+          <FilterBar ariaLabel="Drive filters">
+            <div data-testid="filters">controls</div>
+          </FilterBar>
+        </FilterSheet>
+      </I18nextProvider>,
+    );
+    expect(document.querySelector('[data-testid="filters"]')).not.toBeNull();
+    expect(document.querySelector('button[aria-haspopup="dialog"]')).toBeNull();
+  });
+
+  it('1440px — inline FilterBar still wraps instead of forcing a fixed width', () => {
+    patchMatchMedia((q) => q === '(min-width: 768px)');
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <FilterSheet>
+          <FilterBar ariaLabel="Drive filters">
+            <span>one</span>
+            <span>two</span>
+          </FilterBar>
+        </FilterSheet>
+      </I18nextProvider>,
+    );
+    const bar = container.querySelector('[role="group"]');
+    expect(bar).not.toBeNull();
+    // `flex-wrap` (not a fixed `w-[...]`) is what keeps a filter row from
+    // forcing horizontal scroll on any of the three widths.
+    expect(bar!.className).toMatch(/flex-wrap/);
+  });
+});
+
+/**
+ * 200% zoom reflow proxy (WCAG 1.4.10).
+ *
+ * A real browser zoom shrinks the effective CSS-px viewport without
+ * changing `window.innerWidth` in jsdom, so the meaningful thing to assert
+ * is that long content reflows/truncates-with-a-tooltip rather than forcing
+ * a fixed pixel width wider than its container — the same contract that
+ * keeps a page usable once zoomed to 200%.
+ */
+describe('mobile.viewport :: 200% zoom reflow proxy', () => {
+  it('ComboboxMulti chip labels truncate with a hover tooltip instead of overflowing', () => {
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ComboboxMulti
+          label="Vehicles"
+          hideLabel
+          value={[{ id: 'v1', label: 'A very long vehicle display name that would overflow a narrow chip' }]}
+          options={[]}
+          onChange={() => {}}
+          getOptionLabel={(o) => o.label}
+          getOptionKey={(o) => o.id}
+        />
+      </I18nextProvider>,
+    );
+    const chipLabel = document.querySelector('span.truncate');
+    expect(chipLabel).not.toBeNull();
+    expect(chipLabel!.getAttribute('title')).toBe(
+      'A very long vehicle display name that would overflow a narrow chip',
+    );
+  });
+
+  it('Drawer panel is width-bounded (max-w, not a fixed oversized px) at every size', () => {
+    patchMatchMedia(() => false);
+    for (const size of ['sm', 'md', 'lg'] as const) {
+      const { unmount } = render(
+        <Drawer open onClose={() => {}} title="Panel" size={size}>
+          <div>body</div>
+        </Drawer>,
+      );
+      const panel = document.querySelector('[data-drawer-panel]');
+      expect(panel).not.toBeNull();
+      // `w-full` + a `sm:max-w-*` cap — never a bare fixed `w-[...]px` that
+      // would overflow a zoomed-in / narrow viewport.
+      expect(panel!.className).toMatch(/w-full/);
+      expect(panel!.className).toMatch(/sm:max-w-/);
+      unmount();
+    }
+  });
+
+  it('DataTable scroll container is bounded (overflow-auto, not overflow-visible)', () => {
+    type Row = { id: number; name: string };
+    const cols: Column<Row>[] = [{ key: 'name', header: 'Name', render: (r) => r.name }];
+    const { container } = render(
+      <I18nextProvider i18n={i18n}>
+        <DataTable
+          columns={cols}
+          data={[{ id: 1, name: 'Model 3' }]}
+          keyExtractor={(r) => r.id}
+          stickyHeader
+          maxHeight={320}
+        />
+      </I18nextProvider>,
+    );
+    const scrollContainer = container.querySelector('.overflow-auto');
+    expect(scrollContainer).not.toBeNull();
+  });
+});
+
+/**
+ * Focus + touch-target regression for the shared dialog primitives.
+ *
+ * `<Drawer>` and `<FilterSheet>`'s `<Modal>` are the two focus-trapping
+ * surfaces this wave touches; both close controls must clear the WCAG
+ * 2.5.5 44 × 44 px floor (not just the 24 × 24 AA floor the static audit
+ * enforces) since they are primary, persistent dismiss actions rather than
+ * decorative inline glyphs.
+ */
+describe('mobile.viewport :: focus + touch targets (Drawer / FilterSheet)', () => {
+  it('Drawer moves focus into the panel and its Close control is 44x44', () => {
+    patchMatchMedia(() => false);
+    render(
+      <Drawer open onClose={() => {}} title="Panel">
+        <button type="button">Inner action</button>
+      </Drawer>,
+    );
+    // The default footer also renders a "Close" action; the header Close is
+    // first in DOM order and receives initial focus.
+    const closeBtn = screen.getAllByRole('button', { name: 'Close' })[0];
+    expect(closeBtn.className).toMatch(/\bh-11\b/);
+    expect(closeBtn.className).toMatch(/\bw-11\b/);
+    expect(document.activeElement).toBe(closeBtn);
+  });
+
+  it('FilterSheet trigger meets the 44x44 floor and opens a focus-trapped dialog', () => {
+    patchMatchMedia(() => false);
+    render(
+      <I18nextProvider i18n={i18n}>
+        <FilterSheet title="Drive filters">
+          <button type="button">Vehicle</button>
+        </FilterSheet>
+      </I18nextProvider>,
+    );
+    const trigger = screen.getByRole('button', { name: /filters/i });
+    expect(trigger.className).toMatch(/min-h-\[44px\]/);
+    expect(trigger.className).toMatch(/min-w-\[44px\]/);
+    fireEvent.click(trigger);
+    const dialog = screen.getByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+    // Focus lands inside the dialog (Modal's focus trap), not left behind on
+    // the now-hidden trigger.
+    expect(dialog.contains(document.activeElement)).toBe(true);
+  });
+
+  it("Accordion's disclosure trigger row clears the 44px minimum row height", () => {
+    render(
+      <Accordion title="Section">
+        <div>body</div>
+      </Accordion>,
+    );
+    const trigger = screen.getByRole('button', { name: 'Section' });
+    // Default `px-4 py-3` header padding (12px top+bottom) plus line-height
+    // clears 44px in practice; assert the token contract instead of a
+    // computed pixel value jsdom can't produce.
+    expect(trigger.className).toMatch(/py-3/);
+  });
+});
+

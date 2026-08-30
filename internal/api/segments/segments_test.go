@@ -199,9 +199,9 @@ func TestMostCommon(t *testing.T) {
 func TestWhPerKm(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name             string
-		energyWh, distM  float64
-		want             float64
+		name            string
+		energyWh, distM float64
+		want            float64
 	}{
 		{"10 km at 2000 Wh", 2000, 10000, 200},
 		{"1 km at 150 Wh", 150, 1000, 150},

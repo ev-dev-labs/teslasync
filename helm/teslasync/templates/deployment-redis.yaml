@@ -22,8 +22,13 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        {{- toYaml .Values.redis.podSecurityContext | nindent 8 }}
       containers:
         - name: redis
+          securityContext:
+            {{- toYaml .Values.redis.securityContext | nindent 12 }}
           image: {{ .Values.redis.image | quote }}
           {{- with .Values.redis.command }}
           command:
@@ -33,6 +38,13 @@ spec:
             - name: redis
               containerPort: 6379
               protocol: TCP
+          # AOF replay completes before liveness is allowed to restart Redis.
+          startupProbe:
+            exec:
+              command: ["redis-cli", "ping"]
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
           livenessProbe:
             exec:
               command: ["redis-cli", "ping"]
@@ -49,15 +61,15 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.redis.persistence.enabled }}
           volumeMounts:
             - name: redis-data
               mountPath: /data
-          {{- end }}
-      {{- if .Values.redis.persistence.enabled }}
       volumes:
         - name: redis-data
+        {{- if .Values.redis.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-redis-data
-      {{- end }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
 {{- end }}

@@ -28,6 +28,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>, <MetricBar>, and the
 // PageContainer freshness chip's useReducedMotion) reads it at module load.
 vi.hoisted(() => {
@@ -207,12 +213,13 @@ function renderPage() {
   );
 }
 
-// Read a KPI card's value <p> by its label text (MetricCard renders label +
-// value as siblings inside a single `.rounded-xl` card).
+// Read a KPI card's value by its label text via MetricCard's stable semantic
+// hooks: the card root is `[data-role="metric-card"]` and its value node is
+// `[data-role="metric-value"]` (both siblings of `[data-role="metric-label"]`).
 function kpiValue(label: string): string {
-  const card = screen.getByText(label).closest('.rounded-xl');
+  const card = screen.getByText(label).closest('[data-role="metric-card"]');
   expect(card).not.toBeNull();
-  const value = card!.querySelector('p.text-xl');
+  const value = card!.querySelector('[data-role="metric-value"]');
   expect(value).not.toBeNull();
   return value!.textContent ?? '';
 }

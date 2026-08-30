@@ -1,16 +1,19 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import {
   useActionCenter,
   useApplyActionCenterAction,
 } from '@/api/hooks/useActionCenter';
-import { useVehicles } from '@/api/hooks/useVehicles';
 import { useToast } from '@/components/feedback';
 import { PageContainer } from '@/components/layout';
 import { FadeIn } from '@/components/motion';
 import { Button, Pagination } from '@/components/ui';
+import { DataProvenanceBadge } from '@/components/data-display';
+import { useDataState } from '@/hooks/useDataState';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { Icons } from '@/lib/icons';
 import type {
   ActionCenterFilter,
@@ -32,12 +35,35 @@ export default function ActionCenterPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const toast = useToast();
-  const [filter, setFilter] = useState<ActionCenterFilter>(initialFilter);
+  const operationalMode = useOperationalMode();
+  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const [filter, setFilter] = useState<ActionCenterFilter>(() => ({
+    ...initialFilter,
+    vehicle_id: vehicleId ?? undefined,
+  }));
   const [pending, setPending] = useState<PendingAction | null>(null);
   const query = useActionCenter(filter);
-  const vehiclesQuery = useVehicles();
+  const actionCenterState = useDataState(query, { provenance: 'inferred' });
   const applyAction = useApplyActionCenterAction();
   usePageTitle(t('actionCenter.page.title', 'Action Center'));
+
+  useEffect(() => {
+    setFilter((current) =>
+      current.vehicle_id === (vehicleId ?? undefined)
+        ? current
+        : { ...current, vehicle_id: vehicleId ?? undefined, offset: 0 },
+    );
+  }, [vehicleId]);
+
+  const handleFilterChange = useCallback(
+    (next: ActionCenterFilter) => {
+      setFilter(next);
+      if (next.vehicle_id != null && next.vehicle_id !== vehicleId) {
+        setVehicleId(next.vehicle_id);
+      }
+    },
+    [setVehicleId, vehicleId],
+  );
 
   const handleAction = useCallback(
     (
@@ -48,9 +74,19 @@ export default function ActionCenterPage() {
         if (recommendation.navigation_path) navigate(recommendation.navigation_path);
         return;
       }
+      if (!operationalMode.canWrite) {
+        toast.warning(
+          t(
+            'operationalMode.actionCenterDisabled.title',
+            'Inbox actions are read-only',
+          ),
+          operationalMode.writeBlockReason ?? undefined,
+        );
+        return;
+      }
       setPending({ recommendation, action });
     },
-    [navigate],
+    [navigate, operationalMode, t, toast],
   );
 
   const confirmAction = useCallback(async () => {
@@ -60,7 +96,7 @@ export default function ActionCenterPage() {
         ? new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString()
         : null;
     try {
-      await applyAction.mutateAsync({
+      const result = await applyAction.mutateAsync({
         recommendation_id: pending.recommendation.id,
         fingerprint: pending.recommendation.fingerprint,
         action: pending.action,
@@ -68,10 +104,50 @@ export default function ActionCenterPage() {
         confirmed: true,
         snoozed_until: snoozedUntil,
       });
-      toast.success(
-        t('actionCenter.toast.success', 'Action applied'),
-        t('actionCenter.toast.successMessage', 'Your decision inbox state was updated.'),
-      );
+      if (pending.action === 'restore') {
+        toast.success(
+          t('actionCenter.toast.restoreSuccess', 'Recommendation restored'),
+          t('actionCenter.toast.restoreSuccessMessage', 'The recommendation is back in the open queue.'),
+        );
+      } else {
+        toast.toast({
+          type: 'success',
+          title: t('actionCenter.toast.success', 'Action applied'),
+          message: t(
+            'actionCenter.toast.successMessage',
+            'Your decision inbox state was updated.',
+          ),
+          duration: 5000,
+          action: {
+            label: t('common.undo', 'Undo'),
+            onClick: () => {
+              void applyAction.mutateAsync({
+                recommendation_id: result.recommendation.id,
+                fingerprint: result.recommendation.fingerprint,
+                action: 'restore',
+                expected_version: result.recommendation.current_state.version,
+                confirmed: true,
+                snoozed_until: null,
+              }).then(() => {
+                toast.success(
+                  t('actionCenter.toast.undoSuccess', 'Action undone'),
+                  t(
+                    'actionCenter.toast.undoSuccessMessage',
+                    'The recommendation was restored to the open queue.',
+                  ),
+                );
+              }).catch((error) => {
+                toast.error(
+                  t('actionCenter.toast.undoError', 'Could not undo action'),
+                  error instanceof Error
+                    ? error.message
+                    : t('actionCenter.toast.errorMessage', 'Refresh and try again.'),
+                );
+              });
+            },
+          },
+        });
+      }
       setPending(null);
     } catch (error) {
       toast.error(
@@ -87,16 +163,23 @@ export default function ActionCenterPage() {
   const pageSize = filter.limit ?? 50;
   const page = Math.floor((filter.offset ?? 0) / pageSize) + 1;
   const RefreshIcon = Icons.refresh;
-  const actions = (
-    <Button
-      type="button"
-      variant="secondary"
-      icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
-      onClick={() => void query.refetch()}
-      loading={query.isFetching}
-    >
-      {t('actionCenter.actions.refresh', 'Refresh evidence')}
-    </Button>
+  const refreshAction = (
+    <div className="flex flex-wrap items-center gap-2">
+      <DataProvenanceBadge
+        provenance={actionCenterState.provenance}
+        status={actionCenterState.status}
+        updatedAt={actionCenterState.updatedAt}
+      />
+      <Button
+        type="button"
+        variant="secondary"
+        icon={<RefreshIcon className="h-4 w-4" aria-hidden="true" />}
+        onClick={() => void query.refetch()}
+        loading={query.isFetching}
+      >
+        {t('actionCenter.actions.refresh', 'Refresh evidence')}
+      </Button>
+    </div>
   );
 
   return (
@@ -106,7 +189,7 @@ export default function ActionCenterPage() {
         'actionCenter.page.subtitle',
         'A prioritized decision inbox built from existing TeslaSync evidence—not another analytics dashboard.',
       )}
-      actions={actions}
+      secondaryActions={refreshAction}
       query={query}
       copyLink
     >
@@ -119,8 +202,8 @@ export default function ActionCenterPage() {
       <FadeIn delay={0.04}>
         <ActionCenterFilters
           filter={filter}
-          vehicles={vehiclesQuery.data ?? []}
-          onChange={setFilter}
+          vehicles={vehicles}
+          onChange={handleFilterChange}
         />
       </FadeIn>
       <FadeIn delay={0.08}>
@@ -136,6 +219,8 @@ export default function ActionCenterPage() {
           error={query.error}
           onRetry={() => void query.refetch()}
           onAction={handleAction}
+          actionsDisabled={!operationalMode.canWrite}
+          actionsDisabledReason={operationalMode.writeBlockReason ?? undefined}
           onClearFilters={() => setFilter(initialFilter)}
         />
         <Pagination

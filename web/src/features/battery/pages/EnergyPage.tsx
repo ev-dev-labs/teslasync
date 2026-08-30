@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom';
 import {
   Zap, Leaf, Fuel, Sun, Moon, ArrowRight, Activity, Gauge,
   DollarSign, Route, BatteryCharging, CalendarDays, TrendingUp,
+  CircleAlert, Thermometer, MapPinned,
 } from 'lucide-react';
 
-import { PageContainer } from '@/components/layout/PageContainer';
+import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, DataTable, Badge, PanelTitle, Text, Caption,
   MetricLabel, HelperText, type Column,
@@ -20,11 +21,29 @@ import {
   ChartTimeRangeProvider, useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
 import { FadeIn, StaggerContainer, StaggerItem } from '@/components/motion';
-import { Skeleton, QueryError, EmptyState, ChartBlockSkeleton, StatGridSkeleton, PageHeaderSkeleton } from '@/components/feedback';
-import { Currency, SavedViewMenu, MetricCard, MetricTile } from '@/components/data-display';
+import {
+  AlertBanner,
+  Skeleton,
+  QueryError,
+  EmptyState,
+  ChartBlockSkeleton,
+  StatGridSkeleton,
+  PageHeaderSkeleton,
+} from '@/components/feedback';
+import {
+  Currency,
+  DataFreshnessAuto,
+  DataProvenanceBadge,
+  SavedViewMenu,
+  MetricCard,
+  MetricTile,
+  OperationalBrief,
+  type OperationalAttention,
+  type OperationalTone,
+} from '@/components/data-display';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 
-import { useEnergyStats } from '@/api/hooks/useEnergy';
+import { useEnergyStats, useVampireDrainStats } from '@/api/hooks/useEnergy';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useChargingTelemetryLatest } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -34,13 +53,16 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
-import { formatDateShort } from '@/lib/dateFormat';
+import { useDataState } from '@/hooks/useDataState';
+import { formatDateShort, formatDayKey, ymdInTz } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt, fmtPercent } from '@/lib/numberFormat';
 import { CHARGER_COLORS } from '@/lib/colors';
 import { chartTokens, neonColorMap, type NeonColor } from '@/lib/tokens';
 import { cn } from '@/lib/cn';
 import type { ChargingSession } from '@/api/types';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertEnergyFromSI, convertPowerFromSI } from '@/lib/unitConversion';
+import { useTimezone } from '@/lib/timezone';
 
 /* ── Local: Cost Comparison Card ────────────────────────────────── */
 
@@ -57,15 +79,29 @@ const EFFICIENCY_EXCELLENT_WH_PER_M = 0.14;
 const EFFICIENCY_GOOD_WH_PER_M = 0.18;
 const EFFICIENCY_AVERAGE_WH_PER_M = 0.22;
 const EFFICIENCY_MAX_WH_PER_M = 0.3;
+const CO2_SAVED_KG_PER_KWH = 0.4;
+
+function inclusiveDayCount(start: string, end: string, fallback = 30): number {
+  const startMs = new Date(start).getTime();
+  const endMs = new Date(end).getTime();
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || startMs > endMs) {
+    return fallback;
+  }
+  return Math.max(1, Math.floor((endMs - startMs) / 86_400_000) + 1);
+}
 
 function CostComparisonCard({
   label, evCost, gasCost, icon,
 }: {
-  label: string; evCost: number; gasCost: number; icon: ReactNode;
+  label: string; evCost: number | null; gasCost: number | null; icon: ReactNode;
 }) {
   const { t } = useTranslation();
-  const savings = (gasCost ?? 0) - (evCost ?? 0);
-  const savingsPct = gasCost > 0 ? (savings / gasCost) * 100 : 0;
+  const savings = evCost != null && gasCost != null ? gasCost - evCost : null;
+  const savingsPct =
+    savings != null && gasCost != null && gasCost > 0
+      ? (Math.abs(savings) / gasCost) * 100
+      : null;
+  const isSaving = savings != null && savings >= 0;
   const green = neonColorMap.green;
   return (
     <GlassPanel className="p-4 sm:p-5">
@@ -77,27 +113,48 @@ function CostComparisonCard({
       </div>
       <div className="mb-3 flex items-center gap-4">
         <div className="min-w-0">
-          <MetricLabel>{t('energy.cost_decimal.evCost', 'EV Cost')}</MetricLabel>
+          <MetricLabel>{t('energy.cost.evCost', 'EV Cost')}</MetricLabel>
           <Text as="p" size="lg" weight="bold" className="mt-0.5 text-cyan-300">
-            <Currency value={evCost ?? 0} />
+            {evCost != null ? <Currency value={evCost} /> : '—'}
           </Text>
         </div>
         <ArrowRight className="h-4 w-4 shrink-0 text-[var(--text-muted)]" aria-hidden="true" />
         <div className="min-w-0">
-          <MetricLabel>{t('energy.cost_decimal.gasEquivalent', 'Gas Equivalent')}</MetricLabel>
+          <MetricLabel>{t('energy.cost.gasEquivalent', 'Gas Equivalent')}</MetricLabel>
           <Text as="p" size="lg" weight="bold" color="secondary" className="mt-0.5">
-            <Currency value={gasCost ?? 0} />
+            {gasCost != null ? <Currency value={gasCost} /> : '—'}
           </Text>
         </div>
       </div>
-      <div className="flex flex-wrap items-center gap-2">
-        <Text size="sm" weight="bold" className="text-emerald-300">
-          {t('energy.cost_decimal.saving', 'Saving')} <Currency value={savings ?? 0} />
-        </Text>
-        <Text as="span" size="2xs" weight="semibold" className={cn('rounded-full px-2 py-0.5 ring-1', green.bg, green.text, green.ring)}>
-          {fmtPercent(savingsPct ?? 0)} {t('energy.cost_decimal.less', 'less')}
-        </Text>
-      </div>
+      {savings != null && savingsPct != null ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <Text size="sm" weight="bold" className={isSaving ? 'text-emerald-300' : 'text-amber-300'}>
+            {isSaving
+              ? t('energy.cost.saving', 'Saving')
+              : t('energy.cost.higherBy', 'Higher by')}{' '}
+            <Currency value={Math.abs(savings)} />
+          </Text>
+          <Text
+            as="span"
+            size="2xs"
+            weight="semibold"
+            className={cn(
+              'rounded-full px-2 py-0.5 ring-1',
+              isSaving ? [green.bg, green.text, green.ring] : 'bg-amber-500/10 text-amber-300 ring-amber-500/20',
+            )}
+          >
+            {fmtPercent(savingsPct)}{' '}
+            {isSaving ? t('energy.cost.less', 'less') : t('energy.cost.more', 'more')}
+          </Text>
+        </div>
+      ) : (
+        <HelperText>
+          {t(
+            'energy.cost.incomplete',
+            'Complete charging-cost coverage is required before savings are modeled.',
+          )}
+        </HelperText>
+      )}
     </GlassPanel>
   );
 }
@@ -147,14 +204,16 @@ function EnergyChartSync({
 
 /**
  * Mirrors the EnergyPage bento while data loads:
- * page header → 6-card KPI band → hero-gauge + lifetime bento →
- * 2 cost-comparison cards → 2 daily charts → 2 pattern charts → sessions table.
+ * page header → operational brief → 6-card KPI band → driver investigation →
+ * hero-gauge + lifetime bento → 2 cost cards → 4 charts → sessions table.
  */
 function EnergyPageSkeleton() {
   return (
     <div className="space-y-6" data-testid="energy-page-skeleton">
       <PageHeaderSkeleton />
+      <Skeleton className="h-72 rounded-xl" />
       <StatGridSkeleton cards={6} className="sm:grid-cols-3 lg:grid-cols-6" />
+      <Skeleton className="h-60 rounded-xl" />
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-3 xl:gap-5">
         <Skeleton className="h-56 rounded-xl xl:col-span-2" />
         <Skeleton className="h-56 rounded-xl" />
@@ -180,7 +239,16 @@ export default function EnergyPage() {
   const { t } = useTranslation();
   usePageTitle(t('energy.title', 'Energy'));
   const { unitPrefs, formatEnergy } = useUnits();
-  const { formatCurrency, currencySymbol } = useFormatting();
+  const { formatCurrency, currencySymbol, estimateGasCost } = useFormatting();
+  const timezone = useTimezone();
+  const sessionHourFormatter = useMemo(
+    () => new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }),
+    [timezone],
+  );
   const toDistanceDisplay = (value: number) => convertDistanceFromSI(value, unitPrefs.distance);
   const toEnergyDisplay = (wh: number) => convertEnergyFromSI(wh, unitPrefs.energy);
 
@@ -197,28 +265,103 @@ export default function EnergyPage() {
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'energy.range',
   });
+  const periodDays = inclusiveDayCount(startDate, endDate);
 
   /* URL-persisted hidden-series state for the two-series
      energy/efficiency composed chart. */
   const energyCostHidden = useHiddenSeries('energy-cost-daily');
+  /* URL-persisted hidden-series state for the efficiency + distance trend. */
+  const efficiencyHidden = useHiddenSeries('energy-efficiency-trend');
+  /* URL-persisted hidden-series state for energy + session-count buckets. */
+  const timeOfDayHidden = useHiddenSeries('energy-charging-time-of-day');
 
   /* ── Data fetching ────────────────────────────────────────────── */
+  const statsQuery = useEnergyStats(
+    vehicleId != null ? String(vehicleId) : null,
+    { start: startDate },
+  );
   const {
     data: stats, isLoading, error: statsError, refetch,
-  } = useEnergyStats(vehicleId != null ? String(vehicleId) : null, 30);
+  } = statsQuery;
+  const statsDataState = useDataState(statsQuery, { provenance: 'inferred' });
 
-  const { data: sessions } = useChargingSessionsPaginated(vehicleId, {
+  const sessionsQuery = useChargingSessionsPaginated(vehicleId, {
     limit: 100, start: startDate, end: endDate,
   });
+  const sessions = useMemo(() => sessionsQuery.data ?? [], [sessionsQuery.data]);
 
-  const { data: liveCharging } = useChargingTelemetryLatest(vehicleId ?? 0);
+  const liveChargingQuery = useChargingTelemetryLatest(vehicleId ?? 0);
+  const liveCharging = liveChargingQuery.data;
+  const idleDrainQuery = useVampireDrainStats(
+    vehicleId != null ? String(vehicleId) : null,
+  );
 
   /* ── Derived metrics ──────────────────────────────────────────── */
-  const totalEnergy = sessions?.reduce((s, c) => s + (c.total_energy_added_wh ?? 0), 0) ?? 0;
-  const totalCost = sessions?.reduce((s, c) => s + (c.cost_decimal ?? 0), 0) ?? 0;
-  const avgEfficiency = stats?.avg_efficiency_wh_per_m ?? 0;
-  const totalDistance = stats?.total_distance_m ?? 0;
-  const co2Saved = stats?.co2_saved_kg ?? totalEnergy * 0.42;
+  const sessionCapReached = sessions.length >= 100;
+  const costedSessions = sessions.filter(
+    (session) =>
+      typeof session.cost_decimal === 'number'
+      && Number.isFinite(session.cost_decimal),
+  );
+  const costCoverageComplete =
+    sessionsQuery.isSuccess
+    && sessions.length > 0
+    && costedSessions.length === sessions.length
+    && !sessionCapReached;
+  const totalChargingEnergyWh = sessions.reduce(
+    (sum, session) => sum + (Number.isFinite(session.total_energy_added_wh) ? session.total_energy_added_wh : 0),
+    0,
+  );
+  const costedEnergyWh = costedSessions.reduce(
+    (sum, session) => sum + (Number.isFinite(session.total_energy_added_wh) ? session.total_energy_added_wh : 0),
+    0,
+  );
+  const totalCost = costedSessions.reduce(
+    (sum, session) => sum + (session.cost_decimal ?? 0),
+    0,
+  );
+  const dailyEnergy = useMemo(
+    () =>
+      (stats?.daily_breakdown ?? []).filter(
+        (day) => day.date >= startDate && day.date <= endDate,
+      ),
+    [endDate, startDate, stats?.daily_breakdown],
+  );
+  const scopedDriveEnergyWh = dailyEnergy.reduce(
+    (sum, day) => sum + (day.energy_wh ?? 0),
+    0,
+  );
+  const totalDistance = dailyEnergy.reduce(
+    (sum, day) => sum + (day.distance_m ?? 0),
+    0,
+  );
+  const avgEfficiency = totalDistance > 0
+    ? scopedDriveEnergyWh / totalDistance
+    : 0;
+  const co2Saved = (scopedDriveEnergyWh / 1000) * CO2_SAVED_KG_PER_KWH;
+  const measuredEfficiencyDays = dailyEnergy.filter(
+    (day) =>
+      Number.isFinite(day.efficiency_wh_per_m)
+      && (day.efficiency_wh_per_m ?? 0) > 0
+      && Number.isFinite(day.distance_m)
+      && (day.distance_m ?? 0) > 0,
+  );
+  const peakEfficiencyDay = measuredEfficiencyDays.reduce<(typeof measuredEfficiencyDays)[number] | null>(
+    (peak, day) =>
+      peak == null || day.efficiency_wh_per_m > peak.efficiency_wh_per_m ? day : peak,
+    null,
+  );
+  const bestEfficiencyDay = measuredEfficiencyDays.reduce<(typeof measuredEfficiencyDays)[number] | null>(
+    (best, day) =>
+      best == null || day.efficiency_wh_per_m < best.efficiency_wh_per_m ? day : best,
+    null,
+  );
+  const efficiencySpreadPct =
+    peakEfficiencyDay != null
+    && bestEfficiencyDay != null
+    && avgEfficiency > 0
+      ? ((peakEfficiencyDay.efficiency_wh_per_m - bestEfficiencyDay.efficiency_wh_per_m) / avgEfficiency) * 100
+      : null;
 
   // Qualitative efficiency regions, converted to whichever display unit the
   // reading itself uses so the bands never disagree with the number.
@@ -251,55 +394,199 @@ export default function EnergyPage() {
     ],
     [unitPrefs.distance, t],
   );
-  // Guard against hand-edited / malformed `from`/`to` URL params: an invalid
-  // Date yields NaN which `Math.max(1, NaN)` propagates (NaN), corrupting every
-  // downstream projection and the "Last {days} Days" labels. Fall back to the
-  // 30-day default window instead.
-  const startMs = new Date(startDate).getTime();
-  const endMs = new Date(endDate).getTime();
-  const periodDays = Number.isFinite(startMs) && Number.isFinite(endMs)
-    ? Math.max(1, Math.floor((endMs - startMs) / 86400000) + 1)
-    : 30;
-  const costPerKm = totalDistance > 0 ? totalCost / totalDistance : 0;
-  const costPerKwh = totalEnergy > 0 ? totalCost / (totalEnergy / 1000) : 0;
-  // `total_distance_m` is SI meters post phase-42; convert to the user's display
-  // distance before applying the per-unit gas estimate, otherwise the gas
-  // "equivalent" balloons ~1000× (e.g. $24k for a 200 km month).
-  const gasEquivalent = toDistanceDisplay(totalDistance) * 0.12;
-  const monthlyProjectedCost = costPerKm > 0 ? costPerKm * (totalDistance / periodDays) * 30 : 0;
-  const yearlyProjectedCost = monthlyProjectedCost * 12;
-
-  const dailyEnergy = stats?.daily_breakdown ?? [];
+  const costPerDistance =
+    costCoverageComplete && totalDistance > 0
+      ? totalCost / toDistanceDisplay(totalDistance)
+      : null;
+  const costPerKwh = costedEnergyWh > 0 ? totalCost / (costedEnergyWh / 1000) : null;
+  // The shared formatter bridges SI meters to the configured gas unit and
+  // efficiency. Missing/invalid fuel settings return null instead of a
+  // fabricated comparison.
+  const gasEquivalent = totalDistance > 0 ? estimateGasCost(totalDistance) : null;
+  const observedCost = costCoverageComplete ? totalCost : null;
+  const monthlyProjectedCost =
+    costPerDistance != null
+      ? costPerDistance * (toDistanceDisplay(totalDistance) / periodDays) * 30
+      : null;
+  const yearlyProjectedCost =
+    observedCost != null ? (observedCost / periodDays) * 365 : null;
+  const projectedMonthlyConsumptionWh =
+    scopedDriveEnergyWh > 0 ? (scopedDriveEnergyWh / periodDays) * 30 : null;
+  const savings =
+    observedCost != null && gasEquivalent != null
+      ? gasEquivalent - observedCost
+      : null;
 
   /* The API daily breakdown is SI (Wh, Wh/m, m). Convert once to the user's
-     display units so both synced daily charts plot values that match their
-     axis + legend labels (kWh, Wh/mi|Wh/km, mi|km) instead of raw SI. */
-  const dailyChartData = useMemo(
+     display units so the efficiency chart plots values matching its labels. */
+  const dailyEfficiencyData = useMemo(
     () =>
       dailyEnergy.map((d) => ({
         date: d.date,
-        energy: convertEnergyFromSI(d.energy_wh ?? 0, energyUnit),
         efficiency: (d.efficiency_wh_per_m ?? 0) * (distanceUnit === 'mi' ? 1609.344 : 1000),
         distance: convertDistanceFromSI(d.distance_m ?? 0, distanceUnit),
       })),
-    [dailyEnergy, energyUnit, distanceUnit],
+    [dailyEnergy, distanceUnit],
   );
 
-  /* ── No-data banner gate ───────────────────────────────────────────
-   * Replay vehicles + brand-new accounts have no charging sessions and
-   * no computed energy stats. Showing 4 LinearGauges all at 0 looks
-   * like a perfectly efficient car using zero energy. Render an
-   * honest empty hero instead of misleading zeros.
-   */
-  const hasNoEnergyData = useMemo(() => {
-    const noSessions = !sessions || sessions.length === 0;
-    const noStats = !stats || (
-      (stats.total_wh ?? 0) === 0 &&
-      (stats.total_energy_used_wh ?? 0) === 0 &&
-      (stats.total_distance_m ?? 0) === 0
-    );
-    return noSessions && noStats;
-  }, [sessions, stats]);
+  /* Consumption comes from the drive aggregate; recorded cost comes from
+     charging sessions because the energy cagg intentionally emits cost=0. */
+  const dailyConsumptionCostData = useMemo(() => {
+    const rows = new Map<string, { date: string; energy: number; cost: number | null }>();
+    dailyEnergy.forEach((day) => {
+      rows.set(day.date, {
+        date: day.date,
+        energy: convertEnergyFromSI(day.energy_wh ?? 0, energyUnit),
+        cost: null,
+      });
+    });
+    sessions.forEach((session) => {
+      const date = ymdInTz(new Date(session.started_at), timezone);
+      if (date == null || date < startDate || date > endDate) return;
+      const row = rows.get(date) ?? { date, energy: 0, cost: null };
+      if (typeof session.cost_decimal === 'number' && Number.isFinite(session.cost_decimal)) {
+        row.cost = (row.cost ?? 0) + session.cost_decimal;
+      }
+      rows.set(date, row);
+    });
+    return [...rows.values()].sort((a, b) => a.date.localeCompare(b.date));
+  }, [dailyEnergy, endDate, energyUnit, sessions, startDate, timezone]);
+
+  const secondarySourceFailures = [
+    sessionsQuery.isError
+      ? t('energy.sources.chargingHistory', 'charging history')
+      : null,
+    idleDrainQuery.isError
+      ? t('energy.sources.idleDrain', 'idle-drain history')
+      : null,
+    liveChargingQuery.isError
+      ? t('energy.sources.lifetimeTelemetry', 'lifetime telemetry')
+      : null,
+  ].filter((source): source is string => source != null);
+
+  const idleDrainRate = idleDrainQuery.data?.avg_drain_pct_per_day ?? null;
+  const idleDrainHigh = idleDrainRate != null && idleDrainRate >= 3;
+  const costSeriesLabel = t('energy.chart.recordedCost', 'Recorded charging cost');
+
+  /* Replay vehicles and brand-new accounts need an honest empty hero instead
+     of valid-looking zeroes while independent sources resolve. */
+  const hasNoEnergyData =
+    (vehicleId == null || sessionsQuery.isSuccess)
+    && sessions.length === 0
+    && scopedDriveEnergyWh === 0
+    && totalDistance === 0;
+
+  const efficiencyTone: OperationalTone =
+    avgEfficiency <= 0
+      ? 'neutral'
+      : avgEfficiency <= EFFICIENCY_GOOD_WH_PER_M
+        ? 'success'
+        : avgEfficiency <= EFFICIENCY_AVERAGE_WH_PER_M
+          ? 'warning'
+          : 'danger';
+
+  const energyStatusTone: OperationalTone =
+    hasNoEnergyData
+      ? 'neutral'
+      : idleDrainHigh
+        || efficiencyTone === 'danger'
+        || secondarySourceFailures.length > 0
+        ? 'warning'
+        : efficiencyTone;
+
+  const energyAttention: OperationalAttention[] = [];
+  if (hasNoEnergyData) {
+    energyAttention.push({
+      key: 'energy-data',
+      title: t('operations.energy.noDataTitle', 'Energy evidence is still building'),
+      description: t(
+        'operations.energy.noDataDescription',
+        'Complete a drive or charging session to establish efficiency and cost baselines.',
+      ),
+      tone: 'info',
+    });
+  } else {
+    if (avgEfficiency > EFFICIENCY_AVERAGE_WH_PER_M) {
+      energyAttention.push({
+        key: 'energy-efficiency',
+        title: t('operations.energy.efficiencyAttention', 'Efficiency is outside the preferred band'),
+        description: t(
+          'operations.energy.efficiencyAttentionDescription',
+          'Compare the linked temperature, speed, and route evidence; this page does not attribute a cause.',
+        ),
+        tone: 'warning',
+      });
+    }
+    if (idleDrainHigh) {
+      energyAttention.push({
+        key: 'idle-drain',
+        title: t('operations.energy.idleDrainAttention', 'Parked drain needs review'),
+        description: t(
+          'operations.energy.idleDrainAttentionDescription',
+          'The 90-day parked, non-charging average is {{value}} per day.',
+          { value: fmtPercent(idleDrainRate) },
+        ),
+        tone: 'warning',
+      });
+    }
+    if (savings != null) {
+      if (savings >= 0) {
+        energyAttention.push({
+          key: 'energy-savings',
+          title: t('operations.energy.savingsTitle', 'Electric operation remains cost-favorable'),
+          description: t(
+            'operations.energy.savingsDescription',
+            'Estimated savings versus the configured gas-equivalent model are {{value}}.',
+            { value: formatCurrency(savings) },
+          ),
+          tone: 'success',
+        });
+      } else {
+        energyAttention.push({
+          key: 'energy-cost-premium',
+          title: t('operations.energy.costPremiumTitle', 'Recorded electric cost exceeds the gas model'),
+          description: t(
+            'operations.energy.costPremiumDescription',
+            'Recorded charging cost is {{value}} above the configured gas-equivalent model for this distance.',
+            { value: formatCurrency(Math.abs(savings)) },
+          ),
+          tone: 'warning',
+        });
+      }
+    }
+    if (sessions.length > 0 && !costCoverageComplete) {
+      energyAttention.push({
+        key: 'cost-coverage',
+        title: t('operations.energy.costCoverageTitle', 'Cost coverage is partial'),
+        description: t(
+          'operations.energy.costCoverageDescription',
+          '{{priced}} of {{total}} returned sessions include recorded cost; savings and cost projections are withheld.',
+          { priced: costedSessions.length, total: sessions.length },
+        ),
+        tone: 'info',
+      });
+    }
+    if (sessionCapReached) {
+      energyAttention.push({
+        key: 'session-cap',
+        title: t('operations.energy.sessionCapTitle', 'Charging history reached the analysis cap'),
+        description: t(
+          'operations.energy.sessionCapDescription',
+          'The latest 100 sessions are shown; older sessions may be outside cost and pattern analysis.',
+        ),
+        tone: 'info',
+      });
+    }
+  }
+  energyAttention.push({
+    key: 'charging-loss',
+    title: t('operations.energy.lossUnavailableTitle', 'Charging losses are not measured'),
+    description: t(
+      'operations.energy.lossUnavailableDescription',
+      'Independent wall-input and battery-retained energy are absent from the session contract, so no loss percentage is fabricated.',
+    ),
+    tone: 'neutral',
+  });
 
   /* ── Time-of-day analysis ─────────────────────────────────────── */
   const timeOfDayData = useMemo(() => {
@@ -313,7 +600,8 @@ export default function EnergyPage() {
     const buckets: Record<string, { count: number; energy: number }> = {};
     labels.forEach((l) => { buckets[l] = { count: 0, energy: 0 }; });
     sessions.forEach((s) => {
-      const hour = new Date(s.started_at).getHours();
+      const hour = Number(sessionHourFormatter.format(new Date(s.started_at)));
+      if (!Number.isFinite(hour)) return;
       const idx = hour < 6 ? 0 : hour < 12 ? 1 : hour < 18 ? 2 : 3;
       buckets[labels[idx]].count++;
       buckets[labels[idx]].energy += s.total_energy_added_wh ?? 0;
@@ -325,21 +613,40 @@ export default function EnergyPage() {
       count: buckets[name].count,
       energy: convertEnergyFromSI(buckets[name].energy, energyUnit),
     }));
-  }, [sessions, t, energyUnit]);
+  }, [sessions, t, energyUnit, sessionHourFormatter]);
 
   /* ── Charger-type breakdown ───────────────────────────────────── */
   const chargerBreakdown = useMemo(() => {
     if (!sessions || sessions.length === 0) return [];
-    const types: Record<string, { count: number; energy: number; cost: number }> = {};
+    const types: Record<string, {
+      count: number;
+      energy: number;
+      cost: number;
+      costedEnergy: number;
+      pricedCount: number;
+    }> = {};
     // Stable internal grouping keys (also used for CHARGER_COLORS lookup + React keys).
     sessions.forEach((s) => {
-      const key = s.charger_type?.toLowerCase().includes('tesla')
+      const chargerDescription = `${s.charger_type ?? ''} ${s.cable_type ?? ''}`.toLowerCase();
+      const key = chargerDescription.includes('tesla') || chargerDescription.includes('supercharger')
         ? 'Supercharger'
-        : s.charger_type ? 'DC Fast' : 'Home/AC';
-      if (!types[key]) types[key] = { count: 0, energy: 0, cost: 0 };
+        : /\b(ccs|chademo|dc|fast)\b/.test(chargerDescription) ? 'DC Fast' : 'Home/AC';
+      if (!types[key]) {
+        types[key] = {
+          count: 0,
+          energy: 0,
+          cost: 0,
+          costedEnergy: 0,
+          pricedCount: 0,
+        };
+      }
       types[key].count++;
       types[key].energy += s.total_energy_added_wh ?? 0;
-      types[key].cost += s.cost_decimal ?? 0;
+      if (typeof s.cost_decimal === 'number' && Number.isFinite(s.cost_decimal)) {
+        types[key].cost += s.cost_decimal;
+        types[key].costedEnergy += s.total_energy_added_wh ?? 0;
+        types[key].pricedCount++;
+      }
     });
     const chargerLabels: Record<string, string> = {
       Supercharger: t('energy.chargerType.supercharger', 'Supercharger'),
@@ -404,7 +711,7 @@ export default function EnergyPage() {
     },
     {
       key: 'cost',
-      header: t('energy.table.cost_decimal', 'Cost'),
+      header: t('energy.table.cost', 'Cost'),
       render: (s) => <>{typeof s.cost_decimal === 'number' ? formatCurrency(s.cost_decimal) : '—'}</>,
     },
     {
@@ -421,44 +728,198 @@ export default function EnergyPage() {
   ], [t, formatCurrency, formatEnergy]);
 
   /* ── KPI band definition ──────────────────────────────────────── */
+  const recordedCostValue =
+    costedSessions.length > 0
+      ? `${costCoverageComplete ? '' : '≥ '}${formatCurrency(totalCost)}`
+      : '—';
   const kpis: { key: string; label: string; value: string; icon: ReactNode; color: NeonColor }[] = [
     {
       key: 'costPerDist',
       label: t('energy.metric.costPerDist', { unit: distanceUnit, defaultValue: 'Cost per {{unit}}' }),
-      value: formatCurrency(totalDistance > 0 ? totalCost / toDistanceDisplay(totalDistance) : 0),
+      value: costPerDistance != null ? formatCurrency(costPerDistance) : '—',
       icon: <DollarSign className="h-4 w-4" />, color: 'cyan',
     },
     {
       key: 'costPerKwh',
       label: t('energy.metric.costPerKwh', 'Cost per kWh'),
-      value: formatCurrency(costPerKwh ?? 0),
+      value: costPerKwh != null ? formatCurrency(costPerKwh) : '—',
       icon: <Zap className="h-4 w-4" />, color: 'green',
     },
     {
       key: 'totalDistance',
       label: t('energy.metric.totalDistance', 'Total Distance'),
-      value: `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
+      value: statsQuery.isError
+        ? '—'
+        : `${fmtInt(toDistanceDisplay(totalDistance ?? 0))} ${distanceUnit}`,
       icon: <Route className="h-4 w-4" />, color: 'blue',
     },
     {
       key: 'sessions',
       label: t('energy.metric.sessions', 'Sessions'),
-      value: `${sessions?.length ?? 0}`,
+      value: sessionsQuery.isLoading || sessionsQuery.isError
+        ? '—'
+        : `${sessionCapReached ? '≥ ' : ''}${sessions.length}`,
       icon: <BatteryCharging className="h-4 w-4" />, color: 'purple',
     },
     {
       key: 'monthlyEst',
       label: t('energy.metric.monthlyEst', 'Monthly Est.'),
-      value: formatCurrency(monthlyProjectedCost ?? 0),
+      value: monthlyProjectedCost != null ? formatCurrency(monthlyProjectedCost) : '—',
       icon: <CalendarDays className="h-4 w-4" />, color: 'amber',
     },
     {
       key: 'yearlyEst',
       label: t('energy.metric.yearlyEst', 'Yearly Est.'),
-      value: formatCurrency(yearlyProjectedCost ?? 0),
+      value: yearlyProjectedCost != null ? formatCurrency(yearlyProjectedCost) : '—',
       icon: <TrendingUp className="h-4 w-4" />, color: 'red',
     },
   ];
+  const narrativeEvidence: OperationalNarrative['evidence'] = [
+    ...dailyEnergy
+      .slice(-3)
+      .reverse()
+      .map((day) => ({
+        id: `energy-day-${day.date}`,
+        summary: t(
+          'operations.energy.narrative.dailySummary',
+          '{{date}}: {{energy}} consumed across {{distance}}.',
+          {
+            date: day.date,
+            energy: formatEnergy(day.energy_wh ?? 0),
+            distance: `${fmtNumber(toDistanceDisplay(day.distance_m ?? 0), 1)} ${distanceUnit}`,
+          },
+        ),
+        observedAt: day.date,
+        provenance: {
+          source: t('operations.energy.consumptionSource', 'Drive consumption'),
+          recordId: day.date,
+          method: t(
+            'operations.energy.narrative.dailyMethod',
+            'Daily aggregate of measured drive energy and distance.',
+          ),
+        },
+      })),
+    ...sessions.slice(0, 2).map((session) => ({
+      id: `energy-charge-${session.id}`,
+      summary: t(
+        'operations.energy.narrative.sessionSummary',
+        '{{date}} charging: {{energy}} added; recorded cost {{cost}}.',
+        {
+          date: session.started_at,
+          energy: formatEnergy(session.total_energy_added_wh ?? 0),
+          cost:
+            session.cost_decimal == null
+              ? t('operations.energy.narrative.costMissing', 'not recorded')
+              : formatCurrency(session.cost_decimal),
+        },
+      ),
+      observedAt: session.started_at,
+      provenance: {
+        source: t('operations.energy.narrative.chargingSource', 'Charging history'),
+        recordId: String(session.id),
+        method: t(
+          'operations.energy.narrative.sessionMethod',
+          'Direct charging-session energy and recorded cost.',
+        ),
+      },
+    })),
+  ];
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.energy.narrative.whatChanged',
+      '{{energy}} of measured drive energy across {{days}} daily records, with {{cost}} in recorded charging cost.',
+      {
+        energy: formatEnergy(Math.max(0, scopedDriveEnergyWh)),
+        days: dailyEnergy.length,
+        cost: formatCurrency(totalCost),
+      },
+    ),
+    whyItMatters: t(
+      'operations.energy.narrative.impact',
+      'Energy intensity and cost coverage determine operating exposure and whether projections are decision-ready.',
+    ),
+    confidence: {
+      label:
+        dailyEnergy.length >= 7
+        && secondarySourceFailures.length === 0
+        && (sessions.length === 0 || costedSessions.length === sessions.length)
+          ? 'high'
+          : dailyEnergy.length > 0 || sessions.length > 0
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.energy.narrative.dailyBasis',
+          '{{count}} daily drive aggregates contain measured energy.',
+          { count: dailyEnergy.length },
+        ),
+        t(
+          'operations.energy.narrative.costBasis',
+          '{{priced}} of {{total}} returned charging sessions include recorded cost.',
+          { priced: costedSessions.length, total: sessions.length },
+        ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      energyAttention[0]?.description
+      ?? t(
+        'operations.energy.narrative.monitorResponse',
+        'No immediate response is indicated; continue collecting drive and charging evidence.',
+      ),
+    limitations: [
+      t(
+        'operations.energy.lossUnavailableDescription',
+        'Independent wall-input and battery-retained energy are absent from the session contract, so no loss percentage is fabricated.',
+      ),
+      ...(secondarySourceFailures.length > 0
+        ? [
+            t(
+              'operations.energy.narrative.sourceLimitation',
+              '{{count}} supporting data source is unavailable, so this assessment is partial.',
+              { count: secondarySourceFailures.length },
+            ),
+          ]
+        : []),
+      ...(costedSessions.length < sessions.length
+        ? [
+            t(
+              'operations.energy.narrative.costLimitation',
+              'Cost totals exclude sessions without a recorded price.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.energy.narrative.windowLimitation',
+        'Idle drain uses a separate 90-day source window and is not attributed to a specific cause.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.energy.consumptionSource', 'Drive consumption'),
+        method: t(
+          'operations.energy.narrative.driveMethod',
+          'Sums canonical measured drive energy and distance in the active analysis window.',
+        ),
+      },
+      {
+        source: t('operations.energy.narrative.chargingSource', 'Charging history'),
+        method: t(
+          'operations.energy.narrative.costMethod',
+          'Sums only cost values persisted on returned charging sessions.',
+        ),
+      },
+      {
+        source: t('operations.energy.narrative.idleSource', 'Parked-state history'),
+        method: t(
+          'operations.energy.narrative.idleMethod',
+          'Computes parked, non-charging battery change over the separate 90-day source window.',
+        ),
+      },
+    ],
+  };
 
   /* ── Loading short-circuit ────────────────────────────────────── */
   if (isLoading) {
@@ -470,8 +931,8 @@ export default function EnergyPage() {
     <PageContainer
       title={t('energy.pageTitle', 'Energy Intelligence')}
       subtitle={t('energy.pageSubtitle', 'Deep cost analytics, efficiency trends, savings projections, and consumption patterns')}
-      actions={
-        <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+      contextActions={
+        <>
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -479,15 +940,145 @@ export default function EnergyPage() {
             align="end"
             triggerTestId="energy-range"
           />
-          <SavedViewMenu
-            route="/energy"
-            currentQuery={savedView.currentQuery}
-            onApply={savedView.apply}
-          />
-        </div>
+        </>
+      }
+      overflowActions={
+        <SavedViewMenu
+          route="/energy"
+          currentQuery={savedView.currentQuery}
+          onApply={savedView.apply}
+        />
       }
     >
       {statsError && <QueryError error={statsError} onRetry={refetch} />}
+      {secondarySourceFailures.length > 0 && (
+        <AlertBanner
+          data-testid="energy-partial-data"
+          variant="warning"
+          title={t('energy.sources.partialTitle', 'Some energy sources are unavailable')}
+          icon={<CircleAlert className="h-4 w-4" aria-hidden="true" />}
+        >
+          {t(
+            'energy.sources.partialDescription',
+            'Available sections remain visible. Unavailable sources: {{sources}}.',
+            { sources: secondarySourceFailures.join(', ') },
+          )}
+        </AlertBanner>
+      )}
+
+      <OperationalBrief
+        testId="energy-operational-brief"
+        eyebrow={t('operations.energy.eyebrow', 'Energy posture')}
+        title={t('operations.energy.title', 'Consumption, efficiency, and cost in one operating view')}
+        description={t(
+          'operations.energy.description',
+          'The selected window combines measured drive consumption, charging cost coverage, idle drain, and projected usage.',
+        )}
+        statusLabel={
+          hasNoEnergyData
+            ? t('operations.status.awaitingData', 'Awaiting data')
+            : energyStatusTone === 'success'
+              ? t('operations.status.onTrack', 'On track')
+              : t('operations.status.review', 'Review recommended')
+        }
+        statusTone={energyStatusTone}
+        narrative={narrative}
+        scope={
+          <Badge variant="neutral" size="sm">
+            {t('operations.scope.days', '{{count}} days', { count: periodDays })}
+          </Badge>
+        }
+        freshness={
+          <div className="flex flex-wrap items-center gap-2">
+            <DataProvenanceBadge
+              provenance={statsDataState.provenance}
+              status={statsDataState.status}
+              updatedAt={statsDataState.updatedAt}
+            />
+            <DataFreshnessAuto
+              query={statsQuery}
+              source={t('operations.energy.consumptionSource', 'Drive consumption')}
+            />
+          </div>
+        }
+        metrics={[
+          {
+            key: 'consumption',
+            label: t('operations.energy.consumption', 'Drive consumption'),
+            value: scopedDriveEnergyWh > 0 ? formatEnergy(scopedDriveEnergyWh) : '—',
+            detail: t(
+              'operations.energy.consumptionDetail',
+              'Measured traction energy in the selected drive aggregate.',
+            ),
+            tone: 'info',
+          },
+          {
+            key: 'efficiency',
+            label: t('energy.gauge.efficiency', 'Efficiency'),
+            value: avgEfficiency > 0
+              ? `${fmtInt(toEfficiencyDisplay(avgEfficiency))} ${efficiencyUnit}`
+              : '—',
+            detail: t(
+              'operations.energy.efficiencyDetail',
+              'Average energy consumed per display-distance unit.',
+            ),
+            tone: efficiencyTone,
+          },
+          {
+            key: 'idle-drain',
+            label: t('operations.energy.idleDrain', 'Idle drain'),
+            value: idleDrainQuery.isLoading
+              ? t('common.loading', 'Loading…')
+              : idleDrainRate != null
+                ? `${fmtNumber(idleDrainRate)}%/day`
+                : '—',
+            detail: t(
+              'operations.energy.idleDrainDetail',
+              'Average parked, non-charging loss across the separate 90-day source window.',
+            ),
+            tone: idleDrainHigh ? 'warning' : idleDrainRate != null ? 'success' : 'neutral',
+          },
+          {
+            key: 'charging-loss',
+            label: t('operations.energy.chargingLoss', 'Charging losses'),
+            value: t('operations.energy.notMeasured', 'Not measured'),
+            detail: t(
+              'operations.energy.chargingLossDetail',
+              'Wall input and battery-retained energy are not independently available.',
+            ),
+            tone: 'neutral',
+          },
+          {
+            key: 'cost',
+            label: t('operations.energy.recordedCost', 'Recorded cost'),
+            value: recordedCostValue,
+            detail: t(
+              'operations.energy.costDetail',
+              '{{priced}} of {{total}} returned sessions include cost.',
+              { priced: costedSessions.length, total: sessions.length },
+            ),
+            tone: costCoverageComplete ? 'neutral' : costedSessions.length > 0 ? 'info' : 'neutral',
+          },
+          {
+            key: 'projection',
+            label: t('operations.energy.projectedUsage', 'Projected 30-day use'),
+            value: projectedMonthlyConsumptionWh != null
+              ? formatEnergy(projectedMonthlyConsumptionWh)
+              : '—',
+            detail: t(
+              'operations.energy.projectedUsageDetail',
+              'Straight-line projection from measured consumption in the selected window.',
+            ),
+            tone: 'neutral',
+          },
+        ]}
+        metricColumns={3}
+        attention={energyAttention}
+        provenance={t(
+          'operations.energy.provenance',
+          'Drive consumption comes from SI daily aggregates; costs from returned charging sessions; idle drain from 90-day FSM and signal history. Charging loss remains unsupported.',
+        )}
+      />
 
       {/* ── KPI band ────────────────────────────────────────────── */}
       <section aria-label={t('energy.kpis', 'Key energy metrics')}>
@@ -499,6 +1090,90 @@ export default function EnergyPage() {
           ))}
         </StaggerContainer>
       </section>
+
+      <FadeIn delay={0.04}>
+        <GlassPanel className="p-4 sm:p-5">
+          <PanelTitle className="flex items-center gap-2">
+            <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+            {t('energy.drivers.title', 'Efficiency driver investigation')}
+          </PanelTitle>
+          <Text as="p" variant="bodySm" className="mt-1 max-w-4xl">
+            {t(
+              'energy.drivers.description',
+              'Daily intensity identifies when efficiency changed; temperature, speed, and route workspaces provide the evidence needed to investigate why.',
+            )}
+          </Text>
+          {peakEfficiencyDay != null && bestEfficiencyDay != null ? (
+            <>
+              <div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <MetricTile
+                  value={toEfficiencyDisplay(peakEfficiencyDay.efficiency_wh_per_m)}
+                  unit={efficiencyUnit}
+                  label={t('energy.drivers.highestDay', 'Highest observed day')}
+                  sublabel={formatDayKey(peakEfficiencyDay.date, { style: 'long' })}
+                  accentClass="text-amber-300"
+                />
+                <MetricTile
+                  value={toEfficiencyDisplay(bestEfficiencyDay.efficiency_wh_per_m)}
+                  unit={efficiencyUnit}
+                  label={t('energy.drivers.lowestDay', 'Lowest observed day')}
+                  sublabel={formatDayKey(bestEfficiencyDay.date, { style: 'long' })}
+                  accentClass="text-emerald-300"
+                />
+                <MetricTile
+                  value={efficiencySpreadPct}
+                  unit="%"
+                  label={t('energy.drivers.spread', 'Observed daily spread')}
+                  sublabel={t('energy.drivers.spreadHint', 'Difference relative to weighted average')}
+                  accentClass="text-cyan-300"
+                />
+                <MetricTile
+                  value={toDistanceDisplay(peakEfficiencyDay.distance_m)}
+                  unit={distanceUnit}
+                  label={t('energy.drivers.distanceContext', 'Distance on highest day')}
+                  sublabel={t('energy.drivers.contextNotCause', 'Context only, not causal attribution')}
+                />
+              </div>
+              <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-3">
+                <Link
+                  to="/temperature-impact"
+                  className="flex min-h-11 items-center gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-3)]"
+                >
+                  <Thermometer className="h-4 w-4 text-amber-300" aria-hidden="true" />
+                  <Text size="sm" weight="semibold">{t('energy.drivers.temperature', 'Review temperature impact')}</Text>
+                </Link>
+                <Link
+                  to="/speed-profile"
+                  className="flex min-h-11 items-center gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-3)]"
+                >
+                  <Gauge className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+                  <Text size="sm" weight="semibold">{t('energy.drivers.speed', 'Review speed profile')}</Text>
+                </Link>
+                <Link
+                  to="/route-efficiency"
+                  className="flex min-h-11 items-center gap-3 rounded-shape-md border border-[var(--border-subtle)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:border-[var(--border-default)] hover:bg-[var(--surface-3)]"
+                >
+                  <MapPinned className="h-4 w-4 text-purple-300" aria-hidden="true" />
+                  <Text size="sm" weight="semibold">{t('energy.drivers.route', 'Review route efficiency')}</Text>
+                </Link>
+              </div>
+              <HelperText className="mt-3">
+                {t(
+                  'energy.drivers.disclosure',
+                  'These daily observations are descriptive. They do not attribute efficiency changes to a specific cause.',
+                )}
+              </HelperText>
+            </>
+          ) : (
+            // no-action: this evidence requires additional measured drive days.
+            <EmptyState
+              icon={<Activity className="h-8 w-8" />}
+              message={t('energy.drivers.empty', 'More measured drive days are needed to compare efficiency pressure.')}
+              className="py-8"
+            />
+          )}
+        </GlassPanel>
+      </FadeIn>
 
       {/* ── Hero bento: gauges (primary) + lifetime (context) ───── */}
       <FadeIn delay={0.05}>
@@ -519,13 +1194,13 @@ export default function EnergyPage() {
             ) : (
               <div className="grid grid-cols-2 items-center gap-4 sm:grid-cols-4 sm:gap-6">
                 <MetricTile
-                  value={toEnergyDisplay(totalEnergy)}
+                  value={toEnergyDisplay(scopedDriveEnergyWh)}
                   label={t('energy.gauge.energyUsed', 'Energy Used')}
                   unit={energyUnit}
                   accentClass="text-cyan-300"
                 />
                 <ThresholdBar
-                  value={toEfficiencyDisplay(avgEfficiency || (totalDistance > 0 ? totalEnergy / totalDistance : 0))}
+                  value={toEfficiencyDisplay(avgEfficiency)}
                   min={0}
                   max={toEfficiencyDisplay(EFFICIENCY_MAX_WH_PER_M)}
                   bands={efficiencyBands}
@@ -541,9 +1216,9 @@ export default function EnergyPage() {
                   accentClass="text-purple-300"
                 />
                 <MetricTile
-                  value={totalCost}
+                  value={observedCost}
                   label={t('energy.gauge.totalCost', 'Total Cost')}
-                  unit={currencySymbol}
+                  unit={observedCost != null ? currencySymbol : undefined}
                   accentClass="text-amber-300"
                 />
               </div>
@@ -565,8 +1240,12 @@ export default function EnergyPage() {
               />
               <LifetimeStat
                 label={t('energy.lifetime.periodEnergy', { days: periodDays, defaultValue: 'Last {{days}} Days' })}
-                value={fmtNumber(toEnergyDisplay(totalEnergy))}
-                unit={energyUnit}
+                value={
+                  sessionsQuery.isLoading || sessionsQuery.isError
+                    ? '—'
+                    : `${sessionCapReached ? '≥ ' : ''}${fmtNumber(toEnergyDisplay(totalChargingEnergyWh))}`
+                }
+                unit={sessionsQuery.isError ? undefined : energyUnit}
                 desc={t('energy.lifetime.periodEnergyDesc', 'Energy added during selected date range')}
                 accent="text-emerald-300"
               />
@@ -582,15 +1261,15 @@ export default function EnergyPage() {
           className="grid grid-cols-1 gap-4 sm:grid-cols-2"
         >
           <CostComparisonCard
-            label={t('energy.cost_decimal.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
-            evCost={totalCost}
+            label={t('energy.cost.periodTotal', { days: periodDays, defaultValue: '{{days}}-Day Total' })}
+            evCost={observedCost}
             gasCost={gasEquivalent}
             icon={<Fuel className="h-4 w-4" />}
           />
           <CostComparisonCard
-            label={t('energy.cost_decimal.projectedAnnual', 'Projected Annual')}
+            label={t('energy.cost.projectedAnnual', 'Projected Annual')}
             evCost={yearlyProjectedCost}
-            gasCost={(gasEquivalent / periodDays) * 365}
+            gasCost={gasEquivalent != null ? (gasEquivalent / periodDays) * 365 : null}
             icon={<Leaf className="h-4 w-4" />}
           />
         </section>
@@ -610,7 +1289,7 @@ export default function EnergyPage() {
             {/* chart-a11y:no-table dual-axis composed chart with brush; SR users can use Download CSV via the chart export menu */}
             <ChartContainer
               title={t('energy.chart.energyCostDaily', 'Energy & Cost Daily')}
-              ariaLabel={t('energy.chart.energyCostDaily.aria', 'Daily energy and efficiency composed chart with bars and a line')}
+              ariaLabel={t('energy.chart.energyCostDailyAria', 'Daily drive consumption and recorded charging cost chart')}
               exportable
               exportFilename="energy-cost-daily"
               chartKey="energy-cost-daily"
@@ -618,12 +1297,12 @@ export default function EnergyPage() {
             >
               {({ annotations: chartAnnotations }) => (
                 <div className="h-56 sm:h-64">
-                  {dailyChartData.length > 0 ? (
+                  {dailyConsumptionCostData.length > 0 ? (
                     <EnergyChartSync>
                       {({ sync, syncedX }) => (
                         <ResponsiveContainer width="100%" height="100%">
                           <ComposedChart
-                            data={dailyChartData}
+                            data={dailyConsumptionCostData}
                             syncId={sync.syncId}
                             syncMethod={sync.syncMethod}
                             onMouseMove={sync.onMouseMove}
@@ -634,14 +1313,31 @@ export default function EnergyPage() {
                             {chartGrid}
                             <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
                             <YAxis yAxisId="left" tick={axisTickSm} tickLine={false} axisLine={false} />
-                            <YAxis yAxisId="right" orientation="right" tick={axisTickSm} tickLine={false} axisLine={false} />
-                            <Tooltip content={<ChartTooltip />} />
+                            <YAxis
+                              yAxisId="right"
+                              orientation="right"
+                              tick={axisTickSm}
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(value: number) => formatCurrency(value, 0)}
+                            />
+                            <Tooltip
+                              content={(
+                                <ChartTooltip
+                                  valueFormatter={(value, name) =>
+                                    name === costSeriesLabel
+                                      ? formatCurrency(Number(value))
+                                      : `${fmtNumber(Number(value))} ${energyUnit}`
+                                  }
+                                />
+                              )}
+                            />
                             <ChartLegend state={energyCostHidden} />
                             {renderAnnotationLines(chartAnnotations, (ts) => ts)}
                             <Bar
                               yAxisId="left"
                               dataKey="energy"
-                              name={t('energy.chart.energy', 'Energy')}
+                              name={t('energy.chart.driveConsumption', 'Drive consumption')}
                               fill="url(#energyBarGrad)"
                               fillOpacity={0.6}
                               radius={[3, 3, 0, 0]}
@@ -651,11 +1347,12 @@ export default function EnergyPage() {
                             <Line
                               {...AREA_DEFAULTS}
                               yAxisId="right"
-                              dataKey="efficiency"
-                              name={efficiencyUnit}
+                              dataKey="cost"
+                              name={costSeriesLabel}
                               stroke="#10b981"
                               animationDuration={800}
-                              hide={energyCostHidden.isHidden('efficiency')}
+                              connectNulls={false}
+                              hide={energyCostHidden.isHidden('cost')}
                             />
                             {syncedX != null && (
                               <ReferenceLine
@@ -668,7 +1365,7 @@ export default function EnergyPage() {
                                 isFront
                               />
                             )}
-                            {dailyChartData.length > 14 && (
+                            {dailyConsumptionCostData.length > 14 && (
                               <Brush
                                 dataKey="date"
                                 height={20}
@@ -695,17 +1392,18 @@ export default function EnergyPage() {
             {/* chart-a11y:no-table efficiency + distance two-area trend; same daily breakdown is exportable as CSV via the chart menu */}
             <ChartContainer
               title={t('energy.chart.efficiencyTrend', 'Efficiency Trend')}
-              ariaLabel={t('energy.chart.efficiencyTrend.aria', 'Daily efficiency and distance area chart')}
+              ariaLabel={t('energy.chart.efficiencyTrendAria', 'Daily efficiency and distance area chart')}
               exportable
               exportFilename="efficiency-trend"
+              chartKey="energy-efficiency-trend"
             >
               <div className="h-56 sm:h-64">
-                {dailyChartData.length > 0 ? (
+                {dailyEfficiencyData.length > 0 ? (
                   <EnergyChartSync>
                     {({ sync, syncedX }) => (
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
-                          data={dailyChartData}
+                          data={dailyEfficiencyData}
                           syncId={sync.syncId}
                           syncMethod={sync.syncMethod}
                           onMouseMove={sync.onMouseMove}
@@ -718,6 +1416,7 @@ export default function EnergyPage() {
                           <XAxis dataKey="date" tick={axisTickSm} tickLine={false} axisLine={false} />
                           <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                           <Tooltip content={<ChartTooltip />} />
+                          <ChartLegend state={efficiencyHidden} />
                           <Area
                             {...AREA_DEFAULTS}
                             dataKey="efficiency"
@@ -725,6 +1424,7 @@ export default function EnergyPage() {
                             stroke="#10b981"
                             fill="url(#effGrad)"
                             animationDuration={800}
+                            hide={efficiencyHidden.isHidden('efficiency')}
                           />
                           <Area
                             {...AREA_DEFAULTS}
@@ -735,6 +1435,7 @@ export default function EnergyPage() {
                             strokeWidth={1}
                             strokeDasharray="4 4"
                             animationDuration={800}
+                            hide={efficiencyHidden.isHidden('distance')}
                           />
                           {syncedX != null && (
                             <ReferenceLine
@@ -772,11 +1473,19 @@ export default function EnergyPage() {
           {/* chart-a11y:no-table aggregated time-of-day buckets bar chart; CSV download available */}
           <ChartContainer
             title={t('energy.chart.chargingByTime', 'Charging by Time of Day')}
-            ariaLabel={t('energy.chart.chargingByTime.aria', 'Charging energy and session count by time of day bar chart')}
+            ariaLabel={t('energy.chart.chargingByTimeAria', 'Charging energy and session count by time of day bar chart')}
             exportable
             exportFilename="charging-by-time"
+            chartKey="energy-charging-time-of-day"
           >
-            {timeOfDayData.length > 0 ? (
+            {sessionsQuery.isLoading ? (
+              <Skeleton className="h-60 rounded-xl" />
+            ) : sessionsQuery.isError ? (
+              <QueryError
+                error={sessionsQuery.error}
+                onRetry={() => void sessionsQuery.refetch()}
+              />
+            ) : timeOfDayData.length > 0 ? (
               <>
                 <div className="h-44 sm:h-60">
                   <ResponsiveContainer width="100%" height="100%">
@@ -785,13 +1494,15 @@ export default function EnergyPage() {
                       <XAxis dataKey="name" tick={axisTickSm} tickLine={false} axisLine={false} />
                       <YAxis tick={axisTickSm} tickLine={false} axisLine={false} />
                       <Tooltip content={<ChartTooltip />} />
+                      <ChartLegend state={timeOfDayHidden} />
                       <Bar
                         dataKey="energy"
-                        name={t('energy.chart.energyKwh', 'Energy (kWh)')}
+                        name={t('energy.chart.energyDisplay', { unit: energyUnit, defaultValue: 'Energy ({{unit}})' })}
                         fill="#f59e0b"
                         fillOpacity={0.7}
                         radius={[3, 3, 0, 0]}
                         animationDuration={800}
+                        hide={timeOfDayHidden.isHidden('energy')}
                       />
                       <Bar
                         dataKey="count"
@@ -800,23 +1511,34 @@ export default function EnergyPage() {
                         fillOpacity={0.5}
                         radius={[3, 3, 0, 0]}
                         animationDuration={800}
+                        hide={timeOfDayHidden.isHidden('count')}
                       />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1">
                   <Caption className="flex items-center gap-1">
-                    <Moon className="h-3 w-3" aria-hidden="true" /> {t('energy.tip.offPeak', 'Off-peak charging saves money')}
+                    <Moon className="h-3 w-3" aria-hidden="true" />
+                    {t('energy.tip.timezone', 'Buckets use {{timezone}} session start time.', { timezone })}
                   </Caption>
                   <Caption className="flex items-center gap-1">
-                    <Sun className="h-3 w-3" aria-hidden="true" /> {t('energy.tip.solar', 'Solar-optimal: 10am–3pm')}
+                    <Sun className="h-3 w-3" aria-hidden="true" />
+                    {t('energy.tip.noSavingsClaim', 'Timing alone does not prove tariff or solar savings.')}
                   </Caption>
                 </div>
               </>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              // no-action: the global vehicle and analysis-window controls remain available.
+              <EmptyState
                 icon={<Activity className="h-8 w-8" />}
-                message={t('common.noData', 'No data available')}
+                message={t(
+                  'energy.chart.noTimeOfDayData',
+                  'No charging sessions fall within the selected analysis window.',
+                )}
+                description={t(
+                  'energy.chart.noTimeOfDayDataDescription',
+                  'Session timing patterns appear after completed charges are recorded in this period.',
+                )}
                 className="py-8"
               />
             )}
@@ -825,11 +1547,18 @@ export default function EnergyPage() {
           {/* chart-a11y:no-table charger-type pie-chart aggregation; CSV download available */}
           <ChartContainer
             title={t('energy.chart.chargerBreakdown', 'Charger Type Breakdown')}
-            ariaLabel={t('energy.chart.chargerBreakdown.aria', 'Charger type share pie chart')}
+            ariaLabel={t('energy.chart.chargerBreakdownAria', 'Charger type share pie chart')}
             exportable
             exportFilename="charger-breakdown"
           >
-            {chargerBreakdown.length > 0 ? (
+            {sessionsQuery.isLoading ? (
+              <Skeleton className="h-60 rounded-xl" />
+            ) : sessionsQuery.isError ? (
+              <QueryError
+                error={sessionsQuery.error}
+                onRetry={() => void sessionsQuery.refetch()}
+              />
+            ) : chargerBreakdown.length > 0 ? (
               <div className="flex flex-col items-center gap-4 sm:flex-row sm:gap-6">
                 <div className="h-40 w-40 shrink-0 sm:h-48 sm:w-48">
                   <ResponsiveContainer width="100%" height="100%">
@@ -866,9 +1595,13 @@ export default function EnergyPage() {
                       </div>
                       <div className="flex items-center justify-between">
                         <Text size="xs" className="text-cyan-300">{fmtNumber(toEnergyDisplay(b.energy ?? 0))} {energyUnit}</Text>
-                        <Text size="xs" className="text-emerald-300"><Currency value={b.cost ?? 0} /></Text>
+                        <Text size="xs" className="text-emerald-300">
+                          {b.pricedCount > 0 ? <Currency value={b.cost} /> : '—'}
+                        </Text>
                         <Caption>
-                          <Currency value={b.energy > 0 ? b.cost / (b.energy / 1000) : 0} precision={3} />/kWh
+                          {b.costedEnergy > 0
+                            ? <><Currency value={b.cost / (b.costedEnergy / 1000)} precision={3} />/kWh</>
+                            : '—'}
                         </Caption>
                       </div>
                     </div>
@@ -876,9 +1609,17 @@ export default function EnergyPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+              // no-action: the global vehicle and analysis-window controls remain available.
+              <EmptyState
                 icon={<Activity className="h-8 w-8" />}
-                message={t('common.noData', 'No data available')}
+                message={t(
+                  'energy.chart.noChargerBreakdownData',
+                  'No charger-type energy is available for the selected analysis window.',
+                )}
+                description={t(
+                  'energy.chart.noChargerBreakdownDataDescription',
+                  'Home, AC, and DC shares appear after completed sessions include charger classification.',
+                )}
                 className="py-8"
               />
             )}
@@ -893,7 +1634,14 @@ export default function EnergyPage() {
             <Zap className="h-4 w-4 text-amber-300" aria-hidden="true" />
             {t('energy.sessions.title', 'Recent Charging Sessions')}
           </PanelTitle>
-          {sessions && sessions.length > 0 ? (
+          {sessionsQuery.isLoading ? (
+            <Skeleton className="h-64 rounded-xl" />
+          ) : sessionsQuery.isError ? (
+            <QueryError
+              error={sessionsQuery.error}
+              onRetry={() => { void sessionsQuery.refetch(); }}
+            />
+          ) : sessions.length > 0 ? (
             <DataTable
               tableId="battery:energy-sessions"
               columns={sessionColumns}

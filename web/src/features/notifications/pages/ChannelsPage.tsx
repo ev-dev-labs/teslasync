@@ -6,7 +6,7 @@
  * grid, the browser-push + provider-reference band, and the create/edit modal.
  */
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Plus, RefreshCw } from 'lucide-react';
 
@@ -31,6 +31,21 @@ export default function ChannelsPage() {
   const channelsQuery = useNotificationChannels();
   const statsQuery = useNotificationStats();
   const channels: NotificationChannel[] = channelsQuery.data ?? [];
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'notification-channels',
+        label: t('dataSources.labels.notificationChannels', 'Notification channels'),
+        query: channelsQuery,
+      },
+      {
+        id: 'delivery-statistics',
+        label: t('dataSources.labels.notificationStats', 'Delivery statistics'),
+        query: statsQuery,
+      },
+    ],
+    [channelsQuery, statsQuery, t],
+  );
 
   const [showForm, setShowForm] = useState(false);
   const [editingChannel, setEditingChannel] = useState<NotificationChannel | null>(null);
@@ -65,6 +80,7 @@ export default function ChannelsPage() {
       subtitle={t('notifications.channels.subtitle', 'Where to send notifications: Discord, Slack, Telegram, email, ntfy, Pushover, or a custom webhook.')}
       actions={actions}
       query={[channelsQuery, statsQuery]}
+      dataSources={dataSources}
       copyLink
     >
       {/* 1 — Delivery-health KPI band (full-width) */}

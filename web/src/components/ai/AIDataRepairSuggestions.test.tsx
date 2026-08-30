@@ -2,12 +2,10 @@
 //
 // The module exports a single symbol: the
 // `withAiFeature('data-repair-suggestions', InnerSection)` gated
-// component. Unlike its property-driven siblings (AIAnomalyExplanations,
-// AIChargingCurveFingerprintClustering) this surface takes NO props —
-// the backend reads the in-scope stale-session inventory itself, so the
-// POST body is a constant `{}` and `canStart` reduces to "no stream is
-// open". This suite covers every observable facet of the component so
-// the file can be marked production-grade:
+// component. The optional vehicleId prop scopes the server-side stale-session
+// inventory; changing that scope aborts any active request and clears prior
+// output. This suite covers every observable facet of the component so the
+// file can be marked production-grade:
 //
 //   1. Render gate (ADR-015 §I5/§I6): the surface is entirely absent
 //      when ai_mode='off' OR the per-feature toggle is off OR settings
@@ -29,11 +27,11 @@
 //
 //   3. On-mode SSE wiring: clicking Draft POSTs exactly once to the
 //      registered route /api/v1/ai/system/data-repair/draft with an
-//      empty `{}` JSON body + SSE headers, shows the thinking indicator
-//      while awaiting the first delta, renders the delta text, coalesces
-//      a double-submit while streaming, surfaces a stream error on a
-//      non-2xx response, and re-enables the button after a completed
-//      draft so the user can draft again (a fresh POST fires).
+//      empty `{}` fleet-wide body or `{ vehicle_id }` scoped body + SSE
+//      headers, shows the thinking indicator while awaiting the first delta,
+//      renders the delta text, coalesces a double-submit while streaming,
+//      surfaces a stream error on a non-2xx response, and re-enables the
+//      button after a completed draft so the user can draft again.
 //
 // Network is stubbed at the `fetch` boundary — the same pattern the
 // sibling wiring tests use; no real request is ever made.
@@ -443,5 +441,68 @@ describe('AIDataRepairSuggestions — on-mode SSE wiring', () => {
     await waitFor(() => expect(fetchCount).toBe(2))
     await waitFor(() => expect(root).toHaveTextContent('Second proposal after re-draft.'))
     expect(root).not.toHaveTextContent('First proposal for stale drive 7.')
+  })
+
+  it('aborts an active draft when the selected vehicle changes', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+
+    let requestSignal: AbortSignal | undefined
+    globalThis.fetch = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => {
+      requestSignal = init?.signal ?? undefined
+      return new Promise<Response>((_resolve, reject) => {
+        requestSignal?.addEventListener('abort', () => {
+          const abortError = new Error('Aborted')
+          abortError.name = 'AbortError'
+          reject(abortError)
+        }, { once: true })
+      })
+    }) as unknown as typeof globalThis.fetch
+
+    const { rerender } = render(<AIDataRepairSuggestions vehicleId={7} />)
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    })
+
+    await waitFor(() => expect(requestSignal).toBeDefined())
+    expect(requestSignal?.aborted).toBe(false)
+
+    rerender(<AIDataRepairSuggestions vehicleId={8} />)
+
+    await waitFor(() => expect(requestSignal?.aborted).toBe(true))
+    expect(screen.getByRole('button', { name: BUTTON_NAME })).not.toBeDisabled()
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+  })
+
+  it('clears a completed draft before showing another vehicle scope', async () => {
+    mockUseSettings.mockReturnValue(enabled())
+
+    const requestBodies: unknown[] = []
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const body = JSON.parse(String(init?.body)) as { vehicle_id?: number }
+      requestBodies.push(body)
+      const proposal = body.vehicle_id === 7
+        ? 'Proposal scoped to vehicle 7.'
+        : 'Proposal scoped to vehicle 8.'
+      return new Response(makeReadableStream([
+        sseFrame('delta', { text: proposal }),
+        sseFrame('done', { finish_reason: 'stop', usage: { in: 10, out: 5 } }),
+      ]), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      })
+    }) as unknown as typeof globalThis.fetch
+
+    const { rerender } = render(<AIDataRepairSuggestions vehicleId={7} />)
+    fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    await screen.findByText('Proposal scoped to vehicle 7.')
+
+    rerender(<AIDataRepairSuggestions vehicleId={8} />)
+
+    expect(screen.queryByText('Proposal scoped to vehicle 7.')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('ai-output-panel')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: BUTTON_NAME }))
+    await screen.findByText('Proposal scoped to vehicle 8.')
+    expect(requestBodies).toEqual([{ vehicle_id: 7 }, { vehicle_id: 8 }])
   })
 })

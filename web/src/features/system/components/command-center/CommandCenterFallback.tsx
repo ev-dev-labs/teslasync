@@ -66,6 +66,10 @@ export function CommandCenterFallback({
             icon={<Car className="h-8 w-8" aria-hidden="true" />}
             title={t('commands.noVehicles', 'No vehicles found')}
             message={unavailableMessage}
+            actionTo={{
+              label: t('tesla.connect', 'Connect Tesla Account'),
+              to: '/tesla-account',
+            }}
             className="py-8"
           />
         )}
@@ -82,7 +86,7 @@ export function CommandCenterFallback({
             ))}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: live vehicle state and permissions determine availability in this panel */
             icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
             message={unavailableMessage}
             className="py-6"
@@ -101,7 +105,7 @@ export function CommandCenterFallback({
             ))}
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: live vehicle state and permissions determine availability in this panel */
             icon={<LayoutGrid className="h-8 w-8" aria-hidden="true" />}
             message={unavailableMessage}
             className="py-8"
@@ -122,7 +126,7 @@ export function CommandCenterFallback({
               <Skeleton height={48} />
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: live vehicle state and permissions determine availability in this panel */
               icon={<History className="h-8 w-8" aria-hidden="true" />}
               message={unavailableMessage}
               className="py-8"

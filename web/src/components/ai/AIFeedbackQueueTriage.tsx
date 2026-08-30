@@ -122,6 +122,11 @@ function InnerSection({ feedbackId }: InnerSectionProps) {
     url: '/ai/feedback/triage/draft',
     body,
     onEvent: noopStreamEvent,
+    // AI-01: feedback-row scope is part of stream identity —
+    // switching the in-view feedback row aborts an in-flight draft
+    // and clears the previous row's triage advice before the new
+    // scope streams in.
+    scopeKey: haveFeedback ? feedbackId : null,
   })
 
   return (

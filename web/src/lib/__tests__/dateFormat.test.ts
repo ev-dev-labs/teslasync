@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import {
   formatDateTime, formatDate, formatTime, formatDateShort, tzAbbreviation,
-  formatRelativeDays, formatDayKey, ymdInTz,
+  formatRelativeDays, formatRelativeDayKey, formatDayKey, ymdInTz,
 } from '../dateFormat';
 
 const ISO = '2026-04-04T14:30:00Z'; // 2026-04-04 14:30 UTC
@@ -171,6 +171,26 @@ describe('formatRelativeDays', () => {
       formatRelativeDays('2026-05-12T00:30:00Z', { tz: 'America/Los_Angeles' }),
     ).toBe('Yesterday');
     vi.useRealTimers();
+  });
+});
+
+describe('formatRelativeDayKey', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('keeps the current Pacific calendar day as Today after UTC midnight', () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2026-08-28T02:23:00Z'));
+
+    expect(
+      formatRelativeDayKey('2026-08-27', { tz: 'America/Los_Angeles' }),
+    ).toBe('Today');
+    expect(formatRelativeDayKey('2026-08-27', { tz: 'UTC' })).toBe('Yesterday');
+  });
+
+  it('returns the fallback for malformed day keys', () => {
+    expect(formatRelativeDayKey('not-a-day', { tz: 'UTC' })).toBe('—');
   });
 });
 

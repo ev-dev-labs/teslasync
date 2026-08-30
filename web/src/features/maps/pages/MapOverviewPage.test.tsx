@@ -423,6 +423,7 @@ describe('MapOverviewPage — empty data', () => {
       await screen.findByText('Not enough GPS points to replay a route yet.'),
     ).toBeInTheDocument()
     expect(screen.getByText('No location history found.')).toBeInTheDocument()
+    expect(screen.getByText(/appears after the selected vehicle reports valid GPS positions/)).toBeInTheDocument()
 
     // No trail polyline and no playback widget with too few points.
     expect(screen.queryByTestId('route-playback')).toBeNull()
@@ -447,7 +448,7 @@ describe('MapOverviewPage — fleet gate hardening', () => {
     install({ vehiclesPending: true })
     renderPage()
 
-    expect(await screen.findByRole('status', { name: 'Loading' })).toBeInTheDocument()
+    expect(await screen.findByRole('status', { name: /Loading/ })).toBeInTheDocument()
     // Regression guard: the misleading empty-state prompt must NOT appear
     // just because the fleet hasn't resolved yet.
     expect(screen.queryByText('Set up TeslaSync')).toBeNull()
@@ -458,7 +459,9 @@ describe('MapOverviewPage — fleet gate hardening', () => {
     install({ vehiclesError: true })
     renderPage()
 
-    expect(await screen.findByText('vehicles boom')).toBeInTheDocument()
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
     expect(screen.queryByText('Set up TeslaSync')).toBeNull()
   })
 })

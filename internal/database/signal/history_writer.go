@@ -2,7 +2,6 @@ package signal
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -42,6 +41,8 @@ type SignalHistoryWriter struct {
 	db *database.DB
 }
 
+const signalRetentionMaxWindowPerRun = 56 * 24 * time.Hour
+
 // NewSignalHistoryWriter constructs a read-only signal_log accessor.
 // The legacy `flushInterval` and `rdb` parameters were dropped — the
 // constructor now takes only the DB pool.
@@ -49,19 +50,76 @@ func NewSignalHistoryWriter(db *database.DB) *SignalHistoryWriter {
 	return &SignalHistoryWriter{db: db}
 }
 
-// Cleanup deletes rows older than the retention period.
+// Cleanup drops complete TimescaleDB chunks older than the retention period.
 //
-// signal_log uses `ts` (TIMESTAMPTZ) as the row timestamp;
-// the legacy `created_at` column no longer exists.
+// Each invocation advances through at most eight seven-day chunk windows. This
+// bounds the first cleanup after an operator opts in instead of deleting an
+// installation's entire historical backlog in one transaction.
 func (w *SignalHistoryWriter) Cleanup(ctx context.Context, retentionDays int) {
-	result, err := w.db.Pool.Exec(ctx,
-		"DELETE FROM signal_log WHERE ts < NOW() - $1::interval",
-		fmt.Sprintf("%d days", retentionDays))
-	if err != nil {
-		log.Warn().Err(err).Msg("signal_log: TTL cleanup failed")
+	if w == nil || w.db == nil || w.db.Pool == nil || retentionDays <= 0 {
 		return
 	}
-	log.Info().Int64("deleted", result.RowsAffected()).Int("retention_days", retentionDays).Msg("signal_log: TTL cleanup")
+	retentionCutoff := time.Now().UTC().AddDate(0, 0, -retentionDays)
+	targets := []struct {
+		name      string
+		dropQuery string
+	}{
+		{
+			name:      "signal_log",
+			dropQuery: "SELECT drop_chunks('signal_log', older_than => $1::timestamptz)::text",
+		},
+		{
+			name:      "signal_transport_evidence",
+			dropQuery: "SELECT drop_chunks('signal_transport_evidence', older_than => $1::timestamptz)::text",
+		},
+	}
+	for _, target := range targets {
+		var oldestChunkEnd *time.Time
+		err := w.db.Pool.QueryRow(ctx, `
+			SELECT MIN(range_end)
+			FROM timescaledb_information.chunks
+			WHERE hypertable_schema = current_schema()
+			  AND hypertable_name = $1`,
+			target.name,
+		).Scan(&oldestChunkEnd)
+		if err != nil {
+			log.Warn().Err(err).Str("table", target.name).Msg("signal retention chunk discovery failed")
+			continue
+		}
+		if oldestChunkEnd == nil || !oldestChunkEnd.Before(retentionCutoff) {
+			continue
+		}
+
+		dropCutoff := oldestChunkEnd.Add(signalRetentionMaxWindowPerRun)
+		backlogRemaining := dropCutoff.Before(retentionCutoff)
+		if !backlogRemaining {
+			dropCutoff = retentionCutoff
+		}
+		rows, err := w.db.Pool.Query(ctx, target.dropQuery, dropCutoff)
+		if err != nil {
+			log.Warn().Err(err).Str("table", target.name).Msg("signal retention cleanup failed")
+			continue
+		}
+		dropped := 0
+		for rows.Next() {
+			var chunk string
+			if err := rows.Scan(&chunk); err != nil {
+				log.Warn().Err(err).Str("table", target.name).Msg("signal retention cleanup result failed")
+				break
+			}
+			dropped++
+		}
+		if err := rows.Err(); err != nil {
+			log.Warn().Err(err).Str("table", target.name).Msg("signal retention cleanup result failed")
+		}
+		rows.Close()
+		log.Info().
+			Str("table", target.name).
+			Int("chunks_dropped", dropped).
+			Int("retention_days", retentionDays).
+			Bool("backlog_remaining", backlogRemaining).
+			Msg("signal retention cleanup")
+	}
 }
 
 // GetHistory returns time-series data for a single signal within a date range.

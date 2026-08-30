@@ -215,7 +215,7 @@ func newErrorRepo(q errorQuerier) *TeslaFleetTelemetryErrorRepo {
 	return &TeslaFleetTelemetryErrorRepo{q: q}
 }
 
-func strPtr(s string) *string       { return &s }
+func strPtr(s string) *string        { return &s }
 func timePtr(t time.Time) *time.Time { return &t }
 
 // ---------------------------------------------------------------------------
@@ -277,9 +277,9 @@ func TestNewTeslaFleetTelemetryErrorRepo_WiresPool(t *testing.T) {
 func TestClampErrorPage(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
-		name                   string
-		limit, offset          int
-		wantLimit, wantOffset  int
+		name                  string
+		limit, offset         int
+		wantLimit, wantOffset int
 	}{
 		{"typical", 50, 10, 50, 10},
 		{"zero_limit_defaults", 0, 0, defaultErrorPageLimit, 0},

@@ -32,6 +32,7 @@ import { FadeIn } from '@/components/motion';
 import {
   EmptyState,
   AlertBanner,
+  DataStateNotice,
   QueryError,
   SectionErrorBoundary,
   Skeleton,
@@ -128,15 +129,15 @@ export default function GDPRExportPage() {
         </FadeIn>
 
         {subsystemMissing && (
-          <AlertBanner
-            variant="warning"
-            title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}
+          <DataStateNotice
+            state="unsupported"
+            title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}
           >
             {t(
               'admin.gdprExport.notConfigured',
               'GDPR export subsystem is not configured on this deployment.',
             )}
-          </AlertBanner>
+          </DataStateNotice>
         )}
 
         {!activeId ? (

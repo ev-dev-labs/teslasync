@@ -33,9 +33,19 @@ vi.mock('@/api/hooks/useExports', () => ({
 // --- useIsMutating: return a deterministic count so no QueryClientProvider
 //     is required. Everything else in react-query is preserved.
 let mockMutating = 0
+let mockMutationSnapshots: Array<{
+  mutationId: number
+  status: 'idle' | 'pending' | 'success' | 'error'
+  submittedAt: number
+  error: unknown
+}> = []
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@tanstack/react-query')>()
-  return { ...actual, useIsMutating: () => mockMutating }
+  return {
+    ...actual,
+    useIsMutating: () => mockMutating,
+    useMutationState: () => mockMutationSnapshots,
+  }
 })
 
 // --- react-i18next: a stable translator that returns the inline English
@@ -72,12 +82,14 @@ function exportJob(over: Partial<ExportJobSummary> = {}): ExportJobSummary {
 beforeEach(() => {
   mockExportData = []
   mockMutating = 0
+  mockMutationSnapshots = []
   act(() => {
     __clearBackgroundJobsForTests()
   })
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   act(() => {
     __clearBackgroundJobsForTests()
   })
@@ -95,6 +107,7 @@ describe('registerJob + custom store', () => {
     expect(job.id).toBe('backup')
     expect(job.label).toBe('Generating backup')
     expect(job.kind).toBe('custom')
+    expect(job.status).toBe('running')
     expect(Number.isNaN(Date.parse(job.startedAt))).toBe(false)
   })
 
@@ -214,6 +227,7 @@ describe('useBackgroundJobs — aggregation', () => {
     const job = result.current.jobs[0]
     expect(job.id).toBe('tanstack-mutations')
     expect(job.kind).toBe('mutation')
+    expect(job.status).toBe('running')
     expect(job.label).toBe('Saving…')
   })
 
@@ -255,5 +269,240 @@ describe('useBackgroundJobs — aggregation', () => {
     expect(result.current.count).toBe(2)
     // The malformed export's startedAt fell back to '' and sorts first.
     expect(result.current.jobs[0].id).toBe('export:1')
+  })
+
+  it('shows a successful mutation briefly and expires it automatically', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockMutationSnapshots = [{
+      mutationId: 1,
+      status: 'success',
+      submittedAt: Date.now() - 1_000,
+      error: null,
+    }]
+
+    const { result } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs[0]).toMatchObject({
+      kind: 'mutation',
+      status: 'success',
+      label: 'Changes saved',
+    })
+
+    act(() => vi.advanceTimersByTime(9_000))
+    expect(result.current.jobs).toEqual([])
+  })
+
+  it('does not replay an old settled mutation when the status bar mounts', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockMutationSnapshots = [{
+      mutationId: 3,
+      status: 'success',
+      submittedAt: Date.now() - 60_000,
+      error: null,
+    }]
+
+    const { result } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs).toEqual([])
+  })
+
+  it('shows completion for a long mutation observed while it was running', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    const submittedAt = Date.now() - 60_000
+    mockMutating = 1
+    mockMutationSnapshots = [{
+      mutationId: 4,
+      status: 'pending',
+      submittedAt,
+      error: null,
+    }]
+    const { result, rerender } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs[0].status).toBe('running')
+
+    mockMutating = 0
+    mockMutationSnapshots = [{
+      mutationId: 4,
+      status: 'success',
+      submittedAt,
+      error: null,
+    }]
+    rerender()
+    expect(result.current.jobs[0]).toMatchObject({
+      status: 'success',
+      label: 'Changes saved',
+    })
+  })
+
+  it('shows a failed mutation with its error for a longer transient window', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockMutationSnapshots = [{
+      mutationId: 2,
+      status: 'error',
+      submittedAt: Date.now() - 1_000,
+      error: new Error('Gateway unavailable'),
+    }]
+
+    const { result } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs[0]).toMatchObject({
+      kind: 'mutation',
+      status: 'error',
+      label: 'Sync failed',
+      description: 'Gateway unavailable',
+    })
+
+    act(() => vi.advanceTimersByTime(9_000))
+    expect(result.current.jobs).toHaveLength(1)
+    act(() => vi.advanceTimersByTime(7_000))
+    expect(result.current.jobs).toEqual([])
+  })
+
+  it('keeps a recent failure visible while another mutation is still running', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockMutating = 1
+    mockMutationSnapshots = [
+      {
+        mutationId: 7,
+        status: 'error',
+        submittedAt: Date.now() - 1_000,
+        error: new Error('Save rejected'),
+      },
+      {
+        mutationId: 8,
+        status: 'pending',
+        submittedAt: Date.now(),
+        error: null,
+      },
+    ]
+
+    const { result } = renderHook(() => useBackgroundJobs())
+
+    expect(result.current.jobs).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'tanstack-mutation:7:error',
+          status: 'error',
+          description: 'Save rejected',
+        }),
+        expect.objectContaining({
+          id: 'tanstack-mutations',
+          status: 'running',
+        }),
+      ]),
+    )
+  })
+
+  it('prioritizes a recent failure over a newer success', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockMutationSnapshots = [
+      {
+        mutationId: 9,
+        status: 'error',
+        submittedAt: Date.now() - 2_000,
+        error: new Error('Conflict'),
+      },
+      {
+        mutationId: 10,
+        status: 'success',
+        submittedAt: Date.now() - 1_000,
+        error: null,
+      },
+    ]
+
+    const { result } = renderHook(() => useBackgroundJobs())
+
+    expect(result.current.jobs).toHaveLength(1)
+    expect(result.current.jobs[0]).toMatchObject({
+      id: 'tanstack-mutation:9:error',
+      status: 'error',
+      description: 'Conflict',
+    })
+  })
+
+  it('surfaces a newly ready export as a transient success', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockExportData = [
+      exportJob({
+        id: 'ready',
+        status: 'ready',
+        file_name: 'drives.csv',
+        completed_at: new Date(Date.now() - 1_000).toISOString(),
+      }),
+    ]
+
+    const { result } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs[0]).toMatchObject({
+      id: 'export:ready:ready',
+      status: 'success',
+      label: 'drives export ready',
+      description: 'drives.csv',
+    })
+  })
+
+  it('shows an export that settles after a long-running active poll', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockExportData = [
+      exportJob({
+        id: 'long-running',
+        status: 'processing',
+        created_at: new Date(Date.now() - 60_000).toISOString(),
+      }),
+    ]
+
+    const { result, rerender } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs[0]).toMatchObject({
+      id: 'export:long-running',
+      status: 'running',
+    })
+
+    vi.setSystemTime(new Date('2026-07-05T12:05:00.000Z'))
+    mockExportData = [
+      exportJob({
+        id: 'long-running',
+        status: 'ready',
+        completed_at: new Date().toISOString(),
+      }),
+    ]
+    rerender()
+
+    expect(result.current.jobs[0]).toMatchObject({
+      id: 'export:long-running:ready',
+      status: 'success',
+      label: 'drives export ready',
+    })
+
+    act(() => vi.advanceTimersByTime(9_000))
+    expect(result.current.jobs).toEqual([])
+  })
+
+  it('does not replay a stale cached export completion after remount', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date('2026-07-05T12:00:00.000Z'))
+    mockExportData = [
+      exportJob({
+        id: 'cached',
+        status: 'processing',
+        created_at: new Date(Date.now() - 3_600_000).toISOString(),
+      }),
+    ]
+
+    const { result, rerender } = renderHook(() => useBackgroundJobs())
+    expect(result.current.jobs[0]?.status).toBe('running')
+
+    mockExportData = [
+      exportJob({
+        id: 'cached',
+        status: 'ready',
+        completed_at: new Date(Date.now() - 60_000).toISOString(),
+      }),
+    ]
+    rerender()
+
+    expect(result.current.jobs).toEqual([])
   })
 })

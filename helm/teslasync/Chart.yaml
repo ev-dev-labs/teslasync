@@ -2,11 +2,11 @@ apiVersion: v2
 name: teslasync
 description: A Helm chart for deploying TeslaSync — a self-hosted Tesla vehicle data logger with a Go backend, Nginx frontend, PostgreSQL, Redis, MQTT, and Grafana.
 type: application
-version: 0.6.1
+version: 0.6.3
 appVersion: "1.1.0"
-home: https://github.com/your-org/teslasync
+home: https://github.com/ev-dev-labs/teslasync
 sources:
-  - https://github.com/your-org/teslasync
+  - https://github.com/ev-dev-labs/teslasync
 keywords:
   - tesla
   - telemetry
@@ -19,7 +19,7 @@ keywords:
   - data-logger
 maintainers:
   - name: TeslaSync
-    url: https://github.com/your-org
+    url: https://github.com/ev-dev-labs
 dependencies: []
 annotations:
   category: Automotive

@@ -11,7 +11,7 @@ import {
   Car,
   RefreshCw,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout';
+import { PageContainer, PrefetchLink } from '@/components/layout';
 import {
   GlassPanel,
   Badge,
@@ -33,13 +33,14 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ChartLegend,
   ChartTooltip,
   chartGrid,
   axisTick,
   chartMargin,
   CHART_COLORS,
   AREA_DEFAULTS,
+  EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -742,6 +743,20 @@ export default function SafetySettingsPage() {
                   }
                   subtitle={t('safety.distanceAutopilot', '{{unit}} (autopilot)', { unit: distanceUnit })}
                 />
+                {/* Contextual drill-through: this card shows the CURRENT
+                    counter reading; FSD Insights turns the same signal into a
+                    per-day trend with explicit data-confidence metadata. */}
+                <PrefetchLink
+                  to="/fsd"
+                  className="flex min-h-11 items-center justify-between gap-2 rounded-shape-md border border-[var(--border-default)] bg-[var(--surface-2)] px-3 py-2 transition-colors hover:bg-[var(--control-bg-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]"
+                >
+                  <Text as="span" size="sm" weight="medium">
+                    {t('safety.openFsdInsights', 'Open FSD Insights')}
+                  </Text>
+                  <Caption className="shrink-0">
+                    {t('safety.openFsdInsightsHint', 'Daily trend & data confidence')}
+                  </Caption>
+                </PrefetchLink>
               </div>
             )}
           </GlassPanel>
@@ -769,49 +784,58 @@ export default function SafetySettingsPage() {
               message={t('safety.noChart', 'No safety state history to chart yet.')}
             />
           ) : (
-            <div
-              className="h-64 sm:h-72 xl:h-80"
-              role="img"
-              aria-label={t('safety.chartAria', 'Safety feature states over time')}
-            >
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={chartMargin}>
-                  {chartGrid}
-                  <XAxis dataKey="time" tick={axisTick} interval="preserveStartEnd" />
-                  <YAxis
-                    tick={axisTick}
-                    domain={[0, 1]}
-                    ticks={[0, 1]}
-                    tickFormatter={(v: number) => (v === 1 ? t('On') : t('Off'))}
-                  />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend />
-                  <Line
-                    {...AREA_DEFAULTS}
-                    type="stepAfter"
-                    dataKey="aeb"
-                    name={t('AEB')}
-                    stroke={CHART_COLORS[0]}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    {...AREA_DEFAULTS}
-                    type="stepAfter"
-                    dataKey="bscw"
-                    name={t('BSCW')}
-                    stroke={CHART_COLORS[1]}
-                    isAnimationActive={false}
-                  />
-                  <Line
-                    {...AREA_DEFAULTS}
-                    type="stepAfter"
-                    dataKey="elda"
-                    name={t('ELDA')}
-                    stroke={CHART_COLORS[2]}
-                    isAnimationActive={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+            <div className="h-64 sm:h-72 xl:h-80">
+              {/* chart-a11y:no-table safety state time-series (sentry/lock/gear) — binary states over time, not tabular */}
+              <EmbeddedChart
+                chartKey="safety-states-history"
+                title={t('safety.chartTitle', 'Safety States')}
+                ariaLabel={t('safety.chartAria', 'Safety feature states over time')}
+                fluid
+              >
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chartData} margin={chartMargin}>
+                      {chartGrid}
+                      <XAxis dataKey="time" tick={axisTick} interval="preserveStartEnd" />
+                      <YAxis
+                        tick={axisTick}
+                        domain={[0, 1]}
+                        ticks={[0, 1]}
+                        tickFormatter={(v: number) => (v === 1 ? t('On') : t('Off'))}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <ChartLegend />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        type="stepAfter"
+                        dataKey="aeb"
+                        name={t('AEB')}
+                        stroke={CHART_COLORS[0]}
+                        isAnimationActive={false}
+                        hide={hiddenSeries?.isHidden('aeb') ?? false}
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        type="stepAfter"
+                        dataKey="bscw"
+                        name={t('BSCW')}
+                        stroke={CHART_COLORS[1]}
+                        isAnimationActive={false}
+                        hide={hiddenSeries?.isHidden('bscw') ?? false}
+                      />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        type="stepAfter"
+                        dataKey="elda"
+                        name={t('ELDA')}
+                        stroke={CHART_COLORS[2]}
+                        isAnimationActive={false}
+                        hide={hiddenSeries?.isHidden('elda') ?? false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </EmbeddedChart>
             </div>
           )}
         </GlassPanel>
@@ -835,7 +859,11 @@ export default function SafetySettingsPage() {
             <EmptyState
               icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
               /* no-action: transient — this table lists the same safety-history snapshots as the chart above; the header Refresh button covers a manual retry while telemetry is still producing rows. */
-              message={t('safety.noHistory', 'No history records found.')}
+              message={t('safety.noHistory', 'No safety settings history has been recorded.')}
+              description={t(
+                'safety.noHistoryDescription',
+                'Snapshots appear after the selected vehicle reports driver-assistance and safety configuration telemetry.',
+              )}
             />
           ) : (
             <DataTable<SafetySnapshot>

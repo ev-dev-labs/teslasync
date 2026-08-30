@@ -173,6 +173,77 @@ func TestParseDateRange_LegacyEndOfDay(t *testing.T) {
 	}
 }
 
+func TestParseDateRangeValues(t *testing.T) {
+	tests := []struct {
+		name    string
+		start   string
+		end     string
+		wantErr bool
+	}{
+		{name: "date only", start: "2026-08-01", end: "2026-08-26"},
+		{name: "RFC3339", start: "2026-08-01T00:00:00Z", end: "2026-08-27T00:00:00Z"},
+		{name: "invalid start", start: "yesterday", wantErr: true},
+		{name: "invalid end", end: "tomorrow", wantErr: true},
+		{name: "reversed bounds", start: "2026-08-27", end: "2026-08-26", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			start, end, err := apiparams.ParseDateRangeValues(tt.start, tt.end)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ParseDateRangeValues() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if tt.wantErr {
+				return
+			}
+			if tt.start != "" && start.IsZero() {
+				t.Fatal("start is zero")
+			}
+			if tt.end != "" && end.IsZero() {
+				t.Fatal("end is zero")
+			}
+		})
+	}
+}
+
+func TestValidateDateRange(t *testing.T) {
+	start := time.Date(2026, time.August, 1, 0, 0, 0, 0, time.UTC)
+	tests := []struct {
+		name    string
+		end     time.Time
+		maxSpan time.Duration
+		wantErr bool
+	}{
+		{name: "within maximum", end: start.Add(24 * time.Hour), maxSpan: 2 * 24 * time.Hour},
+		{name: "exceeds maximum", end: start.Add(3 * 24 * time.Hour), maxSpan: 2 * 24 * time.Hour, wantErr: true},
+		{name: "reversed", end: start.Add(-time.Hour), wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := apiparams.ValidateDateRange(start, tt.end, tt.maxSpan)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("ValidateDateRange() error = %v, wantErr %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestSetPaginationHeaders(t *testing.T) {
+	rec := httptest.NewRecorder()
+	apiparams.SetPaginationHeaders(rec, 50, 100, 50)
+
+	headers := rec.Result().Header
+	if got, want := headers.Get("X-Pagination-Limit"), "50"; got != want {
+		t.Fatalf("X-Pagination-Limit = %q, want %q", got, want)
+	}
+	if got, want := headers.Get("X-Pagination-Offset"), "100"; got != want {
+		t.Fatalf("X-Pagination-Offset = %q, want %q", got, want)
+	}
+	if got, want := headers.Get("X-Result-Possibly-Truncated"), "true"; got != want {
+		t.Fatalf("X-Result-Possibly-Truncated = %q, want %q", got, want)
+	}
+}
+
 // NullableTime pins the subtle pgx interface-nil contract.
 
 func TestNullableTime_FalseReturnsTypedNil(t *testing.T) {

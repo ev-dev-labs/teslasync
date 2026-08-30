@@ -86,8 +86,8 @@ an explicit follow-up so it isn't lost).
 
 Exposes:
 
-* Dashboard tabs (drag-to-reorder)
-* Per-tab context menu: Rename, Duplicate, Delete, Settings
+* Dashboard tabs (drag-to-reorder plus one-click/keyboard move-earlier and move-later actions)
+* Per-tab action menu: Move earlier/later, Rename, Duplicate, Delete, Settings
 * Edit mode toggle, Auto-arrange, Undo/Redo (with `undoCount` indicator)
 * Templates button (opens `<TemplateGallery>`)
 * Reset (now confirmed via `useConfirm()` in the new `<LayoutSwitcher>`)

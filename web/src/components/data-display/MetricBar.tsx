@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { motion } from '@/components/motion'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { fmtNumber } from '../../lib/numberFormat'
 
 /**
@@ -17,20 +18,30 @@ import { fmtNumber } from '../../lib/numberFormat'
 export function MetricBar({ value, max, color, label, sublabel }: {
   value: number; max: number; color: string; label: string; sublabel?: string
 }) {
-  const pct = Math.min((value / max) * 100, 100)
+  const { reduce } = useMotionPreference()
+  const safeValue = Number.isFinite(value) ? value : 0
+  const safeMax = Number.isFinite(max) && max > 0 ? max : 0
+  const pct = safeMax > 0 ? Math.min(Math.max((safeValue / safeMax) * 100, 0), 100) : 0
+  const boundedValue = safeMax > 0 ? Math.min(Math.max(safeValue, 0), safeMax) : 0
   return (
-    <div>
-      <div className="flex items-center justify-between mb-1.5">
-        <span className="text-xs font-medium text-[var(--text-secondary)]">{label}</span>
-        <span className="text-xs font-mono" style={{ color }}>{sublabel ?? fmtNumber(value)}</span>
+    <div
+      role="progressbar"
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={safeMax}
+      aria-valuenow={boundedValue}
+    >
+      <div className="mb-2 flex items-center justify-between gap-3">
+        <span className="text-sm font-medium text-[var(--text-secondary)]">{label}</span>
+        <span className="font-mono text-sm" style={{ color }}>{sublabel ?? fmtNumber(safeValue)}</span>
       </div>
-      <div className="h-2 rounded-full bg-[var(--surface-2)] overflow-hidden">
+      <div className="h-2.5 overflow-hidden rounded-pill bg-[var(--surface-2)]">
         <motion.div
-          className="h-full rounded-full"
-          initial={{ width: 0 }}
+          className="h-full rounded-pill"
+          initial={reduce ? false : { width: 0 }}
           animate={{ width: `${pct}%` }}
-          transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
-          style={{ background: `linear-gradient(90deg, ${color}99, ${color})`, boxShadow: `0 0 8px ${color}40` }}
+          transition={{ duration: reduce ? 0 : 1, ease: [0.16, 1, 0.3, 1] }}
+          style={{ background: `linear-gradient(90deg, ${color}99, ${color})` }}
         />
       </div>
     </div>

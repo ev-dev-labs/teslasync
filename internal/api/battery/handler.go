@@ -1,7 +1,9 @@
 package battery
 
 import (
+	"fmt"
 	"net/http"
+	"sort"
 	"strconv"
 	"time"
 
@@ -12,7 +14,10 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"go.opentelemetry.io/otel"
 )
+
+const maxBatteryTrendDays = 366
 
 // BatteryHandler handles battery health HTTP requests.
 //
@@ -37,8 +42,18 @@ func NewBatteryHandler(db *database.DB, state signal.StateReader) *BatteryHandle
 }
 
 func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.battery.report")
+	defer span.End()
+	now := time.Now().UTC()
+	traceID := span.SpanContext().TraceID().String()
+
 	vehicleID, err := apiparams.URLParamInt64(r, "vehicleID")
-	if err != nil {
+	if err != nil || vehicleID <= 0 {
+		if err != nil {
+			span.RecordError(err)
+		} else {
+			span.RecordError(fmt.Errorf("vehicle ID must be positive"))
+		}
 		httpx.WriteError(w, http.StatusBadRequest, "invalid vehicle ID")
 		return
 	}
@@ -49,26 +64,33 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 	// parsing live in signal.ParseAsOf so every handler that gains the
 	// parameter shares one policy. Absence of the parameter preserves
 	// the legacy live-state behavior exactly.
-	queryTime, hasAsOf, asOfErr := signal.ParseAsOf(r.URL.Query(), time.Now())
+	queryTime, hasAsOf, asOfErr := signal.ParseAsOf(r.URL.Query(), now)
 	if asOfErr != nil {
+		span.RecordError(asOfErr)
 		httpx.WriteError(w, http.StatusBadRequest, asOfErr.Error())
 		return
 	}
 	if !hasAsOf {
-		queryTime = time.Now()
+		queryTime = now
 	}
 
 	var healthScore, capacityWh, degradation, estRange float64
 	var avgTemp *float64
 	var cycleCount int
+	partialReasons := make(map[string]struct{})
+	markPartial := func(reason string) {
+		partialReasons[reason] = struct{}{}
+	}
 
 	{
 		const nominalCapacity = 75000.0
 
 		if h.state != nil {
-			val, err := h.state.SignalAt(r.Context(), vehicleID, "EnergyRemaining", queryTime)
+			val, err := h.state.SignalAt(ctx, vehicleID, "EnergyRemaining", queryTime)
 			if err != nil {
-				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").Msg("battery: failed to read signal state")
+				span.RecordError(err)
+				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EnergyRemaining").
+					Str("trace_id", traceID).Msg("battery: failed to read signal state")
 				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
@@ -82,9 +104,11 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					degradation = 100 - healthScore
 				}
 			}
-			val, err = h.state.SignalAt(r.Context(), vehicleID, "EstBatteryRange", queryTime)
+			val, err = h.state.SignalAt(ctx, vehicleID, "EstBatteryRange", queryTime)
 			if err != nil {
-				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").Msg("battery: failed to read signal state")
+				span.RecordError(err)
+				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "EstBatteryRange").
+					Str("trace_id", traceID).Msg("battery: failed to read signal state")
 				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
@@ -94,17 +118,21 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			// nil means "no data" when either module temperature is absent.
-			valMax, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMax", queryTime)
+			valMax, err := h.state.SignalAt(ctx, vehicleID, "ModuleTempMax", queryTime)
 			if err != nil {
-				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").Msg("battery: failed to read signal state")
+				span.RecordError(err)
+				log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMax").
+					Str("trace_id", traceID).Msg("battery: failed to read signal state")
 				httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 				return
 			}
 			if valMax != nil {
 				if tempMax, ok := signal.Float64(valMax); ok {
-					valMin, err := h.state.SignalAt(r.Context(), vehicleID, "ModuleTempMin", queryTime)
+					valMin, err := h.state.SignalAt(ctx, vehicleID, "ModuleTempMin", queryTime)
 					if err != nil {
-						log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").Msg("battery: failed to read signal state")
+						span.RecordError(err)
+						log.Error().Err(err).Int64("vehicle_id", vehicleID).Str("signal", "ModuleTempMin").
+							Str("trace_id", traceID).Msg("battery: failed to read signal state")
 						httpx.WriteError(w, http.StatusInternalServerError, "failed to read battery state")
 						return
 					}
@@ -116,6 +144,8 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+		} else {
+			markPartial("state_reader_unavailable")
 		}
 
 		// Count charge cycles from charging sessions (sum of SOC deltas / 100).
@@ -126,15 +156,20 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		// as the legacy query (filter to rows where the SoC actually rose).
 		if h.db != nil {
 			var totalSOCDelta *float64
-			if err := h.db.Pool.QueryRow(r.Context(),
+			if err := h.db.Pool.QueryRow(ctx,
 				`SELECT SUM(GREATEST(end_soc_pct - start_soc_pct, 0))
 				 FROM charging_sessions WHERE vehicle_id = $1 AND end_soc_pct > start_soc_pct`,
 				vehicleID).Scan(&totalSOCDelta); err != nil && err != pgx.ErrNoRows {
-				log.Warn().Err(err).Int64("vehicleID", vehicleID).Msg("battery: charge cycle SOC delta query failed")
+				span.RecordError(err)
+				log.Warn().Err(err).Int64("vehicle_id", vehicleID).Str("trace_id", traceID).
+					Msg("battery: charge cycle SOC delta query failed")
+				markPartial("charge_cycle_query_failed")
 			}
 			if totalSOCDelta != nil {
 				cycleCount = int(*totalSOCDelta / 100)
 			}
+		} else {
+			markPartial("database_unavailable")
 		}
 	}
 
@@ -146,20 +181,25 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 		CapacityWh  float64 `json:"capacity_wh"`
 		EstRangeKm  float64 `json:"est_range_km"`
 	}
-	var trend []trendPoint
+	trend := make([]trendPoint, 0)
 
 	trendDays := 90
-	if d := r.URL.Query().Get("days"); d != "" {
-		if parsed, parseErr := strconv.Atoi(d); parseErr == nil && parsed > 0 && parsed <= 3650 {
-			trendDays = parsed
+	if rawDays := r.URL.Query().Get("days"); rawDays != "" {
+		parsed, parseErr := strconv.Atoi(rawDays)
+		if parseErr != nil || parsed <= 0 || parsed > maxBatteryTrendDays {
+			validationErr := fmt.Errorf("days must be an integer between 1 and %d", maxBatteryTrendDays)
+			span.RecordError(validationErr)
+			httpx.WriteError(w, http.StatusBadRequest, validationErr.Error())
+			return
 		}
+		trendDays = parsed
 	}
-	trendCutoff := time.Now().UTC().AddDate(0, 0, -trendDays)
+	trendCutoff := now.AddDate(0, 0, -trendDays)
 	const trendNominalCap = 75000.0
 	const trendNominalRange = 531.0
 
 	if h.db != nil {
-		trendRows, trendErr := h.db.Pool.Query(r.Context(),
+		trendRows, trendErr := h.db.Pool.Query(ctx,
 			`SELECT bucket, end_soc, min_soc, max_soc
 			 FROM cagg_battery_daily
 			 WHERE vehicle_id = $1 AND bucket >= $2
@@ -171,7 +211,9 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 				var bucket time.Time
 				var endSOC, minSOC, maxSOC *float64
 				if scanErr := trendRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
-					log.Warn().Err(scanErr).Int64("vehicleID", vehicleID).Msg("battery: trend row scan failed")
+					log.Warn().Err(scanErr).Int64("vehicle_id", vehicleID).Str("trace_id", traceID).
+						Msg("battery: trend row scan failed")
+					markPartial("trend_row_scan_failed")
 					continue
 				}
 				soc := 0.0
@@ -187,12 +229,33 @@ func (h *BatteryHandler) Report(w http.ResponseWriter, r *http.Request) {
 					EstRangeKm:  soc * trendNominalRange / 100,
 				})
 			}
+			if rowsErr := trendRows.Err(); rowsErr != nil {
+				span.RecordError(rowsErr)
+				log.Warn().Err(rowsErr).Int64("vehicle_id", vehicleID).Str("trace_id", traceID).
+					Msg("battery: failed to iterate trend rows")
+				markPartial("trend_query_failed")
+			}
+		} else {
+			span.RecordError(trendErr)
+			log.Warn().Err(trendErr).Int64("vehicle_id", vehicleID).Str("trace_id", traceID).
+				Msg("battery: failed to query trend")
+			markPartial("trend_query_failed")
 		}
+	} else {
+		markPartial("database_unavailable")
 	}
 
 	const nominalRangeKm = 531.0 // Model Y Long Range nominal range.
+	partialReasonList := make([]string, 0, len(partialReasons))
+	for reason := range partialReasons {
+		partialReasonList = append(partialReasonList, reason)
+	}
+	sort.Strings(partialReasonList)
 
 	resp := map[string]interface{}{
+		"generated_at":               now,
+		"source":                     "signal_log_and_cagg_battery_daily",
+		"partial_result":             map[string]interface{}{"is_partial": len(partialReasonList) > 0, "reasons": partialReasonList},
 		"vehicle_id":                 vehicleID,
 		"health_score":               healthScore,
 		"capacity_wh":                capacityWh,

@@ -1,0 +1,57 @@
+{
+  "exportsList": {
+    "title": "Exports",
+    "subtitle": "Manage your past export jobs. Select rows to delete in bulk.",
+    "resource": "Exports",
+    "noun": {
+      "one": "export",
+      "other": "exports"
+    },
+    "bulk": {
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete export jobs?",
+        "body": "Selected jobs and their downloadable artifacts will be permanently removed."
+      }
+    },
+    "empty": {
+      "title": "No exports yet",
+      "body": "Your future exports will appear here for download or deletion."
+    },
+    "col": {
+      "type": "Type",
+      "format": "Format",
+      "size": "Size",
+      "created": "Created",
+      "status": "Status",
+      "actions": "Actions"
+    },
+    "status": {
+      "queued": "Queued",
+      "processing": "Processing",
+      "ready": "Ready",
+      "failed": "Failed",
+      "expired": "Expired"
+    },
+    "kpi": {
+      "label": "Export summary",
+      "total": "Total Exports",
+      "ready": "Ready",
+      "inProgress": "In Progress",
+      "failed": "Failed",
+      "storage": "Total Size"
+    },
+    "jobs": {
+      "title": "Export Jobs"
+    },
+    "breakdown": {
+      "title": "Status Breakdown",
+      "storage": "Storage Used",
+      "empty": "No export activity to summarize yet.",
+      "loading": "Loading status breakdown…"
+    },
+    "selectExport": "Select export {{id}}",
+    "downloadAria": "Download export {{id}}",
+    "download": "Download"
+  }
+}

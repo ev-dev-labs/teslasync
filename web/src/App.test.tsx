@@ -6,6 +6,10 @@ import { initReactI18next } from 'react-i18next'
 import i18n from 'i18next'
 
 import { setBaseTitle, __resetTitleStoreForTests } from '@/lib/titleStore'
+import {
+  resetProductPreferences,
+  updateProductPreferences,
+} from '@/lib/productPreferences'
 
 /**
  * App.tsx elevation coverage.
@@ -54,13 +58,28 @@ vi.mock('@/lib/errorReporter', () => ({
 vi.mock('./components/layout/Layout', () => ({ default: () => null }))
 vi.mock('./components/layout/ScrollRestoration', () => ({ ScrollRestoration: () => null }))
 vi.mock('@/features/onboarding/components/OnboardingGate', () => ({ OnboardingGate: () => null }))
+vi.mock('@/features/onboarding/components/TaskOnboardingHost', () => ({
+  TaskOnboardingHost: () => null,
+}))
 vi.mock('@/components/ui/DensityApplier', () => ({ DensityApplier: () => null }))
 vi.mock('@/components/ui/ContextMenu', () => ({ ContextMenuRoot: () => null }))
-vi.mock('@/components/a11y', () => ({ RouteAnnouncer: () => null }))
+vi.mock('@/components/a11y', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@/components/a11y')>()),
+  RouteAnnouncer: () => null,
+  RouteFocusManager: () => null,
+}))
+// The consent-policy gate issues a TanStack query; this spec renders <App>
+// without a QueryClientProvider. Its own behaviour is covered by
+// components/feedback/__tests__/VitalsConsentPolicyGate.test.tsx and by
+// src/App.consent.test.tsx (which asserts it mounts on standalone routes).
+vi.mock('./components/feedback/VitalsConsentPolicyGate', () => ({
+  VitalsConsentPolicyGate: () => null,
+}))
 
 import App, {
   RecentPagesRecorder,
   SafeRoute,
+  resolvePreferredLandingRedirect,
   resolveReturnRedirect,
   stripTitleSuffix,
   RECENT_PAGES_RECORD_DELAY_MS,
@@ -84,6 +103,9 @@ beforeEach(async () => {
   navigateSpy.mockReset()
   recordPageViewSpy.mockReset()
   sessionStorage.clear()
+  localStorage.clear()
+  resetProductPreferences()
+  window.history.replaceState({}, '', '/')
   __resetTitleStoreForTests()
 })
 
@@ -142,6 +164,21 @@ describe('App :: resolveReturnRedirect', () => {
   })
 })
 
+describe('App :: resolvePreferredLandingRedirect', () => {
+  it('redirects only an initial root entry to the configured page', () => {
+    expect(
+      resolvePreferredLandingRedirect('/', '/battery'),
+    ).toBe('/battery')
+    expect(
+      resolvePreferredLandingRedirect('/vehicles', '/battery'),
+    ).toBeNull()
+  })
+
+  it('keeps Dashboard as the root when it is the configured page', () => {
+    expect(resolvePreferredLandingRedirect('/', '/')).toBeNull()
+  })
+})
+
 // ── App composition (redirect wiring) ────────────────────────────────────
 describe('App :: post-re-auth redirect wiring', () => {
   function renderApp() {
@@ -176,6 +213,25 @@ describe('App :: post-re-auth redirect wiring', () => {
   it('does nothing when no return URL is stored', () => {
     renderApp()
     expect(navigateSpy).not.toHaveBeenCalled()
+  })
+
+  it('applies the preferred page only to a startup root entry', () => {
+    updateProductPreferences({ landingPage: '/battery' })
+    renderApp()
+    expect(navigateSpy).toHaveBeenCalledWith('/battery', {
+      replace: true,
+    })
+  })
+
+  it('gives a post-auth return target precedence over the preferred page', () => {
+    updateProductPreferences({ landingPage: '/battery' })
+    sessionStorage.setItem(
+      RETURN_URL_KEY,
+      `${window.location.origin}/vehicles`,
+    )
+    renderApp()
+    expect(navigateSpy).toHaveBeenCalledTimes(1)
+    expect(navigateSpy).toHaveBeenCalledWith('/vehicles')
   })
 })
 

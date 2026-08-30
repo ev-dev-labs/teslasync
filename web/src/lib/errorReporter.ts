@@ -13,7 +13,16 @@
  */
 
 import { isRateLimitError, isUpstreamUnavailableError } from './resilience'
-import { isReportingAllowed } from './cookieConsent'
+import { getConsent, subscribeConsent, type ConsentState } from './cookieConsent'
+import { normalizeRouteTemplate, redactLocationInText } from './routeTemplate'
+import {
+  getVitalsConsentDecision,
+  resetVitalsConsentRequirementForTests,
+  setVitalsConsentRequirement,
+  subscribeVitalsConsentPolicy,
+  type VitalsConsentDecision,
+} from './webVitalsConsent'
+import { redactSensitiveText } from './privacy'
 
 const ENDPOINT = '/api/v1/web-errors'
 const COALESCE_WINDOW_MS = 60_000
@@ -69,10 +78,10 @@ interface ReporterState {
   // successfully-POSTed report is still attachable.
   feedbackRing: FeedbackErrorReport[]
   enabledOverride?: boolean
-  // Deployment-wide GDPR / ePrivacy gate. When true,
-  // isEnabled() short-circuits unless the user has
-  // explicitly accepted via the cookie consent banner.
-  requireCookieConsent: boolean
+  /** Last observed user consent decision, used to detect transitions. */
+  lastConsent: ConsentState
+  unsubscribeConsentPolicy: (() => void) | null
+  unsubscribeCookieConsent: (() => void) | null
 }
 
 const state: ReporterState = {
@@ -80,31 +89,74 @@ const state: ReporterState = {
   buckets: new Map(),
   buffer: [],
   feedbackRing: [],
-  requireCookieConsent: false,
+  lastConsent: 'unknown',
+  unsubscribeConsentPolicy: null,
+  unsubscribeCookieConsent: null,
 }
 
 /**
- * Push the deployment-wide consent requirement down into the reporter.
- * Called from main.tsx once the
- * `/system/version` query resolves. Mid-session flips are honored on
- * the next captured error.
+ * Publish the deployment-wide consent policy.
+ *
+ * Accepts `undefined` for "not resolved yet" (query in flight, or
+ * `/system/version` failed with no cached response) — the same tri-state the
+ * Web Vitals reporter uses. Both reporters read ONE store
+ * (`web/src/lib/webVitalsConsent.ts`) so their gates cannot drift apart, and
+ * `<VitalsConsentPolicyGate>` is the only production caller.
  */
-export function setErrorReporterConsentRequirement(required: boolean): void {
-  state.requireCookieConsent = Boolean(required)
+export function setErrorReporterConsentRequirement(required: boolean | undefined): void {
+  setVitalsConsentRequirement(required)
 }
 
-function isEnabled(): boolean {
-  if (state.enabledOverride !== undefined) return state.enabledOverride
+/**
+ * Resolve what may happen with a report right now.
+ *
+ * - `send` — transmit, and drain anything buffered.
+ * - `hold` — the live policy has not resolved. Buffer, transmit nothing, and
+ *   do NOT drain the offline buffer. Early boot errors are the most valuable
+ *   ones, so they are kept rather than discarded.
+ * - `drop`  — reporting is not permitted; discard the buffer too.
+ */
+function resolveDecision(): VitalsConsentDecision {
+  // `false` is the explicit "off" switch used by the dev-mode spec.
+  if (state.enabledOverride === false) return 'drop'
   // Web errors only get reported in production builds — dev errors come
   // from HMR reloads, StrictMode double-invokes, or work-in-progress
   // code that hasn't been pushed yet, all of which would create noise.
-  if (!import.meta.env.PROD) return false
-  // When the deployment requires consent and the user has not yet
-  // accepted, suppress wire reporting. The
-  // feedback ring buffer is unaffected because it never leaves the
-  // browser; it is only consumed by the in-app feedback modal.
-  if (!isReportingAllowed(state.requireCookieConsent)) return false
-  return true
+  // `__setErrorReporterEnabledForTests(true)` simulates a production build;
+  // it does NOT bypass the consent gate.
+  if (state.enabledOverride === undefined && !import.meta.env.PROD) return 'drop'
+  return getVitalsConsentDecision()
+}
+
+/**
+ * Synchronously destroy the offline/pending buffer.
+ *
+ * A buffered report must never cross a consent boundary: before an Accept
+ * there was no lawful basis for it, and after a Decline it must not linger.
+ * The feedback ring is untouched — it never leaves the browser.
+ */
+function discardPendingReports(): void {
+  state.buffer.length = 0
+}
+
+function onConsentChanged(next: ConsentState): void {
+  if (next === state.lastConsent) return
+  state.lastConsent = next
+  // Runs synchronously inside `setConsent()`, so the buffer is gone before any
+  // later code can observe the new (possibly permissive) decision and flush.
+  discardPendingReports()
+}
+
+function onConsentPolicyChanged(next: 'unknown' | 'required' | 'not-required'): void {
+  if (next === 'unknown') return
+  const decision = resolveDecision()
+  if (decision === 'send') {
+    flushBuffer()
+    return
+  }
+  if (decision === 'drop') {
+    discardPendingReports()
+  }
 }
 
 function isOffline(): boolean {
@@ -136,6 +188,18 @@ function stackOf(err: unknown): string | undefined {
     return err.stack
   }
   return undefined
+}
+
+/**
+ * The full client-boundary scrub for free-text diagnostics.
+ *
+ * Order matters: the current URL is templated and its query/fragment removed
+ * FIRST, then generic secret redaction runs. The other way round, a
+ * `[REDACTED]` marker injected into a query string breaks URL boundary
+ * detection and leaves `?secret=…#frag` residue behind.
+ */
+function scrubDiagnosticText(text: string): string {
+  return redactSensitiveText(redactLocationInText(text))
 }
 
 function shouldSkip(err: unknown): boolean {
@@ -184,6 +248,15 @@ function sendPayload(payload: FrontendErrorPayload): void {
 
 function flushBuffer(): void {
   if (state.buffer.length === 0) return
+  // Never drain while the policy is unresolved (`hold`) or reporting is
+  // forbidden (`drop`). `drop` additionally destroys the buffer so a later
+  // Accept cannot resurrect pre-consent reports.
+  const decision = resolveDecision()
+  if (decision === 'drop') {
+    discardPendingReports()
+    return
+  }
+  if (decision !== 'send') return
   const drained = state.buffer.splice(0, state.buffer.length)
   for (const item of drained) {
     sendPayload(item.payload)
@@ -201,11 +274,30 @@ function flushBuffer(): void {
 export function reportFrontendError(err: unknown, source: ErrorSource): void {
   if (shouldSkip(err)) return
 
+  // ── Client-boundary privacy ─────────────────────────────────────────────
+  // Every field below is scrubbed BEFORE the payload is constructed, because
+  // a payload can be buffered for an arbitrarily long time (offline, or the
+  // consent policy not yet resolved) and is then POSTed verbatim. Backend
+  // normalisation is far too late: the raw value has already left the browser.
+  //
+  //   route          templated via the shared, registry-aware normaliser, so
+  //                  `/s/share-token-abc` becomes `/s/:id` rather than being
+  //                  preserved as an innocuous-looking word. Query and hash
+  //                  are dropped by the normaliser and never retained.
+  //   message/stack  generic secret redaction, then every verbatim occurrence
+  //                  of the current URL (href / pathname / search / hash) is
+  //                  replaced with the template, and query+hash are stripped
+  //                  from any remaining absolute URL.
+  //   userAgent      no URL content.
+  //   occurredAt     timestamp only.
+  const rawStack = stackOf(err)
   const payload: FrontendErrorPayload = {
     name: nameOf(err),
-    message: messageOf(err),
-    stack: stackOf(err),
-    route: typeof window !== 'undefined' ? window.location.pathname : '/',
+    message: scrubDiagnosticText(messageOf(err)),
+    stack: rawStack === undefined ? undefined : scrubDiagnosticText(rawStack),
+    route: normalizeRouteTemplate(
+      typeof window !== 'undefined' ? window.location.pathname : '/',
+    ),
     userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : '',
     occurredAt: new Date().toISOString(),
   }
@@ -223,14 +315,26 @@ export function reportFrontendError(err: unknown, source: ErrorSource): void {
     source,
   })
 
-  if (!isEnabled()) return
+  const decision = resolveDecision()
+  if (decision === 'drop') {
+    // Not permitted. Also destroy anything already buffered so a later
+    // Accept cannot resurrect reports captured under a "no" answer.
+    discardPendingReports()
+    return
+  }
 
   const key = bucketKey(source, payload)
   const now = Date.now()
   if (shouldCoalesce(key, now)) return
   state.buckets.set(key, now)
 
-  if (isOffline()) {
+  // `hold` means the live policy has not resolved yet: buffer, transmit
+  // nothing. Early boot errors — the ones raised before React and the version
+  // query have even started — are exactly the reports worth keeping, so they
+  // wait here instead of being thrown away. They are drained by
+  // `onConsentPolicyChanged` once (and only once) the policy resolves to a
+  // state that permits sending.
+  if (decision === 'hold' || isOffline()) {
     // Drop the oldest buffered report when the buffer is full so we
     // always preserve the most recent context — older errors are less
     // actionable by the time the user comes back online.
@@ -241,7 +345,6 @@ export function reportFrontendError(err: unknown, source: ErrorSource): void {
 
   sendPayload(payload)
 }
-
 function pushFeedbackReport(report: FeedbackErrorReport): void {
   state.feedbackRing.push(report)
   if (state.feedbackRing.length > FEEDBACK_RING_SIZE) {
@@ -290,6 +393,11 @@ export function installGlobalErrorReporting(): void {
   window.addEventListener('online', () => {
     flushBuffer()
   })
+
+  // Same tri-state gate as the Web Vitals reporter, from the same store.
+  state.lastConsent = getConsent()
+  state.unsubscribeCookieConsent = subscribeConsent(onConsentChanged)
+  state.unsubscribeConsentPolicy = subscribeVitalsConsentPolicy(onConsentPolicyChanged)
 }
 
 // ─── Test-only exports ──────────────────────────────────────────────
@@ -302,17 +410,39 @@ export function __resetErrorReporterForTests(): void {
   state.buffer.length = 0
   state.feedbackRing.length = 0
   state.enabledOverride = undefined
-  // Restore the legacy "consent not required" baseline so existing
-  // errorReporter tests continue to observe the
-  // unchanged behaviour. The cookie consent unit tests reset the
-  // localStorage gate independently in their own beforeEach.
-  state.requireCookieConsent = false
+  state.unsubscribeConsentPolicy?.()
+  state.unsubscribeConsentPolicy = null
+  state.unsubscribeCookieConsent?.()
+  state.unsubscribeCookieConsent = null
+  state.lastConsent = 'unknown'
+  // Restore a *resolved* "consent not required" deployment so existing
+  // errorReporter specs keep observing the unchanged send path. Pass
+  // `'unknown'` to `resetVitalsConsentRequirementForTests` directly (or call
+  // `setErrorReporterConsentRequirement(undefined)`) to assert the
+  // fail-closed HOLD behaviour.
+  resetVitalsConsentRequirementForTests('not-required')
 }
 
+/**
+ * Simulate a production build for tests.
+ *
+ * `true` skips the DEV short-circuit but STILL consults the consent gate, so
+ * specs can exercise send/hold/drop. `false` forces a hard "off". `undefined`
+ * restores the real `import.meta.env.PROD` check.
+ */
 export function __setErrorReporterEnabledForTests(v: boolean | undefined): void {
   state.enabledOverride = v
 }
 
 export function __getBufferedCountForTests(): number {
   return state.buffer.length
+}
+
+/**
+ * The payloads currently held in the offline / policy-hold buffer.
+ * Returns copies so a spec can inspect exactly what WOULD be transmitted
+ * without being able to mutate reporter state.
+ */
+export function __getBufferedPayloadsForTests(): FrontendErrorPayload[] {
+  return state.buffer.map(item => ({ ...item.payload }))
 }

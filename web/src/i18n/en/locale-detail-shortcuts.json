@@ -1,0 +1,37 @@
+{
+  "shortcuts": {
+    "title": "Keyboard Shortcuts",
+    "hint": "Press",
+    "hintSuffix": "for shortcuts",
+    "openPalette": "Open command palette",
+    "openPaletteAlt": "Open command palette",
+    "openShortcuts": "Show keyboard shortcuts",
+    "close": "Close modal / cancel",
+    "goto": "Go to {{label}}",
+    "search": "Search shortcuts…",
+    "empty": "No shortcuts match your search.",
+    "filter": {
+      "all": "All",
+      "global": "Global",
+      "page": "This page",
+      "label": "Filter shortcuts"
+    },
+    "group": {
+      "global": "Global",
+      "navigation": "Navigation (press g then…)",
+      "commands": "Commands"
+    },
+    "groups": {
+      "navigation": "Navigation (press g then…)",
+      "actions": "Actions",
+      "commands": "Commands",
+      "table": "Table",
+      "replay": "Trip replay",
+      "bulk": "Bulk actions",
+      "form": "Form editor",
+      "chart": "Charts",
+      "dashboard": "Dashboard"
+    },
+    "gotoPrompt": "Go to…"
+  }
+}

@@ -241,6 +241,9 @@ func (c *Client) doRequestWithTokenOptions(
 	if waitErr := c.limiter.Wait(ctx); waitErr != nil {
 		return nil, 0, fmt.Errorf("rate limiter: %w", waitErr)
 	}
+	if budgetErr := c.reserveBudget(ctx, method, telemetryPath); budgetErr != nil {
+		return nil, budgetHTTPStatus(budgetErr), budgetErr
+	}
 
 	url := c.baseURL + path
 	start := time.Now()

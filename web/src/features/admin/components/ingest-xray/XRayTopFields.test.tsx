@@ -139,8 +139,9 @@ describe('XRayTopFields — error', () => {
     });
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
-    // The bars must not render while an error is surfaced.
-    expect(screen.queryByRole('list')).toBeNull();
+    // The bars must not render while an error is surfaced. QueryError renders
+    // its own help-links list, so target the labelled field list.
+    expect(screen.queryByRole('list', { name: HEADING })).toBeNull();
     expect(screen.queryByText('ShouldNotRender')).toBeNull();
   });
 });

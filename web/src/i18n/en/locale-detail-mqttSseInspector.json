@@ -1,0 +1,11 @@
+{
+  "mqttSseInspector": {
+    "aiExplainer": {
+      "title": "Helix stream explainer",
+      "description": "Get a 3-6 sentence factual explanation of the current MQTT broker, SSE hub, and background-job state. The explainer reads only the deterministic broker-status envelope (broker connectivity, per-vehicle stream stats, SSE client counts, job freshness) — broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The explanation is informational; the broker-status snapshot above remains the canonical raw view.",
+      "button": "Explain streams",
+      "badge": "Helix",
+      "emptyHint": "A valid time window is required."
+    }
+  }
+}

@@ -181,7 +181,7 @@ export function ActiveDayConsistency({
               />
             </div>
           ) : summary.accounting.eligibleRows === 0 ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={
                 <CalendarCheck2

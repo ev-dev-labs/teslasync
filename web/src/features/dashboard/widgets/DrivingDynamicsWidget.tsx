@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Gauge } from 'lucide-react';
-import { LinearGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
+import { LinearGauge, BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Tooltip, ChartTooltip, EmbeddedChart, axisTick, axisTickSm, chartGrid, useThemeChartPalette } from '@/components/charts';
 import { Badge } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
 import { useDrivingDynamics, useAccelerationDistribution } from '@/api/hooks/useDriving';
@@ -213,7 +213,19 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
 
           {/* Wide: acceleration distribution histogram */}
           {isWide && histogramData.length > 0 && (
-            <div className="flex-1 min-h-0">
+            <EmbeddedChart
+              title={t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
+              ariaLabel={t(
+                'widget.drivingDynamics.distributionAria',
+                'Distribution of observed acceleration magnitudes',
+              )}
+              data={histogramData}
+              dataColumns={[
+                { key: 'range', label: t('widget.drivingDynamics.gForce', 'G-force') },
+                { key: 'count', label: t('widget.drivingDynamics.samples', 'Samples') },
+              ]}
+              className="flex-1 min-h-0"
+            >
               <p className="text-2xs text-[var(--text-muted)] mb-1">
                 {t('widget.drivingDynamics.distribution', 'G-Force Distribution')}
               </p>
@@ -223,13 +235,13 @@ export default function DrivingDynamicsWidget({ vehicleId, size }: WidgetProps) 
                   <XAxis dataKey="range" tick={axisTickSm} />
                   <YAxis tick={axisTick} allowDecimals={false} />
                   <Tooltip
-                    contentStyle={{ background: 'rgba(15,23,42,0.95)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 11 }}
+                    content={<ChartTooltip />}
                     labelFormatter={(v) => `${v}g`}
                   />
                   <Bar dataKey="count" fill={palette.series[0]} radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </EmbeddedChart>
           )}
         </div>
       ) : (

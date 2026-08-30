@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import {
-  Gauge, AlertTriangle, TrendingDown, Activity, Clock, AlertCircle,
+  Gauge, AlertTriangle, TrendingDown, Activity, Clock,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
@@ -12,7 +12,7 @@ import { MetricCard } from '@/components/data-display';
 import {
   ThresholdBar, ChartTooltip, CHART_COLORS, AREA_DEFAULTS, axisTickSm,
   LineChart, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend,
+  Tooltip, ResponsiveContainer, ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -24,7 +24,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { convertPressureFromSI } from '@/lib/unitConversion';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { getErrorMessage } from '@/lib/errorMessage';
 import { request } from '@/api/client';
 import { AITirePressureTrendReasoning } from '@/components/ai/AITirePressureTrendReasoning';
 
@@ -293,8 +292,23 @@ export default function TirePressurePage() {
     error: historyError,
     refetch: refetchHistory,
   } = historyQuery;
-
-  const anyError = [latestError, historyError].find(Boolean);
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'latest-tire-pressure',
+        label: t('dataSources.labels.liveTirePressure', 'Latest tire pressure'),
+        query: latestQuery,
+        enabled: activeVehicleId !== null,
+      },
+      {
+        id: 'tire-pressure-history',
+        label: t('dataSources.labels.tirePressureHistory', 'Tire pressure history'),
+        query: historyQuery,
+        enabled: activeVehicleId !== null,
+      },
+    ],
+    [activeVehicleId, historyQuery, latestQuery, t],
+  );
 
   /* ---- Derived data ---- */
 
@@ -456,6 +470,7 @@ export default function TirePressurePage() {
         'Monitor tire pressure readings and history',
       )}
       query={[latestQuery, historyQuery]}
+      dataSources={dataSources}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <VehicleSelect
@@ -472,16 +487,6 @@ export default function TirePressurePage() {
         </div>
       }
     >
-      {anyError && (
-        <AlertBanner
-          variant="danger"
-          icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}
-          title={t('error.loadFailed', 'Failed to load data')}
-        >
-          {getErrorMessage(anyError)}
-        </AlertBanner>
-      )}
-
       {/* AI opt-in narration — renders nothing when the feature is disabled. */}
       <AITirePressureTrendReasoning vehicleId={activeVehicleId ?? undefined} />
 
@@ -626,35 +631,46 @@ export default function TirePressurePage() {
               />
             ) : (
               <div className="h-56 sm:h-64 xl:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={chartData}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--glass-border)"
-                      strokeOpacity={0.5}
-                    />
-                    <XAxis
-                      dataKey="time"
-                      tick={axisTickSm}
-                    />
-                    <YAxis
-                      domain={['auto', 'auto']}
-                      tick={axisTickSm}
-                      tickFormatter={(v: number) => fmtNumber(v, 1)}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 11 }} />
-                    {TIRE_POSITIONS.map((pos) => (
-                      <Line
-                        key={pos}
-                        {...AREA_DEFAULTS}
-                        dataKey={pos}
-                        name={tireLabel(pos)}
-                        stroke={LINE_COLORS[pos]}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
+                {/* chart-a11y:no-table tire pressure time-series for 4 positions — dense history, not tabular */}
+                <EmbeddedChart
+                  chartKey="tire-pressure-history"
+                  title={t('tirePressure.pressureHistory', 'Pressure History')}
+                  ariaLabel={t('tirePressure.pressureHistoryAria', 'Tire pressure over time for all four positions')}
+                  fluid
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="var(--glass-border)"
+                          strokeOpacity={0.5}
+                        />
+                        <XAxis
+                          dataKey="time"
+                          tick={axisTickSm}
+                        />
+                        <YAxis
+                          domain={['auto', 'auto']}
+                          tick={axisTickSm}
+                          tickFormatter={(v: number) => fmtNumber(v, 1)}
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        <ChartLegend wrapperStyle={{ fontSize: 11 }} />
+                        {TIRE_POSITIONS.map((pos) => (
+                          <Line
+                            key={pos}
+                            {...AREA_DEFAULTS}
+                            dataKey={pos}
+                            name={tireLabel(pos)}
+                            stroke={LINE_COLORS[pos]}
+                            hide={hiddenSeries?.isHidden(pos) ?? false}
+                          />
+                        ))}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>

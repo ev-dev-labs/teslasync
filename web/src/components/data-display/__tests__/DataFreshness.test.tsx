@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react'
+import { act, render, screen, fireEvent } from '@testing-library/react'
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   DataFreshness,
@@ -190,7 +190,7 @@ describe('DataFreshness', () => {
 
   it('calls onRefresh when clicked and not fetching', () => {
     const onRefresh = vi.fn()
-    const { container } = render(
+    render(
       <DataFreshness
         updatedAt={Date.now() - 1000}
         isFetching={false}
@@ -199,9 +199,7 @@ describe('DataFreshness', () => {
         onRefresh={onRefresh}
       />,
     )
-    const root = container.querySelector('span[role="button"]')
-    expect(root).not.toBeNull()
-    fireEvent.click(root!)
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }))
     expect(onRefresh).toHaveBeenCalledTimes(1)
   })
 
@@ -217,8 +215,38 @@ describe('DataFreshness', () => {
       />,
     )
     const root = container.firstElementChild!
+    expect(root).toBeDisabled()
     fireEvent.click(root)
     expect(onRefresh).not.toHaveBeenCalled()
+  })
+
+  it('spells out stale status instead of relying on the amber dot alone', () => {
+    render(
+      <DataFreshness
+        updatedAt={Date.now() - 5 * 60_000}
+        isFetching={false}
+        isStale
+        isError={false}
+      />,
+    )
+    expect(screen.getByText('Stale · 5m ago')).toBeInTheDocument()
+  })
+
+  it('includes source provenance in the hover and accessible detail', () => {
+    render(
+      <DataFreshness
+        updatedAt={Date.now() - 1000}
+        isFetching={false}
+        isStale={false}
+        isError={false}
+        source="Battery analytics"
+      />,
+    )
+    const status = screen.getByRole('status')
+    expect(status).toHaveAttribute('title', expect.stringContaining('Source: Battery analytics'))
+    expect(status).toHaveAccessibleName(
+      'Data freshness: Up to date · just now · Source: Battery analytics',
+    )
   })
 
   // ── Background-refetch pulse ───────────────────────────────────────
@@ -329,12 +357,10 @@ describe('DataFreshnessAuto', () => {
 
   it('passes refetch through as the click handler by default', () => {
     const refetch = vi.fn().mockResolvedValue(undefined)
-    const { container } = render(
+    render(
       <DataFreshnessAuto query={makeQuery({ refetch: refetch as unknown as FreshnessQuery['refetch'] })} />,
     )
-    const root = container.querySelector('span[role="button"]')
-    expect(root).not.toBeNull()
-    fireEvent.click(root!)
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }))
     expect(refetch).toHaveBeenCalledTimes(1)
   })
 
@@ -342,7 +368,7 @@ describe('DataFreshnessAuto', () => {
     const { container } = render(
       <DataFreshnessAuto query={makeQuery()} refetchable={false} />,
     )
-    expect(container.querySelector('span[role="button"]')).toBeNull()
+    expect(container.querySelector('button')).toBeNull()
   })
 
   it('forces stale visual when forceStaleAfterMs threshold is exceeded', () => {
@@ -362,6 +388,21 @@ describe('DataFreshnessAuto', () => {
       <DataFreshnessAuto query={query} forceStaleAfterMs={5 * 60_000} />,
     )
     expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
+  })
+
+  it('transitions to forced stale as the successful update ages', () => {
+    const query = makeQuery({ dataUpdatedAt: Date.now() })
+    const { container } = render(
+      <DataFreshnessAuto query={query} forceStaleAfterMs={60_000} />,
+    )
+    expect(container.querySelector('.bg-emerald-400')).toBeInTheDocument()
+
+    act(() => {
+      vi.advanceTimersByTime(60_001)
+    })
+
+    expect(container.querySelector('.bg-amber-400')).toBeInTheDocument()
+    expect(screen.getByText('Stale · 1m ago')).toBeInTheDocument()
   })
 
   it('treats dataUpdatedAt=0 (never fetched) as null updatedAt', () => {

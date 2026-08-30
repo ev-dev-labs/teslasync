@@ -19,8 +19,9 @@ type Store struct {
 	prefix string
 }
 
-// New creates a cache store. If Redis is enabled and reachable, it is used
-// as the primary cache. Otherwise, an in-memory cache is used.
+// New creates a cache store. When Redis is enabled, its client is retained
+// even if the startup probe fails so go-redis can reconnect after dependencies
+// recover. Individual operations continue to fall back to the in-memory store.
 func New(cfg config.RedisConfig) *Store {
 	s := &Store{
 		mem:    newMemStore(),
@@ -37,16 +38,16 @@ func New(cfg config.RedisConfig) *Store {
 		Password: cfg.Password,
 		DB:       cfg.DB,
 	})
+	s.rdb = rdb
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		log.Warn().Err(err).Msg("cache: Redis unreachable, falling back to in-memory")
+		log.Warn().Err(err).Msg("cache: Redis unreachable; using in-memory fallback until Redis reconnects")
 		return s
 	}
 
-	s.rdb = rdb
 	log.Info().Str("addr", cfg.Addr()).Msg("cache: connected to Redis")
 	return s
 }
@@ -101,13 +102,14 @@ func (s *Store) Close() {
 	s.mem.Close()
 }
 
-// IsRedis returns true if the cache is backed by Redis.
+// IsRedis returns true when Redis is configured. Reachability is checked by
+// health probes and may change while the retained client reconnects.
 func (s *Store) IsRedis() bool {
 	return s.rdb != nil
 }
 
-// Underlying returns the raw *redis.Client, or nil if Redis is not connected.
-// Use this for advanced operations like HSET that go beyond the generic cache API.
+// Underlying returns the configured raw *redis.Client, or nil when Redis is
+// disabled. The client reconnects automatically after transient outages.
 func (s *Store) Underlying() *redis.Client {
 	return s.rdb
 }

@@ -37,17 +37,19 @@ type PredictionInfo struct {
 
 // VehiclePollingState tracks per-vehicle polling state managed by the engine.
 type VehiclePollingState struct {
-	VIN              string                     `json:"vin"`
-	LastResponse     *tesla.VehicleDataResponse `json:"-"`
-	LastPollTime     time.Time                  `json:"last_poll_time"`
-	NextPollAfter    time.Time                  `json:"next_poll_after"`
-	CurrentActivity  ActivityLevel              `json:"current_activity"`
-	CurrentProfile   PollProfile                `json:"current_profile"`
-	ConsecIdle       int                        `json:"consec_idle"`
-	LastBatteryLevel int                        `json:"last_battery_level"`
-	LastOdometer     float64                    `json:"last_odometer"`
-	LastDecision     *PollDecision              `json:"last_decision,omitempty"`
-	DecisionHistory  []PollDecision             `json:"-"` // ring buffer, kept in memory
+	VIN               string                     `json:"vin"`
+	LastResponse      *tesla.VehicleDataResponse `json:"-"`
+	LastPollTime      time.Time                  `json:"last_poll_time"`
+	NextPollAfter     time.Time                  `json:"next_poll_after"`
+	BudgetPausedUntil time.Time                  `json:"budget_paused_until,omitzero"`
+	BackoffReason     string                     `json:"backoff_reason,omitempty"`
+	CurrentActivity   ActivityLevel              `json:"current_activity"`
+	CurrentProfile    PollProfile                `json:"current_profile"`
+	ConsecIdle        int                        `json:"consec_idle"`
+	LastBatteryLevel  int                        `json:"last_battery_level"`
+	LastOdometer      float64                    `json:"last_odometer"`
+	LastDecision      *PollDecision              `json:"last_decision,omitempty"`
+	DecisionHistory   []PollDecision             `json:"-"` // ring buffer, kept in memory
 }
 
 // IntervalConfig holds the poll intervals for each vehicle state.
@@ -75,8 +77,8 @@ type EngineConfig struct {
 	EnablePredictor       bool           `json:"enable_predictor"`
 	FleetTelemetryEnabled bool           `json:"fleet_telemetry_enabled"`
 	DecisionHistorySize   int            `json:"decision_history_size"` // ring buffer size (default 100)
-	CostPerRequest        float64        `json:"cost_per_request"`      // $0.00222
-	MonthlyCredit         float64        `json:"monthly_credit"`        // $10
+	CostPerRequest        float64        `json:"cost_per_request"`
+	MonthlyCredit         float64        `json:"monthly_credit"` // $10
 }
 
 // DefaultEngineConfig returns sensible defaults.
@@ -86,7 +88,7 @@ func DefaultEngineConfig() EngineConfig {
 		MaxBackoff:          30 * time.Minute,
 		EnablePredictor:     true,
 		DecisionHistorySize: 100,
-		CostPerRequest:      0.00222, // ~$10 / 4500 requests
+		CostPerRequest:      tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData),
 		MonthlyCredit:       10.0,
 	}
 }

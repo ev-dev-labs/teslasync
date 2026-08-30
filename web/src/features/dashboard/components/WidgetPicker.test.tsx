@@ -21,7 +21,7 @@
  *
  * i18n is stubbed with an interpolating passthrough `t(key, default, opts)` so
  * assertions run against deterministic English defaults (matching the sibling
- * DashboardSettingsModal / RecentlyViewedWidget convention). No network is
+ * DashboardSettingsModal convention). No network is
  * touched — the component is pure presentation over the static registry.
  */
 import { afterEach, describe, it, expect, vi } from 'vitest';
@@ -98,10 +98,12 @@ describe('WidgetPicker', () => {
     expect(screen.getByRole('dialog', { name: 'Add Widget' })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /search widgets/i })).toBeInTheDocument();
 
-    // "All" is the default-selected category pill.
-    const selected = screen.getByRole('tab', { selected: true });
+    // "All" is the default-selected category filter.
+    const selected = screen.getByRole('button', { name: 'All', pressed: true });
     expect(selected).toHaveTextContent('All');
-    expect(screen.getByRole('tab', { name: 'Battery & Range' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
+    ).toBeInTheDocument();
 
     // The whole registry is available and the preset section is present.
     expect(
@@ -140,7 +142,9 @@ describe('WidgetPicker', () => {
 
   it('filtering by category narrows the list and hides the presets section', () => {
     renderPicker();
-    fireEvent.click(screen.getByRole('tab', { name: 'Battery & Range' }));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Battery & Range', pressed: false }),
+    );
 
     expect(widgetCard(BATTERY_GAUGE_DESC)).toBeInTheDocument();
     // A vehicle-category widget is no longer rendered.

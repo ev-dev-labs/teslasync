@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { ExternalLink, HelpCircle } from 'lucide-react';
 
 import { cn } from '@/lib/cn';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
 import { Tooltip } from './Tooltip';
 
 /**
@@ -57,6 +58,7 @@ export function HelpTooltip({
   ariaLabel,
 }: HelpTooltipProps) {
   const { t } = useTranslation();
+  const { preferences } = useProductPreferences();
 
   const resolved = i18nKey
     ? t(i18nKey, { defaultValue: defaultValue ?? '' })
@@ -64,14 +66,14 @@ export function HelpTooltip({
 
   // Render nothing when no content is supplied — keeps consumers from having
   // to gate the tooltip themselves.
-  if (!resolved) return null;
+  if (!preferences.contextualHelp || !resolved) return null;
 
   const iconClass = SIZE_CLASS[size];
   const label = ariaLabel ?? t('help.tooltip.iconLabel', { defaultValue: 'More info' });
 
   const tooltipBody = (
-    <div className="text-2xs leading-snug">
-      <p className="text-[var(--text-primary)]">{resolved}</p>
+    <span className="block text-2xs leading-snug">
+      <span className="block text-[var(--text-primary)]">{resolved}</span>
       {learnMore && (
         <a
           href={learnMore.url}
@@ -88,7 +90,7 @@ export function HelpTooltip({
           <ExternalLink className="h-3 w-3" aria-hidden />
         </a>
       )}
-    </div>
+    </span>
   );
 
   return (

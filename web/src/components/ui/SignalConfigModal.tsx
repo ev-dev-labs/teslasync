@@ -2,7 +2,7 @@ import { useState, useMemo, useEffect } from 'react'
 import { Search, Zap, Battery, Gauge, Shield, Thermometer, Radio, Settings, Wrench, ChevronDown, CheckCircle } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { EmptyState } from '@/components/feedback'
+import { EmptyState } from '@/components/feedback/EmptyState'
 import { Input, Modal, Select } from '.'
 
 const INTERVAL_OPTIONS = [

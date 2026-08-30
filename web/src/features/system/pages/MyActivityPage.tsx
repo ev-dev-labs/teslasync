@@ -18,7 +18,7 @@ import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { DataStateNotice, ErrorDisplay } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { RangePicker } from '@/components/forms';
 import { Icons } from '@/lib/icons';
@@ -95,23 +95,19 @@ export default function MyActivityPage() {
         <FadeIn>
           <GlassPanel className="p-4 sm:p-6">
             {featureDisabled ? (
-              <EmptyState
-                icon={<Icons.securityCheck className="h-8 w-8" />}
-                title={t('activity.myActivity.disabled.title', 'Activity feed disabled')}
+              <DataStateNotice
+                state="unsupported"
+                title={t(
+                  'activity.myActivity.disabled.title',
+                  'Activity feed is not supported',
+                )}
                 message={t(
                   'activity.myActivity.disabled.description',
                   'Per-user activity is only available when TeslaSync is deployed behind an identity provider (ForwardAuth). Ask your administrator to configure AUTH_FORWARD_HEADER.',
                 )}
               />
             ) : (
-              <EmptyState /* no-action: auth gate — recovery is signing in via the identity provider */
-                icon={<Icons.user className="h-8 w-8" />}
-                title={t('activity.myActivity.unauthorized.title', 'Identity required')}
-                message={t(
-                  'activity.myActivity.unauthorized.description',
-                  'Your request did not include an identity header. Sign in through your identity provider and try again.',
-                )}
-              />
+              <ErrorDisplay error={error} />
             )}
           </GlassPanel>
         </FadeIn>

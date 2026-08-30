@@ -60,7 +60,15 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     [validRouteId],
   )
   const body = useMemo(() => ({}), [])
-  const stream = useAiStream({ url, body, onEvent: noop })
+  const stream = useAiStream({
+    url,
+    body,
+    onEvent: noop,
+    // AI-01: route scope is part of stream identity — switching the
+    // in-view route aborts an in-flight suggestion and clears the
+    // previous route's narrative before the new scope streams in.
+    scopeKey: validRouteId,
+  })
   return (
     <AIFeatureCard
       title={t('routeEfficiency.aiSuggestions.title', 'Route-efficiency suggestions')}

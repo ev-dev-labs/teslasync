@@ -7,6 +7,8 @@ metadata:
 data:
   DATABASE_HOST: {{ include "teslasync.postgresql.host" . | quote }}
   DATABASE_PORT: {{ include "teslasync.postgresql.port" . | quote }}
+  # OPS-09: isolated drain listener port (see values.yaml `drain`).
+  TESLASYNC_DRAIN_PORT: {{ .Values.drain.port | quote }}
   DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}
   DATABASE_NAME: {{ include "teslasync.postgresql.database" . | quote }}
   DATABASE_SSLMODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
@@ -35,14 +37,32 @@ data:
   TESLA_API_BASE_URL: {{ .Values.tesla.apiBaseUrl | quote }}
   TESLA_AUTH_URL: {{ .Values.tesla.authUrl | default "https://auth.tesla.com" | quote }}
   TESLA_TIMEOUT: {{ .Values.tesla.timeout | default "30s" | quote }}
+  TESLA_API_DAILY_BUDGET_USD: {{ .Values.tesla.dailyBudgetUsd | quote }}
+  TESLA_API_COMMAND_RESERVE_USD: {{ .Values.tesla.commandReserveUsd | quote }}
   WORKER_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
   WORKER_SLEEP_POLL_MULT: {{ .Values.config.sleepPollMultiplier | default 4 | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}
   FORWARD_AUTH_HEADER: {{ .Values.config.forwardAuthHeader | quote }}
   TESLASYNC_PORT: {{ .Values.service.port | quote }}
   HELM_CHART_VERSION: {{ .Chart.Version | quote }}
-  {{- if .Values.config.webEndpoint }}
-  CORS_ORIGINS: {{ .Values.config.webEndpoint | quote }}
+  {{- $publicOrigins := .Values.config.webEndpoint | default "" }}
+  {{- if and (not $publicOrigins) .Values.ingress.enabled .Values.ingress.tls }}
+  {{- $derivedOrigins := list }}
+  {{- range .Values.ingress.tls }}
+  {{- range .hosts }}
+  {{- $derivedOrigins = append $derivedOrigins (printf "https://%s" .) }}
+  {{- end }}
+  {{- end }}
+  {{- $publicOrigins = join "," $derivedOrigins }}
+  {{- end }}
+  {{- if and (not $publicOrigins) .Values.ingress.enabled .Values.ingress.tls }}
+  {{- fail "config.webEndpoint is required when ingress TLS has no public host so CSRF has a trusted origin" }}
+  {{- end }}
+  {{- if and (not $publicOrigins) .Values.ingressRoute.enabled .Values.ingressRoute.tls.enabled }}
+  {{- fail "config.webEndpoint is required when ingressRoute TLS is enabled so CSRF has a trusted public origin" }}
+  {{- end }}
+  {{- if $publicOrigins }}
+  CORS_ORIGINS: {{ $publicOrigins | quote }}
   {{- end }}
   {{- $ftHost := include "teslasync.fleetTelemetry.host" . }}
   {{- if or .Values.fleetTelemetry.enabled $ftHost }}
@@ -59,7 +79,7 @@ data:
   {{- end }}
   {{- if or .Values.mongodb.enabled .Values.mongodb.external.uri }}
   MONGODB_ENABLED: "true"
-  {{- if not .Values.secrets.existingSecret }}
+  {{- if .Values.secrets.create }}
   {{- if .Values.mongodb.external.uri }}
   MONGODB_URI: {{ .Values.mongodb.external.uri | quote }}
   {{- else }}
@@ -69,16 +89,19 @@ data:
   MONGODB_DATABASE: {{ .Values.mongodb.database | default "teslasync" | quote }}
   MONGODB_TTL_DAYS: {{ .Values.mongodb.ttlDays | default 7 | quote }}
   {{- end }}
-  # Data retention (0 or unset = no automatic cleanup)
+  # Data retention. The chart ships a finite signal_log retention window.
   {{- if .Values.retention }}
-  {{- if .Values.retention.dataDays }}
+  {{- if hasKey .Values.retention "dataDays" }}
   DATA_RETENTION_DAYS: {{ .Values.retention.dataDays | quote }}
   {{- end }}
-  {{- if .Values.retention.positionDays }}
+  {{- if hasKey .Values.retention "positionDays" }}
   POSITION_RETENTION_DAYS: {{ .Values.retention.positionDays | quote }}
   {{- end }}
-  {{- if .Values.retention.signalHistoryDays }}
+  {{- if hasKey .Values.retention "signalHistoryDays" }}
   SIGNAL_HISTORY_RETENTION_DAYS: {{ .Values.retention.signalHistoryDays | quote }}
+  {{- end }}
+  {{- if hasKey .Values.retention "signalHistoryAcknowledged" }}
+  SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED: {{ .Values.retention.signalHistoryAcknowledged | quote }}
   {{- end }}
   {{- if hasKey .Values.retention "auditDays" }}
   AUDIT_RETENTION_DAYS: {{ .Values.retention.auditDays | quote }}
@@ -124,16 +147,13 @@ data:
   DLQ_REPLAY_ENABLED: "false"
   DLQ_RING_CAPACITY: "200"
   {{- end }}
-  {{- if not .Values.secrets.existingSecret }}
-  {{- if .Values.config.googleMaps.apiKey }}
-  GOOGLE_MAPS_API_KEY: {{ .Values.config.googleMaps.apiKey | quote }}
-  {{- end }}
-  {{- end }}
-  {{- if not .Values.secrets.existingSecret }}
-  {{- if .Values.config.azureMaps.apiKey }}
-  AZURE_MAPS_API_KEY: {{ .Values.config.azureMaps.apiKey | quote }}
-  {{- end }}
-  {{- end }}
+  # NOTE: GOOGLE_MAPS_API_KEY and AZURE_MAPS_API_KEY are deliberately NOT
+  # rendered here. They are credentials and live in templates/secret.yaml
+  # only; both the ConfigMap and the Secret are mounted via envFrom, so the
+  # container environment is unchanged. Duplicating them into a ConfigMap
+  # made them readable by anything with `get configmaps` and put them in
+  # plaintext `helm get manifest` output.
+  # Enforced by: go run ./cmd/ops-gate -check config-parity
   # Inbound api_call_logs middleware (Phase 38-10).
   # Body capture defaults to OFF; enable only for diagnostic windows.
   {{- if .Values.config.apiLogs }}
@@ -186,3 +206,14 @@ data:
   # first visit and gates optional client-side reporting (web
   # vitals, error reporter) on the user's stored consent.
   TESLASYNC_REQUIRE_COOKIE_CONSENT: {{ default false (and .Values.config .Values.config.requireCookieConsent) | quote }}
+  SYNTHETIC_ENABLED: {{ default false (and .Values.synthetic .Values.synthetic.enabled) | quote }}
+  SYNTHETIC_INTERVAL_SECONDS: {{ default 60 (and .Values.synthetic .Values.synthetic.intervalSeconds) | quote }}
+  SYNTHETIC_TIMEOUT_SECONDS: {{ default 30 (and .Values.synthetic .Values.synthetic.timeoutSeconds) | quote }}
+  SYNTHETIC_PROBE_URLS: {{ default "" (and .Values.synthetic .Values.synthetic.probeURLs) | quote }}
+  # Critical-operator-chain synthetic journey probe (dashboard/fleet
+  # state -> vehicle inspect -> battery health -> charging history —
+  # see internal/synthetic.OperatorChainJourneySteps). Opt-in; empty
+  # disables it even when SYNTHETIC_ENABLED=true. Point it at this
+  # deployment's own in-cluster API service so the probe exercises the
+  # real read path, e.g. "http://{{ include "teslasync.fullname" . }}:8080".
+  SYNTHETIC_JOURNEY_BASE_URL: {{ default "" (and .Values.synthetic .Values.synthetic.journeyBaseURL) | quote }}

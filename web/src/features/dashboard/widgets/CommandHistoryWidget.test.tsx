@@ -247,7 +247,7 @@ describe('CommandHistoryWidget states', () => {
     // Title still renders (not gated behind data) and the panel is not blank.
     expect(screen.getByText('Command History')).toBeInTheDocument();
     expect(screen.getByText('No commands sent')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
@@ -371,7 +371,7 @@ describe('CommandHistoryWidget refresh', () => {
     );
     renderWidget(STANDARD);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);
   });

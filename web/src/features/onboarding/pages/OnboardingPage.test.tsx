@@ -10,22 +10,34 @@ import type { OnboardingStatus } from '@/api/hooks/useOnboarding';
 
 // Mock framer-motion so FadeIn renders children eagerly without
 // IntersectionObserver awareness.
-vi.mock('framer-motion', () => ({
-  motion: new Proxy(
-    {},
-    {
-      get:
-        () =>
-        ({ children, ...props }: { children?: ReactNode } & Record<string, unknown>) => {
-          const safe = filterMotionProps(props);
-          return <div {...safe}>{children}</div>;
+vi.mock('framer-motion', () => {
+  const tagCache = new Map<
+    PropertyKey,
+    (props: { children?: ReactNode } & Record<string, unknown>) => ReactNode
+  >();
+
+  return {
+    motion: new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          let Component = tagCache.get(key);
+          if (!Component) {
+            Component = ({ children, ...props }) => {
+              const safe = filterMotionProps(props);
+              return <div {...safe}>{children}</div>;
+            };
+            tagCache.set(key, Component);
+          }
+          return Component;
         },
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
-  useInView: () => true,
-  useReducedMotion: () => false,
-}));
+      },
+    ),
+    AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
+    useInView: () => true,
+    useReducedMotion: () => false,
+  };
+});
 
 function filterMotionProps(props: Record<string, unknown>): Record<string, unknown> {
   const cleaned: Record<string, unknown> = {};

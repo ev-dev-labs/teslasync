@@ -28,7 +28,13 @@ import {
   Textarea as UiTextarea,
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
-import { AlertBanner, DraftRecoveryBanner, EmptyState, EditConflictBanner } from '@/components/feedback';
+import {
+  AlertBanner,
+  DraftRecoveryBanner,
+  EmptyState,
+  EditConflictBanner,
+  OperationalWriteNotice,
+} from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { FormSection } from '@/components/forms';
 import { AINLAutomationBuilder } from '@/components/ai/AINLAutomationBuilder';
@@ -39,6 +45,7 @@ import { useFormDraft } from '@/hooks/useFormDraft';
 import { useNavigationGuard } from '@/hooks/useNavigationGuard';
 import { useEditLease } from '@/hooks/useEditLease';
 import { useConfirm } from '@/hooks/useConfirm';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { ConfirmDialog } from '@/components/ui';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useNotificationChannels } from '@/api/hooks/useNotifications';
@@ -319,6 +326,7 @@ export default function AutomationBuilderPage() {
   const createMutation = useCreateAutomationFull();
   const updateMutation = useUpdateAutomationFull();
   const testRunMutation = useTestRunAutomation();
+  const operationalMode = useOperationalMode();
 
   // `useFormDraft` autosaves the in-progress
   // automation to localStorage so a tab close, SW reload, or auth redirect
@@ -663,6 +671,13 @@ export default function AutomationBuilderPage() {
         }}
         className="space-y-6"
       >
+        <OperationalWriteNotice
+          title={t(
+            'automations.builder.readOnly.title',
+            'Automation publishing is read-only',
+          )}
+        />
+
         {/* Session / concurrency banners — full width, top of page */}
         <EditConflictBanner
           resourceKey={leaseKey}
@@ -940,7 +955,13 @@ export default function AutomationBuilderPage() {
         <FadeIn delay={0.25}>
           <GlassPanel className="p-4">
             <div className="flex flex-wrap items-center gap-3">
-              <UiButton type="submit" loading={isSaving} disabled={isSaving} className="min-h-11">
+              <UiButton
+                type="submit"
+                loading={isSaving}
+                disabled={isSaving || !operationalMode.canWrite}
+                title={operationalMode.writeBlockReason ?? undefined}
+                className="min-h-11"
+              >
                 <Save className="mr-2 h-4 w-4" />
                 {isEdit
                   ? t('automations.builder.save', 'Save')
@@ -952,7 +973,8 @@ export default function AutomationBuilderPage() {
                   variant="secondary"
                   onClick={handleTestRun}
                   loading={testRunMutation.isPending}
-                  disabled={testRunMutation.isPending}
+                  disabled={testRunMutation.isPending || !operationalMode.canWrite}
+                  title={operationalMode.writeBlockReason ?? undefined}
                   className="min-h-11"
                 >
                   <PlayCircle className="mr-2 h-4 w-4" />

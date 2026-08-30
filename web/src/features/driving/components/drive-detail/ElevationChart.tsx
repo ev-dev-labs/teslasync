@@ -2,8 +2,8 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Activity, ArrowUpRight, ArrowDownRight } from 'lucide-react';
 import {
-  ChartContainer, ChartTooltip,
-  ComposedChart, Area, Line, Legend, ReferenceLine,
+  ChartContainer, ChartLegend, ChartTooltip,
+  ComposedChart, Area, Line, ReferenceLine,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   useSyncedCursor, useSyncedReferenceLineX,
 } from '@/components/charts';
@@ -11,7 +11,6 @@ import { chartTokens } from '@/lib/tokens';
 import { FadeIn } from '@/components/motion';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { LEGEND_STYLE } from './helpers';
 import type { ChartDataPoint, DriveStats } from './types';
 
 interface ElevationChartProps {
@@ -41,11 +40,13 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
       <ChartContainer
         title={t('driveDetail.elevProfile', 'Elevation Profile')}
         ariaLabel={t('driveDetail.elevProfile.aria', 'Elevation and speed area+line chart over the drive timeline')}
+        chartKey="drive-detail-elevation"
         height={220}
         className="h-full"
       >
-        {points.length > 1 ? (
-          <>
+        {({ hiddenSeries }) => (
+          points.length > 1 ? (
+            <>
             <div className="flex items-center gap-4 mb-2 text-xs">
               <span className="flex items-center gap-1 text-green-400"><ArrowUpRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevGain)} m {t('driveDetail.gain', 'gain')}</span>
               <span className="flex items-center gap-1 text-red-400"><ArrowDownRight className="h-3 w-3" aria-hidden="true" />{fmtNumber(elevLoss)} m {t('driveDetail.loss', 'loss')}</span>
@@ -63,9 +64,9 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 <YAxis yAxisId="elev" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <YAxis yAxisId="speed" orientation="right" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend wrapperStyle={LEGEND_STYLE} />
-                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} />
-                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} />
+                <ChartLegend />
+                <Area yAxisId="elev" type="monotone" dataKey="elevation" stroke="#10b981" fill="#10b981" fillOpacity={0.2} strokeWidth={2} name={`${t('driveDetail.elevation', 'Elevation')} (m)`} hide={hiddenSeries?.isHidden('elevation')} />
+                <Line yAxisId="speed" type="monotone" dataKey="speed" stroke="#a855f7" strokeWidth={1.5} dot={false} name={`${t('driveDetail.speed', 'Speed')} (${speedUnit})`} strokeOpacity={0.6} hide={hiddenSeries?.isHidden('speed')} />
                 {syncedX != null && (
                   <ReferenceLine
                     yAxisId="elev"
@@ -79,12 +80,13 @@ export function ElevationChart({ chartData, stats }: ElevationChartProps) {
                 )}
               </ComposedChart>
             </ResponsiveContainer>
-          </>
-        ) : (
-          <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
-            <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
-            <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
-          </div>
+            </>
+          ) : (
+            <div role="status" className="h-full flex flex-col items-center justify-center gap-2 text-[var(--text-muted)]">
+              <Activity className="h-8 w-8 opacity-20" aria-hidden="true" />
+              <p className="text-xs">{t('driveDetail.noChartData', 'No telemetry data available')}</p>
+            </div>
+          )
         )}
       </ChartContainer>
     </FadeIn>

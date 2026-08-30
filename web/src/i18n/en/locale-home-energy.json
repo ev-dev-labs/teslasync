@@ -1,0 +1,142 @@
+{
+  "homeEnergy": {
+    "export": {
+      "description": "Download the full recommendation — inputs, per-slot schedule, and scores — as a versioned JSON document. Nothing is sent to any vehicle, Powerwall, or utility.",
+      "download": "Download canonical JSON plan",
+      "title": "Export Plan"
+    },
+    "flow": {
+      "aria": "Multi-series chart of solar generation, household load, vehicle charging, battery, and grid power across the planning horizon",
+      "battery": "Powerwall (+charge/-discharge)",
+      "gridExport": "Grid export (shown negative)",
+      "gridImport": "Grid import",
+      "load": "Household load",
+      "solar": "Solar",
+      "subtitle": "Solar, household load, vehicle charging, battery, and grid — per 15-minute slot",
+      "title": "Energy Flow Schedule",
+      "vehicles": "Vehicle charging"
+    },
+    "heatmap": {
+      "empty": "No plan slots to display yet.",
+      "gridExport": "Grid export %",
+      "gridImport": "Grid import %",
+      "less": "Less",
+      "more": "More",
+      "powerwall": "Powerwall SoC",
+      "tariff": "Import tariff",
+      "title": "Tariff & Constraint Heatmap",
+      "vehicles": "Vehicle charging"
+    },
+    "kpi": {
+      "cost": "Projected Cost",
+      "costHint": "over the planning horizon",
+      "feasible": "Plan is feasible",
+      "infeasible": "Constraints violated",
+      "overall": "Overall Score",
+      "peakImport": "Peak Grid Import",
+      "peakImportHint": "highest single-slot draw",
+      "selfConsumption": "Self-Consumption",
+      "selfConsumptionHint": "solar used on-site",
+      "unmetEnergy": "Unmet Energy",
+      "unmetEnergyHint": "never fabricated as delivered",
+      "vehiclesReady": "Vehicles Ready",
+      "vehiclesReadyHint": "meet their target by deadline"
+    },
+    "page": {
+      "subtitle": "A local, deterministic recommendation across vehicles, solar, battery, and tariffs — never an autonomous command",
+      "title": "Whole-Home Energy Orchestrator"
+    },
+    "powerwall": {
+      "aria": "Powerwall state of charge over time, with reserve floor reference line",
+      "none": "No home battery is modeled in this scenario. Enable it under Scenario & Assumptions.",
+      "reserveLabel": "Reserve floor",
+      "soc": "State of charge",
+      "subtitle": "Projected state of charge, with the backup reserve floor",
+      "title": "Powerwall Trajectory"
+    },
+    "quality": {
+      "confidence": "{{pct}}% confidence from {{count}} history sample(s)",
+      "high": "High",
+      "load": "Household load forecast",
+      "low": "Low",
+      "medium": "Medium",
+      "noAutonomy": "This plan is a recommendation only. TeslaSync never issues a command to a vehicle, Powerwall, or utility as a result of it.",
+      "none": "No history",
+      "provenanceAssumed": "Assumed (user-editable): tariff rates, grid/panel import-export limits, Powerwall specification, and per-vehicle target SoC, capacity, charge power, and departure time. TeslaSync has no endpoint that reports these as measured fact.",
+      "provenanceNoSite": "Measured: current vehicle state of charge only — no Tesla energy site was found on this account.",
+      "provenanceSite": "Measured: current vehicle SoC and solar/load history from {{site}}.",
+      "solar": "Solar forecast",
+      "title": "Assumptions & Forecast Quality",
+      "unnamedSite": "your Tesla energy site"
+    },
+    "readiness": {
+      "addVehicle": "Add a vehicle",
+      "delivered": "Delivered {{delivered}} of {{needed}} needed",
+      "departureSlot": "Departure slot #{{slot}}",
+      "empty": "No vehicles are part of this plan.",
+      "noDeadline": "Opportunistic (no deadline)",
+      "notReady": "Not ready",
+      "ofTarget": "of {{target}}%",
+      "ready": "Ready",
+      "ringAria": "{{name}} projected state of charge",
+      "title": "Per-Vehicle Readiness",
+      "unmet": "Unmet: {{amount}}"
+    },
+    "scenario": {
+      "commitBaseline": "Save as stability baseline",
+      "exportPrice": "Export price",
+      "gridGroup": "Grid / Panel Limits (editable assumption)",
+      "horizonGroup": "Planning Horizon",
+      "horizonHours": "Horizon",
+      "hoursValue": "{{n}}h",
+      "hourValue": "{{n}}:00",
+      "importOffPeak": "Off-peak import price",
+      "importPeak": "Peak import price",
+      "maxExport": "Max grid export",
+      "maxImport": "Max grid import",
+      "peakEnd": "Peak window end (UTC hour)",
+      "peakStart": "Peak window start (UTC hour)",
+      "powerwallEnabled": "Present",
+      "powerwallGroup": "Home Battery (editable assumption)",
+      "presetBalanced": "Balanced",
+      "presetCost": "Cost-first",
+      "presetCustom": "Custom (saved)",
+      "presetGreen": "Self-consumption-first",
+      "presetPeak": "Peak-shaving-first",
+      "pwCapacity": "Usable capacity",
+      "pwChargePower": "Max charge power",
+      "pwDischargePower": "Max discharge power",
+      "pwReserve": "Backup reserve floor",
+      "refreshNow": "Recompute from now",
+      "reset": "Reset to defaults",
+      "tariffGroup": "Tariff (editable assumption)",
+      "title": "Scenario & Assumptions",
+      "weightPreset": "Optimization priority"
+    },
+    "vehicle": {
+      "addVehicle": "Add a vehicle",
+      "capacity": "Usable pack capacity",
+      "currentSoc": "Current SoC (measured): {{pct}}%",
+      "departureHour": "Departure hour (UTC)",
+      "empty": "No vehicles found on this account to orchestrate.",
+      "hasDeadline": "Has departure deadline",
+      "maxPower": "Max charge power",
+      "priority": "Charging priority",
+      "priorityHigh": "High",
+      "priorityLow": "Low",
+      "priorityMedium": "Medium",
+      "targetSoc": "Target SoC by departure",
+      "title": "Vehicle Assumptions"
+    },
+    "violation": {
+      "unknownVehicle": "A vehicle"
+    },
+    "violations": {
+      "clean": "This plan satisfies every hard constraint modeled.",
+      "errorsCount": "{{count}} error(s)",
+      "none": "No violations",
+      "title": "Constraint Violations",
+      "warningsCount": "{{count}} warning(s)"
+    }
+  }
+}

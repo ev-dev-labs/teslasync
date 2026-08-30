@@ -56,8 +56,11 @@ export function HealthProbesSection() {
   }
 
   const livenessStatus = data?.status ?? 'unknown';
-  const dbStatus = data?.database?.status ?? 'unknown';
-  const dbLatency = data?.database?.latency_ms;
+  const database = data?.components?.database;
+  const pool = data?.components?.database_pool;
+  const system = data?.components?.system;
+  const dbStatus = database?.status ?? 'unknown';
+  const dbLatency = database?.latency_ms;
 
   return (
     <AccordionSection
@@ -81,8 +84,8 @@ export function HealthProbesSection() {
           <KVList
             items={[
               { label: t('Status'), value: livenessStatus },
-              { label: t('Goroutines'), value: fmtInt(data?.system?.goroutines ?? 0) },
-              { label: t('Uptime'), value: formatUptime(data?.system?.uptime_seconds ?? 0) },
+              { label: t('Goroutines'), value: fmtInt(system?.goroutines ?? 0) },
+              { label: t('Uptime'), value: formatUptime(system?.uptime_seconds ?? 0) },
             ]}
           />
         </Card>
@@ -96,7 +99,7 @@ export function HealthProbesSection() {
             items={[
               { label: t('Database'), value: dbStatus },
               { label: t('Latency'), value: dbLatency != null ? `${fmtNumber(dbLatency, 1)} ms` : '—' },
-              { label: t('Pool Connections'), value: fmtInt(data?.database_pool?.total_conns ?? 0) },
+              { label: t('Pool Connections'), value: fmtInt(pool?.total_conns ?? 0) },
             ]}
           />
         </Card>

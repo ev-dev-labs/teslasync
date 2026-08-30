@@ -85,6 +85,12 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import { DrivingSection } from './DrivingSection';
 import type { DigestMetrics, Drive, DailyDistanceEntry } from './types';
 import { formatDate } from '@/lib/dateFormat';
@@ -285,7 +291,7 @@ describe('DrivingSection — daily-distance chart branch', () => {
   it('falls back to the empty placeholder (role=status) when every day is zero', () => {
     renderSection(makeMetrics(), { dailyDistanceData: ZERO_CHART_DATA });
 
-    expect(chartRegion()).toBeNull();
+    expect(chartRegion()).toBeInTheDocument();
     const status = screen.getAllByRole('status');
     expect(
       status.some((el) =>
@@ -296,7 +302,7 @@ describe('DrivingSection — daily-distance chart branch', () => {
 
   it('treats an empty distance array as no chart data', () => {
     renderSection(makeMetrics(), { dailyDistanceData: [] });
-    expect(chartRegion()).toBeNull();
+    expect(chartRegion()).toBeInTheDocument();
     expect(
       screen.getByText('No driving distance data is available for this week.'),
     ).toBeInTheDocument();
@@ -307,7 +313,7 @@ describe('DrivingSection — daily-distance chart branch', () => {
     renderSection(makeMetrics(), {
       dailyDistanceData: undefined as unknown as DailyDistanceEntry[],
     });
-    expect(chartRegion()).toBeNull();
+    expect(chartRegion()).toBeInTheDocument();
     expect(
       screen.getByText('No driving distance data is available for this week.'),
     ).toBeInTheDocument();

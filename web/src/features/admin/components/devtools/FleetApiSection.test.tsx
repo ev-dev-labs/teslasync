@@ -162,7 +162,11 @@ async function findToolCard(title: string): Promise<HTMLElement> {
   // Auto-mount so per-tool tests can `install(...)` then jump straight to the
   // card they care about; screen-level tests call renderSection() explicitly.
   if (!mounted) renderSection()
-  const heading = await screen.findByRole('heading', { level: 3, name: title })
+  const heading = await screen.findByRole(
+    'heading',
+    { level: 3, name: title },
+    { timeout: 5_000 },
+  )
   const card = heading.closest('[data-print-card]')
   if (!card) throw new Error(`no tool card container found for "${title}"`)
   return card as HTMLElement

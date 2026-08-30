@@ -1,0 +1,17 @@
+{
+  "forms": {
+    "unsavedTitle": "Unsaved changes",
+    "unsavedWarning": "You have unsaved changes. Discard them?",
+    "unsavedRule": "You have an unsaved alert rule.",
+    "unsavedAutomation": "You have an unsaved automation.",
+    "unsavedSettings": "You have unsaved settings.",
+    "discard": "Discard changes",
+    "keepEditing": "Keep editing",
+    "restoreDraftTitle": "Restore draft?",
+    "restoreDraftMessage": "We saved a draft of your changes from {{when}}. Restore it or start over?",
+    "restoreDraft": "Restore draft",
+    "discardDraft": "Start over",
+    "validationFailed": "Please fix the highlighted fields before saving.",
+    "saveError": "Failed to save changes"
+  }
+}

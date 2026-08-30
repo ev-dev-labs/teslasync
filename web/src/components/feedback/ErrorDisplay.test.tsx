@@ -75,7 +75,7 @@ describe('ErrorDisplay', () => {
     })
   })
 
-  describe('401 / 403 Unauthorized', () => {
+  describe('authentication and permission', () => {
     it('renders a Sign-in CTA on 401 and hands off to /login on click', () => {
       const origLocation = window.location
       Object.defineProperty(window, 'location', {
@@ -94,14 +94,22 @@ describe('ErrorDisplay', () => {
       }
     })
 
-    it('renders the same Sign-in banner on 403', () => {
+    it('renders permission guidance without a misleading Sign-in CTA on 403', () => {
       renderInRouter(<ErrorDisplay error={new ApiError('forbidden', 403)} />)
-      expect(screen.getByText('Sign in required')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+      expect(screen.getByText('Permission denied')).toBeInTheDocument()
+      // "administrator" now appears in both the guidance body and its
+      // request-access steps, so assert the guidance block is present rather
+      // than that the word occurs exactly once.
+      expect(screen.getAllByText(/administrator/i).length).toBeGreaterThan(0)
+      expect(screen.getByTestId('permission-guidance')).toHaveAttribute(
+        'data-access-block',
+        'forbidden',
+      )
+      expect(screen.queryByRole('button', { name: /sign in/i })).toBeNull()
     })
   })
 
-  describe('5xx Server error', () => {
+  describe('server and dependency failures', () => {
     it('renders the server-error title with a Retry CTA that calls onRetry', () => {
       const onRetry = vi.fn()
       renderInRouter(<ErrorDisplay error={new ApiError('boom', 500)} onRetry={onRetry} />)
@@ -111,14 +119,32 @@ describe('ErrorDisplay', () => {
       expect(onRetry).toHaveBeenCalledTimes(1)
     })
 
-    it('also treats 503 as a server error', () => {
+    it('distinguishes an unavailable dependency from a generic server error', () => {
       renderInRouter(<ErrorDisplay error={new ApiError('unavailable', 503)} />)
-      expect(screen.getByText('Server error')).toBeInTheDocument()
+      expect(screen.getByText('Service unavailable')).toBeInTheDocument()
     })
 
     it('omits the Retry CTA when onRetry is not provided', () => {
       renderInRouter(<ErrorDisplay error={new ApiError('boom', 500)} />)
       expect(screen.queryByRole('button', { name: /^retry$/i })).toBeNull()
+    })
+
+    it.each([408, 504])('renders timeout-specific guidance for HTTP %s', (status) => {
+      renderInRouter(<ErrorDisplay error={new ApiError('timeout', status)} />)
+      expect(screen.getByText('Request timed out')).toBeInTheDocument()
+      expect(screen.getByText(/did not respond in time/i)).toBeInTheDocument()
+    })
+
+    it.each([405, 501])('renders a calm unsupported state for HTTP %s', (status) => {
+      renderInRouter(<ErrorDisplay error={new ApiError('unsupported', status)} />)
+      expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+      expect(screen.getByText('Feature not supported')).toBeInTheDocument()
+    })
+
+    it('uses a request-failure state for other 4xx responses', () => {
+      renderInRouter(<ErrorDisplay error={new ApiError('invalid filters', 422)} />)
+      expect(screen.getByText('Request could not be completed')).toBeInTheDocument()
+      expect(screen.queryByText("Can't reach server")).toBeNull()
     })
   })
 

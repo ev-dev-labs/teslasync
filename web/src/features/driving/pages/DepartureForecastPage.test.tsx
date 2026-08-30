@@ -467,9 +467,13 @@ describe('DepartureForecastPage', () => {
 
     for (const label of [
       'Hourly and cumulative modeled departure likelihood across the next 24 vehicle-timezone hour boundaries',
+      'Weekly recorded departure events and active local driving days across the observed vehicle-timezone span',
+    ]) {
+      expect(screen.getByRole('group', { name: label })).toBeInTheDocument();
+    }
+    for (const label of [
       'Seven-day by 24-hour heatmap of supported recorded departures and modeled likelihood',
       'Bar chart of recorded departures by local hour with four daypart summaries',
-      'Weekly recorded departure events and active local driving days across the observed vehicle-timezone span',
     ]) {
       expect(screen.getByRole('img', { name: label })).toBeInTheDocument();
     }

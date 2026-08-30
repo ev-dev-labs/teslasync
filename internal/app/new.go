@@ -2,18 +2,22 @@ package app
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"net/http/cookiejar"
 	"os"
 	"strings"
 	"sync/atomic"
 	"time"
 
+	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
 	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
@@ -31,6 +35,7 @@ import (
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	telemetrydb "github.com/ev-dev-labs/teslasync/internal/database/telemetry"
+	teslabudgetdb "github.com/ev-dev-labs/teslasync/internal/database/teslabudget"
 	tripdb "github.com/ev-dev-labs/teslasync/internal/database/trip"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
@@ -121,7 +126,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initCache()
 	a.initFlagStore(ctx)
 	a.initObservabilityPhase45(ctx)
-	a.initObservabilityPhase46(ctx)
+	a.initObservabilityPhase46()
 	a.initHomeAssistantPublisher(ctx)
 	a.initEventBus()
 	a.initEncryptor()
@@ -144,6 +149,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initGasPriceWorker(ctx)
 	a.initUnitDriftValidator(ctx)
 	a.initAIBackgroundJobs(ctx)
+	a.initDataRepairScanner(ctx)
 	a.initHealthWatchdog(ctx)
 	a.loadOpenAPISpec()
 
@@ -356,7 +362,7 @@ func (a *App) initObservabilityPhase45(ctx context.Context) {
 //
 // Each subsystem is independent: SLO load failure does NOT block
 // data-quality or synthetic; synthetic disabled does NOT block SLO.
-func (a *App) initObservabilityPhase46(ctx context.Context) {
+func (a *App) initObservabilityPhase46() {
 	// SLO catalog + tracker.
 	if path := a.Cfg.SLO.CatalogPath; path != "" {
 		if cat, err := slo.LoadCatalog(path); err != nil {
@@ -379,15 +385,26 @@ func (a *App) initObservabilityPhase46(ctx context.Context) {
 		a.DataQualityScorer = dataquality.NewScorerFromPool(a.DB.Pool, a.Cfg.DataQuality.WindowMins)
 	}
 
-	// Synthetic runner — built unconditionally so the admin board
-	// can report "synthetic monitoring not enabled" honestly when
-	// disabled. Started only when enabled to avoid background work.
+	// Synthetic runner — built only when enabled; a nil runner makes the
+	// admin observability endpoint report that synthetic monitoring is not
+	// configured. Startup is deferred until the public listener is bound.
 	if a.Cfg.Synthetic.Enabled {
 		probes := buildSyntheticProbes(a.Cfg.Synthetic.ProbeURLs)
+		if baseURL := strings.TrimSpace(a.Cfg.Synthetic.JourneyBaseURL); baseURL != "" {
+			journey, err := buildOperatorChainJourneyProbe(
+				baseURL,
+				time.Duration(a.Cfg.Synthetic.TimeoutSeconds)*time.Second,
+				a.Cfg.Auth.ForwardAuthHeader,
+			)
+			if err != nil {
+				log.Error().Err(err).Msg("synthetic operator journey initialization failed")
+			} else {
+				probes = append(probes, journey)
+			}
+		}
 		interval := time.Duration(a.Cfg.Synthetic.IntervalSeconds) * time.Second
 		timeout := time.Duration(a.Cfg.Synthetic.TimeoutSeconds) * time.Second
 		runner := synthetic.NewRunner(probes, interval, timeout)
-		runner.Start(ctx)
 		a.SyntheticRunner = runner
 		a.addCloser("synthetic-runner", func(_ context.Context) error {
 			runner.Stop()
@@ -405,9 +422,8 @@ func (a *App) initObservabilityPhase46(ctx context.Context) {
 
 // buildSyntheticProbes parses the comma-separated SYNTHETIC_PROBE_URLS
 // list into a set of HTTP probes. Each url becomes a probe named
-// "http_<index>" so the synthetic board has stable identifiers across
-// reorders; operators that want stable names should run the canary in
-// its own deployment with one probe per binary.
+// "http_<index>". Operators that want stable identifiers across URL
+// reordering should run one probe per deployment.
 func buildSyntheticProbes(raw string) []synthetic.Probe {
 	if raw == "" {
 		return nil
@@ -422,6 +438,33 @@ func buildSyntheticProbes(raw string) []synthetic.Probe {
 		probes = append(probes, synthetic.NewHTTPProbe(fmt.Sprintf("http_%d", i), url))
 	}
 	return probes
+}
+
+// buildOperatorChainJourneyProbe wires the canonical critical-operator
+// journey (dashboard/fleet state -> vehicle inspect -> battery health
+// -> charging history) against baseURL. Step observations are exported
+// as bounded-cardinality Prometheus metrics via
+// metrics.ObserveSyntheticJourneyStep (labels: fixed journey + step
+// names only — never vehicle IDs or VINs).
+func buildOperatorChainJourneyProbe(baseURL string, timeout time.Duration, forwardAuthHeader string) (synthetic.Probe, error) {
+	const journeyName = "operator_chain"
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		return nil, fmt.Errorf("create synthetic journey cookie jar: %w", err)
+	}
+	client := httputil.NewClient(httputil.ClientConfig{
+		Name:    "synthetic-operator-chain",
+		Timeout: timeout,
+	})
+	client.Jar = jar
+	probe := synthetic.NewJourneyProbe(journeyName, baseURL, synthetic.OperatorChainJourneySteps(), client).
+		WithObserver(func(journey string, step synthetic.JourneyStepResult) {
+			metrics.ObserveSyntheticJourneyStep(journey, step.Name, step.OK, step.Skipped, step.DurationMs)
+		})
+	if forwardAuthHeader != "" {
+		probe.WithHeader(forwardAuthHeader, "teslasync-synthetic")
+	}
+	return probe, nil
 }
 
 // initHomeAssistantPublisher wires the HomeAssistant MQTT discovery
@@ -546,6 +589,19 @@ func (a *App) initEncryptor() {
 
 func (a *App) initTeslaClient() {
 	a.TeslaClient = tesla.NewClient(a.Cfg.Tesla)
+	policy := tesla.NewBudgetPolicy(
+		a.Cfg.Tesla.DailyBudgetUSD,
+		a.Cfg.Tesla.CommandReserveUSD,
+	)
+	if policy.Enabled() {
+		a.TeslaClient.SetRequestBudget(teslabudgetdb.New(a.DB.Pool, policy))
+		log.Info().
+			Float64("daily_limit_usd", a.Cfg.Tesla.DailyBudgetUSD).
+			Float64("command_reserve_usd", a.Cfg.Tesla.CommandReserveUSD).
+			Msg("shared Tesla Fleet API request budget enabled")
+	} else {
+		log.Warn().Msg("Tesla Fleet API request budget disabled; outbound spend is unbounded")
+	}
 }
 
 func (a *App) initAPILogging() {
@@ -659,12 +715,19 @@ func (a *App) initStateReader() {
 // hydrates AlertEvaluator prevSignals, starts the FSM reconcile loop,
 // optionally wires the MongoDB raw-telemetry capture, and starts the
 // MQTT PipelineSubscriber, its writers, and side-effects observer.
-// Returns an error only for fatal misconfigurations
-// (invalid LIVE_SIGNAL_STORE_MODE, router.New writer-coverage failure,
-// MQTT pipeline construction failure when MQTT is configured).
+// Returns an error for fatal misconfigurations or when the required MQTT
+// ingest path cannot be established
+// (invalid LIVE_SIGNAL_STORE_MODE, unavailable MQTT while Fleet Telemetry is
+// enabled, or router/pipeline construction failure).
 func (a *App) initTelemetryHandler(ctx context.Context) error {
 	if !a.Cfg.FleetTelemetry.Enabled {
 		return nil
+	}
+	if a.MQTT == nil {
+		return errors.New("fleet telemetry is enabled but MQTT is unavailable")
+	}
+	if strings.TrimSpace(a.Cfg.FleetTelemetry.TopicBase) == "" {
+		return errors.New("fleet telemetry is enabled but FLEET_TELEMETRY_TOPIC_BASE is empty")
 	}
 
 	a.TelemetryHandler = apitelem.NewHandler(
@@ -802,10 +865,8 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		go sessionTracker.BackfillAddresses(ctx)
 	}
 
-	if a.MQTT != nil && a.Cfg.FleetTelemetry.TopicBase != "" {
-		if err := a.initPipelineSubscriber(ctx, vehicleRepo); err != nil {
-			return err
-		}
+	if err := a.initPipelineSubscriber(ctx, vehicleRepo); err != nil {
+		return err
 	}
 	return nil
 }
@@ -932,6 +993,11 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 			sub.OnBrokerReconnect(c)
 		}
 	}
+	pipelineOnConnectionLost := func(_ error) {
+		if sub := subRef.Load(); sub != nil {
+			sub.OnBrokerConnectionLost()
+		}
+	}
 
 	pahoClient, dlq, err := mqtt.NewProductionPipelineMQTT(
 		ctx,
@@ -942,6 +1008,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 		dlqTopic,
 		pipelineLogger,
 		pipelineOnConnect,
+		pipelineOnConnectionLost,
 	)
 	if err != nil {
 		return fmt.Errorf("phase-42a: NewProductionPipelineMQTT failed; broker=%s dlq_topic=%s: %w",
@@ -1012,10 +1079,9 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 	// pre-start invocations via the started/stopped flags.
 	subRef.Store(pipelineSubscriber)
 	if err := pipelineSubscriber.Start(); err != nil {
-		log.Warn().Err(err).
-			Str("topic_base", a.Cfg.FleetTelemetry.TopicBase).
-			Msg("phase-42a: PipelineSubscriber failed to start")
-		return nil
+		pipelineSubscriber.Stop()
+		return fmt.Errorf("phase-42a: PipelineSubscriber failed to start for topic base %q: %w",
+			a.Cfg.FleetTelemetry.TopicBase, err)
 	}
 	a.pipelineSubscriber = pipelineSubscriber
 	a.addCloser("pipeline-subscriber", func(_ context.Context) error {
@@ -1120,7 +1186,13 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 		return
 	}
 	if a.Cfg.Retention.SignalHistoryRetentionDays <= 0 {
-		log.Info().Msg("signal_history TTL cleanup DISABLED (SIGNAL_HISTORY_RETENTION_DAYS not set)")
+		log.Warn().Msg("signal_log retention cleanup disabled; storage growth is unbounded")
+		return
+	}
+	if !a.Cfg.Retention.SignalHistoryRetentionAcknowledged {
+		log.Warn().
+			Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).
+			Msg("signal_log retention cleanup awaiting explicit backup acknowledgement")
 		return
 	}
 	go func() {
@@ -1137,7 +1209,7 @@ func (a *App) initSignalHistoryCleanup(ctx context.Context) {
 			}
 		}
 	}()
-	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("signal_history TTL cleanup scheduled")
+	log.Info().Int("retention_days", a.Cfg.Retention.SignalHistoryRetentionDays).Msg("signal_log retention cleanup scheduled")
 }
 
 // signalHistoryCleaner is the minimal contract runSignalHistoryCleanupTick
@@ -1148,9 +1220,9 @@ type signalHistoryCleaner interface {
 }
 
 func runSignalHistoryCleanupTick(ctx context.Context, writer signalHistoryCleaner, retentionDays int) {
-	tickCtx, span := appBackgroundTracer().Start(ctx, "signal_history.cleanup_tick",
+	tickCtx, span := appBackgroundTracer().Start(ctx, "signal_log.cleanup_tick",
 		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
-		oteltrace.WithAttributes(attribute.Int("signal_history.retention_days", retentionDays)),
+		oteltrace.WithAttributes(attribute.Int("signal_log.retention_days", retentionDays)),
 	)
 	defer span.End()
 	writer.Cleanup(tickCtx, retentionDays)
@@ -1293,6 +1365,73 @@ func runEmbeddingsTTLTick(ctx context.Context, db *database.DB, settingsRepo *se
 		span.SetStatus(codes.Error, "embeddings TTL failed")
 		log.Warn().Err(err).Str("reason", reason).Msg("ai background jobs: embeddings TTL run failed")
 	}
+}
+
+const dataRepairScanInterval = 15 * time.Minute
+
+type dataRepairScanner interface {
+	Scan(context.Context, apidatarepair.ScanOptions) (apidatarepair.ScanResult, error)
+}
+
+func (a *App) initDataRepairScanner(ctx context.Context) {
+	if a.DB == nil {
+		return
+	}
+	a.DataRepairScanner = apidatarepair.NewScanner(a.DB)
+	resilience.SafeGoLoop(ctx, "data-repair-scanner", func(loopCtx context.Context) {
+		runDataRepairScanTick(loopCtx, a.DataRepairScanner, "initial")
+
+		ticker := time.NewTicker(dataRepairScanInterval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-loopCtx.Done():
+				return
+			case <-ticker.C:
+				runDataRepairScanTick(loopCtx, a.DataRepairScanner, "periodic")
+			}
+		}
+	})
+	log.Info().Dur("interval", dataRepairScanInterval).Msg("data-repair integrity scanner scheduled")
+}
+
+func runDataRepairScanTick(ctx context.Context, scanner dataRepairScanner, reason string) {
+	tickCtx, span := appBackgroundTracer().Start(ctx, "data_repair.scan_tick",
+		oteltrace.WithSpanKind(oteltrace.SpanKindInternal),
+		oteltrace.WithAttributes(attribute.String("data_repair.reason", reason)),
+	)
+	defer span.End()
+
+	result, err := scanner.Scan(tickCtx, apidatarepair.ScanOptions{
+		Trigger:     systemmodel.RepairScanTriggerScheduled,
+		InitiatedBy: "system",
+	})
+	span.SetAttributes(
+		attribute.Int("data_repair.discovered", result.Discovered),
+		attribute.Int("data_repair.refreshed", result.Refreshed),
+		attribute.Bool("data_repair.truncated", result.Truncated),
+		attribute.String("data_repair.status", string(result.Status)),
+	)
+	if errors.Is(err, apidatarepair.ErrScanAlreadyRunning) {
+		log.Debug().Str("reason", reason).Msg("data-repair scan skipped because another scan is running")
+		return
+	}
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "data-repair scan failed")
+		log.Warn().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Str("reason", reason).
+			Msg("data-repair integrity scan failed")
+		return
+	}
+	log.Info().
+		Int("discovered", result.Discovered).
+		Int("refreshed", result.Refreshed).
+		Bool("truncated", result.Truncated).
+		Str("reason", reason).
+		Msg("data-repair integrity scan completed")
 }
 
 func (a *App) initHealthWatchdog(ctx context.Context) {
@@ -1485,10 +1624,9 @@ func (a *App) onboardingCompleteForHealthNotifications(ctx context.Context) bool
 // actually configured (REDIS_ENABLED=true) — an install that never
 // enabled Redis must see "redis" stay unknown forever, never
 // "healthy" (there's nothing to be healthy about) and never "degraded"
-// (nothing broke). When Redis IS enabled but internal/cache.Store
-// never connected (Underlying() == nil — Store falls back to in-memory
-// permanently after a failed startup Ping), that is a real, ongoing
-// failure and is reported as such every tick.
+// (nothing broke). When Redis IS enabled, internal/cache.Store retains its
+// go-redis client through startup failures so this check both reports the
+// outage and observes recovery without an API restart.
 func (a *App) checkRedisHealth(tickCtx context.Context) {
 	if a.Cfg == nil || !a.Cfg.Redis.Enabled {
 		return

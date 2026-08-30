@@ -366,6 +366,11 @@ export function WidgetPicker({
       open={open}
       onClose={onClose}
       title={t('dashboard.addWidget', 'Add Widget')}
+      description={t(
+        'widgets.pickerDescription',
+        'Choose the operational signals and workflows that belong on this dashboard.',
+      )}
+      size="lg"
       footer={addedThisSessionCount > 0 ? (
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-sm font-medium text-[var(--text-primary)]">
@@ -399,42 +404,45 @@ export function WidgetPicker({
           </span>
         </div>
 
-        {/* Category filter pills */}
+        {/* Categories are filters, not document tabs: pressed state communicates
+            the active scope without implying a separate tabpanel relationship. */}
         <div
           className="flex flex-wrap gap-1.5"
-          role="tablist"
+          role="group"
           aria-label={t('widgets.categoryFilter', 'Filter by category')}
         >
-          <button
+          <UiButton
             type="button"
-            role="tab"
-            aria-selected={categoryFilter === 'all'}
+            variant={categoryFilter === 'all' ? 'secondary' : 'ghost'}
+            size="sm"
+            aria-pressed={categoryFilter === 'all'}
             onClick={() => setCategoryFilter('all')}
             className={cn(
-              'h-7 rounded-full border px-3 text-xs font-medium transition-colors',
+              'h-7 rounded-full px-3 text-xs',
               categoryFilter === 'all'
                 ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
+                : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
             )}
           >
             {t('widgets.allCategories', 'All')}
-          </button>
+          </UiButton>
           {availableCategories.map((cat) => (
-            <button
+            <UiButton
               key={cat}
               type="button"
-              role="tab"
-              aria-selected={categoryFilter === cat}
+              variant={categoryFilter === cat ? 'secondary' : 'ghost'}
+              size="sm"
+              aria-pressed={categoryFilter === cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                'h-7 rounded-full border px-3 text-xs font-medium transition-colors',
+                'h-7 rounded-full px-3 text-xs',
                 categoryFilter === cat
                   ? 'border-[var(--theme-primary)]/40 bg-[var(--theme-primary)]/15 text-[var(--theme-primary)]'
-                  : 'border-[var(--border-subtle)] bg-white/[0.03] text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
+                  : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]',
               )}
             >
               {CATEGORY_LABELS[cat]}
-            </button>
+            </UiButton>
           ))}
         </div>
 

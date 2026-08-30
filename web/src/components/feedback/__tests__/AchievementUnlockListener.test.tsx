@@ -132,15 +132,30 @@ describe('AchievementUnlockListener', () => {
     vi.unstubAllGlobals()
   })
 
-  it('renders the celebration stack with every queued unlock when showToasts is on', () => {
+  it('renders the celebration stack with every queued unlock when showToasts is on', async () => {
     mockPrefs.showToasts = true
     mockRecent = [makeEvent('a1', 'First Drive'), makeEvent('a2', 'Night Owl')]
 
     render(<AchievementUnlockListener />)
 
-    expect(screen.getByTestId('toast-stack')).toBeInTheDocument()
+    // CLEAN-06: the stack is a lazy boundary, so it resolves on the microtask
+    // after the first unlock lands rather than being in the startup closure.
+    expect(await screen.findByTestId('toast-stack')).toBeInTheDocument()
     expect(screen.getByText('First Drive')).toBeInTheDocument()
     expect(screen.getByText('Night Owl')).toBeInTheDocument()
+  })
+
+  it('does not mount the deferred stack when the queue is empty', () => {
+    mockPrefs.showToasts = true
+    mockRecent = []
+
+    const { container } = render(<AchievementUnlockListener />)
+
+    // No queued unlock means the celebration chunk is never requested at all,
+    // which is the whole point of taking it out of the app-root import graph.
+    expect(container.firstChild).toBeNull()
+    expect(screen.queryByTestId('toast-stack')).not.toBeInTheDocument()
+    expect(mockUseUnlocks).toHaveBeenCalled()
   })
 
   it('renders nothing visible when showToasts is off but keeps draining the queue', () => {
@@ -155,12 +170,12 @@ describe('AchievementUnlockListener', () => {
     expect(mockUseUnlocks).toHaveBeenCalled()
   })
 
-  it('wires the stack dismiss straight through to the hook dismiss', () => {
+  it('wires the stack dismiss straight through to the hook dismiss', async () => {
     mockPrefs.showToasts = true
     mockRecent = [makeEvent('a1', 'First Drive')]
 
     render(<AchievementUnlockListener />)
-    fireEvent.click(screen.getByTestId('dismiss-a1'))
+    fireEvent.click(await screen.findByTestId('dismiss-a1'))
 
     expect(mockDismiss).toHaveBeenCalledTimes(1)
     expect(mockDismiss).toHaveBeenCalledWith('a1')

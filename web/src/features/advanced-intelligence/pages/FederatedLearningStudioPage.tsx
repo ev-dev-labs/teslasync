@@ -91,7 +91,7 @@ export default function FederatedLearningStudioPage() {
             ? t('advancedIntelligence.vehicle.empty', 'Select a vehicle to load intelligence.')
             : t('advancedIntelligence.federated.budget.empty', 'Privacy budget status is unavailable.')}
         >
-          <Grid cols={{ default: 1, sm: 3 }} gap={4}>
+          <Grid minItemWidth="standard" gap={4}>
             <StatCard
               label={t('advancedIntelligence.federated.budget.total', 'Total epsilon budget')}
               value={query.data ? fmtNumber(query.data.total_epsilon_budget, 2) : null}

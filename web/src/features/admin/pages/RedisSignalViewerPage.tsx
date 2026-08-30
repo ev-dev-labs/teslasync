@@ -40,7 +40,7 @@ import {
 import { EmptyState, QueryError, Skeleton } from '@/components/feedback'
 import { useToast } from '@/components/feedback/Toast'
 import { FadeIn } from '@/components/motion'
-import { useVehicles } from '@/api/hooks/useVehicles'
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle'
 import {
   useRedisSignals,
   usePurgeAllRedisSignals,
@@ -187,10 +187,11 @@ export default function RedisSignalViewerPage() {
   usePageTitle(t('redis.title', 'Redis Signal Viewer'))
   const { formatDateTime } = useDateFormat()
 
-  const { data: vehicles } = useVehicles()
-  const vehicleList = vehicles ?? []
-
-  const [selectedVehicleId, setSelectedVehicleId] = useState<number | null>(null)
+  const {
+    vehicleId: selectedVehicleId,
+    vehicles: vehicleList,
+    setVehicleId: setSelectedVehicleId,
+  } = useSelectedVehicle()
   const [search, setSearch] = useState('')
   const [autoRefresh, setAutoRefresh] = useState(false)
   const [categoryFilter, setCategoryFilter] = useState<string>('all')

@@ -23,6 +23,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ChartTooltip,
+  EmbeddedChart,
 } from '@/components/charts';
 import {
   EmptyState,
@@ -513,7 +514,21 @@ export default function AlertRulesPage() {
               />
             ) : (
               <>
-                <div className="h-56 sm:h-64">
+                <EmbeddedChart
+                  title={t('alertRules.insights.severity', 'Severity distribution')}
+                  ariaLabel={t(
+                    'alertRules.insights.severityAria',
+                    'Alert rules by severity',
+                  )}
+                  data={severitySegments.map(({ label, value }) => ({ label, value }))}
+                  dataColumns={[
+                    { key: 'label', label: t('alertRules.insights.severityLabel', 'Severity') },
+                    { key: 'value', label: t('alertRules.insights.ruleCount', 'Rules') },
+                  ]}
+                  fluid={false}
+                  mobileHeight={224}
+                  height={256}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -534,7 +549,7 @@ export default function AlertRulesPage() {
                       <Tooltip content={<ChartTooltip />} wrapperStyle={{ outline: 'none' }} />
                     </PieChart>
                   </ResponsiveContainer>
-                </div>
+                </EmbeddedChart>
                 <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1">
                   {severitySegments.map((seg) => (
                     <div key={seg.key} className="flex items-center gap-1.5">
@@ -658,7 +673,30 @@ export default function AlertRulesPage() {
               sortKey={sortKey}
               sortDir={sortDir}
               onSort={onSort}
+              mobileColumns={['name', 'severity', 'status']}
+              columnVisibility
+              columnReorder
+              resizable
               pagination
+              exportable
+              exportFilename="alert-rules"
+              exportRow={(rule) => ({
+                name: rule.name,
+                kind:
+                  rule.kind === 'computed_metric'
+                    ? t('alertRules.kind.metric', 'Metric')
+                    : t('alertRules.kind.signal', 'Signal'),
+                signal_name: subjectOf(rule),
+                severity: rule.severity,
+                scope: rule.all_vehicles
+                  ? t('alertRules.scope.all', 'All vehicles')
+                  : (rule.vehicle_ids ?? []).join(', '),
+                status: isSnoozed(rule, Date.now())
+                  ? t('alertRules.status.snoozed', 'Snoozed')
+                  : rule.enabled
+                    ? t('common.enabled', 'Enabled')
+                    : t('common.disabled', 'Disabled'),
+              })}
               emptyMessage={t('alertRules.table.empty', 'No alert rules match')}
             />
           )}

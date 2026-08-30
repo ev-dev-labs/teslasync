@@ -1,7 +1,10 @@
-import { forwardRef } from 'react';
+import { forwardRef, useId } from 'react';
 import { cn } from '@/lib/cn';
 import { Text } from '@/components/ui/Typography';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
+import { useA11ySummary } from '@/hooks/useA11ySummary';
 import { fmtNumber, getGlobalPrecision } from '@/lib/numberFormat';
+import { resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
 
 export interface LinearGaugeProps {
   value: number;
@@ -29,6 +32,24 @@ export interface LinearGaugeProps {
    */
   ariaLabel?: string;
   unit?: string;
+  /**
+   * Semantic fill colour, resolved through the central `gaugeTone` map in
+   * `@/lib/tokens`.
+   *
+   * Prefer this over {@link color} for anything that carries MEANING —
+   * `success` / `warning` / `danger` for status readings, `primary` /
+   * `accent` for headline brand gauges. The theme tones resolve through the
+   * CSS variables the ThemeProvider rewrites, so warm / light / custom presets
+   * re-tint the bar instead of leaving a hardcoded blue behind.
+   *
+   * Takes precedence over {@link color} when both are supplied.
+   */
+  tone?: GaugeTone;
+  /**
+   * Raw CSS colour escape hatch, kept for genuinely caller-defined series
+   * colours (a per-series bar matching its chart line) and for backwards
+   * compatibility. Ignored when {@link tone} is set.
+   */
   color?: string;
   /**
    * Visual weight, carried over from the radial gauge this replaced, where it
@@ -38,6 +59,17 @@ export interface LinearGaugeProps {
    */
   size?: number;
   decimals?: number;
+  /**
+   * Qualitative reading, already translated ("Healthy", "Degraded",
+   * "Below target").
+   *
+   * A meter announces a number and a range; it cannot announce judgement.
+   * Sighted users read the judgement off the fill colour, which is
+   * invisible to assistive tech and to anyone with a colour-vision
+   * deficiency. Passing it here folds it into the gauge's
+   * screen-reader summary.
+   */
+  status?: string;
   /**
    * Suppress the printed scale caption for callers that already state the
    * ceiling themselves (e.g. a badge reading "7/9 enabled" beside the gauge).
@@ -80,9 +112,16 @@ const toFinite = (v: number): number => (Number.isFinite(v) ? v : 0);
  */
 export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
   function LinearGauge(
-    { value, max, min = 0, label, ariaLabel, unit, color = '#3b82f6', size = 120, decimals, hideScale, marker, markerLabel, className },
+    { value, max, min = 0, label, ariaLabel, unit, tone, color, size = 120, decimals, hideScale, marker, markerLabel, status, className },
     ref,
   ) {
+    const generatedId = useId();
+    const summaryId = `${generatedId}-summary`;
+    const { describeGauge } = useA11ySummary();
+    // Semantic tone wins over the raw colour escape hatch (see
+    // `resolveGaugeColor`), and an unspecified gauge falls back to the theme
+    // primary rather than a hardcoded blue.
+    const fillColor = resolveGaugeColor(tone, color);
     // Null-safety: callers routinely forward optional API values (e.g.
     // `state.battery_level`) that can be undefined / null / NaN at runtime
     // despite the `number` type. Sanitising here keeps the fill geometry finite
@@ -125,6 +164,16 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
         ? (marker - safeMin) / span
         : null;
 
+    // Built from the SAME formatted strings the sighted user reads, so
+    // the spoken summary can never disagree with the printed numbers.
+    const summary = describeGauge({
+      label: ariaLabel || label,
+      value: unitSuffix ? `${display}${unitSuffix}` : display,
+      min: showScale ? `${fmtNumber(safeMin, 0)}${unitSuffix}` : null,
+      max: showScale ? `${fmtNumber(safeMax, 0)}${unitSuffix}` : null,
+      status,
+    });
+
     return (
       <div
         ref={ref}
@@ -134,8 +183,17 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
         aria-valuemin={safeMin}
         aria-valuemax={safeMax}
         aria-valuetext={unit ? `${display}${unit}` : display}
+        aria-describedby={summary ? summaryId : undefined}
         className={cn('flex w-full min-w-0 flex-col gap-1.5', className)}
       >
+        {/* A11Y-10: `role="meter"` gets the NUMBER across but loses the
+            meaning — a screen-reader user hears "82" with no sense of
+            whether that is good, what the ceiling is, or what changed.
+            The one-sentence summary supplies the interpretation the
+            sighted user gets from the bar's fill and colour. */}
+        {summary && (
+          <VisuallyHidden id={summaryId}>{summary}</VisuallyHidden>
+        )}
         <div className="flex items-baseline gap-1">
           <Text as="span" size={valueSize} weight="bold" color="primary" className="tabular-nums">
             {display}
@@ -149,8 +207,8 @@ export const LinearGauge = forwardRef<HTMLDivElement, LinearGaugeProps>(
 
         <div className={cn('relative w-full overflow-hidden rounded-full bg-[var(--surface-2)]', trackHeight)}>
           <div
-            className="h-full rounded-full transition-[width] duration-500 ease-out"
-            style={{ width: `${ratio * 100}%`, backgroundColor: color }}
+            className="h-full rounded-full transition-[width] duration-slow ease-out"
+            style={{ width: `${ratio * 100}%`, backgroundColor: fillColor }}
           />
           {markerRatio !== null && (
             <span

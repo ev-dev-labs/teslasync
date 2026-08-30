@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, ShieldAlert } from 'lucide-react';
+import { ShieldAlert } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import { AlertBanner } from '@/components/feedback';
@@ -13,7 +13,6 @@ import { useRangeState } from '@/hooks/useRangeState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useSecurityEvents } from '@/api/hooks/useAdmin';
-import { getErrorMessage } from '@/lib/errorMessage';
 import { buildTwinStateFromAdmin } from '@/lib/vehicleState';
 import { request } from '@/api/client';
 import type { SecurityEvent } from '@/types/admin';
@@ -55,7 +54,7 @@ export default function SecurityAccessPage() {
 
   /* Surface useVehicles errors so the top banner keeps reporting fleet
      list-load failures. React Query dedupes by queryKey (free piggy-back). */
-  const { error: vehiclesError } = useVehicles();
+  const vehiclesQuery = useVehicles();
 
   /* ---- Latest security state (polled) ---- */
   const latestQuery = useQuery({
@@ -74,6 +73,28 @@ export default function SecurityAccessPage() {
     error: historyError,
     refetch: refetchHistory,
   } = historyQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'vehicle-registry',
+        label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'),
+        query: vehiclesQuery,
+      },
+      {
+        id: 'latest-security-state',
+        label: t('dataSources.labels.latestSecurityState', 'Latest security state'),
+        query: latestQuery,
+        enabled: activeId !== '',
+      },
+      {
+        id: 'security-history',
+        label: t('dataSources.labels.securityHistory', 'Security history'),
+        query: historyQuery,
+        enabled: activeId !== '',
+      },
+    ],
+    [activeId, historyQuery, latestQuery, t, vehiclesQuery],
+  );
 
   /* ---- Range filter (client-side on history) ---- */
   const { start, end, setRange } = useRangeState({
@@ -117,7 +138,8 @@ export default function SecurityAccessPage() {
     <PageContainer
       title={t('admin.security.title', 'Security & Access')}
       subtitle={t('admin.security.subtitle', 'Lock status, sentry mode, doors, and windows')}
-      query={[latestQuery, historyQuery]}
+      query={[vehiclesQuery, latestQuery, historyQuery]}
+      dataSources={dataSources}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2 sm:gap-3">
           <VehicleSelect />
@@ -125,12 +147,6 @@ export default function SecurityAccessPage() {
         </div>
       }
     >
-      {vehiclesError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(vehiclesError)}
-        </AlertBanner>
-      )}
-
       {/* Contextual insecure-vehicle warning */}
       {!isSecure && latest && (
         <FadeIn>

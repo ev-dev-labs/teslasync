@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import { useTeslaUserOrders, useRefreshTeslaOrders } from '@/api/hooks/useUser'
 import { GlassPanel, Button, IconBox, Badge } from '@/components/ui'
-import { EmptyState, Spinner, QueryError } from '@/components/feedback'
+import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import { useToast } from '@/components/feedback/Toast'
 import { cn } from '@/lib/cn'
@@ -71,9 +71,11 @@ export function ActiveOrdersSection() {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center justify-center py-16">
-            <Spinner size="md" label={t('orders.loading', 'Loading orders…')} />
-          </div>
+          <ListSkeleton
+            rows={2}
+            label={t('orders.loading', 'Loading orders…')}
+            testId="active-orders-loading"
+          />
         ) : isError && orders.length === 0 ? (
           <QueryError
             error={error}

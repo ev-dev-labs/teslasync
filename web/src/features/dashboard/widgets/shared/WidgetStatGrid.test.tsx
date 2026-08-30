@@ -109,7 +109,7 @@ describe('WidgetStatGrid — trend chip branches', () => {
     );
     expect(screen.getByText('+12%')).toBeInTheDocument();
     expect(screen.getByText('↑')).toBeInTheDocument();
-    expect(container.querySelector('.text-green-600')).not.toBeNull();
+    expect(container.querySelector('.text-emerald-700')).not.toBeNull();
   });
 
   it('renders a negative (red) chip for a down trend with a value', () => {
@@ -118,7 +118,7 @@ describe('WidgetStatGrid — trend chip branches', () => {
     );
     expect(screen.getByText('High')).toBeInTheDocument();
     expect(screen.getByText('↓')).toBeInTheDocument();
-    expect(container.querySelector('.text-red-600')).not.toBeNull();
+    expect(container.querySelector('.text-rose-700')).not.toBeNull();
   });
 
   it('omits the chip when a trend direction has no accompanying value', () => {

@@ -1,0 +1,22 @@
+{{- if .Values.mqtt.enabled }}
+{{- $persistence := .Values.mqtt.persistence | default dict }}
+{{- $queue := .Values.mqtt.queue | default dict }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-mosquitto
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mosquitto
+data:
+  mosquitto.conf: |
+    listener 1883
+    allow_anonymous true
+    persistence {{ ternary "true" "false" ($persistence.enabled | default false) }}
+    persistence_location /mosquitto/data/
+    autosave_interval {{ $persistence.autosaveIntervalSeconds | default 30 }}
+    max_queued_messages {{ $queue.maxQueuedMessages | default 10000 }}
+
+    listener 9001
+    protocol websockets
+{{- end }}

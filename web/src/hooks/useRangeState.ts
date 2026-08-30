@@ -19,7 +19,7 @@
  *     <RangePicker> handles it.
  */
 
-import { useCallback, useMemo } from 'react';
+import { useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   getDatePreset,
@@ -31,6 +31,10 @@ import { calendarRangeToInstants } from '@/lib/dateRange';
 const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const DEFAULT_PRESET_ID = '7d';
 const RANGE_PREFERENCE_VERSION = 2;
+const DEFAULT_SCOPE_KEY = 'time_scope';
+const SHARED_RANGE_CHANGE_EVENT = 'teslasync:shared-date-range-change';
+const LIVE_WINDOW_MS = 5 * 60_000;
+const ROLLING_REFRESH_MS = 60_000;
 
 export const SHARED_RANGE_STORAGE_KEY = 'teslasync.date-range.v2';
 
@@ -48,6 +52,12 @@ export interface UseRangeStateOptions {
   fromKey?: string;
   toKey?: string;
   compareKey?: string;
+  /**
+   * URL key that preserves the semantic scope when multiple presets resolve
+   * to the same calendar range (notably Live and Today).
+   * Defaults to `time_scope`.
+   */
+  scopeKey?: string;
   /**
    * Optional page-specific backup for the shared date-range preference.
    * Recommended: a dotted key like `'charging.list.range'`.
@@ -86,18 +96,22 @@ interface StoredRangePreference extends RangeValue {
   presetId?: string;
 }
 
+interface SharedRangeChangeDetail {
+  sourceId: string;
+  preference: StoredRangePreference;
+}
+
 export interface UseRangeStateReturn {
   start: string;
   end: string;
   /**
-   * RFC 3339 instant of `start`'s local midnight in the configured tz.
-   * Pass directly to API hooks — never the raw `start` calendar string.
+   * RFC 3339 lower bound. Calendar scopes use `start`'s local midnight;
+   * Live and 24h scopes use precise rolling instants.
    */
   startInstant: string;
   /**
-   * RFC 3339 instant of the day AFTER `end`'s local midnight (exclusive)
-   * in the configured tz. Half-open `[startInstant, endInstantExclusive)`
-   * is the canonical API window; inclusive end-of-day is a footgun.
+   * RFC 3339 exclusive upper bound. Calendar scopes use the day after
+   * `end`; Live and 24h scopes use the current rolling clock.
    */
   endInstantExclusive: string;
   /** IANA timezone used to compute `startInstant`/`endInstantExclusive`. */
@@ -195,6 +209,18 @@ function saveToStorage(
   }
 }
 
+function notifySharedRangeChange(
+  sourceId: string,
+  preference: StoredRangePreference,
+) {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(
+    new CustomEvent<SharedRangeChangeDetail>(SHARED_RANGE_CHANGE_EVENT, {
+      detail: { sourceId, preference },
+    }),
+  );
+}
+
 function resolvePreference(preference: StoredRangePreference): RangeValue {
   const preset = preference.presetId
     ? getDatePreset(preference.presetId)
@@ -235,6 +261,11 @@ function applyUrlUpdates(
   }
 }
 
+function resetPagination(params: URLSearchParams) {
+  params.delete('page');
+  params.delete('offset');
+}
+
 /**
  * Compute the previous period of equal length immediately preceding [start, end].
  * For a 7-day window, returns the 7 days before that. End boundary is exclusive
@@ -262,24 +293,37 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     fromKey = 'from',
     toKey = 'to',
     compareKey = 'compare',
+    scopeKey = DEFAULT_SCOPE_KEY,
     persistKey,
     minDate,
     enableCompare = false,
     timezone,
   } = opts;
 
+  const sourceId = useId();
   const [params, setParams] = useSearchParams();
+  const [rollingNow, setRollingNow] = useState(() => Date.now());
 
   const urlStart = params.get(fromKey);
   const urlEnd = params.get(toKey);
   const urlCompare = params.get(compareKey);
+  const urlScope = params.get(scopeKey);
+  const urlScopedPreset =
+    urlScope && urlScope !== 'custom' ? getDatePreset(urlScope) : undefined;
+  const urlScopedRange = urlScopedPreset
+    ? clampRange(urlScopedPreset.resolve(new Date(rollingNow)), minDate)
+    : null;
 
   // Lazily compute the resolved fallback once per render. The default preset's
-  // `resolve()` is cheap (Date math), so re-running it is fine and ensures
-  // "today"-style presets stay live without a re-render loop.
+  // `resolve()` is cheap (Date math). The minute clock keeps rolling defaults
+  // current across midnight without changing query bounds between dates.
   const fallback = useMemo<RangeValue>(
-    () => clampRange(getFallbackPreset(defaultPresetId).resolve(), minDate),
-    [defaultPresetId, minDate],
+    () =>
+      clampRange(
+        getFallbackPreset(defaultPresetId).resolve(new Date(rollingNow)),
+        minDate,
+      ),
+    [defaultPresetId, minDate, rollingNow],
   );
 
   const sharedPreference = loadFromStorage(SHARED_RANGE_STORAGE_KEY);
@@ -298,12 +342,15 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   // Resolve synchronously so inherited preferences never flash the page
   // fallback before the first paint.
   const effective = useMemo<RangeValue>(() => {
+    if (urlScopedRange) return urlScopedRange;
     if (urlRange) return clampRange(urlRange, minDate);
     if (storedRange) return clampRange(storedRange, minDate);
     return fallback;
   }, [
     urlRange?.start,
     urlRange?.end,
+    urlScopedRange?.start,
+    urlScopedRange?.end,
     storedRange?.start,
     storedRange?.end,
     minDate,
@@ -333,15 +380,18 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
+          resetPagination(next);
           applyUrlUpdates(next, urlUpdates);
           next.set(fromKey, pageRange.start);
           next.set(toKey, pageRange.end);
+          next.set(scopeKey, preference.presetId ?? 'custom');
           return next;
         },
         { replace: true },
       );
+      notifySharedRangeChange(sourceId, preference);
     },
-    [setParams, fromKey, toKey, minDate, persistKey],
+    [setParams, fromKey, toKey, scopeKey, minDate, persistKey, sourceId],
   );
 
   const setRange = useCallback(
@@ -395,21 +445,26 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
+        resetPagination(next);
         applyUrlUpdates(next, urlUpdates);
         next.delete(fromKey);
         next.delete(toKey);
         next.delete(compareKey);
+        next.delete(scopeKey);
         return next;
       },
       { replace: true },
     );
+    notifySharedRangeChange(sourceId, preference);
   }, [
     setParams,
     fromKey,
     toKey,
     compareKey,
+    scopeKey,
     defaultPresetId,
     persistKey,
+    sourceId,
   ]);
 
   const reset = useCallback(
@@ -423,10 +478,106 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     [compare, effective.start, effective.end],
   );
 
-  const presetId = useMemo(
-    () => matchPresetId(effective.start, effective.end),
-    [effective.start, effective.end],
-  );
+  const presetId = useMemo(() => {
+    if (urlScopedPreset) return urlScopedPreset.id;
+    if (!urlRange && storedPreference?.presetId) {
+      return storedPreference.presetId;
+    }
+    return matchPresetId(effective.start, effective.end);
+  }, [
+    effective.end,
+    effective.start,
+    storedPreference?.presetId,
+    urlRange?.end,
+    urlRange?.start,
+    urlScopedPreset,
+    rollingNow,
+  ]);
+
+  useEffect(() => {
+    if (!presetId) return undefined;
+    const timer = window.setInterval(
+      () => setRollingNow(Date.now()),
+      ROLLING_REFRESH_MS,
+    );
+    return () => window.clearInterval(timer);
+  }, [presetId]);
+
+  // Keep rolling preset URLs truthful across midnight while avoiding a
+  // navigation every minute when the resolved calendar dates are unchanged.
+  useEffect(() => {
+    if (
+      !urlScopedRange ||
+      !urlStart ||
+      !urlEnd ||
+      (urlStart === urlScopedRange.start && urlEnd === urlScopedRange.end)
+    ) {
+      return;
+    }
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.set(fromKey, urlScopedRange.start);
+        next.set(toKey, urlScopedRange.end);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [
+    fromKey,
+    setParams,
+    toKey,
+    urlEnd,
+    urlScopedRange?.end,
+    urlScopedRange?.start,
+    urlStart,
+  ]);
+
+  // A page with custom URL keys still inherits changes made by the global
+  // workspace/status control. Canonical from/to keys are removed after the
+  // handoff so one URL never advertises two conflicting active windows.
+  useEffect(() => {
+    if (fromKey === 'from' && toKey === 'to') return undefined;
+    const handleSharedRangeChange = (event: Event) => {
+      const detail = (event as CustomEvent<SharedRangeChangeDetail>).detail;
+      if (!detail || detail.sourceId === sourceId) return;
+      const pageRange = clampRange(
+        resolvePreference(detail.preference),
+        minDate,
+      );
+      saveToStorage(persistKey, detail.preference);
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          resetPagination(next);
+          next.set(fromKey, pageRange.start);
+          next.set(toKey, pageRange.end);
+          next.set(scopeKey, detail.preference.presetId ?? 'custom');
+          next.delete('from');
+          next.delete('to');
+          return next;
+        },
+        { replace: true },
+      );
+    };
+    window.addEventListener(
+      SHARED_RANGE_CHANGE_EVENT,
+      handleSharedRangeChange,
+    );
+    return () =>
+      window.removeEventListener(
+        SHARED_RANGE_CHANGE_EVENT,
+        handleSharedRangeChange,
+      );
+  }, [
+    fromKey,
+    minDate,
+    persistKey,
+    scopeKey,
+    setParams,
+    sourceId,
+    toKey,
+  ]);
 
   const resolvedTimezone = useMemo(() => {
     if (timezone && timezone.trim()) return timezone;
@@ -437,15 +588,27 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     }
   }, [timezone]);
 
-  const { startInstant, endInstantExclusive } = useMemo(
-    () =>
-      calendarRangeToInstants({
+  const { startInstant, endInstantExclusive } = useMemo(() => {
+    if (presetId === 'live' || presetId === '24h') {
+      const durationMs =
+        presetId === 'live' ? LIVE_WINDOW_MS : 24 * 60 * 60_000;
+      return {
+        startInstant: new Date(rollingNow - durationMs).toISOString(),
+        endInstantExclusive: new Date(rollingNow).toISOString(),
+      };
+    }
+    return calendarRangeToInstants({
         startDate: effective.start,
         endDate: effective.end,
         timezone: resolvedTimezone,
-      }),
-    [effective.start, effective.end, resolvedTimezone],
-  );
+      });
+  }, [
+    effective.start,
+    effective.end,
+    presetId,
+    resolvedTimezone,
+    rollingNow,
+  ]);
 
   return {
     start: effective.start,

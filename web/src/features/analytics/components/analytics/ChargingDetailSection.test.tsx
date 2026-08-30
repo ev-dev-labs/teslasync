@@ -30,6 +30,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
+import { ToastProvider } from '@/components/feedback';
 
 // jsdom lacks matchMedia; install a benign stub before any module that might
 // read it at import time evaluates (defensive — shared UI pulls it in).
@@ -159,7 +160,9 @@ function renderSection(query: FleetAnalyticsQuery) {
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter>
-        <ChargingDetailSection query={query} />
+        <ToastProvider>
+          <ChargingDetailSection query={query} />
+        </ToastProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -194,7 +197,7 @@ describe('ChargingDetailSection — populated', () => {
 
     // Bar width = count / maxCount → 100% / 50% / 25%.
     const fills = Array.from(
-      container.querySelectorAll<HTMLElement>('div.bg-neon-green'),
+      container.querySelectorAll<HTMLElement>('[data-testid="charger-brand-fill"]'),
     ).map((el) => el.style.width);
     expect(fills).toEqual(['100%', '50%', '25%']);
   });

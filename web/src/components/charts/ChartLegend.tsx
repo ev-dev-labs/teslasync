@@ -2,6 +2,7 @@ import { Legend } from 'recharts'
 import { useChartHiddenSeries } from './ChartHiddenSeriesContext'
 import type { ChartLegendState } from './useChartLegendState'
 import type { HiddenSeriesState } from '@/hooks/useHiddenSeries'
+import { Button } from '@/components/ui'
 
 /**
  * Recharts' Legend payload uses its `DataKey<any>` type (string | number |
@@ -98,23 +99,51 @@ export function LegendSeriesLabel({ resolved, value, entry }: LegendSeriesLabelP
   const seriesKey = pickKey(entry, value)
   const interactive = resolved != null
   const dimmed = interactive ? resolved.isHidden(seriesKey) : false
+  const sharedProps = {
+    style: {
+      opacity: dimmed ? 0.4 : 1,
+      textDecoration: dimmed ? 'line-through' : 'none',
+      cursor: interactive ? 'pointer' : 'default',
+    },
+    'data-series-key': seriesKey,
+    'data-series-hidden': dimmed ? 'true' : 'false',
+  } as const
+
+  if (interactive) {
+    return (
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="h-auto min-h-0 rounded-none p-0 font-normal hover:bg-transparent"
+        aria-pressed={dimmed}
+        onClick={(event) => {
+          event.stopPropagation()
+          toggleFromLegend(resolved, {
+            ...entry,
+            value:
+              entry?.value
+              ?? (typeof value === 'string' || typeof value === 'number' ? value : undefined),
+          })
+        }}
+        {...sharedProps}
+      >
+        {value}
+      </Button>
+    )
+  }
+
   return (
     <span
-      style={{
-        opacity: dimmed ? 0.4 : 1,
-        textDecoration: dimmed ? 'line-through' : 'none',
-        cursor: interactive ? 'pointer' : 'default',
-      }}
-      aria-pressed={interactive ? dimmed : undefined}
-      data-series-key={seriesKey}
-      data-series-hidden={dimmed ? 'true' : 'false'}
+      {...sharedProps}
     >
       {value}
     </span>
   )
 }
 
-export interface ChartLegendProps {
+export interface ChartLegendProps
+  extends Omit<React.ComponentPropsWithoutRef<typeof Legend>, 'formatter' | 'onClick'> {
   /**
    * Optional toggle source. When omitted, the legend pulls state from the
    * surrounding `<ChartContainer chartKey="…">` via
@@ -123,12 +152,6 @@ export interface ChartLegendProps {
    * passively (no click-to-hide UX, no dimming).
    */
   state?: ChartLegendToggleSource
-  /** Recharts wrapper-style override (font size, margin, etc.). */
-  wrapperStyle?: React.CSSProperties
-  /** Vertical alignment passed through to recharts. */
-  verticalAlign?: 'top' | 'middle' | 'bottom'
-  /** Horizontal alignment passed through to recharts. */
-  align?: 'left' | 'center' | 'right'
 }
 
 /**
@@ -145,17 +168,13 @@ export interface ChartLegendProps {
  */
 export function ChartLegend({
   state,
-  wrapperStyle,
-  verticalAlign,
-  align,
+  ...legendProps
 }: ChartLegendProps) {
   const contextState = useChartHiddenSeries()
   const resolved: ChartLegendToggleSource | null = state ?? contextState
   return (
     <Legend
-      wrapperStyle={wrapperStyle}
-      verticalAlign={verticalAlign}
-      align={align}
+      {...legendProps}
       onClick={(data) => toggleFromLegend(resolved, data as LegendPayloadEntry)}
       formatter={(value, entry) => (
         <LegendSeriesLabel
@@ -167,3 +186,6 @@ export function ChartLegend({
     />
   )
 }
+
+// Recharts discovers declarative children by displayName before rendering them.
+ChartLegend.displayName = Legend.displayName

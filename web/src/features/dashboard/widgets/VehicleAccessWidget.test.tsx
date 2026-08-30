@@ -430,7 +430,7 @@ describe('VehicleAccessWidget — interactions & a11y', () => {
     const mq = setMobile({ data: makeMobileEnvelope(true) });
     renderWidget(FULL);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(dq.refetch).toHaveBeenCalledTimes(1);
     expect(iq.refetch).toHaveBeenCalledTimes(1);

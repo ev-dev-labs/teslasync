@@ -619,7 +619,7 @@ describe('RegenEfficiencyPage', () => {
 
     const shareCard = screen
       .getByText('Aggregate recovery share')
-      .closest('div.rounded-xl');
+      .closest('[data-role="metric-card"]');
     expect(shareCard).not.toBeNull();
     expect(within(shareCard as HTMLElement).getByText('—')).toBeInTheDocument();
     expect(screen.queryByRole('meter')).not.toBeInTheDocument();

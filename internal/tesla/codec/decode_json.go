@@ -42,7 +42,12 @@ func registerCodecCounter(name, help string) *prometheus.CounterVec {
 //
 // Wrap with fmt.Errorf("...: %w", ErrPayloadDrop) so the caller can
 // recover the descriptive context AND the sentinel.
-var ErrPayloadDrop = errors.New("codec: payload drop")
+var (
+	ErrPayloadDrop            = errors.New("codec: payload drop")
+	ErrSourceTimestampInvalid = errors.New("codec: invalid source timestamp")
+)
+
+const maxSourceTimestampFutureSkew = 5 * time.Minute
 
 // jsonFieldUnknownTotal counts per-field MQTT messages dropped because the
 // topic-derived field name is not in protomodel.SignalsByName. A non-zero
@@ -84,9 +89,8 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 
 // DecodeJSONField is the per-field MQTT entry point. The Tesla Fleet
 // Telemetry MQTT producer publishes one signal per topic in the form
-// `{topicBase}/{VIN}/v/{key}` with the raw json.Marshal of the producer's
-// per-Value-variant Go value as the body (see upstream
-// datastore/mqtt/mqtt_payload.go::processVehicleFields). This function
+// `{topicBase}/{VIN}/v/{key}` with a `{"value":...,"ts":...}` envelope.
+// This function
 // reverses that encoding into the same []Atomic shape that Decode emits
 // for the proto-batch path so downstream consumers (router,
 // normalize.Pipeline, signal.Store) observe a uniform contract.
@@ -97,9 +101,10 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 //     ValueKind, CompoundKind, and EnumStringPrefix in
 //     protomodel.SignalsByName so the body is decoded against
 //     the SAME schema the proto-batch path uses.
-//   - body       The raw MQTT message body. Either bare JSON
-//     (production) or an envelope `{"value":...,"ts":...}`
-//     (replay/test). Envelope detection is unambiguous: every
+//   - body       The raw MQTT message body. Production uses an envelope
+//     `{"value":...,"ts":...}`. Bare JSON remains decodable for controlled
+//     compatibility callers, but the production subscriber rejects it.
+//     Envelope detection is unambiguous: every
 //     Tesla compound uses domain-specific top-level keys
 //     (latitude/longitude, DriverFront/etc., FrontLeft/etc.)
 //     and "value" is reserved for the envelope.
@@ -107,10 +112,8 @@ var jsonFlattenErrorsTotal = registerCodecCounter(
 //     Atomic.VehicleID; the caller must validate it earlier so
 //     a malformed topic can't poison signal_log.
 //   - fallbackTs The wall-clock at which the subscriber received the
-//     message. Used as Atomic.EmittedAt when the body is bare
-//     (production) since Tesla's per-field publisher does NOT
-//     include event-time. The envelope's "ts" overrides this
-//     when present (replay path preserves producer time).
+//     message. Used as Atomic.EmittedAt only for compatibility callers when
+//     the body is bare. The envelope's "ts" preserves producer event time.
 //
 // Output:
 //   - On success: ([]Atomic, nil). Atomics for an atomic ValueKind have
@@ -149,6 +152,7 @@ func DecodeJSONField(field string, body []byte, vin string, fallbackTs time.Time
 // The body slice MUST NOT be retained beyond the call (a bytes.NewReader
 // is captured for one Unmarshal, then released to the caller's pool).
 func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin string, fallbackTs time.Time) (atoms []Atomic, err error) {
+	var sourceEmittedAt *time.Time
 	_, span := otel.Tracer(codecTracerName).Start(
 		ctx,
 		"codec.decode_json_field",
@@ -159,6 +163,14 @@ func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin stri
 		),
 	)
 	defer func() {
+		// DecodeJSONField is transport-agnostic. The MQTT subscriber stamps
+		// the final atomics at the actual receipt boundary; direct callers
+		// remain explicitly unknown. This post-decode pass deliberately runs
+		// after compound flattening so every child retains provenance.
+		for i := range atoms {
+			atoms[i].IngestOrigin = IngestOriginUnknown
+			atoms[i].SourceEmittedAt = sourceEmittedAt
+		}
 		span.SetAttributes(attribute.Int("atomics_emitted", len(atoms)))
 		if err != nil {
 			span.RecordError(err)
@@ -174,11 +186,11 @@ func DecodeJSONFieldCtx(ctx context.Context, field string, body []byte, vin stri
 		return nil, nil
 	}
 
-	body, ts, err := unwrapEnvelope(body, fallbackTs)
+	body, ts, sourceEmittedAt, err := unwrapEnvelope(body, fallbackTs)
 	if err != nil {
 		jsonDecodeErrorsTotal.WithLabelValues(field).Inc()
 		span.SetAttributes(attribute.String("outcome", "envelope_error"))
-		return nil, fmt.Errorf("codec: field %q envelope: %v: %w", field, err, ErrPayloadDrop)
+		return nil, fmt.Errorf("codec: field %q envelope: %w: %w", field, err, ErrPayloadDrop)
 	}
 
 	if isJSONNull(body) {
@@ -286,7 +298,7 @@ func decodeJSONFieldStrict(meta *protomodel.SignalMeta, field string, body []byt
 }
 
 // unwrapEnvelope detects the optional `{"value": <bare>, "ts": "<RFC3339>"}`
-// envelope used by the replay tooling (cmd/pub-test-signal). When the body
+// envelope emitted by the TeslaSync Fleet Telemetry producer. When the body
 // is a JSON object whose top-level keys include "value", the inner value
 // becomes the body to decode and the optional "ts" (RFC3339) overrides the
 // caller-supplied fallback. When the body is anything else (bare JSON
@@ -299,34 +311,47 @@ func decodeJSONFieldStrict(meta *protomodel.SignalMeta, field string, body []byt
 // upstream proto NEVER places "value" as a Field name and getProtoValue's
 // returnAsToplevel collapse hides intermediate wrapper objects, so
 // "value" can only mean the envelope.
-func unwrapEnvelope(body []byte, fallbackTs time.Time) ([]byte, time.Time, error) {
+func unwrapEnvelope(body []byte, fallbackTs time.Time) ([]byte, time.Time, *time.Time, error) {
 	trimmed := bytes.TrimSpace(body)
 	if len(trimmed) == 0 || trimmed[0] != '{' {
-		return body, fallbackTs, nil
+		return body, fallbackTs, nil, nil
 	}
 	var probe map[string]json.RawMessage
 	if err := json.Unmarshal(trimmed, &probe); err != nil {
 		// Not a parseable object — let the per-kind decoder report the
 		// real error against the original body for a clearer message.
-		return body, fallbackTs, nil
+		return body, fallbackTs, nil, nil
 	}
 	raw, ok := probe["value"]
 	if !ok {
-		return body, fallbackTs, nil
+		return body, fallbackTs, nil, nil
 	}
 	ts := fallbackTs
+	var sourceEmittedAt *time.Time
 	if rawTs, hasTs := probe["ts"]; hasTs {
 		var s string
 		if err := json.Unmarshal(rawTs, &s); err != nil {
-			return nil, time.Time{}, fmt.Errorf("envelope ts: %v", err)
+			return nil, time.Time{}, nil, fmt.Errorf("envelope ts: %v", err)
 		}
 		parsed, err := time.Parse(time.RFC3339Nano, s)
 		if err != nil {
-			return nil, time.Time{}, fmt.Errorf("envelope ts %q: %v", s, err)
+			return nil, time.Time{}, nil, fmt.Errorf("%w: envelope ts %q: %v", ErrSourceTimestampInvalid, s, err)
 		}
-		ts = parsed
+		if parsed.IsZero() {
+			return nil, time.Time{}, nil, fmt.Errorf("%w: envelope ts is zero", ErrSourceTimestampInvalid)
+		}
+		if !fallbackTs.IsZero() && parsed.After(fallbackTs.Add(maxSourceTimestampFutureSkew)) {
+			return nil, time.Time{}, nil, fmt.Errorf(
+				"%w: envelope ts %q is more than %s after receipt time",
+				ErrSourceTimestampInvalid,
+				s,
+				maxSourceTimestampFutureSkew,
+			)
+		}
+		ts = parsed.UTC()
+		sourceEmittedAt = &ts
 	}
-	return raw, ts, nil
+	return raw, ts, sourceEmittedAt, nil
 }
 
 // isJSONNull reports whether body is the literal JSON null token. Used to

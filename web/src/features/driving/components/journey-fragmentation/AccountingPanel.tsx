@@ -47,7 +47,7 @@ export function AccountingPanel({ result }: JourneyFragmentationSectionProps) {
         </div>
       </div>
       {result.returnedRows === 0 ? (
-        <EmptyState icon={<ClipboardList className="h-7 w-7" />} message={t('journeyFragmentation.accounting.empty', 'Accounting will populate when the history request returns rows.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<ClipboardList className="h-7 w-7" />} message={t('journeyFragmentation.accounting.empty', 'Accounting will populate when the history request returns rows.')} />
       ) : (
         <>
           <div className="grid gap-4 lg:grid-cols-2">

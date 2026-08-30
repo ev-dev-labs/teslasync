@@ -8,6 +8,7 @@
  * a `GlassPanel` so it shares the exact surface + rhythm of the sibling
  * top-talkers panel beside it. Owns its own loading / empty / error states.
  */
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BarChart3 } from 'lucide-react';
 
@@ -21,9 +22,10 @@ import {
   XAxis,
   YAxis,
   axisTick,
+  ChartTooltip,
+  EmbeddedChart,
 } from '@/components/charts';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { chartTokens } from '@/lib/tokens';
 import { formatBytes } from '@/lib/numberFormat';
 import { type SectionState, type VehicleCostBar } from './helpers';
@@ -41,12 +43,6 @@ const BASE = chartTokens.series[0];
 // JSX props"). Values are static module-level tokens.
 const CHART_MARGIN = { top: 4, right: 16, left: 8, bottom: 4 };
 const TOOLTIP_CURSOR = { fill: 'var(--surface-2)', opacity: 0.4 };
-const TOOLTIP_CONTENT_STYLE = {
-  background: chartTokens.tooltipBg,
-  border: `1px solid ${chartTokens.tooltipBorder}`,
-  borderRadius: 8,
-  color: chartTokens.tooltipText,
-};
 
 export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehicleChartProps) {
   const { t } = useTranslation();
@@ -54,6 +50,10 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
   // Null-safe: a caller passing undefined/null must fall through to the empty
   // state, never crash on `.length` / `.map`.
   const items = bars ?? [];
+  const chartRows = useMemo(
+    () => items.map(({ name, bytes }) => ({ name, bytes })),
+    [items],
+  );
 
   return (
     <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
@@ -61,59 +61,59 @@ export function CostByVehicleChart({ bars, loading, error, onRetry }: CostByVehi
         <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.vehicleCost.chartTitle', 'Ingest cost by vehicle')}
       </PanelTitle>
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : loading && items.length === 0 ? (
-        <Skeleton height={288} />
-      ) : items.length === 0 ? (
-        <EmptyState
-          icon={<BarChart3 className="h-8 w-8" />}
-          message={t('admin.vehicleCost.chartEmpty', 'No ingest volume recorded in this window yet.')}
-          action={{ label: t('common.retry', 'Retry'), onClick: onRetry }}
-        />
-      ) : (
-        <div
-          className="h-72 sm:h-80"
-          role="img"
-          aria-label={t(
-            'admin.vehicleCost.chartAria',
-            'Horizontal bar chart of estimated ingest bytes per vehicle, largest consumer first.',
-          )}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={items} layout="vertical" margin={CHART_MARGIN}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke={chartTokens.gridStroke}
-                strokeOpacity={0.4}
-                horizontal={false}
-              />
-              <XAxis
-                type="number"
-                tick={axisTick}
-                tickFormatter={(v: number) => formatBytes(v)}
-              />
-              <YAxis
-                type="category"
-                dataKey="name"
-                tick={axisTick}
-                width={128}
-                tickFormatter={(v: string) => (v.length > 18 ? `${v.slice(0, 17)}…` : v)}
-              />
-              <Tooltip
-                cursor={TOOLTIP_CURSOR}
-                contentStyle={TOOLTIP_CONTENT_STYLE}
-                formatter={(v: number) => [formatBytes(v), t('admin.vehicleCost.colBytes', 'Bytes (est.)')]}
-              />
-              <Bar dataKey="bytes" radius={[0, 4, 4, 0]} isAnimationActive={false}>
-                {items.map((b, i) => (
-                  <Cell key={b.vehicle_id} fill={i === 0 ? HIGHLIGHT : BASE} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <EmbeddedChart
+        title={t('admin.vehicleCost.chartTitle', 'Ingest cost by vehicle')}
+        ariaLabel={t(
+          'admin.vehicleCost.chartAria',
+          'Horizontal bar chart of estimated ingest bytes per vehicle, largest consumer first.',
+        )}
+        loading={loading && items.length === 0 && !error}
+        error={error}
+        onRetry={onRetry}
+        empty={!error && !loading && items.length === 0}
+        emptyMessage={t('admin.vehicleCost.chartEmpty', 'No ingest volume recorded in this window yet.')}
+        data={chartRows}
+        dataColumns={[
+          { key: 'name', label: t('admin.vehicleCost.colVehicle', 'Vehicle') },
+          {
+            key: 'bytes',
+            label: t('admin.vehicleCost.colBytes', 'Bytes (est.)'),
+            format: (v) => formatBytes(Number(v)),
+          },
+        ]}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={items} layout="vertical" margin={CHART_MARGIN}>
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke={chartTokens.gridStroke}
+              strokeOpacity={0.4}
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              tick={axisTick}
+              tickFormatter={(v: number) => formatBytes(v)}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              tick={axisTick}
+              width={128}
+              tickFormatter={(v: string) => (v.length > 18 ? `${v.slice(0, 17)}…` : v)}
+            />
+            <Tooltip
+              cursor={TOOLTIP_CURSOR}
+              content={<ChartTooltip formatter={(v) => [formatBytes(Number(v)), t('admin.vehicleCost.colBytes', 'Bytes (est.)')]} />}
+            />
+            <Bar dataKey="bytes" radius={[0, 4, 4, 0]} isAnimationActive={false}>
+              {items.map((b, i) => (
+                <Cell key={b.vehicle_id} fill={i === 0 ? HIGHLIGHT : BASE} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

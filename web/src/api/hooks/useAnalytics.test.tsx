@@ -44,6 +44,7 @@ import {
   useBatteryCells,
   useRangeProjection,
   useTemperatureImpact,
+  useFsdInsights,
   type LifetimeStats,
   type LifetimeAchievement,
   type PersonalRecord,
@@ -61,6 +62,7 @@ import {
   type TemperatureImpactMonthlyTrend,
   type TemperatureImpactResponse,
 } from './useAnalytics';
+import type { FsdInsights } from '@/types/fsd';
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
@@ -684,5 +686,139 @@ describe('useTemperatureImpact', () => {
     renderHook(() => useTemperatureImpact(''), { wrapper });
     await tick();
     expect(mockedRequest).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// useFsdInsights
+// ---------------------------------------------------------------------------
+
+describe('useFsdInsights', () => {
+  const fixture: FsdInsights = {
+    vehicle_id: 7,
+    period: {
+      days: 30,
+      timezone: 'America/Los_Angeles',
+      start_date: '2026-02-02',
+      end_date: '2026-03-03',
+      start_at: '2026-02-02T08:00:00Z',
+      end_at: '2026-03-03T18:00:00Z',
+    },
+    totals: {
+      fsd_distance_m: 12_000,
+      driving_distance_m: 48_000,
+      fsd_share_pct: 25,
+      active_days: 4,
+      measured_days: 27,
+      days_in_period: 30,
+      avg_measured_day_fsd_distance_m: 444.444,
+      avg_active_day_fsd_distance_m: 3_000,
+      best_day: {
+        date: '2026-02-20',
+        fsd_distance_m: 6_000,
+        driving_distance_m: 10_000,
+        fsd_share_pct: 60,
+      },
+    },
+    quality: {
+      fsd_sample_count: 12,
+      driving_sample_count: 14,
+      fsd_invalid_sample_count: 0,
+      driving_invalid_sample_count: 0,
+      fsd_duplicate_sample_count: 0,
+      driving_duplicate_sample_count: 0,
+      fsd_reset_count: 0,
+      driving_reset_count: 0,
+      fsd_baseline_available: true,
+      driving_baseline_available: true,
+      fsd_reported_in_period: true,
+      driving_reported_in_period: true,
+      fsd_distance_derivable: true,
+      driving_denominator_available: true,
+      share_basis_available: true,
+      fsd_measured_days: 27,
+      historical_data_guarded: true,
+      required_normalization_version: 1,
+      fsd_untrusted_sample_count: 0,
+      driving_untrusted_sample_count: 0,
+      counter_observation_days: 9,
+      days_without_counter_observation: 21,
+      counter_observation_day_pct: 30,
+      first_observation_at: '2026-02-04T10:00:00Z',
+      last_observation_at: '2026-03-02T19:00:00Z',
+      fsd_first_observation_at: '2026-02-04T10:00:00Z',
+      fsd_last_observation_at: '2026-03-02T19:00:00Z',
+      share_clamped: false,
+    },
+    daily: [
+      {
+        date: '2026-02-20',
+        fsd_distance_m: 6_000,
+        driving_distance_m: 10_000,
+        fsd_share_pct: 60,
+        fsd_observation_count: 3,
+        driving_observation_count: 4,
+        reset_count: 0,
+        has_counter_observation: true,
+      },
+    ],
+  };
+
+  it('builds a snake_case scoped path with no /api/v1 prefix', async () => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(
+      () => useFsdInsights('7', 90, 'America/Los_Angeles'),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url, options] = callAt();
+    expect(url.startsWith('/analytics/fsd?')).toBe(true);
+    expect(url).not.toContain('/api/v1');
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('days')).toBe('90');
+    expect(params.get('timezone')).toBe('America/Los_Angeles');
+    expect(options.signal).toBeInstanceOf(AbortSignal);
+  });
+
+  it('returns raw SI meters untouched', async () => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(() => useFsdInsights('7', 30, 'UTC'), { wrapper });
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(result.current.data?.totals.fsd_distance_m).toBe(12_000);
+    expect(result.current.data?.daily[0].fsd_distance_m).toBe(6_000);
+    expect(result.current.data?.totals.fsd_share_pct).toBe(25);
+  });
+
+  it('keys the cache by vehicle, period, and timezone so scopes cannot bleed', () => {
+    const a = analyticsKeys.fsdInsights({ vehicleId: '7', timezone: 'UTC', filters: { days: 30 } });
+    const b = analyticsKeys.fsdInsights({ vehicleId: '8', timezone: 'UTC', filters: { days: 30 } });
+    const c = analyticsKeys.fsdInsights({ vehicleId: '7', timezone: 'UTC', filters: { days: 90 } });
+    const d = analyticsKeys.fsdInsights({
+      vehicleId: '7',
+      timezone: 'Europe/Berlin',
+      filters: { days: 30 },
+    });
+
+    expect(a[0]).toBe('analytics');
+    expect(a[1]).toBe('fsd');
+    expect(JSON.stringify(a)).not.toBe(JSON.stringify(b));
+    expect(JSON.stringify(a)).not.toBe(JSON.stringify(c));
+    expect(JSON.stringify(a)).not.toBe(JSON.stringify(d));
+  });
+
+  it('is disabled without a vehicle id', async () => {
+    renderHook(() => useFsdInsights(undefined, 30, 'UTC'), { wrapper });
+    await tick();
+    expect(mockedRequest).not.toHaveBeenCalled();
+  });
+
+  it('surfaces the failure channel instead of throwing', async () => {
+    mockedRequest.mockRejectedValueOnce(new Error('fsd unavailable'));
+    const { result } = renderHook(() => useFsdInsights('7', 30, 'UTC'), { wrapper });
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(String(result.current.error)).toContain('fsd unavailable');
   });
 });

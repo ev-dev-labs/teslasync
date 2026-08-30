@@ -18,11 +18,11 @@ interface Tab {
  * Dashboard → Drives → Charging → Battery → Map.
  */
 const TABS: Tab[] = [
-  { path: '/',         icon: Home,             i18nKey: 'nav.dashboard', fallback: 'Home' },
-  { path: '/drives',   icon: Car,              i18nKey: 'nav.drives',    fallback: 'Drives' },
-  { path: '/charging', icon: BatteryCharging,  i18nKey: 'nav.charging',  fallback: 'Charging' },
-  { path: '/battery',  icon: HeartPulse,       i18nKey: 'nav.battery',   fallback: 'Battery' },
-  { path: '/live',     icon: MapPin,           i18nKey: 'nav.liveMap',   fallback: 'Map' },
+  { path: '/',         icon: Home,             i18nKey: 'nav.mobileHome',     fallback: 'Home' },
+  { path: '/drives',   icon: Car,              i18nKey: 'nav.mobileDrives',   fallback: 'Drives' },
+  { path: '/charging', icon: BatteryCharging,  i18nKey: 'nav.mobileCharging', fallback: 'Charging' },
+  { path: '/battery',  icon: HeartPulse,       i18nKey: 'nav.mobileBattery',  fallback: 'Battery' },
+  { path: '/live',     icon: MapPin,           i18nKey: 'nav.mobileMap',      fallback: 'Map' },
 ];
 
 /** Paths shown in the bottom tab bar — used to de-emphasize sidebar duplicates on mobile */
@@ -35,9 +35,11 @@ export function BottomTabBar() {
   return (
     <nav
       aria-label={t('nav.quickNav', 'Quick navigation')}
-      className="fixed bottom-0 left-0 right-0 z-50 lg:hidden
-        bg-[var(--surface-overlay)] backdrop-blur-xl border-t border-white/[0.06]
-        flex items-center justify-around px-2 h-14 safe-bottom"
+      data-role="bottom-tab-bar"
+      className="fixed inset-x-0 bottom-0 z-50 xl:hidden
+        flex h-14 items-center justify-around border-t border-[var(--border-default)]
+        bg-[var(--surface-1)] px-2 shadow-e3 dark:bg-[var(--surface-overlay)] dark:backdrop-blur-xl
+        safe-bottom forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]"
     >
       {TABS.map(tab => {
         const isActive = tab.path === '/'
@@ -55,19 +57,21 @@ export function BottomTabBar() {
             aria-label={label}
             aria-current={isActive ? 'page' : undefined}
             className={cn(
-              'relative flex flex-col items-center justify-center gap-0.5 py-1.5 px-3 rounded-lg',
-              'transition-colors min-w-[48px] min-h-[44px]',
+              'relative flex min-h-[44px] min-w-[48px] flex-1 flex-col items-center justify-center gap-0.5 rounded-shape-md px-1 py-1',
+              'text-sm font-medium leading-none transition-colors duration-fast',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--theme-primary)]',
               isActive
-                ? 'text-[var(--theme-primary)]'
-                : 'text-[var(--text-muted)] active:text-[var(--text-secondary)]'
+                ? 'bg-[rgba(var(--theme-primary-rgb),0.10)] font-semibold text-[var(--text-primary)] ring-1 ring-inset ring-[rgba(var(--theme-primary-rgb),0.20)] forced-colors:border forced-colors:border-[Highlight]'
+                : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)] active:bg-[var(--surface-2)]'
             )}
           >
-            <Icon aria-hidden="true" className={cn('h-5 w-5', isActive && 'drop-shadow-[0_0_6px_currentColor]')} />
-            <span className="text-2xs font-medium leading-tight">
-              {label}
-            </span>
+            <Icon aria-hidden="true" className="h-5 w-5" strokeWidth={isActive ? 2.4 : 2} />
+            <span className="whitespace-nowrap">{label}</span>
             {isActive && (
-              <span className="absolute -bottom-0.5 h-0.5 w-4 rounded-full bg-[var(--theme-primary)] shadow-[0_0_6px_var(--theme-primary)]" />
+              <span
+                aria-hidden="true"
+                className="absolute bottom-0 h-0.5 w-6 rounded-full bg-[var(--theme-primary)] forced-colors:bg-[Highlight]"
+              />
             )}
           </PrefetchLink>
         );

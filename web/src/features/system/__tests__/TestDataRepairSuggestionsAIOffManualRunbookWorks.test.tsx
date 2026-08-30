@@ -22,11 +22,12 @@
 // show:
 //
 //   - The page title (Data Repair).
-//   - The four MetricCards (Total Stale, Stale Charging, Stale
-//     Drives, Status).
-//   - Both worklist panels (Charging Sessions, Drives) rendered
-//     side-by-side (the redesign replaced the tab switcher with a
-//     full-width two-column bento).
+//   - After opening the deferred "Diagnostics" workspace tab: the four
+//     MetricCards (Suggested Repairs, Drive Boundaries, Charging
+//     Boundaries, Blocked) — renamed when the page moved from an
+//     age-based stale list to an evidence-based diagnosis.
+//   - Both stale worklist panels (Charging Sessions, Drives) rendered
+//     side-by-side inside that diagnostics workspace.
 //   - The deterministic empty-state when the inventory is empty.
 //
 // The HTTP POST /api/v1/ai/system/data-repair/draft 404-in-off-
@@ -41,7 +42,7 @@
 // positional pattern against the file path.
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
@@ -187,9 +188,11 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     );
 
     // Empty inventory — exercises the deterministic "all clean"
-    // path. The page MUST show the metric cards + tab buttons
+    // path. The page MUST show the metric cards + both worklists
     // regardless of inventory size, so the assertion set is
-    // robust whether the user has stale rows or not.
+    // robust whether the user has stale rows or not. The same stub
+    // answers the suggestions diagnosis GET; the page null-guards the
+    // missing suggestion arrays.
     mockRequest.mockResolvedValue({
       stale_charging: [],
       stale_drives: [],
@@ -200,21 +203,25 @@ describe('TestDataRepairSuggestionsAIOffManualRunbookWorks (data-repair-suggesti
     // 1) Page title surfaces.
     expect(await screen.findByText('Data Repair')).toBeInTheDocument();
 
-    // 2) Metric cards — all four labels present (await loading to
-    // finish; React Query resolves on its own scheduler tick).
-    // Total Stale appears only on the metric card; Stale Charging
-    // and Stale Drives appear on both metric card and tab buttons,
-    // so use getAllByText for those.
+    // 1b) The deep-diagnostics workspace is deferred behind the Diagnostics
+    // tab (it lazy-loads and only then issues the suggestion/stale scans), so
+    // open it before asserting the deterministic surfaces it owns.
+    fireEvent.click(await screen.findByRole('tab', { name: 'Diagnostics' }));
+
+    // 2) Metric cards — the deterministic KPI band is present (await
+    // loading to finish; React Query resolves on its own scheduler tick).
+    // "Suggested Repairs" appears only on the metric card; the boundary
+    // labels also appear as panel headings, so use getAllByText for those.
     expect(
-      await screen.findByText(/Total Stale/i, undefined, { timeout: 3000 }),
+      await screen.findByText(/Suggested Repairs/i, undefined, { timeout: 3000 }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/Stale Charging/i).length).toBeGreaterThan(0);
-    expect(screen.getAllByText(/Stale Drives/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Drive Boundaries/i).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Charging Boundaries/i).length).toBeGreaterThan(0);
 
     // 3) Both deterministic worklist panels — Charging Sessions +
-    // Drives — render as section headings. The redesign shows both
-    // lists side-by-side instead of behind a tab switcher, so we assert
-    // the panel headings (exact accessible names avoid matching the
+    // Drives — render as section headings inside the diagnostics
+    // workspace, side-by-side rather than behind a sub-tab switcher, so we
+    // assert the panel headings (exact accessible names avoid matching the
     // "All charging sessions are complete" empty-state heading).
     expect(
       screen.getByRole('heading', { name: 'Charging Sessions' }),

@@ -10,6 +10,7 @@ import type {
   WebErrorsSummary, MaintenanceState, MaintenanceUpdateInput,
   RuntimeStatusSnapshot,
 } from '@/types/admin';
+import type { ExtendedHealthResponse } from '@/api/types';
 
 export const adminKeys = {
   apiKeys: ['api-keys'] as const,
@@ -18,6 +19,7 @@ export const adminKeys = {
   backupConfigs: ['backup-configs'] as const,
   backupRuns: ['backup-runs'] as const,
   systemHealth: ['system-health'] as const,
+  extendedHealth: ['system-status', 'extended-health'] as const,
   runtimeStatus: ['runtime-status'] as const,
   auditLogs: ['audit-logs'] as const,
   securityEvents: (vehicleId: string) => ['security-events', vehicleId] as const,
@@ -46,9 +48,11 @@ export function useCreateApiKey() {
     mutationFn: (data: { name: string; permissions: string }) =>
       request<APIKey & { key: string }>('/api-keys', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
       success('toast.admin.apiKey.create.success', 'API key created');
@@ -61,7 +65,11 @@ export function useDeleteApiKey() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: string) => request<void>(`/api-keys/${id}`, { method: 'DELETE' }),
+    mutationFn: (id: string) => request<void>(`/api-keys/${id}`, {
+      method: 'DELETE',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
       success('toast.admin.apiKey.delete.success', 'API key deleted');
@@ -74,7 +82,11 @@ export function useRevokeApiKey() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: string) => request<void>(`/api-keys/${id}/revoke`, { method: 'POST' }),
+    mutationFn: (id: string) => request<void>(`/api-keys/${id}/revoke`, {
+      method: 'POST',
+      requiresLiveMode: true,
+    }),
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.apiKeys });
       success('toast.admin.apiKey.revoke.success', 'API key revoked');
@@ -119,8 +131,25 @@ export function useBackupRuns() {
 export function useSystemHealth() {
   return useQuery({
     queryKey: adminKeys.systemHealth,
-    queryFn: ({ signal }) => request<SystemHealth>('/system/health', { signal }),
+    queryFn: ({ signal }) =>
+      request<SystemHealth>('/system/health', {
+        signal,
+        acceptedStatuses: [503],
+      }),
     refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+export function useExtendedSystemHealth(options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: adminKeys.extendedHealth,
+    queryFn: ({ signal }) =>
+      request<ExtendedHealthResponse>('/system/health', {
+        signal,
+        acceptedStatuses: [503],
+      }),
+    enabled: options?.enabled ?? true,
+    refetchInterval: options?.enabled === false ? false : INTERVALS.STANDARD,
   });
 }
 
@@ -165,6 +194,7 @@ export function useUpdateMaintenance() {
     mutationFn: (input: MaintenanceUpdateInput) =>
       request<MaintenanceState>('/admin/maintenance', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           mode: input.mode,
@@ -172,6 +202,7 @@ export function useUpdateMaintenance() {
           until: input.until ?? null,
         }),
       }),
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.maintenance });
       qc.invalidateQueries({ queryKey: adminKeys.systemHealth });
@@ -257,6 +288,9 @@ export function useCreateExport() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(data),
       }),
+    // Reporting writes remain valid in historical mode, but they must fail
+    // immediately while offline instead of replaying after reconnect.
+    networkMode: 'always',
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: adminKeys.exportJobs });
       success('toast.admin.export.create.success', 'Export job created');

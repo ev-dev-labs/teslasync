@@ -138,7 +138,7 @@ function renderCard(over: Partial<CardProps> = {}) {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   const props: CardProps = {
     session: makeSession(),
-    toDistanceDisplay: (km: number) => km,
+    toDistanceDisplay: (meters: number) => meters / 1000,
     distanceUnit: 'km',
     ...over,
   };
@@ -218,6 +218,19 @@ describe('ChargingSessionCard — primary line + badges', () => {
     expect(screen.getByText('Charger')).toBeInTheDocument();
     expect(screen.getByText('Expensive charge ($0.75/kWh)')).toBeInTheDocument();
   });
+
+  it('opens the quick preview without nesting the action in the detail link', () => {
+    const onPreview = vi.fn();
+    renderCard({ onPreview });
+
+    const action = screen.getByRole('button', {
+      name: 'Quick view charging session',
+    });
+    fireEvent.click(action);
+
+    expect(onPreview).toHaveBeenCalledWith(expect.objectContaining({ id: 1 }));
+    expect(screen.getByRole('link')).not.toContainElement(action);
+  });
 });
 
 describe('ChargingSessionCard — metric chips', () => {
@@ -232,7 +245,7 @@ describe('ChargingSessionCard — metric chips', () => {
   });
 
   it('renders cost, cost-per-kWh and range-added chips and converts distance at the edge', () => {
-    const toDistanceDisplay = vi.fn((km: number) => km);
+    const toDistanceDisplay = vi.fn((meters: number) => meters / 1000);
     const { container } = renderCard({
       session: makeSession({
         charger_type: 'CCS',
@@ -248,8 +261,8 @@ describe('ChargingSessionCard — metric chips', () => {
     expect(screen.getByText('$12.50')).toBeInTheDocument();
     // cost / (40 kWh) = $0.31/kWh, shown parenthesised.
     expect(container.textContent).toContain('($0.31/kWh)');
-    // distance conversion happens at the display edge in km (100000 m → 100 km).
-    expect(toDistanceDisplay).toHaveBeenCalledWith(100);
+    // Canonical metres stay intact until the display conversion boundary.
+    expect(toDistanceDisplay).toHaveBeenCalledWith(100_000);
     expect(container.textContent).toContain(`+${fmtInt(100)} km`);
   });
 

@@ -1,8 +1,9 @@
 import type { ComponentProps } from 'react'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { act, render, screen, fireEvent, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { LiveTelemetrySegment } from './LiveTelemetrySegment'
+import { StatusBarProvider } from './StatusBarContext'
 import type { LiveConnectionState } from '@/hooks/useLiveConnection'
 
 // ── Controllable live-connection state ────────────────────────────────────────
@@ -60,6 +61,7 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
 })
 
@@ -96,6 +98,32 @@ describe('LiveTelemetrySegment', () => {
     expect(link).not.toHaveTextContent('·')
   })
 
+  it('classifies a connected stream older than two minutes as stale', () => {
+    setState('connected', agoIso(120_000))
+    renderSegment()
+
+    const link = getLink()
+    expect(link).toHaveTextContent('Stale')
+    expect(link).toHaveTextContent('2m')
+    expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Stale')
+    expect(link.className).toContain('text-amber-300')
+    expect(link.querySelector('.bg-amber-400')).not.toBeNull()
+  })
+
+  it('transitions from Live to Stale on its local freshness cadence', () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(NOW))
+    setState('connected', agoIso(119_000))
+    renderSegment()
+    expect(getLink()).toHaveTextContent('Live')
+
+    vi.setSystemTime(new Date(NOW + 10_000))
+    act(() => vi.advanceTimersByTime(10_000))
+
+    expect(getLink()).toHaveTextContent('Stale')
+    expect(getLink()).toHaveTextContent('2m')
+  })
+
   it('renders the disconnected state: rose Offline label + rose dot', () => {
     setState('disconnected')
     renderSegment()
@@ -105,6 +133,28 @@ describe('LiveTelemetrySegment', () => {
     expect(link).toHaveAttribute('aria-label', 'Live telemetry status: Offline')
     expect(link.className).toContain('text-rose-300')
     expect(link.querySelector('.bg-rose-400')).not.toBeNull()
+  })
+
+  it('announces meaningful status transitions through the separate live region', () => {
+    const { rerender } = render(
+      <StatusBarProvider announcementLabel="Status announcements">
+        <MemoryRouter>
+          <LiveTelemetrySegment />
+        </MemoryRouter>
+      </StatusBarProvider>,
+    )
+    setState('disconnected')
+    rerender(
+      <StatusBarProvider announcementLabel="Status announcements">
+        <MemoryRouter>
+          <LiveTelemetrySegment />
+        </MemoryRouter>
+      </StatusBarProvider>,
+    )
+
+    expect(
+      screen.getByRole('status', { name: 'Status announcements' }),
+    ).toHaveTextContent('Live telemetry status: Offline')
   })
 
   it('renders the unknown state as a muted "Idle" segment', () => {

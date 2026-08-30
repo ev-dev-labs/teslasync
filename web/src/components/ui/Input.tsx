@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes, type ReactNode } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes, type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { Label } from './Label';
 import { HelpIcon, type HelpIconProps } from './HelpIcon';
@@ -25,15 +25,35 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
 }
 
 const sizeClasses: Record<NonNullable<InputProps['size']>, string> = {
-  sm: 'px-2 py-1.5 text-xs',
-  md: 'px-3 py-2 text-sm',
-  lg: 'px-4 py-2.5 text-base',
+  sm: 'min-h-9 px-3 py-1.5 text-sm',
+  md: 'min-h-10 px-3 py-2 text-sm',
+  lg: 'min-h-12 px-4 py-2.5 text-base',
   auto: 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row',
 };
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ label, help, error, hint, icon, suffix, size = 'md', className, id, required, ...props }, ref) => {
-    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  ({
+    label,
+    help,
+    error,
+    hint,
+    icon,
+    suffix,
+    size = 'md',
+    className,
+    id,
+    required,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  }, ref) => {
+    const reactId = useId();
+    const inputId = id || label?.toLowerCase().replace(/\s+/g, '-') || `input-${reactId}`;
+    const feedbackId = error
+      ? `${inputId}-error`
+      : hint
+        ? `${inputId}-hint`
+        : undefined;
+    const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
       <div className="space-y-1">
         {label && (
@@ -56,22 +76,22 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             required={required}
             aria-required={required ? 'true' : undefined}
             className={cn(
-              'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
+              'w-full rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] text-[var(--text-primary)] transition-colors',
               sizeClasses[size],
-              'placeholder:text-[var(--text-muted)] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
+              'placeholder:text-[var(--text-muted)] focus-visible:border-[var(--theme-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-app)]',
               'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-              error && 'border-red-500',
+              error && 'border-rose-500',
               icon && 'pl-10',
               suffix && 'pr-10',
               className,
             )}
             aria-invalid={error ? 'true' : undefined}
-            aria-describedby={error ? `${inputId}-error` : hint ? `${inputId}-hint` : undefined}
+            aria-describedby={describedBy}
             {...props}
           />
           {suffix && <span className="absolute right-3 top-1/2 -translate-y-1/2">{suffix}</span>}
         </div>
-        {error && <p id={`${inputId}-error`} className="text-xs text-red-500">{error}</p>}
+        {error && <p id={`${inputId}-error`} role="alert" className="text-xs text-rose-300">{error}</p>}
         {hint && !error && <p id={`${inputId}-hint`} className="text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );

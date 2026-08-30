@@ -1,7 +1,8 @@
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { VehicleSelect } from '@/components/forms';
 import { PageContainer } from '@/components/layout';
-import { Select } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
 import { AIDigestNarration } from '@/components/ai/AIDigestNarration';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -31,9 +32,7 @@ export default function WeeklyDigestPage() {
     funFact,
     goToPrevWeek,
     goToNextWeek,
-    vehicleOptions,
     selectedVehicleId,
-    setVehicleId,
     drivesLoading,
     drivesError,
     refetchDrives,
@@ -51,6 +50,29 @@ export default function WeeklyDigestPage() {
   // domains, so they share those two domains' loading / error state.
   const summaryLoading = drivesLoading || chargingLoading;
   const summaryError = drivesError ?? chargingError ?? null;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'drive-history',
+        label: t('dataSources.labels.driveHistory', 'Drive history'),
+        query: freshnessQueries[0] ?? {},
+        enabled: freshnessQueries[0] != null,
+      },
+      {
+        id: 'charging-history',
+        label: t('dataSources.labels.chargingHistory', 'Charging history'),
+        query: freshnessQueries[1] ?? {},
+        enabled: freshnessQueries[1] != null,
+      },
+      {
+        id: 'alert-history',
+        label: t('dataSources.labels.alertHistory', 'Alert history'),
+        query: freshnessQueries[2] ?? {},
+        enabled: freshnessQueries[2] != null,
+      },
+    ],
+    [freshnessQueries, t],
+  );
 
   // AIDigestNarration feeds this id into a POST body (`vehicle_id`), so coerce
   // it to a finite number at the boundary and drop anything non-numeric —
@@ -61,12 +83,8 @@ export default function WeeklyDigestPage() {
     selectedVehicleId !== '' && Number.isFinite(parsedVehicleId) ? parsedVehicleId : undefined;
 
   const actions = (
-    <Select
-      options={vehicleOptions}
-      value={selectedVehicleId}
-      onChange={(e) => setVehicleId(e.target.value)}
-      placeholder={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
-      aria-label={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
+    <VehicleSelect
+      ariaLabel={t('analytics.weeklyDigest.selectVehicle', 'Select vehicle')}
       className="w-full sm:w-48"
     />
   );
@@ -77,6 +95,7 @@ export default function WeeklyDigestPage() {
       subtitle={t('analytics.weeklyDigest.subtitle', 'Your driving and charging summary for the week')}
       actions={actions}
       query={freshnessQueries}
+      dataSources={dataSources}
     >
       {/* Week navigation band */}
       <FadeIn>

@@ -111,7 +111,7 @@ export function TrueCostSensitivityMatrix({
               mobileColumns={['price', 'lowMpg', 'baselineMpg']}
             />
           ) : (
-            <EmptyState message={t('tco.sensitivity.empty', 'A supported baseline fuel comparison is required for scenarios.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.sensitivity.empty', 'A supported baseline fuel comparison is required for scenarios.')} />
           )}
         </TrueCostSectionBody>
       </GlassPanel>

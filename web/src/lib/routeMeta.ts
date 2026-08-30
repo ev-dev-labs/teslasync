@@ -35,18 +35,104 @@ export interface RouteMeta {
  * routeMeta unit test, which also detects cycles).
  */
 const PARENT_OVERRIDES: Record<string, string> = {
+  // ── Entity detail chains ───────────────────────────────────────────────
   '/drives/:id': '/drives',
   '/drives/:id/replay': '/drives/:id',
   '/charging/:id': '/charging',
   '/vehicles/:id': '/vehicles',
   '/vehicles/:id/access': '/vehicles/:id',
   '/trips/:id': '/trips',
+  '/sharing/trips': '/trips',
   '/automations/new': '/automations',
+  '/automations/list': '/automations',
   '/automations/:id/edit': '/automations',
-  '/notifications/studio': '/notifications/inbox',
-  '/notifications/archived': '/notifications/inbox',
   '/year-review/:year': '/analytics',
   '/me/activity': '/',
+
+  // ── Charging sub-surfaces ──────────────────────────────────────────────
+  '/charging/costs': '/charging',
+  '/charging/curves': '/charging',
+  '/charging/schedule': '/charging',
+  '/charging/vampire-drain': '/charging',
+
+  // ── Battery / energy sub-surfaces ──────────────────────────────────────
+  '/battery/health': '/battery',
+  '/power/dashboards': '/power-flow',
+  '/power/grafana': '/power-flow',
+  '/power/sql': '/power-flow',
+
+  // ── Analytics sub-surfaces ─────────────────────────────────────────────
+  '/analytics/anomalies': '/analytics',
+  '/analytics/carbon': '/analytics',
+  '/analytics/range': '/analytics',
+  '/analytics/tco': '/analytics',
+  '/benchmarks/privacy': '/analytics',
+
+  // ── Advanced / experimental intelligence ───────────────────────────────
+  '/intelligence/behavioral-sentinel': '/intelligence-packs',
+  '/intelligence/causal-lab': '/intelligence-packs',
+  '/intelligence/charging-forensics': '/intelligence-packs',
+  '/intelligence/charging-site-twin': '/intelligence-packs',
+  '/intelligence/component-survival': '/intelligence-packs',
+  '/intelligence/emergency-resilience': '/intelligence-packs',
+  '/intelligence/federated-learning': '/intelligence-packs',
+  '/intelligence/firmware-canary': '/intelligence-packs',
+  '/intelligence/journey-assurance': '/intelligence-packs',
+  '/intelligence/road-hazards': '/intelligence-packs',
+  '/intelligence/tco-optimizer': '/intelligence-packs',
+  '/intelligence/twin-lab': '/intelligence-packs',
+  '/ownership/charging-reconciliation': '/tco',
+  '/ownership/consumables-lifecycle': '/tco',
+  '/ownership/data-governance': '/tco',
+  '/ownership/driver-attribution': '/tco',
+  '/ownership/insurance-telematics': '/tco',
+  '/ownership/jurisdiction-compliance': '/tco',
+  '/ownership/model-trust': '/tco',
+  '/ownership/subscription-roi': '/tco',
+  '/ownership/tariff-lab': '/tco',
+  '/ownership/warranty-command': '/tco',
+
+  // ── Notifications workspace ────────────────────────────────────────────
+  '/notifications/studio': '/notifications/inbox',
+  '/notifications/archived': '/notifications/inbox',
+  '/notifications/alerts': '/notifications/inbox',
+  '/notifications/audit': '/notifications/inbox',
+  '/notifications/browser': '/notifications/inbox',
+  '/notifications/channels': '/notifications/inbox',
+  '/notifications/quiet-hours': '/notifications/inbox',
+  '/notifications/rules': '/notifications/inbox',
+  '/notifications/webhooks': '/notifications/inbox',
+
+  // ── Diagnostics / repair ───────────────────────────────────────────────
+  '/diagnostics/root-cause': '/system-status',
+  '/diagnostics/rul': '/system-status',
+  '/diagnostics/service-evidence': '/maintenance',
+  '/system-status/incidents/:id': '/system-status',
+  '/docs/status-api': '/system-status',
+
+  // ── Administration & developer surfaces ────────────────────────────────
+  '/admin/audit-log': '/dev-tools',
+  '/admin/data-quality': '/dev-tools',
+  '/admin/disk-forecast': '/dev-tools',
+  '/admin/dlq': '/dev-tools',
+  '/admin/feedback': '/dev-tools',
+  '/admin/flags': '/dev-tools',
+  '/admin/gdpr-exports': '/dev-tools',
+  '/admin/ingest-xray': '/dev-tools',
+  '/admin/live-signals': '/dev-tools',
+  '/admin/schema-drift': '/dev-tools',
+  '/admin/secret-rotation': '/dev-tools',
+  '/admin/slow-queries': '/dev-tools',
+  '/admin/telemetry/coverage': '/dev-tools',
+  '/admin/vehicle-cost': '/dev-tools',
+
+  // ── Account & settings ─────────────────────────────────────────────────
+  '/account/2fa': '/settings',
+  '/account/privacy': '/settings',
+  '/account/sessions': '/settings',
+  '/settings/safety': '/settings',
+  '/integrations/helix': '/settings',
+  '/vehicle-systems/software': '/software-updates',
 };
 
 /**

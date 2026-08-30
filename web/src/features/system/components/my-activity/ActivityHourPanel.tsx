@@ -3,10 +3,10 @@
  * (local time), revealing when the user tends to act. Always renders all 24
  * buckets so the shape is comparable across windows. Owns its own states.
  */
+import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart,
   Bar,
@@ -17,6 +17,7 @@ import {
   ChartTooltip,
   chartGrid,
   axisTickSm,
+  EmbeddedChart,
 } from '@/components/charts';
 import { Icons } from '@/lib/icons';
 import { chartTokens } from '@/lib/tokens';
@@ -48,6 +49,10 @@ export function ActivityHourPanel({
 }: ActivityHourPanelProps) {
   const { t } = useTranslation();
   const rows = data ?? [];
+  const chartRows = useMemo(
+    () => rows.map(({ label, count }) => ({ label, count })),
+    [rows],
+  );
 
   return (
     <GlassPanel className={className}>
@@ -56,42 +61,39 @@ export function ActivityHourPanel({
           <Icons.clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('activity.myActivity.byHour.title', 'By hour of day')}
         </PanelTitle>
-        {isLoading ? (
-          <Skeleton height={220} />
-        ) : isError ? (
-          <QueryError error={error} onRetry={onRetry} />
-        ) : isEmpty || rows.length === 0 ? (
-          // no-action: the hourly distribution's window is controlled by the RangePicker in the page header; a different range repopulates it.
-          <EmptyState
-            icon={<Icons.clock className="h-8 w-8" />}
-            message={t('activity.myActivity.byHour.empty', 'No activity to chart by hour yet.')}
-          />
-        ) : (
-          <div
-            className="h-56 sm:h-64"
-            role="img"
-            aria-label={t(
-              'activity.myActivity.byHour.chartAria',
-              'Activity counts by hour of day',
-            )}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows}>
-                {chartGrid}
-                <XAxis dataKey="label" tick={axisTickSm} interval={2} />
-                <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
-                <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
-                <Bar
-                  dataKey="count"
-                  name={t('activity.myActivity.byHour.series', 'Actions')}
-                  fill={chartTokens.series[4]}
-                  fillOpacity={0.85}
-                  radius={BAR_RADIUS}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <EmbeddedChart
+          title={t('activity.myActivity.byHour.title', 'By hour of day')}
+          ariaLabel={t(
+            'activity.myActivity.byHour.chartAria',
+            'Activity counts by hour of day',
+          )}
+          loading={isLoading}
+          error={isError ? (error instanceof Error ? error : new Error(String(error))) : undefined}
+          onRetry={onRetry}
+          empty={!isLoading && !isError && (isEmpty || rows.length === 0)}
+          emptyMessage={t('activity.myActivity.byHour.empty', 'No activity to chart by hour yet.')}
+          data={chartRows}
+          dataColumns={[
+            { key: 'label', label: t('activity.myActivity.byHour.colHour', 'Hour') },
+            { key: 'count', label: t('activity.myActivity.byHour.series', 'Actions') },
+          ]}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={rows}>
+              {chartGrid}
+              <XAxis dataKey="label" tick={axisTickSm} interval={2} />
+              <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
+              <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
+              <Bar
+                dataKey="count"
+                name={t('activity.myActivity.byHour.series', 'Actions')}
+                fill={chartTokens.series[4]}
+                fillOpacity={0.85}
+                radius={BAR_RADIUS}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </EmbeddedChart>
       </div>
     </GlassPanel>
   );

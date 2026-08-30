@@ -62,7 +62,7 @@ export function DepartureConsistency({
 
       <DrivingRhythmSectionBody state={state} className="mt-4 min-h-64">
         {summary.total === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             className="h-full"
             icon={<Clock4 className="h-8 w-8" aria-hidden="true" />}
             message={t(

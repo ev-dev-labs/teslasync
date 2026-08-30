@@ -58,6 +58,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/digests/weekly/narrate',
     body,
     onEvent: noop,
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight narration and clears the
+    // previous vehicle's recap before the new scope streams in.
+    scopeKey: canStart ? numericVehicleId : null,
   })
   return (
     <AIFeatureCard

@@ -69,8 +69,14 @@ function makeWrapper() {
 }
 
 /** Reads back the [path, options] pair from the Nth request() call. */
-function callArgs(n = 0): [string, { method?: string }] {
-  return mockedRequest.mock.calls[n] as [string, { method?: string }];
+function callArgs(n = 0): [
+  string,
+  { method?: string; requiresLiveMode?: boolean },
+] {
+  return mockedRequest.mock.calls[n] as [
+    string,
+    { method?: string; requiresLiveMode?: boolean },
+  ];
 }
 
 const signalsPayload: RedisSignalsResponse = {
@@ -238,6 +244,7 @@ describe('usePurgeRedisSignals', () => {
     const [url, opts] = callArgs();
     expect(url).toBe('/dev-tools/redis-signals?vehicle_id=7');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(res).toEqual(purgeOnePayload);
   });
 
@@ -271,6 +278,7 @@ describe('usePurgeAllRedisSignals', () => {
     const [url, opts] = callArgs();
     expect(url).toBe('/dev-tools/redis-signals/keys');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(res?.purged).toBe(3);
     expect(res?.has_more).toBe(false);
   });

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import '@/i18n'
-import { ApiError } from '@/lib/resilience'
+import { ApiError, RateLimitError } from '@/lib/resilience'
 import { QueryError } from '../QueryError'
 
 /**
@@ -74,21 +74,29 @@ describe('QueryError', () => {
     })
   })
 
-  describe('401 / 403 Unauthorized', () => {
+  describe('authentication and permission', () => {
     it('renders Sign-in CTA on 401', () => {
       renderInRouter(<QueryError error={new ApiError('expired', 401)} />)
       expect(screen.getByText('Sign in required')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
 
-    it('renders Sign-in CTA on 403', () => {
+    it('renders permission guidance without a misleading Sign-in CTA on 403', () => {
       renderInRouter(<QueryError error={new ApiError('forbidden', 403)} />)
-      expect(screen.getByText('Sign in required')).toBeInTheDocument()
-      expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+      expect(screen.getByText('Permission denied')).toBeInTheDocument()
+      // "administrator" now appears in both the guidance body and its
+      // request-access steps, so assert the guidance block is present rather
+      // than that the word occurs exactly once.
+      expect(screen.getAllByText(/administrator/i).length).toBeGreaterThan(0)
+      expect(screen.getByTestId('permission-guidance')).toHaveAttribute(
+        'data-access-block',
+        'forbidden',
+      )
+      expect(screen.queryByRole('button', { name: /sign in/i })).toBeNull()
     })
   })
 
-  describe('5xx Server error', () => {
+  describe('server and dependency failures', () => {
     it('renders the server-error title with a Retry CTA when onRetry is provided', () => {
       const onRetry = vi.fn()
       renderInRouter(
@@ -101,23 +109,49 @@ describe('QueryError', () => {
       expect(onRetry).toHaveBeenCalledTimes(1)
     })
 
-    it('also matches 502 / 503 / 504', () => {
+    it('distinguishes an unavailable dependency from a generic server error', () => {
       const { rerender } = renderInRouter(
         <QueryError error={new ApiError('bad gateway', 502)} />,
       )
-      expect(screen.getByText('Server error')).toBeInTheDocument()
+      expect(screen.getByText('Service unavailable')).toBeInTheDocument()
 
       rerender(
         <MemoryRouter>
           <QueryError error={new ApiError('unavailable', 503)} />
         </MemoryRouter>,
       )
-      expect(screen.getByText('Server error')).toBeInTheDocument()
+      expect(screen.getByText('Service unavailable')).toBeInTheDocument()
     })
 
     it('omits the Retry CTA when onRetry is not provided', () => {
       renderInRouter(<QueryError error={new ApiError('boom', 500)} />)
       expect(screen.queryByRole('button', { name: /^retry$/i })).toBeNull()
+    })
+
+    it.each([408, 504])('renders timeout-specific guidance for HTTP %s', (status) => {
+      renderInRouter(<QueryError error={new ApiError('timeout', status)} />)
+      expect(screen.getByText('Request timed out')).toBeInTheDocument()
+      expect(screen.getByText(/did not respond in time/i)).toBeInTheDocument()
+    })
+
+    it.each([405, 501])('renders a calm unsupported state for HTTP %s', (status) => {
+      renderInRouter(<QueryError error={new ApiError('unsupported', status)} />)
+      expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+      expect(screen.getByText('Feature not supported')).toBeInTheDocument()
+    })
+
+    it('does not misclassify other 4xx responses as network failures', () => {
+      renderInRouter(<QueryError error={new ApiError('invalid filters', 422)} />)
+      expect(screen.getByText('Request could not be completed')).toBeInTheDocument()
+      expect(screen.queryByText("Can't reach server")).toBeNull()
+    })
+
+    it('uses a calm waiting state for an explicit rate-limit back-off', () => {
+      renderInRouter(
+        <QueryError error={new RateLimitError('slow down', 15, '/drives')} />,
+      )
+      expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite')
+      expect(screen.getByText('Waiting for upstream')).toBeInTheDocument()
     })
   })
 

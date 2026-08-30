@@ -1,0 +1,144 @@
+{
+  "statusBar": {
+    "aria": "Application status",
+    "announcements": "Application status announcements",
+    "connection": {
+      "short": "API",
+      "ok": "Online",
+      "degraded": "Degraded",
+      "offline": "Offline",
+      "unknown": "Connecting…",
+      "tooltip": "API connection",
+      "aria": "API connection status"
+    },
+    "connectionDiagnostics": {
+      "open": "Open connection diagnostics",
+      "title": "Connection diagnostics",
+      "unknown": "Unknown",
+      "checking": "Checking",
+      "status": {
+        "healthy": "Healthy",
+        "degraded": "Degraded",
+        "unhealthy": "Unhealthy",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "unavailable": "Diagnostics are temporarily unavailable.",
+      "database": "Database latency",
+      "pool": "Active DB connections",
+      "telemetry": "Telemetry stream",
+      "queue": "Buffered events",
+      "fullStatus": "Open system status"
+    },
+    "live": {
+      "short": "Live",
+      "stale": "Stale",
+      "reconnecting": "Reconnecting",
+      "offline": "Offline",
+      "unknown": "Idle",
+      "tooltip": "Live telemetry stream",
+      "lastMessage": "Last message {{age}} ago",
+      "aria": "Live telemetry status"
+    },
+    "alerts": {
+      "short": "Alerts",
+      "title": "Priority alerts",
+      "count": "{{count}} unread alerts",
+      "countMore": "{{count}}+ unread alerts",
+      "open": "Open {{count}} unread alerts",
+      "openWithSeverity": "Open {{count}} unread alerts. Highest severity: {{severity}}",
+      "openMoreWithSeverity": "Open {{count}}+ unread alerts. Highest severity: {{severity}}",
+      "newCritical": "Critical alert: {{title}}",
+      "unavailable": "Alerts unavailable",
+      "unavailableAria": "Priority alert monitoring is unavailable",
+      "unavailableDetail": "The latest priority alerts could not be refreshed.",
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning"
+      },
+      "viewAll": "View all alerts"
+    },
+    "vehicle": {
+      "tooltip": "Active vehicle",
+      "aria": "Active vehicle",
+      "switch": "Switch vehicle",
+      "fallback": "Vehicle",
+      "none": "No vehicle"
+    },
+    "background": {
+      "one": "1 task",
+      "many": "{{count}} tasks",
+      "tooltip": "Background work in progress",
+      "recentTooltip": "Recent background activity",
+      "aria": "Background tasks",
+      "heading": "Running",
+      "queued": "Queued",
+      "processing": "Processing",
+      "exportLabel": "{{type}} export",
+      "saving": "Saving…",
+      "savingMany": "Saving {{count}} changes…",
+      "recentHeading": "Recent activity",
+      "exportFailed": "{{type}} export failed",
+      "exportReady": "{{type}} export ready",
+      "syncFailed": "Sync failed",
+      "saved": "Changes saved",
+      "tryAgain": "Please try again"
+    },
+    "recent": {
+      "short": "Recent",
+      "title": "Recently viewed",
+      "tooltip": "Recently viewed pages",
+      "open": "Open recently viewed pages, {{count}} saved",
+      "count_one": "{{count}} page",
+      "count_other": "{{count}} pages",
+      "count": "{{count}} pages",
+      "empty": "Pages you visit will appear here for quick access."
+    },
+    "presentation": {
+      "short": "Present",
+      "title": "Presentation",
+      "tooltip": "Report and kiosk views",
+      "open": "Open presentation options",
+      "description": "Prepare the active view for review or unattended display.",
+      "report": "Report view",
+      "reportDescription": "Print-ready operational view",
+      "copy": "Copy report link",
+      "copyDescription": "Share this view and its current filters",
+      "kiosk": "Kiosk view",
+      "kioskDescription": "Fullscreen monitoring without app chrome",
+      "copied": "Report link copied",
+      "copyFailed": "Could not copy report link"
+    },
+    "more": {
+      "label": "More",
+      "tooltip": "More status and help",
+      "open": "Open more status options",
+      "backgroundError": "Background work needs attention",
+      "backgroundComplete": "Background work completed"
+    },
+    "help": {
+      "short": "Help",
+      "title": "Help & support",
+      "tooltip": "Help and about",
+      "open": "Open help and about",
+      "buildNews": "Update or release notes available",
+      "about": "About TeslaSync"
+    },
+    "version": {
+      "tooltip": "TeslaSync version",
+      "aria": "TeslaSync version",
+      "uptime": "up {{uptime}}",
+      "uptimeLabel": "Server uptime",
+      "modalTitle": "About this build",
+      "appVersion": "App version",
+      "commit": "Commit",
+      "chart": "Helm chart",
+      "go": "Go runtime",
+      "platform": "Platform",
+      "updateAvailable": "Update available",
+      "updateBanner": "A newer release is available",
+      "changelog": "Release notes",
+      "close": "Close"
+    }
+  }
+}

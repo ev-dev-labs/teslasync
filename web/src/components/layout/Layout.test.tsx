@@ -23,6 +23,7 @@ import {
   fireEvent,
   waitFor,
   cleanup,
+  act,
 } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -37,11 +38,13 @@ const H = vi.hoisted(() => {
   ]
   const VEHICLES = [{ id: 1 }, { id: 2 }]
   const STALE = { stale_charging: [{ id: 1 }], stale_drives: [{ id: 1 }, { id: 2 }] }
+  const REPAIR_STATS = { open: 1, in_review: 2 }
 
   const defaultReq = (url: unknown) => {
     if (typeof url === 'string') {
       if (url.startsWith('/alerts')) return Promise.resolve(ALERTS)
       if (url === '/vehicles') return Promise.resolve(VEHICLES)
+      if (url === '/data-repair/cases/stats') return Promise.resolve(REPAIR_STATS)
       if (url.startsWith('/data-repair')) return Promise.resolve(STALE)
     }
     return Promise.resolve({})
@@ -51,10 +54,13 @@ const H = vi.hoisted(() => {
     ALERTS,
     VEHICLES,
     STALE,
+    REPAIR_STATS,
     defaultReq,
     request: vi.fn(defaultReq),
     sidebarStyle: { value: 'legacy' as string },
+    sidebarProps: { linear: null as Record<string, unknown> | null, notion: null as Record<string, unknown> | null },
     forwardAuth: { value: false },
+    presentation: { mode: 'standard' as 'standard' | 'report' | 'kiosk' },
     toast: {
       toast: vi.fn(),
       success: vi.fn(),
@@ -187,6 +193,32 @@ vi.mock('@/hooks/useTour', () => ({
 vi.mock('@/hooks/useSidebarStyle', () => ({
   useSidebarStyle: () => H.sidebarStyle.value,
 }))
+vi.mock('@/hooks/usePresentationMode', () => ({
+  usePresentationMode: () => ({
+    mode: H.presentation.mode,
+    isActive: H.presentation.mode !== 'standard',
+    isReport: H.presentation.mode === 'report',
+    isKiosk: H.presentation.mode === 'kiosk',
+    config: {
+      hideCursor: true,
+      cursorTimeout: 5,
+      dimAfter: 0,
+      dimLevel: 0.5,
+      showClock: true,
+      clockPosition: 'bottom-right',
+    },
+    isDimmed: false,
+    isCursorHidden: false,
+    rotation: {
+      dashboardCount: 0,
+      currentIndex: 0,
+      enabled: false,
+    },
+    enterReport: vi.fn(),
+    enterKiosk: vi.fn(),
+    exitPresentation: vi.fn(),
+  }),
+}))
 vi.mock('../../hooks/useRealtimeEvents', () => ({
   useRealtimeEvents: (opts: unknown) => H.realtime(opts),
 }))
@@ -204,6 +236,21 @@ vi.mock('@/api/client', () => ({
 }))
 vi.mock('@/api/hooks/useAuthMode', () => ({
   useIsForwardAuth: () => H.forwardAuth.value,
+  // Capability-aware nav grouping reads the raw auth-mode contract. Open mode
+  // (`mode: 'open'`) is the default fixture: the local operator owns every
+  // administrative surface, so advanced groups are promoted, not restricted.
+  useAuthMode: () => ({
+    data: {
+      mode: H.forwardAuth.value ? 'forward_auth' : 'open',
+      capabilities: {
+        step_up_reauth: H.forwardAuth.value,
+        totp_enrollment: H.forwardAuth.value,
+        session_list: H.forwardAuth.value,
+        impersonation: false,
+        rbac: H.forwardAuth.value,
+      },
+    },
+  }),
 }))
 vi.mock('@/api/hooks/useSettings', () => ({
   useSettings: () => ({ data: { completed_tours: [] }, isFetched: true }),
@@ -250,6 +297,20 @@ vi.mock('@/components/a11y', () => ({ AnnouncerRegion: () => null }))
 vi.mock('@/lib/globalShortcuts', () => ({ GlobalShortcuts: () => null }))
 vi.mock('@/features/onboarding/TourLauncher', () => ({ TourLauncher: () => null }))
 vi.mock('@/components/motion', () => ({
+  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+  motion: {
+    div: ({
+      children,
+      layoutId: _layoutId,
+      initial: _initial,
+      animate: _animate,
+      exit: _exit,
+      transition: _transition,
+      ...props
+    }: Record<string, unknown> & { children?: React.ReactNode }) => (
+      <div {...props}>{children}</div>
+    ),
+  },
   RouteTransition: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
 vi.mock('./BottomTabBar', () => ({
@@ -257,26 +318,49 @@ vi.mock('./BottomTabBar', () => ({
   BOTTOM_TAB_PATHS: new Set(['/', '/vehicles', '/charging', '/drives']),
 }))
 vi.mock('./sidebar/LinearSidebar', () => ({
-  LinearSidebar: () => <div data-testid="linear-sidebar" />,
+  LinearSidebar: (props: Record<string, unknown>) => {
+    H.sidebarProps.linear = props
+    return <div data-testid="linear-sidebar" />
+  },
 }))
 vi.mock('./sidebar/NotionSidebar', () => ({
-  NotionSidebar: () => <div data-testid="notion-sidebar" />,
+  NotionSidebar: (props: Record<string, unknown>) => {
+    H.sidebarProps.notion = props
+    return <div data-testid="notion-sidebar" />
+  },
 }))
 vi.mock('./StatusBar', () => ({
-  StatusBar: () => null,
+  StatusBar: () => <div data-testid="status-bar" />,
   useStatusBarPrefs: () => ({ enabled: true, iconOnly: false }),
 }))
-vi.mock('../ui/CommandPalette', () => ({
-  CommandPalette: () => null,
-  CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
+vi.mock('./presentation/PresentationOverlay', () => ({
+  PresentationOverlay: ({ mode }: { mode: string }) => (
+    <div data-testid="presentation-overlay" data-mode={mode} />
+  ),
+}))
+vi.mock('./presentation/ReportMasthead', () => ({
+  ReportMasthead: () => <div data-testid="report-masthead" />,
 }))
 vi.mock('../data-display/ServiceStatus', () => ({ ServiceStatusBanner: () => null }))
-vi.mock('../ui/Logo', () => ({ default: () => <div data-testid="logo" /> }))
 vi.mock('./BreadcrumbOverridesContext', () => ({
   BreadcrumbOverridesProvider: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
 }))
-vi.mock('./LayoutBreadcrumbs', () => ({ LayoutBreadcrumbs: () => <div data-testid="breadcrumbs" /> }))
-vi.mock('./VehiclePicker', () => ({ VehiclePicker: () => null }))
+vi.mock('./LayoutBreadcrumbs', () => ({
+  LayoutBreadcrumbs: ({ variant }: { variant?: string }) => (
+    <div data-testid="breadcrumbs" data-variant={variant ?? 'page'} />
+  ),
+}))
+vi.mock('./VehiclePicker', () => ({
+  VehiclePicker: ({ className }: { className?: string }) => (
+    <div data-testid="vehicle-picker" className={className} />
+  ),
+}))
+vi.mock('./WorkspaceContextControl', () => ({
+  // Mirror the real component's `hidden` contract so route-aware scope tests
+  // assert on genuine behaviour rather than an always-on stub.
+  WorkspaceContextControl: ({ hidden = false }: { hidden?: boolean }) =>
+    hidden ? null : <div data-testid="workspace-context-control" />,
+}))
 vi.mock('./NotificationBellPopover', () => ({ NotificationBellPopover: () => null }))
 vi.mock('./sidebar/NavSectionHeader', () => ({
   NavSectionHeader: ({ label, action, id }: { label: string; action?: React.ReactNode; id?: string }) => (
@@ -288,7 +372,7 @@ vi.mock('./sidebar/NavSectionHeader', () => ({
 }))
 
 // ── @/components/ui: faithful Button + trivial ThemePicker ────────────
-vi.mock('@/components/ui', async () => {
+vi.mock('@/components/ui/runtime', async () => {
   const { forwardRef } = await import('react')
   const Button = forwardRef<HTMLButtonElement, Record<string, unknown>>((props, ref) => {
     const { children, variant, size, loading, icon, ...rest } = props
@@ -305,12 +389,35 @@ vi.mock('@/components/ui', async () => {
   Button.displayName = 'Button'
   return {
     Button,
+    Caption: ({ children, ...props }: { children?: React.ReactNode; [key: string]: unknown }) => (
+      <span {...props}>{children}</span>
+    ),
+    CommandPalette: () => null,
+    CommandPaletteTrigger: () => <div data-testid="cmd-trigger" />,
+    Logo: () => <div data-testid="logo" />,
     ThemePicker: () => <div data-testid="theme-picker" />,
   }
 })
+vi.mock('@/components/ui/ThemePicker', () => ({
+  ThemePicker: () => <div data-testid="theme-picker" />,
+}))
 
 // Import AFTER the mocks so the shell wires the stubs.
-import Layout, { navSections, navSearchKeywords } from './Layout'
+import Layout, { navSections, navSearchKeywords, reconcileNavPaths } from './Layout'
+import {
+  CANONICAL_SECTION_TO_COMPACT_GROUP,
+  COMPACT_GROUP_TITLES,
+  COMPACT_NAV_BLUEPRINT,
+  EXPLORE_PATH,
+  MAX_COMPACT_GROUPS,
+} from './sidebar/compactNav'
+import {
+  DEFAULT_PINNED_NAV_PATHS,
+  PINNED_NAV_STORAGE_KEY,
+  RECENT_NAV_STORAGE_KEY,
+  __resetNavPinsSessionOverridesForTests,
+  setPinnedNavPaths,
+} from '@/lib/navPins'
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
@@ -343,8 +450,12 @@ const origCAF = window.cancelAnimationFrame
 beforeEach(() => {
   cleanup()
   localStorage.clear()
+  __resetNavPinsSessionOverridesForTests()
   H.sidebarStyle.value = 'legacy'
+  H.sidebarProps.linear = null
+  H.sidebarProps.notion = null
   H.forwardAuth.value = false
+  H.presentation.mode = 'standard'
   H.request.mockReset()
   H.request.mockImplementation(H.defaultReq)
   H.realtime.mockReset()
@@ -468,10 +579,296 @@ describe('Layout — sidebar style selection', () => {
   })
 })
 
+// ══════════════════════════════════════════════════════════════════════
+// Compact (progressive-disclosure) IA for the default Linear sidebar
+// ══════════════════════════════════════════════════════════════════════
+
+describe('compact nav blueprint ↔ navSections catalog', () => {
+  const catalogPaths = new Set(navSections.flatMap((s) => s.items).map((i) => i.to))
+  const blueprintPaths = COMPACT_NAV_BLUEPRINT.flatMap((g) => g.paths)
+
+  it('declares the everyday primary hierarchy followed by advanced groups', () => {
+    expect(COMPACT_GROUP_TITLES.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
+    expect(COMPACT_NAV_BLUEPRINT.map((g) => g.title)).toEqual([...COMPACT_GROUP_TITLES])
+    expect([...COMPACT_GROUP_TITLES]).toEqual([
+      'Overview',
+      'Vehicles',
+      'Drives',
+      'Charging',
+      'Energy',
+      'Insights',
+      'Operations',
+      'Advanced Intelligence',
+      'Administration',
+      'Developer',
+      'Settings & Account',
+    ])
+  })
+
+  it('never repeats a path across the curated groups', () => {
+    expect(new Set(blueprintPaths).size).toBe(blueprintPaths.length)
+  })
+
+  it('only curates paths that really exist in the canonical catalog', () => {
+    const orphans = blueprintPaths.filter((p) => !catalogPaths.has(p))
+    expect(orphans).toEqual([])
+  })
+
+  it('keeps the required core destinations reachable from the compact tree', () => {
+    for (const required of [
+      '/',
+      EXPLORE_PATH,
+      '/vehicles',
+      '/drives',
+      '/charging',
+      '/energy',
+      '/battery',
+      '/analytics',
+      '/automations',
+      '/settings',
+    ]) {
+      expect(blueprintPaths).toContain(required)
+    }
+    const overview = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Overview')
+    // The Feature Hub is a first-class Overview row — it is the escape hatch
+    // to the complete catalog for every long-tail route.
+    expect(overview?.paths).toContain(EXPLORE_PATH)
+  })
+
+  it('parks admin and developer destinations in advanced groups, never deletes them', () => {
+    const admin = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Administration')
+    const developer = COMPACT_NAV_BLUEPRINT.find((g) => g.title === 'Developer')
+    expect(admin?.tier).toBe('advanced')
+    expect(admin?.capability).toBe('administration')
+    expect(admin?.paths.some((p) => p.startsWith('/admin/'))).toBe(true)
+    expect(developer?.tier).toBe('advanced')
+    expect(developer?.capability).toBe('developer')
+    expect(developer?.paths).toContain('/dev-tools')
+  })
+
+  it('maps every canonical section title onto a compact group', () => {
+    for (const section of navSections) {
+      const mapped = CANONICAL_SECTION_TO_COMPACT_GROUP[section.title]
+      expect(mapped, `no compact group mapped for "${section.title}"`).toBeTruthy()
+      expect(COMPACT_GROUP_TITLES).toContain(mapped)
+    }
+  })
+
+  it('leaves the canonical catalog itself untouched (still the full route list)', () => {
+    expect(navSections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
+    expect(navSections.flatMap((s) => s.items).length).toBeGreaterThan(blueprintPaths.length * 2)
+  })
+})
+
+describe('Layout — compact Linear sidebar wiring', () => {
+  const linearProps = () =>
+    H.sidebarProps.linear as unknown as {
+      sections: Array<{
+        title: string
+        tier?: string
+        restricted?: boolean
+        items: Array<{ to: string }>
+      }>
+      activeSectionTitle?: string
+    }
+
+  it('feeds the Linear sidebar the compact two-tier tree, not the full catalog', () => {
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/')
+
+    const { sections } = linearProps()
+    expect(sections.length).toBeLessThanOrEqual(MAX_COMPACT_GROUPS)
+    expect(sections.map((s) => s.title)).toEqual([...COMPACT_GROUP_TITLES])
+
+    const paths = sections.flatMap((s) => s.items.map((i) => i.to))
+    expect(new Set(paths).size).toBe(paths.length)
+    expect(paths).toContain(EXPLORE_PATH)
+    expect(paths.length).toBeLessThan(navSections.flatMap((s) => s.items).length / 2)
+  })
+
+  it('leads with the seven everyday primary groups before any advanced group', () => {
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/')
+
+    const { sections } = linearProps()
+    expect(sections.slice(0, 7).map((s) => s.title)).toEqual([
+      'Overview',
+      'Vehicles',
+      'Drives',
+      'Charging',
+      'Energy',
+      'Insights',
+      'Operations',
+    ])
+    expect(sections.slice(0, 7).every((s) => s.tier === 'primary')).toBe(true)
+    expect(sections.slice(7).every((s) => s.tier === 'advanced')).toBe(true)
+  })
+
+  it('reports the compact group as the active section for a curated route', () => {
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/drives')
+    expect(linearProps().activeSectionTitle).toBe('Drives')
+  })
+
+  it('injects a long-tail active route into its mapped compact group', () => {
+    H.sidebarStyle.value = 'linear'
+    // /dashcam lives in the canonical "Diagnostics" section and is NOT part
+    // of the curated set — it must still light up under Developer.
+    renderLayout('/dashcam')
+
+    const { sections, activeSectionTitle } = linearProps()
+    expect(activeSectionTitle).toBe('Developer')
+    const group = sections.find((s) => s.title === 'Developer')
+    expect(group?.items.map((i) => i.to)).toContain('/dashcam')
+    // Injection must not duplicate anything elsewhere in the tree.
+    const paths = sections.flatMap((s) => s.items.map((i) => i.to))
+    expect(paths.filter((p) => p === '/dashcam')).toHaveLength(1)
+  })
+
+  it('keeps every authorized admin destination present in the compact tree', () => {
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/')
+
+    const { sections } = linearProps()
+    const administration = sections.find((s) => s.title === 'Administration')
+    expect(administration).toBeTruthy()
+    expect(administration?.items.length).toBeGreaterThan(0)
+    // Demotion is the mechanism — deletion is never allowed.
+    expect(administration?.tier).toBe('advanced')
+  })
+
+  it('keeps the complete catalog for the Notion style (explicit user choice)', () => {
+    H.sidebarStyle.value = 'notion'
+    renderLayout('/dashcam')
+
+    const props = H.sidebarProps.notion as unknown as {
+      sections: Array<{ title: string }>
+      activeSectionTitle?: string
+    }
+    expect(props.sections.map((s) => s.title)).toContain('Diagnostics')
+    expect(props.sections.length).toBeGreaterThan(MAX_COMPACT_GROUPS)
+    expect(props.activeSectionTitle).toBe('Diagnostics')
+  })
+})
+
 describe('Layout — global page chrome', () => {
-  it('mounts breadcrumbs for a registered route that is not a sidebar entry', () => {
+  it('mounts the persistent workspace command header with compact breadcrumbs', () => {
     renderLayout('/notifications/archived')
-    expect(screen.getByTestId('breadcrumbs')).toBeInTheDocument()
+    const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(workspaceHeader).toBeInTheDocument()
+    expect(within(workspaceHeader as HTMLElement).getByTestId('breadcrumbs')).toHaveAttribute(
+      'data-variant',
+      'workspace',
+    )
+    expect(within(workspaceHeader as HTMLElement).getByTestId('cmd-trigger')).toBeInTheDocument()
+  })
+
+  it('keeps page breadcrumbs available below the desktop workspace breakpoint', () => {
+    renderLayout('/notifications/archived')
+    const compactBreadcrumbs = document.querySelector('[data-role="compact-breadcrumbs"]')
+
+    expect(compactBreadcrumbs).toHaveClass('xl:hidden')
+    expect(
+      within(compactBreadcrumbs as HTMLElement).getByTestId('breadcrumbs'),
+    ).toHaveAttribute('data-variant', 'page')
+  })
+
+  it('keeps desktop scope in the command header and mobile scope in the drawer', () => {
+    renderLayout('/')
+    const pickers = screen.getAllByTestId('vehicle-picker')
+    expect(pickers).toHaveLength(2)
+    expect(pickers.filter(picker => picker.classList.contains('xl:hidden'))).toHaveLength(1)
+    const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(within(workspaceHeader as HTMLElement).getByTestId('vehicle-picker')).not.toHaveClass(
+      'xl:hidden',
+    )
+  })
+
+  it('renders exactly one analysis-window control per breakpoint on a range-owning route', () => {
+    renderLayout('/drives')
+    const controls = screen.getAllByTestId('workspace-context-control')
+    // One desktop instance in the workspace header, one mobile instance in
+    // the drawer — never two competing controls at the same breakpoint.
+    expect(controls).toHaveLength(2)
+
+    const workspaceHeader = document.querySelector('[data-role="workspace-header"]')
+    expect(
+      within(workspaceHeader as HTMLElement).getAllByTestId('workspace-context-control'),
+    ).toHaveLength(1)
+    const drawerControls = controls.filter((control) =>
+      control.closest('.xl\\:hidden'),
+    )
+    expect(drawerControls).toHaveLength(1)
+  })
+
+  it('hides the analysis-window control entirely on routes that do not consume it', () => {
+    renderLayout('/battery')
+    expect(screen.queryAllByTestId('workspace-context-control')).toHaveLength(0)
+    // Vehicle scope IS meaningful on /battery, so that control stays.
+    expect(screen.getAllByTestId('vehicle-picker').length).toBeGreaterThan(0)
+  })
+
+  it('hides the vehicle picker on fleet-wide and workflow routes', () => {
+    renderLayout('/settings')
+    expect(screen.queryAllByTestId('vehicle-picker')).toHaveLength(0)
+    expect(screen.queryAllByTestId('workspace-context-control')).toHaveLength(0)
+  })
+
+  it('re-evaluates context ownership across a route transition', () => {
+    const { unmount } = renderLayout('/drives')
+    expect(screen.getAllByTestId('workspace-context-control').length).toBeGreaterThan(0)
+    unmount()
+
+    renderLayout('/vehicles/42')
+    // Detail route: vehicle context is implied by the URL, range is not owned.
+    expect(screen.queryAllByTestId('workspace-context-control')).toHaveLength(0)
+  })
+
+  it('lets pages use the full main-column width without a centered max-width cap', () => {
+    const { container } = renderLayout('/')
+    const viewport = container.querySelector('[data-role="page-viewport"]')
+
+    expect(viewport).toHaveClass('w-full')
+    expect(viewport).not.toHaveClass('mx-auto', 'max-w-[1920px]')
+  })
+
+  it('switches the shell to a print-ready report view', () => {
+    H.presentation.mode = 'report'
+    const { container } = renderLayout('/battery')
+
+    expect(
+      container.querySelector('[data-presentation-mode="report"]'),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId('report-masthead')).toBeInTheDocument()
+    expect(screen.getByTestId('presentation-overlay')).toHaveAttribute(
+      'data-mode',
+      'report',
+    )
+    expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
+    expect(screen.queryByTestId('status-bar')).toBeNull()
+    expect(container.querySelector('aside')).toHaveClass('hidden')
+    expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
+      'max-w-[1600px]',
+    )
+  })
+
+  it('switches the shell to a full-viewport kiosk view', () => {
+    H.presentation.mode = 'kiosk'
+    const { container } = renderLayout('/')
+
+    expect(
+      container.querySelector('[data-presentation-mode="kiosk"]'),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId('report-masthead')).toBeNull()
+    expect(screen.getByTestId('presentation-overlay')).toHaveAttribute(
+      'data-mode',
+      'kiosk',
+    )
+    expect(document.querySelector('[data-role="workspace-header"]')).toBeNull()
+    expect(screen.queryByTestId('status-bar')).toBeNull()
+    expect(container.querySelector('[data-role="page-viewport"]')).toHaveClass(
+      'p-0',
+    )
   })
 })
 
@@ -525,13 +922,27 @@ describe('Layout — live nav badges', () => {
     })
   })
 
-  it('shows the stale-session badge on the "Data Repair" link', async () => {
+  it('shows the active durable-case badge on the "Data Repair" link', async () => {
     renderLayout('/data-repair')
     await waitFor(() => {
       const link = screen.getByRole('link', { name: 'Data Repair' })
-      // STALE fixture: 1 charging + 2 drives = 3.
+      // REPAIR_STATS fixture: 1 open + 2 in review = 3.
       expect(within(link).getByText('3')).toBeInTheDocument()
     })
+  })
+
+  it('does not run the deep stale-session diagnostic from global chrome', async () => {
+    renderLayout('/')
+    await waitFor(() => {
+      expect(H.request).toHaveBeenCalledWith(
+        '/data-repair/cases/stats',
+        expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      )
+    })
+    expect(H.request).not.toHaveBeenCalledWith(
+      '/data-repair/stale-sessions',
+      expect.anything(),
+    )
   })
 })
 
@@ -670,7 +1081,7 @@ describe('Layout — ThemeQuickSwitcher', () => {
 
     fireEvent.click(trigger)
     const dialog = await screen.findByRole('dialog', { name: 'Open theme picker' })
-    expect(within(dialog).getByTestId('theme-picker')).toBeInTheDocument()
+    expect(await within(dialog).findByTestId('theme-picker')).toBeInTheDocument()
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
 
     fireEvent.keyDown(document, { key: 'Escape' })
@@ -743,5 +1154,306 @@ describe('Layout — active-link scroll behaviour', () => {
 
     expect(() => renderLayout('/vehicles')).not.toThrow()
     expect(screen.getByRole('navigation', { name: 'Primary' })).toBeInTheDocument()
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════
+// Pinned / recent nav persistence: shared bus, reconciliation, no loops
+// ══════════════════════════════════════════════════════════════════════
+
+describe('reconcileNavPaths (pure)', () => {
+  const catalogPaths = navSections.flatMap((s) => s.items).map((i) => i.to)
+
+  it('keeps every path the canonical catalog still serves', () => {
+    const sample = catalogPaths.slice(0, 5)
+    expect(reconcileNavPaths(sample)).toEqual(sample)
+  })
+
+  it('drops paths the catalog no longer contains (dead links)', () => {
+    expect(reconcileNavPaths(['/drives', '/route-removed-in-v3', '/charging'])).toEqual([
+      '/drives',
+      '/charging',
+    ])
+  })
+
+  it('preserves order and is a no-op on an empty list', () => {
+    expect(reconcileNavPaths(['/charging', '/drives'])).toEqual(['/charging', '/drives'])
+    expect(reconcileNavPaths([])).toEqual([])
+  })
+
+  it('keeps visibility-gated destinations (transient state is not a dead link)', () => {
+    // /vehicle-comparison is hidden below two vehicles but still exists.
+    expect(reconcileNavPaths(['/vehicle-comparison'])).toEqual(['/vehicle-comparison'])
+  })
+})
+
+describe('Layout — nav pin persistence', () => {
+  const linearPinnedPaths = () =>
+    (
+      (H.sidebarProps.linear as unknown as {
+        pinnedItems?: Array<{ to: string }>
+      } | null)?.pinnedItems ?? []
+    ).map((item) => item.to)
+
+  function readStoredPins(): string[] | null {
+    const raw = localStorage.getItem(PINNED_NAV_STORAGE_KEY)
+    return raw == null ? null : (JSON.parse(raw) as string[])
+  }
+
+  it('does not re-persist the shipped defaults on first mount', () => {
+    localStorage.clear()
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    // "Never customized" must stay that way — writing the defaults back would
+    // freeze them as an explicit user list and fire the change bus on boot.
+    expect(readStoredPins()).toBeNull()
+    expect(linearPinnedPaths()).toEqual([...DEFAULT_PINNED_NAV_PATHS])
+  })
+
+  it('reconciles a stored dead path out of the rail and rewrites storage once', () => {
+    localStorage.setItem(
+      PINNED_NAV_STORAGE_KEY,
+      JSON.stringify(['/drives', '/route-removed-in-v3', '/charging']),
+    )
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    expect(linearPinnedPaths()).toEqual(['/drives', '/charging'])
+    expect(readStoredPins()).toEqual(['/drives', '/charging'])
+  })
+
+  it('never re-persists an invalid stored value verbatim', () => {
+    localStorage.setItem(
+      PINNED_NAV_STORAGE_KEY,
+      JSON.stringify(['/drives', 42, null, 'https://evil.example', '//evil.example']),
+    )
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    expect(readStoredPins()).toEqual(['/drives'])
+    expect(linearPinnedPaths()).toEqual(['/drives'])
+  })
+
+  it('does not write when the persisted value already matches state (no loop)', () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives', '/charging']))
+    H.sidebarStyle.value = 'linear'
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    try {
+      renderLayout('/', { defaultPins: true })
+      const pinWrites = setItem.mock.calls.filter(
+        ([key]) => key === PINNED_NAV_STORAGE_KEY,
+      )
+      expect(pinWrites).toHaveLength(0)
+    } finally {
+      setItem.mockRestore()
+    }
+    expect(readStoredPins()).toEqual(['/drives', '/charging'])
+  })
+
+  it('adopts a same-tab pin change published on the shared bus', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+    expect(linearPinnedPaths()).toEqual(['/drives'])
+
+    act(() => {
+      setPinnedNavPaths(['/charging', '/battery'])
+    })
+
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/charging', '/battery'])
+    })
+  })
+
+  it('adopts a cross-tab pin change delivered as a storage event', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+    expect(linearPinnedPaths()).toEqual(['/drives'])
+
+    act(() => {
+      // Another tab wrote the key directly; only the storage event reaches us.
+      localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/battery', '/live']))
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: PINNED_NAV_STORAGE_KEY }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/battery', '/live'])
+    })
+  })
+
+  it('reconciles a dead path pushed by another tab instead of rendering it', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    act(() => {
+      localStorage.setItem(
+        PINNED_NAV_STORAGE_KEY,
+        JSON.stringify(['/charging', '/route-removed-in-v3']),
+      )
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: PINNED_NAV_STORAGE_KEY }),
+      )
+    })
+
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/charging'])
+    })
+    expect(readStoredPins()).toEqual(['/charging'])
+  })
+
+  it('ignores storage events for unrelated keys', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    act(() => {
+      localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/battery']))
+      window.dispatchEvent(new StorageEvent('storage', { key: 'some-other-key' }))
+    })
+
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/drives'])
+    })
+  })
+
+  it('settles after a same-tab publish without a write storm', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    try {
+      act(() => {
+        setPinnedNavPaths(['/charging'])
+      })
+      await waitFor(() => {
+        expect(linearPinnedPaths()).toEqual(['/charging'])
+      })
+      // Exactly the one publish the test made; the subscription must not
+      // bounce it back into a second write.
+      const pinWrites = setItem.mock.calls.filter(
+        ([key]) => key === PINNED_NAV_STORAGE_KEY,
+      )
+      expect(pinWrites).toHaveLength(1)
+    } finally {
+      setItem.mockRestore()
+    }
+  })
+
+  it('keeps recent-nav paths on the same bus and reconciliation path', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify([]))
+    localStorage.setItem(
+      RECENT_NAV_STORAGE_KEY,
+      JSON.stringify(['/charging', '/route-removed-in-v3']),
+    )
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    await waitFor(() => {
+      expect(JSON.parse(localStorage.getItem(RECENT_NAV_STORAGE_KEY) as string)).toEqual([
+        '/charging',
+      ])
+    })
+  })
+})
+
+describe('Layout — nav pins under a rejected write', () => {
+  const linearPinnedPaths = () =>
+    (
+      (H.sidebarProps.linear as unknown as {
+        pinnedItems?: Array<{ to: string }>
+      } | null)?.pinnedItems ?? []
+    ).map((item) => item.to)
+
+  function withRejectedWrites(run: () => void) {
+    const original = Storage.prototype.setItem
+    Storage.prototype.setItem = () => {
+      const error = new Error('QuotaExceededError')
+      error.name = 'QuotaExceededError'
+      throw error
+    }
+    try {
+      run()
+    } finally {
+      Storage.prototype.setItem = original
+    }
+  }
+
+  it('keeps the published pins when persistence is rejected (no stale rollback)', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+    expect(linearPinnedPaths()).toEqual(['/drives'])
+
+    act(() => {
+      withRejectedWrites(() => {
+        setPinnedNavPaths(['/charging', '/battery'])
+      })
+    })
+
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/charging', '/battery'])
+    })
+    // Storage genuinely still holds the old list — the shell must not adopt it.
+    expect(JSON.parse(localStorage.getItem(PINNED_NAV_STORAGE_KEY) as string)).toEqual([
+      '/drives',
+    ])
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/charging', '/battery'])
+    })
+  })
+
+  it('still reconciles dead paths out of a non-persisted payload', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    act(() => {
+      withRejectedWrites(() => {
+        setPinnedNavPaths(['/charging', '/route-removed-in-v3'])
+      })
+    })
+
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/charging'])
+    })
+  })
+
+  it('does not retry a rejected write on every render', async () => {
+    localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(['/drives']))
+    H.sidebarStyle.value = 'linear'
+    renderLayout('/', { defaultPins: true })
+
+    act(() => {
+      withRejectedWrites(() => {
+        setPinnedNavPaths(['/charging'])
+      })
+    })
+    await waitFor(() => {
+      expect(linearPinnedPaths()).toEqual(['/charging'])
+    })
+
+    const setItem = vi.spyOn(Storage.prototype, 'setItem')
+    try {
+      // Force re-renders; the shell must not hammer the exhausted quota.
+      act(() => {
+        window.dispatchEvent(new Event('resize'))
+      })
+      await waitFor(() => {
+        expect(linearPinnedPaths()).toEqual(['/charging'])
+      })
+      const pinWrites = setItem.mock.calls.filter(
+        ([key]) => key === PINNED_NAV_STORAGE_KEY,
+      )
+      expect(pinWrites).toHaveLength(0)
+    } finally {
+      setItem.mockRestore()
+    }
   })
 })

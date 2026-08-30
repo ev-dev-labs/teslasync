@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"errors"
+	"math"
 	"os"
 	"strings"
 	"sync"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 )
 
 // chargeStateCallRecord captures one StateReader.State invocation made by
@@ -68,6 +70,20 @@ func (f *chargeTrackingFakeState) snapshotCalls() []chargeStateCallRecord {
 
 // Compile-time guarantee.
 var _ signal.StateReader = (*chargeTrackingFakeState)(nil)
+
+func TestFreshChargeCoordinateValueRequiresObservedTimestamp(t *testing.T) {
+	now := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
+	if freshChargeCoordinateValue(&signal.Value{
+		Raw:                37.5,
+		Timestamp:          now,
+		TimestampSynthetic: true,
+	}, now) {
+		t.Fatal("synthetic warmup coordinate reported fresh")
+	}
+	if !freshChargeCoordinateValue(&signal.Value{Raw: 37.5, Timestamp: now}, now) {
+		t.Fatal("observed current coordinate reported stale")
+	}
+}
 
 // TestChargeTracking_SetChargeStateReader_RoundTrip pins the wiring seam
 // installed in this prompt: SetChargeStateReader stashes the reader in
@@ -182,6 +198,135 @@ func TestChargeTracking_StartSnapshot_UsesState(t *testing.T) {
 	legacy := stateToLegacyMap(got)
 	if bl, ok := snapFloat(legacy, "BatteryLevel"); !ok || bl != 18.0 {
 		t.Fatalf("stateToLegacyMap dropped BatteryLevel: snapFloat = (%v, %v), want (18.0, true)", bl, ok)
+	}
+}
+
+func TestTrackedChargeEnergyDelta(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name      string
+		values    []float64
+		wantDelta float64
+		wantOK    bool
+	}{
+		{
+			name:      "advancing counter",
+			values:    []float64{100000, 115000, 130500},
+			wantDelta: 30500,
+			wantOK:    true,
+		},
+		{
+			name:      "unchanged counter",
+			values:    []float64{100000, 100000},
+			wantDelta: 0,
+			wantOK:    true,
+		},
+		{
+			name:      "reset is not attributable",
+			values:    []float64{100000, 120000, 3000, 7000},
+			wantDelta: 0,
+			wantOK:    false,
+		},
+		{
+			name:      "invalid sample does not become baseline",
+			values:    []float64{math.Inf(1)},
+			wantDelta: 0,
+			wantOK:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			active := &streamingCharge{}
+			for _, value := range tt.values {
+				observeChargeEnergyCounter(active, map[string]interface{}{
+					"ACChargingEnergyIn": value,
+				})
+			}
+
+			gotDelta, gotOK := trackedChargeEnergyDelta(active)
+			if gotDelta != tt.wantDelta || gotOK != tt.wantOK {
+				t.Fatalf(
+					"trackedChargeEnergyDelta() = (%v, %v), want (%v, %v)",
+					gotDelta,
+					gotOK,
+					tt.wantDelta,
+					tt.wantOK,
+				)
+			}
+		})
+	}
+}
+
+func TestTrackCharging_ObservesEnergyOnlyPayloads(t *testing.T) {
+	t.Parallel()
+
+	const vehicleID = int64(17)
+	active := &streamingCharge{
+		VehicleID:            vehicleID,
+		EnergyCounterField:   "DCChargingEnergyIn",
+		EnergyCounterStartWh: floatPtr(100000),
+		EnergyCounterLastWh:  floatPtr(100000),
+		lastTelemetryWrite:   time.Now().UTC(),
+	}
+	tracker := &TelemetrySessionTracker{
+		activeCharges: map[int64]*streamingCharge{vehicleID: active},
+	}
+
+	tracker.trackCharging(
+		context.Background(),
+		vehicleID,
+		"",
+		map[string]interface{}{"DCChargingEnergyIn": 120000.0},
+		nil,
+		time.Now().UTC(),
+		nil,
+	)
+	tracker.trackCharging(
+		context.Background(),
+		vehicleID,
+		"",
+		map[string]interface{}{"DCChargingEnergyIn": 3000.0},
+		nil,
+		time.Now().UTC(),
+		nil,
+	)
+
+	if !active.EnergyCounterReset {
+		t.Fatal("energy-only reset was not retained by active charge")
+	}
+	if active.EnergyCounterLastWh == nil || *active.EnergyCounterLastWh != 3000 {
+		t.Fatalf("last counter = %v, want 3000", active.EnergyCounterLastWh)
+	}
+	if delta, ok := trackedChargeEnergyDelta(active); delta != 0 || ok {
+		t.Fatalf("trackedChargeEnergyDelta() = (%v, %v), want (0, false)", delta, ok)
+	}
+}
+
+func TestSnapshotChargeEnergyDelta_UsesConsistentCounter(t *testing.T) {
+	t.Parallel()
+
+	start := map[string]interface{}{
+		"ACChargingEnergyIn": 50000.0,
+		"DCChargingEnergyIn": 100000.0,
+	}
+	end := map[string]interface{}{
+		"ACChargingEnergyIn": 51000.0,
+		"DCChargingEnergyIn": 130500.0,
+	}
+
+	delta, kind, ok := snapshotChargeEnergyDelta(start, end, "DCChargingEnergyIn")
+	if !ok || kind != signalcounter.ChangeAdvanced || delta != 30500 {
+		t.Fatalf(
+			"snapshotChargeEnergyDelta() = (%v, %v, %v), want (30500, ChangeAdvanced, true)",
+			delta,
+			kind,
+			ok,
+		)
 	}
 }
 

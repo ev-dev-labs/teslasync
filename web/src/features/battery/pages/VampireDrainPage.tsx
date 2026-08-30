@@ -11,10 +11,10 @@ import { GlassPanel, Badge, Button, DataTable, PanelTitle, Caption, Text, type C
 import { MetricCard } from '@/components/data-display';
 import { AIVampireDrainExplanation } from '@/components/ai/AIVampireDrainExplanation';
 import {
-  LinearGauge, ChartTooltip, AREA_DEFAULTS,
+  LinearGauge, ChartLegend, ChartTooltip, EmbeddedChart, AREA_DEFAULTS,
   chartMargin, axisTick, CHART_COLORS,
   LineChart, Line, BarChart, Bar,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -84,6 +84,23 @@ export default function VampireDrainPage() {
 
   const stats = statsQuery.data ?? null;
   const events = useMemo(() => eventsQuery.data?.events ?? [], [eventsQuery.data]);
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'drain-statistics',
+        label: t('dataSources.labels.vampireDrainStats', 'Vampire-drain statistics'),
+        query: statsQuery,
+        enabled,
+      },
+      {
+        id: 'parked-drain-events',
+        label: t('dataSources.labels.vampireDrainEvents', 'Parked-drain events'),
+        query: eventsQuery,
+        enabled,
+      },
+    ],
+    [enabled, eventsQuery, statsQuery, t],
+  );
 
   const { sortKey, sortDir, onSort, sortFn } = useSortToggle('started_at');
 
@@ -168,6 +185,7 @@ export default function VampireDrainPage() {
       subtitle={t('vampireDrain.subtitle', 'Analyze phantom energy loss while your vehicle is parked')}
       actions={actions}
       query={[statsQuery, eventsQuery]}
+      dataSources={dataSources}
     >
       {/* AI narrator — opt-in, never replaces the deterministic stats below (ADR-015 §I3/§I5). */}
       <FadeIn>
@@ -267,7 +285,22 @@ export default function VampireDrainPage() {
                 message={noEventsMsg}
               />
             ) : (
-              <div className="h-56 sm:h-64 xl:h-72">
+              <EmbeddedChart
+                title={t('vampireDrain.trend.title', 'Drain Rate Trend')}
+                ariaLabel={t('vampireDrain.trend.aria', 'Daily vampire drain rate over parked sessions')}
+                data={trend}
+                dataColumns={[
+                  { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDate(String(value ?? '')) },
+                  {
+                    key: 'rate',
+                    label: t('vampireDrain.trend.series', 'Drain Rate (%/day)'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={224}
+                chartKey="vampire-drain-rate-trend"
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={trend} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -277,7 +310,7 @@ export default function VampireDrainPage() {
                     <Line {...AREA_DEFAULTS} dataKey="rate" name={t('vampireDrain.trend.series', 'Drain Rate (%/day)')} stroke={CHART_COLORS[0]} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 
@@ -360,20 +393,42 @@ export default function VampireDrainPage() {
                 message={noEventsMsg}
               />
             ) : (
-              <div className="h-56 sm:h-64 xl:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={daily} margin={chartMargin}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
-                    <YAxis yAxisId="left" tick={axisTick} unit="%" width={44} />
-                    <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="h" width={44} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="drain_pct" name={t('vampireDrain.daily.loss', 'Battery Loss %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} />
-                    <Bar yAxisId="right" dataKey="hours" name={t('vampireDrain.daily.parked', 'Parked Hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
+              <EmbeddedChart
+                title={t('vampireDrain.daily.title', 'Daily Drain While Parked')}
+                ariaLabel={t('vampireDrain.daily.aria', 'Daily battery loss and parked hours')}
+                data={daily}
+                dataColumns={[
+                  { key: 'date', label: t('vampireDrain.date', 'Date'), format: (value) => formatDate(String(value ?? '')) },
+                  {
+                    key: 'drain_pct',
+                    label: t('vampireDrain.daily.loss', 'Battery Loss %'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                  {
+                    key: 'hours',
+                    label: t('vampireDrain.daily.parked', 'Parked Hours'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={224}
+                chartKey="vampire-drain-daily"
+              >
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={daily} margin={chartMargin}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="date" tick={axisTick} tickFormatter={(v: string) => formatDate(v)} />
+                      <YAxis yAxisId="left" tick={axisTick} unit="%" width={44} />
+                      <YAxis yAxisId="right" orientation="right" tick={axisTick} unit="h" width={44} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <ChartLegend />
+                      <Bar yAxisId="left" dataKey="drain_pct" name={t('vampireDrain.daily.loss', 'Battery Loss %')} fill={CHART_COLORS[5]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drain_pct')} />
+                      <Bar yAxisId="right" dataKey="hours" name={t('vampireDrain.daily.parked', 'Parked Hours')} fill={CHART_COLORS[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('hours')} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
+              </EmbeddedChart>
             )}
           </GlassPanel>
 

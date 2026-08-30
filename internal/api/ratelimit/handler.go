@@ -1,19 +1,23 @@
 // Rate-limit status endpoint.
 //
-// GET /api/v1/system/rate-limits returns cheap, process-local ScopeBudget rows
-// for the admin status panel. Fleet Telemetry RPS remains out of scope here; the
-// exposed scopes cover Tesla client burst, all /api/v1 traffic, and mutating API
-// traffic with the shared ok/warn/critical severity ladder.
+// GET /api/v1/system/rate-limits returns ScopeBudget rows for the admin status
+// panel. Fleet API spend comes from a durable, cross-process reservation store;
+// internal request counters and the burst smoother remain process-local.
 
 package ratelimit
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 )
 
 // Severity buckets returned in ScopeBudget.Severity. Lowercase enum
@@ -29,6 +33,8 @@ const (
 // the SPA can pin per-row icons / labels without depending on Name.
 const (
 	RateLimitScopeTeslaFleetAPIBurst = "tesla.fleet_api.burst"
+	RateLimitScopeTeslaDailySpend    = "tesla.fleet_api.daily_spend"
+	RateLimitScopeTeslaBackground    = "tesla.fleet_api.background_spend"
 	RateLimitScopeAPIInternalMinute  = "api.internal.minute"
 	RateLimitScopeAPIWriteMinute     = "api.write.minute"
 )
@@ -66,6 +72,8 @@ type ScopeBudget struct {
 	// Severity is the colour band the SPA renders. See severity
 	// constants above.
 	Severity string `json:"severity"`
+	// Unit controls value formatting in the SPA. Empty means a raw count.
+	Unit string `json:"unit,omitempty"`
 	// Detail is a human-readable footnote ("client-side burst",
 	// etc.). Surfaced as helper text under each row.
 	Detail string `json:"detail,omitempty"`
@@ -77,7 +85,10 @@ type ScopeBudget struct {
 type RateLimitStatusResponse struct {
 	GeneratedAt time.Time     `json:"generated_at"`
 	Scopes      []ScopeBudget `json:"scopes"`
+	Warnings    []string      `json:"warnings,omitempty"`
 }
+
+const fleetAPIBudgetUnavailableWarning = "Tesla Fleet API spend evidence is unavailable; outbound Fleet API calls fail closed."
 
 // Handler closes over the data sources every scope row needs.
 // All dependencies are optional — when a dependency is nil the
@@ -144,23 +155,41 @@ func NewHandler(cfg RateLimitHandlerConfig) *Handler {
 // ServeHTTP fulfils GET /api/v1/system/rate-limits. Method-strict so
 // the SPA can't accidentally mutate state by misrouting a POST.
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "GET /api/v1/system/rate-limits")
+	defer span.End()
+
 	if r.Method != http.MethodGet {
 		w.Header().Set("Allow", http.MethodGet)
 		httpx.WriteError(w, http.StatusMethodNotAllowed, "method not allowed")
 		return
 	}
-	resp := h.Build()
+	resp, err := h.Build(ctx)
+	if err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "rate-limit status partially unavailable")
+		log.Error().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("rate-limit status returned partial evidence")
+	}
 	httpx.WriteJSON(w, http.StatusOK, resp)
 }
 
 // Build composes the response. Exposed (unexported but reachable from
 // tests) so tests can assert the scope shape without going through an
 // httptest round-trip.
-func (h *Handler) Build() RateLimitStatusResponse {
+func (h *Handler) Build(ctx context.Context) (RateLimitStatusResponse, error) {
 	now := h.now()
-	scopes := make([]ScopeBudget, 0, 3)
+	scopes := make([]ScopeBudget, 0, 5)
 	if s, ok := h.teslaScope(now); ok {
 		scopes = append(scopes, s)
+	}
+	var warnings []string
+	budgetScopes, err := h.teslaBudgetScopes(ctx)
+	if err == nil {
+		scopes = append(scopes, budgetScopes...)
+	} else {
+		warnings = append(warnings, fleetAPIBudgetUnavailableWarning)
 	}
 	if s, ok := h.apiInternalScope(); ok {
 		scopes = append(scopes, s)
@@ -171,7 +200,63 @@ func (h *Handler) Build() RateLimitStatusResponse {
 	return RateLimitStatusResponse{
 		GeneratedAt: now,
 		Scopes:      scopes,
+		Warnings:    warnings,
+	}, err
+}
+
+func (h *Handler) teslaBudgetScopes(ctx context.Context) ([]ScopeBudget, error) {
+	if h.teslaClient == nil {
+		return nil, nil
 	}
+	snapshot, enabled, err := h.teslaClient.BudgetSnapshot(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("read Tesla Fleet API budget snapshot: %w", err)
+	}
+	if !enabled || snapshot.DailyLimitMicroUSD <= 0 {
+		return nil, nil
+	}
+
+	detail := fmt.Sprintf(
+		"Shared UTC-day estimate — %d vehicle-data, %d wake, %d command, %d paid-specs, %d other reservations.",
+		snapshot.VehicleDataRequests,
+		snapshot.WakeUpRequests,
+		snapshot.CommandRequests,
+		snapshot.VehicleSpecsRequests,
+		snapshot.OtherRequests,
+	)
+	dailyLimit := snapshot.DailyLimitUSD()
+	backgroundLimit := snapshot.BackgroundLimitUSD()
+	remainingBackgroundMicroUSD := snapshot.RemainingBackgroundMicroUSD()
+	remainingVehicleDataCalls := remainingBackgroundMicroUSD /
+		tesla.EstimatedCostMicroUSD(tesla.BudgetCategoryVehicleData)
+	return []ScopeBudget{
+		{
+			ID:            RateLimitScopeTeslaDailySpend,
+			Name:          "Tesla Fleet API estimated spend",
+			Current:       snapshot.EstimatedCostUSD(),
+			Limit:         dailyLimit,
+			WindowSeconds: 24 * 60 * 60,
+			ResetAt:       &snapshot.ResetAt,
+			Severity:      severityForPercent(percentOf(snapshot.EstimatedCostUSD(), dailyLimit)),
+			Unit:          "usd",
+			Detail:        detail,
+		},
+		{
+			ID:            RateLimitScopeTeslaBackground,
+			Name:          "Tesla background-read allowance",
+			Current:       snapshot.BackgroundCostUSD(),
+			Limit:         backgroundLimit,
+			WindowSeconds: 24 * 60 * 60,
+			ResetAt:       &snapshot.ResetAt,
+			Severity:      severityForPercent(percentOf(snapshot.BackgroundCostUSD(), backgroundLimit)),
+			Unit:          "usd",
+			Detail: fmt.Sprintf(
+				"$%.3f remains reserved for wake-ups and commands; current allowance equals up to %d vehicle-data calls before the UTC reset.",
+				float64(snapshot.CommandReserveMicroUSD)/float64(tesla.MicroUSDPerUSD),
+				remainingVehicleDataCalls,
+			),
+		},
+	}, nil
 }
 
 // teslaScope renders the client-side Fleet API token-bucket gauge.

@@ -1,0 +1,21 @@
+{
+  "exports": {
+    "aiRedaction": {
+      "title": "Plan PII redactions before sharing",
+      "description": "Ask Helix to recommend which PII classes to redact from a shared export. The recommendation is catalog-based — Helix never reads the rows of your export; it consults a deterministic per-export-type PII catalog and surfaces the highly-recommended redactions plus the optional ones that depend on your consent. Apply the recommendation by toggling the matching options in your export request.",
+      "button": "Suggest redactions",
+      "badge": "Helix",
+      "exportTypeLabel": "Export type",
+      "exportTypePlaceholder": "Select an export type…",
+      "noTypeHint": "Pick an export type to enable Helix.",
+      "exportType": {
+        "drives": "Drives",
+        "charging": "Charging",
+        "trips": "Trips",
+        "analytics": "Analytics",
+        "backup": "Backup",
+        "account": "Account"
+      }
+    }
+  }
+}

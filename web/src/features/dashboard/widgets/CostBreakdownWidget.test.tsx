@@ -113,8 +113,10 @@ vi.mock('@/hooks/useFormatting', () => ({
 // per-slice <Cell key> path is exercised.
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     useThemeChartPalette: () => ({
       primary: '#00b4d8',
       accent: '#e63946',
@@ -491,7 +493,7 @@ describe('CostBreakdownWidget — refresh wiring', () => {
     mockCost.mockReturnValue(qr({ data: makeData(), refetch }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

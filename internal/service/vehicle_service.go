@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
@@ -36,6 +37,11 @@ type VehicleService struct {
 	settingsRepo  *settingsdb.SettingsRepo
 	stateProvider *vehicleStateProvider
 	state         SignalStateReader
+	// fsmState overrides the persisted FSM "current state + since" lookup.
+	// Nil in production (stateProvider is used); the seam exists so the
+	// telemetry-vs-FSM conflict contract in current_state.go is testable
+	// without a live fsm_transitions table.
+	fsmState fsmStateSource
 }
 
 // NewVehicleService creates a VehicleService with all required repos.
@@ -123,8 +129,74 @@ func (p *vehicleStateProvider) GetCurrentStateSince(ctx context.Context, vehicle
 // NEVER returns nil — always builds a complete state from whatever data
 // is available (SignalStore → snapshot tables → zero defaults).
 func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle *vehiclemodel.Vehicle) *vehiclemodel.VehicleState {
+	state, _ := s.BuildStateFromSignalStoreContext(context.Background(), store, vehicle)
+	return state
+}
+
+// BuildStateFromSignalStoreContext is the cancellation-aware production path.
+// Callers with a request context must use it so signal_log and FSM fallback
+// reads cannot outlive the request.
+func (s *VehicleService) BuildStateFromSignalStoreContext(
+	ctx context.Context,
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+) (*vehiclemodel.VehicleState, error) {
+	state, _, err := s.BuildStateFromSignalStoreWithProvenanceContext(ctx, store, vehicle)
+	return state, err
+}
+
+// BuildStateFromSignalStoreWithProvenance assembles the same state while
+// returning the JSON fields whose exact winning values came from real,
+// timestamped live signals. Fields filled from signal_log or synthetic cache
+// warmup values remain available in State but are deliberately unverified.
+func (s *VehicleService) BuildStateFromSignalStoreWithProvenance(
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+) (*vehiclemodel.VehicleState, map[string]bool) {
+	state, verified, _ := s.BuildStateFromSignalStoreWithProvenanceContext(
+		context.Background(),
+		store,
+		vehicle,
+	)
+	return state, verified
+}
+
+// BuildStateFromSignalStoreWithProvenanceContext is the cancellation-aware
+// provenance assembler used by live HTTP state reads.
+func (s *VehicleService) BuildStateFromSignalStoreWithProvenanceContext(
+	ctx context.Context,
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+) (*vehiclemodel.VehicleState, map[string]bool, error) {
+	return s.buildStateFromSignalStoreWithProvenance(ctx, store, vehicle, nil)
+}
+
+// buildStateFromSignalStoreWithProvenance is the assembler both the
+// single-vehicle and the fleet-batch paths share. `pre` supplies the durable
+// signal_log and FSM fallbacks when they were read in bulk for a whole batch;
+// a nil prefetch reads them per vehicle exactly as before.
+func (s *VehicleService) buildStateFromSignalStoreWithProvenance(
+	ctx context.Context,
+	store *signal.Store,
+	vehicle *vehiclemodel.Vehicle,
+	pre *CurrentStatePrefetch,
+) (*vehiclemodel.VehicleState, map[string]bool, error) {
 	state := &vehiclemodel.VehicleState{
 		VehicleID: vehicle.ID,
+	}
+	verified := make(map[string]bool)
+	selected := make(map[string]bool)
+	mark := func(field string, value *signal.Value) {
+		// Tesla telemetry is a sparse change feed: a field's older observed
+		// timestamp remains its current value while any recent real signal
+		// establishes stream freshness. This marker records source provenance;
+		// the API/frontend apply stream freshness separately.
+		selected[field] = true
+		if isObservedSignalValue(value) {
+			verified[field] = true
+		} else {
+			delete(verified, field)
+		}
 	}
 
 	// Collect signals from store (may be empty after pod restart)
@@ -145,68 +217,94 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 
 	if f, ok := signal.Float64Value(all["VehicleSpeed"]); ok {
 		state.Speed = f
+		mark("speed", all["VehicleSpeed"])
 	}
 	if f, ok := signal.Float64Value(all["Odometer"]); ok {
 		state.Odometer = f
+		mark("odometer", all["Odometer"])
 	}
 	if f, ok := signal.Float64Value(all["BatteryLevel"]); ok {
 		state.BatteryLevel = int(f)
-	}
-	if state.BatteryLevel == 0 {
+		mark("battery_level", all["BatteryLevel"])
+	} else {
 		if f, ok := signal.Float64Value(all["Soc"]); ok {
 			state.BatteryLevel = int(f)
+			mark("battery_level", all["Soc"])
 		}
 	}
 	if f, ok := signal.Float64Value(all["IdealBatteryRange"]); ok {
 		state.IdealRange = f
+		mark("ideal_range", all["IdealBatteryRange"])
 	}
 	if f, ok := signal.Float64Value(all["RatedRange"]); ok {
 		state.RatedRange = f
-	}
-	if state.RatedRange == 0 {
+		mark("rated_range", all["RatedRange"])
+	} else {
 		if f, ok := signal.Float64Value(all["EstBatteryRange"]); ok {
 			state.RatedRange = f
+			mark("rated_range", all["EstBatteryRange"])
 		}
 	}
 	if f, ok := signal.Float64Value(all["InsideTemp"]); ok {
 		state.InsideTemp = f
+		mark("inside_temp", all["InsideTemp"])
 	}
 	if f, ok := signal.Float64Value(all["OutsideTemp"]); ok {
 		state.OutsideTemp = f
+		mark("outside_temp", all["OutsideTemp"])
 	}
 
-	// Location: codec emits a composite map[string]any with float32/float64
-	// latitude+longitude members. Use signal.Float64 on the unwrapped
-	// elements so float32 lat/lon survives the projection.
-	if v := all["Location"]; v != nil {
+	// The canonical codec flattens Location into LocationLatitude and
+	// LocationLongitude. Bare and compound names remain read-only fallbacks for
+	// legacy REST/cache values written before the flattening contract.
+	if f, ok := signal.Float64Value(all["LocationLatitude"]); ok {
+		state.Latitude = f
+		mark("latitude", all["LocationLatitude"])
+	} else if f, ok := signal.Float64Value(all["Latitude"]); ok {
+		state.Latitude = f
+		mark("latitude", all["Latitude"])
+	} else if v := all["Location"]; v != nil {
 		if loc, ok := v.Raw.(map[string]interface{}); ok {
 			if lat, ok := signal.Float64(loc["latitude"]); ok {
 				state.Latitude = lat
-			}
-			if lon, ok := signal.Float64(loc["longitude"]); ok {
-				state.Longitude = lon
+				mark("latitude", v)
 			}
 		}
 	}
-	if f, ok := signal.Float64Value(all["Latitude"]); ok {
-		state.Latitude = f
-	}
-	if f, ok := signal.Float64Value(all["Longitude"]); ok {
+	if f, ok := signal.Float64Value(all["LocationLongitude"]); ok {
 		state.Longitude = f
+		mark("longitude", all["LocationLongitude"])
+	} else if f, ok := signal.Float64Value(all["Longitude"]); ok {
+		state.Longitude = f
+		mark("longitude", all["Longitude"])
+	} else if v := all["Location"]; v != nil {
+		if loc, ok := v.Raw.(map[string]interface{}); ok {
+			if lon, ok := signal.Float64(loc["longitude"]); ok {
+				state.Longitude = lon
+				mark("longitude", v)
+			}
+		}
 	}
 	if f, ok := signal.Float64Value(all["GpsHeading"]); ok {
 		fc := f
 		state.Heading = &fc
+		mark("heading", all["GpsHeading"])
 	}
 
 	// Power (computed or direct)
 	if f, ok := signal.Float64Value(all["Power"]); ok {
 		state.Power = f
+		mark("power", all["Power"])
 	} else {
 		voltage, vok := signal.Float64Value(all["PackVoltage"])
 		current, cok := signal.Float64Value(all["PackCurrent"])
 		if vok && cok {
 			state.Power = voltage * current / 1000.0
+			selected["power"] = true
+			if isObservedSignalValue(all["PackVoltage"]) &&
+				isObservedSignalValue(all["PackCurrent"]) {
+				verified["power"] = true
+			}
 		}
 	}
 
@@ -214,26 +312,32 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	if v := all["DetailedChargeState"]; v != nil {
 		if cs, ok := v.Raw.(string); ok {
 			state.IsCharging = enums.IsCharging(cs)
+			mark("is_charging", v)
 		}
 	}
-	if !state.IsCharging {
+	if !selected["is_charging"] {
 		if f, ok := signal.Float64Value(all["ChargeAmps"]); ok {
 			state.IsCharging = f > 1.0
+			mark("is_charging", all["ChargeAmps"])
 		}
 	}
 	if f, ok := signal.Float64Value(all["ACChargingPower"]); ok {
 		// VehicleState's established JSON contract exposes charger_power in
 		// kW; signal.Store is canonical W after telemetry normalization.
 		state.ChargerPower = f / 1000.0
+		mark("charger_power", all["ACChargingPower"])
 	}
 	if f, ok := signal.Float64Value(all["DCChargingPower"]); ok && f > 0 {
 		state.ChargerPower = f / 1000.0
+		mark("charger_power", all["DCChargingPower"])
 	}
 	if f, ok := signal.Float64Value(all["ChargeRateMilePerHour"]); ok {
 		state.ChargeRate = f
+		mark("charge_rate", all["ChargeRateMilePerHour"])
 	}
 	if f, ok := signal.Float64Value(all["TimeToFullCharge"]); ok {
 		state.TimeToFullChg = f
+		mark("time_to_full_charge", all["TimeToFullCharge"])
 	}
 
 	// Security
@@ -241,24 +345,29 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		switch lv := v.Raw.(type) {
 		case bool:
 			state.IsLocked = lv
+			mark("is_locked", v)
 		case string:
 			state.IsLocked = lv == "true" || lv == "1"
+			mark("is_locked", v)
 		}
 	}
 	if v := all["SentryMode"]; v != nil {
 		state.SentryMode = enums.ParseEnumBool(v.Raw)
+		mark("sentry_mode", v)
 	}
 
 	// Software version
 	if v := all["Version"]; v != nil {
 		if sv, ok := v.Raw.(string); ok && sv != "" {
 			state.SoftwareVersion = sv
+			mark("software_version", v)
 		}
 	}
 	if state.SoftwareVersion == "" {
 		if v := all["SoftwareUpdateVersion"]; v != nil {
 			if sv, ok := v.Raw.(string); ok && sv != "" {
 				state.SoftwareVersion = sv
+				mark("software_version", v)
 			}
 		}
 	}
@@ -268,13 +377,16 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 		switch hv := v.Raw.(type) {
 		case bool:
 			state.IsClimateOn = hv
+			mark("is_climate_on", v)
 		case string:
 			state.IsClimateOn = enums.ParseHvacPower(hv)
+			mark("is_climate_on", v)
 		default:
 			// Numeric HvacPower variants may be float32 or int32; route them
 			// through the canonical converter.
 			if f, ok := signal.Float64(v.Raw); ok {
 				state.IsClimateOn = f > 0
+				mark("is_climate_on", v)
 			}
 		}
 	}
@@ -284,29 +396,37 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 	// store; reading from snapshot tables (positions, state_snapshots,
 	// battery_snapshots, climate_snapshots, etc.) is forbidden. Live values
 	// always win — the fallback only fills holes.
-	ctx := context.Background()
-	if s.state != nil {
-		snap, err := s.state.State(ctx, vehicle.ID, time.Now().UTC())
+	//
+	// In a fleet batch the snapshot arrives from ONE set-based signal_log
+	// query taken for the whole page (see CurrentStatePrefetch); the read is
+	// the same read, just not repeated per vehicle.
+	if snap, err, attempted := s.durableSnapshot(ctx, vehicle.ID, pre); attempted {
 		if err != nil {
+			if ctxErr := ctx.Err(); ctxErr != nil {
+				return state, verified, fmt.Errorf("read signal_log fallback for vehicle %d: %w", vehicle.ID, ctxErr)
+			}
 			log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle service: signal_log fallback read failed")
 		} else if len(snap) > 0 {
-			fillStateFromSnapshot(state, all, snap)
+			fillStateFromSnapshot(state, snap, selected, verified)
 		}
 	}
 
 	// Fall back to fsm_transitions for the vehicle state string so handlers
 	// that build state from a cold SignalStore still get a non-empty State after
 	// a pod restart.
-	if state.State == "" && s.stateProvider != nil {
-		if currentState, _, err := s.stateProvider.GetCurrentStateSince(ctx, vehicle.ID); err == nil && currentState != "" {
+	if state.State == "" {
+		if currentState, err := s.fallbackFSMState(ctx, vehicle.ID, pre); err == nil && currentState != "" {
 			state.State = currentState
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return state, verified, fmt.Errorf("read FSM fallback for vehicle %d: %w", vehicle.ID, ctxErr)
 		}
 	}
 	if state.State == "" {
 		state.State = enums.StateOnline
 	}
 
-	return state
+	return state, verified, nil
 }
 
 // fillStateFromSnapshot backfills VehicleState fields that are still at their
@@ -316,90 +436,124 @@ func (s *VehicleService) BuildStateFromSignalStore(store *signal.Store, vehicle 
 // always preferred — boolean fields are only filled when the live store had
 // no entry for the corresponding signal name (avoiding false-vs-unset
 // ambiguity).
-func fillStateFromSnapshot(state *vehiclemodel.VehicleState, live map[string]*signal.Value, snap signal.State) {
-	if state.Odometer == 0 {
+func fillStateFromSnapshot(
+	state *vehiclemodel.VehicleState,
+	snap signal.State,
+	selected map[string]bool,
+	verified map[string]bool,
+) {
+	if !selected["odometer"] {
 		if f, ok := snapFloat(snap, "Odometer"); ok {
 			state.Odometer = f
+			delete(verified, "odometer")
 		}
 	}
-	if state.InsideTemp == 0 {
+	if !selected["inside_temp"] {
 		if f, ok := snapFloat(snap, "InsideTemp"); ok {
 			state.InsideTemp = f
+			delete(verified, "inside_temp")
 		}
 	}
-	if state.OutsideTemp == 0 {
+	if !selected["outside_temp"] {
 		if f, ok := snapFloat(snap, "OutsideTemp"); ok {
 			state.OutsideTemp = f
+			delete(verified, "outside_temp")
 		}
 	}
-	if state.SoftwareVersion == "" {
+	if !selected["software_version"] {
 		if v, ok := snapString(snap, "Version"); ok && v != "" {
 			state.SoftwareVersion = v
+			delete(verified, "software_version")
 		} else if v, ok := snapString(snap, "SoftwareUpdateVersion"); ok && v != "" {
 			state.SoftwareVersion = v
+			delete(verified, "software_version")
 		}
 	}
-	if state.IdealRange == 0 {
+	if !selected["ideal_range"] {
 		if f, ok := snapFloat(snap, "IdealBatteryRange"); ok {
 			state.IdealRange = f
+			delete(verified, "ideal_range")
 		}
 	}
-	if state.RatedRange == 0 {
+	if !selected["rated_range"] {
 		if f, ok := snapFloat(snap, "RatedRange"); ok {
 			state.RatedRange = f
+			delete(verified, "rated_range")
 		} else if f, ok := snapFloat(snap, "EstBatteryRange"); ok {
 			state.RatedRange = f
+			delete(verified, "rated_range")
 		}
 	}
-	if state.Latitude == 0 {
-		if f, ok := snapFloat(snap, "Latitude"); ok {
+	if !selected["latitude"] {
+		if f, ok := snapFloat(snap, "LocationLatitude"); ok {
 			state.Latitude = f
+			delete(verified, "latitude")
+		} else if f, ok := snapFloat(snap, "Latitude"); ok {
+			state.Latitude = f
+			delete(verified, "latitude")
 		}
 	}
-	if state.Longitude == 0 {
-		if f, ok := snapFloat(snap, "Longitude"); ok {
+	if !selected["longitude"] {
+		if f, ok := snapFloat(snap, "LocationLongitude"); ok {
 			state.Longitude = f
+			delete(verified, "longitude")
+		} else if f, ok := snapFloat(snap, "Longitude"); ok {
+			state.Longitude = f
+			delete(verified, "longitude")
 		}
 	}
-	if state.BatteryLevel == 0 {
+	if !selected["battery_level"] {
 		if f, ok := snapFloat(snap, "BatteryLevel"); ok {
 			state.BatteryLevel = int(f)
+			delete(verified, "battery_level")
 		} else if f, ok := snapFloat(snap, "Soc"); ok {
 			state.BatteryLevel = int(f)
+			delete(verified, "battery_level")
 		}
 	}
-	if state.Speed == 0 {
+	if !selected["speed"] {
 		if f, ok := snapFloat(snap, "VehicleSpeed"); ok {
 			state.Speed = f
+			delete(verified, "speed")
 		}
 	}
 
-	// Boolean and string fields where the Go zero value (false / "") is
-	// indistinguishable from "unset". Only fill when the live store did not
-	// supply the corresponding signal at all — avoids overwriting a real
-	// live `false` with a stale signal_log `true`.
-	if _, present := live["Locked"]; !present {
+	// Boolean fields use the same explicit-selection guard so a real false is
+	// never confused with an unset field.
+	if !selected["is_locked"] {
 		if b, ok := snapBool(snap, "Locked"); ok {
 			state.IsLocked = b
+			delete(verified, "is_locked")
 		}
 	}
-	if _, present := live["SentryMode"]; !present {
+	if !selected["sentry_mode"] {
 		if v, ok := snap["SentryMode"]; ok {
 			state.SentryMode = enums.ParseEnumBool(v)
+			delete(verified, "sentry_mode")
 		}
 	}
-	if _, present := live["HvacPower"]; !present {
+	if !selected["is_climate_on"] {
 		if v, ok := snap["HvacPower"]; ok {
 			switch hv := v.(type) {
 			case bool:
 				state.IsClimateOn = hv
+				delete(verified, "is_climate_on")
 			case string:
 				state.IsClimateOn = enums.ParseHvacPower(hv)
+				delete(verified, "is_climate_on")
 			case float64:
 				state.IsClimateOn = hv > 0
+				delete(verified, "is_climate_on")
 			}
 		}
 	}
+}
+
+func isObservedSignalValue(value *signal.Value) bool {
+	return value != nil &&
+		value.Raw != nil &&
+		!value.Timestamp.IsZero() &&
+		!value.TimestampSynthetic
 }
 
 // snapFloat extracts a numeric value from a signal_log snapshot map.

@@ -4,6 +4,7 @@ import { TrendingUp } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useTeslaEnergyLiveStatusHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -11,7 +12,7 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   time: string;
   solar: number;
   battery: number;
@@ -208,8 +209,25 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
         emptyIcon={<TrendingUp aria-hidden="true" className="h-5 w-5" />}
         stats={stats}
         chart={
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
+          <EmbeddedChart
+            title={t('widget.powerFlowHistory.title', 'Power Flow History')}
+            ariaLabel={t(
+              'widget.powerFlowHistory.chartAria',
+              'Solar, battery, grid, and home power over the last 24 hours',
+            )}
+            data={chartData}
+            dataColumns={[
+              { key: 'time', label: t('widget.powerFlowHistory.time', 'Time') },
+              { key: 'solar', label: t('widget.powerFlowHistory.solar', 'Solar (kW)') },
+              { key: 'battery', label: t('widget.powerFlowHistory.battery', 'Battery (kW)') },
+              { key: 'grid', label: t('widget.powerFlowHistory.grid', 'Grid (kW)') },
+              { key: 'home', label: t('widget.powerFlowHistory.home', 'Home (kW)') },
+            ]}
+            chartKey="dashboard-power-flow-history"
+          >
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="time"
@@ -225,18 +243,14 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 tickFormatter={(v: number) => fmt(v, 1)}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                content={<ChartTooltip />}
                 formatter={(value: number, name: string) => [
                   `${fmtNumber(value, 2)} kW`,
                   name,
                 ]}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
               />
+              <ChartLegend />
               <defs>
                 <linearGradient id={`${widgetId}-solarGrad`} x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%" stopColor="#facc15" stopOpacity={0.4} />
@@ -263,6 +277,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 strokeWidth={2}
                 fill={`url(#${widgetId}-solarGrad)`}
                 name={t('widget.powerFlowHistory.solar', 'Solar')}
+                hide={hiddenSeries?.isHidden('solar')}
               />
               <Area
                 type="monotone"
@@ -272,6 +287,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 strokeWidth={2}
                 fill={`url(#${widgetId}-batteryGrad)`}
                 name={t('widget.powerFlowHistory.battery', 'Battery')}
+                hide={hiddenSeries?.isHidden('battery')}
               />
               <Area
                 type="monotone"
@@ -281,6 +297,7 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 strokeWidth={2}
                 fill={`url(#${widgetId}-gridGrad)`}
                 name={t('widget.powerFlowHistory.grid', 'Grid')}
+                hide={hiddenSeries?.isHidden('grid')}
               />
               <Area
                 type="monotone"
@@ -290,9 +307,12 @@ export default function PowerFlowHistoryWidget({ size }: WidgetProps) {
                 strokeWidth={2}
                 fill={`url(#${widgetId}-homeGrad)`}
                 name={t('widget.powerFlowHistory.home', 'Home')}
+                hide={hiddenSeries?.isHidden('home')}
               />
-            </AreaChart>
-          </ResponsiveContainer>
+                </AreaChart>
+              </ResponsiveContainer>
+            )}
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

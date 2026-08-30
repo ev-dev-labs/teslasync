@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isTransientWaiting } from './errorClassification'
+import { classifyError, isTransientWaiting } from './errorClassification'
 import {
   ApiError,
   RateLimitError,
@@ -106,6 +106,43 @@ describe('isTransientWaiting — semantics', () => {
     expect(isTransientWaiting(new RateLimitError('x', 5, '/a'))).toStrictEqual(true)
     expect(isTransientWaiting(null)).toStrictEqual(false)
     expect(isTransientWaiting({})).toStrictEqual(false)
+  })
+
+  describe('classifyError', () => {
+    it.each([
+      ['not_found', new ApiError('missing', 404), true],
+      ['unauthorized', new ApiError('expired', 401), true],
+      ['forbidden', new ApiError('denied', 403), true],
+      ['timed_out', new ApiError('timeout', 408), true],
+      ['timed_out', new ApiError('gateway timeout', 504), true],
+      ['unsupported', new ApiError('method', 405), true],
+      ['unsupported', new ApiError('not implemented', 501), true],
+      ['unavailable', new ApiError('bad gateway', 502), true],
+      ['unavailable', new ApiError('unavailable', 503), true],
+      ['server', new ApiError('boom', 500), true],
+      ['request', new ApiError('invalid', 422), true],
+      ['network', new TypeError('Failed to fetch'), true],
+      ['offline', new Error('network down'), false],
+    ] as const)('classifies %s distinctly', (kind, error, online) => {
+      expect(classifyError(error, online)).toBe(kind)
+    })
+
+    it('keeps HTTP failures authoritative when the browser also reports offline', () => {
+      expect(classifyError(new ApiError('forbidden', 403), false)).toBe('forbidden')
+      expect(classifyError(new ApiError('boom', 500), false)).toBe('server')
+    })
+
+    it('maps known back-off errors to a calm waiting state', () => {
+      expect(classifyError(new RateLimitError('slow down', 5, '/drives'), true)).toBe('waiting')
+      expect(
+        classifyError(new UpstreamUnavailableError('breaker open', 5, 'tesla-fleet'), true),
+      ).toBe('waiting')
+    })
+
+    it('uses waiting only as the empty classifier result', () => {
+      expect(classifyError(null, true)).toBe('waiting')
+      expect(classifyError(undefined, false)).toBe('waiting')
+    })
   })
 
   it('classifies both transient families identically (OR of the two guards)', () => {

@@ -149,7 +149,8 @@ vi.mock('@/components/maps', () => ({
 // Recharts measures the SVG bbox and jsdom returns 0×0, so the chart barrel is
 // replaced with inert stubs. AreaChart exposes its `data` (the derived speed
 // series) and Area exposes its `name` so conversion + labelling are assertable.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => ({
+  ...(await import('@/test/chartTestDoubles')).chartTestDoubles,
    
   AreaChart: ({ data, children }: any) => (
     <div data-testid="area-chart" data-series={JSON.stringify(data)}>

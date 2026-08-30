@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { WifiOff } from 'lucide-react'
 import { useLiveConnection } from '@/hooks/useLiveConnection'
-import { AlertBanner } from './AlertBanner'
+import { DataStateNotice } from './DataStateNotice'
 
 /**
  * Show the banner once the live pipe has been disconnected for at least
@@ -69,9 +68,8 @@ export function LiveStaleDataBanner({ className }: LiveStaleDataBannerProps) {
   if (!show) return null
 
   return (
-    <AlertBanner
-      variant="warning"
-      icon={<WifiOff className="h-5 w-5" />}
+    <DataStateNotice
+      state="stale"
       title={t('live.staleBanner.title', 'Live data unavailable')}
       className={className}
       data-testid="live-stale-banner"
@@ -82,6 +80,6 @@ export function LiveStaleDataBanner({ className }: LiveStaleDataBannerProps) {
         'live.staleBanner.message',
         'The live data connection has been offline for more than 2 minutes. Values on this page may be stale until the connection is restored.',
       )}
-    </AlertBanner>
+    </DataStateNotice>
   )
 }

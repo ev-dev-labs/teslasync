@@ -2,10 +2,11 @@
  * Recently viewed pages.
  *
  * Client-side LRU of the user's most recently visited routes. Capped at
- * {@link RECENT_PAGES_MAX} entries. Surfaces in three places:
+ * {@link RECENT_PAGES_MAX} entries. Surfaces in four places:
  *
  *   - Command palette "Recent" section when the input is empty.
- *   - "Recently viewed" widget on the dashboard.
+ *   - Global status-bar popover.
+ *   - Explore page's recently visited strip.
  *   - Settings → Privacy → "Clear recent pages" button.
  *
  * Storage is intentionally client-side only. Recent-page history is a
@@ -34,7 +35,7 @@ export const RECENT_PAGES_MAX = MAX_ENTRIES
 
 /**
  * Coarse category for a recorded page. Drives the icon shown in the
- * palette / widget and gives consumers a stable grouping key. New kinds
+ * palette / recent-page surfaces and gives consumers a stable grouping key. New kinds
  * may be added without breaking forward compatibility — unknown kinds
  * read from storage are surfaced as `'page'` by consumers.
  */

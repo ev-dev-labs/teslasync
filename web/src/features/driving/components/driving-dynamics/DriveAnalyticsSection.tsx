@@ -5,6 +5,7 @@ import { Grid } from '@/components/layout';
 import { SectionTitle } from '@/components/ui';
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ChartGradient,
   AREA_DEFAULTS,
@@ -21,7 +22,6 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  Legend,
 } from '@/components/charts';
 import { RangePicker } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
@@ -218,6 +218,7 @@ export default function DriveAnalyticsSection({
           title={t('dynamics.powerProfile', 'Power Profile')}
           subtitle={t('dynamics.powerProfileDesc', 'Peak & regen power for recent drives')}
           ariaLabel={t('dynamics.powerProfile.aria', 'Recent-drives peak and regen power dual-area chart')}
+          chartKey="driving-dynamics-power-profile"
           data={powerProfile.map((d) => ({
             label: d.label,
             powerMax: d.powerMax,
@@ -233,20 +234,22 @@ export default function DriveAnalyticsSection({
           exportable
           exportFilename="power-profile"
         >
-          <ResponsiveContainer width="100%" height={320}>
-            <AreaChart data={powerProfile}>
+          {({ hiddenSeries }) => (
+            <ResponsiveContainer width="100%" height={320}>
+              <AreaChart data={powerProfile}>
               {areaGradient('powerMaxGrad', '#3b82f6')}
               {areaGradient('powerMinGrad', '#ef4444', 0.25)}
               <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
               <XAxis dataKey="label" tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} />
               <YAxis tick={{ fill: 'rgba(255,255,255,0.5)', fontSize: 12 }} unit=" kW" />
               <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ color: 'rgba(255,255,255,0.6)' }} />
+              <ChartLegend />
               <ReferenceLine y={0} stroke="rgba(255,255,255,0.2)" />
-              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} />
-              <Area {...AREA_DEFAULTS} dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} />
-            </AreaChart>
-          </ResponsiveContainer>
+              <Area {...AREA_DEFAULTS} dataKey="powerMax" stroke="#3b82f6" fill="url(#powerMaxGrad)" name={t('dynamics.maxPower', 'Max Power (kW)')} hide={hiddenSeries?.isHidden('powerMax')} />
+              <Area {...AREA_DEFAULTS} dataKey="powerMin" stroke="#ef4444" fill="url(#powerMinGrad)" name={t('dynamics.regenPower', 'Regen Power (kW)')} hide={hiddenSeries?.isHidden('powerMin')} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </ChartContainer>
       </FadeIn>
     </>

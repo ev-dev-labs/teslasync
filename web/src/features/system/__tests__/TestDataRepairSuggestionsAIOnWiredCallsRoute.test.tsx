@@ -218,4 +218,28 @@ describe('TestDataRepairSuggestionsAIOnWiredCallsRoute (data-repair-suggestions 
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(fetchCount).toBe(1);
   });
+
+  it('sends the selected vehicle scope with the repair-plan request', async () => {
+    mockUseSettings.mockReturnValue(
+      settingsPayload({
+        ai_mode: 'cloud',
+        ai_features: { 'data-repair-suggestions': true },
+      }),
+    );
+
+    const fetchCalls: Array<{ init: RequestInit | undefined }> = [];
+    globalThis.fetch = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      fetchCalls.push({ init });
+      return new Response(makeReadableStream([sseFrame('done', { finish_reason: 'stop' })]), {
+        status: 200,
+        headers: { 'Content-Type': 'text/event-stream' },
+      });
+    }) as unknown as typeof globalThis.fetch;
+
+    render(<AIDataRepairSuggestions vehicleId={7} />);
+    fireEvent.click(screen.getByRole('button', { name: /Draft repair plan/i }));
+
+    await waitFor(() => expect(fetchCalls).toHaveLength(1));
+    expect(JSON.parse(String(fetchCalls[0].init?.body))).toEqual({ vehicle_id: 7 });
+  });
 });

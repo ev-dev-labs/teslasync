@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import type { ChargingSession } from '@/api/types';
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   chartGrid,
   axisTickSm,
@@ -15,8 +16,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from '@/components/charts';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { useChartPalette } from '@/hooks/useChartPalette';
-import { Text } from '@/components/ui';
 import { isDcSession, avg } from './helpers';
 import { convertPowerFromSI } from '@/lib/unitConversion';
 import type { MonthlySpeed } from './types';
@@ -28,6 +29,7 @@ interface SpeedTrendChartProps {
 export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
+  const hidden = useHiddenSeries('charging-speed-trend');
 
   const monthlyTrend = useMemo((): MonthlySpeed[] => {
     const rows = sessions ?? [];
@@ -86,6 +88,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
       height={280}
       exportable
       exportFilename="charging-speed-trend"
+      chartKey="charging-speed-trend"
     >
       <ResponsiveContainer width="100%" height={280}>
         <LineChart
@@ -104,6 +107,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
             }}
           />
           <Tooltip content={<ChartTooltip />} />
+          <ChartLegend state={hidden} />
           <Line
             {...AREA_DEFAULTS}
             dataKey="dcAvgKw"
@@ -111,6 +115,7 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
             stroke={palette[0]}
             dot={{ r: 3, fill: palette[0] }}
             unit=" kW"
+            hide={hidden.isHidden('dcAvgKw')}
           />
           <Line
             {...AREA_DEFAULTS}
@@ -119,27 +124,10 @@ export default function SpeedTrendChart({ sessions }: SpeedTrendChartProps) {
             stroke={palette[1]}
             dot={{ r: 3, fill: palette[1] }}
             unit=" kW"
+            hide={hidden.isHidden('acAvgKw')}
           />
         </LineChart>
       </ResponsiveContainer>
-      <div className="mt-3 flex gap-4 px-2">
-        <div className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-2 w-3 rounded-sm"
-            style={{ backgroundColor: palette[0] }}
-            aria-hidden="true"
-          />
-          <Text variant="bodySm">{t('charging.curve.dcFast', 'DC Fast')}</Text>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <span
-            className="inline-block h-2 w-3 rounded-sm"
-            style={{ backgroundColor: palette[1] }}
-            aria-hidden="true"
-          />
-          <Text variant="bodySm">{t('charging.curve.acHome', 'AC / Home')}</Text>
-        </div>
-      </div>
     </ChartContainer>
   );
 }

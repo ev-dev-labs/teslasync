@@ -5,6 +5,7 @@ import (
 
 	systemmodel "github.com/ev-dev-labs/teslasync/internal/models/system"
 
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
@@ -28,14 +29,16 @@ import (
 
 // RouterOptions holds optional parameters for NewRouter.
 type RouterOptions struct {
-	AppVersion       string
-	Encryptor        *crypto.Encryptor
-	TelemetryHandler *apitelem.Handler        // If set, reuses existing handler (for hybrid mode wiring)
-	GasPriceWorker   *worker.GasPriceWorker   // If set, enables gas price management endpoints
-	PollEngine       *polling.PollEngine      // If set, enables polling engine dashboard endpoints
-	SignalStore      *signal.Store            // If set, enables /internal/flush endpoint
-	WebhookTrigger   apiwhrx.WebhookProcessor // If set, enables public webhook receiver endpoint
-	CacheStore       *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
+	AppVersion        string
+	Encryptor         *crypto.Encryptor
+	TelemetryHandler  *apitelem.Handler        // If set, reuses existing handler (for hybrid mode wiring)
+	GasPriceWorker    *worker.GasPriceWorker   // If set, enables gas price management endpoints
+	PollEngine        *polling.PollEngine      // If set, enables polling engine dashboard endpoints
+	SignalStore       *signal.Store            // If set, enables /internal/flush endpoint
+	WebhookTrigger    apiwhrx.WebhookProcessor // If set, enables public webhook receiver endpoint
+	CacheStore        *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
+	DataRepairScanner *apidatarepair.Scanner   // If set, shared by manual and scheduled integrity scans
+	LivenessChecks    []LivenessCheck          // Restart-repairable process-local health checks
 
 	// DLQInspector and the replay audit repo enable
 	// /system/dlq{,/{id},/{id}/replay} when set.

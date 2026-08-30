@@ -36,8 +36,8 @@ import {
   ErrorText,
   HelperText,
   Code,
+  Input,
 } from '@/components/ui';
-import { Spinner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { isApiError, SudoCanceledError } from '@/api/client';
 import { useToast } from '@/components/feedback/Toast';
@@ -269,19 +269,13 @@ export function SettingsExportImport() {
           <Button
             onClick={handleExport}
             disabled={exportMut.isPending}
+            loading={exportMut.isPending}
+            icon={<Download className="h-4 w-4" />}
             data-testid="settings-export-button"
           >
-            {exportMut.isPending ? (
-              <>
-                <Spinner className="h-4 w-4 mr-2" />
-                {t('backup.export.busy', 'Exporting…')}
-              </>
-            ) : (
-              <>
-                <Download className="h-4 w-4 mr-2" />
-                {t('backup.export.cta', 'Export JSON')}
-              </>
-            )}
+            {exportMut.isPending
+              ? t('backup.export.busy', 'Exporting…')
+              : t('backup.export.cta', 'Export JSON')}
           </Button>
         </div>
 
@@ -313,7 +307,7 @@ export function SettingsExportImport() {
               <Text variant="bodySm">
                 {t('backup.import.dropPrompt', 'Drag a JSON bundle here, or')}
               </Text>
-              <input
+              <Input
                 ref={fileInputRef}
                 id={fileInputId}
                 type="file"
@@ -326,19 +320,13 @@ export function SettingsExportImport() {
                 variant="ghost"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={stage === 'parsing'}
+                loading={stage === 'parsing'}
+                icon={<Upload className="h-4 w-4" />}
                 className="mt-2"
               >
-                {stage === 'parsing' ? (
-                  <>
-                    <Spinner className="h-4 w-4 mr-2" />
-                    {t('backup.import.parsing', 'Reading…')}
-                  </>
-                ) : (
-                  <>
-                    <Upload className="h-4 w-4 mr-2" />
-                    {t('backup.import.choose', 'Choose a file')}
-                  </>
-                )}
+                {stage === 'parsing'
+                  ? t('backup.import.parsing', 'Reading…')
+                  : t('backup.import.choose', 'Choose a file')}
               </Button>
             </div>
           )}
@@ -391,13 +379,11 @@ export function SettingsExportImport() {
                 <Button
                   onClick={handleApply}
                   disabled={applyMut.isPending || (summary != null && summary.total === 0)}
+                  loading={applyMut.isPending}
                   data-testid="settings-import-apply"
                 >
                   {applyMut.isPending ? (
-                    <>
-                      <Spinner className="h-4 w-4 mr-2" />
-                      {t('backup.import.applying', 'Applying…')}
-                    </>
+                    t('backup.import.applying', 'Applying…')
                   ) : summary && summary.total > 0 ? (
                     t('backup.import.applyCount', 'Apply {{count}} change(s)', {
                       count: summary.total,

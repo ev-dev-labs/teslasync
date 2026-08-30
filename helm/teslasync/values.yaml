@@ -18,6 +18,33 @@ fullnameOverride: ""
 # ─────────────────────────────────────────────────────────────────────────────
 replicaCount: 1
 
+# OPS-09 — graceful shutdown budget.
+#
+# Kubernetes defaults terminationGracePeriodSeconds to 30. The API's real
+# shutdown budget is 80s (preStop propagation 5 + telemetry flush 10 +
+# HTTP drain 30 + inbound api_call_logs drain 30 + drain listener 5), so
+# the default SIGKILLed pods 50s into a drain that was still running,
+# dropping in-flight requests on every rollout.
+#
+# The budget is locked three ways — `ops/rollout/stages.yaml` `shutdown`,
+# the constants in `internal/app/run.go`, and this value — and
+# `go run ./cmd/ops-gate -check rollout` fails if they drift.
+terminationGracePeriodSeconds: 90
+
+# OPS-09 — isolated drain plane.
+#
+# The preStop endpoint is one-way and pod-fatal: it flips readiness
+# closed permanently and releases every SSE stream. It therefore binds
+# its OWN listener on this port, which NO Service and NO Ingress targets.
+# Kubelet reaches a preStop httpGet by dialling the pod IP directly, so
+# it needs no Service — but nothing outside the pod network can route to
+# it. The public router keeps only the read-only /internal/drain-status
+# contract.
+#
+# Must differ from service.port; the app refuses to start otherwise.
+drain:
+  port: 8090
+
 image:
   repository: ghcr.io/ev-dev-labs/teslasync-api
   pullPolicy: IfNotPresent
@@ -73,6 +100,95 @@ podDisruptionBudget:
   enabled: false
   minAvailable: 1
 
+# ── OPS-05: staged / canary rollout controls ──────────────────────────
+# Defined in ops/rollout/stages.yaml; `go run ./cmd/ops-gate -check
+# rollout` fails if this block and that manifest drift apart.
+#
+# DEFAULTS PRESERVE EXISTING API/WEB BEHAVIOUR:
+#   * api/web strategies reproduce the previously hard-coded
+#     RollingUpdate maxSurge=1 / maxUnavailable=0.
+#     When Fleet Telemetry is enabled, the API template safely overrides
+#     its strategy to Recreate because the persistent MQTT client ID has
+#     exactly one owner.
+#   * worker strategies use Recreate so stable MQTT client IDs never have
+#     overlapping revision owners.
+#   * every canary is disabled, so no extra workload is created.
+rollout:
+  # Maps to Deployment.spec.paused. Set true to freeze an in-flight
+  # rollout without deleting or scaling anything.
+  paused: false
+
+  # OPS-05 — selector mode.
+  #
+  # `legacy`   stable Deployments keep the selector they have always
+  #            had. Canary is REFUSED in this mode (the chart fails
+  #            rendering) because a canary pod carrying the same
+  #            selector labels would be a superset match: the stable
+  #            Deployment, its HPA, and its PDB would all silently
+  #            adopt canary pods and scale/evict against them.
+  #
+  # `disjoint` stable pods carry `teslasync.io/rollout: stable` and the
+  #            stable Deployment/HPA/PDB select on it, so stable and
+  #            canary are provably disjoint. The Service selector stays
+  #            on the common labels, so it still fronts BOTH.
+  #
+  # `spec.selector` is IMMUTABLE on an existing Deployment, so switching
+  # an already-installed release from legacy to disjoint needs a one-time
+  # migration. The procedure is NOT obvious — `--cascade=orphan` leaves a
+  # live ReplicaSet that recreates every pod you delete — so it lives in
+  # ops/rollout/stages.yaml `selector_migration` (machine-checked
+  # ordering) and docs/runbooks/rollout-selector-migration.md.
+  #
+  # The default stays `legacy` precisely so an unattended `helm upgrade`
+  # never hits the immutable-field error.
+  selectorMode: legacy
+
+  api:
+    strategy:
+      type: RollingUpdate
+      maxSurge: 1
+      maxUnavailable: 0
+    canary:
+      # A canary Deployment shares the api Service selector, so traffic
+      # is split by replica share: 1 canary alongside N stable replicas
+      # receives roughly 1/(N+1) of requests. No service mesh required.
+      enabled: false
+      replicaCount: 1
+      # Empty tag == same image as stable (useful for config-only canaries).
+      image:
+        tag: ""
+      podAnnotations: {}
+
+  web:
+    strategy:
+      type: RollingUpdate
+      maxSurge: 1
+      maxUnavailable: 0
+    canary:
+      enabled: false
+      replicaCount: 1
+      image:
+        tag: ""
+      podAnnotations: {}
+
+  # Workers use stable MQTT client IDs and are single-owner. Recreate prevents
+  # two revisions from evicting each other or double-delivering work.
+  notificationWorker:
+    strategy:
+      type: Recreate
+  exportWorker:
+    strategy:
+      type: Recreate
+  automationWorker:
+    strategy:
+      type: Recreate
+
+  # High-risk behaviour changes registered in ops/rollout/stages.yaml.
+  # Rendered into the <release>-rollout ConfigMap for deploy tooling and
+  # operators. The application reads its own FlagStore, so listing a name
+  # here changes NO runtime behaviour on its own.
+  highRiskFlags: []
+
 podAnnotations: {}
 podSecurityContext:
   runAsNonRoot: true
@@ -85,6 +201,32 @@ securityContext:
   capabilities:
     drop:
       - ALL
+
+# Init containers only probe dependency ports and require no writable
+# filesystem. Kept separate because their BusyBox image has no application UID.
+initSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop:
+      - ALL
+
+# Same-node reboot recovery for the self-hosted homelab deployment.
+# This does not claim tolerance of permanent node or disk loss: that depends
+# on the configured StorageClass and independently verified backups.
+nodeRecovery:
+  # Refuse accidental emptyDir-backed state for bundled durable services.
+  # Set false only for disposable development installs.
+  enforcePersistentState: true
+  dependencyWait:
+    image: busybox:1.36
+    intervalSeconds: 5
+    maxAttempts: 120
+  # Ten minutes lets WAL/AOF/persistence replay and API state hydration finish
+  # before kubelet liveness checks are allowed to restart a recovering pod.
+  startupProbe:
+    periodSeconds: 5
+    failureThreshold: 120
 
 # Pin api + workers (notification, export, automation, command-proxy) to carbon
 # so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
@@ -138,7 +280,8 @@ web:
 
   securityContext:
     allowPrivilegeEscalation: false
-    readOnlyRootFilesystem: false
+    # Nginx writes only to the three mounted emptyDir paths in deployment-web.
+    readOnlyRootFilesystem: true
     capabilities:
       drop:
         - ALL
@@ -301,18 +444,159 @@ encryption:
 # ─────────────────────────────────────────────────────────────────────────────
 # Secrets
 #
-# By default the chart creates a K8s Secret with credentials from values.
-# Set secrets.existingSecret to the name of a pre-created Secret to skip
-# chart-managed secret creation. Useful for GitOps setups with SOPS,
-# External Secrets Operator, or Sealed Secrets.
+# By default the chart references a pre-created <release>-teslasync Secret and
+# does not render credential material. This keeps `helm template`, Argo CD, and
+# Flux output deterministic and prevents offline renders from rotating values.
+#
+# Set secrets.existingSecret for a differently named Secret (for example from
+# SOPS or Sealed Secrets), or enable externalSecrets below. Chart-managed
+# Secrets are opt-in with secrets.create=true and require explicit strong
+# PostgreSQL and Grafana passwords; the chart never generates random values.
+# These modes are mutually exclusive.
 #
 # The existing Secret must contain these keys:
 #   TESLA_CLIENT_ID, TESLA_CLIENT_SECRET, DATABASE_PASS,
-#   REDIS_PASSWORD, ENCRYPTION_KEY, GAS_PRICE_API_KEY,
-#   AZURE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY, MONGODB_URI
+#   and GRAFANA_ADMIN_PASSWORD when bundled Grafana is enabled. Optional
+#   integrations need their corresponding REDIS_PASSWORD, ENCRYPTION_KEY,
+#   GAS_PRICE_API_KEY, AZURE_MAPS_API_KEY, GOOGLE_MAPS_API_KEY, MONGODB_URI,
+#   MQTT_PASSWORD, AUTH_JWT_SECRET, TESLASYNC_VAPID_PRIVATE_KEY,
+#   TESLASYNC_VAPID_SUBJECT, TESLASYNC_GITHUB_TOKEN, and
+#   TESLASYNC_OPERATOR_TOKEN keys.
 # ─────────────────────────────────────────────────────────────────────────────
 secrets:
+  create: false
   existingSecret: ""
+
+# External Secrets Operator integration. The referenced SecretStore or
+# ClusterSecretStore is intentionally managed outside this application chart
+# because its workload identity and provider permissions are cluster concerns.
+externalSecrets:
+  enabled: false
+  refreshInterval: 1h
+  secretStoreRef:
+    name: ""
+    kind: ClusterSecretStore
+  target:
+    # Empty uses the normal <release>-teslasync Secret name.
+    name: ""
+    # Only "" or "Orphan" are accepted; the chart renders Orphan in EVERY
+    # migrationGate mode. Anything else is a render-time error.
+    #
+    # Any owning policy makes ESO stamp .metadata.ownerReferences onto the
+    # target Secret at creation time. That is a time bomb in every mode, not
+    # just hook mode: a release installed today under `none` or `require`
+    # carries the reference, and the day it enters hook mode the
+    # `before-hook-creation` delete of the ExternalSecret garbage-collects the
+    # credentials out from under every running pod.
+    #
+    # deletionPolicy does NOT protect against this. Per the ESO API reference
+    # it "specifies what happens to the Secret when data fields are deleted
+    # from the provider" — it says nothing about deletion of the
+    # ExternalSecret object itself.
+    #
+    # Orphan "creates the Secret but does not set .metadata.ownerReferences"
+    # and updates it if it already exists, so the target survives the CR being
+    # recreated and the default refreshPolicy: Periodic resumes refreshing it.
+    #
+    # LIMIT: this governs FUTURE reconciles only. It does not remove an
+    # ownerReference that an earlier Owner-managed reconcile already wrote onto
+    # a live Secret, and ESO does not retract references it has already set. A
+    # release that ran with Owner before this change MUST complete the one-time
+    # preflight in docs/runbooks/migration-gate-lifecycle.md before its first
+    # conversion into hook mode.
+    #
+    # Trade-off: because the target Secret is orphaned it is not
+    # garbage-collected when the release goes away. See "Uninstall" in the
+    # chart README for the explicit cleanup.
+    creationPolicy: ""
+    deletionPolicy: Retain
+  # Use either data, dataFrom, or both. Remote values must produce the
+  # environment-variable keys documented above.
+  data: []
+  # - secretKey: DATABASE_PASS
+  #   remoteRef:
+  #     key: teslasync/production/database-password
+  dataFrom: []
+  # - extract:
+  #     key: teslasync/production
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Migration hook secret gate
+#
+# The database migration Job runs as a `pre-install,pre-upgrade` Helm hook and
+# reads DATABASE_PASS from the runtime Secret via `envFrom`. Helm applies hooks
+# BEFORE the release's ordinary manifests, so any Secret source the chart
+# renders as an ordinary manifest does not exist yet when that Job is
+# scheduled:
+#
+#   * externalSecrets — on a fresh install the ExternalSecret is applied after
+#     the hook, so External Secrets Operator has not been asked to fetch
+#     anything. The Job's pod sits in CreateContainerConfigError until the hook
+#     times out, with nothing in the output pointing at the cause.
+#   * secrets.create — the chart-managed Secret has the same ordering problem.
+#   * secrets.existingSecret — provisioned out of band, so nothing to order.
+#
+# Hook weights alone do not fix this. Weights only order resources that are
+# themselves hooks, and even once an ExternalSecret exists, ESO still has to
+# reach the provider and write the target Secret. The contract therefore has
+# two halves: make the source exist before the hook, then actually wait for the
+# data.
+#
+# One question decides which mode is valid: DOES THIS CHART RENDER THE SECRET
+# SOURCE? (externalSecrets.enabled=true or secrets.create=true)
+#
+# mode:
+#   auto     `hook` when the chart renders the source, `none` otherwise.
+#            Default.
+#   hook     REQUIRES a chart-rendered source. Renders it as a
+#            pre-install/pre-upgrade hook at weight -10 (the migration Job is
+#            weight 0), with `helm.sh/resource-policy: keep` so converting a
+#            previously ordinary manifest is not deleted by Helm's regular
+#            removal phase, AND makes the Job wait for the required keys.
+#   require  REQUIRES that no source is chart-rendered — the Secret is
+#            genuinely provisioned outside this release (secrets.existingSecret,
+#            or an ExternalSecret applied by a GitOps controller). Combining it
+#            with externalSecrets.enabled or secrets.create is a render-time
+#            error: an ordinary manifest cannot be applied until the pre-install
+#            hooks have finished, so the migration Job would time out on every
+#            fresh install by construction.
+#            Enforced at the hook boundary by the readiness wait below, which
+#            fails the migration Job — and so the release — within
+#            timeoutSeconds, naming the Secret and the missing keys. The chart
+#            deliberately does NOT `lookup` the Secret at render time: that
+#            would make rendering depend on cluster state and on the Helm client
+#            holding RBAC to read Secrets, which many GitOps service accounts do
+#            not have.
+#   none     No ordering, no wait. NOT a general escape hatch — it does not make
+#            the race safe, it only stops the chart from managing it, and for a
+#            chart-rendered source it is a known-broken fresh install. It exists
+#            for one case: a release whose Secret is already present and stable,
+#            where you are deliberately deferring the conversion.
+#
+# LIFECYCLE WARNING. Helm tracks hook resources and ordinary manifests
+# separately and offers no supported in-place transition between them. All three
+# of these need an explicit operator procedure and are NOT safe as a bare
+# `helm upgrade` / `helm rollback`:
+#   1. the first conversion of a pre-fix ordinary source into hook mode;
+#   2. rolling back from a hook-mode revision to a pre-conversion revision;
+#   3. leaving hook mode — hook mode is STICKY for a source identity.
+# See docs/runbooks/migration-gate-lifecycle.md, registered in
+# ops/runbooks/dependencies.yaml so the warning cannot drift away.
+#
+# The wait runs as an initContainer that mounts the target Secret with
+# `optional: true` and polls its own mounted files, so it needs no API access
+# and no extra RBAC. On timeout it names the Secret, the missing keys, and the
+# `kubectl get externalsecret` command that shows why ESO has not synced.
+migrationGate:
+  mode: auto
+  # Total time the migration Job will wait for the runtime Secret. Must exceed
+  # the worst-case ESO reconciliation for your provider.
+  timeoutSeconds: 300
+  pollIntervalSeconds: 5
+  # Keys the migration itself cannot start without. DATABASE_PASS is the
+  # minimum; add others if your deployment needs them before migrating.
+  requiredKeys:
+    - DATABASE_PASS
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Fleet Telemetry (Tesla streaming data)
@@ -345,9 +629,15 @@ fleetTelemetry:
   # Example: telemetry.example.com
   host: ""
 
-  # -- Tesla's official Fleet Telemetry Docker image.
-  # See: https://hub.docker.com/r/tesla/fleet-telemetry
-  image: tesla/fleet-telemetry:latest
+  # -- Optional complete image reference override. Leave empty to use
+  # imageRepository with imageTag (or the chart appVersion).
+  image: ""
+  # -- TeslaSync's pinned Fleet Telemetry build. It preserves Payload.CreatedAt
+  # in each MQTT field envelope so broker replay cannot rewrite event time.
+  imageRepository: ghcr.io/ev-dev-labs/teslasync-fleet-telemetry
+  # -- Image tag. Empty uses the chart appVersion.
+  imageTag: ""
+  imagePullPolicy: IfNotPresent
 
   service:
     # NodePort opens port 30443 on every node's host network. The router
@@ -466,6 +756,9 @@ serviceAccount:
 ingress:
   enabled: false
   className: ""
+  # Security annotations are emitted by the ingress template. They apply at
+  # the TLS boundary (not the HTTP web pod), and can be overridden here only
+  # when a nonstandard ingress controller requires different annotations.
   annotations: {}
   hosts:
     - host: teslasync.local
@@ -485,6 +778,10 @@ ingressRoute:
   enabled: false
   namespace: ""
   annotations: {}
+  # Adds a Traefik Middleware with the browser-security headers and HSTS.
+  # It is attached automatically to every chart-managed route.
+  securityHeaders:
+    enabled: true
   entryPoints:
     - websecure
   # SSE bypass route — auto-added before catch-all when a ForwardAuth provider is used.
@@ -545,7 +842,10 @@ config:
   browserApiBase: ""
 
   # -- Public-facing base URL for the web frontend.
-  # Used for CORS allowed origins. Leave empty to allow all origins.
+  # Used for CORS and CSRF trusted origins. When standard ingress TLS is
+  # enabled this chart derives https:// origins from ingress.tls hosts if this
+  # remains empty. Set it explicitly for non-443, split-origin, or Traefik
+  # IngressRoute TLS deployments.
   #
   # Examples:
   #   Public:   https://teslasync.cyphers.app
@@ -644,6 +944,18 @@ config:
   # DEPRECATED: Removed in Phase 18 auth unification. Use forwardAuthHeader instead.
   # authentikURL: ""
   # authentikHMACKey: ""
+
+# ── Synthetic monitoring — outside-in canary probes ────────────────────
+synthetic:
+  # All synthetic checks are opt-in. probeURLs is a comma-separated list
+  # of endpoint checks.
+  enabled: false
+  intervalSeconds: 60
+  timeoutSeconds: 30
+  probeURLs: ""
+  # Base URL for the critical operator journey. Use the API origin without
+  # /api/v1, e.g. "http://teslasync:8080". Empty disables the journey.
+  journeyBaseURL: ""
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Gas Price Auto-Poll (EIA API)
@@ -772,6 +1084,10 @@ tesla:
   authUrl: "https://auth.tesla.com"
   # -- Timeout for Tesla API requests
   timeout: "30s"
+  # -- UTC-daily estimated Fleet API spend ceiling in USD. Set 0 to disable.
+  dailyBudgetUsd: 0.30
+  # -- Portion of dailyBudgetUsd protected from background reads for commands.
+  commandReserveUsd: 0.05
 
 # ─────────────────────────────────────────────────────────────────────────────
 # PostgreSQL
@@ -781,6 +1097,19 @@ tesla:
 # ─────────────────────────────────────────────────────────────────────────────
 postgresql:
   enabled: true
+  # timescaledb-ha runs as its postgres user; writable state is limited to
+  # the data PVC plus the explicit runtime emptyDir mounts.
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1000
+    runAsGroup: 1000
+    fsGroup: 1000
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
 
   # -- Connection pool tuning
   maxConns: 25
@@ -806,7 +1135,9 @@ postgresql:
 
   auth:
     username: teslasync
-    password: teslasync
+    # Used only when secrets.create=true, where a non-empty strong value is
+    # required. Existing/external Secret modes keep this blank.
+    password: ""
     database: teslasync
 
   service:
@@ -871,12 +1202,38 @@ postgresql:
 # ─────────────────────────────────────────────────────────────────────────────
 redis:
   enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 999
+    runAsGroup: 999
+    fsGroup: 999
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
   # -- Redis database number
   db: 0
 
   image: redis:7-alpine
 
-  command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+  # Keep Redis below its 192Mi pod limit so AOF rewrite copy-on-write and
+  # allocator overhead cannot turn a busy reboot recovery into an OOM loop.
+  # AOF is the single persistence mechanism; periodic RDB snapshots are
+  # disabled to avoid a second fork-heavy persistence path in the small pod.
+  command:
+    - redis-server
+    - --appendonly
+    - "yes"
+    - --appendfsync
+    - everysec
+    - --maxmemory
+    - 128mb
+    - --maxmemory-policy
+    - noeviction
+    - --save
+    - ""
 
   service:
     type: ClusterIP
@@ -911,6 +1268,17 @@ redis:
 # ─────────────────────────────────────────────────────────────────────────────
 mqtt:
   enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 1883
+    runAsGroup: 1883
+    fsGroup: 1883
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
   # -- MQTT client ID
   clientId: "teslasync"
   # -- MQTT topic prefix
@@ -932,6 +1300,15 @@ mqtt:
     storageClass: ""
     accessModes:
       - ReadWriteOnce
+    # -- Seconds between broker persistence snapshots. Five seconds limits the
+    # hard-reboot loss window without forcing a disk write for every signal.
+    autosaveIntervalSeconds: 5
+
+  queue:
+    # -- QoS 1/2 messages retained per offline persistent client. The
+    # subscriber normally recovers within seconds; this is additional headroom
+    # for a pod restart and must not be treated as a recovery mechanism.
+    maxQueuedMessages: 10000
 
   resources:
     limits:
@@ -950,12 +1327,13 @@ mqtt:
 # Phase-42 operator surface
 #
 # These knobs power the resubscribe + unit-drift workflows introduced in
-# Phase-42 (ADR-004 #5 + #9). Both cmd/resubscribe and cmd/unit-drift-validator
-# refuse to run without `operator.token` — leave it empty to keep them disabled.
+# Phase-42 (ADR-004 #5 + #9). Both cmd/resubscribe and
+# cmd/unit-drift-validator require TESLASYNC_OPERATOR_TOKEN in the selected
+# runtime Secret. operator.token is used only when secrets.create=true.
 # ─────────────────────────────────────────────────────────────────────────────
 operator:
   # -- Operator token used by cmd/resubscribe and cmd/unit-drift-validator.
-  # Rendered into the Secret as TESLASYNC_OPERATOR_TOKEN when non-empty.
+  # Rendered into the chart-managed Secret when secrets.create=true.
   # Generate with `openssl rand -hex 32` and store in your secret manager.
   token: ""
 
@@ -1001,13 +1379,16 @@ unitDriftValidator:
 # Controls how long historical data is kept before automatic cleanup.
 # ─────────────────────────────────────────────────────────────────────────────
 retention:
-  # Days to keep general data (drives, charges, positions, etc.)
-  # Uncomment to enable automatic cleanup:
-  # dataDays: 365
-  # Days to keep high-frequency position data
-  # positionDays: 90
-  # Days to keep per-signal telemetry history (Postgres signal_history table)
-  # signalHistoryDays: 7
+  # Legacy vehicle-state cleanup compatibility setting. The current
+  # vehicle_live_state table is current state, not retained history.
+  dataDays: 0
+  # The positions table is legacy and receives no canonical telemetry writes.
+  positionDays: 0
+  # Raw signal_log history. Continuous aggregates retain long-range trends.
+  signalHistoryDays: 365
+  # Destructive retention is inactive until an operator verifies a recoverable
+  # backup and explicitly acknowledges the configured history window.
+  signalHistoryAcknowledged: false
   # Days to keep audit_logs entries (Phase-40 / Prompt 49). Hard delete after.
   # Set to 0 to disable cleanup. Default in the API server is 365.
   auditDays: 365
@@ -1067,11 +1448,23 @@ mongodb:
 # ─────────────────────────────────────────────────────────────────────────────
 grafana:
   enabled: true
+  podSecurityContext:
+    runAsNonRoot: true
+    runAsUser: 472
+    runAsGroup: 472
+    fsGroup: 472
+  securityContext:
+    allowPrivilegeEscalation: false
+    readOnlyRootFilesystem: true
+    capabilities:
+      drop:
+        - ALL
 
   image: grafana/grafana:10.4.0
 
   adminUser: admin
-  adminPassword: teslasync
+  # Required only when Grafana is enabled with secrets.create=true.
+  adminPassword: ""
 
   # This chart does not bundle Prometheus. Point the provisioned datasource
   # at the Prometheus service already present in the cluster.

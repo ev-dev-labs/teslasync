@@ -41,6 +41,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import { OverviewVehicleComparison } from './OverviewVehicleComparison';
@@ -94,7 +96,8 @@ vi.mock('@/hooks/useSettings', async () => {
 //    chart surfaces its `data` prop (as JSON), each series surfaces its dataKey
 //    binding, and the donut surfaces its projected `data` array + one <Cell>
 //    per slice so the page-computed conversions are directly assertable. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
   const Inert = () => null;
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const makeChart =
@@ -131,6 +134,7 @@ vi.mock('@/components/charts', () => {
     <span data-testid="pie-cell" data-fill={String(fill ?? '')} />
   );
   return {
+    ...actual,
     ChartTooltip: Inert,
     chartGrid: null,
     axisTick: {},
@@ -195,10 +199,15 @@ function makeQuery(over: QueryOverride = {}): FleetAnalyticsQuery {
 }
 
 function renderCmp(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <OverviewVehicleComparison query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <OverviewVehicleComparison query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -218,7 +227,7 @@ function barRows(): Row[] {
 }
 /** Inline widths of every leaderboard fill bar, in render (ranked) order. */
 function leaderboardWidths(container: HTMLElement): string[] {
-  return Array.from(container.querySelectorAll<HTMLElement>('.bg-neon-cyan')).map(
+  return Array.from(container.querySelectorAll<HTMLElement>('[data-testid="efficiency-leader-fill"]')).map(
     (el) => el.style.width,
   );
 }
@@ -331,16 +340,17 @@ describe('OverviewVehicleComparison — populated', () => {
   it('exposes each chart as an accessible image with a unit-aware donut label', () => {
     renderCmp(makeQuery({ data: analytics(TWO) }));
 
-    // Exactly the three chart panels are images; the leaderboard is not.
-    expect(screen.getAllByRole('img')).toHaveLength(3);
+    // The static donut is an image; charts with interactive legends are groups.
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+    expect(screen.getAllByRole('group')).toHaveLength(2);
     expect(
       screen.getByRole('img', { name: 'Fleet distance share by vehicle (km)' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Normalized vehicle metric comparison' }),
+      screen.getByRole('group', { name: 'Normalized vehicle metric comparison' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Energy and drive count by vehicle' }),
+      screen.getByRole('group', { name: 'Energy and drive count by vehicle' }),
     ).toBeInTheDocument();
   });
 
@@ -431,8 +441,10 @@ describe('OverviewVehicleComparison — radar threshold', () => {
     expect(screen.getByTestId('chart-pie')).toBeInTheDocument();
     expect(screen.getByTestId('chart-bar')).toBeInTheDocument();
     expect(screen.getByText('#1 Solo')).toBeInTheDocument();
-    // Two chart images (donut + energy); the radar is an empty state.
-    expect(screen.getAllByRole('img')).toHaveLength(2);
+    // The donut is an image, the interactive energy chart is a group, and
+    // the radar is an empty state.
+    expect(screen.getAllByRole('img')).toHaveLength(1);
+    expect(screen.getByRole('group', { name: 'Energy and drive count by vehicle' })).toBeInTheDocument();
   });
 });
 

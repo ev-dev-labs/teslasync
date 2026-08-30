@@ -99,7 +99,7 @@ export default function AutopilotSection({ vehicleId }: AutopilotSectionProps) {
         {t('dynamics.autopilot', 'Autopilot & Cruise')}
       </PanelTitle>
       {hasAny ? (
-        <Grid cols={{ default: 1, sm: 3 }} gap={4}>
+        <Grid minItemWidth="standard" gap={4}>
           <StatCard
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             label={t('dynamics.currentSpeed', 'Current Speed')}

@@ -11,6 +11,7 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
+	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/router"
 )
 
@@ -25,6 +26,15 @@ import (
 // signal_metadata table and avoids the field-name → ValueKind round-trip
 // on the hot path.
 //
+// The ONE exception is the numeric-kind label, which is canonicalised
+// against protomodel.SignalsByName by signalLogCanonicalNumericKind. The
+// Go runtime type of a numeric value is transport-dependent — the proto
+// batch path decodes whichever oneof variant the producer chose
+// (FloatValue → float32, DoubleValue → float64) while the per-field JSON
+// path decodes the width the catalog declares — so the runtime type is
+// not a stable discriminator for the SAME signal observed over the two
+// transports. See that function's godoc.
+//
 // The 8 active kinds cover every value type the codec.DecodeValue function
 // can emit. ValueKindUnknown (0), ValueKindCompound (8), and
 // ValueKindInvalid (10) are intentionally absent: compound atomics are
@@ -32,6 +42,11 @@ import (
 // never sees them, and the unknown / invalid kinds are dropped upstream
 // per protomodel/datum_decoder_gen.go:33-47.
 const (
+	// signalLogNormalizationVersion identifies rows written after the
+	// field-specific Tesla wire-unit rules have been applied. Legacy writers
+	// omit the nullable column added by migration 000232, leaving NULL.
+	signalLogNormalizationVersion int16 = 1
+
 	signalLogKindString int16 = 1
 	signalLogKindBool   int16 = 2
 	signalLogKindInt32  int16 = 3
@@ -88,21 +103,37 @@ var _ signalLogPool = (*pgxpool.Pool)(nil)
 // $1 = VIN (string), $2 = ts (time.Time), $3 = field (string),
 // $4 = value_kind (int16), $5 = str_value (any/nil), $6 = bool_value
 // (any/nil), $7 = int_value (any/nil), $8 = float_value (any/nil),
-// $9 = time_value (any/nil).
+// $9 = time_value (any/nil), $10 = normalization_version (int16),
+// $11 = ingest_origin (string), $12 = source_emitted_at (time.Time/nil),
+// $13 = received_at (time.Time/nil).
 const signalLogInsertSQL = `INSERT INTO signal_log (
 	vehicle_id, ts, field, value_kind,
-	str_value, bool_value, int_value, float_value, time_value
+	str_value, bool_value, int_value, float_value, time_value,
+	normalization_version, normalization_write_token,
+	ingest_origin, source_emitted_at, received_at, provenance_write_token
 )
-SELECT v.id, $2, $3, $4, $5, $6, $7, $8, $9
+SELECT v.id, $2, $3, $4, $5, $6, $7, $8, $9, $10, TRUE, $11, $12, $13, TRUE
 FROM vehicles v
 WHERE v.vin = $1
 ON CONFLICT (vehicle_id, ts, field) DO UPDATE SET
-	value_kind  = EXCLUDED.value_kind,
-	str_value   = EXCLUDED.str_value,
-	bool_value  = EXCLUDED.bool_value,
-	int_value   = EXCLUDED.int_value,
-	float_value = EXCLUDED.float_value,
-	time_value  = EXCLUDED.time_value`
+	value_kind            = EXCLUDED.value_kind,
+	str_value             = EXCLUDED.str_value,
+	bool_value            = EXCLUDED.bool_value,
+	int_value             = EXCLUDED.int_value,
+	float_value           = EXCLUDED.float_value,
+	time_value            = EXCLUDED.time_value,
+	normalization_version = EXCLUDED.normalization_version,
+	normalization_write_token = NOT COALESCE(
+		signal_log.normalization_write_token,
+		FALSE
+	),
+	ingest_origin         = EXCLUDED.ingest_origin,
+	source_emitted_at     = EXCLUDED.source_emitted_at,
+	received_at           = EXCLUDED.received_at,
+	provenance_write_token = NOT COALESCE(
+		signal_log.provenance_write_token,
+		FALSE
+	)`
 
 // signalLogWriter is the bespoke router.Writer for destination
 // signal_log. It is NOT composed from snapshotWriter because signal_log
@@ -152,6 +183,11 @@ func NewSignalLogWriter(pool *pgxpool.Pool) router.Writer {
 //     a producer/codec contract drift surfaces loudly per the writer's
 //     drop-loud contract.
 //
+//  1a. Canonicalise the numeric kind label via
+//     signalLogCanonicalNumericKind so the same signal carries the same
+//     value_kind regardless of which transport attested it. The bound
+//     value itself is never rewritten — only the label.
+//
 //  2. Normalise atom.EmittedAt to UTC with the monotonic clock stripped
 //     so two atomics carrying the same Payload.CreatedAt always
 //     key-equal. Mirrors positions_writer.go:284 and
@@ -195,9 +231,18 @@ func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 	if err != nil {
 		return fmt.Errorf("signalLogWriter.%s: %w", atom.Field, err)
 	}
+	declaredKind := bound.kind
+	bound.kind = signalLogCanonicalNumericKind(atom.Field, bound.kind)
 	span.SetAttributes(attribute.Int("value_kind", int(bound.kind)))
+	if bound.kind != declaredKind {
+		span.SetAttributes(
+			attribute.Int("value_kind_runtime", int(declaredKind)),
+			attribute.Bool("value_kind_canonicalized", true),
+		)
+	}
 
 	ts := atom.EmittedAt.UTC().Round(0)
+	origin, sourceEmittedAt, receivedAt := signalLogProvenance(atom)
 
 	tag, err := w.db.Exec(
 		ctx,
@@ -211,10 +256,15 @@ func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 		bound.integer,
 		bound.float,
 		bound.timeVal,
+		signalLogNormalizationVersion,
+		origin,
+		sourceEmittedAt,
+		receivedAt,
 	)
 	if err != nil {
 		return fmt.Errorf("signalLogWriter.%s: %w", atom.Field, err)
 	}
+
 	span.SetAttributes(attribute.Int64("rows_affected", tag.RowsAffected()))
 	if tag.RowsAffected() == 0 {
 		// VIN deliberately not in the message — it is PII. The
@@ -226,6 +276,93 @@ func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 		return err
 	}
 	return nil
+}
+
+// signalLogProvenance converts codec provenance into database-ready values.
+// Missing or invalid origin is deliberately stored as explicit "unknown";
+// source time remains nil in that case because a caller that did not stamp a
+// transport origin has not supplied a durable attestation context.
+func signalLogProvenance(atom codec.Atomic) (codec.IngestOrigin, any, any) {
+	origin := atom.IngestOrigin
+	if !origin.Valid() {
+		return codec.IngestOriginUnknown, nil, normalizeOptionalTime(atom.ReceivedAt)
+	}
+	var sourceEmittedAt any
+	if atom.SourceEmittedAt != nil {
+		sourceEmittedAt = atom.SourceEmittedAt.UTC().Round(0)
+	}
+	return origin, sourceEmittedAt, normalizeOptionalTime(atom.ReceivedAt)
+}
+
+func normalizeOptionalTime(t *time.Time) any {
+	if t == nil || t.IsZero() {
+		return nil
+	}
+	return t.UTC().Round(0)
+}
+
+// signalLogCanonicalNumericKind returns the value_kind label that every
+// transport must agree on for a numeric value of the given field.
+//
+// Why this exists: value_kind is a per-signal type discriminator, but the
+// Go runtime type the writer sees for a numeric value is a TRANSPORT
+// artefact. The proto batch path (HTTP) decodes whichever Value oneof
+// variant the producer populated — Value_FloatValue yields float32,
+// Value_DoubleValue yields float64 — while the per-field JSON path (MQTT)
+// decodes the width declared by protomodel.SignalMeta.ValueKind. The same
+// physical observation of e.g. VehicleSpeed therefore reached signal_log
+// as value_kind=6 over one transport and value_kind=5 over the other; the
+// signal_transport_evidence trigger copied that split into the evidence
+// feed, and the cross-transport agreement analyzer then scored two
+// identical numbers as a disagreement.
+//
+// The catalog is the correct arbiter: protomodel is generated from the
+// vendored Tesla proto, so SignalsByName[field].ValueKind is the declared
+// type of the SIGNAL, independent of the transport that carried it. The
+// lookup is a single map hit against a package-level map, so the hot path
+// cost is one hash — not the field-name → metadata round-trip the rest of
+// this writer avoids.
+//
+// Deliberate limits:
+//
+//   - Only float↔float and integer↔integer relabelling happens. A numeric
+//     runtime value whose catalog entry declares a NON-numeric kind (or a
+//     numeric family the value does not belong to) keeps its runtime label
+//     so codec/catalog drift stays visible instead of being papered over.
+//
+//   - Fields with no catalog entry (flattened compound children, unknown
+//     producer fields) keep their runtime label; there is no metadata to
+//     canonicalise against and inventing one would be a fabricated claim.
+//
+//   - Enum (kind 7) is never produced or consumed here. Typed proto enums
+//     are converted to canonical short strings by the codec on both
+//     transports, so the enum label is not a cross-transport divergence.
+//
+//   - Only the label changes. Both float kinds land in the same DOUBLE
+//     PRECISION column and both integer kinds in the same BIGINT column,
+//     so no stored magnitude, precision, or SI semantic is altered.
+func signalLogCanonicalNumericKind(field string, kind int16) int16 {
+	meta := protomodel.SignalsByName[field]
+	if meta == nil {
+		return kind
+	}
+	switch kind {
+	case signalLogKindFloat, signalLogKindDouble:
+		switch meta.ValueKind {
+		case protomodel.ValueKindFloat:
+			return signalLogKindFloat
+		case protomodel.ValueKindDouble:
+			return signalLogKindDouble
+		}
+	case signalLogKindInt32, signalLogKindInt64:
+		switch meta.ValueKind {
+		case protomodel.ValueKindInt32:
+			return signalLogKindInt32
+		case protomodel.ValueKindInt64:
+			return signalLogKindInt64
+		}
+	}
+	return kind
 }
 
 // signalLogBound is the typed-column payload returned by

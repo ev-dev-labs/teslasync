@@ -1,8 +1,8 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Text } from '@/components/ui';
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   chartGrid,
   axisTickSm,
@@ -40,33 +40,6 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
     [t],
   );
 
-  // Legend swatches read straight from the same palette as the series so the
-  // colors always match the rendered lines/bar (they previously drifted out of
-  // sync when the default palette switched to the color-blind-safe set).
-  const legend = useMemo(
-    () => [
-      {
-        key: 'avg10to80',
-        color: CHART_COLORS[0],
-        opacity: 1,
-        label: t('charging.curve.avg10to80Line', '10→80% avg'),
-      },
-      {
-        key: 'avg20to80',
-        color: CHART_COLORS[2],
-        opacity: 1,
-        label: t('charging.curve.avg20to80Line', '20→80% avg'),
-      },
-      {
-        key: 'count',
-        color: CHART_COLORS[5],
-        opacity: 0.3,
-        label: t('charging.curve.dcSessions', 'DC Sessions'),
-      },
-    ],
-    [t],
-  );
-
   return (
     <ChartContainer
       title={t('charging.curve.yearlyTrend', 'Yearly Charging Speed Trend')}
@@ -78,6 +51,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
         'charging.curve.yearlyTrend.aria',
         'Yearly average charge-time and session-count composed chart',
       )}
+      chartKey="charging-curve-yearly-trend"
       empty={isEmpty}
       data={data}
       dataColumns={dataColumns}
@@ -85,8 +59,9 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
       exportable
       exportFilename="yearly-charging-trend"
     >
-      <ResponsiveContainer width="100%" height={280}>
-        <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
+      {({ hiddenSeries }) => (
+        <ResponsiveContainer width="100%" height={280}>
+          <ComposedChart data={data} margin={{ top: 10, right: 20, left: 0, bottom: 0 }}>
           <CartesianGrid {...chartGrid} />
           <XAxis dataKey="year" tick={axisTickSm} />
           <YAxis
@@ -112,6 +87,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
             }}
           />
           <Tooltip content={<ChartTooltip />} />
+          <ChartLegend />
           <Bar
             yAxisId="count"
             dataKey="count"
@@ -119,6 +95,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
             fill={CHART_COLORS[5]}
             opacity={0.3}
             radius={[4, 4, 0, 0]}
+            hide={hiddenSeries?.isHidden('count')}
           />
           <Line
             {...AREA_DEFAULTS}
@@ -128,6 +105,7 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
             stroke={CHART_COLORS[0]}
             dot={{ r: 4, fill: CHART_COLORS[0] }}
             unit=" min"
+            hide={hiddenSeries?.isHidden('avg10to80')}
           />
           <Line
             {...AREA_DEFAULTS}
@@ -137,20 +115,11 @@ export default function YearlyTrendChart({ yearlyTrend }: YearlyTrendChartProps)
             stroke={CHART_COLORS[2]}
             dot={{ r: 4, fill: CHART_COLORS[2] }}
             unit=" min"
+            hide={hiddenSeries?.isHidden('avg20to80')}
           />
-        </ComposedChart>
-      </ResponsiveContainer>
-      <div className="mt-3 flex flex-wrap gap-4 px-2">
-        {legend.map((item) => (
-          <div key={item.key} className="flex items-center gap-1.5">
-            <span
-              className="inline-block h-2 w-3 rounded-sm"
-              style={{ backgroundColor: item.color, opacity: item.opacity }}
-            />
-            <Text variant="bodySm">{item.label}</Text>
-          </div>
-        ))}
-      </div>
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
     </ChartContainer>
   );
 }

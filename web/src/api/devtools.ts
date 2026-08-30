@@ -86,13 +86,13 @@ export interface RedisSignalsPurgeAllResponse {
 export const purgeRedisSignals = (vehicleId: number) =>
   request<RedisSignalsPurgeResponse>(
     `/dev-tools/redis-signals?vehicle_id=${vehicleId}`,
-    { method: 'DELETE' },
+    { method: 'DELETE', requiresLiveMode: true },
   )
 
 export const purgeAllRedisSignals = () =>
   request<RedisSignalsPurgeAllResponse>(
     '/dev-tools/redis-signals/keys',
-    { method: 'DELETE' },
+    { method: 'DELETE', requiresLiveMode: true },
   )
 
 // === Fleet Telemetry ===
@@ -129,7 +129,10 @@ export const getAPIUsage = () => request<APIUsage>('/system/api-usage')
 
 export const getCompressionStats = () => request<CompressionStats>('/system/compression-stats')
 
-export const getExtendedHealth = () => request<ExtendedHealthResponse>('/system/health')
+export const getExtendedHealth = () =>
+  request<ExtendedHealthResponse>('/system/health', {
+    acceptedStatuses: [503],
+  })
 
 export const getBackupStats = () => request<BackupStats>('/system/backup/stats')
 

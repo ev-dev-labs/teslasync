@@ -49,13 +49,14 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ChartLegend,
   ChartTooltip,
   chartMarginLabeled,
   axisTick,
   chartAnimation,
   AREA_DEFAULTS,
   areaGradient,
+  EmbeddedChart,
 } from '@/components/charts';
 
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -429,6 +430,23 @@ export default function ClimateControlPage() {
 
   const historyQuery = useClimateHistory(activeId);
   const { data: history, isLoading: historyLoading } = historyQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'latest-climate-state',
+        label: t('dataSources.labels.latestClimateState', 'Latest climate state'),
+        query: climateQuery,
+        enabled: activeId !== '',
+      },
+      {
+        id: 'climate-history',
+        label: t('dataSources.labels.climateHistory', 'Climate history'),
+        query: historyQuery,
+        enabled: activeId !== '',
+      },
+    ],
+    [activeId, climateQuery, historyQuery, t],
+  );
 
   /* ─── Charging telemetry (for NotEnoughPowerToHeat alert) ─── */
   const { data: chargingLatest } = useChargingTelemetryLatest(activeIdNum);
@@ -584,6 +602,7 @@ export default function ClimateControlPage() {
       title={t('Climate Control')}
       subtitle={t('HVAC status, temperatures, and seat heaters')}
       query={[climateQuery, historyQuery]}
+      dataSources={dataSources}
       actions={
         <div className="flex flex-wrap items-center justify-end gap-2">
           <VehicleSelect />
@@ -1311,51 +1330,72 @@ export default function ClimateControlPage() {
             {historyLoading ? (
               <Skeleton height={300} />
             ) : !hasTempHistory ? (
-              <EmptyState /* no-action: transient — no history samples yet */
+              // no-action: temperature history accumulates automatically from climate telemetry.
+              <EmptyState
                 icon={<Thermometer className="h-10 w-10" aria-hidden="true" />}
-                message={t('No temperature history available.')}
+                message={t(
+                  'climate.history.temperatureEmpty',
+                  'No temperature history has been recorded.',
+                )}
+                description={t(
+                  'climate.history.temperatureEmptyDescription',
+                  'Cabin, ambient, and set-point trends appear after the vehicle reports climate samples.',
+                )}
               />
             ) : (
               <div className="h-64 sm:h-72 xl:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={convertedChartData} margin={chartMarginLabeled}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--glass-border)"
-                      strokeOpacity={0.4}
-                    />
-                    <XAxis
-                      dataKey="timestamp"
-                      tick={axisTick}
-                      tickFormatter={(v: string) => formatTime(v)}
-                    />
-                    <YAxis tick={axisTick} unit={tempUnit} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="insideTemp"
-                      name={t('Inside Temp')}
-                      stroke={CHART_COLORS[0]}
-                      {...chartAnimation}
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="outsideTemp"
-                      name={t('Outside Temp')}
-                      stroke={CHART_COLORS[1]}
-                      {...chartAnimation}
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="driverTempSetting"
-                      name={t('Driver Set Temp')}
-                      stroke={CHART_COLORS[2]}
-                      strokeDasharray="5 5"
-                      {...chartAnimation}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {/* chart-a11y:no-table continuous temperature time-series with many data points — not tabular */}
+                <EmbeddedChart
+                  chartKey="climate-temp-history"
+                  title={t('climate.history.title', 'Temperature History')}
+                  ariaLabel={t('climate.history.temperatureAria', 'Cabin, ambient, and driver set-point temperature over time')}
+                  fluid
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={convertedChartData} margin={chartMarginLabeled}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="var(--glass-border)"
+                          strokeOpacity={0.4}
+                        />
+                        <XAxis
+                          dataKey="timestamp"
+                          tick={axisTick}
+                          tickFormatter={(v: string) => formatTime(v)}
+                        />
+                        <YAxis tick={axisTick} unit={tempUnit} />
+                        <Tooltip content={<ChartTooltip />} />
+                        <ChartLegend />
+                        <Line
+                          {...AREA_DEFAULTS}
+                          dataKey="insideTemp"
+                          name={t('Inside Temp')}
+                          stroke={CHART_COLORS[0]}
+                          {...chartAnimation}
+                          hide={hiddenSeries?.isHidden('insideTemp') ?? false}
+                        />
+                        <Line
+                          {...AREA_DEFAULTS}
+                          dataKey="outsideTemp"
+                          name={t('Outside Temp')}
+                          stroke={CHART_COLORS[1]}
+                          {...chartAnimation}
+                          hide={hiddenSeries?.isHidden('outsideTemp') ?? false}
+                        />
+                        <Line
+                          {...AREA_DEFAULTS}
+                          dataKey="driverTempSetting"
+                          name={t('Driver Set Temp')}
+                          stroke={CHART_COLORS[2]}
+                          strokeDasharray="5 5"
+                          {...chartAnimation}
+                          hide={hiddenSeries?.isHidden('driverTempSetting') ?? false}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>
@@ -1371,56 +1411,76 @@ export default function ClimateControlPage() {
             {historyLoading ? (
               <Skeleton height={300} />
             ) : !hasTempHistory ? (
-              <EmptyState /* no-action: transient — no HVAC history samples yet */
+              // no-action: HVAC history accumulates automatically from climate telemetry.
+              <EmptyState
                 icon={<Wind className="h-10 w-10" aria-hidden="true" />}
-                message={t('No HVAC history available.')}
+                message={t(
+                  'climate.history.hvacEmpty',
+                  'No HVAC operating history has been recorded.',
+                )}
+                description={t(
+                  'climate.history.hvacEmptyDescription',
+                  'AC state and fan-speed trends appear after the vehicle reports active climate samples.',
+                )}
               />
             ) : (
               <div className="h-64 sm:h-72 xl:h-80">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={convertedChartData} margin={chartMarginLabeled}>
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="var(--glass-border)"
-                      strokeOpacity={0.4}
-                    />
-                    <XAxis
-                      dataKey="timestamp"
-                      tick={axisTick}
-                      tickFormatter={(v: string) => formatTime(v)}
-                    />
-                    <YAxis yAxisId="ac" domain={[0, 1]} tick={axisTick} width={36} />
-                    <YAxis
-                      yAxisId="fan"
-                      orientation="right"
-                      domain={[0, 10]}
-                      tick={axisTick}
-                      width={36}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    {areaGradient('climateAcGrad', CHART_COLORS[0])}
-                    <Area
-                      {...AREA_DEFAULTS}
-                      yAxisId="ac"
-                      type="stepAfter"
-                      dataKey="acActive"
-                      name={t('AC On/Off')}
-                      stroke={CHART_COLORS[0]}
-                      fill="url(#climateAcGrad)"
-                      {...chartAnimation}
-                    />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      yAxisId="fan"
-                      type="stepAfter"
-                      dataKey="fanSpeed"
-                      name={t('Fan Speed')}
-                      stroke={CHART_COLORS[3]}
-                      {...chartAnimation}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {/* chart-a11y:no-table continuous HVAC time-series (AC on/off + fan speed) — dense, not tabular */}
+                <EmbeddedChart
+                  chartKey="climate-hvac-history"
+                  title={t('AC State & Fan Speed')}
+                  ariaLabel={t('climate.history.hvacAria', 'AC on/off state and fan speed over time')}
+                  fluid
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={convertedChartData} margin={chartMarginLabeled}>
+                        <CartesianGrid
+                          strokeDasharray="3 3"
+                          stroke="var(--glass-border)"
+                          strokeOpacity={0.4}
+                        />
+                        <XAxis
+                          dataKey="timestamp"
+                          tick={axisTick}
+                          tickFormatter={(v: string) => formatTime(v)}
+                        />
+                        <YAxis yAxisId="ac" domain={[0, 1]} tick={axisTick} width={36} />
+                        <YAxis
+                          yAxisId="fan"
+                          orientation="right"
+                          domain={[0, 10]}
+                          tick={axisTick}
+                          width={36}
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        <ChartLegend />
+                        {areaGradient('climateAcGrad', CHART_COLORS[0])}
+                        <Area
+                          {...AREA_DEFAULTS}
+                          yAxisId="ac"
+                          type="stepAfter"
+                          dataKey="acActive"
+                          name={t('AC On/Off')}
+                          stroke={CHART_COLORS[0]}
+                          fill="url(#climateAcGrad)"
+                          {...chartAnimation}
+                          hide={hiddenSeries?.isHidden('acActive') ?? false}
+                        />
+                        <Line
+                          {...AREA_DEFAULTS}
+                          yAxisId="fan"
+                          type="stepAfter"
+                          dataKey="fanSpeed"
+                          name={t('Fan Speed')}
+                          stroke={CHART_COLORS[3]}
+                          {...chartAnimation}
+                          hide={hiddenSeries?.isHidden('fanSpeed') ?? false}
+                        />
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>
@@ -1439,9 +1499,14 @@ export default function ClimateControlPage() {
           {historyLoading ? (
             <Skeleton lines={8} />
           ) : sortedHistory.length === 0 ? (
-            <EmptyState /* no-action: transient — no history records yet */
+            // no-action: climate snapshots appear automatically as telemetry arrives.
+            <EmptyState
               icon={<CircleGauge className="h-10 w-10" aria-hidden="true" />}
-              message={t('No history records found.')}
+              message={t('climate.history.emptyMessage', 'No climate history has been recorded.')}
+              description={t(
+                'climate.history.emptyDescription',
+                'Climate snapshots accumulate after the vehicle reports cabin, ambient, or HVAC telemetry.',
+              )}
             />
           ) : (
             <DataTable

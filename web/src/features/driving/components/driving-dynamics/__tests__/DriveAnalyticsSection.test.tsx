@@ -28,6 +28,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
 
 vi.mock('react-i18next', async () => {
@@ -114,7 +115,9 @@ function renderSection(overrides: Partial<Props> = {}) {
   })
   return render(
     <QueryClientProvider client={qc}>
-      <DriveAnalyticsSection {...baseProps(overrides)} />
+      <MemoryRouter>
+        <DriveAnalyticsSection {...baseProps(overrides)} />
+      </MemoryRouter>
     </QueryClientProvider>,
   )
 }
@@ -288,8 +291,8 @@ describe('DriveAnalyticsSection — accessibility & structure', () => {
 
     expect(screen.getByText('Drive Analytics')).toBeInTheDocument()
 
-    // Each Recharts SVG is opaque to assistive tech, so ChartContainer
-    // exposes a role="img" with a descriptive aria-label. Pin all three.
+    // Static charts retain image semantics; the interactive multi-series
+    // chart is a named group so its legend buttons are semantically valid.
     expect(
       screen.getByRole('img', { name: 'Speed-bucket drive count distribution bar chart' }),
     ).toBeInTheDocument()
@@ -299,7 +302,7 @@ describe('DriveAnalyticsSection — accessibility & structure', () => {
       }),
     ).toBeInTheDocument()
     expect(
-      screen.getByRole('img', { name: 'Recent-drives peak and regen power dual-area chart' }),
+      screen.getByRole('group', { name: 'Recent-drives peak and regen power dual-area chart' }),
     ).toBeInTheDocument()
 
     // The three panels are exposed as figure landmarks named by their titles.

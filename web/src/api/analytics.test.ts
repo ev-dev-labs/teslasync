@@ -167,19 +167,18 @@ describe('mileage pagination', () => {
 })
 
 describe('getVampireDrainEvents', () => {
-  it('defaults limit/offset and omits the date range when unset', async () => {
+  it('uses the backend-supported vehicle and limit parameters', async () => {
     await getVampireDrainEvents(11)
     const path = pathArg()
-    expect(path).toBe('/vampire-drain?vehicle_id=11&limit=100&offset=0')
-    expect(path).not.toContain('start=')
-    expect(path).not.toContain('end=')
+    expect(path).toBe('/vampire-drain?vehicle_id=11&limit=100')
+    expect(path).not.toContain('offset=')
   })
 
-  it('appends start and end when a date range is supplied', async () => {
-    await getVampireDrainEvents(11, 25, 50, '2024-01-01', '2024-01-31')
-    expect(requestMock).toHaveBeenCalledWith(
-      '/vampire-drain?vehicle_id=11&limit=25&offset=50&start=2024-01-01&end=2024-01-31',
-    )
+  it('unwraps the canonical response envelope', async () => {
+    const event = { started_at: '2024-01-01T00:00:00Z', drain_pct_per_day: 1 }
+    requestMock.mockResolvedValueOnce({ vehicle_id: 11, events: [event] })
+    await expect(getVampireDrainEvents(11, 25)).resolves.toEqual([event])
+    expect(requestMock).toHaveBeenCalledWith('/vampire-drain?vehicle_id=11&limit=25')
   })
 })
 

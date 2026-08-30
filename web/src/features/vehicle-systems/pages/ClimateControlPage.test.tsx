@@ -31,6 +31,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // i18n stub: echo the fallback when present, else the key (the page's keys are
 // the English strings themselves), so assertions target rendered English.
 vi.mock('react-i18next', () => ({
@@ -274,7 +280,7 @@ function renderPage() {
 
 /** Scope a MetricCard by its (unique) label. */
 function card(label: string): HTMLElement {
-  const wrapper = screen.getByText(label).closest('div.p-3');
+  const wrapper = screen.getByText(label).closest('[data-role="metric-card"]');
   if (!wrapper) throw new Error(`MetricCard wrapper not found for "${label}"`);
   return wrapper as HTMLElement;
 }
@@ -436,9 +442,12 @@ describe('ClimateControlPage — loading, empty & error states', () => {
     // Gauges + charts + table show their own empty states.
     const overview = screen.getByRole('region', { name: 'Climate Overview' });
     expect(within(overview).getByText('Inside Temp')).toBeInTheDocument();
-    expect(screen.getByText('No temperature history available.')).toBeInTheDocument();
-    expect(screen.getByText('No HVAC history available.')).toBeInTheDocument();
-    expect(screen.getByText('No history records found.')).toBeInTheDocument();
+    expect(screen.getByText('No temperature history has been recorded.')).toBeInTheDocument();
+    expect(screen.getByText(/Cabin, ambient, and set-point trends/)).toBeInTheDocument();
+    expect(screen.getByText('No HVAC operating history has been recorded.')).toBeInTheDocument();
+    expect(screen.getByText(/AC state and fan-speed trends/)).toBeInTheDocument();
+    expect(screen.getByText('No climate history has been recorded.')).toBeInTheDocument();
+    expect(screen.getByText(/Climate snapshots accumulate/)).toBeInTheDocument();
     // AI boundary receives null cabin/outside temps when there is no snapshot.
     expect(screen.getByTestId('ai-recommender')).toHaveAttribute('data-cabin', 'null');
   });

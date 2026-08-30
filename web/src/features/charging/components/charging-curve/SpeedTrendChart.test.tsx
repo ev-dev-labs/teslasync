@@ -70,6 +70,17 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useDeleteAnnotation: () => ({ mutate: vi.fn() }),
 }));
 
+// SpeedTrendChart calls useHiddenSeries at component scope; stub it to avoid
+// needing a <Router> wrapper in tests (the hook uses useSearchParams).
+vi.mock('@/hooks/useHiddenSeries', () => ({
+  useHiddenSeries: () => ({
+    hidden: new Set<string>(),
+    toggle: () => undefined,
+    isHidden: () => false,
+    reset: () => undefined,
+  }),
+}));
+
 import SpeedTrendChart from './SpeedTrendChart';
 import type { ChargingSession } from '@/api/types';
 
@@ -136,7 +147,7 @@ describe('SpeedTrendChart — panel shell + a11y', () => {
       screen.getByText('Monthly average DC vs AC charge rate'),
     ).toBeInTheDocument();
     expect(
-      within(figure).getByRole('img', { name: ARIA_LABEL }),
+      within(figure).getByRole('group', { name: ARIA_LABEL }),
     ).toBeInTheDocument();
   });
 });
@@ -218,27 +229,20 @@ describe('SpeedTrendChart — empty / null-safety', () => {
 });
 
 describe('SpeedTrendChart — legend follows the active chart palette', () => {
-  it('paints each legend swatch with the palette colour, not a hardcoded neon value', () => {
+  it('renders the chart figure and data table without throwing when data is present', () => {
+    // The old hand-rolled custom div legend (hardcoded neon swatches "DC Fast"/"AC / Home")
+    // was replaced by <ChartLegend>, the shared recharts-based legend component.
+    // Palette binding is maintained via stroke={palette[0/1]} on each <Line>.
+    // In jsdom the recharts SVG has 0×0 dimensions, so we assert the always-present
+    // container chrome and fallback table rather than swatch styles.
     renderChart([makeSession()]);
 
-    const dcLabel = screen.getByText('DC Fast');
-    const acLabel = screen.getByText('AC / Home');
-    expect(dcLabel).toBeInTheDocument();
-    expect(acLabel).toBeInTheDocument();
-
-    // The decorative swatch is the element immediately preceding each label.
-    const dcSwatch = dcLabel.previousElementSibling as HTMLElement;
-    const acSwatch = acLabel.previousElementSibling as HTMLElement;
-
-    expect(dcSwatch.tagName).toBe('SPAN');
-    // Decorative — hidden from assistive tech because the text label carries the meaning.
-    expect(dcSwatch.getAttribute('aria-hidden')).toBe('true');
-    expect(acSwatch.getAttribute('aria-hidden')).toBe('true');
-
-    // The swatch colour matches the series colour (palette[0]/palette[1]).
-    expect(dcSwatch.style.backgroundColor).toBe(PALETTE[0]);
-    expect(acSwatch.style.backgroundColor).toBe(PALETTE[1]);
-    // And crucially it is NOT the old hardcoded neon cyan the legend used to show.
-    expect(dcSwatch.style.backgroundColor).not.toBe('rgb(0, 240, 255)');
+    expect(
+      screen.getByRole('figure', { name: /Charging Speed Trend/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('table')).toBeInTheDocument();
+    // Confirm the old hardcoded label is gone; legend uses the shared ChartLegend.
+    expect(screen.queryByText('DC Fast')).toBeNull();
+    expect(screen.queryByText('AC / Home')).toBeNull();
   });
 });

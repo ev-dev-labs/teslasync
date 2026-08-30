@@ -30,20 +30,39 @@ export interface SelectProps extends Omit<SelectHTMLAttributes<HTMLSelectElement
 }
 
 const sizeClasses: Record<NonNullable<SelectProps['size']>, string> = {
-  sm: 'px-2 py-1.5 text-xs',
-  md: 'px-3 py-2 text-sm',
-  lg: 'px-4 py-2.5 text-base',
+  sm: 'min-h-9 px-3 py-1.5 text-sm',
+  md: 'min-h-10 px-3 py-2 text-sm',
+  lg: 'min-h-12 px-4 py-2.5 text-base',
   auto: 'px-d-pad-x py-d-pad-y text-d-base min-h-d-row',
 };
 
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ options, label, help, error, hint, placeholder, size = 'md', className, id, required, ...props }, ref) => {
+  ({
+    options,
+    label,
+    help,
+    error,
+    hint,
+    placeholder,
+    size = 'md',
+    className,
+    id,
+    required,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  }, ref) => {
     // Fall back to a stable, unique React id so the error/hint nodes and
     // their `aria-describedby` wiring never collapse to `undefined-error`
     // (invalid + duplicated across label-less selects) when neither `id`
     // nor `label` is supplied.
     const reactId = useId();
     const selectId = id || label?.toLowerCase().replace(/\s+/g, '-') || `select-${reactId}`;
+    const feedbackId = error
+      ? `${selectId}-error`
+      : hint
+        ? `${selectId}-hint`
+        : undefined;
+    const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
       <div className="space-y-1">
         {label && (
@@ -64,15 +83,15 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
           required={required}
           aria-required={required ? 'true' : undefined}
           className={cn(
-            'w-full rounded-md border border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] transition-colors',
+            'w-full rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)] text-[var(--text-primary)] transition-colors',
             sizeClasses[size],
-            'focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1 focus:ring-offset-[var(--bg)]',
+            'focus-visible:border-[var(--theme-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-app)]',
             'disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-            error && 'border-red-500',
+            error && 'border-rose-500',
             className,
           )}
           aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? `${selectId}-error` : hint ? `${selectId}-hint` : undefined}
+          aria-describedby={describedBy}
           {...props}
         >
           {placeholder && <option value="">{placeholder}</option>}
@@ -82,7 +101,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             </option>
           ))}
         </select>
-        {error && <p id={`${selectId}-error`} className="text-xs text-red-500">{error}</p>}
+        {error && <p id={`${selectId}-error`} role="alert" className="text-xs text-rose-300">{error}</p>}
         {hint && !error && <p id={`${selectId}-hint`} className="text-xs text-[var(--text-muted)]">{hint}</p>}
       </div>
     );

@@ -58,6 +58,36 @@ vi.mock('@/api/hooks/useVehicles', () => ({
   useVehicles: () => ({ data: VEHICLES }),
 }));
 
+vi.mock('@/api/hooks/useSignals', () => ({
+  useAvailableSignals: () => ({
+    data: {
+      vehicle_id: 1,
+      count: 2,
+      source: 'protomodel',
+      signals: [
+        {
+          name: 'BatteryLevel',
+          category: 'battery',
+          value_kind: 'float',
+          unit_kind: 'charge',
+          is_compound: false,
+          is_setting_unit: false,
+        },
+        {
+          name: 'VehicleSpeed',
+          category: 'driving',
+          value_kind: 'float',
+          unit_kind: 'speed',
+          is_compound: false,
+          is_setting_unit: false,
+        },
+      ],
+    },
+    isLoading: false,
+    isError: false,
+  }),
+}));
+
 const recordedSavePayloads: AlertRuleInput[] = [];
 
 vi.mock('@/api/hooks/useNotifications', async () => {
@@ -109,6 +139,36 @@ function selectRule(name: string) {
     fireEvent.click(span);
   }
 }
+
+describe('AlertStudioPage — canonical signal units', () => {
+  beforeEach(() => {
+    RULES = [];
+    recordedSavePayloads.length = 0;
+    window.localStorage.clear();
+  });
+
+  it('associates charge thresholds with canonical percent guidance', () => {
+    renderPage();
+    fireEvent.change(document.getElementById('alert-signal') as HTMLSelectElement, {
+      target: { value: 'BatteryLevel' },
+    });
+
+    const input = screen.getByLabelText(/^Numeric Value/);
+    expect(input).toHaveAttribute('aria-describedby');
+    expect(screen.getByText('Canonical input: percent from 0 to 100.')).toBeInTheDocument();
+  });
+
+  it('identifies speed thresholds as canonical meters per second', () => {
+    renderPage();
+    fireEvent.change(document.getElementById('alert-signal') as HTMLSelectElement, {
+      target: { value: 'VehicleSpeed' },
+    });
+
+    expect(
+      screen.getByText('Canonical SI input: meters per second (m/s).'),
+    ).toBeInTheDocument();
+  });
+});
 
 describe('AlertStudioPage — multi-vehicle picker integration (Phase-49 / Slice 0006)', () => {
   beforeEach(() => {

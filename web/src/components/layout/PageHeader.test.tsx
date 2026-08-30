@@ -9,9 +9,9 @@
  *   - `copyLink` mounts the real CopyLinkButton — clicking copies the current
  *     URL to the clipboard, flips to "Copied", and surfaces a success toast;
  *     a rejected clipboard write surfaces an error toast (failure path)
- *   - the gradient page title keeps a `forced-colors:` fallback so it stays
- *     legible in Windows High Contrast mode (the bug this elevation fixed)
- *   - the decorative underline is hidden from assistive tech (aria-hidden)
+ *   - the page title uses the shared typography role without decorative
+ *     gradient treatment
+ *   - the header uses the shared subtle divider for consistent hierarchy
  */
 
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
@@ -149,6 +149,25 @@ describe('PageHeader', () => {
     expect(screen.getByRole('button', { name: 'New rule' })).toBeInTheDocument()
   })
 
+  it('places typed page actions in the canonical groups', () => {
+    const { container } = renderHeader(
+      <PageHeader
+        title="Fleet"
+        metadataActions={<span>Fresh</span>}
+        contextActions={<button type="button">Vehicle</button>}
+        secondaryActions={<button type="button">Compare</button>}
+        destructiveActions={<button type="button">Remove</button>}
+        overflowActions={<button type="button">More</button>}
+        primaryAction={<button type="button">Sync</button>}
+      />,
+    )
+
+    expect(
+      Array.from(container.querySelectorAll('[data-action-group]'))
+        .map((group) => group.getAttribute('data-action-group')),
+    ).toEqual(['metadata', 'context', 'secondary', 'destructive', 'overflow', 'primary'])
+  })
+
   it('copies the current URL and shows a success toast + "Copied" state on click', async () => {
     renderHeader(<PageHeader title="Notifications" copyLink />)
     const btn = screen.getByRole('button', { name: /copy link to this view/i })
@@ -176,19 +195,24 @@ describe('PageHeader', () => {
     expect(screen.queryByText('Link copied to clipboard')).toBeNull()
   })
 
-  it('keeps a forced-colors fallback on the gradient title so it stays legible in high-contrast mode', () => {
+  it('uses the shared sober heading treatment instead of gradient text', () => {
     renderHeader(<PageHeader title="Fleet Overview" />)
     const heading = screen.getByRole('heading', { level: 1 })
-    // Regression guard for the invisible-in-High-Contrast bug: the gradient
-    // clip-text title must restore a system text colour under forced-colors.
-    expect(heading.className).toContain('forced-colors:text-[CanvasText]')
-    expect(heading.className).toContain('bg-clip-text')
+    expect(heading.className).toContain('font-bold')
+    expect(heading.className).not.toContain('bg-clip-text')
   })
 
-  it('hides the decorative underline from assistive technology', () => {
+  it('uses the shared subtle divider and omits the decorative underline', () => {
     const { container } = renderHeader(<PageHeader title="Fleet Overview" />)
-    const underline = container.querySelector('.from-neon-cyan')
-    expect(underline).not.toBeNull()
-    expect(underline).toHaveAttribute('aria-hidden', 'true')
+    expect(container.querySelector('header')).toHaveClass(
+      'rounded-panel',
+      'border-[var(--border-default)]',
+      'shadow-e1',
+    )
+    expect(container.querySelector('header span[aria-hidden="true"]')).toHaveClass(
+      'w-1',
+      'bg-[var(--theme-primary)]',
+    )
+    expect(container.querySelector('.from-neon-cyan')).toBeNull()
   })
 })

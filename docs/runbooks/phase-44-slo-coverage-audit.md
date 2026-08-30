@@ -12,11 +12,22 @@ go run ./cmd/slo-coverage-audit -report docs/runbooks/phase-44-slo-coverage-audi
 
 - Transitive coverage from `api_availability`: **true**
 - Per-route SLOs registered for:
+  - `/api/v1/action-center/{recommendationID}/actions`
+  - `/api/v1/activity`
+  - `/api/v1/analytics/battery-health`
+  - `/api/v1/analytics/fsd`
+  - `/api/v1/benchmarks/privacy`
+  - `/api/v1/benchmarks/privacy/consent`
+  - `/api/v1/benchmarks/releases`
+  - `/api/v1/fleet-ops/utilization-forecast`
+  - `/api/v1/service-intelligence/vehicles/{vehicleID}`
+  - `/api/v1/vehicles/states`
   - `/api/v1/vehicles/{vehicleID}/state`
+  - `/api/v1/web-vitals`
 
 ## Findings
 
-All 185 user-facing routes are covered.
+All 227 user-facing routes are covered.
 
 ## Per-route coverage table
 
@@ -25,6 +36,14 @@ All 185 user-facing routes are covered.
 | `/.well-known/appspecific/com.tesla.3p.public-key.pem` | transitive (api_availability) |
 | `/acceleration-distribution` | transitive (api_availability) |
 | `/account` | transitive (api_availability) |
+| `/action-center` | transitive (api_availability) |
+| `/action-center/{recommendationID}/history` | transitive (api_availability) |
+| `/activity` | transitive (api_availability) |
+| `/admin/observability/data-quality` | transitive (api_availability) |
+| `/admin/observability/lineage` | transitive (api_availability) |
+| `/admin/observability/slo` | transitive (api_availability) |
+| `/admin/observability/synthetic` | transitive (api_availability) |
+| `/admin/service-intelligence/communications/status` | transitive (api_availability) |
 | `/analytics` | transitive (api_availability) |
 | `/analytics/anomalies` | transitive (api_availability) |
 | `/analytics/battery-cells` | transitive (api_availability) |
@@ -36,6 +55,7 @@ All 185 user-facing routes are covered.
 | `/analytics/driving-coach` | transitive (api_availability) |
 | `/analytics/energy` | transitive (api_availability) |
 | `/analytics/fleet` | transitive (api_availability) |
+| `/analytics/fsd` | transitive (api_availability) |
 | `/analytics/lifetime` | transitive (api_availability) |
 | `/analytics/period-stats` | transitive (api_availability) |
 | `/analytics/range-projection` | transitive (api_availability) |
@@ -55,11 +75,21 @@ All 185 user-facing routes are covered.
 | `/backup-history` | transitive (api_availability) |
 | `/backup/stats` | transitive (api_availability) |
 | `/battery` | transitive (api_availability) |
+| `/battery-passport` | transitive (api_availability) |
+| `/battery-passport/verify` | transitive (api_availability) |
 | `/battery/cells` | transitive (api_availability) |
 | `/battery/projected-range` | transitive (api_availability) |
 | `/callback` | transitive (api_availability) |
 | `/candidates` | transitive (api_availability) |
+| `/carbon/intensity` | transitive (api_availability) |
+| `/carbon/recommendation` | transitive (api_availability) |
+| `/carbon/summary` | transitive (api_availability) |
+| `/cases` | transitive (api_availability) |
+| `/cases/stats` | transitive (api_availability) |
+| `/cases/{id}` | transitive (api_availability) |
+| `/charging-activity` | transitive (api_availability) |
 | `/charging-history` | transitive (api_availability) |
+| `/charging-summary` | transitive (api_availability) |
 | `/commands/history` | transitive (api_availability) |
 | `/commands/latest` | transitive (api_availability) |
 | `/complication` | transitive (api_availability) |
@@ -69,6 +99,7 @@ All 185 user-facing routes are covered.
 | `/configs` | transitive (api_availability) |
 | `/configs/{configID}` | transitive (api_availability) |
 | `/configs/{configID}/trigger` | transitive (api_availability) |
+| `/daily` | transitive (api_availability) |
 | `/db-stats` | transitive (api_availability) |
 | `/decisions` | transitive (api_availability) |
 | `/demo` | transitive (api_availability) |
@@ -81,11 +112,13 @@ All 185 user-facing routes are covered.
 | `/energy-history` | transitive (api_availability) |
 | `/energy/flow` | transitive (api_availability) |
 | `/enroll` | transitive (api_availability) |
+| `/enterprise-roles` | transitive (api_availability) |
 | `/env-check` | transitive (api_availability) |
 | `/error-vins` | transitive (api_availability) |
 | `/errors` | transitive (api_availability) |
 | `/errors/catalog` | transitive (api_availability) |
 | `/errors/stats` | transitive (api_availability) |
+| `/event-types` | transitive (api_availability) |
 | `/events` | transitive (api_availability) |
 | `/export` | transitive (api_availability) |
 | `/feature-config` | transitive (api_availability) |
@@ -110,11 +143,15 @@ All 185 user-facing routes are covered.
 | `/mark-read` | transitive (api_availability) |
 | `/mark-unread` | transitive (api_availability) |
 | `/matrix` | transitive (api_availability) |
+| `/message-placeholders` | transitive (api_availability) |
+| `/message-presets` | transitive (api_availability) |
+| `/message-preview` | transitive (api_availability) |
 | `/migration-status` | transitive (api_availability) |
 | `/mobile-enabled` | transitive (api_availability) |
 | `/monthly` | transitive (api_availability) |
 | `/mqtt-test` | transitive (api_availability) |
 | `/nearby-charging` | transitive (api_availability) |
+| `/needs-review` | transitive (api_availability) |
 | `/onboarding/status` | transitive (api_availability) |
 | `/openapi` | transitive (api_availability) |
 | `/options` | transitive (api_availability) |
@@ -127,11 +164,16 @@ All 185 user-facing routes are covered.
 | `/positions` | transitive (api_availability) |
 | `/predictions` | transitive (api_availability) |
 | `/preferences` | transitive (api_availability) |
+| `/preview` | transitive (api_availability) |
+| `/privacy` | transitive (api_availability) |
 | `/profile` | transitive (api_availability) |
 | `/public-key` | transitive (api_availability) |
 | `/public-key-status` | transitive (api_availability) |
+| `/quarantine` | transitive (api_availability) |
 | `/quick` | transitive (api_availability) |
 | `/rate-plans` | transitive (api_availability) |
+| `/rates` | transitive (api_availability) |
+| `/rates/current` | transitive (api_availability) |
 | `/recent-alerts` | transitive (api_availability) |
 | `/records` | transitive (api_availability) |
 | `/redis-signals` | transitive (api_availability) |
@@ -140,6 +182,9 @@ All 185 user-facing routes are covered.
 | `/region` | transitive (api_availability) |
 | `/register-partner` | transitive (api_availability) |
 | `/release-notes` | transitive (api_availability) |
+| `/releases` | transitive (api_availability) |
+| `/rul` | transitive (api_availability) |
+| `/rul/{component}` | transitive (api_availability) |
 | `/rules` | transitive (api_availability) |
 | `/rules/{ruleID}` | transitive (api_availability) |
 | `/rules/{ruleID}/snooze` | transitive (api_availability) |
@@ -151,10 +196,14 @@ All 185 user-facing routes are covered.
 | `/runtime-info` | transitive (api_availability) |
 | `/savings` | transitive (api_availability) |
 | `/score` | transitive (api_availability) |
+| `/segments` | transitive (api_availability) |
+| `/segments/{segmentID}/ghost` | transitive (api_availability) |
+| `/segments/{segmentID}/leaderboard` | transitive (api_availability) |
 | `/service-data` | transitive (api_availability) |
 | `/sessions` | transitive (api_availability) |
 | `/sessions/{id}` | transitive (api_availability) |
 | `/settings` | transitive (api_availability) |
+| `/settings/ai/validate-config` | transitive (api_availability) |
 | `/settings/dashboard-layouts` | transitive (api_availability) |
 | `/settings/export` | transitive (api_availability) |
 | `/settings/polling-config` | transitive (api_availability) |
@@ -169,18 +218,21 @@ All 185 user-facing routes are covered.
 | `/sse-token` | transitive (api_availability) |
 | `/stale-sessions` | transitive (api_availability) |
 | `/state` | transitive (api_availability) |
+| `/states` | transitive (api_availability) |
 | `/stats` | transitive (api_availability) |
 | `/status` | transitive (api_availability) |
 | `/stream` | transitive (api_availability) |
 | `/subscribe` | transitive (api_availability) |
 | `/subscriptions` | transitive (api_availability) |
 | `/sudo` | transitive (api_availability) |
+| `/suggestions` | transitive (api_availability) |
 | `/summary` | transitive (api_availability) |
 | `/telemetry` | transitive (api_availability) |
 | `/tesla/energy-sites` | transitive (api_availability) |
-| `/tesla/warranty` | transitive (api_availability) |
 | `/test` | transitive (api_availability) |
 | `/test-api` | transitive (api_availability) |
+| `/time-machine` | transitive (api_availability) |
+| `/time-machine/range` | transitive (api_availability) |
 | `/timeline` | transitive (api_availability) |
 | `/toggle` | transitive (api_availability) |
 | `/token-info` | transitive (api_availability) |
@@ -195,6 +247,7 @@ All 185 user-facing routes are covered.
 | `/users/me/activity` | transitive (api_availability) |
 | `/verify` | transitive (api_availability) |
 | `/version` | transitive (api_availability) |
+| `/warranty` | transitive (api_availability) |
 | `/weekly-digest` | transitive (api_availability) |
 | `/workers` | transitive (api_availability) |
 | `/{alertID}` | transitive (api_availability) |

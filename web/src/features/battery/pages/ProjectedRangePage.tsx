@@ -11,10 +11,10 @@ import { VehicleSelect } from '@/components/forms';
 import { GlassPanel, Badge, Slider, PanelTitle, Text, Caption, HelperText } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  LinearGauge, ChartTooltip,
+  LinearGauge, ChartLegend, ChartTooltip, EmbeddedChart,
   chartMargin, axisTick, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  Tooltip, ResponsiveContainer, ReferenceLine,
   AREA_DEFAULTS, areaGradient,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -165,6 +165,14 @@ export default function ProjectedRangePage() {
   const factors = data?.factors ?? [];
   const matrix = data?.efficiency_matrix ?? [];
   const curve = data?.projection_curve ?? [];
+  const curveTableData = useMemo(
+    () => curve.map(({ battery_pct, rated_range, projected_range }) => ({
+      battery_pct,
+      rated_range,
+      projected_range,
+    })),
+    [curve],
+  );
 
   const pageProps = {
     title: t('range.title', 'Projected Range'),
@@ -257,22 +265,44 @@ export default function ProjectedRangePage() {
             ) : curve.length === 0 || !data ? (
               <EmptyState /* no-action: transient — curve populates once the vehicle logs drives */ message={t('range.noCurve', 'Range projection curve will appear once this vehicle logs drives.')} />
             ) : (
-              <div className="h-56 sm:h-64 xl:h-72" role="img" aria-label={t('range.projectionCurveAria', 'Rated versus projected range across battery level')}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={curve} margin={chartMargin}>
-                    {areaGradient('ratedFill', CHART_COLORS[0])}
-                    {areaGradient('projectedFill', CHART_COLORS[1])}
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.4} />
-                    <XAxis dataKey="battery_pct" tick={axisTick} unit="%" />
-                    <YAxis tick={axisTick} unit=" km" width={55} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    <ReferenceLine x={data.battery_level} stroke={CHART_COLORS[3]} strokeDasharray="4 4" label={t('range.current', 'Current')} />
-                    <Area {...AREA_DEFAULTS} dataKey="rated_range" name={t('range.rated', 'Rated Range')} stroke={CHART_COLORS[0]} fill="url(#ratedFill)" />
-                    <Area {...AREA_DEFAULTS} dataKey="projected_range" name={t('range.projected', 'Projected Range')} stroke={CHART_COLORS[1]} fill="url(#projectedFill)" />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
+              <EmbeddedChart
+                title={t('range.projectionCurve', 'Range Projection Curve')}
+                ariaLabel={t('range.projectionCurveAria', 'Rated versus projected range across battery level')}
+                data={curveTableData}
+                dataColumns={[
+                  { key: 'battery_pct', label: t('range.battery', 'Battery') },
+                  {
+                    key: 'rated_range',
+                    label: t('range.rated', 'Rated Range'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                  {
+                    key: 'projected_range',
+                    label: t('range.projected', 'Projected Range'),
+                    format: (value) => fmtNumber(Number(value ?? 0)),
+                  },
+                ]}
+                height={288}
+                mobileHeight={224}
+                chartKey="projected-range-curve"
+              >
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={curve} margin={chartMargin}>
+                      {areaGradient('ratedFill', CHART_COLORS[0])}
+                      {areaGradient('projectedFill', CHART_COLORS[1])}
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--border-subtle)" strokeOpacity={0.4} />
+                      <XAxis dataKey="battery_pct" tick={axisTick} unit="%" />
+                      <YAxis tick={axisTick} unit=" km" width={55} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <ChartLegend />
+                      <ReferenceLine x={data.battery_level} stroke={CHART_COLORS[3]} strokeDasharray="4 4" label={t('range.current', 'Current')} />
+                      <Area {...AREA_DEFAULTS} dataKey="rated_range" name={t('range.rated', 'Rated Range')} stroke={CHART_COLORS[0]} fill="url(#ratedFill)" hide={hiddenSeries?.isHidden('rated_range')} />
+                      <Area {...AREA_DEFAULTS} dataKey="projected_range" name={t('range.projected', 'Projected Range')} stroke={CHART_COLORS[1]} fill="url(#projectedFill)" hide={hiddenSeries?.isHidden('projected_range')} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                )}
+              </EmbeddedChart>
             )}
           </GlassPanel>
         </section>

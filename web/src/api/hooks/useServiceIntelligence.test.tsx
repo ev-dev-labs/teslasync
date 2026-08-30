@@ -198,6 +198,7 @@ describe('useServiceIntelligence', () => {
       '/admin/service-intelligence/communications/import',
       expect.objectContaining({
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify({ artifact_url: artifactURL }),
       }),
     );

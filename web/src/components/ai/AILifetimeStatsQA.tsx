@@ -89,6 +89,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/analytics/lifetime/qa',
     body,
     onEvent: () => {},
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight answer and clears the
+    // previous vehicle's answer before the new scope streams in.
+    scopeKey: Number.isFinite(numericVehicleId) && numericVehicleId > 0 ? numericVehicleId : null,
   })
   const haveVehicle = Number.isFinite(numericVehicleId) && numericVehicleId > 0
   const haveQuestion =

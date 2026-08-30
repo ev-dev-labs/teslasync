@@ -10,6 +10,7 @@ import { ambientTemperatureGaugeRange } from '@/components/charts/temperatureGau
 import { StatusBadge } from '@/components/data-display/StatusBadge';
 import { StatCard } from '@/components/data-display/StatCard';
 import { Badge } from '@/components/ui/Badge';
+import { Heading, Text } from '@/components/ui/Typography';
 import { Grid } from '@/components/layout/Grid';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { FSM_REGISTRY } from '@/types/fsm';
@@ -119,14 +120,14 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
         <div className="flex items-start justify-between">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
-              <h2 className="text-xl font-bold text-[var(--text-primary)]">
+              <Heading level="section" className="text-xl font-bold">
                 {vehicle.display_name}
-              </h2>
+              </Heading>
               <StatusBadge status={toStatus(vehicleState?.state ?? vehicle.state ?? 'offline')} />
             </div>
-            <p className="text-xs font-mono text-[var(--text-muted)] dark:text-[var(--text-muted)]">
+            <Text as="p" size="xs" color="muted" className="font-mono">
               {vehicle.vin}
-            </p>
+            </Text>
           </div>
           <Badge variant="neutral" size="sm">
             {vehicle.model}
@@ -144,7 +145,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 max={100}
                 label={t('vehicleHero.gauge.battery', 'Battery')}
                 unit="%"
-                color={(vs.battery_level ?? 0) > 20 ? '#22d3ee' : '#ef4444'}
+                tone={(vs.battery_level ?? 0) > 20 ? 'accent' : 'danger'}
                 size={100}
               />
               <LinearGauge
@@ -152,7 +153,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 max={rangeMax}
                 label={t('vehicleHero.gauge.range', 'Range')}
                 unit={distanceLabel}
-                color="#4ade80"
+                tone="success"
                 size={100}
               />
               <LinearGauge
@@ -160,7 +161,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 {...tempRange}
                 label={t('vehicleHero.gauge.inside', 'Inside')}
                 unit={temperatureLabel}
-                color="#f59e0b"
+                tone="warning"
                 size={100}
               />
               <LinearGauge
@@ -168,7 +169,7 @@ export const VehicleHeroCard = forwardRef<HTMLDivElement, VehicleHeroCardProps>(
                 {...tempRange}
                 label={t('vehicleHero.gauge.outside', 'Outside')}
                 unit={temperatureLabel}
-                color="#a78bfa"
+                tone="purple"
                 size={100}
               />
             </div>

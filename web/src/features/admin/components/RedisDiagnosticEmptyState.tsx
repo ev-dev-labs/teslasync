@@ -293,20 +293,22 @@ function DiagnosticBanner({
               </Text>
               <div className="flex flex-wrap gap-2">
                 {otherKeys.slice(0, 6).map((k) => (
-                  <button
+                  <Button
                     key={k.vehicle_id}
                     type="button"
+                    variant="ghost"
+                    size="sm"
                     onClick={() => onSelectVehicle?.(k.vehicle_id)}
                     data-testid={`redis-diagnostic-other-${k.vehicle_id}`}
                     className={cn(
-                      'rounded-full border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-1 hover:bg-[var(--surface-2)]',
+                      'h-auto rounded-full border border-[var(--border-subtle)] bg-[var(--surface-1)] px-3 py-1 hover:bg-[var(--surface-2)]',
                       typography.size.xs,
                       typography.color.secondary,
                     )}
                   >
                     {k.display_name || k.vehicle_vin || `Vehicle ${k.vehicle_id}`}{' '}
                     <Text color="muted">· {k.field_count}</Text>
-                  </button>
+                  </Button>
                 ))}
               </div>
             </div>

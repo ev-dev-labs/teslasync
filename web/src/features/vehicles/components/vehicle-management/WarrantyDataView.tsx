@@ -130,7 +130,7 @@ export function WarrantyDataView({ data }: WarrantyDataViewProps) {
   if (coverages.length === 0) {
     return (
       <div>
-        <EmptyState
+        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
           title={t(
             'vehicleManagement.warranty.emptyTitle',
             'No warranty coverage returned',

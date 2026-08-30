@@ -96,9 +96,9 @@ function renderKpis(over: Partial<Props> = {}) {
 }
 
 // Scope a query to a single MetricCard by its label — the card root carries the
-// `rounded-xl` utility, so we climb to it and search within.
+// `data-role="metric-card"` semantic hook, so we climb to it and search within.
 function card(label: string) {
-  const root = screen.getByText(label).closest('div.rounded-xl') as HTMLElement;
+  const root = screen.getByText(label).closest('[data-role="metric-card"]') as HTMLElement;
   return within(root);
 }
 

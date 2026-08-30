@@ -345,6 +345,19 @@ func (h *GuardHandler) Panic(w http.ResponseWriter, r *http.Request) {
 	for _, cmd := range guardPanicCommands {
 		err := h.cmd.SendCommand(ctx, vehicle.VIN, cmd, nil)
 		if err != nil {
+			// Fleet API daily budget errors are systemic, not per-command:
+			// the same shared budget will reject every remaining command in
+			// this loop identically, so continuing would just spend time
+			// re-deriving a 502 that hides the real cause. Abort immediately
+			// and surface the structured 429/503 status instead.
+			if failure, matched := httpx.ClassifyTeslaBudgetError(err); matched {
+				log.Warn().Err(err).
+					Int64("vehicle_id", vehicleID).
+					Str("command", cmd).
+					Msg("guard.panic: Fleet API budget constraint — aborting remaining commands")
+				httpx.WriteError(w, failure.StatusCode, failure.Message)
+				return
+			}
 			anyFailure = true
 			log.Warn().Err(err).
 				Int64("vehicle_id", vehicleID).

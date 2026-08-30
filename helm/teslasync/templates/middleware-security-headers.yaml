@@ -1,0 +1,18 @@
+{{- if and .Values.ingressRoute.enabled .Values.ingressRoute.securityHeaders.enabled }}
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: {{ include "teslasync.fullname" . }}-security-headers
+  namespace: {{ .Values.ingressRoute.namespace | default .Release.Namespace }}
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+spec:
+  headers:
+    contentSecurityPolicy: "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'none'; form-action 'self'; script-src 'self' 'sha256-ue3mo3bS289RnivI3dUkb2fS/Z4Y2IXWPEYuKHmUdY0='; style-src 'self' https://fonts.googleapis.com; style-src-attr 'unsafe-inline'; style-src-elem 'self' https://fonts.googleapis.com 'sha256-eC/LYFbFX0VPdH107k2WfWKmpi4owBWgEs9oH9HVTeI='; img-src 'self' data: blob: https:; media-src 'self' blob:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss:; worker-src 'self' blob:; manifest-src 'self'"
+    contentTypeNosniff: true
+    frameDeny: true
+    referrerPolicy: "strict-origin-when-cross-origin"
+    permissionsPolicy: "accelerometer=(), camera=(), geolocation=(), gyroscope=(), microphone=(), payment=(), usb=()"
+    stsSeconds: 63072000
+    stsIncludeSubdomains: true
+{{- end }}

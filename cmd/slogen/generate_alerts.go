@@ -51,6 +51,7 @@ func runGenerateAlerts(args []string) error {
 	fs := flag.NewFlagSet("generate alerts", flag.ContinueOnError)
 	catalog := fs.String("catalog", "slo/catalog.yaml", "path to SLO catalog YAML")
 	out := fs.String("out", defaultAlertsOut, "output path for alerting rules")
+	check := fs.Bool("check", false, "exit non-zero if the committed file would change; never writes")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -59,8 +60,12 @@ func runGenerateAlerts(args []string) error {
 		return err
 	}
 	rendered := renderAlerts(cat)
-	if err := writeFileIdempotent(*out, rendered); err != nil {
+	if err := writeFileIdempotent(*out, rendered, *check); err != nil {
 		return err
+	}
+	if *check {
+		fmt.Fprintf(os.Stdout, "ok %s is current (%d SLOs, %d alerts)\n", *out, len(cat.SLOs), len(cat.SLOs)*len(burnTiers))
+		return nil
 	}
 	fmt.Fprintf(os.Stdout, "wrote %s (%d SLOs, %d alerts)\n", *out, len(cat.SLOs), len(cat.SLOs)*len(burnTiers))
 	return nil
@@ -84,6 +89,10 @@ func renderAlerts(cat *Catalog) string {
 
 func emitBurnAlert(b *strings.Builder, s SLO, t burnTier) {
 	threshold := errorBudgetBurnThreshold(s.Objective, t.burnRate)
+	severity := t.severity
+	if t.name == "FastBurn" && s.FastBurnSeverity != "" {
+		severity = s.FastBurnSeverity
+	}
 	expr := fmt.Sprintf(
 		"(1 - %s) > %s and (1 - %s) > %s",
 		burnRatioExpr(s, t.longWindow), threshold,
@@ -93,7 +102,7 @@ func emitBurnAlert(b *strings.Builder, s SLO, t burnTier) {
 	fmt.Fprintf(b, "        expr: %s\n", quoteScalar(expr))
 	fmt.Fprintf(b, "        for: %s\n", t.for_)
 	b.WriteString("        labels:\n")
-	fmt.Fprintf(b, "          severity: %s\n", t.severity)
+	fmt.Fprintf(b, "          severity: %s\n", severity)
 	fmt.Fprintf(b, "          slo: %q\n", s.Name)
 	fmt.Fprintf(b, "          owner: %q\n", s.Owner)
 	fmt.Fprintf(b, "          burn_rate: %q\n", trimFloat(t.burnRate))

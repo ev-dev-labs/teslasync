@@ -123,6 +123,21 @@ export default function PowerFlowDashboardPage() {
     error: historyError,
     refetch: refetchHistory,
   } = historyQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'live-energy-status',
+        label: t('dataSources.labels.liveEnergyStatus', 'Live energy status'),
+        query: liveQuery,
+      },
+      {
+        id: 'energy-status-history',
+        label: t('dataSources.labels.energyStatusHistory', 'Energy status history'),
+        query: historyQuery,
+      },
+    ],
+    [historyQuery, liveQuery, t],
+  );
 
   // liveStatus may be a "no data" envelope rather than a real snapshot; only
   // treat it as live data when it carries a record id.
@@ -195,6 +210,7 @@ export default function PowerFlowDashboardPage() {
       subtitle={t('powerFlow.subtitle', 'Real-time power flow from your Tesla Energy system')}
       actions={actions}
       query={[liveQuery, historyQuery]}
+      dataSources={dataSources}
     >
       {/* 1 — Live status strip */}
       <FadeIn>

@@ -82,6 +82,7 @@ export function useApplyActionCenterAction() {
         `/action-center/${encodeURIComponent(input.recommendation_id)}/actions`,
         {
           method: 'POST',
+          requiresLiveMode: true,
           body: JSON.stringify({
             fingerprint: input.fingerprint,
             action: input.action,
@@ -91,6 +92,7 @@ export function useApplyActionCenterAction() {
           }),
         },
       ),
+    networkMode: 'always',
     onMutate: async (input) => {
       await queryClient.cancelQueries({ queryKey: actionCenterKeys.lists });
       const snapshots = queryClient.getQueriesData<ActionCenterResponse>({

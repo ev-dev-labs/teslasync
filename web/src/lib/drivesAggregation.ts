@@ -38,17 +38,34 @@ const GRADE_PALETTE: Record<GradeLabel, { color: string; numeric: number | null 
   '—':  { color: '#6b7280', numeric: null },
 };
 
+export const MIN_EFFICIENCY_DISTANCE_M = 1_000;
+
 /**
- * Per-drive efficiency in Wh/km. `null` when the drive lacks the inputs
- * needed to compute it (no battery delta, zero distance). This matches the
- * formula previously inlined inside `DrivesListPage.tsx`.
+ * Calculate measured energy intensity in Wh/km from canonical SI values.
+ * Very short drives are excluded because rounding and standby loads make the
+ * result too noisy for meaningful comparison.
  */
-export function getEfficiency(drive: Drive): number | null {
-  const batteryUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceM > 0 && batteryUsed > 0) {
-    return (batteryUsed * 0.75 * 1000) / (drive.distanceM / 1000);
+export function getEnergyIntensityWhPerKm(
+  distanceM: number | null | undefined,
+  energyUsedWh: number | null | undefined,
+): number | null {
+  if (
+    distanceM == null
+    || !Number.isFinite(distanceM)
+    || distanceM < MIN_EFFICIENCY_DISTANCE_M
+    || energyUsedWh == null
+    || !Number.isFinite(energyUsedWh)
+    || energyUsedWh <= 0
+  ) {
+    return null;
   }
-  return null;
+
+  return energyUsedWh / (distanceM / 1_000);
+}
+
+/** Return a drive's measured energy intensity in Wh/km. */
+export function getEfficiency(drive: Drive): number | null {
+  return getEnergyIntensityWhPerKm(drive.distanceM, drive.energyUsedWh);
 }
 
 /**
@@ -84,19 +101,17 @@ export function gradeFromNumeric(numeric: number | null): Grade {
   return { label, ...GRADE_PALETTE[label] };
 }
 
-/** Average grade across a list of drives. Skips ungraded drives. */
+/** Distance-weighted grade across drives with measured energy. */
 export function avgGrade(drives: readonly Drive[]): Grade {
-  let total = 0;
-  let n = 0;
+  let energyWh = 0;
+  let distanceM = 0;
   for (const d of drives) {
-    const g = gradeFromEfficiency(getEfficiency(d));
-    if (g.numeric != null) {
-      total += g.numeric;
-      n += 1;
+    if (getEfficiency(d) != null) {
+      energyWh += d.energyUsedWh ?? 0;
+      distanceM += d.distanceM;
     }
   }
-  if (n === 0) return { label: '—', ...GRADE_PALETTE['—'] };
-  return gradeFromNumeric(total / n);
+  return gradeFromEfficiency(getEnergyIntensityWhPerKm(distanceM, energyWh));
 }
 
 /* ------------------------------------------------------------------ */
@@ -119,8 +134,12 @@ export interface PeriodStats {
   longest: Drive | null;
   /** Average grade weight, ready for `gradeFromNumeric`. */
   avgGradeNumeric: number | null;
-  /** Total energy used (kWh), summed from per-drive battery delta. */
-  totalEnergyKwh: number;
+  /** Total measured energy used in canonical watt-hours. */
+  totalEnergyWh: number;
+  /** Drives with measured positive energy, including short drives. */
+  energyMeasuredCount: number;
+  /** Drives eligible for measured energy-intensity comparison. */
+  efficiencyMeasuredCount: number;
 }
 
 /**
@@ -155,12 +174,12 @@ export function computePeriodStats(
   let totalDurationS = 0;
   let topSpeedMps = 0;
   let longest: Drive | null = null;
-  let effSum = 0;
-  let effN = 0;
+  let efficiencyEnergyWh = 0;
+  let efficiencyDistanceM = 0;
+  let efficiencyMeasuredCount = 0;
   let bestEff: number | null = null;
-  let gradeSum = 0;
-  let gradeN = 0;
-  let totalEnergyKwh = 0;
+  let totalEnergyWh = 0;
+  let energyMeasuredCount = 0;
 
   for (const d of drives) {
     if (!inDateRange(d, startDate, endDate, tz)) continue;
@@ -172,25 +191,25 @@ export function computePeriodStats(
 
     const eff = getEfficiency(d);
     if (eff != null) {
-      effSum += eff;
-      effN += 1;
+      efficiencyEnergyWh += d.energyUsedWh ?? 0;
+      efficiencyDistanceM += d.distanceM;
+      efficiencyMeasuredCount += 1;
       if (bestEff == null || eff < bestEff) bestEff = eff;
     }
 
-    const grade = gradeFromEfficiency(eff);
-    if (grade.numeric != null) {
-      gradeSum += grade.numeric;
-      gradeN += 1;
-    }
-
     if (
-      d.startBatteryPct != null &&
-      d.endBatteryPct != null &&
-      d.startBatteryPct > d.endBatteryPct
+      d.energyUsedWh != null
+      && Number.isFinite(d.energyUsedWh)
+      && d.energyUsedWh > 0
     ) {
-      totalEnergyKwh += (d.startBatteryPct - d.endBatteryPct) * 0.75;
+      totalEnergyWh += d.energyUsedWh;
+      energyMeasuredCount += 1;
     }
   }
+
+  const avgEfficiencyWhKm = efficiencyMeasuredCount > 0 && efficiencyDistanceM > 0
+    ? efficiencyEnergyWh / (efficiencyDistanceM / 1_000)
+    : null;
 
   return {
     count,
@@ -198,10 +217,14 @@ export function computePeriodStats(
     totalDurationS,
     topSpeedMps,
     longest,
-    avgEfficiencyWhKm: effN > 0 ? effSum / effN : null,
+    avgEfficiencyWhKm,
     bestEfficiencyWhKm: bestEff,
-    avgGradeNumeric: gradeN > 0 ? gradeSum / gradeN : null,
-    totalEnergyKwh,
+    avgGradeNumeric: avgEfficiencyWhKm != null
+      ? gradeFromEfficiency(avgEfficiencyWhKm).numeric
+      : null,
+    totalEnergyWh,
+    energyMeasuredCount,
+    efficiencyMeasuredCount,
   };
 }
 
@@ -406,7 +429,7 @@ export interface TrendPoint {
 
 /**
  * Daily aggregation of a metric across the supplied drives. Distance is
- * returned in metres (callers convert), cost in kWh-equivalent units (the
+ * returned in metres (callers convert), cost in canonical watt-hours (the
  * caller applies the `costPerKwh` multiplier so the lib stays free of
  * settings dependencies).
  *
@@ -420,11 +443,11 @@ export function dailyTrend(
   metric: TrendMetric,
   tz?: string,
 ): TrendPoint[] {
-  const buckets = new Map<string, { sum: number; count: number; best: number | null }>();
+  const buckets = new Map<string, { sum: number; count: number; distanceM: number }>();
   for (const d of drives) {
     const day = localDayKey(d.startTs, tz);
     if (!day) continue;
-    const b = buckets.get(day) ?? { sum: 0, count: 0, best: null };
+    const b = buckets.get(day) ?? { sum: 0, count: 0, distanceM: 0 };
 
     switch (metric) {
       case 'drives':
@@ -436,40 +459,53 @@ export function dailyTrend(
       case 'efficiency': {
         const eff = getEfficiency(d);
         if (eff != null) {
-          b.sum += eff;
+          b.sum += d.energyUsedWh ?? 0;
+          b.distanceM += d.distanceM;
           b.count += 1;
         }
         break;
       }
       case 'score': {
-        const g = gradeFromEfficiency(getEfficiency(d));
-        if (g.numeric != null) {
-          b.sum += g.numeric;
+        const eff = getEfficiency(d);
+        if (eff != null) {
+          b.sum += d.energyUsedWh ?? 0;
+          b.distanceM += d.distanceM;
           b.count += 1;
         }
         break;
       }
       case 'cost':
         if (
-          d.startBatteryPct != null &&
-          d.endBatteryPct != null &&
-          d.startBatteryPct > d.endBatteryPct
+          d.energyUsedWh != null
+          && Number.isFinite(d.energyUsedWh)
+          && d.energyUsedWh > 0
         ) {
-          b.sum += (d.startBatteryPct - d.endBatteryPct) * 0.75;
+          b.sum += d.energyUsedWh;
+          b.count += 1;
         }
         break;
     }
     buckets.set(day, b);
   }
 
-  const points: TrendPoint[] = Array.from(buckets.entries()).map(([date, b]) => {
-    let value = 0;
-    if (metric === 'efficiency' || metric === 'score') {
-      value = b.count > 0 ? b.sum / b.count : 0;
-    } else {
-      value = b.sum;
+  const points: TrendPoint[] = Array.from(buckets.entries()).flatMap(([date, b]) => {
+    if (
+      (metric === 'efficiency' || metric === 'score' || metric === 'cost')
+      && b.count === 0
+    ) {
+      return [];
     }
-    return { date, value };
+
+    let value = b.sum;
+    if (metric === 'efficiency' || metric === 'score') {
+      const efficiency = b.distanceM > 0
+        ? b.sum / (b.distanceM / 1_000)
+        : null;
+      value = metric === 'score'
+        ? gradeFromEfficiency(efficiency).numeric ?? 0
+        : efficiency ?? 0;
+    }
+    return [{ date, value }];
   });
   return points.sort((a, b) => (a.date < b.date ? -1 : 1));
 }

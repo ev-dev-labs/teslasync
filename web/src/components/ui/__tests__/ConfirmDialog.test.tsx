@@ -22,6 +22,37 @@ afterEach(() => {
 });
 
 describe('ConfirmDialog — silenceKey', () => {
+  it('honors caller-owned validation before enabling confirmation', () => {
+    const onConfirm = vi.fn();
+    const { rerender } = render(
+      <ConfirmDialog
+        open
+        title="Resolve case?"
+        message="An operator note is required."
+        confirmLabel="Resolve"
+        confirmDisabled
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Resolve' })).toBeDisabled();
+
+    rerender(
+      <ConfirmDialog
+        open
+        title="Resolve case?"
+        message="An operator note is required."
+        confirmLabel="Resolve"
+        confirmDisabled={false}
+        onConfirm={onConfirm}
+        onCancel={() => {}}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Resolve' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
   it('renders the checkbox when silenceKey is provided on a non-destructive prompt', () => {
     render(
       <ConfirmDialog

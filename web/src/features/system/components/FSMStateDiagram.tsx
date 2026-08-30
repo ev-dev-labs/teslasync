@@ -6,6 +6,7 @@ import { cn } from '@/lib/cn';
 import { FSM_STATES, FSM_EDGES, getStateColor } from '@/types/fsm';
 import type { FSMTransition } from '@/types/fsm';
 import { VisuallyHidden } from '@/components/a11y';
+import { useA11ySummary } from '@/hooks/useA11ySummary';
 
 interface FSMStateDiagramProps {
   fsmType: string;
@@ -16,6 +17,7 @@ interface FSMStateDiagramProps {
 
 export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) {
   const { t } = useTranslation();
+  const { describeStateMachine } = useA11ySummary();
 
   const states = FSM_STATES[fsmType];
   const edges = FSM_EDGES[fsmType];
@@ -41,8 +43,20 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
     return { stateCounts: sc, edgeCounts: ec, latestState: latest };
   }, [transitions, fsmType]);
 
-  if (!states || !edges) {
-    return (
+  const reachableFromLatest = useMemo(() => {
+    if (!latestState) return [];
+    return (FSM_EDGES[fsmType] ?? [])
+      .filter(([from]) => from === latestState)
+      .map(([, to]) => to);
+  }, [fsmType, latestState]);
+
+  const stateSummary = describeStateMachine({
+    label: t('fsm.stateDiagram', 'State Diagram'),
+    current: latestState || t('fsm.noObservedState', 'No observed state'),
+    next: reachableFromLatest,
+  });
+
+  if (!states || !edges) {    return (
       <GlassPanel className="p-5">
         <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-3">
           {t('fsm.stateDiagram', 'State Diagram')}
@@ -57,6 +71,12 @@ export function FSMStateDiagram({ fsmType, transitions }: FSMStateDiagramProps) 
       <h2 className="text-sm font-semibold text-[var(--text-primary)] mb-4">
         {t('fsm.stateDiagram', 'State Diagram')}
       </h2>
+      {/* A11Y-10: the diagram encodes the machine's position with colour
+          and left-to-right placement, both invisible to assistive tech.
+          The summary answers the question the diagram exists to answer —
+          which state is the machine in, and where can it go next — before
+          the user has to walk the node list. */}
+      <VisuallyHidden>{stateSummary}</VisuallyHidden>
       <div className="flex flex-wrap items-start gap-2 sm:gap-3">
         {states.map((state, i) => {
           const color = getStateColor(fsmType, state);

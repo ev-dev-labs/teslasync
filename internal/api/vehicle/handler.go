@@ -1,6 +1,7 @@
 package vehicle
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -9,11 +10,13 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/apperror"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/service"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 )
 
@@ -27,9 +30,40 @@ import (
 // when the projected fields are unchanged from the previous emission.
 type Handler struct {
 	vehicleSvc  *service.VehicleService
+	vehicleRepo vehicleListFetcher
 	teslaClient *tesla.Client
 	telemetry   TelemetrySource
 	state       signal.StateReader
+}
+
+type vehicleListFetcher interface {
+	GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, error)
+	GetPage(ctx context.Context, limit, offset int) ([]*vehiclemodel.Vehicle, error)
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+}
+
+// stateFreshness mirrors service.StateFreshness on the wire. The alias keeps
+// the existing JSON contract (a bare string) while the classification itself
+// is owned by the shared resolver.
+type stateFreshness string
+
+const (
+	stateFreshnessFresh   = stateFreshness(service.FreshnessFresh)
+	stateFreshnessStale   = stateFreshness(service.FreshnessStale)
+	stateFreshnessUnknown = stateFreshness(service.FreshnessUnknown)
+)
+
+type currentStateResponse struct {
+	State      *vehiclemodel.VehicleState `json:"state"`
+	Live       bool                       `json:"live"`
+	DataSource string                     `json:"data_source"`
+	// ObservedAt/Freshness describe the live stream's newest real observation.
+	// VerifiedFields separately identifies state values backed by non-synthetic
+	// live signals, so durable fallbacks never inherit that stream freshness.
+	ObservedAt     *time.Time     `json:"observed_at,omitempty"`
+	Freshness      stateFreshness `json:"freshness"`
+	VerifiedFields []string       `json:"verified_fields"`
+	AsOf           *time.Time     `json:"as_of,omitempty"`
 }
 
 // vehiclePositionMappings projects the signal_log change feed into the
@@ -49,6 +83,7 @@ var vehiclePositionMappings = []signal.FieldMapping{
 func NewHandler(vehicleSvc *service.VehicleService, tc *tesla.Client, state signal.StateReader) *Handler {
 	return &Handler{
 		vehicleSvc:  vehicleSvc,
+		vehicleRepo: vehicleSvc.VehicleRepo(),
 		teslaClient: tc,
 		state:       state,
 	}
@@ -60,11 +95,41 @@ func (h *Handler) SetTelemetrySource(ts TelemetrySource) {
 }
 
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	vehicles, err := h.vehicleSvc.VehicleRepo().GetAll(r.Context())
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.vehicles.list")
+	defer span.End()
+
+	repo := h.vehicleRepo
+	if repo == nil {
+		repo = h.vehicleSvc.VehicleRepo()
+	}
+	query := r.URL.Query()
+	_, hasLimit := query["limit"]
+	_, hasOffset := query["offset"]
+
+	var (
+		vehicles []*vehiclemodel.Vehicle
+		err      error
+	)
+	if hasLimit || hasOffset {
+		limit, offset := apiparams.Pagination(r)
+		vehicles, err = repo.GetPage(ctx, limit, offset)
+		if err == nil {
+			apiparams.SetPaginationHeaders(w, limit, offset, len(vehicles))
+		}
+	} else {
+		// Preserve the historical array contract for existing fleet consumers:
+		// an omitted pagination query means the complete vehicle list.
+		vehicles, err = repo.GetAll(ctx)
+	}
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list vehicles")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to list vehicles")
 		apperror.Write(w, r, apperror.ErrDBQuery.WithMessage("failed to list vehicles"))
 		return
+	}
+	if vehicles == nil {
+		vehicles = []*vehiclemodel.Vehicle{}
 	}
 	httpx.WriteJSON(w, http.StatusOK, vehicles)
 }
@@ -208,7 +273,11 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 	}
 	span.SetAttributes(attribute.Int64("vehicle.id", id))
 
-	vehicle, err := h.vehicleSvc.VehicleRepo().GetByID(ctx, id)
+	repo := h.vehicleRepo
+	if repo == nil {
+		repo = h.vehicleSvc.VehicleRepo()
+	}
+	vehicle, err := repo.GetByID(ctx, id)
 	if err != nil || vehicle == nil {
 		apperror.Write(w, r, apperror.ErrVehicleNotFound)
 		return
@@ -244,56 +313,52 @@ func (h *Handler) CurrentState(w http.ResponseWriter, r *http.Request) {
 		}
 		store := signal.New()
 		store.Hydrate(vehicle.ID, raw)
-		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
-		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-			"state":       state,
-			"live":        false,
-			"data_source": "as_of",
-			"as_of":       asOf.Format(time.RFC3339),
+		state, stateErr := h.vehicleSvc.BuildStateFromSignalStoreContext(ctx, store, vehicle)
+		if stateErr != nil {
+			log.Error().
+				Err(stateErr).
+				Int64("vehicle_id", vehicle.ID).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("vehicle current state: assemble snapshot failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to assemble snapshot")
+			return
+		}
+		httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
+			State:          state,
+			Live:           false,
+			DataSource:     service.DataSourceAsOf,
+			Freshness:      stateFreshnessUnknown,
+			VerifiedFields: []string{},
+			AsOf:           &asOf,
 		})
 		return
 	}
 
-	// PRIMARY: Build state from the live signal boundary + DB fallbacks.
+	// Live-first assembly + provenance + telemetry-vs-FSM conflict
+	// observability all live in service.ResolveCurrentState, which the fleet
+	// batch endpoint (GET /api/v1/vehicles/states) also calls. Sharing the
+	// resolver is what keeps the single-vehicle and fleet-wide answers
+	// byte-identical instead of drifting into two subtly different truths.
+	var liveStore signal.LiveSignalStore
 	if h.telemetry != nil {
-		store := signal.New()
-		var hasLiveSignals bool
-		if liveStore := h.telemetry.GetLiveSignalStore(); liveStore != nil {
-			values, err := liveStore.GetAll(ctx, vehicle.ID, signal.LiveSignalReadDistributed)
-			if err != nil {
-				log.Warn().Err(err).Int64("vehicle_id", vehicle.ID).Msg("vehicle current state: live signal read failed")
-			} else if len(values) > 0 {
-				store.Hydrate(vehicle.ID, liveSignalValuesToRaw(values))
-				hasLiveSignals = true
-			}
-		}
-		state := h.vehicleSvc.BuildStateFromSignalStore(store, vehicle)
-		// Enrich with state-since timestamp from vehicle_states table
-		if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
-			state.Since = since
-		}
-		dataSource := "live_signal_store"
-		if !hasLiveSignals {
-			dataSource = "db_fallback"
-		}
-		httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-			"state":       state,
-			"live":        hasLiveSignals,
-			"data_source": dataSource,
-		})
+		liveStore = h.telemetry.GetLiveSignalStore()
+	}
+	resolved, err := h.vehicleSvc.ResolveCurrentState(ctx, vehicle, liveStore, time.Now().UTC())
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("vehicle current state: resolution failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to resolve vehicle state")
 		return
 	}
-
-	// SECONDARY: Build state from DB records (fleet telemetry snapshot tables)
-	// Only reached when telemetryHandler is nil (no MQTT configured)
-	state := h.vehicleSvc.BuildStateFromSignalStore(nil, vehicle)
-	if _, since, err := h.vehicleSvc.StateRepo().GetCurrentStateSince(ctx, vehicle.ID); err == nil && since != nil {
-		state.Since = since
-	}
-	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
-		"state":       state,
-		"live":        false,
-		"data_source": "db_fallback",
+	httpx.WriteJSON(w, http.StatusOK, currentStateResponse{
+		State:          resolved.State,
+		Live:           resolved.Live,
+		DataSource:     resolved.DataSource,
+		ObservedAt:     resolved.ObservedAt,
+		Freshness:      stateFreshness(resolved.Freshness),
+		VerifiedFields: resolved.VerifiedFields,
 	})
 }
 
@@ -332,16 +397,18 @@ type TelemetrySource interface {
 	GetLiveSignalStore() signal.LiveSignalStore
 }
 
-// liveSignalValuesToRaw projects a live-store snapshot into the raw
-// map[string]interface{} shape signal.Store.Hydrate expects. Duplicated
-// from internal/api/signal_handler.go for the duration of Phase R2; the
-// parent copy will be deleted when its callers are also carved.
-func liveSignalValuesToRaw(values map[string]*signal.Value) map[string]interface{} {
-	raw := make(map[string]interface{}, len(values))
-	for name, value := range values {
-		if value != nil {
-			raw[name] = value.Raw
-		}
-	}
-	return raw
+func latestLiveSignalObservation(values map[string]*signal.Value) *time.Time {
+	// Thin delegation: the implementation lives beside the shared resolver so
+	// the single-vehicle and fleet-batch surfaces cannot classify freshness
+	// differently. The wrapper exists because this package's tests pin the
+	// behaviour at the handler boundary.
+	return service.LatestLiveSignalObservation(values)
+}
+
+func isVerifiedLiveSignal(value *signal.Value) bool {
+	return service.IsObservedLiveSignal(value)
+}
+
+func sortedVerifiedFields(verified map[string]bool) []string {
+	return service.SortedVerifiedFields(verified)
 }

@@ -22,7 +22,7 @@ export function StructureIndicators({ result }: JourneyFragmentationSectionProps
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.structure.subtitle', 'Structural indicators describe the returned records; they are not route or intent recommendations.')}</Text>
       </div>
       {result.includedDrives === 0 ? (
-        <EmptyState icon={<Footprints className="h-7 w-7" />} message={t('journeyFragmentation.structure.empty', 'No included drives are available for structural indicators.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<Footprints className="h-7 w-7" />} message={t('journeyFragmentation.structure.empty', 'No included drives are available for structural indicators.')} />
       ) : (
         <div className="grid gap-3 sm:grid-cols-3">
           <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] p-4">

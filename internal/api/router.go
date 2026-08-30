@@ -16,6 +16,7 @@ import (
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
 	docsfs "github.com/ev-dev-labs/teslasync/docs"
+	apiactivity "github.com/ev-dev-labs/teslasync/internal/api/activity"
 	apiadminfb "github.com/ev-dev-labs/teslasync/internal/api/adminfeedback"
 	apiadminls "github.com/ev-dev-labs/teslasync/internal/api/adminlogstream"
 	apiadminmnt "github.com/ev-dev-labs/teslasync/internal/api/adminmaintenance"
@@ -123,6 +124,7 @@ import (
 	apifb "github.com/ev-dev-labs/teslasync/internal/api/feedback"
 	apifleetops "github.com/ev-dev-labs/teslasync/internal/api/fleetops"
 	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
+	apifsd "github.com/ev-dev-labs/teslasync/internal/api/fsd"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
@@ -214,6 +216,7 @@ import (
 	auditdb "github.com/ev-dev-labs/teslasync/internal/database/audit"
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
@@ -233,6 +236,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/integrations"
 	"github.com/ev-dev-labs/teslasync/internal/integrations/nhtsa"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/ops"
 	"github.com/ev-dev-labs/teslasync/internal/platform"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/service"
@@ -247,6 +251,8 @@ import (
 	"github.com/pquerna/otp/totp"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/trace"
 
 	tsauth "github.com/ev-dev-labs/teslasync/internal/auth"
 
@@ -380,6 +386,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/app/chargingsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/dashboardsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/exportsvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/fleetstatesvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/gdprexportsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/ownershipintelsvc"
 	"github.com/ev-dev-labs/teslasync/internal/app/vehiclesvc"
@@ -428,6 +435,61 @@ func mountAccountVehicleManagementRoutes(r chi.Router, h vehicleManagementRouteH
 	r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/tesla/vehicle-pricing", h.VehiclePricing)
 }
 
+type dataRepairRoutes interface {
+	GetStaleSessions(http.ResponseWriter, *http.Request)
+	GetSuggestions(http.ResponseWriter, *http.Request)
+	ListCases(http.ResponseWriter, *http.Request)
+	GetCaseStats(http.ResponseWriter, *http.Request)
+	GetCase(http.ResponseWriter, *http.Request)
+	ListQuarantines(http.ResponseWriter, *http.Request)
+	TransitionCase(http.ResponseWriter, *http.Request)
+	AssignCase(http.ResponseWriter, *http.Request)
+	AddCaseComment(http.ResponseWriter, *http.Request)
+	BulkTransitionCases(http.ResponseWriter, *http.Request)
+	ScanCases(http.ResponseWriter, *http.Request)
+	QuarantineCase(http.ResponseWriter, *http.Request)
+	RestoreQuarantine(http.ResponseWriter, *http.Request)
+	UpdateCharging(http.ResponseWriter, *http.Request)
+	PreviewCharging(http.ResponseWriter, *http.Request)
+	CloseCharging(http.ResponseWriter, *http.Request)
+	DeleteCharging(http.ResponseWriter, *http.Request)
+	UpdateDrive(http.ResponseWriter, *http.Request)
+	PreviewDrive(http.ResponseWriter, *http.Request)
+	CloseDrive(http.ResponseWriter, *http.Request)
+	DeleteDrive(http.ResponseWriter, *http.Request)
+}
+
+func mountDataRepairRoutes(r chi.Router, h dataRepairRoutes, sudo func(http.Handler) http.Handler) {
+	r.Route("/data-repair", func(r chi.Router) {
+		r.Use(httprate.LimitByIP(20, time.Minute))
+		r.Get("/stale-sessions", h.GetStaleSessions)
+		r.Get("/suggestions", h.GetSuggestions)
+		r.Get("/cases", h.ListCases)
+		r.Get("/cases/stats", h.GetCaseStats)
+		r.Get("/cases/{id}", h.GetCase)
+		r.Get("/quarantine", h.ListQuarantines)
+		r.With(httprate.LimitByIP(2, time.Minute), sudo).Post("/cases/scan", h.ScanCases)
+		r.With(sudo).Post("/cases/{id}/transition", h.TransitionCase)
+		r.With(sudo).Put("/cases/{id}/assignment", h.AssignCase)
+		r.With(sudo).Post("/cases/{id}/comments", h.AddCaseComment)
+		r.With(sudo).Post("/cases/{id}/quarantine", h.QuarantineCase)
+		r.With(sudo).Post("/cases/bulk-transition", h.BulkTransitionCases)
+		r.With(sudo).Post("/quarantine/{id}/restore", h.RestoreQuarantine)
+		r.Route("/charging/{id}", func(r chi.Router) {
+			r.With(sudo).Put("/", h.UpdateCharging)
+			r.Post("/preview", h.PreviewCharging)
+			r.With(sudo).Post("/close", h.CloseCharging)
+			r.With(sudo).Delete("/", h.DeleteCharging)
+		})
+		r.Route("/drive/{id}", func(r chi.Router) {
+			r.With(sudo).Put("/", h.UpdateDrive)
+			r.Post("/preview", h.PreviewDrive)
+			r.With(sudo).Post("/close", h.CloseDrive)
+			r.With(sudo).Delete("/", h.DeleteDrive)
+		})
+	})
+}
+
 // NewRouter creates and configures the main HTTP router with all API routes,
 // middleware (logging, recovery, CORS, rate limiting, security headers), and
 // a static file server for the SPA frontend. It wires up handler dependencies
@@ -455,6 +517,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// into this tracker via apperror.SetTracker; see internal/api/apperror.
 	errorTracker := NewErrorTracker(200)
 	apperror.SetTracker(errorTracker)
+	r.Use(apimw.CapturePeerAddress) // Must precede RealIP; rate limits use the transport peer, not XFF.
 	r.Use(chimw.RequestID)
 	r.Use(chimw.RealIP)
 	r.Use(apimw.Tracing)
@@ -489,7 +552,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// with the Fetch spec. Set CORS_ORIGINS env var for production.
 	corsOrigins := []string{"*"}
 	if cfg.CORSOrigins != "" {
-		corsOrigins = []string{cfg.CORSOrigins}
+		corsOrigins = make([]string, 0, len(strings.Split(cfg.CORSOrigins, ",")))
+		for _, origin := range strings.Split(cfg.CORSOrigins, ",") {
+			if origin = strings.TrimSpace(origin); origin != "" {
+				corsOrigins = append(corsOrigins, origin)
+			}
+		}
 	}
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins: corsOrigins,
@@ -544,6 +612,59 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	}
 	liveStateReader := signal.MustNewLiveStateReader(liveSignalStore, stateReader)
 	vehicleHandler := apiveh.NewHandler(vehicleSvc, teslaClient, stateReader)
+	// Fleet-wide batch current-state read (ADR-009: handler/v1 + app/*svc).
+	// It shares service.VehicleService.ResolveCurrentState with the
+	// single-vehicle GET /vehicles/{id}/state above, so the two surfaces
+	// cannot report different truths for the same car. `liveSignalStore` is
+	// the same L1+L2 boundary the single read uses (a no-op store when no
+	// telemetry source is configured) — no snapshot tables are involved.
+	//
+	// CacheTTL enables coalescing + a 1s successful-result micro-cache: the
+	// SPA's multi-tab / SSE-burst thundering herd collapses into ONE storage
+	// read. Failures are never cached and every caller gets its own copy.
+	fleetStateHandler := v1handlers.NewFleetStateHandler(fleetstatesvc.New(fleetstatesvc.Options{
+		Vehicles: vehicledb.NewVehicleRepo(db),
+		Resolver: vehicleSvc,
+		Live:     liveSignalStore,
+		CacheTTL: fleetstatesvc.DefaultCacheTTL,
+		OnResolverError: func(ctx context.Context, vehicleID int64, err error) {
+			span := trace.SpanFromContext(ctx)
+			log.Warn().
+				Err(err).
+				Int64("vehicle_id", vehicleID).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("fleet state: vehicle resolution failed; reported as a failed item")
+		},
+		OnResolverPanic: func(ctx context.Context, vehicleID int64, recovered any) {
+			span := trace.SpanFromContext(ctx)
+			log.Error().
+				Int64("vehicle_id", vehicleID).
+				Interface("panic", recovered).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("fleet state: vehicle resolution panicked; reported as a failed item")
+		},
+		OnPrefetchError: func(ctx context.Context, err error) {
+			span := trace.SpanFromContext(ctx)
+			log.Warn().
+				Err(err).
+				Str("trace_id", span.SpanContext().TraceID().String()).
+				Msg("fleet state: bulk prefetch unavailable; falling back to per-vehicle reads")
+		},
+		OnCacheOutcome: func(ctx context.Context, outcome fleetstatesvc.CacheOutcome) {
+			// Span attributes only: a per-request log line here would be pure
+			// noise on the hot path, and cache behaviour is a latency story
+			// that belongs on the trace.
+			span := trace.SpanFromContext(ctx)
+			if !span.IsRecording() {
+				return
+			}
+			span.SetAttributes(
+				attribute.Bool("fleet.cache_hit", outcome.Hit),
+				attribute.Bool("fleet.cache_coalesced", outcome.Coalesced),
+				attribute.Float64("fleet.cache_age_seconds", outcome.Age.Seconds()),
+			)
+		},
+	}))
 	driveHandler := apidrives.NewDriveDetail(db, stateReader, liveStateReader)
 	chargingHandler := apicharging.NewChargingHandler(db, stateReader, liveStateReader)
 	geofenceHandler := apigeo.NewHandler(db, apigeo.WithAuditFunc(
@@ -870,6 +991,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	safetyHandler := apisafety.NewSafetyHandler(stateReader, liveStateReader)
 	userPreferenceHandler := apiuserpref.NewUserPreferenceHandler(stateReader, liveStateReader)
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
+	activityHandler := apiactivity.NewHandler(db)
 	tcoHandler := apitco.NewHandler(db)
 	sleepHandler := apisleep.NewSleepHandler(db)
 	//: VampireDrainHandler deleted (vampire_drain_events).
@@ -899,8 +1021,27 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// authoritative catalog/observation surface.
 	chargingHeatmapHandler := apichargeheatmap.NewChargingHeatmapHandler(db)
 	speedProfileHandler := apispeedprof.NewSpeedProfileHandler(db)
-	dataRepairHandler := apidatarepair.NewDataRepairHandler(db)
+	// Data repair: read-only evidence diagnosis + explicit, audited apply.
+	// The diagnosis source is only installed when a database is present; with
+	// no pool the suggestions endpoint reports 503 rather than pretending the
+	// worklist is clean.
+	dataRepairOpts := []apidatarepair.Option{
+		apidatarepair.WithForwardAuthHeader(cfg.Auth.ForwardAuthHeader),
+	}
+	if opt.DataRepairScanner != nil {
+		dataRepairOpts = append(dataRepairOpts, apidatarepair.WithScanner(opt.DataRepairScanner))
+	}
+	if db != nil {
+		dataRepairOpts = append(dataRepairOpts,
+			apidatarepair.WithDiagnosisSource(datarepairdb.NewRepo(db)))
+	}
+	dataRepairHandler := apidatarepair.NewDataRepairHandler(db, dataRepairOpts...)
 	tempImpactHandler := tempimpact.NewHandler(db)
+	// FSD Insights reads the two resettable SI-meter distance counters
+	// (SelfDrivingMilesSinceReset / MilesSinceReset) straight off the
+	// signal_log change feed and derives reset-safe per-local-day deltas
+	// server-side, so the browser never downloads a raw counter history.
+	fsdInsightsHandler := apifsd.NewHandler(db)
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
 	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
 	segmentsHandler := apisegments.NewSegmentsHandler(db)
@@ -2139,14 +2280,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
-	r.Get("/healthz", HealthHandler(db))
+	r.Get("/healthz", HealthHandler(db, opt.LivenessChecks...))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
-	// Internal: PreStop flush endpoint for Kubernetes lifecycle hooks
+	// Internal: READ-ONLY drain contract. The mutating drain endpoint
+	// (/internal/flush) is NOT mounted here — it is one-way and
+	// pod-fatal, so a public route would let any caller that reaches the
+	// ingress permanently remove a healthy pod from service. It lives on
+	// the isolated internal listener in internal/app/drain.go, on a port
+	// no Service or Ingress targets.
 	// (Signal store no longer has Postgres flush — Redis + signal_log handle persistence)
-	r.Post("/internal/flush", func(w http.ResponseWriter, req *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{"status": "flushed"})
-	})
+	r.Get(ops.DrainStatusPath, DrainStatusHandler(cfg.DrainPort))
 	r.Handle("/metrics", MetricsHandler())
 
 	// Public: Automation webhook receiver (no auth — token IS the auth).
@@ -2900,6 +3044,16 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// No-op when ForwardAuthHeader is empty (dev mode / no auth configured).
 		r.Use(ForwardAuthMiddleware(cfg.Auth.ForwardAuthHeader))
 
+		// All authenticated mutations prove browser same-origin intent and are
+		// bounded by a shared per-client backstop. Public browser telemetry is
+		// mounted outside this group so anonymous ingestion remains unaffected;
+		// credential and destructive routes retain their stricter local limits.
+		r.Use(apimw.CSRFProtectionWithOptions(apimw.CSRFOptions{
+			AllowedOrigins:       apimw.ParseAllowedOrigins(cfg.CORSOrigins),
+			AllowLoopbackOrigins: cfg.Auth.ForwardAuthHeader == "",
+		}))
+		r.Use(apimw.NewWriteRateLimiter(apimw.DefaultWriteLimit, time.Minute, cfg.Auth.ForwardAuthHeader).Middleware)
+
 		// Subject recorder. MUST run AFTER
 		// ForwardAuthMiddleware (so the principal header is the
 		// authoritative one for this request) and BEFORE both the
@@ -3012,6 +3166,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/onboarding/status", onboardingHandler.Status)
 		r.Route("/vehicles", func(r chi.Router) {
 			r.Get("/", vehicleHandler.List)
+			// Batch current state for the whole fleet in ONE request.
+			// Registered as a STATIC segment inside this group so chi's trie
+			// resolves it ahead of the /{vehicleID} parameter node below
+			// (same precedence the existing static /sync route relies on).
+			r.Get("/states", fleetStateHandler.List)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
 				r.Get("/", vehicleHandler.Get)
@@ -3454,7 +3613,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 			// SSE stream for real-time automation events (static route before {id} param)
 			// Protected by ForwardAuthMiddleware on the parent /api/v1 group
-			r.Get("/events", sse.SSEHandler(automationEventHub))
+			r.Get("/events", sse.SSEHandler(automationEventHub, sse.WithDrainSignal(ShutdownGate.Drained())))
 
 			// Import/Export (static routes before {id} param)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/export", automationHandler.ExportBatch)
@@ -3512,6 +3671,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
 		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
 		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
+		// Supervised self-driving distance analytics. Server-side
+		// aggregation keeps the raw counter change feed off the wire; the
+		// response is canonical SI meters plus explicit data-quality
+		// metadata (baselines, resets, coverage).
+		r.Get("/analytics/fsd", fsdInsightsHandler.Insights)
 		r.Get("/analytics/route-efficiency", routeEfficiencyHandler.List)
 		r.Get("/analytics/route-efficiency/detail", routeEfficiencyHandler.Detail)
 		r.Get("/analytics/battery-cells", batteryCellsHandler.Get)
@@ -3726,6 +3890,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Software Updates
 		r.Get("/software-updates", softwareUpdateHandler.List)
 
+		// Unified operations-intelligence activity timeline — read-only,
+		// composed at query time from drives, charging_sessions,
+		// notification_logs, software_updates, and chart_annotations. See
+		// internal/database/activity for the UNION ALL composition and
+		// internal/models/activity for why maintenance/service events are
+		// intentionally excluded.
+		r.Get("/activity", activityHandler.List)
+
 		// /vampire-drain + /vampire-drain/stats are derived
 		// live from fsm_transitions because vampire_drain_events no longer exists.
 		// Parked windows come from
@@ -3889,7 +4061,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 
 		// Real-time SSE stream — protected by ForwardAuthMiddleware on the parent /api/v1 group
-		r.Get("/events", sse.SSEHandler(eventHub))
+		r.Get("/events", sse.SSEHandler(eventHub, sse.WithDrainSignal(ShutdownGate.Drained())))
 		// Backward-compat stub: frontend still calls fetchSSEToken until it is removed
 		r.Get("/sse-token", func(w http.ResponseWriter, r *http.Request) {
 			writeJSON(w, http.StatusOK, map[string]string{"token": ""})
@@ -4454,6 +4626,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
+				r.Get("/transport-agreement", signalHandler.TransportAgreement)
 				r.Get("/{signalName}/history", signalHandler.History)
 			} else {
 				// No telemetry handler at all — register with DB-only fallbacks
@@ -4471,27 +4644,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/diff", signalHandler.Diff)
 				r.Get("/available", signalHandler.AvailableSignals)
 				r.Get("/stats", signalHandler.Stats)
+				r.Get("/transport-agreement", signalHandler.TransportAgreement)
 				r.Get("/{signalName}/history", signalHandler.History)
 			}
 		})
 
 		// Data Repair
-		r.Route("/data-repair", func(r chi.Router) {
-			r.Use(httprate.LimitByIP(20, 1*time.Minute))
-			// GET stays read-only and unguarded; every mutating route
-			// below threads through RequireSudo.
-			r.Get("/stale-sessions", dataRepairHandler.GetStaleSessions)
-			r.Route("/charging/{id}", func(r chi.Router) {
-				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateCharging)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseCharging)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteCharging)
-			})
-			r.Route("/drive/{id}", func(r chi.Router) {
-				r.With(RequireSudo(sudoStore, sudoCfg)).Put("/", dataRepairHandler.UpdateDrive)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Post("/close", dataRepairHandler.CloseDrive)
-				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", dataRepairHandler.DeleteDrive)
-			})
-		})
+		mountDataRepairRoutes(r, dataRepairHandler, RequireSudo(sudoStore, sudoCfg))
 
 		// Backup & Restore
 		r.Route("/backup", func(r chi.Router) {
@@ -4725,7 +4884,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		})
 	}
 
-	return r
+	return apimw.WithMatchedRoute(r)
 }
 
 // spaFallback returns an http.Handler that serves static files from dir

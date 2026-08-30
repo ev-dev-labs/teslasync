@@ -17,6 +17,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/geocoding"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/jackc/pgx/v5"
 )
 
 // TelemetrySessionTracker detects drive and charge boundaries from streaming Fleet Telemetry.
@@ -33,10 +34,18 @@ type TelemetrySessionTracker struct {
 	localSignals        *signal.Store
 	signalHistoryWriter *signaldb.SignalHistoryWriter
 	signalLogReader     *signaldb.SignalLogReader
+	transaction         func(context.Context, func(pgx.Tx) error) error
 
 	mu            sync.Mutex
 	activeDrives  map[int64]*streamingDrive  // vehicleID → active drive
 	activeCharges map[int64]*streamingCharge // vehicleID → active charge
+}
+
+func (t *TelemetrySessionTracker) withTransaction(ctx context.Context, fn func(pgx.Tx) error) error {
+	if t.transaction != nil {
+		return t.transaction(ctx, fn)
+	}
+	return t.db.WithTx(ctx, fn)
 }
 
 // NewTelemetrySessionTracker creates a tracker with its repository dependencies.

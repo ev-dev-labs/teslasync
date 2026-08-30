@@ -4,6 +4,10 @@ import type { ModeId, ThemeId } from '@/components/ui/ThemeProvider'
 import { Icons, type LucideIcon } from '@/lib/icons'
 import { TOUR_OPEN_LAUNCHER_EVENT } from '@/lib/tourRegistry'
 import { _resetFrecency } from '@/lib/commandFrecency'
+import {
+  dispatchWorkspaceDensity,
+  dispatchWorkspaceRangePreset,
+} from '@/lib/workspacePreferences'
 
 export type { LucideIcon }
 
@@ -132,13 +136,13 @@ export const commandRegistry: CommandDefinition[] = [
   {
     id: 'pref.theme.neonCyan',
     labelKey: 'palette.cmd.themeNeonCyan',
-    labelFallback: 'Switch to Neon Cyan',
+    labelFallback: 'Switch to Signal Blue',
     icon: Icons.palette,
     section: 'preferences',
-    keywords: ['theme', 'switch', 'neon', 'cyan', 'color'],
+    keywords: ['theme', 'switch', 'signal', 'blue', 'neon', 'cyan', 'color'],
     perform: (ctx) => {
       ctx.setTheme('neon-cyan')
-      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Neon Cyan', defaultValue: 'Switched to Neon Cyan' }))
+      ctx.toast.info(ctx.t('theme.switchedTo', { name: 'Signal Blue', defaultValue: 'Switched to Signal Blue' }))
     },
   },
   {
@@ -222,6 +226,105 @@ export const commandRegistry: CommandDefinition[] = [
     },
   },
   {
+    id: 'workspace.range.live',
+    labelKey: 'palette.cmd.rangeLive',
+    labelFallback: 'Analysis window: Live',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'live', 'realtime', 'latest', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('live'),
+  },
+  {
+    id: 'workspace.range.24h',
+    labelKey: 'palette.cmd.range24h',
+    labelFallback: 'Analysis window: Last 24 hours',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'day', '24 hours', 'rolling', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('24h'),
+  },
+  {
+    id: 'workspace.range.today',
+    labelKey: 'palette.cmd.rangeToday',
+    labelFallback: 'Analysis window: Today',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'today', 'live', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('today'),
+  },
+  {
+    id: 'workspace.range.7d',
+    labelKey: 'palette.cmd.range7d',
+    labelFallback: 'Analysis window: Last 7 days',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'week', '7 days', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('7d'),
+  },
+  {
+    id: 'workspace.range.30d',
+    labelKey: 'palette.cmd.range30d',
+    labelFallback: 'Analysis window: Last 30 days',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'month', '30 days', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('30d'),
+  },
+  {
+    id: 'workspace.range.90d',
+    labelKey: 'palette.cmd.range90d',
+    labelFallback: 'Analysis window: Last 90 days',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'quarter', '90 days', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('90d'),
+  },
+  {
+    id: 'workspace.range.1y',
+    labelKey: 'palette.cmd.range1y',
+    labelFallback: 'Analysis window: Last year',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'year', '12 months', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('1y'),
+  },
+  {
+    id: 'workspace.range.all',
+    labelKey: 'palette.cmd.rangeAll',
+    labelFallback: 'Analysis window: All time',
+    icon: Icons.calendar,
+    section: 'preferences',
+    keywords: ['range', 'time', 'all', 'lifetime', 'analysis'],
+    perform: () => dispatchWorkspaceRangePreset('all'),
+  },
+  {
+    id: 'workspace.density.compact',
+    labelKey: 'palette.cmd.densityCompact',
+    labelFallback: 'Workspace density: Compact',
+    icon: Icons.settingsAlt,
+    section: 'preferences',
+    keywords: ['density', 'compact', 'rows', 'workspace'],
+    perform: () => dispatchWorkspaceDensity('compact'),
+  },
+  {
+    id: 'workspace.density.comfortable',
+    labelKey: 'palette.cmd.densityComfortable',
+    labelFallback: 'Workspace density: Comfortable',
+    icon: Icons.settingsAlt,
+    section: 'preferences',
+    keywords: ['density', 'comfortable', 'default', 'workspace'],
+    perform: () => dispatchWorkspaceDensity('comfortable'),
+  },
+  {
+    id: 'workspace.density.spacious',
+    labelKey: 'palette.cmd.densitySpacious',
+    labelFallback: 'Workspace density: Spacious',
+    icon: Icons.settingsAlt,
+    section: 'preferences',
+    keywords: ['density', 'spacious', 'large', 'workspace'],
+    perform: () => dispatchWorkspaceDensity('spacious'),
+  },
+  {
     id: 'action.alerts.new',
     labelKey: 'palette.cmd.newAlert',
     labelFallback: 'Create new alert rule',
@@ -272,8 +375,35 @@ export const commandRegistry: CommandDefinition[] = [
     labelFallback: 'View system status',
     icon: Icons.speed,
     section: 'actions',
-    keywords: ['system', 'status', 'health', 'uptime', 'service'],
+    keywords: ['system', 'status', 'health', 'uptime', 'service', 'diagnostics', 'operations'],
     perform: (ctx) => ctx.navigate('/system-status'),
+  },
+  {
+    id: 'action.center',
+    labelKey: 'palette.cmd.actionCenter',
+    labelFallback: 'Open Action Center',
+    icon: Icons.alertCircle,
+    section: 'actions',
+    keywords: ['action center', 'attention', 'recommendations', 'triage', 'issues'],
+    perform: (ctx) => ctx.navigate('/action-center'),
+  },
+  {
+    id: 'action.compare.fleet',
+    labelKey: 'palette.cmd.fleetComparison',
+    labelFallback: 'Compare fleet vehicles',
+    icon: Icons.gitCompare,
+    section: 'actions',
+    keywords: ['fleet', 'vehicle', 'compare', 'comparison', 'benchmark'],
+    perform: (ctx) => ctx.navigate('/vehicle-comparison'),
+  },
+  {
+    id: 'action.compare.period',
+    labelKey: 'palette.cmd.periodComparison',
+    labelFallback: 'Compare analysis periods',
+    icon: Icons.calendar,
+    section: 'actions',
+    keywords: ['period', 'time', 'compare', 'comparison', 'before', 'after'],
+    perform: (ctx) => ctx.navigate('/period-compare'),
   },
   {
     // open the global time-machine date picker.

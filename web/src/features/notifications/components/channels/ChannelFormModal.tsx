@@ -10,11 +10,12 @@ import { useTranslation } from 'react-i18next';
 import { CheckCircle, TestTube, XCircle } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import {
-  Button, ErrorText, GlassPanel, HelpIcon, Input, Modal, Text, Toggle,
+  Button, ConfirmDialog, ErrorText, GlassPanel, HelpIcon, Input, Modal, Text, Toggle,
 } from '@/components/ui';
 import { FadeIn } from '@/components/motion';
-import { useToast } from '@/components/feedback/Toast';
+import { useToast } from '@/components/feedback';
 import { useSaveChannel, useTestChannel } from '@/api/hooks/useNotifications';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import type { NotificationChannel } from '@/api/types';
 import {
   buildChannelPayload, channelToFormConfig, CHANNEL_TYPES, FIELD_HELP,
@@ -31,25 +32,45 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
   const { t } = useTranslation();
   const toast = useToast();
   const isEdit = !!channel;
-  const [kind, setKind] = useState<ChannelType>(channel?.kind ?? 'discord');
-  const [name, setName] = useState(channel?.name ?? '');
-  const [enabled, setEnabled] = useState(channel?.enabled ?? true);
-  const [config, setConfig] = useState<Record<string, string>>(
-    channel ? channelToFormConfig(channel) : {},
-  );
+  const [initialValues] = useState(() => ({
+    kind: channel?.kind ?? 'discord' as ChannelType,
+    name: channel?.name ?? '',
+    enabled: channel?.enabled ?? true,
+    config: channel ? channelToFormConfig(channel) : {},
+  }));
+  const [kind, setKind] = useState<ChannelType>(initialValues.kind);
+  const [name, setName] = useState(initialValues.name);
+  const [enabled, setEnabled] = useState(initialValues.enabled);
+  const [config, setConfig] = useState<Record<string, string>>(initialValues.config);
+  const [nameError, setNameError] = useState('');
   const [formError, setFormError] = useState('');
   const [testResult, setTestResult] = useState<{ success: boolean; message?: string } | null>(null);
 
   const meta = getChannelMeta(kind);
   const saveMut = useSaveChannel();
   const testMut = useTestChannel();
+  const isDirty = kind !== initialValues.kind
+    || name !== initialValues.name
+    || enabled !== initialValues.enabled
+    || JSON.stringify(config) !== JSON.stringify(initialValues.config);
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    isDirty,
+    onClose,
+    {
+      message: t(
+        'notifications.channels.unsaved',
+        'You have unsaved notification-channel changes. Discard them?',
+      ),
+    },
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setNameError('');
     setFormError('');
     setTestResult(null);
     if (!name.trim()) {
-      setFormError(t('notifications.channels.nameRequired', 'Name is required'));
+      setNameError(t('notifications.channels.nameRequired', 'Name is required'));
       return;
     }
     const payload = buildChannelPayload(kind, name, enabled, config, isEdit && channel ? channel.id : undefined);
@@ -81,7 +102,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
   return (
     <Modal
       open
-      onClose={onClose}
+      onClose={requestClose}
       size="lg"
       title={isEdit ? t('notifications.channels.editTitle', 'Edit Channel') : t('notifications.channels.addTitle', 'Add Channel')}
     >
@@ -140,7 +161,11 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
               content: 'Friendly identifier shown in the channel list and on alert delivery logs. Has no functional impact — pick anything memorable.',
             }}
             value={name}
-            onChange={(e) => setName(e.target.value)}
+            onChange={(e) => {
+              setName(e.target.value);
+              setNameError('');
+            }}
+            error={nameError || undefined}
             placeholder={`${t('notifications.channels.namePlaceholderPrefix', 'My')} ${meta.label}`}
           />
 
@@ -216,7 +241,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
               </Button>
             )}
             <div className="flex-1" />
-            <Button type="button" variant="ghost" onClick={onClose}>{t('common.cancel', 'Cancel')}</Button>
+            <Button type="button" variant="ghost" onClick={requestClose}>{t('common.cancel', 'Cancel')}</Button>
             <Button type="submit" variant="primary" loading={saveMut.isPending}>
               {saveMut.isPending
                 ? t('common.saving', 'Saving…')
@@ -225,6 +250,7 @@ export function ChannelFormModal({ channel, onClose, onSaved }: ChannelFormModal
           </div>
         </form>
       </FadeIn>
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </Modal>
   );
 }

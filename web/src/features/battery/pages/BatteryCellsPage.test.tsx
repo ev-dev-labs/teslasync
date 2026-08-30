@@ -42,6 +42,12 @@ import type { ReactNode } from 'react';
 import { ToastProvider } from '@/components/feedback/Toast';
 import type { BatteryCellData, CellReading } from '@/api/hooks/useAnalytics';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // ── Hoisted, per-test controllable state ─────────────────────────────
 // `query` feeds the stubbed useBatteryCells; `temp` feeds useUnits so a
 // single test can flip °C→°F; `selected` feeds useSelectedVehicle.
@@ -406,7 +412,12 @@ describe('BatteryCellsPage', () => {
     fireEvent.click(voltageHeaderBtn);
 
     expect(voltageHeaderBtn.closest('th')).toHaveAttribute('aria-sort', 'descending');
-    expect(screen.getByRole('button', { name: 'Cell #' }).closest('th')).not.toHaveAttribute('aria-sort');
+    // A sortable-but-inactive column advertises `aria-sort="none"` rather than
+    // omitting the attribute (otherwise AT cannot tell it is sortable at all).
+    expect(screen.getByRole('button', { name: 'Cell #' }).closest('th')).toHaveAttribute(
+      'aria-sort',
+      'none',
+    );
   });
 });
 

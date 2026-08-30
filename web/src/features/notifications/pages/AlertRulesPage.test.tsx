@@ -21,6 +21,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import type { AlertRule } from '@/api/types';
 import AlertRulesPage, { subjectOf, isSnoozed } from './AlertRulesPage';
 
@@ -261,6 +267,12 @@ describe('AlertRulesPage — data state', () => {
     expect(screen.getByRole('table')).toBeInTheDocument();
     expect(screen.getByText('Zebra')).toBeInTheDocument();
     expect(screen.getByText('Mango')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Download CSV' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Reorder or hide columns' }),
+    ).toBeInTheDocument();
   });
 
   it('shows the severity legend with the computed critical count', () => {

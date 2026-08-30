@@ -381,6 +381,7 @@ export function GeneralSettings() {
                     />
                   </div>
                   <Select
+                    aria-label={t('app.gasVolumeUnit', 'Fuel volume unit')}
                     value={form.gas_unit}
                     onChange={e => setForm({ ...form, gas_unit: e.target.value })}
                     options={[{ value: 'gallon', label: t('app.perGallon', '/ gallon') }, { value: 'liter', label: t('app.perLiter', '/ liter') }]}

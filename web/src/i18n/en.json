@@ -1,4 +1,228 @@
 {
+  "density": {
+    "table": "Table",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "spacious": "Spacious",
+    "groupLabel": "List density"
+  },
+  "signalTransportAgreement": {
+    "title": "HTTP / MQTT Agreement",
+    "description": "Compares only SI-normalized observations with producer timestamps from both Fleet Telemetry transports.",
+    "measured": "Measured",
+    "notMeasured": "Not measured",
+    "runQuery": "Run a signal query to audit HTTP and MQTT evidence for the same time window.",
+    "resource": "transport agreement evidence",
+    "unavailable": "Transport agreement evidence is not available for this query.",
+    "windowLimitTitle": "Agreement is limited to seven days",
+    "windowLimitDescription": "Cross-transport agreement is evaluated over at most {{limitDays}} days ({{limitHours}} hours). This query covers {{requestedDays}} days and is kept exactly as submitted — the signal history below is unchanged. Re-run with a shorter range to audit HTTP and MQTT evidence.",
+    "partialTitle": "Partial evidence window",
+    "partialDescription": "The audit reached its {{limit}}-row safety limit. Results describe only the bounded sample and do not prove full-window agreement.",
+    "invalidRows": "Excluded malformed typed rows: {{count}}.",
+    "agreement": "Agreement",
+    "sourceTimeOnly": "Producer time only; receipt fallbacks excluded",
+    "comparablePairs": "Comparable pairs",
+    "pairTolerance": "Within {{seconds}} seconds",
+    "httpEvidence": "HTTP evidence",
+    "mqttEvidence": "MQTT evidence",
+    "noEvidenceTitle": "No eligible evidence",
+    "noEvidenceDescription": "No normalized observations with producer timestamps were recorded in this window.",
+    "overlapTitle": "Not enough overlapping evidence",
+    "overlapDescription": "Agreement needs HTTP and MQTT observations for the same signal within the source-time tolerance. Missing overlap is unknown, not 0% agreement.",
+    "fieldTitle": "Per-signal evidence",
+    "fieldCount": "Showing {{shown}} of {{total}} signals",
+    "fieldEvidence": "{{pairs}} pairs / {{http}} HTTP / {{mqtt}} MQTT",
+    "disagreements": "Disagreements: {{count}}",
+    "noFields": "No eligible per-signal evidence is available."
+  },
+  "signalLog": {
+    "records": "records"
+  },
+  "route": {
+    "noLocationData": "No location data",
+    "roundTrip": "round trip"
+  },
+  "emptyState": {
+    "threshold": {
+      "defaultItem": "items",
+      "message": "Need at least {{threshold}} {{noun}} to show meaningful patterns. You have {{current}} so far."
+    }
+  },
+  "sortControl": {
+    "ascending": "Ascending",
+    "descending": "Descending",
+    "fieldLabel": "Sort by",
+    "direction": "Sort direction"
+  },
+  "vehicleSelect": {
+    "aria": "Select vehicle"
+  },
+  "productPreferences": {
+    "title": "Workspace preferences",
+    "description": "Choose how TeslaSync prioritizes information when this browser opens. These presentation preferences never change permissions or backend authorization.",
+    "deviceLocal": "This browser",
+    "persona": {
+      "label": "Workspace profile"
+    },
+    "personas": {
+      "owner": {
+        "label": "Owner",
+        "description": "Keep the most useful everyday vehicle information close at hand."
+      },
+      "fleetOperator": {
+        "label": "Fleet operator",
+        "description": "Prioritize active fleet operations and current vehicle state."
+      },
+      "analyst": {
+        "label": "Analyst",
+        "description": "Prioritize trends, reports, and historical analysis."
+      },
+      "administrator": {
+        "label": "Administrator",
+        "description": "Prioritize system administration and operational controls."
+      }
+    },
+    "defaultVehicle": {
+      "label": "Default vehicle",
+      "hint": "Choose the vehicle selected when TeslaSync opens.",
+      "lastActive": "Use the last active vehicle",
+      "unnamed": "Vehicle {{id}}",
+      "unavailable": "Unavailable vehicle {{id}}"
+    },
+    "defaultRange": {
+      "label": "Default analysis range",
+      "hint": "Choose the time range used for new analysis views."
+    },
+    "landing": {
+      "label": "Landing page",
+      "hint": "Choose the page shown when TeslaSync opens.",
+      "options": {
+        "dashboard": "Dashboard",
+        "vehicles": "Vehicles",
+        "drives": "Drives",
+        "charging": "Charging",
+        "battery": "Battery",
+        "analytics": "Analytics",
+        "actionCenter": "Action center"
+      }
+    },
+    "contextualHelp": {
+      "label": "Contextual help",
+      "hint": "Show helpful guidance in workspace controls."
+    },
+    "releaseHighlights": {
+      "label": "Release highlights",
+      "hint": "Show recently released capabilities."
+    },
+    "reset": {
+      "label": "Reset defaults",
+      "done": "Workspace preferences restored to defaults."
+    }
+  },
+  "statCard": {
+    "loading": "Loading",
+    "trend": {
+      "increased": "increased",
+      "decreased": "decreased",
+      "unchanged": "no change"
+    }
+  },
+  "workspaceContext": {
+    "ranges": {
+      "live": "Live",
+      "24h": "Last 24 hours",
+      "today": "Today",
+      "7d": "Last 7 days",
+      "30d": "Last 30 days",
+      "90d": "Last 90 days",
+      "1y": "Last year",
+      "all": "All time"
+    }
+  },
+  "dataState": {
+    "stale": {
+      "title": "Data may be stale",
+      "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
+    },
+    "systemStatus": {
+      "maintenance": {
+        "readOnly": "Maintenance controls are read-only"
+      }
+    },
+    "partial": {
+      "title": "Partial data",
+      "message": "Some sources did not respond. Available results remain visible and are not treated as complete."
+    },
+    "unavailable": {
+      "title": "Service unavailable",
+      "message": "A required service is unavailable. This section will recover when the dependency returns."
+    },
+    "unsupported": {
+      "title": "Feature not supported",
+      "message": "This feature is not enabled by the current deployment configuration."
+    }
+  },
+  "dataSources": {
+    "partialMessage": "Available sections remain visible. Source status is tracked independently below.",
+    "staleMessage": "Previously loaded data remains visible while affected sources recover.",
+    "unavailableMessage": "No requested source has returned usable data yet.",
+    "retry": "Retry unavailable sources",
+    "labels": {
+      "applicationSettings": "Application settings",
+      "alertHistory": "Alert history",
+      "backupConfigurations": "Backup configurations",
+      "backupRuns": "Backup runs",
+      "captureStatistics": "Capture statistics",
+      "chargingHistory": "Charging history",
+      "climateHistory": "Climate history",
+      "connectionPool": "Connection pool",
+      "dailyMileage": "Daily mileage",
+      "databaseStatistics": "Database statistics",
+      "driveHistory": "Drive history",
+      "efficiencySummary": "Efficiency summary",
+      "energyStatusHistory": "Energy status history",
+      "fleetAnalytics": "Fleet analytics",
+      "latestClimateState": "Latest climate state",
+      "latestSecurityState": "Latest security state",
+      "liveVehicleState": "Live vehicle state",
+      "liveEnergyStatus": "Live energy status",
+      "liveTirePressure": "Latest tire pressure",
+      "maintenanceItems": "Maintenance items",
+      "migrationStatus": "Migration status",
+      "mileageSummary": "Mileage summary",
+      "monthlyMileage": "Monthly mileage",
+      "notificationChannels": "Notification channels",
+      "notificationStats": "Delivery statistics",
+      "pollingConfiguration": "Polling configuration",
+      "rateLimits": "Rate-limit budgets",
+      "runtimeVersion": "Runtime version",
+      "selectedSignalHistory": "Selected signal history",
+      "securityHistory": "Security history",
+      "serviceRecords": "Service records",
+      "shareInvitations": "Share invitations",
+      "signalAHistory": "Signal A history",
+      "signalBHistory": "Signal B history",
+      "signalCatalog": "Signal catalog",
+      "softwareUpdates": "Software updates",
+      "tirePressureHistory": "Tire pressure history",
+      "vampireDrainEvents": "Parked-drain events",
+      "vampireDrainStats": "Vampire-drain statistics",
+      "vehicleDrivers": "Vehicle drivers",
+      "vehicleEnergyFlow": "Vehicle energy flow",
+      "vehicleEnergySummary": "Vehicle energy summary",
+      "vehicleRegistry": "Vehicle registry",
+      "workerQueues": "Worker queues"
+    },
+    "status": {
+      "ready": "Ready",
+      "loading": "Loading",
+      "refreshing": "Refreshing",
+      "paused": "Paused offline",
+      "failed": "Failed",
+      "refreshFailed": "Cached · refresh failed",
+      "pending": "Pending"
+    }
+  },
   "packCapacity": {
     "title": "Pack Capacity",
     "subtitle": "Charging-derived capacity evidence, uncertainty, sensitivity, diagnostics, and exact row accounting",
@@ -72,6 +296,15 @@
       "gain": "Measurement gain (%)",
       "innovation": "Standardized innovation",
       "linearFit": "Descriptive linear fit"
+    },
+    "columns": {
+      "band": "Innovation band",
+      "share": "Share (%)",
+      "month": "Month",
+      "processNoise": "Process noise (Wh / square-root day)",
+      "socWindow": "SoC window",
+      "minimumSocWindow": "Minimum SoC window",
+      "date": "Date"
     },
     "timeline": {
       "title": "Capacity estimate timeline",
@@ -1013,13 +1246,34 @@
       "activeDays": "Active days"
     },
     "weekdays": {
-      "sun": { "short": "Sun", "long": "Sunday" },
-      "mon": { "short": "Mon", "long": "Monday" },
-      "tue": { "short": "Tue", "long": "Tuesday" },
-      "wed": { "short": "Wed", "long": "Wednesday" },
-      "thu": { "short": "Thu", "long": "Thursday" },
-      "fri": { "short": "Fri", "long": "Friday" },
-      "sat": { "short": "Sat", "long": "Saturday" }
+      "sun": {
+        "short": "Sun",
+        "long": "Sunday"
+      },
+      "mon": {
+        "short": "Mon",
+        "long": "Monday"
+      },
+      "tue": {
+        "short": "Tue",
+        "long": "Tuesday"
+      },
+      "wed": {
+        "short": "Wed",
+        "long": "Wednesday"
+      },
+      "thu": {
+        "short": "Thu",
+        "long": "Thursday"
+      },
+      "fri": {
+        "short": "Fri",
+        "long": "Friday"
+      },
+      "sat": {
+        "short": "Sat",
+        "long": "Saturday"
+      }
     },
     "rhythm": {
       "title": "Driving rhythm",
@@ -1864,7 +2118,7 @@
       "distance": "Distance",
       "duration": "Duration",
       "energy": "Energy",
-      "efficiency": "Efficiency",
+      "efficiency": "Energy intensity",
       "route": "Route labels",
       "withheld": "Present · withheld",
       "notRecorded": "Not recorded",
@@ -2282,7 +2536,9 @@
       "title": "Methodology and limitations",
       "subtitle": "Definitions, calendar semantics, support rules, accounting, and interpretation limits.",
       "notice": "Use this page only to inspect returned historical arrival evidence; it does not predict whether a future trip will have enough range."
-    }
+    },
+    "colLabel": "Category",
+    "percentileTitle": "Range Buffer Percentile"
   },
   "rhythm": {
     "title": "Driving Rhythm",
@@ -2364,7 +2620,8 @@
       "hour": "Local hour",
       "share": "Drive share",
       "empty": "No valid departure hours are available in this window.",
-      "driveValue": "{{count}} drives"
+      "driveValue": "{{count}} drives",
+      "colHour": "Hour"
     },
     "monthly": {
       "drives": "Valid drives",
@@ -2378,7 +2635,8 @@
       "activeDays": "Active local days",
       "activeSlots": "Active weekday-hour slots",
       "distance": "Logged distance",
-      "empty": "No valid local months are available for a trend."
+      "empty": "No valid local months are available for a trend.",
+      "colMonth": "Month"
     },
     "slots": {
       "title": "Strongest time slots",
@@ -2534,7 +2792,9 @@
       "empty": "No reconstructed parking starts are available for a time profile.",
       "byHour": "By local hour",
       "byWeekday": "By local weekday"
-    }
+    },
+    "startBarAria": "Bar chart of {{series}} patterns",
+    "startBarColTime": "Time"
   },
   "mileageBudget": {
     "title": "Mileage Budget",
@@ -3124,7 +3384,11 @@
       "empty": "No emissions contain available speed, so no speed band is inferred."
     },
     "distributions": {
-      "emissionValue": "{{value}} emissions"
+      "emissionValue": "{{value}} emissions",
+      "aria": "Bar chart of drive DNA signal distribution",
+      "colCount": "Count",
+      "colLabel": "Signal",
+      "title": "Drive DNA Distribution"
     },
     "coverage": {
       "returnedRows": "Rows returned",
@@ -3185,7 +3449,11 @@
       "powerBoundary": "The legacy response power value is kW and is multiplied by exactly 1,000 once at the model boundary to canonical W.",
       "countBasis": "Power states, speed bands, and regen shares are emission-count evidence, never duration or time shares.",
       "noClaim": "Traits are deterministic artistic heuristics—not a score, diagnosis, stable personality assessment, efficiency verdict, or causal claim."
-    }
+    },
+    "socElevationAria": "State of charge and elevation over elapsed drive time",
+    "socElevationTitle": "SoC & Elevation",
+    "speedPowerAria": "Speed and motor power over elapsed drive time",
+    "speedPowerTitle": "Speed & Power"
   },
   "global": {
     "loading": "Loading"
@@ -3209,6 +3477,12 @@
   },
   "help": {
     "title": "Help",
+    "shortcuts": "Open keyboard shortcuts",
+    "shortcutsLabel": "Keyboard shortcuts",
+    "tour": "Open tour launcher",
+    "tourLabel": "Take a tour",
+    "feedback": "Open feedback / bug report form",
+    "feedbackLabel": "Report a problem",
     "intro": "Get started with TeslaSync. The links below cover the most common questions; for anything else, ask the in-app assistant or open the documentation.",
     "baseline": {
       "links": {
@@ -3246,7 +3520,7 @@
       "iconLabel": "More info"
     },
     "vampireDrain": {
-      "body": "Idle energy lost while the car is parked and not charging. We compute it as the % of battery used per hour while the vehicle reports gear=Park and is not in motion.",
+      "body": "Battery percentage lost per day while the vehicle is parked and not charging, derived from observed parked windows.",
       "avgRate": "Mean battery loss per hour while parked and not charging across the selected period.",
       "totalLoss": "Estimated kWh lost to vampire drain across all parked sessions in the selected period.",
       "worstSession": "Single parked session with the largest % battery drop.",
@@ -3456,6 +3730,8 @@
   "date": {
     "preset": {
       "label": "Quick date range",
+      "live": "Live",
+      "last24h": "Last 24 hours",
       "today": "Today",
       "yesterday": "Yesterday",
       "last7": "Last 7 days",
@@ -3484,7 +3760,456 @@
       "popoverLabel": "Date range picker"
     }
   },
+  "workspace": {
+    "analysis": {
+      "title": "Workspace analysis context",
+      "trigger": "Analysis window: {{range}}",
+      "description": "Vehicle-aware pages inherit this analysis window and interface density.",
+      "liveHint": "Live uses the latest available data. Precise-history views use rolling instants; calendar summaries include the local dates intersected by the selected window.",
+      "range": "Analysis window",
+      "custom": "Custom",
+      "applyCustom": "Apply custom range",
+      "density": "Workspace density",
+      "activeRange": "{{start}} to {{end}}",
+      "rangeWithComparison": "{{range}} · Compare",
+      "comparisonActive": "Comparison active: previous matching period"
+    }
+  },
+  "operations": {
+    "reviewDetails": "Review details",
+    "reviewAll": "Review all",
+    "detailTitle": "{{title}} details",
+    "metrics": "Operational metrics",
+    "attention": "Attention",
+    "noAttention": "No current attention items.",
+    "narrative": {
+      "title": "Decision narrative",
+      "whatChanged": "What changed",
+      "whyItMatters": "Why it matters",
+      "whyUnavailable": "No defensible impact statement is available.",
+      "likelyCause": "Likely cause",
+      "causeUnavailable": "Cause is not established by the available evidence.",
+      "recommendedResponse": "Recommended response",
+      "responseUnavailable": "No action is recommended from this evidence alone.",
+      "confidence": {
+        "title": "Confidence",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "not_scored": "Not scored",
+        "unavailable": "No confidence basis was supplied."
+      },
+      "limitations": "Limitations",
+      "noLimitations": "No additional limitations were supplied.",
+      "evidence": "Supporting evidence",
+      "noEvidence": "No supporting records were supplied.",
+      "provenance": "How this was calculated",
+      "noProvenance": "Calculation provenance was not supplied.",
+      "record": "Record"
+    },
+    "scope": {
+      "lifetime": "Lifetime model",
+      "days": "{{count}} days"
+    },
+    "status": {
+      "awaitingData": "Awaiting data",
+      "onTrack": "On track",
+      "review": "Review recommended",
+      "ready": "Fleet ready",
+      "loading": "Resolving live state"
+    },
+    "battery": {
+      "eyebrow": "Battery posture",
+      "title": "Long-term pack health remains measurable and actionable",
+      "description": "Health, degradation, range confidence, charging stress, thermal impact, and cycle exposure are summarized before the deeper evidence.",
+      "healthDetail": "Current modeled health relative to the original usable pack.",
+      "degradationDetail": "Annualized capacity change inferred from available history.",
+      "projectionDetail": "Projected time to the common warranty-health threshold.",
+      "projectionUnavailable": "More stable history is required for a trustworthy projection.",
+      "cyclesDetail": "Equivalent full cycles accumulated across charging activity.",
+      "rangeConfidence": "Range confidence",
+      "rangeConfidenceHigh": "High",
+      "rangeConfidenceDeveloping": "Developing",
+      "rangeConfidenceLimited": "Limited",
+      "rangeConfidenceHighDetail": "{{count}} historical range samples support a stable {{years}}-year threshold forecast.",
+      "rangeConfidenceDevelopingDetail": "{{count}} historical range samples are available; more history will tighten the forecast.",
+      "rangeConfidenceLimitedDetail": "Only {{count}} usable range samples are available; treat projections as directional.",
+      "chargingStress": "Charging stress",
+      "chargingStressLow": "Low",
+      "chargingStressMedium": "Medium",
+      "chargingStressHigh": "High",
+      "chargingStressDetail": "{{fast}} fast-charge sessions; {{depth}} average depth of discharge.",
+      "thermalImpact": "Thermal impact",
+      "thermalImpactDetail": "Lower exposure is better; sustained high temperatures increase pack wear.",
+      "thermalImpactUnavailable": "More temperature history is required to estimate thermal exposure.",
+      "analyticsSource": "Battery analytics",
+      "signalTitle": "Signal: {{title}}",
+      "statusHealthy": "Healthy",
+      "statusMonitor": "Monitor",
+      "statusService": "Service review",
+      "packScore": "Pack score",
+      "degradationPace": "Degradation pace",
+      "projectionHorizon": "Projection horizon",
+      "cycleExposure": "Cycle exposure",
+      "provenance": "Calculated from battery-health snapshots, charging history, and the latest available BMS telemetry.",
+      "narrative": {
+        "snapshotSummary": "{{date}}: {{health}} state of health with {{capacity}} estimated usable capacity.",
+        "historySource": "Battery health history",
+        "snapshotMethod": "Direct capacity and range snapshot retained by battery analytics.",
+        "whatChanged": "Modeled pack health is {{health}}, with {{rate}} annualized degradation across the available history.",
+        "healthyImpact": "Stable capacity preserves usable range and reduces near-term service uncertainty.",
+        "snapshotBasis": "{{count}} retained battery-health snapshots support this assessment.",
+        "projectionBasis": "The degradation projection passed the page stability bounds.",
+        "projectionLimitedBasis": "The projection is withheld because the available trend did not pass stability bounds.",
+        "serviceResponse": "Arrange an independent battery-health review and preserve the supporting snapshots.",
+        "chargingResponse": "Review repeated fast charging and deep discharge exposure before the pattern continues.",
+        "monitorResponse": "Continue monitoring capacity, thermal exposure, and charging stress as new snapshots arrive.",
+        "causeLimitation": "Capacity history can identify a trend but does not diagnose the physical cause of degradation.",
+        "temperatureLimitation": "Temperature history is insufficient to score thermal exposure.",
+        "projectionLimitation": "Time-to-threshold projections remain directional until a stable trend is available.",
+        "evidenceLimit": "Supporting evidence is limited to the five most recent retained snapshots.",
+        "analyticsMethod": "Models state of health and degradation from retained battery snapshots.",
+        "chargingSource": "Charging history",
+        "chargingMethod": "Measures fast-charge, depth-of-discharge, and cycle exposure from recorded sessions."
+      }
+    },
+    "energy": {
+      "eyebrow": "Energy posture",
+      "title": "Consumption, efficiency, and cost in one operating view",
+      "description": "The selected window combines measured drive consumption, charging cost coverage, idle drain, and projected usage.",
+      "noDataTitle": "Energy evidence is still building",
+      "noDataDescription": "Complete a drive or charging session to establish efficiency and cost baselines.",
+      "efficiencyAttention": "Efficiency is outside the preferred band",
+      "efficiencyAttentionDescription": "Compare the linked temperature, speed, and route evidence; this page does not attribute a cause.",
+      "idleDrainAttention": "Parked drain needs review",
+      "idleDrainAttentionDescription": "The 90-day parked, non-charging average is {{value}} per day.",
+      "savingsTitle": "Electric operation remains cost-favorable",
+      "savingsDescription": "Estimated savings versus the configured gas-equivalent model are {{value}}.",
+      "costPremiumTitle": "Recorded electric cost exceeds the gas model",
+      "costPremiumDescription": "Recorded charging cost is {{value}} above the configured gas-equivalent model for this distance.",
+      "costCoverageTitle": "Cost coverage is partial",
+      "costCoverageDescription": "{{priced}} of {{total}} returned sessions include recorded cost; savings and cost projections are withheld.",
+      "sessionCapTitle": "Charging history reached the analysis cap",
+      "sessionCapDescription": "The latest 100 sessions are shown; older sessions may be outside cost and pattern analysis.",
+      "lossUnavailableTitle": "Charging losses are not measured",
+      "lossUnavailableDescription": "Independent wall-input and battery-retained energy are absent from the session contract, so no loss percentage is fabricated.",
+      "consumptionSource": "Drive consumption",
+      "consumption": "Drive consumption",
+      "consumptionDetail": "Measured traction energy in the selected drive aggregate.",
+      "efficiencyDetail": "Average energy consumed per display-distance unit.",
+      "idleDrain": "Idle drain",
+      "idleDrainDetail": "Average parked, non-charging loss across the separate 90-day source window.",
+      "chargingLoss": "Charging losses",
+      "notMeasured": "Not measured",
+      "chargingLossDetail": "Wall input and battery-retained energy are not independently available.",
+      "recordedCost": "Recorded cost",
+      "costDetail": "{{priced}} of {{total}} returned sessions include cost.",
+      "projectedUsage": "Projected 30-day use",
+      "projectedUsageDetail": "Straight-line projection from measured consumption in the selected window.",
+      "provenance": "Drive consumption comes from SI daily aggregates; costs from returned charging sessions; idle drain from 90-day FSM and signal history. Charging loss remains unsupported.",
+      "narrative": {
+        "dailySummary": "{{date}}: {{energy}} consumed across {{distance}}.",
+        "dailyMethod": "Daily aggregate of measured drive energy and distance.",
+        "sessionSummary": "{{date}} charging: {{energy}} added; recorded cost {{cost}}.",
+        "costMissing": "not recorded",
+        "chargingSource": "Charging history",
+        "sessionMethod": "Direct charging-session energy and recorded cost.",
+        "whatChanged": "{{energy}} of measured drive energy across {{days}} daily records, with {{cost}} in recorded charging cost.",
+        "impact": "Energy intensity and cost coverage determine operating exposure and whether projections are decision-ready.",
+        "dailyBasis": "{{count}} daily drive aggregates contain measured energy.",
+        "costBasis": "{{priced}} of {{total}} returned charging sessions include recorded cost.",
+        "monitorResponse": "No immediate response is indicated; continue collecting drive and charging evidence.",
+        "sourceLimitation": "{{count}} supporting data source is unavailable, so this assessment is partial.",
+        "costLimitation": "Cost totals exclude sessions without a recorded price.",
+        "windowLimitation": "Idle drain uses a separate 90-day source window and is not attributed to a specific cause.",
+        "driveMethod": "Sums canonical measured drive energy and distance in the active analysis window.",
+        "costMethod": "Sums only cost values persisted on returned charging sessions.",
+        "idleSource": "Parked-state history",
+        "idleMethod": "Computes parked, non-charging battery change over the separate 90-day source window."
+      }
+    },
+    "vehicles": {
+      "eyebrow": "Fleet posture",
+      "title": "Availability and readiness across the fleet",
+      "description": "Live connectivity, departure readiness, utilization, software consistency, and service attention are consolidated before vehicle-level detail.",
+      "offlineTitle": "{{count}} vehicle unavailable",
+      "offlineDescription": "Live state could not be resolved. Verify connectivity before issuing commands.",
+      "evidenceGapTitle": "Current fleet evidence is incomplete",
+      "evidenceGapDescription": "Refresh vehicles without verified battery or software readings before making fleet-wide decisions.",
+      "lowBatteryTitle": "{{count}} vehicle below 20%",
+      "lowBatteryDescription": "Review charging readiness before the next scheduled departure.",
+      "totalDetail": "Vehicles currently registered in this TeslaSync workspace.",
+      "online": "Live state available",
+      "onlineDetail": "Vehicles with a current state response available.",
+      "readiness": "Departure ready",
+      "readinessDetail": "Vehicles reporting live state with at least 20% battery.",
+      "batteryCoverageNote": "Based on {{covered}} of {{total}} vehicles with a current battery reading.",
+      "utilization": "Live utilization",
+      "utilizationDetail": "{{active}} of {{total}} registered vehicles are driving or charging now.",
+      "softwarePosture": "Software posture",
+      "softwareVersionCount": "{{count}} versions",
+      "softwareCoverageDetail": "Based on {{covered}} of {{total}} vehicles with a current software reading.",
+      "softwareMixedTitle": "{{count}} software versions are active",
+      "softwareMixedDescription": "Review rollout consistency before diagnosing behavior that differs between vehicles.",
+      "serviceAttention": "Service attention",
+      "openWorkOrders": "{{count}} open",
+      "serviceDetail": "High- or critical-severity work orders requiring review: {{urgent}}.",
+      "serviceAttentionTitle": "Urgent service work requires attention ({{count}})",
+      "serviceAttentionDescription": "High- or critical-severity maintenance is still open in Fleet Operations.",
+      "serviceUnavailableTitle": "Service attention is temporarily unavailable",
+      "serviceUnavailableDescription": "Fleet availability and live state remain visible, but maintenance work orders could not be loaded.",
+      "serviceUnavailableMetric": "Work-order data is unavailable; live fleet data remains usable.",
+      "liveStateSource": "Live vehicle state",
+      "workOrdersSource": "Fleet work orders",
+      "openFleetOperations": "Fleet operations",
+      "batteryDetail": "Mean state of charge across vehicles with live state.",
+      "charging": "Charging now",
+      "chargingDetail": "Vehicles actively reporting a charging state.",
+      "provenance": "Based on the registered fleet, the latest independently resolved live state for each vehicle, and Fleet Operations work orders.",
+      "narrative": {
+        "vehicleSummary": "{{vehicle}}: {{state}}, battery {{battery}}.",
+        "stateUnavailable": "live state unavailable",
+        "vehicleMethod": "Latest independently resolved state for this registered vehicle.",
+        "workOrderSummary": "{{vehicle}}: {{severity}} work order — {{title}}.",
+        "workOrderMethod": "Open high- or critical-severity Fleet Operations work order.",
+        "whatChanged": "{{online}} of {{total}} registered vehicles have current state; {{ready}} of {{batteryCovered}} with verified battery data are departure ready, and {{urgent}} urgent work orders remain open.",
+        "whatChangedWithoutBattery": "{{online}} of {{total}} registered vehicles have current state; departure readiness is unknown because no battery reading is verified, and {{urgent}} urgent work orders remain open.",
+        "readyImpact": "Verified live state and service status support fleet dispatch decisions; unavailable evidence remains explicitly excluded.",
+        "liveBasis": "Live state resolved for {{online}} of {{total}} registered vehicles.",
+        "workOrderLimitedBasis": "Fleet Operations work orders were unavailable.",
+        "workOrderBasis": "{{count}} open work orders were evaluated for service attention.",
+        "serviceResponse": "Review the urgent Fleet Operations work orders before assigning affected vehicles.",
+        "connectivityResponse": "Verify connectivity before issuing commands to vehicles without live state.",
+        "chargeResponse": "Confirm charging plans for vehicles below the departure-readiness threshold.",
+        "evidenceGapResponse": "Refresh vehicles without verified state, battery, or software evidence before making fleet-wide readiness decisions.",
+        "monitorResponse": "No immediate fleet response is indicated; continue monitoring readiness and service status.",
+        "snapshotLimitation": "Live vehicle state is a current snapshot and does not explain why a vehicle is offline or at a low charge level.",
+        "workOrderLimitation": "Service readiness is incomplete while Fleet Operations work orders are unavailable.",
+        "coverageLimitation": "Fleet-wide conclusions are limited because one or more vehicles lack verified current state, battery, or software evidence.",
+        "evidenceLimit": "Supporting evidence is limited to four vehicle snapshots and two urgent work orders.",
+        "liveMethod": "Resolves current state independently for every registered vehicle.",
+        "serviceMethod": "Counts open work orders and elevates high- and critical-severity records."
+      }
+    },
+    "charging": {
+      "eyebrow": "Charging posture",
+      "title": "Cost, reliability, and battery-friendly behavior",
+      "description": "Current charging state, departure readiness, cost exposure, and charger behavior are paired with the selected session history.",
+      "statusCharging": "Charging now",
+      "currentPosture": "Current posture",
+      "checkingLiveState": "Checking",
+      "chargingNow": "Charging",
+      "notCharging": "Not charging",
+      "currentPostureUnavailable": "Live state could not be resolved; session history remains available.",
+      "currentPostureCharging": "Battery is at {{battery}}%{{eta}}.",
+      "currentPostureEta": " with {{duration}} to target",
+      "currentPostureIdle": "Latest battery state is {{battery}}%; the vehicle is not drawing charge.",
+      "currentPostureMissing": "Live state has not arrived; session history remains available.",
+      "departureReadiness": "Departure readiness",
+      "departureUnavailable": "Current battery state is required to assess near-term departure readiness.",
+      "departureEta": "Estimated {{duration}} to the configured charge target.",
+      "departureReady": "Battery state supports near-term departure; confirm route range before leaving.",
+      "departureLow": "Additional charging is recommended before the next departure.",
+      "departureAttentionTitle": "Departure charge is below 20%",
+      "departureAttentionDescription": "Charge before the next departure or confirm that the planned route is within the available range.",
+      "costExposure": "Cost exposure",
+      "costExposureDetail": "{{rate}}/kWh blended across recorded charging energy.",
+      "costExposureUnavailable": "A blended rate requires both recorded energy and cost.",
+      "efficiency": "Charging efficiency",
+      "efficiencyNotMeasured": "Not measured",
+      "efficiencyNotMeasuredDetail": "Independent wall-input and battery-retained energy are not present in the session contract; delivery rate is shown below instead.",
+      "interruptions": "Potential interruptions",
+      "interruptionsDetail": "Sessions with a telemetry gap or sustained unexpectedly low DC power.",
+      "reliability": "Charger reliability",
+      "reliabilityValue": "{{value}}% clear",
+      "reliabilityDetail": "Share of sessions without telemetry gaps, sustained low power, or prolonged trickle behavior; not a charger-uptime SLA.",
+      "liveStateUnavailableTitle": "Live charging and departure state are unavailable",
+      "liveStateUnavailableDescription": "Charging history and cost analysis remain available, but current battery and charging posture could not be resolved.",
+      "liveStateSource": "Live vehicle state",
+      "sessionsSource": "Charging sessions",
+      "anomalyDescription": "Review the session evidence and charger conditions before the pattern repeats.",
+      "noDataTitle": "No charging activity in this window",
+      "noDataDescription": "Choose a wider analysis window or complete a charging session.",
+      "sessionsDetail": "Completed and active sessions in the selected period.",
+      "deliveredEnergy": "Delivered energy",
+      "energyDetail": "Total energy added across the selected sessions.",
+      "costDetail": "Recorded charging spend in the active period.",
+      "exceptions": "Exceptions",
+      "exceptionsDetail": "Sessions with missing telemetry, unusual cost, power, or duration.",
+      "provenance": "Derived from live vehicle state, charging-session telemetry, configured cost data, and vehicle-local day boundaries.",
+      "narrative": {
+        "sessionSummary": "{{date}}: {{energy}} added at {{place}}.",
+        "unknownPlace": "an unrecorded location",
+        "anomalyMethod": "Session matched a deterministic telemetry, power, duration, or cost exception rule.",
+        "sessionMethod": "Direct charging-session energy, time, and location record.",
+        "whatChanged": "{{sessions}} sessions delivered {{energy}} in the selected window; {{exceptions}} require review.",
+        "impact": "Current charge posture and repeated session exceptions affect departure readiness, cost visibility, and charger confidence.",
+        "sessionBasis": "{{count}} sessions were evaluated in the active period.",
+        "liveLimitedBasis": "Live charging and battery state could not be resolved.",
+        "liveBasis": "Current charging and battery state comes from the live vehicle-state record.",
+        "monitorResponse": "No immediate response is indicated; continue monitoring departure readiness and session exceptions.",
+        "reliabilityLimitation": "The clear-session ratio is an exception heuristic, not a charger-uptime service level.",
+        "liveLimitation": "Departure readiness is incomplete while live vehicle state is unavailable.",
+        "causeLimitation": "Session patterns do not establish whether the vehicle, charger, site, or network caused an exception.",
+        "liveMethod": "Provides current battery level, charging state, and estimated time to target.",
+        "historyMethod": "Evaluates recorded sessions for energy, cost, duration, power, and telemetry exceptions."
+      },
+      "fleetNarrative": {
+        "sessionSummary": "{{date}} at {{site}}: {{energy}} added with {{cost}} recorded cost.",
+        "unknownSite": "unrecorded site",
+        "costMissing": "no",
+        "source": "Tesla Fleet Charging sessions",
+        "sessionMethod": "Direct business-account charging session returned by Tesla Fleet Charging.",
+        "whatChanged": "{{sessions}} Fleet Charging sessions delivered {{energy}} with {{cost}} in recorded fees.",
+        "impact": "Business-account session records provide auditable site, energy, fee, and charger evidence for fleet cost review.",
+        "sessionBasis": "{{count}} direct Fleet Charging sessions match the active filters.",
+        "costBasis": "Every matching session includes a recorded cost.",
+        "costLimitedBasis": "{{count}} matching session lacks recorded cost.",
+        "monitorResponse": "No immediate response is indicated; continue reviewing site costs and newly synchronized sessions.",
+        "accountLimitation": "This source is available only to eligible Tesla business accounts.",
+        "missingCostLimitation": "Cost totals exclude sessions without a fee supplied by Tesla.",
+        "causeLimitation": "Session records show observed energy and fees but do not diagnose the cause of charging behavior.",
+        "evidenceLimit": "Supporting evidence is limited to the five most recent sessions matching the active filters.",
+        "sourceMethod": "Aggregates energy, direct Tesla fee fields, charger type, and site from synchronized business-account sessions."
+      }
+    },
+    "drives": {
+      "eyebrow": "Driving posture",
+      "title": "Activity, efficiency, and exceptions in context",
+      "description": "Measured energy, route context, and exceptions use one vehicle-aware period with direct access to supporting evidence.",
+      "anomalyTitle_one": "1 energy-intensity exception",
+      "anomalyTitle_other": "{{count}} energy-intensity exceptions",
+      "anomalyDescription": "Review measured high-energy drives against route, speed, temperature, and battery context.",
+      "partialEnergyTitle": "{{count}} drives excluded from efficiency",
+      "partialEnergyDescription": "Activity remains visible, but efficiency requires measured energy and at least 1 km of distance.",
+      "noDataTitle": "No drives in this analysis window",
+      "noDataDescription": "Choose a wider window or complete a drive to build an operating baseline.",
+      "countDetail": "Completed drives in the selected analysis window.",
+      "distanceDetail": "Total distance traveled using the current display unit.",
+      "efficiencyDetail": "{{measured}} of {{total}} drives have measured energy and sufficient distance.",
+      "movementDetail": "Distance-weighted energy intensity compared with the prior period.",
+      "exceptionDetail": "Measured drives in the high energy-intensity grade.",
+      "routeCoverageDetail": "{{covered}} of {{total}} drives include both origin and destination evidence.",
+      "historySource": "Drive history",
+      "provenance": "Measured energy and distance stay canonical until display; missing evidence is excluded rather than estimated.",
+      "narrative": {
+        "driveSummary": "{{date}}: {{distance}} at {{efficiency}}; {{route}}.",
+        "efficiencyMissing": "efficiency unavailable",
+        "routeMissing": "route context incomplete",
+        "exceptionMethod": "Measured energy intensity matched the deterministic exception grade.",
+        "driveMethod": "Direct completed-drive distance, energy, and route record.",
+        "whatChanged": "{{drives}} drives covered {{distance}} at {{efficiency}} average energy intensity; {{exceptions}} records were flagged.",
+        "impact": "Measured energy intensity and route coverage reveal operational exceptions without guessing at their cause.",
+        "energyBasis": "{{measured}} of {{total}} drives include measured energy and sufficient distance.",
+        "comparisonBasis": "The immediately preceding period provides a measured comparison baseline.",
+        "comparisonLimitedBasis": "A comparable preceding-period energy baseline is unavailable.",
+        "monitorResponse": "No immediate response is indicated; continue monitoring energy intensity as more drives complete.",
+        "energyLimitation": "{{count}} drive records are excluded from efficiency because measured energy or sufficient distance is missing.",
+        "routeLimitation": "{{count}} drive records lack complete origin and destination evidence.",
+        "causeLimitation": "Drive records do not isolate weather, traffic, payload, HVAC use, or road grade as a cause.",
+        "evidenceLimit": "Supporting evidence is limited to five exception or recent-drive records.",
+        "historyMethod": "Aggregates completed-drive distance and measured energy in canonical units, excluding incomplete efficiency records."
+      }
+    },
+    "alerts": {
+      "eyebrow": "Alert posture",
+      "title": "Triage, ownership, and evidence in one queue",
+      "description": "Open issues are separated from acknowledged work, with direct access to the triggering signal and response history.",
+      "statusClear": "Queue clear",
+      "statusCritical": "Immediate triage",
+      "statusReview": "Review queue",
+      "criticalTitle": "{{count}} critical alert requires response",
+      "criticalDescription": "Inspect the related signal, record an owner, and acknowledge the response.",
+      "agingTitle": "Open alert is aging",
+      "agingDescription": "The oldest unacknowledged alert has been open for {{count}} hours.",
+      "evidenceTitle": "Context requires manual review",
+      "evidenceDescription": "{{count}} open alert has no related signal metadata; use its source and timestamp to investigate.",
+      "open": "Open",
+      "openDetail": "Awaiting acknowledgement or a recorded response.",
+      "openCritical": "Open critical",
+      "openCriticalDetail": "Highest-severity items still requiring triage.",
+      "acknowledged": "Acknowledged",
+      "acknowledgedDetail": "Items with a recorded response in this scope.",
+      "responders": "Responders",
+      "respondersDetail": "Named owners recorded by acknowledgement events.",
+      "triageCritical": "Triage critical",
+      "manageRules": "Manage rules",
+      "provenance": "Derived from the alert event feed, rule metadata, and acknowledgement audit records for the active vehicle and date scope.",
+      "narrative": {
+        "whatChanged": "{{open}} alerts remain open, including {{critical}} critical.",
+        "openImpact": "Unacknowledged alerts can leave vehicle or fleet conditions without a recorded response.",
+        "clearImpact": "No alert in the selected scope is waiting for acknowledgement.",
+        "confidenceRecord": "Alert state comes from direct persisted event records.",
+        "confidenceAudit": "Acknowledgement ownership comes from the server audit record.",
+        "rootCauseLimitation": "Alert records show triggers and response state; they do not prove root cause.",
+        "missingSignalLimitation": "{{count}} open alert lacks related signal metadata.",
+        "evidenceCap": "The evidence preview shows the 5 most recent records from this scope.",
+        "noResponse": "No immediate response is required; continue monitoring the selected scope.",
+        "alertSource": "Alert event feed",
+        "signalMethod": "Related signal: {{signal}}",
+        "scopeMethod": "Filtered to the active vehicle and analysis window.",
+        "ackSource": "Acknowledgement audit history"
+      },
+      "vehicleNumber": "Vehicle #{{id}}",
+      "fleetWide": "Fleet-wide",
+      "allVehicles": "All vehicles",
+      "drawerEyebrow": "Alert evidence",
+      "drawerTitle": "Alert details",
+      "lifecycleAcknowledged": "Acknowledged",
+      "lifecycleOpen": "Open",
+      "severity": "Severity",
+      "vehicle": "Vehicle",
+      "relatedSignal": "Related signal",
+      "signalLabel": "Signal",
+      "noSignal": "No signal metadata",
+      "triggered": "Triggered",
+      "owner": "Owner",
+      "awaitingOwner": "Awaiting acknowledgement",
+      "resolutionState": "Resolution state",
+      "reopen": "Reopen alert",
+      "acknowledge": "Acknowledge alert",
+      "recommendedResponse": "Recommended response",
+      "investigateSignal": "Investigate signal",
+      "responseNote": "Response note",
+      "inspect": "Inspect alert",
+      "auditTrail": "alert audit trail",
+      "auditUnavailable": "The alert summary is available, but its audit trail has not loaded.",
+      "cachedAuditWarning": "The latest refresh failed. Showing the most recent cached audit trail.",
+      "feed": "alert feed",
+      "rules": "alert rules",
+      "rulesUnavailable": "Alert events remain available, but rule status could not be loaded.",
+      "trendUnavailable": "Trend unavailable",
+      "distributionUnavailable": "Distribution unavailable",
+      "feedUnavailable": "Alert feed unavailable",
+      "feedUnavailableDetail": "Restore the alert feed to resume triage.",
+      "selectAlert": "Select {{title}}",
+      "untitled": "untitled alert",
+      "bulk": {
+        "markRead": "Mark read",
+        "markReadSuccess": "{{count}} alerts marked as read",
+        "selectVisible": "Select visible alerts",
+        "visibleCount": "{{count}} alerts in the current view",
+        "alertOne": "alert",
+        "alertOther": "alerts"
+      },
+      "remediation": {
+        "battery": "Confirm the current state of charge and charging access. Schedule charging if the condition persists.",
+        "charging": "Review charging telemetry, connector state, and recent interruptions before the next session.",
+        "tire": "Inspect tire pressure and temperature before the next drive, then confirm the reading after adjustment.",
+        "security": "Verify vehicle location and access state before acknowledging the event.",
+        "software": "Review update readiness and schedule installation while the vehicle is safely parked.",
+        "system": "Open diagnostics and verify the affected service before acknowledging the incident.",
+        "driving": "Review the related drive and telemetry window, then record any required operator follow-up.",
+        "signal": "Inspect the related signal around the trigger time and record the response when acknowledging.",
+        "general": "Review the alert source, timestamp, and audit history before acknowledging the response."
+      }
+    }
+  },
   "nav": {
+    "workspaceContext": "Fleet operations",
+    "workspaceHeader": "Workspace command bar",
+    "quickAccess": "Quick access",
+    "workspacePages": "Workspace",
     "dashboard": "Dashboard",
     "liveMap": "Live Map",
     "vehicles": "Fleet",
@@ -3533,6 +4258,11 @@
     "headingValue": "{{cardinal}} ({{degrees}}°)",
     "unknown": "Unknown",
     "quickNav": "Quick navigation",
+    "mobileHome": "Home",
+    "mobileDrives": "Drives",
+    "mobileCharging": "Charging",
+    "mobileBattery": "Battery",
+    "mobileMap": "Map",
     "currentPage": "Current page",
     "closeSidebar": "Close sidebar",
     "currentSection": "Current",
@@ -3545,6 +4275,25 @@
     "sections": "Sections",
     "expandAll": "Expand all sections",
     "collapseAll": "Collapse all sections",
+    "compactOverview": "Overview",
+    "compactVehicles": "Vehicles",
+    "compactDrives": "Drives",
+    "compactCharging": "Charging",
+    "compactEnergy": "Energy",
+    "compactInsights": "Insights",
+    "compactOperations": "Operations",
+    "compactAdvancedIntelligence": "Advanced Intelligence",
+    "compactAdministration": "Administration",
+    "compactDeveloper": "Developer",
+    "compactFleet": "Fleet",
+    "compactDriving": "Driving",
+    "compactChargingEnergy": "Charging & Energy",
+    "compactBattery": "Battery",
+    "compactReportsAnalytics": "Reports & Analytics",
+    "compactAutomationAlerts": "Automation & Alerts",
+    "compactSystemDeveloper": "System & Developer",
+    "compactSettingsAccount": "Settings & Account",
+    "browseAllFeatures": "Browse all features",
     "openSidebar": "Open sidebar",
     "quickSearchHint": "Ctrl+K to jump",
     "minDelay": "min delay",
@@ -3602,6 +4351,8 @@
     "legendSpeedV2": "Speed ({{unit}})",
     "legendDistanceToArrivalV2": "Distance to Arrival ({{unit}})",
     "waypoints": "Route Waypoints",
+    "noWaypoints": "The active route does not include waypoint details.",
+    "noWaypointsDescription": "Stops appear here when vehicle navigation supplies waypoint metadata for the active route.",
     "min": "min",
     "recentDestinations": "Recent Destinations",
     "noDestinations": "No destination history available.",
@@ -3625,9 +4376,12 @@
     "presenceAria": "Location status",
     "chartsAria": "Route charts",
     "routeDetailAria": "Route details",
-    "historyAria": "Location history"
+    "historyAria": "Location history",
+    "speedHistoryAria": "Speed and distance-to-arrival area chart over time",
+    "speedHistoryTitle": "Speed & Distance History"
   },
   "routes": {
+    "fSDInsights": "FSD Insights",
     "vehicleManagement": "Vehicle Management",
     "twinLab": "Vehicle Twin Lab",
     "firmwareCanary": "Firmware Canary",
@@ -3647,8 +4401,38 @@
     "label": "Vehicle",
     "fallbackName": "Vehicle {{id}}"
   },
+  "operationalMode": {
+    "live": {
+      "label": "Live",
+      "shortLabel": "Live",
+      "description": "Current data with live actions available."
+    },
+    "cached": {
+      "label": "Cached",
+      "shortLabel": "Cached",
+      "description": "The connection is offline. Retained data remains available, but it may be stale.",
+      "writeBlocked": "Reconnect before making operational changes."
+    },
+    "asOf": {
+      "label": "As of {{when}}",
+      "shortLabel": "As of",
+      "description": "Historical state reconstructed at {{when}}. Operational changes are disabled.",
+      "writeBlocked": "Return to live mode before making operational changes."
+    },
+    "writeBlocked": "Return to live mode before making operational changes.",
+    "writeNotice": {
+      "title": "Operational changes are read-only"
+    },
+    "commandsDisabled": {
+      "title": "Vehicle commands are read-only"
+    },
+    "actionCenterDisabled": {
+      "title": "Inbox actions are read-only"
+    }
+  },
   "statusBar": {
     "aria": "Application status",
+    "announcements": "Application status announcements",
     "connection": {
       "short": "API",
       "ok": "Online",
@@ -3658,14 +4442,52 @@
       "tooltip": "API connection",
       "aria": "API connection status"
     },
+    "connectionDiagnostics": {
+      "open": "Open connection diagnostics",
+      "title": "Connection diagnostics",
+      "unknown": "Unknown",
+      "checking": "Checking",
+      "status": {
+        "healthy": "Healthy",
+        "degraded": "Degraded",
+        "unhealthy": "Unhealthy",
+        "enabled": "Enabled",
+        "disabled": "Disabled"
+      },
+      "unavailable": "Diagnostics are temporarily unavailable.",
+      "database": "Database latency",
+      "pool": "Active DB connections",
+      "telemetry": "Telemetry stream",
+      "queue": "Buffered events",
+      "fullStatus": "Open system status"
+    },
     "live": {
       "short": "Live",
+      "stale": "Stale",
       "reconnecting": "Reconnecting",
       "offline": "Offline",
       "unknown": "Idle",
       "tooltip": "Live telemetry stream",
       "lastMessage": "Last message {{age}} ago",
       "aria": "Live telemetry status"
+    },
+    "alerts": {
+      "short": "Alerts",
+      "title": "Priority alerts",
+      "count": "{{count}} unread alerts",
+      "countMore": "{{count}}+ unread alerts",
+      "open": "Open {{count}} unread alerts",
+      "openWithSeverity": "Open {{count}} unread alerts. Highest severity: {{severity}}",
+      "openMoreWithSeverity": "Open {{count}}+ unread alerts. Highest severity: {{severity}}",
+      "newCritical": "Critical alert: {{title}}",
+      "unavailable": "Alerts unavailable",
+      "unavailableAria": "Priority alert monitoring is unavailable",
+      "unavailableDetail": "The latest priority alerts could not be refreshed.",
+      "severity": {
+        "critical": "Critical",
+        "warning": "Warning"
+      },
+      "viewAll": "View all alerts"
     },
     "vehicle": {
       "tooltip": "Active vehicle",
@@ -3678,13 +4500,60 @@
       "one": "1 task",
       "many": "{{count}} tasks",
       "tooltip": "Background work in progress",
+      "recentTooltip": "Recent background activity",
       "aria": "Background tasks",
       "heading": "Running",
       "queued": "Queued",
       "processing": "Processing",
       "exportLabel": "{{type}} export",
       "saving": "Saving…",
-      "savingMany": "Saving {{count}} changes…"
+      "savingMany": "Saving {{count}} changes…",
+      "recentHeading": "Recent activity",
+      "exportFailed": "{{type}} export failed",
+      "exportReady": "{{type}} export ready",
+      "syncFailed": "Sync failed",
+      "saved": "Changes saved",
+      "tryAgain": "Please try again"
+    },
+    "recent": {
+      "short": "Recent",
+      "title": "Recently viewed",
+      "tooltip": "Recently viewed pages",
+      "open": "Open recently viewed pages, {{count}} saved",
+      "count_one": "{{count}} page",
+      "count_other": "{{count}} pages",
+      "count": "{{count}} pages",
+      "empty": "Pages you visit will appear here for quick access."
+    },
+    "presentation": {
+      "short": "Present",
+      "title": "Presentation",
+      "tooltip": "Report and kiosk views",
+      "open": "Open presentation options",
+      "description": "Prepare the active view for review or unattended display.",
+      "report": "Report view",
+      "reportDescription": "Print-ready operational view",
+      "copy": "Copy report link",
+      "copyDescription": "Share this view and its current filters",
+      "kiosk": "Kiosk view",
+      "kioskDescription": "Fullscreen monitoring without app chrome",
+      "copied": "Report link copied",
+      "copyFailed": "Could not copy report link"
+    },
+    "more": {
+      "label": "More",
+      "tooltip": "More status and help",
+      "open": "Open more status options",
+      "backgroundError": "Background work needs attention",
+      "backgroundComplete": "Background work completed"
+    },
+    "help": {
+      "short": "Help",
+      "title": "Help & support",
+      "tooltip": "Help and about",
+      "open": "Open help and about",
+      "buildNews": "Update or release notes available",
+      "about": "About TeslaSync"
     },
     "version": {
       "tooltip": "TeslaSync version",
@@ -3997,10 +4866,15 @@
     "loading": "Loading...",
     "noData": "No data available",
     "noDataForPeriod": "No data available for this period",
+    "noChargingRecords": "No charging records match the current selection.",
+    "noChargingRecordsDescription": "Adjust the vehicle or date filters, or return after more charging history is recorded.",
+    "noAnalyticsRecords": "No analytics records match the current selection.",
+    "noAnalyticsRecordsDescription": "Adjust the current filters or return after more fleet activity is recorded.",
     "save": "Save",
     "cancel": "Cancel",
     "delete": "Delete",
     "edit": "Edit",
+    "quickView": "Quick view",
     "create": "Create",
     "search": "Search",
     "clear": "Clear",
@@ -4122,7 +4996,11 @@
     "remove": "Remove",
     "high": "High",
     "actions": "Actions",
-    "keep": "Keep reservation"
+    "keep": "Keep reservation",
+    "category": "Category",
+    "percentage": "%",
+    "timestamp": "Timestamp",
+    "unavailable": "Unavailable"
   },
   "units": {
     "km": "km",
@@ -4151,8 +5029,132 @@
     }
   },
   "dashboard": {
-    "title": "Dashboard",
-    "subtitle": "Fleet overview and real-time analytics",
+    "fleetPosture": {
+      "eyebrow": "Operational brief",
+      "title": "Fleet posture",
+      "unnamedVehicle": "Selected vehicle",
+      "activeScope": "Active vehicle scope",
+      "openVehicle": "Open vehicle",
+      "investigate": "Investigate",
+      "workflows": "Primary workflows",
+      "workflow": {
+        "live": "Live map",
+        "liveHelp": "Position and movement",
+        "alerts": "Review alerts",
+        "alertsHelp": "Exceptions requiring attention",
+        "charging": "Charging",
+        "chargingHelp": "Sessions, cost, and readiness",
+        "battery": "Battery",
+        "batteryHelp": "Capacity and health evidence"
+      },
+      "taxonomyHelp": "Unverified, last-known, no-state and unreachable are statements about our evidence — only Offline is a statement about the vehicle.",
+      "badge": {
+        "resolving": "Checking live state",
+        "unavailable": "Live state unavailable",
+        "verified": "{{verified}} of {{total}} verified"
+      },
+      "headline": {
+        "resolving": "Resolving live state for {{count}} vehicle(s).",
+        "unavailable": "Live state could not be read. Showing the last known readings, which are no longer being refreshed.",
+        "attention": "{{verified}} of {{total}} vehicles verified. {{attention}} need attention.",
+        "ok": "All {{total}} vehicles verified from current telemetry."
+      },
+      "category": {
+        "reporting": "Reporting",
+        "offline": "Offline",
+        "unverified": "Unverified",
+        "stale": "Last known",
+        "missing": "No state",
+        "failed": "Unreachable"
+      },
+      "hint": {
+        "reporting": "Current, verified telemetry",
+        "offline": "The vehicle reported itself offline",
+        "unverified": "State returned, but nothing current backs it",
+        "stale": "Showing a retained reading after a failed refresh",
+        "missing": "Answered with no state yet — not offline",
+        "failed": "The request failed; this is about us, not the car"
+      },
+      "metric": {
+        "fleet": "Fleet",
+        "fleetHelp": "registered",
+        "verified": "Verified",
+        "verifiedHelp": "current telemetry",
+        "attention": "Attention",
+        "attentionHelp": "exceptions",
+        "oldest": "Oldest reading",
+        "oldestHelp": "observed, not fetched",
+        "oldestNone": "no verified observation",
+        "resolvingHelp": "checking live state"
+      },
+      "scope": {
+        "checking": "Checking",
+        "unknown": "Unknown",
+        "observed": "Last real observation {{age}}",
+        "noObservation": "No verified observation time for this vehicle",
+        "resolvingHelp": "Resolving the latest verified telemetry before assessing this vehicle.",
+        "healthyHelp": "Vehicle data is reporting normally. Global pages and filters follow this selection.",
+        "offlineHelp": "The vehicle reported itself offline. Last-known records remain available while live controls wait for reconnection.",
+        "unverifiedHelp": "State was returned, but nothing current backs it. Values shown elsewhere may be a durable record rather than live telemetry.",
+        "staleHelp": "The refresh failed, so the last real reading is being retained. Its age keeps growing until telemetry returns.",
+        "missingHelp": "The backend answered and has no state for this vehicle yet. That is unknown, not offline.",
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not about the vehicle."
+      },
+      "drill": {
+        "title": "Investigate fleet posture",
+        "signals": "Signal evidence",
+        "signalsHelp": "What each vehicle last emitted, and when",
+        "system": "System diagnostics",
+        "systemHelp": "Ingest and API health behind an unreachable read",
+        "liveSignals": "Live signal inspector",
+        "liveSignalsHelp": "The raw live-state boundary for a suspected cache gap",
+        "vehicle": "Open scoped vehicle",
+        "vehicleHelp": "Full detail for the vehicle in scope"
+      }
+    },
+    "title": "Fleet Operations",
+    "subtitle": "Monitor readiness, investigate exceptions, and act from one workspace",
+    "personalWorkspace": "Personal workspace",
+    "personalWorkspaceHelp": "Arrange the live modules your team checks most often.",
+    "operations": {
+      "eyebrow": "Operational brief",
+      "title": "Fleet posture",
+      "unnamedVehicle": "Selected vehicle",
+      "attention": "{{count}} need attention",
+      "ready": "No active exceptions",
+      "checkingFleet": "Checking live state",
+      "checkingState": "Checking live state",
+      "unknownState": "Unknown",
+      "activeScope": "Active vehicle scope",
+      "scopeHealthy": "Vehicle data is reporting normally. Global pages and filters follow this selection.",
+      "scopeChecking": "Resolving the latest verified telemetry before assessing this vehicle.",
+      "scopeOffline": "The selected vehicle is offline. Last-known records remain available while live controls wait for reconnection.",
+      "scopeAttention": "Current vehicle state could not be verified. Review telemetry health before relying on live controls.",
+      "openVehicle": "Open vehicle",
+      "workflows": "Primary workflows",
+      "metric": {
+        "fleet": "Fleet",
+        "fleetHelp": "registered",
+        "reporting": "Reporting",
+        "reportingHelp": "reachable now",
+        "attention": "Attention",
+        "attentionHelp": "exceptions",
+        "resolvingHelp": "checking live state",
+        "scope": "Scope",
+        "scopeVehicle": "selected vehicle",
+        "scopeFleet": "entire fleet"
+      },
+      "workflow": {
+        "live": "Live map",
+        "liveHelp": "Position and movement",
+        "alerts": "Review alerts",
+        "alertsHelp": "Exceptions requiring attention",
+        "charging": "Charging",
+        "chargingHelp": "Sessions, cost, and readiness",
+        "battery": "Battery",
+        "batteryHelp": "Capacity and health evidence"
+      }
+    },
     "vehicles": "Vehicles",
     "distance": "Distance",
     "drives": "Drives",
@@ -4183,7 +5185,7 @@
     "reset": "Reset",
     "kiosk": "Kiosk",
     "customize": "Customize",
-    "editHint": "Drag widgets to reorder, resize from edges. Click the gear icon for widget settings.",
+    "editHint": "Drag widgets or use Arrange for one-click and keyboard positioning. Resize from edges or the same menu.",
     "customizeHint": "You can customize this dashboard. Tap the + to add widgets.",
     "customizeHintCta": "Add widgets",
     "catalogue": {
@@ -4248,10 +5250,35 @@
       "editExit": "Done"
     },
     "printSnapshot": "Print snapshot",
+    "layoutActions": "Actions for {{name}}",
+    "moveLayoutEarlier": "Move earlier",
+    "moveLayoutLater": "Move later",
+    "layoutMovedEarlier": "{{name}} moved earlier",
+    "layoutMovedLater": "{{name}} moved later",
     "grid": {
       "settingsLabel": "Settings for {{name}}",
       "removeLabel": "Remove {{name}}",
       "expandLabel": "Expand {{name}}",
+      "arrangeLabel": "Arrange {{name}}",
+      "arrangeDialogLabel": "Arrange {{name}}",
+      "positionHeading": "Position",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "moveLeft": "Move left",
+      "moveRight": "Move right",
+      "sizeHeading": "Size",
+      "makeNarrower": "Narrower",
+      "makeWider": "Wider",
+      "makeShorter": "Shorter",
+      "makeTaller": "Taller",
+      "movedUpAnnouncement": "{{name}} moved up",
+      "movedDownAnnouncement": "{{name}} moved down",
+      "movedLeftAnnouncement": "{{name}} moved left",
+      "movedRightAnnouncement": "{{name}} moved right",
+      "madeNarrowerAnnouncement": "{{name}} made narrower",
+      "madeWiderAnnouncement": "{{name}} made wider",
+      "madeShorterAnnouncement": "{{name}} made shorter",
+      "madeTallerAnnouncement": "{{name}} made taller",
       "exitFullscreen": "Exit Fullscreen",
       "widgetFailed": "{{name}} failed to load",
       "emptyTitle": "No widgets yet",
@@ -4261,7 +5288,7 @@
   "charging": {
     "list": {
       "title": "Charging Sessions",
-      "subtitle": "Cost analysis, charger breakdown, energy patterns, and performance tracking",
+      "subtitle": "Live readiness, cost exposure, charger behavior, and charging history",
       "empty": "No charging sessions yet",
       "emptyDescription": "Charging data will appear here once your vehicle records a session.",
       "noMatches": "No sessions match your filters",
@@ -4310,7 +5337,10 @@
       "costUsd": "Cost ($)",
       "total": "total",
       "noTrendData": "No charging trend data available yet.",
-      "noBreakdownData": "No charger breakdown data available yet."
+      "noBreakdownData": "No charger breakdown data available yet.",
+      "batteryRange": "Battery level",
+      "chargerType": "Charger type",
+      "date": "Date"
     },
     "stats": {
       "chargingByType": "Charging Stats by Type",
@@ -4323,15 +5353,15 @@
       "totalCost": "Total Cost",
       "avgCostPerKwh": "Avg $/kWh"
     },
-    "efficiency": {
-      "title": "Charging Efficiency",
-      "hint": "Wall-to-battery energy conversion",
-      "sessionsWithData": "sessions with data",
-      "average": "Average Efficiency",
-      "best": "Best Session",
-      "worst": "Worst Session",
-      "wallLoss": "Wall-to-Battery Loss",
-      "averageBar": "Average charging efficiency"
+    "deliveryRate": {
+      "title": "Charging delivery rate",
+      "hint": "Observed energy per elapsed hour; this is power delivery, not wall-to-battery efficiency.",
+      "average": "Average delivery rate",
+      "averageDetail": "Time-weighted power across completed sessions with usable energy and duration.",
+      "best": "Highest-rate session",
+      "worst": "Lowest-rate session",
+      "observed": "Observed delivery",
+      "observedDetail": "{{duration}} across {{count}} sessions"
     },
     "specs": {
       "title": "Charger Specs Breakdown",
@@ -4481,6 +5511,11 @@
     },
     "noStats": "No charging statistics available yet",
     "noMetrics": "No charging metrics available yet",
+    "insights": {
+      "title": "Charging Insights",
+      "emptyMessage": "Charging insights need completed sessions in the selected range.",
+      "emptyDescription": "Battery-start patterns, charger comparisons, and scheduling guidance appear as session history accumulates."
+    },
     "selectVehicle": "Select vehicle",
     "detail": {
       "title": "Charge Session",
@@ -4533,7 +5568,13 @@
       "chargeRate": "Charge Rate",
       "chargeEnergyAdded": "Energy Added",
       "chargeMilesAdded": "Range Added",
+      "closedTelemetryDescription": "This closed session cannot recover missing samples; future sessions will populate when telemetry is available.",
+      "noCurveData": "A charge curve cannot be plotted because this session has no paired battery-level and power samples.",
+      "noTimelineData": "No battery level, energy, or range samples were recorded for this session.",
+      "noTemperatureData": "No battery, cabin, or ambient temperature samples were recorded for this session.",
+      "noElectricalData": "No voltage or current samples were recorded for this session.",
       "noLiveData": "No live charging telemetry available.",
+      "noLiveDataDescription": "Live electrical parameters appear only while the selected vehicle is actively charging.",
       "started": "Started",
       "ended": "Ended",
       "resource": "Charge session",
@@ -4556,7 +5597,8 @@
         "description": "Get a 2-4 paragraph plain-language explanation of any flags raised on this charging session — trickle, expensive, low-power, or interrupted — generated from the same deterministic aggregation metrics shown above.",
         "generateButton": "Generate diagnosis",
         "emptyHint": "Waiting for a charging session…"
-      }
+      },
+      "time": "Time"
     },
     "heatmap": {
       "title": "Charging Patterns",
@@ -4586,7 +5628,22 @@
       "noLocations": "No repeat charging locations yet",
       "less": "Less",
       "more": "More",
-      "topLocations": "Top Charging Locations"
+      "topLocations": "Top Charging Locations",
+      "day": "Day",
+      "location": "Location"
+    },
+    "duration": "Duration",
+    "batteryChange": "Battery change",
+    "quickView": "Quick view charging session",
+    "preview": {
+      "eyebrow": "Charging session",
+      "title": "Session #{{id}}",
+      "description": "Started {{time}}",
+      "active": "Active",
+      "completed": "Completed",
+      "peakPower": "Peak power",
+      "charger": "Charger",
+      "openDetails": "Open session details"
     },
     "invoice": "Invoice"
   },
@@ -4638,7 +5695,8 @@
       "generateButton": "Narrate comparison",
       "badge": "Helix",
       "noVehicleHint": "Pick a vehicle to enable Helix narration."
-    }
+    },
+    "chartAria": "Comparison of selected metrics between two periods"
   },
   "live": {
     "connected": "Live",
@@ -4663,6 +5721,12 @@
     "common": {
       "error": "Something went wrong"
     },
+    "feedback": {
+      "bulkUpdate": {
+        "success": "Updated {{count}} feedback items",
+        "error": "Some feedback items could not be updated"
+      }
+    },
     "dataRepair": {
       "charging": {
         "update": {
@@ -4673,9 +5737,13 @@
           "success": "Charging session closed",
           "error": "Failed to close charging session"
         },
-        "discard": {
-          "success": "Charging session discarded",
-          "error": "Failed to discard charging session"
+        "quarantine": {
+          "success": "Charging session moved to quarantine",
+          "error": "Failed to quarantine charging session"
+        },
+        "apply": {
+          "success": "Charging boundary repaired",
+          "error": "Failed to repair charging boundary"
         }
       },
       "drive": {
@@ -4687,10 +5755,46 @@
           "success": "Drive closed",
           "error": "Failed to close drive"
         },
-        "discard": {
-          "success": "Drive discarded",
-          "error": "Failed to discard drive"
+        "quarantine": {
+          "success": "Drive moved to quarantine",
+          "error": "Failed to quarantine drive"
+        },
+        "apply": {
+          "success": "Drive boundary repaired",
+          "error": "Failed to repair drive boundary"
         }
+      },
+      "case": {
+        "transition": {
+          "success": "Repair case updated",
+          "error": "Failed to update repair case"
+        },
+        "bulk": {
+          "success": "Updated {{count}} repair cases",
+          "partial": "Updated {{updated}} repair cases; {{skipped}} skipped",
+          "skipped": "No repair cases were updated; {{skipped}} skipped",
+          "error": "Failed to update repair cases"
+        },
+        "assign": {
+          "success": "Case assignment updated",
+          "error": "Failed to update case assignment"
+        },
+        "comment": {
+          "success": "Comment added",
+          "error": "Failed to add comment"
+        }
+      },
+      "scan": {
+        "success": "Data integrity scan completed",
+        "error": "Data integrity scan failed"
+      },
+      "quarantine": {
+        "success": "Session moved to quarantine",
+        "error": "Failed to quarantine session"
+      },
+      "restore": {
+        "success": "Session restored",
+        "error": "Failed to restore session"
       }
     },
     "quietHours": {
@@ -5158,6 +6262,11 @@
     "pageTitle": "Welcome to TeslaSync",
     "welcome": "Welcome to TeslaSync",
     "subtitle": "Three quick steps before your dashboard is ready.",
+    "workspaceProfile": {
+      "title": "Tailor your workspace",
+      "description": "Choose the perspective that best matches your work. TeslaSync will prioritize navigation and discovery without hiding features or changing permissions.",
+      "label": "Primary use"
+    },
     "intro": {
       "title": "Setup checklist",
       "desc": "TeslaSync runs entirely on your hardware. No data leaves your install, and you can revisit this page from Settings any time."
@@ -5277,16 +6386,25 @@
     "noResults": "No results for \"{{query}}\"",
     "noVehicles": "No vehicles available",
     "selectVehicleFor": "Send \"{{command}}\" to…",
+    "acknowledgeAlert": {
+      "hint": "Choose from recent open alerts",
+      "select": "Choose an open alert to acknowledge",
+      "loading": "Loading open alerts…",
+      "error": "Open alerts are unavailable right now",
+      "empty": "No open alerts to acknowledge"
+    },
     "shortcut": "Shortcut: {{keys}}",
     "section": {
       "recent": "Recent",
       "mostUsed": "Most Used",
       "pages": "Pages",
+      "savedViews": "Saved views",
       "vehicles": "Vehicles",
       "preferences": "Preferences",
       "actions": "Actions",
       "commands": "Vehicle Commands",
-      "selectVehicle": "Select Vehicle"
+      "selectVehicle": "Select Vehicle",
+      "openAlerts": "Open alerts"
     },
     "recent": {
       "justNow": "Just now",
@@ -5309,19 +6427,34 @@
       "themeMidnight": "Theme: Midnight Blue",
       "themeAuto": "Theme: Auto (system)",
       "themePicker": "Open theme picker",
-      "themeNeonCyan": "Switch to Neon Cyan",
+      "themeNeonCyan": "Switch to Signal Blue",
       "themeTeslaRed": "Switch to Tesla Red",
       "themeMatrixGreen": "Switch to Matrix Green",
       "themeRoyalPurple": "Switch to Royal Purple",
       "themeSolarAmber": "Switch to Solar Amber",
       "themeToggleMode": "Toggle dark mode",
       "refresh": "Refresh data",
+      "rangeLive": "Analysis window: Live",
+      "range24h": "Analysis window: Last 24 hours",
+      "rangeToday": "Analysis window: Today",
+      "range7d": "Analysis window: Last 7 days",
+      "range30d": "Analysis window: Last 30 days",
+      "range90d": "Analysis window: Last 90 days",
+      "range1y": "Analysis window: Last year",
+      "rangeAll": "Analysis window: All time",
+      "densityCompact": "Workspace density: Compact",
+      "densityComfortable": "Workspace density: Comfortable",
+      "densitySpacious": "Workspace density: Spacious",
+      "acknowledgeAlert": "Acknowledge an alert",
       "newAlert": "Create new alert rule",
       "testAlert": "Send a test alert",
       "notificationsHistory": "Open notification history",
       "commandHistory": "Open command history",
       "securitySettings": "Open security & access",
       "systemStatus": "View system status",
+      "actionCenter": "Open Action Center",
+      "fleetComparison": "Compare fleet vehicles",
+      "periodComparison": "Compare analysis periods",
       "apiPlayground": "Open API playground",
       "timeMachineOpen": "Open time machine",
       "export": "Open data export",
@@ -5661,8 +6794,22 @@
       "csv": "Download CSV",
       "csvAria": "Download visible rows as CSV",
       "loading": "Preparing CSV…",
-      "csvButton": "Download CSV"
+      "csvButton": "Download CSV",
+      "failed": "Could not prepare the table export."
     }
+  },
+  "listExport": {
+    "button": "Export",
+    "menuLabel": "Export list",
+    "disabledTooltip": "No data to export",
+    "exporting": "Preparing {{format}} export…",
+    "failed": "Could not prepare the {{format}} export.",
+    "scopeLegend": "Export scope",
+    "visible": "Visible",
+    "visibleWithCount": "Visible ({{count}})",
+    "selectedWithCount": "Selected ({{count}})",
+    "csv": "Download as CSV",
+    "json": "Download as JSON"
   },
   "shortcuts": {
     "title": "Keyboard Shortcuts",
@@ -5739,7 +6886,9 @@
       "copy": "Copy image to clipboard",
       "copySuccess": "Chart image copied to clipboard",
       "copyFallback": "Clipboard not available — image downloaded instead",
-      "copyFailed": "Failed to copy chart image"
+      "copyFailed": "Failed to copy chart image",
+      "preparing": "Preparing chart export…",
+      "failed": "Could not prepare the {{format}} export."
     },
     "exportCsv": "Download data as CSV",
     "menu": {
@@ -5752,8 +6901,12 @@
       "fallbackTableLabel": "{{title}} — data table",
       "summary": "Chart: {{title}}"
     },
+    "loading": "Loading chart…",
     "noData": "No data available",
+    "noDataDescription": "No chartable observations are available for the current selection yet.",
     "col": {
+      "date": "Date",
+      "value": "Value",
       "time": "Time",
       "energy": "Energy (kWh)"
     }
@@ -5862,7 +7015,7 @@
     "later": "Later",
     "offline": {
       "title": "You're offline",
-      "banner": "Showing cached data. New requests will retry when you reconnect."
+      "banner": "Showing cached data. Operational changes stay disabled until you reconnect."
     }
   },
   "queryError": {
@@ -5922,6 +7075,68 @@
       "automations": {
         "title": "Automation builder",
         "description": "Triggers, conditions, actions, and conflict detection for rules."
+      },
+      "productPreferences": {
+        "title": "Workspace preferences",
+        "deviceLocal": "This browser",
+        "description": "Choose how TeslaSync prioritizes information when this browser opens. These presentation preferences never change permissions or backend authorization.",
+        "persona": {
+          "label": "Workspace profile"
+        },
+        "personas": {
+          "owner": {
+            "label": "Owner",
+            "description": "Prioritizes daily vehicle status, charging, battery health, and ownership costs."
+          },
+          "fleetOperator": {
+            "label": "Fleet operator",
+            "description": "Prioritizes fleet readiness, alerts, automations, commands, and service operations."
+          },
+          "analyst": {
+            "label": "Analyst",
+            "description": "Prioritizes reports, trends, efficiency, driving evidence, and data exports."
+          },
+          "administrator": {
+            "label": "Administrator",
+            "description": "Prioritizes system health, diagnostics, integrations, data controls, and settings."
+          }
+        },
+        "landing": {
+          "label": "Preferred landing page",
+          "hint": "Applied only when TeslaSync first opens at the root URL; Dashboard remains available from navigation.",
+          "options": {
+            "dashboard": "Dashboard",
+            "actionCenter": "Action Center",
+            "vehicles": "Vehicles",
+            "battery": "Battery",
+            "charging": "Charging",
+            "drives": "Driving",
+            "analytics": "Analytics"
+          }
+        },
+        "defaultVehicle": {
+          "label": "Default active vehicle",
+          "hint": "Used on a fresh app load. Selecting a vehicle here also applies it to the current global vehicle scope.",
+          "lastActive": "Use the last active vehicle",
+          "unnamed": "Vehicle {{id}}",
+          "unavailable": "Unavailable vehicle {{id}}"
+        },
+        "defaultRange": {
+          "label": "Default analysis window",
+          "hint": "Becomes the active global analysis window immediately and is reused when no more specific range is stored."
+        },
+        "contextualHelp": {
+          "label": "Contextual inline help",
+          "hint": "Show concise explanations beside advanced settings and analytical metrics. Help remains available from the status line."
+        },
+        "releaseHighlights": {
+          "label": "Contextual release highlights",
+          "hint": "Surface relevant product changes after an update. Full release notes remain available from Help & support."
+        },
+        "reset": {
+          "label": "Reset defaults",
+          "done": "Workspace preferences restored to defaults."
+        }
       },
       "settings": {
         "title": "Settings & preferences",
@@ -6065,7 +7280,7 @@
         },
         "data-repair-suggestions": {
           "label": "Data repair suggestions",
-          "description": "Opt-in LLM that proposes a typed repair plan (close, discard, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Discard button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when Helix is off."
+          "description": "Opt-in LLM that proposes a typed RepairPlan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Quarantine button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when Helix is off."
         },
         "signal-explorer-nl-filter": {
           "label": "Signal explorer NL filter",
@@ -6182,6 +7397,16 @@
     },
     "viewContext": "View context",
     "searchPlaceholder": "Search by title or message…",
+    "emptyTitle": "No alerts",
+    "noAlertsInRange": "No alerts in this range. Your fleet is running smoothly.",
+    "noAlertsInRangeDescription": "Alert rules continue monitoring new telemetry and will surface actionable events here.",
+    "noSearchResults": "No alerts match your search.",
+    "noSearchResultsDescription": "Try a broader title or message search, or clear the search to restore all alerts.",
+    "noneForFilterDescription": "Clear the active filters to review alerts in every status.",
+    "noAlerts": "Your fleet is running smoothly. Alerts will appear here.",
+    "noAlertsDescription": "Configured rules continue monitoring incoming fleet telemetry.",
+    "clearSearch": "Clear search",
+    "clearFilters": "Clear filters",
     "tabFlash": "(!) ALERT — ",
     "delete": {
       "title": "Delete rule?",
@@ -6244,7 +7469,11 @@
       "daysAgo": "{{count}}d ago",
       "daysAgo_one": "{{count}}d ago",
       "daysAgo_other": "{{count}}d ago"
-    }
+    },
+    "count": "Alerts",
+    "day": "Day",
+    "type": "Alert type",
+    "typeDistributionAria": "Alert distribution by type"
   },
   "pagination": {
     "showing": "Showing {{start}}–{{end}} of {{total}}",
@@ -6503,9 +7732,15 @@
       "enabled": "Enabled",
       "disabled": "Disabled",
       "sentryChart": "Sentry Mode Activity",
+      "sentryEmpty": "No Sentry Mode activity is recorded in this history window.",
+      "sentryEmptyDescription": "The chart populates as security snapshots record Sentry Mode on and off states.",
+      "statsEmpty": "No security events are available in this history window.",
+      "statsEmptyDescription": "Lock, door, window, HomeLink, and Sentry statistics appear after security state changes are recorded.",
+      "refreshHistory": "Refresh security history",
       "chart": {
         "sentryOn": "Sentry On",
-        "sentryOff": "Sentry Off"
+        "sentryOff": "Sentry Off",
+        "date": "Date"
       },
       "stat": {
         "status": "Current Status",
@@ -6824,6 +8059,9 @@
       },
       "panels": {
         "snapshot": "Live snapshot"
+      },
+      "kinds": {
+        "kindCol": "Kind"
       }
     },
     "teslaOrders": {
@@ -6899,6 +8137,69 @@
       "board": {
         "aria": "Orders board"
       }
+    },
+    "diskForecast": {
+      "col": {
+        "count": "Count",
+        "severity": "Severity"
+      }
+    },
+    "secretRotation": {
+      "col": {
+        "count": "Count",
+        "severity": "Severity"
+      }
+    },
+    "slowQueries": {
+      "colQuery": "Query"
+    },
+    "dataQuality": {
+      "pageTitle": "Data Quality",
+      "subtitle": "Per-field signal freshness, gaps and duplicates, with normalization-version provenance for the same bounded window.",
+      "notConfigured": "The data-quality scorer is not configured on this deployment. Scoring requires the signal_log hypertable connection to be wired.",
+      "unknown": "Unknown",
+      "windowSub": "Window: {{mins}} min",
+      "kpiRegion": "Normalization coverage totals",
+      "kpiTotal": "Samples in window",
+      "kpiVersioned": "Version-attested",
+      "kpiVersionedSub": "Rows carrying a normalization version",
+      "kpiUnversioned": "Unattested",
+      "kpiUnversionedSub": "Legacy or below-contract provenance",
+      "kpiCoverage": "Attested coverage",
+      "kpiCoverageSub": "{{versioned}} of {{total}} rows",
+      "kpiCoverageUnknownSub": "No samples were observed in this window",
+      "kpiRequiredVersion": "Required version",
+      "kpiRequiredVersionSub": "Minimum attested SI contract",
+      "kpiCriticalFields": "Critical fields",
+      "kpiCriticalFieldsSub": "Composite score below 50",
+      "versionsTitle": "Normalization version distribution",
+      "versionsSubtitle": "Row counts per normalization contract version over the scoring window.",
+      "versionsEmptyTitle": "No version evidence",
+      "versionsEmptyMessage": "No signal rows were persisted in this window, so no normalization version could be observed.",
+      "legacyVersion": "Legacy / unknown",
+      "versionAttested": "Attested",
+      "versionUnattested": "Unattested",
+      "versionRows": "{{rows}} rows",
+      "versionShare": "{{share}}% of window",
+      "shareUnknown": "Share unknown",
+      "tableTitle": "Per-field quality and provenance",
+      "tableSubtitle": "Worst-scoring fields first. Coverage is the share of this field’s rows carrying a normalization version.",
+      "colField": "Field",
+      "colFieldSamples": "{{samples}} samples",
+      "colSeverity": "Quality",
+      "colFreshness": "Freshness",
+      "colMaxGap": "Max gap",
+      "colDuplicates": "Duplicates",
+      "colVersioned": "Attested",
+      "colUnversioned": "Unattested",
+      "colCoverage": "Coverage",
+      "trustComplete": "Fully attested",
+      "trustPartial": "Partially attested",
+      "trustNone": "Unattested",
+      "trustUnknown": "Unknown",
+      "fieldsEmptyTitle": "No field scores",
+      "fieldsEmptyMessage": "No signal fields were persisted during this scoring window.",
+      "fieldsEmptyTable": "No field scores"
     }
   },
   "apiLogs": {
@@ -7290,22 +8591,322 @@
   },
   "dataRepair": {
     "title": "Data Repair",
+    "readOnly": {
+      "title": "Data repair is read-only"
+    },
+    "aiSuggestions": {
+      "title": "Helix repair suggestions",
+      "description": "Propose a typed repair plan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory below. Helix never writes; review the proposal and use the matching baseline form to apply it.",
+      "button": "Draft repair plan",
+      "badge": "Helix"
+    },
     "kpis": "Repair summary",
     "worklist": "Repair worklist",
-    "callout": "Sessions open for more than 24 hours are shown here. Editing, closing, or discarding a record is a privileged action and may prompt re-authentication.",
+    "suggestionsRegion": "Suggested repairs",
+    "callout": "Suggestions come from durable history only: a session is listed when its stored state is contradicted by a later signal, never because it is simply old. Applying a repair rewrites the end timestamp (and, for drives, the derived duration) of that one session, is recorded in the audit log, and is never done automatically.",
+    "truncated": "The scan hit its per-request limit, so more sessions may need repair than are listed here. Apply what is shown and refresh.",
     "subtitle": {
       "count": "{{count}} incomplete session(s) found",
-      "clean": "Fix incomplete or stale sessions"
+      "suggestions": "{{count}} session boundary(s) contradicted by later evidence",
+      "clean": "Find and repair broken drive and charging session boundaries",
+      "workspace": "Review evidence-backed anomalies, coordinate decisions, and apply reversible corrections."
+    },
+    "diagnostics": {
+      "title": "Direct evidence diagnostics",
+      "description": "Inspect durable signal contradictions and manually review incomplete sessions. These deeper scans run only while this workspace is open.",
+      "loading": "Loading diagnostics workspace",
+      "scanning": "Scanning",
+      "ready": "Ready",
+      "attention": "Attention needed"
     },
     "kpi": {
       "total": "Total Stale",
       "charging": "Stale Charging",
       "drives": "Stale Drives",
-      "status": "Status"
+      "status": "Status",
+      "suggestions": "Suggested Repairs",
+      "driveSuggestions": "Drive Boundaries",
+      "chargingSuggestions": "Charging Boundaries",
+      "blocked": "Blocked"
     },
     "status": {
       "clean": "Clean",
       "needsRepair": "Needs Repair"
+    },
+    "kind": {
+      "drive": "Drive",
+      "charging": "Charging session"
+    },
+    "badge": {
+      "open": "Open"
+    },
+    "confidence": {
+      "high": "High confidence",
+      "medium": "Medium confidence",
+      "unknown": "Unrated confidence"
+    },
+    "source": {
+      "signalLog": "Signal history",
+      "driveTelemetry": "Drive telemetry",
+      "chargingTelemetry": "Charging telemetry",
+      "drives": "Drive record",
+      "chargingSessions": "Charging record",
+      "unknown": "Durable history"
+    },
+    "rule": {
+      "driveOpenChargingStarted": {
+        "label": "Drive left open, then charging started",
+        "why": "The car was last seen driving, and the next durable event is a charging session starting. A car cannot drive and charge at once, so the Park signal that should have ended this drive was never recorded."
+      },
+      "driveOpenParkObserved": {
+        "label": "Drive left open after the car parked",
+        "why": "Drive telemetry recorded the car shifting into Park after this drive started, but the drive was never closed. The signal arrived; the completion write did not."
+      },
+      "driveEndAfterContradiction": {
+        "label": "Drive ends long after it really finished",
+        "why": "This drive is already closed, but its end time is well after durable evidence shows the drive had finished — so it swallowed time that belongs to another session."
+      },
+      "chargingOpenChargeEnded": {
+        "label": "Charging left open after it stopped",
+        "why": "A later charge-state observation shows charging had stopped, but the session is still recorded as in progress."
+      },
+      "chargingOpenDriveStarted": {
+        "label": "Charging left open, then the car drove away",
+        "why": "The car shifted into a driving gear (or a drive was recorded) while this charging session was still open. Charging and driving are mutually exclusive."
+      },
+      "chargingEndAfterContradiction": {
+        "label": "Charging ends long after it really finished",
+        "why": "This charging session is already closed, but its end time is well after durable evidence shows charging had finished."
+      },
+      "unknown": {
+        "label": "Session boundary looks wrong",
+        "why": "Stored session state contradicts later durable evidence."
+      }
+    },
+    "blocked": {
+      "overlapsNextSession": "Applying this would still leave the session overlapping the next one for this vehicle. Fix the neighbouring session first.",
+      "unknown": "This suggestion cannot be applied right now."
+    },
+    "timeline": {
+      "start": "Session started",
+      "startDetail": "Stored start of {{kind}} #{{id}}",
+      "lastInSession": "Last evidence the session was still running",
+      "noInSession": "No in-session evidence recorded",
+      "noInSessionDetail": "Nothing durable was written between the session start and the contradiction.",
+      "contradiction": "Contradicting evidence",
+      "proposed": "Proposed end",
+      "proposedDetail": "Never later than the contradicting evidence"
+    },
+    "detail": {
+      "vehicle": "Vehicle",
+      "storedEnd": "Stored end",
+      "stillOpen": "Still open",
+      "proposedEnd": "Proposed end",
+      "storedDuration": "Stored duration",
+      "proposedDuration": "Proposed duration",
+      "evidenceGap": "Unobserved gap"
+    },
+    "card": {
+      "label": "Repair suggestion for {{kind}} #{{id}}",
+      "evidence": "Evidence timeline",
+      "details": "Proposed change",
+      "risk": "Applying rewrites only the end timestamp (and the derived duration for drives). Measured totals such as distance, energy and speed are left untouched, so they may still reflect the original window.",
+      "applied": "Applied. Refresh to re-check the remaining suggestions.",
+      "manualOnly": "Nothing is applied until you confirm.",
+      "genericError": "The repair was rejected. Refresh and review again."
+    },
+    "confirm": {
+      "title": "Apply this repair?",
+      "message": "This rewrites {{kind}} #{{id}} to end at {{end}}. Distance, energy and speed totals are NOT recomputed — they were measured over the original window. This is recorded in the audit log and is not undone automatically.",
+      "caseImpactDescription": "Review the exact server-calculated impact before applying this boundary.",
+      "apply": "Apply repair"
+    },
+    "manualConfirm": {
+      "saveTitle": "Save these corrections?",
+      "saveMessage": "This updates the entered measurements without changing the session boundary. The correction is recorded in the audit log.",
+      "closeTitle": "Apply this manual boundary?",
+      "closeMessage": "This uses the exact end timestamp you entered. The server will reject overlaps or concurrent changes and record the boundary in the audit log.",
+      "quarantineTitle": "Move this session to quarantine?",
+      "quarantineMessage": "This removes {{kind}} #{{id}} from active data, but preserves a checksummed snapshot for verified restore. The reason and operator are recorded in the audit log.",
+      "quarantineReasonPlaceholder": "Explain why this session should be removed from active data"
+    },
+    "stale": {
+      "intro": "Incomplete sessions with no contradicting evidence. These are listed for manual inspection only — nothing in the recorded history establishes where they should end."
+    },
+    "cases": {
+      "workspaceTitle": "Integrity command center",
+      "workspaceDescription": "Continuous detection creates durable, assignable cases. No repair is applied without operator review.",
+      "lastScan": "Last scan: {{time}}",
+      "noScan": "No completed scan recorded yet",
+      "scanNow": "Run integrity scan",
+      "metricsResource": "Repair case metrics",
+      "workspaceTabs": "Repair workspace views",
+      "tabCases": "Case queue",
+      "tabQuarantine": "Quarantine ledger",
+      "tabDiagnostics": "Diagnostics",
+      "refreshing": "Refreshing",
+      "monitoring": "Monitoring",
+      "metricsUnavailable": "Metrics unavailable",
+      "updating": "Updating",
+      "metricsLabel": "Repair case metrics",
+      "open": "Open cases",
+      "openHint": "Awaiting operator review",
+      "inReview": "In review",
+      "inReviewHint": "Actively triaged",
+      "quarantined": "Quarantined",
+      "quarantinedHint": "Reversible removals",
+      "active": "Active cases",
+      "activeHint": "Active review workload",
+      "queueTitle": "Repair case queue",
+      "queueDescription": "Durable findings stay visible until an operator reviews and resolves them.",
+      "resourceName": "Repair cases",
+      "loading": "Loading repair cases…",
+      "refreshFailed": "Repair cases could not refresh. Showing the most recently loaded queue.",
+      "empty": "No repair cases match these filters.",
+      "pageCount": "{{count}} cases on this page",
+      "caseNumber": "Case #{{id}}",
+      "sessionReference": "{{kind}} #{{id}}",
+      "vehicleNumber": "Vehicle #{{id}}",
+      "reviewCaseLabel": "Review case {{id}}",
+      "review": "Review",
+      "drawerTitle": "Case #{{id}}",
+      "drawerLoadingTitle": "Repair case",
+      "drawerDescription": "{{kind}} session #{{id}} · vehicle #{{vehicle}}",
+      "drawerLoading": "Loading durable evidence and operator history",
+      "beginReview": "Begin review",
+      "reopen": "Reopen",
+      "resolve": "Resolve case",
+      "confidenceBadge": "{{confidence}} confidence",
+      "lastSeen": "Last seen {{time}}",
+      "findingTitle": "Integrity finding",
+      "actionable": "Actionable",
+      "blocked": "Blocked",
+      "vehicle": "Vehicle",
+      "relatedSession": "Related session",
+      "confidence": "Confidence",
+      "firstDetected": "First detected",
+      "lastDetected": "Last detected",
+      "suggestedBoundary": "Suggested boundary",
+      "evidenceGap": "Evidence gap",
+      "evidenceTitle": "Evidence chain",
+      "evidenceDescription": "Durable observations used to establish the session boundary.",
+      "lastInSession": "Last in-session observation",
+      "contradiction": "Contradicting observation",
+      "assignmentTitle": "Ownership",
+      "assignee": "Assignee",
+      "unassignedValue": "Unassigned",
+      "assigneePlaceholder": "Operator name",
+      "saveAssignment": "Save assignment",
+      "activityTitle": "Review notes",
+      "noComments": "No review notes yet.",
+      "commentLabel": "Add review note",
+      "addComment": "Add note",
+      "controlledActions": "Controlled actions",
+      "controlledDescription": "Apply a verified boundary, dismiss a false positive, or move the source session into reversible quarantine.",
+      "dismiss": "Dismiss finding",
+      "quarantineAction": "Move to quarantine",
+      "restoreTitle": "Restore quarantined session",
+      "restoreDescription": "The original row and linked relationships will be verified and restored atomically.",
+      "restoreAction": "Restore session",
+      "confirmQuarantine": "Move session to quarantine?",
+      "confirmRestore": "Restore this session?",
+      "confirmDismiss": "Dismiss this finding?",
+      "confirmResolve": "Resolve this case?",
+      "reasonRequiredDescription": "Provide an operator note. This action is recorded in the audit trail.",
+      "reasonLabel": "Operator note",
+      "reasonPlaceholder": "Explain the evidence and decision",
+      "findings": {
+        "endedBeforeStarted": "Session ends before it starts",
+        "durationMismatch": "Stored duration does not match the session window",
+        "driveOverlap": "Drive overlaps another drive",
+        "chargingOverlap": "Charging session overlaps another charging session",
+        "driveChargingOverlap": "Drive and charging windows overlap",
+        "duplicateWindow": "Duplicate session window",
+        "odometerRollback": "Odometer moves backwards during the session",
+        "socInconsistent": "State of charge changes in the wrong direction",
+        "negativeDistance": "Distance is negative",
+        "negativeDuration": "Duration is negative",
+        "negativeEnergyUsed": "Energy used is negative",
+        "negativeRegenEnergy": "Regenerated energy is negative",
+        "negativeEnergyAdded": "Energy added is negative",
+        "manualQuarantine": "Operator-requested quarantine"
+      },
+      "blockedReasons": {
+        "structuralCorrection": "This structural anomaly requires a manual correction",
+        "operatorAction": "This case records an explicit operator action",
+        "notApplicable": "No safe automatic boundary is available"
+      },
+      "status": {
+        "open": "Open",
+        "inReview": "In review",
+        "applied": "Applied",
+        "dismissed": "Dismissed",
+        "quarantined": "Quarantined",
+        "restored": "Restored",
+        "resolved": "Resolved"
+      },
+      "filters": {
+        "allStatuses": "All statuses",
+        "allKinds": "All session types",
+        "allConfidence": "All confidence levels",
+        "status": "Filter by status",
+        "kind": "Filter by session type",
+        "confidence": "Filter by confidence",
+        "owner": "Filter by owner",
+        "ownerPlaceholder": "Owner",
+        "clear": "Clear filters"
+      },
+      "columns": {
+        "case": "Case",
+        "finding": "Finding",
+        "status": "Status",
+        "confidence": "Confidence",
+        "owner": "Owner",
+        "lastDetected": "Last detected",
+        "actions": "Actions"
+      },
+      "bulk": {
+        "beginReview": "Begin review",
+        "dismiss": "Dismiss selected",
+        "noReviewable": "Only open cases can begin review.",
+        "noDismissible": "Only open or in-review cases can be dismissed.",
+        "confirmDismiss": "Dismiss selected findings?",
+        "confirmDismissDescription": "Dismissal changes case metadata only. Source sessions remain untouched and the decision is audited.",
+        "reasonPlaceholder": "Explain why these findings are false positives"
+      }
+    },
+    "quarantine": {
+      "all": "All records",
+      "active": "Awaiting restore",
+      "restored": "Restored",
+      "held": "Held safely",
+      "title": "Quarantine ledger",
+      "description": "Every removal retains a checksummed recovery snapshot and a complete operator trail.",
+      "filterStatus": "Filter quarantine status",
+      "resourceName": "Quarantine records",
+      "loading": "Loading quarantine ledger…",
+      "refreshFailed": "Quarantine records could not refresh. Showing the most recently loaded ledger.",
+      "empty": "No quarantine records match this filter.",
+      "pageCount": "{{count}} records on this page",
+      "confirmRestore": "Restore quarantined session?",
+      "confirmRestoreDescription": "The snapshot checksum and schema version will be verified before the session and its relationships are restored.",
+      "restoreReasonPlaceholder": "Explain why this session should be restored",
+      "columns": {
+        "session": "Session",
+        "status": "Status",
+        "reason": "Reason",
+        "quarantinedAt": "Quarantined",
+        "operator": "Operator",
+        "actions": "Actions"
+      }
+    },
+    "preview": {
+      "title": "Verified impact",
+      "ready": "Ready to apply",
+      "alreadyApplied": "Already applied",
+      "noChanges": "No database fields would change.",
+      "preserved": "{{count}} measured fields stay unchanged",
+      "revalidated": "The server revalidated the current row, evidence, concurrency pin, and overlap guard."
     },
     "metric": {
       "energy": "Energy",
@@ -7316,7 +8917,8 @@
     "row": {
       "toggle": "Open repair form for record #{{id}}",
       "vehicle": "Vehicle {{id}}",
-      "open": "Open"
+      "open": "Open",
+      "readOnly": "Repair is unavailable for record #{{id}}"
     },
     "field": {
       "endedAt": "End Date/Time (ISO)",
@@ -7328,25 +8930,34 @@
       "distanceM": "Distance (m)",
       "durationS": "Duration (s)",
       "maxSpeedMps": "Max Speed (m/s)",
-      "avgSpeedMps": "Avg Speed (m/s)"
+      "avgSpeedMps": "Avg Speed (m/s)",
+      "invalidEndedAt": "Use RFC3339 format, including a timezone.",
+      "validEndedAtRequired": "Enter a valid RFC3339 end timestamp first."
     },
     "action": {
       "closeSession": "Close Session",
       "closeDrive": "Close Drive",
-      "discard": "Discard"
+      "quarantine": "Move to quarantine",
+      "reviewApply": "Review & apply"
     },
     "charging": {
       "title": "Charging Sessions",
       "resource": "Charging sessions",
       "emptyTitle": "All charging sessions are complete",
       "empty": "No stale charging sessions found.",
-      "formLabel": "Repair charging session #{{id}}"
+      "formLabel": "Repair charging session #{{id}}",
+      "suggestionsTitle": "Charging Boundaries",
+      "suggestionsEmptyTitle": "No contradicted charging boundaries",
+      "suggestionsEmpty": "Every charging session in the scanned window agrees with the durable signal history."
     },
     "drives": {
       "title": "Drives",
       "resource": "Drives",
       "emptyTitle": "All drives are complete",
-      "empty": "No stale drives found."
+      "empty": "No stale drives found.",
+      "suggestionsTitle": "Drive Boundaries",
+      "suggestionsEmptyTitle": "No contradicted drive boundaries",
+      "suggestionsEmpty": "Every drive in the scanned window agrees with the durable signal history."
     },
     "drive": {
       "formLabel": "Repair drive #{{id}}",
@@ -7399,12 +9010,20 @@
       "min": "min",
       "chargeEff": "Charge Efficiency",
       "chargerTypes": "Charger Types",
+      "chargerTypesAria": "Charging sessions by charger type",
+      "chargerType": "Charger type",
       "noTypes": "No charger type data",
       "startBattery": "Start Battery Distribution",
+      "startBatteryAria": "Charging sessions by starting battery level",
+      "batteryRange": "Battery level",
       "noBatDist": "No battery distribution data",
       "hourlyPattern": "Hourly Charging Pattern",
+      "hourlyPatternAria": "Charging sessions and energy by hour of day",
+      "hour": "Hour",
       "charges": "Charges",
       "noHourly": "No hourly data",
+      "monthlyTrendAria": "Monthly charging energy, average power, and session count",
+      "month": "Month",
       "summary": "Charging summary metrics"
     },
     "driving": {
@@ -7415,11 +9034,14 @@
       "avgDriveDist": "Avg Drive Distance",
       "longestDrive": "Longest Drive",
       "speedDist": "Speed Distribution",
+      "speedRange": "Speed range",
       "trips": "Trips",
       "noSpeed": "No speed data",
       "distDist": "Trip Distance Distribution",
+      "distanceRange": "Distance range",
       "noDistDist": "No distance distribution data",
       "hourlyPattern": "Hourly Driving Pattern",
+      "hour": "Hour",
       "drives": "Drives",
       "distance": "Distance",
       "noHourly": "No hourly data",
@@ -7430,6 +9052,7 @@
       "dailyTrend": "Daily Driving Trend",
       "noDailyTrend": "No daily trend data",
       "durationDist": "Drive Duration Distribution",
+      "durationRange": "Duration range",
       "noDurationData": "Not enough drive data for distribution chart",
       "effTrend": "Efficiency Trend",
       "noEffTrend": "No efficiency trend data",
@@ -7461,23 +9084,32 @@
     },
     "overview": {
       "distByVehicle": "Distance by Vehicle",
+      "distByVehicleAria": "Distance driven by vehicle",
+      "vehicle": "Vehicle",
       "noVehicles": "No vehicle data",
       "dayOfWeek": "Day of Week Pattern",
+      "dayOfWeekAria": "Drive count and average distance by day of week",
+      "day": "Day",
       "drives": "Drives",
       "avgDist": "Avg Distance",
       "noDow": "No day-of-week data",
       "monthlyCost": "Monthly Cost Comparison",
+      "monthlyCostAria": "Monthly electric cost, gas cost, and savings comparison",
       "electricCost": "Electric Cost",
       "gasCost": "Gas Cost",
       "savings": "Savings",
       "noMonthly": "No monthly data",
       "quickLinks": "Quick Links",
       "fleetUsage": "Fleet Usage",
+      "fleetUsageAria": "Fleet distance share by vehicle",
       "effLeaderboard": "Efficiency Leaderboard",
       "noEfficiency": "No efficiency data",
       "vehicleComparison": "Vehicle Comparison",
+      "vehicleComparisonAria": "Normalized vehicle metric comparison",
+      "metric": "Metric",
       "noComparison": "Need 2+ vehicles for comparison",
       "energyActivity": "Energy & Activity",
+      "energyActivityAria": "Energy and drive count by vehicle",
       "energykWh": "Energy (kWh)",
       "radar": {
         "distance": "Distance",
@@ -7551,7 +9183,10 @@
       "batteryAndAlerts": "Battery health & alerts",
       "alertDistributionChartLabel": "Pie chart of alerts by severity",
       "noAlertBreakdown": "No severity breakdown to chart.",
-      "loading": "Loading weekly digest"
+      "loading": "Loading weekly digest",
+      "alerts": "Alerts",
+      "day": "Day",
+      "severity": "Severity"
     },
     "title": "Fleet Analytics",
     "tabs": {
@@ -7699,7 +9334,8 @@
     "banner": {
       "toPeriodPrefix": "Looking to compare time periods instead?",
       "toPeriodCta": "Open Period comparison →"
-    }
+    },
+    "month": "Month"
   },
   "fleetCompare": {
     "singleVehicle": {
@@ -7738,15 +9374,21 @@
     "month": "Month",
     "distance": "Distance",
     "drives": "Drives",
-    "distancePerDrive": "Distance / Drive"
+    "distancePerDrive": "Distance / Drive",
+    "dailyDistanceAria": "Daily distance traveled over time",
+    "date": "Date",
+    "monthlyDistanceAria": "Monthly distance traveled over time",
+    "odometerOverTimeAria": "Odometer readings over time"
   },
   "statistics": {
     "title": "Statistics",
     "subtitle": "Lifetime vehicle statistics and records",
     "selectVehicle": "Select Vehicle",
     "averages": "Averages",
-    "noData": "No Data",
-    "noDataMsg": "No statistics available for this vehicle.",
+    "noData": "No statistics yet",
+    "noDataMsg": "This vehicle has no completed driving or charging history in the selected period.",
+    "noDataDescription": "Complete a drive or charging session, then return after TeslaSync has processed the activity.",
+    "viewDrives": "View drives",
     "totalDistance": "Total Distance",
     "totalDrives": "Total Drives",
     "totalEnergy": "Total Energy",
@@ -7762,22 +9404,37 @@
     "cycles": "Cycles",
     "age": "Age",
     "noBattery": "No battery health data available",
+    "noBatteryDescription": "Battery health estimates appear after enough charging and range telemetry has accumulated.",
     "stateDistribution": "State Distribution",
     "noStates": "No state distribution data",
+    "noStatesDescription": "Driving, charging, and parked-state history will populate this distribution over time.",
     "mileage": "Mileage Summary",
     "totalMileage": "Total Distance",
     "dailyAvg": "Daily Average",
     "daysTracked": "Days Tracked",
     "yearlyProjection": "Yearly Projection",
     "noMileage": "No mileage data available",
+    "noMileageDescription": "Distance totals and projections appear after the first completed drive is recorded.",
     "vehicleComparison": "Vehicle Comparison",
     "distance": "Distance",
     "energy": "Energy (kWh)",
-    "singleVehicle": "Add more vehicles to compare"
+    "singleVehicle": "Add more vehicles to compare",
+    "singleVehicleDescription": "Fleet comparison requires activity from at least two registered vehicles.",
+    "manageVehicles": "Manage vehicles"
+  },
+  "fleetApi": {
+    "configured": {
+      "emptyTitle": "Endpoint metadata unavailable",
+      "emptyMessage": "This runtime did not publish any configured endpoint URLs.",
+      "emptyDescription": "Configure the public and Tesla Fleet API URLs in deployment settings; metadata appears after the service restarts."
+    }
   },
   "apiKeys": {
     "title": "API Keys",
     "subtitle": "Manage programmatic access to TeslaSync",
+    "readOnly": {
+      "title": "API key management is read-only"
+    },
     "createKey": "Create Key",
     "newKey": "New API Key",
     "keyCreated": "API Key Created",
@@ -7839,6 +9496,9 @@
     "fromState": "From State",
     "toState": "To State",
     "duration": "Duration",
+    "actions": "Actions",
+    "inspect": "Inspect",
+    "inspectTransition": "Inspect transition {{from}} to {{to}}",
     "selectVehicle": "Select Vehicle",
     "subtitle": "Vehicle state history and transitions",
     "totalTransitions": "Total Transitions",
@@ -7853,7 +9513,17 @@
     "idle": "Idle",
     "sleeping": "Sleeping",
     "stateTransitions": "State Transitions",
-    "noTransitions": "No state transitions recorded"
+    "noTransitions": "No state transitions recorded",
+    "preview": {
+      "eyebrow": "State transition",
+      "title": "{{from}} → {{to}}",
+      "fallbackTitle": "Transition details",
+      "description": "Recorded {{time}}",
+      "triggerField": "Trigger field",
+      "triggerValue": "Trigger value"
+    },
+    "dailyBreakdownAria": "Daily transition counts by vehicle state",
+    "day": "Day"
   },
   "tco": {
     "title": "Lifetime Operating Cost",
@@ -8449,7 +10119,13 @@
     }
   },
   "automations": {
+    "readOnly": {
+      "title": "Automation controls are read-only"
+    },
     "builder": {
+      "readOnly": {
+        "title": "Automation publishing is read-only"
+      },
       "aiBuilder": {
         "title": "Draft from natural language",
         "description": "Describe the automation you want and get a typed graph draft you can review and save below.",
@@ -8643,9 +10319,12 @@
       "evCost": "EV Cost",
       "gasEquivalent": "Gas Equivalent",
       "saving": "Saving",
+      "higherBy": "Higher by",
       "less": "less",
+      "more": "more",
       "projectedAnnual": "Projected Annual",
-      "periodTotal": "{{days}}-Day Total"
+      "periodTotal": "{{days}}-Day Total",
+      "incomplete": "Complete charging-cost coverage is required before savings are modeled."
     },
     "title": "Energy",
     "timeOfDay": {
@@ -8694,18 +10373,55 @@
     },
     "chart": {
       "energyCostDaily": "Energy & Cost Daily",
+      "energyCostDailyAria": "Daily drive consumption and recorded charging cost chart",
+      "driveConsumption": "Drive consumption",
+      "recordedCost": "Recorded charging cost",
+      "energy": "Energy",
       "energyKwh": "Energy (kWh)",
+      "energyDisplay": "Energy ({{unit}})",
       "noEnergyData": "Connect vehicle to see energy data",
       "efficiencyTrend": "Efficiency Trend",
+      "efficiencyTrendAria": "Daily efficiency and distance area chart",
       "noEfficiencyData": "No efficiency data yet",
       "chargingByTime": "Charging by Time of Day",
+      "chargingByTimeAria": "Charging energy and session count by time of day bar chart",
+      "noTimeOfDayData": "No charging sessions fall within the selected analysis window.",
+      "noTimeOfDayDataDescription": "Session timing patterns appear after completed charges are recorded in this period.",
       "sessions": "Sessions",
       "chargerBreakdown": "Charger Type Breakdown",
+      "chargerBreakdownAria": "Charger type share pie chart",
+      "noChargerBreakdownData": "No charger-type energy is available for the selected analysis window.",
+      "noChargerBreakdownDataDescription": "Home, AC, and DC shares appear after completed sessions include charger classification.",
       "distance": "Distance ({{unit}})"
     },
     "tip": {
       "offPeak": "Off-peak charging saves money",
-      "solar": "Solar-optimal: 10am–3pm"
+      "solar": "Solar-optimal: 10am–3pm",
+      "timezone": "Buckets use {{timezone}} session start time.",
+      "noSavingsClaim": "Timing alone does not prove tariff or solar savings."
+    },
+    "sources": {
+      "chargingHistory": "charging history",
+      "idleDrain": "idle-drain history",
+      "lifetimeTelemetry": "lifetime telemetry",
+      "partialTitle": "Some energy sources are unavailable",
+      "partialDescription": "Available sections remain visible. Unavailable sources: {{sources}}.",
+      "chargingHistoryUnavailable": "Charging history is unavailable. Other energy evidence remains visible."
+    },
+    "drivers": {
+      "title": "Efficiency driver investigation",
+      "description": "Daily intensity identifies when efficiency changed; temperature, speed, and route workspaces provide the evidence needed to investigate why.",
+      "highestDay": "Highest observed day",
+      "lowestDay": "Lowest observed day",
+      "spread": "Observed daily spread",
+      "spreadHint": "Difference relative to weighted average",
+      "distanceContext": "Distance on highest day",
+      "contextNotCause": "Context only, not causal attribution",
+      "temperature": "Review temperature impact",
+      "speed": "Review speed profile",
+      "route": "Review route efficiency",
+      "disclosure": "These daily observations are descriptive. They do not attribute efficiency changes to a specific cause.",
+      "empty": "More measured drive days are needed to compare efficiency pressure."
     },
     "breakdown": {
       "sessions": "sessions"
@@ -8795,7 +10511,11 @@
         "voltageSpread": "V Spread",
         "tempSpread": "Temp Spread",
         "normalCells": "Normal Cells"
-      }
+      },
+      "distribution": {
+        "range": "Voltage range"
+      },
+      "time": "Time"
     },
     "degradation": {
       "title": "Battery Degradation",
@@ -8826,7 +10546,9 @@
       "stressLow": "Your charging habits are optimal for battery longevity.",
       "stressMedium": "Consider reducing fast charging frequency and avoiding full charges when possible.",
       "stressHigh": "High stress detected. Reducing fast charges and deep discharges can improve battery lifespan.",
-      "noHistory": "No degradation records found."
+      "noHistory": "No degradation records found.",
+      "noHistoryDescription": "Capacity estimates appear after enough charging, range, and odometer snapshots have accumulated.",
+      "date": "Date"
     },
     "health": {
       "excellent": "Excellent",
@@ -8913,19 +10635,26 @@
     },
     "chart": {
       "capacityTrend": "Capacity Trend & Prediction",
+      "capacityTrendAria": "Battery capacity trend with dashed projection line over time",
       "dashedProjected": "Dashed = projected",
       "actual": "Actual %",
       "predicted": "Predicted %",
       "noTrend": "Not enough snapshots for trend analysis",
       "rangeTrend": "Estimated Range Over Time",
+      "rangeTrendAria": "Estimated battery range over time area chart",
       "range": "Range",
       "noRange": "No range data yet",
       "chargeDist": "Charge Level Distribution",
+      "chargeDistAria": "Distribution of charging-session start and end battery levels",
       "chargeDistSub": "Recent 100 sessions",
+      "chargeBand": "Battery level",
       "chargeStarted": "Charge Started",
       "chargeEnded": "Charge Ended",
       "noSessions": "No charging session data yet",
       "acdc": "AC / DC Energy Breakdown",
+      "acdcAria": "AC versus DC energy share pie chart",
+      "chargingType": "Charging type",
+      "energyKwh": "Energy (kWh)",
       "noBreakdown": "No charging data for breakdown"
     },
     "habit": {
@@ -9432,7 +11161,8 @@
     },
     "trend": {
       "title": "Drain Rate Trend",
-      "series": "Drain Rate (%/day)"
+      "series": "Drain Rate (%/day)",
+      "aria": "Daily vampire drain rate over parked sessions"
     },
     "gauge": {
       "title": "Drain Rate",
@@ -9442,7 +11172,8 @@
     "daily": {
       "title": "Daily Drain While Parked",
       "loss": "Battery Loss %",
-      "parked": "Parked Hours"
+      "parked": "Parked Hours",
+      "aria": "Daily battery loss and parked hours"
     },
     "sessions": {
       "title": "Drain Sessions",
@@ -9463,7 +11194,8 @@
       "polling": "Reduce third-party app polling intervals to let the car sleep faster.",
       "wake": "Avoid opening the app frequently — each wake cycle costs battery.",
       "energySaver": "Enable energy-saving mode in vehicle settings for better standby."
-    }
+    },
+    "date": "Date"
   },
   "climate": {
     "aiPreheatPrecool": {
@@ -9472,6 +11204,17 @@
       "description": "Ask Helix to draft a preheat or precool window grounded in the deterministic departure heuristic — start time, end time, mode (preheat | precool), and target cabin temperature. The temperatures are the same the panels below show; Helix never persists a schedule. Review the proposal and click Apply on the climate controls below to save it.",
       "generateButton": "Draft schedule",
       "emptyHint": "Select a vehicle and confirm the cabin temperature, outside temperature, and departure time to draft a schedule."
+    },
+    "history": {
+      "emptyMessage": "No climate history has been recorded.",
+      "emptyDescription": "Climate snapshots accumulate after the vehicle reports cabin, ambient, or HVAC telemetry.",
+      "temperatureEmpty": "No temperature history has been recorded.",
+      "temperatureEmptyDescription": "Cabin, ambient, and set-point trends appear after the vehicle reports climate samples.",
+      "hvacEmpty": "No HVAC operating history has been recorded.",
+      "hvacEmptyDescription": "AC state and fan-speed trends appear after the vehicle reports active climate samples.",
+      "hvacAria": "AC on/off state and fan speed over time",
+      "temperatureAria": "Cabin, ambient, and driver set-point temperature over time",
+      "title": "Temperature History"
     }
   },
   "chargerTypes": {
@@ -9488,7 +11231,10 @@
     },
     "chargerType": {
       "title": "Cost by Charger Type",
-      "sessions": "sessions"
+      "sessions": "sessions",
+      "cost": "Cost",
+      "energy": "Energy (kWh)",
+      "type": "Charger type"
     },
     "charts": {
       "noData": "Not enough data",
@@ -9521,7 +11267,12 @@
       "avgKm": "Avg km/mo",
       "noSavings": "Savings data will appear once driving history is available.",
       "insights": "Insights",
-      "noInsights": "Insights will appear as more data is collected."
+      "noInsights": "Insights will appear as more data is collected.",
+      "chargerType": "Charger type",
+      "lowerBound": "Lower bound",
+      "month": "Month",
+      "share": "Share (%)",
+      "upperBound": "Upper bound"
     },
     "stats": {
       "totalCost": "Total Cost",
@@ -9598,7 +11349,10 @@
       "busiestHour": "Busiest Hour",
       "offPeakRatio": "Off-Peak Charging",
       "offPeakDesc": "of sessions between 10 PM–6 AM",
-      "noInsights": "No insights available"
+      "noInsights": "No insights available",
+      "hour": "Hour",
+      "hourlyDistribution": "Hourly charging distribution",
+      "ratePeriod": "Rate period"
     },
     "title": "Cost Analysis",
     "empty": {
@@ -9721,7 +11475,8 @@
       "value": "Value",
       "updated": "Updated",
       "noData": "No Powershare signals received yet."
-    }
+    },
+    "time": "Time"
   },
   "tesla_charging": {
     "title": "Tesla Charging History",
@@ -9756,7 +11511,9 @@
     "noData": "No Tesla charging history yet. Click \"Refresh from Tesla\" to import your Supercharger sessions.",
     "filterLabel": {
       "search": "Search"
-    }
+    },
+    "month": "Month",
+    "spending": "Spending"
   },
   "tesla_sessions": {
     "title": "Fleet Charging Sessions",
@@ -9824,6 +11581,12 @@
     "compactMode": "Compact mode (smaller gaps)"
   },
   "freshness": {
+    "age": {
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
     "justNow": "just now",
     "seconds": "{{s}}s ago",
     "minutes": "{{m}}m ago",
@@ -9832,9 +11595,12 @@
     "weeks": "{{w}}w ago",
     "updating": "updating…",
     "error": "error",
+    "staleWithAge": "Stale · {{age}}",
     "lastUpdated": "Last updated: {{time}}",
     "neverUpdated": "Never updated",
     "refresh": "Refresh",
+    "refreshState": "Refresh data · {{state}}",
+    "source": "Source: {{source}}",
     "updatingTooltip": "Updating…",
     "fresh": "Up to date",
     "stale": "Stale",
@@ -9953,7 +11719,46 @@
     "solid": "Solid",
     "bgOpacity": "Background Opacity",
     "preview": "Preview — this is how widgets will look",
-    "enter": "Enter Kiosk Mode"
+    "enter": "Enter Kiosk Mode",
+    "rotationPosition": "Dashboard {{current}} of {{total}}"
+  },
+  "presentation": {
+    "exit": "Exit presentation mode",
+    "exitShort": "Exit",
+    "report": {
+      "active": "Report view",
+      "description": "Operational report generated from the active TeslaSync view.",
+      "generated": "Generated",
+      "scope": "Scope",
+      "open": "Open report view",
+      "help": "Clean navigation-free layout for printing and review.",
+      "copyLink": "Copy report link",
+      "copyHelp": "Preserves the current route and filter query.",
+      "linkCopied": "Report link copied",
+      "linkError": "Could not copy report link"
+    },
+    "kiosk": {
+      "open": "Open kiosk view",
+      "help": "Fullscreen monitoring with idle cursor and screen dimming."
+    }
+  },
+  "calculationDetails": {
+    "title": "How this was calculated",
+    "provenance": "Provenance",
+    "method": "Method",
+    "sources": "Data sources",
+    "source": "Source",
+    "period": "Analysis period",
+    "coverage": "Data coverage",
+    "version": "Calculation version",
+    "exclusions": "Exclusions and limitations",
+    "unavailable": "Not provided",
+    "sourceUnavailable": "Source metadata unavailable",
+    "periodUnavailable": "Analysis period unavailable",
+    "coverageUnavailable": "Coverage metadata unavailable",
+    "versionUnavailable": "Version metadata unavailable",
+    "exclusionsUnavailable": "No exclusions were provided",
+    "noExclusions": "No additional exclusions were supplied."
   },
   "telemetry": {
     "title": "Live Telemetry",
@@ -10081,7 +11886,8 @@
       "trend": {
         "title": "Activity over time",
         "series": "Actions",
-        "empty": "No activity recorded in this window."
+        "empty": "No activity recorded in this window.",
+        "colDay": "Day"
       },
       "topActions": {
         "title": "Top actions",
@@ -10095,7 +11901,8 @@
       "byHour": {
         "title": "By hour of day",
         "series": "Actions",
-        "empty": "No activity to chart by hour yet."
+        "empty": "No activity to chart by hour yet.",
+        "colHour": "Hour"
       },
       "breakdowns": {
         "aria": "Activity breakdowns"
@@ -10148,6 +11955,66 @@
       "automationExecuted": "Automation ran",
       "automationFailed": "Automation failed",
       "automationAutoDisabled": "Automation auto-disabled"
+    },
+    "timeline": {
+      "title": "Activity Timeline",
+      "subtitle": "A unified timeline of drives, charging, alerts, software updates, and your annotations.",
+      "empty": "No activity in this window.",
+      "loadMore": "Older",
+      "loadNewer": "Newer",
+      "provenance": "Source: {{source}}",
+      "sourceRecord": "{{source}} record {{id}}",
+      "serviceHistoryLimitation": "Dated service records will join this timeline when a verified service-history source is available.",
+      "item": {
+        "drive": "Drive",
+        "driveInProgress": "Drive in progress",
+        "charging": "Charging session",
+        "chargingInProgress": "Charging in progress",
+        "software": "Software update",
+        "softwareVersion": "Software update {{version}}",
+        "alert": "Alert",
+        "annotation": "Annotation",
+        "socChange": "{{start}}% → {{end}}%"
+      },
+      "source": {
+        "drive": "Driving history",
+        "charging": "Charging history",
+        "alert": "Alert delivery log",
+        "software_update": "Software update history",
+        "annotation": "User annotation"
+      },
+      "severity": {
+        "info": "Info",
+        "warn": "Warning",
+        "critical": "Critical"
+      },
+      "status": {
+        "completed": "Completed",
+        "in_progress": "In progress",
+        "sent": "Sent",
+        "pending": "Pending",
+        "failed": "Failed",
+        "deferred_dnd": "Deferred by quiet hours",
+        "installed": "Installed",
+        "installing": "Installing",
+        "downloading": "Downloading",
+        "available": "Available",
+        "milestone": "Milestone",
+        "maintenance": "Maintenance",
+        "trip": "Trip",
+        "issue": "Issue",
+        "upgrade": "Upgrade",
+        "custom": "Custom"
+      },
+      "kindFilter": {
+        "aria": "Filter by activity kind",
+        "all": "All",
+        "drive": "Drive",
+        "charging": "Charging",
+        "alert": "Alert",
+        "software_update": "Software Update",
+        "annotation": "Annotation"
+      }
     }
   },
   "perf": {
@@ -10166,6 +12033,11 @@
     "blank": "Blank Dashboard"
   },
   "hero": {
+    "unknownStatus": "Unknown",
+    "unknownHelp": "No current, verified telemetry backs an operational state for this vehicle.",
+    "provenanceLive": "Live telemetry · {{count}} verified field(s)",
+    "provenanceStale": "Last known reading — telemetry has gone quiet",
+    "provenanceUnknown": "No verified observation time — showing last durable record",
     "battery": "Battery",
     "range": "Range",
     "speed": "Speed",
@@ -10227,7 +12099,10 @@
     "chargingClimate": "Charging & climate",
     "securityLocation": "Security & location",
     "controls": "Controls",
-    "noVehicle": "No vehicle found",
+    "noVehicleTitle": "No vehicle available",
+    "noVehicle": "Register or sync a Tesla vehicle before opening the live glance workspace.",
+    "noVehicleDescription": "Vehicle status, charging, climate, security, and location evidence will appear after the first telemetry check-in.",
+    "manageVehicles": "Manage vehicles",
     "noState": "No live data for this vehicle yet",
     "defaultName": "Tesla",
     "selectVehicle": "Select vehicle",
@@ -10387,6 +12262,10 @@
     "healthPct": "Health %",
     "needMoreData": "More data needed for trend",
     "batteryDegradation": "Battery Degradation",
+    "batteryDegradationChart": {
+      "aria": "Monthly battery health trend",
+      "month": "Month"
+    },
     "noDegradation": "No degradation data",
     "battery": "Battery",
     "charging": "Charging",
@@ -10454,7 +12333,10 @@
         "home": "Home / AC",
         "supercharger": "Supercharger",
         "dc": "DC Fast"
-      }
+      },
+      "chargerType": "Charger type",
+      "energyKwh": "Energy (kWh)",
+      "session": "Session"
     },
     "chargeStatusLive": "Charge Status",
     "noChargeData": "No charge data",
@@ -10464,7 +12346,6 @@
     "timeRemaining": "Time Left",
     "energyAdded": "Added",
     "chargeRate": "Rate",
-    "batteryLevel": "Battery",
     "lastSession": "Last Session",
     "power": "Power",
     "rate": "Rate",
@@ -10514,7 +12395,8 @@
       "title": "Charge Session Detail",
       "chargerSupercharger": "Supercharger",
       "chargerDcFast": "DC Fast",
-      "chargerAcHome": "AC / Home"
+      "chargerAcHome": "AC / Home",
+      "time": "Time"
     },
     "chargingTelemetry": {
       "voltage": "Voltage",
@@ -10551,7 +12433,8 @@
       "cabin": "Cabin",
       "outside": "Outside",
       "noData": "No climate history",
-      "title": "Climate History"
+      "title": "Climate History",
+      "time": "Time"
     },
     "climate": "Climate",
     "cabin": "Cabin",
@@ -10581,7 +12464,9 @@
       "costPerDist": "Cost / {{unit}}",
       "gasSavings": "Gas Savings",
       "lifetime": "Lifetime",
-      "chartLabel": "Monthly EV charging cost breakdown"
+      "chartLabel": "Monthly EV charging cost breakdown",
+      "cost": "Cost",
+      "month": "Month"
     },
     "costForecast": {
       "noData": "No forecast data",
@@ -10589,7 +12474,11 @@
       "trend": "Trend",
       "avgPerKwh": "Avg $/kWh",
       "title": "Cost Forecast",
-      "costLabel": "Cost"
+      "costLabel": "Cost",
+      "actual": "Actual",
+      "forecast": "Forecast",
+      "month": "Month",
+      "periodType": "Period type"
     },
     "dashboardStats": {
       "vehicles": "Vehicles",
@@ -10656,7 +12545,8 @@
       "daily": "Daily",
       "rolling": "7-day avg",
       "title": "Drive Efficiency",
-      "empty": "No efficiency data yet"
+      "empty": "No efficiency data yet",
+      "date": "Date"
     },
     "driveScoreGauge": {
       "weekly": "Weekly score",
@@ -10668,7 +12558,10 @@
     },
     "score": "Score",
     "efficiency": "Efficiency",
-    "noScore": "No data yet",
+    "noScore": "No drive score yet",
+    "noScoreDescription": "Complete a drive with measured energy and distance to calculate an efficiency score.",
+    "emptyMessage": "This widget has no qualifying data yet.",
+    "emptyDescription": "It will populate after the source records relevant activity.",
     "driveTelemetry": {
       "distance": "Distance",
       "duration": "Duration",
@@ -10680,7 +12573,8 @@
       "battery": "Battery %",
       "empty": "No recent drives",
       "title": "Drive Telemetry",
-      "noTelemetry": "No telemetry for this drive"
+      "noTelemetry": "No telemetry for this drive",
+      "time": "Time"
     },
     "drivetrainHealth": {
       "score": "health",
@@ -10706,7 +12600,9 @@
       "accel": "Accel",
       "brake": "Brake",
       "lateral": "Lateral",
-      "distribution": "G-Force Distribution"
+      "distribution": "G-Force Distribution",
+      "gForce": "G-force",
+      "samples": "Samples"
     },
     "energyFlowAnimated": {
       "idle": "Idle",
@@ -10743,7 +12639,8 @@
       "noData": "No energy data available",
       "title": "Energy Stats",
       "dailyUsage": "Daily Usage",
-      "energyKwh": "Energy (kWh)"
+      "energyKwh": "Energy (kWh)",
+      "date": "Date"
     },
     "exportActiveJobs": "Active Exports",
     "exportRunningBadge": "Running",
@@ -10765,7 +12662,10 @@
       "hr": "h",
       "noData": "No state data",
       "title": "State Distribution",
-      "recentTransitions": "Recent Transitions"
+      "recentTransitions": "Recent Transitions",
+      "duration": "Duration",
+      "share": "Share",
+      "stateLabel": "State"
     },
     "geofence": {
       "noZone": "No zone",
@@ -10876,7 +12776,8 @@
       "total12m": "12-Mo Total",
       "title": "Monthly Mileage",
       "distance": "Distance",
-      "error": "Unable to load mileage data"
+      "error": "Unable to load mileage data",
+      "month": "Month"
     },
     "motorHistory": {
       "torque": "Torque",
@@ -10884,7 +12785,9 @@
       "noData": "No motor history",
       "title": "Motor History",
       "lateralG": "Lateral G",
-      "longG": "Long. G"
+      "longG": "Long. G",
+      "time": "Time",
+      "torqueNm": "Torque (Nm)"
     },
     "motorPerformance": {
       "gear": "Gear",
@@ -10946,7 +12849,8 @@
       "solar": "Solar",
       "battery": "Battery",
       "grid": "Grid",
-      "home": "Home"
+      "home": "Home",
+      "time": "Time"
     },
     "projectedRange": {
       "excellent": "Excellent",
@@ -11094,7 +12998,9 @@
       "avg": "Daily Avg",
       "total30d": "30-Day Total",
       "title": "Solar Production",
-      "solar": "Solar"
+      "solar": "Solar",
+      "date": "Date",
+      "solarKwh": "Solar (kWh)"
     },
     "speedHeatmap": {
       "peak": "Peak",
@@ -11115,7 +13021,8 @@
       "title": "Speed Profile",
       "frequency": "Frequency",
       "efficiency": "Wh/mi",
-      "avgPower": "Avg Power"
+      "avgPower": "Avg Power",
+      "speedRange": "Speed range"
     },
     "stateTimeline": {
       "min": "m",
@@ -11174,7 +13081,8 @@
       "min": "Min",
       "max": "Max",
       "noData": "No tire pressure history",
-      "title": "Tire Pressure History"
+      "title": "Tire Pressure History",
+      "time": "Time"
     },
     "tireNoReading": "No reading",
     "tireJustNow": "Just now",
@@ -11209,6 +13117,7 @@
       "hr": "h",
       "sentry": "Sentry",
       "perDay": "/day",
+      "averageUnavailable": "Average unavailable",
       "title": "Vampire Drain",
       "avgDrain": "Avg Drain",
       "eventCount": "{{count}} events · {{hours}}h total",
@@ -11285,7 +13194,9 @@
       "avgPerSession": "Avg / Session",
       "title": "Wall Connector",
       "energy": "Energy",
-      "chartLabel": "Daily Wall Connector charging energy over the last 14 days"
+      "chartLabel": "Daily Wall Connector charging energy over the last 14 days",
+      "date": "Date",
+      "energyKwh": "Energy (kWh)"
     },
     "warranty": {
       "expired": "Expired",
@@ -11399,7 +13310,8 @@
       "description": "Compute statistical anomaly bounds (mean, stddev, p5/p95) from this vehicle's recent signal history and walk through how each signal compares to the static safe-range fallback.",
       "generateButton": "Train baseline",
       "badge": "Helix"
-    }
+    },
+    "colSignal": "Signal"
   },
   "driveDetail": {
     "vsAverage": "vs your average",
@@ -11689,7 +13601,8 @@
       "recommendations": "Recommendations",
       "noRecs": "Recommendations will appear after more drives.",
       "perDriveScores": "Per-Drive Scores",
-      "noDrives": "No drives found."
+      "noDrives": "No drives found.",
+      "weeklyTrendAria": "Line chart of weekly driving score over time"
     },
     "tipNoData": "Drive your vehicle to start collecting dynamics data.",
     "tipEaseAccel": "Ease into the accelerator — gradual inputs save energy and tire wear.",
@@ -11909,6 +13822,14 @@
       "chargeSummary": "{{from}}% → {{to}}% ({{min}} min)"
     },
     "title": "Trip Planner",
+    "share": {
+      "title": "Shared destination",
+      "loading": "Importing the destination shared with TeslaSync…",
+      "coordinates": "Destination coordinates imported. Review the route settings before planning.",
+      "text": "Destination prefilled. Choose a matching search result to confirm its coordinates.",
+      "errorTitle": "Shared destination unavailable",
+      "error": "The shared item was empty, expired, or could not be read. Share it again or enter the destination manually."
+    },
     "speed": {
       "relaxed": "Relaxed (−20%)",
       "normal": "Normal",
@@ -11966,6 +13887,11 @@
     "trendDown": "Declining",
     "trendFlat": "Stable",
     "subtitle": "Your driving rating and breakdown",
+    "partial": {
+      "title": "Score evidence is partial",
+      "message_one": "1 drive is excluded because measured energy, average power, or maximum speed is unavailable.",
+      "message_other": "{{count}} drives are excluded because measured energy, average power, or maximum speed is unavailable."
+    },
     "emptyTitle": "No Scored Drives",
     "overall": "Overall Score",
     "basedOn": "Based on {{count}} drives",
@@ -12045,14 +13971,29 @@
   },
   "drives": {
     "score": "score",
+    "efficiencyGrade": "Efficiency grade",
+    "efficiencyGradeAria": "Efficiency grade {{grade}}",
+    "highEnergyUse": "High energy use",
     "noTelemetry": "No telemetry",
     "inProgress": "In progress",
     "highSpeed": "High speed",
     "avg": "Avg",
     "max": "Max",
     "title": "Drive History",
-    "subtitle": "Trip scoring, efficiency analysis, distance patterns, and performance data",
-    "searchPlaceholder": "Search drives — try \"score:D\", \"Office\", \"29.1\"",
+    "subtitle": "Measured energy intensity, route evidence, and comparable drive history",
+    "duration": "Duration",
+    "energyUsed": "Energy used",
+    "batteryChange": "Battery change",
+    "unknownStart": "Unknown start",
+    "unknownEnd": "Unknown destination",
+    "quickView": "Quick view drive",
+    "preview": {
+      "eyebrow": "Drive preview",
+      "title": "Drive details",
+      "completed": "Completed",
+      "openDetails": "Open drive details"
+    },
+    "searchPlaceholder": "Search drives — try \"grade:D\", \"Office\", \"29.1\"",
     "aiSearch": {
       "title": "Find a drive in natural language",
       "description": "Describe a drive (for example \"last Friday's trip to the coast\") and jump straight to its replay — the assistant only narrates your own drives.",
@@ -12072,6 +14013,7 @@
     "longestDrive": "Longest Drive",
     "avgDuration": "Avg Duration",
     "recentDrives": "Recent Drives",
+    "driveEvidence": "Drive evidence",
     "distance": "Distance",
     "distanceDistribution": "Trip Distance Distribution",
     "drives": "Drives",
@@ -12079,7 +14021,31 @@
     "lower": "Lower",
     "better": "better",
     "avgSpeed": "Avg Speed",
-    "efficiency": "Efficiency",
+    "efficiency": "Energy intensity",
+    "avgGrade": "Efficiency grade",
+    "energyAndCost": "Measured energy / cost",
+    "compareSelected": "Compare selected",
+    "openCompare": "Compare drives",
+    "partialEnergy": {
+      "title": "Efficiency evidence is partial",
+      "message": "{{measured}} of {{total}} drives include measured energy and at least 1 km of distance. Activity, route, and timing evidence remain complete."
+    },
+    "decision": {
+      "noBaseline": "No baseline",
+      "stable": "Stable",
+      "improved": "{{value}}% lower",
+      "regressed": "{{value}}% higher",
+      "movement": "Efficiency movement",
+      "exceptions": "Efficiency exceptions",
+      "routeCoverage": "Route context"
+    },
+    "metric": {
+      "drives": "Drives",
+      "distance": "Distance",
+      "grade": "Efficiency grade",
+      "efficiency": "Energy intensity",
+      "cost": "Cost"
+    },
     "allDrives": "All Drives",
     "truncated": "Showing the {{limit}} most recent drives in this range — the range holds more than one request can return. Narrow the dates, or use the CSV/JSON export for the full set.",
     "sortRecent": "Recent",
@@ -12249,7 +14215,8 @@
       "eligible": "Eligible drives",
       "returned": "Returned drives",
       "empty": "No eligible dated drives are available for a monthly trend.",
-      "truncated": "Showing the latest {{displayed}} of {{total}} observed months; all observed months remain included in coverage accounting."
+      "truncated": "Showing the latest {{displayed}} of {{total}} observed months; all observed months remain included in coverage accounting.",
+      "colMonth": "Month"
     },
     "distribution": {
       "sectionAria": "Per-drive recovery-ratio distribution",
@@ -12504,6 +14471,8 @@
     "geofences": "Geofences",
     "locations": "Locations",
     "recentHistory": "Recent Location History",
+    "noHistory": "No location history found.",
+    "noHistoryDescription": "Location history appears after the selected vehicle reports valid GPS positions.",
     "recentPlayback": "Recent Route Playback",
     "playbackLabel": "Recent route playback map",
     "subtitle": "Live vehicle location and recent history",
@@ -12560,7 +14529,10 @@
       "badge": "Helix",
       "generateButton": "Narrate impact",
       "emptyHint": "Select a vehicle to narrate its temperature impact."
-    }
+    },
+    "bucketAria": "Average efficiency line chart by temperature range bucket",
+    "monthlyAria": "Monthly drive count bars and average temperature line",
+    "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive"
   },
   "notifications": {
     "title": "Notifications",
@@ -12573,6 +14545,12 @@
     "inbox": {
       "selectAll": "Select all visible",
       "countLabel": "{{count}} notifications",
+      "threadCountLabel": "{{count}} threads",
+      "threadCountLabel_one": "{{count}} thread",
+      "threadCountLabel_other": "{{count}} threads",
+      "deliveryCountLabel": "{{count}} deliveries",
+      "deliveryCountLabel_one": "{{count}} delivery",
+      "deliveryCountLabel_other": "{{count}} deliveries",
       "filter": {
         "severity": "Severity",
         "vehicle": "Vehicle",
@@ -13047,9 +15025,9 @@
     "statusBar": {
       "label": "Status bar",
       "show": "Show status bar",
-      "showHelp": "Always-on footer with API health, live telemetry, vehicle, and version.",
+      "showHelp": "Always-on footer with connection health, live freshness, priority alerts, recent pages, and operational activity.",
       "iconOnly": "Always icon-only",
-      "iconOnlyHelp": "Hide labels at all widths. Otherwise the bar auto-collapses on narrow screens.",
+      "iconOnlyHelp": "Hide labels at all widths. Lower-priority tools move into More on constrained screens.",
       "shownToast": "Status bar shown",
       "hiddenToast": "Status bar hidden"
     },
@@ -13102,7 +15080,8 @@
     },
     "type": {
       "flag": "Boolean flags",
-      "configured": "Configured"
+      "configured": "Configured",
+      "label": "Type"
     },
     "filter": {
       "all": "All statuses"
@@ -13154,7 +15133,8 @@
     "mpg": "mpg",
     "effectiveTo": "Effective To",
     "current": "Current",
-    "noHistoryRows": "No price history recorded yet."
+    "noHistoryRows": "No price history recorded yet.",
+    "priceTrendDateCol": "Date"
   },
   "distance": "Distance",
   "miles": "Miles",
@@ -13198,6 +15178,7 @@
     "timezoneUserHint": "IANA tz name. Useful when travelling but you'd rather see times in your home zone.",
     "electricityCost": "Electricity Cost (per kWh)",
     "gasPrice": "Gas Price (for EV vs ICE comparison)",
+    "gasVolumeUnit": "Fuel volume unit",
     "perGallon": "/ gallon",
     "perLiter": "/ liter",
     "comparisonMPG": "Comparison Vehicle MPG",
@@ -14257,7 +16238,11 @@
     "timelineTitle": "Command Timeline",
     "showing": "{{count}} commands",
     "noFilterResults": "No commands match the current filters",
-    "noCommands": "No commands have been sent yet"
+    "noCommands": "No commands have been sent yet",
+    "col": {
+      "day": "Day"
+    },
+    "dailyActivityAria": "Stacked bar chart of daily command success and failure counts"
   },
   "dataExport": {
     "csvPreview": "CSV Preview",
@@ -14565,7 +16550,9 @@
     "collectingData": "Collecting throughput data…",
     "vehicleBreakdown": "Vehicle Breakdown",
     "vehicles": "vehicles",
-    "noVehicles": "No vehicles currently streaming"
+    "noVehicles": "No vehicles currently streaming",
+    "throughputAria": "MQTT signal throughput over time",
+    "time": "Time"
   },
   "mqttSseInspector": {
     "aiExplainer": {
@@ -14642,6 +16629,12 @@
     "recordsTitle": "Service Records",
     "noRecords": "No service records logged yet.",
     "noRecordsShort": "No service records found.",
+    "inspectRecord": "Inspect service record",
+    "preview": {
+      "eyebrow": "Service evidence",
+      "title": "Service record",
+      "completed": "Completed"
+    },
     "col": {
       "date": "Date",
       "description": "Description",
@@ -14849,7 +16842,9 @@
     "allFresh": "All signals are arriving on time.",
     "catalogTitle": "Signal Catalog",
     "refresh": "Refresh signals",
-    "neverReported": "{{never}} signals have never reported."
+    "neverReported": "{{never}} signals have never reported.",
+    "chartAria": "Signal staleness bucket counts by category",
+    "segmentLabel": "Category"
   },
   "savedViews": {
     "title": "Saved views",
@@ -15017,7 +17012,9 @@
     "autoPanicHelp": "Automatically execute panic actions when guard is triggered",
     "saveSettings": "Save Settings",
     "liveMap": "Live Vehicle Location",
-    "noLocation": "No vehicle location available",
+    "noCurrentLocation": "Current vehicle location unavailable",
+    "lockUnknown": "Lock state unavailable",
+    "sentryUnknown": "Sentry status unavailable",
     "eventTimeline": "Event Timeline",
     "unack": "unacknowledged",
     "panicConfirmTitle": "Activate Panic Mode?",
@@ -15025,7 +17022,152 @@
     "notified": "Notified",
     "acknowledge": "Ack"
   },
+  "fsd": {
+    "title": "FSD Insights",
+    "subtitle": "Reported supervised self-driving distance and its share of observed driving, with the counter evidence behind every metric.",
+    "noVehicle": "Select a vehicle to see supervised self-driving telemetry.",
+    "chooseVehicle": "Choose a vehicle",
+    "loading": "Loading supervised self-driving telemetry",
+    "notReported": "Not reported",
+    "period": {
+      "label": "Analysis period",
+      "option": "{{days}}d",
+      "optionAria": "Last {{days}} days"
+    },
+    "kpi": {
+      "section": "Supervised self-driving summary",
+      "distance": "Supervised self-driving distance",
+      "distanceHint": "Reported counter change",
+      "distanceUnavailable": "Self-driving counter not reported in this period",
+      "share": "Share of observed driving",
+      "sharePct": "{{value}}%",
+      "shareHint": "of {{distance}} observed driving",
+      "shareUnavailable": "Observed-driving counter not reported",
+      "shareNoFsd": "Needs the self-driving counter, which was not reported",
+      "shareUnaligned": "Counter spans do not align for a trustworthy share",
+      "activeDays": "Days with self-driving distance",
+      "activeDaysHint": "of {{days}} measured days",
+      "activeDaysUnavailable": "No day could be measured",
+      "noPeriod": "No period loaded yet",
+      "bestDay": "Best day",
+      "bestDayNone": "No day accumulated distance yet",
+      "bestDayUnavailable": "Nothing measured in this period"
+    },
+    "trend": {
+      "section": "Supervised self-driving distance trend",
+      "title": "Distance trend",
+      "subtitle": "Counter movement attributed to each local calendar day in {{timezone}}.",
+      "aria": "Daily supervised self-driving distance compared with total observed driving distance",
+      "colDay": "Local day",
+      "fsdSeries": "Supervised self-driving",
+      "drivingSeries": "Observed driving",
+      "value": "{{value}} {{unit}}",
+      "empty": "The supervised self-driving counter did not report a measurable distance in this period."
+    },
+    "share": {
+      "section": "Supervised self-driving adoption trend",
+      "title": "Usage share trend",
+      "subtitle": "Supervised self-driving distance as a percentage of observed driving distance.",
+      "aria": "Daily percentage of observed driving distance covered by supervised self-driving",
+      "series": "Self-driving share",
+      "empty": "Usage share needs aligned self-driving and observed-driving counters for this period."
+    },
+    "weekday": {
+      "section": "Supervised self-driving by day of week",
+      "title": "Day-of-week pattern",
+      "subtitle": "Where supervised self-driving distance lands across the week. Descriptive only.",
+      "aria": "Supervised self-driving distance totalled by day of the week",
+      "series": "Self-driving distance",
+      "colDay": "Weekday",
+      "colMeasuredDays": "Measured days",
+      "colActiveDays": "Days with distance",
+      "empty": "The supervised self-driving counter did not report a measurable distance on any weekday.",
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "unknown": "Unknown"
+    },
+    "topDays": {
+      "section": "Most active supervised self-driving days",
+      "title": "Most active days",
+      "subtitle": "Up to {{limit}} local days ranked by supervised self-driving distance.",
+      "colDate": "Local day",
+      "colDistance": "Self-driving",
+      "colDriving": "Observed driving",
+      "colShare": "Share",
+      "colFlags": "Flags",
+      "resetFlag": "Counter reset ({{resets}})",
+      "noFlags": "None",
+      "empty": "No day in this period accumulated supervised self-driving distance."
+    },
+    "confidence": {
+      "section": "Data confidence and methodology",
+      "title": "Data confidence & methodology",
+      "intro": "Everything on this page is derived from two resettable distance counters on a sparse change feed. These are the exact observations behind the numbers above.",
+      "reduced": "Reduced confidence",
+      "good": "Usable counter basis",
+      "window": "Observation window",
+      "windowValue": "{{start}} – {{end}} ({{timezone}})",
+      "fsdReported": "Self-driving counter reported",
+      "fsdReportedYes": "Yes — distance is derivable",
+      "fsdReportedNotDerivable": "Reported once, but no second reading to difference against",
+      "fsdReportedNo": "No — nothing was reported inside this period, so every self-driving distance is unavailable",
+      "measuredDays": "Days with a measured self-driving distance",
+      "measuredDaysValue": "{{measured}} of {{total}}",
+      "coverage": "Days with distance-counter observations",
+      "coverageValue": "{{observed}} of {{total}} ({{pct}}%)",
+      "gaps": "Days without a distance-counter observation",
+      "samples": "Counter observations used",
+      "samplesValue": "{{fsd}} self-driving / {{driving}} driving",
+      "rejected": "Observations rejected",
+      "rejectedValue": "{{invalid}} invalid / {{duplicate}} duplicate",
+      "resets": "Counter resets detected",
+      "resetsValue": "{{fsd}} self-driving / {{driving}} driving",
+      "fsdBaseline": "Self-driving pre-window baseline",
+      "drivingBaseline": "Observed-driving pre-window baseline",
+      "baselineYes": "Available — first in-window change is attributable",
+      "baselineNo": "Missing — the first observation is not counted as distance",
+      "denominator": "Observed-driving denominator",
+      "denominatorYes": "Available",
+      "denominatorNo": "Not reported — usage share is unavailable",
+      "shareBasis": "Usage-share counter basis",
+      "shareBasisYes": "Aligned — both counters cover the same derivable span",
+      "shareBasisNo": "Not aligned — standalone distances remain visible, but usage share is unavailable",
+      "historyGuard": "Historical normalization guard",
+      "historyGuardExcluded": "Active — {{excluded}} legacy observations with unknown unit provenance were excluded",
+      "historyGuardTrusted": "Active — all included observations use normalization contract v{{version}} or newer",
+      "historyGuardUnavailable": "Unavailable — historical unit provenance could not be verified",
+      "firstObservation": "First observation",
+      "lastObservation": "Last observation",
+      "fsdLastObservation": "Last self-driving observation",
+      "noFsdData": "Every supervised self-driving distance on this page is shown as “not reported”, because the counter produced no derivable reading in this window. That is not the same as the vehicle driving itself zero metres.",
+      "clamped": "A raw share exceeded 100% because the two counters were reset independently, so it was capped at 100%.",
+      "shareBasisWarning": "Usage share is unavailable because the two counters begin from different provable points. Standalone distances are not affected.",
+      "historicalGuardWarning": "{{count}} legacy distance-counter observations were excluded because their unit-normalization provenance cannot be proven.",
+      "scopeNote": "This is supervised self-driving distance telemetry. It cannot describe interventions, disengagements, safety performance, or per-drive attribution.",
+      "timezoneNote": "Days are your browser’s local calendar days; each observed change is attributed to the day of the later reading.",
+      "unitNote": "The API stores and returns canonical SI meters; values are converted to your display unit only when rendered."
+    },
+    "method": {
+      "delta": "Tesla only transmits a signal when it changes. Distance is the difference between consecutive readings of the counter, never the counter value itself.",
+      "absence": "A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero means at least one distance counter reported that day and the self-driving counter did not move — the two are never collapsed together.",
+      "absenceActive": "The self-driving counter produced no derivable reading in this window, so its distances read “not reported”. Absence of a derivable counter reading is not evidence of zero supervised self-driving distance.",
+      "reset": "The counters are user-resettable trip meters. When a value drops, the decrease is recorded as a reset and contributes zero distance rather than a negative or inflated number.",
+      "resetSeen": "A counter reset was detected in this period. The drop contributes zero distance — the distance travelled between the reset and the next reading cannot be known.",
+      "baseline": "Attribution needs a reading from before the window. Without one, the first in-window reading is an anchor, not distance travelled. Usage share is shown only when both counters have the same provable basis.",
+      "share": "Usage share divides supervised self-driving distance by observed-driving distance only when both counters cover the same provable span. An unavailable share is never rendered as zero.",
+      "shareUnavailable": "The two counters do not cover the same provable span in this period. Their standalone distances remain available, but dividing them would be misleading, so usage share is not reported.",
+      "provenance": "Only signal-history rows carrying a proven canonical normalization version are used. Legacy rows with unknown unit provenance are excluded rather than guessed or silently rescaled.",
+      "limits": "No intervention, disengagement, safety, or autonomy-quality metric is available from this telemetry, and a day’s distance cannot be tied to a specific drive."
+    }
+  },
   "safety": {
+    "openFsdInsights": "Open FSD Insights",
+    "openFsdInsightsHint": "Daily trend & data confidence",
     "liveSignals": "Live Safety Signals",
     "selectVehicleCta": "Go to vehicles",
     "buckled": "Buckled",
@@ -15045,7 +17187,10 @@
     "milesAutopilot": "miles (autopilot)",
     "distanceSinceReset": "Distance Since Reset",
     "selfDrivingDistance": "Self-Driving Distance",
-    "distanceAutopilot": "{{unit}} (autopilot)"
+    "distanceAutopilot": "{{unit}} (autopilot)",
+    "noHistory": "No safety settings history has been recorded.",
+    "noHistoryDescription": "Snapshots appear after the selected vehicle reports driver-assistance and safety configuration telemetry.",
+    "chartTitle": "Safety States"
   },
   "softwareUpdates": {
     "title": "Software Updates",
@@ -15071,7 +17216,8 @@
     "cadence": {
       "title": "Update Cadence",
       "series": "Updates",
-      "empty": "No update activity in this range"
+      "empty": "No update activity in this range",
+      "colMonth": "Month"
     },
     "breakdown": {
       "title": "By Status",
@@ -15103,10 +17249,41 @@
       "badge": "Helix",
       "description": "Ask Helix to explain the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation, all-tires-trending suggesting weather rather than puncture, single-corner slow-leak signature), and any actionable threshold crossing. The per-corner pressures and thresholds are the same the gauges below show; the narrator only explains them and is honest that the slope is a descriptive linear extrapolation, not a forecast.",
       "generateButton": "Narrate trend"
-    }
+    },
+    "pressureHistoryAria": "Tire pressure over time for all four positions"
   },
   "vehicles": {
     "compareButton": "Compare vehicles",
+    "quickViewAria": "Quick view {{name}}",
+    "lastKnown": "Last known",
+    "statusPartialUnverified": "{{unverified}} vehicle(s) have retained state without a current live verification and are excluded from the breakdown.",
+    "preview": {
+      "eyebrow": "Vehicle preview",
+      "title": "Vehicle details",
+      "security": "Security",
+      "charging": "Charging",
+      "openDetails": "Open vehicle details",
+      "telemetry": "Telemetry",
+      "noReading": "No reading available for this vehicle",
+      "lastKnownAged": "Last known: {{value}} ({{age}}) — not currently verified",
+      "lastKnown": "Last known: {{value}} — not currently verified",
+      "observedAt": "{{summary}} · last real observation {{age}}",
+      "observedUnknown": "{{summary}} · no verified observation time",
+      "trust": {
+        "live": "Live",
+        "liveHelp": "Current, verified telemetry",
+        "unverified": "Unverified",
+        "unverifiedHelp": "State returned, but nothing current backs it",
+        "stale": "Last known",
+        "staleHelp": "Refresh failed; a retained reading is being shown",
+        "failed": "Unreachable",
+        "failedHelp": "The live-state request failed. This is a fact about our pipeline, not the vehicle.",
+        "missing": "No state",
+        "missingHelp": "The backend answered and has no state yet. Unknown, not offline.",
+        "checking": "Checking",
+        "checkingHelp": "Resolving live state…"
+      }
+    },
     "aiPaintPreview": {
       "title": "Draft a Helix paint preview",
       "description": "Ask Helix to draft a propose-only paint-color image prompt for this vehicle. Helix only sees the redacted vehicle context (model, trim, current exterior color) — never the display name, VIN, license plate, or location. The draft is never applied automatically; review the proposed image prompt here, then use the existing Color setting below to apply the new paint if you'd like to keep it.",
@@ -15254,7 +17431,10 @@
         "chargeUnit": "Charge Unit",
         "tirePressure": "Tire Pressure",
         "time24h": "24h Time"
-      }
+      },
+      "batteryAria": "Battery current and remaining levels bar chart",
+      "driveTrendAria": "Recent drive distance and duration area chart",
+      "speedHistoryAria": "Vehicle speed history area chart"
     },
     "syncToast": "Vehicles synced successfully",
     "syncFailed": "Failed to sync vehicles",
@@ -15280,6 +17460,10 @@
     "overview": "Fleet overview",
     "statusBreakdown": "Fleet Status",
     "noStatusData": "No fleet status data yet",
+    "noStatusDataDescription": "Availability and readiness appear after at least one registered vehicle reports live state.",
+    "noBatteryReadings": "Live battery readings have not arrived for the registered fleet.",
+    "noBatteryReadingsDescription": "Readings appear after vehicles reconnect and send a telemetry update.",
+    "refreshLiveState": "Refresh live state",
     "battery": "Battery",
     "batteryLevel": "Battery level",
     "range": "Range",
@@ -15720,6 +17904,30 @@
   "addressInput": {
     "label": "Address"
   },
+  "signalHistory": {
+    "emptyTitle": "No signal samples",
+    "emptyMessage": "No signal data matches the selected signals and time range.",
+    "emptyDescription": "Expand the time range or choose another signal, then run the query again."
+  },
+  "signalChart": {
+    "waitingLive": "Waiting for live signal data…",
+    "waitingLiveDescription": "Samples will appear when the selected vehicle publishes the chosen signals.",
+    "emptyRange": "No signal samples were recorded in this time range.",
+    "emptyRangeDescription": "Expand the range or select another signal to inspect available history.",
+    "histAria": "Historical signal chart",
+    "liveAria": "Live signal stream chart"
+  },
+  "signalStats": {
+    "emptyMessage": "No aggregate statistics are available.",
+    "emptyDescription": "Select a signal with numeric samples or expand the queried time range."
+  },
+  "signalExplorer": {
+    "start": {
+      "title": "Pick signals and click Explore",
+      "message": "Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.",
+      "description": "Historical queries use the selected range; Live begins streaming new samples without changing it."
+    }
+  },
   "signalQuery": {
     "from": "From",
     "to": "To",
@@ -15906,6 +18114,11 @@
         "githubUrl": "GitHub issue URL",
         "saveUrl": "Save URL",
         "forward": "Forward to GitHub"
+      },
+      "bulk": {
+        "triage": "Mark triaged",
+        "close": "Close selected",
+        "reopen": "Reopen selected"
       },
       "maskedEmail": "Reporter email, click to reveal"
     }
@@ -16260,6 +18473,7 @@
     "refresh": "Refresh",
     "lastUpdated": "Updated {{when}}",
     "windowSeconds": "Last {{seconds}}s window",
+    "windowUtcDay": "UTC day",
     "windowInstant": "Live snapshot",
     "resetIn": "Refills in {{duration}}",
     "usage": "{{current}} / {{limit}}",
@@ -16548,17 +18762,16 @@
     "subtitle": "Manage local browsing history surfaces. These settings only affect this browser."
   },
   "recentPages": {
-    "widgetTitle": "Recently Viewed",
     "empty": "Pages you visit will appear here for quick access.",
     "shortMinute": "m",
     "shortHour": "h",
     "shortDay": "d",
     "justNow": "Just now",
     "clearTitle": "Recently viewed pages",
-    "clearBody": "Wipe the list of pages used by the dashboard widget and the Recent section in the command palette.",
+    "clearBody": "Wipe the list of pages used by the status bar and the Recent section in the command palette.",
     "clearButton": "Clear recent pages",
     "clearConfirmTitle": "Clear recent pages?",
-    "clearConfirmBody": "This will wipe the list immediately. The dashboard widget and palette Recent section will be empty until you visit new pages.",
+    "clearConfirmBody": "This will wipe the list immediately. The status bar and palette Recent section will be empty until you visit new pages.",
     "clearConfirmCta": "Clear pages",
     "cleared": "Recent pages cleared",
     "storedCount_one": "{{count}} entry stored",
@@ -16613,10 +18826,23 @@
     },
     "detail": {
       "title": "Throttles & workers"
+    },
+    "empty": {
+      "compression": "No compression statistics are available yet.",
+      "compressionDescription": "Storage savings appear after TimescaleDB compression policies process eligible telemetry chunks.",
+      "exportQueue": "No export jobs are queued.",
+      "exportQueueDescription": "New export requests will appear here while they are pending, processing, or completing.",
+      "notifications": "No notification activity has been recorded.",
+      "notificationsDescription": "Delivery totals and channel health appear after alerts or system messages send notifications.",
+      "telemetry": "Telemetry service health has not reported yet.",
+      "telemetryDescription": "Connection mode, vehicle counts, and signal throughput appear after the telemetry service publishes health data."
     }
   },
   "automationList": {
     "title": "Automations (list)",
+    "readOnly": {
+      "title": "Bulk automation controls are read-only"
+    },
     "noun": {
       "one": "automation",
       "other": "automations"
@@ -16721,6 +18947,13 @@
       "cta": "View drives"
     },
     "resetDateRange": "Reset date range",
+    "inspect": "Inspect {{location}}",
+    "unknown": "Unknown location",
+    "lastVisited": "Last visited",
+    "preview": {
+      "eyebrow": "Location evidence",
+      "lastVisited": "Last visited {{date}}"
+    },
     "aiAutoName": {
       "title": "Suggest a name for this location",
       "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
@@ -16754,7 +18987,9 @@
       "status": "Status breakdown",
       "noStatus": "No rules to summarise yet",
       "topSignals": "Top monitored signals",
-      "noSignals": "No monitored signals yet"
+      "noSignals": "No monitored signals yet",
+      "ruleCount": "Rules",
+      "severityLabel": "Severity"
     },
     "kind": {
       "signal": "Signal",
@@ -17215,7 +19450,9 @@
       "support": "{{count}} samples · route allowance {{allowance}}",
       "title": "Supported route-window comparisons",
       "windowValue": "{{start}}–{{end}}"
-    }
+    },
+    "colLabel": "Category",
+    "profileTitle": "Arrival Reliability Profile"
   },
   "destinationTransitions": {
     "bands": {
@@ -17492,7 +19729,9 @@
       },
       "subtitle": "Accepted transition starts grouped by weekday in {{timeZone}}.",
       "title": "Vehicle-timezone weekday profile"
-    }
+    },
+    "colLabel": "Category",
+    "profileTitle": "Destination Transition Profile"
   },
   "journeyFragmentation": {
     "title": "Journey Fragmentation",
@@ -17670,7 +19909,28 @@
     "efficiencyValue": "{{energy}} / {{distance}}",
     "trendValue": "{{sign}}{{energy}} / {{distance}} / yr",
     "subtitle": "Vehicle-local calendar normalization with explicit evidence accounting and descriptive support",
-    "kpis": "Seasonal efficiency summary metrics",
+    "kpis": {
+      "aria": "Seasonal efficiency evidence summary",
+      "title": "Observed seasonal evidence",
+      "subtitle": "Canonical intensity is Wh/m; display conversion follows the selected distance and energy preferences.",
+      "included": "Included drives",
+      "returned": "{{count}} returned · {{excluded}} excluded",
+      "actual": "Observed intensity",
+      "distance": "{{distance}} observed distance",
+      "fit": "Fit status",
+      "support": "{{ratio}} samples / 6 parameters",
+      "trend": "Descriptive trend",
+      "trendHint": "deseasonalized Wh/m per year",
+      "rSquared": "In-sample R²",
+      "rSquaredHint": "descriptive fit, not a forward claim",
+      "coverage": "Local coverage",
+      "coverageHint": "{{days}} days · {{weeks}} weeks · {{years}} years",
+      "timeZone": "Vehicle timezone: {{timeZone}}",
+      "evidenceBand": "Evidence band: {{band}} ({{index}}/100)",
+      "recency": "Latest included: {{days}} days ago",
+      "capReached": "Latest returned 1,000-row window reached",
+      "capNotReached": "Returned window below the 1,000-row cap"
+    },
     "analyzed": "Drives Modeled",
     "actual": "Actual Intensity",
     "expectedValue": "expected: {{value}}",
@@ -17722,28 +19982,6 @@
       "thin": "Thin",
       "moderate": "Moderate",
       "strong": "Strong"
-    },
-    "kpis": {
-      "aria": "Seasonal efficiency evidence summary",
-      "title": "Observed seasonal evidence",
-      "subtitle": "Canonical intensity is Wh/m; display conversion follows the selected distance and energy preferences.",
-      "included": "Included drives",
-      "returned": "{{count}} returned · {{excluded}} excluded",
-      "actual": "Observed intensity",
-      "distance": "{{distance}} observed distance",
-      "fit": "Fit status",
-      "support": "{{ratio}} samples / 6 parameters",
-      "trend": "Descriptive trend",
-      "trendHint": "deseasonalized Wh/m per year",
-      "rSquared": "In-sample R²",
-      "rSquaredHint": "descriptive fit, not a forward claim",
-      "coverage": "Local coverage",
-      "coverageHint": "{{days}} days · {{weeks}} weeks · {{years}} years",
-      "timeZone": "Vehicle timezone: {{timeZone}}",
-      "evidenceBand": "Evidence band: {{band}} ({{index}}/100)",
-      "recency": "Latest included: {{days}} days ago",
-      "capReached": "Latest returned 1,000-row window reached",
-      "capNotReached": "Returned window below the 1,000-row cap"
     },
     "calendar": {
       "title": "Vehicle-local calendar coverage",
@@ -20191,6 +22429,9 @@
     }
   },
   "fleetOps": {
+    "readOnly": {
+      "title": "Fleet Operations is read-only"
+    },
     "actions": {
       "reserve": "New reservation"
     },
@@ -20681,7 +22922,9 @@
       "selectToPreview": "Select a pack to run its sandbox preview.",
       "truncatedSuffix": " · truncated by budget",
       "usingFullGrant": "Preview mode: simulating full requested-capability grant (not installed)",
-      "usingInstalledGrant": "Using installed capability grant"
+      "usingInstalledGrant": "Using installed capability grant",
+      "row": "Sample",
+      "value": "Value"
     },
     "security": {
       "browserNote": "Ed25519 in Web Crypto requires a secure context (HTTPS or localhost) and a modern browser (roughly Chrome/Edge 137+, Firefox 130+, Safari 17+ — exact floors vary by OS). Older or locked-down browsers cannot install signed packs; this is by design, not a bug.",
@@ -21054,6 +23297,20 @@
     "subtitle": "A canonical, offline-verifiable JSON export of this evidence-ranked analysis — signal evidence, ranked hypotheses, limitations, and a SHA-256 integrity digest, never a diagnosis or proof of causation.",
     "title": "Service Evidence Pack"
   },
+  "entityContext": {
+    "title": "Related context",
+    "vehicle": "Vehicle",
+    "drives": "Drive history",
+    "charging": "Charging sessions",
+    "location": "Charge location",
+    "locations": "Visited locations",
+    "startLocation": "Start location",
+    "endLocation": "Destination",
+    "alerts": "Alerts",
+    "service": "Service history",
+    "telemetry": "Telemetry evidence",
+    "evidencePack": "Build service evidence pack"
+  },
   "actionCenter": {
     "page": {
       "title": "Action Center",
@@ -21094,9 +23351,13 @@
     "source": {
       "active_alerts": "Active alerts",
       "advanced_intelligence": "Advanced intelligence",
+      "battery_health": "Battery health",
       "charging_reliability": "Charging reliability",
+      "drive_efficiency": "Drive efficiency",
       "fleet_maintenance": "Fleet maintenance",
-      "signal_health": "Signal health"
+      "signal_health": "Signal health",
+      "system_health": "System health",
+      "vehicle_readiness": "Vehicle readiness"
     },
     "state": {
       "open": "Open",
@@ -21113,6 +23374,17 @@
       "available": "Available",
       "degraded": "Degraded",
       "unavailable": "Unavailable"
+    },
+    "provenance": {
+      "notification_logs": "Alert delivery history",
+      "charging_sessions": "Charging history",
+      "command_logs": "Vehicle command history",
+      "drives": "Completed drive history",
+      "fleet_maintenance_work_orders": "Fleet maintenance work orders",
+      "signal_log": "Telemetry history",
+      "status_incidents": "System incident history",
+      "tesla_battery_passport_ledger": "Issued Battery Passports",
+      "method": "Ranked from persisted evidence without synthetic substitutes."
     },
     "providers": {
       "title": "Source coverage",
@@ -21167,6 +23439,11 @@
     "toast": {
       "success": "Action applied",
       "successMessage": "Your decision inbox state was updated.",
+      "restoreSuccess": "Recommendation restored",
+      "restoreSuccessMessage": "The recommendation is back in the open queue.",
+      "undoSuccess": "Action undone",
+      "undoSuccessMessage": "The recommendation was restored to the open queue.",
+      "undoError": "Could not undo action",
       "error": "Action not applied",
       "errorMessage": "Refresh and try again."
     }
@@ -21272,9 +23549,13 @@
         "body": "Rounds use local aggregates only. No raw trips, locations, video, command payloads, or gradients are uploaded.",
         "title": "Raw vehicle data never leaves this instance"
       },
-      "status": { "none": "No round" },
+      "status": {
+        "none": "No round"
+      },
       "subtitle": "Manage subject-scoped local aggregate model rounds within explicit privacy budgets.",
-      "task": { "efficiency": "Efficiency" },
+      "task": {
+        "efficiency": "Efficiency"
+      },
       "title": "Federated Learning Studio",
       "toast": "Privacy-preserving local round completed",
       "unsupported": {
@@ -21307,7 +23588,9 @@
         "causality": "Proof that firmware caused a measured change",
         "deployment": "Firmware deployment or rollback commands"
       },
-      "version": { "unsupported": "Version unsupported" }
+      "version": {
+        "unsupported": "Version unsupported"
+      }
     },
     "forensics": {
       "discrepancy": "Cost discrepancy",
@@ -21319,7 +23602,9 @@
         "body": "Meter, tariff, loss, and cost values are displayed only when the backend can support them.",
         "title": "Null means unsupported, not zero"
       },
-      "reconciliation": { "title": "Session reconciliation" },
+      "reconciliation": {
+        "title": "Session reconciliation"
+      },
       "recordedCost": "Recorded cost",
       "session": "Session",
       "started": "Started",
@@ -21332,7 +23617,9 @@
       },
       "vehicleEnergy": "Vehicle energy"
     },
-    "form": { "displayEquivalent": "Display equivalent: {{value}}" },
+    "form": {
+      "displayEquivalent": "Display equivalent: {{value}}"
+    },
     "hazards": {
       "cell": "Coarse cell",
       "clusters": {
@@ -21454,7 +23741,9 @@
         "empty": "No detailed evidence was returned.",
         "title": "Finding evidence"
       },
-      "findings": { "title": "Explainable findings" },
+      "findings": {
+        "title": "Explainable findings"
+      },
       "subtitle": "Explainable command, identity, and telemetry-integrity signals without personal attribution.",
       "title": "Behavioral Sentinel",
       "unsupported": {
@@ -21488,7 +23777,9 @@
         "subtitle": "Model arrival and service assumptions alongside electrical constraints.",
         "title": "Site scenario"
       },
-      "mitigation": { "effect": "Queue {{queue}}% · Peak {{peak}}" },
+      "mitigation": {
+        "effect": "Queue {{queue}}% · Peak {{peak}}"
+      },
       "mitigations": {
         "empty": "No supported mitigations were returned.",
         "title": "Ranked mitigations and assumptions"
@@ -21515,7 +23806,9 @@
     },
     "survival": {
       "adjustedP50": "adjusted P50 {{value}}",
-      "cards": { "title": "Component survival cards" },
+      "cards": {
+        "title": "Component survival cards"
+      },
       "empty": "No component survival estimates are available.",
       "evidenceCount": "{{count}} evidence",
       "intervention": "Intervention sensitivity",
@@ -21576,7 +23869,9 @@
       },
       "withinBudget": "Within budget"
     },
-    "toast": { "error": "Advanced intelligence request failed" },
+    "toast": {
+      "error": "Advanced intelligence request failed"
+    },
     "twin": {
       "baseline": {
         "capacity": "Usable battery",
@@ -21629,7 +23924,9 @@
       "short": "Unsupported",
       "title": "Explicitly unsupported"
     },
-    "vehicle": { "empty": "Select a vehicle to load intelligence." }
+    "vehicle": {
+      "empty": "Select a vehicle to load intelligence."
+    }
   },
   "serviceIntelligence": {
     "actions": {
@@ -22946,5 +25243,40 @@
       "default_estimate": "Default Estimate",
       "unknown": "Unknown"
     }
+  },
+  "coverage": {
+    "destinations": {
+      "aria": "Horizontal bar chart showing routed field counts per destination"
+    }
+  },
+  "departureForecast": {
+    "colSlot": "Time",
+    "next24Title": "Next-24h Departure Forecast"
+  },
+  "energyFlow": {
+    "dailyEfficiency": {
+      "aria": "Daily driving efficiency over time"
+    },
+    "distance": {
+      "aria": "Daily driving distance over time"
+    },
+    "usage": {
+      "aria": "Daily energy usage over time"
+    }
+  },
+  "media": {
+    "sourceAria": "Pie chart of media source distribution",
+    "volumeAria": "Media volume over time area chart"
+  },
+  "originConcentration": {
+    "colOrigin": "Origin",
+    "title": "Origin Concentration"
+  },
+  "speedSweetSpot": {
+    "colBand": "Speed band",
+    "consumptionAria": "Qualified and unqualified energy consumption across speed bands",
+    "consumptionTitle": "Consumption vs Speed",
+    "evidenceAria": "Individual drive evidence scatter plot across speed and energy consumption",
+    "evidenceTitle": "Drive Evidence"
   }
 }

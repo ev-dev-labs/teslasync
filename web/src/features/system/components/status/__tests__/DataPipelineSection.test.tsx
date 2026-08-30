@@ -201,7 +201,8 @@ describe('DataPipelineSection', () => {
     renderSection()
     expand()
 
-    expect(await screen.findByText('No export jobs in queue')).toBeInTheDocument()
+    expect(await screen.findByText('No export jobs are queued.')).toBeInTheDocument()
+    expect(screen.getByText(/New export requests will appear here/)).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
@@ -215,7 +216,8 @@ describe('DataPipelineSection', () => {
     expand()
 
     expect(await screen.findByText('Compression Statistics')).toBeInTheDocument()
-    expect(screen.getByText('No compression statistics available')).toBeInTheDocument()
+    expect(screen.getByText('No compression statistics are available yet.')).toBeInTheDocument()
+    expect(screen.getByText(/TimescaleDB compression policies/)).toBeInTheDocument()
     expect(screen.getByText('still-here.csv')).toBeInTheDocument()
   })
 
@@ -248,6 +250,6 @@ describe('DataPipelineSection', () => {
     // The compression half still renders from its own successful query...
     expect(screen.getByText('Compression Statistics')).toBeInTheDocument()
     // ...and we must NOT claim the queue is empty when the request errored.
-    expect(screen.queryByText('No export jobs in queue')).not.toBeInTheDocument()
+    expect(screen.queryByText('No export jobs are queued.')).not.toBeInTheDocument()
   })
 })

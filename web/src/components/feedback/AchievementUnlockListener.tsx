@@ -1,7 +1,34 @@
-import { useEffect, useRef } from 'react'
+import { Suspense, lazy, useEffect, useRef } from 'react'
 import { useAchievementUnlocks } from '@/api/hooks/useAchievementUnlocks'
 import { useAchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs'
-import { AchievementUnlockedToastStack } from './AchievementUnlockedToast'
+import { OptionalSurfaceBoundary } from './_OptionalSurfaceBoundary'
+
+// CLEAN-06 — the celebration STACK is deferred, the SUBSCRIPTION is not.
+//
+// This listener is mounted at the app root, so anything it statically imports
+// is cold-start weight. Importing the stack eagerly pulled
+// `AchievementUnlockedToast` and, through it,
+// `features/analytics/components/AchievementBadge` into the startup closure:
+// a feature-domain component that can only ever paint after an SSE
+// `achievement_unlocked` event arrives, i.e. never during first paint.
+//
+// The hook subscription, the SSE queue draining, the chime and the seen-set
+// bookkeeping all stay eager and synchronous, so no event can be missed and
+// the audible celebration is not delayed. Only the visual stack is fetched,
+// and only once there is something to show — `Suspense fallback={null}` keeps
+// the intermediate frame identical to the "no unlocks" frame that renders
+// today.
+//
+// A lazy import can also REJECT — a stale hashed chunk after a deploy, or an
+// offline first-unlock. Suspense does not catch that; the rejection is thrown
+// during render and, with only the root <ErrorBoundary> above it, would
+// replace the entire application with an error page (and, because the shared
+// boundary treats chunk errors as recoverable, force a hard reload five
+// seconds later) — all for a decorative toast. `OptionalSurfaceBoundary`
+// contains it: renders nothing, reloads nothing, reports once.
+const AchievementUnlockedToastStack = lazy(() =>
+  import('./AchievementUnlockedToast').then((m) => ({ default: m.AchievementUnlockedToastStack })),
+)
 
 type WindowWithLegacyAudio = Window & {
   webkitAudioContext?: typeof AudioContext
@@ -107,5 +134,16 @@ export function AchievementUnlockListener() {
   // keep the hook subscription live so the SSE queue is drained.
   if (!prefs.showToasts) return null
 
-  return <AchievementUnlockedToastStack events={recent} onDismiss={dismiss} />
+  // Nothing queued: do not fetch the stack chunk at all. This is what keeps a
+  // normal session — which never unlocks anything — from paying for the
+  // celebration UI.
+  if (recent.length === 0) return null
+
+  return (
+    <OptionalSurfaceBoundary name="AchievementCelebration">
+      <Suspense fallback={null}>
+        <AchievementUnlockedToastStack events={recent} onDismiss={dismiss} />
+      </Suspense>
+    </OptionalSurfaceBoundary>
+  )
 }

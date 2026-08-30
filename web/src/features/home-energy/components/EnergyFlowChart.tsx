@@ -49,11 +49,13 @@ export function EnergyFlowChart({ slots }: EnergyFlowChartProps) {
       title={t('homeEnergy.flow.title', 'Energy Flow Schedule')}
       subtitle={t('homeEnergy.flow.subtitle', 'Solar, household load, vehicle charging, battery, and grid — per 15-minute slot')}
       ariaLabel={t('homeEnergy.flow.aria', 'Multi-series chart of solar generation, household load, vehicle charging, battery, and grid power across the planning horizon')}
+      chartKey="home-energy-flow-schedule"
       empty={rows.length === 0}
       height={CHART_HEIGHT}
     >
-      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <ComposedChart data={rows} margin={chartMarginLabeled}>
+      {({ hiddenSeries }) => (
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+          <ComposedChart data={rows} margin={chartMarginLabeled}>
           {chartGrid}
           <XAxis dataKey="time" tickFormatter={(v: string) => formatTime(v)} {...axisTick} />
           <YAxis tickFormatter={(v: number) => formatPower(v)} {...axisTick} />
@@ -66,15 +68,17 @@ export function EnergyFlowChart({ slots }: EnergyFlowChartProps) {
             stroke={CHART_COLORS[2]}
             fill={CHART_COLORS[2]}
             fillOpacity={0.25}
+            hide={hiddenSeries?.isHidden('solarW')}
           />
-          <Line type="monotone" dataKey="loadW" name={t('homeEnergy.flow.load', 'Household load')} stroke={CHART_COLORS[0]} dot={false} strokeWidth={2} />
-          <Line type="monotone" dataKey="vehicleChargeW" name={t('homeEnergy.flow.vehicles', 'Vehicle charging')} stroke={CHART_COLORS[1]} dot={false} strokeWidth={2} />
-          <Line type="monotone" dataKey="batteryPowerW" name={t('homeEnergy.flow.battery', 'Powerwall (+charge/-discharge)')} stroke={CHART_COLORS[3]} dot={false} strokeWidth={2} strokeDasharray="4 2" />
-          <Line type="monotone" dataKey="gridImportW" name={t('homeEnergy.flow.gridImport', 'Grid import')} stroke={CHART_COLORS[4]} dot={false} strokeWidth={1.5} />
-          <Line type="monotone" dataKey="gridExportW" name={t('homeEnergy.flow.gridExport', 'Grid export (shown negative)')} stroke={CHART_COLORS[5]} dot={false} strokeWidth={1.5} />
+          <Line type="monotone" dataKey="loadW" name={t('homeEnergy.flow.load', 'Household load')} stroke={CHART_COLORS[0]} dot={false} strokeWidth={2} hide={hiddenSeries?.isHidden('loadW')} />
+          <Line type="monotone" dataKey="vehicleChargeW" name={t('homeEnergy.flow.vehicles', 'Vehicle charging')} stroke={CHART_COLORS[1]} dot={false} strokeWidth={2} hide={hiddenSeries?.isHidden('vehicleChargeW')} />
+          <Line type="monotone" dataKey="batteryPowerW" name={t('homeEnergy.flow.battery', 'Powerwall (+charge/-discharge)')} stroke={CHART_COLORS[3]} dot={false} strokeWidth={2} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('batteryPowerW')} />
+          <Line type="monotone" dataKey="gridImportW" name={t('homeEnergy.flow.gridImport', 'Grid import')} stroke={CHART_COLORS[4]} dot={false} strokeWidth={1.5} hide={hiddenSeries?.isHidden('gridImportW')} />
+          <Line type="monotone" dataKey="gridExportW" name={t('homeEnergy.flow.gridExport', 'Grid export (shown negative)')} stroke={CHART_COLORS[5]} dot={false} strokeWidth={1.5} hide={hiddenSeries?.isHidden('gridExportW')} />
           <ChartLegend />
-        </ComposedChart>
-      </ResponsiveContainer>
+          </ComposedChart>
+        </ResponsiveContainer>
+      )}
     </ChartContainer>
   );
 }

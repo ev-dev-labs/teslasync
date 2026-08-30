@@ -104,7 +104,7 @@ export function TrueCostCumulativeChart({
               </AreaChart>
             </ResponsiveContainer>
           ) : (
-            <EmptyState message={t('tco.charts.cumulative.empty', 'No supported monthly fuel deltas are available.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.charts.cumulative.empty', 'No supported monthly fuel deltas are available.')} />
           )}
         </TrueCostSectionBody>
       </ChartContainer>

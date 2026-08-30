@@ -37,12 +37,14 @@ const H = vi.hoisted(() => ({
 
 vi.mock('recharts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('recharts')>()
+  const Legend = (props: Record<string, unknown>) => {
+    H.legendProps = props
+    return null
+  }
+  Legend.displayName = 'Legend'
   return {
     ...actual,
-    Legend: (props: Record<string, unknown>) => {
-      H.legendProps = props
-      return null
-    },
+    Legend,
   }
 })
 
@@ -153,24 +155,24 @@ describe('toggleFromLegend', () => {
 describe('LegendSeriesLabel', () => {
   it('renders the label text and derives the series key from the dataKey', () => {
     render(<LegendSeriesLabel resolved={makeSource()} value="Speed" entry={{ dataKey: 'speed' }} />)
-    const span = screen.getByText('Speed')
-    expect(span).toHaveAttribute('data-series-key', 'speed')
+    const button = screen.getByRole('button', { name: 'Speed' })
+    expect(button).toHaveAttribute('data-series-key', 'speed')
   })
 
   it('marks a hidden interactive series dimmed + pressed with line-through', () => {
     render(<LegendSeriesLabel resolved={makeSource(['speed'])} value="Speed" entry={{ dataKey: 'speed' }} />)
-    const span = screen.getByText('Speed')
-    expect(span).toHaveAttribute('aria-pressed', 'true')
-    expect(span).toHaveAttribute('data-series-hidden', 'true')
-    expect(span).toHaveStyle({ opacity: '0.4', textDecoration: 'line-through', cursor: 'pointer' })
+    const button = screen.getByRole('button', { name: 'Speed' })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    expect(button).toHaveAttribute('data-series-hidden', 'true')
+    expect(button).toHaveStyle({ opacity: '0.4', textDecoration: 'line-through', cursor: 'pointer' })
   })
 
   it('marks a visible interactive series un-dimmed + not pressed', () => {
     render(<LegendSeriesLabel resolved={makeSource([])} value="Speed" entry={{ dataKey: 'speed' }} />)
-    const span = screen.getByText('Speed')
-    expect(span).toHaveAttribute('aria-pressed', 'false')
-    expect(span).toHaveAttribute('data-series-hidden', 'false')
-    expect(span).toHaveStyle({ opacity: '1', cursor: 'pointer' })
+    const button = screen.getByRole('button', { name: 'Speed' })
+    expect(button).toHaveAttribute('aria-pressed', 'false')
+    expect(button).toHaveAttribute('data-series-hidden', 'false')
+    expect(button).toHaveStyle({ opacity: '1', cursor: 'pointer' })
   })
 
   it('renders passively (no aria-pressed, default cursor) when there is no toggle source', () => {
@@ -183,9 +185,16 @@ describe('LegendSeriesLabel', () => {
 
   it('keys off the label when the entry carries no dataKey', () => {
     render(<LegendSeriesLabel resolved={makeSource(['Power'])} value="Power" />)
-    const span = screen.getByText('Power')
-    expect(span).toHaveAttribute('data-series-key', 'Power')
-    expect(span).toHaveAttribute('aria-pressed', 'true')
+    const button = screen.getByRole('button', { name: 'Power' })
+    expect(button).toHaveAttribute('data-series-key', 'Power')
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+  })
+
+  it('toggles from the focusable legend control', () => {
+    const source = makeSource()
+    render(<LegendSeriesLabel resolved={source} value="Speed" entry={{ dataKey: 'speed' }} />)
+    screen.getByRole('button', { name: 'Speed' }).click()
+    expect(source.toggle).toHaveBeenCalledWith('speed')
   })
 })
 
@@ -201,6 +210,10 @@ describe('ChartLegend — recharts wiring', () => {
     if (!p) throw new Error('Legend was not rendered')
     return p as never
   }
+
+  it('uses the recharts display name so categorical charts discover it', () => {
+    expect(ChartLegend.displayName).toBe('Legend')
+  })
 
   it('passes wrapperStyle / verticalAlign / align straight through to recharts <Legend>', () => {
     const style = { fontSize: 12 }
@@ -222,9 +235,9 @@ describe('ChartLegend — recharts wiring', () => {
     render(<ChartLegend state={makeSource(['power'])} />)
     const node = legend().formatter('Power', { dataKey: 'power' })
     render(node)
-    const span = screen.getByText('Power')
-    expect(span).toHaveAttribute('aria-pressed', 'true')
-    expect(span).toHaveAttribute('data-series-hidden', 'true')
+    const button = screen.getByRole('button', { name: 'Power' })
+    expect(button).toHaveAttribute('aria-pressed', 'true')
+    expect(button).toHaveAttribute('data-series-hidden', 'true')
   })
 
   it('resolves state from the surrounding ChartHiddenSeriesContext when no state prop is given', () => {
@@ -239,7 +252,7 @@ describe('ChartLegend — recharts wiring', () => {
     expect(ctx.toggle).toHaveBeenCalledWith('soc')
     // … and the formatter dims the context-hidden series.
     render(legend().formatter('SOC', { dataKey: 'soc' }))
-    expect(screen.getByText('SOC')).toHaveAttribute('aria-pressed', 'true')
+    expect(screen.getByRole('button', { name: 'SOC' })).toHaveAttribute('aria-pressed', 'true')
   })
 
   it('prefers an explicit state prop over the context source', () => {

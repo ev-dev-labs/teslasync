@@ -117,7 +117,10 @@ vi.mock('@/api/hooks/useEnergy', async () => {
 // echoes its `data` array as JSON so the Wh→kWh + label math is inspectable;
 // the axis/tooltip doubles invoke the widget's real formatters so the unit
 // wiring is exercised.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+  ...chartTestDoubles,
   chartGrid: null,
   chartMargin: {},
   chartAnimation: {},
@@ -161,7 +164,8 @@ vi.mock('@/components/charts', () => ({
       data-fmt={typeof formatter === 'function' ? JSON.stringify(formatter(2.5)) : ''}
     />
   ),
-}));
+  };
+});
 
 import SolarProductionWidget from './SolarProductionWidget';
 import type { WidgetSize } from './types';
@@ -419,7 +423,7 @@ describe('SolarProductionWidget', () => {
     expect(screen.queryByText('No Tesla Energy site linked')).not.toBeInTheDocument();
     expect(screen.queryByText('Solar Production')).not.toBeInTheDocument();
     // The error branch replaces the header, so there is no refresh control.
-    expect(screen.queryByRole('button', { name: 'Refresh' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).not.toBeInTheDocument();
   });
 
   it('shows the no-data empty state (keeping the titled shell) with a linked site', () => {
@@ -471,7 +475,7 @@ describe('SolarProductionWidget', () => {
     historyMock.mockReturnValue(h);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
     expect(s.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(s.refetch).toHaveBeenCalledTimes(1);
@@ -485,7 +489,7 @@ describe('SolarProductionWidget', () => {
     historyMock.mockReturnValue(h);
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /Refresh data/ });
     fireEvent.click(refresh);
     expect(s.refetch).toHaveBeenCalledTimes(1);
     expect(h.refetch).not.toHaveBeenCalled();

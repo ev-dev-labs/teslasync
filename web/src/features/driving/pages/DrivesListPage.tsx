@@ -1,26 +1,31 @@
 import { useMemo, useState, useCallback, useEffect, useDeferredValue } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import {
   Route, Gauge, TrendingUp, Clock, Sparkles,
   ArrowUpDown, ArrowDown, Download, Activity,
   Trash2, AlertTriangle, Star, Repeat, Tag, List as ListIcon,
+  BatteryCharging, Bell, Car, GitCompareArrows, MapPin, Wrench,
 } from 'lucide-react';
-import { PageContainer } from '@/components/layout/PageContainer';
-import { PageHeaderSticky } from '@/components/layout/PageHeaderSticky';
+import { PageContainer, PageHeaderSticky } from '@/components/layout';
 import { GlassPanel } from '@/components/ui/GlassPanel';
-import { PanelTitle, SectionTitle, Text } from '@/components/ui';
+import { Badge, PanelTitle, SectionTitle, Text } from '@/components/ui';
 import { Button } from '@/components/ui/Button';
 import { Pagination } from '@/components/ui/Pagination';
 import { SavedViewMenu } from '@/components/data-display/SavedViewMenu';
 import {
-  BulkActionsToolbar, type BulkAction, DataFreshnessAuto,
-  KpiOverviewCard, MetricCard, DateGroupedList, type DateGroupedListGroup,
+  BulkActionsToolbar, type BulkAction,
+  KpiOverviewCard, MetricCard, DateGroupedList, OperationalBrief,
+  DataFreshnessAuto, DataProvenanceBadge, EntityPreviewDrawer,
+  type DateGroupedListGroup, type OperationalAttention,
 } from '@/components/data-display';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { MetricSwitcherChart, type MetricSwitcherMetric } from '@/components/charts';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { InlineCallout } from '@/components/feedback/InlineCallout';
+import { DataStateNotice, StaleRefreshWarning } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 import { RangePicker, VehicleSelect, PillFilterBar, type PillItem } from '@/components/forms';
 import { SearchInput } from '@/components/forms/SearchInput';
 import { FilterBar } from '@/components/forms/FilterBar';
@@ -33,19 +38,24 @@ import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
 import { apiUrl } from '@/api/client';
+import { scopedPath } from '@/api/scope';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useDataState } from '@/hooks/useDataState';
+import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useTimezone } from '@/lib/timezone';
 import { NoVehicleSelected } from '@/features/onboarding/components/NoVehicleSelected';
 import { PullToRefresh } from '@/components/mobile';
 import { AINLDriveSearch } from '@/components/ai/AINLDriveSearch';
-import { formatRelativeDays, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
+import { formatDateTime, formatRelativeDayKey, formatDurationMinutes, formatDayKey } from '@/lib/dateFormat';
 import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
+import { buildContextHref } from '@/lib/contextNavigation';
 import type { Drive } from '@/types/driving';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import {
   getEfficiency, gradeFromEfficiency, gradeFromNumeric,
@@ -69,6 +79,7 @@ const DRIVES_FETCH_LIMIT = 1000;
 
 export default function DrivesListPage() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   usePageTitle(t('drives.title', 'Drive History'));
   const savedView = useSavedViewUrl();
 
@@ -101,7 +112,37 @@ export default function DrivesListPage() {
   }), [priorRange, startDate, endDate]);
 
   const drivesQuery = useDrives(vehicleIdStr, fetchWindow);
-  const { data: drives, isLoading: isDrivesLoading, error: drivesError, refetch: refetchDrives } = drivesQuery;
+  const { data: drives, isLoading: isDrivesLoading, refetch: refetchDrives } = drivesQuery;
+  /* Trust contract: a failed BACKGROUND refresh must not delete the drive
+   * rows already on screen. `fatalError` is non-null only when the very first
+   * load failed with nothing retained, so it is the only error allowed to
+   * reach <PageContainer error={...}> (which replaces all page content). */
+  const drivesState = useDataState(drivesQuery, { provenance: 'historical' });
+  const [previewDrive, setPreviewDrive] = useState<Drive | null>(null);
+
+  /* Single source of truth for the vehicle + date window every scoped read and
+   * every export on this page must agree on. `scopedPath` renders it as
+   * sorted, URL-encoded snake_case params and strips any accidental
+   * `/api/v1` prefix, so a download link can never drift from the filters the
+   * user can see. */
+  const exportScope = useMemo(() => ({
+    vehicleId: vehicleId ?? null,
+    start: startDate,
+    end: endDate,
+    filters: { format: 'csv' },
+  }), [vehicleId, startDate, endDate]);
+
+  /* A deliberate pull-to-refresh is a statement about the whole workspace, not
+   * about this tab. Broadcasting it means a pinned dashboard on a second
+   * monitor stops showing pre-refresh numbers the moment the operator pulls
+   * here. Reuses the existing coalescing bus — no extra channel. */
+  const { refresh: refreshAcrossTabs } = useCrossTabRefresh({
+    queryKeys: [['drives']],
+  });
+  const handlePullToRefresh = useCallback(async () => {
+    refreshAcrossTabs();
+    await refetchDrives();
+  }, [refreshAcrossTabs, refetchDrives]);
 
   /* A full page back means the range almost certainly holds more drives than
    * one request can carry. Say so rather than silently showing a subset. */
@@ -115,7 +156,7 @@ export default function DrivesListPage() {
   const tz = useTimezone('vehicle');
 
   /* Unit conversion */
-  const { unitPrefs } = useUnits();
+  const { unitPrefs, formatEnergy } = useUnits();
   const toDistanceDisplay = useCallback(
     (v: number) => convertDistanceFromSI(v, unitPrefs.distance),
     [unitPrefs.distance],
@@ -198,7 +239,7 @@ export default function DrivesListPage() {
     }
   }, [collection, dateFilteredDrives, anomalyDrives, notableDrives, commuteDrives]);
 
-  /* ---- Search filter — supports `score:X`, `from:Mon`, `distance:>N`
+  /* ---- Search filter — supports `grade:X`, legacy `score:X`, `from:Mon`, `distance:>N`
  * plus bare substring (addresses + numbers). The structured
  * parser short-circuits when the query is empty, so the pre-
  * existing free-text behaviour stays unchanged for users who
@@ -225,6 +266,10 @@ export default function DrivesListPage() {
         ],
         kv: {
           score: (drive, token) => {
+            const grade = gradeFromEfficiency(getEfficiency(drive)).label.toLowerCase();
+            return grade === token.value.trim().toLowerCase();
+          },
+          grade: (drive, token) => {
             const grade = gradeFromEfficiency(getEfficiency(drive)).label.toLowerCase();
             return grade === token.value.trim().toLowerCase();
           },
@@ -286,9 +331,8 @@ export default function DrivesListPage() {
       return {
         dateKey: g.dateKey,
         dateLabel: formatDayKey(g.dateKey, { style: 'long' }),
-        // Always-relative label uses the YMD key (no Date arithmetic), so
-        // "Today/Yesterday/Xd ago" agrees with the dateLabel above.
-        relativeLabel: formatRelativeDays(`${g.dateKey}T12:00:00Z`, { tz: 'UTC' }),
+        // Compare the vehicle-local YMD key with "today" in that same zone.
+        relativeLabel: formatRelativeDayKey(g.dateKey, { tz }),
         summary: `${g.items.length} ${noun} · ${distDisplay} ${distanceUnit}`,
         items: g.items,
       };
@@ -313,7 +357,7 @@ export default function DrivesListPage() {
       getValue: (p) => toDistanceDisplay(p.value),
       formatValue: (v) => `${fmtNumber(v)} ${distanceUnit}`,
       formatTick: (v) => fmtNumber(v) },
-    { key: 'score',      label: t('drives.metric.score', 'Score'),           chart: 'line', color: '#a855f7', accent: 'purple',
+    { key: 'score',      label: t('drives.metric.grade', 'Efficiency grade'), chart: 'line', color: '#a855f7', accent: 'purple',
       formatValue: (v) => gradeFromNumeric(v).label,
       // Numeric ticks for the score axis — letter grades on the axis
       // would make every tick read "B" / "C" / "—", obscuring the trend.
@@ -323,7 +367,7 @@ export default function DrivesListPage() {
       formatValue: (v) => `${fmtInt(v)} ${efficiencyUnit}`,
       formatTick: (v) => fmtInt(v) },
     { key: 'cost',       label: t('drives.metric.cost', 'Cost'),             chart: 'bar',  color: '#ef4444', accent: 'red',
-      getValue: (p) => p.value * costPerKwh,
+      getValue: (p) => (p.value / 1_000) * costPerKwh,
       formatValue: (v) => formatCurrency(v, 2),
       // Compact axis label so the Y-axis doesn't show "$0.0833" on each tick.
       formatTick: (v) => formatCurrency(v, 2) },
@@ -359,6 +403,18 @@ export default function DrivesListPage() {
   const bulkDeleteDrivesMut = useBulkDeleteDrives();
   const bulkDriveActions = useMemo<BulkAction[]>(() => [
     {
+      id: 'compare',
+      label: t('drives.compareSelected', 'Compare selected'),
+      icon: <GitCompareArrows className="h-3.5 w-3.5" />,
+      disabled: bulkSelected.size !== 2,
+      onClick: async (ids) => {
+        navigate(buildContextHref('/drive-compare', {
+          drive_a: ids[0],
+          drive_b: ids[1],
+        }));
+      },
+    },
+    {
       id: 'delete',
       label: t('bulk.actions.delete', 'Delete'),
       icon: <Trash2 className="h-3.5 w-3.5" />,
@@ -378,7 +434,7 @@ export default function DrivesListPage() {
         clearBulk();
       },
     },
-  ], [t, bulkSelected.size, bulkDeleteDrivesMut, clearBulk]);
+  ], [t, bulkSelected.size, bulkDeleteDrivesMut, clearBulk, navigate]);
 
   /* ---- Period labels for the comparison header ---- */
   // Friendly format that always shows years on both ends so a Dec→Jan
@@ -418,7 +474,7 @@ export default function DrivesListPage() {
     priorLabel = undefined;
   }
 
-  const avgGrade = gradeFromNumeric(currentStats.avgGradeNumeric);
+  const avgGrade = gradeFromEfficiency(currentStats.avgEfficiencyWhKm);
 
   /* ---- Headline grids ---- */
   const distMi = toDistanceDisplay(currentStats.totalDistanceM);
@@ -431,8 +487,100 @@ export default function DrivesListPage() {
   const priorEffDisp = priorStats?.avgEfficiencyWhKm != null
     ? toEfficiencyDisplay(priorStats.avgEfficiencyWhKm)
     : null;
-  const totalCost = currentStats.totalEnergyKwh * costPerKwh;
-  const priorTotalCost = priorStats ? priorStats.totalEnergyKwh * costPerKwh : null;
+  const totalCost = (currentStats.totalEnergyWh / 1_000) * costPerKwh;
+  const priorTotalCost = priorStats && priorStats.energyMeasuredCount > 0
+    ? (priorStats.totalEnergyWh / 1_000) * costPerKwh
+    : null;
+  const routeContextCount = dateFilteredDrives.filter((drive) => {
+    const hasStart = Boolean(
+      drive.startAddress
+      || (drive.startLat != null && drive.startLon != null),
+    );
+    const hasEnd = Boolean(
+      drive.endAddress
+      || (drive.endLat != null && drive.endLon != null),
+    );
+    return hasStart && hasEnd;
+  }).length;
+  const missingEfficiencyCount = Math.max(
+    0,
+    currentStats.count - currentStats.efficiencyMeasuredCount,
+  );
+  const efficiencyMovementPct = (
+    currentStats.avgEfficiencyWhKm != null
+    && priorStats?.avgEfficiencyWhKm != null
+    && priorStats.avgEfficiencyWhKm > 0
+  )
+    ? ((priorStats.avgEfficiencyWhKm - currentStats.avgEfficiencyWhKm)
+      / priorStats.avgEfficiencyWhKm) * 100
+    : null;
+
+  let efficiencyMovementValue = t('drives.decision.noBaseline', 'No baseline');
+  let efficiencyMovementTone: 'success' | 'warning' | 'neutral' = 'neutral';
+  if (efficiencyMovementPct != null) {
+    if (Math.abs(efficiencyMovementPct) < 1) {
+      efficiencyMovementValue = t('drives.decision.stable', 'Stable');
+    } else if (efficiencyMovementPct > 0) {
+      efficiencyMovementValue = t(
+        'drives.decision.improved',
+        '{{value}}% lower',
+        { value: fmtNumber(efficiencyMovementPct, 1) },
+      );
+      efficiencyMovementTone = 'success';
+    } else {
+      efficiencyMovementValue = t(
+        'drives.decision.regressed',
+        '{{value}}% higher',
+        { value: fmtNumber(Math.abs(efficiencyMovementPct), 1) },
+      );
+      efficiencyMovementTone = 'warning';
+    }
+  }
+
+  const driveAttention: OperationalAttention[] = [];
+  if (anomalyDrives.length > 0) {
+    driveAttention.push({
+      key: 'drive-anomalies',
+      title: anomalyDrives.length === 1
+        ? t('operations.drives.anomalyTitle_one', '1 energy-intensity exception')
+        : t(
+            'operations.drives.anomalyTitle_other',
+            '{{count}} energy-intensity exceptions',
+            { count: anomalyDrives.length },
+          ),
+      description: t(
+        'operations.drives.anomalyDescription',
+        'Review measured high-energy drives against route, speed, temperature, and battery context.',
+      ),
+      tone: 'warning',
+    });
+  }
+  if (currentStats.count > 0 && missingEfficiencyCount > 0) {
+    driveAttention.push({
+      key: 'drive-energy-coverage',
+      title: t(
+        'operations.drives.partialEnergyTitle',
+        '{{count}} drives excluded from efficiency',
+        { count: missingEfficiencyCount },
+      ),
+      description: t(
+        'operations.drives.partialEnergyDescription',
+        'Activity remains visible, but efficiency requires measured energy and at least 1 km of distance.',
+      ),
+      tone: currentStats.efficiencyMeasuredCount === 0 ? 'warning' : 'info',
+    });
+  }
+  if (currentStats.count === 0) {
+    driveAttention.push({
+      key: 'drives-empty',
+      title: t('operations.drives.noDataTitle', 'No drives in this analysis window'),
+      description: t(
+        'operations.drives.noDataDescription',
+        'Choose a wider window or complete a drive to build an operating baseline.',
+      ),
+      tone: 'info',
+    });
+  }
 
   /* ---- Highlights rows — "fold-down" period stats (top speed, longest,
  * avg trip, avg duration) surfaced beside the trend chart. Real period
@@ -508,27 +656,166 @@ export default function DrivesListPage() {
       {avgGrade.label !== '—' && (
         <>
           <span className="opacity-50">·</span>
-          <span>{t('drives.avgScore', 'avg')}{' '}
+          <span>{t('drives.avgGrade', 'efficiency grade')}{' '}
             <Text as="span" weight="semibold" style={{ color: avgGrade.color }}>{avgGrade.label}</Text>
           </span>
         </>
       )}
     </>
   );
+  const narrativeSourceDrives =
+    anomalyDrives.length > 0 ? anomalyDrives : dateFilteredDrives;
+  const narrativeEvidence: OperationalNarrative['evidence'] = narrativeSourceDrives
+    .slice(0, 5)
+    .map((drive) => {
+      const efficiency = getEfficiency(drive);
+      return {
+        id: `drive-${drive.id}`,
+        summary: t(
+          'operations.drives.narrative.driveSummary',
+          '{{date}}: {{distance}} at {{efficiency}}; {{route}}.',
+          {
+            date: drive.startTs,
+            distance: `${fmtNumber(toDistanceDisplay(drive.distanceM ?? 0), 1)} ${distanceUnit}`,
+            efficiency:
+              efficiency == null
+                ? t('operations.drives.narrative.efficiencyMissing', 'efficiency unavailable')
+                : `${fmtNumber(toEfficiencyDisplay(efficiency), 0)} ${efficiencyUnit}`,
+            route:
+              drive.startAddress && drive.endAddress
+                ? `${drive.startAddress} → ${drive.endAddress}`
+                : t('operations.drives.narrative.routeMissing', 'route context incomplete'),
+          },
+        ),
+        observedAt: drive.endTs ?? drive.startTs,
+        provenance: {
+          source: t('operations.drives.historySource', 'Drive history'),
+          recordId: String(drive.id),
+          method: anomalyDriveIds.has(drive.id)
+            ? t(
+                'operations.drives.narrative.exceptionMethod',
+                'Measured energy intensity matched the deterministic exception grade.',
+              )
+            : t(
+                'operations.drives.narrative.driveMethod',
+                'Direct completed-drive distance, energy, and route record.',
+              ),
+        },
+      };
+    });
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.drives.narrative.whatChanged',
+      '{{drives}} drives covered {{distance}} at {{efficiency}} average energy intensity; {{exceptions}} records were flagged.',
+      {
+        drives: currentStats.count,
+        distance: `${fmtNumber(toDistanceDisplay(currentStats.totalDistanceM), 1)} ${distanceUnit}`,
+        efficiency:
+          currentStats.avgEfficiencyWhKm == null
+            ? t('operations.drives.narrative.efficiencyMissing', 'efficiency unavailable')
+            : `${fmtNumber(toEfficiencyDisplay(currentStats.avgEfficiencyWhKm), 0)} ${efficiencyUnit}`,
+        exceptions: anomalyDrives.length,
+      },
+    ),
+    whyItMatters: t(
+      'operations.drives.narrative.impact',
+      'Measured energy intensity and route coverage reveal operational exceptions without guessing at their cause.',
+    ),
+    confidence: {
+      label:
+        currentStats.efficiencyMeasuredCount >= 10 && efficiencyMovementPct != null
+          ? 'high'
+          : currentStats.efficiencyMeasuredCount > 0
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.drives.narrative.energyBasis',
+          '{{measured}} of {{total}} drives include measured energy and sufficient distance.',
+          {
+            measured: currentStats.efficiencyMeasuredCount,
+            total: currentStats.count,
+          },
+        ),
+        efficiencyMovementPct != null
+          ? t(
+              'operations.drives.narrative.comparisonBasis',
+              'The immediately preceding period provides a measured comparison baseline.',
+            )
+          : t(
+              'operations.drives.narrative.comparisonLimitedBasis',
+              'A comparable preceding-period energy baseline is unavailable.',
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      driveAttention[0]?.description
+      ?? t(
+        'operations.drives.narrative.monitorResponse',
+        'No immediate response is indicated; continue monitoring energy intensity as more drives complete.',
+      ),
+    limitations: [
+      ...(missingEfficiencyCount > 0
+        ? [
+            t(
+              'operations.drives.narrative.energyLimitation',
+              '{{count}} drive records are excluded from efficiency because measured energy or sufficient distance is missing.',
+              { count: missingEfficiencyCount },
+            ),
+          ]
+        : []),
+      ...(routeContextCount < currentStats.count
+        ? [
+            t(
+              'operations.drives.narrative.routeLimitation',
+              '{{count}} drive records lack complete origin and destination evidence.',
+              { count: currentStats.count - routeContextCount },
+            ),
+          ]
+        : []),
+      t(
+        'operations.drives.narrative.causeLimitation',
+        'Drive records do not isolate weather, traffic, payload, HVAC use, or road grade as a cause.',
+      ),
+      t(
+        'operations.drives.narrative.evidenceLimit',
+        'Supporting evidence is limited to five exception or recent-drive records.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t('operations.drives.historySource', 'Drive history'),
+        method: t(
+          'operations.drives.narrative.historyMethod',
+          'Aggregates completed-drive distance and measured energy in canonical units, excluding incomplete efficiency records.',
+        ),
+      },
+    ],
+  };
 
   /* ---- Defensive: no vehicle ---- */
   if (vehicleId == null) {
     return <NoVehicleSelected pageTitle={t('drives.title', 'Drive History')} />;
   }
 
+  const previewFrom = localDayKey(previewDrive?.startTs, tz);
+  const previewTo = localDayKey(previewDrive?.endTs ?? previewDrive?.startTs, tz) ?? previewFrom;
+
   return (
     <PageContainer
       title={t('drives.title', 'Drive History')}
-      subtitle={t('drives.subtitle', 'Trip scoring, efficiency analysis, distance patterns, and performance data')}
-      error={drivesError as Error | null}
+      subtitle={t(
+        'drives.subtitle',
+        'Measured energy intensity, route evidence, and comparable drive history',
+      )}
+      error={drivesState.fatalError}
       copyLink
-      actions={
-        <div className="flex flex-wrap items-center justify-end gap-3">
+      query={drivesQuery}
+      contextActions={
+        <>
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
@@ -538,18 +825,19 @@ export default function DrivesListPage() {
             align="end"
             triggerTestId="drives-range-picker"
           />
-          <DataFreshnessAuto query={drivesQuery} />
-          <div data-tour="drives-saved-views">
-            <SavedViewMenu
-              route="/drives"
-              currentQuery={savedView.currentQuery}
-              onApply={savedView.apply}
-            />
-          </div>
+        </>
+      }
+      overflowActions={
+        <div data-tour="drives-saved-views">
+          <SavedViewMenu
+            route="/drives"
+            currentQuery={savedView.currentQuery}
+            onApply={savedView.apply}
+          />
         </div>
       }
     >
-      <PullToRefresh onRefresh={async () => { await refetchDrives(); }}>
+      <PullToRefresh onRefresh={handlePullToRefresh}>
         <div className="space-y-4 sm:space-y-6">
         {/* Sticky bar that appears once the overview scrolls out */}
         <PageHeaderSticky
@@ -559,6 +847,163 @@ export default function DrivesListPage() {
         >
           {stickySummary}
         </PageHeaderSticky>
+
+        <OperationalBrief
+          testId="drives-operational-brief"
+          eyebrow={t('operations.drives.eyebrow', 'Driving posture')}
+          title={t('operations.drives.title', 'Activity, efficiency, and exceptions in context')}
+          description={t(
+            'operations.drives.description',
+            'Measured energy, route context, and exceptions use one vehicle-aware period with direct access to supporting evidence.',
+          )}
+          statusLabel={
+            currentStats.count === 0
+              ? t('operations.status.awaitingData', 'Awaiting data')
+              : anomalyDrives.length > 0 || missingEfficiencyCount > 0
+                ? t('operations.status.review', 'Review recommended')
+                : t('operations.status.onTrack', 'On track')
+          }
+          statusTone={
+            currentStats.count === 0
+              ? 'neutral'
+              : anomalyDrives.length > 0 || missingEfficiencyCount > 0
+                ? 'warning'
+                : 'success'
+          }
+          narrative={narrative}
+          scope={
+            <Badge variant="neutral" size="sm">
+              {datePresetLabel ?? `${startDate} → ${endDate}`}
+            </Badge>
+          }
+          freshness={(
+            <div className="flex flex-wrap items-center gap-2">
+              <DataProvenanceBadge
+                provenance={drivesState.provenance}
+                status={drivesState.status}
+                updatedAt={drivesState.updatedAt}
+              />
+              <DataFreshnessAuto
+                query={drivesQuery}
+                source={t('operations.drives.historySource', 'Drive history')}
+              />
+            </div>
+          )}
+          metricColumns={3}
+          metrics={[
+            {
+              key: 'drives',
+              label: t('drives.totalDrives', 'Drives'),
+              value: fmtCompact(currentStats.count),
+              detail: t(
+                'operations.drives.countDetail',
+                'Completed drives in the selected analysis window.',
+              ),
+              tone: 'info',
+            },
+            {
+              key: 'distance',
+              label: `${t('drives.distance', 'Distance')} (${distanceUnit})`,
+              value: fmtCompact(distMi, 10_000),
+              detail: t(
+                'operations.drives.distanceDetail',
+                'Total distance traveled using the current display unit.',
+              ),
+              tone: 'success',
+            },
+            {
+              key: 'efficiency',
+              label: `${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`,
+              value: avgEffDisp != null ? fmtInt(avgEffDisp) : '—',
+              detail: t(
+                'operations.drives.efficiencyDetail',
+                '{{measured}} of {{total}} drives have measured energy and sufficient distance.',
+                {
+                  measured: currentStats.efficiencyMeasuredCount,
+                  total: currentStats.count,
+                },
+              ),
+              tone: avgEffDisp == null
+                ? 'neutral'
+                : anomalyDrives.length > 0
+                  ? 'warning'
+                  : 'success',
+            },
+            {
+              key: 'movement',
+              label: t('drives.decision.movement', 'Efficiency movement'),
+              value: efficiencyMovementValue,
+              detail: t(
+                'operations.drives.movementDetail',
+                'Distance-weighted energy intensity compared with the prior period.',
+              ),
+              tone: efficiencyMovementTone,
+            },
+            {
+              key: 'exceptions',
+              label: t('drives.decision.exceptions', 'Efficiency exceptions'),
+              value: fmtCompact(anomalyDrives.length),
+              detail: t(
+                'operations.drives.exceptionDetail',
+                'Measured drives in the high energy-intensity grade.',
+              ),
+              tone: anomalyDrives.length > 0 ? 'warning' : 'success',
+            },
+            {
+              key: 'route-context',
+              label: t('drives.decision.routeCoverage', 'Route context'),
+              value: currentStats.count > 0
+                ? `${fmtInt((routeContextCount / currentStats.count) * 100)}%`
+                : '—',
+              detail: t(
+                'operations.drives.routeCoverageDetail',
+                '{{covered}} of {{total}} drives include both origin and destination evidence.',
+                { covered: routeContextCount, total: currentStats.count },
+              ),
+              tone: currentStats.count === 0
+                ? 'neutral'
+                : routeContextCount === currentStats.count
+                  ? 'success'
+                  : 'info',
+            },
+          ]}
+          attention={driveAttention}
+          actions={(
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              icon={<GitCompareArrows className="h-4 w-4" aria-hidden="true" />}
+              onClick={() => navigate('/drive-compare')}
+            >
+              {t('drives.openCompare', 'Compare drives')}
+            </Button>
+          )}
+          provenance={t(
+            'operations.drives.provenance',
+            'Measured energy and distance stay canonical until display; missing evidence is excluded rather than estimated.',
+          )}
+        />
+
+        <StaleRefreshWarning
+          state={drivesState}
+          label={t('drives.title', 'Drive History')}
+        />
+
+        {!isDrivesLoading && currentStats.count > 0 && missingEfficiencyCount > 0 && (
+          <DataStateNotice
+            state="partial"
+            title={t('drives.partialEnergy.title', 'Efficiency evidence is partial')}
+            message={t(
+              'drives.partialEnergy.message',
+              '{{measured}} of {{total}} drives include measured energy and at least 1 km of distance. Activity, route, and timing evidence remain complete.',
+              {
+                measured: currentStats.efficiencyMeasuredCount,
+                total: currentStats.count,
+              },
+            )}
+          />
+        )}
 
         {/* Opt-in natural-language drive search.
             Hidden when ai_mode='off' or the nl-drive-search-replay toggle
@@ -575,7 +1020,7 @@ export default function DrivesListPage() {
               <SearchInput
                 value={search}
                 onChange={(v) => { setUrlBatch({ q: v || null, page: null }); }}
-                placeholder={t('drives.searchPlaceholder', 'Search drives — try "score:D", "Office", "29.1"')}
+                placeholder={t('drives.searchPlaceholder', 'Search drives — try "grade:D", "Office", "29.1"')}
                 className="w-full"
                 historyScope="drives"
               />
@@ -675,18 +1120,12 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
-                    label={t('drives.avgScore', 'Avg score')}
+                    label={t('drives.avgGrade', 'Efficiency grade')}
                     value={avgGrade.label}
                     color="purple"
-                    delta={priorHasData && priorStats!.avgGradeNumeric != null && currentStats.avgGradeNumeric != null ? {
-                      metric: 'drive_score',
-                      previous: priorStats!.avgGradeNumeric,
-                      current: currentStats.avgGradeNumeric,
-                      display: 'percent',
-                    } : undefined}
                   />
                   <MetricCard
-                    label={`${t('drives.efficiency', 'Efficiency')} (${efficiencyUnit})`}
+                    label={`${t('drives.efficiency', 'Energy intensity')} (${efficiencyUnit})`}
                     value={avgEffDisp != null ? fmtInt(avgEffDisp) : '—'}
                     color="amber"
                     delta={priorHasData && avgEffDisp != null && priorEffDisp != null ? {
@@ -697,10 +1136,12 @@ export default function DrivesListPage() {
                     } : undefined}
                   />
                   <MetricCard
-                    label={t('drives.cost', 'Cost')}
-                    value={formatEnergyCost(currentStats.totalEnergyKwh)}
+                    label={t('drives.energyAndCost', 'Measured energy / cost')}
+                    value={currentStats.energyMeasuredCount > 0
+                      ? `${formatEnergy(currentStats.totalEnergyWh)} · ${formatEnergyCost(currentStats.totalEnergyWh / 1_000)}`
+                      : '—'}
                     color="red"
-                    delta={priorHasData ? {
+                    delta={priorHasData && priorTotalCost != null && currentStats.energyMeasuredCount > 0 ? {
                       metric: 'cost',
                       previous: priorTotalCost,
                       current: totalCost,
@@ -807,7 +1248,7 @@ export default function DrivesListPage() {
           <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
             <SectionTitle className="flex items-center gap-2">
               <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
-              {t('drives.allDrives', 'All Drives')}
+              {t('drives.driveEvidence', 'Drive evidence')}
               <Text as="span" size="xs" weight="regular" color="muted">
                 ({fmtCompact(sortedDrives.length)})
               </Text>
@@ -849,13 +1290,13 @@ export default function DrivesListPage() {
                 ))}
                 <span className="mx-1 h-4 w-px bg-[var(--surface-2)]" aria-hidden="true" />
                 <a
-                  href={apiUrl(`/export/drives?format=csv${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
+                  href={apiUrl(scopedPath('/export/drives', exportScope))}
                   download="teslasync-drives.csv"
                 >
                   <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>CSV</Button>
                 </a>
                 <a
-                  href={apiUrl(`/export/drives?format=json${startDate ? `&start=${startDate}` : ''}${endDate ? `&end=${endDate}` : ''}${vehicleId ? `&vehicle_id=${vehicleId}` : ''}`)}
+                  href={apiUrl(scopedPath('/export/drives', { ...exportScope, filters: { format: 'json' } }))}
                   download="teslasync-drives.json"
                 >
                   <Button variant="secondary" size="sm" icon={<Download className="h-3.5 w-3.5" />}>JSON</Button>
@@ -909,6 +1350,7 @@ export default function DrivesListPage() {
                       isAnomaly={anomalyDriveIds.has(d.id)}
                       selected={bulkSelected.has(d.id)}
                       onToggleSelect={toggleDriveSelected}
+                      onPreview={setPreviewDrive}
                     />
                   </StaggerItem>
                 )}
@@ -923,27 +1365,190 @@ export default function DrivesListPage() {
             />
           </>
         ) : (
-          <EmptyState
-            icon={<Route className="h-8 w-8" />}
-            title={
-              collection !== 'all'
-                ? t('drives.emptyForCollection', 'No drives in this view')
-                : t('drives.emptyTitle', 'No drives recorded yet')
-            }
-            message={
-              collection !== 'all'
-                ? t('drives.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
-                : t('drives.emptyMessage', 'Drive data will appear here once your vehicle records trips.')
-            }
-            action={{
-              label: t('drives.empty.cta', 'Reset filters'),
-              onClick: () => {
-                setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
-              },
-            }}
-          />
+          <>
+            <EmptyState
+              icon={<Route className="h-8 w-8" />}
+              title={
+                collection !== 'all'
+                  ? t('drives.emptyForCollection', 'No drives in this view')
+                  : t('drives.emptyTitle', 'No drives recorded yet')
+              }
+              message={
+                collection !== 'all'
+                  ? t('drives.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
+                  : t('drives.emptyMessage', 'Drive data will appear here once your vehicle records trips.')
+              }
+              action={{
+                label: t('drives.empty.cta', 'Reset filters'),
+                onClick: () => {
+                  setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
+                },
+              }}
+            />
+            {/* HELP-02. Only for the unfiltered view: the governed "likely
+                cause" describes a vehicle that has not driven since it was
+                linked, which would be wrong copy for a user who has simply
+                filtered every row out — that case is already answered by the
+                message above. One CTA is preserved; this adds explanation,
+                not another action. */}
+            {collection === 'all' && (
+              <EmptyStateGuidanceDetails guidanceId="drives.list" className="mx-auto" />
+            )}
+          </>
         )}
         </section>
+        <EntityPreviewDrawer
+          open={previewDrive !== null}
+          onClose={() => setPreviewDrive(null)}
+          eyebrow={t('drives.preview.eyebrow', 'Drive preview')}
+          title={
+            previewDrive
+              ? `${previewDrive.startAddress ?? t('drives.unknownStart', 'Unknown start')} → ${
+                  previewDrive.endAddress ?? t('drives.unknownEnd', 'Unknown destination')
+                }`
+              : t('drives.preview.title', 'Drive details')
+          }
+          description={
+            previewDrive
+              ? formatDateTime(previewDrive.startTs, { tz })
+              : undefined
+          }
+          statusLabel={
+            previewDrive?.endTs
+              ? t('drives.preview.completed', 'Completed')
+              : t('drives.inProgress', 'In progress')
+          }
+          statusTone={previewDrive?.endTs ? 'success' : 'info'}
+          fields={
+            previewDrive
+              ? [
+                  {
+                    key: 'duration',
+                    label: t('drives.duration', 'Duration'),
+                    value: formatDurationMinutes(previewDrive.durationS / 60),
+                  },
+                  {
+                    key: 'distance',
+                    label: t('drives.distance', 'Distance'),
+                    value: `${fmtNumber(toDistanceDisplay(previewDrive.distanceM))} ${distanceUnit}`,
+                  },
+                  {
+                    key: 'energy',
+                    label: t('drives.energyUsed', 'Energy used'),
+                    value: previewDrive.energyUsedWh != null
+                      ? formatEnergy(previewDrive.energyUsedWh)
+                      : '—',
+                  },
+                  {
+                    key: 'battery',
+                    label: t('drives.batteryChange', 'Battery change'),
+                    value: `${
+                      previewDrive.startBatteryPct != null
+                        ? `${fmtNumber(previewDrive.startBatteryPct)}%`
+                        : '—'
+                    } → ${
+                      previewDrive.endBatteryPct != null
+                        ? `${fmtNumber(previewDrive.endBatteryPct)}%`
+                        : '—'
+                    }`,
+                  },
+                  {
+                    key: 'efficiency',
+                    label: t('drives.efficiency', 'Energy intensity'),
+                    value: getEfficiency(previewDrive) != null
+                      ? `${fmtInt(
+                          toEfficiencyDisplay(getEfficiency(previewDrive) ?? 0),
+                        )} ${efficiencyUnit}`
+                      : '—',
+                  },
+                  {
+                    key: 'grade',
+                    label: t('drives.avgGrade', 'Efficiency grade'),
+                    value: gradeFromEfficiency(getEfficiency(previewDrive)).label,
+                  },
+                ]
+              : []
+          }
+          primaryAction={
+            previewDrive
+              ? {
+                  label: t('drives.preview.openDetails', 'Open drive details'),
+                  onClick: () => navigate(`/drives/${previewDrive.id}`),
+                }
+              : undefined
+          }
+          relatedActions={
+            previewDrive
+              ? [
+                  {
+                    key: 'vehicle',
+                    label: t('entityContext.vehicle', 'Vehicle'),
+                    to: `/vehicles/${previewDrive.vehicleId}`,
+                    icon: <Car className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'charging',
+                    label: t('entityContext.charging', 'Charging sessions'),
+                    to: buildContextHref('/charging', {
+                      from: previewFrom,
+                      to: previewTo,
+                    }),
+                    icon: <BatteryCharging className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  ...(previewDrive.startAddress
+                    ? [{
+                        key: 'start-location',
+                        label: t('entityContext.startLocation', 'Start location'),
+                        to: buildContextHref('/locations', {
+                          q: previewDrive.startAddress,
+                          from: previewFrom,
+                          to: previewTo,
+                        }),
+                        icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                      }]
+                    : []),
+                  ...(previewDrive.endAddress
+                    && previewDrive.endAddress !== previewDrive.startAddress
+                    ? [{
+                        key: 'end-location',
+                        label: t('entityContext.endLocation', 'Destination'),
+                        to: buildContextHref('/locations', {
+                          q: previewDrive.endAddress,
+                          from: previewFrom,
+                          to: previewTo,
+                        }),
+                        icon: <MapPin className="h-4 w-4" aria-hidden="true" />,
+                      }]
+                    : []),
+                  {
+                    key: 'alerts',
+                    label: t('entityContext.alerts', 'Alerts'),
+                    to: buildContextHref('/notifications/alerts', {
+                      from: previewFrom,
+                      to: previewTo,
+                    }),
+                    icon: <Bell className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'service',
+                    label: t('entityContext.service', 'Service history'),
+                    to: '/maintenance',
+                    icon: <Wrench className="h-4 w-4" aria-hidden="true" />,
+                  },
+                  {
+                    key: 'telemetry',
+                    label: t('entityContext.telemetry', 'Telemetry evidence'),
+                    to: buildContextHref('/signals', {
+                      from: previewFrom,
+                      to: previewTo,
+                      signals: ['VehicleSpeed', 'BatteryLevel'],
+                    }),
+                    icon: <Activity className="h-4 w-4" aria-hidden="true" />,
+                  },
+                ]
+              : []
+          }
+        />
         </div>
       </PullToRefresh>
     </PageContainer>

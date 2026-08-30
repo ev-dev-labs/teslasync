@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Select, Button, PanelTitle } from '@/components/ui';
+import { GlassPanel, Button, PanelTitle } from '@/components/ui';
 import { MetricCard, SavedViewMenu, DataFreshnessAuto } from '@/components/data-display';
 import {
   LinearGauge, ChartTooltip, ChartContainer, ChartLegend,
@@ -17,7 +17,7 @@ import {
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, StatGridSkeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
-import { RangePicker } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useFleetAnalytics, useMileageStats, useStateSummary } from '@/api/hooks/useAnalytics';
@@ -27,7 +27,6 @@ import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useChartPalette } from '@/hooks/useChartPalette';
 import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
-import { useUrlString } from '@/hooks/useUrlState';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
@@ -36,7 +35,6 @@ import { request } from '@/api/client';
 
 const KM_PER_MILE = 1.609344;
 const METERS_PER_KM = 1000;
-const BATTERY_GAUGE_COLOR = '#10b981';
 
 /* ── Types ────────────────────────────────────────────────────────── */
 
@@ -82,17 +80,8 @@ export default function StatisticsPage() {
   );
   const savedView = useSavedViewUrl();
 
-  const [, setUrlVehicleId] = useUrlString('vehicle_id', '');
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId } = useSelectedVehicle();
   const activeId = vehicleId != null ? String(vehicleId) : '';
-
-  const onPickVehicle = (id: string) => {
-    const n = Number(id);
-    if (Number.isFinite(n) && n > 0) {
-      setVehicleId(n);
-      setUrlVehicleId(id);
-    }
-  };
 
   const { start: startDate, end: endDate, setRange } = useRangeState({
     persistKey: 'statistics.range',
@@ -155,23 +144,12 @@ export default function StatisticsPage() {
     }));
   }, [fleet, fromKm]);
 
-  const vehicleOptions = vehicles.map((v) => ({
-    value: String(v.id),
-    label: v.display_name || v.vin,
-  }));
-
   /* ── Toolbar ───────────────────────────────────────────────────── */
   const actions = (
     <div className="flex flex-wrap items-center gap-2">
-      {vehicles.length > 0 && (
-        <Select
-          value={activeId}
-          onChange={(e) => onPickVehicle(e.target.value)}
-          options={vehicleOptions}
-          placeholder={t('statistics.selectVehicle', 'Select Vehicle')}
-          aria-label={t('statistics.selectVehicle', 'Select Vehicle')}
-        />
-      )}
+      <VehicleSelect
+        ariaLabel={t('statistics.selectVehicle', 'Select Vehicle')}
+      />
       <RangePicker
         value={{ start: startDate, end: endDate }}
         onChange={setRange}
@@ -214,10 +192,21 @@ export default function StatisticsPage() {
           </GlassPanel>
         ) : !stats ? (
           <GlassPanel className="p-4 sm:p-5">
-            <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+            <EmptyState
               icon={<BarChart3 className="h-10 w-10" aria-hidden="true" />}
-              title={t('statistics.noData', 'No Data')}
-              message={t('statistics.noDataMsg', 'No statistics available for this vehicle.')}
+              title={t('statistics.noData', 'No statistics yet')}
+              message={t(
+                'statistics.noDataMsg',
+                'This vehicle has no completed driving or charging history in the selected period.',
+              )}
+              description={t(
+                'statistics.noDataDescription',
+                'Complete a drive or charging session, then return after TeslaSync has processed the activity.',
+              )}
+              actionTo={{
+                label: t('statistics.viewDrives', 'View drives'),
+                to: '/drives',
+              }}
             />
           </GlassPanel>
         ) : (
@@ -264,7 +253,7 @@ export default function StatisticsPage() {
                     max={100}
                     label={t('statistics.health', 'Health')}
                     unit="%"
-                    color={BATTERY_GAUGE_COLOR}
+                    tone="success"
                     size={140}
                     className="max-w-xs"
                   />
@@ -277,9 +266,14 @@ export default function StatisticsPage() {
                 </div>
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              // no-action: battery estimates populate automatically after sufficient telemetry.
+              <EmptyState
                 icon={<Battery className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.noBattery', 'No battery health data available')}
+                description={t(
+                  'statistics.noBatteryDescription',
+                  'Battery health estimates appear after enough charging and range telemetry has accumulated.',
+                )}
                 className="py-8"
               />
             )}
@@ -307,9 +301,14 @@ export default function StatisticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              // no-action: state history accumulates automatically from vehicle activity.
+              <EmptyState
                 icon={<Clock className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.noStates', 'No state distribution data')}
+                description={t(
+                  'statistics.noStatesDescription',
+                  'Driving, charging, and parked-state history will populate this distribution over time.',
+                )}
                 className="py-8"
               />
             )}
@@ -337,9 +336,14 @@ export default function StatisticsPage() {
                 <MetricCard label={t('statistics.yearlyProjection', 'Yearly Projection')} value={`${fmtInt(fromKm(((mileage.last_30d_km ?? 0) / 30) * 365))} ${distanceUnit}`} icon={<TrendingUp className="h-4 w-4" />} color="amber" />
               </div>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              // no-action: mileage totals populate automatically after a completed drive.
+              <EmptyState
                 icon={<Car className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.noMileage', 'No mileage data available')}
+                description={t(
+                  'statistics.noMileageDescription',
+                  'Distance totals and projections appear after the first completed drive is recorded.',
+                )}
                 className="py-8"
               />
             )}
@@ -372,9 +376,17 @@ export default function StatisticsPage() {
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState /* no-action: transient empty state — surfaces when source data is missing */
+              <EmptyState
                 icon={<Car className="h-8 w-8" aria-hidden="true" />}
                 message={t('statistics.singleVehicle', 'Add more vehicles to compare')}
+                description={t(
+                  'statistics.singleVehicleDescription',
+                  'Fleet comparison requires activity from at least two registered vehicles.',
+                )}
+                actionTo={{
+                  label: t('statistics.manageVehicles', 'Manage vehicles'),
+                  to: '/vehicles',
+                }}
                 className="py-8"
               />
             )}

@@ -4,9 +4,7 @@
   "private": true,
   "description": "Repo-root helper scripts (docs screenshots, etc.) — see scripts/.",
   "scripts": {
-    "screenshots": "node scripts/screenshots.js"
-  },
-  "devDependencies": {
-    "playwright": "^1.48.0"
+    "screenshots": "node scripts/screenshots.js",
+    "e2e:update-baselines": "npm --prefix web run e2e:update-visual"
   }
 }

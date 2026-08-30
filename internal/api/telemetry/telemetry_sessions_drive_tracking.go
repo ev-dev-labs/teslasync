@@ -16,6 +16,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/events"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
 	"github.com/ev-dev-labs/teslasync/internal/units"
 )
 
@@ -220,23 +221,28 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		// Speed = 0, active drive → check for drive end (2-min timeout fallback)
 		active.LastSeen = time.Now().UTC()
 		active.LastSpeed = 0
+		speedEventTs := payloadTs
+		if ts, ok := fieldTs["VehicleSpeed"]; ok && !ts.IsZero() {
+			speedEventTs = ts
+		}
+		speedEventTs = eventTimeOrNow(speedEventTs)
 
 		if active.LastSpeedZeroTime.IsZero() {
-			active.LastSpeedZeroTime = time.Now().UTC()
+			active.LastSpeedZeroTime = speedEventTs
 		}
 
 		// Before ending: check SignalStore for last known Gear.
 		// If the car's gear is still D/R (traffic light, jam, long stop), do NOT end the drive.
 		// Gear signals only fire on CHANGE — a Gear=D from 2 hours ago is still valid
 		// as long as no Gear=P was received since.
-		if !active.LastSpeedZeroTime.IsZero() && time.Since(active.LastSpeedZeroTime) > 2*time.Minute {
+		if !active.LastSpeedZeroTime.IsZero() && speedEventTs.Sub(active.LastSpeedZeroTime) > 2*time.Minute {
 			if t.localSignals != nil {
 				if gv := t.localSignals.Get(vehicleID, "Gear"); gv != nil {
 					gearStr, _ := gv.Raw.(string)
 					if gearStr == enums.GearDrive || gearStr == enums.GearReverse {
 						// Last known Gear is D/R — car hasn't shifted to P.
 						// Keep the drive alive (traffic light, jam, accident, etc.)
-						active.LastSpeedZeroTime = time.Now().UTC()
+						active.LastSpeedZeroTime = speedEventTs
 						log.Debug().Int64("vehicle_id", vehicleID).Str("gear", gearStr).
 							Msg("telemetry: speed=0 >2min but last Gear=D/R — keeping drive alive")
 						return
@@ -732,10 +738,10 @@ func (t *TelemetrySessionTracker) recordDriveTelemetry(ctx context.Context, driv
 	_ = reading
 }
 
-func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) {
+func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehicleID int64, active *streamingDrive, signals map[string]interface{}, payloadTs time.Time, fieldTs map[string]time.Time) bool {
 	// Guard: prevent double-completion race between cleanup and normal end
 	if active.Completing {
-		return
+		return false
 	}
 	active.Completing = true
 
@@ -794,9 +800,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// init point (line ~826) where it can be inserted into the map.
 	var distanceMeters float64
 	if active.StartOdometer != nil && active.LastOdometer != nil {
-		distanceMeters = *active.LastOdometer - *active.StartOdometer
-		if distanceMeters < 0 {
-			distanceMeters = 0
+		change := signalcounter.Compare(*active.StartOdometer, *active.LastOdometer)
+		if change.Kind == signalcounter.ChangeAdvanced {
+			distanceMeters = change.Delta
 		}
 	}
 
@@ -1040,9 +1046,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		// reported in kWh; convert to SI Wh for the energy_used_wh column.
 		if startEnergy, ok := snapFloat(startSnap, "LifetimeEnergyUsed"); ok {
 			if endEnergy, ok := snapFloat(endSnap, "LifetimeEnergyUsed"); ok {
-				energyUsedDisplay := endEnergy - startEnergy
-				if energyUsedDisplay > 0 {
-					enhancedFields["energy_used_wh"] = energyUsedDisplay * 1000.0
+				change := signalcounter.Compare(startEnergy, endEnergy)
+				if change.Kind == signalcounter.ChangeAdvanced {
+					enhancedFields["energy_used_wh"] = change.Delta * 1000.0
 				}
 			}
 		}
@@ -1185,7 +1191,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		powerMaxW = &w
 	}
 
-	if err := t.db.WithTx(ctx, func(tx pgx.Tx) error {
+	if err := t.withTransaction(ctx, func(tx pgx.Tx) error {
 		var endBatteryPct *int16
 		if endBattery := int16(endBattery); endBattery > 0 {
 			endBatteryPct = &endBattery
@@ -1225,7 +1231,9 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		}
 		return nil
 	}); err != nil {
+		active.Completing = false
 		log.Error().Err(err).Int64("drive_id", active.DriveID).Msg("telemetry: failed to complete drive")
+		return false
 	}
 
 	// --- Backfill missing start/end values from nearest position data ---
@@ -1238,7 +1246,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// the drive-completion geocode, because the end label has to be resolved
 	// from the endpoint that survives that correction.
 	go func() {
-		t.backfillDriveValues(active, vehicleID)
+		t.backfillDriveValues(active, vehicleID, endTs)
 		t.finalizeDriveEndpoints(active.DriveID)
 	}()
 
@@ -1269,12 +1277,13 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 		// metrics.TotalDistanceKm is reported in km; convert from SI meters.
 		metrics.TotalDistanceKm.Add(distanceMeters / 1000.0)
 	}
+	return true
 }
 
 // backfillDriveValues checks if a completed drive has missing start/end values
 // (SOC, odometer, range, elevation) and fills them from the nearest position data.
 // Runs async after drive completion — does not block the telemetry pipeline.
-func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, vehicleID int64) {
+func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, vehicleID int64, endTime time.Time) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -1299,7 +1308,6 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 	}
 
 	// --- Backfill end values ---
-	endTime := time.Now().UTC()
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {

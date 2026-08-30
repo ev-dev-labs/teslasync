@@ -64,13 +64,35 @@ function makeFilename(base: string | undefined, ext: string): string {
   return `${safe}-${date}.${ext}`;
 }
 
+function captureBackground(node: HTMLElement): string {
+  if (typeof window === 'undefined') return CAPTURE_BACKGROUND;
+
+  // html2canvas renders an explicit canvas background instead of compositing
+  // through the app shell. Walk to the first opaque themed surface so an
+  // exported PNG respects light/dark/custom palettes rather than always
+  // becoming dark. The chart DOM already contains masked values, so PNG and
+  // clipboard exports preserve the same privacy treatment as the screen.
+  for (let current: HTMLElement | null = node; current; current = current.parentElement) {
+    const color = window.getComputedStyle(current).backgroundColor;
+    if (color && color !== 'transparent' && color !== 'rgba(0, 0, 0, 0)') {
+      return color;
+    }
+  }
+  return CAPTURE_BACKGROUND;
+}
+
 async function snapshotToCanvas(node: HTMLElement): Promise<HTMLCanvasElement> {
   const { default: html2canvas } = await import('html2canvas-pro');
   return html2canvas(node, {
-    backgroundColor: CAPTURE_BACKGROUND,
+    backgroundColor: captureBackground(node),
     scale: 2,
     useCORS: true,
     logging: false,
+    // Keep export capture equivalent to the user-visible chart instead of
+    // serializing export/fullscreen controls. ChartContainer marks its
+    // toolbar; this guard also makes standalone hook consumers safe.
+    ignoreElements: (element) =>
+      element.getAttribute('data-html2canvas-ignore') === 'true',
   });
 }
 
@@ -103,6 +125,15 @@ function serializeFirstChildSVG(root: HTMLElement): string | null {
   }
   if (!clone.getAttribute('xmlns:xlink')) {
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+  }
+  // Recharts SVGs are transparent. Pin the computed chart surface directly
+  // on the exported SVG so the downloaded file retains the active theme even
+  // outside the TeslaSync stylesheet.
+  clone.style.backgroundColor = captureBackground(root);
+  const label = root.getAttribute('aria-label');
+  if (label && !clone.getAttribute('aria-label')) {
+    clone.setAttribute('aria-label', label);
+    clone.setAttribute('role', 'img');
   }
   return new XMLSerializer().serializeToString(clone);
 }

@@ -1,6 +1,6 @@
-// Package backupverify exercises the most recent backup artifact end-
-// to-end so a silently-broken backup pipeline is caught BEFORE it is
-// needed for a restore.
+// Package backupverify validates the checksum, freshness, decoding, and
+// critical-table contents of the most recent backup artifact. Database import
+// and service recovery are exercised separately by package backuprestore.
 //
 // Layer: platform
 //

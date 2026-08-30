@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Activity } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart,
   Bar,
@@ -12,8 +11,9 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ChartLegend,
   ChartTooltip,
+  EmbeddedChart,
 } from '@/components/charts';
 import { chartTokens } from '@/lib/tokens';
 import { formatDateShort } from '@/lib/dateFormat';
@@ -39,6 +39,10 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
     () => (Array.isArray(sentryBuckets) ? sentryBuckets : []),
     [sentryBuckets],
   );
+  const chartRows = useMemo(
+    () => buckets.map(({ date, sentryOn, sentryOff }) => ({ date, sentryOn, sentryOff })),
+    [buckets],
+  );
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
@@ -46,16 +50,30 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
         <Activity className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('admin.security.sentryChart', 'Sentry Mode Activity')}
       </PanelTitle>
-      {error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : isLoading ? (
-        <Skeleton height={256} />
-      ) : buckets.length > 0 ? (
-        <div
-          className="h-56 sm:h-64 xl:h-72"
-          role="img"
-          aria-label={t('admin.security.sentryChart', 'Sentry Mode Activity')}
-        >
+      <EmbeddedChart
+        chartKey="admin-security-sentry-mode"
+        title={t('admin.security.sentryChart', 'Sentry Mode Activity')}
+        ariaLabel={t('admin.security.sentryChart', 'Sentry Mode Activity')}
+        loading={isLoading && !error}
+        error={error instanceof Error ? error : error ? new Error(String(error)) : undefined}
+        onRetry={onRetry}
+        empty={!error && !isLoading && buckets.length === 0}
+        emptyMessage={t(
+          'admin.security.sentryEmpty',
+          'No Sentry Mode activity is recorded in this history window.',
+        )}
+        emptyDescription={t(
+          'admin.security.sentryEmptyDescription',
+          'The chart populates as security snapshots record Sentry Mode on and off states.',
+        )}
+        data={chartRows}
+        dataColumns={[
+          { key: 'date', label: t('admin.security.chart.date', 'Date') },
+          { key: 'sentryOn', label: t('admin.security.chart.sentryOn', 'Sentry On') },
+          { key: 'sentryOff', label: t('admin.security.chart.sentryOff', 'Sentry Off') },
+        ]}
+      >
+        {({ hiddenSeries }) => (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={buckets}>
               <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} />
@@ -66,13 +84,14 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
               />
               <YAxis tick={{ fill: chartTokens.axisStroke, fontSize: 11 }} allowDecimals={false} />
               <Tooltip content={<ChartTooltip />} />
-              <Legend wrapperStyle={{ fontSize: 12, color: chartTokens.axisStroke }} />
+              <ChartLegend />
               <Bar
                 dataKey="sentryOn"
                 name={t('admin.security.chart.sentryOn', 'Sentry On')}
                 fill={chartTokens.series[0]}
                 radius={[4, 4, 0, 0]}
                 stackId="sentry"
+                hide={hiddenSeries?.isHidden('sentryOn') ?? false}
               />
               <Bar
                 dataKey="sentryOff"
@@ -80,18 +99,12 @@ export function SentryModeChart({ sentryBuckets, isLoading, error, onRetry, clas
                 fill={chartTokens.axisStroke}
                 radius={[4, 4, 0, 0]}
                 stackId="sentry"
+                hide={hiddenSeries?.isHidden('sentryOff') ?? false}
               />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      ) : (
-        <EmptyState
-          icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-          message={t('common.noData', 'No data available')}
-          className="py-8"
-          action={onRetry ? { label: t('common.retry', 'Retry'), onClick: onRetry } : undefined}
-        />
-      )}
+        )}
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

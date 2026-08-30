@@ -29,6 +29,15 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+const operationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}));
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}));
+
 vi.mock('react-i18next', async () => {
   const actual =
     await vi.importActual<typeof import('react-i18next')>('react-i18next');
@@ -156,6 +165,8 @@ function kpiCardText(label: string): string {
 
 beforeEach(() => {
   mockedRequest.mockReset();
+  operationalMode.canWrite = true;
+  operationalMode.writeBlockReason = null;
 });
 
 describe('APIKeysPage', () => {
@@ -180,6 +191,28 @@ describe('APIKeysPage', () => {
 
     // The expired key surfaces both a KPI "Expired" label AND an inline badge.
     expect(screen.getAllByText('Expired').length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('renders the read-only explanation outside the disabled create action', async () => {
+    operationalMode.canWrite = false;
+    operationalMode.writeBlockReason =
+      'Reconnect before making operational changes.';
+    installRequest([]);
+    renderPage();
+
+    await screen.findByText('No API keys');
+    const createButton = screen.getByRole('button', { name: 'Create Key' });
+    const noticeTitle = screen.getByText('API key management is read-only');
+
+    expect(createButton).toBeDisabled();
+    expect(createButton).toHaveAttribute(
+      'title',
+      'Reconnect before making operational changes.',
+    );
+    expect(noticeTitle.closest('button')).toBeNull();
+    expect(
+      screen.getByText('Reconnect before making operational changes.'),
+    ).toBeInTheDocument();
   });
 
   it('shows empty states and a truthful zero KPI when there are no keys', async () => {
@@ -268,6 +301,7 @@ describe('APIKeysPage', () => {
         '/api-keys',
         expect.objectContaining({
           method: 'POST',
+          requiresLiveMode: true,
           body: JSON.stringify({ name: 'CI Bot', permissions: 'admin' }),
         }),
       ),
@@ -288,6 +322,7 @@ describe('APIKeysPage', () => {
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith('/api-keys/k1/revoke', {
         method: 'POST',
+        requiresLiveMode: true,
       }),
     );
   });
@@ -308,6 +343,7 @@ describe('APIKeysPage', () => {
     await waitFor(() =>
       expect(mockedRequest).toHaveBeenCalledWith('/api-keys/k2', {
         method: 'DELETE',
+        requiresLiveMode: true,
       }),
     );
     // The dialog closes on success (deleteTarget cleared in onSuccess).

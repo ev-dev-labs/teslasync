@@ -6,6 +6,7 @@ import {
   BarChart,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   ResponsiveContainer,
   Tooltip,
@@ -55,6 +56,7 @@ export function CycleStressDepthDistribution({
           'cycleStress.distribution.aria',
           'Histogram of reconstructed cycle depth with equivalent full cycles and depth-weighted index',
         )}
+        chartKey="cycle-stress-depth-distribution"
         height={320}
         loading={state.isLoading}
         empty={false}
@@ -88,14 +90,15 @@ export function CycleStressDepthDistribution({
           },
         ]}
       >
-        <CycleStressSectionBody
-          result={result}
-          state={state}
-          requirement="cycles"
-          className="h-full"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={rows}>
+        {({ hiddenSeries }) => (
+          <CycleStressSectionBody
+            result={result}
+            state={state}
+            requirement="cycles"
+            className="h-full"
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={rows}>
               <CartesianGrid
                 strokeDasharray="3 3"
                 stroke="var(--glass-border)"
@@ -114,6 +117,7 @@ export function CycleStressDepthDistribution({
                 axisLine={false}
               />
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
               <Bar
                 dataKey="weightedCycles"
                 name={t(
@@ -123,6 +127,7 @@ export function CycleStressDepthDistribution({
                 fill={chartTokens.series[0]}
                 fillOpacity={0.82}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('weightedCycles')}
               />
               <Bar
                 dataKey="equivalentFullCycles"
@@ -133,6 +138,7 @@ export function CycleStressDepthDistribution({
                 fill={chartTokens.series[1]}
                 fillOpacity={0.82}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('equivalentFullCycles')}
               />
               <Bar
                 dataKey="depthWeightedIndex"
@@ -143,10 +149,12 @@ export function CycleStressDepthDistribution({
                 fill={chartTokens.series[4]}
                 fillOpacity={0.82}
                 radius={[3, 3, 0, 0]}
+                hide={hiddenSeries?.isHidden('depthWeightedIndex')}
               />
-            </BarChart>
-          </ResponsiveContainer>
-        </CycleStressSectionBody>
+              </BarChart>
+            </ResponsiveContainer>
+          </CycleStressSectionBody>
+        )}
       </ChartContainer>
     </section>
   );

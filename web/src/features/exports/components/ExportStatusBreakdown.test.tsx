@@ -15,9 +15,11 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
 
-// MetricBar animates its fill via framer-motion's `motion.div`. Render it as a
-// plain element so the bars are synchronous + deterministic under jsdom (mirrors
-// the shared MetricBar unit test).
+// MetricBar animates its fill via framer-motion's `motion.div` and reads
+// `useReducedMotion()` (via `useMotionPreference`) to decide whether that
+// tween runs. Render it as a plain element + stub the reduced-motion query so
+// the bars are synchronous + deterministic under jsdom (mirrors the shared
+// MetricBar unit test).
 vi.mock('framer-motion', () => ({
   motion: new Proxy(
     {},
@@ -37,6 +39,7 @@ vi.mock('framer-motion', () => ({
         },
     },
   ),
+  useReducedMotion: () => false,
 }));
 
 // Pin the browser to "online" so QueryError resolves to its network-error

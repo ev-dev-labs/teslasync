@@ -116,6 +116,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/tire-pressure/trends/explain',
     body,
     onEvent: noop,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight explanation and clears the
+    // previous vehicle's narrative before the new scope streams in.
+    scopeKey: Number.isFinite(numericVehicleId) && numericVehicleId > 0 ? numericVehicleId : null,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
   return (

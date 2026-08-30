@@ -1,0 +1,174 @@
+{
+  "$comment": [
+    "CLEAN-08 — versioned registry of every static audit in web/scripts/.",
+    "",
+    "Enforced by scripts/check-audit-registry.mjs (npm run audit:registry, itself",
+    "part of `npm run lint`):",
+    "  1. COVERAGE    every web/scripts/audit*.mjs file is registered exactly once,",
+    "                 and every `audit:*` npm script points at a registered file.",
+    "  2. EXECUTABLE  every active audit has a non-zero exit path — a script that",
+    "                 only prints is not a gate.",
+    "  3. THRESHOLDED every active audit declares `enforcement`. 'zero-violations'",
+    "                 fails on the first finding; 'threshold' declares the env var",
+    "                 that pins the ceiling/floor so the number can only ratchet.",
+    "  4. WIRED       every active audit is reachable from a command CI actually",
+    "                 runs (see `roots` below), transitively through `npm run`.",
+    "  5. ARCHIVED    an archived audit must not exist under web/scripts/ and must",
+    "                 not be referenced by package.json, and must name the",
+    "                 executable gate that superseded it."
+  ],
+  "version": 1,
+  "roots": {
+    "lint": ".github/workflows/ci.yml :: frontend → npm run lint",
+    "postbuild": ".github/workflows/ci.yml :: frontend → npm run build",
+    "perf:check": ".github/workflows/perf.yml :: lighthouse → npm run perf:check"
+  },
+  "externalWiring": {
+    "web/vite.config.ts": "verify-english-catalog-split buildStart plugin — runs on every `vite build` and `vite dev`, i.e. on every CI job that builds the SPA."
+  },
+  "audits": [
+    { "script": "audit-empty-state-cta.mjs", "npmScript": "audit:empty-state", "status": "active", "enforcement": "zero-violations", "asserts": "Every EmptyState carries an actionable CTA." },
+    { "script": "audit-tooltip-text-color.mjs", "npmScript": "audit:tooltip-text", "status": "active", "enforcement": "zero-violations", "asserts": "Recharts tooltip content uses readable token colours." },
+    { "script": "audit-i18n-shadowed-keys.mjs", "npmScript": "audit:i18n-shadowed", "status": "active", "enforcement": "zero-violations", "asserts": "No i18n key is shadowed by a namespace of the same name." },
+    { "script": "audit-query-signal.mjs", "npmScript": "audit:query-signal", "status": "active", "enforcement": "zero-violations", "asserts": "Query hooks thread an AbortSignal." },
+    { "script": "audit-datatable-tableid.mjs", "npmScript": "audit:datatable-tableid", "status": "active", "enforcement": "zero-violations", "asserts": "Every DataTable declares a stable tableId for persisted prefs." },
+    { "script": "audit-filterbar-chips.mjs", "npmScript": "audit:filterbar-chips", "status": "active", "enforcement": "zero-violations", "asserts": "Filter bars surface active-filter chips." },
+    { "script": "audit-forced-colors.mjs", "npmScript": "audit:forced-colors", "status": "active", "enforcement": "zero-violations", "asserts": "Windows High Contrast / forced-colors survivability." },
+    { "script": "audit-sr-only.mjs", "npmScript": "audit:sr-only", "status": "active", "enforcement": "zero-violations", "asserts": "sr-only text uses the shared VisuallyHidden primitive." },
+    { "script": "audit-accessible-name.mjs", "npmScript": "audit:accessible-name", "status": "active", "enforcement": "zero-violations", "asserts": "Interactive controls have a computable accessible name." },
+    { "script": "audit-landmarks.mjs", "npmScript": "audit:landmarks", "status": "active", "enforcement": "zero-violations", "asserts": "Page structure exposes the required ARIA landmarks." },
+    { "script": "audit-reduced-motion.mjs", "npmScript": "audit:reduced-motion", "status": "active", "enforcement": "zero-violations", "asserts": "Animation respects prefers-reduced-motion." },
+    { "script": "audit-chart-a11y.mjs", "npmScript": "audit:chart-a11y", "status": "active", "enforcement": "zero-violations", "asserts": "Charts expose an accessible description/table alternative." },
+    { "script": "audit-chart-frame.mjs", "npmScript": "audit:chart-frame", "status": "active", "enforcement": "zero-violations", "asserts": "Charts are wrapped in the shared ChartContainer frame." },
+    { "script": "audit-chart-safety.mjs", "npmScript": "audit:chart-safety", "status": "active", "enforcement": "zero-violations", "asserts": "Chart data access is null-safe." },
+    { "script": "audit-chart-legend-toggle.mjs", "npmScript": "audit:chart-legend", "status": "active", "enforcement": "zero-violations", "asserts": "Multi-series charts ship a toggleable legend." },
+    { "script": "audit-marker-cluster.mjs", "npmScript": "audit:marker-cluster", "status": "active", "enforcement": "zero-violations", "asserts": "Maps with many markers use clustering." },
+    { "script": "audit-deferred-filter.mjs", "npmScript": "audit:deferred-filter", "status": "active", "enforcement": "zero-violations", "asserts": "Expensive filters are deferred off the keystroke path." },
+    { "script": "auditPrefetchLink.mjs", "npmScript": "audit:prefetch-link", "status": "active", "enforcement": "zero-violations", "asserts": "Route links prefetch their lazy chunk." },
+    { "script": "auditTagInput.mjs", "npmScript": "audit:tag-input", "status": "active", "enforcement": "zero-violations", "asserts": "Tag inputs use the shared primitive." },
+    { "script": "auditRequiredFields.mjs", "npmScript": "audit:required-fields", "status": "active", "enforcement": "zero-violations", "asserts": "Required form fields are marked programmatically." },
+    { "script": "auditUnitInput.mjs", "npmScript": "audit:unit-input", "status": "active", "enforcement": "zero-violations", "asserts": "Unit-bearing inputs convert at the display boundary." },
+    { "script": "auditMaskedValues.mjs", "npmScript": "audit:masked-values", "status": "active", "enforcement": "zero-violations", "asserts": "Sensitive values render through the masking primitive." },
+    { "script": "audit-rtl-properties.mjs", "npmScript": "audit:rtl", "status": "active", "enforcement": "zero-violations", "asserts": "Layout uses logical (RTL-safe) properties." },
+    { "script": "audit-background-polling.mjs", "npmScript": "audit:bg-polling", "status": "active", "enforcement": "zero-violations", "asserts": "Polling pauses when the tab is hidden." },
+    { "script": "audit-export-adoption.mjs", "npmScript": "audit:export-adoption", "status": "active", "enforcement": "zero-violations", "asserts": "Data surfaces expose an export affordance." },
+    { "script": "audit-live-mutations.mjs", "npmScript": "audit:live-mutations", "status": "active", "enforcement": "zero-violations", "asserts": "Live mutations invalidate the right query keys." },
+    { "script": "audit-inline-help.mjs", "npmScript": "audit:inline-help", "status": "active", "enforcement": "zero-violations", "asserts": "Complex surfaces carry inline help." },
+    { "script": "audit-touch-target.mjs", "npmScript": "audit:touch-target", "status": "active", "enforcement": "zero-violations", "asserts": "Interactive targets meet the minimum touch size." },
+    { "script": "audit-gauge-width.mjs", "npmScript": "audit:gauge-width", "status": "active", "enforcement": "zero-violations", "asserts": "Gauges size from tokens, not magic pixel widths." },
+    { "script": "audit-typography.mjs", "npmScript": "audit:typography", "status": "active", "enforcement": "zero-violations", "asserts": "Text uses the typography role components/tokens." },
+    { "script": "audit-light-mode-parity.mjs", "npmScript": "lint:light-mode", "status": "active", "enforcement": "zero-violations", "asserts": "Every dark-mode surface has a light-mode counterpart." },
+
+    {
+      "script": "audit-virtualization.mjs",
+      "npmScript": "audit:virtualization",
+      "status": "active",
+      "enforcement": "zero-violations",
+      "asserts": "Hot tables are virtualized, AND the set of unvirtualized long-list surfaces derived by a source scan matches the acknowledged set exactly (in both directions).",
+      "clean08": "Was defined in package.json but unreachable from any CI command, and its PENDING_MIGRATION list printed a WARN nobody could fail on. The follow-up AUDIT_VIRTUALIZATION_BACKLOG_LIMIT ceiling was vacuous — a hardcoded six-item array compared against a default of six, so it could only fire if somebody edited the array. Replaced with `discoverLongListSurfaces()`, which recomputes the set from the sources on every run and fails on a NEW unvirtualized long-list surface anywhere in the app as well as on a stale acknowledgement."
+    },
+    {
+      "script": "auditSkeletons.mjs",
+      "npmScript": "audit:skeletons",
+      "status": "active",
+      "enforcement": "zero-violations",
+      "asserts": "No page uses a bare <Spinner/> as its whole loading state.",
+      "clean08": "Was defined in package.json but unreachable from any CI command. Verified passing (434 pages) and wired into `npm run lint`."
+    },
+    {
+      "script": "auditMotionTokens.mjs",
+      "npmScript": "audit:motion",
+      "status": "active",
+      "enforcement": "zero-violations",
+      "asserts": "No raw duration-NNN classes; motion uses duration-fast|normal|slow tokens that collapse under prefers-reduced-motion.",
+      "clean08": "Was defined in package.json but unreachable from any CI command, and failing: components/charts/LinearGauge.tsx used duration-500, which does NOT collapse under prefers-reduced-motion. Fixed to duration-slow and wired into `npm run lint`."
+    },
+    {
+      "script": "auditChartPalette.mjs",
+      "npmScript": "audit:palette",
+      "status": "active",
+      "enforcement": "zero-violations",
+      "asserts": "Adjacent chart palette entries stay distinguishable (lightness + hue deltas) and the source constants have not drifted.",
+      "clean08": "Was defined in package.json but unreachable from any CI command. Verified passing and wired into `npm run lint`."
+    },
+    {
+      "script": "audit-help-tooltip-coverage.mjs",
+      "npmScript": "audit:help-tooltip",
+      "status": "active",
+      "enforcement": "threshold",
+      "thresholdEnv": "AUDIT_HELP_TOOLTIP_FLOOR",
+      "asserts": "Deeply-technical surfaces adopt <HelpTooltip>; coverage may only ratchet up.",
+      "clean08": "Had no npm script at all and failed outright at 6/9, so it could never be wired. Converted to a ratcheting floor (regression fails, improvement fails until the floor is raised) and wired into `npm run lint`."
+    },
+    {
+      "script": "audit-i18n-namespaces.mjs",
+      "npmScript": null,
+      "status": "active",
+      "enforcement": "threshold",
+      "thresholdEnv": "(baseline file: src/i18n/namespace-audit-baseline.json)",
+      "wiredBy": "web/vite.config.ts",
+      "asserts": "No new dotted/dotless i18n namespace misses versus the committed baseline.",
+      "note": "Invoked with --strict from the verify-english-catalog-split buildStart plugin rather than from an npm script, so it runs on every build in every CI job that compiles the SPA."
+    }
+  ],
+  "reports": [
+    {
+      "script": "../scripts/a11y-audit.ps1",
+      "npmScript": "audit:a11y",
+      "kind": "report",
+      "status": "manual",
+      "note": "Regex heuristic, NOT a gate, and never wired into CI. Retained as a manual deep-dive tool only. Its over-reporting (295 'buttons without accessible name' vs a clean `audit:accessible-name` run) is exactly why the semantic gates below are authoritative.",
+      "supersededBy": [
+        "npm run audit:accessible-name",
+        "npm run audit:sr-only",
+        "npm run audit:landmarks",
+        "npm run audit:forced-colors",
+        "npm run audit:touch-target",
+        "npm run audit:reduced-motion",
+        "eslint-plugin-jsx-a11y (npm run lint)",
+        "npm run e2e:a11y (axe-core)"
+      ]
+    },
+    {
+      "script": "../scripts/i18n-coverage.ps1",
+      "npmScript": "audit:i18n",
+      "kind": "report",
+      "status": "manual",
+      "note": "Regex heuristic, NOT a gate, and never wired into CI. Retained as a manual deep-dive tool only.",
+      "supersededBy": [
+        "npm run lint:i18n",
+        "npm run audit:i18n-shadowed",
+        "npm run i18n:validate:strict",
+        "node scripts/split-i18n-catalog.mjs --check (vite buildStart)",
+        "node scripts/audit-i18n-namespaces.mjs --strict (vite buildStart)",
+        "npm run perf:i18n-runtime"
+      ]
+    },
+    {
+      "script": "../scripts/mobile-audit.ps1",
+      "npmScript": null,
+      "kind": "report",
+      "status": "manual",
+      "note": "Regex heuristic, NOT a gate, and never wired into CI or package.json. Retained as a manual deep-dive tool only.",
+      "supersededBy": [
+        "npm run audit:touch-target",
+        "npm run audit:rtl",
+        "npm run e2e:quality (chromium responsive projects)"
+      ]
+    }
+  ],
+  "archived": [
+    {
+      "script": "icon-audit.ps1",
+      "originalPath": "scripts/icon-audit.ps1",
+      "archivedTo": "scripts/archive/icon-audit.ps1",
+      "reports": ["docs/audits/archive/icon-audit.md", "docs/audits/archive/lucide-direct-imports.txt"],
+      "reason": "Premise inverted. It counted direct `lucide-react` imports as debt to be migrated into a central non-tree-shakeable icon registry — the same shape as force-grouping lucide-react in manualChunks, which hoisted 421 icon modules into the shell and was removed to bring startup JS under budget. Per-route direct imports are now the required pattern.",
+      "supersededBy": [
+        "npm run perf:check → check-bundle-size.mjs --strict (BUNDLE_STARTUP_ICON_SHARE_LIMIT)",
+        "web/src/__tests__/viteChunking.test.ts"
+      ],
+      "documentedIn": "docs/audits/archive/README.md"
+    }
+  ]
+}

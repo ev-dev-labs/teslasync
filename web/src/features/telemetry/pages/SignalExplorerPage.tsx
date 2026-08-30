@@ -398,8 +398,15 @@ export default function SignalExplorerPage() {
               <GlassPanel className="p-4 sm:p-5">
                 <EmptyState
                   icon={<Database className="h-10 w-10" aria-hidden="true" />}
-                  title={t('Pick signals and click Explore')}
-                  message={t('Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.')}
+                  title={t('signalExplorer.start.title', 'Pick signals and click Explore')}
+                  message={t(
+                    'signalExplorer.start.message',
+                    'Choose up to 5 signals, set a date range, then hit Explore — or toggle Live to stream in real time.',
+                  )}
+                  description={t(
+                    'signalExplorer.start.description',
+                    'Historical queries use the selected range; Live begins streaming new samples without changing it.',
+                  )}
                 />
               </GlassPanel>
             </FadeIn>

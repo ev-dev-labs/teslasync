@@ -64,7 +64,7 @@ export function CarbonGreenTimingScore({
                   )}
                 </Text>
               </div>
-              <Grid cols={{ default: 1, sm: 3 }} gap={3}>
+              <Grid minItemWidth="standard" gap={3}>
                 <MetricCard
                   label={t('carbon.score.sessions', 'Support sessions')}
                   value={display.formatNumber(lifetime.sessionsScored, 0)}
@@ -102,7 +102,7 @@ export function CarbonGreenTimingScore({
               </Grid>
             </div>
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               message={t(
                 hasScoredSessions
                   ? 'carbon.score.unavailable'

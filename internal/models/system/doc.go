@@ -15,6 +15,10 @@
 //   - FSMTransition — finite-state-machine transition log.
 //   - Settings — aggregate root for legacy settings I/O (export/import).
 //   - Embedding — pgvector-backed semantic search records.
+//   - SessionRepairKind, SessionRepairRule, SessionRepairConfidence,
+//     SessionRepairEvidenceSource, SessionRepairEvidence,
+//     SessionRepairSuggestion, SessionRepairReport — read-only
+//     evidence-based diagnosis DTOs for the /data-repair worklist.
 //
 // Layer: domain
 //

@@ -86,6 +86,21 @@ export default function VehicleAccessPage() {
     error: invitationsError,
     refetch: refetchInvitations,
   } = invitationsQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'drivers',
+        label: t('dataSources.labels.vehicleDrivers', 'Vehicle drivers'),
+        query: driversQuery,
+      },
+      {
+        id: 'invitations',
+        label: t('dataSources.labels.shareInvitations', 'Share invitations'),
+        query: invitationsQuery,
+      },
+    ],
+    [driversQuery, invitationsQuery, t],
+  );
 
   const refreshDrivers = useRefreshVehicleDrivers();
   const refreshInvitations = useRefreshVehicleInvitations();
@@ -271,6 +286,7 @@ export default function VehicleAccessPage() {
       title={t('vehicleAccess.title', 'Vehicle Access')}
       subtitle={t('vehicleAccess.subtitle', 'Manage drivers and share invitations')}
       query={[driversQuery, invitationsQuery]}
+      dataSources={dataSources}
       breadcrumbLabels={{
         '/vehicles/:id': vehicle?.display_name ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id: vehicleId }),
       }}

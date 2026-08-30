@@ -5,7 +5,7 @@ import { useSyncExternalStore } from 'react'
  *
  * Three options:
  *   - 'linear' (default) — quiet single-column tree with 2px accent bar
- *   - 'notion'           — tighter rows with caret-on-row section toggles
+ *   - 'notion'           — complete route catalog with collapsible groups
  *   - 'legacy'           — original multi-color icon-tile sidebar
  *
  * Stored in localStorage (not the backend `AppSettings` blob) so:

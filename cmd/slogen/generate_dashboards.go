@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -108,6 +109,7 @@ func runGenerateDashboards(args []string) error {
 	fs := flag.NewFlagSet("generate dashboards", flag.ContinueOnError)
 	catalog := fs.String("catalog", "slo/catalog.yaml", "path to SLO catalog YAML")
 	outDir := fs.String("out-dir", defaultDashboardsDir, "output directory for dashboards")
+	check := fs.Bool("check", false, "exit non-zero if any committed dashboard would change; never writes")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -116,8 +118,10 @@ func runGenerateDashboards(args []string) error {
 		return err
 	}
 
-	if err := os.MkdirAll(*outDir, 0o755); err != nil {
-		return err
+	if !*check {
+		if err := os.MkdirAll(*outDir, 0o755); err != nil {
+			return err
+		}
 	}
 
 	written := 0
@@ -127,7 +131,7 @@ func runGenerateDashboards(args []string) error {
 		if err != nil {
 			return err
 		}
-		if err := writeFileIdempotent(path, body); err != nil {
+		if err := writeFileIdempotent(path, body, *check); err != nil {
 			return err
 		}
 		written++
@@ -137,15 +141,97 @@ func runGenerateDashboards(args []string) error {
 	if err != nil {
 		return err
 	}
-	if err := writeFileIdempotent(overviewPath, overviewBody); err != nil {
+	if err := writeFileIdempotent(overviewPath, overviewBody, *check); err != nil {
 		return err
 	}
 	written++
+	if *check {
+		fmt.Fprintf(os.Stdout, "ok %d dashboards in %s are current\n", written, *outDir)
+		return nil
+	}
 	fmt.Fprintf(os.Stdout, "wrote %d dashboards to %s\n", written, *outDir)
 	return nil
 }
 
 var prometheusDS = datasource{Type: "prometheus", UID: "DS_TESLASYNC_PROMETHEUS"}
+
+var prometheusHTTPMatcherRE = regexp.MustCompile(
+	`(?:^|,)\s*(method|route)\s*(=~|!~|!=|=)\s*("(?:\\.|[^"\\])*")`,
+)
+
+// httpScopeMatchers extracts only bounded HTTP dimensions from an SLO's
+// denominator selector. Status and histogram-bucket labels describe the SLI
+// calculation, not the traffic population the dashboard latency panel should
+// chart. Preserving method/route match operators keeps exact and regex-scoped
+// SLOs faithful without building a general PromQL parser.
+func httpScopeMatchers(validEvents string) string {
+	metrics := []string{
+		"teslasync_red_http_requests_total",
+		"teslasync_red_http_request_duration_seconds_count",
+	}
+	for _, metric := range metrics {
+		body, ok := prometheusSelectorBody(validEvents, metric)
+		if !ok {
+			continue
+		}
+		matches := prometheusHTTPMatcherRE.FindAllStringSubmatch(body, -1)
+		if len(matches) == 0 {
+			return ""
+		}
+		parts := make([]string, 0, len(matches))
+		for _, match := range matches {
+			parts = append(parts, match[1]+match[2]+match[3])
+		}
+		return "{" + strings.Join(parts, ",") + "}"
+	}
+	return ""
+}
+
+// prometheusSelectorBody returns the first label-selector body immediately
+// following metric. Braces escaped inside a quoted regex are ignored.
+func prometheusSelectorBody(expression, metric string) (string, bool) {
+	start := strings.Index(expression, metric)
+	if start < 0 {
+		return "", false
+	}
+	cursor := start + len(metric)
+	for cursor < len(expression) && (expression[cursor] == ' ' || expression[cursor] == '\t') {
+		cursor++
+	}
+	if cursor >= len(expression) || expression[cursor] != '{' {
+		return "", false
+	}
+
+	bodyStart := cursor + 1
+	inQuote := false
+	escaped := false
+	for cursor = bodyStart; cursor < len(expression); cursor++ {
+		ch := expression[cursor]
+		if escaped {
+			escaped = false
+			continue
+		}
+		if inQuote && ch == '\\' {
+			escaped = true
+			continue
+		}
+		if ch == '"' {
+			inQuote = !inQuote
+			continue
+		}
+		if ch == '}' && !inQuote {
+			return expression[bodyStart:cursor], true
+		}
+	}
+	return "", false
+}
+
+func latencyPanelExpression(s SLO) string {
+	return fmt.Sprintf(
+		"histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket%s[5m])))",
+		httpScopeMatchers(s.SLI.ValidEvents),
+	)
+}
 
 func renderSLODashboard(s SLO) (string, error) {
 	var min0 float64 = 0
@@ -224,7 +310,7 @@ func renderSLODashboard(s SLO) (string, error) {
 			FieldConfig: fieldCfg{Defaults: fieldDefaults{Unit: "s"}},
 			Targets: []target{{
 				RefID:        "A",
-				Expr:         "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket[5m])))",
+				Expr:         latencyPanelExpression(s),
 				LegendFormat: "p99",
 				Exemplar:     true,
 			}},
@@ -249,7 +335,7 @@ func renderSLODashboard(s SLO) (string, error) {
 			URL:   "/explore?left=%7B%22datasource%22:%22tempo%22%7D",
 		}},
 	}
-	return marshalDashboard(d)
+	return marshalDashboard(applyFrontendSpecialisation(d, s))
 }
 
 func renderOverviewDashboard(cat *Catalog) (string, error) {

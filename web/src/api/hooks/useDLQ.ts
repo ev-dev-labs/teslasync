@@ -153,6 +153,7 @@ export function useDLQReplay() {
     mutationFn: ({ id }) =>
       request<DLQReplayResponse>(`/system/dlq/${id}/replay`, {
         method: 'POST',
+        requiresLiveMode: true,
       }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['system', 'dlq'] });

@@ -1,13 +1,13 @@
 /**
  * DashboardPage — behaviour + hardening coverage.
  *
- * DashboardPage is the fleet "Command Center" orchestrator. Its only export is
+ * DashboardPage is the fleet operations orchestrator. Its only export is
  * the default page component; the file-local helpers (`ThemeFirstRunBanner`,
  * `EmptyOnboarding`, `LoadingSkeleton`) are exercised transitively through the
  * page render. The page wires together a large surface, so these tests focus on
  * the branches and interactions the component actually owns:
  *
- *   1. SHELL      — title/subtitle, recently-viewed, layout region gating.
+ *   1. SHELL      — title/subtitle and layout region gating.
  *   2. HEADER     — view-mode actions expose accessible names (the a11y fix),
  *                   refresh invalidates caches, Customize enters edit mode.
  *   3. EDIT MODE  — undo/redo labels + wiring + counter, add-widget picker, Done.
@@ -15,7 +15,7 @@
  *                   populated grid.
  *   5. SETTINGS   — opening a widget's settings modal + saving persists config.
  *   6. BANNERS    — load-error + Tesla-not-connected warnings.
- *   7. ALERTS     — unread badge count, 99+ cap, hidden in edit mode.
+ *   7. STATUS     — global alert/live status is not duplicated in page chrome.
  *   8. THEME NAG  — first-run prompt shows/hides on the right conditions and
  *                   both dismiss paths persist + fire the picker event.
  *   9. HINT       — the customize hint appears after its delay and opens the
@@ -33,9 +33,10 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, cleanup, act } from '@testing-library/react';
+import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 
 // ── Hoisted, per-test controllable state ──────────────────────────────
@@ -111,7 +112,7 @@ const h = vi.hoisted(() => {
     layout,
     kiosk,
     vehicles: undefined as unknown,
-    alerts: { data: [] as unknown[], error: undefined } as unknown,
+    fleetStates: undefined as unknown,
     auth: { authenticated: true } as unknown,
     themeId: 'aurora' as string,
     syncMutate: vi.fn(),
@@ -153,18 +154,14 @@ vi.mock('@/api/hooks/useVehicles', async (importOriginal) => {
   return {
     ...actual,
     useVehicles: () => h.vehicles,
+    useFleetStates: () => h.fleetStates,
     useSyncVehicles: () => ({ mutate: h.syncMutate, isPending: h.syncPending }),
   };
 });
 
-vi.mock('@/api/hooks/useAlerts', async (importOriginal) => {
-  const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useAlerts: () => h.alerts };
-});
-
 vi.mock('@/api/hooks/useSettings', async (importOriginal) => {
   const actual = await importOriginal<Record<string, unknown>>();
-  return { ...actual, useAuthStatus: () => ({ data: h.auth }) };
+  return { ...actual, useAuthStatus: () => ({ data: h.auth, isLoading: false }) };
 });
 
 // ── App-level hooks ───────────────────────────────────────────────────
@@ -252,9 +249,6 @@ vi.mock('../components/ImportPreviewModal', () => ({
 vi.mock('../components/DashboardSettingsModal', () => ({
   DashboardSettingsModal: (props: any) => (props.open ? <div data-testid="dash-settings" /> : null),
 }));
-vi.mock('../components/KioskOverlay', () => ({
-  KioskOverlay: () => <div data-testid="kiosk-overlay" />,
-}));
 vi.mock('../components/KioskSettingsModal', () => ({
   KioskSettingsModal: (props: any) => (props.open ? <div data-testid="kiosk-settings" /> : null),
 }));
@@ -273,10 +267,6 @@ vi.mock('../components/WidgetCatalogueDialog', () => ({
       </div>
     ) : null,
 }));
-vi.mock('../components/RecentlyViewedWidget', () => ({
-  RecentlyViewedWidget: () => <div data-testid="recently-viewed" />,
-}));
-
 import DashboardPage from './DashboardPage';
 import { toUrlSafeBase64 } from '../hooks/validateImport';
 
@@ -311,9 +301,34 @@ function makeQuery(overrides: Record<string, unknown> = {}) {
   };
 }
 
-function makeAlerts(unread: number) {
-  const data = Array.from({ length: unread }, (_, i) => ({ id: i + 1, is_read: false }));
-  return { data, error: undefined };
+function makeFleetState(
+  vehicle: Record<string, unknown>,
+  state: Record<string, unknown> = {},
+  verifiedFields: string[] = ['state', 'is_charging', 'speed'],
+  overrides: Record<string, unknown> = {},
+) {
+  const now = Date.now();
+  return {
+    vehicle,
+    state: {
+      vehicle_id: vehicle.id,
+      state: 'online',
+      is_charging: false,
+      speed: 0,
+      ...state,
+    },
+    outcome: 'resolved',
+    freshness: 'fresh',
+    verifiedFields,
+    stale: false,
+    observedAt: now,
+    receivedAt: now,
+    ...overrides,
+  };
+}
+
+function metricValue(brief: HTMLElement, label: string) {
+  return within(brief).getByText(label).parentElement?.querySelector('dd');
 }
 
 function setDashboard(overrides: Record<string, unknown> = {}) {
@@ -334,9 +349,11 @@ function renderPage() {
   const invalidateSpy = vi.spyOn(qc, 'invalidateQueries');
   const utils = render(
     <QueryClientProvider client={qc}>
-      <MemoryRouter>
-        <DashboardPage />
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter>
+          <DashboardPage />
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
   return { ...utils, qc, invalidateSpy };
@@ -356,8 +373,9 @@ beforeEach(() => {
   setDashboard();
   (h.kiosk as Record<string, unknown>).isKiosk = false;
   (h.kiosk as Record<string, unknown>).validIds = ['d1'];
-  h.vehicles = makeQuery({ data: [{ id: 1, display_name: 'Model 3', vin: 'VIN1' }] });
-  h.alerts = { data: [], error: undefined };
+  const vehicle = { id: 1, display_name: 'Model 3', vin: 'VIN1' };
+  h.vehicles = makeQuery({ data: [vehicle] });
+  h.fleetStates = makeQuery({ data: [makeFleetState(vehicle)] });
   h.auth = { authenticated: true };
   h.themeId = 'aurora';
   h.syncPending = false;
@@ -369,11 +387,111 @@ afterEach(() => {
 });
 
 describe('DashboardPage — shell', () => {
-  it('renders the Command Center title, subtitle and recently-viewed region', () => {
+  it('renders the Fleet Operations identity and command brief without a page-level recent panel', () => {
     renderPage();
-    expect(screen.getByRole('heading', { level: 1, name: 'Command Center' })).toBeInTheDocument();
-    expect(screen.getByText('Real-time fleet intelligence and control')).toBeInTheDocument();
-    expect(screen.getByTestId('recently-viewed')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Fleet Operations' })).toBeInTheDocument();
+    expect(
+      screen.getByText('Monitor readiness, investigate exceptions, and act from one workspace'),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('fleet-operations-brief')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Fleet posture' })).toBeInTheDocument();
+    expect(screen.getByRole('navigation', { name: 'Primary workflows' })).toBeInTheDocument();
+    expect(screen.queryByText('Recently Viewed')).toBeNull();
+  });
+
+  it('uses verified charging and movement instead of stale inventory posture', () => {
+    const vehicles = [
+      { id: 1, display_name: 'Falcon', vin: 'VIN1', state: 'unknown', healthy: false },
+      { id: 2, display_name: 'Roadrunner', vin: 'VIN2', state: 'unknown', healthy: false },
+      { id: 3, display_name: 'Kestrel', vin: 'VIN3', state: 'online', healthy: true },
+    ];
+    h.vehicles = makeQuery({ data: vehicles });
+    h.fleetStates = makeQuery({
+      data: [
+        makeFleetState(
+          vehicles[0],
+          { state: 'unknown', is_charging: true },
+          ['is_charging'],
+        ),
+        makeFleetState(
+          vehicles[1],
+          { state: 'unknown', speed: 14 },
+          ['speed'],
+        ),
+        makeFleetState(
+          vehicles[2],
+          {},
+          [],
+          {
+            state: null,
+            outcome: 'failed',
+            freshness: 'unknown',
+            observedAt: null,
+            error: new Error('gateway timeout'),
+          },
+        ),
+      ],
+    });
+
+    renderPage();
+
+    const brief = screen.getByTestId('fleet-operations-brief');
+    // Verified charging outranks the stale inventory `state: 'unknown'`.
+    expect(within(brief).getByText('charging')).toBeInTheDocument();
+    // Two verified readings, one unreachable vehicle.
+    expect(metricValue(brief, 'Verified')).toHaveTextContent('2/3');
+    expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
+    // The taxonomy separates "we cannot read it" from "it is offline".
+    expect(metricValue(brief, 'Reporting')).toHaveTextContent('2');
+    expect(metricValue(brief, 'Unreachable')).toHaveTextContent('1');
+    expect(metricValue(brief, 'Offline')).toHaveTextContent('0');
+    expect(
+      within(brief).getByTestId('fleet-posture-announcement'),
+    ).toHaveTextContent('2 of 3 vehicles verified. 1 need attention.');
+    expect(
+      within(brief).getByText(
+        'Vehicle data is reporting normally. Global pages and filters follow this selection.',
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('keeps a failed selected-vehicle state unknown rather than claiming it is offline', () => {
+    const vehicle = {
+      id: 1,
+      display_name: 'Falcon',
+      vin: 'VIN1',
+      state: 'charging',
+      healthy: true,
+    };
+    h.vehicles = makeQuery({ data: [vehicle] });
+    h.fleetStates = makeQuery({
+      data: [
+        makeFleetState(vehicle, {}, [], {
+          state: null,
+          outcome: 'failed',
+          freshness: 'unknown',
+          observedAt: null,
+          error: new Error('gateway timeout'),
+        }),
+      ],
+    });
+
+    renderPage();
+
+    const brief = screen.getByTestId('fleet-operations-brief');
+    expect(within(brief).getByText('Unknown')).toBeInTheDocument();
+    expect(metricValue(brief, 'Verified')).toHaveTextContent('0/1');
+    expect(metricValue(brief, 'Attention')).toHaveTextContent('1');
+    // A failed request is categorised as UNREACHABLE — a fact about our
+    // pipeline — and never folded into the Offline count.
+    expect(metricValue(brief, 'Unreachable')).toHaveTextContent('1');
+    expect(metricValue(brief, 'Offline')).toHaveTextContent('0');
+    expect(
+      within(brief).getByText(
+        'The live-state request failed. This is a fact about our pipeline, not about the vehicle.',
+      ),
+    ).toBeInTheDocument();
+    expect(within(brief).queryByText('offline')).not.toBeInTheDocument();
   });
 
   it('hides the layout region when there are no saved dashboards', () => {
@@ -394,11 +512,15 @@ describe('DashboardPage — shell', () => {
 });
 
 describe('DashboardPage — view-mode header actions', () => {
-  it('exposes accessible names on the icon-only header buttons', () => {
+  it('keeps primary actions visible and groups secondary tools', () => {
     renderPage();
     expect(screen.getByRole('button', { name: 'Refresh data' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Customize' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Export dashboard' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     expect(screen.getByRole('button', { name: 'Export dashboard' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Import dashboard' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Kiosk mode' })).toBeInTheDocument();
   });
 
   it('refresh invalidates the core query caches', async () => {
@@ -420,8 +542,10 @@ describe('DashboardPage — view-mode header actions', () => {
   it('opens the export and import modals from the header', () => {
     renderPage();
     expect(screen.queryByTestId('export-modal')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     fireEvent.click(screen.getByRole('button', { name: 'Export dashboard' }));
     expect(screen.getByTestId('export-modal')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'More dashboard actions' }));
     fireEvent.click(screen.getByRole('button', { name: 'Import dashboard' }));
     expect(screen.getByTestId('import-modal')).toBeInTheDocument();
   });
@@ -468,17 +592,18 @@ describe('DashboardPage — data states', () => {
     const { container } = renderPage();
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
-    expect(screen.queryByText('Sync Your Vehicles')).toBeNull();
-    expect(screen.queryByText('Welcome to TeslaSync')).toBeNull();
+    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
+    expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
   });
 
   it('shows onboarding with a connect link when unauthenticated and no vehicles', () => {
     h.vehicles = makeQuery({ data: [] });
     h.auth = { authenticated: false };
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Welcome to TeslaSync' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Build a live operating picture of your Tesla fleet' })).toBeInTheDocument();
     const link = screen.getByRole('link', { name: /Connect Tesla Account/i });
     expect(link.getAttribute('href')).toBe('/settings');
+    expect(screen.getByText('Workspace setup')).toBeInTheDocument();
     expect(screen.queryByTestId('dashboard-grid')).toBeNull();
   });
 
@@ -486,7 +611,7 @@ describe('DashboardPage — data states', () => {
     h.vehicles = makeQuery({ data: [] });
     h.auth = { authenticated: true };
     renderPage();
-    expect(screen.getByRole('heading', { name: 'Sync Your Vehicles' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Bring your vehicles into TeslaSync' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Sync Vehicles/i }));
     expect(h.syncMutate).toHaveBeenCalledTimes(1);
   });
@@ -494,7 +619,7 @@ describe('DashboardPage — data states', () => {
   it('renders the dashboard grid when vehicles exist', () => {
     renderPage();
     expect(screen.getByTestId('dashboard-grid')).toBeInTheDocument();
-    expect(screen.queryByText('Welcome to TeslaSync')).toBeNull();
+    expect(screen.queryByText('Build a live operating picture of your Tesla fleet')).toBeNull();
   });
 });
 
@@ -520,10 +645,12 @@ describe('DashboardPage — widget settings flow', () => {
 });
 
 describe('DashboardPage — banners', () => {
-  it('surfaces a load error banner with the error message', () => {
+  it('uses the shared safe error state without exposing backend details', () => {
     h.vehicles = makeQuery({ data: undefined, error: new Error('Boom'), isError: true });
     renderPage();
-    expect(screen.getByText(/Failed to load data: Boom/)).toBeInTheDocument();
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
+    expect(screen.queryByText(/Boom/)).toBeNull();
+    expect(screen.queryByText('Bring your vehicles into TeslaSync')).toBeNull();
   });
 
   it('warns and links to settings when the Tesla account is not connected', () => {
@@ -540,28 +667,17 @@ describe('DashboardPage — banners', () => {
   });
 });
 
-describe('DashboardPage — unread alerts badge', () => {
-  it('renders the badge with the unread count and an aria-label', () => {
-    h.alerts = makeAlerts(5);
-    renderPage();
-    const badge = screen.getByRole('link', { name: '5 unread alerts' });
-    expect(badge).toBeInTheDocument();
-    expect(badge.getAttribute('href')).toBe('/notifications/alerts');
-    expect(badge.textContent).toContain('5');
-  });
-
-  it('caps the badge at 99+ for large unread counts', () => {
-    h.alerts = makeAlerts(100);
-    renderPage();
-    const badge = screen.getByRole('link', { name: '100 unread alerts' });
-    expect(badge.textContent).toContain('99+');
-  });
-
-  it('hides the unread badge in edit mode', () => {
-    h.alerts = makeAlerts(5);
+describe('DashboardPage — status ownership', () => {
+  it('does not duplicate the global alert or live status controls in the page header', () => {
     h.layout.editMode = true;
     renderPage();
-    expect(screen.queryByRole('link', { name: '5 unread alerts' })).toBeNull();
+    const pageHeader = screen
+      .getByRole('heading', { level: 1, name: 'Fleet Operations' })
+      .closest('[data-role="page-header"]');
+    if (!pageHeader) throw new Error('Dashboard page header was not rendered');
+
+    expect(within(pageHeader).queryByRole('link', { name: /unread alerts/i })).toBeNull();
+    expect(within(pageHeader).queryByText('Live')).toBeNull();
   });
 });
 
@@ -691,7 +807,6 @@ describe('DashboardPage — kiosk mode', () => {
   it('renders the kiosk surface and hides the add-widget FAB in kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = true;
     renderPage();
-    expect(screen.getByTestId('kiosk-overlay')).toBeInTheDocument();
     expect(screen.getByTestId('kiosk-grid')).toBeInTheDocument();
     expect(screen.queryByTestId('add-widget-fab')).toBeNull();
   });
@@ -700,7 +815,7 @@ describe('DashboardPage — kiosk mode', () => {
     (h.kiosk as Record<string, unknown>).isKiosk = false;
     renderPage();
     expect(screen.getByTestId('add-widget-fab')).toBeInTheDocument();
-    expect(screen.queryByTestId('kiosk-overlay')).toBeNull();
+    expect(screen.queryByTestId('kiosk-grid')).toBeNull();
   });
 });
 

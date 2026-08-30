@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { request } from '@/api/client';
+import { request, type ApiRequestOptions } from '@/api/client';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
 import { useToast } from '@/components/feedback/Toast';
 
@@ -21,7 +21,10 @@ function getWatchApiKey(): string {
   return sessionStorage.getItem('teslasync-watch-key') ?? '';
 }
 
-async function watchRequest<T>(path: string, options?: RequestInit): Promise<T> {
+async function watchRequest<T>(
+  path: string,
+  options?: ApiRequestOptions,
+): Promise<T> {
   const apiKey = getWatchApiKey();
   const headers = new Headers(options?.headers);
 
@@ -117,12 +120,14 @@ export function useWatchCommand() {
     mutationFn: ({ vehicleId, command }: { vehicleId?: number; command: string }) =>
       watchRequest<WatchCommandResult>('/watch/command', {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           vehicle_id: vehicleId ?? 0,
           command,
         }),
       }),
+    networkMode: 'always',
     // Read `data?.` defensively: a 204 / empty / malformed body must surface
     // the generic failure toast rather than throw on `data.success`.
     onSuccess: (data) => {

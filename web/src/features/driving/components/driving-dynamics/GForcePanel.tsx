@@ -14,11 +14,6 @@ interface GForcePanelProps {
   vehicleId: number | null | undefined;
 }
 
-// Static responsive column config, hoisted so the panel's REALTIME
-// polling re-render doesn't allocate a fresh object literal for <Grid>
-// on every tick.
-const GRID_COLS = { default: 1, sm: 3 } as const;
-
 /**
  * Acceleration G-forces (LateralAcceleration, LongitudinalAcceleration).
  *
@@ -76,7 +71,7 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
         {t('dynamics.gForce', 'Acceleration G-Force')}
       </PanelTitle>
       {isLoading ? (
-        <Grid cols={GRID_COLS} gap={4}>
+        <Grid minItemWidth="standard" gap={4}>
           <StatCard loading label={lateralLabel} value="" />
           <StatCard loading label={longitudinalLabel} value="" />
           <StatCard loading label={combinedLabel} value="" />
@@ -84,7 +79,7 @@ export default function GForcePanel({ vehicleId }: GForcePanelProps) {
       ) : isError ? (
         <QueryError error={error} onRetry={handleRetry} />
       ) : hasAny ? (
-        <Grid cols={GRID_COLS} gap={4}>
+        <Grid minItemWidth="standard" gap={4}>
           <StatCard
             icon={<Gauge className="h-5 w-5" aria-hidden="true" />}
             label={lateralLabel}

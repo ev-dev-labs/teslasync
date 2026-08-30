@@ -74,6 +74,7 @@ import {
   useUpdatePollingConfig,
   useCaptureStats,
   useVersionInfo,
+  useUpdateCheck,
   type DashboardLayoutsPayload,
   type PollingConfig,
 } from './useSettings';
@@ -81,7 +82,12 @@ import {
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>;
 
 /** The captured (url, options) tuple of a `request()` invocation. */
-type ReqOpts = { method?: string; body?: string; signal?: unknown };
+type ReqOpts = {
+  method?: string;
+  body?: string;
+  signal?: unknown;
+  requiresLiveMode?: boolean;
+};
 function callAt(n = 0): [string, ReqOpts] {
   return mockedRequest.mock.calls[n] as [string, ReqOpts];
 }
@@ -470,6 +476,7 @@ describe('useSyncVehicles', () => {
 
     expect(callAt(0)[0]).toBe('/vehicles/sync');
     expect(callAt(0)[1].method).toBe('POST');
+    expect(callAt(0)[1].requiresLiveMode).toBe(true);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.vehicles });
     expect(successToast).toHaveBeenCalledWith(
       'toast.settings.vehicles.sync.success',
@@ -768,6 +775,7 @@ describe('useToggleAPISuspend', () => {
 
     expect(callAt(0)[0]).toBe('/settings/suspend-api');
     expect(callAt(0)[1].method).toBe('POST');
+    expect(callAt(0)[1].requiresLiveMode).toBe(true);
     expect(bodyAt(0)).toEqual({ suspended: true });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: settingsKeys.settings });
     expect(successToast).toHaveBeenCalledWith(
@@ -822,6 +830,7 @@ describe('useUpdatePollingConfig', () => {
 
     expect(callAt(0)[0]).toBe('/settings/polling-config');
     expect(callAt(0)[1].method).toBe('PUT');
+    expect(callAt(0)[1].requiresLiveMode).toBe(true);
     expect(bodyAt(0)).toEqual(pc);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['polling-config'] });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: ['capture-stats'] });
@@ -897,5 +906,23 @@ describe('useVersionInfo', () => {
 
     await waitFor(() => expect(result.current.isError).toBe(true));
     expect(result.current.error).toBeInstanceOf(Error);
+  });
+});
+
+describe('useUpdateCheck', () => {
+  it('GETs /system/update-check and exposes update availability', async () => {
+    mockedRequest.mockResolvedValueOnce({
+      current: '2.3.4',
+      latest: '2.4.0',
+      update_available: true,
+    });
+
+    const { Wrapper } = makeWrapper();
+    const { result } = renderHook(() => useUpdateCheck(), { wrapper: Wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.update_available).toBe(true);
+    expect(callAt(0)[0]).toBe('/system/update-check');
+    expect(callAt(0)[1].signal).toBeInstanceOf(AbortSignal);
   });
 });

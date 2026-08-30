@@ -9,9 +9,8 @@
  * - Tree-style: tiny uppercase section headers + click-to-collapse.
  * - Active state: 2px left accent bar + medium font weight. Nothing else.
  * - Icons are page-marker glyphs (14px, muted) — no decorative tiles.
- * - Inline tree filter (Notion-style) — types into the local box to whittle
- *   the tree down without leaving the sidebar. Empty matches collapse the
- *   section header silently.
+ * - Navigation search is owned by the command palette trigger mounted directly
+ *   above this tree, avoiding two competing search boxes in the same sidebar.
  *
  * What this does NOT change
  * - Sidebar wrapper, mobile slide animation, vehicle picker, command-palette
@@ -28,24 +27,40 @@
  *   component is not used).
  * - "Favorites" (pinned) is a permanent un-collapsable group at the top
  *   whenever there is at least one pinned item.
- * - Typing in the tree-filter expands every section that has a match,
- *   so users see results immediately. Clearing the filter restores the
- *   prior expansion state.
  */
 
 import { useEffect, useMemo, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
-import { GuardedNavLink } from '../../feedback/GuardedLink'
-import { Button, Input } from '@/components/ui'
+import { PrefetchNavLink } from '../PrefetchLink'
+import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
+import { compactGroupTier, EXPLORE_PATH, type CompactGroupTier } from './compactNav'
+
+const COMPACT_GROUP_I18N_KEYS: Readonly<Record<string, string>> = {
+  Overview: 'nav.compactOverview',
+  Vehicles: 'nav.compactVehicles',
+  Drives: 'nav.compactDrives',
+  Charging: 'nav.compactCharging',
+  Energy: 'nav.compactEnergy',
+  Insights: 'nav.compactInsights',
+  Operations: 'nav.compactOperations',
+  'Advanced Intelligence': 'nav.compactAdvancedIntelligence',
+  Administration: 'nav.compactAdministration',
+  Developer: 'nav.compactDeveloper',
+  'Settings & Account': 'nav.compactSettingsAccount',
+}
 
 // Re-derive the structural types from Layout's exported navSections so this
 // component stays in lockstep with the canonical nav tree without taking
 // on a circular import or duplicating the literal.
 export type LinearSidebarSectionInput = {
   title: string
+  /** Compact tier — `advanced` groups render under the "Advanced" divider. */
+  tier?: CompactGroupTier
+  /** True when the current principal lacks the capability that promotes the group. */
+  restricted?: boolean
   items: Array<{
     to: string
     icon: typeof Icons.home
@@ -117,32 +132,32 @@ function LinearNavLink({
       {active && (
         <span
           aria-hidden
-          className="absolute left-0 top-1/2 h-5 w-[2px] -translate-y-1/2 rounded-r-sm bg-[var(--theme-primary)]"
+          className="absolute start-0 top-1/2 h-6 w-[3px] -translate-y-1/2 rounded-e-sm bg-[var(--theme-primary)]"
         />
       )}
-      <GuardedNavLink
+      <PrefetchNavLink
         to={to}
         onClick={onSelect}
-        aria-current={active ? 'page' : undefined}
+        aria-current={active ? 'page' : false}
         data-tour={dataTour}
         className={cn(
-          'flex min-w-0 flex-1 items-center gap-2.5 rounded-md py-1 pe-2 ps-3 text-sm transition-colors',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)] focus-visible:ring-offset-0',
+          'flex min-h-10 min-w-0 flex-1 items-center gap-2.5 rounded-shape-md py-2 pe-2.5 ps-3 text-sm transition-colors',
+          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-0',
           active
-            ? 'bg-white/[0.04] font-medium text-[var(--text-primary)]'
-            : 'text-[var(--text-secondary)] hover:bg-white/[0.03] hover:text-[var(--text-primary)]',
+            ? 'bg-[var(--surface-2)] font-medium text-[var(--text-primary)]'
+            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
         )}
       >
         <Icon
           className={cn(
-            'h-3.5 w-3.5 shrink-0 transition-colors',
-            active ? 'text-[var(--text-primary)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+            'h-4 w-4 shrink-0 transition-colors',
+            active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
           )}
           aria-hidden
         />
         <span className="min-w-0 flex-1 truncate">{label}</span>
         {trailing}
-      </GuardedNavLink>
+      </PrefetchNavLink>
       {hoverAction && (
         <div className="ms-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           {hoverAction}
@@ -154,22 +169,35 @@ function LinearNavLink({
 
 interface SectionHeaderProps {
   title: string
+  icon: typeof Icons.home
   expanded: boolean
+  active: boolean
   onToggle: () => void
   count?: number
 }
 
-function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeaderProps) {
+function LinearSectionHeader({
+  title,
+  icon: Icon,
+  expanded,
+  active,
+  onToggle,
+  count,
+}: SectionHeaderProps) {
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={onToggle}
       aria-expanded={expanded}
       className={cn(
-        'group flex w-full items-center gap-1.5 rounded-md px-2 py-1 text-left',
-        'text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]',
-        'transition-colors hover:text-[var(--text-secondary)]',
-        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
+        'group h-auto min-h-10 w-full justify-start gap-2.5 rounded-shape-md px-2.5 py-2 text-left',
+        'text-sm font-medium transition-colors',
+        active
+          ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
+          : 'text-[var(--text-secondary)] hover:bg-[var(--surface-2)] hover:text-[var(--text-primary)]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)]',
       )}
     >
       <Icons.next
@@ -179,13 +207,20 @@ function LinearSectionHeader({ title, expanded, onToggle, count }: SectionHeader
         )}
         aria-hidden
       />
+      <Icon
+        className={cn(
+          'h-4 w-4 shrink-0',
+          active ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]',
+        )}
+        aria-hidden
+      />
       <span className="min-w-0 flex-1 truncate">{title}</span>
       {typeof count === 'number' && count > 0 && (
-        <span className="tabular-nums text-2xs font-medium text-[var(--text-muted)]/80">
+        <span className="rounded-shape-sm bg-[var(--surface-3)] px-1.5 py-0.5 text-xs font-medium tabular-nums text-[var(--text-muted)]">
           {count}
         </span>
       )}
-    </button>
+    </Button>
   )
 }
 
@@ -206,7 +241,7 @@ function CountChip({ value, label }: { value: number; label: string }) {
   return (
     <span
       aria-label={label}
-      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded-md bg-white/[0.05] px-1 text-2xs font-medium tabular-nums text-[var(--text-secondary)]"
+      className="inline-flex h-4 min-w-[18px] items-center justify-center rounded-shape-sm bg-[var(--surface-2)] px-1 text-2xs font-medium tabular-nums text-[var(--text-secondary)]"
     >
       {value > 99 ? '99+' : value}
     </span>
@@ -277,47 +312,8 @@ export function LinearSidebar({
     })
   }
 
-  // ── Tree filter ────────────────────────────────────────────────────────
-  const [filter, setFilter] = useState('')
-  const filterTokens = useMemo(
-    () => filter.trim().toLowerCase().split(/\s+/).filter(Boolean),
-    [filter],
-  )
-
-  const matchesFilter = (label: string) => {
-    if (filterTokens.length === 0) return true
-    const haystack = (label ?? '').toLowerCase()
-    return filterTokens.every(token => haystack.includes(token))
-  }
-
-  // Compute the visible items per section AFTER applying the filter,
-  // so we can both hide non-matching rows AND auto-expand sections
-  // that have at least one match.
-  const filteredSections = useMemo(
-    () =>
-      sections.map(section => ({
-        ...section,
-        items: section.items.filter(item => matchesFilter(navLabel(item.label))),
-      })),
-    [sections, filterTokens, navLabel],
-  )
-
-  // Favorites after the same filter. Memoized so the "Favorites" header can be
-  // hidden entirely when the active filter excludes every pinned item —
-  // otherwise an orphan label would sit above an empty list.
-  const visiblePinned = useMemo(
-    () => pinnedItems.filter(item => matchesFilter(navLabel(item.label))),
-    [pinnedItems, filterTokens, navLabel],
-  )
-
-  // When the filter is active, treat every section with matches as expanded.
-  const isExpanded = (title: string) => {
-    if (filterTokens.length > 0) {
-      const sec = filteredSections.find(s => s.title === title)
-      return Boolean(sec && sec.items.length > 0)
-    }
-    return !collapsed.has(title)
-  }
+  const visiblePinned = pinnedItems
+  const isExpanded = (title: string) => !collapsed.has(title)
 
   // ── Trailing-badge logic per item ──────────────────────────────────────
   const trailingFor = (to: string): React.ReactNode => {
@@ -347,7 +343,7 @@ export function LinearSidebar({
         aria-label={t('nav.pinPage', { page: navLabel(item.label), defaultValue: 'Pin {{page}} to favorites' })}
         title={t('nav.pinPage', { page: navLabel(item.label), defaultValue: 'Pin {{page}} to favorites' })}
         onClick={() => onPin(item.to)}
-        className="h-6 w-6 rounded-md p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--theme-primary)]"
+        className="h-6 w-6 rounded-shape-sm p-0 text-[var(--text-muted)] hover:bg-[var(--control-bg)] hover:text-[var(--theme-primary)]"
         data-testid={`linear-sidebar-pin-${item.to}`}
       >
         <Icons.star className="h-3 w-3" />
@@ -356,40 +352,47 @@ export function LinearSidebar({
   }
 
   // ── Render ─────────────────────────────────────────────────────────────
-  const expandedSections = filteredSections.filter(s => s.items.length > 0)
+  const expandedSections = sections.filter(s => s.items.length > 0)
+  const sectionLabel = (title: string) => {
+    const key = COMPACT_GROUP_I18N_KEYS[title]
+    return key ? t(key, title) : title
+  }
+
+  // "Browse all features" escape hatch.
+  //
+  // The Linear tree is a curated subset (see `compactNav.ts`); the complete
+  // catalog lives in the Feature Hub at `/explore`. `/explore` is a
+  // first-class row in the Overview group, so we only surface the footer
+  // link when that row is not actually on screen — i.e. Overview is
+  // collapsed — which keeps the affordance explicit without duplicating it.
+  const exploreInTree = sections.some(section =>
+    section.items.some(item => item.to === EXPLORE_PATH),
+  )
+  const exploreRowVisible =
+    visiblePinned.some(item => item.to === EXPLORE_PATH) ||
+    expandedSections.some(
+      section => isExpanded(section.title) && section.items.some(item => item.to === EXPLORE_PATH),
+    )
+  const showExploreFooter = exploreInTree && !exploreRowVisible
 
   return (
     <div className="flex h-full min-h-0 flex-col" data-role="linear-sidebar">
-      {/* Inline tree filter — whittles the tree down without leaving the
-          sidebar. Non-matching rows hide; sections with a match auto-expand. */}
-      <div className="px-2 pb-2 pt-1">
-        <Input
-          type="search"
-          size="sm"
-          value={filter}
-          onChange={event => setFilter(event.target.value)}
-          icon={<Icons.search className="h-3.5 w-3.5" aria-hidden />}
-          aria-label={t('nav.filterLabel', 'Filter navigation')}
-          placeholder={t('nav.filterPlaceholder', 'Filter…')}
-          data-testid="linear-sidebar-filter"
-        />
-      </div>
       {/* Tree */}
       <nav
         aria-label={t('nav.sidebar', 'Sidebar navigation')}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-2 pb-3 scrollbar-thin"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 py-3 pb-5 scrollbar-thin"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {/* Favorites — only when there is at least one pinned item.
             Never collapses (Linear style: favorites are always visible). */}
         {visiblePinned.length > 0 && (
-          <div className="mb-3">
+          <div className="mb-4 rounded-shape-lg border border-[var(--border-default)] bg-[var(--surface-2)]/60 p-2">
             <div
-              className="flex items-center gap-1.5 rounded-md px-2 py-1 text-2xs font-semibold uppercase tracking-[0.08em] text-[var(--text-muted)]"
+              className="flex items-center gap-2 rounded-shape-md px-2 py-1.5 text-xs font-semibold text-[var(--text-secondary)]"
               id="linear-nav-favorites-label"
             >
               <Icons.star className="h-3 w-3 shrink-0" aria-hidden />
-              <span>{t('nav.favorites', 'Favorites')}</span>
+              <span>{t('nav.quickAccess', 'Quick access')}</span>
             </div>
             <div className="mt-0.5 space-y-px" aria-labelledby="linear-nav-favorites-label">
               {visiblePinned
@@ -399,7 +402,7 @@ export function LinearSidebar({
                     to={item.to}
                     label={navLabel(item.label)}
                     icon={item.icon}
-                    active={isActiveLinearPath(effectivePath, item.to)}
+                    active={false}
                     onSelect={onItemSelect}
                     trailing={trailingFor(item.to)}
                     hoverAction={
@@ -410,7 +413,7 @@ export function LinearSidebar({
                         aria-label={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })}
                         title={t('nav.unpinPage', { page: navLabel(item.label), defaultValue: 'Unpin {{page}}' })}
                         onClick={() => onUnpin(item.to)}
-                        className="h-6 w-6 rounded-md p-0 text-[var(--text-muted)] hover:bg-white/[0.05] hover:text-[var(--text-secondary)]"
+                        className="h-6 w-6 rounded-shape-sm p-0 text-[var(--text-muted)] hover:bg-[var(--control-bg)] hover:text-[var(--text-secondary)]"
                         data-testid={`linear-sidebar-unpin-${item.to}`}
                       >
                         <Icons.close className="h-3 w-3" />
@@ -423,19 +426,47 @@ export function LinearSidebar({
         )}
 
         {/* Sections */}
-        <div className="space-y-2">
-          {expandedSections.map(section => {
+        <div className="space-y-1.5">
+          {expandedSections.map((section, index) => {
             const expanded = isExpanded(section.title)
+            const active = section.title === activeSectionTitle
+            const sectionIcon = section.items[0]?.icon ?? Icons.home
+            const tier = section.tier ?? compactGroupTier(section.title)
+            const previousTier =
+              index === 0
+                ? null
+                : (expandedSections[index - 1].tier ??
+                   compactGroupTier(expandedSections[index - 1].title))
+            // One divider between the everyday hierarchy and the advanced
+            // parking spots. Advanced destinations are demoted, never hidden.
+            const startsAdvanced = tier === 'advanced' && previousTier !== 'advanced'
             return (
-              <div key={section.title} className="space-y-0.5">
+              <div
+                key={section.title}
+                className="space-y-0.5"
+                data-nav-group={section.title}
+                data-nav-tier={tier}
+                data-nav-restricted={section.restricted ? 'true' : 'false'}
+              >
+                {startsAdvanced && (
+                  <div
+                    className="mt-3 flex items-center gap-2 border-t border-[var(--border-default)] px-2.5 pb-1 pt-3 text-2xs font-semibold uppercase tracking-wider text-[var(--text-muted)]"
+                    data-testid="linear-sidebar-advanced-divider"
+                  >
+                    <Icons.preferences className="h-3 w-3 shrink-0" aria-hidden />
+                    <span>{t('nav.advancedGroups', 'Advanced')}</span>
+                  </div>
+                )}
                 <LinearSectionHeader
-                  title={section.title}
+                  title={sectionLabel(section.title)}
+                  icon={sectionIcon}
                   expanded={expanded}
+                  active={active}
                   onToggle={() => toggleSection(section.title)}
                   count={section.items.length}
                 />
                 {expanded && (
-                  <div className="space-y-px ps-2" role="group" aria-label={section.title}>
+                  <div className="ms-4 space-y-px border-s border-[var(--border-default)] ps-2.5" role="group" aria-label={sectionLabel(section.title)}>
                     {section.items.map(item => (
                       <LinearNavLink
                         key={item.to}
@@ -455,23 +486,31 @@ export function LinearSidebar({
             )
           })}
 
-          {filterTokens.length > 0 && expandedSections.length === 0 && visiblePinned.length === 0 && (
+          {expandedSections.length === 0 && visiblePinned.length === 0 && (
             <div
               className="rounded-md px-3 py-4 text-center text-xs text-[var(--text-muted)]"
               role="status"
-              data-testid="linear-sidebar-empty-filter"
+              data-testid="linear-sidebar-empty"
             >
-              <p>{t('nav.filterNoMatch', 'No matches.')}</p>
-              <button
-                type="button"
-                onClick={() => setFilter('')}
-                className="mt-2 rounded-md px-2 py-1 text-xs text-[var(--theme-primary)] hover:bg-white/[0.05] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]"
-              >
-                {t('nav.filterClear', 'Clear filter')}
-              </button>
+              <p>{t('nav.empty', 'No pages available.')}</p>
             </div>
           )}
         </div>
+
+        {showExploreFooter && (
+          <div
+            className="mt-3 border-t border-[var(--border-default)] pt-2"
+            data-testid="linear-sidebar-explore-footer"
+          >
+            <LinearNavLink
+              to={EXPLORE_PATH}
+              label={t('nav.browseAllFeatures', 'Browse all features')}
+              icon={Icons.sparkles}
+              active={isActiveLinearPath(effectivePath, EXPLORE_PATH)}
+              onSelect={onItemSelect}
+            />
+          </div>
+        )}
       </nav>
     </div>
   )

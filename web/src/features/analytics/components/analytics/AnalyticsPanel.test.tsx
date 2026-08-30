@@ -17,7 +17,7 @@
  *   4. SKELETON H — a custom skeletonHeight is forwarded to the skeleton.
  *   5. ERROR      — QueryError surfaces with a retryable CTA; clicking it
  *                   invokes the supplied onRetry; children are withheld.
- *   6. EMPTY      — the default "No data available" EmptyState renders
+ *   6. EMPTY      — contextual analytics guidance renders
  *                   (never a blank panel) with children withheld.
  *   7. EMPTY+MSG  — a custom emptyMessage + emptyIcon are surfaced and the
  *                   default copy is suppressed.
@@ -160,7 +160,10 @@ describe('AnalyticsPanel', () => {
       </AnalyticsPanel>,
     );
 
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(
+      screen.getByText('No analytics records match the current selection.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Adjust the current filters/)).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
   });
@@ -180,7 +183,7 @@ describe('AnalyticsPanel', () => {
     expect(screen.getByText('No vehicle data')).toBeInTheDocument();
     expect(screen.getByTestId('empty-icon')).toBeInTheDocument();
     // The default copy must NOT appear once a custom message is supplied.
-    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No analytics records match the current selection.')).not.toBeInTheDocument();
   });
 
   it('applies loading ▸ error ▸ empty ▸ children precedence', () => {
@@ -194,7 +197,7 @@ describe('AnalyticsPanel', () => {
     // loading wins over error + empty + children.
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText(/Can't reach server/i)).not.toBeInTheDocument();
-    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No analytics records match the current selection.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
 
     // error wins over empty + children when not loading.
@@ -206,7 +209,7 @@ describe('AnalyticsPanel', () => {
       </MemoryRouter>,
     );
     expect(screen.getByText(/Can't reach server/i)).toBeInTheDocument();
-    expect(screen.queryByText('No data available')).not.toBeInTheDocument();
+    expect(screen.queryByText('No analytics records match the current selection.')).not.toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
 
     // empty wins over children when neither loading nor error.
@@ -217,7 +220,9 @@ describe('AnalyticsPanel', () => {
         </AnalyticsPanel>
       </MemoryRouter>,
     );
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(
+      screen.getByText('No analytics records match the current selection.'),
+    ).toBeInTheDocument();
     expect(screen.queryByTestId('panel-body')).not.toBeInTheDocument();
 
     // children render once every gate is cleared.

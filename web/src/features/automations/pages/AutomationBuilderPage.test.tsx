@@ -45,20 +45,38 @@ const H = vi.hoisted(() => ({
 
 // framer-motion — collapse animations to plain divs (matches the repo's
 // established page-test convention).
-vi.mock('framer-motion', () => ({
-  motion: new Proxy(
-    {},
-    {
-      get: () => (props: Record<string, unknown>) => {
-        const { children, ...rest } = props as { children?: React.ReactNode };
-        return <div {...(rest as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>;
+//
+// The proxy MUST hand back a stable component identity per tag: returning a
+// fresh arrow function on every `motion.div` access makes React treat each
+// render as a new component type, unmounting and re-creating the entire
+// subtree (and every DOM node in it) on any incidental re-render — e.g. the
+// edit-lease election that fires 250ms after mount. That silently invalidates
+// element references already handed to the test by `findBy*`.
+vi.mock('framer-motion', () => {
+  const tagCache = new Map<string, React.FC<Record<string, unknown>>>();
+  return {
+    motion: new Proxy(
+      {},
+      {
+        get: (_target, key) => {
+          const tag = String(key);
+          let Component = tagCache.get(tag);
+          if (!Component) {
+            Component = (props: Record<string, unknown>) => {
+              const { children, ...rest } = props as { children?: React.ReactNode };
+              return <div {...(rest as React.HTMLAttributes<HTMLDivElement>)}>{children}</div>;
+            };
+            tagCache.set(tag, Component);
+          }
+          return Component;
+        },
       },
-    },
-  ),
-  AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
-  useReducedMotion: () => false,
-  useInView: () => true,
-}));
+    ),
+    AnimatePresence: ({ children }: { children?: React.ReactNode }) => <>{children}</>,
+    useReducedMotion: () => false,
+    useInView: () => true,
+  };
+});
 
 // Heavy builder children — stubbed so the page's own orchestration is under
 // test (not the leaf editors, which have their own suites). Keep TRIGGER_TYPES

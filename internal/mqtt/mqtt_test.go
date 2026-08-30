@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -208,7 +209,8 @@ func (f *fakeDLQ) Entries() []DLQEntry {
 func newTestSubscriber(t *testing.T, pipeline Pipeline, dlq DLQPublisher, resolver VINResolver) *PipelineSubscriber {
 	t.Helper()
 	cfg := PipelineSubscriberConfig{
-		TopicBase: "telemetry",
+		TopicBase:                   "telemetry",
+		AllowMissingSourceTimestamp: true,
 	}
 	cfg.withDefaults()
 	ctx, cancel := context.WithCancel(context.Background())
@@ -240,18 +242,21 @@ func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 
 	var ackCalls atomic.Int32
 	body := []byte("75.5") // Soc is a float field; "75.5" is valid JSON for it.
+	receivedAt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
 
 	sub.handlePayload(context.Background(), mqttPayload{
-		Topic:     "telemetry/5YJ3E1EA1LF000001/v/Soc",
-		Payload:   body,
-		MessageID: 42,
-		Ack:       func() { ackCalls.Add(1) },
+		Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:    body,
+		MessageID:  42,
+		ReceivedAt: receivedAt,
+		Ack:        func() { ackCalls.Add(1) },
 	})
 
 	calls := pipe.Calls()
 	if len(calls) != 1 {
 		t.Fatalf("Pipeline.ProcessAtomics called %d times, want 1", len(calls))
 	}
+
 	if got := len(calls[0].Atomics); got != 1 {
 		t.Fatalf("atomics len = %d, want 1", got)
 	}
@@ -261,11 +266,106 @@ func TestPipelineSubscriber_ValidPayload_DelegatesToPipeline(t *testing.T) {
 	if got := calls[0].Atomics[0].Field; got != "Soc" {
 		t.Errorf("atomic field = %q, want %q", got, "Soc")
 	}
+	atom := calls[0].Atomics[0]
+	if atom.IngestOrigin != codec.IngestOriginFleetTelemetryMQTT {
+		t.Errorf("ingest origin = %q, want fleet_telemetry_mqtt", atom.IngestOrigin)
+	}
+	if atom.ReceivedAt == nil || !atom.ReceivedAt.Equal(receivedAt) {
+		t.Errorf("received_at = %v, want subscriber boundary %v", atom.ReceivedAt, receivedAt)
+	}
+	if atom.SourceEmittedAt != nil {
+		t.Errorf("bare MQTT SourceEmittedAt = %v, want nil", atom.SourceEmittedAt)
+	}
 	if got := ackCalls.Load(); got != 1 {
 		t.Errorf("ack called %d times, want 1", got)
 	}
 	if got := len(dlq.Entries()); got != 0 {
 		t.Errorf("DLQ entries = %d, want 0", got)
+	}
+}
+
+func TestPipelineSubscriber_WeekOldEnvelopeRetainsSourceTimeEvidence(t *testing.T) {
+	pipe := &fakePipeline{}
+	sub := newTestSubscriber(t, pipe, &fakeDLQ{}, staticResolver(42))
+	receivedAt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	sourceAt := time.Date(2026, 8, 22, 10, 0, 0, 0, time.UTC)
+
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:    []byte(`{"value":75.5,"ts":"2026-08-22T10:00:00Z"}`),
+		ReceivedAt: receivedAt,
+		Ack:        func() {},
+	})
+
+	calls := pipe.Calls()
+	if len(calls) != 1 || len(calls[0].Atomics) != 1 {
+		t.Fatalf("pipeline calls = %#v, want one atomic", calls)
+	}
+	atom := calls[0].Atomics[0]
+	if !atom.EmittedAt.Equal(sourceAt) {
+		t.Errorf("EmittedAt = %v, want replay source %v", atom.EmittedAt, sourceAt)
+	}
+	if atom.SourceEmittedAt == nil || !atom.SourceEmittedAt.Equal(sourceAt) {
+		t.Errorf("SourceEmittedAt = %v, want replay source %v", atom.SourceEmittedAt, sourceAt)
+	}
+	if atom.ReceivedAt == nil || !atom.ReceivedAt.Equal(receivedAt) {
+		t.Errorf("ReceivedAt = %v, want subscriber receipt %v", atom.ReceivedAt, receivedAt)
+	}
+}
+
+func TestPipelineSubscriber_MissingSourceTimestampIsQuarantined(t *testing.T) {
+	pipe := &fakePipeline{}
+	dlq := &fakeDLQ{}
+	sub := newTestSubscriber(t, pipe, dlq, staticResolver(42))
+	sub.cfg.AllowMissingSourceTimestamp = false
+
+	var ackCalls atomic.Int32
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:    []byte("75.5"),
+		ReceivedAt: time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC),
+		Ack:        func() { ackCalls.Add(1) },
+	})
+
+	if got := len(pipe.Calls()); got != 0 {
+		t.Fatalf("Pipeline.ProcessAtomics calls = %d, want 0", got)
+	}
+	entries := dlq.Entries()
+	if len(entries) != 1 {
+		t.Fatalf("DLQ entries = %d, want 1", len(entries))
+	}
+	if got := entries[0].Reason; !strings.Contains(got, errSourceTimestampMissing.Error()) {
+		t.Errorf("DLQ reason = %q, want source timestamp failure", got)
+	}
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times, want 1", got)
+	}
+}
+
+func TestPipelineSubscriber_FutureSourceTimestampIsQuarantined(t *testing.T) {
+	pipe := &fakePipeline{}
+	dlq := &fakeDLQ{}
+	sub := newTestSubscriber(t, pipe, dlq, staticResolver(42))
+	receivedAt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	future := receivedAt.Add(10 * time.Minute)
+
+	var ackCalls atomic.Int32
+	sub.handlePayload(context.Background(), mqttPayload{
+		Topic:      "telemetry/5YJ3E1EA1LF000001/v/Soc",
+		Payload:    []byte(`{"value":75.5,"ts":"` + future.Format(time.RFC3339Nano) + `"}`),
+		ReceivedAt: receivedAt,
+		Ack:        func() { ackCalls.Add(1) },
+	})
+
+	if got := len(pipe.Calls()); got != 0 {
+		t.Fatalf("Pipeline.ProcessAtomics calls = %d, want 0", got)
+	}
+	entries := dlq.Entries()
+	if len(entries) != 1 || !strings.Contains(entries[0].Reason, codec.ErrSourceTimestampInvalid.Error()) {
+		t.Fatalf("DLQ entries = %#v, want invalid source timestamp quarantine", entries)
+	}
+	if got := ackCalls.Load(); got != 1 {
+		t.Errorf("ack called %d times, want 1", got)
 	}
 }
 
@@ -719,6 +819,18 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 	if sub.cfg.SubscribeQoS != 1 {
 		t.Errorf("SubscribeQoS default = %d, want 1", sub.cfg.SubscribeQoS)
 	}
+	if sub.cfg.SubscriptionRetryInterval != 5*time.Second {
+		t.Errorf("SubscriptionRetryInterval default = %s, want 5s", sub.cfg.SubscriptionRetryInterval)
+	}
+	if sub.cfg.SubscriptionReconcileInterval != 30*time.Second {
+		t.Errorf("SubscriptionReconcileInterval default = %s, want 30s", sub.cfg.SubscriptionReconcileInterval)
+	}
+	if sub.cfg.LivenessFailureAfter != 90*time.Second {
+		t.Errorf("LivenessFailureAfter default = %s, want 90s", sub.cfg.LivenessFailureAfter)
+	}
+	if sub.cfg.AllowMissingSourceTimestamp {
+		t.Error("AllowMissingSourceTimestamp default = true, want false")
+	}
 }
 
 func TestSetPayloadDropSentinel_Removed(t *testing.T) {
@@ -795,9 +907,11 @@ func mustPanic(t *testing.T, name string, fn func()) {
 type fakePahoClient struct {
 	mu               sync.Mutex
 	subscribeCalls   int
+	unsubscribeCalls int
 	lastSubscribeTop string
 	lastSubscribeQoS byte
 	connected        bool
+	connectionOpen   *bool
 }
 
 func (f *fakePahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
@@ -827,19 +941,53 @@ func (f *fakePahoClient) LastQoS() byte {
 	return f.lastSubscribeQoS
 }
 
+func (f *fakePahoClient) SetConnected(connected bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.connected = connected
+}
+
+func (f *fakePahoClient) SetConnectionOpen(open bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.connectionOpen = &open
+}
+
+func (f *fakePahoClient) UnsubscribeCalls() int {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.unsubscribeCalls
+}
+
 // Unused pahomqtt.Client methods. They panic so that an accidental
 // dependency on broker-side behaviour in a test surfaces immediately.
-func (f *fakePahoClient) IsConnected() bool      { return f.connected }
-func (f *fakePahoClient) IsConnectionOpen() bool { return f.connected }
-func (f *fakePahoClient) Connect() pahoToken     { panic("Connect not used") }
-func (f *fakePahoClient) Disconnect(_ uint)      { panic("Disconnect not used") }
+func (f *fakePahoClient) IsConnected() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.connected
+}
+func (f *fakePahoClient) IsConnectionOpen() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.connectionOpen != nil {
+		return *f.connectionOpen
+	}
+	return f.connected
+}
+func (f *fakePahoClient) Connect() pahoToken { panic("Connect not used") }
+func (f *fakePahoClient) Disconnect(_ uint)  { panic("Disconnect not used") }
 func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoToken {
 	panic("Publish not used")
 }
 func (f *fakePahoClient) SubscribeMultiple(_ map[string]byte, _ pahoMessageHandler) pahoToken {
 	panic("SubscribeMultiple not used")
 }
-func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken       { panic("Unsubscribe not used") }
+func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.unsubscribeCalls++
+	return immediatePahoToken{}
+}
 func (f *fakePahoClient) AddRoute(_ string, _ pahoMessageHandler) {}
 func (f *fakePahoClient) OptionsReader() pahoOptionsReader        { panic("OptionsReader not used") }
 
@@ -884,7 +1032,7 @@ func (timeoutPahoToken) Error() error { return nil }
 
 func TestOnBrokerReconnect_PreStart_NoSubscribe(t *testing.T) {
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
-	fc := &fakePahoClient{}
+	fc := &fakePahoClient{connected: true}
 
 	sub.OnBrokerReconnect(fc)
 
@@ -902,7 +1050,7 @@ func TestOnBrokerReconnect_PostStop_NoSubscribe(t *testing.T) {
 	sub.stopped = true
 	sub.mu.Unlock()
 
-	fc := &fakePahoClient{}
+	fc := &fakePahoClient{connected: true}
 
 	sub.OnBrokerReconnect(fc)
 
@@ -917,7 +1065,7 @@ func TestOnBrokerReconnect_PostStart_ReSubscribes(t *testing.T) {
 	sub.started = true
 	sub.mu.Unlock()
 
-	fc := &fakePahoClient{}
+	fc := &fakePahoClient{connected: true}
 
 	sub.OnBrokerReconnect(fc)
 
@@ -934,7 +1082,7 @@ func TestOnBrokerReconnect_PostStart_ReSubscribes(t *testing.T) {
 
 func TestOnBrokerReconnect_NilClientArg_FallsBackToEmbeddedClient(t *testing.T) {
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
-	embeddedFC := &fakePahoClient{}
+	embeddedFC := &fakePahoClient{connected: true}
 	sub.client = embeddedFC // newTestSubscriber leaves this nil
 	sub.mu.Lock()
 	sub.started = true
@@ -955,6 +1103,7 @@ func TestOnBrokerReconnect_SubscribeError_Returns(t *testing.T) {
 
 	// Inject a fake whose Subscribe returns an error token.
 	fc := &erroringPahoSubscribeClient{err: errors.New("acl: not authorized")}
+	fc.SetConnected(true)
 
 	sub.OnBrokerReconnect(fc)
 
@@ -972,6 +1121,7 @@ func TestOnBrokerReconnect_SubscribeTimeout_Returns(t *testing.T) {
 	// Tighten the timeout so the test runs quickly.
 	sub.cfg.SubscribeTimeout = 5 * time.Millisecond
 	fc := &timeoutPahoSubscribeClient{}
+	fc.SetConnected(true)
 
 	sub.OnBrokerReconnect(fc)
 
@@ -987,22 +1137,413 @@ func TestPipelineSubscriber_IsHealthy(t *testing.T) {
 	sub.mu.Lock()
 	sub.started = true
 	sub.subscribed = true
+	sub.lastSubACK = time.Now()
 	sub.mu.Unlock()
 
 	if !sub.IsHealthy() {
 		t.Fatal("IsHealthy() = false for active connected subscription")
 	}
-	client.connected = false
+	client.SetConnected(false)
 	if sub.IsHealthy() {
 		t.Fatal("IsHealthy() = true after broker disconnect")
 	}
-	client.connected = true
+	client.SetConnected(true)
 	sub.mu.Lock()
 	sub.subscribed = false
 	sub.mu.Unlock()
 	if sub.IsHealthy() {
 		t.Fatal("IsHealthy() = true without an active subscription")
 	}
+}
+
+func TestPipelineSubscriber_IsUnhealthyWhilePahoIsReconnecting(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	client.SetConnectionOpen(false)
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.mu.Lock()
+	sub.started = true
+	sub.subscribed = true
+	sub.lastSubACK = time.Now()
+	sub.mu.Unlock()
+
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true while Paho reports connected but its network connection is not open")
+	}
+}
+
+func TestPipelineSubscriber_ExpiresStaleSUBACKLease(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.cfg.SubscriptionReconcileInterval = 5 * time.Millisecond
+	sub.cfg.SubscribeTimeout = time.Millisecond
+	sub.mu.Lock()
+	sub.started = true
+	sub.subscribed = true
+	sub.lastSubACK = time.Now().Add(-20 * time.Millisecond)
+	sub.mu.Unlock()
+
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true after the broker-confirmed subscription lease expired")
+	}
+}
+
+func TestPipelineSubscriber_RecoveryRetriesFailedReconnectSubscribe(t *testing.T) {
+	client := &sequencedPahoClient{
+		fakePahoClient: fakePahoClient{connected: true},
+		tokens: []pahoToken{
+			immediatePahoToken{},
+			erroringPahoToken{err: errors.New("transient SUBACK failure")},
+			immediatePahoToken{},
+		},
+	}
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscribeTimeout:          20 * time.Millisecond,
+			SubscriptionRetryInterval: 5 * time.Millisecond,
+			LivenessFailureAfter:      time.Second,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	sub.OnBrokerReconnect(client)
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true after failed reconnect subscription")
+	}
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for !sub.IsHealthy() && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if !sub.IsHealthy() {
+		t.Fatalf("subscriber did not recover; Subscribe calls = %d", client.Calls())
+	}
+	if got := client.Calls(); got != 3 {
+		t.Fatalf("Subscribe calls = %d, want 3 (initial + failed reconnect + supervisor retry)", got)
+	}
+}
+
+func TestPipelineSubscriber_ReconcilesAcknowledgedSubscription(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                     "telemetry",
+			SubscriptionRetryInterval:     time.Hour,
+			SubscriptionReconcileInterval: 30 * time.Second,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	sub.mu.Lock()
+	sub.lastSubACK = time.Now().Add(-31 * time.Second)
+	sub.mu.Unlock()
+
+	sub.subscriptionRecoveryTick()
+
+	if got := client.Calls(); got != 2 {
+		t.Fatalf("Subscribe calls = %d, want 2 (initial + periodic reconciliation)", got)
+	}
+	if !sub.IsHealthy() {
+		t.Fatal("subscriber unhealthy after successful periodic reconciliation")
+	}
+}
+
+func TestPipelineSubscriber_DoesNotReconcileFreshSubscription(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                     "telemetry",
+			SubscriptionRetryInterval:     time.Hour,
+			SubscriptionReconcileInterval: 30 * time.Second,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	sub.subscriptionRecoveryTick()
+
+	if got := client.Calls(); got != 1 {
+		t.Fatalf("Subscribe calls = %d, want only the initial subscription", got)
+	}
+}
+
+func TestPipelineSubscriber_FailedReconciliationBecomesUnhealthyAndRetries(t *testing.T) {
+	client := &sequencedPahoClient{
+		fakePahoClient: fakePahoClient{connected: true},
+		tokens: []pahoToken{
+			immediatePahoToken{},
+			erroringPahoToken{err: errors.New("reconciliation rejected")},
+			immediatePahoToken{},
+		},
+	}
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                     "telemetry",
+			SubscriptionRetryInterval:     time.Hour,
+			SubscriptionReconcileInterval: 30 * time.Second,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	sub.mu.Lock()
+	sub.lastSubACK = time.Now().Add(-31 * time.Second)
+	sub.mu.Unlock()
+
+	sub.subscriptionRecoveryTick()
+	if sub.IsHealthy() {
+		t.Fatal("subscriber remained healthy after failed periodic SUBACK")
+	}
+
+	sub.subscriptionRecoveryTick()
+	if !sub.IsHealthy() {
+		t.Fatal("subscriber did not recover on the fast supervisor retry")
+	}
+	if got := client.Calls(); got != 3 {
+		t.Fatalf("Subscribe calls = %d, want 3 (initial + failed reconcile + retry)", got)
+	}
+}
+
+func TestPipelineSubscriber_StaleSUBACKCannotRestoreLostConnection(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	done := make(chan struct{})
+	go func() {
+		defer close(done)
+		sub.OnBrokerReconnect(client)
+	}()
+	<-client.entered
+	client.SetConnected(false)
+	sub.OnBrokerConnectionLost()
+	close(client.release)
+	<-done
+
+	if sub.IsHealthy() {
+		t.Fatal("stale SUBACK restored health after a newer connection-loss event")
+	}
+	sub.mu.Lock()
+	subscribed := sub.subscribed
+	sub.mu.Unlock()
+	if subscribed {
+		t.Fatal("stale SUBACK set subscribed=true")
+	}
+}
+
+func TestPipelineSubscriber_StopPreservesPersistentSubscription(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscriptionRetryInterval: time.Hour,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+
+	if err := sub.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	sub.Stop()
+
+	if got := client.UnsubscribeCalls(); got != 0 {
+		t.Fatalf("Unsubscribe calls = %d, want 0 so the persistent broker session survives restart", got)
+	}
+}
+
+func TestPipelineSubscriber_InitialSubscribeFailureDoesNotRunDegraded(t *testing.T) {
+	client := &erroringPahoSubscribeClient{err: errors.New("acl: not authorized")}
+	client.SetConnected(true)
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscriptionRetryInterval: 5 * time.Millisecond,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err == nil {
+		t.Fatal("Start() error = nil, want initial SUBACK failure")
+	}
+	time.Sleep(15 * time.Millisecond)
+	if got := client.Calls(); got != 1 {
+		t.Fatalf("Subscribe calls = %d, want 1; failed startup must not enter degraded retry mode", got)
+	}
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true after initial SUBACK failure")
+	}
+}
+
+func TestPipelineSubscriber_SubscribeAttemptsAreSerialized(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		sub.OnBrokerReconnect(client)
+	}()
+	<-client.entered
+	go func() {
+		defer wg.Done()
+		sub.OnBrokerReconnect(client)
+	}()
+	time.Sleep(10 * time.Millisecond)
+	close(client.release)
+	wg.Wait()
+
+	if got := client.MaxConcurrent(); got != 1 {
+		t.Fatalf("concurrent Subscribe calls = %d, want 1", got)
+	}
+	if got := client.Calls(); got != 2 {
+		t.Fatalf("Subscribe calls = %d, want 2 serialized reconnect attempts", got)
+	}
+}
+
+func TestPipelineSubscriber_LivenessFailsOnlyForRepairableWedge(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.cfg.LivenessFailureAfter = 10 * time.Millisecond
+	sub.mu.Lock()
+	sub.started = true
+	sub.subscribed = false
+	sub.mu.Unlock()
+
+	if err := sub.LivenessError(true); err != nil {
+		t.Fatalf("LivenessError() before grace = %v", err)
+	}
+	time.Sleep(15 * time.Millisecond)
+	if err := sub.LivenessError(true); err == nil {
+		t.Fatal("LivenessError() = nil after connected-but-unsubscribed grace")
+	}
+
+	client.SetConnected(false)
+	if err := sub.LivenessError(false); err != nil {
+		t.Fatalf("LivenessError() during broker-wide outage = %v", err)
+	}
+	time.Sleep(15 * time.Millisecond)
+	if err := sub.LivenessError(false); err != nil {
+		t.Fatalf("LivenessError() restarted outage timer while broker unavailable: %v", err)
+	}
+
+	if err := sub.LivenessError(true); err != nil {
+		t.Fatalf("LivenessError() immediately after broker recovery = %v", err)
+	}
+	time.Sleep(15 * time.Millisecond)
+	if err := sub.LivenessError(true); err == nil {
+		t.Fatal("LivenessError() = nil for disconnected pipeline while independent client reaches broker")
+	}
+}
+
+type sequencedPahoClient struct {
+	fakePahoClient
+	tokens []pahoToken
+}
+
+func (s *sequencedPahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.subscribeCalls++
+	s.lastSubscribeTop = topic
+	s.lastSubscribeQoS = qos
+	if len(s.tokens) == 0 {
+		return immediatePahoToken{}
+	}
+	token := s.tokens[0]
+	s.tokens = s.tokens[1:]
+	return token
+}
+
+type blockingPahoClient struct {
+	fakePahoClient
+	entered chan struct{}
+	release chan struct{}
+	active  int
+	max     int
+}
+
+func newBlockingPahoClient() *blockingPahoClient {
+	return &blockingPahoClient{
+		fakePahoClient: fakePahoClient{connected: true},
+		entered:        make(chan struct{}, 2),
+		release:        make(chan struct{}),
+	}
+}
+
+func (b *blockingPahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	b.mu.Lock()
+	b.subscribeCalls++
+	b.lastSubscribeTop = topic
+	b.lastSubscribeQoS = qos
+	b.active++
+	if b.active > b.max {
+		b.max = b.active
+	}
+	b.mu.Unlock()
+
+	b.entered <- struct{}{}
+	<-b.release
+
+	b.mu.Lock()
+	b.active--
+	b.mu.Unlock()
+	return immediatePahoToken{}
+}
+
+func (b *blockingPahoClient) MaxConcurrent() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.max
 }
 
 // erroringPahoSubscribeClient wraps fakePahoClient to return an erroring

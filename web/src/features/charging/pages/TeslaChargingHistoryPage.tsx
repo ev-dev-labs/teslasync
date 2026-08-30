@@ -10,7 +10,7 @@ import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
   ChartTooltip, ChartGradient, chartGrid, axisTickSm,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
@@ -25,6 +25,10 @@ import {
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import {
+  ALL_VEHICLES_VIN,
+  useVehicleVinFilter,
+} from '@/hooks/useVehicleVinFilter';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -99,11 +103,21 @@ export default function TeslaChargingHistoryPage() {
   const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_charging.title', 'Tesla Charging History'));
 
-  const { data: vehicles } = useVehicles();
-  // VIN filter, sort, and search persist in the URL.
-  const [selectedVin, setSelectedVin] = useUrlString('vin', '');
-  const historyQuery = useTeslaChargingHistory(selectedVin || undefined);
-  const { data: response, isLoading, error, refetch } = historyQuery;
+  const { isLoading: vehiclesLoading } = useVehicles();
+  const {
+    queryVin,
+    selectedVin,
+    setSelectedVin,
+    vehicles,
+  } = useVehicleVinFilter();
+  const historyQuery = useTeslaChargingHistory(queryVin, { enabled: !vehiclesLoading });
+  const {
+    data: response,
+    isLoading: historyLoading,
+    error,
+    refetch,
+  } = historyQuery;
+  const isLoading = vehiclesLoading || historyLoading;
   const refreshMutation = useRefreshTeslaChargingHistory();
 
   const allEntries = response?.entries ?? [];
@@ -135,8 +149,11 @@ export default function TeslaChargingHistoryPage() {
   );
 
   const vehicleOptions = useMemo(() => {
-    const opts = [{ value: '', label: t('tesla_charging.allVehicles', 'All Vehicles') }];
-    for (const v of vehicles ?? []) {
+    const opts = [{
+      value: ALL_VEHICLES_VIN,
+      label: t('tesla_charging.allVehicles', 'All Vehicles'),
+    }];
+    for (const v of vehicles) {
       opts.push({ value: v.vin, label: `${v.display_name} (${v.vin.slice(-6)})` });
     }
     return opts;
@@ -147,7 +164,7 @@ export default function TeslaChargingHistoryPage() {
   const topLocationsMax = topLocations.length > 0 ? topLocations[0].total : 0;
 
   const handleRefresh = () => {
-    refreshMutation.mutate(selectedVin ? { vin: selectedVin } : undefined);
+    refreshMutation.mutate(queryVin ? { vin: queryVin } : undefined);
   };
 
   const columns: Column<TeslaChargingHistoryEntry>[] = useMemo(() => [
@@ -450,10 +467,17 @@ export default function TeslaChargingHistoryPage() {
                 message={t('tesla_charging.noChartData', 'No spending data yet. Click "Refresh from Tesla" to sync.')}
               />
             ) : (
-              <div
-                className="h-56 sm:h-64 xl:h-72"
-                role="img"
-                aria-label={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+              <EmbeddedChart
+                title={t('tesla_charging.monthlySpending', 'Monthly Spending')}
+                ariaLabel={t('tesla_charging.monthlySpending.aria', 'Monthly Tesla charging spending bar chart')}
+                data={monthlyData}
+                dataColumns={[
+                  { key: 'month', label: t('tesla_charging.month', 'Month') },
+                  { key: 'total', label: t('tesla_charging.spending', 'Spending') },
+                ]}
+                fluid={false}
+                mobileHeight={224}
+                height={288}
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyData}>
@@ -467,7 +491,7 @@ export default function TeslaChargingHistoryPage() {
                     <Bar dataKey="total" fill="url(#spendGrad)" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 
@@ -575,6 +599,17 @@ export default function TeslaChargingHistoryPage() {
                     invoice: row.invoice_content_id ?? '',
                   })}
                   selectable="multi"
+                  // A11Y: the first column is a bare date, which many
+                  // rows share. Pair it with the site so each checkbox
+                  // names the session it toggles.
+                  rowLabel={(row) =>
+                    t('tesla_charging.rowLabel', '{{site}}, {{date}}', {
+                      site:
+                        row.site_location_name ||
+                        t('tesla_charging.unknownSite', 'Unknown site'),
+                      date: formatDateTime(row.charge_start_datetime),
+                    })
+                  }
                   selectedKeys={selectedKeys}
                   onSelectionChange={setSelectedKeys}
                   bulkActions={(rows) => (

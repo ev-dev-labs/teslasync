@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Gauge, TrendingUp, Zap, AlertTriangle, DollarSign } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { Checkbox } from '@/components/ui/Checkbox';
-import { Text } from '@/components/ui';
+import { Button, Text } from '@/components/ui';
 import { InlineMetric } from '@/components/data-display/InlineMetric';
 import {
   HistoryListRow, ScoreBadge, BatteryDelta, RouteDisplay,
@@ -12,6 +12,7 @@ import { formatDateTime, formatTime, formatDurationMinutes } from '@/lib/dateFor
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
+import { Icons } from '@/lib/icons';
 
 export interface DriveCardProps {
   drive: Drive;
@@ -24,9 +25,10 @@ export interface DriveCardProps {
   formatEnergyCost?: (kwh: number) => string;
   selected?: boolean;
   onToggleSelect?: (id: number, on: boolean) => void;
+  onPreview?: (drive: Drive) => void;
   /** IANA timezone for time-of-day rendering. Defaults to browser local. */
   tz?: string;
-  /** When true, render an inline `⚠ Low efficiency` badge to mark this row
+  /** When true, render a high-energy-use badge to mark this row
  * as the one called out in the page-level anomaly summary. */
   isAnomaly?: boolean;
 }
@@ -34,7 +36,7 @@ export interface DriveCardProps {
 function DriveCardImpl({
   drive, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
-  selected, onToggleSelect, tz, isAnomaly,
+  selected, onToggleSelect, onPreview, tz, isAnomaly,
 }: DriveCardProps) {
   const { t } = useTranslation();
   const actualDistance = drive.distanceM;
@@ -47,7 +49,7 @@ function DriveCardImpl({
         ? fmtInt(toSpeedDisplay(actualDistance / drive.durationS))
         : '—';
   const eff = getEfficiency(drive);
-  const effConverted = eff ? toEfficiencyDisplay(eff) : null;
+  const effConverted = eff != null ? toEfficiencyDisplay(eff) : null;
   const score = gradeFromEfficiency(eff);
   const hasBattery =
     drive.startBatteryPct !== null &&
@@ -89,7 +91,7 @@ function DriveCardImpl({
       {isAnomaly && (
         <Badge variant="danger" size="sm">
           <AlertTriangle className="h-3 w-3" aria-hidden />
-          {t('drives.lowEfficiencyBadge', 'Low efficiency')}
+          {t('drives.highEnergyUse', 'High energy use')}
         </Badge>
       )}
     </>
@@ -122,10 +124,10 @@ function DriveCardImpl({
           <Zap className="h-3 w-3" aria-hidden /> {fmtInt(effConverted)} {efficiencyUnit}
         </span>
       )}
-      {formatEnergyCost && hasBattery && drive.startBatteryPct != null && drive.endBatteryPct != null && drive.startBatteryPct > drive.endBatteryPct && (
+      {formatEnergyCost && drive.energyUsedWh != null && drive.energyUsedWh > 0 && (
         <span className="flex items-center gap-1 text-emerald-300">
           <DollarSign className="h-3 w-3" aria-hidden />
-          ~{formatEnergyCost((drive.startBatteryPct - drive.endBatteryPct) * 0.75)}
+          ~{formatEnergyCost(drive.energyUsedWh / 1_000)}
         </span>
       )}
     </>
@@ -134,10 +136,37 @@ function DriveCardImpl({
   return (
     <HistoryListRow
       checkbox={checkbox}
-      leading={<ScoreBadge grade={score.label} ariaLabel={t('drives.scoreAria', 'Score {{grade}}', { grade: score.label })} />}
+      leading={(
+        <ScoreBadge
+          grade={score.label}
+          ariaLabel={t(
+            'drives.efficiencyGradeAria',
+            'Efficiency grade {{grade}}',
+            { grade: score.label },
+          )}
+        />
+      )}
       primary={primary}
       route={route}
       metrics={metrics}
+      actions={
+        onPreview
+          ? [
+              <Button
+                key="preview"
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="h-9 w-9 p-0"
+                aria-label={t('drives.quickView', 'Quick view drive')}
+                title={t('drives.quickView', 'Quick view drive')}
+                onClick={() => onPreview(drive)}
+              >
+                <Icons.show className="h-4 w-4" aria-hidden="true" />
+              </Button>,
+            ]
+          : undefined
+      }
       href={`/drives/${drive.id}`}
       selected={selected}
     />
@@ -159,4 +188,5 @@ export const DriveCard = memo(DriveCardImpl, (prev, next) =>
   prev.efficiencyUnit === next.efficiencyUnit &&
   prev.tz === next.tz &&
   prev.isAnomaly === next.isAnomaly &&
-  prev.onToggleSelect === next.onToggleSelect, );
+  prev.onToggleSelect === next.onToggleSelect &&
+  prev.onPreview === next.onPreview, );

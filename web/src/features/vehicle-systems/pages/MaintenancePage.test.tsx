@@ -398,6 +398,35 @@ describe('MaintenancePage', () => {
     expect(screen.getByTestId('ai-predictive-maintenance')).toHaveAttribute('data-vehicle-id', '7');
   });
 
+  it('opens a service record with related operational evidence links', () => {
+    h.recordsQuery = makeQuery({
+      data: [
+        makeRecord({
+          id: 11,
+          date: '2024-03-01T10:00:00Z',
+          description: 'Annual inspection',
+          notes: 'Brake wear documented',
+        }),
+      ],
+    });
+
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'Inspect service record' }));
+
+    const drawer = screen.getByRole('dialog', { name: 'Annual inspection' });
+    expect(within(drawer).getByText('Brake wear documented')).toBeInTheDocument();
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/7');
+    expect(within(drawer).getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute('href', '/drives?from=2024-03-01&to=2024-03-01');
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute('href', '/charging?from=2024-03-01&to=2024-03-01');
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute('href', '/signals?from=2024-03-01&to=2024-03-01');
+    expect(within(drawer).getByRole('link', { name: 'Build service evidence pack' }))
+      .toHaveAttribute('href', '/diagnostics/service-evidence');
+  });
+
   it('re-converts the SI distance to the user mi preference at the render boundary', () => {
     h.unit.distance = 'mi';
     h.itemsQuery = makeQuery({
@@ -524,10 +553,11 @@ describe('MaintenancePage', () => {
 
     // (39000 - 20000) / 20000 = 95% → derived status "overdue".
     expect(screen.getByText('95%')).toBeInTheDocument();
-    const bars = screen.getAllByRole('progressbar');
-    expect(bars).toHaveLength(1); // completed item renders no bar
-    expect(bars[0]).toHaveAttribute('aria-valuenow', '95');
-    expect(bars[0]).toHaveAttribute('aria-label', 'Tire Rotation service progress');
+    const bar = screen.getByRole('progressbar', { name: 'Tire Rotation service progress' });
+    expect(bar).toHaveAttribute('aria-valuenow', '95');
+    expect(
+      screen.queryByRole('progressbar', { name: 'Tire Balance service progress' }),
+    ).toBeNull();
     // The derived "Overdue" badge shows on the card even though raw status is "soon".
     expect(screen.getAllByText('Overdue').length).toBeGreaterThanOrEqual(1);
   });
@@ -557,7 +587,7 @@ describe('MaintenancePage', () => {
 
     renderPage();
 
-    const bar = screen.getByRole('progressbar');
+    const bar = screen.getByRole('progressbar', { name: 'Air Filter service progress' });
     expect(bar).toHaveAttribute('aria-valuenow', '0');
     expect(bar).not.toHaveAttribute('aria-valuenow', 'NaN');
     expect(screen.getByText('0%')).toBeInTheDocument();

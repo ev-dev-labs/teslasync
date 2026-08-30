@@ -1,6 +1,8 @@
 import { useEffect, useCallback, useState, useRef } from 'react'
 import { useRealtimeEvents } from './useRealtimeEvents'
+import { useLiveRecovery } from './useLiveRecovery'
 import { useVehicleLiveSignals } from '@/api/hooks/useTelemetry'
+import { telemetryKeys } from '@/api/hooks/useTelemetry'
 import { parseEnumBool, parseBuckleStatus } from '../lib/parseEnums'
 
 /**
@@ -413,6 +415,15 @@ export function useVehicleLive(vehicleId?: number) {
   const stateRef = useRef(state)
   stateRef.current = state
   const { data: initialLiveSignals } = useVehicleLiveSignals(vehicleId)
+
+  // Redis Pub/Sub does not replay: every `vehicle_update` published while the
+  // EventSource was down is gone. Re-read the canonical live endpoint on
+  // reconnect so a silent 40-second gap cannot leave this state object
+  // permanently behind with no visible symptom.
+  useLiveRecovery({
+    queryKeys: [telemetryKeys.liveSignals(vehicleId)],
+    enabled: vehicleId != null && vehicleId > 0,
+  })
 
   const handleUpdate = useCallback((data: unknown) => {
     const update = data as { vehicle_id?: number; state?: Record<string, unknown>; signals?: Record<string, unknown> }

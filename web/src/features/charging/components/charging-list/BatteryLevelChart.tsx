@@ -1,11 +1,10 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BatteryCharging } from 'lucide-react';
-import { GlassPanel } from '@/components/ui';
-import { EmptyState } from '@/components/feedback';
+import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import {
   ChartTooltip, chartGrid, axisTickSm,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import type { StartLevelBucket } from './helpers';
 
@@ -33,22 +32,33 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
 
   return (
     <GlassPanel className="p-6">
-      <h3 className="section-title mb-4 flex items-center gap-2">
+      <PanelTitle className="mb-4 flex items-center gap-2">
         <BatteryCharging className="h-4 w-4 text-neon-amber" aria-hidden="true" />
         {t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
-        <span className="text-xs text-[var(--text-muted)] font-normal ml-2">
+        <Text as="span" variant="caption" className="ml-2">
           {t('charging.charts.batteryLevelHint', 'How low do you typically go before charging?')}
-        </span>
-      </h3>
-      <div className="h-36 sm:h-44">
-        {isEmpty ? (
-          // no-action: unreachable — ChargingListPage only mounts this chart once startLevelDist.length > 0, so totalSessions here is never 0.
-          <EmptyState
-            icon={<BatteryCharging className="h-8 w-8 opacity-20" aria-hidden="true" />}
-            message={t('charging.charts.batteryLevelEmpty', 'No charge-start levels to chart yet.')}
-            className="py-8"
-          />
-        ) : (
+        </Text>
+      </PanelTitle>
+      <EmbeddedChart
+        title={t('charging.charts.batteryLevelAtStart', 'Battery Level at Charge Start')}
+        ariaLabel={t(
+          'charging.charts.batteryLevelAria',
+          'Charging sessions by starting battery level',
+        )}
+        data={buckets.map(({ range, count }) => ({ range, count }))}
+        dataColumns={[
+          { key: 'range', label: t('charging.charts.batteryRange', 'Battery level') },
+          { key: 'count', label: t('charging.charts.sessions', 'Sessions') },
+        ]}
+        empty={isEmpty}
+        emptyMessage={t(
+          'charging.charts.batteryLevelEmpty',
+          'No charge-start levels to chart yet.',
+        )}
+        fluid={false}
+        mobileHeight={144}
+        height={176}
+      >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={buckets}>
               {chartGrid}
@@ -64,8 +74,7 @@ export function BatteryLevelChart({ data }: BatteryLevelChartProps) {
               />
             </BarChart>
           </ResponsiveContainer>
-        )}
-      </div>
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

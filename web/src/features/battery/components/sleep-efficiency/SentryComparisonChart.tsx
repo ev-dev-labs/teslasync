@@ -6,8 +6,8 @@ import {
   Bar,
   BarChart,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -111,10 +111,11 @@ export function SentryComparisonChart({
         exportData={analysis.sentry.comparisonAvailable ? data : []}
         chartKey="sleep-efficiency-sentry-comparison"
       >
-        <SleepEfficiencySectionBody state={state} skeletonHeight={240}>
-          {analysis.sentry.comparisonAvailable ? (
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={data}>
+        {({ hiddenSeries }) => (
+          <SleepEfficiencySectionBody state={state} skeletonHeight={240}>
+            {analysis.sentry.comparisonAvailable ? (
+              <ResponsiveContainer width="100%" height={240}>
+                <BarChart data={data}>
                 {chartGrid}
                 <XAxis
                   dataKey="mode"
@@ -128,7 +129,7 @@ export function SentryComparisonChart({
                   axisLine={false}
                 />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
+                <ChartLegend />
                 <Bar
                   dataKey="drainRate"
                   name={t(
@@ -137,6 +138,7 @@ export function SentryComparisonChart({
                   )}
                   fill="#f59e0b"
                   radius={[4, 4, 0, 0]}
+                  hide={hiddenSeries?.isHidden('drainRate')}
                 />
                 <Bar
                   dataKey="batteryLost"
@@ -146,25 +148,27 @@ export function SentryComparisonChart({
                   )}
                   fill="#a855f7"
                   radius={[4, 4, 0, 0]}
+                  hide={hiddenSeries?.isHidden('batteryLost')}
                 />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            // no-action: qualifying count-bearing groups arrive from backend reconstruction
-            <EmptyState
-              className="py-8"
-              icon={<Eye className="h-8 w-8" aria-hidden="true" />}
-              title={t(
-                'sleep.sentryChart.unavailableTitle',
-                'Sentry comparison unavailable',
-              )}
-              message={t(
-                'sleep.sentryChart.unavailable',
-                'No complete on/off pair has positive sample counts. Empty groups are unavailable; count-bearing zero rates would remain valid evidence.',
-              )}
-            />
-          )}
-        </SleepEfficiencySectionBody>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              // no-action: qualifying count-bearing groups arrive from backend reconstruction
+              <EmptyState
+                className="py-8"
+                icon={<Eye className="h-8 w-8" aria-hidden="true" />}
+                title={t(
+                  'sleep.sentryChart.unavailableTitle',
+                  'Sentry comparison unavailable',
+                )}
+                message={t(
+                  'sleep.sentryChart.unavailable',
+                  'No complete on/off pair has positive sample counts. Empty groups are unavailable; count-bearing zero rates would remain valid evidence.',
+                )}
+              />
+            )}
+          </SleepEfficiencySectionBody>
+        )}
       </ChartContainer>
     </section>
   );

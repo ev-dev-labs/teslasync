@@ -15,17 +15,34 @@
  * dev-dependency is added — keep the install lean.
  */
 import { spawn, spawnSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync, existsSync, statSync, readdirSync } from 'node:fs'
+import {
+  mkdirSync,
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  statSync,
+  readdirSync,
+  rmSync,
+} from 'node:fs'
 import { join, dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { tmpdir } from 'node:os'
+import { createServer } from 'node:net'
+import { once } from 'node:events'
 import { gzipSync } from 'node:zlib'
 import { setTimeout as sleep } from 'node:timers/promises'
+import {
+  findEntryAssetNames,
+  findModulePreloadAssetNames,
+} from './bundle-assets.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const WEB_ROOT = resolve(__dirname, '..')
 const BASELINE_PATH = join(WEB_ROOT, 'perf-baseline.json')
 const DIST_DIR = join(WEB_ROOT, 'dist')
 const PREVIEW_PORT = 4173
+const VITE_BIN = join(WEB_ROOT, 'node_modules', 'vite', 'bin', 'vite.js')
+const BENCHMARK_BLOCKED_URLS = ['http://local.adguard.org/*']
 
 const ROUTES = [
   '/',
@@ -33,10 +50,29 @@ const ROUTES = [
   '/drives',
   '/analytics',
   '/charging',
+  '/battery',
 ]
 
 function log(...args) {
   console.log('[perf:baseline]', ...args)
+}
+
+function npmCliPath(command) {
+  const npmExecPath = process.env.npm_execpath
+  if (npmExecPath) {
+    return command === 'npx'
+      ? join(dirname(npmExecPath), 'npx-cli.js')
+      : npmExecPath
+  }
+
+  const candidate = join(
+    dirname(process.execPath),
+    'node_modules',
+    'npm',
+    'bin',
+    `${command}-cli.js`,
+  )
+  return existsSync(candidate) ? candidate : null
 }
 
 function buildIfNeeded() {
@@ -45,7 +81,17 @@ function buildIfNeeded() {
     return
   }
   log('running `npm run build`')
-  const r = spawnSync('npm', ['run', 'build'], { cwd: WEB_ROOT, stdio: 'inherit', shell: true })
+  const npmCli = npmCliPath('npm')
+  const r = npmCli
+    ? spawnSync(process.execPath, [npmCli, 'run', 'build'], {
+        cwd: WEB_ROOT,
+        stdio: 'inherit',
+      })
+    : spawnSync('npm', ['run', 'build'], {
+        cwd: WEB_ROOT,
+        stdio: 'inherit',
+        shell: process.platform === 'win32',
+      })
   if (r.status !== 0) {
     throw new Error(`npm run build failed (exit ${r.status})`)
   }
@@ -53,10 +99,9 @@ function buildIfNeeded() {
 
 function startPreview() {
   log(`starting vite preview on :${PREVIEW_PORT}`)
-  const proc = spawn('npx', ['vite', 'preview', '--port', String(PREVIEW_PORT), '--strictPort'], {
+  const proc = spawn(process.execPath, [VITE_BIN, 'preview', '--port', String(PREVIEW_PORT), '--strictPort'], {
     cwd: WEB_ROOT,
     stdio: ['ignore', 'pipe', 'pipe'],
-    shell: true,
   })
   proc.stdout.on('data', (d) => process.stdout.write(`[preview] ${d}`))
   proc.stderr.on('data', (d) => process.stderr.write(`[preview] ${d}`))
@@ -76,7 +121,104 @@ async function waitForServer(url, attempts = 60) {
   throw new Error(`server at ${url} did not become ready in ${attempts * 500}ms`)
 }
 
-function runLighthouse(url) {
+function resolveChromePath() {
+  const candidates = [
+    process.env.CHROME_PATH,
+    process.platform === 'win32'
+      ? join(process.env.PROGRAMFILES ?? 'C:\\Program Files', 'Google', 'Chrome', 'Application', 'chrome.exe')
+      : null,
+    process.platform === 'win32'
+      ? join(process.env['PROGRAMFILES(X86)'] ?? 'C:\\Program Files (x86)', 'Google', 'Chrome', 'Application', 'chrome.exe')
+      : null,
+    process.platform === 'darwin'
+      ? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+      : null,
+    '/usr/bin/google-chrome',
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+  ].filter(Boolean)
+
+  return candidates.find((candidate) => existsSync(candidate)) ?? null
+}
+
+async function reservePort() {
+  const server = createServer()
+  server.unref()
+  await new Promise((resolveListen, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', resolveListen)
+  })
+  const address = server.address()
+  if (!address || typeof address === 'string') {
+    server.close()
+    throw new Error('unable to reserve a Chrome debugging port')
+  }
+  await new Promise((resolveClose, reject) => {
+    server.close((error) => (error ? reject(error) : resolveClose()))
+  })
+  return address.port
+}
+
+async function startChrome() {
+  const chromePath = resolveChromePath()
+  if (!chromePath) {
+    log('Chrome path not found; Lighthouse will use its own launcher')
+    return null
+  }
+
+  const port = await reservePort()
+  const profileDir = join(tmpdir(), `teslasync-lighthouse-${process.pid}-${Date.now()}`)
+  mkdirSync(profileDir, { recursive: true })
+  log(`starting shared headless Chrome on :${port}`)
+  const proc = spawn(chromePath, [
+    '--headless=new',
+    '--no-sandbox',
+    '--disable-gpu',
+    '--disable-extensions',
+    '--disable-component-extensions-with-background-pages',
+    '--no-first-run',
+    '--no-default-browser-check',
+    `--remote-debugging-port=${port}`,
+    `--user-data-dir=${profileDir}`,
+    'about:blank',
+  ], {
+    stdio: ['ignore', 'ignore', 'pipe'],
+  })
+
+  let stderr = ''
+  proc.stderr.on('data', (chunk) => {
+    stderr += String(chunk)
+  })
+
+  try {
+    await waitForServer(`http://127.0.0.1:${port}/json/version`, 60)
+    return { proc, port, profileDir }
+  } catch (error) {
+    proc.kill()
+    throw new Error(`headless Chrome failed to start: ${stderr || error.message}`)
+  }
+}
+
+async function stopChrome(session) {
+  if (!session) return
+  log('stopping shared headless Chrome')
+  if (session.proc.exitCode === null) {
+    session.proc.kill()
+    await Promise.race([once(session.proc, 'exit'), sleep(5_000)])
+  }
+  try {
+    rmSync(session.profileDir, {
+      recursive: true,
+      force: true,
+      maxRetries: 5,
+      retryDelay: 200,
+    })
+  } catch (error) {
+    log(`could not remove Chrome profile ${session.profileDir}: ${error.message}`)
+  }
+}
+
+function runLighthouse(url, chromePort) {
   log(`lighthouse ${url}`)
   const args = [
     '-y', 'lighthouse@latest',
@@ -84,16 +226,50 @@ function runLighthouse(url) {
     '--quiet',
     '--output=json',
     '--only-categories=performance',
-    '--chrome-flags=--headless=new --no-sandbox --disable-gpu',
     '--max-wait-for-load=45000',
+    ...BENCHMARK_BLOCKED_URLS.map((pattern) => `--blocked-url-patterns=${pattern}`),
   ]
-  const r = spawnSync('npx', args, { cwd: WEB_ROOT, encoding: 'utf8', shell: true, maxBuffer: 32 * 1024 * 1024 })
+  if (chromePort) {
+    args.push(`--port=${chromePort}`)
+  } else {
+    args.push(
+      '--chrome-flags=--headless=new --no-sandbox --disable-gpu --disable-extensions --disable-component-extensions-with-background-pages',
+    )
+  }
+
+  const npxCli = npmCliPath('npx')
+  const r = npxCli
+    ? spawnSync(process.execPath, [npxCli, ...args], {
+        cwd: WEB_ROOT,
+        encoding: 'utf8',
+        maxBuffer: 32 * 1024 * 1024,
+        timeout: 120_000,
+      })
+    : spawnSync('npx', args, {
+        cwd: WEB_ROOT,
+        encoding: 'utf8',
+        shell: process.platform === 'win32',
+        maxBuffer: 32 * 1024 * 1024,
+        timeout: 120_000,
+      })
   if (r.status !== 0) {
     console.error(r.stderr)
+    if (r.error) console.error(r.error)
     throw new Error(`lighthouse failed for ${url} (exit ${r.status})`)
   }
   const json = JSON.parse(r.stdout)
   const audits = json.audits ?? {}
+  const benchmarkInterference = (
+    audits['network-requests']?.details?.items ?? []
+  ).filter((request) =>
+    typeof request.url === 'string'
+    && request.url.startsWith('http://local.adguard.org/')
+    && (request.transferSize ?? 0) > 0)
+  if (benchmarkInterference.length > 0) {
+    throw new Error(
+      `local AdGuard injected ${benchmarkInterference.length} request(s) into the Lighthouse run`,
+    )
+  }
   const num = (k) => (audits[k]?.numericValue ?? null)
   return {
     fcp: num('first-contentful-paint'),
@@ -109,21 +285,31 @@ function runLighthouse(url) {
 function summariseBundle() {
   const assetsDir = join(DIST_DIR, 'assets')
   if (!existsSync(assetsDir)) {
-    return { totalGzippedJsKB: null, entryGzippedKB: null, chunkCount: null }
+    return {
+      totalGzippedJsKB: null,
+      entryGzippedKB: null,
+      initialGzippedJsKB: null,
+      chunkCount: null,
+    }
   }
   const files = readdirSync(assetsDir).filter((f) => f.endsWith('.js'))
+  const entryNames = findEntryAssetNames(DIST_DIR)
+  const preloadedNames = findModulePreloadAssetNames(DIST_DIR)
   let totalGz = 0
-  let entryGz = null
+  let entryGz = 0
+  let initialGz = 0
   for (const f of files) {
     const buf = readFileSync(join(assetsDir, f))
     const gz = gzipSync(buf).length
     totalGz += gz
-    if (f.startsWith('index-')) entryGz = gz
+    if (entryNames.has(f)) entryGz += gz
+    if (entryNames.has(f) || preloadedNames.has(f)) initialGz += gz
   }
   const kb = (n) => Math.round((n / 1024) * 100) / 100
   return {
     totalGzippedJsKB: kb(totalGz),
-    entryGzippedKB: entryGz != null ? kb(entryGz) : null,
+    entryGzippedKB: entryNames.size > 0 ? kb(entryGz) : null,
+    initialGzippedJsKB: entryNames.size > 0 ? kb(initialGz) : null,
     chunkCount: files.length,
   }
 }
@@ -145,18 +331,25 @@ async function main() {
     await waitForServer(`http://localhost:${PREVIEW_PORT}/`)
     const routeResults = {}
     for (const route of ROUTES) {
+      let chrome = null
       try {
-        routeResults[route] = runLighthouse(`http://localhost:${PREVIEW_PORT}${route}`)
+        chrome = await startChrome()
+        routeResults[route] = runLighthouse(
+          `http://localhost:${PREVIEW_PORT}${route}`,
+          chrome?.port,
+        )
       } catch (err) {
         log(`route ${route} failed:`, err.message)
         routeResults[route] = { error: err.message }
         exitCode = 1
+      } finally {
+        await stopChrome(chrome)
       }
     }
 
     const baseline = {
       $schema: './perf-baseline.schema.json',
-      comment: 'Performance baseline — regenerated by `npm run perf:baseline`. Phase 40 / Prompt 35.',
+      comment: 'Performance baseline — regenerated by `npm run perf:baseline`; machine-local AdGuard injection is blocked so totals represent TeslaSync.',
       generatedAt: new Date().toISOString(),
       lighthouseVersion: 'latest (via npx)',
       build: summariseBundle(),

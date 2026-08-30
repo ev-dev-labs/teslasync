@@ -333,13 +333,15 @@ beforeEach(() => {
 
 /* ── Tests ───────────────────────────────────────────────────────────────── */
 describe('SharedDrivePage — loading / error / empty branches', () => {
-  it('renders only the loading spinner while the share is loading', () => {
+  it('renders the report-shaped loading skeleton while the share is loading', () => {
     setData(undefined, { isLoading: true })
     renderPage()
 
-    expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument()
-    // No page chrome or report content while the spinner owns the screen.
-    expect(screen.queryByText('Shared Drive Report')).toBeNull()
+    expect(
+      screen.getByRole('status', { name: 'Loading shared drive report…' }),
+    ).toHaveAttribute('aria-busy', 'true')
+    // Stable report chrome renders immediately; fetched content does not.
+    expect(screen.getByText('Shared Drive Report')).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Morning Commute' })).toBeNull()
   })
 

@@ -4,10 +4,9 @@
  * The page is the "Fleet Charging Sessions" dashboard for Tesla business
  * accounts. It fans two TanStack Query hooks (`useTeslaChargingSessions` +
  * `useVehicles`) and a refresh mutation through the real
- * `useUnits`/`useFormatting`/`useRangeState` boundary into six surfaces: a
- * business-account note, a five-tile KPI band, a monthly-cost chart, a
- * charger-type energy breakdown, a session-location map + top-locations
- * ranking, and a virtualized sessions table.
+ * `useUnits`/`useFormatting`/`useRangeState` boundary into a decision-first
+ * operational brief followed by the business-account note, KPI band,
+ * cost/type analysis, location analysis, and virtualized session history.
  *
  * Two layers are exercised:
  *
@@ -29,7 +28,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
@@ -330,13 +329,22 @@ describe('TeslaChargingSessionsPage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Fleet Charging Sessions' }),
     ).toBeInTheDocument()
 
+    const brief = screen.getByTestId('charging-operational-brief')
+    expect(
+      within(brief).getByText('Cost, energy, and session evidence in one operating view'),
+    ).toBeInTheDocument()
+
     // KPI band derives from the SERVER summary (not the filtered sessions).
     expect(await screen.findByText('42')).toBeInTheDocument()
+    expect(within(brief).getByText('3')).toBeInTheDocument()
+    expect(within(brief).getByText('60.0 kWh')).toBeInTheDocument()
+    expect(within(brief).getByText('$15.00')).toBeInTheDocument()
+    expect(within(brief).getByText('1h 10m')).toBeInTheDocument()
     expect(screen.getByText('123.0 kWh')).toBeInTheDocument()
     expect(screen.getByText('$99.50')).toBeInTheDocument()
     expect(screen.getByText('$0.234')).toBeInTheDocument()
     expect(screen.getByText('250')).toBeInTheDocument()
-    expect(screen.getByText('Total Sessions')).toBeInTheDocument()
+    expect(screen.getAllByText('Total Sessions').length).toBeGreaterThan(1)
     expect(screen.getByText('Peak Power')).toBeInTheDocument()
 
     // Every section panel is present — nothing stubbed out.
@@ -366,9 +374,10 @@ describe('TeslaChargingSessionsPage', () => {
     install({ sessionsPending: true })
     renderPage()
 
-    // The monthly-cost chart shows the brand Spinner while data loads.
-    const spinners = await screen.findAllByRole('status', { name: 'Loading' })
-    expect(spinners.length).toBeGreaterThan(0)
+    expect(
+      await screen.findByRole('status', { name: 'Loading monthly charging costs…' }),
+    ).toHaveAttribute('aria-busy', 'true')
+    expect(screen.getByTestId('table-skeleton')).toBeInTheDocument()
 
     // KPI values are withheld — never a half-populated dashboard.
     expect(screen.queryByText('123.0 kWh')).toBeNull()
@@ -379,7 +388,7 @@ describe('TeslaChargingSessionsPage', () => {
     install({ sessionsError: true })
     renderPage()
 
-    expect(await screen.findByText(/Failed to load data/)).toBeInTheDocument()
+    expect(await screen.findByText("Can't reach server")).toBeInTheDocument()
 
     // No stale/fabricated KPI values leak through the error branch.
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
@@ -401,7 +410,26 @@ describe('TeslaChargingSessionsPage', () => {
     // KPI band still renders, folded to honest zero / em-dash placeholders.
     expect(screen.getAllByText('0').length).toBeGreaterThan(0)
     expect(screen.getAllByText('—').length).toBeGreaterThan(0)
+    expect(screen.getByText('No sessions in this analysis window')).toBeInTheDocument()
     expect(screen.queryByText('123.0 kWh')).toBeNull()
+  })
+
+  it('surfaces fee exposure and partial cost coverage as attention items', async () => {
+    install({
+      sessions: [
+        makeSession({
+          idle_fee: 2,
+          congestion_fee: 1,
+          total_cost: null,
+        }),
+      ],
+    })
+    renderPage()
+
+    expect(await screen.findByText('Charging fees need review')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Review all' }))
+    expect(screen.getByText('Cost coverage is incomplete')).toBeInTheDocument()
+    expect(screen.getByText(/sessions have no reported cost/i)).toBeInTheDocument()
   })
 
   it('fires the refresh mutation against the Tesla sync endpoint on click', async () => {
@@ -412,7 +440,7 @@ describe('TeslaChargingSessionsPage', () => {
 
     await waitFor(() => {
       expect(mockedRequest).toHaveBeenCalledWith(
-        '/tesla/charging/sessions/refresh',
+        '/tesla/charging/sessions/refresh?vin=VIN00000000000007',
         expect.objectContaining({ method: 'POST' }),
       )
     })
@@ -456,5 +484,23 @@ describe('TeslaChargingSessionsPage', () => {
     expect(screen.getByRole('region', { name: 'Session locations' })).toBeInTheDocument()
     expect(screen.getByRole('region', { name: 'Charging sessions table' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument()
+
+    const actions = screen.getByRole('group', { name: 'Actions' })
+    expect(actions.querySelector('[data-action-group="context"]')).toContainElement(
+      screen.getByRole('combobox', { name: 'Select vehicle' }),
+    )
+    expect(actions.querySelector('[data-action-group="primary"]')).toContainElement(
+      screen.getByRole('button', { name: 'Refresh from Tesla' }),
+    )
+
+    const brief = screen.getByTestId('charging-operational-brief')
+    const analysis = screen.getByRole('region', { name: 'Cost analysis' })
+    const history = screen.getByRole('region', { name: 'Charging sessions table' })
+    expect(
+      brief.compareDocumentPosition(analysis) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    expect(
+      analysis.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 })

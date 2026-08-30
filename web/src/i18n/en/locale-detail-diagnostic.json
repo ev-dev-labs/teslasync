@@ -1,0 +1,32 @@
+{
+  "diagnostic": {
+    "title": "System diagnostic",
+    "subtitle": "Run an aggregated self-test against the database, MQTT broker, Redis, Tesla API, and resilience monitors. Use this when telemetry is missing, charge sessions don't appear, or notifications stop firing.",
+    "run": "Run diagnostic",
+    "running": "Running diagnostic…",
+    "rerun": "Re-run diagnostic",
+    "lastRun": "Generated {{when}}",
+    "noReport": "No diagnostic has been run in this session yet. Click \"Run diagnostic\" to probe every dependency.",
+    "errorTitle": "Diagnostic failed to run",
+    "errorBody": "The diagnostic endpoint returned an error. Check API logs and try again.",
+    "checkCount": "{{count}} check",
+    "checkCount_other": "{{count}} checks",
+    "duration": "{{ms}}ms",
+    "remediationLabel": "Remediation",
+    "copyReport": "Copy report",
+    "copyReportSuccess": "Diagnostic report copied to clipboard",
+    "copyReportError": "Could not copy to clipboard. Use Download instead.",
+    "downloadReport": "Download .txt",
+    "filename": "teslasync-diagnostic-{{ts}}.txt",
+    "overall": {
+      "ok": "All systems healthy",
+      "degraded": "Degraded — some checks need attention",
+      "down": "One or more checks failed"
+    },
+    "status": {
+      "ok": "OK",
+      "warn": "Warning",
+      "fail": "Fail"
+    }
+  }
+}

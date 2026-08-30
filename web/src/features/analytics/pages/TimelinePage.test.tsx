@@ -36,6 +36,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>()
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles')
+  return { ...actual, ...chartTestDoubles }
+})
+
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client')
   return {
@@ -225,6 +231,16 @@ describe('TimelinePage', () => {
     expect(screen.getByText('Time by State')).toBeInTheDocument()
     expect(screen.getByText('State Transitions')).toBeInTheDocument()
 
+    // Regression: EmbeddedChart used to default to fluid sizing, silently
+    // ignoring these explicit heights. ResponsiveContainer then measured an
+    // auto-sized grid track and expanded the chart down the entire page.
+    const dailyChart = screen.getByRole('img', {
+      name: 'Daily transition counts by vehicle state',
+    })
+    expect(dailyChart).toHaveAttribute('data-chart-height', '256')
+    expect(dailyChart).toHaveAttribute('data-chart-mobile-height', '224')
+    expect(dailyChart).toHaveAttribute('data-chart-fluid', 'false')
+
     // With data present, sections are NOT showing their empty copy.
     expect(screen.queryByText('No daily transition activity yet')).toBeNull()
     expect(screen.queryByText('No state transitions recorded')).toBeNull()
@@ -281,7 +297,7 @@ describe('TimelinePage', () => {
     // Once the vehicle is auto-selected and the queries start fetching, the
     // page swaps to its spinner shell — the KPI band is gone.
     await waitFor(() =>
-      expect(screen.getByRole('status', { name: 'Loading' })).toBeInTheDocument(),
+      expect(screen.getByRole('status', { name: /Loading/ })).toBeInTheDocument(),
     )
     expect(screen.queryByText('Total Transitions')).toBeNull()
     expect(screen.queryByRole('region', { name: 'Summary metrics' })).toBeNull()
@@ -341,5 +357,29 @@ describe('TimelinePage', () => {
     const kpiBand = screen.getByRole('region', { name: 'Summary metrics' })
     expect(within(kpiBand).getByText('7')).toBeInTheDocument()
     expect(within(kpiBand).queryByText('10')).toBeNull()
+  })
+
+  it('opens state-transition evidence without leaving the timeline', async () => {
+    renderPage()
+
+    const inspect = await screen.findByRole('button', {
+      name: 'Inspect transition asleep to driving',
+    })
+    fireEvent.click(inspect)
+
+    const drawer = screen.getByRole('dialog', { name: 'asleep → driving' })
+    expect(within(drawer).getByText('State transition')).toBeInTheDocument()
+    expect(within(drawer).getByText('shift_state')).toBeInTheDocument()
+    expect(within(drawer).getByText('D')).toBeInTheDocument()
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/1')
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2025-03-01&to=2025-03-01&signals=shift_state',
+      )
+
+    fireEvent.click(within(drawer).getByText('Close'))
+    expect(screen.queryByRole('dialog', { name: 'asleep → driving' })).toBeNull()
   })
 })

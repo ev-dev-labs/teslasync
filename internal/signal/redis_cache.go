@@ -136,6 +136,7 @@ var staleTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 
 type redisSignalClient interface {
 	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
+	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
 	HGet(ctx context.Context, key string, field string) *redis.StringCmd
@@ -146,6 +147,31 @@ type redisSignalClient interface {
 	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
 }
 
+const updateTimestampedSignalsScript = `
+local written = 0
+for i = 2, #ARGV, 3 do
+  local field = ARGV[i]
+  local incoming_ts = tonumber(ARGV[i + 1])
+  local encoded = ARGV[i + 2]
+  local current = redis.call("HGET", KEYS[1], field)
+  local current_ts = nil
+  if current then
+    local ok, envelope = pcall(cjson.decode, current)
+    if ok and envelope then
+      current_ts = tonumber(envelope["ts"])
+    end
+  end
+  if not current_ts or current_ts <= incoming_ts then
+    redis.call("HSET", KEYS[1], field, encoded)
+    written = written + 1
+  end
+end
+if written > 0 then
+  redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
+end
+return written
+`
+
 // redisSignalValueEnvelope is the wire format for a single HSET field
 // value. Writers populate BOTH the typed envelope fields (Kind, V, TS)
 // and the legacy envelope fields (Encoding, Value, LegacyValue, Timestamp,
@@ -154,9 +180,10 @@ type redisSignalClient interface {
 // production Redis entries remain decodable via the legacy fields alone.
 type redisSignalValueEnvelope struct {
 	// Typed envelope (canonical going forward).
-	Kind protomodel.ValueKind `json:"kind,omitempty"`
-	V    json.RawMessage      `json:"v,omitempty"`
-	TS   int64                `json:"ts,omitempty"`
+	Kind     protomodel.ValueKind `json:"kind,omitempty"`
+	V        json.RawMessage      `json:"v,omitempty"`
+	TS       int64                `json:"ts,omitempty"`
+	Observed *bool                `json:"observed,omitempty"`
 
 	// Legacy envelope (dual-written for old-binary read compatibility).
 	Encoding    string          `json:"encoding,omitempty"`
@@ -174,6 +201,10 @@ type redisSignalValueEnvelope struct {
 type RedisSignalCache struct {
 	rdb        redisSignalClient
 	staleAfter time.Duration
+	// batch is the optional bulk (pipelined) read seam used by
+	// GetAllValuesBulk. Installed by NewRedisSignalCache from the concrete
+	// client; see redis_cache_bulk.go.
+	batch redisHashBatchReader
 }
 
 // RedisSignalCacheOption configures a RedisSignalCache at construction.
@@ -196,6 +227,14 @@ func NewRedisSignalCache(rdb *redis.Client, opts ...RedisSignalCacheOption) *Red
 	c := &RedisSignalCache{
 		rdb:        rdb,
 		staleAfter: LiveSignalFreshnessThreshold,
+	}
+	if rdb != nil {
+		// Bulk reads (GetAllValuesBulk) pipeline N HGETALLs into one round
+		// trip. Wiring the seam here — rather than type-asserting the
+		// interface field — keeps the batching available to production
+		// without widening the redisSignalClient contract every fake
+		// implements.
+		c.batch = pipelinedHashBatchReader{rdb: rdb}
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -276,6 +315,68 @@ func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals 
 	return nil
 }
 
+// UpdateValues writes timestamped values without allowing an older replay to
+// replace a newer value. The compare-and-set runs atomically in Redis so
+// concurrent async mirrors and multiple API pods preserve per-field ordering.
+func (c *RedisSignalCache) UpdateValues(ctx context.Context, vehicleID int64, values map[string]*Value) (err error) {
+	if len(values) == 0 {
+		return nil
+	}
+
+	ctx, span := otel.Tracer(redisCacheTracerName).Start(
+		ctx,
+		"signal.redis_cache.update_values",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", vehicleID),
+			attribute.Int("signal_count", len(values)),
+			attribute.Bool("async", redisAsyncFromContext(ctx)),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "redis_cache.update_values")
+		}
+		span.End()
+	}()
+
+	args := make([]interface{}, 0, 1+len(values)*3)
+	args = append(args, int64(signalKeyTTL/time.Second))
+	for name, value := range values {
+		if value == nil || value.Raw == nil {
+			continue
+		}
+		if im, isMap := value.Raw.(map[string]interface{}); isMap {
+			if invalid, ok := im["invalid"].(bool); ok && invalid {
+				continue
+			}
+		}
+		encoded, encErr := encodeTimestampedSignalValueForFieldWithMetadata(
+			name,
+			value.Raw,
+			value.Timestamp,
+			value.TimestampSynthetic,
+		)
+		if encErr != nil {
+			return fmt.Errorf("encode timestamped Redis signal %s: %w", name, encErr)
+		}
+		args = append(args, name, value.Timestamp.UTC().UnixNano(), encoded)
+	}
+
+	candidateCount := (len(args) - 1) / 3
+	span.SetAttributes(attribute.Int("candidate_count", candidateCount))
+	if candidateCount == 0 {
+		return nil
+	}
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+	if evalErr := c.rdb.Eval(ctx, updateTimestampedSignalsScript, []string{key}, args...).Err(); evalErr != nil {
+		log.Warn().Err(evalErr).Int64("vehicle_id", vehicleID).Msg("redis signal cache: timestamped update failed")
+		return fmt.Errorf("conditionally update Redis live signals for vehicle %d: %w", vehicleID, evalErr)
+	}
+	return nil
+}
+
 // RestampLegacy rewrites legacy scalar HSET fields under
 // vehicle:{vehicleID}:signals as full timestamp-aware envelopes using
 // time.Now() as the synthetic restamp timestamp. It returns the count of
@@ -327,7 +428,7 @@ func (c *RedisSignalCache) RestampLegacy(ctx context.Context, vehicleID int64) (
 			}
 		}
 
-		encoded, encErr := encodeTimestampedSignalValueForField(field, decoded, now)
+		encoded, encErr := encodeTimestampedSignalValueForFieldWithMetadata(field, decoded, now, true)
 		if encErr != nil {
 			return 0, fmt.Errorf("encode restamped redis signal %s: %w", field, encErr)
 		}
@@ -600,7 +701,14 @@ func decodeSignalValueWithTimestamp(s string) (*Value, error) {
 		if !decoded {
 			return nil, fmt.Errorf("decode envelope value: missing typed v / legacy value field")
 		}
-		return &Value{Raw: value, Timestamp: envelopeTimestamp(envelope)}, nil
+		return &Value{
+			Raw:       value,
+			Timestamp: envelopeTimestamp(envelope),
+			// Envelopes written before provenance was explicit are
+			// conservative unknowns. They may be genuine cache writes or a
+			// legacy scalar that an older binary restamped with time.Now().
+			TimestampSynthetic: envelope.Observed == nil || !*envelope.Observed,
+		}, nil
 	}
 	return &Value{Raw: decodeLegacySignalValue(s), Timestamp: time.Time{}}, nil
 }
@@ -802,15 +910,26 @@ func parseRedisSignalValueEnvelope(s string, strict bool) (redisSignalValueEnvel
 // readers pick up `kind`+`v`+`ts`; old readers ignore them and fall
 // through to `value`/`timestamp` exactly as before.
 func encodeTimestampedSignalValueForField(name string, v interface{}, timestamp time.Time) (string, error) {
+	return encodeTimestampedSignalValueForFieldWithMetadata(name, v, timestamp, false)
+}
+
+func encodeTimestampedSignalValueForFieldWithMetadata(
+	name string,
+	v interface{},
+	timestamp time.Time,
+	synthetic bool,
+) (string, error) {
 	raw, err := json.Marshal(v)
 	if err != nil {
 		return "", fmt.Errorf("marshal value: %w", err)
 	}
 	legacyValue := encodeSignalValue(v)
+	observed := !synthetic
 	envelope := redisSignalValueEnvelope{
-		Kind: inferValueKind(name, v),
-		V:    raw,
-		TS:   timestamp.UTC().UnixNano(),
+		Kind:     inferValueKind(name, v),
+		V:        raw,
+		TS:       timestamp.UTC().UnixNano(),
+		Observed: &observed,
 
 		Encoding:    redisSignalValueEncoding,
 		Value:       raw,

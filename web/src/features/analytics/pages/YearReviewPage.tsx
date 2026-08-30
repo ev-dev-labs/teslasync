@@ -1,5 +1,5 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useMemo, type ReactNode } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   Car, Route as RouteIcon, Zap, BatteryCharging, DollarSign, Leaf,
@@ -23,6 +23,7 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { useFormatting } from '@/hooks/useFormatting';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
 import type { YearReview } from '@/api/types';
 
@@ -30,7 +31,6 @@ import type { YearReview } from '@/api/types';
 export default function YearReviewPage() {
   const { t } = useTranslation();
   const { year: yearParam } = useParams<{ year: string }>();
-  const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
 
   const currentYear = new Date().getFullYear();
@@ -40,22 +40,13 @@ export default function YearReviewPage() {
   const { formatDistance, formatEnergy } = useUnits();
   const { formatCurrency } = useFormatting();
 
-  const vehicleIdParam = searchParams.get('vehicle_id') ?? '';
-  const { data: vehicles, isLoading: vehiclesLoading } = useVehicles();
-  const vehicleList = vehicles ?? [];
+  const { isLoading: vehiclesLoading } = useVehicles();
+  const { vehicleId, vehicles: vehicleList, setVehicleId } = useSelectedVehicle();
+  const vehicleIdParam = vehicleId == null ? '' : String(vehicleId);
   const vehicleOptions = useMemo(
     () => vehicleList.map((v) => ({ value: String(v.id), label: v.display_name || v.vin })),
     [vehicleList],
   );
-
-  // Default the URL to the first vehicle so deep links, the freshness chip, and
-  // the AI narration all resolve without a manual pick. URL sync only — not a
-  // data-loading effect.
-  useEffect(() => {
-    if (!vehicleIdParam && vehicleList.length > 0) {
-      setSearchParams({ vehicle_id: String(vehicleList[0].id) }, { replace: true });
-    }
-  }, [vehicleIdParam, vehicleList, setSearchParams]);
 
   const query = useYearReview(year, vehicleIdParam || undefined);
   const { data, isLoading, isError, error, refetch } = query;
@@ -99,7 +90,10 @@ export default function YearReviewPage() {
         <Select
           options={vehicleOptions}
           value={vehicleIdParam}
-          onChange={(e) => setSearchParams({ vehicle_id: e.target.value }, { replace: true })}
+          onChange={(e) => {
+            const next = Number(e.target.value);
+            setVehicleId(Number.isInteger(next) && next > 0 ? next : null);
+          }}
           aria-label={t('yearReview.selectVehicle', 'Select vehicle')}
           size="sm"
         />

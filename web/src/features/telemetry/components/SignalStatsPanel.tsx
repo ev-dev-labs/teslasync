@@ -16,9 +16,10 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Activity } from 'lucide-react';
 
-import { GlassPanel, DataTable, Toggle, SectionTitle, Caption, type Column } from '@/components/ui';
-import { Skeleton } from '@/components/feedback';
+import { GlassPanel, DataTable, Toggle, SectionTitle, type Column } from '@/components/ui';
+import { EmptyState, Skeleton } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { CHART_COLORS } from '@/lib/colors';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -181,7 +182,16 @@ export function SignalStatsPanel({
             pagination={{ defaultPageSize: 50 }}
           />
         ) : (
-          <Caption>{t('No stats available')}</Caption>
+          // no-action: recovery uses the signal and time-range controls in the parent workspace.
+          <EmptyState
+            icon={<Activity className="h-6 w-6" aria-hidden="true" />}
+            message={t('signalStats.emptyMessage', 'No aggregate statistics are available.')}
+            description={t(
+              'signalStats.emptyDescription',
+              'Select a signal with numeric samples or expand the queried time range.',
+            )}
+            className="py-8"
+          />
         )}
       </GlassPanel>
     </FadeIn>

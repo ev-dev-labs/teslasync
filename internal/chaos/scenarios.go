@@ -44,10 +44,14 @@ func (s Scenario) Run(ctx context.Context, c *Client) error {
 	if err := c.AddToxic(ctx, s.Proxy, s.Toxic); err != nil {
 		return fmt.Errorf("scenario %q: install toxic: %w", s.Name, err)
 	}
+	removed := false
 	// Defer removal — we want cleanup even if the wait-loop ctx
 	// expires. Use a fresh context for cleanup so a cancelled parent
 	// doesn't prevent removal.
 	defer func() {
+		if removed {
+			return
+		}
 		cleanupCtx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		_ = c.RemoveToxic(cleanupCtx, s.Proxy, s.Toxic.Name)
@@ -58,6 +62,14 @@ func (s Scenario) Run(ctx context.Context, c *Client) error {
 	case <-ctx.Done():
 		return ctx.Err()
 	}
+
+	removeCtx, removeCancel := context.WithTimeout(context.Background(), 10*time.Second)
+	err := c.RemoveToxic(removeCtx, s.Proxy, s.Toxic.Name)
+	removeCancel()
+	if err != nil {
+		return fmt.Errorf("scenario %q: remove toxic: %w", s.Name, err)
+	}
+	removed = true
 
 	settle := s.SettleDelay
 	if settle == 0 {

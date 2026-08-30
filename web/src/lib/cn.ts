@@ -1,5 +1,36 @@
-import { clsx, type ClassValue } from 'clsx'
 import { extendTailwindMerge } from 'tailwind-merge'
+
+interface ClassDictionary {
+  [className: string]: unknown
+}
+
+type ClassArray = ClassValue[]
+
+type ClassValue = string | number | boolean | null | undefined | ClassDictionary | ClassArray
+
+function joinClassValues(values: readonly ClassValue[]): string {
+  const classes: string[] = []
+
+  const append = (value: ClassValue): void => {
+    if (!value) return
+    if (typeof value === 'string' || typeof value === 'number') {
+      classes.push(String(value))
+      return
+    }
+    if (Array.isArray(value)) {
+      value.forEach(append)
+      return
+    }
+    if (typeof value === 'object') {
+      for (const [className, enabled] of Object.entries(value)) {
+        if (enabled) classes.push(className)
+      }
+    }
+  }
+
+  values.forEach(append)
+  return classes.join(' ')
+}
 
 /**
  * tailwind-merge only resolves conflicts between utilities it recognises. The
@@ -39,10 +70,10 @@ const twMerge = extendTailwindMerge({
 })
 
 /**
- * Merge Tailwind classes with conflict resolution. Combines clsx (conditional
- * composition of strings/arrays/objects with falsy pruning) + tailwind-merge
- * (last conflicting utility wins). Always returns a string.
+ * Merge Tailwind classes with conflict resolution. Supports conditional
+ * strings, arrays, and object maps before applying tailwind-merge's
+ * last-conflicting-utility-wins behavior. Always returns a string.
  */
 export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs))
+  return twMerge(joinClassValues(inputs))
 }

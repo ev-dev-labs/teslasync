@@ -2,7 +2,6 @@ import { describe, it, expect, afterEach } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 
 import { MAIN_TOUR } from './mainTour'
-import type { TourAutoStartContext } from '@/lib/tourRegistry'
 import { getTour, isRecommendedForRoute, listTours } from '@/lib/tourRegistry'
 import { useTour } from '@/hooks/useTour'
 
@@ -34,8 +33,8 @@ describe('MAIN_TOUR — identity & metadata', () => {
     expect(MAIN_TOUR.version).toBe(2)
   })
 
-  it('declares an autoStart predicate (the only tour that auto-launches)', () => {
-    expect(typeof MAIN_TOUR.autoStart).toBe('function')
+  it('is launcher-only — no tour, including this one, auto-launches (HELP-01)', () => {
+    expect(MAIN_TOUR.autoStart).toBeUndefined()
   })
 })
 
@@ -104,35 +103,13 @@ describe('MAIN_TOUR — targets resolve through document.querySelector', () => {
   })
 })
 
-describe('MAIN_TOUR.autoStart — predicate branches', () => {
-  const autoStart = MAIN_TOUR.autoStart!
-
-  it('starts on the dashboard root when at least one vehicle is linked', () => {
-    expect(autoStart({ pathname: '/', vehicleCount: 1 })).toBe(true)
-    expect(autoStart({ pathname: '/', vehicleCount: 12 })).toBe(true)
-  })
-
-  it('does not start when the fleet is empty', () => {
-    expect(autoStart({ pathname: '/', vehicleCount: 0 })).toBe(false)
-  })
-
-  it('does not start for a negative (corrupt) vehicle count', () => {
-    expect(autoStart({ pathname: '/', vehicleCount: -3 })).toBe(false)
-  })
-
-  it('only matches the exact root — not a nested or "/dashboard" path', () => {
-    expect(autoStart({ pathname: '/vehicles', vehicleCount: 4 })).toBe(false)
-    expect(autoStart({ pathname: '/dashboard', vehicleCount: 4 })).toBe(false)
-    expect(autoStart({ pathname: '', vehicleCount: 2 })).toBe(false)
-  })
-
-  it('is null-safe: a partial context missing vehicleCount resolves to false', () => {
-    expect(autoStart({ pathname: '/' } as unknown as TourAutoStartContext)).toBe(false)
-  })
-
-  it('is null-safe: an undefined context returns false without throwing', () => {
-    expect(() => autoStart(undefined as unknown as TourAutoStartContext)).not.toThrow()
-    expect(autoStart(undefined as unknown as TourAutoStartContext)).toBe(false)
+describe('MAIN_TOUR — auto-start policy (HELP-01)', () => {
+  it('declares no autoStart predicate at all', () => {
+    // The predicate was removed rather than made stricter: any surviving
+    // predicate is an app that can decide, on its own, to take over a user's
+    // screen. Progressive task hints (lib/onboardingTasks) replaced it.
+    expect(MAIN_TOUR.autoStart).toBeUndefined()
+    expect('autoStart' in MAIN_TOUR).toBe(false)
   })
 })
 
@@ -141,10 +118,9 @@ describe('MAIN_TOUR — registry integration', () => {
     expect(getTour('main')).toBe(MAIN_TOUR)
   })
 
-  it('is the sole tour that opts into auto-start', () => {
+  it('is not auto-started — no tour in the registry opts in', () => {
     const autoStarting = listTours().filter((t) => typeof t.autoStart === 'function')
-    expect(autoStarting).toHaveLength(1)
-    expect(autoStarting[0]).toBe(MAIN_TOUR)
+    expect(autoStarting).toHaveLength(0)
   })
 
   it('is recommended only on the exact root route', () => {

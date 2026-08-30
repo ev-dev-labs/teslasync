@@ -353,7 +353,7 @@ describe('BatteryLinearGaugeWidget — refresh + vehicle resolution', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ battery_level: 80 }), { refetch }));
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

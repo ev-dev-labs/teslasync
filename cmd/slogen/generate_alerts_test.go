@@ -43,6 +43,27 @@ func TestRenderAlerts_TwoAlertsPerSLO(t *testing.T) {
 	}
 }
 
+func TestRenderAlerts_FastBurnSeverityOverride(t *testing.T) {
+	t.Parallel()
+	cat := &Catalog{SLOs: []SLO{{
+		Name:             "budget_continuity",
+		Description:      "Budget continuity planning signal",
+		SLI:              SLI{GoodEvents: "rate(g[5m])", ValidEvents: "rate(v[5m])"},
+		Objective:        99,
+		Window:           "7d",
+		Owner:            "platform",
+		FastBurnSeverity: "ticket",
+	}}}
+
+	out := renderAlerts(cat)
+	if strings.Contains(out, "severity: page") {
+		t.Fatalf("fast-burn severity override did not suppress page routing:\n%s", out)
+	}
+	if got := strings.Count(out, "severity: ticket"); got != 2 {
+		t.Fatalf("ticket severities = %d, want both fast and slow alerts routed as tickets", got)
+	}
+}
+
 func TestErrorBudgetBurnThreshold(t *testing.T) {
 	t.Parallel()
 	// 99.5% objective, 14.4 burn rate -> (1 - 0.995) * 14.4 = 0.072

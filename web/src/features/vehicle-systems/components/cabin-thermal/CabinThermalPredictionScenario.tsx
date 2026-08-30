@@ -5,8 +5,8 @@ import { useTranslation } from 'react-i18next';
 import {
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
-  Legend,
   Line,
   LineChart,
   ResponsiveContainer,
@@ -128,17 +128,19 @@ export function CabinThermalPredictionScenario({
                   { key: 'ambient', label: t('cabinThermal.prediction.ambientUnit', 'Ambient ({{unit}})', { unit: temperatureUnit }) },
                 ]}
               >
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={curve}>
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={curve}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="elapsed" unit={` ${durationUnit}`} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                     <YAxis unit={temperatureUnit} tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend />
-                    <Line type="monotone" dataKey="cabin" name={t('cabinThermal.prediction.cabin', 'Cabin')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} />
-                    <Line type="monotone" dataKey="ambient" name={t('cabinThermal.prediction.ambient', 'Ambient')} stroke={chartTokens.series[2]} strokeDasharray="4 4" dot={false} />
-                  </LineChart>
-                </ResponsiveContainer>
+                    <ChartLegend />
+                    <Line type="monotone" dataKey="cabin" name={t('cabinThermal.prediction.cabin', 'Cabin')} stroke={chartTokens.series[0]} strokeWidth={2} dot={false} hide={hiddenSeries?.isHidden('cabin')} />
+                    <Line type="monotone" dataKey="ambient" name={t('cabinThermal.prediction.ambient', 'Ambient')} stroke={chartTokens.series[2]} strokeDasharray="4 4" dot={false} hide={hiddenSeries?.isHidden('ambient')} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
               </ChartContainer>
             </>
           ) : null}

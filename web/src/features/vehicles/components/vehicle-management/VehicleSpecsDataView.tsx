@@ -18,7 +18,7 @@ export function VehicleSpecsDataView({ data }: VehicleSpecsDataViewProps) {
   if (fields.length === 0) {
     return (
       <div>
-        <EmptyState
+        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
           title={t(
             'vehicleManagement.specs.emptyTitle',
             'No specifications returned',

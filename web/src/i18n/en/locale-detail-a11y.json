@@ -1,0 +1,21 @@
+{
+  "a11y": {
+    "skipToContent": "Skip to main content",
+    "primaryNav": "Primary",
+    "primaryHeader": "Site header",
+    "footerStatus": "Status bar",
+    "breadcrumb": "Breadcrumb",
+    "breadcrumbHome": "Dashboard",
+    "pagination": "Pagination",
+    "closeDialog": "Close dialog",
+    "dismissNotification": "Dismiss notification",
+    "loading": "Loading",
+    "toggleDensity": "Toggle density",
+    "toggleSidebar": "Toggle sidebar",
+    "openCommandPalette": "Open command palette",
+    "openSettings": "Open settings",
+    "dataFreshness": "Data freshness: {{state}}",
+    "chartFigure": "Chart: {{title}}",
+    "helpFor": "Help for {{field}}"
+  }
+}

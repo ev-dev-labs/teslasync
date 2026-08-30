@@ -125,7 +125,7 @@ export function DriveDnaPowerDistribution({
               maxBarSize={42}
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={<Zap className="h-8 w-8" aria-hidden="true" />}
               message={t(

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { motion } from 'framer-motion'
+import { motion } from '@/components/motion'
 import {
   Gauge, Zap, BatteryCharging, Moon, TrendingDown,
   Activity, Clock, ChevronDown, ChevronRight, Sparkles,
@@ -15,6 +15,7 @@ import {
 } from '@/api/polling'
 import { activityColor } from '@/lib/colors'
 import { cn } from '@/lib/cn'
+import { useMotionPreference } from '@/hooks/useMotionPreference'
 import { GlassPanel } from '../ui/GlassPanel'
 import { Button } from '../ui/Button'
 import { AnimatedNumber } from './AnimatedNumber'
@@ -76,6 +77,7 @@ export function formatTimeUntil(dateStr: string): string {
 
 function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingStatus }) {
   const { t } = useTranslation()
+  const { reduce } = useMotionPreference()
   const [expanded, setExpanded] = useState(false)
   const color = activityColor(status.activity)
   const shortVin = vin.slice(-8)
@@ -96,8 +98,8 @@ function VehicleActivity({ vin, status }: { vin: string; status: VehiclePollingS
         <div className="flex items-center gap-2">
           <motion.div
             className="inline-flex"
-            animate={{ scale: status.activity === 'active' ? [1, 1.2, 1] : 1 }}
-            transition={{ repeat: status.activity === 'active' ? Infinity : 0, duration: 1.5 }}
+            animate={{ scale: status.activity === 'active' && !reduce ? [1, 1.2, 1] : 1 }}
+            transition={{ repeat: status.activity === 'active' && !reduce ? Infinity : 0, duration: 1.5 }}
             style={{ color }}
             aria-hidden="true"
           >

@@ -102,6 +102,11 @@ function InnerSection({
     url: '/ai/charging/schedule/draft',
     body,
     onEvent: noop,
+    // AI-01: vehicle + departure scope is part of stream identity —
+    // changing either aborts an in-flight draft and clears the
+    // previous scope's schedule proposal before the new scope
+    // streams in.
+    scopeKey: validVehicleId ? `${validVehicleId}:${body.depart_by}` : null,
   })
   // canStart mirrors the two hard preconditions the backend enforces
   // before it will accept a draft: a positive-integer vehicle_id and a

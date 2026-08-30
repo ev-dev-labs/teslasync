@@ -164,10 +164,10 @@ function renderPage(initialEntry = '/search') {
   );
 }
 
-/** The MetricCard root (`.rounded-xl`) that owns the given KPI label. */
+/** The MetricCard root (`[data-role="metric-card"]`) that owns the given KPI label. */
 function metricCard(label: string): HTMLElement {
   const span = screen.getByText(label);
-  const root = span.closest('div.rounded-xl');
+  const root = span.closest('[data-role="metric-card"]');
   if (!root) throw new Error(`no MetricCard root for "${label}"`);
   return root as HTMLElement;
 }

@@ -34,6 +34,66 @@ slos:
     owner: platform
     tags: [http, latency]
 
+  - name: fleet_state_batch_availability
+    description: "Fleet batch current-state reads (GET /api/v1/vehicles/states) must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/vehicles/states\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/vehicles/states\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, fleet, live-state]
+
+  - name: fleet_state_batch_latency_1s
+    description: "The fleet batch current-state read must complete within one second so the SPA posture panel stays responsive at fleet scale."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/states\",le=\"1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/vehicles/states\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, fleet, latency]
+
+  - name: signal_transport_agreement_availability
+    description: "Bounded source-time cross-transport agreement audits must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/signals/{vehicleID}/transport-agreement\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/signals/{vehicleID}/transport-agreement\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, telemetry, data-quality]
+
+  - name: signal_transport_agreement_latency_2s
+    description: "Bounded source-time cross-transport agreement audits must complete within two seconds."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/signals/{vehicleID}/transport-agreement\",le=\"2\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/signals/{vehicleID}/transport-agreement\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, telemetry, data-quality, latency]
+
+  - name: data_quality_read_availability
+    description: "Bounded admin data-quality scoring reads must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/admin/observability/data-quality\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/admin/observability/data-quality\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, admin, observability, data-quality]
+
+  - name: data_quality_read_latency_2s
+    description: "Bounded admin data-quality scoring reads must complete within two seconds."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/admin/observability/data-quality\",le=\"2\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/admin/observability/data-quality\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, admin, observability, data-quality, latency]
+
   - name: battery_health_latency_1s
     description: "Battery health analytics requests must complete within one second."
     sli:
@@ -83,6 +143,36 @@ slos:
     window: 30d
     owner: platform
     tags: [http, action-center, decision-inbox]
+
+  - name: activity_timeline_read_availability
+    description: "Unified vehicle activity timeline reads must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/activity\",method=\"GET\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: platform
+    tags: [http, activity, operations]
+
+  - name: data_repair_read_availability
+    description: "Data-repair inventory, evidence diagnosis, durable case reads, and quarantine-ledger reads must return without server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/(stale-sessions|suggestions|quarantine|cases(|/stats|/\\\\{id\\\\}))\",method=\"GET\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, data-repair, operations]
+
+  - name: data_repair_write_availability
+    description: "Confirmation-gated session repair, case metadata, quarantine, and restore mutations must avoid server errors; expected validation conflicts remain valid outcomes."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=~\"/api/v1/data-repair/((drive|charging)/\\\\{id\\\\}(|/close)|cases/(scan|bulk-transition|\\\\{id\\\\}/(transition|assignment|comments|quarantine))|quarantine/\\\\{id\\\\}/restore)\",method=~\"PUT|POST|DELETE\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: platform
+    tags: [http, data-repair, writes]
 
   - name: action_center_write_availability
     description: "Confirmation-gated Action Center state actions must return without server errors; expected conflicts remain valid outcomes."
@@ -134,15 +224,25 @@ slos:
     owner: ingest
     tags: [throughput, pipeline]
 
-  - name: mqtt_no_backlog
-    description: "MQTT consumer backlog must stay below 1000 messages."
+  - name: mqtt_pipeline_subscription
+    description: "The dedicated Fleet Telemetry MQTT consumer must retain a recent broker-confirmed subscription lease."
     sli:
-      good_events: "sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[5m:30s])"
+      good_events: "sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[5m:30s])"
+      valid_events: "count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[5m:30s])"
+    objective: 99.9
+    window: 7d
+    owner: ingest
+    tags: [mqtt, subscription, availability]
+
+  - name: mqtt_handler_backlog
+    description: "MQTT messages admitted to the API must not accumulate in handlers."
+    sli:
+      good_events: "sum_over_time((teslasync_mqtt_consumer_backlog < 100)[5m:30s])"
       valid_events: "count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])"
     objective: 99.0
     window: 7d
     owner: ingest
-    tags: [mqtt, backlog]
+    tags: [mqtt, handlers, saturation]
 
   - name: tesla_api_availability
     description: "Tesla upstream API circuit breaker must remain closed."
@@ -153,6 +253,27 @@ slos:
     window: 30d
     owner: platform
     tags: [upstream, breaker]
+
+  - name: fleet_api_budget_evidence_availability
+    description: "Fleet API polling must retain access to shared budget evidence rather than failing closed."
+    sli:
+      good_events: "sum(rate(teslasync_polls_total{result!=\"budget_unavailable\"}[5m]))"
+      valid_events: "sum(rate(teslasync_polls_total[5m]))"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    tags: [upstream, polling, budget]
+
+  - name: fleet_api_polling_budget_continuity
+    description: "Fleet API polling should retain daily budget headroom so no current-fleet vehicle remains paused."
+    sli:
+      good_events: "sum_over_time((max(teslasync_polling_budget_paused_vehicles) == bool 0)[5m:30s])"
+      valid_events: "count_over_time((max(teslasync_polling_budget_paused_vehicles))[5m:30s])"
+    objective: 99.0
+    window: 7d
+    owner: platform
+    fast_burn_severity: ticket
+    tags: [upstream, polling, budget]
 
   - name: sse_delivery
     description: "Server-sent-events broadcast latency p95 must remain under 2 seconds."
@@ -165,14 +286,82 @@ slos:
     tags: [sse, latency]
 
   - name: frontend_lcp
-    description: "Largest Contentful Paint p75 must stay below 2.5 seconds."
+    description: "Largest Contentful Paint must stay within the 2.5s good threshold for at least 90% of real user samples."
     sli:
       good_events: "sum(rate(teslasync_frontend_web_vitals_lcp_seconds_bucket{le=\"2.5\"}[5m]))"
       valid_events: "sum(rate(teslasync_frontend_web_vitals_lcp_seconds_count[5m]))"
     objective: 90.0
     window: 28d
     owner: frontend
-    tags: [frontend, web-vitals]
+    tags: [frontend, web-vitals, rum]
+
+  - name: frontend_inp
+    description: "Interaction to Next Paint must stay within the 200ms good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_inp_seconds_bucket{le=\"0.2\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_inp_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, interactivity]
+
+  - name: frontend_cls
+    description: "Cumulative Layout Shift must stay within the 0.1 good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_cls_ratio_bucket{le=\"0.1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_cls_ratio_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, stability]
+
+  - name: frontend_fcp
+    description: "First Contentful Paint must stay within the 1.8s good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_fcp_seconds_bucket{le=\"1.8\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_fcp_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, loading]
+
+  - name: frontend_ttfb
+    description: "Time To First Byte must stay within the 800ms good threshold for at least 90% of real user samples."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_bucket{le=\"0.8\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_web_vitals_ttfb_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, web-vitals, rum, backend-latency]
+
+  - name: frontend_route_transition
+    description: "SPA route transitions must paint the new route within 500ms for at least 90% of real user navigations."
+    sli:
+      good_events: "sum(rate(teslasync_frontend_route_transition_seconds_bucket{le=\"0.5\"}[5m]))"
+      valid_events: "sum(rate(teslasync_frontend_route_transition_seconds_count[5m]))"
+    objective: 90.0
+    window: 28d
+    owner: frontend
+    tags: [frontend, rum, navigation]
+
+  # NOTE: there is deliberately NO `frontend_time_to_usable_content` SLO.
+  # `teslasync_frontend_time_to_usable_content_seconds` is only populated when a
+  # page explicitly calls `markContentReady(token)` (web/src/lib/webVitalsReporter.ts).
+  # Until pages are wired the histogram has no samples, and an SLO over an empty
+  # denominator reports a permanent 100% success — a dishonest green light.
+  # Add the SLO in the same change that wires the first pages; the readiness
+  # gate and the exact wording are in docs/runbooks/frontend-rum-slos.md.
+
+  - name: frontend_rum_ingest_availability
+    description: "The public RUM ingest endpoint must accept browser batches without server errors; losing it blinds every frontend SLO."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{route=\"/api/v1/web-vitals\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: frontend
+    tags: [frontend, rum, http, ingest]
 
   - name: fleet_ops_availability
     description: "Small-fleet operations endpoints must return non-5xx responses."
@@ -187,7 +376,7 @@ slos:
   - name: fleet_ops_forecast_latency
     description: "Small-fleet utilization forecasts must complete within one second."
     sli:
-      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1.0\"}[5m]))"
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/fleet-ops/utilization-forecast\",le=\"1\"}[5m]))"
       valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{route=\"/api/v1/fleet-ops/utilization-forecast\"}[5m]))"
     objective: 99.0
     window: 30d
@@ -253,3 +442,23 @@ slos:
     window: 30d
     owner: platform
     tags: [http, geofences, pricing, writes]
+
+  - name: fsd_insights_availability
+    description: "Supervised self-driving insights reads (GET /api/v1/analytics/fsd) must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: analytics
+    tags: [http, analytics, fsd]
+
+  - name: fsd_insights_latency_1s
+    description: "Server-side FSD Insights aggregation over signal_log must complete within one second."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_request_duration_seconds_bucket{method=\"GET\",route=\"/api/v1/analytics/fsd\",le=\"1\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_request_duration_seconds_count{method=\"GET\",route=\"/api/v1/analytics/fsd\"}[5m]))"
+    objective: 99.0
+    window: 30d
+    owner: analytics
+    tags: [http, analytics, fsd, latency]

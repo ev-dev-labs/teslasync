@@ -64,7 +64,7 @@ export function BatteryCareSection({
         ) : state.isLoading ? (
           <Skeleton height={loadingHeight} className="rounded-xl" />
         ) : !hasData ? (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             className="min-h-52"
             icon={emptyIcon}
             message={emptyMessage}

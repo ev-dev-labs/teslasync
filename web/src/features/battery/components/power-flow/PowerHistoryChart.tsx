@@ -4,9 +4,9 @@ import { useTranslation } from 'react-i18next';
 import { GlassPanel, PanelTitle } from '@/components/ui';
 import { QueryError } from '@/components/feedback';
 import {
-  ChartContainer, ChartGradient, ChartTooltip,
+  ChartContainer, ChartGradient, ChartLegend, ChartTooltip,
   chartGrid, axisTick, chartMarginLabeled,
-  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { cn } from '@/lib/cn';
@@ -70,12 +70,14 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
       title={t('powerFlow.powerOverTime', 'Power Over Time')}
       subtitle={t('powerFlow.powerOverTimeDesc', 'Solar, battery, and grid power flow')}
       ariaLabel={t('powerFlow.powerOverTimeAria', 'Solar, battery, grid, and home power flow stacked area chart over time')}
+      chartKey="power-flow-history"
       loading={loading}
       empty={rows.length === 0}
       height={CHART_HEIGHT}
     >
-      <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
-        <AreaChart data={rows} margin={chartMarginLabeled}>
+      {({ hiddenSeries }) => (
+        <ResponsiveContainer width="100%" height={CHART_HEIGHT}>
+          <AreaChart data={rows} margin={chartMarginLabeled}>
           <defs>
             <ChartGradient id="pfGradSolar" color={FLOW_COLORS.solar} />
             <ChartGradient id="pfGradBattery" color={FLOW_COLORS.battery} />
@@ -90,13 +92,14 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
           />
           <YAxis tickFormatter={formatWattTick} {...axisTick} />
           <Tooltip content={<ChartTooltip />} />
-          <Legend />
+          <ChartLegend />
           <Area
             {...AREA_DEFAULTS}
             dataKey="solar"
             name={t('powerFlow.solar', 'Solar')}
             stroke={FLOW_COLORS.solar}
             fill="url(#pfGradSolar)"
+            hide={hiddenSeries?.isHidden('solar')}
           />
           <Area
             {...AREA_DEFAULTS}
@@ -104,6 +107,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
             name={t('powerFlow.batteryLabel', 'Battery')}
             stroke={FLOW_COLORS.battery}
             fill="url(#pfGradBattery)"
+            hide={hiddenSeries?.isHidden('battery')}
           />
           <Area
             {...AREA_DEFAULTS}
@@ -111,6 +115,7 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
             name={t('powerFlow.grid', 'Grid')}
             stroke={FLOW_COLORS.grid}
             fill="url(#pfGradGrid)"
+            hide={hiddenSeries?.isHidden('grid')}
           />
           <Area
             {...AREA_DEFAULTS}
@@ -118,9 +123,11 @@ export function PowerHistoryChart({ data, loading, error, onRetry, className }: 
             name={t('powerFlow.home', 'Home')}
             stroke={FLOW_COLORS.home}
             fill="url(#pfGradHome)"
+            hide={hiddenSeries?.isHidden('load')}
           />
-        </AreaChart>
-      </ResponsiveContainer>
+          </AreaChart>
+        </ResponsiveContainer>
+      )}
     </ChartContainer>
   );
 }

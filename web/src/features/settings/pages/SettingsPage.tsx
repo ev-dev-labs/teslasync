@@ -30,6 +30,7 @@ import { restartChecklist } from '@/features/onboarding/checklist'
 import {
   GeneralSettings,
   AppearanceSettings,
+  WorkspacePreferencesSettings,
   TypographySettings,
   AdvancedSettings,
   SettingsSearch,
@@ -221,6 +222,9 @@ export default function SettingsPage() {
         aria-label={t('preferences.aria', 'Preference sections')}
         className="columns-1 2xl:columns-2"
       >
+        <section id="workspace">
+          <WorkspacePreferencesSettings />
+        </section>
         <section id="general">
           <GeneralSettings />
         </section>

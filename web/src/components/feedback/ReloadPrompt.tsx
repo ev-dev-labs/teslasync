@@ -1,145 +1,91 @@
-import { useRegisterSW } from 'virtual:pwa-register/react'
-import { RefreshCw } from 'lucide-react'
-import { useEffect, useState, useRef, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
-import { Button } from '../ui/Button'
-import { GlassPanel } from '../ui/GlassPanel'
+import { useEffect } from 'react'
 
-const COUNTDOWN_SECONDS = 3
-const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000
+import { usePwaUpdate } from '@/hooks/usePwaUpdate'
+import { useAppLifecycle } from '@/hooks/useAppLifecycle'
+import { useServiceWorkerBridge } from '@/hooks/useServiceWorkerBridge'
+import { useOnlineStatus } from '@/hooks/useOnlineStatus'
+import { subscribe } from '@/lib/broadcast'
+import { purgeServiceWorkerApiCache } from '@/sw/purgeApiCache'
+import { UpdatePrompt } from './UpdatePrompt'
+import { CachedDataNotice } from './CachedDataNotice'
+import { OfflineBanner } from './OfflineBanner'
 
 /**
- * Shows a non-intrusive banner when a new version is deployed.
+ * Application-root PWA host.
  *
- * NOTE: After the switch to `registerType: 'autoUpdate'` (vite.config.ts),
- * `needRefresh` is never set to `true` by `useRegisterSW` — vite-plugin-pwa
- * wires `onNeedRefresh` only in `prompt` mode. The banner UI is therefore
- * effectively dead code in production, but the hook is still mounted for
- * its useful side effect: the periodic `registration.update()` interval
- * below makes the browser fetch the manifest every 5 minutes so newly
- * deployed builds are picked up promptly even on tabs the user keeps
- * open. The `activated` listener inside vite-plugin-pwa's autoUpdate
- * branch then drives the auto-reload — see node_modules/vite-plugin-pwa
- * /dist/client/build/react.js.
+ * Mounted once from `main.tsx`. It owns every piece of device/PWA lifecycle
+ * that must exist regardless of which route is open, and deliberately owns
+ * them in ONE place so none of them can be double-registered:
  *
- * Counts down then auto-reloads so users always run the latest version,
- * but exposes a Dismiss button to opt out (cancels the countdown and
- * hides the banner — the next page navigation or update check picks up
- * the new build).
+ *  - {@link useServiceWorkerBridge} mirrors the device notification policy and
+ *    the low-bandwidth flag into the service worker, and re-sends them
+ *    whenever an update swaps the controlling worker (PWA-05 / PWA-07).
+ *  - {@link usePwaUpdate} detects, explains and applies new builds without
+ *    ever reloading behind the user's back (PWA-03 / PWA-04).
+ *  - {@link useAppLifecycle} recovers after the OS backgrounds, freezes or
+ *    bfcache-restores the app: it re-invalidates the visible queries, resets
+ *    a zombie SSE pipe, and runs an out-of-band update check (PWA-08).
+ *  - the `auth.logout` broadcast funnel, below.
+ *  - {@link OfflineBanner} is THE global owner of the browser-offline
+ *    announcement. It used to be mounted by `<Layout>` in standard
+ *    presentation mode only, which meant the six routes that never mount
+ *    `<Layout>` — and every report/kiosk view — announced the transition zero
+ *    times. Mounting it here makes ownership global and singular.
+ *  - {@link CachedDataNotice} discloses, while offline, exactly when the data
+ *    on screen was captured (PWA-02). It is deliberately NON-live
+ *    (`role="note"`) because the banner above owns the announcement.
+ *
+ * The file keeps its historical name because `main.tsx` imports it by path;
+ * the countdown-and-auto-reload banner it used to be now lives in
+ * `UpdatePrompt.tsx` — without the countdown, which discarded unsaved work
+ * for anyone who looked away for three seconds.
  */
 export default function ReloadPrompt() {
-  const { t } = useTranslation()
-  const [countdown, setCountdown] = useState(COUNTDOWN_SECONDS)
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const updateIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const online = useOnlineStatus()
 
-  const {
-    needRefresh: [needRefresh, setNeedRefresh],
-    updateServiceWorker,
-  } = useRegisterSW({
-    onRegisteredSW(_swUrl: string, registration?: ServiceWorkerRegistration) {
-      if (registration) {
-        // Keep a handle so the interval can be torn down on unmount —
-        // otherwise it keeps calling registration.update() forever, even
-        // after this component leaves the tree, leaking a timer per mount.
-        updateIntervalRef.current = setInterval(() => {
-          void registration.update()
-        }, UPDATE_CHECK_INTERVAL_MS)
-      }
-    },
-    onRegisterError(error: unknown) {
-      console.error('[SW] Registration error:', error)
-    },
-  })
+  useServiceWorkerBridge()
+  const update = usePwaUpdate()
+  useAppLifecycle({ onCheckForUpdate: update.checkForUpdate })
 
-  const clearCountdown = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current)
-      timerRef.current = null
-    }
+  // Identity-transition purge, broadcast funnel.
+  //
+  // `lib/resilience.ts::navigateToReauth()` purges synchronously in the tab
+  // that is signing out and then broadcasts `auth.logout`. This listener is
+  // the receiving half: a sibling tab that was NOT the one navigating must
+  // also drop the previous identity's cached API reads, because it may be
+  // uncontrolled (so the first tab's worker-side purge could have been a
+  // no-op) and because it will keep rendering until the user returns to it.
+  //
+  // Cache Storage is shared per-origin, so a second purge is idempotent and
+  // cheap; correctness here matters more than avoiding a redundant delete.
+  useEffect(() => {
+    return subscribe((message) => {
+      if (message.type !== 'auth.logout') return
+      purgeServiceWorkerApiCache()
+    })
   }, [])
 
-  const doReload = useCallback(() => {
-    clearCountdown()
-    updateServiceWorker(true)
-  }, [updateServiceWorker, clearCountdown])
-
-  const dismiss = useCallback(() => {
-    clearCountdown()
-    setNeedRefresh(false)
-  }, [clearCountdown, setNeedRefresh])
-
-  useEffect(() => {
-    if (!needRefresh) return
-
-    setCountdown(COUNTDOWN_SECONDS)
-    timerRef.current = setInterval(() => {
-      setCountdown((prev) => {
-        if (prev <= 1) {
-          clearCountdown()
-          updateServiceWorker(true)
-          return 0
-        }
-        return prev - 1
-      })
-    }, 1000)
-
-    return clearCountdown
-  }, [needRefresh, updateServiceWorker, clearCountdown])
-
-  // Tear down the periodic service-worker update poll on unmount so a
-  // remounted prompt never stacks multiple update() intervals.
-  useEffect(
-    () => () => {
-      if (updateIntervalRef.current) {
-        clearInterval(updateIntervalRef.current)
-        updateIntervalRef.current = null
-      }
-    },
-    [],
-  )
-
-  if (!needRefresh) return null
-
   return (
-    <div
-      role="alert"
-      aria-live="polite"
-      data-testid="reload-prompt"
-      className="fixed bottom-4 right-4 z-[9999] animate-in slide-in-from-bottom-4 fade-in duration-normal"
-    >
-      <GlassPanel className="!p-4 flex items-center gap-3 border border-neon-cyan/30 shadow-lg shadow-neon-cyan/10 max-w-sm">
-        <div className="rounded-lg bg-neon-cyan/10 p-2">
-          <RefreshCw className="h-5 w-5 text-neon-cyan animate-spin" aria-hidden="true" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-[var(--text-primary)]">
-            {t('pwa.newVersion', 'New version available')}
-          </p>
-          <p className="text-xs text-[var(--text-secondary)]">
-            {t('pwa.reloadingIn', 'Reloading in {{seconds}}s...', { seconds: countdown })}
-          </p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={dismiss}
-          data-testid="reload-prompt-dismiss"
-          className="shrink-0 text-[var(--text-secondary)]"
+    <>
+      {/* Global, singular owner of the offline announcement — every route and
+          every presentation mode. Renders the visible chip in standard mode
+          and a screen-reader-only live region in report/kiosk. */}
+      <OfflineBanner />
+      {!online && (
+        // Positioning wrapper only — no role and no aria-label. An aria-label
+        // on a roleless <div> is ignored by assistive technology, and giving
+        // this element a role would create a second announcement competing
+        // with <OfflineBanner> above. The notice inside owns its own
+        // semantics as a NON-live note and states the offline condition in
+        // its visible text.
+        <div
+          data-testid="pwa-offline-disclosure"
+          className="fixed inset-x-3 top-[calc(0.75rem+env(safe-area-inset-top,0px))] z-[9990] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:w-[28rem]"
         >
-          {t('pwa.later', 'Later')}
-        </Button>
-        <Button
-          variant="primary"
-          size="sm"
-          onClick={doReload}
-          data-testid="reload-prompt-reload"
-          className="shrink-0"
-        >
-          {t('pwa.reloadNow', 'Reload Now')}
-        </Button>
-      </GlassPanel>
-    </div>
+          <CachedDataNotice announce={false} />
+        </div>
+      )}
+      <UpdatePrompt state={update} />
+    </>
   )
 }
-

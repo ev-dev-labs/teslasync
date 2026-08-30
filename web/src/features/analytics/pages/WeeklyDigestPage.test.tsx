@@ -11,8 +11,8 @@
  * This suite drives that orchestration by mocking the `weekly-digest` barrel
  * (the hook + section spies that reflect their props as data-attributes), the
  * AI narration surface, the motion wrapper, and i18n. The real `PageContainer`
- * and `Select` render so the page's landmarks + vehicle combobox are exercised
- * for real. Network is never touched.
+ * and canonical `VehicleSelect` render so the page's landmarks + global
+ * vehicle combobox are exercised for real. Network is never touched.
  *
  * Facets covered:
  *   - scaffolding/a11y: page heading + subtitle, labelled region landmarks,
@@ -26,7 +26,7 @@
  *     its own query without cross-contaminating healthy panels.
  *   - summary retry re-invokes refetchAll for both summary bands.
  *   - week navigation callbacks + label/current wiring.
- *   - vehicle scope select onChange forwards the raw string value.
+ *   - vehicle scope select updates the shared numeric vehicle context.
  *   - AI vehicle id boundary: numeric id forwarded, `0` preserved, empty →
  *     undefined, and a non-numeric id is dropped instead of forwarding NaN.
  */
@@ -37,6 +37,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
 import type { DigestMetrics } from '../components/weekly-digest/types';
+
+const selectedVehicleContext = vi.hoisted(() => ({
+  setVehicleId: vi.fn(),
+}));
 
 // ── i18n stub: return the fallback string, interpolating {{var}} options ──
 vi.mock('react-i18next', () => ({
@@ -68,6 +72,18 @@ vi.mock('@/components/ai/AIDigestNarration', () => ({
   AIDigestNarration: ({ vehicleId }: { vehicleId?: number }) => (
     <div data-testid="ai-narration" data-vehicle-id={vehicleId ?? 'none'} />
   ),
+}));
+
+vi.mock('@/hooks/useSelectedVehicle', () => ({
+  useSelectedVehicle: () => ({
+    vehicleId: 7,
+    vehicle: null,
+    vehicles: [
+      { id: 7, display_name: 'My Model 3', vin: 'VIN7' },
+      { id: 9, display_name: 'My Model Y', vin: 'VIN9' },
+    ],
+    setVehicleId: selectedVehicleContext.setVehicleId,
+  }),
 }));
 
 // ── weekly-digest barrel: mock the hook + reflect each section's props ──
@@ -215,6 +231,7 @@ const retryButton = (id: string) =>
 beforeEach(() => {
   mockHook.mockReset();
   mockHook.mockReturnValue(makeHook());
+  selectedVehicleContext.setVehicleId.mockReset();
 });
 
 describe('WeeklyDigestPage — scaffolding + a11y', () => {
@@ -417,16 +434,14 @@ describe('WeeklyDigestPage — week navigation', () => {
 });
 
 describe('WeeklyDigestPage — vehicle scope select', () => {
-  it('forwards the raw string value to setVehicleId on change', () => {
-    const setVehicleId = vi.fn();
-    mockHook.mockReturnValue(makeHook({ setVehicleId }));
+  it('updates the shared numeric vehicle context on change', () => {
     renderPage();
 
     fireEvent.change(screen.getByRole('combobox', { name: 'Select vehicle' }), {
       target: { value: '9' },
     });
-    expect(setVehicleId).toHaveBeenCalledTimes(1);
-    expect(setVehicleId).toHaveBeenCalledWith('9');
+    expect(selectedVehicleContext.setVehicleId).toHaveBeenCalledTimes(1);
+    expect(selectedVehicleContext.setVehicleId).toHaveBeenCalledWith(9);
   });
 });
 

@@ -1,6 +1,5 @@
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Activity } from 'lucide-react';
 
 import {
   AREA_DEFAULTS,
@@ -8,6 +7,7 @@ import {
   AreaChart,
   ChartContainer,
   ChartGradient,
+  ChartLegend,
   ChartTooltip,
   ComposedChart,
   Line,
@@ -21,7 +21,6 @@ import {
   chartGrid,
   renderAnnotationLines,
 } from '@/components/charts';
-import { EmptyState } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { useAlertContext } from '@/hooks/useAlertContext';
 import { useUnits } from '@/hooks/useUnits';
@@ -36,7 +35,7 @@ interface BatteryTrendChartsProps {
   vehicleId: number;
 }
 
-interface PredictionChartPoint {
+interface PredictionChartPoint extends Record<string, string | number | undefined> {
   label: string;
   actual?: number;
   predicted?: number;
@@ -91,14 +90,24 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
           title={t('battery.chart.capacityTrend', 'Capacity Trend & Prediction')}
           subtitle={t('battery.chart.dashedProjected', 'Dashed = projected')}
           ariaLabel={t(
-            'battery.chart.capacityTrend.aria',
+            'battery.chart.capacityTrendAria',
             'Battery capacity trend with dashed projection line over time',
           )}
-          exportable
+          size="detail"
+          empty={predictionChartData.length === 0}
+          emptyMessage={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')}
+          data={predictionChartData}
+          dataColumns={[
+            { key: 'label', label: t('chart.col.date', 'Date') },
+            { key: 'actual', label: t('battery.chart.actual', 'Actual %') },
+            { key: 'predicted', label: t('battery.chart.predicted', 'Predicted %') },
+          ]}
+          exportData={predictionChartData}
           exportFilename="capacity-trend"
+          chartKey="battery-health-capacity-trend"
         >
-          {predictionChartData.length > 0 ? (
-            <div className="h-48 sm:h-72">
+          {({ hiddenSeries }) => (
+            <div className="h-full">
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={predictionChartData}>
                   <defs>
@@ -108,6 +117,7 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                   <XAxis dataKey="label" tick={axisTickSm} tickLine={false} axisLine={false} />
                   <YAxis domain={[60, 100]} tick={axisTickSm} tickLine={false} axisLine={false} unit="%" />
                   <Tooltip content={<ChartTooltip />} />
+                  <ChartLegend />
                   <ReferenceLine y={70} stroke={STATUS_COLORS.critical} strokeDasharray="8 4" />
                   <ReferenceLine y={80} stroke={STATUS_COLORS.warning} strokeDasharray="4 4" />
                   <TimeMarker
@@ -120,6 +130,8 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                     name={t('battery.chart.actual', 'Actual %')}
                     stroke="transparent"
                     fill="url(#healthGrad)"
+                    hide={hiddenSeries?.isHidden('actual')}
+                    legendType="none"
                   />
                   <Line
                     {...AREA_DEFAULTS}
@@ -128,6 +140,7 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                     stroke={COLOR.CYAN}
                     dot={{ fill: COLOR.CYAN, r: 2 }}
                     connectNulls={false}
+                    hide={hiddenSeries?.isHidden('actual')}
                   />
                   <Line
                     {...AREA_DEFAULTS}
@@ -136,16 +149,11 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                     stroke={COLOR.CYAN}
                     strokeDasharray="6 4"
                     opacity={0.5}
+                    hide={hiddenSeries?.isHidden('predicted')}
                   />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
-          ) : (
-            <EmptyState
-              icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-              message={t('battery.chart.noTrend', 'Not enough snapshots for trend analysis')}
-              className="py-8"
-            />
           )}
         </ChartContainer>
 
@@ -153,16 +161,27 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
           className="h-full"
           title={t('battery.chart.rangeTrend', 'Estimated Range Over Time')}
           ariaLabel={t(
-            'battery.chart.rangeTrend.aria',
+            'battery.chart.rangeTrendAria',
             'Estimated battery range over time area chart',
           )}
-          exportable
+          size="detail"
+          empty={rangeTrend.length === 0}
+          emptyMessage={t('battery.chart.noRange', 'No range data yet')}
+          data={rangeTrend}
+          dataColumns={[
+            { key: 'label', label: t('chart.col.date', 'Date') },
+            {
+              key: 'range',
+              label: `${t('battery.chart.range', 'Range')} (${unitPrefs.distance})`,
+            },
+          ]}
+          exportData={rangeTrend}
           exportFilename="range-trend"
           annotations={{ vehicleId, scope: 'battery', chartId: 'battery-health-range-trend' }}
         >
           {({ annotations: chartAnnotations }) =>
-            rangeTrend.length > 0 ? (
-              <div className="h-48 sm:h-72">
+            (
+              <div className="h-full">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={rangeTrend}>
                     <defs>
@@ -187,12 +206,6 @@ export default function BatteryTrendCharts({ health, vehicleId }: BatteryTrendCh
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-            ) : (
-              <EmptyState
-                icon={<Activity className="h-8 w-8" aria-hidden="true" />}
-                message={t('battery.chart.noRange', 'No range data yet')}
-                className="py-8"
-              />
             )
           }
         </ChartContainer>

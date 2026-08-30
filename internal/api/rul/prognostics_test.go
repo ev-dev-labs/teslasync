@@ -112,10 +112,10 @@ func TestRegressionConfidence(t *testing.T) {
 func TestSampleConfidence(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name             string
-		samples          int
-		adequate         float64
-		want             float64
+		name     string
+		samples  int
+		adequate float64
+		want     float64
 	}{
 		{"at adequate", 40, 40, 1.0},
 		{"above adequate clamps", 100, 40, 1.0},
@@ -240,10 +240,10 @@ func TestClassifyStatus(t *testing.T) {
 func TestKmPerDay(t *testing.T) {
 	t.Parallel()
 	tests := []struct {
-		name    string
-		km      float64
-		span    float64
-		want    float64
+		name string
+		km   float64
+		span float64
+		want float64
 	}{
 		{"normal", 900, 30, 30},
 		{"span floored at 1 day", 50, 0.2, 50},
@@ -268,7 +268,7 @@ func TestBuildSoHSeries(t *testing.T) {
 	t.Parallel()
 	base := time.Date(2024, 1, 1, 0, 0, 0, 0, time.UTC)
 	rows := []DailyBattery{
-		{Day: base, MaxEnergyWh: 67500, MaxSocPct: 90},               // usable 75000 -> SoH 100
+		{Day: base, MaxEnergyWh: 67500, MaxSocPct: 90},                   // usable 75000 -> SoH 100
 		{Day: base.AddDate(0, 0, 10), MaxEnergyWh: 20000, MaxSocPct: 40}, // low SoC -> dropped
 		{Day: base.AddDate(0, 0, 20), MaxEnergyWh: 66000, MaxSocPct: 90}, // usable 73333 -> SoH ~97.8
 		{Day: base.AddDate(0, 0, 30), MaxEnergyWh: 0, MaxSocPct: 95},     // no energy -> dropped

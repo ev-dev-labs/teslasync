@@ -12,6 +12,7 @@ import { MetricBar } from '@/components/data-display';
 import {
   LinearGauge, ChartGradient, ChartTooltip, chartGrid, axisTick,
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ReferenceLine, ResponsiveContainer,
+  EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -307,75 +308,79 @@ export default function RemainingUsefulLifePage() {
             />
           ) : (
             <>
-              <div
-                role="img"
-                aria-label={t('rul.forecast.aria', 'Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band')}
-                className="h-72 sm:h-80"
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={chartData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
-                    <defs>
-                      <ChartGradient id="rulBandGrad" color={activeMeta.gauge} opacity={0.25} />
-                    </defs>
-                    {chartGrid}
-                    <XAxis
-                      dataKey="date"
-                      tick={axisTick}
-                      tickLine={false}
-                      axisLine={false}
-                      minTickGap={28}
-                      tickFormatter={(d: string) => (typeof d === 'string' ? d.slice(0, 7) : String(d))}
-                    />
-                    <YAxis
-                      width={44}
-                      domain={[yMin, 100]}
-                      tick={axisTick}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(v: number) => fmtInt(v)}
-                    />
-                    <Tooltip content={
-                      <ChartTooltip
-                        valueFormatter={(v) => (
-                          Array.isArray(v)
-                            ? `${fmtInt(v[0])}–${fmtInt(v[1])}%`
-                            : `${fmtNumber(v as number, 1)}%`
-                        )}
+              <div className="h-72 sm:h-80">
+                {/* chart-legend-audit:skip confidence band is inseparable from projected health line */}
+                {/* chart-a11y:no-table projected health line + confidence band area — composite trace not tabular */}
+                <EmbeddedChart
+                  title={t('rul.forecast.title', 'Health Forecast')}
+                  ariaLabel={t('rul.forecast.aria', 'Area chart of projected component health declining to its end-of-life threshold, with a shaded confidence band')}
+                  fluid
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={chartData} margin={{ top: 12, right: 16, bottom: 4, left: 4 }}>
+                      <defs>
+                        <ChartGradient id="rulBandGrad" color={activeMeta.gauge} opacity={0.25} />
+                      </defs>
+                      {chartGrid}
+                      <XAxis
+                        dataKey="date"
+                        tick={axisTick}
+                        tickLine={false}
+                        axisLine={false}
+                        minTickGap={28}
+                        tickFormatter={(d: string) => (typeof d === 'string' ? d.slice(0, 7) : String(d))}
                       />
-                    } />
-                    {eol != null ? (
-                      <ReferenceLine
-                        y={eol}
-                        stroke={COLOR_EOL}
-                        strokeDasharray="4 3"
-                        strokeOpacity={0.8}
-                        label={{
-                          value: t('rul.forecast.eol', 'End of life'),
-                          position: 'insideTopRight',
-                          fill: COLOR_EOL,
-                          fontSize: 10,
-                        }}
+                      <YAxis
+                        width={44}
+                        domain={[yMin, 100]}
+                        tick={axisTick}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v: number) => fmtInt(v)}
                       />
-                    ) : null}
-                    <Area
-                      type="monotone"
-                      dataKey="band"
-                      stroke="none"
-                      fill="url(#rulBandGrad)"
-                      name={t('rul.forecast.band', 'Confidence band')}
-                      isAnimationActive={false}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="projected_health"
-                      stroke={activeMeta.gauge}
-                      strokeWidth={2}
-                      dot={false}
-                      name={t('rul.forecast.projected', 'Projected health')}
-                      animationDuration={700}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                      <Tooltip content={
+                        <ChartTooltip
+                          valueFormatter={(v) => (
+                            Array.isArray(v)
+                              ? `${fmtInt(v[0])}–${fmtInt(v[1])}%`
+                              : `${fmtNumber(v as number, 1)}%`
+                          )}
+                        />
+                      } />
+                      {eol != null ? (
+                        <ReferenceLine
+                          y={eol}
+                          stroke={COLOR_EOL}
+                          strokeDasharray="4 3"
+                          strokeOpacity={0.8}
+                          label={{
+                            value: t('rul.forecast.eol', 'End of life'),
+                            position: 'insideTopRight',
+                            fill: COLOR_EOL,
+                            fontSize: 10,
+                          }}
+                        />
+                      ) : null}
+                      <Area
+                        type="monotone"
+                        dataKey="band"
+                        stroke="none"
+                        fill="url(#rulBandGrad)"
+                        name={t('rul.forecast.band', 'Confidence band')}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="projected_health"
+                        stroke={activeMeta.gauge}
+                        strokeWidth={2}
+                        dot={false}
+                        name={t('rul.forecast.projected', 'Projected health')}
+                        animationDuration={700}
+                      />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </EmbeddedChart>
               </div>
               {detail?.basis ? (
                 <Text as="p" variant="caption" className="mt-3">

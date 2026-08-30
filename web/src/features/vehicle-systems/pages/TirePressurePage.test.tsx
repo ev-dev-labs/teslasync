@@ -31,6 +31,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import TirePressurePage, {
   hasTpmsWarning,
   normaliseTpmsToPa,
@@ -515,16 +521,21 @@ describe('TirePressurePage — loading / empty / error states', () => {
     expect(kpiCard('Avg Pressure').getByText('—')).toBeInTheDocument();
   });
 
-  it('surfaces a QueryError with a working Retry and the page-level error banner', async () => {
+  it('names the failed source, preserves history, and keeps section retry working', async () => {
     setLatest(null, 'reject');
     setHistory([], 'resolve'); // isolate the failure to the "current readings" query
     renderPage();
 
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
-    expect(screen.getByText('Failed to load data')).toBeInTheDocument();
+    expect(screen.getByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByText('Latest tire pressure')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByText('Tire pressure history')).toBeInTheDocument();
+    expect(screen.getByText('Ready')).toBeInTheDocument();
+    expect(screen.getAllByText('No history data').length).toBeGreaterThanOrEqual(1);
 
     const callsBefore = H.calls.latest;
-    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Retry$/ }));
     await waitFor(() => expect(H.calls.latest).toBeGreaterThan(callsBefore));
   });
 });

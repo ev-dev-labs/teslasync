@@ -95,8 +95,10 @@ const cap = vi.hoisted(() => ({
 
 vi.mock('@/components/charts', async (importActual) => {
   const actual = await importActual<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     chartGrid: null,
     ResponsiveContainer: (props: Record<string, unknown>) => (
       <div data-testid="chart-shell">{props.children as ReactNode}</div>
@@ -349,7 +351,7 @@ describe('ClimateHistoryWidget — refresh', () => {
     expect(await screen.findByTestId('area-chart')).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
   });

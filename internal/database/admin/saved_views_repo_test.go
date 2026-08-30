@@ -3,6 +3,7 @@ package admin
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -76,6 +77,27 @@ func TestSavedViewsRepo_List(t *testing.T) {
 				t.Errorf("scanned rows wrong: %+v %+v", got[0], got[1])
 			}
 		})
+	}
+}
+
+func TestSavedViewsRepo_List_EmptyRouteUsesGlobalPredicate(t *testing.T) {
+	t.Parallel()
+	v := sampleView()
+	pool := &fakePool{
+		queryQueue: []queryResult{{rows: newFakeRows([][]any{savedViewRow(v)})}},
+	}
+	repo := &SavedViewsRepo{pool: pool}
+
+	got, err := repo.List(context.Background(), SavedViewListFilter{UserID: i64(1)})
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(got) != 1 || got[0].ID != v.ID {
+		t.Fatalf("unexpected rows: %#v", got)
+	}
+	assertArgsEqual(t, pool.queryCalls[0].args, []any{i64(1), ""})
+	if !strings.Contains(pool.queryCalls[0].sql, "$2 = '' OR route = $2") {
+		t.Fatalf("global route predicate missing from query: %s", pool.queryCalls[0].sql)
 	}
 }
 

@@ -1,0 +1,648 @@
+{
+  "advanced": {
+    "restoreConfirms": {
+      "title": "Confirmation prompts",
+      "restoreAll": "Restore all",
+      "restore": "Restore"
+    }
+  },
+  "ai": {
+    "settings": {
+      "title": "Helix",
+      "subtitle": "Optional. Helix is off by default; nothing is enabled until you opt in here.",
+      "modeLegend": "Helix mode",
+      "save": "Save Helix settings",
+      "saving": "Saving…",
+      "bannerOff": "Helix is off. Your app works fully without it. Enable a mode above to opt in.",
+      "mode": {
+        "off": "Off (default)",
+        "offHint": "Helix is off. The app works fully without it.",
+        "local": "Local-only",
+        "localHint": "Use a private model on your network (e.g. Ollama). No data leaves your install.",
+        "cloud": "Cloud",
+        "cloudHint": "Use a cloud provider (e.g. OpenAI). Requires an API key."
+      },
+      "provider": {
+        "label": "Provider configuration",
+        "providerLabel": "Provider",
+        "baseUrl": "Base URL",
+        "baseUrlHint": "Must resolve to a private network address (loopback, RFC1918, link-local, or ULA).",
+        "model": "Model",
+        "apiKey": "API key",
+        "apiKeyPlaceholder": "sk-…  (leave blank to keep current)",
+        "apiKeyHint": "Stored encrypted. Never displayed once saved.",
+        "costCap": "Daily cost cap (USD)",
+        "costCapHint": "Daily cap on cloud spending. 0 disables the cap.",
+        "localExplainer": "Local-only mode never sends data outside your network. The validator pins the resolved IP at save time to defend against later DNS rebinding.",
+        "validateOptional": "Validation is optional but recommended — it catches mis-typed URLs and confirms the model is reachable."
+      },
+      "validate": {
+        "button": "Validate",
+        "running": "Validating…",
+        "success": "OK — provider reachable",
+        "successPinned": "OK — pinned to {{ip}}",
+        "failure": "Validation failed",
+        "cloudButton": "Validate connection",
+        "successProbed": "OK — {{model}} reachable",
+        "networkError": "Validation failed — could not reach the server. Check your connection and try again."
+      },
+      "feature": {
+        "legend": "Per-feature opt-in (all default off)",
+        "ai-provider-health": {
+          "label": "Helix provider health (ops)",
+          "description": "Diagnostic endpoint that reports the active Helix provider and its capabilities. Off by default; enable only for ops debugging."
+        },
+        "chatbot-llm": {
+          "label": "LLM chatbot",
+          "description": "Conversational fleet assistant powered by an LLM. Falls back to the heuristic chatbot when Helix is off."
+        },
+        "digest-narration": {
+          "label": "Weekly digest narration",
+          "description": "Opt-in LLM narration of the weekly digest. The deterministic template digest remains the baseline when Helix is off."
+        },
+        "yir-narration": {
+          "label": "Year-in-review narration",
+          "description": "Opt-in LLM narration of the annual year-in-review slides. The deterministic template slides remain the baseline when Helix is off."
+        },
+        "anomaly-explanations": {
+          "label": "Anomaly explanation narration",
+          "description": "Opt-in LLM narration that explains already-detected anomalies in plain language. The deterministic detector and safe-range explanations remain the baseline when Helix is off."
+        },
+        "nl-alert-builder": {
+          "label": "Natural-language alert builder",
+          "description": "Opt-in LLM that drafts alert rules from a plain-language description. Drafts are typed AlertRule proposals that you review and save through the standard form; the manual AlertStudio remains the canonical baseline when Helix is off."
+        },
+        "nl-automation-builder": {
+          "label": "Natural-language automation builder",
+          "description": "Opt-in LLM that drafts automation graphs (trigger, conditions, actions) from a plain-language description. Drafts are typed proposals that you review and save through the standard builder; the manual AutomationBuilder remains the canonical baseline when Helix is off."
+        },
+        "nl-search": {
+          "label": "Natural-language search",
+          "description": "Opt-in LLM that searches your drives, charging sessions, and alerts from a plain-language description and narrates the matches. The typed search filters at /search remain the canonical baseline when Helix is off."
+        },
+        "drive-coaching": {
+          "label": "Per-drive coaching",
+          "description": "Opt-in LLM that narrates an individual drive in 2-4 short paragraphs covering efficiency, regen use, and notable braking or acceleration moments. The deterministic per-drive stat cards, hero gauges, and energy summary remain the canonical baseline when Helix is off."
+        },
+        "charging-diagnosis": {
+          "label": "Per-charging-session diagnosis",
+          "description": "Opt-in LLM that explains why a charging session was flagged trickle, expensive, low-power, or interrupted in 2-4 short paragraphs. The deterministic flag badges, hero gauges, and charge curve remain the canonical baseline when Helix is off."
+        },
+        "rag-help": {
+          "label": "RAG-backed app help",
+          "description": "Opt-in LLM that answers natural-language questions about the application using its own documentation, runbooks, and i18n strings — with explicit citations to each source. The deterministic curated /help page links and tooltips remain the canonical baseline when Helix is off."
+        },
+        "nl-drive-search-replay": {
+          "label": "Natural-language drive search and replay",
+          "description": "Opt-in LLM that finds a drive from a plain-language description and links straight to its replay. The typed search, filter chips, range picker, and vehicle selector on the Drives page remain the canonical baseline when Helix is off."
+        },
+        "speed-profile-insights": {
+          "label": "Speed-profile insights",
+          "description": "Opt-in LLM that interprets a drive's speed regime distribution — city / suburban / highway buckets, outliers, and a high-level route context envelope — in a few short sentences. The deterministic SpeedHistogramChart and summary metrics on the drive detail page remain the canonical baseline when Helix is off."
+        },
+        "route-efficiency-suggestions": {
+          "label": "Route-efficiency suggestions",
+          "description": "Opt-in LLM that suggests lower-consumption habits and route choices grounded in your own route history — dominant route, kWh/100mi figure, and one or two concrete, non-mutating ideas to try yourself. The deterministic route comparison cards and kWh/100mi metrics on the Route Efficiency page remain the canonical baseline when Helix is off."
+        },
+        "trip-planner-llm-agent": {
+          "label": "Trip-planner LLM agent",
+          "description": "Opt-in LLM agent that drafts a trip plan grounded in your own charging history along the corridor — origin and destination, current state of charge, minimum arrival state of charge, and one or two suggested stops drawn from places you have already charged at. The deterministic heuristic trip planner, manual form, map, and Plan button on the Trip Planner page remain the canonical baseline when Helix is off."
+        },
+        "smart-charge-schedule-suggestion": {
+          "label": "Smart-charge schedule suggestion",
+          "description": "Opt-in LLM agent that proposes a time-of-use-optimized charge schedule by delegating to the canonical charge-planner optimizer — target state of charge, departure time, rate plan, and a one or two sentence narration of the proposed window. The manual schedule form, deterministic optimizer, rate timeline, and Schedule button on the Smart Charge page remain the canonical baseline when Helix is off."
+        },
+        "battery-health-forecast-narrative": {
+          "label": "Battery health forecast narrative",
+          "description": "Opt-in LLM narrator that explains the deterministic battery-health forecast — current state of health, projected degradation slope, dominant charging-habit drivers, and the top one or two risk factors — grounded in the same numeric envelope the chart renders. The deterministic Capacity Trend & Prediction chart, hero metric cards, insights, and recommendations on the Battery Health page remain the canonical baseline when Helix is off."
+        },
+        "charging-curve-fingerprint-clustering": {
+          "label": "Charging-curve fingerprint clustering",
+          "description": "Opt-in LLM narrator that names and explains each deterministic charging-curve cluster fingerprint — peak power tier (L1 / L2 / DC fast), session count per cluster, ramp shape, dominant charger type, and total energy per session — grounded in the same per-cluster envelope the curves render. The deterministic charging-curve charts, per-session labels, and distribution panel on the Charging Curve page remain the canonical baseline when Helix is off."
+        },
+        "cost-forecast-narration": {
+          "label": "Cost forecast narration",
+          "description": "Opt-in LLM narrator that explains the deterministic charging-cost forecast — historical monthly trend, projected cost / cost_low / cost_high band, home-vs-supercharger split, and the top deterministic insight — grounded in the same numeric envelope the chart renders, and honest that the band is an APPROXIMATE prediction interval rather than a strict 95% confidence interval. The deterministic cost forecast chart, summary cards, breakdown, savings calculator, monthly cost table, time-of-use analysis, lifetime summary, and environmental impact card on the Cost Analysis page remain the canonical baseline when Helix is off."
+        },
+        "period-compare-narration": {
+          "label": "Period compare narration",
+          "description": "Opt-in LLM narrator that explains the deterministic period-over-period analytics on the Period Compare page — which one or two metrics moved most between Period A and Period B, with directional phrasing keyed to the percent_change sign, and explicit honesty about zero-baseline windows and best-effort cost figures. The deterministic Period A vs Period B metric cards, side-by-side bar chart, comparison table, and insights panel remain the canonical baseline when Helix is off."
+        },
+        "lifetime-stats-qa": {
+          "label": "Lifetime stats Q&A",
+          "description": "Opt-in LLM Q&A surface that answers natural-language questions about your all-time stats — total drives, total distance, charging savings, achievements, personal records, ownership timeline — by routing through two read-only tools that quote the same deterministic envelope the Lifetime Stats dashboard renders. The narrator never invents numbers and is honest about zero-data vehicles. The deterministic Lifetime Stats hero card, key-stats grid, achievements gallery, fun-facts cards, personal-records panel, and ownership timeline remain the canonical baseline when Helix is off."
+        },
+        "incident-timeline-summarizer": {
+          "label": "Incident timeline summarizer",
+          "description": "Opt-in LLM summarizer that condenses one incident's chronological timeline into a 3-6 sentence factual summary — what happened, what investigation steps the operator took, and how it resolved — by routing through two read-only tools that quote the same deterministic envelope the canonical incident page renders. The narrator never invents updates and never speculates about root cause. Per-request scope binding rejects any cross-incident tool call to defend against prompt-injection exfiltration via operator-authored text. The deterministic incident timeline list, append-update form, and lifecycle controls on the per-incident page remain the canonical baseline when Helix is off."
+        },
+        "data-repair-suggestions": {
+          "label": "Data repair suggestions",
+          "description": "Opt-in LLM that proposes a typed RepairPlan (close, quarantine, or partial-update) for one stale charging session or drive from the inventory shown on the Data Repair page. PROPOSE-ONLY: the LLM routes through two propose-only tools that share the same per-kind update_fields allowlist used by the canonical handler, and the user reviews the typed proposal in the Helix panel and clicks the canonical Save / Close / Quarantine button on the baseline form to apply it. The LLM never writes. Per-request scope binding rejects any cross-row mutation proposal to defend against prompt-injection exfiltration via operator-authored start_place / end_place fields. The deterministic stale-session list and per-row repair forms on the Data Repair page remain the canonical baseline when Helix is off."
+        },
+        "signal-explorer-nl-filter": {
+          "label": "Signal explorer NL filter",
+          "description": "Opt-in LLM that translates a natural-language filter request (e.g. \"battery level for yesterday\") into a typed SignalFilter draft the Signal Explorer page can apply with one click. PROPOSE-ONLY: the LLM routes through two propose-only tools that enforce the same per-vehicle signal catalog and range/per-page enumerations the deterministic SignalSelector + RangePicker + PER_PAGE Select honour, and the user reviews the typed proposal in the Helix panel and clicks Apply to copy it into the form. The LLM never edits filter state directly. Per-request scope binding rejects any signal name not in the in-scope per-vehicle catalog and any vehicle_id mismatch to defend against prompt-injection. The deterministic SignalSelector, RangePicker, page-size Select, and Explore / Live buttons on /signals/explorer remain the canonical baseline when Helix is off."
+        },
+        "vampire-drain-explanation": {
+          "label": "Vampire-drain explanation",
+          "description": "Opt-in LLM narrator that explains the deterministic vampire-drain (idle energy loss) signal — recent average / median / p95 idle drain rate per day, the worst recent idle window (start, duration, drain %, ambient temperature), and the per-event driver (Sentry on, climate on, very long parked window) most strongly correlated with elevated drain — grounded in the same numeric envelope the cards render, and honest that the per-event driver attribution is correlational rather than causal. The deterministic vampire-drain stats, per-event timeline, and typical-vs-worst cards on the Vampire Drain page remain the canonical baseline when Helix is off."
+        },
+        "preheat-precool-recommender": {
+          "label": "Preheat and precool recommender",
+          "description": "Opt-in LLM agent that proposes a preheat or precool window — start time, end time, target cabin temperature, mode (preheat | precool) — by combining your typical departure timestamp with the vehicle's current cabin and outside temperatures. The proposal is structured and propose-only: review the typed draft in the Helix panel and click Apply on the existing climate-controls UI to save it; Helix never creates a schedule directly. The deterministic Climate Control page (HVAC banner, status cards, efficiency panel, history table, seat-heater controls, manual departure-time heuristic) remains the canonical baseline when Helix is off."
+        },
+        "cabin-temperature-impact-narrative": {
+          "label": "Cabin temperature impact narrative",
+          "description": "Opt-in LLM narrator that explains how outside ambient temperature affects this vehicle's driving efficiency — which temperature bucket runs most efficiently, the relative consumption gap between the best and worst bucket, and the 12-month seasonal trend (cold-weather dip vs mild-weather recovery) — grounded strictly in the same bucketed-efficiency aggregates and monthly seasonal trend the chart renders, and honest that the surface is a descriptive aggregate of recent drives rather than a forecast or regression model. The deterministic Temperature Impact page (bucketed-efficiency chart, monthly seasonal trend, summary metric cards, recent drives table) remains the canonical baseline when Helix is off."
+        },
+        "tire-pressure-trend-reasoning": {
+          "label": "Tire-pressure trend reasoning",
+          "description": "Opt-in LLM narrator that explains the recent 30-day trend in this vehicle's four corner tire pressures — which tires are trending up, down, or stable, the most likely deterministic driver of any deviation (cold-weather correlation when all four corners trend together with a parallel ambient-temperature drop, single-corner slow-leak signature when one corner's rate is materially worse), and any actionable threshold crossing — grounded strictly in the same TpmsPressure* and OutsideTemp signal-log change feed the gauges render, and honest that the per-corner slope is a descriptive linear extrapolation rather than a forecast. The deterministic Tire Pressure page (four-corner gauges, soft-low/normal/soft-high threshold bands, warning banner, summary metric cards, pressure history chart, history table) remains the canonical baseline when Helix is off."
+        },
+        "alert-tuning-suggestions": {
+          "label": "Alert-rule tuning suggestions",
+          "description": "Opt-in LLM that reads an existing AlertRule plus the rule's recent 30-day firing history and proposes a typed lower-noise patch (threshold, cooldown, severity, trigger-mode) — for example, raising the battery-low threshold or lengthening the cooldown when the rule has been firing 23 times a week. Surfaces a descriptive replay of the recent firing window (how often the rule would have fired under the proposed thresholds), explicitly NOT a prediction, and never persists the patch — the user reviews the typed draft inside the AlertStudio editor and clicks the canonical Save button to apply. The deterministic AlertStudio editor (manual threshold + cooldown tuning, severity selector, trigger-mode toggle, fired-history table) remains the canonical baseline when Helix is off."
+        },
+        "inbox-auto-categorization": {
+          "label": "Inbox auto-categorization",
+          "description": "Opt-in LLM that reads recent notification-log rows for the requested vehicle plus severity filter, buckets them into a closed taxonomy of nine categories (battery, charging, climate, tire, security, connectivity, maintenance, noise, other) using a deterministic substring mapper over the alert rule's signal name, and proposes which category buckets dominate the inbox over the recent window. Surfaces a descriptive count over the chosen window — explicitly NOT a forecast — and never assigns labels to rows; the user reviews the typed proposal inside the inbox panel and clicks Apply categories as filter to copy the proposed rule_id list into the existing URL-backed inbox filter. The deterministic inbox (manual severity / vehicle / rule_id filters, free-text search, day-grouped + threaded views, bulk actions) remains the canonical baseline when Helix is off."
+        },
+        "cross-rule-conflict-detection": {
+          "label": "Cross-rule conflict detection",
+          "description": "Opt-in LLM that reads the typed AlertRule definitions in the current scope (optionally narrowed by vehicle, signal name, enabled-only, or an explicit rule-id list) and surfaces structural conflicts within a closed taxonomy of two kinds: redundant_duplicate (byte-identical predicate plus overlapping vehicle scope, both enabled) and overlapping_threshold (same signal_name, overlapping vehicle scope, predicate intervals overlap on numeric ops). Each surfaced conflict carries metadata flags for severity_mismatch, cooldown_mismatch, trigger_mode_mismatch, and subsumes — informational only, never a new conflict kind. Descriptive structural overlap analysis only — explicitly NOT a prediction — and never edits, merges, or deletes rules; the user clicks Review rule {id} to navigate the AlertStudio editor and applies any change manually. The deterministic AlertStudio rule list and per-rule validation remain the canonical baseline when Helix is off."
+        },
+        "auto-name-unnamed-locations": {
+          "label": "Auto-name unnamed locations",
+          "description": "Opt-in LLM-assisted location-name proposals grounded in the visited-location's visit pattern (current address_name, visit_count, total_duration_s, last_visited). Propose-only: Helix produces a structured proposal via two typed read-only tools (draft_location_name then validate_location_name) and the user explicitly confirms or edits before saving through the existing baseline geofence-create / location-rename path. The deterministic visited-location stat cards, frequency bar charts, and existing list rendered by LocationsPage at /locations remain the canonical baseline when Helix is off. The per-feature redaction policy keeps lat/long, street addresses, and place names tagged; only the vehicle name may be narrated."
+        },
+        "geofence-aware-automation-suggestions": {
+          "label": "Geofence-aware automation suggestions",
+          "description": "Opt-in LLM that proposes a typed Automation graph DTO scoped to one of your existing geofences. Propose-only: Helix proposes a structured automation via two typed read-only tools (draft_automation_graph then validate_automation_graph) and you review the populated form and click Save through the canonical baseline POST /api/v1/automations write path. The geofence catalog (id + name + category — never coordinates) is injected so the LLM picks an existing place_id rather than hallucinating one. The deterministic AutomationBuilder form, trigger / condition / action editors, and Save button at /automations/builder remain the canonical baseline when Helix is off."
+        },
+        "learned-per-vehicle-anomaly-baselines": {
+          "label": "Learned per-vehicle anomaly baselines",
+          "description": "Opt-in statistical model that computes per-signal mean, stddev, and p5/p95 from this vehicle's recent signal history (default 14 days, capped at 30) and proposes a learned anomaly envelope, falling back per-signal to the static safe-range envelope when fewer than 30 samples exist in the lookback window. Read-only: the trainer never writes to signal_log, never overwrites the deterministic safe-range table, and the Helix narration walks the user through the learned vs. static comparison via two typed tools (train_anomaly_baseline then query_anomaly_baseline). The deterministic Z-score detector + static safeRanges map at /anomaly-detection remain the canonical baseline when Helix is off."
+        },
+        "range-prediction-model": {
+          "label": "Range-prediction model",
+          "description": "Opt-in statistical model that computes per-bucket (temperature × speed) mean Wh/km from this vehicle's recent drives (default 14 days, capped at 30) and proposes a learned range envelope, falling back per-bucket to the deterministic linear projection when fewer than 5 qualifying drives exist in the lookback window. Read-only: the trainer never writes to drives, never overwrites the heuristic curve, and the Helix narration walks the user through the learned vs. heuristic comparison via two typed tools (train_range_model then query_range_prediction). The deterministic linear projection + heuristic Wh/km curve at /projected-range remain the canonical baseline when Helix is off."
+        },
+        "log-trace-summarization": {
+          "label": "Log and trace summarization",
+          "description": "Opt-in LLM narrator that summarizes one in-scope window of redacted log events and trace spans into a 3-6 sentence factual paragraph — what level breakdown the window held, which message templates dominated, which trace operations ran (with mean latency), and any structural signals worth investigating — by routing through two read-only tools that quote the same deterministic envelope the operator can already inspect manually. The narrator never invents log lines and never speculates about root cause. Per-request scope binding rejects any cross-window tool call to defend against prompt-injection exfiltration via operator-authored log messages. The deterministic SSE-backed live log table, level / grep / vehicle filter controls, pause/resume, and copy-to-clipboard / download controls on the Live Logs page remain the canonical baseline when Helix is off."
+        },
+        "feedback-queue-triage": {
+          "label": "Feedback queue triage",
+          "description": "Opt-in LLM advisor that proposes a status, category, and priority label for one in-scope user feedback row — by quoting the same redacted envelope (id, category, title, body excerpt, page route, app version, status, created_at) that an operator can already inspect manually in the queue — and routes the proposal through a closed-enum validator before the UI surfaces it as a recommendation chip. The advisor NEVER writes to user_feedback; the existing manual triage controls (status dropdown, category badge, priority chip, save button) remain the sole write path. Per-request scope binding rejects any cross-row tool call to defend against prompt-injection exfiltration via user-authored feedback text. The deterministic feedback queue table, filter / sort / search controls, per-row expansion, and manual triage controls on the Admin Feedback Queue page remain the canonical baseline when Helix is off."
+        },
+        "mqtt-sse-inspector-explanations": {
+          "label": "MQTT and SSE inspector explanations",
+          "description": "Opt-in LLM narrator that summarizes one in-scope window of the MQTT broker, SSE hub, and background-job state into a 3-6 sentence factual paragraph — whether the broker is connected, how many vehicles are actively streaming, how many are stale, what aggregate signals-per-second the pipeline holds, how many SSE clients are subscribed, and whether the background jobs (signal_log writer, snapshot rollover, alert engine) ran recently — by routing through two read-only tools that quote the same deterministic broker-status envelope the operator can already inspect manually. The narrator never invents a stream state and never speculates about root cause. Per-request scope binding rejects any cross-window tool call to defend against prompt-injection exfiltration via broker topic strings. Broker hostnames, ports, SSE client identifiers, and VINs are redacted before the message reaches the provider. The deterministic broker-status snapshot panel, per-vehicle stream stats table, throughput chart, and topic-pattern badges on the MQTT Inspector page remain the canonical baseline when Helix is off."
+        },
+        "state-machine-debugger-narrator": {
+          "label": "State-machine debugger narrator",
+          "description": "Opt-in LLM narrator that summarizes one in-scope vehicle FSM transition trace into a 3-6 sentence factual paragraph — the total transition count, the per-FSM-name breakdown when more than one FSM is present, the dominant from→to edges, the flap count when greater than zero, and any unusual trigger string — by routing through two read-only tools that quote the same deterministic transition envelope the operator can already inspect manually in the transition table. The narrator never invents a transition and never speculates about root cause. Per-request scope binding rejects any cross-vehicle or cross-window tool call to defend against prompt-injection exfiltration via operator-readable trigger strings or FSM names. VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The deterministic transition table, state diagram, FSM health panel, and timeline chart on the State Machine Debugger page remain the canonical baseline when Helix is off."
+        },
+        "predictive-maintenance": {
+          "label": "Predictive maintenance",
+          "description": "Opt-in LLM advisor that narrates one in-scope vehicle's upcoming maintenance risks in a 3-6 sentence factual paragraph — which scheduled items are overdue, which are due soon, the recent service-record context, and whether the current mileage informs the recommendation or if time-based reasoning was used (when no recent odometer reading is available) — by routing through two read-only tools that quote the same deterministic maintenance envelope the operator can already inspect on the Maintenance page. The advisor never invents an item, never proposes a write, and never speculates about root cause beyond the deterministic envelope. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via user-authored service-record notes. VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The deterministic threshold reminders, status badges, summary metric cards, upcoming items list, and Schedule Maintenance write controls on the Maintenance page remain the canonical baseline when Helix is off."
+        },
+        "tco-narration": {
+          "label": "TCO narration",
+          "description": "Opt-in Helix narrator that explains the deterministic Total-Cost-of-Ownership envelope on the True Cost of Ownership page — the EV charging cost, the equivalent gas cost, the cumulative savings, and the cost-per-kilometre comparison — by routing through one read-only tool that quotes the same numbers the chart shows. The narrator is honest about the four limiting assumptions: operating cost only (no depreciation, resale, insurance, registration, or financing); a flat $50/month maintenance heuristic; equivalent gas cost estimated from charged energy not real-world distance; and gas-price / efficiency / electricity-rate defaults from your editable Settings. When the deterministic envelope reports negative savings the narrator states that fact honestly rather than cheerlead. The deterministic hero stat cards, cumulative-savings area chart, cost-per-km bar chart, monthly EV-vs-gas bar chart, and savings-breakdown summary remain the canonical baseline when Helix is off."
+        },
+        "software-update-changelog-summarizer": {
+          "label": "Software update changelog summarizer",
+          "description": "Opt-in Helix narrator that summarizes one in-scope vehicle's firmware update history on the Software Updates page — the current installed version, the install cadence (days between recent versions), and the headline release-note themes for the versions you have actually installed — by routing through two read-only tools that quote the same deterministic update events the timeline shows plus the public Tesla release-note chunks the retrieval layer surfaces. The narrator never invents firmware versions and never claims features your installed build does not have; when no release notes are available for a version it states that fact honestly. Per-request scope binding rejects any cross-vehicle tool call to defend against prompt-injection exfiltration via release-note text. The deterministic current-version metric card, install-count metric card, total-update count, the per-version timeline with status chips, and the public release-notes external links remain the canonical baseline when Helix is off."
+        },
+        "pii-redaction-shared-exports": {
+          "label": "PII redaction in shared exports",
+          "description": "Opt-in Helix advisor that recommends which PII classes to redact from a shared export on the Exports page — the highly-recommended classes for the chosen export type (drives, charging, trips, analytics, backup, account) plus the optional classes that depend on your consent — by routing through two read-only tools that consult a STATIC catalog of PII classes keyed by export type. The advisor is catalog-based, not a per-row PII scan: Helix never reads the rows of your export and never reports PII it actually saw; it surfaces the catalog's recommendations plus the assumptions inherited from the catalog. Per-request scope binding rejects any cross-export-type tool call to defend against prompt-injection exfiltration. The deterministic export-jobs list, bulk-delete toolbar, and download links remain the canonical baseline when Helix is off."
+        },
+        "nl-sql-playground": {
+          "label": "Natural-language SQL playground",
+          "description": "Opt-in Helix translator on the SQL Playground page (/power/sql) that converts a natural-language question into a typed read-only SQL DRAFT (a single SELECT or WITH statement against the curated install-wide schema catalog of drives, charging_sessions, vehicles, alerts, and signal_log_view) by routing through two propose-only tools (draft_readonly_sql + validate_readonly_sql). The translator NEVER executes SQL — there is no apply or execute tool; the deny-by-default keyword scan refuses INSERT, UPDATE, DELETE, DROP, ALTER, CREATE, TRUNCATE, GRANT, REVOKE, VACUUM, COPY, CALL, DO, MERGE, and EXECUTE; the per-request scope binding refuses any table reference outside the curated catalog. The user reviews the typed proposal in the AI side panel, clicks Apply to editor to copy the draft into the manual SQL editor, and clicks the canonical Run button to execute. The deterministic manual SQL editor and curated catalog viewer remain the canonical baseline when Helix is off."
+        },
+        "nl-grafana-panel": {
+          "label": "Natural-language Grafana panel",
+          "description": "Opt-in Helix translator on the Grafana Panel Builder page (/power/grafana) that converts a natural-language data question into a typed Grafana panel JSON DRAFT (a single panel envelope — title, type, datasource, targets, grid_pos — against the curated install-wide panel-builder catalog of 8 panel types, 2 datasource types, and the same 5 tables nl-sql-playground exposes) by routing through two propose-only tools (draft_grafana_panel + validate_grafana_panel). The translator NEVER pushes the panel to Grafana — there is no apply or push tool; the per-request scope binding refuses any panel type, datasource type, or table outside the curated catalog; the postgres rawSql contract refuses anything other than a SELECT/WITH single statement. The user reviews the typed proposal in the AI side panel, clicks Apply to editor to copy the draft into the manual JSON editor, and clicks the canonical Copy to clipboard button to paste it into their existing Grafana dashboard. The deterministic manual JSON editor and curated panel-builder catalog viewer remain the canonical baseline when Helix is off."
+        },
+        "nl-dashboard-composer": {
+          "label": "Natural-language dashboard composer",
+          "description": "Opt-in Helix translator on the Dashboard Composer page (/power/dashboards) that converts a natural-language dashboard request into a typed dashboard JSON DRAFT (a single dashboard envelope — title + ordered list of panel slots picking panels by name from the curated install-wide catalog and placing each on the Grafana 24-column grid) by routing through two propose-only tools (draft_dashboard_layout + validate_dashboard_layout). The translator NEVER pushes the dashboard to Grafana — there is no apply or push tool; the per-request scope binding refuses any panel_name outside the curated catalog; the layout contract refuses overlapping bounding boxes, more than 12 slots, or the same panel_name twice. The user reviews the typed proposal in the AI side panel, clicks Apply to editor to copy the draft into the manual JSON dashboard composer, and clicks the canonical Copy to clipboard button to paste it into their existing Grafana dashboard. The deterministic manual JSON composer and curated panel catalog viewer remain the canonical baseline when Helix is off."
+        }
+      },
+      "archive": {
+        "title": "Restore previous Helix selection?",
+        "description": "You previously had these features enabled. Re-enable them now?",
+        "restore": "Restore selection",
+        "decline": "No thanks"
+      },
+      "usage": {
+        "title": "Usage today",
+        "tokensIn": "Tokens in",
+        "tokensOut": "Tokens out",
+        "cost": "Estimated cost",
+        "placeholder": "Usage populates as features run. Live numbers arrive in a follow-up update."
+      }
+    }
+  },
+  "orders": {
+    "title": "Active Orders",
+    "subtitle": "Vehicle orders and delivery tracking from Tesla",
+    "lastSynced": "Synced",
+    "refresh": "Refresh",
+    "orderId": "Order ID",
+    "vin": "VIN",
+    "deliveryDate": "Delivery Date",
+    "upgradable": "Upgradable",
+    "noOrders": "No active orders found.",
+    "noData": "No order data yet. Click Refresh to fetch from Tesla.",
+    "loading": "Loading orders…",
+    "resourceName": "Orders"
+  },
+  "quietHours": {
+    "title": "Quiet hours / Do-Not-Disturb",
+    "subtitle": "Defer non-critical notifications during sleep, meetings, or other time-of-day windows.",
+    "addWindow": "Add window",
+    "edit": "Edit",
+    "delete": "Delete",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "loading": "Loading quiet-hours windows…",
+    "empty": "No quiet-hours windows yet. Add one to defer non-critical notifications during sleep or meetings.",
+    "bypassLabel": "Always allow:",
+    "deferred": "DND deferred",
+    "deferredTooltip": "Held until the active quiet-hours window ends.",
+    "form": {
+      "addTitle": "New quiet-hours window",
+      "editTitle": "Edit window",
+      "enabled": "Enabled",
+      "start": "Start",
+      "end": "End",
+      "timezone": "Timezone (IANA)",
+      "weekdays": "Weekdays",
+      "bypass": "Always allow these severities through",
+      "create": "Create",
+      "update": "Update",
+      "cancel": "Cancel"
+    },
+    "weekday": {
+      "sun": "Sun",
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat"
+    },
+    "severity": {
+      "info": "Info",
+      "warn": "Warning",
+      "critical": "Critical"
+    },
+    "error": {
+      "startInvalid": "Start must be HH:MM (24-hour).",
+      "endInvalid": "End must be HH:MM (24-hour).",
+      "endEqual": "End must differ from start.",
+      "timezoneRequired": "Timezone is required.",
+      "weekdaysRequired": "Pick at least one weekday.",
+      "bypassRequired": "Pick at least one severity."
+    }
+  },
+  "safetySettings": {
+    "pageTitle": "Safety settings",
+    "pageSubtitle": "Notification quiet hours, alert digest mode, critical-flash signalling, tab-badge signalling, and the API kill-switch. Use the links below each row to change a value.",
+    "listing": {
+      "title": "Your safety-related settings",
+      "subtitle": "Each row shows the current value on this install and links to the canonical Settings page where you can change it.",
+      "docsLink": "Docs",
+      "changeHint": "To change a value, open the main Settings page. This page is read-only and never changes a setting on its own."
+    },
+    "rows": {
+      "quietHoursEnabled": {
+        "title": "Quiet hours",
+        "description": "When ON, TeslaSync defers non-critical notifications during the configured quiet-hours window. Critical alerts are always delivered."
+      },
+      "quietHoursStart": {
+        "title": "Quiet-hours window start",
+        "description": "Window start in HH:MM (24-hour) local time. Effective only when quiet hours are ON."
+      },
+      "quietHoursEnd": {
+        "title": "Quiet-hours window end",
+        "description": "Window end in HH:MM (24-hour) local time. Effective only when quiet hours are ON."
+      },
+      "alertDigestMode": {
+        "title": "Alert digest mode",
+        "description": "How alerts are batched. Instant delivers each alert as it fires; Hourly batches into one digest per hour; Daily batches into one digest per day."
+      },
+      "criticalFlashEnabled": {
+        "title": "Critical-alert tab flash",
+        "description": "When ON, TeslaSync briefly flashes the browser tab title when a critical alert arrives while the tab is in the background. Honours the OS-level reduce-motion preference."
+      },
+      "tabBadgeEnabled": {
+        "title": "Unread tab badge",
+        "description": "When ON, TeslaSync prefixes the browser tab title with (N) and paints a coloured dot on the favicon for unread notifications."
+      },
+      "apiSuspended": {
+        "title": "API kill-switch",
+        "description": "Operational kill-switch. When ON, TeslaSync stops issuing requests to the Tesla Fleet API; existing telemetry streams continue. Used during outage triage so the install does not pile up rate-limited retries."
+      }
+    },
+    "aiExplainer": {
+      "title": "Explain my safety settings",
+      "description": "Ask Helix to explain the safety-related TeslaSync settings on this page in plain English. Helix only reads the typed envelope of canonical setting values (booleans, enum strings, HH:MM times) — it never reads notification titles, vehicle names, or any other PII, and it never proposes or changes a setting. Use the controls below to update a value yourself; Helix only narrates.",
+      "button": "Explain my settings",
+      "badge": "Helix"
+    }
+  },
+  "settings": {
+    "tours": {
+      "label": "Product tours",
+      "title": "Product tours",
+      "body": "Re-run the guided walkthroughs that introduce major sections.",
+      "replayMain": "Replay dashboard tour",
+      "replayDebugger": "Debugger tour",
+      "replayAutomations": "Automations tour",
+      "resetAll": "Reset all tours",
+      "resetDone": "All tours reset — they will play next time you open the matching page"
+    },
+    "tab": {
+      "heading": "Browser tab signals",
+      "badge": "Show unread count in browser tab",
+      "flash": "Flash tab title on critical alerts",
+      "hint": "Adds a \"(N)\" prefix and favicon dot when there are unread notifications. Critical alerts briefly flash \"(!) ALERT\" when the tab is in the background."
+    },
+    "search": {
+      "placeholder": "Search settings…",
+      "label": "Search settings",
+      "noResults": "No matching settings."
+    },
+    "advanced": {
+      "restoreConfirms": {
+        "title": "Confirmation prompts",
+        "description": "Re-enable “Don’t ask again” prompts you previously silenced.",
+        "empty": "No silenced prompts. Tick “Don’t ask again” on a confirmation dialog to silence it.",
+        "restore": "Restore",
+        "restoreAll": "Restore all",
+        "keys": {
+          "discardDraft": "Discard unsaved draft",
+          "unsavedNavigation": "Leave page with unsaved changes"
+        },
+        "restoreOne": "Restore {{name}}"
+      }
+    },
+    "totp": {
+      "title": "Two-factor authentication",
+      "subtitle": "TOTP codes from your authenticator app are required for the sudo step-up before destructive admin actions.",
+      "loading": "Loading two-factor settings…",
+      "status": {
+        "active": "Active",
+        "notEnrolled": "Not enrolled"
+      },
+      "actions": {
+        "enroll": "Enable TOTP",
+        "enrollHint": "Compatible with Google Authenticator, 1Password, Bitwarden, Authy and other RFC 6238 clients.",
+        "regenerate": "Regenerate backup codes",
+        "disable": "Disable"
+      },
+      "lastUsed": {
+        "label": "Last used",
+        "never": "Never"
+      },
+      "backupCodesRemaining": {
+        "label": "Backup codes remaining"
+      },
+      "modal": {
+        "enrollTitle": "Enable TOTP",
+        "scanInstructions": "Scan the QR code with your authenticator app, or enter the secret manually.",
+        "qrAlt": "TOTP QR code",
+        "manualLabel": "Manual entry secret",
+        "codeLabel": "Enter the 6-digit code from your app",
+        "verify": "Verify and activate",
+        "cancel": "Cancel"
+      },
+      "backupCodes": {
+        "title": "Save your backup codes",
+        "warning": "These codes will not be shown again. Store them in a password manager. Each code can be used once if you lose access to your authenticator app.",
+        "download": "Download .txt",
+        "done": "I saved them",
+        "fileHeader": "# TeslaSync TOTP backup codes — keep secret."
+      },
+      "disable": {
+        "title": "Disable two-factor authentication?",
+        "message": "You will no longer be prompted for a TOTP code on the sudo step-up. Your backup codes will be invalidated.",
+        "confirm": "Disable",
+        "cancel": "Keep TOTP enabled",
+        "typedLabel": "Type DISABLE to confirm"
+      },
+      "openMode": {
+        "message": "Per-user TOTP requires forward-auth mode. Configure your reverse proxy to inject X-Forwarded-User then reload."
+      },
+      "errors": {
+        "codeLength": "Enter all 6 digits.",
+        "invalidCode": "Code did not match. Try the next one.",
+        "rateLimited": "Too many incorrect attempts. Try again in 15 minutes.",
+        "enrollmentExpired": "Enrollment expired. Close and start over.",
+        "verifyGeneric": "Verification failed.",
+        "enroll": "Failed to start TOTP enrollment",
+        "verify": "Verification failed",
+        "disable": "Failed to disable TOTP",
+        "regenerate": "Failed to regenerate backup codes"
+      },
+      "toasts": {
+        "verified": "TOTP enabled. Save your backup codes!",
+        "disabled": "TOTP disabled.",
+        "backupRegenerated": "Backup codes regenerated."
+      }
+    },
+    "electricityCost": "Electricity Cost (per kWh)"
+  },
+  "settingsReset": {
+    "title": "Reset to defaults",
+    "subtitle": "Restore an individual section to its default state. Each reset is destructive and cannot be undone — export your settings first if you want a backup.",
+    "deniedTitle": "Sections that aren’t user-resettable",
+    "deniedSubtitle": "These sections live outside this server’s preference store. The Settings page can’t reset them, but the linked instructions tell you where to go.",
+    "section": {
+      "general": {
+        "title": "General preferences",
+        "desc": "Units, language, currency, timezone, and energy/gas pricing defaults."
+      },
+      "appearance": {
+        "title": "Appearance",
+        "desc": "Theme, density, chart palette, and notification badge / flash preferences."
+      },
+      "alertRules": {
+        "title": "Alert rules",
+        "desc": "Delete every alert rule you have authored. Cannot be undone."
+      },
+      "geofences": {
+        "title": "Geofences",
+        "desc": "Delete every geofence and its electricity-rate overrides. Vehicle home assignments will be cleared."
+      },
+      "notificationChannels": {
+        "title": "Notification channels",
+        "desc": "Delete every webhook, Discord, Slack, email, and push channel along with their delivery history."
+      },
+      "dashboardLayout": {
+        "title": "Dashboard layouts",
+        "desc": "Delete every saved dashboard layout preset."
+      },
+      "automations": {
+        "title": "Automations",
+        "desc": "Delete every automation, including its triggers, conditions, actions, variables, and run history."
+      },
+      "quietHours": {
+        "title": "Quiet hours",
+        "desc": "Delete every quiet-hours window for your account."
+      }
+    },
+    "denied": {
+      "tariffs": {
+        "title": "Charge cost tariffs",
+        "reason": "Tariffs are stored per-vehicle. Reset the assignment from the Vehicle Settings page on the vehicle detail screen."
+      },
+      "soundPrefs": {
+        "title": "Notification sound preferences",
+        "reason": "Notification sound preferences are stored in your browser. Clear them via your browser’s site-data controls."
+      }
+    },
+    "actions": {
+      "reset": "Reset"
+    },
+    "dangerZone": {
+      "title": "Danger zone",
+      "subtitle": "Wipe every user-discoverable preference at once. Alert rules, geofences, channels, automations, dashboard layouts, and your typed preference rows are all deleted in a single transaction.",
+      "help": "You will be asked to type RESET to confirm.",
+      "cta": "Reset ALL settings"
+    },
+    "confirm": {
+      "sectionTitle": "Reset {{name}}?",
+      "sectionMessage": "{{description}} This action is permanent.",
+      "allTitle": "Reset every user-discoverable setting?",
+      "allMessage": "Every alert rule, geofence, channel, automation, dashboard layout preset, and preference row will be permanently deleted. This cannot be undone.",
+      "confirmLabel": "Reset",
+      "allConfirmLabel": "Reset everything",
+      "cancelLabel": "Cancel",
+      "typedLabel": "Type RESET to confirm"
+    },
+    "toasts": {
+      "successTitle": "Settings reset",
+      "successDetail": "{{count}} item(s) reset across {{sections}} section(s)."
+    }
+  },
+  "totp": {
+    "disable": {
+      "typedLabel": "Type DISABLE to confirm",
+      "title": "Disable two-factor authentication?",
+      "confirm": "Disable",
+      "cancel": "Keep TOTP enabled"
+    },
+    "errors": {
+      "codeLength": "Enter all 6 digits.",
+      "invalidCode": "Code did not match. Try the next one.",
+      "verifyGeneric": "Verification failed."
+    },
+    "loading": "Loading two-factor settings…",
+    "title": "Two-factor authentication",
+    "status": {
+      "active": "Active",
+      "notEnrolled": "Not enrolled"
+    },
+    "lastUsed": {
+      "label": "Last used",
+      "never": "Never"
+    },
+    "backupCodesRemaining": {
+      "label": "Backup codes remaining"
+    },
+    "actions": {
+      "regenerate": "Regenerate backup codes",
+      "disable": "Disable",
+      "enroll": "Enable TOTP"
+    },
+    "modal": {
+      "enrollTitle": "Enable TOTP",
+      "qrAlt": "TOTP QR code",
+      "manualLabel": "Manual entry secret",
+      "codeLabel": "Enter the 6-digit code from your app",
+      "cancel": "Cancel",
+      "verify": "Verify and activate"
+    },
+    "backupCodes": {
+      "title": "Save your backup codes",
+      "download": "Download .txt",
+      "done": "I saved them"
+    }
+  },
+  "webhookChannels": {
+    "title": "Webhook channels",
+    "subtitle": "Forward TeslaSync notifications to Discord, Slack, n8n, Home Assistant, or any HTTP receiver. Each channel can be HMAC-signed so receivers can verify authenticity.",
+    "addButton": "Add webhook",
+    "loadError": "Failed to load webhook channels: {{error}}",
+    "savingAnnouncement": "Saving webhook…",
+    "empty": {
+      "title": "No webhooks yet",
+      "message": "Add a webhook to forward TeslaSync events to your favourite chat or automation tool.",
+      "action": "Add your first webhook"
+    },
+    "row": {
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "toggle": "Active",
+      "test": "Test webhook",
+      "edit": "Edit webhook",
+      "delete": "Delete webhook"
+    },
+    "test": {
+      "success": "Success",
+      "failure": "Failed",
+      "status": "Status {{status}}",
+      "latency": "{{ms}} ms",
+      "signature": "Signature:",
+      "body": "Response body",
+      "truncated": "… (truncated)"
+    },
+    "form": {
+      "addTitle": "Add webhook",
+      "editTitle": "Edit webhook",
+      "name": "Name",
+      "namePlaceholder": "Discord #alerts",
+      "nameRequired": "Name is required.",
+      "url": "URL",
+      "urlPlaceholder": "https://discord.com/api/webhooks/...",
+      "urlInvalid": "URL must start with http:// or https://.",
+      "urlHelp": "Compatible with Discord, Slack, n8n, Home Assistant, and any HTTP receiver.",
+      "method": "HTTP method",
+      "secret": "Signing secret",
+      "secretPlaceholder": "Optional — used for HMAC signing",
+      "secretPlaceholderEdit": "Leave blank to keep existing",
+      "secretHelp": "When set, every request includes X-TeslaSync-Signature: sha256=<hmac> so the receiver can verify authenticity.",
+      "showSecret": "Show secret",
+      "hideSecret": "Hide secret",
+      "enabled": "Enabled",
+      "cancel": "Cancel",
+      "save": "Add webhook",
+      "saveEdit": "Save changes",
+      "saving": "Saving…"
+    },
+    "signature": {
+      "label": "Signature preview",
+      "loading": "Computing signature…",
+      "error": "Failed to compute signature: {{error}}",
+      "empty": "Add a signing secret to preview the X-TeslaSync-Signature header.",
+      "help": "Send this header value with every webhook so receivers can verify authenticity."
+    },
+    "delete": {
+      "title": "Delete webhook?",
+      "message": "This will permanently remove the webhook. TeslaSync will stop sending notifications to it immediately.",
+      "confirm": "Delete webhook",
+      "cancel": "Cancel"
+    },
+    "docs": {
+      "title": "Available payload variables",
+      "intro": "Webhook receivers get a JSON envelope with these fields:"
+    }
+  }
+}

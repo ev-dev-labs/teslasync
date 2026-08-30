@@ -22,8 +22,9 @@
  * working.
  */
 import { useTranslation } from 'react-i18next'
-import { GlassPanel, ConfirmDialog, Text } from '@/components/ui'
-import { Spinner } from '@/components/feedback'
+import { GlassPanel, ConfirmDialog } from '@/components/ui'
+import { VisuallyHidden } from '@/components/a11y'
+import { Skeleton } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 import {
   useTotpEnrollmentFlow,
@@ -41,9 +42,20 @@ export function TOTPEnrollmentSection() {
   if (status.isLoading) {
     return (
       <FadeIn delay={0.05}>
-        <GlassPanel className="flex items-center gap-4 p-4 sm:p-5">
-          <Spinner size="sm" />
-          <Text variant="bodySm">{t('totp.loading', 'Loading two-factor settings…')}</Text>
+        <GlassPanel
+          role="status"
+          aria-busy="true"
+          aria-label={t('totp.loading', 'Loading two-factor settings…')}
+          className="flex items-center gap-4 p-4 sm:p-5"
+        >
+          <Skeleton rounded className="h-11 w-11 shrink-0" />
+          <div className="flex-1 space-y-2">
+            <Skeleton className="h-5 w-48" />
+            <Skeleton className="h-3 w-full max-w-md" />
+            <VisuallyHidden>
+              {t('totp.loading', 'Loading two-factor settings…')}
+            </VisuallyHidden>
+          </div>
         </GlassPanel>
       </FadeIn>
     )

@@ -299,7 +299,7 @@ describe('VehicleCostPage', () => {
     );
     renderPage();
 
-    expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument();
+    expect(screen.getByText('Feature not supported')).toBeInTheDocument();
     expect(
       screen.getByText(/ingest-x-ray subsystem is not configured/i),
     ).toBeInTheDocument();
@@ -317,7 +317,7 @@ describe('VehicleCostPage', () => {
     );
     renderPage();
 
-    expect(screen.queryByText('Subsystem unavailable')).not.toBeInTheDocument();
+    expect(screen.queryByText('Feature not supported')).not.toBeInTheDocument();
     expect(captured.kpis.error).toBe(err);
     expect(captured.chart.error).toBe(err);
     expect(captured.table.error).toBe(err);

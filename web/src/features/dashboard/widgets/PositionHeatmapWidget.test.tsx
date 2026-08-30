@@ -458,7 +458,7 @@ describe('PositionHeatmapWidget — freshness + vehicle scoping', () => {
     positionsMock.mockReturnValue(q);
     renderWidget({ cols: 2, rows: 2 });
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(q.refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(q.refetch).toHaveBeenCalledTimes(1);

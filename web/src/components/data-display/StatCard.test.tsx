@@ -51,7 +51,7 @@ describe('StatCard — core rendering', () => {
     const { container } = render(
       <StatCard label="X" value={1} className="col-span-2" />,
     );
-    expect(card(container)).toHaveClass('flex', 'flex-col', 'gap-1', 'col-span-2');
+    expect(card(container)).toHaveClass('flex', 'flex-col', 'gap-2', 'min-h-28', 'p-5', 'col-span-2');
   });
 });
 
@@ -117,7 +117,7 @@ describe('StatCard — trend', () => {
       />,
     );
     const row = screen.getByText('+12%').closest('div') as HTMLElement;
-    expect(row).toHaveClass('text-green-600');
+    expect(row).toHaveClass('text-emerald-700', 'dark:text-emerald-300');
     // Direction is conveyed by a word too, not colour alone (WCAG 1.4.1).
     expect(within(row).getByText('increased')).toBeInTheDocument();
     const glyph = within(row).getByText('↑');
@@ -133,7 +133,7 @@ describe('StatCard — trend', () => {
       />,
     );
     const row = screen.getByText('-8%').closest('div') as HTMLElement;
-    expect(row).toHaveClass('text-red-600');
+    expect(row).toHaveClass('text-rose-700', 'dark:text-rose-300');
     expect(within(row).getByText('decreased')).toBeInTheDocument();
     expect(within(row).getByText('↓')).toBeInTheDocument();
   });
@@ -159,8 +159,8 @@ describe('StatCard — trend', () => {
       />,
     );
     const row = screen.getByText('-5%').closest('div') as HTMLElement;
-    expect(row).toHaveClass('text-green-600');
-    expect(row).not.toHaveClass('text-red-600');
+    expect(row).toHaveClass('text-emerald-700', 'dark:text-emerald-300');
+    expect(row).not.toHaveClass('text-rose-700');
   });
 
   it('omits the trend row when no trend is supplied', () => {

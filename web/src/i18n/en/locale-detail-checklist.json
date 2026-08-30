@@ -1,0 +1,56 @@
+{
+  "checklist": {
+    "title": "Get started",
+    "progress": "{{done}}/{{total}} complete",
+    "completeMessage": "You're all set! 🎉",
+    "dismiss": "Dismiss",
+    "restart": "Restart checklist",
+    "empty": "No setup steps available right now.",
+    "dismissedTitle": "Setup checklist hidden",
+    "dismissedMessage": "Remove this widget from your dashboard or restart the checklist to see your remaining setup steps.",
+    "help": "Tracks the few things you need to configure before TeslaSync feels useful. Auto-completes each step as you do it; dismiss it once you're done.",
+    "settings": {
+      "title": "Setup Checklist",
+      "description": "Restart the first-run checklist widget on your dashboard. If you removed it, re-add the “Setup Checklist” widget from the dashboard customizer.",
+      "restart": "Restart Checklist",
+      "restarted": "Setup checklist restarted — re-add the widget from the dashboard customizer if needed."
+    },
+    "tasks": {
+      "connectVehicle": {
+        "title": "Connect your Tesla",
+        "description": "Link your Tesla account to start syncing data.",
+        "cta": "Connect"
+      },
+      "pickTheme": {
+        "title": "Pick a theme",
+        "description": "Choose an accent color that fits your style.",
+        "cta": "Open"
+      },
+      "firstAlert": {
+        "title": "Create your first alert rule",
+        "description": "Get notified when something changes — battery low, charge complete, etc.",
+        "cta": "Create"
+      },
+      "notify": {
+        "title": "Add a notification channel",
+        "description": "Without a channel (Discord, ntfy, email, …) your alerts go to /dev/null.",
+        "cta": "Configure"
+      },
+      "commandPalette": {
+        "title": "Try the command palette",
+        "description": "Press Ctrl+K (or ⌘K) to jump anywhere instantly.",
+        "cta": "Open"
+      },
+      "enablePush": {
+        "title": "Enable web push notifications",
+        "description": "Get alerts in your browser even when TeslaSync is closed.",
+        "cta": "Enable"
+      },
+      "customizeDashboard": {
+        "title": "Customize your dashboard",
+        "description": "Add widgets that match how you use TeslaSync.",
+        "cta": "Open"
+      }
+    }
+  }
+}

@@ -9,6 +9,8 @@ import {
 
 const BOLT = 'M112 30L62 108h34L78 170l58-82h-34z'
 const VIEWBOX = 'viewBox="0 0 200 200"'
+const PRIMARY = '#3b82f6'
+const ACCENT = '#06b6d4'
 const decode = (url: string) =>
   atob(url.replace('data:image/svg+xml;base64,', ''))
 
@@ -17,19 +19,20 @@ describe('buildAppIconSvg — shared artwork across every mode', () => {
 
   it('emits well-formed SVG with the brand viewBox + bolt in all modes', () => {
     for (const mode of modes) {
-      const svg = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode })
+      const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode })
       expect(svg.startsWith('<svg')).toBe(true)
       expect(svg.endsWith('</svg>')).toBe(true)
       expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"')
       expect(svg).toContain(VIEWBOX)
-      expect(svg).toContain(`<path d="${BOLT}" fill="#ffffff"/>`)
-      expect(svg).toContain('<linearGradient')
+      expect(svg).toContain(`<path d="${BOLT}" fill="${PRIMARY}"/>`)
+      expect(svg).toContain(`stroke="${ACCENT}"`)
+      expect(svg).not.toContain('<linearGradient')
     }
   })
 
   it('defaults to the standard mode when mode is omitted', () => {
-    const explicit = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'standard' })
-    const implicit = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981' })
+    const explicit = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'standard' })
+    const implicit = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT })
     expect(implicit).toBe(explicit)
   })
 
@@ -39,9 +42,9 @@ describe('buildAppIconSvg — shared artwork across every mode', () => {
   })
 
   it('produces distinct markup per mode (silhouette differs)', () => {
-    const std = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'standard' })
-    const msk = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'maskable' })
-    const apl = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'apple' })
+    const std = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'standard' })
+    const msk = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'maskable' })
+    const apl = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'apple' })
     expect(std).not.toBe(msk)
     expect(std).not.toBe(apl)
     expect(msk).not.toBe(apl)
@@ -49,22 +52,24 @@ describe('buildAppIconSvg — shared artwork across every mode', () => {
 })
 
 describe('buildAppIconSvg — per-mode geometry', () => {
-  it('standard: rounded rect (rx=44), no safe-zone transform group', () => {
-    const svg = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'standard' })
-    expect(svg).toContain('<rect width="200" height="200" rx="44" fill="url(#g)"/>')
+  it('standard: rounded canvas with an inset framed surface', () => {
+    const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'standard' })
+    expect(svg).toContain('<rect width="200" height="200" rx="44" fill="#0b0d12"/>')
+    expect(svg).toContain('<rect x="8" y="8" width="184" height="184" rx="38"')
     expect(svg).not.toContain('<g transform')
   })
 
   it('apple: full-bleed rect with NO rounding (iOS applies its own mask)', () => {
-    const svg = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'apple' })
-    expect(svg).toContain('<rect width="200" height="200" fill="url(#g)"/>')
+    const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'apple' })
+    expect(svg).toContain('<rect width="200" height="200" fill="#0b0d12"/>')
     expect(svg).not.toContain('rx="44"')
     expect(svg).not.toContain('<g transform')
   })
 
   it('maskable: bolt shifted into the inner 80% safe-zone, no rounding', () => {
-    const svg = buildAppIconSvg({ primary: '#00f0ff', accent: '#10b981', mode: 'maskable' })
+    const svg = buildAppIconSvg({ primary: PRIMARY, accent: ACCENT, mode: 'maskable' })
     expect(svg).toContain('<g transform="translate(20 20) scale(0.8)">')
+    expect(svg).toContain('<rect x="20" y="20" width="160" height="160" rx="32"')
     expect(svg).not.toContain('rx="44"')
   })
 })
@@ -74,36 +79,37 @@ describe('buildAppIconSvg — safeHex colour guarding', () => {
     const cases = ['#abc', '#ABCD', '#00f0ff', '#00F0FF80']
     for (const c of cases) {
       const svg = buildAppIconSvg({ primary: c, accent: c })
-      expect(svg).toContain(`stop-color="${c}"`)
+      expect(svg).toContain(`fill="${c}"`)
+      expect(svg).toContain(`stroke="${c}"`)
     }
   })
 
   it('falls back to brand defaults for malformed / non-hex values', () => {
     const svg = buildAppIconSvg({ primary: 'rgb(1,2,3)', accent: 'not-a-colour' })
-    expect(svg).toContain('stop-color="#00f0ff"')
-    expect(svg).toContain('stop-color="#10b981"')
+    expect(svg).toContain('fill="#3b82f6"')
+    expect(svg).toContain('stroke="#06b6d4"')
     expect(svg).not.toContain('rgb(1,2,3)')
     expect(svg).not.toContain('not-a-colour')
   })
 
   // Regression: 5- and 7-digit strings satisfy /^#[0-9a-fA-F]{3,8}$/ but are
-  // NOT valid CSS colours — a renderer drops the stop and blanks the gradient.
+  // NOT valid CSS colours — a renderer drops the affected fill or stroke.
   // The guard must reject them (only 3/4/6/8 are legal hex lengths).
   it('rejects 5- and 7-digit hex strings that are not legal CSS colours', () => {
-    const five = buildAppIconSvg({ primary: '#12345', accent: '#10b981' })
-    expect(five).not.toContain('stop-color="#12345"')
-    expect(five).toContain('stop-color="#00f0ff"')
+    const five = buildAppIconSvg({ primary: '#12345', accent: ACCENT })
+    expect(five).not.toContain('fill="#12345"')
+    expect(five).toContain('fill="#3b82f6"')
 
-    const seven = buildAppIconSvg({ primary: '#00f0ff', accent: '#1234567' })
-    expect(seven).not.toContain('stop-color="#1234567"')
-    expect(seven).toContain('stop-color="#10b981"')
+    const seven = buildAppIconSvg({ primary: PRIMARY, accent: '#1234567' })
+    expect(seven).not.toContain('stroke="#1234567"')
+    expect(seven).toContain('stroke="#06b6d4"')
   })
 
   it('rejects out-of-range lengths and stray hash-only input', () => {
     for (const bad of ['#', '#12', '#123456789', '', '#gggggg']) {
       const svg = buildAppIconSvg({ primary: bad, accent: bad })
-      expect(svg).toContain('stop-color="#00f0ff"')
-      expect(svg).toContain('stop-color="#10b981"')
+      expect(svg).toContain('fill="#3b82f6"')
+      expect(svg).toContain('stroke="#06b6d4"')
     }
   })
 })

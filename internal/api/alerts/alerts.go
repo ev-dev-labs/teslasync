@@ -58,13 +58,10 @@ type AlertEventResponse struct {
 }
 
 // AlertDetailResponse is the wire shape for GET /alerts/{id}: the standard
-// AlertResponse fields plus the post-ack columns and the audit timeline.
+// AlertResponse fields plus the audit timeline.
 type AlertDetailResponse struct {
 	AlertResponse
-	AcknowledgedAt      *time.Time           `json:"acknowledged_at,omitempty"`
-	AcknowledgedBy      *string              `json:"acknowledged_by,omitempty"`
-	AcknowledgementNote *string              `json:"acknowledgement_note,omitempty"`
-	Events              []AlertEventResponse `json:"events"`
+	Events []AlertEventResponse `json:"events"`
 }
 
 // GetAlert returns a single alert with its full audit timeline.
@@ -244,11 +241,8 @@ func (h *AlertHandler) buildAlertDetailResponse(ctx context.Context, logRow *not
 	}
 	wire := buildAlertEventTimeline(logRow, events)
 	return &AlertDetailResponse{
-		AlertResponse:       *adapted[0],
-		AcknowledgedAt:      logRow.AcknowledgedAt,
-		AcknowledgedBy:      logRow.AcknowledgedBy,
-		AcknowledgementNote: logRow.AcknowledgementNote,
-		Events:              wire,
+		AlertResponse: *adapted[0],
+		Events:        wire,
 	}, nil
 }
 

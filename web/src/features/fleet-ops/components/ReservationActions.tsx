@@ -8,6 +8,8 @@ interface ReservationActionsProps {
   onEdit: (item: FleetReservation) => void;
   onCancel: (item: FleetReservation) => void;
   onDelete: (item: FleetReservation) => void;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
 export function ReservationActions({
@@ -15,6 +17,8 @@ export function ReservationActions({
   onEdit,
   onCancel,
   onDelete,
+  disabled = false,
+  disabledReason,
 }: ReservationActionsProps) {
   const { t } = useTranslation();
   const active = item.status === 'requested' || item.status === 'confirmed';
@@ -26,6 +30,8 @@ export function ReservationActions({
         size="sm"
         className="min-h-11 min-w-11 px-0"
         aria-label={t('fleetOps.reservations.edit', 'Edit {{name}}', { name: item.title })}
+        disabled={disabled}
+        title={disabledReason}
         onClick={() => onEdit(item)}
       >
         <Pencil className="h-4 w-4" />
@@ -37,6 +43,8 @@ export function ReservationActions({
           size="sm"
           className="min-h-11 min-w-11 px-0 text-amber-300"
           aria-label={t('fleetOps.reservations.cancelNamed', 'Cancel {{name}}', { name: item.title })}
+          disabled={disabled}
+          title={disabledReason}
           onClick={() => onCancel(item)}
         >
           <Ban className="h-4 w-4" />
@@ -48,6 +56,8 @@ export function ReservationActions({
         size="sm"
         className="min-h-11 min-w-11 px-0 text-rose-300"
         aria-label={t('fleetOps.reservations.delete', 'Delete {{name}}', { name: item.title })}
+        disabled={disabled}
+        title={disabledReason}
         onClick={() => onDelete(item)}
       >
         <Trash2 className="h-4 w-4" />

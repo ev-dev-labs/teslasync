@@ -47,6 +47,7 @@ import { BulkActionsToolbar, type BulkAction } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { Skeleton } from '@/components/feedback/Skeleton';
 import { useToast } from '@/components/feedback/Toast';
+import { ListExportMenu, type ExportScope } from '@/components/forms';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { useBulkSelection } from '@/hooks/useBulkSelection';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
@@ -70,6 +71,7 @@ import { AIInboxAutoCategorization } from '@/components/ai/AIInboxAutoCategoriza
 import { NotificationRow } from './NotificationRow';
 import { NotificationGroupRow } from './NotificationGroupRow';
 import { PullToRefresh, SwipeRow } from '@/components/mobile';
+import { exportAsCSV, exportAsJSON } from '@/lib/export';
 
 const SEVERITY_VALUES = ['info', 'warn', 'critical'] as const;
 type SeverityValue = (typeof SEVERITY_VALUES)[number];
@@ -83,6 +85,25 @@ type ReadValue = (typeof READ_VALUES)[number];
 // for users who want to see every individual delivery.
 const VIEW_VALUES = ['grouped', 'flat'] as const;
 type ViewValue = (typeof VIEW_VALUES)[number];
+
+function notificationExportRow(log: NotificationLog): Record<string, unknown> {
+  return {
+    id: log.id,
+    created_at: log.created_at,
+    sent_at: log.sent_at,
+    scheduled_at: log.scheduled_at ?? '',
+    title: log.title,
+    message: log.message,
+    severity: log.severity ?? '',
+    status: log.status,
+    read_at: log.read_at ?? '',
+    archived_at: log.archived_at ?? '',
+    channel_id: log.channel_id,
+    alert_id: log.alert_id,
+    latency_ms: log.latency_ms ?? null,
+    error: log.error,
+  };
+}
 
 const PREF_MARK_ON_OPEN = 'teslasync.notifications.markOnOpen';
 const PREF_MARK_ON_CLICK = 'teslasync.notifications.markOnClick';
@@ -263,6 +284,10 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     refetch: groupsRefetch,
   } = useNotificationGroups(filters, { enabled: isGrouped });
   const groups = useMemo(() => rawGroups ?? [], [rawGroups]);
+  const groupedDeliveryCount = useMemo(
+    () => groups.reduce((total, group) => total + Math.max(0, group.count), 0),
+    [groups],
+  );
 
   const ruleMap = useMemo<Record<number, AlertRule>>(() => {
     const m: Record<number, AlertRule> = {};
@@ -309,6 +334,52 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
     [bulkSelection],
   );
   const visibleIds = useMemo(() => rows.map(r => r.id), [rows]);
+  const visibleExportRows = useMemo(
+    () =>
+      isGrouped
+        ? groups.map((group) => ({
+            ...notificationExportRow(group.latest),
+            thread_count: group.count,
+            unread_count: group.unread_count,
+            vehicle_ids: group.vehicle_ids.join(','),
+          }))
+        : rows.map((row) => ({
+            ...notificationExportRow(row),
+            thread_count: 1,
+            unread_count: row.read_at ? 0 : 1,
+            vehicle_ids: '',
+          })),
+    [groups, isGrouped, rows],
+  );
+  const selectedExportRows = useMemo(
+    () =>
+      isGrouped
+        ? []
+        : rows
+            .filter((row) => selected.has(row.id))
+            .map((row) => notificationExportRow(row)),
+    [isGrouped, rows, selected],
+  );
+  const exportRows = useCallback(
+    (scope: ExportScope) =>
+      scope === 'selected' && selectedExportRows.length > 0
+        ? selectedExportRows
+        : visibleExportRows,
+    [selectedExportRows, visibleExportRows],
+  );
+  const exportFilename = `${archived ? 'teslasync-notifications-archive' : 'teslasync-notifications'}-${new Date().toISOString().slice(0, 10)}`;
+  const handleExportCsv = useCallback(
+    (scope: ExportScope) => {
+      exportAsCSV(exportRows(scope), `${exportFilename}.csv`);
+    },
+    [exportFilename, exportRows],
+  );
+  const handleExportJson = useCallback(
+    (scope: ExportScope) => {
+      exportAsJSON(exportRows(scope), `${exportFilename}.json`);
+    },
+    [exportFilename, exportRows],
+  );
   const selectAllVisible = useCallback(
     () => bulkSelection.selectAll(visibleIds),
     [bulkSelection, visibleIds],
@@ -586,72 +657,98 @@ export function InboxBody({ archived, vehicles, rules }: InboxBodyProps) {
               aria-label={t('notifications.inbox.selectAll', 'Select all visible')}
             />
           )}
-          <span className="text-xs text-[var(--text-muted)]">
-            {isGrouped
-              ? t('notifications.inbox.countLabel', '{{count}} notifications', { count: groups.length })
-              : t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })}
+          <span
+            className="text-xs text-[var(--text-muted)]"
+            data-testid="inbox-result-count"
+          >
+            {isGrouped ? (
+              <>
+                {t('notifications.inbox.threadCountLabel', '{{count}} threads', {
+                  count: groups.length,
+                })}
+                <span aria-hidden="true"> · </span>
+                {t('notifications.inbox.deliveryCountLabel', '{{count}} deliveries', {
+                  count: groupedDeliveryCount,
+                })}
+              </>
+            ) : (
+              t('notifications.inbox.countLabel', '{{count}} notifications', { count: rows.length })
+            )}
           </span>
-          {!archived && (
-            <div
-              className="ml-auto flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-0.5"
-              role="group"
-              aria-label={t('notifications.view.label', 'View')}
-            >
+          <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+            <ListExportMenu
+              onExportCsv={handleExportCsv}
+              onExportJson={handleExportJson}
+              selectedCount={isGrouped ? 0 : selected.size}
+              visibleCount={visibleExportRows.length}
+              disabled={
+                visibleExportRows.length === 0 ||
+                (isGrouped ? groupsLoading : isLoading)
+              }
+              testId="notification-export"
+            />
+            {!archived && (
+              <div
+                className="flex items-center gap-1 rounded-full border border-white/[0.06] bg-white/[0.02] p-0.5"
+                role="group"
+                aria-label={t('notifications.view.label', 'View')}
+              >
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setView('grouped')}
+                  aria-pressed={view === 'grouped'}
+                  aria-label={t('notifications.view.grouped', 'Grouped')}
+                  className={cn(
+                    'h-auto rounded-full px-2 py-1',
+                    view === 'grouped'
+                      ? 'bg-cyan-400/15 text-cyan-200'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                  )}
+                  data-testid="view-toggle-grouped"
+                >
+                  <Layers className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">
+                    {t('notifications.view.grouped', 'Grouped')}
+                  </span>
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setView('flat')}
+                  aria-pressed={view === 'flat'}
+                  aria-label={t('notifications.view.flat', 'Flat')}
+                  className={cn(
+                    'h-auto rounded-full px-2 py-1',
+                    view === 'flat'
+                      ? 'bg-cyan-400/15 text-cyan-200'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
+                  )}
+                  data-testid="view-toggle-flat"
+                >
+                  <List className="h-3.5 w-3.5" aria-hidden="true" />
+                  <span className="hidden sm:inline">
+                    {t('notifications.view.flat', 'Flat')}
+                  </span>
+                </Button>
+              </div>
+            )}
+            {!archived && !isGrouped && unreadCount > 0 && (
               <Button
-                type="button"
                 variant="ghost"
                 size="sm"
-                onClick={() => setView('grouped')}
-                aria-pressed={view === 'grouped'}
-                aria-label={t('notifications.view.grouped', 'Grouped')}
-                className={cn(
-                  'h-auto rounded-full px-2 py-1',
-                  view === 'grouped'
-                    ? 'bg-cyan-400/15 text-cyan-200'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                )}
-                data-testid="view-toggle-grouped"
+                onClick={handleMarkAllRead}
+                disabled={bulkMarkReadMut.isPending}
+                icon={<CheckCheck className="h-3.5 w-3.5" />}
+                className="text-xs"
+                aria-label={t('notifications.markAllRead.action', 'Mark all read')}
               >
-                <Layers className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">
-                  {t('notifications.view.grouped', 'Grouped')}
-                </span>
+                {t('notifications.markAllRead.action', 'Mark all read')}
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => setView('flat')}
-                aria-pressed={view === 'flat'}
-                aria-label={t('notifications.view.flat', 'Flat')}
-                className={cn(
-                  'h-auto rounded-full px-2 py-1',
-                  view === 'flat'
-                    ? 'bg-cyan-400/15 text-cyan-200'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]',
-                )}
-                data-testid="view-toggle-flat"
-              >
-                <List className="h-3.5 w-3.5" aria-hidden="true" />
-                <span className="hidden sm:inline">
-                  {t('notifications.view.flat', 'Flat')}
-                </span>
-              </Button>
-            </div>
-          )}
-          {!archived && !isGrouped && unreadCount > 0 && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleMarkAllRead}
-              disabled={bulkMarkReadMut.isPending}
-              icon={<CheckCheck className="h-3.5 w-3.5" />}
-              className="text-xs"
-              aria-label={t('notifications.markAllRead.action', 'Mark all read')}
-            >
-              {t('notifications.markAllRead.action', 'Mark all read')}
-            </Button>
-          )}
+            )}
+          </div>
         </div>
 
         {((isGrouped && groupsLoading) || (!isGrouped && isLoading)) && (

@@ -67,3 +67,24 @@ func TestNewCompositeTracer_NonNil(t *testing.T) {
 	// Ensure it still implements pgx.QueryTracer interface (compile-time guard).
 	var _ pgx.QueryTracer = tr
 }
+
+func TestQueryOperation(t *testing.T) {
+	tests := []struct {
+		sql  string
+		want string
+	}{
+		{sql: "SELECT 1", want: "select"},
+		{sql: "\n INSERT INTO vehicles(id) VALUES (1)", want: "insert"},
+		{sql: "UPDATE vehicles SET display_name = 'x'", want: "update"},
+		{sql: "DELETE FROM vehicles", want: "delete"},
+		{sql: "WITH row AS (SELECT 1) SELECT * FROM row", want: "other"},
+		{sql: "", want: "other"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.want, func(t *testing.T) {
+			if got := queryOperation(tt.sql); got != tt.want {
+				t.Fatalf("queryOperation(%q) = %q, want %q", tt.sql, got, tt.want)
+			}
+		})
+	}
+}

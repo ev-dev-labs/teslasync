@@ -37,7 +37,7 @@ export function RecentPagesPanel({ count, onClear }: RecentPagesPanelProps) {
           <Text as="p" variant="caption" className="max-w-prose">
             {t(
               'recentPages.clearBody',
-              'Wipe the list of pages used by the dashboard widget and the Recent section in the command palette.',
+              'Wipe the list of pages used by the status bar and the Recent section in the command palette.',
             )}
           </Text>
         </div>

@@ -4,13 +4,20 @@ import Layout from './components/layout/Layout'
 import { ScrollRestoration } from './components/layout/ScrollRestoration'
 import { PageLoadSkeleton } from './components/feedback/PageLoadSkeleton'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
+import { VitalsConsentPolicyGate } from './components/feedback/VitalsConsentPolicyGate'
 import { SuspenseProgressBoundary } from './components/feedback/SuspenseProgressBoundary'
 import { OnboardingGate } from '@/features/onboarding/components/OnboardingGate'
+import { TaskOnboardingHost } from '@/features/onboarding/components/TaskOnboardingHost'
+import { DemoModeBanner } from '@/components/feedback/DemoModeBanner'
 import { DensityApplier } from '@/components/ui/DensityApplier'
 import { ContextMenuRoot } from '@/components/ui/ContextMenu'
-import { RouteAnnouncer } from '@/components/a11y'
+import { RouteAnnouncer, RouteFocusManager } from '@/components/a11y'
 import { recordPageView, resolvePageLabel } from '@/lib/recentPages'
 import { getBaseTitle } from '@/lib/titleStore'
+import {
+  getProductPreferencesSnapshot,
+  type ProductLandingPage,
+} from '@/lib/productPreferences'
 
 // ── ALL pages live in features/ — zero imports from pages/ ──────────────
 
@@ -110,6 +117,9 @@ const WhatIf = lazy(() => import('./features/driving/pages/WhatIfPage'))
 const TripLogbook = lazy(() => import('./features/driving/pages/TripLogbookPage'))
 const RangeBuffer = lazy(() => import('./features/driving/pages/RangeBufferPage'))
 const DrivingRhythm = lazy(() => import('./features/driving/pages/DrivingRhythmPage'))
+// FSD Insights — supervised self-driving distance telemetry
+// (SelfDrivingMilesSinceReset). Code-split like every other route page.
+const FSDInsights = lazy(() => import('./features/driving/pages/FSDInsightsPage'))
 const SpeedSweetSpot = lazy(() => import('./features/driving/pages/SpeedSweetSpotPage'))
 const ParkingAnalytics = lazy(() => import('./features/vehicles/pages/ParkingAnalyticsPage'))
 const MileageBudget = lazy(() => import('./features/analytics/pages/MileageBudgetPage'))
@@ -134,6 +144,11 @@ const TrueCostOwnership = lazy(() => import('./features/analytics/pages/TrueCost
 const CarbonIntelligence = lazy(() => import('./features/analytics/pages/CarbonIntelligencePage'))
 const WeeklyDigest = lazy(() => import('./features/analytics/pages/WeeklyDigestPage'))
 const Timeline = lazy(() => import('./features/analytics/pages/TimelinePage'))
+// Phase: unified vehicle operations-intelligence activity timeline
+// (drives + charging + alerts + software updates + annotations). Distinct
+// from `Timeline` above (FSM state transitions) and `MyActivity` (per-user
+// audit log) below.
+const ActivityTimeline = lazy(() => import('./features/system/pages/ActivityTimelinePage'))
 const FleetCompare = lazy(() => import('./features/analytics/pages/FleetComparePage'))
 const LifetimeStats = lazy(() => import('./features/analytics/pages/LifetimeStatsPage'))
 const YearReview = lazy(() => import('./features/analytics/pages/YearReviewPage'))
@@ -250,6 +265,7 @@ const LiveSignalInspector = lazy(() => import('./features/admin/pages/LiveSignal
 const SchemaDrift = lazy(() => import('./features/admin/pages/SchemaDriftPage'))
 const SlowQueriesAdmin = lazy(() => import('./features/admin/pages/SlowQueriesPage'))
 const VehicleCostAdmin = lazy(() => import('./features/admin/pages/VehicleCostPage'))
+const DataQualityAdmin = lazy(() => import('./features/admin/pages/DataQualityPage'))
 const DiskForecast = lazy(() => import('./features/admin/pages/DiskForecastPage'))
 const SecretRotation = lazy(() => import('./features/admin/pages/SecretRotationPage'))
 const AuditLogAdmin = lazy(() => import('./features/admin/pages/AuditLogPage'))
@@ -264,6 +280,7 @@ const PowerDashboards = lazy(() => import('./features/power-user/pages/Dashboard
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
+const Help = lazy(() => import('./features/system/pages/HelpPage'))
 const DataExport = lazy(() => import('./features/system/pages/DataExportPage'))
 const ExportsPage = lazy(() => import('./features/exports/pages/ExportsPage'))
 const DataRepair = lazy(() => import('./features/system/pages/DataRepairPage'))
@@ -431,32 +448,78 @@ export function resolveReturnRedirect(
   return url.pathname + url.search + url.hash
 }
 
+export function resolvePreferredLandingRedirect(
+  currentPathname: string,
+  preferredLandingPage: ProductLandingPage,
+): ProductLandingPage | null {
+  if (currentPathname !== '/' || preferredLandingPage === '/') return null
+  return preferredLandingPage
+}
+
 export default function App() {
   const navigate = useNavigate()
+  const startupRoutingHandled = useRef(false)
 
-  // After re-authentication, redirect back to the page the user was on.
+  // Resolve startup routing once. A post-auth return target takes precedence;
+  // otherwise the preferred landing page applies only to an initial root
+  // load, so later Dashboard navigation remains reachable.
   useEffect(() => {
+    if (startupRoutingHandled.current) return
+    startupRoutingHandled.current = true
+
     const returnUrl = sessionStorage.getItem('teslasync-return-url')
-    if (!returnUrl) return
-    sessionStorage.removeItem('teslasync-return-url')
-    const dest = resolveReturnRedirect(
-      returnUrl,
-      window.location.origin,
+    if (returnUrl) {
+      sessionStorage.removeItem('teslasync-return-url')
+      const dest = resolveReturnRedirect(
+        returnUrl,
+        window.location.origin,
+        window.location.pathname,
+      )
+      if (dest) {
+        navigate(dest)
+        return
+      }
+    }
+
+    const preferredLanding = resolvePreferredLandingRedirect(
       window.location.pathname,
+      getProductPreferencesSnapshot().landingPage,
     )
-    if (dest) navigate(dest)
+    if (preferredLanding) {
+      navigate(preferredLanding, { replace: true })
+    }
   }, [navigate])
 
   return (
     <>
+      {/* HELP-12 — unmistakable synthetic-data label. Self-gating: renders
+          nothing unless demo mode is explicitly and completely configured
+          (see lib/demoMode for the fail-closed guard). Mounted first so it is
+          the topmost element of any screenshot. */}
+      <DemoModeBanner />
       <OnboardingGate />
+      {/* HELP-01 — at most one inline, dismissible, route-scoped onboarding
+          hint. Replaces the automatic dashboard tour: it never takes focus,
+          never blocks, and is suppressed entirely for experienced users and
+          for anyone who opted out. */}
+      <TaskOnboardingHost />
+      {/* Publishes the live `require_cookie_consent` policy into the optional
+          reporters. Mounted ABOVE <Routes> so it also covers the standalone
+          routes that never mount <Layout> (/s/:token, /watch, /onboarding).
+          Until it resolves, RUM holds its queue and transmits nothing. */}
+      <VitalsConsentPolicyGate />
       <ScrollRestoration />
       <DensityApplier />
       {/* Phase-46 / Prompt 21 — announces the new page title to screen
           readers on every SPA navigation. WCAG 2.4.2. */}
       <RouteAnnouncer />
+      {/* A11Y-03 — parks keyboard focus on the new page's <h1> after a
+          client-side navigation so screen-reader and switch users do not
+          have to re-traverse the shell. Suppressed on Back/Forward,
+          query-only navigations, open dialogs, and mid-typing. */}
+      <RouteFocusManager />
       {/* Phase-46 / Prompt 51 — records every route the user visits so
-          the command palette and dashboard widget can surface them. */}
+          the command palette and global recent-page surfaces can show them. */}
       <RecentPagesRecorder />
       {/* Phase-46 / Prompt 30 — single portal host for the shared
           right-click ContextMenu primitive. Subscribes to a module-level
@@ -536,6 +599,7 @@ export default function App() {
         <Route path="charging/vampire-drain" element={<SafeRoute name="VampireDrain"><VampireDrain /></SafeRoute>} />
         <Route path="locations" element={<SafeRoute name="Locations"><Locations /></SafeRoute>} />
         <Route path="timeline" element={<SafeRoute name="Timeline"><Timeline /></SafeRoute>} />
+        <Route path="activity" element={<SafeRoute name="ActivityTimeline"><ActivityTimeline /></SafeRoute>} />
         <Route path="mileage" element={<SafeRoute name="Mileage"><Mileage /></SafeRoute>} />
         <Route path="projected-range" element={<SafeRoute name="ProjectedRange"><ProjectedRange /></SafeRoute>} />
         {/* Phase-50 / 0063 alias: the slice prompt registered the AI feature
@@ -562,6 +626,11 @@ export default function App() {
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
+        {/* HELP-06/08/09/11 — the help index, glossary, release notes,
+            support bundle and dashboard presets all live here. The page and
+            its tests already existed but were never routed, so /help 404'd
+            and every in-app "get help" link had nowhere to point. */}
+        <Route path="help" element={<SafeRoute name="Help"><Help /></SafeRoute>} />
         <Route path="roadmap" element={<SafeRoute name="Roadmap"><Roadmap /></SafeRoute>} />
         <Route path="api-keys" element={<SafeRoute name="APIKeys"><APIKeysPage /></SafeRoute>} />
         <Route path="compare" element={<Navigate to="/period-compare" replace />} />
@@ -579,6 +648,7 @@ export default function App() {
         <Route path="admin/schema-drift" element={<SafeRoute name="SchemaDrift"><SchemaDrift /></SafeRoute>} />
         <Route path="admin/slow-queries" element={<SafeRoute name="SlowQueries"><SlowQueriesAdmin /></SafeRoute>} />
         <Route path="admin/vehicle-cost" element={<SafeRoute name="VehicleCost"><VehicleCostAdmin /></SafeRoute>} />
+        <Route path="admin/data-quality" element={<SafeRoute name="DataQuality"><DataQualityAdmin /></SafeRoute>} />
         <Route path="admin/disk-forecast" element={<SafeRoute name="DiskForecast"><DiskForecast /></SafeRoute>} />
         <Route path="admin/secret-rotation" element={<SafeRoute name="SecretRotation"><SecretRotation /></SafeRoute>} />
         <Route path="admin/audit-log" element={<SafeRoute name="AuditLog"><AuditLogAdmin /></SafeRoute>} />
@@ -700,6 +770,7 @@ export default function App() {
                 <Route path="logbook" element={<SafeRoute name="TripLogbook"><TripLogbook /></SafeRoute>} />
                 <Route path="range-buffer" element={<SafeRoute name="RangeBuffer"><RangeBuffer /></SafeRoute>} />
                 <Route path="driving-rhythm" element={<SafeRoute name="DrivingRhythm"><DrivingRhythm /></SafeRoute>} />
+                <Route path="fsd" element={<SafeRoute name="FSDInsights"><FSDInsights /></SafeRoute>} />
                 <Route path="speed-sweetspot" element={<SafeRoute name="SpeedSweetSpot"><SpeedSweetSpot /></SafeRoute>} />
                 <Route path="parking" element={<SafeRoute name="ParkingAnalytics"><ParkingAnalytics /></SafeRoute>} />
                 <Route path="mileage-budget" element={<SafeRoute name="MileageBudget"><MileageBudget /></SafeRoute>} />

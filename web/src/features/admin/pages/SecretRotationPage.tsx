@@ -27,12 +27,13 @@ import {
 import { MetricCard, MetricBar } from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
-  EmptyState, AlertBanner, SectionErrorBoundary, Skeleton, QueryError,
+  EmptyState, AlertBanner, DataStateNotice, SectionErrorBoundary, Skeleton, QueryError,
 } from '@/components/feedback';
 import {
   ChartTooltip,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
+  EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -269,12 +270,12 @@ export default function SecretRotationPage() {
       query={query}
     >
       {subsystemMissing && (
-        <AlertBanner variant="warning" title={t('admin.subsystem.unavailableTitle', 'Subsystem unavailable')}>
+        <DataStateNotice state="unsupported" title={t('admin.subsystem.unsupportedTitle', 'Feature not supported')}>
           {t(
             'admin.secretRotation.notConfigured',
             'The rotation tracker is not configured on this deployment. Enable secret rotation tracking in config to populate this page.',
           )}
-        </AlertBanner>
+        </DataStateNotice>
       )}
 
       {counts.critical > 0 && (
@@ -370,54 +371,52 @@ export default function SecretRotationPage() {
               <KeyRound className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('admin.secretRotation.ageTitle', 'Secret age by kind')}
             </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={320} />
-            ) : showError ? (
-              <QueryError error={query.error} onRetry={retry} />
-            ) : topByAge.length === 0 ? (
-              <EmptyState /* no-action: chart renders once rotation observations exist */
-                icon={<KeyRound className="h-8 w-8" />}
-                message={t('admin.secretRotation.noAgeData', 'No rotation ages to chart yet.')}
-              />
-            ) : (
-              <div
-                className="h-72 sm:h-80"
-                role="img"
-                aria-label={t('admin.secretRotation.ageAria', 'Horizontal bar chart of the oldest tracked secrets by age in days, colored by severity tier')}
-              >
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart layout="vertical" data={topByAge} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
-                    <XAxis
-                      type="number"
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      tickFormatter={(v) => `${fmtNumber(Number(v))}d`}
-                    />
-                    <YAxis
-                      type="category"
-                      dataKey="label"
-                      width={148}
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      tickFormatter={(v) => truncate(String(v))}
-                    />
-                    <Tooltip
-                      content={<ChartTooltip />}
-                      formatter={(v) => t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(Number(v)) })}
-                    />
-                    <Bar
-                      dataKey="age_days"
-                      name={t('admin.secretRotation.colAge', 'Age (days)')}
-                      radius={[0, 4, 4, 0]}
-                      fillOpacity={0.9}
-                    >
-                      {topByAge.map((r) => (
-                        <Cell key={rowKey(r)} fill={SEVERITY_HEX[r.severity] ?? SEVERITY_HEX.unknown} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            )}
+            <EmbeddedChart
+              title={t('admin.secretRotation.ageTitle', 'Secret age by kind')}
+              ariaLabel={t('admin.secretRotation.ageAria', 'Horizontal bar chart of the oldest tracked secrets by age in days, colored by severity tier')}
+              loading={isLoading}
+              error={showError ? (query.error ?? undefined) : undefined}
+              onRetry={retry}
+              empty={!isLoading && !showError && topByAge.length === 0}
+              emptyMessage={t('admin.secretRotation.noAgeData', 'No rotation ages to chart yet.')}
+              data={topByAge}
+              dataColumns={[
+                { key: 'label', label: t('admin.secretRotation.colKind', 'Kind') },
+                { key: 'age_days', label: t('admin.secretRotation.colAge', 'Age (days)'), format: (v) => `${fmtNumber(Number(v))}d` },
+              ]}
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart layout="vertical" data={topByAge} margin={{ top: 4, right: 16, left: 8, bottom: 4 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} strokeOpacity={0.4} horizontal={false} />
+                  <XAxis
+                    type="number"
+                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tickFormatter={(v) => `${fmtNumber(Number(v))}d`}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    width={148}
+                    tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                    tickFormatter={(v) => truncate(String(v))}
+                  />
+                  <Tooltip
+                    content={<ChartTooltip />}
+                    formatter={(v) => t('admin.secretRotation.daysValue', '{{days}} d', { days: fmtNumber(Number(v)) })}
+                  />
+                  <Bar
+                    dataKey="age_days"
+                    name={t('admin.secretRotation.colAge', 'Age (days)')}
+                    radius={[0, 4, 4, 0]}
+                    fillOpacity={0.9}
+                  >
+                    {topByAge.map((r) => (
+                      <Cell key={rowKey(r)} fill={SEVERITY_HEX[r.severity] ?? SEVERITY_HEX.unknown} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </EmbeddedChart>
           </GlassPanel>
 
           <GlassPanel className="p-4 sm:p-5">
@@ -425,41 +424,41 @@ export default function SecretRotationPage() {
               <ShieldAlert className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('admin.secretRotation.severityTitle', 'Severity mix')}
             </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={220} />
-            ) : showError ? (
-              <QueryError error={query.error} onRetry={retry} />
-            ) : severitySlices.length === 0 ? (
-              <EmptyState /* no-action: severity is derived from backend thresholds */
-                icon={<ShieldAlert className="h-8 w-8" />}
-                message={t('admin.secretRotation.noSeverity', 'No severity data available yet.')}
-              />
-            ) : (
-              <div className="space-y-4">
-                <div
-                  className="h-44"
-                  role="img"
-                  aria-label={t('admin.secretRotation.severityAria', 'Donut chart of tracked secrets grouped by rotation severity tier')}
-                >
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={severitySlices}
-                        dataKey="value"
-                        nameKey="label"
-                        innerRadius={48}
-                        outerRadius={72}
-                        paddingAngle={2}
-                        strokeWidth={0}
-                      >
-                        {severitySlices.map((s) => (
-                          <Cell key={s.key} fill={SEVERITY_HEX[s.key]} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
+            <div className="space-y-4">
+              <EmbeddedChart
+                title={t('admin.secretRotation.severityTitle', 'Severity mix')}
+                ariaLabel={t('admin.secretRotation.severityAria', 'Donut chart of tracked secrets grouped by rotation severity tier')}
+                loading={isLoading}
+                error={showError ? (query.error ?? undefined) : undefined}
+                onRetry={retry}
+                empty={!isLoading && !showError && severitySlices.length === 0}
+                emptyMessage={t('admin.secretRotation.noSeverity', 'No severity data available yet.')}
+                data={severitySlices}
+                dataColumns={[
+                  { key: 'label', label: t('admin.secretRotation.col.severity', 'Severity') },
+                  { key: 'value', label: t('admin.secretRotation.col.count', 'Count') },
+                ]}
+              >
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={severitySlices}
+                      dataKey="value"
+                      nameKey="label"
+                      innerRadius={48}
+                      outerRadius={72}
+                      paddingAngle={2}
+                      strokeWidth={0}
+                    >
+                      {severitySlices.map((s) => (
+                        <Cell key={s.key} fill={SEVERITY_HEX[s.key]} />
+                      ))}
+                    </Pie>
+                    <Tooltip content={<ChartTooltip />} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </EmbeddedChart>
+              {!isLoading && !showError && severitySlices.length > 0 && (
                 <ul className="space-y-1.5">
                   {SEVERITY_ORDER.map((key) => (
                     <li key={key} className="flex items-center justify-between gap-2">
@@ -477,8 +476,8 @@ export default function SecretRotationPage() {
                     </li>
                   ))}
                 </ul>
-              </div>
-            )}
+              )}
+            </div>
           </GlassPanel>
         </section>
       </FadeIn>

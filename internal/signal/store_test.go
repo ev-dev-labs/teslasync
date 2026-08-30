@@ -167,6 +167,30 @@ func TestSet_NilAndInvalidMarkerSkipped(t *testing.T) {
 	}
 }
 
+func TestUpdateValuesPreservesEventTimeAndRejectsOlderReplay(t *testing.T) {
+	s := New()
+	newer := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	older := newer.Add(-7 * 24 * time.Hour)
+
+	s.UpdateValues(1, map[string]*Value{
+		"BatteryLevel": {Raw: 80.0, Timestamp: newer},
+	})
+	s.UpdateValues(1, map[string]*Value{
+		"BatteryLevel": {Raw: 20.0, Timestamp: older},
+	})
+
+	got := s.Get(1, "BatteryLevel")
+	if got == nil {
+		t.Fatal("BatteryLevel missing")
+	}
+	if got.Raw != 80.0 {
+		t.Fatalf("BatteryLevel = %v, want newer value 80", got.Raw)
+	}
+	if !got.Timestamp.Equal(newer) {
+		t.Fatalf("Timestamp = %v, want producer event time %v", got.Timestamp, newer)
+	}
+}
+
 // TestGetFloat_ValueKindMismatchOnDeclaredField verifies that a typed
 // getter rejects values stored under a declared ValueKind that does not
 // match the getter. Locked is declared as ValueKindBool, so GetFloat

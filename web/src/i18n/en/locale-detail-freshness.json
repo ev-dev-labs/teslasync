@@ -1,0 +1,30 @@
+{
+  "freshness": {
+    "age": {
+      "seconds": "{{count}}s ago",
+      "minutes": "{{count}}m ago",
+      "hours": "{{count}}h ago",
+      "days": "{{count}}d ago"
+    },
+    "justNow": "just now",
+    "seconds": "{{s}}s ago",
+    "minutes": "{{m}}m ago",
+    "hours": "{{h}}h ago",
+    "days": "{{d}}d ago",
+    "weeks": "{{w}}w ago",
+    "updating": "updating…",
+    "error": "error",
+    "staleWithAge": "Stale · {{age}}",
+    "lastUpdated": "Last updated: {{time}}",
+    "neverUpdated": "Never updated",
+    "refresh": "Refresh",
+    "refreshState": "Refresh data · {{state}}",
+    "source": "Source: {{source}}",
+    "updatingTooltip": "Updating…",
+    "fresh": "Up to date",
+    "stale": "Stale",
+    "offline": "Offline",
+    "noData": "No recent data",
+    "ariaLabel": "{{status}} · {{age}}"
+  }
+}

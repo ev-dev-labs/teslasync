@@ -18,6 +18,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { createRef } from 'react';
 import { render, screen, cleanup } from '@testing-library/react';
 import { LinearGauge } from './LinearGauge';
+import { gaugeTone, resolveGaugeColor, type GaugeTone } from '@/lib/tokens';
 import { setGlobalPrecision } from '@/lib/numberFormat';
 
 /** The gauge renders exactly one width-driven fill element inside the track. */
@@ -347,5 +348,96 @@ describe('LinearGauge — accessible naming', () => {
   it('leaves the meter unnamed rather than naming it an empty string', () => {
     render(<LinearGauge value={5} max={10} label="" />);
     expect(screen.getByRole('meter')).not.toHaveAttribute('aria-label');
+  });
+});
+
+describe('LinearGauge — semantic tones', () => {
+  afterEach(cleanup);
+
+  /**
+   * jsdom serialises a hex fill as `rgb(r, g, b)` but leaves a `var(--x)`
+   * reference verbatim, so tone assertions compare against whatever the
+   * central map declares, run through the same normalisation.
+   */
+  const expectedFill = (tone: GaugeTone) => {
+    const declared = gaugeTone[tone];
+    if (!declared.startsWith('#')) return declared;
+    const n = Number.parseInt(declared.slice(1), 16);
+    return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+  };
+
+  const TONES: GaugeTone[] = [
+    'primary', 'accent', 'success', 'warning', 'danger', 'info', 'purple', 'neutral',
+  ];
+
+  it.each(TONES)('paints the %s tone from the central gaugeTone map', (tone) => {
+    const { container } = render(<LinearGauge value={50} max={100} label="X" tone={tone} />);
+    expect(fill(container)?.style.backgroundColor).toBe(expectedFill(tone));
+  });
+
+  it('resolves the theme tones through CSS variables so presets can re-tint them', () => {
+    // The regression this guards: a hardcoded `#3b82f6` stayed blue on the warm
+    // / light / custom presets because a hex literal cannot follow the theme.
+    for (const tone of ['primary', 'accent'] as const) {
+      const { container } = render(<LinearGauge value={50} max={100} label="X" tone={tone} />);
+      expect(fill(container)?.style.backgroundColor).toMatch(/^var\(--theme-/);
+      cleanup();
+    }
+  });
+
+  it('keeps the status tones fixed so danger reads as danger on every preset', () => {
+    for (const tone of ['success', 'warning', 'danger', 'info', 'purple'] as const) {
+      expect(gaugeTone[tone]).toMatch(/^#[0-9a-f]{6}$/i);
+    }
+  });
+
+  it('defaults to the theme primary tone when neither tone nor colour is given', () => {
+    const { container } = render(<LinearGauge value={50} max={100} label="X" />);
+    expect(fill(container)?.style.backgroundColor).toBe(gaugeTone.primary);
+  });
+
+  it('lets a raw colour through untouched when no tone is supplied', () => {
+    const { container } = render(<LinearGauge value={50} max={100} label="X" color="#ff00ff" />);
+    expect(fill(container)?.style.backgroundColor).toBe('rgb(255, 0, 255)');
+  });
+
+  it('prefers the tone over a raw colour when both are supplied', () => {
+    // Precedence is deliberate: `tone` is the migrated, semantic input, so a
+    // stale `color` left beside it must not silently win.
+    const { container } = render(
+      <LinearGauge value={50} max={100} label="X" tone="danger" color="#00ff00" />,
+    );
+    expect(fill(container)?.style.backgroundColor).toBe(expectedFill('danger'));
+  });
+
+  it('leaves geometry, scale caption and ARIA untouched by the tone', () => {
+    const { container } = render(
+      <LinearGauge value={120} max={250} label="Power" unit=" kW" tone="warning" />,
+    );
+    expect(fillPct(container)).toBe('48%');
+    expect(screen.getByText('0 – 250 kW')).toBeInTheDocument();
+    expect(screen.getByRole('meter', { name: 'Power' })).toHaveAttribute('aria-valuenow', '120');
+  });
+});
+
+describe('resolveGaugeColor — precedence contract', () => {
+  it('returns the tone colour when a tone is given, ignoring any raw colour', () => {
+    expect(resolveGaugeColor('success', '#123456')).toBe(gaugeTone.success);
+    expect(resolveGaugeColor('primary')).toBe(gaugeTone.primary);
+  });
+
+  it('falls back to the raw colour when no tone is given', () => {
+    expect(resolveGaugeColor(undefined, '#123456')).toBe('#123456');
+  });
+
+  it('falls back to the theme primary when neither input is given', () => {
+    expect(resolveGaugeColor()).toBe(gaugeTone.primary);
+  });
+
+  it('ignores an unknown runtime tone rather than emitting undefined', () => {
+    // Tones are frequently data-driven (`tone={TONE_BY_STATUS[status]}`); a
+    // value outside the union at runtime must not produce `background: undefined`.
+    expect(resolveGaugeColor('bogus' as GaugeTone, '#123456')).toBe('#123456');
+    expect(resolveGaugeColor('bogus' as GaugeTone)).toBe(gaugeTone.primary);
   });
 });

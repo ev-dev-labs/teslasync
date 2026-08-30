@@ -47,12 +47,13 @@ var (
 	AddressBackfillCompleted = metrics.AddressBackfillCompleted
 
 	// Connections
-	SSEConnectionsActive = metrics.SSEConnectionsActive
-	SSEEventsSent        = metrics.SSEEventsSent
-	SSEEventsDropped     = metrics.SSEEventsDropped
-	SSEConnectionsTotal  = metrics.SSEConnectionsTotal
-	SSEBroadcastDuration = metrics.SSEBroadcastDuration
-	SSEBytesSent         = metrics.SSEBytesSent
+	SSEConnectionsActive           = metrics.SSEConnectionsActive
+	SSEEventsSent                  = metrics.SSEEventsSent
+	SSEEventsDropped               = metrics.SSEEventsDropped
+	SSEConnectionsTotal            = metrics.SSEConnectionsTotal
+	SSEBroadcastDuration           = metrics.SSEBroadcastDuration
+	SSEBytesSent                   = metrics.SSEBytesSent
+	SSEClientBufferSaturationRatio = metrics.SSEClientBufferSaturationRatio
 
 	// Auth
 	AuthAttempts   = metrics.AuthAttempts

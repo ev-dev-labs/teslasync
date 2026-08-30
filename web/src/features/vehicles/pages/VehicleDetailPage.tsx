@@ -5,11 +5,12 @@ import { Activity } from 'lucide-react'
 
 import { PageContainer } from '@/components/layout'
 import { GlassPanel, PanelTitle, SectionTitle } from '@/components/ui'
-import { LiveIndicator } from '@/components/data-display'
+import { DataProvenanceBadge, LiveIndicator } from '@/components/data-display'
 import { Skeleton, LiveStaleDataBanner, SectionErrorBoundary, StatGridSkeleton, ChartBlockSkeleton, PageHeaderSkeleton, QueryError } from '@/components/feedback'
 import { FadeIn } from '@/components/motion'
 
 import { usePageTitle } from '@/hooks/usePageTitle'
+import { useDataState } from '@/hooks/useDataState'
 import { useToast } from '@/components/feedback/Toast'
 import { request } from '@/api/client'
 import type {
@@ -98,12 +99,14 @@ export default function VehicleDetailPage() {
       ? nicknameSetting.value
       : vehicle?.display_name
 
-  const { data: stateData, error: stateError, refetch: refetchState } = useQuery({
+  const stateQuery = useQuery({
     queryKey: ['vehicle-state', vehicleId],
     queryFn: () => request<StateResponse>(`/vehicles/${vehicleId}/state`),
     enabled: vehicleId > 0,
     refetchInterval: 30_000,
   })
+  const { data: stateData, error: stateError, refetch: refetchState } = stateQuery
+  const stateDataState = useDataState(stateQuery, { provenance: 'live' })
 
   const { data: motorData } = useQuery({
     queryKey: ['motor-latest', vehicleId],
@@ -196,7 +199,16 @@ export default function VehicleDetailPage() {
       breadcrumbLabels={{
         '/vehicles/:id': effectiveName ?? t('vehicles.detail.vehicleNumber', 'Vehicle #{{id}}', { id }),
       }}
-      actions={<LiveIndicator variant="compact" />}
+      actions={
+        <div className="flex flex-wrap items-center gap-2">
+          <DataProvenanceBadge
+            provenance={stateDataState.provenance}
+            status={stateDataState.status}
+            updatedAt={stateDataState.updatedAt}
+          />
+          <LiveIndicator variant="compact" />
+        </div>
+      }
     >
       <LiveStaleDataBanner />
 

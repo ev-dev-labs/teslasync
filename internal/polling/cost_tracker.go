@@ -22,6 +22,7 @@ type CostTracker struct {
 	savedByIdle           atomic.Int64
 	savedByPrediction     atomic.Int64
 	savedBySleep          atomic.Int64
+	savedByBudget         atomic.Int64
 
 	// What would have happened without the engine
 	pollsWithoutEngine atomic.Int64
@@ -62,12 +63,15 @@ func (c *CostTracker) RecordSkip(reason string) {
 		c.savedByPrediction.Add(1)
 	case "sleep":
 		c.savedBySleep.Add(1)
+	case "budget":
+		c.savedByBudget.Add(1)
 	}
 	metrics.PollsSaved.WithLabelValues(reason).Inc()
 }
 
-// RecordBaselineTick records that a poll would have been made at the base interval.
-// Called every tick to track what polling would look like without the engine.
+// RecordBaselineTick records an eligible poll that would have been made at the
+// base interval. Infrastructure backoffs are excluded because they are not
+// optimization savings.
 func (c *CostTracker) RecordBaselineTick() {
 	c.pollsWithoutEngine.Add(1)
 }
@@ -96,7 +100,8 @@ func (c *CostTracker) Snapshot() CostSnapshot {
 	byIdle := c.savedByIdle.Load()
 	byPred := c.savedByPrediction.Load()
 	bySleep := c.savedBySleep.Load()
-	saved := byFT + byIdle + byPred + bySleep
+	byBudget := c.savedByBudget.Load()
+	saved := byFT + byIdle + byPred + bySleep + byBudget
 	baseline := c.pollsWithoutEngine.Load()
 
 	total := made + saved
@@ -135,6 +140,7 @@ func (c *CostTracker) Snapshot() CostSnapshot {
 			"idle_detection":  byIdle,
 			"prediction":      byPred,
 			"sleep_detection": bySleep,
+			"budget":          byBudget,
 		},
 		SavingsPercent:    savingsPct,
 		EstimatedCost:     estCost,

@@ -234,6 +234,10 @@ export function SignalDiffTable({
         emptyMessage={emptyMessage}
         compact
         selectable="multi"
+        // Signal names are already human-readable and are the row key,
+        // but state it explicitly so the label survives a future
+        // change of `keyExtractor`.
+        rowLabel={(row) => row.name}
         selectedKeys={selectedSignals}
         onSelectionChange={(keys) => onSelectionChange(keys.map(String))}
         virtualized

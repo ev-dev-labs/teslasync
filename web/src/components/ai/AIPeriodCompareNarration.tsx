@@ -72,6 +72,14 @@ function InnerSection({ vehicleId, daysA, daysB }: InnerSectionProps) {
     url: '/ai/analytics/period-compare/narrate',
     body,
     onEvent: noop,
+    // AI-01: vehicle + period-window scope is part of stream
+    // identity — changing any of them aborts an in-flight narration
+    // and clears the previous scope's narrative before the new scope
+    // streams in.
+    scopeKey:
+      Number.isFinite(numericVehicleId) && numericVehicleId > 0
+        ? `${numericVehicleId}:${body.days_a ?? ''}:${body.days_b ?? ''}`
+        : null,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
   return (

@@ -126,7 +126,7 @@ export function RootCauseSignalTimelineChart({
               stroke={chartTokens.series[i % chartTokens.series.length]}
               strokeWidth={name === focalSignal ? 2.5 : 1.5}
               dot={false}
-              connectNulls
+              connectNulls={false}
               hide={hidden.isHidden(name)}
             />
           ))}

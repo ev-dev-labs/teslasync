@@ -30,13 +30,15 @@ var (
 	_ dqpkg.Rows    = (*fakeRows)(nil)
 )
 
-// fakeRow mirrors the five columns Scorer.Snapshot scans per field.
+// fakeRow mirrors one firmware/field aggregate scanned by Snapshot.
 type fakeRow struct {
-	field    string
-	count    int64
-	lastSeen time.Time
-	maxGap   float64
-	dupRatio float64
+	field       string
+	count       int64
+	lastSeen    time.Time
+	maxGap      float64
+	dupRatio    float64
+	versioned   int64
+	unversioned int64
 }
 
 // fakeRows implements dqpkg.Rows over an in-memory slice.
@@ -57,47 +59,135 @@ func (r *fakeRows) Scan(dest ...any) error {
 	if r.idx >= len(r.rows) {
 		return errors.New("fakeRows: Scan past end")
 	}
-	if len(dest) != 5 {
+	if len(dest) != 10 {
 		return errors.New("fakeRows: unexpected dest count")
 	}
 	row := r.rows[r.idx]
 	r.idx++
-	fieldp, ok := dest[0].(*string)
+	firmwarep, ok := dest[0].(**string)
 	if !ok {
-		return errors.New("fakeRows: dest[0] not *string")
+		return errors.New("fakeRows: dest[0] not **string")
 	}
-	countp, ok := dest[1].(*int64)
+	vehiclesp, ok := dest[1].(*int64)
 	if !ok {
 		return errors.New("fakeRows: dest[1] not *int64")
 	}
-	seenp, ok := dest[2].(*time.Time)
+	fieldp, ok := dest[2].(*string)
 	if !ok {
-		return errors.New("fakeRows: dest[2] not *time.Time")
+		return errors.New("fakeRows: dest[2] not *string")
 	}
-	gapp, ok := dest[3].(*float64)
+	countp, ok := dest[3].(*int64)
 	if !ok {
-		return errors.New("fakeRows: dest[3] not *float64")
+		return errors.New("fakeRows: dest[3] not *int64")
 	}
-	dupp, ok := dest[4].(*float64)
+	seenp, ok := dest[4].(*time.Time)
 	if !ok {
-		return errors.New("fakeRows: dest[4] not *float64")
+		return errors.New("fakeRows: dest[4] not *time.Time")
 	}
-	*fieldp, *countp, *seenp, *gapp, *dupp = row.field, row.count, row.lastSeen, row.maxGap, row.dupRatio
+	gapp, ok := dest[5].(*float64)
+	if !ok {
+		return errors.New("fakeRows: dest[5] not *float64")
+	}
+	duplicatep, ok := dest[6].(*int64)
+	if !ok {
+		return errors.New("fakeRows: dest[6] not *int64")
+	}
+	comparisonp, ok := dest[7].(*int64)
+	if !ok {
+		return errors.New("fakeRows: dest[7] not *int64")
+	}
+	versionedp, ok := dest[8].(*int64)
+	if !ok {
+		return errors.New("fakeRows: dest[8] not *int64")
+	}
+	unversionedp, ok := dest[9].(*int64)
+	if !ok {
+		return errors.New("fakeRows: dest[9] not *int64")
+	}
+	*firmwarep = nil
+	*vehiclesp = 1
+	*fieldp, *countp, *seenp, *gapp = row.field, row.count, row.lastSeen, row.maxGap
+	*comparisonp = 1000
+	*duplicatep = int64(row.dupRatio * float64(*comparisonp))
+	*versionedp, *unversionedp = row.versioned, row.unversioned
 	return nil
 }
 
 func (r *fakeRows) Close()     { r.closed = true }
 func (r *fakeRows) Err() error { return r.iterErr }
 
-// fakeQuerier implements dqpkg.Querier and records the query it saw.
+// fakeVersionRow mirrors one bucket of the bounded
+// GROUP BY normalization_version aggregate Snapshot issues second.
+type fakeVersionRow struct {
+	version *int16
+	count   int64
+}
+
+// fakeVersionRows implements dqpkg.Rows for the normalization aggregate.
+type fakeVersionRows struct {
+	rows    []fakeVersionRow
+	idx     int
+	scanErr error
+	iterErr error
+	closed  bool
+}
+
+func (r *fakeVersionRows) Next() bool { return r.idx < len(r.rows) }
+
+func (r *fakeVersionRows) Scan(dest ...any) error {
+	if r.scanErr != nil {
+		return r.scanErr
+	}
+	if r.idx >= len(r.rows) {
+		return errors.New("fakeVersionRows: Scan past end")
+	}
+	if len(dest) != 2 {
+		return errors.New("fakeVersionRows: unexpected dest count")
+	}
+	versionp, ok := dest[0].(**int16)
+	if !ok {
+		return errors.New("fakeVersionRows: dest[0] not **int16")
+	}
+	countp, ok := dest[1].(*int64)
+	if !ok {
+		return errors.New("fakeVersionRows: dest[1] not *int64")
+	}
+	row := r.rows[r.idx]
+	r.idx++
+	*versionp, *countp = row.version, row.count
+	return nil
+}
+
+func (r *fakeVersionRows) Close()     { r.closed = true }
+func (r *fakeVersionRows) Err() error { return r.iterErr }
+
+func versionOf(v int16) *int16 { return &v }
+
+// fakeQuerier implements dqpkg.Querier and records the queries it saw. It
+// routes on the SQL text because Snapshot issues two bounded aggregates.
 type fakeQuerier struct {
-	rows     *fakeRows
-	queryErr error
-	gotSQL   string
-	gotArgs  []any
+	rows            *fakeRows
+	versionRows     *fakeVersionRows
+	queryErr        error
+	versionQueryErr error
+	gotSQL          string
+	gotArgs         []any
+	gotVersionSQL   string
+	gotVersionArgs  []any
 }
 
 func (q *fakeQuerier) Query(_ context.Context, sql string, args ...any) (dqpkg.Rows, error) {
+	if strings.Contains(sql, "GROUP BY normalization_version") {
+		q.gotVersionSQL = sql
+		q.gotVersionArgs = args
+		if q.versionQueryErr != nil {
+			return nil, q.versionQueryErr
+		}
+		if q.versionRows == nil {
+			q.versionRows = &fakeVersionRows{}
+		}
+		return q.versionRows, nil
+	}
 	q.gotSQL = sql
 	q.gotArgs = args
 	if q.queryErr != nil {
@@ -243,6 +333,33 @@ func TestScore_InternalErrors(t *testing.T) {
 			}},
 			wantErrPart: "boom-iter",
 		},
+		{
+			name: "normalization version query failure",
+			querier: &fakeQuerier{
+				rows:            &fakeRows{},
+				versionQueryErr: errors.New("boom-version-query"),
+			},
+			wantErrPart: "boom-version-query",
+		},
+		{
+			name: "normalization version scan failure",
+			querier: &fakeQuerier{
+				rows: &fakeRows{},
+				versionRows: &fakeVersionRows{
+					rows:    []fakeVersionRow{{version: versionOf(1), count: 3}},
+					scanErr: errors.New("boom-version-scan"),
+				},
+			},
+			wantErrPart: "boom-version-scan",
+		},
+		{
+			name: "normalization version iteration failure",
+			querier: &fakeQuerier{
+				rows:        &fakeRows{},
+				versionRows: &fakeVersionRows{iterErr: errors.New("boom-version-iter")},
+			},
+			wantErrPart: "boom-version-iter",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -269,16 +386,22 @@ func TestScore_InternalErrors(t *testing.T) {
 func TestScore_Success(t *testing.T) {
 	now := time.Now()
 	past := now.Add(-24 * time.Hour)
-	q := &fakeQuerier{rows: &fakeRows{rows: []fakeRow{
-		// composite ~100 (fresh, no gap, no dupes) => ok
-		{field: "FreshField", count: 100, lastSeen: now, maxGap: 0, dupRatio: 0},
-		// composite ~66.7 (stale freshness axis 0, gap 100, dupe 100) => warn
-		{field: "WarnField", count: 80, lastSeen: past, maxGap: 0, dupRatio: 0},
-		// composite 50 (freshness 0, gap 50, dupe 100) => warn
-		{field: "MidField", count: 40, lastSeen: past, maxGap: 165, dupRatio: 0},
-		// composite 0 (freshness 0, gap 0, dupe 0) => critical
-		{field: "CritField", count: 20, lastSeen: past, maxGap: 300, dupRatio: 0.5},
-	}}}
+	q := &fakeQuerier{
+		rows: &fakeRows{rows: []fakeRow{
+			// composite ~100 (fresh, no gap, no dupes) => ok
+			{field: "FreshField", count: 100, lastSeen: now, maxGap: 0, dupRatio: 0, versioned: 100},
+			// composite ~66.7 (stale freshness axis 0, gap 100, dupe 100) => warn
+			{field: "WarnField", count: 80, lastSeen: past, maxGap: 0, dupRatio: 0, versioned: 80},
+			// composite 50 (freshness 0, gap 50, dupe 100) => warn
+			{field: "MidField", count: 40, lastSeen: past, maxGap: 165, dupRatio: 0, versioned: 30, unversioned: 10},
+			// composite 0 (freshness 0, gap 0, dupe 0) => critical
+			{field: "CritField", count: 20, lastSeen: past, maxGap: 300, dupRatio: 0.5, versioned: 10, unversioned: 10},
+		}},
+		versionRows: &fakeVersionRows{rows: []fakeVersionRow{
+			{version: nil, count: 20},
+			{version: versionOf(1), count: 220},
+		}},
+	}
 
 	h := NewHandler(scorerWith(q, 60))
 	rec := doScore(h)
@@ -300,6 +423,18 @@ func TestScore_Success(t *testing.T) {
 	}
 	if snap.GeneratedAt.IsZero() {
 		t.Error("generated_at should be populated")
+	}
+	if snap.Normalization.CoveragePct == nil || snap.Normalization.CoverageState != "measured" {
+		t.Errorf("normalization coverage = %v/%q, want measured",
+			snap.Normalization.CoveragePct, snap.Normalization.CoverageState)
+	}
+	if snap.Normalization.TotalSampleCount != 240 ||
+		snap.Normalization.VersionedSampleCount != 220 ||
+		snap.Normalization.UnversionedSampleCount != 20 {
+		t.Errorf("normalization counts = %+v, want 240/220/20", snap.Normalization)
+	}
+	if len(snap.Normalization.Versions) != 2 {
+		t.Errorf("normalization versions = %d, want 2", len(snap.Normalization.Versions))
 	}
 	if len(snap.Fields) != 4 {
 		t.Fatalf("fields len = %d, want 4", len(snap.Fields))
@@ -341,11 +476,9 @@ func TestScore_Success(t *testing.T) {
 		}
 	}
 
-	// The scorer must pass the configured window as a string arg and
-	// scan against signal_log; asserting here ties the handler to the
-	// query it actually issues.
-	if len(q.gotArgs) != 1 || q.gotArgs[0] != "60" {
-		t.Errorf("query args = %v, want [\"60\"]", q.gotArgs)
+	// The scorer must pass an explicit bounded timestamp window.
+	if len(q.gotArgs) != 2 {
+		t.Errorf("query args = %v, want explicit start/end timestamps", q.gotArgs)
 	}
 	if !strings.Contains(q.gotSQL, "signal_log") {
 		t.Errorf("query did not reference signal_log: %q", q.gotSQL)
@@ -353,6 +486,15 @@ func TestScore_Success(t *testing.T) {
 	// Rows must be closed to avoid leaking a pooled connection.
 	if !q.rows.closed {
 		t.Error("rows.Close was not called")
+	}
+	if !q.versionRows.closed {
+		t.Error("normalization rows.Close was not called")
+	}
+	if !strings.Contains(q.gotVersionSQL, "GROUP BY normalization_version") {
+		t.Errorf("normalization query missing GROUP BY: %q", q.gotVersionSQL)
+	}
+	if len(q.gotVersionArgs) != 2 {
+		t.Errorf("normalization query args = %v, want explicit start/end timestamps", q.gotVersionArgs)
 	}
 }
 
@@ -393,8 +535,8 @@ func TestScore_ZeroWindowDefaultsTo60(t *testing.T) {
 	if snap.WindowMins != 60 {
 		t.Errorf("window_mins = %d, want default 60", snap.WindowMins)
 	}
-	if len(q.gotArgs) != 1 || q.gotArgs[0] != "60" {
-		t.Errorf("query args = %v, want [\"60\"]", q.gotArgs)
+	if len(q.gotArgs) != 2 {
+		t.Errorf("query args = %v, want explicit start/end timestamps", q.gotArgs)
 	}
 }
 

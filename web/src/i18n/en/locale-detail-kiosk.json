@@ -1,0 +1,27 @@
+{
+  "kiosk": {
+    "exit": "Exit kiosk mode",
+    "exitLabel": "Exit Kiosk",
+    "settings": "Kiosk Settings",
+    "rotation": "Dashboard Rotation",
+    "rotationInterval": "Rotation Interval",
+    "dashboardsToRotate": "Dashboards to Rotate",
+    "default": "Default",
+    "display": "Display",
+    "hideCursor": "Auto-hide Cursor",
+    "cursorTimeout": "Hide After",
+    "dimAfter": "Dim Screen After",
+    "brightness": "Dimmed Brightness",
+    "showClock": "Show Clock",
+    "clockPosition": "Clock Position",
+    "transparency": "Transparency",
+    "transparencyDesc": "Adjust widget and background opacity. Higher values are more solid and readable.",
+    "widgetOpacity": "Widget Opacity",
+    "transparent": "Transparent",
+    "solid": "Solid",
+    "bgOpacity": "Background Opacity",
+    "preview": "Preview — this is how widgets will look",
+    "enter": "Enter Kiosk Mode",
+    "rotationPosition": "Dashboard {{current}} of {{total}}"
+  }
+}

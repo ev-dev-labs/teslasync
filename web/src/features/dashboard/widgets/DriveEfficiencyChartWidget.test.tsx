@@ -19,16 +19,15 @@
  *
  * Facets covered:
  *   - estimateEfficiency: energy path, tiny-drive skip, out-of-range guards,
- *     the battery-delta fallback, zero-energy → fallback, non-positive delta /
- *     missing SOC → null, and energy-path precedence.
- *   - buildDailyEfficiency: per-day averaging + trailing rolling average,
+ *     missing/zero-energy exclusion, and independence from SOC readings.
+ *   - buildDailyEfficiency: distance-weighted daily intensity + trailing rolling average,
  *     skipping timestamp-less / estimator-rejected drives, 1-decimal rounding,
  *     and the empty-input / all-rejected → [] contract.
  *   - rendering: populated km render (stats + unit + legend + title), the
  *     km→mi conversion of the unit label AND the numbers, the "no data" empty
  *     state (role="status") with stats withheld, the >30-day filter collapsing
  *     to empty, the loading skeleton, and the error branch (role="alert").
- *   - interaction/a11y: the freshness control is an accessible "Refresh"
+ *   - interaction/a11y: the freshness control is an accessible refresh-state
  *     button that refetches; the compact 1×1 layout drops the title + chart
  *     but keeps the stats.
  *   - data plumbing: explicit vehicleId, first-vehicle fallback, the disabled
@@ -60,8 +59,10 @@ vi.mock('@tanstack/react-query', async (importOriginal) => {
 // hook (it reaches for useTheme() which requires a ThemeProvider). ──
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     useThemeChartPalette: () => ({
       primary: '#22d3ee',
       accent: '#f59e0b',
@@ -239,38 +240,34 @@ describe('estimateEfficiency', () => {
     expect(estimateEfficiency(makeDrive({ distance_m: 10_000, energy_used_wh: 6000 }))).toBeNull(); // 600 > 500
   });
 
-  it('falls back to a battery-delta estimate when energy is missing', () => {
-    // 30 km, 10% of a ~75 kWh pack → 7500 Wh / 30 km = 250 Wh/km.
+  it('returns null when measured energy is missing', () => {
     expect(
       estimateEfficiency(
         makeDrive({ distance_m: 30_000, energy_used_wh: null, start_soc_pct: 80, end_soc_pct: 70 }),
       ),
-    ).toBe(250);
+    ).toBeNull();
   });
 
-  it('treats zero energy as missing and uses the battery fallback', () => {
+  it('returns null when measured energy is zero', () => {
     expect(
       estimateEfficiency(
         makeDrive({ distance_m: 30_000, energy_used_wh: 0, start_soc_pct: 80, end_soc_pct: 70 }),
       ),
-    ).toBe(250);
+    ).toBeNull();
   });
 
-  it('returns null for a non-positive battery delta or a missing SOC reading', () => {
-    // Battery gained charge over the drive (regen-dominant / bad data).
+  it('does not derive energy intensity from SOC readings', () => {
     expect(
       estimateEfficiency(
         makeDrive({ distance_m: 30_000, energy_used_wh: null, start_soc_pct: 70, end_soc_pct: 80 }),
       ),
     ).toBeNull();
-    // No end SOC to diff against.
     expect(
       estimateEfficiency(makeDrive({ distance_m: 30_000, energy_used_wh: null, end_soc_pct: null })),
     ).toBeNull();
   });
 
-  it('prefers the energy path over the battery estimate when both are present', () => {
-    // Energy → 150; the (huge) 70-point SOC delta must NOT win.
+  it('uses measured energy even when SOC movement disagrees', () => {
     expect(
       estimateEfficiency(
         makeDrive({ distance_m: 10_000, energy_used_wh: 1500, start_soc_pct: 90, end_soc_pct: 20 }),
@@ -280,7 +277,7 @@ describe('estimateEfficiency', () => {
 });
 
 describe('buildDailyEfficiency', () => {
-  it('averages drives per day and computes a trailing rolling average', () => {
+  it('computes daily measured intensity and a trailing rolling average', () => {
     const drives = [
       makeDrive({ id: 1, start_ts: '2026-06-01T08:00:00Z', distance_m: 10_000, energy_used_wh: 1500 }), // 150
       makeDrive({ id: 2, start_ts: '2026-06-01T18:00:00Z', distance_m: 10_000, energy_used_wh: 1700 }), // 170
@@ -293,6 +290,25 @@ describe('buildDailyEfficiency', () => {
     expect(out[0]).toEqual({ date: '2026-06-01', label: '2026-06-01', efficiency: 160, rollingAvg: null });
     // Day 2 = 180, rolling = mean(160,180) = 170.
     expect(out[1]).toEqual({ date: '2026-06-02', label: '2026-06-02', efficiency: 180, rollingAvg: 170 });
+  });
+
+  it('weights a daily intensity by distance rather than drive count', () => {
+    const drives = [
+      makeDrive({
+        id: 1,
+        start_ts: '2026-06-01T08:00:00Z',
+        distance_m: 10_000,
+        energy_used_wh: 1_000,
+      }),
+      makeDrive({
+        id: 2,
+        start_ts: '2026-06-01T18:00:00Z',
+        distance_m: 30_000,
+        energy_used_wh: 6_000,
+      }),
+    ];
+
+    expect(buildDailyEfficiency(drives, 7, shortDate)[0].efficiency).toBe(175);
   });
 
   it('skips drives with no timestamp and drives the estimator rejects', () => {
@@ -347,9 +363,11 @@ describe('DriveEfficiencyChartWidget — rendering', () => {
     expect(screen.getByText('+36.4%')).toBeInTheDocument();
     // The Wh/km unit label rides along the Avg and Best stats.
     expect(screen.getAllByText('Wh/km')).toHaveLength(2);
-    // Legend swatches for the daily series and the 7-day rolling average.
-    expect(screen.getByText('Daily')).toBeInTheDocument();
-    expect(screen.getByText('7-day avg')).toBeInTheDocument();
+    // Multi-series charts identify their shared persisted legend state.
+    expect(screen.getByTestId('embedded-chart')).toHaveAttribute(
+      'data-chart-key',
+      'dashboard-drive-efficiency',
+    );
   });
 
   it('converts both the unit label and the numbers to the mi preference', () => {
@@ -414,7 +432,7 @@ describe('DriveEfficiencyChartWidget — interaction & layout', () => {
     setup({ drives: makeQuery({ data: recentDrives(), refetch }) });
     renderWidget({ size: STANDARD });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 
@@ -424,7 +442,7 @@ describe('DriveEfficiencyChartWidget — interaction & layout', () => {
 
     // Compact widgets are title-less and chart-less…
     expect(screen.queryByText('Drive Efficiency')).not.toBeInTheDocument();
-    expect(screen.queryByText('7-day avg')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('chart-legend')).not.toBeInTheDocument();
     // …but the summary stats still render.
     expect(screen.getByText('Avg')).toBeInTheDocument();
     expect(screen.getByText('130')).toBeInTheDocument();

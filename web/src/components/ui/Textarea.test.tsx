@@ -12,9 +12,10 @@
  *   4. The `error` string is programmatically associated: the control gets
  *      `aria-invalid="true"` and `aria-describedby` pointing at the error
  *      paragraph's id — even for an aria-label-only textarea (useId fallback).
- *   5. The optional `help` renders a HelpIcon whose accessible name defaults
+ *   5. Hint/error feedback merges with caller-supplied descriptions.
+ *   6. The optional `help` renders a HelpIcon whose accessible name defaults
  *      to "Help for {id}" and honours an explicit `help.for` override.
- *   6. The ref forwards to the underlying `<textarea>` and onChange fires.
+ *   7. The ref forwards to the underlying `<textarea>` and onChange fires.
  *
  * `@testing-library/user-event` is not installed in this repo, so user
  * interactions are driven with `fireEvent` (matching Card / EditableText /
@@ -141,9 +142,9 @@ describe('Textarea — sizing', () => {
   it('merges a caller className and resolves conflicts via cn() (tailwind-merge)', () => {
     render(<Textarea aria-label="C" className="rounded-none" />);
     const className = screen.getByRole('textbox', { name: 'C' }).className;
-    // caller's rounded-none must win over the base rounded-lg.
+    // caller's rounded-none must win over the shared control shape.
     expect(className).toContain('rounded-none');
-    expect(className).not.toContain('rounded-lg');
+    expect(className).not.toContain('rounded-shape-md');
   });
 });
 
@@ -181,13 +182,12 @@ describe('Textarea — error a11y wiring', () => {
     const errorEl = document.getElementById(describedBy as string);
     expect(errorEl).not.toBeNull();
     expect(errorEl).toHaveTextContent('Notes are required');
+    expect(screen.getByRole('alert')).toBe(errorEl);
   });
 
   it('applies the error border utility when an error is present', () => {
     render(<Textarea label="Notes" error="bad" />);
-    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain(
-      'border-red-500/50',
-    );
+    expect(screen.getByRole('textbox', { name: 'Notes' }).className).toContain('border-rose-500');
   });
 
   it('associates the error even for an aria-label-only textarea (useId fallback)', () => {
@@ -220,6 +220,27 @@ describe('Textarea — error a11y wiring', () => {
     expect(a).toBeTruthy();
     expect(b).toBeTruthy();
     expect(a).not.toBe(b);
+  });
+
+  it('renders a hint and preserves a caller-supplied description association', () => {
+    render(
+      <>
+        <span id="external-help">External help</span>
+        <Textarea
+          label="Notes"
+          hint="Up to 120 characters"
+          aria-describedby="external-help"
+        />
+      </>,
+    );
+    const textarea = screen.getByRole('textbox', { name: 'Notes' });
+    expect(textarea).toHaveAttribute(
+      'aria-describedby',
+      'external-help notes-hint',
+    );
+    expect(document.getElementById('notes-hint')).toHaveTextContent(
+      'Up to 120 characters',
+    );
   });
 });
 

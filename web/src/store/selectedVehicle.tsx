@@ -6,13 +6,15 @@ import {
   useState,
   type ReactNode,
 } from 'react';
+import { getProductPreferencesSnapshot } from '@/lib/productPreferences';
 
 /**
  * Selected-vehicle store.
  *
  * Persistent global state for "the vehicle the user is currently focused on".
- * Survives reloads via localStorage so multi-vehicle owners don't have to
- * re-pick their vehicle every time they navigate.
+ * Survives reloads via localStorage. When the user has configured a default
+ * vehicle, that explicit startup preference wins over the last active
+ * selection; otherwise the previous sticky-selection behavior is preserved.
  *
  * The store deliberately does NOT know about the vehicles list, URL params,
  * or alert context. Pages should consume `useSelectedVehicle()` (which
@@ -34,6 +36,9 @@ export interface SelectedVehicleStoreValue {
 function loadInitial(): number | null {
   if (typeof window === 'undefined') return null;
   try {
+    const preferred =
+      getProductPreferencesSnapshot().defaultVehicleId;
+    if (preferred != null) return preferred;
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const n = Number(raw);

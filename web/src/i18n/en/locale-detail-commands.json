@@ -1,0 +1,345 @@
+{
+  "commands": {
+    "title": "Commands",
+    "pageTitle": "Vehicle Command Center",
+    "subtitle": "Review vehicle readiness, send remote actions, and verify recent outcomes.",
+    "viewHistory": "View history",
+    "selectVehicle": "Select vehicle",
+    "centerRegion": "Selected vehicle command center",
+    "reachableCount": "{{reachable}}/{{total}} recently reachable",
+    "statesError": "Failed to load vehicle states",
+    "noVehicles": "No vehicles found",
+    "connectFleet": "Connect your Tesla account and sync your fleet to start sending commands.",
+    "search": {
+      "placeholder": "Search commands...",
+      "noResults": "No commands match your search",
+      "aria": "Search commands",
+      "results": "Command search results",
+      "emptyTitle": "No matching commands"
+    },
+    "toggleFavorite": "Toggle favorite",
+    "cat": {
+      "quickActions": "Quick Actions",
+      "alerts": "Alerts & Location",
+      "charging": "Charging",
+      "climate": "Climate & Comfort",
+      "climateProtect": "Climate Protection",
+      "doors": "Doors & Trunk",
+      "drive": "Drive",
+      "media": "Media",
+      "navigation": "Navigation",
+      "schedules": "Schedules",
+      "security": "Security & Access",
+      "software": "Software",
+      "sunroof": "Sunroof",
+      "vehicle": "Vehicle",
+      "windows": "Windows"
+    },
+    "on": "ON",
+    "off": "OFF",
+    "domain": {
+      "aria": "Command domains",
+      "access": {
+        "title": "Access & Security",
+        "description": "Locks, security modes, openings, and drive authorization."
+      },
+      "comfort": {
+        "title": "Climate & Comfort",
+        "description": "Cabin temperature, seats, steering heat, and protection modes."
+      },
+      "charging": {
+        "title": "Charging & Schedules",
+        "description": "Charge controls, limits, and recurring vehicle schedules."
+      },
+      "vehicle": {
+        "title": "Vehicle Controls",
+        "description": "Location, navigation, software, identity, and media controls."
+      }
+    },
+    "status": {
+      "online": "Online",
+      "driving": "Driving",
+      "charging": "Charging",
+      "asleep": "Asleep",
+      "offline": "Offline",
+      "updating": "Updating",
+      "unknown": "Unknown"
+    },
+    "hero": {
+      "title": "Selected vehicle",
+      "selectedVehicle": "Selected vehicle",
+      "vehicleState": "Vehicle state",
+      "loadingState": "Loading vehicle state",
+      "battery": "Battery",
+      "range": "Estimated range",
+      "cabin": "Cabin",
+      "access": "Access state",
+      "noTelemetryTitle": "Live state unavailable",
+      "noTelemetry": "Commands remain available, but state-dependent controls may not reflect the vehicle yet."
+    },
+    "readiness": {
+      "title": "Command readiness",
+      "description": "Connection, telemetry, and motion context before a remote request is sent.",
+      "connection": "Connection",
+      "availability": "Command delivery",
+      "motion": "Motion context",
+      "telemetry": "Telemetry",
+      "checking": "Checking",
+      "stateUnknown": "State unknown",
+      "deliveryUncertain": "Delivery uncertain",
+      "wakeRecommended": "Wake recommended",
+      "ready": "Ready",
+      "motionUnknown": "Motion unknown",
+      "moving": "Vehicle moving",
+      "stationary": "No motion reported",
+      "freshnessUnknown": "Unknown",
+      "outdated": "Outdated",
+      "current": "Current",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "asleepHelp": "The vehicle is asleep. Commands remain selectable; waking it first can improve delivery speed.",
+      "offlineHelp": "The vehicle reports offline. Commands remain selectable, but delivery may fail until connectivity returns."
+    },
+    "freshness": {
+      "title": "Telemetry may be outdated",
+      "message": "Last vehicle update: {{age}}. Verify the car is awake and reachable before sending a safety-sensitive command."
+    },
+    "workspace": {
+      "title": "Command workspace",
+      "description": "Find an action by domain or search the complete command catalogue.",
+      "count": "{{count}} actions",
+      "domainCount": "{{count}} actions"
+    },
+    "feedback": {
+      "pending": "Sending {{command}}…",
+      "success": "{{command}} request sent to {{vehicle}}.",
+      "failed": "{{command}} was not accepted by {{vehicle}}.",
+      "error": "{{command}} failed: {{message}}",
+      "idle": "No command is currently running. Results will appear here."
+    },
+    "safety": {
+      "title": "Safety & execution",
+      "description": "Remote commands can affect a physical vehicle. Review context before acting.",
+      "requestTitle": "A request is not physical proof",
+      "requestBody": "Confirm the resulting vehicle state after access, charging, or drive-sensitive actions.",
+      "confirmTitle": "Sensitive actions add friction",
+      "confirmBody": "High-impact commands require confirmation, a countdown, or typed acknowledgement.",
+      "contextTitle": "Check the surroundings",
+      "contextBody": "Verify the vehicle is parked and clear before opening panels or enabling drive access.",
+      "contextDisconnected": "Current vehicle context may be unavailable while it is asleep or offline."
+    },
+    "activity": {
+      "title": "Recent command activity",
+      "description": "Latest delivery outcomes for the selected vehicle.",
+      "resource": "Command activity",
+      "loading": "Loading command activity",
+      "emptyTitle": "No commands sent yet",
+      "empty": "Command outcomes will appear here after the first request.",
+      "succeeded": "Succeeded",
+      "failed": "Failed",
+      "pending": "Pending",
+      "failedReason": "{{status}} · {{reason}}",
+      "unknownCommand": "{{command}}",
+      "commands": {
+        "unlock": "Unlock",
+        "sentry_off": "Sentry Off",
+        "valet_off": "Valet Off",
+        "guest_mode_off": "Guest Mode Off",
+        "climate_off": "Climate Off",
+        "bioweapon_off": "Bioweapon Off",
+        "climate_keeper_off": "Climate Keeper Off",
+        "charge_stop": "Stop Charging"
+      }
+    },
+    "fallback": {
+      "unavailable": "Vehicle controls are unavailable until fleet data can be loaded.",
+      "loadingFleet": "Loading your fleet",
+      "fleet": "Vehicle fleet"
+    },
+    "confirm": {
+      "default": "Are you sure?",
+      "typeToConfirm": "Type \"{{word}}\" to confirm:",
+      "countdown": "Confirm ({{seconds}}s)"
+    },
+    "input": {
+      "required": "Required",
+      "pin": "Enter a 4-digit PIN",
+      "wholeNumber": "Enter a whole number",
+      "min": "Minimum: {{min}}",
+      "max": "Maximum: {{max}}",
+      "decimal": "Enter a valid number"
+    },
+    "select": {
+      "noOptions": "No options available"
+    },
+    "toast": {
+      "success": "Command sent successfully",
+      "failed": "Command failed",
+      "error": "Command failed: {{message}}"
+    },
+    "alerts": {
+      "boombox": "Boombox",
+      "findMyCar": "Find my car",
+      "flashLights": "Flash Lights",
+      "horn": "Horn",
+      "locatePing": "Locate Ping",
+      "randomFart": "Random fart"
+    },
+    "charging": {
+      "amperage": "Amperage",
+      "charge": "Charge",
+      "chargePort": "Charge Port",
+      "close": "Close",
+      "dailyMode": "Daily mode",
+      "enterAmps": "Enter charging amps (e.g., 16, 32, 48):",
+      "enterLimit": "Enter charge limit % (50–100):",
+      "maxRange": "Max Range",
+      "open": "Open",
+      "percent": "Charge %",
+      "setAmps": "Set Amps",
+      "setLimit": "Set Limit",
+      "standard": "Standard",
+      "tripMode": "Trip mode"
+    },
+    "climate": {
+      "bioweapon": "Bioweapon",
+      "campMode": "Camp Mode",
+      "climate": "Climate",
+      "climateKeeper": "Climate Keeper",
+      "cop": "Overheat Protect",
+      "copFan": "Overheat Protect",
+      "copHigh": "High",
+      "copHighTemperature": "100°F / 40°C",
+      "copLow": "Low",
+      "copLowTemperature": "90°F / 30°C",
+      "copMedium": "Medium",
+      "copMediumTemperature": "95°F / 35°C",
+      "copOff": "Overheat Protect",
+      "copOn": "On (AC)",
+      "copTemp": "COP Temp",
+      "default": "Default",
+      "defenseMode": "Defense Mode",
+      "dogMode": "Dog Mode",
+      "driver": "Driver",
+      "driverPassenger": "Driver/Passenger",
+      "enterTemp": "Enter temperature in °C (e.g., 21):",
+      "fanOnly": "Fan only",
+      "keepMode": "Keep",
+      "maxPrecondition": "Max Precondition",
+      "off": "OFF",
+      "override": "Override",
+      "resetPrecondition": "Reset Precondition",
+      "seatCool": "Seat Cool",
+      "seatHeat": "Seat Heat",
+      "setLevel": "Low/Med/High",
+      "setTemps": "Set Temps",
+      "steeringHeat": "Steering Heat",
+      "toggle": "Toggle"
+    },
+    "doors": {
+      "frunk": "Frunk",
+      "open": "Open",
+      "trunk": "Trunk"
+    },
+    "drive": {
+      "confirmRemoteStart": "This will enable keyless driving for 2 minutes. Continue?",
+      "keylessDrive": "Keyless drive",
+      "remoteStart": "Remote Start"
+    },
+    "homelink": {
+      "garage": "Garage door",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "trigger": "HomeLink",
+      "triggerTitle": "Enter vehicle coordinates"
+    },
+    "media": {
+      "enterVolume": "Enter volume level (0.0 – 11.0):",
+      "nextFav": "Next Favorite",
+      "nextTrack": "Next Track",
+      "playPause": "Play / Pause",
+      "prevFav": "Prev Favorite",
+      "prevTrack": "Prev Track",
+      "volumeDown": "Volume Down",
+      "volumeUp": "Volume Up"
+    },
+    "nav": {
+      "byId": "By ID",
+      "coordinates": "Lat / Lon",
+      "enterAddress": "Enter destination address:",
+      "enterScId": "Enter Supercharger ID:",
+      "latitude": "Latitude",
+      "longitude": "Longitude",
+      "sendAddress": "Send Address",
+      "sendGPS": "Send GPS",
+      "sendGPSTitle": "Enter GPS coordinates",
+      "supercharger": "Supercharger",
+      "toVehicleNav": "To vehicle nav"
+    },
+    "schedules": {
+      "addCharge": "Add Charge Schedule",
+      "addPrecondition": "Add Precondition",
+      "byId": "By ID",
+      "enterScheduleId": "Enter schedule ID to remove:",
+      "midnight": "Midnight daily",
+      "morning": "7 AM daily",
+      "removeCharge": "Remove Schedule",
+      "removePrecondition": "Remove Precondition"
+    },
+    "security": {
+      "admin": "Admin",
+      "clearPin": "Clear PIN",
+      "clearSpeedPin": "Clear Speed PIN",
+      "confirmClearDrivePin": "Clear PIN to Drive without authentication?",
+      "confirmClearPin": "Clear speed limit PIN without authentication?",
+      "confirmErase": "This will erase all user data from the vehicle touchscreen. Continue?",
+      "enable": "Enable",
+      "enterPin": "Enter 4-digit PIN:",
+      "enterSpeedLimit": "Enter speed limit (50-90 MPH):",
+      "enterSpeedPin": "Enter 4-digit PIN:",
+      "enterValetPin": "Enter 4-digit valet PIN:",
+      "eraseData": "Erase Data",
+      "guestMode": "Guest Mode",
+      "guestOnly": "Guest mode only",
+      "lock": "Lock",
+      "pinToDrive": "PIN to Drive",
+      "requiresPin": "Requires PIN",
+      "resetPin": "Reset PIN",
+      "resetValetPin": "Reset Valet PIN",
+      "sentry": "Sentry",
+      "setMph": "Set MPH",
+      "speedActivate": "Activate",
+      "speedDeactivate": "Deactivate",
+      "speedLimit": "Speed Limit",
+      "speedLimitMode": "Speed Limit",
+      "valetMode": "Valet Mode",
+      "wakeUp": "Wake Up",
+      "wakeVehicle": "Wake vehicle"
+    },
+    "software": {
+      "cancelUpdate": "Cancel Update",
+      "enterDelay": "Install in how many minutes? (0 = now, 120 = 2 hours)",
+      "installNow": "Install now",
+      "scheduleUpdate": "Schedule Update",
+      "stopPending": "Stop pending"
+    },
+    "sunroof": {
+      "close": "Sunroof",
+      "closeMode": "Close",
+      "stop": "Sunroof",
+      "stopMode": "Stop",
+      "vent": "Sunroof",
+      "ventMode": "Vent"
+    },
+    "vehicle": {
+      "fallbackName": "Vehicle {{id}}",
+      "changeName": "Change name",
+      "enterName": "Enter new vehicle name:",
+      "rename": "Rename"
+    },
+    "windows": {
+      "close": "Close Windows",
+      "vent": "Vent Windows"
+    }
+  }
+}

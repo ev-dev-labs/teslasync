@@ -236,7 +236,7 @@ describe('MaintenanceTrackerWidget — compact layout', () => {
     );
     renderWidget(COMPACT);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });
@@ -400,7 +400,7 @@ describe('MaintenanceTrackerWidget — shell states', () => {
     );
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

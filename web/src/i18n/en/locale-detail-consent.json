@@ -1,0 +1,43 @@
+{
+  "consent": {
+    "banner": {
+      "title": "Cookies & analytics",
+      "body": "TeslaSync uses strictly necessary storage to keep you signed in and to remember your preferences. With your consent, we also collect anonymous performance and error reports to improve the app. You can change your mind any time in Settings → Privacy.",
+      "manage": "Manage preferences",
+      "hideDetails": "Hide details",
+      "accept": "Accept all",
+      "decline": "Decline non-essential"
+    },
+    "category": {
+      "alwaysOn": "Always on",
+      "essential": {
+        "title": "Strictly necessary",
+        "body": "Authentication, session, theme, and saved drafts. Required for the app to work and exempt from consent under the ePrivacy directive."
+      },
+      "analytics": {
+        "title": "Performance & error reporting",
+        "body": "Anonymous Core Web Vitals (page-load timings) and uncaught error reports sent to this TeslaSync instance to help operators diagnose issues. No third parties involved."
+      }
+    },
+    "section": {
+      "title": "Cookies & analytics consent",
+      "bodyOn": "This deployment collects anonymous performance and error reports with your consent. Strictly necessary storage (auth, settings) is always on.",
+      "bodyOff": "This deployment does not require consent collection — these controls let you preview the user-facing flow."
+    },
+    "state": {
+      "accepted": "Accepted — performance & error reporting on",
+      "declined": "Declined — only essential storage in use",
+      "unknown": "Not decided — banner will appear on next visit"
+    },
+    "action": {
+      "accept": "Re-grant consent",
+      "decline": "Withdraw consent",
+      "reset": "Reset"
+    },
+    "toast": {
+      "accepted": "Consent granted",
+      "declined": "Consent withdrawn",
+      "reset": "Consent reset — banner will reappear"
+    }
+  }
+}

@@ -136,8 +136,13 @@ generate:
 	go run ./tools/aigen
 
 ## generate-check: Fail if generated artefacts drift from their generators.
+##                 Registry-driven (scripts/generated-artifacts.json): runs the
+##                 non-mutating --check form of every generator AND proves the
+##                 worktree is byte-identical afterwards, so a "check" can never
+##                 quietly rewrite a committed source file.
 generate-check:
 	go run ./tools/aigen --check
+	node scripts/check-generated-freshness.mjs
 
 ## ai-vet: Phase-50 / 0001 — enforce the AI-Off Contract at the
 ##         type-system level (registry coverage + every /api/v1/ai/*

@@ -184,7 +184,7 @@ describe('DriveScoreWidget', () => {
     expect(screen.getByText('320')).toBeInTheDocument();
     expect(screen.getByText('Wh/km')).toBeInTheDocument();
     // Not the empty state.
-    expect(screen.queryByText('No data yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
 
   it('requests the trailing 7-day analytics window', () => {
@@ -208,7 +208,8 @@ describe('DriveScoreWidget', () => {
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('No data yet')).toBeInTheDocument();
+    expect(screen.getByText('No drive score yet')).toBeInTheDocument();
+    expect(screen.getByText(/Complete a drive with measured energy and distance/)).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
   });
@@ -220,7 +221,7 @@ describe('DriveScoreWidget', () => {
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('No data yet')).toBeInTheDocument();
+    expect(screen.getByText('No drive score yet')).toBeInTheDocument();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
     expect(screen.queryByText('0')).not.toBeInTheDocument();
   });
@@ -232,7 +233,7 @@ describe('DriveScoreWidget', () => {
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('No data yet')).toBeInTheDocument();
+    expect(screen.getByText('No drive score yet')).toBeInTheDocument();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
   });
 
@@ -243,7 +244,7 @@ describe('DriveScoreWidget', () => {
 
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
     expect(screen.queryByText('Score')).not.toBeInTheDocument();
-    expect(screen.queryByText('No data yet')).not.toBeInTheDocument();
+    expect(screen.queryByText('No drive score yet')).not.toBeInTheDocument();
   });
 
   it('keeps the gauge on a background-refetch error (never blanks a live widget)', () => {
@@ -263,7 +264,7 @@ describe('DriveScoreWidget', () => {
 
     renderWidget(<DriveScoreWidget size={SIZE_STANDARD} />);
 
-    expect(screen.getByText('No data yet')).toBeInTheDocument();
+    expect(screen.getByText('No drive score yet')).toBeInTheDocument();
   });
 
   it('invokes refetch when the freshness/refresh control is activated', () => {

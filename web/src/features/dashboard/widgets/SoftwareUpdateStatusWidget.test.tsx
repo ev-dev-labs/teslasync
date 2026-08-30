@@ -200,7 +200,7 @@ describe('SoftwareUpdateStatusWidget — shell states', () => {
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByText('Current Version')).toBeNull();
     expect(screen.queryByText('No software data')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^Refresh/i })).toBeNull();
   });
 
   it('renders an explicit empty state when neither live state nor an update exists', () => {
@@ -244,7 +244,7 @@ describe('SoftwareUpdateStatusWidget — compact (1×1)', () => {
     expect(screen.queryByText('Software Update')).toBeNull();
     expect(screen.queryByText('Current Version')).toBeNull();
     // …but still expose the refresh affordance as an icon-only overlay.
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
@@ -420,7 +420,7 @@ describe('SoftwareUpdateStatusWidget — refresh wiring', () => {
     mockConfig.mockReturnValue(cfg({}));
     renderWidget(FULL);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(refetch).toHaveBeenCalledTimes(1);
   });

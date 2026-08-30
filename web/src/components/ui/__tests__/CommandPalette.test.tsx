@@ -1,16 +1,40 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, act, waitFor, fireEvent } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MemoryRouter } from 'react-router-dom'
+import { MemoryRouter, useLocation } from 'react-router-dom'
 import { ToastProvider } from '@/components/feedback/Toast'
 import { ThemeProvider } from '@/components/ui/ThemeProvider'
-import { SelectedVehicleProvider } from '@/store/selectedVehicle'
-import { CommandPalette, addRecentCommand, getRecentCommands } from '../CommandPalette'
+import {
+  __SELECTED_VEHICLE_STORAGE_KEY__,
+  SelectedVehicleProvider,
+} from '@/store/selectedVehicle'
+import {
+  CommandPalette,
+  PALETTE_INPUT_FOCUS_DELAY_MS,
+  addRecentCommand,
+  getRecentCommands,
+} from '../CommandPalette'
+import { CommandPaletteHost } from '@/components/layout/CommandPaletteHost'
 import { vehicleKeys } from '@/api/hooks/useVehicles'
+import { savedViewsKeys } from '@/api/hooks/useSavedViews'
+import { searchKeys } from '@/api/hooks/useSearch'
+import { alertKeys } from '@/api/hooks/useAlerts'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { recordCommandUse, _resetFrecency } from '@/lib/commandFrecency'
+import { setPinnedNavPaths, __resetNavPinsSessionOverridesForTests } from '@/lib/navPins'
+import { getShellFocusableElements } from '@/components/layout/shellFocusTrap'
 import type { Vehicle } from '@/types/vehicle'
+import type { Alert, AlertDetail, SavedView, SearchResponse } from '@/api/types'
 import type { ReactNode } from 'react'
+import { StrictMode } from 'react'
+
+const { requestMock } = vi.hoisted(() => ({
+  requestMock: vi.fn(),
+}))
+
+vi.mock('@/api/client', () => ({
+  request: (...args: unknown[]) => requestMock(...args),
+}))
 
 // jsdom doesn't implement matchMedia; ThemeProvider uses it for `prefers-color-scheme`
 if (!window.matchMedia) {
@@ -42,10 +66,34 @@ function makeVehicles(): Vehicle[] {
   ]
 }
 
-function makeWrapper(vehicles: Vehicle[]) {
+function makeAlert(overrides: Partial<Alert> = {}): Alert {
+  return {
+    id: 9,
+    vehicle_id: 1,
+    type: 'battery',
+    severity: 'critical',
+    title: 'Battery critically low',
+    message: 'Charge before the next dispatch',
+    is_read: false,
+    created_at: '2026-08-24T16:00:00Z',
+    ...overrides,
+  }
+}
+
+function makeWrapper(
+  vehicles: Vehicle[],
+  savedViews: SavedView[] = [],
+  searchResponses: Record<string, SearchResponse> = {},
+  alerts: Alert[] = [],
+) {
   return function Wrapper({ children }: { children: ReactNode }) {
     const qc = new QueryClient({ defaultOptions: { queries: { retry: false, staleTime: Infinity } } })
     qc.setQueryData(vehicleKeys.all, vehicles)
+    qc.setQueryData(savedViewsKeys.allList, savedViews)
+    qc.setQueryData(alertKeys.alerts, alerts)
+    for (const [query, response] of Object.entries(searchResponses)) {
+      qc.setQueryData(searchKeys.global(query, undefined, 5), response)
+    }
     return (
       <QueryClientProvider client={qc}>
         <MemoryRouter initialEntries={['/']}>
@@ -58,6 +106,11 @@ function makeWrapper(vehicles: Vehicle[]) {
       </QueryClientProvider>
     )
   }
+}
+
+function LocationProbe() {
+  const location = useLocation()
+  return <output data-testid="location">{location.pathname}{location.search}</output>
 }
 
 // Mounts the global keyboard-shortcut hook the same way Layout does in
@@ -79,12 +132,16 @@ function openPaletteViaEvent() {
 beforeEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  __resetNavPinsSessionOverridesForTests()
   _resetFrecency()
+  requestMock.mockReset()
+  requestMock.mockResolvedValue({})
 })
 
 afterEach(() => {
   localStorage.clear()
   sessionStorage.clear()
+  __resetNavPinsSessionOverridesForTests()
   _resetFrecency()
 })
 
@@ -123,6 +180,62 @@ describe('CommandPalette recent storage', () => {
 // ─── Cmd+K behavior ─────────────────────────────────────────────────────────
 
 describe('CommandPalette keyboard shortcut', () => {
+  it('opens the deferred palette on its first invocation', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    const onOpen = vi.fn()
+    render(<CommandPaletteHost onOpen={onOpen} />, { wrapper: Wrapper })
+    expect(screen.queryByPlaceholderText(/Search pages/i)).toBeNull()
+
+    act(() => { window.dispatchEvent(new CustomEvent('toggle-command-palette')) })
+
+    // The host resolves the palette through `React.lazy`, so the first open
+    // waits on a real dynamic import. Under a saturated full-suite run that
+    // can exceed waitFor's 1 s default — this is chunk-load latency, not a
+    // behavioural delay, so give it explicit headroom.
+    await waitFor(
+      () => {
+        expect(screen.getByPlaceholderText(/Search pages/i)).toBeInTheDocument()
+        expect(onOpen).toHaveBeenCalledTimes(1)
+      },
+      { timeout: 10_000 },
+    )
+    const positioner = document.querySelector(
+      '[data-command-palette-positioner]',
+    )
+    const panel = document.querySelector('[data-command-palette-panel]')
+    // Viewport-centered at every width and zoom level: no sidebar offset, no
+    // breakpoint-conditional horizontal padding, no transform.
+    expect(positioner).toHaveClass(
+      'fixed',
+      'inset-0',
+      'flex',
+      'items-start',
+      'justify-center',
+      'overflow-y-auto',
+    )
+    const positionerClass = positioner?.getAttribute('class') ?? ''
+    expect(positionerClass).not.toContain('--shell-sidebar-width')
+    expect(positionerClass).not.toContain('xl:ps-')
+    expect(positionerClass).not.toContain('sm:top-')
+    expect(panel).toHaveClass('w-full', 'max-w-lg', 'pointer-events-auto')
+    expect(panel?.getAttribute('class')).not.toContain('translate-x')
+  })
+
+  it('bounds the panel height so it stays fully reachable at high zoom', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/Search pages/i)).toBeInTheDocument()
+    })
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveClass('flex', 'flex-col', 'max-h-[84vh]')
+    const listbox = screen.getByRole('listbox')
+    expect(listbox).toHaveClass('max-h-80', 'min-h-0', 'overflow-y-auto')
+  })
+
   it('opens on Ctrl+K when focus is on the body', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(
@@ -201,6 +314,20 @@ describe('CommandPalette search', () => {
     })
   })
 
+  it('changes the global vehicle selection from a switch command', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'switch model y' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Switch to Model Y/i }))
+
+    await waitFor(() => {
+      expect(localStorage.getItem(__SELECTED_VEHICLE_STORAGE_KEY__)).toBe('2')
+    })
+  })
+
   it('surfaces theme registry commands on a "theme" search', async () => {
     const Wrapper = makeWrapper(makeVehicles())
     render(<CommandPalette />, { wrapper: Wrapper })
@@ -222,6 +349,125 @@ describe('CommandPalette search', () => {
     fireEvent.change(input, { target: { value: 'refresh' } })
 
     expect(await screen.findByText(/Refresh data/)).toBeInTheDocument()
+  })
+
+  it('opens live entity-search results from the command center', async () => {
+    const Wrapper = makeWrapper(makeVehicles(), [], {
+      alpha: {
+        query: 'alpha',
+        hits: [{
+          type: 'drive',
+          id: 77,
+          title: 'Alpha commute',
+          subtitle: 'Drive · completed',
+          url: '/drives/77',
+          score: 100,
+        }],
+      },
+    })
+    render(
+      <>
+        <CommandPalette />
+        <LocationProbe />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'alpha' } })
+
+    const result = await screen.findByRole('option', { name: /Alpha commute/i })
+    fireEvent.click(result)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent('/drives/77')
+    })
+  })
+
+  it('finds and applies saved views from any supported workspace', async () => {
+    const Wrapper = makeWrapper(makeVehicles(), [{
+      id: 41,
+      name: 'Long-haul efficiency',
+      route: '/drives',
+      query: 'range=30d&sort=efficiency',
+      is_default: false,
+      is_pinned: true,
+      sort_order: 0,
+      created_at: '2026-01-01T00:00:00Z',
+      updated_at: '2026-01-01T00:00:00Z',
+    }])
+    render(
+      <>
+        <CommandPalette />
+        <LocationProbe />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'long haul' } })
+
+    const result = await screen.findByRole('option', { name: /Long-haul efficiency/i })
+    expect(screen.getByText('Saved views')).toBeInTheDocument()
+    fireEvent.click(result)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location')).toHaveTextContent(
+        '/drives?range=30d&sort=efficiency',
+      )
+    })
+  })
+
+  it('acknowledges an open alert from the command center and exposes Undo', async () => {
+    const alert = makeAlert()
+    const acknowledged: AlertDetail = {
+      ...alert,
+      acknowledged_at: '2026-08-24T17:00:00Z',
+      events: [],
+    }
+    const reopened: AlertDetail = {
+      ...alert,
+      acknowledged_at: null,
+      events: [],
+    }
+    requestMock.mockImplementation((path: string) => {
+      if (path === `/alerts/${alert.id}/acknowledge`) return Promise.resolve(acknowledged)
+      if (path === `/alerts/${alert.id}/reopen`) return Promise.resolve(reopened)
+      return Promise.reject(new Error(`Unexpected request: ${path}`))
+    })
+    const Wrapper = makeWrapper(
+      makeVehicles(),
+      [],
+      { acknowledge: { query: 'acknowledge', hits: [] } },
+      [alert],
+    )
+    render(<CommandPalette />, { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages/i) as HTMLInputElement
+    fireEvent.change(input, { target: { value: 'acknowledge' } })
+    fireEvent.click(await screen.findByRole('option', { name: /Acknowledge an alert/i }))
+
+    expect(screen.getByText('Choose an open alert to acknowledge')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('option', { name: /Battery critically low/i }))
+
+    await waitFor(() => {
+      expect(requestMock).toHaveBeenCalledWith(
+        `/alerts/${alert.id}/acknowledge`,
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
+    expect(await screen.findByText('Alert acknowledged')).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Undo' }))
+    await waitFor(() => {
+      expect(requestMock).toHaveBeenCalledWith(
+        `/alerts/${alert.id}/reopen`,
+        expect.objectContaining({ method: 'POST' }),
+      )
+    })
   })
 
   // Regression for a scoring bug where each keyword was
@@ -362,7 +608,7 @@ vi.spyOn(console, 'error').mockImplementation((...args: unknown[]) => {
 
 describe('CommandPalette keyboard navigation', () => {
   function getRows() {
-    return screen.queryAllByRole('button').filter((b) => b.hasAttribute('data-palette-row'))
+    return screen.queryAllByRole('option').filter((b) => b.hasAttribute('data-palette-row'))
   }
   function getSelectedRow() {
     return getRows().find((b) => b.getAttribute('aria-current') === 'true') ?? null
@@ -719,4 +965,1033 @@ describe('CommandPalette scope prefixes', () => {
       expect(screen.getByPlaceholderText(/Search pages…/i)).toBeInTheDocument()
     })
   })
+})
+
+// ─── Focus management, a11y semantics, keyboard reach ───────────────────────
+
+describe('CommandPalette focus + listbox semantics', () => {
+  it('returns focus to the invoking trigger when the palette closes', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+    expect(document.activeElement).toBe(trigger)
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    // The palette moves focus into its own input on open.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input)
+    })
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(trigger)
+    })
+  })
+
+  it('does not steal focus back to a trigger that was removed while open', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    const { rerender } = render(
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+    act(() => screen.getByTestId('palette-trigger').focus())
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    rerender(<CommandPalette />)
+    expect(() => {
+      act(() => {
+        fireEvent.keyDown(window, { key: 'Escape' })
+      })
+    }).not.toThrow()
+  })
+
+  it('does not restore the shell trigger when navigation owns the next focus target', async () => {
+    setPinnedNavPaths(['/drives'])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <LocationProbe />
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input)
+    })
+
+    const pinned = await screen.findByRole('group', { name: 'Pinned' })
+    fireEvent.click(pinned.querySelector<HTMLElement>('[data-palette-row]')!)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/drives')
+      expect(document.activeElement).not.toBe(trigger)
+    })
+  })
+
+  it('exposes combobox + listbox semantics with a live active descendant', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    expect(input).toHaveAttribute('role', 'combobox')
+    expect(input).toHaveAttribute('aria-controls', 'command-palette-listbox')
+    expect(input).toHaveAttribute('aria-autocomplete', 'list')
+
+    const listbox = screen.getByRole('listbox')
+    expect(listbox).toHaveAttribute('id', 'command-palette-listbox')
+
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-option-0')
+    })
+    const firstOption = document.querySelector('[data-palette-row="0"]')
+    expect(firstOption).toHaveAttribute('id', 'command-palette-option-0')
+    expect(firstOption).toHaveAttribute('role', 'option')
+    expect(firstOption).toHaveAttribute('aria-selected', 'true')
+  })
+
+  it('keeps exactly one visible selection while arrowing through results', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    fireEvent.change(input, { target: { value: 'drives' } })
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-palette-row]').length).toBeGreaterThan(1)
+    })
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-option-1')
+    })
+    expect(document.querySelectorAll('[data-palette-selected]').length).toBe(1)
+    expect(document.querySelector('[data-palette-selected]')).toHaveAttribute(
+      'data-palette-row',
+      '1',
+    )
+  })
+
+  it('supports Home / End to reach the ends of a long result list', async () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    fireEvent.change(input, { target: { value: 'charge' } })
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-palette-row]').length).toBeGreaterThan(2)
+    })
+    const rowCount = document.querySelectorAll('[data-palette-row]').length
+
+    fireEvent.keyDown(input, { key: 'End' })
+    await waitFor(() => {
+      expect(input).toHaveAttribute(
+        'aria-activedescendant',
+        `command-palette-option-${rowCount - 1}`,
+      )
+    })
+
+    fireEvent.keyDown(input, { key: 'Home' })
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-option-0')
+    })
+  })
+})
+
+// ─── Pinned destinations ────────────────────────────────────────────────────
+
+describe('CommandPalette pinned destinations', () => {
+  it('surfaces the sidebar Quick-access pins in their own section', async () => {
+    setPinnedNavPaths(['/drives', '/charging'])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+    await waitFor(() => {
+      expect(screen.getByText('Pinned')).toBeInTheDocument()
+    })
+
+    const pinnedGroup = screen.getByRole('group', { name: 'Pinned' })
+    const rows = Array.from(
+      pinnedGroup.querySelectorAll<HTMLElement>('[data-palette-row]'),
+    ).map((row) => row.textContent ?? '')
+    expect(rows.some((text) => text.includes('/drives'))).toBe(true)
+    expect(rows.some((text) => text.includes('/charging'))).toBe(true)
+  })
+
+  it('navigates to the pinned destination when its row is activated', async () => {
+    setPinnedNavPaths(['/drives'])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(
+      <>
+        <LocationProbe />
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const pinnedGroup = await screen.findByRole('group', { name: 'Pinned' })
+    const row = pinnedGroup.querySelector<HTMLElement>('[data-palette-row]')
+    expect(row).not.toBeNull()
+    fireEvent.click(row!)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/drives')
+    })
+  })
+
+  it('drops pins that no longer resolve to a catalog destination', async () => {
+    setPinnedNavPaths(['/drives', '/this-route-was-deleted'])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const pinnedGroup = await screen.findByRole('group', { name: 'Pinned' })
+    expect(pinnedGroup.querySelectorAll('[data-palette-row]').length).toBe(1)
+  })
+
+  it('renders no Pinned section when the user cleared every pin', async () => {
+    setPinnedNavPaths([])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    expect(screen.queryByRole('group', { name: 'Pinned' })).toBeNull()
+  })
+
+  it('hides pinned rows once the user starts typing a query', async () => {
+    setPinnedNavPaths(['/drives'])
+    const Wrapper = makeWrapper(makeVehicles())
+    render(<CommandPalette />, { wrapper: Wrapper })
+    openPaletteViaEvent()
+
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    await screen.findByRole('group', { name: 'Pinned' })
+
+    fireEvent.change(input, { target: { value: 'battery' } })
+    await waitFor(() => {
+      expect(screen.queryByRole('group', { name: 'Pinned' })).toBeNull()
+    })
+  })
+})
+
+// ─── Contextual (related) destinations + global scope preservation ──────────
+
+describe('CommandPalette contextual navigation', () => {
+  function makeRoutedWrapper(initialEntry: string) {
+    return function Wrapper({ children }: { children: ReactNode }) {
+      const qc = new QueryClient({
+        defaultOptions: { queries: { retry: false, staleTime: Infinity } },
+      })
+      qc.setQueryData(vehicleKeys.all, makeVehicles())
+      qc.setQueryData(savedViewsKeys.allList, [])
+      qc.setQueryData(alertKeys.alerts, [])
+      return (
+        <QueryClientProvider client={qc}>
+          <MemoryRouter initialEntries={[initialEntry]}>
+            <ThemeProvider>
+              <ToastProvider>
+                <SelectedVehicleProvider>{children}</SelectedVehicleProvider>
+              </ToastProvider>
+            </ThemeProvider>
+          </MemoryRouter>
+        </QueryClientProvider>
+      )
+    }
+  }
+
+  it('offers parent and sibling destinations declared by route metadata', async () => {
+    render(<CommandPalette />, { wrapper: makeRoutedWrapper('/notifications/rules') })
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const related = await screen.findByRole('group', { name: 'Related to this page' })
+    const labels = Array.from(
+      related.querySelectorAll<HTMLElement>('[data-palette-row]'),
+    ).map((row) => row.textContent ?? '')
+    expect(labels.some((text) => text.includes('Back to section'))).toBe(true)
+    expect(labels.length).toBeGreaterThan(1)
+  })
+
+  it('renders no Related section for a route with no declared hierarchy', async () => {
+    render(<CommandPalette />, { wrapper: makeRoutedWrapper('/drives') })
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    expect(screen.queryByRole('group', { name: 'Related to this page' })).toBeNull()
+  })
+
+  it('carries the active analysis window onto a destination that owns it', async () => {
+    setPinnedNavPaths(['/drives'])
+    render(
+      <>
+        <LocationProbe />
+        <CommandPalette />
+      </>,
+      { wrapper: makeRoutedWrapper('/charging?from=2026-01-01&to=2026-01-31&time_scope=30d') },
+    )
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const pinned = await screen.findByRole('group', { name: 'Pinned' })
+    fireEvent.click(pinned.querySelector<HTMLElement>('[data-palette-row]')!)
+
+    await waitFor(() => {
+      const location = screen.getByTestId('location').textContent ?? ''
+      expect(location.startsWith('/drives?')).toBe(true)
+      const params = new URLSearchParams(location.split('?')[1])
+      expect(params.get('from')).toBe('2026-01-01')
+      expect(params.get('to')).toBe('2026-01-31')
+      expect(params.get('time_scope')).toBe('30d')
+    })
+  })
+
+  it('does not carry an analysis window onto a route that cannot consume it', async () => {
+    setPinnedNavPaths(['/settings'])
+    render(
+      <>
+        <LocationProbe />
+        <CommandPalette />
+      </>,
+      { wrapper: makeRoutedWrapper('/charging?from=2026-01-01&to=2026-01-31') },
+    )
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const pinned = await screen.findByRole('group', { name: 'Pinned' })
+    fireEvent.click(pinned.querySelector<HTMLElement>('[data-palette-row]')!)
+
+    await waitFor(() => {
+      expect(screen.getByTestId('location').textContent).toBe('/settings')
+    })
+  })
+})
+
+// ─── aria-modal containment: focus trap + inert background ─────────────────
+
+describe('CommandPalette modal containment', () => {
+  function renderWithBackground() {
+    const Wrapper = makeWrapper(makeVehicles())
+    return render(
+      <>
+        <main data-testid="app-content">
+          <button type="button" data-testid="background-button">
+            Background
+          </button>
+        </main>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+  }
+
+  // Reuse the shared primitive so the test asserts the SAME tab order the
+  // trap enforces (selector lists are not document-ordered in jsdom).
+  function panelFocusables() {
+    const panel = document.querySelector('[data-command-palette-panel]') as HTMLElement
+    return getShellFocusableElements(panel)
+  }
+
+  it('declares an aria-modal dialog', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveAccessibleName()
+  })
+
+  it('inerts and aria-hides background content while open', async () => {
+    renderWithBackground()
+    const content = screen.getByTestId('app-content')
+    expect(content.hasAttribute('inert')).toBe(false)
+
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    await waitFor(() => {
+      expect(content.hasAttribute('inert')).toBe(true)
+    })
+    expect(content).toHaveAttribute('aria-hidden', 'true')
+  })
+
+  it('restores the background exactly when the palette closes', async () => {
+    renderWithBackground()
+    const content = screen.getByTestId('app-content')
+
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+    await waitFor(() => expect(content.hasAttribute('inert')).toBe(true))
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+
+    await waitFor(() => {
+      expect(content.hasAttribute('inert')).toBe(false)
+    })
+    expect(content.getAttribute('aria-hidden')).toBeNull()
+  })
+
+  it('leaves its own backdrop interactive so click-outside still closes', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const roots = Array.from(
+      document.querySelectorAll('[data-role="command-palette"]'),
+    )
+    expect(roots.length).toBeGreaterThan(0)
+    for (const root of roots) {
+      expect(root.hasAttribute('inert')).toBe(false)
+    }
+
+    const backdrop = roots.find((el) => !el.hasAttribute('data-command-palette-panel'))
+    fireEvent.click(backdrop as HTMLElement)
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/Search pages, commands/i)).toBeNull()
+    })
+  })
+
+  it('keeps listbox options out of the tab order (aria-activedescendant pattern)', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-palette-row]').length).toBeGreaterThan(0)
+    })
+    for (const row of Array.from(
+      document.querySelectorAll<HTMLElement>('[data-palette-row]'),
+    )) {
+      expect(row.tabIndex).toBe(-1)
+    }
+    expect(panelFocusables().some((el) => el.hasAttribute('data-palette-row'))).toBe(false)
+  })
+
+  it('wraps Tab from the last focusable back to the first', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const focusables = panelFocusables()
+    expect(focusables.length).toBeGreaterThan(1)
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+
+    act(() => last.focus())
+    fireEvent.keyDown(document, { key: 'Tab' })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(first)
+    })
+  })
+
+  it('wraps Shift+Tab from the first focusable back to the last', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const focusables = panelFocusables()
+    const first = focusables[0]
+    const last = focusables[focusables.length - 1]
+
+    act(() => first.focus())
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    await waitFor(() => {
+      expect(document.activeElement).toBe(last)
+    })
+  })
+
+  it('pulls focus back inside when Tab is pressed from background content', async () => {
+    renderWithBackground()
+    const backgroundButton = screen.getByTestId('background-button')
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    act(() => backgroundButton.focus())
+    fireEvent.keyDown(document, { key: 'Tab' })
+    await waitFor(() => {
+      const panel = document.querySelector('[data-command-palette-panel]') as HTMLElement
+      expect(panel.contains(document.activeElement)).toBe(true)
+    })
+  })
+
+  it('still returns focus to the trigger after the trap tears down', async () => {
+    renderWithBackground()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    await waitFor(() => expect(document.activeElement).toBe(input))
+
+    // Move focus around inside the trap first — return must still be exact.
+    fireEvent.keyDown(document, { key: 'Tab', shiftKey: true })
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+
+    await waitFor(() => {
+      expect(document.activeElement).toBe(trigger)
+    })
+  })
+
+  it('keeps arrow-key listbox navigation working inside the trap', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    const input = await screen.findByPlaceholderText(/Search pages, commands/i)
+    await waitFor(() => expect(document.activeElement).toBe(input))
+
+    fireEvent.change(input, { target: { value: 'drives' } })
+    await waitFor(() => {
+      expect(document.querySelectorAll('[data-palette-row]').length).toBeGreaterThan(1)
+    })
+
+    fireEvent.keyDown(input, { key: 'ArrowDown' })
+    await waitFor(() => {
+      expect(input).toHaveAttribute('aria-activedescendant', 'command-palette-option-1')
+    })
+    // Focus never leaves the input — the option is referenced, not focused.
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('keeps the panel viewport-centered while trapped', async () => {
+    renderWithBackground()
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages, commands/i)
+
+    const positioner = document.querySelector('[data-command-palette-positioner]')
+    expect(positioner).toHaveClass('fixed', 'inset-0', 'justify-center')
+    expect(positioner?.getAttribute('class')).not.toContain('--shell-sidebar-width')
+  })
+})
+
+// ─── Delayed input focus: quick-close race ─────────────────────────────────
+//
+// The input is focused on a timer so it does not fight the panel's entrance
+// animation. A user who closes the palette inside that window must NOT have
+// focus yanked back off their trigger when the stale timer fires — and
+// `AnimatePresence` keeps the input mounted through the exit transition, so
+// the node really is still focusable at that moment.
+//
+// Only `setTimeout`/`clearTimeout` are faked: framer-motion drives its
+// animations from rAF, and faking that deadlocks the exit transition.
+
+describe('CommandPalette delayed input focus', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function renderWithTrigger() {
+    const Wrapper = makeWrapper(makeVehicles())
+    return render(
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <CommandPalette />
+      </>,
+      { wrapper: Wrapper },
+    )
+  }
+
+  function paletteInput(): HTMLElement | null {
+    return document.querySelector<HTMLElement>('input[placeholder*="Search pages"]')
+  }
+
+  function advance(ms: number) {
+    act(() => {
+      vi.advanceTimersByTime(ms)
+    })
+  }
+
+  it('focuses the input only after the documented delay on a normal open', () => {
+    renderWithTrigger()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    const input = paletteInput()
+    expect(input).not.toBeNull()
+    // Still on the trigger — the focus hand-off is deliberately deferred.
+    expect(document.activeElement).toBe(trigger)
+
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS - 1)
+    expect(document.activeElement).toBe(trigger)
+
+    advance(1)
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('Escape before the delay restores the trigger and the stale timer cannot steal it back', () => {
+    renderWithTrigger()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    advance(10)
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    expect(document.activeElement).toBe(trigger)
+
+    // Fire well past the original deadline; the exit animation may still have
+    // the input mounted, but nothing may move focus.
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS * 10)
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('backdrop click before the delay restores the trigger and cancels the pending focus', () => {
+    renderWithTrigger()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    advance(5)
+
+    const backdrop = Array.from(
+      document.querySelectorAll('[data-role="command-palette"]'),
+    ).find((el) => !el.hasAttribute('data-command-palette-panel')) as HTMLElement
+    expect(backdrop).toBeTruthy()
+    act(() => {
+      fireEvent.click(backdrop)
+    })
+    expect(document.activeElement).toBe(trigger)
+
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS * 10)
+    expect(document.activeElement).toBe(trigger)
+  })
+
+  it('unmounting before the delay cancels the timer without throwing', () => {
+    const view = renderWithTrigger()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    const input = paletteInput()
+    expect(input).not.toBeNull()
+
+    act(() => view.unmount())
+
+    expect(() => advance(PALETTE_INPUT_FOCUS_DELAY_MS * 10)).not.toThrow()
+    // The detached input never receives focus.
+    expect(document.activeElement).not.toBe(input)
+  })
+
+  it('never focuses a detached input even if a timer survives', () => {
+    renderWithTrigger()
+    openPaletteViaEvent()
+    const input = paletteInput() as HTMLElement
+    expect(input.isConnected).toBe(true)
+
+    // Simulate the panel being torn out mid-animation.
+    act(() => {
+      document.querySelector('[data-command-palette-panel]')?.remove()
+    })
+    expect(input.isConnected).toBe(false)
+
+    expect(() => advance(PALETTE_INPUT_FOCUS_DELAY_MS * 4)).not.toThrow()
+    expect(document.activeElement).not.toBe(input)
+  })
+
+  it('re-opening after a cancelled open still focuses exactly once', () => {
+    renderWithTrigger()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    advance(10)
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    expect(document.activeElement).toBe(trigger)
+
+    openPaletteViaEvent()
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS)
+    const input = paletteInput()
+    expect(input).not.toBeNull()
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('a rapid open→close→open sequence leaves no orphaned focus timer', () => {
+    renderWithTrigger()
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    advance(5)
+    openPaletteViaEvent() // toggle closed
+    advance(5)
+    openPaletteViaEvent() // toggle open again
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS)
+
+    const input = paletteInput()
+    expect(document.activeElement).toBe(input)
+
+    // Close once more and confirm nothing pending reclaims focus.
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    expect(document.activeElement).toBe(trigger)
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS * 10)
+    expect(document.activeElement).toBe(trigger)
+  })
+})
+
+// ─── Parent re-renders must not restart the focus lifecycle ────────────────
+//
+// Production wires `<CommandPaletteHost onOpen={() => setSidebarOpen(false)} />`
+// from Layout, so `onOpen` gets a NEW identity on every Layout render (route
+// changes, SSE alerts, live telemetry, notification counts). If the focus
+// effect depended on that identity it would tear down and re-run while the
+// palette was still open: the 50 ms timer would be cancelled and rescheduled
+// on every render (deferring focus indefinitely), `onOpen` would re-fire, and
+// the transient state reset would wipe the user's query.
+
+describe('CommandPalette focus lifecycle vs parent re-renders', () => {
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  function paletteInput(): HTMLInputElement | null {
+    return document.querySelector<HTMLInputElement>('input[placeholder*="Search pages"]')
+  }
+
+  function advance(ms: number) {
+    act(() => {
+      vi.advanceTimersByTime(ms)
+    })
+  }
+
+  it('honours the ORIGINAL focus deadline despite re-renders with new onOpen identities', () => {
+    const onOpenSpy = vi.fn()
+    const Wrapper = makeWrapper(makeVehicles())
+    const { rerender } = render(
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        {/* fresh inline identity, exactly like Layout */}
+        <CommandPalette onOpen={() => onOpenSpy()} />
+      </>,
+      { wrapper: Wrapper },
+    )
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    expect(onOpenSpy).toHaveBeenCalledTimes(1)
+    expect(document.activeElement).toBe(trigger)
+
+    // Parent churns repeatedly INSIDE the focus window, each time handing the
+    // palette a brand-new callback identity.
+    advance(20)
+    for (let i = 0; i < 5; i += 1) {
+      act(() => {
+        rerender(
+          <>
+            <button type="button" data-testid="palette-trigger">
+              Search
+            </button>
+            <CommandPalette onOpen={() => onOpenSpy()} />
+          </>,
+        )
+      })
+      advance(5)
+    }
+
+    // 20 + 5×5 = 45 ms of the original 50 ms deadline has elapsed.
+    expect(document.activeElement).toBe(trigger)
+    advance(5)
+    // Focus lands on the ORIGINAL deadline — the timer was never rescheduled.
+    expect(document.activeElement).toBe(paletteInput())
+  })
+
+  it('fires onOpen exactly once per false→true transition, not per render', () => {
+    const onOpenSpy = vi.fn()
+    const Wrapper = makeWrapper(makeVehicles())
+    const renderTree = () => (
+      <CommandPalette onOpen={() => onOpenSpy()} />
+    )
+    const { rerender } = render(renderTree(), { wrapper: Wrapper })
+
+    expect(onOpenSpy).not.toHaveBeenCalled()
+
+    openPaletteViaEvent()
+    expect(onOpenSpy).toHaveBeenCalledTimes(1)
+
+    for (let i = 0; i < 4; i += 1) {
+      act(() => rerender(renderTree()))
+    }
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS * 2)
+    expect(onOpenSpy).toHaveBeenCalledTimes(1)
+
+    // Close and re-open → exactly one more invocation.
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    act(() => rerender(renderTree()))
+    openPaletteViaEvent()
+    expect(onOpenSpy).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not reset the typed query when the parent re-renders while open', () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    const renderTree = () => <CommandPalette onOpen={() => {}} />
+    const { rerender } = render(renderTree(), { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS)
+    const input = paletteInput() as HTMLInputElement
+    act(() => {
+      fireEvent.change(input, { target: { value: 'battery' } })
+    })
+    expect(paletteInput()?.value).toBe('battery')
+
+    for (let i = 0; i < 3; i += 1) {
+      act(() => rerender(renderTree()))
+    }
+
+    // The effect must not have re-run and cleared the transient state.
+    expect(paletteInput()?.value).toBe('battery')
+  })
+
+  it('keeps focus on the input across re-renders once it has been granted', () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    const renderTree = () => <CommandPalette onOpen={() => {}} />
+    const { rerender } = render(renderTree(), { wrapper: Wrapper })
+
+    openPaletteViaEvent()
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS)
+    const input = paletteInput()
+    expect(document.activeElement).toBe(input)
+
+    for (let i = 0; i < 3; i += 1) {
+      act(() => rerender(renderTree()))
+      advance(PALETTE_INPUT_FOCUS_DELAY_MS)
+    }
+    expect(document.activeElement).toBe(paletteInput())
+  })
+
+  it('still cancels the pending focus when a re-render is followed by Escape', () => {
+    const Wrapper = makeWrapper(makeVehicles())
+    const renderTree = () => (
+      <>
+        <button type="button" data-testid="palette-trigger">
+          Search
+        </button>
+        <CommandPalette onOpen={() => {}} />
+      </>
+    )
+    const { rerender } = render(renderTree(), { wrapper: Wrapper })
+    const trigger = screen.getByTestId('palette-trigger')
+    act(() => trigger.focus())
+
+    openPaletteViaEvent()
+    advance(10)
+    act(() => rerender(renderTree()))
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+
+    expect(document.activeElement).toBe(trigger)
+    advance(PALETTE_INPUT_FOCUS_DELAY_MS * 10)
+    expect(document.activeElement).toBe(trigger)
+  })
+})
+
+// ─── StrictMode / concurrent lifecycle ─────────────────────────────────────
+//
+// `<StrictMode>` deliberately replays effects on mount (setup → cleanup →
+// setup). `<CommandPaletteHost>` mounts the palette with `initialOpen`, so the
+// opening branch of the focus effect runs TWICE for a single user-visible
+// open. Rescheduling the focus timer on that replay is harmless; announcing
+// the open twice to the parent is not — production wires `onOpen` to
+// `setSidebarOpen(false)` and other callers may count invocations.
+
+describe('CommandPalette StrictMode lifecycle', () => {
+  function StrictWrapper(vehicles: Vehicle[]) {
+    const Inner = makeWrapper(vehicles)
+    return function Wrapper({ children }: { children: ReactNode }) {
+      return (
+        <StrictMode>
+          <Inner>{children}</Inner>
+        </StrictMode>
+      )
+    }
+  }
+
+  it('announces a lazily hosted initialOpen exactly once under StrictMode', async () => {
+    const onOpen = vi.fn()
+    const Wrapper = StrictWrapper(makeVehicles())
+    render(<CommandPaletteHost onOpen={onOpen} />, { wrapper: Wrapper })
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('toggle-command-palette'))
+    })
+
+    // The host resolves the palette through `React.lazy`.
+    const input = await screen.findByPlaceholderText(/Search pages/i, undefined, {
+      timeout: 10_000,
+    })
+    expect(input).toBeInTheDocument()
+
+    // One open epoch → one notification, despite the StrictMode effect replay.
+    expect(onOpen).toHaveBeenCalledTimes(1)
+
+    // The focus hand-off still completes even though the timer was rescheduled.
+    await waitFor(() => {
+      expect(document.activeElement).toBe(input)
+    })
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('increments once per close→reopen cycle under StrictMode', async () => {
+    const onOpen = vi.fn()
+    const Wrapper = StrictWrapper(makeVehicles())
+    render(<CommandPaletteHost onOpen={onOpen} />, { wrapper: Wrapper })
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('toggle-command-palette'))
+    })
+    await screen.findByPlaceholderText(/Search pages/i, undefined, { timeout: 10_000 })
+    expect(onOpen).toHaveBeenCalledTimes(1)
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/Search pages/i)).toBeNull()
+    })
+    // A committed close must not itself notify.
+    expect(onOpen).toHaveBeenCalledTimes(1)
+
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages/i)
+    expect(onOpen).toHaveBeenCalledTimes(2)
+
+    act(() => {
+      fireEvent.keyDown(window, { key: 'Escape' })
+    })
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/Search pages/i)).toBeNull()
+    })
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages/i)
+    expect(onOpen).toHaveBeenCalledTimes(3)
+  })
+
+  it('announces a directly mounted initialOpen exactly once under StrictMode', async () => {
+    const onOpen = vi.fn()
+    const Wrapper = StrictWrapper(makeVehicles())
+    render(<CommandPalette initialOpen onOpen={onOpen} />, { wrapper: Wrapper })
+
+    await screen.findByPlaceholderText(/Search pages/i)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('does not notify on mount when the palette starts closed under StrictMode', async () => {
+    const onOpen = vi.fn()
+    const Wrapper = StrictWrapper(makeVehicles())
+    render(<CommandPalette onOpen={onOpen} />, { wrapper: Wrapper })
+
+    expect(onOpen).not.toHaveBeenCalled()
+
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages/i)
+    expect(onOpen).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the query and focus behaviour intact under StrictMode', async () => {
+    const Wrapper = StrictWrapper(makeVehicles())
+    render(<CommandPalette initialOpen onOpen={() => {}} />, { wrapper: Wrapper })
+
+    const input = await screen.findByPlaceholderText(/Search pages/i)
+    await waitFor(() => expect(document.activeElement).toBe(input))
+
+    fireEvent.change(input, { target: { value: 'battery' } })
+    await waitFor(() => {
+      expect((screen.getByPlaceholderText(/Search pages/i) as HTMLInputElement).value).toBe(
+        'battery',
+      )
+    })
+  })
+})
+
+// ─── Commit-phase latest-callback selection ────────────────────────────────
+
+describe('CommandPalette latest-callback commit semantics', () => {
+  it('invokes the callback from the COMMITTED render, not an earlier one', async () => {
+    const first = vi.fn()
+    const second = vi.fn()
+    const Wrapper = makeWrapper(makeVehicles())
+    const { rerender } = render(<CommandPalette onOpen={first} />, { wrapper: Wrapper })
+
+    // Commit a new callback while closed, then open.
+    act(() => rerender(<CommandPalette onOpen={second} />))
+    openPaletteViaEvent()
+    await screen.findByPlaceholderText(/Search pages/i)
+
+    expect(first).not.toHaveBeenCalled()
+    expect(second).toHaveBeenCalledTimes(1)
+  })
+
+  it('tolerates the callback being removed between commits', async () => {
+    const onOpen = vi.fn()
+    const Wrapper = makeWrapper(makeVehicles())
+    const { rerender } = render(<CommandPalette onOpen={onOpen} />, { wrapper: Wrapper })
+
+    act(() => rerender(<CommandPalette />))
+    expect(() => openPaletteViaEvent()).not.toThrow()
+    await screen.findByPlaceholderText(/Search pages/i)
+    expect(onOpen).not.toHaveBeenCalled()
+  })
+
 })

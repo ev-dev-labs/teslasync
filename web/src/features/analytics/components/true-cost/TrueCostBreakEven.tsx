@@ -71,7 +71,7 @@ export function TrueCostBreakEven({
               </div>
             </div>
           ) : (
-            <EmptyState message={t('tco.breakEven.empty', 'Positive recorded spend, distance, gas baseline, price, and MPG are required.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.breakEven.empty', 'Positive recorded spend, distance, gas baseline, price, and MPG are required.')} />
           )}
         </TrueCostSectionBody>
       </GlassPanel>

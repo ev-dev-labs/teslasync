@@ -11,7 +11,9 @@
 export {
   notificationKeys as alertKeys,
   useAlerts,
+  usePriorityAlerts,
   useMarkAlertRead,
+  useBulkSetAlertsRead,
   useAlertRules,
   useAlertMetrics,
   usePreviewComputedMetric,
@@ -30,7 +32,9 @@ export {
 } from './useNotifications';
 
 export type {
+  AlertListScope,
   Alert,
+  BulkSetAlertsReadInput,
   AlertDetail,
   AlertEvent,
   AlertRule,
@@ -39,12 +43,14 @@ export type {
   AlertRuleSnoozeRequest,
   AlertRuleTriggerMode,
   AlertRuleUpdate,
+  PriorityAlertsSnapshot,
   AlertTestRequest,
   AlertTestTarget,
   ComputedMetricPreview,
   ComputedMetricSummary,
   // Alert acknowledgment and audit timeline.
   AcknowledgeAlertInput,
+  AcknowledgeAlertOptions,
   CommentAlertInput,
 } from './useNotifications';
 

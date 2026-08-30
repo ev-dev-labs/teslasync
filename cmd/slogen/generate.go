@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -44,6 +45,7 @@ func runGenerateRecording(args []string) error {
 	fs := flag.NewFlagSet("generate recording", flag.ContinueOnError)
 	catalog := fs.String("catalog", "slo/catalog.yaml", "path to SLO catalog YAML")
 	out := fs.String("out", defaultRecordingOut, "output path for recording rules")
+	check := fs.Bool("check", false, "exit non-zero if the committed file would change; never writes")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -53,8 +55,12 @@ func runGenerateRecording(args []string) error {
 		return err
 	}
 	rendered := renderRecordingRules(cat)
-	if err := writeFileIdempotent(*out, rendered); err != nil {
+	if err := writeFileIdempotent(*out, rendered, *check); err != nil {
 		return err
+	}
+	if *check {
+		fmt.Fprintf(os.Stdout, "ok %s is current (%d SLOs, %d rules)\n", *out, len(cat.SLOs), len(cat.SLOs)*len(recordingWindows))
+		return nil
 	}
 	fmt.Fprintf(os.Stdout, "wrote %s (%d SLOs, %d rules)\n", *out, len(cat.SLOs), len(cat.SLOs)*len(recordingWindows))
 	return nil
@@ -110,7 +116,20 @@ func renderRecordingRules(cat *Catalog) string {
 func ratioExpr(s SLO, window string) string {
 	good := rewriteWindow(s.SLI.GoodEvents, window)
 	valid := rewriteWindow(s.SLI.ValidEvents, window)
-	return fmt.Sprintf("(%s) / clamp_min((%s), 1)", good, valid)
+	// Preserve the real good/valid ratio at any non-zero traffic rate. A
+	// one-request-per-second denominator floor turns healthy low-volume APIs
+	// into false outages. Windows with no valid events are explicitly healthy
+	// (1) because no reliability budget was consumed.
+	//
+	// The numerator is coalesced to `0 * valid` so a numerator that selects
+	// NOTHING (e.g. a latency SLI pinned to an `le=` histogram bucket that
+	// does not exist) cannot fall through to the vector(1) tail and report a
+	// permanent, fabricated 100 %. With traffic present such an SLI now reads
+	// 0 and fails loudly. Mirrors internal/slo.nonZeroTrafficRatioExpr.
+	return fmt.Sprintf(
+		"(((((%s) or on() (0 * (%s)))) / (%s)) and on() ((%s) > 0)) or on() vector(1)",
+		good, valid, valid, valid,
+	)
 }
 
 // rewriteWindow swaps the literal `[5m]` and the subquery `[5m:30s]` for
@@ -152,16 +171,31 @@ func quoteScalar(s string) string {
 	return b.String()
 }
 
+// errStaleArtifact reports that a committed generated file no longer matches
+// what the generator produces. Returned only in check mode.
+var errStaleArtifact = errors.New("generated artifact is stale")
+
 // writeFileIdempotent writes data only if it differs from disk. The
 // behaviour is required by the prompt's idempotency check: a second
 // invocation must leave the file's bytes (and mtime, since unchanged
 // writes are skipped) unchanged.
-func writeFileIdempotent(path, data string) error {
+//
+// CLEAN-05: when check is true the function never touches the filesystem. It
+// compares instead, so CI can prove the committed artefacts are current
+// without mutating the worktree (`scripts/check-generated-freshness.mjs`).
+func writeFileIdempotent(path, data string, check bool) error {
+	existing, readErr := os.ReadFile(path)
+	if readErr == nil && string(existing) == data {
+		return nil
+	}
+	if check {
+		if readErr != nil {
+			return fmt.Errorf("%w: %s is missing or unreadable: %v", errStaleArtifact, path, readErr)
+		}
+		return fmt.Errorf("%w: %s — regenerate with `go run ./cmd/slogen generate ...` and commit the diff", errStaleArtifact, path)
+	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
-	}
-	if existing, err := os.ReadFile(path); err == nil && string(existing) == data {
-		return nil
 	}
 	return os.WriteFile(path, []byte(data), 0o644)
 }

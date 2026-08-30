@@ -47,6 +47,14 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
     })),
     [speedA, speedB, unitPrefs.speed],
   );
+  const seriesA = useMemo(() => speedA.map((point) => ({
+    progress: point.progress,
+    a: convertSpeedFromSI(point.value, unitPrefs.speed),
+  })), [speedA, unitPrefs.speed]);
+  const seriesB = useMemo(() => speedB.map((point) => ({
+    progress: point.progress,
+    b: convertSpeedFromSI(point.value, unitPrefs.speed),
+  })), [speedB, unitPrefs.speed]);
   const driveAName = t('driveCompare.chart.driveASpeed', 'Drive A speed');
   const driveBName = t('driveCompare.chart.driveBSpeed', 'Drive B speed');
 
@@ -91,6 +99,7 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
                 <XAxis
                   type="number"
                   dataKey="progress"
+                  allowDuplicatedCategory={false}
                   domain={[0, 100]}
                   tick={axisTick}
                   tickLine={false}
@@ -124,7 +133,8 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
                   stroke={CHART_COLORS[0]}
                   strokeWidth={2.5}
                   dot={false}
-                  connectNulls
+                  data={seriesA}
+                  connectNulls={false}
                   hide={hiddenSeries?.isHidden('a') ?? false}
                 />
                 <Line
@@ -134,7 +144,8 @@ export function SpeedComparisonChart({ profileA, profileB, state }: SpeedCompari
                   stroke={CHART_COLORS[3]}
                   strokeWidth={2.5}
                   dot={false}
-                  connectNulls
+                  data={seriesB}
+                  connectNulls={false}
                   hide={hiddenSeries?.isHidden('b') ?? false}
                 />
               </LineChart>

@@ -42,16 +42,20 @@ vi.mock('./ThemeProvider', async () => {
   return { ...actual, useTheme: () => themeHolder.current }
 })
 
-vi.mock('@/components/feedback/Toast', () => ({
-  useToast: () => ({
+vi.mock('@/components/feedback/Toast', () => {
+  const toast = {
     info: toastInfo,
     success: vi.fn(),
     error: vi.fn(),
     warning: vi.fn(),
     toast: vi.fn(),
     dismiss: vi.fn(),
-  }),
-}))
+  };
+  return {
+    useToast: () => toast,
+    useOptionalToast: () => toast,
+  };
+})
 
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')

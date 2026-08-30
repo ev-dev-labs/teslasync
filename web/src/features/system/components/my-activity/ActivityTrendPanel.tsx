@@ -7,7 +7,6 @@ import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   BarChart,
   Bar,
@@ -18,6 +17,7 @@ import {
   ChartTooltip,
   chartGrid,
   axisTickSm,
+  EmbeddedChart,
 } from '@/components/charts';
 import { Icons } from '@/lib/icons';
 import { chartTokens } from '@/lib/tokens';
@@ -82,48 +82,45 @@ export function ActivityTrendPanel({
           <Icons.analytics className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('activity.myActivity.trend.title', 'Activity over time')}
         </PanelTitle>
-        {isLoading ? (
-          <Skeleton height={260} />
-        ) : isError ? (
-          <QueryError error={error ?? FALLBACK_ERROR} onRetry={onRetry} />
-        ) : isEmpty || rows.length === 0 ? (
-          // no-action: the daily trend's window is controlled by the RangePicker in the page header; a different range repopulates it.
-          <EmptyState
-            icon={<Icons.analytics className="h-8 w-8" />}
-            message={t('activity.myActivity.trend.empty', 'No activity recorded in this window.')}
-          />
-        ) : (
-          <div
-            className="h-56 sm:h-64 xl:h-72"
-            role="img"
-            aria-label={t(
-              'activity.myActivity.trend.aria',
-              '{{total}} actions across {{days}} days',
-              { total, days },
-            )}
-          >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={rows}>
-                {chartGrid}
-                <XAxis
-                  dataKey="label"
-                  tick={axisTickSm}
-                  interval="preserveStartEnd"
-                  minTickGap={24}
-                />
-                <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
-                <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
-                <Bar
-                  dataKey="count"
-                  name={t('activity.myActivity.trend.series', 'Actions')}
-                  fill={chartTokens.series[5]}
-                  fillOpacity={0.85}
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
+        <EmbeddedChart
+          title={t('activity.myActivity.trend.title', 'Activity over time')}
+          ariaLabel={t(
+            'activity.myActivity.trend.aria',
+            '{{total}} actions across {{days}} days',
+            { total, days },
+          )}
+          loading={isLoading}
+          error={isError ? (error ?? FALLBACK_ERROR) : undefined}
+          onRetry={onRetry}
+          empty={!isLoading && !isError && (isEmpty || rows.length === 0)}
+          emptyMessage={t('activity.myActivity.trend.empty', 'No activity recorded in this window.')}
+          data={rows}
+          dataColumns={[
+            { key: 'label', label: t('activity.myActivity.trend.colDay', 'Day') },
+            { key: 'count', label: t('activity.myActivity.trend.series', 'Actions') },
+          ]}
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={rows}>
+              {chartGrid}
+              <XAxis
+                dataKey="label"
+                tick={axisTickSm}
+                interval="preserveStartEnd"
+                minTickGap={24}
+              />
+              <YAxis tick={axisTickSm} allowDecimals={false} width={32} />
+              <Tooltip content={<ChartTooltip />} cursor={TOOLTIP_CURSOR} />
+              <Bar
+                dataKey="count"
+                name={t('activity.myActivity.trend.series', 'Actions')}
+                fill={chartTokens.series[5]}
+                fillOpacity={0.85}
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        </EmbeddedChart>
       </div>
     </GlassPanel>
   );

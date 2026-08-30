@@ -7,7 +7,7 @@
  * loading / error / empty state and reads only from the settings hooks.
  */
 
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Activity, AlertTriangle, Database, Globe, Link as LinkIcon, Pause, Play, Shield,
@@ -66,6 +66,31 @@ export default function FleetAPIPage() {
   const pollingQuery = usePollingConfig();
   const captureQuery = useCaptureStats();
   const versionQuery = useVersionInfo();
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'application-settings',
+        label: t('dataSources.labels.applicationSettings', 'Application settings'),
+        query: settingsQuery,
+      },
+      {
+        id: 'polling-configuration',
+        label: t('dataSources.labels.pollingConfiguration', 'Polling configuration'),
+        query: pollingQuery,
+      },
+      {
+        id: 'capture-statistics',
+        label: t('dataSources.labels.captureStatistics', 'Capture statistics'),
+        query: captureQuery,
+      },
+      {
+        id: 'runtime-version',
+        label: t('dataSources.labels.runtimeVersion', 'Runtime version'),
+        query: versionQuery,
+      },
+    ],
+    [captureQuery, pollingQuery, settingsQuery, t, versionQuery],
+  );
 
   const suspendMut = useToggleAPISuspend();
   const pollingConfigMut = useUpdatePollingConfig();
@@ -170,6 +195,7 @@ export default function FleetAPIPage() {
       title={t('fleetApi.pageTitle', 'Fleet API Settings')}
       subtitle={t('fleetApi.subtitle', 'Control Tesla Fleet API polling, endpoint toggles, and telemetry capture')}
       query={[settingsQuery, pollingQuery, captureQuery, versionQuery]}
+      dataSources={dataSources}
     >
       {/* 1 — KPI band ─────────────────────────────────────────────── */}
       <FadeIn>
@@ -422,9 +448,18 @@ export default function FleetAPIPage() {
           ) : versionQuery.isError ? (
             <QueryError error={versionQuery.error} onRetry={() => versionQuery.refetch()} />
           ) : !hasConfiguredEndpoints ? (
-            <EmptyState /* no-action: transient empty state — surfaces when the version payload omits endpoints */
+            // no-action: endpoint URLs are deployment-managed and appear after configuration plus restart.
+            <EmptyState
               icon={<Activity className="h-8 w-8 opacity-40" />}
-              message={t('common.noData', 'No data available')}
+              title={t('fleetApi.configured.emptyTitle', 'Endpoint metadata unavailable')}
+              message={t(
+                'fleetApi.configured.emptyMessage',
+                'This runtime did not publish any configured endpoint URLs.',
+              )}
+              description={t(
+                'fleetApi.configured.emptyDescription',
+                'Configure the public and Tesla Fleet API URLs in deployment settings; metadata appears after the service restarts.',
+              )}
               className="py-8"
             />
           ) : (

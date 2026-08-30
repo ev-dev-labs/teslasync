@@ -22,7 +22,8 @@
  *      `/api/v1` prefix) with an AbortSignal.
  *   2. Insecure latest → the contextual warning banner appears and the
  *      summary flips to "unsecure".
- *   3. A fleet-list load failure surfaces the top-of-page danger banner.
+ *   3. A fleet-list load failure is named in the source ledger while the
+ *      security panels remain visible.
  *   4. No selected vehicle → the latest query is DISABLED (request never
  *      fires) and the panels honestly show "no data".
  *   5+6. The client-side range filter narrows / widens the history handed to
@@ -40,6 +41,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import type { SecurityEvent } from '@/types/admin';
+import type { DataSourceDescriptor } from '@/components/feedback';
 
 /* ------------------------------------------------------------------ */
 /*  Props observed by the stubbed panels (serialized into the DOM).    */
@@ -90,26 +92,34 @@ vi.mock('react-i18next', () => ({
 }));
 
 /* ── PageContainer: faithful, lightweight shell (title/subtitle/actions). */
-vi.mock('@/components/layout', () => ({
-  PageContainer: ({
-    title,
-    subtitle,
-    actions,
-    children,
-  }: {
-    title: string;
-    subtitle?: string;
-    actions?: ReactNode;
-    children: ReactNode;
-  }) => (
-    <div>
-      <h1>{title}</h1>
-      {subtitle ? <p>{subtitle}</p> : null}
-      <div data-testid="page-actions">{actions}</div>
-      <div>{children}</div>
-    </div>
-  ),
-}));
+vi.mock('@/components/layout', async () => {
+  const { DataSourceNotice } = await vi.importActual<
+    typeof import('@/components/feedback/DataSourceNotice')
+  >('@/components/feedback/DataSourceNotice');
+  return {
+    PageContainer: ({
+      title,
+      subtitle,
+      actions,
+      dataSources,
+      children,
+    }: {
+      title: string;
+      subtitle?: string;
+      actions?: ReactNode;
+      dataSources?: readonly DataSourceDescriptor[];
+      children: ReactNode;
+    }) => (
+      <div>
+        <h1>{title}</h1>
+        {subtitle ? <p>{subtitle}</p> : null}
+        <div data-testid="page-actions">{actions}</div>
+        <DataSourceNotice sources={dataSources ?? []} />
+        <div>{children}</div>
+      </div>
+    ),
+  };
+});
 
 /* ── FadeIn: passthrough (strips the framer-motion dependency). ────── */
 vi.mock('@/components/motion', () => ({
@@ -287,8 +297,20 @@ function setRange(start: string, end: string) {
   } as unknown as ReturnType<typeof useRangeState>);
 }
 
-function setVehiclesError(error: unknown) {
-  mockedUseVehicles.mockReturnValue({ error } as unknown as ReturnType<typeof useVehicles>);
+function setVehiclesError(error: unknown, data: unknown = error ? undefined : []) {
+  const refetch = vi.fn();
+  mockedUseVehicles.mockReturnValue({
+    data,
+    error,
+    isError: error != null,
+    isSuccess: error == null,
+    isLoading: false,
+    isPending: false,
+    isFetching: false,
+    fetchStatus: 'idle',
+    refetch,
+  } as unknown as ReturnType<typeof useVehicles>);
+  return refetch;
 }
 
 function setHistory(opts: {
@@ -419,14 +441,27 @@ describe('SecurityAccessPage — insecure posture', () => {
 });
 
 describe('SecurityAccessPage — fleet-list failure', () => {
-  it('surfaces the top-of-page danger banner when useVehicles errors', async () => {
-    setVehiclesError(new Error('network down'));
+  it('names the failed source, preserves panels, and retries only the unavailable query', async () => {
+    const refetch = setVehiclesError(new Error('network down'));
 
     renderPage();
 
-    // The banner interpolates the fallback label + the normalised error message.
-    expect(await screen.findByText(/Failed to load data:\s*network down/)).toBeInTheDocument();
-    // It does not swallow the rest of the page.
+    expect(await screen.findByText('Partial data')).toBeInTheDocument();
+    expect(screen.getByText('Vehicle registry')).toBeInTheDocument();
+    expect(screen.getByText('Failed')).toBeInTheDocument();
+    expect(screen.getByTestId('sum-row')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailable sources' }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps cached fleet context visible when its background refresh fails', async () => {
+    setVehiclesError(new Error('refresh failed'), []);
+
+    renderPage();
+
+    expect(await screen.findByText('Data may be stale')).toBeInTheDocument();
+    expect(screen.getByText('Cached · refresh failed')).toBeInTheDocument();
     expect(screen.getByTestId('sum-row')).toBeInTheDocument();
   });
 });

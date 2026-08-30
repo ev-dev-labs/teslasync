@@ -1,21 +1,38 @@
-import { useSyncExternalStore } from 'react';
+import {
+  useEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { ConnectionSegment } from './status-bar/ConnectionSegment';
 import { LiveTelemetrySegment } from './status-bar/LiveTelemetrySegment';
-import { ActiveVehicleSegment } from './status-bar/ActiveVehicleSegment';
+import { OperationalModeSegment } from './status-bar/OperationalModeSegment';
+import { AlertsSegment } from './status-bar/AlertsSegment';
 import { BackgroundWorkSegment } from './status-bar/BackgroundWorkSegment';
-import { VersionSegment } from './status-bar/VersionSegment';
+import { RecentPagesSegment } from './status-bar/RecentPagesSegment';
 import { HelpSegment } from './status-bar/HelpSegment';
+import { MoreSegment } from './status-bar/MoreSegment';
+import { PresentationModeSegment } from './status-bar/PresentationModeSegment';
+import { AboutBuildModal } from './status-bar/AboutBuildModal';
+import {
+  StatusBarProvider,
+  useStatusBarAnnouncer,
+} from './status-bar/StatusBarContext';
+import {
+  useBackgroundJobs,
+  type UseBackgroundJobsResult,
+} from '@/hooks/useBackgroundJobs';
 import { useMediaQuery } from '@/hooks/useMediaQuery';
 import { cn } from '@/lib/cn';
 
 /**
  * StatusBar.
  *
- * Always-on 28px footer pinned to the bottom of the viewport with five
- * consolidated status segments:
+ * Always-on 28px footer pinned to the bottom of the viewport with prioritized
+ * status segments:
  *
- *   API · Live telemetry · Active vehicle · Background jobs · Version
+ *   API · Live telemetry · operational mode · alerts · recent pages · background jobs · help/about
  *
  * Each segment is its own component (in `./status-bar/`) and is fed by a
  * dedicated hook so subscribers don't pay for the whole bar.
@@ -30,9 +47,9 @@ import { cn } from '@/lib/cn';
  *     in `web/src/index.css`).
  *
  * Accessibility:
- *   - The root carries `role="status"` + `aria-live="polite"` so screen
- *     readers announce notable transitions (offline ↔ online) without
- *     interrupting other reading flow.
+ *   - The root remains a normal footer landmark. A separate visually-hidden
+ *     live region announces meaningful transitions without making every
+ *     interactive control part of one large live region.
  *   - Color is never the sole encoder — every segment pairs color with an
  *     icon variation per state.
  */
@@ -50,63 +67,134 @@ export function StatusBar({ compact = false, className }: StatusBarProps) {
   // without a Tailwind variant blow-up. The threshold matches the same
   // `lg` (1024px) breakpoint Tailwind already uses for the sidebar.
   const isNarrow = useNarrowViewport();
+  const showOverflow = useMediaQuery('(max-width: 1279px)');
 
   if (!prefs.enabled) return null;
 
   const iconOnly = compact || prefs.iconOnly || isNarrow;
 
   return (
-    // `<footer>` exposes a `contentinfo` landmark so screen-reader
-    // landmark navigation (e.g. JAWS Insert+F7) lists the
-    // status bar alongside <header>/<aside>/<main>. The `role="status"`
-    // override + `aria-live="polite"` still announce live updates
-    // (connection drops, vehicle changes) without losing the landmark
-    // affordance because role overrides are permitted by ARIA 1.2.
-    <footer
-      role="status"
-      aria-live="polite"
-      data-role="status-bar"
-      data-print-hide
-      className={cn(
-        // Footer is fixed-position so it lives outside the flexbox layout
-        // and can sit above the mobile tab bar without needing to know
-        // anything about its parent.
-        'fixed left-0 right-0 z-[55] flex items-center justify-between gap-2',
-        'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
-        'px-3 lg:px-4 text-xs text-[var(--text-secondary)]',
-        // Stack above the BottomTabBar on mobile (which is `bottom-0 h-14`),
-        // on desktop go all the way to the bottom.
-        'bottom-14 lg:bottom-0',
-        // 24px on mobile (denser), 28px on desktop. Padding matches.
-        'h-6 lg:h-7',
-        className,
+    <StatusBarProvider
+      announcementLabel={t(
+        'statusBar.announcements',
+        'Application status announcements',
       )}
-      aria-label={t('statusBar.aria', 'Application status')}
     >
-      <div className="flex min-w-0 items-center gap-1">
-        <ConnectionSegment iconOnly={iconOnly} />
-        <Divider />
-        <LiveTelemetrySegment iconOnly={iconOnly} />
-      </div>
-      <div className="flex min-w-0 items-center gap-1">
-        <BackgroundWorkSegment iconOnly={iconOnly} />
-        {/* Background work segment is conditional; only render the divider
-            when it's present (it returns null when there are no jobs). The
-            ActiveVehicleSegment, in turn, is hidden when the fleet has 0
-            vehicles. We always render the dividers around segments that
-            unconditionally render to keep the layout stable. */}
-        <ActiveVehicleSegment iconOnly={iconOnly} />
-        <Divider />
-        <HelpSegment iconOnly={iconOnly} />
-        <Divider />
-        <VersionSegment iconOnly={iconOnly} />
-      </div>
-    </footer>
+      <StatusBarContent
+        iconOnly={iconOnly}
+        showOverflow={showOverflow}
+        className={className}
+      />
+    </StatusBarProvider>
   );
 }
 
+interface StatusBarContentProps {
+  iconOnly: boolean;
+  showOverflow: boolean;
+  className?: string;
+}
+
+function StatusBarContent({
+  iconOnly,
+  showOverflow,
+  className,
+}: StatusBarContentProps) {
+  const { t } = useTranslation();
+  const backgroundJobs = useBackgroundJobs();
+  const [aboutOpen, setAboutOpen] = useState(false);
+  useBackgroundFailureAnnouncements(backgroundJobs);
+
+  return (
+    <>
+      <footer
+        data-role="status-bar"
+        data-print-hide
+        className={cn(
+          'fixed left-0 right-0 z-[55] flex items-center justify-between gap-2',
+          'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
+          'px-3 text-xs text-[var(--text-secondary)] lg:px-4',
+          'bottom-14 lg:bottom-0',
+          'h-6 lg:h-7',
+          className,
+        )}
+        aria-label={t('statusBar.aria', 'Application status')}
+      >
+        <div className="flex min-w-0 items-center gap-1">
+          <ConnectionSegment
+            iconOnly={iconOnly}
+            enableAdminDiagnostics
+          />
+          <Divider />
+          <LiveTelemetrySegment iconOnly={iconOnly} />
+          <OperationalModeSegment iconOnly={iconOnly} />
+          <AlertsSegment iconOnly={iconOnly} />
+        </div>
+        <div className="flex min-w-0 items-center gap-1">
+          <RecentPagesSegment iconOnly={iconOnly} />
+          <Divider />
+          {showOverflow ? (
+            <MoreSegment
+              iconOnly={iconOnly}
+              backgroundJobs={backgroundJobs}
+              onOpenAbout={() => setAboutOpen(true)}
+            />
+          ) : (
+            <>
+              <BackgroundWorkSegment
+                iconOnly={iconOnly}
+                backgroundJobs={backgroundJobs}
+              />
+              <PresentationModeSegment iconOnly={iconOnly} />
+              <HelpSegment
+                iconOnly={iconOnly}
+                onOpenAbout={() => setAboutOpen(true)}
+              />
+            </>
+          )}
+        </div>
+      </footer>
+      {aboutOpen && (
+        <AboutBuildModal
+          open
+          onClose={() => setAboutOpen(false)}
+        />
+      )}
+    </>
+  );
+}
+
+function useBackgroundFailureAnnouncements({
+  jobs,
+}: UseBackgroundJobsResult) {
+  const announce = useStatusBarAnnouncer();
+  const previousErrorIds = useRef(
+    new Set(jobs.filter((job) => job.status === 'error').map((job) => job.id)),
+  );
+
+  useEffect(() => {
+    const current = new Set(
+      jobs.filter((job) => job.status === 'error').map((job) => job.id),
+    );
+    const newError = jobs.find(
+      (job) => job.status === 'error' && !previousErrorIds.current.has(job.id),
+    );
+    if (newError) {
+      announce?.(
+        `${newError.label}${newError.description ? `: ${newError.description}` : ''}`,
+      );
+    }
+    previousErrorIds.current = current;
+  }, [announce, jobs]);
+}
+
 function Divider() {
-  return <span className="h-3 w-px shrink-0 bg-white/[0.08]" aria-hidden />;
+  return (
+    <span
+      className="h-3 w-px shrink-0 bg-[var(--border-subtle)]"
+      aria-hidden
+    />
+  );
 }
 
 // ────────────────────────────────────────────────────────────────────────────

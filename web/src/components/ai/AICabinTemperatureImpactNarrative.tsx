@@ -66,6 +66,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/climate/temperature-impact/narrate',
     body,
     onEvent: noopStreamEvent,
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight narration and clears the
+    // previous vehicle's narrative before the new scope streams in.
+    scopeKey: haveInputs ? numericVehicleId : null,
   })
   return (
     <AIFeatureCard

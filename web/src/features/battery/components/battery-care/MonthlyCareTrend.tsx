@@ -103,7 +103,7 @@ export function MonthlyCareTrend({
               <QueryError error={state.error} onRetry={state.onRetry} />
             </div>
           ) : !hasData ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={<CalendarRange className="h-8 w-8" aria-hidden="true" />}
               message={t(

@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
 
@@ -13,6 +14,7 @@ interface WidgetChartSummaryProps {
   chart: ReactNode;
   compact?: boolean;
   emptyMessage?: string;
+  emptyDescription?: string;
   emptyIcon?: ReactNode;
   isEmpty?: boolean;
 }
@@ -22,11 +24,27 @@ export function WidgetChartSummary({
   chart,
   compact,
   emptyMessage,
+  emptyDescription,
   emptyIcon,
   isEmpty,
 }: WidgetChartSummaryProps) {
+  const { t } = useTranslation('dashboard');
+
   if (isEmpty) {
-    return <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ icon={emptyIcon} message={emptyMessage ?? 'No data available'} />;
+    return (
+      // no-action: widget data populates automatically from its source activity.
+      <EmptyState
+        icon={emptyIcon}
+        message={emptyMessage ?? t(
+          'widget.emptyMessage',
+          'This widget has no qualifying data yet.',
+        )}
+        description={emptyDescription ?? t(
+          'widget.emptyDescription',
+          'It will populate after the source records relevant activity.',
+        )}
+      />
+    );
   }
 
   // Null-safety: a caller may hand us a possibly-undefined array (e.g. `data?.stats`).

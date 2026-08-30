@@ -45,6 +45,8 @@ import { CHART_COLORS } from '@/lib/colors';
 import { cn } from '@/lib/cn';
 import { useInView } from '@/hooks/useInView';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { downsampleChartRows } from './chartSampling';
+import { useChartPointBudget } from './useChartPointBudget';
 
 export interface SmallMultiplesChartProps<T extends Record<string, unknown> = Record<string, unknown>> {
   /** Time-ordered rows. Each row holds `timestamp` + arbitrary series keys. */
@@ -93,17 +95,61 @@ function isFinitePoint(v: unknown): v is number {
 interface CellProjection {
   rows: Array<Record<string, unknown>>;
   hasData: boolean;
+  showDots: boolean;
 }
 
-/** Stride-downsample to `cap` points, always preserving first + last. */
-function strideSample<T>(rows: T[], cap: number): T[] {
-  if (rows.length <= cap) return rows;
-  const stride = Math.ceil(rows.length / cap);
-  const out: T[] = [];
-  for (let i = 0; i < rows.length; i += stride) out.push(rows[i]);
-  const last = rows[rows.length - 1];
-  if (out[out.length - 1] !== last) out.push(last);
-  return out;
+function lowerQuartile(values: number[]): number {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor((sorted.length - 1) * 0.25)] ?? 0;
+}
+
+/**
+ * Project a union-timestamp series without treating every absent union row as
+ * a telemetry outage. Regular sparse cadence rows are omitted; only a gap
+ * substantially larger than the signal's lower-quartile cadence gets one null marker.
+ * Finite samples get dots in that sparse mode, so isolated observations stay
+ * visible while true outages still break the line.
+ */
+export function projectSmallMultipleSeries(
+  data: readonly Record<string, unknown>[],
+  signal: string,
+  xKey: string,
+  maxPoints: number,
+): CellProjection {
+  const finiteIndexes = data.flatMap((row, index) =>
+    isFinitePoint(row[signal]) ? [index] : [],
+  );
+  const cadence = finiteIndexes.length >= 3
+    ? lowerQuartile(finiteIndexes.slice(1).map((index, position) => index - finiteIndexes[position]))
+    : 0;
+  const finiteRows = finiteIndexes.map((index) => ({
+    index,
+    row: { [xKey]: data[index][xKey], [signal]: data[index][signal] },
+  }));
+  const rawMarkers = cadence > 0 ? finiteIndexes.slice(1).flatMap((nextIndex, position) => {
+    const previousIndex = finiteIndexes[position];
+    // Three cadence intervals is deliberately conservative: burst pairs
+    // establish the lower cadence while normal sparse sampling remains joined.
+    if (nextIndex - previousIndex <= cadence * 3) return [];
+    const markerIndex = Math.min(nextIndex - 1, previousIndex + cadence);
+    return [{ index: markerIndex, row: { [xKey]: data[markerIndex][xKey], [signal]: null } }];
+  }) : [];
+  // Marker count is capped as part of the same rendering budget. This retains
+  // outage semantics without turning a sparse union matrix back into its full
+  // cross-product of null rows.
+  const markerBudget = Math.min(rawMarkers.length, Math.floor(Math.max(0, maxPoints) / 3));
+  const markers = downsampleChartRows(rawMarkers, Math.max(2, markerBudget)).rows
+    .slice(0, markerBudget);
+  const valueBudget = Math.max(2, Math.max(0, Math.floor(maxPoints)) - markers.length);
+  const values = downsampleChartRows(finiteRows, valueBudget).rows;
+  const rows = [...values, ...markers]
+    .sort((a, b) => a.index - b.index)
+    .map((entry) => entry.row);
+  return {
+    rows,
+    hasData: finiteRows.length > 0,
+    showDots: finiteRows.length < data.length,
+  };
 }
 
 export function SmallMultiplesChart<T extends Record<string, unknown> = Record<string, unknown>>({
@@ -124,29 +170,25 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
   const { t } = useTranslation();
   const fallbackSyncId = useId();
   const resolvedSyncId = syncId ?? fallbackSyncId;
+  // PWA-07: clamp the per-cell budget when the device is in low-bandwidth
+  // mode. Returns `maxPointsPerCell` unchanged otherwise, so nothing about
+  // the default rendering path changes.
+  const effectiveMaxPointsPerCell = useChartPointBudget(maxPointsPerCell);
 
   /**
    * Per-cell projected + downsampled rows. We walk `data` once per
-   * series, keeping only rows where this signal has a finite numeric
-   * value, then stride-sample down to `maxPointsPerCell`. This is the
+   * series, retaining null rows as visible gaps, then stride-sample down to
+   * `maxPointsPerCell`. This is the
    * single biggest perf win in this component — recharts no longer
    * iterates 60 × 5,021 = 300k row-cells on every render pass.
    */
   const cellProjections = useMemo(() => {
     const map = new Map<string, CellProjection>();
     for (const sig of series) {
-      const projected: Array<Record<string, unknown>> = [];
-      for (const row of data) {
-        const v = row[sig];
-        if (isFinitePoint(v)) {
-          projected.push({ [xKey]: row[xKey], [sig]: v });
-        }
-      }
-      const rows = strideSample(projected, maxPointsPerCell);
-      map.set(sig, { rows, hasData: rows.length > 0 });
+      map.set(sig, projectSmallMultipleSeries(data, sig, xKey, effectiveMaxPointsPerCell));
     }
     return map;
-  }, [data, series, xKey, maxPointsPerCell]);
+  }, [data, series, xKey, effectiveMaxPointsPerCell]);
 
   const gridStyle = useMemo<React.CSSProperties>(
     () =>
@@ -178,6 +220,7 @@ export function SmallMultiplesChart<T extends Record<string, unknown> = Record<s
             color={color}
             cellHeight={cellHeight}
             hasData={hasData}
+            showDots={projection?.showDots ?? false}
             rows={projection?.rows ?? []}
             xKey={xKey}
             syncId={resolvedSyncId}
@@ -202,6 +245,7 @@ interface SmallMultiplesCellProps {
   color: string;
   cellHeight: number;
   hasData: boolean;
+  showDots: boolean;
   rows: Array<Record<string, unknown>>;
   xKey: string;
   syncId: string;
@@ -215,6 +259,7 @@ function SmallMultiplesCell({
   color,
   cellHeight,
   hasData,
+  showDots,
   rows,
   xKey,
   syncId,
@@ -229,7 +274,7 @@ function SmallMultiplesCell({
       ref={ref}
       className={cn(
         'rounded-md border border-[var(--glass-border)] bg-[var(--glass-bg-subtle,transparent)] p-2',
-        cellInteractive && 'cursor-pointer hover:border-[var(--neon-cyan,#22d3ee)]',
+        cellInteractive && 'cursor-pointer hover:border-[var(--theme-primary)]',
       )}
       role={cellInteractive ? 'button' : 'group'}
       tabIndex={cellInteractive ? 0 : -1}
@@ -306,9 +351,9 @@ function SmallMultiplesCell({
               dataKey={sig}
               stroke={color}
               strokeWidth={1.5}
-              dot={false}
+              dot={showDots ? { r: 2, strokeWidth: 0 } : false}
               name={label}
-              connectNulls
+              connectNulls={false}
               isAnimationActive={false}
             />
           </LineChart>

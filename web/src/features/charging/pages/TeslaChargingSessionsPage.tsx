@@ -5,14 +5,36 @@ import {
   Building2, Info, Download, AlertCircle, Plug,
 } from 'lucide-react';
 import { PageContainer } from '@/components/layout';
-import { GlassPanel, Button, Select, DataTable, PanelTitle, Text, type Column } from '@/components/ui';
-import { StatCard, MetricBar } from '@/components/data-display';
+import {
+  Badge,
+  GlassPanel,
+  Button,
+  Select,
+  DataTable,
+  PanelTitle,
+  Text,
+  type Column,
+} from '@/components/ui';
+import {
+  StatCard,
+  MetricBar,
+  DataFreshnessAuto,
+  DataProvenanceBadge,
+  OperationalBrief,
+  type OperationalAttention,
+} from '@/components/data-display';
 import { FadeIn } from '@/components/motion';
 import {
   ChartContainer, ChartTooltip, ChartGradient, chartGrid, axisTickSm,
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CHART_COLORS,
 } from '@/components/charts';
-import { EmptyState, Spinner, Skeleton, AlertBanner } from '@/components/feedback';
+import {
+  ChartSkeleton,
+  EmptyState,
+  ListSkeleton,
+  QueryError,
+  TableSkeleton,
+} from '@/components/feedback';
 import { RangePicker } from '@/components/forms';
 import {
   useTeslaChargingSessions,
@@ -21,16 +43,20 @@ import {
 } from '@/api/hooks/useCharging';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { usePageTitle } from '@/hooks/usePageTitle';
+import {
+  ALL_VEHICLES_VIN,
+  useVehicleVinFilter,
+} from '@/hooks/useVehicleVinFilter';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUnits } from '@/hooks/useUnits';
 import { useSettings } from '@/hooks/useSettings';
 import { useFormatting } from '@/hooks/useFormatting';
+import { useDataState } from '@/hooks/useDataState';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
-import { getErrorMessage } from '@/lib/errorMessage';
-import { cn } from '@/lib/cn';
+import type { OperationalNarrative } from '@/types/operationalNarrative';
 
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
 
@@ -98,9 +124,23 @@ export default function TeslaChargingSessionsPage() {
   const userCurrency = currencyCodeFromSymbol(settings.currency_symbol);
   usePageTitle(t('tesla_sessions.title', 'Fleet Charging Sessions'));
 
-  const { data: vehicles } = useVehicles();
-  const [selectedVin, setSelectedVin] = useState<string>('');
-  const { data: response, isLoading, error } = useTeslaChargingSessions(selectedVin || undefined);
+  const { isLoading: vehiclesLoading } = useVehicles();
+  const {
+    queryVin,
+    selectedVin,
+    setSelectedVin,
+    vehicles,
+  } = useVehicleVinFilter();
+  const sessionsQuery = useTeslaChargingSessions(queryVin, {
+    enabled: !vehiclesLoading,
+  });
+  const {
+    data: response,
+    isLoading: sessionsLoading,
+    error,
+  } = sessionsQuery;
+  const sessionsDataState = useDataState(sessionsQuery, { provenance: 'historical' });
+  const isLoading = vehiclesLoading || sessionsLoading;
   const refreshMutation = useRefreshTeslaChargingSessions();
 
   const allSessions = response?.sessions ?? [];
@@ -124,8 +164,11 @@ export default function TeslaChargingSessionsPage() {
   };
 
   const vehicleOptions = useMemo(() => {
-    const opts = [{ value: '', label: t('tesla_sessions.allVehicles', 'All Vehicles') }];
-    for (const v of vehicles ?? []) {
+    const opts = [{
+      value: ALL_VEHICLES_VIN,
+      label: t('tesla_sessions.allVehicles', 'All Vehicles'),
+    }];
+    for (const v of vehicles) {
       opts.push({ value: v.vin, label: `${v.display_name} (${v.vin.slice(-6)})` });
     }
     return opts;
@@ -164,13 +207,206 @@ export default function TeslaChargingSessionsPage() {
   const lastSync = response && sessions.length > 0 ? sessions[0]?.fetched_at : null;
 
   const handleRefresh = () => {
-    refreshMutation.mutate(selectedVin ? { vin: selectedVin } : undefined);
+    refreshMutation.mutate(queryVin ? { vin: queryVin } : undefined);
   };
 
   const is403 = refreshMutation.error
     && typeof refreshMutation.error === 'object'
     && 'status' in (refreshMutation.error as unknown as Record<string, unknown>)
     && (refreshMutation.error as unknown as Record<string, unknown>).status === 403;
+
+  const operationalTotals = useMemo(() => {
+    let totalWh = 0;
+    let totalCost = 0;
+    let totalFees = 0;
+    let durationSeconds = 0;
+    let durationCount = 0;
+    let missingCostCount = 0;
+
+    for (const session of sessions) {
+      totalWh += session.total_energy_added_wh ?? 0;
+      totalCost += session.total_cost ?? 0;
+      totalFees += (session.idle_fee ?? 0) + (session.congestion_fee ?? 0);
+      if (session.total_cost == null) missingCostCount += 1;
+      if (session.charge_duration_s != null && Number.isFinite(session.charge_duration_s)) {
+        durationSeconds += session.charge_duration_s;
+        durationCount += 1;
+      }
+    }
+
+    return {
+      totalWh,
+      totalCost,
+      totalFees,
+      missingCostCount,
+      averageDurationSeconds: durationCount > 0 ? durationSeconds / durationCount : null,
+    };
+  }, [sessions]);
+
+  const chargingAttention = useMemo<OperationalAttention[]>(() => {
+    const items: OperationalAttention[] = [];
+
+    if (is403) {
+      items.push({
+        key: 'business-access',
+        title: t('operations.charging.businessAccessTitle', 'Tesla Fleet Charging access required'),
+        description: t('operations.charging.businessAccessDescription', 'This import requires a Tesla business account with Fleet Charging access.'),
+        tone: 'warning',
+      });
+    }
+    if (!isLoading && !error && sessions.length === 0) {
+      items.push({
+        key: 'no-sessions',
+        title: t('operations.charging.noSessionsTitle', 'No sessions in this analysis window'),
+        description: t('operations.charging.noSessionsDescription', 'Adjust the vehicle or date scope, or refresh from Tesla to import recent history.'),
+        tone: 'info',
+      });
+    }
+    if (operationalTotals.totalFees > 0) {
+      items.push({
+        key: 'fees',
+        title: t('operations.charging.feesTitle', 'Charging fees need review'),
+        description: t(
+          'operations.charging.feesDescription',
+          '{{amount}} in idle or congestion fees was recorded in this window.',
+          { amount: formatCurrency(operationalTotals.totalFees, 2) },
+        ),
+        tone: 'warning',
+      });
+    }
+    if (operationalTotals.missingCostCount > 0) {
+      items.push({
+        key: 'partial-cost',
+        title: t('operations.charging.partialCostTitle', 'Cost coverage is incomplete'),
+        description: t(
+          'operations.charging.partialCostDescription',
+          '{{count}} sessions have no reported cost, so totals are partial.',
+          { count: operationalTotals.missingCostCount },
+        ),
+        tone: 'warning',
+      });
+    }
+
+    return items;
+  }, [error, formatCurrency, is403, isLoading, operationalTotals, sessions.length, t]);
+  const narrativeEvidence: OperationalNarrative['evidence'] = sessions
+    .slice(0, 5)
+    .map((session) => ({
+      id: `fleet-charging-session-${session.id}`,
+      summary: t(
+        'operations.charging.fleetNarrative.sessionSummary',
+        '{{date}} at {{site}}: {{energy}} added with {{cost}} recorded cost.',
+        {
+          date: session.charge_start_datetime,
+          site:
+            session.site_location_name
+            || t('operations.charging.fleetNarrative.unknownSite', 'unrecorded site'),
+          energy: formatEnergy(session.total_energy_added_wh ?? 0),
+          cost:
+            session.total_cost == null
+              ? t('operations.charging.fleetNarrative.costMissing', 'no')
+              : formatCurrency(session.total_cost, 2),
+        },
+      ),
+      observedAt: session.charge_start_datetime,
+      provenance: {
+        source: t(
+          'operations.charging.fleetNarrative.source',
+          'Tesla Fleet Charging sessions',
+        ),
+        recordId: String(session.session_id),
+        method: t(
+          'operations.charging.fleetNarrative.sessionMethod',
+          'Direct business-account charging session returned by Tesla Fleet Charging.',
+        ),
+      },
+    }));
+  const narrative: OperationalNarrative = {
+    whatChanged: t(
+      'operations.charging.fleetNarrative.whatChanged',
+      '{{sessions}} Fleet Charging sessions delivered {{energy}} with {{cost}} in recorded fees.',
+      {
+        sessions: sessions.length,
+        energy: formatEnergy(operationalTotals.totalWh),
+        cost: formatCurrency(operationalTotals.totalCost, 2),
+      },
+    ),
+    whyItMatters: t(
+      'operations.charging.fleetNarrative.impact',
+      'Business-account session records provide auditable site, energy, fee, and charger evidence for fleet cost review.',
+    ),
+    confidence: {
+      label:
+        sessions.length > 0 && operationalTotals.missingCostCount === 0
+          ? 'high'
+          : sessions.length > 0
+            ? 'medium'
+            : 'low',
+      score: null,
+      basis: [
+        t(
+          'operations.charging.fleetNarrative.sessionBasis',
+          '{{count}} direct Fleet Charging sessions match the active filters.',
+          { count: sessions.length },
+        ),
+        operationalTotals.missingCostCount === 0
+          ? t(
+              'operations.charging.fleetNarrative.costBasis',
+              'Every matching session includes a recorded cost.',
+            )
+          : t(
+              'operations.charging.fleetNarrative.costLimitedBasis',
+              '{{count}} matching session lacks recorded cost.',
+              { count: operationalTotals.missingCostCount },
+            ),
+      ],
+    },
+    likelyCause: null,
+    recommendedResponse:
+      chargingAttention[0]?.description
+      ?? t(
+        'operations.charging.fleetNarrative.monitorResponse',
+        'No immediate response is indicated; continue reviewing site costs and newly synchronized sessions.',
+      ),
+    limitations: [
+      t(
+        'operations.charging.fleetNarrative.accountLimitation',
+        'This source is available only to eligible Tesla business accounts.',
+      ),
+      ...(operationalTotals.missingCostCount > 0
+        ? [
+            t(
+              'operations.charging.fleetNarrative.missingCostLimitation',
+              'Cost totals exclude sessions without a fee supplied by Tesla.',
+            ),
+          ]
+        : []),
+      t(
+        'operations.charging.fleetNarrative.causeLimitation',
+        'Session records show observed energy and fees but do not diagnose the cause of charging behavior.',
+      ),
+      t(
+        'operations.charging.fleetNarrative.evidenceLimit',
+        'Supporting evidence is limited to the five most recent sessions matching the active filters.',
+      ),
+    ],
+    evidence: narrativeEvidence,
+    provenance: [
+      {
+        source: t(
+          'operations.charging.fleetNarrative.source',
+          'Tesla Fleet Charging sessions',
+        ),
+        method: t(
+          'operations.charging.fleetNarrative.sourceMethod',
+          'Aggregates energy, direct Tesla fee fields, charger type, and site from synchronized business-account sessions.',
+        ),
+      },
+    ],
+  };
+
+  const selectedVehicleLabel = vehicleOptions.find((option) => option.value === selectedVin)?.label
+    ?? t('tesla_sessions.allVehicles', 'All Vehicles');
 
   const columns: Column<TeslaChargingSession>[] = useMemo(() => [
     {
@@ -344,8 +580,8 @@ export default function TeslaChargingSessionsPage() {
     [],
   );
 
-  const actions = (
-    <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto sm:gap-3">
+  const contextActions = (
+    <>
       <Select
         options={vehicleOptions}
         value={selectedVin}
@@ -359,30 +595,120 @@ export default function TeslaChargingSessionsPage() {
         align="end"
         triggerTestId="tesla-charging-sessions-range"
       />
-      <Button
-        onClick={handleRefresh}
-        disabled={refreshMutation.isPending}
-        className="flex min-h-11 items-center gap-2"
-      >
-        <RefreshCw className={cn('h-4 w-4', refreshMutation.isPending && 'animate-spin')} aria-hidden="true" />
-        {refreshMutation.isPending
-          ? t('tesla_sessions.refreshing', 'Syncing...')
-          : t('tesla_sessions.refresh', 'Refresh from Tesla')}
-      </Button>
-    </div>
+    </>
+  );
+
+  const primaryAction = (
+    <Button
+      onClick={handleRefresh}
+      loading={refreshMutation.isPending}
+      icon={<RefreshCw className="h-4 w-4" aria-hidden="true" />}
+    >
+      {t('tesla_sessions.refresh', 'Refresh from Tesla')}
+    </Button>
   );
 
   return (
     <PageContainer
       title={t('tesla_sessions.title', 'Fleet Charging Sessions')}
       subtitle={t('tesla_sessions.subtitle', 'Detailed charging session data from Tesla (business accounts only)')}
-      actions={actions}
+      query={sessionsQuery}
+      contextActions={contextActions}
+      primaryAction={primaryAction}
     >
       {error && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(error)}
-        </AlertBanner>
+        <QueryError error={error} onRetry={() => sessionsQuery.refetch()} />
       )}
+
+      <OperationalBrief
+        testId="charging-operational-brief"
+        eyebrow={t('operations.charging.eyebrow', 'Charging posture')}
+        title={t('operations.charging.title', 'Cost, energy, and session evidence in one operating view')}
+        description={t('operations.charging.description', 'The selected vehicle and date range drive charging totals, location analysis, and the supporting session history.')}
+        statusLabel={
+          error
+            ? t('operations.status.unavailable', 'Data unavailable')
+            : isLoading
+              ? t('operations.status.loading', 'Updating')
+              : is403
+                ? t('operations.status.prerequisite', 'Prerequisite required')
+                : sessions.length === 0
+                  ? t('operations.status.awaitingData', 'Awaiting data')
+                  : chargingAttention.length > 0
+                    ? t('operations.status.review', 'Review recommended')
+                    : t('operations.status.onTrack', 'On track')
+        }
+        statusTone={
+          error
+            ? 'danger'
+            : isLoading || sessions.length === 0
+              ? 'neutral'
+              : chargingAttention.length > 0
+                ? 'warning'
+                : 'success'
+        }
+        narrative={narrative}
+        scope={
+          <>
+            <Badge variant="neutral" size="sm">{selectedVehicleLabel}</Badge>
+            <Badge variant="neutral" size="sm">{start} – {end}</Badge>
+          </>
+        }
+        freshness={
+          <div className="flex flex-wrap items-center gap-2">
+            <DataProvenanceBadge
+              provenance={sessionsDataState.provenance}
+              status={sessionsDataState.status}
+              updatedAt={sessionsDataState.updatedAt}
+            />
+            <DataFreshnessAuto
+              query={sessionsQuery}
+              source={t(
+                'operations.charging.fleetNarrative.source',
+                'Tesla Fleet Charging sessions',
+              )}
+            />
+          </div>
+        }
+        metrics={[
+          {
+            key: 'sessions',
+            label: t('tesla_sessions.stats.sessions', 'Total Sessions'),
+            value: isLoading || error ? '—' : fmtInt(sessions.length),
+            detail: t('operations.charging.sessionsDetail', 'Sessions matching the active vehicle and date scope.'),
+            tone: 'info',
+          },
+          {
+            key: 'energy',
+            label: t('tesla_sessions.stats.energy', 'Total Energy'),
+            value: isLoading || error
+              ? '—'
+              : formatEnergy(operationalTotals.totalWh, { precision: 1 }),
+            detail: t('operations.charging.energyDetail', 'Energy added across the matching charging sessions.'),
+            tone: 'success',
+          },
+          {
+            key: 'cost',
+            label: t('tesla_sessions.stats.cost_decimal', 'Total Cost'),
+            value: isLoading || error || sessions.length === 0
+              ? '—'
+              : formatCurrency(operationalTotals.totalCost, 2),
+            detail: t('operations.charging.costDetail', 'Reported session cost; sessions without cost remain flagged as partial.'),
+            tone: operationalTotals.totalFees > 0 ? 'warning' : 'neutral',
+          },
+          {
+            key: 'duration',
+            label: t('operations.charging.averageDuration', 'Average duration'),
+            value: isLoading || error
+              ? '—'
+              : formatDurationSeconds(operationalTotals.averageDurationSeconds),
+            detail: t('operations.charging.durationDetail', 'Mean charging duration for sessions with valid timing data.'),
+            tone: 'neutral',
+          },
+        ]}
+        attention={chargingAttention}
+        provenance={t('operations.charging.provenance', 'Derived from Tesla Fleet Charging session history, reported costs, and SI energy values converted only for display.')}
+      />
 
       {/* Business-account note + sync status */}
       <FadeIn>
@@ -475,7 +801,10 @@ export default function TeslaChargingSessionsPage() {
               exportFilename={`tesla-monthly-cost-${new Date().toISOString().slice(0, 10)}`}
             >
               {isLoading ? (
-                <div className="flex h-[280px] items-center justify-center"><Spinner /></div>
+                <ChartSkeleton
+                  className="h-[280px]"
+                  label={t('tesla_sessions.monthlyCost.loading', 'Loading monthly charging costs…')}
+                />
               ) : monthlyData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={280}>
                   <BarChart data={monthlyData}>
@@ -504,7 +833,11 @@ export default function TeslaChargingSessionsPage() {
               {t('tesla_sessions.chargerType', 'Energy by Charger Type')}
             </PanelTitle>
             {isLoading ? (
-              <Skeleton height={220} />
+              <ListSkeleton
+                rows={3}
+                label={t('tesla_sessions.chargerType.loading', 'Loading charger breakdown…')}
+                testId="charger-type-loading"
+              />
             ) : chargerTypeBreakdown.length > 0 ? (
               <div className="space-y-3">
                 {chargerTypeBreakdown.map((c, i) => (
@@ -540,9 +873,21 @@ export default function TeslaChargingSessionsPage() {
               {t('tesla_sessions.map', 'Session Locations')}
             </PanelTitle>
             {isLoading ? (
-              <Skeleton height={350} />
+              <ChartSkeleton
+                className="h-[350px]"
+                bars={10}
+                label={t('tesla_sessions.map.loading', 'Loading charging locations…')}
+              />
             ) : mapPoints.length > 0 ? (
-              <Suspense fallback={<div className="flex h-[350px] items-center justify-center"><Spinner /></div>}>
+              <Suspense
+                fallback={(
+                  <ChartSkeleton
+                    className="h-[350px]"
+                    bars={10}
+                    label={t('tesla_sessions.map.loading', 'Loading charging locations…')}
+                  />
+                )}
+              >
                 <LazyMap sessions={mapPoints} />
               </Suspense>
             ) : (
@@ -559,7 +904,11 @@ export default function TeslaChargingSessionsPage() {
               {t('tesla_sessions.topLocations', 'Top Locations by Cost')}
             </PanelTitle>
             {isLoading ? (
-              <Skeleton height={220} />
+              <ListSkeleton
+                rows={3}
+                label={t('tesla_sessions.topLocations.loading', 'Loading top charging locations…')}
+                testId="charging-locations-loading"
+              />
             ) : topLocations.length > 0 ? (
               <div className="space-y-3">
                 {topLocations.map((l, i) => (
@@ -591,7 +940,7 @@ export default function TeslaChargingSessionsPage() {
               {t('tesla_sessions.table', 'Charging Sessions')}
             </PanelTitle>
             {isLoading ? (
-              <Skeleton height={400} />
+              <TableSkeleton rows={7} cols={5} />
             ) : sessions.length > 0 ? (
               <DataTable
                 columns={columns}
@@ -622,6 +971,17 @@ export default function TeslaChargingSessionsPage() {
                   type: row.charger_type ?? '',
                 })}
                 selectable="multi"
+                // A11Y: the first column is a bare date, which many
+                // rows share. Pair it with the site so each checkbox
+                // names the session it toggles.
+                rowLabel={(row) =>
+                  t('tesla_sessions.rowLabel', '{{site}}, {{date}}', {
+                    site:
+                      row.site_location_name ||
+                      t('tesla_sessions.unknownSite', 'Unknown site'),
+                    date: formatDateTime(row.charge_start_datetime),
+                  })
+                }
                 selectedKeys={selectedKeys}
                 onSelectionChange={setSelectedKeys}
                 bulkActions={(rows) => (

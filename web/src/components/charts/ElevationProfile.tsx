@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   ReferenceLine, ChartContainer, chartGrid, axisTick, fmt,
-  AREA_DEFAULTS, areaGradient,
+  AREA_DEFAULTS, areaGradient, ChartTooltip,
 } from '@/components/charts';
 import { EmptyState } from '@/components/feedback';
 import { cn } from '@/lib/cn';
@@ -111,7 +111,7 @@ export function ElevationProfile({
       height={height}
       className={className}
     >
-      <ResponsiveContainer width="100%" height={height}>
+      <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={points}
           onClick={handleClick}
@@ -131,7 +131,7 @@ export function ElevationProfile({
             label={{ value: 'm', angle: -90, position: 'insideLeft', style: { fontSize: 10, fill: '#9ca3af' } }}
           />
           <Tooltip
-            contentStyle={{ background: 'rgba(0,0,0,0.85)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }}
+            content={<ChartTooltip />}
             labelFormatter={(v: number) => `${fmt(v, 2)} ${distanceUnit}`}
             formatter={(v: number) => [`${fmt(v, 0)} m`, t('replay.elevation.label', 'Elevation')]}
           />
@@ -145,7 +145,7 @@ export function ElevationProfile({
           {cursorDistance != null && (
             <ReferenceLine
               x={cursorDistance}
-              stroke="#00b4d8"
+              stroke="var(--theme-primary, #3b82f6)"
               strokeWidth={2}
               strokeDasharray="4 2"
             />

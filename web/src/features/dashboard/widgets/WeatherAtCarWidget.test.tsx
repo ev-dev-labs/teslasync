@@ -379,7 +379,7 @@ describe('WeatherAtCarWidget — refresh + vehicle resolution', () => {
     mockUseVehicleState.mockReturnValue(stateQuery(makeState({ outside_temp: 20 }), { refetch }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 

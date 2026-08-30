@@ -4,7 +4,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 )
 
 func TestDriveEvaluator_Driving(t *testing.T) {
@@ -151,6 +153,195 @@ func TestEngine_FirstPoll(t *testing.T) {
 	shouldPoll, _ := engine.ShouldPoll("VIN123")
 	if !shouldPoll {
 		t.Error("first poll should always be allowed")
+	}
+}
+
+func TestEngine_MarkBudgetExhaustedPausesPollEnginePath(t *testing.T) {
+	engine := NewPollEngine(DefaultEngineConfig())
+	resetAt := time.Now().Add(time.Hour)
+
+	engine.MarkBudgetExhausted("VIN123", resetAt)
+
+	shouldPoll, decision := engine.ShouldPoll("VIN123")
+	if shouldPoll {
+		t.Fatal("poll should remain paused until the budget reset")
+	}
+	if len(decision.Reasons) != 1 || decision.Reasons[0] != "Fleet API daily budget exhausted" {
+		t.Fatalf("reasons = %v, want budget exhaustion", decision.Reasons)
+	}
+	state, ok := engine.GetVehicleState("VIN123")
+	if !ok || !state.BudgetPausedUntil.Equal(resetAt) {
+		t.Fatalf("budget pause state = %+v, want reset at %v", state, resetAt)
+	}
+	if got := engine.CostTracker().Snapshot().SavingsBreakdown["budget"]; got != 1 {
+		t.Fatalf("budget skips = %d, want 1 actual skipped poll", got)
+	}
+
+	engine.ResetVehicle("VIN123")
+	shouldPoll, _ = engine.ShouldPoll("VIN123")
+	if !shouldPoll {
+		t.Fatal("reset vehicle should clear the budget pause")
+	}
+}
+
+func TestEngine_MarkBudgetUnavailableUsesRetryBackoffWithoutClaimingExhaustion(t *testing.T) {
+	engine := NewPollEngine(DefaultEngineConfig())
+	retryAt := time.Now().Add(time.Minute)
+
+	engine.MarkBudgetUnavailable("VIN123", retryAt)
+
+	shouldPoll, decision := engine.ShouldPoll("VIN123")
+	if shouldPoll {
+		t.Fatal("poll should back off while budget evidence is unavailable")
+	}
+	if len(decision.Reasons) != 1 || decision.Reasons[0] != "Fleet API budget evidence unavailable" {
+		t.Fatalf("reasons = %v, want unavailable budget evidence", decision.Reasons)
+	}
+	state, ok := engine.GetVehicleState("VIN123")
+	if !ok || state.LastDecision == nil ||
+		len(state.LastDecision.Reasons) != 1 ||
+		state.LastDecision.Reasons[0] != "Fleet API budget evidence unavailable" {
+		t.Fatalf("state = %+v, want unavailable evidence without exhausted state", state)
+	}
+	if !state.BudgetPausedUntil.IsZero() {
+		t.Fatalf("budget pause = %v, want zero because exhaustion is unproven", state.BudgetPausedUntil)
+	}
+	if got := engine.CostTracker().Snapshot().PollsSaved; got != 0 {
+		t.Fatalf("polls saved = %d, want 0 because an evidence outage is not a saving", got)
+	}
+	if got := engine.CostTracker().Snapshot().EstimatedSavings; got != 0 {
+		t.Fatalf("estimated savings = %v, want 0 because an evidence outage is not a saving", got)
+	}
+}
+
+func TestEngine_ReconcileFleetPrunesRetiredBudgetPauses(t *testing.T) {
+	metrics.PollingBudgetPausedVehicles.Set(0)
+	t.Cleanup(func() {
+		metrics.PollingBudgetPausedVehicles.Set(0)
+	})
+
+	engine := NewPollEngine(DefaultEngineConfig())
+	engine.MarkBudgetExhausted("VIN-RETIRED", time.Now().Add(time.Hour))
+	engine.ReconcileFleet([]string{"VIN-RETIRED"})
+	if got := testutil.ToFloat64(metrics.PollingBudgetPausedVehicles); got != 1 {
+		t.Fatalf("paused vehicles = %v, want 1", got)
+	}
+
+	engine.ReconcileFleet([]string{"VIN-ACTIVE"})
+	if _, ok := engine.GetVehicleState("VIN-RETIRED"); !ok {
+		t.Fatal("one missing fleet cycle pruned an active budget pause")
+	}
+	if got := testutil.ToFloat64(metrics.PollingBudgetPausedVehicles); got != 1 {
+		t.Fatalf("paused vehicles after one absence = %v, want 1", got)
+	}
+
+	engine.ReconcileFleet([]string{"VIN-ACTIVE"})
+	if _, ok := engine.GetVehicleState("VIN-RETIRED"); ok {
+		t.Fatal("retired vehicle state was not pruned after consecutive absences")
+	}
+	if got := testutil.ToFloat64(metrics.PollingBudgetPausedVehicles); got != 0 {
+		t.Fatalf("paused vehicles after reconciliation = %v, want 0", got)
+	}
+}
+
+func TestEngine_ApplyBudgetPacingDistributesRemainingCallsAcrossFleet(t *testing.T) {
+	engine := NewPollEngine(DefaultEngineConfig())
+	engine.SetFleetSize(2)
+	speed := 65
+	engine.Assess("VIN123", &tesla.VehicleDataResponse{
+		State:      "online",
+		DriveState: tesla.DriveState{Speed: &speed, Power: 30},
+	})
+
+	interval := engine.ApplyBudgetPacing("VIN123", tesla.BudgetSnapshot{
+		ResetAt:                time.Now().Add(24 * time.Hour),
+		DailyLimitMicroUSD:     300_000,
+		CommandReserveMicroUSD: 50_000,
+		BackgroundCostMicroUSD: 2_000,
+	})
+	if interval < 23*time.Minute || interval > 24*time.Minute {
+		t.Fatalf("paced interval = %v, want about 23 minutes for 62 remaining calls", interval)
+	}
+
+	state, ok := engine.GetVehicleState("VIN123")
+	if !ok || state.LastDecision == nil {
+		t.Fatalf("state = %+v, want a recorded pacing decision", state)
+	}
+	if state.LastDecision.NextInterval != interval {
+		t.Fatalf("decision interval = %v, want %v", state.LastDecision.NextInterval, interval)
+	}
+	foundReason := false
+	for _, reason := range state.LastDecision.Reasons {
+		if reason == "Fleet API budget pacing preserves coverage through the UTC day" {
+			foundReason = true
+		}
+	}
+	if !foundReason {
+		t.Fatalf("decision reasons = %v, want budget pacing evidence", state.LastDecision.Reasons)
+	}
+}
+
+func TestEngine_ApplyBudgetPacingHonorsTotalSpendAfterReserveOverspend(t *testing.T) {
+	engine := NewPollEngine(DefaultEngineConfig())
+	engine.SetFleetSize(2)
+	speed := 65
+	engine.Assess("VIN123", &tesla.VehicleDataResponse{
+		State:      "online",
+		DriveState: tesla.DriveState{Speed: &speed, Power: 30},
+	})
+
+	interval := engine.ApplyBudgetPacing("VIN123", tesla.BudgetSnapshot{
+		ResetAt:                time.Now().Add(24 * time.Hour),
+		DailyLimitMicroUSD:     300_000,
+		CommandReserveMicroUSD: 50_000,
+		EstimatedCostMicroUSD:  290_000,
+		BackgroundCostMicroUSD: 100_000,
+	})
+	if interval < 11*time.Hour+59*time.Minute || interval > 12*time.Hour+time.Minute {
+		t.Fatalf("paced interval = %v, want about 12 hours for two calls per vehicle", interval)
+	}
+}
+
+func TestEngine_StateSnapshotsDoNotAliasPublishedDecisions(t *testing.T) {
+	engine := NewPollEngine(DefaultEngineConfig())
+	speed := 65
+	engine.Assess("VIN123", &tesla.VehicleDataResponse{
+		State:      "online",
+		DriveState: tesla.DriveState{Speed: &speed, Power: 30},
+	})
+
+	beforePacing, ok := engine.GetVehicleState("VIN123")
+	if !ok || beforePacing.LastDecision == nil || len(beforePacing.LastDecision.Reasons) == 0 {
+		t.Fatalf("state = %+v, want an initial decision", beforePacing)
+	}
+	originalInterval := beforePacing.LastDecision.NextInterval
+	originalReason := beforePacing.LastDecision.Reasons[0]
+
+	engine.ApplyBudgetPacing("VIN123", tesla.BudgetSnapshot{
+		ResetAt:                time.Now().Add(24 * time.Hour),
+		DailyLimitMicroUSD:     300_000,
+		CommandReserveMicroUSD: 50_000,
+		EstimatedCostMicroUSD:  2_000,
+		BackgroundCostMicroUSD: 2_000,
+	})
+	if beforePacing.LastDecision.NextInterval != originalInterval ||
+		beforePacing.LastDecision.Reasons[0] != originalReason {
+		t.Fatal("previously published state changed after budget pacing")
+	}
+
+	current, ok := engine.GetVehicleState("VIN123")
+	if !ok || current.LastDecision == nil {
+		t.Fatalf("state = %+v, want a current decision", current)
+	}
+	current.LastDecision.Reasons[0] = "mutated by caller"
+	current.DecisionHistory[0].Reasons[0] = "mutated history"
+
+	unchanged, _ := engine.GetVehicleState("VIN123")
+	if unchanged.LastDecision.Reasons[0] == "mutated by caller" {
+		t.Fatal("LastDecision reasons alias caller-owned snapshot")
+	}
+	if unchanged.DecisionHistory[0].Reasons[0] == "mutated history" {
+		t.Fatal("DecisionHistory reasons alias caller-owned snapshot")
 	}
 }
 

@@ -1,6 +1,7 @@
 import {
   useMutation,
   useQueryClient,
+  type NetworkMode,
   type QueryClient,
   type QueryKey,
   type UseMutationResult,
@@ -53,6 +54,9 @@ export interface OptimisticContext<TPrev> {
 export interface UseOptimisticMutationOptions<TData, TVariables, TPrev> {
   /** Performs the actual server request. Same shape as TanStack Query's. */
   mutationFn: (vars: TVariables) => Promise<TData>;
+  /** Use `always` for live-only writes so offline calls fail immediately
+   * instead of entering TanStack Query's paused mutation queue. */
+  networkMode?: NetworkMode;
   /** Cache keys (prefixes) the mutation affects. Static array or
    *  variables-derived function. Each is treated as a prefix — every
    *  matching child cache is updated and invalidated. */
@@ -112,6 +116,7 @@ export function useOptimisticMutation<TData, TVariables, TPrev = unknown>(
 
   return useMutation<TData, Error, TVariables, OptimisticContext<TPrev>>({
     mutationFn: opts.mutationFn,
+    networkMode: opts.networkMode,
     onMutate: async (vars) => {
       const keys = resolveKeys(opts.queryKeys, vars);
       const snapshots: Array<[QueryKey, TPrev | undefined]> = [];

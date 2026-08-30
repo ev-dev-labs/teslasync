@@ -4,6 +4,8 @@ import { ThermometerSun } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartLegend, ChartTooltip, EmbeddedChart,
+  type ChartDataRow,
 } from '@/components/charts';
 import { useClimateHistory } from '@/api/hooks/useVehicleSystems';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -15,7 +17,7 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertTempFromSI } from '@/lib/unitConversion';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   time: string;
   inside: number | null;
   outside: number | null;
@@ -144,16 +146,24 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<ThermometerSun className="h-5 w-5" />}
         stats={stats}
         chart={
-          <div
-            className="h-full w-full"
-            role="img"
-            aria-label={t(
+          <EmbeddedChart
+            title={t('widget.climateHistory.title', 'Climate History')}
+            ariaLabel={t(
               'widget.climateHistory.chartAria',
               'Cabin and outside temperature history',
             )}
+            data={chartData}
+            dataColumns={[
+              { key: 'time', label: t('widget.climateHistory.time', 'Time') },
+              { key: 'inside', label: `${t('widget.climateHistory.cabin', 'Cabin')} (${tempUnit})` },
+              { key: 'outside', label: `${t('widget.climateHistory.outside', 'Outside')} (${tempUnit})` },
+            ]}
+            chartKey="dashboard-climate-history"
+            className="h-full w-full"
           >
-            <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <defs>
                 <linearGradient id="gradInside" x1="0" y1="0" x2="0" y2="1">
@@ -180,12 +190,7 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 tickFormatter={(v: number) => `${fmt(v, 0)}°`}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                content={<ChartTooltip />}
                 labelFormatter={(v: string) => formatTime(v)}
                 formatter={(value: number, name: string) => {
                   const label =
@@ -195,14 +200,16 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                   return [`${fmtInt(value)}${tempUnit}`, label];
                 }}
               />
+              <ChartLegend />
               <Area
                 type="monotone"
                 dataKey="inside"
                 stroke="#f97316"
                 strokeWidth={2}
                 fill="url(#gradInside)"
-                connectNulls
+                connectNulls={false}
                 name="inside"
+                hide={hiddenSeries?.isHidden('inside')}
               />
               <Area
                 type="monotone"
@@ -210,12 +217,14 @@ export default function ClimateHistoryWidget({ vehicleId, size }: WidgetProps) {
                 stroke="#3b82f6"
                 strokeWidth={2}
                 fill="url(#gradOutside)"
-                connectNulls
+                connectNulls={false}
                 name="outside"
+                hide={hiddenSeries?.isHidden('outside')}
               />
-            </AreaChart>
-          </ResponsiveContainer>
-          </div>
+              </AreaChart>
+            </ResponsiveContainer>
+            )}
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

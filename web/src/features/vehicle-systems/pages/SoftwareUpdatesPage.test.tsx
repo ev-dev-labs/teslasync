@@ -225,7 +225,7 @@ function renderPage(initialEntries: string[] = ['/software-updates']) {
 /** Scope a MetricCard by its (unique-within-the-KPI-band) label. */
 function kpiCard(label: string): HTMLElement {
   const band = screen.getByRole('region', { name: 'Software update summary' });
-  const el = within(band).getByText(label).closest('div.p-3');
+  const el = within(band).getByText(label).closest('[data-role="metric-card"]');
   if (!el) throw new Error(`MetricCard wrapper not found for "${label}"`);
   return el as HTMLElement;
 }

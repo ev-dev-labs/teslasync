@@ -22,8 +22,15 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      # Longer than the API's 90s drain budget so Postgres can wait for
+      # clients to disconnect and complete its shutdown checkpoint.
+      terminationGracePeriodSeconds: 120
+      securityContext:
+        {{- toYaml .Values.postgresql.podSecurityContext | nindent 8 }}
       containers:
         - name: postgresql
+          securityContext:
+            {{- toYaml .Values.postgresql.securityContext | nindent 12 }}
           image: "{{ .Values.postgresql.image.repository }}:{{ .Values.postgresql.image.tag }}"
           imagePullPolicy: {{ .Values.postgresql.image.pullPolicy | default "IfNotPresent" }}
           {{- /*
@@ -54,10 +61,23 @@ spec:
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: {{ include "teslasync.fullname" . }}
+                  name: {{ include "teslasync.secretName" . }}
                   key: DATABASE_PASS
             - name: PGDATA
               value: {{ .Values.postgresql.persistence.pgdataPath | quote }}
+          # WAL replay after an abrupt homelab reboot can take minutes.
+          # startupProbe suppresses liveness until recovery accepts clients.
+          startupProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgresql.auth.username | quote }}
+                - -d
+                - {{ .Values.postgresql.auth.database | quote }}
+            initialDelaySeconds: 10
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
           livenessProbe:
             exec:
               command:
@@ -66,7 +86,7 @@ spec:
                 - {{ .Values.postgresql.auth.username | quote }}
                 - -d
                 - {{ .Values.postgresql.auth.database | quote }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 5
           readinessProbe:
@@ -88,7 +108,14 @@ spec:
             {{- if .Values.postgresql.persistence.enabled }}
             - name: postgresql-data
               mountPath: {{ .Values.postgresql.persistence.mountPath | quote }}
+            {{- else }}
+            - name: postgresql-data
+              mountPath: {{ .Values.postgresql.persistence.mountPath | quote }}
             {{- end }}
+            - name: postgresql-run
+              mountPath: /var/run/postgresql
+            - name: postgresql-tmp
+              mountPath: /tmp
             {{- if .Values.postgresql.initScripts.enabled }}
             - name: init-scripts
               mountPath: /docker-entrypoint-initdb.d
@@ -99,7 +126,14 @@ spec:
         - name: postgresql-data
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-postgresql-data
+        {{- else }}
+        - name: postgresql-data
+          emptyDir: {}
         {{- end }}
+        - name: postgresql-run
+          emptyDir: {}
+        - name: postgresql-tmp
+          emptyDir: {}
         {{- if .Values.postgresql.initScripts.enabled }}
         - name: init-scripts
           configMap:

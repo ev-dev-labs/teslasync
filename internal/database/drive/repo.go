@@ -176,7 +176,9 @@ func (r *DriveRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit, of
 		args = append(args, endTime)
 		argIdx++
 	}
-	query += fmt.Sprintf(" ORDER BY started_at DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
+	// ID is a deterministic tie-breaker for sessions with the same
+	// telemetry timestamp, keeping offset pagination stable between requests.
+	query += fmt.Sprintf(" ORDER BY started_at DESC, id DESC LIMIT $%d OFFSET $%d", argIdx, argIdx+1)
 	args = append(args, limit, offset)
 	rows, err := r.db.Pool.Query(ctx, query, args...)
 	if err != nil {
@@ -318,6 +320,32 @@ func (r *DriveRepo) GetStale(ctx context.Context, cutoff time.Time) ([]*drivemod
 	return drives, rows.Err()
 }
 
+// GetOpenSince returns open drives that started at or after cutoff. Restart
+// recovery uses the recent side of the boundary so abandoned historical rows
+// are not restored as live sessions.
+func (r *DriveRepo) GetOpenSince(ctx context.Context, cutoff time.Time) ([]*drivemodel.Drive, error) {
+	query := `SELECT ` + driveColumns + ` FROM drives WHERE ended_at IS NULL AND started_at >= $1
+		ORDER BY started_at DESC`
+	rows, err := r.db.Pool.Query(ctx, query, cutoff)
+	if err != nil {
+		return nil, fmt.Errorf("get open drives since %s: %w", cutoff.Format(time.RFC3339), err)
+	}
+	defer rows.Close()
+
+	var drives []*drivemodel.Drive
+	for rows.Next() {
+		d, err := scanDrive(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan open drive: %w", err)
+		}
+		drives = append(drives, d)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate open drives: %w", err)
+	}
+	return drives, nil
+}
+
 // FindRecentEndedForMerge returns the most recent ended drive for a vehicle
 // whose ended_at falls within `window` before the candidate startTs. Returns
 // (nil, nil) when no eligible drive is found. This merges spurious
@@ -363,7 +391,6 @@ func (r *DriveRepo) ResumeForMerge(ctx context.Context, id int64) error {
 // is allowed to mutate. Callers MUST pass SI canonical keys directly;
 // display-unit aliases are not accepted.
 var DrivePartialAllowed = map[string]string{
-	"ended_at":           "ended_at",
 	"distance_m":         "distance_m",
 	"duration_s":         "duration_s",
 	"end_soc_pct":        "end_soc_pct",
@@ -404,10 +431,58 @@ func (r *DriveRepo) PartialUpdate(ctx context.Context, id int64, fields map[stri
 	return err
 }
 
+const updateRepairBoundaryIfUnchangedSQL = `
+	UPDATE drives
+	SET ended_at = $3, duration_s = $4
+	WHERE id = $1
+	  AND ended_at IS NOT DISTINCT FROM $2`
+
+// UpdateRepairBoundaryIfUnchanged atomically applies a reviewed data-repair
+// boundary only when ended_at still matches the value observed during review.
+// IS NOT DISTINCT FROM gives NULL-safe compare-and-swap semantics.
+func (r *DriveRepo) UpdateRepairBoundaryIfUnchanged(
+	ctx context.Context,
+	id int64,
+	expectedEndedAt *time.Time,
+	endedAt time.Time,
+	durationS int64,
+) (bool, error) {
+	return r.UpdateRepairBoundaryIfUnchangedWithTx(
+		ctx, r.db.Pool, id, expectedEndedAt, endedAt, durationS,
+	)
+}
+
+// UpdateRepairBoundaryIfUnchangedWithTx applies the boundary through the
+// supplied transaction so the repair and its audit row can commit atomically.
+func (r *DriveRepo) UpdateRepairBoundaryIfUnchangedWithTx(
+	ctx context.Context,
+	tx database.DBTX,
+	id int64,
+	expectedEndedAt *time.Time,
+	endedAt time.Time,
+	durationS int64,
+) (bool, error) {
+	tag, err := tx.Exec(ctx, updateRepairBoundaryIfUnchangedSQL,
+		id, expectedEndedAt, endedAt.UTC(), durationS)
+	if err != nil {
+		return false, fmt.Errorf("update drive %d repair boundary: %w", id, err)
+	}
+	return tag.RowsAffected() == 1, nil
+}
+
 // Delete removes a drive by ID.
 func (r *DriveRepo) Delete(ctx context.Context, id int64) error {
-	_, err := r.db.Pool.Exec(ctx, "DELETE FROM drives WHERE id=$1", id)
+	_, err := r.DeleteWithTx(ctx, r.db.Pool, id)
 	return err
+}
+
+// DeleteWithTx deletes through the supplied transaction.
+func (r *DriveRepo) DeleteWithTx(ctx context.Context, tx database.DBTX, id int64) (bool, error) {
+	tag, err := tx.Exec(ctx, "DELETE FROM drives WHERE id=$1", id)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 // FilterExistingIDs returns the subset of `ids` that exist in the drives
@@ -434,24 +509,44 @@ func (r *DriveRepo) FilterExistingIDs(ctx context.Context, ids []int64) ([]int64
 }
 
 // BulkDelete removes drives whose IDs are in `ids`, all inside a single
-// transaction. Returns the actual rows-affected count. Callers should
-// pre-validate which ids exist via FilterExistingIDs to surface failed ids
-// to the client; this method itself is idempotent for missing ids.
+// transaction. Callers that need per-ID concurrent-delete diagnostics should
+// prefer BulkDeleteReturning.
 func (r *DriveRepo) BulkDelete(ctx context.Context, ids []int64) (int64, error) {
-	if len(ids) == 0 {
-		return 0, nil
+	deleted, err := r.BulkDeleteReturning(ctx, ids)
+	if err != nil {
+		return 0, err
 	}
-	var deleted int64
+	return int64(len(deleted)), nil
+}
+
+// BulkDeleteReturning removes drives in one transaction and returns the
+// actual IDs PostgreSQL deleted. The returned IDs let HTTP handlers distinguish
+// an absent request ID from a row that changed after their preflight read.
+func (r *DriveRepo) BulkDeleteReturning(ctx context.Context, ids []int64) ([]int64, error) {
+	if len(ids) == 0 {
+		return []int64{}, nil
+	}
+	deleted := make([]int64, 0, len(ids))
 	err := r.db.WithTx(ctx, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx, `DELETE FROM drives WHERE id = ANY($1)`, ids)
+		rows, err := tx.Query(ctx, `DELETE FROM drives WHERE id = ANY($1) RETURNING id`, ids)
 		if err != nil {
-			return err
+			return fmt.Errorf("delete drives: %w", err)
 		}
-		deleted = tag.RowsAffected()
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			if err := rows.Scan(&id); err != nil {
+				return fmt.Errorf("scan deleted drive: %w", err)
+			}
+			deleted = append(deleted, id)
+		}
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("iterate deleted drives: %w", err)
+		}
 		return nil
 	})
 	if err != nil {
-		return 0, fmt.Errorf("bulk delete drives: %w", err)
+		return nil, fmt.Errorf("bulk delete drives: %w", err)
 	}
 	return deleted, nil
 }
@@ -560,6 +655,25 @@ func (r *DriveRepo) PartialUpdateWithTx(ctx context.Context, tx database.DBTX, i
 	}
 	_, err := tx.Exec(ctx, query, args...)
 	return err
+}
+
+// PartialUpdateForRepairWithTx applies a reviewed non-boundary repair and
+// reports whether the target row still existed.
+func (r *DriveRepo) PartialUpdateForRepairWithTx(
+	ctx context.Context,
+	tx database.DBTX,
+	id int64,
+	fields map[string]interface{},
+) (bool, error) {
+	query, args := database.BuildPartialUpdate("drives", id, fields, DrivePartialAllowed)
+	if query == "" {
+		return false, nil
+	}
+	tag, err := tx.Exec(ctx, query, args...)
+	if err != nil {
+		return false, err
+	}
+	return tag.RowsAffected() == 1, nil
 }
 
 // BackfillDriveTelemetryDriveIDInTx attaches the supplied driveID to every

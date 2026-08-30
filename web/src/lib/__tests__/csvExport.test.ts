@@ -34,6 +34,12 @@ describe('escapeCell', () => {
     expect(escapeCell(' trimmed ')).toBe('" trimmed "');
   });
 
+  it('neutralizes spreadsheet formula injection', () => {
+    expect(escapeCell('=HYPERLINK("https://attacker.invalid")')).toBe(`"'=HYPERLINK(""https://attacker.invalid"")"`);
+    expect(escapeCell('  +SUM(1,1)')).toBe(`"'  +SUM(1,1)"`);
+    expect(escapeCell(-12)).toBe('-12');
+  });
+
   it('serializes numbers and booleans', () => {
     expect(escapeCell(42)).toBe('42');
     expect(escapeCell(3.14)).toBe('3.14');

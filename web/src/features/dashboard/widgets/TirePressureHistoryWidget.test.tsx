@@ -81,6 +81,12 @@ vi.mock('@/api/hooks/useVehicleSystems', () => ({
 }));
 vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vehiclesMock }));
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 import TirePressureHistoryWidget, {
   RECOMMENDED_RANGE_KPA,
   buildChartData,

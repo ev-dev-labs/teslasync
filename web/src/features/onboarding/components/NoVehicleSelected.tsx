@@ -4,6 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { PageContainer } from '@/components/layout';
 import { GlassPanel } from '@/components/ui';
 import { EmptyState } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
+import { getEmptyStateGuidance } from '@/lib/emptyStateGuidance';
 
 /**
  * Defensive empty state for pages that require a selected vehicle.
@@ -16,7 +18,19 @@ import { EmptyState } from '@/components/feedback';
  * render its data scaffolding (which would throw on `null` IDs);
  * instead it shows this empty state and links the user back into the
  * onboarding flow.
+ *
+ * HELP-02: this is the single highest-traffic empty state in the app —
+ * ~20 pages route through it — so it carries the governed explanation
+ * (prerequisite + likely cause) from `lib/emptyStateGuidance`. The
+ * established title, message and CTA are unchanged: "no vehicles linked"
+ * has two very different causes (setup never finished vs. a revoked Tesla
+ * authorisation) and only one of them is obvious from the CTA. The CTA
+ * target is asserted against the registry in the test, so the two cannot
+ * drift apart.
  */
+
+/** Registry entry backing the explanation rows below the message. */
+const GUIDANCE_ID = 'vehicles.list';
 
 interface NoVehicleSelectedProps {
   /** Localized page title (passed straight through to PageContainer). */
@@ -33,6 +47,7 @@ export function NoVehicleSelected({
   description,
 }: NoVehicleSelectedProps) {
   const { t } = useTranslation();
+  const guidance = getEmptyStateGuidance(GUIDANCE_ID);
 
   return (
     <PageContainer title={pageTitle}>
@@ -49,9 +64,13 @@ export function NoVehicleSelected({
           }
           actionTo={{
             label: t('common.noVehicleSelected.action', 'Set up TeslaSync'),
-            to: '/onboarding',
+            // Kept in lock-step with the governed action for this surface.
+            to: guidance?.action.to ?? '/onboarding',
           }}
         />
+        <div className="flex justify-center">
+          <EmptyStateGuidanceDetails guidanceId={GUIDANCE_ID} />
+        </div>
       </GlassPanel>
     </PageContainer>
   );

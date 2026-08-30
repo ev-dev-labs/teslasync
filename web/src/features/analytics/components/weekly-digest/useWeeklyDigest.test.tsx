@@ -34,6 +34,8 @@ import { describe, it, expect, beforeAll, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { SelectedVehicleProvider } from '@/store/selectedVehicle';
 
 vi.mock('@/api/client', async () => {
   const actual = await vi.importActual<typeof import('@/api/client')>('@/api/client');
@@ -60,7 +62,13 @@ function makeWrapper() {
     },
   });
   function Wrapper({ children }: { children: ReactNode }) {
-    return <QueryClientProvider client={qc}>{children}</QueryClientProvider>;
+    return (
+      <QueryClientProvider client={qc}>
+        <MemoryRouter initialEntries={['/weekly-digest']}>
+          <SelectedVehicleProvider>{children}</SelectedVehicleProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
+    );
   }
   return Wrapper;
 }
@@ -189,6 +197,7 @@ beforeAll(() => {
 });
 
 beforeEach(() => {
+  window.localStorage.clear();
   mockedRequest.mockReset();
 });
 

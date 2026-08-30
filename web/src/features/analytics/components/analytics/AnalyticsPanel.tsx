@@ -18,6 +18,7 @@ interface AnalyticsPanelProps {
   /** True when the query succeeded but produced no rows for this section. */
   isEmpty?: boolean;
   emptyMessage?: string;
+  emptyDescription?: string;
   emptyIcon?: ReactNode;
   /** Skeleton height while loading (defaults to a chart-sized block). */
   skeletonHeight?: number;
@@ -41,6 +42,7 @@ export function AnalyticsPanel({
   onRetry,
   isEmpty,
   emptyMessage,
+  emptyDescription,
   emptyIcon,
   skeletonHeight = 260,
   className,
@@ -62,10 +64,17 @@ export function AnalyticsPanel({
       ) : error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isEmpty ? (
+        // no-action: recovery uses the page-level vehicle and period filters that remain visible.
         <EmptyState
-          /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
           icon={emptyIcon}
-          message={emptyMessage ?? t('common.noData', 'No data available')}
+          message={emptyMessage ?? t(
+            'common.noAnalyticsRecords',
+            'No analytics records match the current selection.',
+          )}
+          description={emptyDescription ?? t(
+            'common.noAnalyticsRecordsDescription',
+            'Adjust the current filters or return after more fleet activity is recorded.',
+          )}
         />
       ) : (
         children

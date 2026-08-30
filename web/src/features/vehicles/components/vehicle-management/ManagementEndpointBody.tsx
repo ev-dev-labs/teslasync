@@ -1,6 +1,11 @@
 import { useTranslation } from 'react-i18next'
 import { isApiError } from '@/api/client'
-import { AlertBanner, EmptyState, Spinner } from '@/components/feedback'
+import {
+  DataStateNotice,
+  EmptyState,
+  ErrorDisplay,
+  ListSkeleton,
+} from '@/components/feedback'
 import {
   managementErrorText,
   type ManagementEndpointKind,
@@ -37,8 +42,8 @@ export function ManagementEndpointBody({
   emptyMessage,
 }: ManagementEndpointBodyProps) {
   const { t } = useTranslation()
-  const capabilityUnavailable =
-    isApiError(error) && [401, 402, 403, 412].includes(error.status)
+  const prerequisiteUnavailable =
+    isApiError(error) && [402, 412].includes(error.status)
 
   if (unavailable) {
     return (
@@ -55,43 +60,45 @@ export function ManagementEndpointBody({
   }
   if (loading) {
     return (
-      <Spinner
-        size="sm"
+      <ListSkeleton
+        rows={3}
         label={t('vehicleManagement.state.loading', 'Loading cached data')}
-        className="py-5"
+        className="py-2"
+        testId="vehicle-management-loading"
       />
     )
   }
-  if (capabilityUnavailable) {
+  if (prerequisiteUnavailable) {
     return (
-      <AlertBanner
-        variant="warning"
-        title={t('vehicleManagement.state.unavailable', 'Capability unavailable')}
-      >
-        {managementErrorText(
+      <DataStateNotice
+        state="unsupported"
+        title={t(
+          'vehicleManagement.state.prerequisiteRequired',
+          'Prerequisite required',
+        )}
+        message={managementErrorText(
           error,
           t(
             'vehicleManagement.state.prerequisiteError',
             'Tesla did not confirm the required account scope or prerequisite.',
           ),
         )}
-      </AlertBanner>
+      />
     )
   }
   if (error) {
     return (
-      <AlertBanner
-        variant="danger"
-        title={t('vehicleManagement.state.error', 'Request failed')}
-      >
-        {managementErrorText(
+      <ErrorDisplay
+        error={error}
+        message={managementErrorText(
           error,
           t(
             'vehicleManagement.state.errorDetail',
             'The request could not be completed.',
           ),
         )}
-      </AlertBanner>
+        compact
+      />
     )
   }
   if (hasRenderableData(data)) {

@@ -105,16 +105,17 @@ export function EventTimeline({ timelineEvents, isLoading, error, onRetry, class
   const { t } = useTranslation();
   const getLabels = useTimelineLabels();
   const events = timelineEvents ?? [];
+  const panelTitle = t('admin.security.timeline.title', 'Security Event Timeline');
 
   return (
     <GlassPanel className={cn('p-4 sm:p-5', className)}>
-      <PanelTitle className="mb-3">{t('admin.security.timeline.title', 'Security Event Timeline')}</PanelTitle>
+      <PanelTitle className="mb-3">{panelTitle}</PanelTitle>
       {error ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : isLoading ? (
         <Skeleton lines={8} />
       ) : events.length > 0 ? (
-        <ul className="max-h-96 space-y-3 overflow-y-auto pr-1">
+        <ul aria-label={panelTitle} className="max-h-96 space-y-3 overflow-y-auto pr-1">
           {events.map((ev) => {
             const { title, subtitle } = getLabels(ev);
             return (

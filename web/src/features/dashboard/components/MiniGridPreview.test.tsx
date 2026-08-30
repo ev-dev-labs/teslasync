@@ -24,8 +24,8 @@
  *   7. `className` passthrough onto the container.
  *
  * i18n is stubbed with a passthrough `t(key, default, opts)` that interpolates
- * `{{count}}`, matching the sibling KioskOverlay/RecentlyViewedWidget
- * convention, so the accessible-name assertions are deterministic without the
+ * `{{count}}`, matching the sibling KioskOverlay test convention, so the
+ * accessible-name assertions are deterministic without the
  * full i18n bootstrap. The real widget registry is used (with stable core
  * widget ids) so icon resolution is covered end-to-end.
  */

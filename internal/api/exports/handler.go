@@ -3,10 +3,12 @@ package exports
 import (
 	"encoding/csv"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
@@ -15,6 +17,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 
@@ -36,6 +39,76 @@ type ExportHandler struct {
 	bulkOverride exportBulkStore
 }
 
+const (
+	maxExportJobRequestBytes = 64 << 10
+)
+
+type submitJobRequest struct {
+	Type      string   `json:"type"`
+	Format    string   `json:"format"`
+	VehicleID *int64   `json:"vehicle_id,omitempty"`
+	Start     string   `json:"start,omitempty"`
+	End       string   `json:"end,omitempty"`
+	Columns   []string `json:"columns,omitempty"`
+}
+
+func decodeSubmitJobRequest(w http.ResponseWriter, r *http.Request) (submitJobRequest, error) {
+	var req submitJobRequest
+	r.Body = http.MaxBytesReader(w, r.Body, maxExportJobRequestBytes)
+	dec := json.NewDecoder(r.Body)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&req); err != nil {
+		return submitJobRequest{}, errors.New("invalid request body")
+	}
+	var trailing json.RawMessage
+	if err := dec.Decode(&trailing); !errors.Is(err, io.EOF) {
+		return submitJobRequest{}, errors.New("request body must contain one JSON object")
+	}
+	return req, nil
+}
+
+// parseAsyncExportWindow preserves nil bounds for the export worker's
+// intentional "All Time" contract. Jobs are queued and streamed by the
+// worker, so changing an omitted range into a synthetic recent window would
+// silently omit records. Explicit date-only bounds retain the established
+// request format and reject only malformed or reversed windows.
+func parseAsyncExportWindow(startRaw, endRaw string) (*time.Time, *time.Time, error) {
+	parse := func(raw, field string) (*time.Time, error) {
+		raw = strings.TrimSpace(raw)
+		if raw == "" {
+			return nil, nil
+		}
+		value, err := time.Parse("2006-01-02", raw)
+		if err != nil {
+			return nil, fmt.Errorf("%s must use YYYY-MM-DD format", field)
+		}
+		value = value.UTC()
+		return &value, nil
+	}
+
+	start, err := parse(startRaw, "start")
+	if err != nil {
+		return nil, nil, err
+	}
+	end, err := parse(endRaw, "end")
+	if err != nil {
+		return nil, nil, err
+	}
+	if start != nil && end != nil {
+		if err := apiparams.ValidateDateRange(*start, *end, 0); err != nil {
+			return nil, nil, err
+		}
+	}
+	return start, end, nil
+}
+
+// syncExportWindow delegates all parsing to the legacy shared helper so
+// synchronous downloads preserve RFC3339 support and the inclusive
+// end-of-day behavior for YYYY-MM-DD filters.
+func syncExportWindow(r *http.Request) (time.Time, time.Time) {
+	return apiparams.ParseDateRange(r)
+}
+
 // NewExportJobHandler creates a handler with MQTT support for async exports.
 func NewExportJobHandler(db *database.DB, mqttClient pahomqtt.Client) *ExportHandler {
 	return &ExportHandler{
@@ -47,22 +120,21 @@ func NewExportJobHandler(db *database.DB, mqttClient pahomqtt.Client) *ExportHan
 
 // SubmitJob creates a new export job and publishes it to the MQTT queue.
 func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
-	var req struct {
-		Type      string   `json:"type"`
-		Format    string   `json:"format"`
-		VehicleID *int64   `json:"vehicle_id,omitempty"`
-		Start     string   `json:"start,omitempty"`
-		End       string   `json:"end,omitempty"`
-		Columns   []string `json:"columns,omitempty"`
-	}
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.exports.submit_job")
+	defer span.End()
+	traceID := span.SpanContext().TraceID().String()
 
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "invalid request body")
+	req, err := decodeSubmitJobRequest(w, r)
+	if err != nil {
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
 	if req.Type == "" {
-		writeError(w, http.StatusBadRequest, "type is required (drives, charging, trips, backup, analytics)")
+		validationErr := errors.New("type is required (drives, charging, trips, backup, analytics)")
+		span.RecordError(validationErr)
+		writeError(w, http.StatusBadRequest, validationErr.Error())
 		return
 	}
 
@@ -72,7 +144,9 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 		"account": true,
 	}
 	if !validTypes[req.Type] {
-		writeError(w, http.StatusBadRequest, "invalid type: must be one of drives, charging, trips, backup, analytics, account")
+		validationErr := errors.New("invalid type: must be one of drives, charging, trips, backup, analytics, account")
+		span.RecordError(validationErr)
+		writeError(w, http.StatusBadRequest, validationErr.Error())
 		return
 	}
 
@@ -93,31 +167,23 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 	// intersection downstream.
 	if len(req.Columns) > 0 && req.Type != "account" {
 		if !export.SupportsColumnSelection(req.Type) {
-			writeError(w, http.StatusBadRequest, "columns are not supported for this export type")
+			validationErr := errors.New("columns are not supported for this export type")
+			span.RecordError(validationErr)
+			writeError(w, http.StatusBadRequest, validationErr.Error())
 			return
 		}
 		if _, err := export.ValidateColumns(req.Type, req.Columns); err != nil {
+			span.RecordError(err)
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
 	}
 
-	var startDate, endDate *time.Time
-	if req.Start != "" {
-		t, err := time.Parse("2006-01-02", req.Start)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid start date format (expected YYYY-MM-DD)")
-			return
-		}
-		startDate = &t
-	}
-	if req.End != "" {
-		t, err := time.Parse("2006-01-02", req.End)
-		if err != nil {
-			writeError(w, http.StatusBadRequest, "invalid end date format (expected YYYY-MM-DD)")
-			return
-		}
-		endDate = &t
+	startDate, endDate, err := parseAsyncExportWindow(req.Start, req.End)
+	if err != nil {
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
 	}
 
 	// Generate job ID
@@ -136,8 +202,9 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 		UpdatedAt: now,
 	}
 
-	if err := h.jobRepo.Create(r.Context(), job); err != nil {
-		log.Error().Err(err).Msg("export: failed to create job")
+	if err := h.jobRepo.Create(ctx, job); err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", traceID).Msg("export: failed to create job")
 		writeError(w, http.StatusInternalServerError, "failed to create export job")
 		return
 	}
@@ -155,10 +222,14 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 		Columns: req.Columns,
 	}
 
-	if err := export.PublishCtx(r.Context(), h.mqttClient, mqttReq); err != nil {
-		log.Error().Err(err).Str("job_id", jobID).Msg("export: failed to publish to MQTT")
+	if err := export.PublishCtx(ctx, h.mqttClient, mqttReq); err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("job_id", jobID).Str("trace_id", traceID).Msg("export: failed to publish to MQTT")
 		// Mark as failed since worker won't pick it up
-		_ = h.jobRepo.Fail(r.Context(), jobID, "failed to queue: "+err.Error())
+		if failErr := h.jobRepo.Fail(ctx, jobID, "failed to queue: "+err.Error()); failErr != nil {
+			log.Warn().Err(failErr).Str("job_id", jobID).Str("trace_id", traceID).
+				Msg("export: failed to mark unqueued job as failed")
+		}
 		writeError(w, http.StatusServiceUnavailable, "export service unavailable, MQTT not connected")
 		return
 	}
@@ -176,13 +247,19 @@ func (h *ExportHandler) SubmitJob(w http.ResponseWriter, r *http.Request) {
 
 // ListJobs returns recent export jobs.
 func (h *ExportHandler) ListJobs(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.exports.list_jobs")
+	defer span.End()
+
 	limit, offset := pagination(r)
-	jobs, err := h.jobRepo.List(r.Context(), limit, offset)
+	jobs, err := h.jobRepo.List(ctx, limit, offset)
 	if err != nil {
-		log.Error().Err(err).Msg("export: failed to list jobs")
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("export: failed to list jobs")
 		writeError(w, http.StatusInternalServerError, "failed to list export jobs")
 		return
 	}
+	apiparams.SetPaginationHeaders(w, limit, offset, len(jobs))
 	writeJSON(w, http.StatusOK, jobs)
 }
 
@@ -396,6 +473,11 @@ func NewExportHandler(db *database.DB) http.HandlerFunc {
 	chargingRepo := chargingdb.NewChargingRepo(db)
 
 	return func(w http.ResponseWriter, r *http.Request) {
+		ctx, span := otel.Tracer("api").Start(r.Context(), "api.exports.download")
+		defer span.End()
+		r = r.WithContext(ctx)
+
+		startTime, endTime := syncExportWindow(r)
 		exportType := chi.URLParam(r, "type")
 		format := r.URL.Query().Get("format")
 		if format == "" {
@@ -404,19 +486,28 @@ func NewExportHandler(db *database.DB) http.HandlerFunc {
 
 		switch exportType {
 		case "drives":
-			exportDrives(w, r, vehicleRepo, driveRepo, format)
+			exportDrives(w, r, vehicleRepo, driveRepo, format, startTime, endTime)
 		case "charging":
-			exportCharging(w, r, vehicleRepo, chargingRepo, format)
+			exportCharging(w, r, vehicleRepo, chargingRepo, format, startTime, endTime)
 		default:
-			http.Error(w, "unsupported export type", http.StatusBadRequest)
+			validationErr := errors.New("unsupported export type")
+			span.RecordError(validationErr)
+			httpx.WriteError(w, http.StatusBadRequest, validationErr.Error())
 		}
 	}
 }
 
-func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb.VehicleRepo, driveRepo *drivedb.DriveRepo, format string) {
+func exportDrives(
+	w http.ResponseWriter,
+	r *http.Request,
+	vehicleRepo *vehicledb.VehicleRepo,
+	driveRepo *drivedb.DriveRepo,
+	format string,
+	startTime, endTime time.Time,
+) {
 	vehicles, err := vehicleRepo.GetAll(r.Context())
 	if err != nil {
-		http.Error(w, "failed to fetch vehicles", http.StatusInternalServerError)
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch vehicles")
 		return
 	}
 
@@ -431,11 +522,16 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb
 	}
 
 	var allDrives []exportDrive
-	startTime, endTime := parseDateRange(r)
+	partial := false
 	for _, v := range vehicles {
 		drives, err := driveRepo.GetByVehicle(r.Context(), v.ID, 500, 0, startTime, endTime)
 		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("export drives: skipped vehicle after query failure")
+			partial = true
 			continue
+		}
+		if len(drives) >= 500 {
+			partial = true
 		}
 		for _, d := range drives {
 			ed := exportDrive{
@@ -452,6 +548,7 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb
 			allDrives = append(allDrives, ed)
 		}
 	}
+	w.Header().Set("X-Export-Partial", strconv.FormatBool(partial))
 
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")
@@ -478,10 +575,17 @@ func exportDrives(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb
 	cw.Flush()
 }
 
-func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicledb.VehicleRepo, chargingRepo *chargingdb.ChargingRepo, format string) {
+func exportCharging(
+	w http.ResponseWriter,
+	r *http.Request,
+	vehicleRepo *vehicledb.VehicleRepo,
+	chargingRepo *chargingdb.ChargingRepo,
+	format string,
+	startTime, endTime time.Time,
+) {
 	vehicles, err := vehicleRepo.GetAll(r.Context())
 	if err != nil {
-		http.Error(w, "failed to fetch vehicles", http.StatusInternalServerError)
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch vehicles")
 		return
 	}
 
@@ -498,11 +602,16 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicle
 	}
 
 	var allSessions []exportSession
-	startTime, endTime := parseDateRange(r)
+	partial := false
 	for _, v := range vehicles {
 		sessions, err := chargingRepo.GetByVehicle(r.Context(), v.ID, 500, 0, startTime, endTime)
 		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", v.ID).Msg("export charging: skipped vehicle after query failure")
+			partial = true
 			continue
+		}
+		if len(sessions) >= 500 {
+			partial = true
 		}
 		for _, s := range sessions {
 			es := exportSession{
@@ -521,6 +630,7 @@ func exportCharging(w http.ResponseWriter, r *http.Request, vehicleRepo *vehicle
 			allSessions = append(allSessions, es)
 		}
 	}
+	w.Header().Set("X-Export-Partial", strconv.FormatBool(partial))
 
 	if format == "json" {
 		w.Header().Set("Content-Type", "application/json")

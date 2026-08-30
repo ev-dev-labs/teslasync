@@ -9,6 +9,8 @@ interface InputCommandTileProps {
   def: CommandDef;
   onRequestDialog: (def: CommandDef) => void;
   loading: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   lastStatus?: string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
@@ -20,16 +22,16 @@ const hoverStyles = {
   success: 'hover:border-neon-green/30',
 } as const;
 
-export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, isFavorite, onToggleFavorite }: InputCommandTileProps) {
+export function InputCommandTile({ def, onRequestDialog, loading, disabled = false, disabledReason, lastStatus, isFavorite, onToggleFavorite }: InputCommandTileProps) {
   const { t } = useTranslation();
   const Icon = def.icon;
   const variant = def.variant ?? 'default';
   const label = t(def.labelKey, def.labelFallback);
 
   const handleActivate = useCallback(() => {
-    if (loading) return;
+    if (loading || disabled) return;
     onRequestDialog(def);
-  }, [loading, onRequestDialog, def]);
+  }, [loading, disabled, onRequestDialog, def]);
 
   // The tile is a clickable surface, so mirror native button keyboard
   // semantics (Enter/Space) — otherwise the command is mouse-only.
@@ -54,17 +56,18 @@ export function InputCommandTile({ def, onRequestDialog, loading, lastStatus, is
   return (
     <GlassPanel
       role="button"
-      tabIndex={loading ? -1 : 0}
+      tabIndex={loading || disabled ? -1 : 0}
       aria-label={label}
       aria-busy={loading || undefined}
-      aria-disabled={loading || undefined}
+      aria-disabled={loading || disabled || undefined}
+      title={disabled ? disabledReason : undefined}
       onClick={handleActivate}
       onKeyDown={handleKeyDown}
       className={cn(
         'p-3 sm:p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[116px] justify-center cursor-pointer relative group select-none',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--theme-primary)]',
         hoverStyles[variant] ?? hoverStyles.default,
-        loading && 'opacity-50 cursor-not-allowed',
+        (loading || disabled) && 'opacity-50 cursor-not-allowed',
       )}
     >
       <ControlButton

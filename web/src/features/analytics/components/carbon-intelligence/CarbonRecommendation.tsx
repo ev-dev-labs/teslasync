@@ -45,7 +45,7 @@ export function CarbonRecommendation({
         </PanelTitle>
         <CarbonSectionBody state={states.recommendation}>
           {recommendation.availability === 'empty' ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               message={t(
                 'carbon.recommendation.empty',
                 'No lifetime charging energy supports a green-window scenario.',

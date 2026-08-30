@@ -29,7 +29,7 @@ export function PackCapacityQueryStatus({
 
   if (!state.vehicleSelected) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
         className="py-6"
         icon={<BatteryMedium className="h-7 w-7" aria-hidden="true" />}
         message={t(
@@ -120,7 +120,7 @@ export function PackCapacityQueryStatus({
   }
   if (result.accounting.returnedRows === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
         className="py-6"
         icon={<BatteryMedium className="h-7 w-7" aria-hidden="true" />}
         message={t(

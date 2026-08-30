@@ -123,6 +123,14 @@ function InnerSection({ vehicleId, lookbackDays }: InnerSectionProps) {
     url: '/ai/charging/vampire-drain/explain',
     body,
     onEvent: noop,
+    // AI-01: vehicle + lookback-window scope is part of stream
+    // identity — changing either aborts an in-flight narration and
+    // clears the previous scope's explanation before the new scope
+    // streams in.
+    scopeKey:
+      Number.isFinite(numericVehicleId) && numericVehicleId > 0
+        ? `${numericVehicleId}:${body.lookback_days ?? ''}`
+        : null,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
   return (

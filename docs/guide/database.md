@@ -118,13 +118,22 @@ The platform's maintenance worker runs retention policies on a schedule. The def
 | ---------------------------------- | ----------- | ------------------------------------------------------------------- |
 | `DATA_RETENTION_DAYS`              | `0` (off)   | Old `vehicle_live_state` rows; legacy table                          |
 | `POSITION_RETENTION_DAYS`          | `0` (off)   | `positions` rows older than N days                                  |
-| `SIGNAL_HISTORY_RETENTION_DAYS`    | `0` (off)   | Legacy `signal_history` rows                                        |
+| `SIGNAL_HISTORY_RETENTION_DAYS`    | `365`       | Raw `signal_log` and transport-evidence chunk window                 |
+| `SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED` | `false` | Enables destructive signal retention after a verified backup        |
 | `AUDIT_RETENTION_DAYS`             | `365`       | `audit_logs` rows                                                   |
 | `AUDIT_IP_RETENTION_DAYS`          | `30`        | Redact `ip` and `user_agent` from `audit_logs` after N days         |
 
-Setting any of these to `0` disables that policy. The defaults are conservative — TeslaSync **does not delete telemetry data unless you tell it to**. If you want long-term storage, leave the position/signal retention off; if you want shorter retention to control disk, set the values that make sense for your fleet size.
+Setting a day value to `0` disables that policy. Signal history cleanup also
+requires `SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED=true`, so upgrading an
+existing installation never activates deletion implicitly. Verify a
+recoverable backup before acknowledging the 365-day default or a shorter
+window. Cleanup drops complete TimescaleDB chunks and advances through at
+most eight seven-day chunk windows per daily run.
 
-For hypertable chunks, retention can also be configured as a TimescaleDB policy (`add_retention_policy('signal_log', INTERVAL '730 days')`) which drops whole chunks rather than row-by-row deletion. That's faster on large tables but loses fine-grained control.
+Do not add a separate TimescaleDB retention policy for these tables; the
+application-managed schedule keeps `signal_log` and
+`signal_transport_evidence` aligned and enforces the upgrade-safety
+acknowledgement.
 
 ## pgvector — RAG embeddings
 

@@ -1,19 +1,23 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Moon, Plus, Trash2, Pencil, X, Check } from 'lucide-react'
 import {
   GlassPanel,
   IconBox,
   Button,
+  ConfirmDialog,
+  ErrorText,
+  PanelTitle,
   Toggle,
   Badge,
   Input,
   Select,
   type SelectOption,
 } from '@/components/ui'
-import { Spinner, EmptyState } from '@/components/feedback'
+import { ListSkeleton, EmptyState, useToast } from '@/components/feedback'
+import { VisuallyHidden } from '@/components/a11y'
 import { FadeIn } from '@/components/motion'
-import { useToast } from '@/components/feedback/Toast'
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import {
   useQuietHours,
   useSaveQuietHours,
@@ -200,8 +204,10 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const windows = useMemo(() => rawWindows ?? [], [rawWindows])
 
   const [draft, setDraft] = useState<DraftWindow | null>(null)
+  const [initialDraft, setInitialDraft] = useState<DraftWindow | null>(null)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
+  const [validationField, setValidationField] = useState<ValidationResult['field']>(undefined)
 
   // Apply a seedDraft from the AI advisor exactly once per
   // identity. The "Apply to form" handler in
@@ -218,15 +224,18 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
     lastConsumedSeed.current = seedDraft
     setEditingId(null)
     const base = makeDraft()
-    setDraft({
+    const seededDraft = {
       enabled: seedDraft.enabled ?? true,
       start_local: seedDraft.start_local ?? base.start_local,
       end_local: seedDraft.end_local ?? base.end_local,
       timezone: seedDraft.timezone ?? base.timezone,
       weekdays: seedDraft.weekdays ?? ALL_WEEKDAYS,
       bypass_severities: [...(seedDraft.bypass_severities ?? DEFAULT_BYPASS)],
-    })
+    }
+    setDraft(seededDraft)
+    setInitialDraft(seededDraft)
     setValidationError(null)
+    setValidationField(undefined)
     onSeedConsumed?.()
   }, [seedDraft, onSeedConsumed])
 
@@ -236,25 +245,51 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   )
 
   const startEdit = (w: QuietHoursWindow) => {
+    const nextDraft = makeDraft(w)
     setEditingId(w.id)
-    setDraft(makeDraft(w))
+    setDraft(nextDraft)
+    setInitialDraft(nextDraft)
     setValidationError(null)
+    setValidationField(undefined)
   }
 
   const startCreate = () => {
+    const nextDraft = makeDraft()
     setEditingId(null)
-    setDraft(makeDraft())
+    setDraft(nextDraft)
+    setInitialDraft(nextDraft)
     setValidationError(null)
+    setValidationField(undefined)
   }
 
-  const cancel = () => {
+  const discardDraft = () => {
     setDraft(null)
+    setInitialDraft(null)
     setEditingId(null)
     setValidationError(null)
+    setValidationField(undefined)
   }
+  const draftIsDirty = draft != null
+    && initialDraft != null
+    && JSON.stringify(draft) !== JSON.stringify(initialDraft)
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    draftIsDirty,
+    discardDraft,
+    {
+      message: t(
+        'quietHours.form.unsaved',
+        'You have unsaved quiet-hours changes. Discard them?',
+      ),
+    },
+  )
 
-  const submit = () => {
-    if (!draft) return
+  const submit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    if (!draft) {
+      setValidationError(t('quietHours.error.missingDraft', 'The quiet-hours draft is unavailable. Reopen the editor.'))
+      setValidationField(undefined)
+      return
+    }
     const v = validateDraft(draft)
     if (!v.ok) {
       const messages: Record<string, string> = {
@@ -267,9 +302,11 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
         bypass_severities: t('quietHours.error.bypassRequired', 'Pick at least one severity.'),
       }
       setValidationError(messages[v.field ?? 'start_local'] ?? messages.start_local)
+      setValidationField(v.field)
       return
     }
     setValidationError(null)
+    setValidationField(undefined)
     const payload: QuietHoursWindowInput & { id?: number } = {
       enabled: draft.enabled,
       start_local: draft.start_local,
@@ -286,7 +323,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             ? t('toast.quietHours.updated', 'Quiet hours window updated')
             : t('toast.quietHours.created', 'Quiet hours window created'),
         )
-        cancel()
+        discardDraft()
       },
       onError: (err: Error) => {
         toast.error(t('toast.quietHours.saveError', 'Failed to save quiet hours window'), err.message)
@@ -308,6 +345,10 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
   const toggleWeekday = (bit: number) => {
     if (!draft) return
     setDraft({ ...draft, weekdays: draft.weekdays ^ bit })
+    if (validationField === 'weekdays') {
+      setValidationError(null)
+      setValidationField(undefined)
+    }
   }
 
   const toggleSeverity = (sev: string) => {
@@ -354,10 +395,11 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
         </div>
 
         {isLoading ? (
-          <div className="flex items-center gap-2 text-xs text-[var(--text-muted)]">
-            <Spinner size="sm" />
-            <span>{t('quietHours.loading', 'Loading quiet-hours windows…')}</span>
-          </div>
+          <ListSkeleton
+            rows={2}
+            label={t('quietHours.loading', 'Loading quiet-hours windows…')}
+            testId="quiet-hours-loading"
+          />
         ) : windows.length === 0 && !draft ? (
           <EmptyState
             /* no-action: empty inbox state — primary CTA already lives in the panel header */
@@ -400,7 +442,7 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                         size="sm"
                         icon={<Trash2 className="h-3.5 w-3.5" />}
                         onClick={() => removeWindow(w)}
-                        disabled={remove.isPending}
+                        loading={remove.isPending && remove.variables === w.id}
                       >
                         {t('quietHours.delete', 'Delete')}
                       </Button>
@@ -440,16 +482,17 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
         )}
 
         {draft && (
-          <div
+          <form
+            onSubmit={submit}
             className="rounded-lg border border-[var(--border-subtle)] bg-white/[0.03] p-4 space-y-4"
             data-testid="quiet-hours-form"
           >
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-[var(--text-primary)]">
+              <PanelTitle>
                 {editingId
                   ? t('quietHours.form.editTitle', 'Edit window')
                   : t('quietHours.form.addTitle', 'New quiet-hours window')}
-              </h3>
+              </PanelTitle>
               <Toggle
                 checked={draft.enabled}
                 onChange={(v) => setDraft({ ...draft, enabled: v })}
@@ -458,100 +501,118 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label htmlFor="qh-start" className="block text-xs text-[var(--text-muted)] mb-1">
-                  {t('quietHours.form.start', 'Start')}
-                </label>
-                <Input
-                  id="qh-start"
-                  type="time"
-                  value={draft.start_local}
-                  onChange={(e) => setDraft({ ...draft, start_local: e.target.value })}
-                />
-              </div>
-              <div>
-                <label htmlFor="qh-end" className="block text-xs text-[var(--text-muted)] mb-1">
-                  {t('quietHours.form.end', 'End')}
-                </label>
-                <Input
-                  id="qh-end"
-                  type="time"
-                  value={draft.end_local}
-                  onChange={(e) => setDraft({ ...draft, end_local: e.target.value })}
-                />
-              </div>
-            </div>
-
-            <div>
-              <label htmlFor="qh-tz" className="block text-xs text-[var(--text-muted)] mb-1">
-                {t('quietHours.form.timezone', 'Timezone (IANA)')}
-              </label>
-              <Select
-                id="qh-tz"
-                value={draft.timezone}
-                onChange={(e) => setDraft({ ...draft, timezone: e.target.value })}
-                options={tzOptions}
+              <Input
+                label={t('quietHours.form.start', 'Start')}
+                type="time"
+                value={draft.start_local}
+                onChange={(e) => {
+                  setDraft({ ...draft, start_local: e.target.value })
+                  if (validationField === 'start_local') {
+                    setValidationError(null)
+                    setValidationField(undefined)
+                  }
+                }}
+                error={validationField === 'start_local' ? validationError ?? undefined : undefined}
+              />
+              <Input
+                label={t('quietHours.form.end', 'End')}
+                type="time"
+                value={draft.end_local}
+                onChange={(e) => {
+                  setDraft({ ...draft, end_local: e.target.value })
+                  if (validationField === 'end_local') {
+                    setValidationError(null)
+                    setValidationField(undefined)
+                  }
+                }}
+                error={validationField === 'end_local' ? validationError ?? undefined : undefined}
               />
             </div>
 
-            <div>
-              <span className="block text-xs text-[var(--text-muted)] mb-2">
+            <Select
+              label={t('quietHours.form.timezone', 'Timezone (IANA)')}
+              value={draft.timezone}
+              onChange={(e) => {
+                setDraft({ ...draft, timezone: e.target.value })
+                if (validationField === 'timezone') {
+                  setValidationError(null)
+                  setValidationField(undefined)
+                }
+              }}
+              error={validationField === 'timezone' ? validationError ?? undefined : undefined}
+              options={tzOptions}
+            />
+
+            <fieldset
+              aria-describedby={validationField === 'weekdays' ? 'quiet-hours-weekdays-error' : undefined}
+            >
+              <legend className="mb-2 text-xs text-[var(--text-muted)]">
                 {t('quietHours.form.weekdays', 'Weekdays')}
-              </span>
+              </legend>
               <div className="flex flex-wrap gap-1.5">
                 {WEEKDAYS.map(({ bit, key, fallback }) => {
                   const on = (draft.weekdays & bit) !== 0
                   return (
-                    <button
+                    <Button
                       key={bit}
                       type="button"
                       onClick={() => toggleWeekday(bit)}
-                      className={
-                        on
-                          ? 'inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-purple-300/15 text-purple-300 ring-1 ring-purple-300/40 transition-colors'
-                          : 'inline-flex items-center px-3 py-1 rounded-md text-xs text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] hover:ring-purple-300/40 transition-colors'
-                      }
+                      variant={on ? 'primary' : 'outline'}
+                      size="sm"
+                      className="h-8"
                       aria-pressed={on}
                       data-testid={`qh-weekday-${bit}`}
                     >
                       {t(key, fallback)}
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
-            </div>
+              {validationField === 'weekdays' && validationError && (
+                <ErrorText id="quiet-hours-weekdays-error" className="mt-2">
+                  {validationError}
+                </ErrorText>
+              )}
+            </fieldset>
 
-            <div>
-              <span className="block text-xs text-[var(--text-muted)] mb-2">
+            <fieldset>
+              <legend className="mb-2 text-xs text-[var(--text-muted)]">
                 {t('quietHours.form.bypass', 'Always allow these severities through')}
-              </span>
+              </legend>
               <div className="flex flex-wrap gap-1.5">
                 {SEVERITY_CHOICES.map(({ value, labelKey, fallback }) => {
                   const on = draft.bypass_severities.includes(value)
                   return (
-                    <button
+                    <Button
                       key={value}
                       type="button"
                       onClick={() => toggleSeverity(value)}
-                      className={
-                        on
-                          ? 'inline-flex items-center px-3 py-1 rounded-md text-xs font-medium bg-amber-300/15 text-amber-300 ring-1 ring-amber-300/40 transition-colors'
-                          : 'inline-flex items-center px-3 py-1 rounded-md text-xs text-[var(--text-secondary)] ring-1 ring-[var(--border-subtle)] hover:ring-amber-300/40 transition-colors'
-                      }
+                      variant={on ? 'primary' : 'outline'}
+                      size="sm"
+                      className="h-8"
                       aria-pressed={on}
                       data-testid={`qh-severity-${value}`}
                     >
                       {t(labelKey, fallback)}
-                    </button>
+                    </Button>
                   )
                 })}
               </div>
-            </div>
+            </fieldset>
 
-            {validationError && (
-              <p className="text-xs text-rose-300" role="alert" data-testid="quiet-hours-error">
+            {validationError && validationField == null && (
+              <ErrorText data-testid="quiet-hours-error">
                 {validationError}
-              </p>
+              </ErrorText>
+            )}
+            {validationError && validationField != null && (
+              <VisuallyHidden
+                liveRegion
+                priority="assertive"
+                data-testid="quiet-hours-error"
+              >
+                {validationError}
+              </VisuallyHidden>
             )}
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[var(--border-subtle)]">
@@ -559,7 +620,9 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                 variant="secondary"
                 size="sm"
                 icon={<X className="h-4 w-4" />}
-                onClick={cancel}
+                type="button"
+                onClick={requestClose}
+                disabled={save.isPending}
               >
                 {t('quietHours.form.cancel', 'Cancel')}
               </Button>
@@ -567,15 +630,20 @@ export function QuietHoursPanel(props: QuietHoursPanelProps = {}) {
                 variant="primary"
                 size="sm"
                 icon={<Check className="h-4 w-4" />}
-                onClick={submit}
-                disabled={save.isPending}
+                type="submit"
+                loading={save.isPending}
                 data-testid="quiet-hours-save"
               >
-                {editingId ? t('quietHours.form.update', 'Update') : t('quietHours.form.create', 'Create')}
+                {save.isPending
+                  ? t('quietHours.form.saving', 'Saving…')
+                  : editingId
+                    ? t('quietHours.form.update', 'Update')
+                    : t('quietHours.form.create', 'Create')}
               </Button>
             </div>
-          </div>
+          </form>
         )}
+        {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
       </GlassPanel>
     </FadeIn>
   )

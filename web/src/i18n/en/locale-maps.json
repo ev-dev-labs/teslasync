@@ -1,0 +1,305 @@
+{
+  "chargingPlaces": {
+    "workspace": {
+      "title": "Charging Places",
+      "unifiedTitle": "Places & Charging Zones",
+      "unifiedAria": "Places and charging zones",
+      "unifiedDescription": "Manage zone boundaries, alerts, categories, charging rates, and session history in one place.",
+      "showArchived": "Show archived",
+      "addPlace": "Add Place",
+      "search": "Search places, categories, or origin…",
+      "clearSearch": "Clear search",
+      "noSearchMatches": "No places match this search. Clear the search to see all places."
+    },
+    "needsSetup": {
+      "title": "Needs Setup",
+      "empty": "All caught up — no auto-discovered places need review.",
+      "review": "Review"
+    },
+    "table": {
+      "title": "Place Directory",
+      "name": "Place",
+      "origin": "Origin",
+      "category": "Category",
+      "zone": "Zone",
+      "status": "Status",
+      "alerts": "Alerts",
+      "entry": "Entry",
+      "exit": "Exit",
+      "entryAlertLabel": "Entry alert for {{name}}",
+      "exitAlertLabel": "Exit alert for {{name}}",
+      "rate": "Rate / kWh",
+      "effectiveSince": "Effective since",
+      "manage": "Manage"
+    },
+    "unnamed": "Unnamed place",
+    "archived": "Archived",
+    "origin": {
+      "discovered": "Auto-discovered",
+      "manual": "Manual"
+    },
+    "category": {
+      "unset": "Uncategorized",
+      "home": "Home",
+      "work": "Work",
+      "restricted": "Restricted",
+      "custom": "Custom"
+    },
+    "noRate": "Not set",
+    "empty": "No active places yet. Existing and future confirmed charging locations appear automatically.",
+    "emptyAll": "No places or zones yet. Charge somewhere or add a place to start.",
+    "kwh": "kWh",
+    "discoveredAt": "Discovered",
+    "detail": {
+      "needsReviewBadge": "Needs review",
+      "markReviewed": "Mark reviewed",
+      "unarchive": "Restore",
+      "archive": "Archive",
+      "placeName": "Place name",
+      "category": "Category",
+      "rename": "Rename {{name}}",
+      "pricingTab": "Rates & Pricing",
+      "activityTab": "Charging Activity",
+      "tabsLabel": "Charging place detail sections",
+      "pricingIntro": "Rate changes never rewrite protected actual costs. The rate active today estimates older unpriced sessions automatically; use preview and apply when you have exact historical rates."
+    },
+    "rateForm": {
+      "title": "Add a Rate",
+      "currency": "Currency",
+      "rate": "Rate per kWh",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to (optional)",
+      "effectiveToHint": "Leave blank for an open-ended rate.",
+      "legacyEstimateHint": "If this rate is active today, it also estimates older unpriced sessions at this place. Existing actual costs stay unchanged.",
+      "submit": "Save Rate",
+      "errors": {
+        "rate": "Enter a non-negative rate.",
+        "effectiveFrom": "Enter a valid effective-from date/time.",
+        "effectiveTo": "Effective-to date/time is invalid.",
+        "order": "Effective-to must be after effective-from."
+      }
+    },
+    "rateHistory": {
+      "title": "Rate History",
+      "empty": "No rate configured yet — use the form above to start pricing sessions at this place.",
+      "effectiveFrom": "Effective From",
+      "rate": "Rate / kWh",
+      "currency": "Currency",
+      "effectiveTo": "Effective To",
+      "current": "Current",
+      "scheduled": "Scheduled",
+      "cancelScheduled": "Cancel scheduled rate",
+      "cancel": "Cancel Rate",
+      "previewSessions": "Preview sessions",
+      "previewHelp": "Preview sessions shows which historical charges match a rate and what would change before anything is applied.",
+      "deleteTitle": "Cancel this scheduled rate?",
+      "deleteMessage": "The previous rate will continue through this cancelled schedule. Effective rate history cannot be deleted."
+    },
+    "previewApply": {
+      "title": "Session Pricing Preview",
+      "regionLabel": "Session pricing preview",
+      "selectRate": "Choose Preview sessions on a rate to see affected charging sessions and estimated cost.",
+      "help": "This preview is read-only. It shows matching historical sessions and estimated cost; nothing changes until you choose Apply.",
+      "metricsHelp": "Matched sessions are in this place and rate period. Eligible sessions can be priced; protected sessions keep their existing cost.",
+      "confirmTitle": "Apply this rate to matching sessions?",
+      "confirmMessage": "This backfills/reprices unpriced or previously geofence-derived sessions in scope. Manual, Tesla-reported, and existing costs with unknown provenance are never overwritten.",
+      "confirmAttributionTitle": "Assign matching sessions to this place?",
+      "confirmAttributionMessage": "Matching sessions will be linked to this place. Their protected costs will remain unchanged.",
+      "applyAction": "Apply",
+      "assignAction": "Assign Sessions",
+      "refresh": "Refresh preview",
+      "from": "Narrow from (optional)",
+      "to": "Narrow to (optional)",
+      "matched": "Matched",
+      "eligible": "Eligible",
+      "protected": "Protected",
+      "energy": "Energy",
+      "estimatedCost": "Estimated Cost",
+      "noMatches": "No sessions match this place and rate period. Check the zone location and radius, or broaden the optional date range. Sessions without coordinates can match an identical saved place name.",
+      "attributionOnly": "All matched costs are protected. Apply can still assign unlinked sessions to this place without changing their cost.",
+      "applied": "Processed {{matched}} matched sessions: {{priced}} priced, {{skipped}} protected or unchanged, {{cost}} total."
+    },
+    "summary": {
+      "title": "Charging Summary",
+      "empty": "No priced charging activity at this place yet.",
+      "sessions": "Sessions",
+      "energy": "Energy",
+      "spend": "Spend"
+    },
+    "activity": {
+      "title": "Charging Activity",
+      "empty": "No charging sessions recorded at this place yet.",
+      "startedAt": "Started",
+      "endedAt": "Ended",
+      "energy": "Energy",
+      "cost": "Cost",
+      "source": "Source",
+      "pageInfo": "Showing {{from}}–{{to}}"
+    },
+    "costSource": {
+      "manual": "Manual",
+      "tesla_actual": "Tesla Reported",
+      "geofence_tariff": "Place Rate",
+      "default_estimate": "Default Estimate",
+      "unknown": "Unknown"
+    }
+  },
+  "geofences": {
+    "selectVehicle": "Select a vehicle first",
+    "noPosition": "No position data available for this vehicle",
+    "locationDenied": "Location access denied",
+    "locationFailed": "Failed to get location",
+    "searchPlaceholder": "Search by name…",
+    "noMatches": "No geofences match your search.",
+    "useCurrentLocation": "Use Current Location",
+    "vehicle": "Vehicle",
+    "browser": "Browser",
+    "chooseVehicle": "— Choose vehicle —",
+    "gettingLocation": "Getting location…",
+    "getLocation": "Get Location",
+    "drawOnMap": "Draw on map",
+    "drawHint": "Click the circle tool, then click and drag on the map to draw a fence.",
+    "drawerLabel": "Geofence drawing map",
+    "noun": {
+      "one": "geofence",
+      "other": "geofences"
+    },
+    "bulk": {
+      "delete": "Delete",
+      "deleteConfirm": {
+        "title": "Delete geofences?"
+      }
+    },
+    "filterLabel": {
+      "search": "Search"
+    },
+    "selectGeofence": "Select geofence {{name}}",
+    "error": {
+      "nameTooLong": "Max 120 characters"
+    },
+    "aiSuggest": {
+      "title": "Suggest a geofence for this location",
+      "description": "Propose a typed geofence draft (centroid, radius, and name) for this visited location based on its visit pattern. Review only — Helix never saves the geofence; you confirm and save via the existing baseline Add Geofence form.",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "suggestButton": "Suggest geofence",
+      "applyButton": "Apply to form",
+      "proposalLabel": "Proposed geofence",
+      "radiusLabel": "Radius",
+      "rejectedLabel": "Proposal rejected by validator",
+      "pickLocation": "Pick a visited location to draft a geofence around",
+      "pickHint": "Paste a visited-location ID from the Locations page to draft a zone around it."
+    },
+    "toggleGeofence": "Toggle geofence {{name}}",
+    "editGeofence": "Edit geofence {{name}}",
+    "deleteGeofence": "Delete geofence {{name}}",
+    "summaryAria": "Geofence summary",
+    "zonesAria": "Geofence zones",
+    "zonesTitle": "Zones",
+    "zonesCount": "{{count}} defined"
+  },
+  "locations": {
+    "filterLabel": {
+      "search": "Search"
+    },
+    "empty": {
+      "cta": "View drives"
+    },
+    "resetDateRange": "Reset date range",
+    "inspect": "Inspect {{location}}",
+    "unknown": "Unknown location",
+    "lastVisited": "Last visited",
+    "preview": {
+      "eyebrow": "Location evidence",
+      "lastVisited": "Last visited {{date}}"
+    },
+    "aiAutoName": {
+      "title": "Suggest a name for this location",
+      "description": "Propose a concise, human-readable name for this visited location based on its visit pattern. Review only — Helix never saves the name; you confirm and save via the existing baseline form.",
+      "badge": "Helix",
+      "currentLabel": "Current label",
+      "proposalLabel": "Proposed name",
+      "rejectedLabel": "Proposal rejected by validator",
+      "suggestButton": "Suggest name",
+      "applyButton": "Apply to form",
+      "applied": "Suggested name ready to save:"
+    }
+  },
+  "mapOverview": {
+    "pageTitle": "Map Overview",
+    "colTime": "Time",
+    "colLat": "Lat",
+    "colLon": "Lon",
+    "colSpeed": "Speed",
+    "speedUnit": "mph",
+    "colHeading": "Heading",
+    "title": "Map Overview",
+    "noGps": "GPS coordinates not available. Location data requires Fleet Telemetry HTTP streaming.",
+    "vehicle": "Vehicle",
+    "currentSpeed": "Current Speed",
+    "heading": "Heading",
+    "latLon": "Lat / Lon",
+    "lastUpdated": "Last Updated",
+    "autoRefresh": "Auto-refreshes every 15 s",
+    "locationDetails": "Location Details",
+    "atHome": "At Home",
+    "yes": "Yes",
+    "no": "No",
+    "unknown": "Unknown",
+    "atWork": "At Work",
+    "homelinkNearby": "HomeLink Nearby",
+    "odometer": "Odometer",
+    "distanceUnit": "mi",
+    "speedUnitValue": "{{unit}}",
+    "distanceUnitValue": "{{unit}}",
+    "noLocation": "No location data available yet",
+    "quickLinks": "Quick Links",
+    "navRoute": "Navigation Route",
+    "geofences": "Geofences",
+    "locations": "Locations",
+    "recentHistory": "Recent Location History",
+    "noHistory": "No location history found.",
+    "noHistoryDescription": "Location history appears after the selected vehicle reports valid GPS positions.",
+    "recentPlayback": "Recent Route Playback",
+    "playbackLabel": "Recent route playback map",
+    "subtitle": "Live vehicle location and recent history",
+    "kpis": "Vehicle status",
+    "noPlayback": "Not enough GPS points to replay a route yet.",
+    "mapRegion": "Live location map"
+  },
+  "navigation": {
+    "noRoute": "No active route selected"
+  },
+  "tempImpact": {
+    "tipCold": "Precondition your cabin in cold weather to reduce battery drain",
+    "tipHot": "Park in shade during hot weather to preserve battery efficiency",
+    "manageVehicles": "Manage vehicles",
+    "title": "Temperature Impact",
+    "subtitle": "How outside temperature affects driving efficiency",
+    "avgEfficiency": "Avg Efficiency",
+    "bestRange": "Best Temp Range",
+    "worstRange": "Worst Temp Range",
+    "totalPoints": "Total Data Points",
+    "scatterTitle": "Temperature vs Efficiency",
+    "temperature": "Temperature",
+    "efficiency": "Efficiency",
+    "scatterName": "Drives",
+    "bucketTitle": "Efficiency by Temperature Range",
+    "avgEff": "Avg Efficiency",
+    "optimalTitle": "Optimal Temperature Analysis",
+    "tipsTitle": "Recommendations",
+    "tipOptimal": "Best efficiency observed in the {{range}} range",
+    "optimalDesc": "Your most efficient temperature range is {{range}} with an average of {{efficiency}} {{unit}} across {{count}} drives.",
+    "optimalDelta": "Compared to the worst range ({{worst}}), you save {{delta}} {{unit}} on average.",
+    "aiNarrative": {
+      "title": "Narrate the cabin-temperature impact",
+      "description": "Ask Helix to explain how outside ambient temperature affects this vehicle's efficiency — which temperature bucket runs most efficiently, how cold-weather months compare with mild-weather months, and what the seasonal pattern in the chart implies. The bucket and monthly numbers are the same the chart below shows; the narrator only explains them and is honest that these are descriptive aggregates of recent drives, not a forecast.",
+      "badge": "Helix",
+      "generateButton": "Narrate impact",
+      "emptyHint": "Select a vehicle to narrate its temperature impact."
+    },
+    "bucketAria": "Average efficiency line chart by temperature range bucket",
+    "monthlyAria": "Monthly drive count bars and average temperature line",
+    "scatterAria": "Scatter plot of energy efficiency against outdoor temperature per drive"
+  }
+}

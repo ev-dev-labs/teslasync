@@ -7,9 +7,14 @@ import {
   type FleetCostCenter,
   type FleetReservation,
 } from '@/api/hooks/useFleetOps';
-import { Button, Modal } from '@/components/ui';
+import { Button, ConfirmDialog, Modal } from '@/components/ui';
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard';
 import { MutationErrorDialog } from './MutationErrorDialog';
-import { ReservationFields, type ReservationFormState } from './ReservationFields';
+import {
+  ReservationFields,
+  type ReservationFieldErrors,
+  type ReservationFormState,
+} from './ReservationFields';
 import { toISOStringOrNull, toLocalDateTime } from './formUtils';
 import type { VehicleChoice } from './editorTypes';
 
@@ -39,7 +44,7 @@ export function ReservationDialog({
   const { t } = useTranslation();
   const createMutation = useCreateFleetReservation();
   const updateMutation = useUpdateFleetReservation();
-  const [form, setForm] = useState<ReservationFormState>({
+  const [initialForm] = useState<ReservationFormState>(() => ({
     title: item?.title ?? '',
     purpose: item?.purpose ?? '',
     vehicleId: item?.vehicle_id.toString() ?? '',
@@ -48,30 +53,64 @@ export function ReservationDialog({
     startsAt: toLocalDateTime(item?.starts_at),
     endsAt: toLocalDateTime(item?.ends_at),
     status: item?.status ?? 'requested',
-  });
-  const [validation, setValidation] = useState<string | null>(null);
+  }));
+  const [form, setForm] = useState<ReservationFormState>(initialForm);
+  const [errors, setErrors] = useState<ReservationFieldErrors>({});
   const pending = createMutation.isPending || updateMutation.isPending;
   const error = createMutation.error ?? updateMutation.error;
+  const isDirty = JSON.stringify(form) !== JSON.stringify(initialForm);
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    isDirty,
+    onClose,
+    {
+      message: t(
+      'fleetOps.reservationDialog.unsaved',
+      'You have unsaved reservation changes. Discard them?',
+      ),
+    },
+  );
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
     const start = toISOStringOrNull(form.startsAt);
     const end = toISOStringOrNull(form.endsAt);
-    const driverIsAssigned = !form.driverId || (start && end && assignments.some((assignment) => (
+    const driverIsAssigned = !form.driverId || Boolean(start && end && assignments.some((assignment) => (
       assignment.driver_id === Number(form.driverId)
       && assignment.vehicle_id === Number(form.vehicleId)
       && new Date(assignment.starts_at) <= new Date(start)
       && (!assignment.ends_at || new Date(assignment.ends_at) >= new Date(end))
     )));
-    if (
-      !form.vehicleId || form.title.trim().length < 1 || form.title.trim().length > 160
-      || form.purpose.length > 500 || !start || !end || new Date(end) <= new Date(start)
-      || !driverIsAssigned
-    ) {
-      setValidation(t('fleetOps.reservationDialog.validation', 'Enter a name, vehicle, valid period, and a driver assigned for the full reservation.'));
+    const nextErrors: ReservationFieldErrors = {};
+    const title = form.title.trim();
+    if (!title) {
+      nextErrors.title = t('fleetOps.reservationDialog.nameRequired', 'Enter a reservation name.');
+    } else if (title.length > 160) {
+      nextErrors.title = t('fleetOps.reservationDialog.nameLimit', 'Use 160 characters or fewer.');
+    }
+    if (form.purpose.length > 500) {
+      nextErrors.purpose = t('fleetOps.reservationDialog.purposeLimit', 'Use 500 characters or fewer.');
+    }
+    if (!form.vehicleId) {
+      nextErrors.vehicleId = t('fleetOps.reservationDialog.vehicleRequired', 'Choose a vehicle.');
+    }
+    if (!start) {
+      nextErrors.startsAt = t('fleetOps.reservationDialog.startRequired', 'Enter a valid start time.');
+    }
+    if (!end) {
+      nextErrors.endsAt = t('fleetOps.reservationDialog.endRequired', 'Enter a valid end time.');
+    } else if (start && new Date(end) <= new Date(start)) {
+      nextErrors.endsAt = t('fleetOps.reservationDialog.endAfterStart', 'End time must be after the start time.');
+    }
+    if (!driverIsAssigned) {
+      nextErrors.driverId = t(
+        'fleetOps.reservationDialog.driverUnavailable',
+        'Choose a driver assigned to this vehicle for the full reservation.',
+      );
+    }
+    setErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0 || !start || !end) {
       return;
     }
-    setValidation(null);
     const input = {
       vehicle_id: Number(form.vehicleId),
       driver_id: form.driverId ? Number(form.driverId) : null,
@@ -100,7 +139,7 @@ export function ReservationDialog({
     <>
       <Modal
         open
-        onClose={onClose}
+        onClose={requestClose}
         title={item
           ? t('fleetOps.reservationDialog.editTitle', 'Edit reservation')
           : t('fleetOps.reservationDialog.title', 'Create reservation')}
@@ -110,12 +149,23 @@ export function ReservationDialog({
           <ReservationFields
             item={item}
             value={form}
-            onChange={(patch) => setForm((current) => ({ ...current, ...patch }))}
+            errors={errors}
+            onChange={(patch) => {
+              setForm((current) => ({ ...current, ...patch }));
+              setErrors((current) => {
+                const next = { ...current };
+                Object.keys(patch).forEach((key) => {
+                  delete next[key as keyof ReservationFieldErrors];
+                });
+                if ('vehicleId' in patch) delete next.driverId;
+                if ('startsAt' in patch) delete next.endsAt;
+                return next;
+              });
+            }}
             vehicles={vehicles}
             assignments={assignments}
             costCenters={costCenters}
           />
-          {validation && <p role="alert" className="text-sm text-rose-300">{validation}</p>}
           <div className="flex justify-between gap-2">
             <div className="flex gap-2">
               {item && (
@@ -130,7 +180,7 @@ export function ReservationDialog({
               )}
             </div>
             <div className="flex gap-2">
-              <Button type="button" variant="ghost" onClick={onClose}>{t('common.cancel', 'Cancel')}</Button>
+              <Button type="button" variant="ghost" onClick={requestClose}>{t('common.cancel', 'Cancel')}</Button>
               <Button type="submit" loading={pending}>
                 {item ? t('common.save', 'Save') : t('fleetOps.reservationDialog.create', 'Create reservation')}
               </Button>
@@ -148,6 +198,7 @@ export function ReservationDialog({
           onClose();
         }}
       />
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </>
   );
 }

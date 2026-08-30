@@ -233,6 +233,19 @@ func (h *Handler) Command(w http.ResponseWriter, r *http.Request) {
 
 	cmdErr := h.teslaClient.SendCommand(r.Context(), vehicle.VIN, body.Command, nil)
 	if cmdErr != nil {
+		// Fleet API daily budget errors are a distinct, structured failure
+		// mode — surface the real HTTP status instead of the generic
+		// 200/success:false envelope below so watch clients (and any
+		// resilience layer inspecting status codes) can tell "budget
+		// exhausted, don't retry" apart from "command failed, maybe retry".
+		if failure, matched := httpx.ClassifyTeslaBudgetError(cmdErr); matched {
+			log.Warn().Err(cmdErr).
+				Str("command", body.Command).
+				Int64("vehicle_id", vehicleID).
+				Msg("watch command rejected: Fleet API budget constraint")
+			httpx.WriteError(w, failure.StatusCode, failure.Message)
+			return
+		}
 		log.Error().Err(cmdErr).
 			Str("command", body.Command).
 			Int64("vehicle_id", vehicleID).

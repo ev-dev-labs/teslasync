@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -13,11 +14,14 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
-	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 )
+
+type matchedRouteKey struct{}
+
+const matchedRouteHeader = "X-TeslaSync-Matched-Route"
 
 // RED metrics (Rate / Errors / Duration) emitted exactly once per HTTP request
 // by Metrics. Label vocabulary:
@@ -48,9 +52,28 @@ var (
 		Namespace: "teslasync",
 		Name:      "red_http_request_duration_seconds",
 		Help:      "HTTP request latency in seconds (RED duration). Observed by Metrics middleware exactly once per request.",
-		Buckets:   []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2.5, 5, 10},
+		Buckets:   REDLatencyBuckets,
 	}, []string{"method", "route"})
 )
+
+// REDLatencyBuckets are the histogram boundaries for
+// teslasync_red_http_request_duration_seconds.
+//
+// Every `le=` boundary referenced by a latency SLO in slo/catalog.yaml MUST
+// appear here verbatim. A Prometheus histogram_bucket series only exists for
+// configured boundaries, so an SLI selecting an absent `le` matches nothing —
+// and because the SLO ratio expression falls back to vector(1) on an empty
+// result, the SLO would silently report a permanent, fabricated 100 %.
+//
+// The 2 bucket backs the named 2-second objectives (signal transport
+// agreement, admin data-quality reads). Adding the exact boundary is preferred
+// over retargeting those objectives to the neighbouring 2.5 bucket, because
+// the objective name and the runbook threshold are the contract operators
+// reason about; silently monitoring 2.5s under a name that says 2s is worse
+// than one extra series per route.
+//
+// Pinned by TestREDLatencyBucketsCoverCatalogSLOs.
+var REDLatencyBuckets = []float64{.005, .01, .025, .05, .1, .25, .5, 1, 2, 2.5, 5, 10}
 
 // statusClass converts a HTTP status code to its RED bucket label
 // (1xx/2xx/3xx/4xx/5xx). Codes outside the 100..599 range collapse to "5xx"
@@ -78,12 +101,50 @@ func statusClass(status int) string {
 // to the existing normalizePath helper to keep cardinality bounded for
 // unrouted traffic too.
 func routeLabel(r *http.Request) string {
+	if pattern := r.Header.Get(matchedRouteHeader); pattern != "" {
+		return pattern
+	}
+	if pattern, ok := r.Context().Value(matchedRouteKey{}).(string); ok && pattern != "" {
+		return pattern
+	}
 	if rc := chi.RouteContext(r.Context()); rc != nil {
 		if pattern := rc.RoutePattern(); pattern != "" {
 			return pattern
 		}
+		if len(rc.RoutePatterns) > 0 {
+			return strings.Join(rc.RoutePatterns, "")
+		}
+		if rc.Routes != nil {
+			if pattern := rc.Routes.Find(chi.NewRouteContext(), r.Method, r.URL.Path); pattern != "" {
+				return pattern
+			}
+		}
 	}
 	return normalizePath(r.URL.Path)
+}
+
+// WithMatchedRoute pre-resolves chi's route pattern before the middleware
+// chain starts. chi v5.3 exposes the final pattern only to the endpoint
+// handler, too late for global metrics and tracing middleware; carrying this
+// immutable value in the request context preserves bounded route labels.
+func WithMatchedRoute(routes chi.Routes) http.Handler {
+	handler, ok := routes.(http.Handler)
+	if !ok {
+		return http.NotFoundHandler()
+	}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Request.WithContext clones the request as chi descends its route
+		// tree, but shares its header map. Strip any user input first, then
+		// use this private per-request marker to carry the router result to
+		// outer observability middleware after the child request returns.
+		r.Header.Del(matchedRouteHeader)
+		if pattern := routes.Find(chi.NewRouteContext(), r.Method, r.URL.Path); pattern != "" {
+			r.Header.Set(matchedRouteHeader, pattern)
+			r.Pattern = pattern
+			r = r.WithContext(context.WithValue(r.Context(), matchedRouteKey{}, pattern))
+		}
+		handler.ServeHTTP(w, r)
+	})
 }
 
 // Metrics records the three RED metrics for every HTTP request:
@@ -209,21 +270,9 @@ func Recovery(next http.Handler) http.Handler {
 // Tracing adds OpenTelemetry spans to HTTP requests.
 // When tracing is not initialized, otelhttp uses the noop provider with zero overhead.
 func Tracing(next http.Handler) http.Handler {
-	// otelhttp cannot know chi's matched route until the downstream handler has
-	// returned. Add it here after routing so Tempo's span-metrics generator gets
-	// a bounded http.route dimension instead of a high-cardinality URL path.
-	routeAware := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, r)
-
-		route := routeLabel(r)
-		span := trace.SpanFromContext(r.Context())
-		span.SetName(fmt.Sprintf("%s %s", r.Method, route))
-		span.SetAttributes(attribute.String("http.route", route))
-	})
-
-	return otelhttp.NewHandler(routeAware, "http.request",
+	return otelhttp.NewHandler(next, "http.request",
 		otelhttp.WithSpanNameFormatter(func(_ string, r *http.Request) string {
-			return fmt.Sprintf("%s %s", r.Method, normalizePath(r.URL.Path))
+			return fmt.Sprintf("%s %s", r.Method, routeLabel(r))
 		}),
 	)
 }

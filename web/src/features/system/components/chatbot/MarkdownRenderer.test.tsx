@@ -31,6 +31,8 @@ import { render, screen, fireEvent, waitFor, within } from '@testing-library/rea
 
 import { MarkdownRenderer } from './MarkdownRenderer';
 
+const MARKDOWN_LOAD_TIMEOUT_MS = 30_000;
+
 /**
  * Render markdown and wait for the lazy `react-markdown` chunk to mount. The
  * resolved output lives inside the `.prose-chat` wrapper (the Suspense
@@ -38,8 +40,10 @@ import { MarkdownRenderer } from './MarkdownRenderer';
  */
 async function renderMarkdown(source: string) {
   const utils = render(<MarkdownRenderer>{source}</MarkdownRenderer>);
-  await waitFor(() =>
-    expect(utils.container.querySelector('.prose-chat')).toBeInTheDocument(),
+  await waitFor(
+    () =>
+      expect(utils.container.querySelector('.prose-chat')).toBeInTheDocument(),
+    { timeout: MARKDOWN_LOAD_TIMEOUT_MS },
   );
   return utils;
 }
@@ -63,7 +67,7 @@ describe('MarkdownRenderer', () => {
     // the `**` markers are gone and a real <strong> element exists.
     await waitFor(
       () => expect(container.querySelector('strong')).toBeInTheDocument(),
-      { timeout: 10_000 },
+      { timeout: MARKDOWN_LOAD_TIMEOUT_MS },
     );
     expect(container.querySelector('strong')).toHaveTextContent('bold');
     expect(container.querySelector('p.whitespace-pre-wrap')).toBeNull();

@@ -5,10 +5,11 @@ import React from 'react'
 
 // ── Theme mock ────────────────────────────────────────────────────────────
 // We control the theme from the test so we can assert that toggling
-// primary/accent re-renders the favicon and the meta theme-color tag.
-let mockTheme = { primary: '#00f0ff', accent: '#10b981' }
+// primary/accent re-renders the favicon while mode controls browser chrome.
+let mockTheme = { primary: '#3b82f6', accent: '#06b6d4' }
+let mockMode = { bg: '#0b0d12' }
 vi.mock('@/components/ui/ThemeProvider', () => ({
-  useTheme: () => ({ theme: mockTheme }),
+  useTheme: () => ({ theme: mockTheme, mode: mockMode }),
 }))
 
 import { useDynamicAppIcon } from '../useDynamicAppIcon'
@@ -42,7 +43,8 @@ function setupHead() {
 
 describe('useDynamicAppIcon', () => {
   beforeEach(() => {
-    mockTheme = { primary: '#00f0ff', accent: '#10b981' }
+    mockTheme = { primary: '#3b82f6', accent: '#06b6d4' }
+    mockMode = { bg: '#0b0d12' }
     setupHead()
     // Stub URL.createObjectURL / revokeObjectURL — jsdom ships only a
     // partial implementation that throws on Blob inputs in some versions.
@@ -64,17 +66,17 @@ describe('useDynamicAppIcon', () => {
     vi.restoreAllMocks()
   })
 
-  it('paints the favicon with the active theme gradient as an SVG data URL', () => {
+  it('paints the favicon with the active framed brand mark as an SVG data URL', () => {
     renderHook(() => useDynamicAppIcon(), { wrapper })
 
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!
     expect(link.href.startsWith('data:image/svg+xml;base64,')).toBe(true)
     expect(link.getAttribute('data-dynamic-app-icon')).toBe('true')
 
-    // Verify the encoded SVG actually contains the active theme stops.
+    // Verify the encoded SVG contains the active theme accents.
     const expectedSvg = buildAppIconSvg({
-      primary: '#00f0ff',
-      accent: '#10b981',
+      primary: '#3b82f6',
+      accent: '#06b6d4',
       mode: 'standard',
     })
     expect(link.href).toBe(svgToDataUrl(expectedSvg))
@@ -86,15 +88,15 @@ describe('useDynamicAppIcon', () => {
     expect(link.dataset.baseHref).toBe(link.href)
   })
 
-  it('updates <meta name="theme-color"> to the theme primary', () => {
+  it('updates <meta name="theme-color"> to the active surface mode', () => {
     renderHook(() => useDynamicAppIcon(), { wrapper })
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!
     expect(meta).not.toBeNull()
-    expect(meta.getAttribute('content')).toBe('#00f0ff')
+    expect(meta.getAttribute('content')).toBe('#0b0d12')
     expect(meta.getAttribute('data-dynamic-app-icon')).toBe('true')
   })
 
-  it('repaints favicon and theme-color when the theme changes', () => {
+  it('repaints the favicon without saturating browser chrome when the theme changes', () => {
     const { rerender } = renderHook(() => useDynamicAppIcon(), { wrapper })
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!
     const firstHref = link.href
@@ -113,7 +115,19 @@ describe('useDynamicAppIcon', () => {
     expect(link.href).toBe(svgToDataUrl(expectedSvg))
 
     const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!
-    expect(meta.getAttribute('content')).toBe('#e31937')
+    expect(meta.getAttribute('content')).toBe('#0b0d12')
+  })
+
+  it('updates browser chrome when the surface mode changes', () => {
+    const { rerender } = renderHook(() => useDynamicAppIcon(), { wrapper })
+    const meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')!
+
+    act(() => {
+      mockMode = { bg: '#f8fafc' }
+    })
+    rerender()
+
+    expect(meta.getAttribute('content')).toBe('#f8fafc')
   })
 
   it('skips work when the theme has not changed', () => {
@@ -138,7 +152,7 @@ describe('useDynamicAppIcon', () => {
 
     expect(
       document.querySelector<HTMLMetaElement>('meta[name="theme-color"]')?.getAttribute('content'),
-    ).toBe('#00f0ff')
+    ).toBe('#0b0d12')
   })
 
   it('falls back to safe default colours when the theme contains a malformed hex', () => {
@@ -146,7 +160,7 @@ describe('useDynamicAppIcon', () => {
     renderHook(() => useDynamicAppIcon(), { wrapper })
 
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!
-    // The malformed primary should be replaced with the fallback (#00f0ff)
+    // The malformed primary should be replaced with the fallback (#3b82f6)
     // by buildAppIconSvg's safeHex guard. The accent (a valid hex) flows
     // through unchanged.
     const expectedSvg = buildAppIconSvg({
@@ -159,7 +173,7 @@ describe('useDynamicAppIcon', () => {
     // SVG payload.
     const decoded = atob(link.href.replace('data:image/svg+xml;base64,', ''))
     expect(decoded).not.toContain('not-a-colour')
-    expect(decoded).toContain('#00f0ff')
+    expect(decoded).toContain('#3b82f6')
   })
 
   it('is a no-op when no <link rel="icon"> exists', () => {

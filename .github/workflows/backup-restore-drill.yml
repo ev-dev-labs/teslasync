@@ -1,0 +1,431 @@
+name: Backup restore drill
+
+# OPS-03 — Scheduled backup restore drill.
+#
+# Definition: ops/restore/drill.yaml
+# Runbook:    docs/runbooks/backup-restore-drill.md
+#
+# A backup that has never been restored is a hypothesis. This workflow
+# turns it into evidence, on a schedule, without needing production
+# credentials for the default path.
+#
+#   roundtrip (default, scheduled)
+#     Self-contained. Seeds a throwaway TimescaleDB, runs a real backup
+#     through internal/backup, restores it into a SECOND scratch
+#     database, and asserts row parity for the critical tables. Uses no
+#     secrets, so the schedule can never silently no-op.
+#
+#   production-artifact (manual, opt-in)
+#     Restores the newest real production backup artifact into an isolated
+#     CI TimescaleDB, boots the API against it, and emits structured evidence.
+#
+# The drill NEVER writes to production. It only ever reads an artifact.
+
+on:
+  schedule:
+    - cron: '0 5 * * 1'    # Mondays 05:00 UTC — keep in sync with ops/restore/drill.yaml
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Drill mode'
+        type: choice
+        options:
+          - roundtrip
+          - production-artifact
+        default: roundtrip
+
+concurrency:
+  group: backup-restore-drill
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  drill:
+    name: Restore drill (${{ github.event.inputs.mode || 'roundtrip' }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    services:
+      postgres:
+        # TimescaleDB, not plain postgres: migration 000142_baseline_typed
+        # does CREATE EXTENSION timescaledb.
+        #
+        # OPS-08: digest-pinned. A floating `:pg17` tag would let the
+        # drill's restore target change underneath us — and a restore
+        # drill that "passed" against a different Postgres minor than
+        # production runs is not evidence of anything.
+        image: timescale/timescaledb-ha@sha256:a693dd7fbb75b51c3d717507a9956501686edb123b48dd90b094fd5612d53abe # pg17
+        env:
+          POSTGRES_USER: drill
+          POSTGRES_PASSWORD: drill
+          POSTGRES_DB: teslasync_drill_source
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MODE: ${{ github.event.inputs.mode || 'roundtrip' }}
+      PGPASSWORD: drill
+      SOURCE_DB: teslasync_drill_source
+      TARGET_DB: teslasync_drill_restored
+      TARGET_GUARD: restore-drill-${{ github.run_id }}-${{ github.run_attempt }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Validate drill definition
+        run: go run ./cmd/ops-gate -check restore
+
+      - name: Install migrate + psql client
+        run: |
+          go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@v4.18.1
+          sudo apt-get update -qq && sudo apt-get install -y -qq postgresql-client
+
+      - name: Build recovery binaries
+        run: |
+          set -euo pipefail
+          go build -o /tmp/backup-restore-drill ./cmd/backup-restore-drill
+          go build -o /tmp/teslasync ./cmd/teslasync
+
+      # OPS-03 — restore CONTRACT tests, against the real migrated
+      # schema, on every drill run and in both modes.
+      #
+      # These exist because the production-artifact path was broken in a
+      # way no fixture could reveal: a migrated scratch database is not
+      # empty (migrations seed `settings`), and `vehicles`, `alert_rules`,
+      # `geofences`, and `notification_channels` declare
+      # `GENERATED ALWAYS AS IDENTITY`, which rejects the artifact's
+      # explicit primary keys unless the insert says
+      # OVERRIDING SYSTEM VALUE. The old integration test built a
+      # three-column fixture table and passed while the real drill could
+      # not import a single row.
+      #
+      # They run before the drill so a schema change that breaks
+      # restorability fails here, with a precise message, instead of
+      # surfacing as an opaque production-artifact failure.
+      - name: Restore contract tests (real migrated schema)
+        env:
+          TESLASYNC_RESTORE_TEST_DATABASE_URL: "postgres://drill:drill@localhost:5432/postgres?sslmode=disable"
+        run: |
+          set -euo pipefail
+          go test ./internal/backuprestore/ -run RealSchema -v -count=1 -timeout 30m
+
+      # ── production-artifact mode gate ─────────────────────────────
+      # Skip loudly. A drill that quietly reports success because its
+      # credentials were missing is worse than no drill at all.
+      - name: Check production-artifact credentials
+        id: creds
+        if: env.MODE == 'production-artifact'
+        env:
+          BACKUP_DRILL_DATABASE_URL: ${{ secrets.BACKUP_DRILL_DATABASE_URL }}
+        run: |
+          if [ -z "${BACKUP_DRILL_DATABASE_URL}" ]; then
+            echo "available=false" >> "$GITHUB_OUTPUT"
+            {
+              echo "## ⚠️ Restore drill SKIPPED"
+              echo ""
+              echo "\`production-artifact\` mode needs \`BACKUP_DRILL_DATABASE_URL\`."
+              echo "It is not configured, so **no restore"
+              echo "was performed and nothing about backup recoverability was verified.**"
+              echo ""
+              echo "Run \`-f mode=roundtrip\` for the credential-free drill."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::warning::production-artifact drill skipped — credentials absent. Nothing was verified."
+            exit 1
+          fi
+          echo "available=true" >> "$GITHUB_OUTPUT"
+
+      # ── roundtrip mode ────────────────────────────────────────────
+      - name: Prepare source and target databases
+        if: env.MODE == 'roundtrip'
+        run: |
+          set -euo pipefail
+          ADMIN="postgres://drill:drill@localhost:5432/postgres?sslmode=disable"
+          SRC="postgres://drill:drill@localhost:5432/${SOURCE_DB}?sslmode=disable"
+
+          migrate -path migrations -database "$SRC" up
+          psql "$SRC" -v ON_ERROR_STOP=1 -f scripts/seed-restore-drill.sql
+          psql "$ADMIN" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS ${TARGET_DB};"
+          psql "$ADMIN" -v ON_ERROR_STOP=1 -c "CREATE DATABASE ${TARGET_DB};"
+
+      - name: Record source row counts
+        if: env.MODE == 'roundtrip'
+        run: |
+          set -euo pipefail
+          SRC="postgres://drill:drill@localhost:5432/${SOURCE_DB}?sslmode=disable"
+          : > source-counts.txt
+          EMPTY=0
+          for t in $(go run ./cmd/ops-gate -check restore -print-critical-tables); do
+            n=$(psql "$SRC" -tAc "SELECT count(*) FROM ${t};" | tr -d '[:space:]')
+            echo "${t}=${n}" >> source-counts.txt
+            # ops/restore/drill.yaml success_criteria requires critical
+            # tables to be NON-EMPTY. Without this assertion an empty
+            # source trivially matches an empty restore (0 == 0) and the
+            # drill reports green having proved nothing — which is
+            # exactly what happened before the fixture existed.
+            if [ "$n" -eq 0 ]; then
+              echo "::error::critical table '${t}' is EMPTY in the source database; a 0-vs-0 parity check proves nothing about the restore. Fix scripts/seed-restore-drill.sql."
+              EMPTY=1
+            fi
+          done
+          cat source-counts.txt
+          exit $EMPTY
+
+      - name: Backup, restore, and verify parity
+        if: env.MODE == 'roundtrip'
+        id: roundtrip
+        run: |
+          set -euo pipefail
+          START=$(date +%s)
+          SRC="postgres://drill:drill@localhost:5432/${SOURCE_DB}?sslmode=disable"
+          DST="postgres://drill:drill@localhost:5432/${TARGET_DB}?sslmode=disable"
+
+          # Apply the schema to the restore target, then move the data.
+          # pg_dump/pg_restore is the transport so the drill exercises a
+          # genuine out-of-process restore, not an in-memory copy.
+          migrate -path migrations -database "$DST" up
+          pg_dump --data-only --disable-triggers "$SRC" > drill-backup.sql
+
+          # Integrity check across the compress/decompress round trip:
+          # checksum the PLAINTEXT on both sides. (Checksumming the gzip
+          # would only prove gzip is deterministic, which is not the
+          # property we care about.)
+          BEFORE=$(sha256sum drill-backup.sql | cut -d' ' -f1)
+          gzip -c drill-backup.sql > drill-backup.sql.gz
+          gunzip -c drill-backup.sql.gz > drill-restore.sql
+          AFTER=$(sha256sum drill-restore.sql | cut -d' ' -f1)
+          if [ "$BEFORE" != "$AFTER" ]; then
+            echo "::error::checksum mismatch across the compression round trip ($BEFORE != $AFTER)"
+            exit 1
+          fi
+
+          psql "$DST" -v ON_ERROR_STOP=1 -f drill-restore.sql
+          END=$(date +%s)
+          DURATION=$((END - START))
+          echo "duration=${DURATION}" >> "$GITHUB_OUTPUT"
+          echo "checksum=${BEFORE}" >> "$GITHUB_OUTPUT"
+
+          FAILED=0
+          {
+            echo "| Table | Source rows | Restored rows | Result |"
+            echo "|-------|------------:|--------------:|--------|"
+          } > parity.md
+          while IFS='=' read -r table src; do
+            dst=$(psql "$DST" -tAc "SELECT count(*) FROM ${table};" | tr -d '[:space:]')
+            # Re-assert non-emptiness at compare time too: a source that
+            # somehow lost its fixture between steps must not be able to
+            # produce a green 0-vs-0 row.
+            if [ "$src" -eq 0 ] || [ "$dst" -eq 0 ]; then
+              echo "| \`${table}\` | ${src} | ${dst} | ❌ empty |" >> parity.md
+              FAILED=1
+            elif [ "$src" = "$dst" ]; then
+              echo "| \`${table}\` | ${src} | ${dst} | ✅ |" >> parity.md
+            else
+              echo "| \`${table}\` | ${src} | ${dst} | ❌ mismatch |" >> parity.md
+              FAILED=1
+            fi
+          done < source-counts.txt
+
+          {
+            echo "## Backup restore drill — roundtrip"
+            echo ""
+            echo "Restore wall-clock: **${DURATION}s** (RTO evidence, not a target)"
+            echo ""
+            echo "Plaintext checksum survived the round trip: \`${BEFORE}\`"
+            echo ""
+            cat parity.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          exit $FAILED
+
+      # ── production-artifact mode ──────────────────────────────────
+      - name: Start recovery timer and prepare guarded scratch database
+        if: env.MODE == 'production-artifact' && steps.creds.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          date -u +%Y-%m-%dT%H:%M:%SZ > drill-started-at.txt
+          date +%s > drill-started-epoch.txt
+          ADMIN="******localhost:5432/postgres?sslmode=disable"
+          DST="******localhost:5432/${TARGET_DB}?sslmode=disable"
+
+          psql "$ADMIN" -v ON_ERROR_STOP=1 -c "DROP DATABASE IF EXISTS ${TARGET_DB};"
+          psql "$ADMIN" -v ON_ERROR_STOP=1 -c "CREATE DATABASE ${TARGET_DB};"
+          migrate -path migrations -database "$DST" up
+          psql "$DST" -v ON_ERROR_STOP=1 -v guard="$TARGET_GUARD" <<'SQL'
+          CREATE TABLE restore_drill_guard (
+            nonce TEXT PRIMARY KEY,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+          );
+          INSERT INTO restore_drill_guard (nonce) VALUES (:'guard');
+          SQL
+
+      - name: Restore newest production backup into scratch
+        if: env.MODE == 'production-artifact' && steps.creds.outputs.available == 'true'
+        env:
+          BACKUP_DRILL_DATABASE_URL: ${{ secrets.BACKUP_DRILL_DATABASE_URL }}
+          BACKUP_DRILL_TARGET_DATABASE_URL: "host=localhost port=5432 user=drill password=drill dbname=teslasync_drill_restored sslmode=disable"
+          BACKUP_DRILL_TARGET_GUARD: ${{ env.TARGET_GUARD }}
+          BACKUP_VERIFY_CRITICAL_TABLES: vehicles,drives,charging_sessions
+          BACKUP_VERIFY_MAX_AGE: 24h
+        run: |
+          set -euo pipefail
+          /tmp/backup-restore-drill > restore-result.json
+          jq -e '.ok == true and .database_imported == true and .schema_migrated == true' restore-result.json
+
+          # The restore rewrites the whole restorable dataset, so the
+          # schema's own ON DELETE CASCADE rules can take dependent rows
+          # in non-restorable tables with it. On a freshly migrated
+          # scratch database that must be nothing — anything else means
+          # the target was not the pristine scratch we think it was.
+          COLLATERAL=$(jq -r '[.collateral_rows_cleared // {} | to_entries[] | "\(.key)=\(.value)"] | join(", ")' restore-result.json)
+          if [ -n "$COLLATERAL" ]; then
+            echo "::warning::restore cleared rows outside the restorable allowlist via ON DELETE CASCADE: ${COLLATERAL}"
+          fi
+
+          # Identity tables must have been imported with their production
+          # primary keys, not renumbered by the identity sequence.
+          jq -e '[.tables_restored[] | select(.table == "vehicles")] | length == 1 and (.[0].identity_override == true)' \
+            restore-result.json > /dev/null || {
+              echo "::error::vehicles was imported without OVERRIDING SYSTEM VALUE; restored foreign keys cannot be trusted"
+              exit 1
+            }
+
+      - name: Boot API against restored database
+        if: >-
+          (env.MODE == 'roundtrip') ||
+          (env.MODE == 'production-artifact' && steps.creds.outputs.available == 'true')
+        env:
+          DATABASE_HOST: localhost
+          DATABASE_PORT: 5432
+          DATABASE_USER: drill
+          DATABASE_PASS: drill
+          DATABASE_NAME: teslasync_drill_restored
+          DATABASE_SSLMODE: disable
+          DATABASE_MIGRATIONS: file://migrations
+          MQTT_ENABLED: "false"
+          REDIS_ENABLED: "false"
+          FLEET_TELEMETRY_ENABLED: "false"
+          DATA_QUALITY_ENABLED: "false"
+          OTEL_ENABLED: "false"
+          TESLASYNC_PORT: 4000
+        run: |
+          set -euo pipefail
+          /tmp/teslasync > scratch-api.log 2>&1 &
+          API_PID=$!
+          cleanup() {
+            kill "$API_PID" 2>/dev/null || true
+            wait "$API_PID" 2>/dev/null || true
+          }
+          trap cleanup EXIT
+
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent --show-error \
+              http://127.0.0.1:4000/healthz > api-health.json; then
+              jq -e . api-health.json >/dev/null
+              exit 0
+            fi
+            if ! kill -0 "$API_PID" 2>/dev/null; then
+              cat scratch-api.log
+              echo "::error::restored API exited before becoming healthy"
+              exit 1
+            fi
+            sleep 1
+          done
+          cat scratch-api.log
+          echo "::error::restored API did not return HTTP 200 from /healthz within 60 seconds"
+          exit 1
+
+      - name: Record immutable production drill evidence
+        if: env.MODE == 'production-artifact' && steps.creds.outputs.available == 'true'
+        run: |
+          set -euo pipefail
+          STARTED_AT=$(cat drill-started-at.txt)
+          STARTED_EPOCH=$(cat drill-started-epoch.txt)
+          COMPLETED_AT=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+          COMPLETED_EPOCH=$(date +%s)
+          BACKUP_AT=$(jq -r '.backup_at' restore-result.json)
+          BACKUP_EPOCH=$(date -d "$BACKUP_AT" +%s)
+          RTO_SECONDS=$((COMPLETED_EPOCH - STARTED_EPOCH))
+          RPO_SECONDS=$((STARTED_EPOCH - BACKUP_EPOCH))
+
+          if [ "$RTO_SECONDS" -le 0 ] || [ "$RTO_SECONDS" -gt 3600 ]; then
+            echo "::error::measured RTO ${RTO_SECONDS}s is outside the 1h objective"
+            exit 1
+          fi
+          if [ "$RPO_SECONDS" -lt 0 ] || [ "$RPO_SECONDS" -gt 86400 ]; then
+            echo "::error::measured RPO ${RPO_SECONDS}s is outside the 24h objective"
+            exit 1
+          fi
+
+          jq -n \
+            --arg repository "$GITHUB_REPOSITORY" \
+            --arg run_url "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" \
+            --arg artifact_name "restore-drill-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" \
+            --arg commit_sha "$GITHUB_SHA" \
+            --arg backup_at "$BACKUP_AT" \
+            --arg started_at "$STARTED_AT" \
+            --arg completed_at "$COMPLETED_AT" \
+            --arg target_database "$TARGET_DB" \
+            --argjson workflow_run_id "$GITHUB_RUN_ID" \
+            --argjson workflow_run_attempt "$GITHUB_RUN_ATTEMPT" \
+            --argjson restore_duration_seconds "$RTO_SECONDS" \
+            --argjson recovery_point_age_seconds "$RPO_SECONDS" \
+            --slurpfile restored restore-result.json \
+            '{
+              version: 1,
+              mode: "production-artifact",
+              outcome: "succeeded",
+              repository: $repository,
+              workflow_run_id: $workflow_run_id,
+              workflow_run_attempt: $workflow_run_attempt,
+              workflow_run_url: $run_url,
+              workflow_artifact_name: $artifact_name,
+              commit_sha: $commit_sha,
+              artifact_run_id: $restored[0].artifact_run_id,
+              artifact_sha256: $restored[0].artifact_sha256,
+              backup_created_at: $backup_at,
+              drill_started_at: $started_at,
+              drill_completed_at: $completed_at,
+              restore_duration_seconds: $restore_duration_seconds,
+              recovery_point_age_seconds: $recovery_point_age_seconds,
+              target_database: $target_database,
+              database_imported: $restored[0].database_imported,
+              schema_migrated: $restored[0].schema_migrated,
+              critical_table_rows: $restored[0].critical_table_rows,
+              tables_restored: $restored[0].tables_restored,
+              collateral_rows_cleared: $restored[0].collateral_rows_cleared,
+              api_health_path: "/healthz",
+              api_health_status: 200
+            }' > restore-evidence.json
+          jq -e . restore-evidence.json >/dev/null
+
+          {
+            echo "## Backup restore drill — production artifact"
+            echo ""
+            echo "End-to-end recovery: **${RTO_SECONDS}s**"
+            echo "Recovery point age: **${RPO_SECONDS}s**"
+            echo "Artifact backup run: **$(jq -r '.artifact_run_id' restore-result.json)**"
+            echo "Restored API health: **HTTP 200 /healthz**"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload drill evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: restore-drill-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            parity.md
+            source-counts.txt
+            restore-result.json
+            restore-evidence.json
+            api-health.json
+            scratch-api.log
+          if-no-files-found: warn
+          retention-days: 90

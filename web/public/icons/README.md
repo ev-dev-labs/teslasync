@@ -24,11 +24,11 @@ artwork inside an inner safe zone — roughly the central 80% of the canvas (the
 outer ~10% on each side may be cropped). See https://web.dev/maskable-icon/ for
 the visual spec.
 
-Both maskable files are referenced twice in the manifest:
-1. Once with `purpose: 'any'` so they also serve as a fallback on browsers that
-   don't request a separate maskable asset.
-2. Once with `purpose: 'maskable'` so adaptive-icon-aware browsers (Chrome on
-   Android, Edge on Windows) pick them up explicitly.
+The manifest references the full-bleed standard icons with `purpose: 'any'`
+and the safe-zone variants with `purpose: 'maskable'`. This keeps the regular
+launcher and desktop presentation visually full-size while allowing
+adaptive-icon-aware browsers (Chrome on Android, Edge on Windows) to crop the
+maskable artwork safely.
 
 ## Why no notification `icon`?
 
@@ -70,11 +70,11 @@ longer being doubled before merging.
 ## Theme colors
 
 The manifest uses:
-- `theme_color: '#00f0ff'` — neon cyan, used by the browser chrome (URL bar)
-- `background_color: '#0a0a0f'` — near-black, used during the splash screen
+- `theme_color: '#0b0d12'` — low-chroma canvas used by browser chrome
+- `background_color: '#0b0d12'` — startup canvas used during the splash screen
 
-Keep new icons consistent with the dark UI palette in
-`web/src/lib/tokens.ts`.
+Keep new icons consistent with the framed brand mark in
+`web/src/lib/appIcon.ts`.
 
 ## Regenerating PNGs from SVG
 

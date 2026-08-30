@@ -260,13 +260,19 @@ var (
 		Namespace: "teslasync",
 		Name:      "polls_total",
 		Help:      "Total vehicle polls by result",
-	}, []string{"result"}) // success, error, skipped
+	}, []string{"result"}) // success, error, budget_limited, budget_unavailable
 
 	PollsSaved = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "teslasync",
 		Name:      "polls_saved_total",
 		Help:      "Total polls avoided by optimization strategy",
-	}, []string{"reason"}) // fleet_telemetry, idle, prediction, sleep
+	}, []string{"reason"}) // fleet_telemetry, idle, prediction, sleep, budget
+
+	PollingBudgetPausedVehicles = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "polling_budget_paused_vehicles",
+		Help:      "Current fleet vehicles whose Fleet API polling is paused until the daily budget resets",
+	})
 
 	ExportJobsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 		Namespace: "teslasync",

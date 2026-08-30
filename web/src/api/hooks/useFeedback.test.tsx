@@ -9,8 +9,8 @@
 //     status/category/limit/offset in a stable order), empty-string filter
 //     omission, the non-finite numeric guard, AbortSignal threading, and the
 //     error path.
-//   - useUpdateFeedback: PATCH /admin/feedback/{id} method/body, cache
-//     invalidation on success, and success/error toast wiring.
+//   - useUpdateFeedback / useBulkUpdateFeedback: PATCH request contracts,
+//     cache invalidation, validation, partial-failure handling, and toasts.
 //
 // Network is stubbed at the request() boundary; the mutation-toast bridge is
 // replaced with spies so onSuccess/onError assertions are exact and no
@@ -43,6 +43,7 @@ vi.mock('./_toastHelpers', () => ({
 import { request } from '@/api/client'
 import {
   feedbackKeys,
+  useBulkUpdateFeedback,
   useSubmitFeedback,
   useFeedbackList,
   useUpdateFeedback,
@@ -287,6 +288,77 @@ describe('useUpdateFeedback', () => {
       nope,
       'toast.feedback.update.error',
       'Failed to update feedback',
+    )
+    expect(successToast).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// useBulkUpdateFeedback
+// ---------------------------------------------------------------------------
+
+describe('useBulkUpdateFeedback', () => {
+  it('deduplicates IDs, PATCHes every row, and invalidates once', async () => {
+    mockedRequest
+      .mockResolvedValueOnce({ ...entry, id: 41, status: 'closed' })
+      .mockResolvedValueOnce({ ...entry, id: 42, status: 'closed' })
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+    const { result } = renderHook(() => useBulkUpdateFeedback(), { wrapper })
+
+    const rows = await result.current.mutateAsync({
+      ids: [41, 42, 41],
+      update: { status: 'closed' },
+    })
+
+    expect(rows.map((row) => row.id)).toEqual([41, 42])
+    expect(mockedRequest).toHaveBeenCalledTimes(2)
+    expect(mockedRequest.mock.calls.map(([url]) => url)).toEqual([
+      '/admin/feedback/41',
+      '/admin/feedback/42',
+    ])
+    expect(invalidateSpy).toHaveBeenCalledTimes(1)
+    expect(successToast).toHaveBeenCalledWith(
+      'toast.feedback.bulkUpdate.success',
+      'Updated {{count}} feedback items',
+      { count: 2 },
+    )
+  })
+
+  it('rejects invalid IDs before issuing requests', async () => {
+    const { result } = renderHook(() => useBulkUpdateFeedback(), { wrapper })
+
+    await expect(
+      result.current.mutateAsync({ ids: [0], update: { status: 'triaged' } }),
+    ).rejects.toThrow('valid feedback IDs')
+
+    expect(mockedRequest).not.toHaveBeenCalled()
+    expect(errorToast).toHaveBeenCalledWith(
+      expect.any(Error),
+      'toast.feedback.bulkUpdate.error',
+      'Some feedback items could not be updated',
+    )
+  })
+
+  it('waits for every request, reports partial failure, and refreshes the cache', async () => {
+    mockedRequest
+      .mockResolvedValueOnce({ ...entry, id: 41, status: 'triaged' })
+      .mockRejectedValueOnce(new Error('conflict'))
+    const invalidateSpy = vi.spyOn(qc, 'invalidateQueries')
+    const { result } = renderHook(() => useBulkUpdateFeedback(), { wrapper })
+
+    await expect(
+      result.current.mutateAsync({
+        ids: [41, 42],
+        update: { status: 'triaged' },
+      }),
+    ).rejects.toThrow('1 of 2 feedback items')
+
+    expect(mockedRequest).toHaveBeenCalledTimes(2)
+    expect(invalidateSpy).toHaveBeenCalledTimes(1)
+    expect(errorToast).toHaveBeenCalledWith(
+      expect.any(Error),
+      'toast.feedback.bulkUpdate.error',
+      'Some feedback items could not be updated',
     )
     expect(successToast).not.toHaveBeenCalled()
   })

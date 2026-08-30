@@ -107,6 +107,46 @@ func TestScenario_Run_RemovesToxicEvenOnContextCancel(t *testing.T) {
 	}
 }
 
+func TestScenario_RunRemovesToxicBeforeSettleAndVerify(t *testing.T) {
+	var events []string
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodPost:
+			events = append(events, "add")
+		case http.MethodDelete:
+			events = append(events, "remove")
+		default:
+			t.Errorf("unexpected method %s", r.Method)
+		}
+		w.WriteHeader(http.StatusOK)
+	}))
+	t.Cleanup(srv.Close)
+
+	scenario := Scenario{
+		Name:        "recovery-order",
+		Proxy:       "redis",
+		Duration:    time.Millisecond,
+		SettleDelay: time.Millisecond,
+		Toxic:       Toxic{Name: "blackhole", Type: "timeout"},
+		Verify: func(context.Context) error {
+			events = append(events, "verify")
+			return nil
+		},
+	}
+	if err := scenario.Run(context.Background(), NewClient(srv.URL)); err != nil {
+		t.Fatalf("Run() error = %v", err)
+	}
+	want := []string{"add", "remove", "verify"}
+	if len(events) != len(want) {
+		t.Fatalf("events = %v, want %v", events, want)
+	}
+	for i := range want {
+		if events[i] != want[i] {
+			t.Fatalf("events = %v, want %v", events, want)
+		}
+	}
+}
+
 func TestScenario_Run_RejectsInvalidConfig(t *testing.T) {
 	c := NewClient("http://127.0.0.1:1")
 	s := Scenario{Name: "x"}

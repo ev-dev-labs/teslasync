@@ -4,6 +4,7 @@ import { Plug } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useTeslaWCChargingHistory, useTeslaEnergySites } from '@/api/hooks/useEnergy';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -11,7 +12,7 @@ import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   date: string;
   energy_kwh: number;
 }
@@ -226,13 +227,17 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
         emptyIcon={<Plug className="h-5 w-5" />}
         stats={stats}
         chart={
-          <div
-            role="img"
-            aria-label={t(
+          <EmbeddedChart
+            title={t('widget.wallConnector.title', 'Wall Connector')}
+            ariaLabel={t(
               'widget.wallConnector.chartLabel',
               'Daily Wall Connector charging energy over the last 14 days',
             )}
-            className="h-full w-full"
+            data={chartData}
+            dataColumns={[
+              { key: 'date', label: t('widget.wallConnector.date', 'Date') },
+              { key: 'energy_kwh', label: t('widget.wallConnector.energyKwh', 'Energy (kWh)') },
+            ]}
           >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
@@ -251,12 +256,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
                   tickFormatter={(v: number) => fmt(v, 0)}
                 />
                 <Tooltip
-                  contentStyle={{
-                    background: 'rgba(0,0,0,0.85)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    borderRadius: 8,
-                    fontSize: 12,
-                  }}
+                  content={<ChartTooltip />}
                   formatter={(value: number) => [
                     `${fmtNumber(value, 1)} kWh`,
                     t('widget.wallConnector.energy', 'Energy'),
@@ -271,7 +271,7 @@ export default function WallConnectorWidget({ size }: WidgetProps) {
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

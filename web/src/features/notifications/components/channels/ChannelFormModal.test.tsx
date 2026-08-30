@@ -29,7 +29,7 @@
  * assertions read against the English copy.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { type ComponentProps, type ReactNode } from 'react';
 
 // framer-motion (via <FadeIn>) reads prefers-reduced-motion through
@@ -282,6 +282,18 @@ describe('ChannelFormModal — create mode', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('requires confirmation before cancelling an edited channel draft', async () => {
+    const { onClose } = renderModal();
+    setValue('Channel Name', 'Unsaved channel');
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+    const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' });
+    expect(onClose).not.toHaveBeenCalled();
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Discard changes' }));
+    await waitFor(() => expect(onClose).toHaveBeenCalledTimes(1));
   });
 });
 

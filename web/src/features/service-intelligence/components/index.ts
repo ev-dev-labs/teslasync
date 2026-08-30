@@ -7,7 +7,6 @@ export { EvidenceLimitationsPanel } from './EvidenceLimitationsPanel';
 export { PanelState } from './PanelState';
 export { RecallFindingCard } from './RecallFindingCard';
 export { RecallInventoryPanel } from './RecallInventoryPanel';
-export { ServiceVehicleSelector } from './ServiceVehicleSelector';
 export { SourceFreshnessPanel } from './SourceFreshnessPanel';
 export { SymptomMatchesPanel } from './SymptomMatchesPanel';
 export { VehicleMatchPanel } from './VehicleMatchPanel';

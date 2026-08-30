@@ -1,0 +1,11 @@
+{
+  "stateMachineDebugger": {
+    "aiNarrator": {
+      "title": "Helix FSM narrator",
+      "description": "Get a 3-6 sentence factual narration of the current vehicle FSM transition trace. The narrator reads only the deterministic FSM envelope (vehicle id, window bounds, per-FSM-name counts, per-edge counts, flap count, transition stream) — VINs, coordinates, place names, IPs, and personal identifiers are redacted before the message reaches the provider. The narration is informational; the transition table, state diagram, and FSM health panel above remain the canonical raw view.",
+      "button": "Narrate transitions",
+      "badge": "Helix",
+      "emptyHint": "Select a vehicle and a valid time window first."
+    }
+  }
+}

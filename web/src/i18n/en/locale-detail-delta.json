@@ -1,0 +1,18 @@
+{
+  "delta": {
+    "noComparison": "No comparison data",
+    "title": "{{current}} vs {{previous}}",
+    "today": "today",
+    "yesterday": "yesterday",
+    "thisWeek": "this week",
+    "lastWeek": "last week",
+    "thisMonth": "this month",
+    "lastMonth": "last month",
+    "thisYear": "this year",
+    "lastYear": "last year",
+    "vsYesterday": "vs yesterday",
+    "vsLastWeek": "vs last week",
+    "vsLastMonth": "vs last month",
+    "vsLastYear": "vs last year"
+  }
+}

@@ -2,7 +2,7 @@
  * useMutationToast — behavioural tests.
  *
  * `_toastHelpers.ts` exports a single hook, `useMutationToast()`, that returns
- * `{ success, error }`. Its job is narrow but load-bearing (40+ mutation call
+ * `{ success, warning, error }`. Its job is narrow but load-bearing (40+ mutation call
  * sites depend on it): translate an i18n key + English fallback into a toast
  * title, derive a user-facing detail line from an arbitrary thrown value, and
  * forward both to the in-house Toast system at the correct severity.
@@ -26,7 +26,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { render, screen, fireEvent, renderHook, act } from '@testing-library/react';
 import { ToastProvider } from '@/components/feedback/Toast';
-import { useMutationToast } from './_toastHelpers';
+import { useDeferredMutationToast, useMutationToast } from './_toastHelpers';
 
 // ── react-i18next: deterministic translator that honours `defaultValue` and
 //    interpolates `{{var}}` placeholders so title assertions are exact. ──
@@ -102,6 +102,20 @@ describe('useMutationToast — success()', () => {
     expect(region).toHaveTextContent('Settings saved');
     // Success is polite, never assertive — no error/alert region should exist.
     expect(screen.queryByRole('alert')).toBeNull();
+  });
+
+  describe('useMutationToast — warning()', () => {
+    it('renders a polite warning toast with interpolated counts', () => {
+      fireHelper((api) => api.warning(
+        'toast.repair.partial',
+        'Updated {{updated}} cases; {{skipped}} skipped',
+        { updated: 2, skipped: 1 },
+      ));
+
+      const region = screen.getByRole('status');
+      expect(region).toHaveTextContent('Updated 2 cases; 1 skipped');
+      expect(screen.queryByRole('alert')).toBeNull();
+    });
   });
 
   it('interpolates {{count}} placeholders into the success message', () => {
@@ -204,6 +218,7 @@ describe('useMutationToast — stability & live dispatch', () => {
 
     expect(result.current).toBe(first);
     expect(result.current.success).toBe(first.success);
+    expect(result.current.warning).toBe(first.warning);
     expect(result.current.error).toBe(first.error);
   });
 
@@ -234,5 +249,29 @@ describe('useMutationToast — provider contract', () => {
       'useToast must be used within ToastProvider',
     );
     spy.mockRestore();
+  });
+});
+
+describe('useDeferredMutationToast — deferred provider contract', () => {
+  it('mounts without a provider while the mutation feedback remains dormant', () => {
+    const { result } = renderHook(() => useDeferredMutationToast());
+
+    expect(result.current.success).toBeTypeOf('function');
+    expect(result.current.warning).toBeTypeOf('function');
+    expect(result.current.error).toBeTypeOf('function');
+  });
+
+  it('still fails loudly when feedback is dispatched without a provider', () => {
+    const { result } = renderHook(() => useDeferredMutationToast());
+
+    expect(() => result.current.success('toast.k', 'Saved')).toThrow(
+      'useToast must be used within ToastProvider',
+    );
+    expect(() => result.current.warning('toast.k', 'Review needed')).toThrow(
+      'useToast must be used within ToastProvider',
+    );
+    expect(() => result.current.error(new Error('boom'))).toThrow(
+      'useToast must be used within ToastProvider',
+    );
   });
 });

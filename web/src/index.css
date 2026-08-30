@@ -29,22 +29,22 @@
   letter-spacing: var(--tracking);
   font-weight: var(--font-weight-normal);
   color-scheme: dark;
-  --neon-cyan: #00f0ff;
+  --neon-cyan: #22d3ee;
   --neon-blue: #4f46e5;
   --neon-purple: #a855f7;
   --tesla-red: #e31937;
   /* Mode-aware vars — overridden by ThemeProvider */
-  --bg: #0a0a0f;
-  --bg-app: #0a0a0f;
-  --surface-1: #0f1019;
-  --surface-2: #151621;
-  --surface-3: #1a1b2e;
+  --bg: #0b0d12;
+  --bg-app: #0b0d12;
+  --surface-1: #11151c;
+  --surface-2: #171c25;
+  --surface-3: #202733;
   --surface-overlay: rgba(0, 0, 0, 0.6);
-  --glass-bg: rgba(255, 255, 255, 0.04);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --text-primary: #ffffff;
-  --text-secondary: #9ca3af;
-  --text-muted: #8a95a6;
+  --glass-bg: rgba(255, 255, 255, 0.025);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --text-primary: #f4f7fb;
+  --text-secondary: #aab4c3;
+  --text-muted: #8490a2;
   /* Text on an inverted surface (flipped tooltip / accent fill). Dark in
    * dark themes, overridden light under :root.light-mode below. */
   --text-inverse: #0f172a;
@@ -58,20 +58,20 @@
    * Defaults below are dark-mode values; :root.light-mode (further down in
    * this file) overrides them for light themes.
    */
-  --surface-elevated: rgba(255, 255, 255, 0.04);
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.12);
-  --border-strong: rgba(255, 255, 255, 0.2);
+  --surface-elevated: var(--surface-2);
+  --border-subtle: rgba(255, 255, 255, 0.055);
+  --border-default: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.16);
   /* Dynamic color theme vars — overridden by ThemeProvider */
-  --theme-primary: #00f0ff;
-  --theme-primary-rgb: 0, 240, 255;
-  --theme-accent: #4f46e5;
-  --theme-accent-rgb: 79, 70, 229;
+  --theme-primary: #3b82f6;
+  --theme-primary-rgb: 59, 130, 246;
+  --theme-accent: #06b6d4;
+  --theme-accent-rgb: 6, 182, 212;
   /* Contrasting foreground for solid accent fills (primary buttons, FAB…).
      Recomputed per-accent in ThemeProvider.applyThemeCSS; these are the
-     defaults for the neon-cyan/indigo starting palette. */
-  --theme-on-primary: #0a0a0f;
-  --theme-on-accent: #ffffff;
+     accessible first-paint defaults for the signal-blue palette. */
+  --theme-on-primary: #0b0d12;
+  --theme-on-accent: #0b0d12;
   /*
    * Density tokens (Phase 40 / Prompt 44).
    *
@@ -89,6 +89,9 @@
   --density-pad-y: 0.75rem;
   --density-gap: 0.75rem;
   --density-text: 0.875rem;
+  /* Fixed desktop shell geometry shared by the sidebar and overlays that
+     center within the post-sidebar workspace. */
+  --shell-sidebar-width: 17rem;
   /*
    * Motion duration tokens (Phase-45 / Prompt 21).
    *
@@ -118,8 +121,8 @@
   --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
   --radius-pill: 9999px;
 
   /*
@@ -221,6 +224,9 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-sans);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }
 
@@ -322,27 +328,29 @@ select option:checked {
   }
 
   .neon-button {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 cursor-pointer;
-    background: linear-gradient(135deg, var(--theme-primary), var(--theme-accent));
-    color: white;
-    box-shadow: 0 0 20px rgba(var(--theme-primary-rgb), 0.2);
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
+      transition-colors duration-fast cursor-pointer;
+    border-radius: var(--radius-sm);
+    background: var(--theme-primary);
+    color: var(--theme-on-primary);
+    border: 1px solid transparent;
+    box-shadow: var(--elevation-1);
   }
   .neon-button:hover {
-    box-shadow: 0 0 30px rgba(var(--theme-primary-rgb), 0.35);
-    transform: translateY(-1px);
+    filter: brightness(1.06);
   }
 
   .neon-button-red {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold
-      transition-all duration-200 cursor-pointer;
-    background: linear-gradient(135deg, #e31937, #ff4060);
-    color: white;
-    box-shadow: 0 0 20px rgba(227, 25, 55, 0.2);
+    @apply inline-flex items-center justify-center gap-2 px-5 py-2.5 text-sm font-semibold
+      transition-colors duration-fast cursor-pointer;
+    border-radius: var(--radius-sm);
+    background: #dc2626;
+    color: var(--text-on-accent);
+    border: 1px solid transparent;
+    box-shadow: var(--elevation-1);
   }
   .neon-button-red:hover {
-    box-shadow: 0 0 30px rgba(227, 25, 55, 0.35);
-    transform: translateY(-1px);
+    background: #b91c1c;
   }
 
   .stat-value {
@@ -352,17 +360,14 @@ select option:checked {
 
   .neon-text-cyan {
     color: var(--neon-cyan);
-    text-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
   }
 
   .neon-text-red {
     color: var(--tesla-red);
-    text-shadow: 0 0 10px rgba(227, 25, 55, 0.3);
   }
 
   .neon-dot {
     @apply h-2 w-2 rounded-full;
-    box-shadow: 0 0 8px currentColor;
   }
 
   .section-title {
@@ -512,11 +517,11 @@ select option:checked {
 }
 
 /* Glass panel glow on active states */
-.glass-glow-cyan { box-shadow: 0 0 20px rgba(0, 240, 255, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-green { box-shadow: 0 0 20px rgba(16, 185, 129, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-purple { box-shadow: 0 0 20px rgba(168, 85, 247, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-amber { box-shadow: 0 0 20px rgba(245, 158, 11, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
-.glass-glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.08), inset 0 1px 0 rgba(255,255,255,0.04); }
+.glass-glow-cyan,
+.glass-glow-green,
+.glass-glow-purple,
+.glass-glow-amber,
+.glass-glow-red { box-shadow: var(--panel-shadow); }
 
 /* ========================================
    LIGHT MODE GLOBAL OVERRIDES
@@ -1065,6 +1070,13 @@ select option:checked {
 }
 
 /* ─── react-grid-layout overrides ─── */
+@media (hover: none) {
+  .edit-mode .widget-edit-toolbar {
+    pointer-events: auto;
+    opacity: 1;
+  }
+}
+
 .react-grid-item {
   overflow: visible !important;
 }
@@ -1242,8 +1254,51 @@ select option:checked {
   .edit-mode .react-grid-item > .widget-container {
     animation: none !important;
   }
+
+  /* A11Y-08 — kill ambient loops outright rather than compressing them.
+   *
+   * The global rule above sets `animation-duration: 0.01ms` +
+   * `animation-iteration-count: 1`, which is the standard "neutralise"
+   * recipe. It is not sufficient for ambient loading effects: collapsing
+   * a shimmer to a single 0.01 ms iteration leaves the element parked on
+   * the animation's FINAL keyframe. For `pulse` that is `opacity: 1`
+   * (harmless), but for `shimmer` / `skeletonWave` the final frame is a
+   * translated highlight gradient sitting off to one side, so a
+   * reduced-motion user sees a permanently lopsided skeleton.
+   *
+   * Naming the classes explicitly and setting `animation: none` returns
+   * each element to its unanimated base style — a flat placeholder,
+   * which is exactly what a reduced-motion user should get. Keep this
+   * list in sync with `tailwind.config.js` → `theme.extend.animation`.
+   */
+  .animate-pulse,
+  .animate-pulse-slow,
+  .animate-shimmer,
+  .animate-skeleton-wave,
+  .shimmer,
+  .pulse-glow,
+  [data-skeleton] {
+    animation: none !important;
+  }
 }
 
+
+/* Application-shell presentation modes. Report mode keeps evidence and scope
+   metadata while removing commands; kiosk mode gives the active route the
+   entire viewport and removes page-level editing chrome. */
+[data-presentation-mode='report'] [data-action-zone='commands'],
+[data-presentation-mode='kiosk'] [data-role='page-header'],
+[data-presentation-mode='kiosk'] [data-role='compact-breadcrumbs'] {
+  display: none !important;
+}
+
+[data-presentation-mode='report'] [data-role='page-container'] {
+  gap: 1.25rem;
+}
+
+[data-presentation-mode='kiosk'] [data-role='page-container'] {
+  min-height: 100vh;
+}
 
 /* === @media print (Phase-40 / Prompt 54) =====================================
  * Live SPA printing: hide app chrome, swap dark glass surfaces for white paper,
@@ -1271,6 +1326,14 @@ select option:checked {
     --text-secondary: #222222;
     --text-muted: #555555;
     color-scheme: light;
+  }
+
+  [data-role='report-masthead'] {
+    display: flex !important;
+  }
+
+  [data-presentation-mode='report'] [data-role='page-header'] {
+    box-shadow: none !important;
   }
 
   html, body {
@@ -1403,6 +1466,96 @@ select option:checked {
  * `forced-colors:` variant or `@media (forced-colors: active)` block.
  * ============================================================================ */
 @media (forced-colors: active) {
+  /* ── Design-token fallbacks ────────────────────────────────────────────
+   * The component layer is written almost entirely against CSS custom
+   * properties (`bg-[var(--surface-1)]`, `text-[var(--text-secondary)]`,
+   * `border-[var(--border-default)]`). Those resolve to fixed hex and
+   * rgba values, and forced-colors mode does NOT rewrite custom
+   * properties — it only overrides the small set of colour properties
+   * the UA recognises, and even then only where the author has not
+   * pinned a value.
+   *
+   * The practical consequence: a panel whose background is
+   * `var(--surface-1)` = `#11151c` keeps rendering near-black in a High
+   * Contrast *light* theme, and its `rgba(255,255,255,0.09)` border
+   * disappears entirely (alpha borders are treated as transparent).
+   * Users get an unreadable, borderless slab.
+   *
+   * Remapping the tokens themselves fixes every consumer at once,
+   * including components that have no `forced-colors:` variant of their
+   * own and pages we have not audited individually. Per-component
+   * `forced-colors:` classes then only need to handle genuinely
+   * component-specific chrome (shadows, gradients, glass).
+   *
+   * `Canvas` / `CanvasText` / `Highlight` / `GrayText` / `LinkText` are
+   * the CSS Color 4 system colours the OS theme populates.
+   *
+   * WHY EVERY DECLARATION HERE IS `!important`
+   * ------------------------------------------
+   * `ThemeProvider` writes the live theme onto the document element as
+   * INLINE style — `root.style.setProperty('--surface-1', …)` — for
+   * `--theme-*`, `--surface-1..3`, `--glass-bg`, `--glass-border`, and
+   * `--text-primary|secondary|muted`. An inline declaration outranks
+   * every normal author rule no matter how specific the selector is, so
+   * a plain `:root { --surface-1: Canvas }` inside this media block
+   * simply loses at runtime and the whole remap silently does nothing.
+   *
+   * An `!important` AUTHOR declaration is the one thing that does beat a
+   * non-important inline declaration (CSS Cascade 4 §6.6.1), which is
+   * why it is used here rather than as a shortcut around specificity.
+   * The corollary is a hard rule: `ThemeProvider` must never call
+   * `setProperty(..., 'important')`, and no rule outside this block may
+   * mark these tokens `!important` — either would re-break the remap.
+   * `scripts/audit-forced-colors.mjs` resolves the cascade and fails the
+   * build if either happens.
+   *
+   * The selector list mirrors the classes `ThemeProvider` actually
+   * toggles on `<html>` (`dark` / `light-mode`). `:root.light-mode` is
+   * listed explicitly because it is where the light palette is defined
+   * (index.css L540) and would otherwise out-specify a bare `:root`
+   * should a future edit drop the `!important`.
+   * ------------------------------------------------------------------- */
+  :root,
+  :root.dark,
+  :root.light-mode {
+    --bg: Canvas !important;
+    --bg-app: Canvas !important;
+    --surface-1: Canvas !important;
+    --surface-2: Canvas !important;
+    --surface-3: Canvas !important;
+    --surface-elevated: Canvas !important;
+    --surface-overlay: Canvas !important;
+    --glass-bg: Canvas !important;
+    --glass-border: CanvasText !important;
+
+    --text-primary: CanvasText !important;
+    --text-secondary: CanvasText !important;
+    /* GrayText is the OS's own "de-emphasised" colour and is guaranteed
+     * to stay legible against Canvas, unlike our alpha-blended greys. */
+    --text-muted: GrayText !important;
+    --text-inverse: Canvas !important;
+    --text-on-accent: Canvas !important;
+
+    --border-subtle: CanvasText !important;
+    --border-default: CanvasText !important;
+    --border-strong: CanvasText !important;
+
+    /* Brand accents become the OS accent so "this is the active/primary
+     * thing" survives, instead of collapsing into body text. */
+    --theme-primary: Highlight !important;
+    --theme-accent: Highlight !important;
+    --theme-on-primary: HighlightText !important;
+    --theme-on-accent: HighlightText !important;
+
+    /* Shadows are suppressed by the UA in forced-colors mode; zeroing
+     * them here stops components from reserving visual weight that will
+     * never be painted. Borders (pinned above) carry the elevation. */
+    --elevation-0: none !important;
+    --elevation-1: none !important;
+    --elevation-2: none !important;
+    --elevation-3: none !important;
+  }
+
   /* Restore a visible focus ring for keyboard users. The neon focus rings
    * across the app use `box-shadow` (Tailwind `ring-*`), which is
    * suppressed entirely in forced-colors mode. Use `outline` instead so
@@ -1548,6 +1701,7 @@ figure[data-print-card]:fullscreen > div[role='img'] {
   flex: 1 1 auto;
   height: auto !important;
   min-height: 0;
+  max-height: none !important;
 }
 
 figure[data-print-card]:fullscreen h3 {

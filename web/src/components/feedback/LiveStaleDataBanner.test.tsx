@@ -104,6 +104,7 @@ describe('LiveStaleDataBanner', () => {
     advance(2_000)
     const banner = screen.getByTestId(BANNER)
     expect(banner).toBeInTheDocument()
+    expect(banner).toHaveAttribute('data-data-state', 'stale')
     // Announced politely to assistive tech when it appears.
     expect(banner).toHaveAttribute('role', 'status')
     expect(banner).toHaveAttribute('aria-live', 'polite')

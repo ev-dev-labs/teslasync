@@ -1,0 +1,266 @@
+{
+  "search": {
+    "title": "Search",
+    "placeholder": "Search vehicles, drives, charging…",
+    "input": {
+      "label": "Search query"
+    },
+    "filters": {
+      "clear": "Clear filters"
+    },
+    "aiSearch": {
+      "title": "Search with natural language",
+      "description": "Describe what you are looking for and the assistant will surface drives, charging sessions, and alerts that match — citing each entity by name.",
+      "badge": "Helix",
+      "searchButton": "Search with Helix"
+    },
+    "tooShort": {
+      "title": "Type at least 2 characters",
+      "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more."
+    },
+    "empty": {
+      "title": "Start typing to search",
+      "message": "Search across vehicles, drives, charging sessions, alerts, geofences, automations and more."
+    },
+    "error": {
+      "title": "Search failed",
+      "message": "The search service did not respond. Try again or refine your query."
+    },
+    "noResults": {
+      "title": "No results",
+      "message": "No matches for \"{{query}}\". Try fewer characters or open the command palette."
+    },
+    "palette": {
+      "viewAll": "View all results for \"{{query}}\""
+    },
+    "section": {
+      "results": "Results",
+      "vehicle": "Vehicles",
+      "drive": "Drives",
+      "charging": "Charging",
+      "alert": "Alerts",
+      "notification": "Notifications",
+      "geofence": "Geofences",
+      "automation": "Automations",
+      "location": "Locations",
+      "trip": "Trips"
+    },
+    "history": {
+      "title": "Recent searches",
+      "clear": "Clear history",
+      "removeAria": "Remove \"{{query}}\" from search history"
+    },
+    "entries": {
+      "tesla": {
+        "connect": {
+          "title": "Connect Tesla account",
+          "desc": "Authorize TeslaSync to access your Tesla account."
+        },
+        "refreshToken": {
+          "title": "Tesla refresh token",
+          "desc": "Manually refresh the cached Tesla OAuth token."
+        },
+        "disconnect": {
+          "title": "Disconnect Tesla account",
+          "desc": "Sign out and remove the cached OAuth token."
+        },
+        "syncVehicles": {
+          "title": "Sync vehicles from Tesla",
+          "desc": "Pull the current vehicle list from the Tesla Fleet API."
+        }
+      },
+      "region": {
+        "title": "Region & Fleet API endpoint",
+        "desc": "Tesla account region and the resolved Fleet API base URL."
+      },
+      "features": {
+        "title": "Feature flags",
+        "desc": "Tesla account feature configuration synced from the Fleet API."
+      },
+      "orders": {
+        "title": "Active orders",
+        "desc": "Vehicle orders and delivery tracking from Tesla."
+      },
+      "general": {
+        "distance": {
+          "title": "Distance unit",
+          "desc": "Show distances in kilometers or miles."
+        },
+        "temperature": {
+          "title": "Temperature unit",
+          "desc": "Show temperatures in Celsius or Fahrenheit."
+        },
+        "pressure": {
+          "title": "Tire pressure unit",
+          "desc": "Show tire pressure in Bar or PSI."
+        },
+        "range": {
+          "title": "Preferred range",
+          "desc": "Display rated or ideal range for the battery."
+        },
+        "precision": {
+          "title": "Decimal precision",
+          "desc": "Number of decimal places shown on numeric metrics."
+        },
+        "language": {
+          "title": "Language",
+          "desc": "Application interface language."
+        },
+        "currency": {
+          "title": "Currency",
+          "desc": "Currency symbol used in cost and savings displays."
+        },
+        "locale": {
+          "title": "Number & date locale",
+          "desc": "Locale used for number, date, and time formatting."
+        },
+        "timezone": {
+          "title": "Time zone",
+          "desc": "Whether timestamps follow the vehicle, your local time, or UTC."
+        },
+        "electricityCost": {
+          "title": "Electricity cost (per kWh)",
+          "desc": "Per-kWh price used in charging cost calculations."
+        },
+        "gasPriceManual": {
+          "title": "Comparison gas price",
+          "desc": "Manual gas price used in EV-vs-ICE savings comparisons."
+        },
+        "mpg": {
+          "title": "Comparison vehicle MPG",
+          "desc": "Average MPG of the equivalent gas car for savings calculations."
+        }
+      },
+      "gasPrice": {
+        "title": "Gas price auto-poll",
+        "desc": "Automatically fetch US average gas prices from EIA."
+      },
+      "notifications": {
+        "browser": {
+          "title": "Browser notifications",
+          "desc": "Enable browser notifications when the tab is in the background."
+        },
+        "alerts": {
+          "title": "Alert notifications",
+          "desc": "Get notified when an alert rule fires."
+        },
+        "exportStatus": {
+          "title": "Export completion notifications",
+          "desc": "Get notified when a CSV/JSON export finishes."
+        },
+        "tabBadge": {
+          "title": "Browser tab unread badge",
+          "desc": "Show unread count in the browser tab title and favicon."
+        },
+        "criticalFlash": {
+          "title": "Critical alert tab flash",
+          "desc": "Flash the browser tab title on critical alerts."
+        },
+        "soundMaster": {
+          "title": "Notification sounds",
+          "desc": "Play short audio cues when alerts and completion events arrive."
+        },
+        "soundChannels": {
+          "title": "Per-channel notification sounds",
+          "desc": "Toggle sound separately for critical, warning, and info alerts plus charge/drive/automation completions."
+        },
+        "soundVolume": {
+          "title": "Notification sound volume",
+          "desc": "Adjust how loud notification cues play."
+        }
+      },
+      "quietHours": {
+        "windows": {
+          "title": "Quiet hours windows",
+          "desc": "Defer non-critical notifications during sleep, work meetings, or any time-of-day window."
+        },
+        "bypass": {
+          "title": "Quiet hours bypass severities",
+          "desc": "Choose which severities (e.g. critical) still ring through during quiet hours."
+        },
+        "timezone": {
+          "title": "Quiet hours timezone",
+          "desc": "Pick the IANA timezone the start/end times are evaluated against."
+        }
+      },
+      "appearance": {
+        "theme": {
+          "title": "Theme",
+          "desc": "Choose light, dark, or system mode and pick an accent color."
+        },
+        "density": {
+          "title": "Information density",
+          "desc": "Compact, comfortable, or spacious row sizing across tables and cards."
+        },
+        "timeFormat": {
+          "title": "Default time format",
+          "desc": "Show timestamps as relative (\"2h ago\") or absolute (\"Nov 12, 13:42\")."
+        },
+        "chartPalette": {
+          "title": "Chart palette",
+          "desc": "Color-blind safe (Okabe-Ito) or stylistic neon chart colors."
+        },
+        "statusBar": {
+          "title": "Status bar",
+          "desc": "Show or hide the always-on footer status bar."
+        },
+        "celebrations": {
+          "title": "Achievement celebrations",
+          "desc": "Celebration toasts and sound when an achievement unlocks."
+        }
+      },
+      "security": {
+        "totpEnroll": {
+          "title": "Enable two-factor authentication"
+        },
+        "totpBackupCodes": {
+          "title": "TOTP backup codes"
+        },
+        "totpDisable": {
+          "title": "Disable two-factor authentication"
+        },
+        "sessionsList": {
+          "title": "Active sessions"
+        },
+        "sessionsRevokeAll": {
+          "title": "Sign out all other devices"
+        }
+      },
+      "advanced": {
+        "restoreConfirms": {
+          "title": "Restore confirmation prompts",
+          "desc": "Re-enable “Don’t ask again” prompts you previously silenced."
+        }
+      },
+      "backup": {
+        "export": {
+          "title": "Export settings as JSON",
+          "desc": "Download a portable bundle of general settings, alert rules, geofences, and quiet-hours windows."
+        },
+        "import": {
+          "title": "Import settings from JSON",
+          "desc": "Restore alert rules, geofences, and quiet-hours windows from a previously exported bundle."
+        }
+      },
+      "webhooks": {
+        "list": {
+          "title": "Webhook channels"
+        },
+        "signing": {
+          "title": "Webhook HMAC signing"
+        },
+        "test": {
+          "title": "Test a webhook channel"
+        }
+      },
+      "reset": {
+        "section": {
+          "title": "Reset a section to defaults"
+        },
+        "all": {
+          "title": "Reset ALL settings"
+        }
+      }
+    }
+  }
+}

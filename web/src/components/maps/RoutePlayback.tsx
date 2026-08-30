@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MapPin, Flag } from 'lucide-react';
 
@@ -6,6 +6,8 @@ import { GlassPanel } from '@/components/ui/GlassPanel';
 import { PlaybackControls } from '@/components/data-display/PlaybackControls';
 import { EmptyState } from '@/components/feedback/EmptyState';
 import { useMotionPreference } from '@/hooks/useMotionPreference';
+import { useA11ySummary } from '@/hooks/useA11ySummary';
+import { VisuallyHidden } from '@/components/a11y/VisuallyHidden';
 import { cn } from '@/lib/cn';
 import { fmtNumber } from '@/lib/numberFormat';
 
@@ -128,19 +130,26 @@ function fmtDuration(ms: number): string {
 
 function FitTrail({ trail }: { trail: LatLngExpression[] }) {
   const map = useMap();
+  // A11Y-08: Leaflet's `fitBounds` / `setView` animate the camera by
+  // default. A pan-and-zoom across a whole drive is exactly the kind of
+  // large-area movement that triggers vestibular symptoms, and it is not
+  // covered by the CSS reduced-motion block because Leaflet drives the
+  // transform imperatively. Jump instead of gliding when asked to.
+  const { reduce } = useMotionPreference();
   useEffect(() => {
+    const options = reduce ? { animate: false, duration: 0 } : {};
     if (trail.length > 1) {
       const bounds = latLngBounds(
         trail.map((p) =>
           Array.isArray(p) ? ([p[0] as number, p[1] as number] as [number, number]) : ([0, 0] as [number, number]),
         ),
       );
-      if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30] });
+      if (bounds.isValid()) map.fitBounds(bounds, { padding: [30, 30], ...options });
     } else if (trail.length === 1) {
-      map.setView(trail[0] as [number, number], 15);
+      map.setView(trail[0] as [number, number], 15, options);
     }
     // Only re-fit when the trail length actually changes.
-  }, [map, trail.length]);
+  }, [map, trail.length, reduce]);
   return null;
 }
 
@@ -171,6 +180,8 @@ export function RoutePlayback({
 }: RoutePlaybackProps) {
   const { t } = useTranslation();
   const { reduce } = useMotionPreference();
+  const { describeRoute } = useA11ySummary();
+  const routeSummaryId = useId();
   const [mapStyle, setMapStyle] = useState<MapStyle>(initialMapStyle);
 
   /* ── Memoized derived data ────────────────────────────────────── */
@@ -316,6 +327,10 @@ export function RoutePlayback({
 
   const progress = totalMs > 0 ? Math.min(elapsedRef.current / totalMs, 1) : 0;
   const heightStyle = typeof height === 'number' ? `${height}px` : height;
+  const routeSummary = describeRoute({
+    pointCount: trail.length,
+    duration: fmtDuration(totalMs),
+  });
 
   return (
     <GlassPanel className={cn('overflow-hidden', className)}>
@@ -324,7 +339,13 @@ export function RoutePlayback({
         style={{ height: heightStyle }}
         role="application"
         aria-label={ariaLabel ?? t('maps.routePlayback.mapLabel', 'Route playback map')}
+        aria-describedby={routeSummaryId}
       >
+        {/* A11Y-10: a Leaflet route is an SVG path plus markers — to a
+            screen reader it is literally nothing. This one sentence is
+            the entire non-visual representation of the drive, so it
+            carries the endpoints, the length, and the sample count. */}
+        <VisuallyHidden id={routeSummaryId}>{routeSummary}</VisuallyHidden>
         {showLayerSwitcher && (
           <MapLayerSwitcher current={mapStyle} onChange={setMapStyle} />
         )}

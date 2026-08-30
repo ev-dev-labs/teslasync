@@ -11,7 +11,7 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ChartTooltip, chartGrid, axisTickSm,
+  ChartTooltip, EmbeddedChart, chartGrid, axisTickSm,
 } from '@/components/charts';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 
@@ -275,7 +275,21 @@ export default function ChargingHeatmapPage() {
                   message={t('charging.heatmap.noLocations', 'No repeat charging locations yet')}
                 />
               ) : (
-                <div className="h-64 sm:h-72">
+                <EmbeddedChart
+                  title={t('charging.heatmap.topLocations', 'Top Charging Locations')}
+                  ariaLabel={t(
+                    'charging.heatmap.topLocationsAria',
+                    'Charging session counts at the most frequently used locations',
+                  )}
+                  data={locationData.map(({ name, count }) => ({ name, count }))}
+                  dataColumns={[
+                    { key: 'name', label: t('charging.heatmap.location', 'Location') },
+                    { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions') },
+                  ]}
+                  fluid={false}
+                  mobileHeight={256}
+                  height={288}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
                       data={locationData}
@@ -294,7 +308,7 @@ export default function ChargingHeatmapPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </EmbeddedChart>
               )}
             </GlassPanel>
 
@@ -314,7 +328,21 @@ export default function ChargingHeatmapPage() {
                   message={t('charging.heatmap.noData', 'No charging sessions in this range')}
                 />
               ) : (
-                <div className="h-64 sm:h-72">
+                <EmbeddedChart
+                  title={t('charging.heatmap.byDayOfWeek', 'Sessions by Day of Week')}
+                  ariaLabel={t(
+                    'charging.heatmap.byDayOfWeekAria',
+                    'Charging session counts for each day of the week',
+                  )}
+                  data={dayOfWeekData.map(({ day, count }) => ({ day, count }))}
+                  dataColumns={[
+                    { key: 'day', label: t('charging.heatmap.day', 'Day') },
+                    { key: 'count', label: t('charging.heatmap.sessionsWord', 'sessions') },
+                  ]}
+                  fluid={false}
+                  mobileHeight={256}
+                  height={288}
+                >
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={dayOfWeekData} margin={{ top: 0, right: 10, left: 0, bottom: 0 }}>
                       {chartGrid}
@@ -329,7 +357,7 @@ export default function ChargingHeatmapPage() {
                       />
                     </BarChart>
                   </ResponsiveContainer>
-                </div>
+                </EmbeddedChart>
               )}
             </GlassPanel>
           </div>

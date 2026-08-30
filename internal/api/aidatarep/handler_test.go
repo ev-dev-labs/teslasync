@@ -66,7 +66,7 @@ func TestDataRepairSuggestionsAIOffManualRunbookWorks(t *testing.T) {
 
 		// Baseline canonical routes — NOT guarded by the AI
 		// guard. Returns deterministic stale-session inventory +
-		// per-row repair handlers (close / discard / update) with
+		// per-row repair handlers (close / quarantine / update) with
 		// the `"ai":false` marker and a `surface` envelope shape
 		// that names the deterministic baseline, so the test can
 		// prove the deterministic manual-runbook path coexists.
@@ -227,16 +227,20 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 	t.Parallel()
 
 	cases := []struct {
-		name   string
-		body   string
-		wantOK bool
+		name          string
+		body          string
+		wantOK        bool
+		wantVehicleID int64
 	}{
-		{"empty_body", "", true},
-		{"empty_object_body", "{}", true},
-		{"null_body", "null", true},
-		{"object_with_unknown_field", `{"hint":"close 42"}`, true},
-		{"malformed_json_body", "{not json", false},
-		{"bare_array", "[1, 2]", false},
+		{"empty_body", "", true, 0},
+		{"empty_object_body", "{}", true, 0},
+		{"null_body", "null", true, 0},
+		{"vehicle_scope", `{"vehicle_id":7}`, true, 7},
+		{"object_with_unknown_field", `{"hint":"close 42"}`, true, 0},
+		{"zero_vehicle_id", `{"vehicle_id":0}`, false, 0},
+		{"negative_vehicle_id", `{"vehicle_id":-1}`, false, 0},
+		{"malformed_json_body", "{not json", false, 0},
+		{"bare_array", "[1, 2]", false, 0},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -244,11 +248,43 @@ func TestHandler_RejectsBadBody(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/api/v1/ai/system/data-repair/draft", strings.NewReader(tc.body))
 			req.Header.Set("Content-Type", "application/json")
 
-			ok := parseDataRepairSuggestionsRequest(rec, req)
+			parsed, ok := parseDataRepairSuggestionsRequest(rec, req)
 			if ok != tc.wantOK {
 				t.Errorf("parseDataRepairSuggestionsRequest(%s) ok = %v, want %v (body=%q)", tc.name, ok, tc.wantOK, rec.Body.String())
 			}
+			if ok && tc.wantVehicleID == 0 && parsed.VehicleID != nil {
+				t.Errorf("parseDataRepairSuggestionsRequest(%s) vehicle_id = %d, want nil", tc.name, *parsed.VehicleID)
+			}
+			if ok && tc.wantVehicleID > 0 &&
+				(parsed.VehicleID == nil || *parsed.VehicleID != tc.wantVehicleID) {
+				t.Errorf("parseDataRepairSuggestionsRequest(%s) vehicle_id = %v, want %d",
+					tc.name, parsed.VehicleID, tc.wantVehicleID)
+			}
 		})
+	}
+}
+
+func TestScopeStaleInventoryFiltersByVehicle(t *testing.T) {
+	t.Parallel()
+	vehicleID := int64(7)
+	charging := []*chargingmodel.ChargingSession{
+		nil,
+		{ID: 1, VehicleID: 7},
+		{ID: 2, VehicleID: 8},
+	}
+	drives := []*drivemodel.Drive{
+		{ID: 3, VehicleID: 8},
+		nil,
+		{ID: 4, VehicleID: 7},
+	}
+
+	gotCharging, gotDrives := scopeStaleInventory(&vehicleID, charging, drives)
+
+	if len(gotCharging) != 1 || gotCharging[0].ID != 1 {
+		t.Fatalf("scoped charging = %+v, want only session 1", gotCharging)
+	}
+	if len(gotDrives) != 1 || gotDrives[0].ID != 4 {
+		t.Fatalf("scoped drives = %+v, want only drive 4", gotDrives)
 	}
 }
 
@@ -319,7 +355,7 @@ func TestPlanValidator_AcceptsValidPlan(t *testing.T) {
 	v := NewPlanValidator()
 	plans := []*diagnostic.DataRepairPlan{
 		{TargetKind: "charging", TargetID: 42, Action: "close"},
-		{TargetKind: "drive", TargetID: 99, Action: "discard"},
+		{TargetKind: "drive", TargetID: 99, Action: "quarantine"},
 		{TargetKind: "drive", TargetID: 99, Action: "update", UpdateFields: map[string]any{"distance_m": 100}},
 	}
 	for _, p := range plans {

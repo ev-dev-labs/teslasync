@@ -160,7 +160,7 @@ function baseProps(over: Partial<Props> = {}): Props {
     sessions: SESSIONS,
     filteredSessions: SESSIONS,
     isLoading: false,
-    toDistanceDisplay: (x: number) => x,
+    toDistanceDisplay: (meters: number) => meters / 1000,
     distanceUnit: 'km',
     sortBy: 'date',
     sortDesc: true,

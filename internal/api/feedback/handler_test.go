@@ -108,6 +108,100 @@ func TestFeedbackSubmitHappyPath(t *testing.T) {
 	}
 }
 
+// TestFeedbackSubmitNormalizesPageRoute pins the privacy boundary on the
+// stored route label.
+//
+// A feedback row is durable, is visible to every admin with queue access, and
+// can be forwarded verbatim into a GitHub issue. Anything identifying in
+// page_route lands in all three places at once, so the handler templates the
+// value itself rather than trusting whatever the client sent — an older SPA
+// build, a scripted POST, or a future caller must not be able to bypass it.
+func TestFeedbackSubmitNormalizesPageRoute(t *testing.T) {
+	cases := []struct {
+		name  string
+		route string
+		want  string
+		deny  string
+	}{
+		{
+			name:  "numeric record id",
+			route: "/drives/91827",
+			want:  "/drives/:id",
+			deny:  "91827",
+		},
+		{
+			name:  "vin in path",
+			route: "/vehicles/5YJ3E1EA7KF317654",
+			deny:  "5YJ3E1EA7KF317654",
+		},
+		{
+			name:  "opaque share token",
+			route: "/s/private-share-slug-xyz",
+			deny:  "private-share-slug-xyz",
+		},
+		{
+			name:  "query string carrying a token",
+			route: "/settings?access_token=supersecretvalue",
+			want:  "/settings",
+			deny:  "supersecretvalue",
+		},
+		{
+			name:  "absolute url with host and fragment",
+			route: "https://tenant.example.com/drives/42#section",
+			want:  "/drives/:id",
+			deny:  "tenant.example.com",
+		},
+		{
+			name:  "plain page survives intact",
+			route: "/system-status",
+			want:  "/system-status",
+		},
+		{
+			name:  "empty stays empty rather than claiming the dashboard",
+			route: "",
+			want:  "",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			store := &fakeFeedbackStore{}
+			h := newTestHandler(store)
+
+			payload := map[string]string{
+				"category":   "bug",
+				"title":      "valid title here",
+				"body":       "this body is more than twenty characters long for sure",
+				"page_route": tc.route,
+			}
+			raw, err := json.Marshal(payload)
+			if err != nil {
+				t.Fatalf("marshal: %v", err)
+			}
+
+			req := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", strings.NewReader(string(raw)))
+			req.Header.Set("Content-Type", "application/json")
+			rec := httptest.NewRecorder()
+
+			h.Submit(rec, req)
+
+			if rec.Code != http.StatusCreated {
+				t.Fatalf("status: got %d, want 201; body=%s", rec.Code, rec.Body.String())
+			}
+			got := store.lastInsert.PageRoute
+			if tc.want != "" && got != tc.want {
+				t.Fatalf("page_route: got %q, want %q", got, tc.want)
+			}
+			if tc.want == "" && tc.deny == "" && got != "" {
+				t.Fatalf("page_route: got %q, want empty", got)
+			}
+			if tc.deny != "" && strings.Contains(got, tc.deny) {
+				t.Fatalf("page_route leaked %q: %q", tc.deny, got)
+			}
+		})
+	}
+}
+
 func TestFeedbackSubmitRateLimited(t *testing.T) {
 	store := &fakeFeedbackStore{countResult: 3}
 	h := newTestHandler(store)

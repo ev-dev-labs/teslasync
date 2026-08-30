@@ -282,7 +282,7 @@ describe('StateTimelineWidget — loading / empty / error', () => {
 
     expect(screen.getByText('No state data available')).toBeInTheDocument();
     // The refresh control stays available so the user can retry.
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Refresh/i })).toBeInTheDocument();
   });
 });
 
@@ -294,7 +294,7 @@ describe('StateTimelineWidget — refresh + vehicle resolution', () => {
     mockTimeline.mockReturnValue(makeQuery({ data: timelineRows(), refetch: timelineRefetch }));
     renderWidget({ size: { cols: 2, rows: 2 } });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(summaryRefetch).toHaveBeenCalledTimes(1);
     expect(timelineRefetch).toHaveBeenCalledTimes(1);
   });

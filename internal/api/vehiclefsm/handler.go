@@ -140,13 +140,13 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 	if to == fsm.Driving && from != fsm.Driving {
 		// Unplug-and-go: close any active charge before starting a drive.
 		if chargeFSM, ok := h.charges[vehicleID]; ok {
-			chargeFSM.TriggerEnding(sctx.Signals, true)
+			chargeFSM.TriggerEndingAt(sctx.Signals, true, sctx.Now)
 			delete(h.charges, vehicleID)
 			log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: force-completed charge (drive started)")
 		}
-		driveFSM := drive.NewSessionFSM(vehicleID, "", 0) // driveID will be set by session tracker
+		driveFSM := drive.NewSessionFSMAt(vehicleID, "", 0, sctx.Now) // driveID will be set by session tracker
 		if sctx.Signals != nil {
-			driveFSM.ProcessSignals(sctx.Signals)
+			driveFSM.ProcessSignalsAt(sctx.Signals, sctx.Now)
 		}
 		h.drives[vehicleID] = driveFSM
 		log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: drive sub-FSM created")
@@ -154,7 +154,7 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 
 	if from == fsm.Driving && to != fsm.Driving {
 		if driveFSM, ok := h.drives[vehicleID]; ok {
-			driveFSM.TriggerEnding(sctx.Signals)
+			driveFSM.TriggerEndingAt(sctx.Signals, sctx.Now)
 			if !driveFSM.IsCompleted() {
 				driveFSM.ForceComplete()
 			}
@@ -169,16 +169,16 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 
 	if to == fsm.Charging && from != fsm.Charging {
 		if driveFSM, ok := h.drives[vehicleID]; ok {
-			driveFSM.TriggerEnding(sctx.Signals)
+			driveFSM.TriggerEndingAt(sctx.Signals, sctx.Now)
 			if !driveFSM.IsCompleted() {
 				driveFSM.ForceComplete()
 			}
 			delete(h.drives, vehicleID)
 			log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: force-completed drive (charge started)")
 		}
-		chargeFSM := charge.NewSessionFSM(vehicleID, "", 0)
+		chargeFSM := charge.NewSessionFSMAt(vehicleID, "", 0, sctx.Now)
 		if sctx.Signals != nil {
-			chargeFSM.ProcessSignals(sctx.Signals)
+			chargeFSM.ProcessSignalsAt(sctx.Signals, sctx.Now)
 		}
 		h.charges[vehicleID] = chargeFSM
 		log.Info().Int64("vehicle_id", vehicleID).Msg("fsm: charge sub-FSM created")
@@ -186,7 +186,7 @@ func (h *Handler) manageSubFSMs(_ context.Context, vehicleID int64, from, to fsm
 
 	if from == fsm.Charging && to != fsm.Charging {
 		if chargeFSM, ok := h.charges[vehicleID]; ok {
-			chargeFSM.TriggerEnding(sctx.Signals, false)
+			chargeFSM.TriggerEndingAt(sctx.Signals, false, sctx.Now)
 			if !chargeFSM.IsCompleted() {
 				chargeFSM.ForceComplete()
 			}
@@ -263,7 +263,7 @@ func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals
 	m := h.getOrCreate(ctx, vehicleID)
 
 	if state := m.Current(); state == fsm.Asleep || state == fsm.Offline {
-		if err := m.HandleSignalReceived(ctx, vehicleID); err != nil {
+		if err := m.HandleSignalReceivedAt(ctx, vehicleID, payloadTs); err != nil {
 			outcome := "error"
 			if ctx.Err() == context.DeadlineExceeded {
 				outcome = "timeout"
@@ -316,10 +316,10 @@ func (h *Handler) ProcessSignalsAt(ctx context.Context, vehicleID int64, signals
 	h.mu.Unlock()
 
 	if activeDrive != nil {
-		activeDrive.ProcessSignals(signals)
+		activeDrive.ProcessSignalsAt(signals, checkTs)
 	}
 	if activeCharge != nil {
-		activeCharge.ProcessSignals(signals)
+		activeCharge.ProcessSignalsAt(signals, checkTs)
 	}
 
 	// Track last-processed time for reconciliation staleness checks.

@@ -127,6 +127,50 @@ describe('RouteAnnouncer', () => {
     );
   });
 
+  it('waits for a lazy destination to replace the shell title', async () => {
+    function SlowPage() {
+      useEffect(() => {
+        document.title = 'TeslaSync';
+        const id = window.setTimeout(() => {
+          document.title = 'Data Repair — TeslaSync';
+        }, 300);
+        return () => window.clearTimeout(id);
+      }, []);
+      return <div>Loading destination</div>;
+    }
+    function Trigger() {
+      const navigate = useNavigate();
+      useEffect(() => {
+        navigate('/b');
+      }, [navigate]);
+      return null;
+    }
+    render(
+      <MemoryRouter initialEntries={['/']}>
+        <RouteAnnouncer />
+        <Routes>
+          <Route path="/" element={<Page title="Dashboard — TeslaSync" />} />
+          <Route path="/b" element={<SlowPage />} />
+        </Routes>
+        <Trigger />
+      </MemoryRouter>,
+    );
+
+    const region = screen.getByTestId('route-announcer');
+    act(() => {
+      vi.advanceTimersByTime(150);
+    });
+    expect(region.textContent ?? '').toBe('');
+
+    await act(async () => {
+      vi.advanceTimersByTime(300);
+      await Promise.resolve();
+    });
+    expect((region.textContent ?? '').replace(/\u200B/g, '')).toBe(
+      'Data Repair — TeslaSync',
+    );
+  });
+
   it('re-announces when two consecutive routes share the same title', () => {
     // Both routes resolve to "Charging Session — TeslaSync" — without
     // the ZWS rotation, screen readers would skip the second one

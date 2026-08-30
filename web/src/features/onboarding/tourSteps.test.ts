@@ -21,14 +21,12 @@ describe('tourSteps backwards-compat shim', () => {
       expect(MAIN_TOUR.descriptionFallback.length).toBeGreaterThan(0)
     })
 
-    it('auto-starts only on the dashboard root with at least one linked vehicle', () => {
-      expect(typeof MAIN_TOUR.autoStart).toBe('function')
-      expect(MAIN_TOUR.autoStart!({ pathname: '/', vehicleCount: 1 })).toBe(true)
-      expect(MAIN_TOUR.autoStart!({ pathname: '/', vehicleCount: 5 })).toBe(true)
-      // No vehicles → do not interrupt an empty account.
-      expect(MAIN_TOUR.autoStart!({ pathname: '/', vehicleCount: 0 })).toBe(false)
-      // Any non-root route → launcher-only, never auto.
-      expect(MAIN_TOUR.autoStart!({ pathname: '/vehicles', vehicleCount: 3 })).toBe(false)
+    it('never auto-starts — the walkthrough is launcher-only (HELP-01)', () => {
+      // The predicate was removed rather than narrowed. A tour that can decide
+      // to start itself is a tour that can interrupt; unsolicited onboarding
+      // now lives in `lib/onboardingTasks` as one inline, route-scoped,
+      // dismissible hint.
+      expect(MAIN_TOUR.autoStart).toBeUndefined()
     })
   })
 

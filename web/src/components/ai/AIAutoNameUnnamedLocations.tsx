@@ -99,14 +99,21 @@ function InnerSection({
     url: `/ai/locations/${locationId}/name/draft`,
     body,
     onEvent: handleEvent,
+    // AI-01: location scope is part of stream identity — switching
+    // the selected location aborts an in-flight draft and clears the
+    // stream's own completed output in addition to the local `draft`
+    // state cleared below.
+    scopeKey: locationId ?? null,
   })
 
   // Pull cancel out so the cleanup effect's deps stay narrow.
   const { cancel: cancelStream } = stream
 
-  // Cancel + reset on locationId change so a stale stream from a
-  // previously-selected location cannot bleed a proposal into the
-  // new scope.
+  // Reset the locally-captured draft on locationId change/unmount so a
+  // stale proposal from a previously-selected location cannot bleed
+  // into the new scope. The stream's own text/activity/usage reset is
+  // now handled by useAiStream's scopeKey above; cancelStream() here
+  // only covers unmount.
   useEffect(() => {
     return () => {
       cancelStream()

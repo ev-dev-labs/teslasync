@@ -27,7 +27,7 @@ import {
 } from '@/components/ui';
 import { PanelTitle } from '@/components/ui/Typography';
 import { Timeline, TimeStamp } from '@/components/data-display';
-import { EmptyState, Spinner } from '@/components/feedback';
+import { EmptyState, ListSkeleton, TableSkeleton } from '@/components/feedback';
 import { useDriveWhyEnded } from '@/api/hooks/useDriving';
 import type {
   DriveDiagnosticSignal,
@@ -183,8 +183,13 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
       {expanded && (
         <div id={regionId} className="mt-4 space-y-6">
           {why.isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <Spinner />
+            <div className="grid gap-6 lg:grid-cols-2">
+              <ListSkeleton
+                rows={3}
+                label={t('driveDetail.whyEnded.loading', 'Loading drive diagnostic…')}
+                testId="why-ended-timeline-loading"
+              />
+              <TableSkeleton rows={4} cols={3} />
             </div>
           ) : why.error ? (
             <EmptyState

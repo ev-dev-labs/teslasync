@@ -19,8 +19,11 @@ Cross-references all frontend hook URLs against the backend route definitions to
 Run the verification script:
 
 ```bash
-bash .github/skills/verify-api-hooks/verify.sh
+bash .github/skills/verify-api-hooks/verify.sh [hook-file-or-directory]
 ```
+
+When a path is supplied, only request calls in that hook file or directory are
+checked. Test files are excluded from production contract checks.
 
 ## How It Works
 

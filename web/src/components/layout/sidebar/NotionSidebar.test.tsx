@@ -2,17 +2,17 @@
  * NotionSidebar tests.
  *
  * NotionSidebar is a presentation-only nav tree: it renders collapsible
- * sections + a Favorites group from props and delegates every side effect
+ * sections + a Quick access group from props and delegates every side effect
  * (pin / unpin / follow-link) to callbacks the hosting Layout supplies.
  * These tests pin the behaviour that matters:
  *
- *   1. Structure — the nav landmark, the "Pages" group, one collapsible
+ *   1. Structure — the nav landmark, the "Workspace" group, one collapsible
  *      button per section, and per-section item counts render.
  *   2. Expansion — only the active section is open on first paint; the whole
  *      row toggles open/closed and reveals/hides its item links.
  *   3. Active path — isActiveNotionPath drives the row's active styling for
  *      exact, prefix, and root ('/') matches (root only on exact '/').
- *   4. Favorites + pin/unpin — the group only appears with pins, an unpinned
+ *   4. Quick access + pin/unpin — the group only appears with pins, an unpinned
  *      item exposes a Pin action, a pinned item an Unpin action, and both fire
  *      the right callback with the route.
  *   5. Trailing badges — the vehicle / stale-row count chips (capped at 99+)
@@ -102,16 +102,16 @@ function renderSidebar(overrides: Partial<NotionSidebarProps> = {}) {
 
 // The component's own deterministic active marker (from isActiveNotionPath),
 // independent of react-router NavLink's own aria-current route matching.
-const ACTIVE_CLASS = 'bg-white/[0.05]'
+const ACTIVE_CLASS = 'bg-[var(--surface-2)]'
 
 afterEach(() => cleanup())
 
 describe('NotionSidebar', () => {
-  it('renders the nav landmark, the Pages group, and a collapsed row per section with its item count', () => {
+  it('renders the nav landmark, the Workspace group, and a collapsed row per section with its item count', () => {
     renderSidebar()
 
     expect(screen.getByRole('navigation', { name: 'Sidebar navigation' })).toBeInTheDocument()
-    expect(screen.getByText('Pages')).toBeInTheDocument()
+    expect(screen.getByText('Workspace')).toBeInTheDocument()
 
     const overview = screen.getByRole('button', { name: /Overview/ })
     const fleet = screen.getByRole('button', { name: /Fleet/ })
@@ -185,19 +185,19 @@ describe('NotionSidebar', () => {
     expect(home).not.toHaveClass(ACTIVE_CLASS)
   })
 
-  it('hides the Favorites group and any unpin control when nothing is pinned', () => {
+  it('hides the Quick access group and any unpin control when nothing is pinned', () => {
     renderSidebar({ pinnedItems: [] })
 
-    expect(screen.queryByText('Favorites')).toBeNull()
+    expect(screen.queryByText('Quick access')).toBeNull()
     expect(screen.queryByRole('button', { name: /Unpin/ })).toBeNull()
   })
 
-  it('shows the Favorites group with a pinned item and an unpin control', () => {
+  it('shows the Quick access group with a pinned item and an unpin control', () => {
     // No activeSectionTitle => sections collapsed, so the only "Vehicles"
-    // link and "Unpin Vehicles" button come from the Favorites group.
+    // link and "Unpin Vehicles" button come from the Quick access group.
     renderSidebar({ pinnedItems: [vehiclesItem] })
 
-    expect(screen.getByText('Favorites')).toBeInTheDocument()
+    expect(screen.getByText('Quick access')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Vehicles' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Unpin Vehicles' })).toBeInTheDocument()
   })
@@ -205,7 +205,7 @@ describe('NotionSidebar', () => {
   it('fires onUnpin with the route when a favorite unpin button is clicked', () => {
     const onUnpin = vi.fn()
     // Charging lives in the (collapsed) Fleet section, so its only unpin
-    // control is the Favorites one — no duplicate to disambiguate.
+    // control is the Quick access one — no duplicate to disambiguate.
     renderSidebar({ pinnedItems: [chargingItem], activeSectionTitle: 'Overview', onUnpin })
 
     fireEvent.click(screen.getByRole('button', { name: 'Unpin Charging' }))
@@ -225,11 +225,23 @@ describe('NotionSidebar', () => {
   it('offers Unpin (not Pin) for an item that is already pinned but still listed in its section', () => {
     renderSidebar({ pinnedItems: [vehiclesItem], activeSectionTitle: 'Overview' })
 
-    // One unpin in Favorites + one on the in-section row = 2.
+    // One unpin in Quick access + one on the in-section row = 2.
     expect(screen.getAllByRole('button', { name: 'Unpin Vehicles' })).toHaveLength(2)
     expect(screen.queryByRole('button', { name: 'Pin Vehicles' })).toBeNull()
     // A sibling that is NOT pinned still offers a Pin action.
     expect(screen.getByRole('button', { name: 'Pin Home' })).toBeInTheDocument()
+  })
+
+  it('keeps one canonical active row when the current page is also a favorite', () => {
+    renderSidebar({
+      pinnedItems: [vehiclesItem],
+      activeSectionTitle: 'Overview',
+      pathname: '/vehicles',
+    })
+
+    const vehicleLinks = screen.getAllByRole('link', { name: 'Vehicles' })
+    expect(vehicleLinks).toHaveLength(2)
+    expect(vehicleLinks.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   })
 
   it('renders a vehicle-count chip on /vehicles and caps large counts at 99+', () => {
@@ -281,7 +293,7 @@ describe('NotionSidebar', () => {
     expect(screen.getByRole('navigation', { name: 'Sidebar navigation' })).toBeInTheDocument()
   })
 
-  it('degrades safely (no throw, empty state, no Favorites) when array props are undefined', () => {
+  it('degrades safely (no throw, empty state, no Quick access) when array props are undefined', () => {
     expect(() =>
       renderSidebar({
         sections: undefined as unknown as NotionSidebarSectionInput[],
@@ -290,7 +302,7 @@ describe('NotionSidebar', () => {
     ).not.toThrow()
 
     expect(screen.getByText('No pages yet.')).toBeInTheDocument()
-    expect(screen.queryByText('Favorites')).toBeNull()
+    expect(screen.queryByText('Quick access')).toBeNull()
   })
 
   it('exposes the same component as the default and named export', () => {

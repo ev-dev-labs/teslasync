@@ -29,7 +29,7 @@ export function HvacCyclingQueryStatus({
 
   if (!state.vehicleSelected) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
         className="py-5"
         icon={<Fan className="h-7 w-7" aria-hidden="true" />}
         message={t(
@@ -93,7 +93,7 @@ export function HvacCyclingQueryStatus({
   if (!state.isResolved) return null;
   if (summary.rows.returnedRows === 0) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
         className="py-5"
         icon={<Fan className="h-7 w-7" aria-hidden="true" />}
         message={t(

@@ -99,7 +99,7 @@ export function ShareCardRepresentativeDirectory({
               mobileColumns={['rank', 'day', 'distance']}
             />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: the shared report is read-only and reflects its fixed evidence scope */
               message={t(
                 'shareCard.directory.empty',
                 'No eligible drive can be ranked for this selected window.',

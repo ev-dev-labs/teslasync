@@ -214,14 +214,17 @@ describe('SignalHistoryTable', () => {
     // No table, no pagination, no empty-state copy while loading.
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull();
-    expect(screen.queryByText('No data')).toBeNull();
+    expect(screen.queryByText('No signal samples')).toBeNull();
   });
 
   it('shows the empty state (no table, no pagination) when there are no rows', () => {
     renderTable({ rows: [], totalRows: 0 });
 
-    expect(screen.getByText('No data')).toBeInTheDocument();
-    expect(screen.getByText('No signal data found for this query.')).toBeInTheDocument();
+    expect(screen.getByText('No signal samples')).toBeInTheDocument();
+    expect(
+      screen.getByText('No signal data matches the selected signals and time range.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Expand the time range or choose another signal/)).toBeInTheDocument();
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByRole('navigation', { name: 'Pagination' })).toBeNull();
   });
@@ -237,7 +240,7 @@ describe('SignalHistoryTable', () => {
     } as unknown as SignalHistoryTableProps;
 
     expect(() => render(<SignalHistoryTable {...bad} />)).not.toThrow();
-    expect(screen.getByText('No data')).toBeInTheDocument();
+    expect(screen.getByText('No signal samples')).toBeInTheDocument();
   });
 
   it('wires pagination controls straight through to onPageChange', () => {

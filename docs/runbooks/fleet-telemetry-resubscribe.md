@@ -11,6 +11,12 @@ subscribed signals — most importantly the four `Setting*Unit` fields
 whose absence would otherwise cause the ingest pipeline to fail-closed
 and silently drop unit-bearing values per ADR-004 #9.
 
+This is separate from the API's MQTT broker subscription. The API
+automatically reasserts its `{topicBase}/+/v/+` MQTT subscription every 30
+seconds and retries a failed SUBACK every five seconds. Do not run a Tesla
+fleet-wide resubscribe merely because the local API consumer lost its broker
+subscription.
+
 ## When to run
 
 - After every deploy that touches `internal/tesla/config/`,

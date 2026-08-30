@@ -372,7 +372,7 @@ describe('SecurityStatusWidget', () => {
     );
     renderWidget();
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     expect(refetch).not.toHaveBeenCalled();
     fireEvent.click(refresh);
     expect(refetch).toHaveBeenCalledTimes(1);

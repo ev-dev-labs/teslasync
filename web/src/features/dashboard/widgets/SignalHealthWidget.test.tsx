@@ -386,7 +386,7 @@ describe('SignalHealthWidget — refresh interaction', () => {
     MOCK_GAPS = { data: { A: { timestamp: ago(30 * S) } } };
     renderWidget(STANDARD);
 
-    const refresh = screen.getByRole('button', { name: 'Refresh' });
+    const refresh = screen.getByRole('button', { name: /^Refresh/i });
     fireEvent.click(refresh);
 
     expect(refetch).toHaveBeenCalledTimes(1);

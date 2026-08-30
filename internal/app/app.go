@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/audit"
 	"github.com/ev-dev-labs/teslasync/internal/cache"
@@ -119,6 +120,7 @@ type App struct {
 	SLOTracker        *slo.Tracker
 	DataQualityScorer *dataquality.Scorer
 	SyntheticRunner   *synthetic.Runner
+	DataRepairScanner *apidatarepair.Scanner
 
 	// Workers
 	Worker         *worker.Worker
@@ -147,6 +149,19 @@ type App struct {
 
 	// HTTP server (assigned in Run)
 	server *http.Server
+
+	// drainServer is the ISOLATED internal listener that serves the
+	// Kubernetes preStop hook. It is deliberately separate from `server`
+	// so the pod-fatal drain endpoint is never published by the Service
+	// or the Ingress. See internal/app/drain.go.
+	//
+	// drainMu guards the pointer and drainOnce makes teardown idempotent:
+	// [App.Run] owns the ordered shutdown, but Close() and tests may also
+	// reach it, and an unsynchronised pointer produced a real
+	// double-shutdown race.
+	drainMu     sync.Mutex
+	drainOnce   sync.Once
+	drainServer *http.Server
 }
 
 // namedCloser pairs a closer fn with a label so shutdown logging is

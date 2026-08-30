@@ -87,7 +87,11 @@ export function VehicleHeader({ vehicle, state, onRefetchState }: VehicleHeaderP
         </Link>
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight text-[var(--text-primary)]">
+            <h1
+              className="text-3xl font-bold tracking-tight text-[var(--text-primary)] outline-none"
+              tabIndex={-1}
+              data-route-focus-target="true"
+            >
               {displayName}
             </h1>
             <StatusBadge status={status} size="md" />

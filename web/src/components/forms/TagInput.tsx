@@ -62,7 +62,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useAnnouncer } from '@/hooks/useAnnouncer';
 import { VisuallyHidden } from '@/components/a11y';
-import { ErrorText, HelperText } from '@/components/ui';
+import { ErrorText, HelperText } from '@/components/ui/runtime';
 
 /* ── Types ────────────────────────────────────────────────────── */
 

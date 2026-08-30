@@ -170,7 +170,7 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
     renderSummary({ metrics: POPULATED });
 
     const row = trendOf('+30.0%');
-    expect(row.className).toContain('text-green-600');
+    expect(row.className).toContain('text-emerald-700');
     expect(row.textContent).toContain('\u2191'); // ↑
   });
 
@@ -178,22 +178,22 @@ describe('WeekOverWeekSummary — trend direction + positivity', () => {
     renderSummary({ metrics: POPULATED });
 
     const row = trendOf('+37.5%');
-    expect(row.className).toContain('text-red-600');
-    expect(row.className).not.toContain('text-green-600');
+    expect(row.className).toContain('text-rose-700');
+    expect(row.className).not.toContain('text-emerald-700');
     expect(row.textContent).toContain('\u2191');
   });
 
   it('inverts positivity for cost — a higher bill reads red', () => {
     renderSummary({ metrics: POPULATED });
 
-    expect(trendOf('+20.0%').className).toContain('text-red-600');
+    expect(trendOf('+20.0%').className).toContain('text-rose-700');
   });
 
   it('reads falling efficiency (lower Wh/km) as a positive (green) down-trend', () => {
     renderSummary({ metrics: POPULATED });
 
     const row = trendOf('-12.5%');
-    expect(row.className).toContain('text-green-600');
+    expect(row.className).toContain('text-emerald-700');
     expect(row.textContent).toContain('\u2193'); // ↓
   });
 

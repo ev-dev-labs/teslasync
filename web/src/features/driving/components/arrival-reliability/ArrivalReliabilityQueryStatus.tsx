@@ -26,7 +26,7 @@ export function ArrivalReliabilityQueryStatus({
 
   if (!state.vehicleSelected) {
     return (
-      <EmptyState
+      <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
         className="py-6"
         icon={<Clock3 className="h-7 w-7" aria-hidden="true" />}
         message={t(
@@ -111,7 +111,7 @@ export function ArrivalReliabilityQueryStatus({
         </AlertBanner>
       ) : null}
       {analysis.accounting.returnedRows === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: retry, vehicle, and range controls are owned by the parent page */
           className="py-6"
           icon={<Clock3 className="h-7 w-7" aria-hidden="true" />}
           message={t(

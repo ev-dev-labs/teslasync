@@ -10,6 +10,8 @@ interface CommandTileProps {
   onExecute: (command: string, params?: Record<string, unknown>) => void;
   onRequestDialog: (def: CommandDef) => void;
   loading: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
   lastStatus?: string;
   isFavorite: boolean;
   onToggleFavorite: () => void;
@@ -21,20 +23,20 @@ const hoverStyles = {
   success: 'hover:border-neon-green/30',
 } as const;
 
-export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStatus, isFavorite, onToggleFavorite }: CommandTileProps) {
+export function CommandTile({ def, onExecute, onRequestDialog, loading, disabled = false, disabledReason, lastStatus, isFavorite, onToggleFavorite }: CommandTileProps) {
   const { t } = useTranslation();
   const Icon = def.icon;
   const variant = def.variant ?? 'default';
   const label = t(def.labelKey, def.labelFallback);
 
   const handleActivate = useCallback(() => {
-    if (loading) return;
+    if (loading || disabled) return;
     if (def.dangerous) {
       onRequestDialog(def);
       return;
     }
     onExecute(def.command, def.params);
-  }, [loading, def, onRequestDialog, onExecute]);
+  }, [loading, disabled, def, onRequestDialog, onExecute]);
 
   // Keyboard parity for the sanctioned role="button" tile (see eslint.config.js:
   // click sites are remediated with role="button" + onKeyDown). Ignore key
@@ -54,15 +56,16 @@ export function CommandTile({ def, onExecute, onRequestDialog, loading, lastStat
   return (
     <GlassPanel
       role="button"
-      tabIndex={loading ? -1 : 0}
+      tabIndex={loading || disabled ? -1 : 0}
       aria-label={label}
       aria-busy={loading || undefined}
-      aria-disabled={loading || undefined}
+      aria-disabled={loading || disabled || undefined}
+      title={disabled ? disabledReason : undefined}
       className={cn(
         'p-3 sm:p-4 flex flex-col items-center gap-2 transition-all duration-normal text-center min-h-[116px] justify-center cursor-pointer relative group',
         'outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--theme-primary)]',
         hoverStyles[variant] ?? hoverStyles.default,
-        loading && 'opacity-50 cursor-not-allowed',
+        (loading || disabled) && 'opacity-50 cursor-not-allowed',
       )}
       onClick={handleActivate}
       onKeyDown={handleKeyDown}

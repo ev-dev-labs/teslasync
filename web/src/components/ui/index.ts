@@ -1,4 +1,4 @@
-export { Button, type ButtonProps } from './Button';
+export { Button, BUTTON_BASE, BUTTON_VARIANTS, type ButtonProps } from './Button';
 export { Badge, BADGE_VARIANTS, type BadgeProps } from './Badge';
 export { Card, CardHeader, CardFooter, type CardProps, type CardHeaderProps } from './Card';
 export { Checkbox, type CheckboxProps, type CheckboxSize } from './Checkbox';
@@ -16,6 +16,7 @@ export { Slider, type SliderProps } from './Slider';
 export { RangeSlider, type RangeSliderProps } from './RangeSlider';
 export { Tooltip, type TooltipProps } from './Tooltip';
 export { HelpTooltip, type HelpTooltipProps } from './HelpTooltip';
+export { GlossaryTerm, type GlossaryTermProps } from './GlossaryTerm';
 export { HelpIcon, type HelpIconProps } from './HelpIcon';
 export { PinButton, type PinButtonProps } from './PinButton';
 export { ConfirmDialog, type ConfirmDialogProps } from './ConfirmDialog';
@@ -25,12 +26,17 @@ export { TabNav, type TabNavProps, type TabNavItem } from './TabNav';
 export { Accordion } from './Accordion';
 export { Pagination } from './Pagination';
 export { DataTable, useSortToggle, useTableSelection, useTableExpansion, type Column, type PaginationConfig } from './DataTable';
+export { Table, type TableProps } from './Table';
 export { DataTableColumnsMenu } from './DataTableColumnsMenu';
 export { DataTableBulkBar } from './DataTableBulkBar';
 export { DataTableResizer } from './DataTableResizer';
 export { DensityApplier } from './DensityApplier';
-export { Drawer } from './Drawer';
+export { Drawer, type DrawerProps, type DrawerSize } from './Drawer';
 export { CommandPalette } from './CommandPalette';
+export {
+  CommandPaletteTrigger,
+  loadCommandPalette,
+} from './CommandPaletteTrigger';
 export {
   ContextMenuRoot,
   useContextMenu,

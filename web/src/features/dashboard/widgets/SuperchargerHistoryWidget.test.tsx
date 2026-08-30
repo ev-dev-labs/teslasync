@@ -380,7 +380,10 @@ describe('SuperchargerHistoryWidget — empty / lifecycle states', () => {
     expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(mockedRequest.mock.calls[0]?.[0]).toBe(HISTORY_ENDPOINT);
     expect(screen.queryByText('No Supercharger sessions')).toBeNull();
-    expect(screen.queryByRole('listitem')).toBeNull();
+    // The shared error card now lists "where to look next" destinations
+    // (HELP-05) as list items, so prove the CHILDREN are suppressed via the
+    // totals row, which only renders alongside session data.
+    expect(screen.queryByText('30-day totals')).toBeNull();
   });
 });
 
@@ -394,7 +397,7 @@ describe('SuperchargerHistoryWidget — refresh', () => {
     expect(await screen.findByText('Supercharger History')).toBeInTheDocument();
     expect(mockedRequest).toHaveBeenCalledTimes(1);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
   });

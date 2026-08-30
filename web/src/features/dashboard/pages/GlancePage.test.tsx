@@ -11,7 +11,7 @@
  * Facets covered:
  *   - pure helpers: every getLocationLabel branch (+ precedence) and every
  *     batteryNeon threshold, asserted directly.
- *   - no-vehicle guard: renders the "No vehicle found" empty state and no
+ *   - no-vehicle guard: renders a guided vehicle-setup state and no
  *     header actions / KPI scaffolding.
  *   - vehicles-loading: page title renders but no content (PageContainer
  *     spinner).
@@ -291,7 +291,12 @@ describe('GlancePage — vehicle guard', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: 'Quick Glance', level: 1 })).toBeInTheDocument();
-    expect(screen.getByText('No vehicle found')).toBeInTheDocument();
+    expect(screen.getByText('No vehicle available')).toBeInTheDocument();
+    expect(screen.getByText(/Register or sync a Tesla vehicle/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Manage vehicles' })).toHaveAttribute(
+      'href',
+      '/vehicles',
+    );
     // No vehicle → no refresh action, no switcher, no KPI region.
     expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'Vehicle overview' })).toBeNull();
@@ -304,7 +309,7 @@ describe('GlancePage — vehicle guard', () => {
     expect(screen.getByRole('heading', { name: 'Quick Glance', level: 1 })).toBeInTheDocument();
     // PageContainer spinner replaces children: neither the empty state nor any
     // panel is mounted.
-    expect(screen.queryByText('No vehicle found')).toBeNull();
+    expect(screen.queryByText('No vehicle available')).toBeNull();
     expect(screen.queryByRole('heading', { name: 'Charging & climate' })).toBeNull();
   });
 });

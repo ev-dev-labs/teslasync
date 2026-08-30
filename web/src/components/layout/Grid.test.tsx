@@ -4,7 +4,7 @@
  * Grid is a presentational wrapper around a CSS grid that maps a responsive
  * `cols` map + numeric `gap` onto static Tailwind utilities. The suite locks
  * in the hardening that landed alongside it:
- *   - every breakpoint (default/sm/md/lg/xl) is applied — `xl` used to be
+ *   - every breakpoint (default through 3xl) is applied — `xl` used to be
  *     silently dropped
  *   - out-of-range / dynamic counts never leak a malformed `undefined` class
  *     and clamp to the max supported column count
@@ -44,14 +44,39 @@ describe('Grid', () => {
     expect(el).toHaveClass('gap-4');
   });
 
-  it('applies responsive column utilities for every breakpoint, including xl', () => {
+  it('applies responsive column utilities for every breakpoint through 3xl', () => {
     // Regression: `xl` was declared in the props type but never rendered.
-    const el = getGrid({ cols: { default: 2, sm: 3, md: 4, lg: 5, xl: 6 } });
+    const el = getGrid({
+      cols: {
+        default: 2,
+        sm: 3,
+        md: 4,
+        lg: 5,
+        xl: 6,
+        '2xl': 5,
+        '3xl': 4,
+      },
+    });
     expect(el).toHaveClass('grid-cols-2');
     expect(el).toHaveClass('sm:grid-cols-3');
     expect(el).toHaveClass('md:grid-cols-4');
     expect(el).toHaveClass('lg:grid-cols-5');
     expect(el).toHaveClass('xl:grid-cols-6');
+    expect(el).toHaveClass('2xl:grid-cols-5');
+    expect(el).toHaveClass('3xl:grid-cols-4');
+  });
+
+  it('supports container-aware auto-fit grids for nested metric cards', () => {
+    const el = getGrid({
+      cols: { default: 1, sm: 3 },
+      minItemWidth: 'standard',
+    });
+    expect(el).toHaveAttribute('data-layout', 'auto-fit');
+    expect(el).toHaveClass(
+      '[grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))]',
+    );
+    expect(el).not.toHaveClass('grid-cols-1');
+    expect(el).not.toHaveClass('sm:grid-cols-3');
   });
 
   it('applies the requested gap and supports a zero gap', () => {

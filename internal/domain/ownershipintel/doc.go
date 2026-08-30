@@ -8,4 +8,6 @@
 // per second) and all money is expressed in ISO-4217 minor units so that no
 // rounding error can accumulate across aggregation. Display conversion is the
 // exclusive responsibility of the React render boundary.
+//
+// Layer: domain
 package ownershipintel

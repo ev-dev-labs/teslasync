@@ -23,15 +23,22 @@ type SessionFSM struct {
 
 // NewSessionFSM creates a charge session FSM in Pending state.
 func NewSessionFSM(vehicleID int64, vin string, sessionID int64) *SessionFSM {
-	now := time.Now().UTC()
+	return NewSessionFSMAt(vehicleID, vin, sessionID, time.Now().UTC())
+}
+
+// NewSessionFSMAt creates a charge session FSM anchored to event time.
+func NewSessionFSMAt(vehicleID int64, vin string, sessionID int64, eventTime time.Time) *SessionFSM {
+	if eventTime.IsZero() {
+		eventTime = time.Now().UTC()
+	}
 	return &SessionFSM{
 		state: Pending,
 		ctx: &Context{
 			SessionID:    sessionID,
 			VehicleID:    vehicleID,
 			VIN:          vin,
-			StartTime:    now,
-			PendingSince: now,
+			StartTime:    eventTime,
+			PendingSince: eventTime,
 		},
 		logger: log.With().Str("component", "charge_fsm").Int64("session_id", sessionID).Logger(),
 	}
@@ -51,10 +58,17 @@ func (m *SessionFSM) Context() Context {
 
 // ProcessSignals feeds a signal batch to the charge session FSM.
 func (m *SessionFSM) ProcessSignals(signals map[string]interface{}) {
+	m.ProcessSignalsAt(signals, time.Now().UTC())
+}
+
+// ProcessSignalsAt feeds a signal batch using producer event time.
+func (m *SessionFSM) ProcessSignalsAt(signals map[string]interface{}, eventTime time.Time) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	now := time.Now().UTC()
+	if eventTime.IsZero() {
+		eventTime = time.Now().UTC()
+	}
 
 	switch m.state {
 	case Pending:
@@ -62,7 +76,7 @@ func (m *SessionFSM) ProcessSignals(signals map[string]interface{}) {
 		m.extractChargerInfo(signals)
 		if m.ctx.HasRequiredStartFields() {
 			m.transitionTo(Active, TriggerStartSnapshotReady)
-		} else if now.Sub(m.ctx.PendingSince) > StartSnapshotTimeout {
+		} else if eventTime.Sub(m.ctx.PendingSince) > StartSnapshotTimeout {
 			m.logger.Warn().Msg("start snapshot timeout — proceeding with partial data")
 			m.transitionTo(Active, TriggerStartTimeout)
 		}
@@ -74,7 +88,7 @@ func (m *SessionFSM) ProcessSignals(signals map[string]interface{}) {
 		m.extractEndSnapshot(signals)
 		if m.ctx.HasRequiredEndFields() {
 			m.transitionTo(Done, TriggerEndSnapshotReady)
-		} else if now.Sub(m.ctx.CompletingSince) > EndSnapshotTimeout {
+		} else if eventTime.Sub(m.ctx.CompletingSince) > EndSnapshotTimeout {
 			m.logger.Warn().Msg("end snapshot timeout — completing with partial data")
 			m.transitionTo(Done, TriggerEndTimeout)
 		}
@@ -87,6 +101,11 @@ func (m *SessionFSM) ProcessSignals(signals map[string]interface{}) {
 
 // TriggerEnding moves to Completing state (charge ended or unplug-and-go).
 func (m *SessionFSM) TriggerEnding(signals map[string]interface{}, gearDrive bool) {
+	m.TriggerEndingAt(signals, gearDrive, time.Now().UTC())
+}
+
+// TriggerEndingAt moves the session to Completing at the supplied event time.
+func (m *SessionFSM) TriggerEndingAt(signals map[string]interface{}, gearDrive bool, eventTime time.Time) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -94,9 +113,11 @@ func (m *SessionFSM) TriggerEnding(signals map[string]interface{}, gearDrive boo
 		return
 	}
 
-	now := time.Now().UTC()
-	m.ctx.EndTime = now
-	m.ctx.CompletingSince = now
+	if eventTime.IsZero() {
+		eventTime = time.Now().UTC()
+	}
+	m.ctx.EndTime = eventTime
+	m.ctx.CompletingSince = eventTime
 
 	if signals != nil {
 		m.extractEndSnapshot(signals)

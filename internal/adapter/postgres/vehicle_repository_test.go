@@ -90,14 +90,18 @@ func TestVehicleRepository_singleRowGetters(t *testing.T) {
 			wantArg: "42",
 		},
 		{
-			name:    "GetByVIN",
-			call:    func(r *vehicleRepository, ctx context.Context) (*vehicle.Vehicle, error) { return r.GetByVIN(ctx, "5YJ3E1EA7KF000001") },
+			name: "GetByVIN",
+			call: func(r *vehicleRepository, ctx context.Context) (*vehicle.Vehicle, error) {
+				return r.GetByVIN(ctx, "5YJ3E1EA7KF000001")
+			},
 			wantSQL: queries.GetVehicleByVIN,
 			wantArg: "5YJ3E1EA7KF000001",
 		},
 		{
-			name:    "GetByIDForUpdate",
-			call:    func(r *vehicleRepository, ctx context.Context) (*vehicle.Vehicle, error) { return r.GetByIDForUpdate(ctx, "42") },
+			name: "GetByIDForUpdate",
+			call: func(r *vehicleRepository, ctx context.Context) (*vehicle.Vehicle, error) {
+				return r.GetByIDForUpdate(ctx, "42")
+			},
 			wantSQL: queries.GetVehicleByIDForUpdate,
 			wantArg: "42",
 		},

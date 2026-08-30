@@ -99,7 +99,7 @@ export function RecentCommandActivity({
         ) : recent.length > 0 ? (
           <Timeline items={timelineItems} />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: live vehicle state and permissions determine availability in this panel */
             icon={<History className="h-8 w-8" aria-hidden="true" />}
             title={t('commands.activity.emptyTitle', 'No commands sent yet')}
             message={t(

@@ -1,33 +1,49 @@
 package drives
 
 import (
+	"errors"
 	"math"
 	"net/http"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
+)
+
+var (
+	errMissingVehicleID = errors.New("vehicle_id query parameter required")
+	errInvalidVehicleID = errors.New("invalid vehicle_id")
 )
 
 func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.drives.list")
+	defer span.End()
+
 	vehicleIDStr := r.URL.Query().Get("vehicle_id")
 	if vehicleIDStr == "" {
+		span.RecordError(errMissingVehicleID)
 		writeError(w, http.StatusBadRequest, "vehicle_id query parameter required")
 		return
 	}
 
 	vehicleID, err := parseInt64(vehicleIDStr)
-	if err != nil {
+	if err != nil || vehicleID <= 0 {
+		span.RecordError(errInvalidVehicleID)
 		writeError(w, http.StatusBadRequest, "invalid vehicle_id")
 		return
 	}
 
 	limit, offset := pagination(r)
 	startTime, endTime := parseDateRange(r)
-	drives, err := h.driveRepo.GetByVehicle(r.Context(), vehicleID, limit, offset, startTime, endTime)
+	drives, err := h.driveRepo.GetByVehicle(ctx, vehicleID, limit, offset, startTime, endTime)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicleID", vehicleID).Msg("failed to list drives")
+		span.RecordError(err)
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to list drives")
 		writeError(w, http.StatusInternalServerError, "failed to list drives")
 		return
 	}
@@ -36,6 +52,7 @@ func (h *DriveHandler) ListByVehicle(w http.ResponseWriter, r *http.Request) {
 	if drives == nil {
 		drives = []*drivemodel.Drive{}
 	}
+	apiparams.SetPaginationHeaders(w, limit, offset, len(drives))
 	writeJSON(w, http.StatusOK, drives)
 }
 

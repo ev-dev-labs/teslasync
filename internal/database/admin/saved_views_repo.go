@@ -27,7 +27,9 @@ func NewSavedViewsRepo(db *database.DB) *SavedViewsRepo {
 	return &SavedViewsRepo{pool: db.Pool}
 }
 
-// SavedViewListFilter narrows a List call to a (user, route) bucket.
+// SavedViewListFilter narrows a List call to a user bucket and, when Route is
+// non-empty, one route. An empty Route returns every saved view in the bucket
+// for global discovery surfaces such as the command palette.
 type SavedViewListFilter struct {
 	UserID *int64
 	Route  string
@@ -38,16 +40,16 @@ type SavedViewListFilter struct {
 // HTTP 409 so the frontend can prompt for a new name without retrying.
 var ErrSavedViewAlreadyExists = errors.New("saved view name already exists")
 
-// List returns the views matching the filter, ordered with pinned rows
-// first then by sort_order ascending then by id ascending so the order
-// is stable across reloads.
+// List returns the views matching the filter, ordered with pinned rows first,
+// then by route, sort_order, and id so both global and route-scoped results are
+// stable across reloads.
 func (r *SavedViewsRepo) List(ctx context.Context, f SavedViewListFilter) ([]*dashboardmodel.SavedView, error) {
 	const query = `
 		SELECT id, user_id, name, route, query, is_default, is_pinned, sort_order, created_at, updated_at
 		FROM saved_views
 		WHERE COALESCE(user_id, 0) = COALESCE($1, 0)
-		  AND route = $2
-		ORDER BY is_pinned DESC, sort_order ASC, id ASC`
+		  AND ($2 = '' OR route = $2)
+		ORDER BY is_pinned DESC, route ASC, sort_order ASC, id ASC`
 
 	rows, err := r.pool.Query(ctx, query, f.UserID, f.Route)
 	if err != nil {

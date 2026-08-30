@@ -5,7 +5,7 @@
  * charging sessions (`useChargingSessionsPaginated`) plus an optimizer feed
  * (`useChargingOptimizer`), then derives period stats, anomaly flags, notable
  * sessions, collection counts, a daily trend, and a paginated + date-grouped
- * list from them. The three data hooks and `useSelectedVehicle` are mocked at
+ * list from them. The four data hooks and `useSelectedVehicle` are mocked at
  * the hook boundary so every branch — no-vehicle, loading, error, empty, and
  * the fully-populated happy path — is exercised deterministically. The heavy
  * chart/panel children (`MetricSwitcherChart`, the five `charging-list` panels,
@@ -18,8 +18,8 @@
  * with a mutable unit preference so the SI→display distance conversion at the
  * render boundary is exercised for BOTH metric (km) and imperial (mi). The
  * `toDistanceDisplay` callback captured off a card carries a regression guard
- * for the fixed 1000× unit bug: it now scales km→metres before feeding the SI
- * converter, so a 50 km charge reads "50 km" / "31 mi", not "0.05 km".
+ * for the SI boundary: it accepts canonical metres directly, so a 50 km charge
+ * reads "50 km" / "31 mi" without a compensating unit round trip.
  *
  * Network never touches the real backend — the charging hooks are stubbed and
  * `@/api/client`'s `request` seam is neutralised so no stray query (VehicleSelect,
@@ -27,7 +27,7 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, within, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
@@ -136,6 +136,11 @@ vi.mock('@/api/hooks/useCharging', async (importActual) => {
   };
 });
 
+vi.mock('@/api/hooks/useVehicles', async (importActual) => {
+  const actual = await importActual<typeof import('@/api/hooks/useVehicles')>();
+  return { ...actual, useVehicleState: vi.fn() };
+});
+
 vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
   const actual = await importActual<typeof import('@/hooks/useSelectedVehicle')>();
   return { ...actual, useSelectedVehicle: vi.fn() };
@@ -145,7 +150,7 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
 // `toDistanceDisplay` callback + `distanceUnit`, renders an anomaly marker when
 // flagged, and a keyboard-operable toggle that drives bulk-selection wiring.
 const captured = vi.hoisted(() => ({
-  toDistanceDisplay: null as null | ((km: number) => number),
+  toDistanceDisplay: null as null | ((meters: number) => number),
   distanceUnit: '' as string,
 }));
 
@@ -166,12 +171,19 @@ vi.mock('../components/ChargingSessionCard', () => ({
         >
           {props.selected ? 'selected' : 'select'}
         </button>
+        <button
+          type="button"
+          aria-label={`preview ${props.session.id}`}
+          onClick={() => props.onPreview?.(props.session)}
+        >
+          preview
+        </button>
       </div>
     );
   },
 }));
 
-// Stub the five analytical panels (they mount recharts) but keep the pure
+// Stub the analytical panels (they mount charts) but keep the pure
 // compute* helpers real so the page's threshold gating runs against genuine data.
 vi.mock('../components/charging-list', async (importActual) => {
   const actual = await importActual<typeof import('../components/charging-list')>();
@@ -180,7 +192,7 @@ vi.mock('../components/charging-list', async (importActual) => {
     ...actual,
     AcDcStatsPanel: stub('acdc-panel'),
     BatteryLevelChart: stub('battery-dist-panel'),
-    EfficiencyPanel: stub('efficiency-panel'),
+    ChargeRatePanel: stub('charge-rate-panel'),
     ChargerSpecsPanel: stub('specs-panel'),
     OptimizerSection: stub('optimizer-panel'),
   };
@@ -228,12 +240,14 @@ if (typeof window.matchMedia !== 'function') {
 import { ToastProvider } from '@/components/feedback/Toast';
 import ChargingListPage, { formatHour } from './ChargingListPage';
 import { useChargingSessionsPaginated, useChargingOptimizer, useBulkDeleteCharging } from '@/api/hooks/useCharging';
+import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import type { ChargingSession } from '@/api/types';
+import type { ChargingSession, VehicleState } from '@/api/types';
 
 const mockSessions = vi.mocked(useChargingSessionsPaginated);
 const mockOptimizer = vi.mocked(useChargingOptimizer);
 const mockBulkDelete = vi.mocked(useBulkDeleteCharging);
+const mockVehicleState = vi.mocked(useVehicleState);
 const mockSelectedVehicle = vi.mocked(useSelectedVehicle);
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
@@ -292,6 +306,30 @@ const SESSIONS: ChargingSession[] = [
   makeSession({ id: 6, charger_type: 'CCS', total_energy_added_wh: 0, cost_decimal: 0, start_soc_pct: 50, end_soc_pct: 50, peak_power_w: null, avg_power_w: null, started_at: '2024-06-10T10:00:00Z', ended_at: '2024-06-10T11:00:00Z', start_place: 'Broken Charger', cable_type: null, end_odometer_m: 100_000 }),
 ];
 
+const LIVE_STATE: VehicleState = {
+  vehicle_id: 1,
+  state: 'online',
+  latitude: 0,
+  longitude: 0,
+  heading: null,
+  speed: 0,
+  power: 0,
+  battery_level: 64,
+  rated_range: 320_000,
+  ideal_range: 0,
+  odometer: 100_000,
+  inside_temp: 21,
+  outside_temp: 18,
+  is_climate_on: false,
+  is_charging: true,
+  charger_power: 11,
+  charge_rate: 0,
+  time_to_full_charge: 1.5,
+  is_locked: true,
+  sentry_mode: false,
+  software_version: '2026.8.3',
+};
+
 function installHappyPath() {
   mockSelectedVehicle.mockReturnValue({
     vehicleId: 1,
@@ -300,6 +338,7 @@ function installHappyPath() {
     setVehicleId: vi.fn(),
   });
   mockSessions.mockReturnValue(qr({ data: SESSIONS }));
+  mockVehicleState.mockReturnValue(qr({ data: { state: LIVE_STATE, live: true } }));
   mockOptimizer.mockReturnValue(qr({ data: {} }));
   mockBulkDelete.mockReturnValue({
     mutateAsync: vi.fn().mockResolvedValue({}),
@@ -320,6 +359,14 @@ function renderPage(entries: string[] = ['/charging?from=2000-01-01&to=2100-01-0
       </QueryClientProvider>
     </MemoryRouter>,
   );
+}
+
+function briefMetric(label: string): HTMLElement {
+  const metric = within(screen.getByTestId('charging-operational-brief'))
+    .getByText(label)
+    .closest('[role="listitem"]');
+  if (!metric) throw new Error(`No operational metric found for "${label}"`);
+  return metric as HTMLElement;
 }
 
 beforeEach(() => {
@@ -358,7 +405,7 @@ describe('ChargingListPage — happy path', () => {
       await screen.findByRole('heading', { level: 1, name: 'Charging Sessions' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Cost, charger type, energy patterns, and battery-friendly scoring'),
+      screen.getByText('Live readiness, cost exposure, charger behavior, and charging history'),
     ).toBeInTheDocument();
     expect(document.title).toContain('Charging Sessions');
 
@@ -370,16 +417,73 @@ describe('ChargingListPage — happy path', () => {
     expect(screen.getByTestId('charging-trend-chart')).toBeInTheDocument();
 
     // Threshold-gated insight panels: 6 sessions clears AC/DC(1), battery(5),
-    // efficiency, and specs(5) — but NOT the optimizer(10).
+    // delivery rate, and specs(5) — but NOT the optimizer(10).
     expect(screen.getByTestId('acdc-panel')).toBeInTheDocument();
     expect(screen.getByTestId('battery-dist-panel')).toBeInTheDocument();
-    expect(screen.getByTestId('efficiency-panel')).toBeInTheDocument();
+    expect(screen.getByTestId('charge-rate-panel')).toBeInTheDocument();
     expect(screen.getByTestId('specs-panel')).toBeInTheDocument();
     expect(screen.queryByTestId('optimizer-panel')).not.toBeInTheDocument();
 
     // Every session card in the window renders.
     expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
     expect(screen.getByTestId('session-card-6')).toBeInTheDocument();
+  });
+
+  it('presents live posture, departure, cost, honest efficiency coverage, interruptions, and reliability', async () => {
+    renderPage();
+    await screen.findByTestId('charging-operational-brief');
+
+    expect(within(briefMetric('Current posture')).getByText('Charging')).toBeInTheDocument();
+    expect(within(briefMetric('Departure readiness')).getByText('64%')).toBeInTheDocument();
+    expect(within(briefMetric('Cost exposure')).getByText('$39.50')).toBeInTheDocument();
+    expect(
+      within(briefMetric('Charging efficiency')).getByText('Not measured'),
+    ).toBeInTheDocument();
+    expect(within(briefMetric('Potential interruptions')).getByText('1')).toBeInTheDocument();
+    expect(within(briefMetric('Charger reliability')).getByText('83% clear')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Source: Live vehicle state/ }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /Source: Charging sessions/ }),
+    ).toBeInTheDocument();
+    expect(mockVehicleState).toHaveBeenCalledWith(1);
+  });
+
+  it('escalates low departure charge when the vehicle is not charging', async () => {
+    mockVehicleState.mockReturnValue(
+      qr({
+        data: {
+          state: { ...LIVE_STATE, is_charging: false, battery_level: 12 },
+          live: true,
+        },
+      }),
+    );
+    renderPage();
+
+    expect(await screen.findByText('Departure charge is below 20%')).toBeInTheDocument();
+    expect(within(briefMetric('Departure readiness')).getByText('12%')).toBeInTheDocument();
+  });
+
+  it('preserves the session vehicle, place, and time window in related links', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'preview 1' }));
+
+    expect(await screen.findByRole('dialog', { name: 'Home Garage' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/1');
+    expect(screen.getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute('href', '/drives?from=2024-06-15&to=2024-06-15');
+    expect(screen.getByRole('link', { name: 'Charge location' }))
+      .toHaveAttribute(
+        'href',
+        '/locations?q=Home+Garage&from=2024-06-15&to=2024-06-15',
+      );
+    expect(screen.getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2024-06-15&to=2024-06-15&signals=ACChargingPower%2CDCChargingPower%2CBatteryLevel',
+      );
   });
 
   it('shows charger-category collection pills and the by-type secondary summary', async () => {
@@ -425,23 +529,21 @@ describe('ChargingListPage — bulk selection', () => {
 });
 
 describe('ChargingListPage — distance conversion (SI regression guard)', () => {
-  it('converts km→display via metres so a 50 km charge reads 50 km, not 0.05 km', async () => {
+  it('converts canonical metres directly at the display boundary', async () => {
     renderPage();
     await screen.findByTestId('session-card-1');
     expect(captured.toDistanceDisplay).toBeTypeOf('function');
-    // Regression: the old code fed km straight into convertDistanceFromSI
-    // (which expects metres), producing 0.05. The fix scales km→m first.
-    expect(captured.toDistanceDisplay!(50)).toBe(50);
+    expect(captured.toDistanceDisplay!(50_000)).toBe(50);
     expect(captured.toDistanceDisplay!(0)).toBe(0);
     expect(captured.distanceUnit).toBe('km');
   });
 
-  it('converts km→miles at the display boundary when the unit preference is imperial', async () => {
+  it('converts canonical metres to miles when the unit preference is imperial', async () => {
     unitState.length = 'mi';
     renderPage();
     await screen.findByTestId('session-card-1');
     // 50 km ⇒ 50_000 m / 1609.344 ≈ 31.07 mi.
-    expect(captured.toDistanceDisplay!(50)).toBeCloseTo(31.07, 1);
+    expect(captured.toDistanceDisplay!(50_000)).toBeCloseTo(31.07, 1);
     expect(captured.distanceUnit).toBe('mi');
   });
 });
@@ -454,9 +556,13 @@ describe('ChargingListPage — non-happy states', () => {
     expect(
       await screen.findByText('No charging sessions in this range'),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText('Charging insights need completed sessions in the selected range.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Battery-start patterns, charger comparisons/)).toBeInTheDocument();
     expect(screen.getByText('No charging sessions yet')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Reset filters' })).toBeInTheDocument();
-    // No trend chart, no session cards, no insight panels when the window is empty.
+    // Analytical content stays withheld, but the insights section explains its prerequisite.
     expect(screen.queryByTestId('charging-trend-chart')).not.toBeInTheDocument();
     expect(screen.queryByTestId('session-card-1')).not.toBeInTheDocument();
   });
@@ -480,6 +586,32 @@ describe('ChargingListPage — non-happy states', () => {
     expect(await screen.findByText("Can't reach server")).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(refetch).toHaveBeenCalledTimes(1));
+  });
+
+  it('keeps the retained session list when a BACKGROUND refetch fails', async () => {
+    // Data-trust contract: the full-bleed <QueryError> is reserved for an
+    // initial failure with nothing cached. A refetch that fails on top of a
+    // rendered list degrades to a non-blocking staleness notice instead.
+    mockSessions.mockReturnValue(
+      qr({ data: SESSIONS, error: new Error('boom'), isError: true }),
+    );
+    renderPage();
+
+    expect(await screen.findByTestId('stale-refresh-warning')).toBeInTheDocument();
+    expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
+    expect(screen.queryByText("Can't reach server")).toBeNull();
+  });
+
+  it('keeps charging history visible when live departure state fails', async () => {    mockVehicleState.mockReturnValue(
+      qr({ isError: true, error: new Error('live state unavailable'), data: undefined }),
+    );
+    renderPage();
+
+    expect(
+      await screen.findByText('Live charging and departure state are unavailable'),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId('session-card-1')).toBeInTheDocument();
+    expect(within(briefMetric('Current posture')).getByText('Unavailable')).toBeInTheDocument();
   });
 
   it('shows the no-vehicle prompt and hides all data sections when no vehicle is selected', async () => {

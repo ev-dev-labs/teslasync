@@ -68,7 +68,7 @@ describe('CatalogKpiBand', () => {
     expect(screen.getByText('m · s · Wh')).toBeInTheDocument();
 
     // Exactly four metric cards — no section is dropped.
-    expect(container.querySelectorAll('.metric-label')).toHaveLength(4);
+    expect(container.querySelectorAll('[data-role="metric-label"]')).toHaveLength(4);
   });
 
   it('renders the numeric counts passed via props', () => {

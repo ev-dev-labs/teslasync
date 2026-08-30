@@ -1,0 +1,482 @@
+{
+  "advancedIntelligence": {
+    "causal": {
+      "baseline": "Baseline",
+      "confirm": {
+        "action": "Create estimate",
+        "body": "This creates an observational estimate from the selected windows. It does not execute the intervention or prove causality.",
+        "title": "Confirm experiment estimate"
+      },
+      "confounders": "Confounder coverage",
+      "effect": "Estimated effect",
+      "form": {
+        "baselineEnd": "Baseline end",
+        "baselineStart": "Baseline start",
+        "intervention": "Intervention",
+        "metric": "Metric",
+        "review": "Review experiment",
+        "subtitle": "Windows must be ordered, non-overlapping, at least 24 hours, and already observed.",
+        "title": "Create windowed experiment",
+        "treatmentEnd": "Treatment end",
+        "treatmentStart": "Treatment start"
+      },
+      "history": {
+        "empty": "No causal experiments have been recorded.",
+        "title": "Experiment history"
+      },
+      "intervention": {
+        "charging": "Charging schedule",
+        "climate": "Climate preconditioning",
+        "driving": "Driving policy",
+        "software": "Software update",
+        "tires": "Tire service"
+      },
+      "metric": {
+        "charging": "Charging success",
+        "energy": "Drive energy efficiency",
+        "speed": "Average speed"
+      },
+      "notice": {
+        "body": "Estimates may remain non-causal or insufficient when samples or confounder coverage are limited.",
+        "title": "Association is not proof of causality"
+      },
+      "samples": "{{count}} samples",
+      "subtitle": "Compare explicit baseline and treatment windows with confounder coverage disclosure.",
+      "title": "Causal Experimentation",
+      "toast": "Experiment estimate created",
+      "treatment": "Treatment",
+      "unsupported": {
+        "commands": "Execution of the selected intervention",
+        "randomized": "Randomized assignment or proof of causality"
+      }
+    },
+    "error": {
+      "body": "Review the scenario inputs and try again.",
+      "title": "Request could not be completed"
+    },
+    "evidence": {
+      "empty": "No supporting evidence was returned.",
+      "sampleLine": "{{count}} samples · {{date}}",
+      "sources": "Evidence sources",
+      "subtitle": "Supported observations are separated from assumptions and unsupported fields.",
+      "title": "Evidence, quality, and limitations"
+    },
+    "federated": {
+      "budget": {
+        "empty": "Privacy budget status is unavailable.",
+        "remaining": "Epsilon remaining",
+        "spent": "Epsilon spent",
+        "title": "Subject privacy budget",
+        "total": "Total epsilon budget"
+      },
+      "card": {
+        "aggregate": "Local aggregate",
+        "epsilon": "Epsilon",
+        "rounds": "Rounds",
+        "samples": "Latest local samples",
+        "use": "Use for next local round"
+      },
+      "cards": {
+        "empty": "No local model cards exist for this vehicle and subject.",
+        "title": "Subject-scoped model cards"
+      },
+      "confirm": {
+        "action": "Start local round",
+        "body": "This local round may spend {{epsilon}} epsilon. It never uploads raw vehicle data.",
+        "title": "Confirm local privacy spend"
+      },
+      "form": {
+        "budget": "Epsilon budget",
+        "epsilon": "Requested epsilon",
+        "expectedVersion": "Expected model-card version",
+        "name": "Model name",
+        "review": "Review privacy spend",
+        "subtitle": "Confirmation spends epsilon only when enough valid local aggregate samples are available.",
+        "task": "Task",
+        "title": "Privacy-gated local training round",
+        "version": "Model version"
+      },
+      "privacy": {
+        "body": "Rounds use local aggregates only. No raw trips, locations, video, command payloads, or gradients are uploaded.",
+        "title": "Raw vehicle data never leaves this instance"
+      },
+      "status": {
+        "none": "No round"
+      },
+      "subtitle": "Manage subject-scoped local aggregate model rounds within explicit privacy budgets.",
+      "task": {
+        "efficiency": "Efficiency"
+      },
+      "title": "Federated Learning Studio",
+      "toast": "Privacy-preserving local round completed",
+      "unsupported": {
+        "global": "A centralized fleet model or cross-subject access",
+        "upload": "Raw-data or gradient upload"
+      }
+    },
+    "firmware": {
+      "decision": {
+        "subtitle": "Target and peer regressions use comparable pre/post observation windows.",
+        "title": "Matched cohort decisions"
+      },
+      "empty": "No firmware canary windows are available.",
+      "excessDelta": "Matched excess",
+      "generated": "Decision generated",
+      "notice": {
+        "body": "Canary decisions summarize matched observations. TeslaSync does not install, hold, or roll back firmware.",
+        "title": "Decision support, not deployment control"
+      },
+      "peerDelta": "Peer regression",
+      "rationale": {
+        "insufficient": "The matched windows do not contain enough supported observations for a rollout decision.",
+        "supported": "The decision reflects target regression relative to the matched peer change and window quality.",
+        "title": "Decision rationale"
+      },
+      "subtitle": "Compare a target vehicle with matched peer windows before deciding rollout readiness.",
+      "targetDelta": "Target regression",
+      "title": "Firmware Canary",
+      "unsupported": {
+        "causality": "Proof that firmware caused a measured change",
+        "deployment": "Firmware deployment or rollback commands"
+      },
+      "version": {
+        "unsupported": "Version unsupported"
+      }
+    },
+    "forensics": {
+      "discrepancy": "Cost discrepancy",
+      "empty": "No charging sessions are available for reconciliation.",
+      "expectedCost": "Expected cost",
+      "loss": "Estimated loss",
+      "meterEnergy": "Meter energy",
+      "notice": {
+        "body": "Meter, tariff, loss, and cost values are displayed only when the backend can support them.",
+        "title": "Null means unsupported, not zero"
+      },
+      "reconciliation": {
+        "title": "Session reconciliation"
+      },
+      "recordedCost": "Recorded cost",
+      "session": "Session",
+      "started": "Started",
+      "status": "Status",
+      "subtitle": "Reconcile vehicle, meter, energy-loss, and cost records without filling unsupported fields.",
+      "title": "Charging Forensics",
+      "unsupported": {
+        "cost": "Expected cost without supported tariff and currency data",
+        "meter": "Meter energy when no meter source is recorded"
+      },
+      "vehicleEnergy": "Vehicle energy"
+    },
+    "form": {
+      "displayEquivalent": "Display equivalent: {{value}}"
+    },
+    "hazards": {
+      "cell": "Coarse cell",
+      "clusters": {
+        "subtitle": "Prioritize clusters using severity, confidence, recency, and observation coverage together.",
+        "title": "Hazard clusters"
+      },
+      "confidence": "Confidence",
+      "coverage": "Observations",
+      "empty": "No coarse-cell hazard clusters meet the privacy and evidence thresholds.",
+      "privacy": {
+        "body": "No exact coordinates, routes, or driver identities are exposed or inferred. Cells are identifiers, not map pins.",
+        "title": "Coarse cells protect location privacy"
+      },
+      "recency": "Last seen",
+      "subtitle": "Privacy-preserving hazard clusters shown only at coarse-cell resolution.",
+      "title": "Road Hazard Mesh",
+      "unsupported": {
+        "coordinates": "Exact coordinates or route reconstruction",
+        "navigation": "Automatic rerouting or vehicle commands"
+      }
+    },
+    "journey": {
+      "arrivalHigh": "Arrival SoC high",
+      "arrivalLow": "Arrival SoC low",
+      "energy": "Energy required",
+      "factors": {
+        "empty": "No supported readiness factors are available.",
+        "title": "Readiness factors"
+      },
+      "form": {
+        "auxiliary": "Auxiliary load (canonical SI, optional)",
+        "departure": "Departure",
+        "distance": "Route distance (canonical SI)",
+        "reserve": "Reserve target (%)",
+        "run": "Run confirmed readiness assessment",
+        "speed": "Average speed (canonical SI, optional)",
+        "subtitle": "Optional weather, speed, and auxiliary load sharpen the estimate when known.",
+        "temperature": "Outside temperature (canonical SI, optional)",
+        "title": "Journey scenario"
+      },
+      "notice": {
+        "body": "This assessment does not reserve chargers, navigate, precondition, or command the vehicle.",
+        "title": "Planning estimate"
+      },
+      "readiness": "Readiness score",
+      "subtitle": "Assess departure readiness and arrival reserve from supported vehicle evidence.",
+      "summary": {
+        "empty": "Submit a journey scenario to calculate readiness.",
+        "title": "Readiness and arrival range"
+      },
+      "title": "Journey Assurance",
+      "toast": "Journey assessment completed",
+      "unsupported": {
+        "commands": "Navigation, charging, or climate commands",
+        "traffic": "Live traffic and charger availability"
+      }
+    },
+    "limitations": {
+      "empty": "No additional limitations were returned.",
+      "title": "Limitations"
+    },
+    "quality": {
+      "coverage": "Coverage",
+      "samples": "Samples",
+      "title": "Data quality",
+      "unsupported": "Quality metadata is unsupported.",
+      "window": "Observation window"
+    },
+    "resilience": {
+      "actions": {
+        "empty": "No outage plan has been generated.",
+        "title": "Load priorities and recommendations"
+      },
+      "form": {
+        "duration": "Outage duration (canonical SI)",
+        "load": "Essential load (canonical SI)",
+        "reserve": "Evacuation reserve (canonical SI)",
+        "run": "Create confirmed outage plan",
+        "solar": "Expected solar energy (canonical SI)",
+        "storage": "Stationary storage (canonical SI)",
+        "title": "Outage plan scenario",
+        "uncertainty": "Restoration uncertainty (%)",
+        "vehicleEnergy": "Vehicle energy (canonical SI)"
+      },
+      "horizon": "Modeled survival horizon",
+      "notice": {
+        "body": "TeslaSync does not shed loads, dispatch storage, export vehicle energy, or execute emergency commands.",
+        "title": "Advisory plan only"
+      },
+      "subtitle": "Plan energy survival, load priorities, and risk progression for a modeled outage.",
+      "summary": {
+        "empty": "Submit an outage scenario to build a plan.",
+        "title": "Survival horizon"
+      },
+      "timeline": {
+        "aria": "Remaining supported energy over the modeled outage timeline",
+        "empty": "At least two supported timeline points are required.",
+        "energy": "Remaining energy",
+        "risk": "Risk",
+        "time": "Time",
+        "title": "Outage risk timeline"
+      },
+      "timelinePoints": "Risk checkpoints",
+      "title": "Emergency Resilience",
+      "toast": "Resilience plan created",
+      "unsupported": {
+        "dispatch": "Automatic load shedding or energy dispatch",
+        "v2h": "Assumed vehicle-to-home capability or authorization"
+      }
+    },
+    "sentinel": {
+      "attribution": {
+        "body": "Findings identify unusual aggregate behavior. They do not identify a person, prove intent, or establish compromise.",
+        "title": "Anomaly is not attribution"
+      },
+      "confidence": "{{value}}% confidence",
+      "empty": "No supported sentinel findings were detected.",
+      "evidence": {
+        "empty": "No detailed evidence was returned.",
+        "title": "Finding evidence"
+      },
+      "findings": {
+        "title": "Explainable findings"
+      },
+      "subtitle": "Explainable command, identity, and telemetry-integrity signals without personal attribution.",
+      "title": "Behavioral Sentinel",
+      "unsupported": {
+        "identity": "Attribution to a specific person or identity",
+        "intent": "Proof of malicious intent or compromise"
+      }
+    },
+    "site": {
+      "constraints": {
+        "empty": "Submit a site scenario to see constraints.",
+        "title": "Utilization and constraints"
+      },
+      "distribution": {
+        "deterministic": "Deterministic",
+        "exponential": "Exponential",
+        "fixed": "Fixed",
+        "poisson": "Poisson"
+      },
+      "form": {
+        "arrivalDistribution": "Arrival distribution",
+        "arrivalRate": "Arrival rate (vehicles/second)",
+        "chargerPower": "Per-charger power (canonical SI)",
+        "chargers": "Charger count",
+        "growth": "Fleet growth (%)",
+        "panel": "Panel limit (canonical SI)",
+        "run": "Run confirmed site simulation",
+        "service": "Mean service time (canonical SI)",
+        "serviceDistribution": "Service distribution",
+        "solar": "Solar power (canonical SI, optional)",
+        "storage": "Storage energy (canonical SI, optional)",
+        "subtitle": "Model arrival and service assumptions alongside electrical constraints.",
+        "title": "Site scenario"
+      },
+      "mitigation": {
+        "effect": "Queue {{queue}}% · Peak {{peak}}"
+      },
+      "mitigations": {
+        "empty": "No supported mitigations were returned.",
+        "title": "Ranked mitigations and assumptions"
+      },
+      "notice": {
+        "body": "Results are planning approximations and do not dispatch storage, change charger limits, or operate a site.",
+        "title": "Design scenario, not site control"
+      },
+      "panelConstraint": "Panel constraint",
+      "peak": "Peak demand",
+      "queueP50": "Queue wait P50",
+      "queueP90": "Queue wait P90",
+      "stable": "Stable",
+      "status": "Projection status",
+      "subtitle": "Test queue, utilization, peak demand, and panel constraints before infrastructure changes.",
+      "title": "Charging Site Twin",
+      "toast": "Site scenario completed",
+      "unstable": "Unstable",
+      "unsupported": {
+        "control": "Charger, panel, solar, or storage control",
+        "guarantee": "Guaranteed real-world queue performance"
+      },
+      "utilization": "Utilization"
+    },
+    "survival": {
+      "adjustedP50": "adjusted P50 {{value}}",
+      "cards": {
+        "title": "Component survival cards"
+      },
+      "empty": "No component survival estimates are available.",
+      "evidenceCount": "{{count}} evidence",
+      "intervention": "Intervention sensitivity",
+      "notice": {
+        "body": "Horizons are uncertainty bands from observed exposure, not guaranteed failure dates or diagnoses.",
+        "title": "Probabilistic maintenance guidance"
+      },
+      "p10": "P10 horizon",
+      "p50": "P50 horizon",
+      "p90": "P90 horizon",
+      "probability": "Survival probability",
+      "risks": {
+        "empty": "Competing-risk estimates are unsupported.",
+        "unsupported": "Unsupported",
+        "title": "Competing risks"
+      },
+      "subtitle": "Review probabilistic service horizons, competing risks, and intervention sensitivity.",
+      "title": "Component Survival",
+      "unsupported": {
+        "failureDate": "A guaranteed failure date",
+        "repair": "Automatic diagnosis or repair authorization"
+      }
+    },
+    "tco": {
+      "alternatives": {
+        "empty": "Submit constraints to generate supported alternatives.",
+        "title": "Pareto-like alternatives"
+      },
+      "budgetStatus": "Budget status",
+      "convenience": "Convenience",
+      "cost": "Projected cost",
+      "form": {
+        "budget": "Budget (minor units)",
+        "currency": "ISO currency code",
+        "distance": "Annual distance (canonical SI)",
+        "home": "Home charging (%)",
+        "horizon": "Planning horizon (canonical SI)",
+        "public": "Public charging (%)",
+        "risk": "Risk tolerance (%)",
+        "run": "Generate confirmed alternatives",
+        "subtitle": "Charging shares must total 100 percent. Budget is entered in currency minor units.",
+        "title": "Optimization constraints"
+      },
+      "mix": "Home / public mix",
+      "notice": {
+        "body": "Projected cost remains unsupported when charging channels or maintenance evidence are incomplete; no zero is fabricated.",
+        "title": "Optimization uses supported costs only"
+      },
+      "overBudget": "Over budget",
+      "pareto": "Pareto-efficient",
+      "risk": "Risk score",
+      "subtitle": "Compare constrained cost, risk, and convenience alternatives on a Pareto-like frontier.",
+      "title": "TCO Optimizer",
+      "toast": "TCO alternatives generated",
+      "unsupported": {
+        "cost": "Cost projections without complete charging and maintenance evidence",
+        "purchase": "Purchases, charging changes, or financial guarantees"
+      },
+      "withinBudget": "Within budget"
+    },
+    "toast": {
+      "error": "Advanced intelligence request failed"
+    },
+    "twin": {
+      "baseline": {
+        "capacity": "Usable battery",
+        "efficiency": "Efficiency",
+        "empty": "Run scenarios to view the calibrated baseline.",
+        "model": "Model",
+        "samples": "Calibration samples",
+        "title": "Calibrated baseline"
+      },
+      "form": {
+        "add": "Add scenario",
+        "auxiliary": "Auxiliary load (canonical SI)",
+        "distance": "Route distance (canonical SI)",
+        "horizon": "Scenario horizon (canonical SI)",
+        "name": "Scenario name",
+        "remove": "Remove scenario",
+        "run": "Run confirmed simulation",
+        "scenario": "Scenario {{number}}",
+        "speed": "Average speed (canonical SI)",
+        "subtitle": "Enter canonical SI values; preferred-unit equivalents are shown below each measurement.",
+        "temperature": "Outside temperature (canonical SI)",
+        "title": "Calibrated scenarios"
+      },
+      "notice": {
+        "body": "Scenarios estimate outcomes from observed calibration data. They do not alter the vehicle.",
+        "title": "Simulation only"
+      },
+      "sensitivity": {
+        "empty": "Sensitivity drivers appear after a supported simulation.",
+        "title": "Sensitivity drivers"
+      },
+      "subtitle": "Compare calibrated, vehicle-specific counterfactuals with explicit uncertainty.",
+      "title": "Twin Lab",
+      "toast": "Twin scenarios completed",
+      "uncertainty": {
+        "aria": "Comparison of modeled range uncertainty across twin scenarios",
+        "empty": "At least two supported scenario results are required.",
+        "estimate": "Estimate",
+        "high": "High",
+        "low": "Low",
+        "subtitle": "Low, estimated, and high modeled range deltas by scenario.",
+        "title": "Range-effect uncertainty comparison"
+      },
+      "unsupported": {
+        "commands": "Vehicle commands and physical actuation",
+        "guarantee": "Guaranteed real-world outcomes"
+      }
+    },
+    "unsupported": {
+      "short": "Unsupported",
+      "title": "Explicitly unsupported"
+    },
+    "vehicle": {
+      "empty": "Select a vehicle to load intelligence."
+    }
+  }
+}

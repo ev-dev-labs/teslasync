@@ -83,7 +83,7 @@ export function BusiestDays({
 
       <UtilizationSectionBody state={state} className="mt-4 min-h-64">
         {summary.busiestDays.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
             icon={<Flame className="h-8 w-8" aria-hidden="true" />}
             message={t(
               'utilization.busiest.empty',

@@ -137,6 +137,91 @@ export interface SecretRotationResponse {
   items: SecretRotationStatus[];
 }
 
+// ---------- Data quality ---------------------------------------------------
+//
+// GET /admin/observability/data-quality → internal/api/dataquality/handler.go,
+// backed by internal/dataquality.Scorer. Unlike the routes above this handler
+// writes a FLAT body via internal/api/httpx.WriteJSON — there is no `{data:…}`
+// envelope to unwrap.
+//
+// Nullability is load-bearing here and must not be collapsed to 0:
+//   • `normalization_coverage_pct` / `coverage_pct` are null when the bounded
+//     window held zero samples. "Unknown" is a different fact from "0 %".
+//   • `version` is null for the legacy/unknown provenance bucket — rows written
+//     before migration 000232. That is NOT the same as an explicit version 0.
+//   • `firmware_version` is null when no `Version` signal was observed.
+
+/** Per-field composite quality tier. Mirrors dataquality.severity(). */
+export type DataQualitySeverity = 'ok' | 'warn' | 'critical';
+
+/** Whether a coverage percentage was actually measured or is unknown. */
+export type NormalizationCoverageState = 'measured' | 'unknown';
+
+/** Whether the firmware context for a segment is attested or unknown. */
+export type FirmwareEvidenceState = 'known' | 'unknown';
+
+export interface DataQualityFieldScore {
+  field: string;
+  sample_count: number;
+  last_seen_at: string;
+  freshness_seconds: number;
+  max_gap_seconds: number;
+  /** 0..1 fraction of comparable consecutive samples whose typed value matched. */
+  duplicate_ratio: number;
+  versioned_sample_count: number;
+  unversioned_sample_count: number;
+  normalization_coverage_pct: number | null;
+  normalization_coverage_state: NormalizationCoverageState;
+  /** 0..100, higher = healthier. */
+  composite_score: number;
+  severity: DataQualitySeverity;
+}
+
+/** One bucket of the bounded GROUP BY normalization_version distribution. */
+export interface NormalizationVersionCount {
+  /** null = legacy/unknown provenance. Never conflate with 0. */
+  version: number | null;
+  sample_count: number;
+  /** null when the window held zero samples. */
+  share_pct: number | null;
+}
+
+export interface NormalizationSummary {
+  required_version: number;
+  total_sample_count: number;
+  versioned_sample_count: number;
+  unversioned_sample_count: number;
+  /** null when total_sample_count is 0 — unknown, not 0 %. */
+  coverage_pct: number | null;
+  coverage_state: NormalizationCoverageState;
+  versions: NormalizationVersionCount[];
+}
+
+export interface DataQualityFirmwareSegment {
+  firmware_version: string | null;
+  firmware_evidence_state: FirmwareEvidenceState;
+  vehicle_count: number;
+  total_sample_count: number;
+  versioned_sample_count: number;
+  unversioned_sample_count: number;
+  normalization_coverage_pct: number | null;
+  normalization_coverage_state: NormalizationCoverageState;
+  fields: DataQualityFieldScore[];
+}
+
+export interface DataQualitySnapshot {
+  generated_at: string;
+  window_start: string;
+  window_end: string;
+  window_mins: number;
+  required_normalization_version: number;
+  normalization: NormalizationSummary;
+  /** How firmware was attributed to a segment, e.g. 'latest_version_at_window_end'. */
+  firmware_assignment: string;
+  firmware_segments: DataQualityFirmwareSegment[];
+  fields: DataQualityFieldScore[];
+}
+
 // ---------- Audit log ------------------------------------------------------
 
 export interface AuditLogQueryParams {

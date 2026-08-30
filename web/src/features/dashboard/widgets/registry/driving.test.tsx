@@ -131,9 +131,9 @@ function renderPicker(overrides: Partial<React.ComponentProps<typeof WidgetPicke
   return { ...utils, onClose, onAddWidgets, onApplyPreset };
 }
 
-/** Select the 'Driving' category tab so only driving widgets remain on screen. */
+/** Select the 'Driving' category filter so only driving widgets remain on screen. */
 function filterToDriving() {
-  fireEvent.click(screen.getByRole('tab', { name: 'Driving' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Driving' }));
 }
 
 afterEach(() => {

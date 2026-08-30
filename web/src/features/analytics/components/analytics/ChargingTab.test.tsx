@@ -44,6 +44,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, within, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 
 vi.mock('react-i18next', async () => {
   const actual =
@@ -167,10 +169,15 @@ function makeQuery(o: QueryOverrides = {}): FleetAnalyticsQuery {
 }
 
 function renderTab(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <ChargingTab query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <ChargingTab query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -188,7 +195,7 @@ describe('ChargingTab — loading', () => {
 
     // The KPI band is a skeleton — no metric labels, and no empty/error UI.
     expect(screen.queryByText('Sessions')).toBeNull();
-    expect(screen.queryByRole('status')).toBeNull();
+    expect(screen.getAllByRole('status')).toHaveLength(3);
     expect(screen.queryByRole('alert')).toBeNull();
   });
 });

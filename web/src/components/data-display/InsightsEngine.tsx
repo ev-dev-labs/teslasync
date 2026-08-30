@@ -202,35 +202,23 @@ function analyzeOptimalCharging(sessions: ChargingSession[]): Insight | null {
 }
 
 function analyzeVampireDrain(stats: VampireDrainStats): Insight | null {
-  if (stats.event_count < 1) return null
+  const average = stats.avg_drain_pct_per_day
+  if (stats.event_count < 1 || average == null || !Number.isFinite(average)) return null
 
-  const sentryDrain = stats.avg_sentry_drain
-  const noSentryDrain = stats.avg_nosentry_drain
-
-  if (sentryDrain <= 0 && noSentryDrain <= 0) return null
-
-  const diff = sentryDrain - noSentryDrain
-  const diffPct = noSentryDrain > 0 ? (diff / noSentryDrain) * 100 : 0
-  const dailyRangeLoss = sentryDrain * 24
-
-  let description: string
-  let severity: Severity = 'info'
-
-  if (diffPct > 20) {
-    description = `Sentry Mode increases battery drain by ${fmtNumber(diffPct, 0)}%. Consider disabling it at home to save ~${fmtNumber(dailyRangeLoss, 1)} km of range daily.`
-    severity = 'warning'
-  } else {
-    description = `Average vampire drain is ${fmtNumber(stats.avg_drain_rate, 2)} %/hr. Total range lost to idle drain: ${fmtNumber(stats.total_range_lost, 1)} km across ${stats.event_count} events.`
-  }
+  const elevated = average >= 3
+  const p95 = stats.p95_drain_pct_per_day
+  const description = p95 != null
+    ? `Average parked drain is ${fmtNumber(average, 2)}% per day; P95 is ${fmtNumber(p95, 2)}% across ${stats.event_count} observed windows.`
+    : `Average parked drain is ${fmtNumber(average, 2)}% per day across ${stats.event_count} observed windows.`
 
   return {
     id: 'vampire-drain',
     icon: Shield,
     title: 'Vampire Drain',
     description,
-    trend: diffPct > 20 ? 'down' : 'neutral',
-    trendGood: diffPct <= 20,
-    severity,
+    trend: elevated ? 'down' : 'neutral',
+    trendGood: !elevated,
+    severity: elevated ? 'warning' : 'info',
   }
 }
 
@@ -420,5 +408,4 @@ export function InsightsEngine({ data }: { data: InsightData }) {
     </FadeIn>
   )
 }
-
 

@@ -27,6 +27,34 @@ package codec
 
 import "time"
 
+// IngestOrigin is the deliberately small vocabulary used to identify the
+// transport boundary that accepted an Atomic. Keep this list aligned with the
+// signal_log_ingest_origin_check constraint in migration 000234.
+type IngestOrigin string
+
+const (
+	IngestOriginUnknown            IngestOrigin = "unknown"
+	IngestOriginFleetTelemetryMQTT IngestOrigin = "fleet_telemetry_mqtt"
+	IngestOriginFleetTelemetryHTTP IngestOrigin = "fleet_telemetry_http"
+)
+
+var validIngestOrigins = [...]IngestOrigin{
+	IngestOriginUnknown,
+	IngestOriginFleetTelemetryMQTT,
+	IngestOriginFleetTelemetryHTTP,
+}
+
+// Valid reports whether origin is in the closed durable provenance
+// vocabulary. Callers that have no boundary stamp must use unknown.
+func (origin IngestOrigin) Valid() bool {
+	for _, valid := range validIngestOrigins {
+		if origin == valid {
+			return true
+		}
+	}
+	return false
+}
+
 // Atomic is the codec's output row. Every entry has been flattened to a
 // typed primitive by the time it leaves Decode; the Value field never
 // contains a protomodel compound struct (Location, Doors, TireLocation,
@@ -48,18 +76,49 @@ import "time"
 // are expected to type-switch on Value when they need the concrete type
 // rather than reflecting at runtime.
 //
-// EmittedAt is the Payload-level CreatedAt timestamp converted to a Go
-// time.Time via timestamppb.AsTime(); the codec deliberately does NOT
-// substitute time.Now() so historical replays preserve the producer's
-// clock. If the producer omitted CreatedAt, EmittedAt is the zero Time
-// and the caller is responsible for either backfilling or dropping.
+// EmittedAt is the timestamp used for ordering and the signal_log primary
+// key. It can be a producer timestamp or a transport-receipt fallback.
+// SourceEmittedAt is the explicit evidence bit: it is non-nil only when
+// EmittedAt came from a valid producer/source timestamp. A receipt fallback
+// MUST leave SourceEmittedAt nil even though it becomes EmittedAt.
 //
 // VehicleID is the Payload-level Vin string (NOT the internal numeric
 // vehicles.id). Callers that need the numeric id must look it up against
 // the vehicles table; the codec layer is intentionally vendor-only.
 type Atomic struct {
-	Field     string
-	Value     any
-	EmittedAt time.Time
-	VehicleID string
+	Field           string
+	Value           any
+	EmittedAt       time.Time
+	VehicleID       string
+	IngestOrigin    IngestOrigin
+	SourceEmittedAt *time.Time
+	ReceivedAt      *time.Time
+}
+
+// StampTransport applies a transport-boundary attestation to final atomics.
+// It preserves SourceEmittedAt, which is set only by the decoder when the
+// wire payload contained a valid source timestamp. A zero receipt timestamp
+// is represented as nil; this avoids inventing receipt evidence for callers
+// that do not have a transport boundary.
+//
+// The caller owns atoms; stamping mutates that slice in place to avoid an
+// allocation on every per-field MQTT message. Invalid or absent origins are
+// made explicitly unknown.
+func StampTransport(atoms []Atomic, origin IngestOrigin, receivedAt time.Time) []Atomic {
+	if atoms == nil {
+		return nil
+	}
+	if !origin.Valid() {
+		origin = IngestOriginUnknown
+	}
+	var receipt *time.Time
+	if !receivedAt.IsZero() {
+		t := receivedAt.UTC().Round(0)
+		receipt = &t
+	}
+	for i := range atoms {
+		atoms[i].IngestOrigin = origin
+		atoms[i].ReceivedAt = receipt
+	}
+	return atoms
 }

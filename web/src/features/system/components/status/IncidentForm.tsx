@@ -12,9 +12,11 @@
  * surfaces consistent without round-trip.
  */
 
-import { useId, useState, type FormEvent } from 'react'
-import { Modal, Button, Input, Textarea, Select } from '@/components/ui'
-import { useToast } from '@/components/feedback/Toast'
+import { useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Modal, Button, ConfirmDialog, Input, Textarea, Select } from '@/components/ui'
+import { useToast } from '@/components/feedback'
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
 import {
   useCreateIncident,
   type IncidentSeverity,
@@ -26,10 +28,8 @@ interface IncidentFormProps {
 }
 
 export function IncidentForm({ onClose }: IncidentFormProps) {
+  const { t } = useTranslation()
   const toast = useToast()
-  const titleId = useId()
-  const componentsId = useId()
-  const messageId = useId()
   const [title, setTitle] = useState('')
   const [titleError, setTitleError] = useState('')
   const [severity, setSeverity] = useState<IncidentSeverity>('minor')
@@ -37,6 +37,21 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
   const [message, setMessage] = useState('')
   const [components, setComponents] = useState('')
   const create = useCreateIncident()
+  const isDirty = title !== ''
+    || severity !== 'minor'
+    || status !== 'investigating'
+    || message !== ''
+    || components !== ''
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    isDirty,
+    onClose,
+    {
+      message: t(
+        'systemStatus.incidents.unsaved',
+        'You have unsaved incident details. Discard them?',
+      ),
+    },
+  )
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -46,7 +61,10 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
       // Surface the error on the field itself (aria-invalid + aria-describedby
       // via Input's `error`) so assistive tech ties it to the input — a
       // transient toast alone isn't programmatically associated (WCAG 3.3.1).
-      setTitleError('Title must be at least 3 characters.')
+      setTitleError(t(
+        'systemStatus.incidents.titleMin',
+        'Title must be at least 3 characters.',
+      ))
       return
     }
     try {
@@ -60,82 +78,95 @@ export function IncidentForm({ onClose }: IncidentFormProps) {
           .map((c) => c.trim())
           .filter(Boolean),
       })
-      toast.success('Incident logged.')
+      toast.success(t('systemStatus.incidents.logged', 'Incident logged.'))
       onClose()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to log incident')
+      toast.error(err instanceof Error
+        ? err.message
+        : t('systemStatus.incidents.logFailed', 'Failed to log incident'))
     }
   }
 
   return (
-    <Modal open onClose={onClose} title="Log an incident" size="md">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label htmlFor={titleId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Title</label>
+    <>
+      <Modal
+        open
+        onClose={requestClose}
+        title={t('systemStatus.incidents.logTitle', 'Log an incident')}
+        size="md"
+      >
+        <form onSubmit={handleSubmit} className="space-y-4">
           <Input
-            id={titleId}
+            label={t('systemStatus.incidents.title', 'Title')}
             value={title}
             onChange={(e) => {
               setTitle(e.target.value)
               if (titleError) setTitleError('')
             }}
-            placeholder="e.g. Wall connector restart at 14:00"
+            placeholder={t(
+              'systemStatus.incidents.titlePlaceholder',
+              'e.g. Wall connector restart at 14:00',
+            )}
             maxLength={200}
             required
             autoFocus
             error={titleError || undefined}
           />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-3">
           <Select
-            label="Severity"
+            label={t('systemStatus.incidents.severity', 'Severity')}
             value={severity}
             onChange={(e) => setSeverity(e.target.value as IncidentSeverity)}
             options={[
-              { value: 'minor', label: 'Minor' },
-              { value: 'major', label: 'Major' },
-              { value: 'critical', label: 'Critical' },
+              { value: 'minor', label: t('systemStatus.incidents.minor', 'Minor') },
+              { value: 'major', label: t('systemStatus.incidents.major', 'Major') },
+              { value: 'critical', label: t('systemStatus.incidents.critical', 'Critical') },
             ]}
           />
           <Select
-            label="Status"
+            label={t('systemStatus.incidents.status', 'Status')}
             value={status}
             onChange={(e) => setStatus(e.target.value as IncidentStatus)}
             options={[
-              { value: 'investigating', label: 'Investigating' },
-              { value: 'identified', label: 'Identified' },
-              { value: 'monitoring', label: 'Monitoring' },
-              { value: 'resolved', label: 'Resolved' },
+              { value: 'investigating', label: t('systemStatus.incidents.investigating', 'Investigating') },
+              { value: 'identified', label: t('systemStatus.incidents.identified', 'Identified') },
+              { value: 'monitoring', label: t('systemStatus.incidents.monitoring', 'Monitoring') },
+              { value: 'resolved', label: t('systemStatus.incidents.resolved', 'Resolved') },
             ]}
           />
-        </div>
-        <div>
-          <label htmlFor={componentsId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Affected components <span className="text-[var(--text-muted)]">(comma-separated, optional)</span></label>
+          </div>
           <Input
-            id={componentsId}
+            label={t('systemStatus.incidents.components', 'Affected components')}
+            hint={t(
+              'systemStatus.incidents.componentsHint',
+              'Optional. Separate multiple component names with commas.',
+            )}
             value={components}
             onChange={(e) => setComponents(e.target.value)}
-            placeholder="e.g. tesla, telemetry"
+            placeholder={t('systemStatus.incidents.componentsPlaceholder', 'e.g. tesla, telemetry')}
           />
-        </div>
-        <div>
-          <label htmlFor={messageId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Initial timeline message <span className="text-[var(--text-muted)]">(optional)</span></label>
           <Textarea
-            id={messageId}
+            label={t('systemStatus.incidents.initialMessage', 'Initial timeline message')}
+            hint={t('systemStatus.incidents.initialMessageHint', 'Optional context for the incident timeline.')}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="What's the situation?"
+            placeholder={t('systemStatus.incidents.messagePlaceholder', "What's the situation?")}
             rows={3}
             maxLength={4000}
           />
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onClose} disabled={create.isPending}>Cancel</Button>
-          <Button type="submit" variant="primary" disabled={create.isPending}>
-            {create.isPending ? 'Logging…' : 'Log incident'}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="ghost" onClick={requestClose} disabled={create.isPending}>
+              {t('common.cancel', 'Cancel')}
+            </Button>
+            <Button type="submit" variant="primary" loading={create.isPending}>
+              {create.isPending
+                ? t('systemStatus.incidents.logging', 'Logging…')
+                : t('systemStatus.incidents.logAction', 'Log incident')}
+            </Button>
+          </div>
+        </form>
+      </Modal>
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
+    </>
   )
 }

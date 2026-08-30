@@ -55,6 +55,15 @@ Components deployed:
   • MongoDB            — external
 {{- end }}
 
+Runtime Secret:
+{{- if .Values.externalSecrets.enabled }}
+  ✓ ExternalSecret    — {{ include "teslasync.secretName" . }}
+{{- else if .Values.secrets.create }}
+  ✓ Chart-managed     — {{ include "teslasync.secretName" . }} (explicit values)
+{{- else }}
+  • Existing Secret   — {{ include "teslasync.secretName" . }} (must already exist)
+{{- end }}
+
 ──────────────────────────────────────────────────────
   Accessing the services
 ──────────────────────────────────────────────────────
@@ -117,10 +126,12 @@ Components deployed:
   Next steps
 ──────────────────────────────────────────────────────
 
-  1. Set your Tesla API credentials:
-     --set tesla.clientId=<ID> --set tesla.clientSecret=<SECRET>
+  1. Provision {{ include "teslasync.secretName" . }} with DATABASE_PASS,
+     GRAFANA_ADMIN_PASSWORD, and Tesla credentials, or configure
+     externalSecrets. GitOps/offline renders never generate credentials.
 
-  2. Change default passwords before exposing to the network:
+  2. For an opt-in chart-managed Secret, set secrets.create=true and
+     provide explicit strong passwords:
      --set postgresql.auth.password=<STRONG_PASSWORD>
      --set grafana.adminPassword=<STRONG_PASSWORD>
 

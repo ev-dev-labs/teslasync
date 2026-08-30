@@ -1,7 +1,9 @@
 import { useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useOnboardingStatus } from '@/api/hooks/useOnboarding';
+import { broadcast } from '@/lib/broadcast';
 import { useOnboardingSkip } from '../hooks/useOnboardingSkip';
+import { markOnboardingCompleted } from '../completion';
 
 /**
  * Onboarding gate.
@@ -43,6 +45,28 @@ export function OnboardingGate() {
   const navigate = useNavigate();
   const { data, isLoading, isError } = useOnboardingStatus();
   const { isSkipped } = useOnboardingSkip();
+
+  /**
+   * Record onboarding completion (HELP-08 correction round).
+   *
+   * `teslasync-onboarded` used to be written only by <OnboardingWizard>, which
+   * is not mounted anywhere — so the key was never set and
+   * `useChangelog().hasCompletedOnboarding` was permanently false, silently
+   * disabling the changelog auto-show for every user.
+   *
+   * The gate is the right owner: it already runs the status query on every
+   * route, so observing `setup_required === false` costs nothing extra, and it
+   * is the same contract the redirect below trusts. `markOnboardingCompleted`
+   * is idempotent, so running this on every status refetch writes once.
+   */
+  useEffect(() => {
+    if (isLoading || isError || !data) return;
+    if (data.setup_required) return;
+    if (markOnboardingCompleted('setup-complete')) {
+      // Tell peer tabs so a second window stops treating this as a first run.
+      broadcast({ type: 'onboarded' });
+    }
+  }, [data, isLoading, isError]);
 
   useEffect(() => {
     // While the status request is in flight or has errored, don't

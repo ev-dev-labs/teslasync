@@ -47,6 +47,32 @@ func TestRewriteWindow_RewritesRangeAndSubquery(t *testing.T) {
 	}
 }
 
+func TestRatioExprPreservesLowTrafficAndTreatsNoTrafficAsHealthy(t *testing.T) {
+	t.Parallel()
+	s := SLO{
+		Name: "low_traffic",
+		SLI: SLI{
+			GoodEvents:  "sum(rate(good[5m]))",
+			ValidEvents: "sum(rate(valid[5m]))",
+		},
+	}
+
+	got := ratioExpr(s, "1h")
+	if strings.Contains(got, "clamp_min") {
+		t.Fatalf("ratio still contains a traffic-rate floor: %s", got)
+	}
+	for _, want := range []string{
+		"sum(rate(good[1h]))",
+		"sum(rate(valid[1h]))",
+		"and on()",
+		"or on() vector(1)",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("ratio %q missing %q", got, want)
+		}
+	}
+}
+
 func TestRunGenerateRecording_IdempotentOnDisk(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

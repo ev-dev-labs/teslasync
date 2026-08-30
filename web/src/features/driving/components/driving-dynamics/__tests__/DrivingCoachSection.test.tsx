@@ -30,6 +30,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>()
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles')
+  return { ...actual, ...chartTestDoubles }
+})
+
 vi.mock('react-i18next', async () => {
   const actual = await vi.importActual<typeof import('react-i18next')>('react-i18next')
   // Mirror i18next's t(key, defaultValue, options) shape closely enough

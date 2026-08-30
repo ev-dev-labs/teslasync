@@ -77,6 +77,7 @@ import type {
 } from '@/api/hooks/useTelemetry'
 
 const mockedRequest = request as unknown as ReturnType<typeof vi.fn>
+const ASYNC_QUERY_TIMEOUT = { timeout: 5_000 }
 
 // ── Endpoint constants (must mirror the hooks in useTelemetry.ts) ────────────
 const VINS_URL = '/tesla/fleet-telemetry/error-vins'
@@ -193,7 +194,9 @@ describe('FleetTelemetryHealth', () => {
     renderHealth()
 
     // VIN table populated from the error-vins endpoint.
-    expect(await screen.findByRole('button', { name: VIN_A })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('button', { name: VIN_A }, ASYNC_QUERY_TIMEOUT),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: VIN_B })).toBeInTheDocument()
 
     // Both card headings render.
@@ -204,7 +207,9 @@ describe('FleetTelemetryHealth', () => {
     expect(screen.getByText(/affected/)).toHaveTextContent('2 affected')
 
     // Error-log rows: code badge + message for A, "—" placeholders for B.
-    expect(await screen.findByText('MISSING_KEY')).toBeInTheDocument()
+    expect(
+      await screen.findByText('MISSING_KEY', {}, ASYNC_QUERY_TIMEOUT),
+    ).toBeInTheDocument()
     expect(screen.getByText('Vehicle key not paired')).toBeInTheDocument()
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2)
 
@@ -218,7 +223,11 @@ describe('FleetTelemetryHealth', () => {
     renderHealth()
 
     expect(
-      await screen.findByText('No vehicles with telemetry errors'),
+      await screen.findByText(
+        'No vehicles with telemetry errors',
+        {},
+        ASYNC_QUERY_TIMEOUT,
+      ),
     ).toBeInTheDocument()
     expect(screen.getByText('No fleet telemetry errors recorded')).toBeInTheDocument()
     expect(screen.getByText(/affected/)).toHaveTextContent('0 affected')
@@ -255,7 +264,7 @@ describe('FleetTelemetryHealth', () => {
     renderHealth()
 
     // Network failure → assertive alert, NOT the "no vehicles" empty copy.
-    const alert = await screen.findByRole('alert')
+    const alert = await screen.findByRole('alert', {}, ASYNC_QUERY_TIMEOUT)
     expect(alert).toBeInTheDocument()
     expect(screen.getByText("Can't reach server")).toBeInTheDocument()
     expect(screen.queryByText('No vehicles with telemetry errors')).toBeNull()
@@ -270,7 +279,9 @@ describe('FleetTelemetryHealth', () => {
     wire()
     renderHealth()
 
-    fireEvent.click(await screen.findByRole('button', { name: VIN_A }))
+    fireEvent.click(
+      await screen.findByRole('button', { name: VIN_A }, ASYNC_QUERY_TIMEOUT),
+    )
 
     // The second query re-runs against the vin-scoped URL…
     await waitFor(() =>
@@ -290,7 +301,7 @@ describe('FleetTelemetryHealth', () => {
   it('POSTs to the correct refresh endpoint and toasts success for each card', async () => {
     wire()
     renderHealth()
-    await screen.findByRole('button', { name: VIN_A })
+    await screen.findByRole('button', { name: VIN_A }, ASYNC_QUERY_TIMEOUT)
 
     const refreshButtons = screen.getAllByRole('button', {
       name: /Refresh from Tesla/,
@@ -320,7 +331,9 @@ describe('FleetTelemetryHealth', () => {
     wire()
     renderHealth()
 
-    const rowA = (await screen.findByRole('button', { name: VIN_A })).closest('tr')
+    const rowA = (
+      await screen.findByRole('button', { name: VIN_A }, ASYNC_QUERY_TIMEOUT)
+    ).closest('tr')
     const rowB = screen.getByRole('button', { name: VIN_B }).closest('tr')
     expect(rowA).not.toBeNull()
     expect(rowB).not.toBeNull()

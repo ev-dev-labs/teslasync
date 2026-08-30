@@ -61,6 +61,31 @@ func TestIsChargeComplete(t *testing.T) {
 	}
 }
 
+func TestIsChargeEnded(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected bool
+	}{
+		{"DetailedChargeStateComplete", true},
+		{"Stopped", true},
+		{"Disconnected", true},
+		{"NoPower", true},
+		{"DetailedChargeStateNoPower", true},
+		{"Charging", false},
+		{"Starting", false},
+		{"Unknown", false},
+		{"NotComplete", false},
+		{"", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			if got := IsChargeEnded(tt.input); got != tt.expected {
+				t.Errorf("IsChargeEnded(%q) = %v, want %v", tt.input, got, tt.expected)
+			}
+		})
+	}
+}
+
 func TestParseEnumBool(t *testing.T) {
 	tests := []struct {
 		name     string

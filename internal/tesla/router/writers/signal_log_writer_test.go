@@ -46,10 +46,26 @@ func assertSignalLogCallShape(t *testing.T, call recordedCall) {
 	// rather than the full LHS=EXCLUDED.RHS clause so the assertion
 	// stays robust against future alignment-spacing changes in
 	// signalLogInsertSQL.
-	for _, col := range []string{"value_kind", "str_value", "bool_value", "int_value", "float_value", "time_value"} {
+	for _, col := range []string{
+		"value_kind",
+		"str_value",
+		"bool_value",
+		"int_value",
+		"float_value",
+		"time_value",
+		"normalization_version",
+		"ingest_origin",
+		"source_emitted_at",
+		"received_at",
+	} {
 		if !strings.Contains(call.SQL, "EXCLUDED."+col) {
 			t.Errorf("SQL missing EXCLUDED.%s in update list: %q", col, call.SQL)
 		}
+	}
+	if !strings.Contains(signalLogInsertSQL, "normalization_write_token") ||
+		!strings.Contains(signalLogInsertSQL, "provenance_write_token") ||
+		!strings.Contains(signalLogInsertSQL, "NOT COALESCE") {
+		t.Error("conflict update must toggle independent normalization and provenance tokens")
 	}
 }
 
@@ -140,8 +156,8 @@ func TestSignalLogWriter_TypeMatrix(t *testing.T) {
 			call := rec.calls[0]
 			assertSignalLogCallShape(t, call)
 
-			if got := len(call.Args); got != 9 {
-				t.Fatalf("Args=%d, want 9 ($1 vin .. $9 time_value)", got)
+			if got := len(call.Args); got != 13 {
+				t.Fatalf("Args=%d, want 13 ($1 vin .. $10 normalization_version, $11-$13 provenance)", got)
 			}
 			if got := call.Args[0]; got != vin {
 				t.Errorf("$1 vin = %v, want %v", got, vin)
@@ -170,7 +186,48 @@ func TestSignalLogWriter_TypeMatrix(t *testing.T) {
 					t.Errorf("$%d %s = %v (%T), want nil (cold-path invariant: exactly one typed column non-null)", argIndex+1, col, got, got)
 				}
 			}
+			if got := call.Args[9]; got != signalLogNormalizationVersion {
+				t.Errorf("$10 normalization_version = %v, want %d", got, signalLogNormalizationVersion)
+			}
+			if got := call.Args[10]; got != codec.IngestOriginUnknown {
+				t.Errorf("$11 ingest_origin = %v, want explicit unknown", got)
+			}
+			if got := call.Args[11]; got != nil {
+				t.Errorf("$12 source_emitted_at = %v, want nil without source evidence", got)
+			}
+			if got := call.Args[12]; got != nil {
+				t.Errorf("$13 received_at = %v, want nil when unavailable", got)
+			}
 		})
+	}
+}
+
+func TestSignalLogWriter_StampedProvenancePersistsAtomically(t *testing.T) {
+	emittedAt := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	receivedAt := emittedAt.Add(2 * time.Second)
+	rec := &recorder{rows: 1}
+	w := newSignalLogTestWriter(t, rec)
+	err := w.Write(context.Background(), codec.Atomic{
+		Field:           "Soc",
+		Value:           float32(42),
+		EmittedAt:       emittedAt,
+		VehicleID:       "VIN",
+		IngestOrigin:    codec.IngestOriginFleetTelemetryMQTT,
+		SourceEmittedAt: &emittedAt,
+		ReceivedAt:      &receivedAt,
+	}, router.Entry{Field: "Soc", Destination: router.DestSignalLog})
+	if err != nil {
+		t.Fatalf("Write: %v", err)
+	}
+	call := rec.calls[0]
+	if got := call.Args[10]; got != codec.IngestOriginFleetTelemetryMQTT {
+		t.Errorf("$11 ingest_origin = %v, want fleet_telemetry_mqtt", got)
+	}
+	if got := call.Args[11]; !reflect.DeepEqual(got, emittedAt) {
+		t.Errorf("$12 source_emitted_at = %v, want %v", got, emittedAt)
+	}
+	if got := call.Args[12]; !reflect.DeepEqual(got, receivedAt) {
+		t.Errorf("$13 received_at = %v, want %v", got, receivedAt)
 	}
 }
 

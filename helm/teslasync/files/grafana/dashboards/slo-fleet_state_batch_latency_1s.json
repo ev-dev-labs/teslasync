@@ -1,0 +1,235 @@
+{
+  "uid": "slo-fleet_state_batch_latency_1s",
+  "title": "SLO: fleet_state_batch_latency_1s",
+  "description": "The fleet batch current-state read must complete within one second so the SPA posture panel stays responsive at fleet scale.",
+  "tags": [
+    "slo",
+    "owner:platform",
+    "http",
+    "fleet",
+    "latency"
+  ],
+  "schemaVersion": 38,
+  "version": 1,
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
+  "refresh": "30s",
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "SLI (5m)",
+      "description": "Current good/valid ratio.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:fleet_state_batch_latency_1s:ratio_rate5m",
+          "legendFormat": "ratio_5m"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      }
+    },
+    {
+      "id": 2,
+      "type": "stat",
+      "title": "Objective",
+      "description": "SLO target.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 6,
+        "y": 0,
+        "w": 6,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "vector(0.99)",
+          "legendFormat": "objective"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      }
+    },
+    {
+      "id": 3,
+      "type": "stat",
+      "title": "Error budget remaining (30d)",
+      "description": "1 - (1 - SLI_30d) / (1 - objective). Negative = budget blown.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "1 - ((1 - slo:fleet_state_batch_latency_1s:ratio_rate30d) / (1 - 0.99))",
+          "legendFormat": "budget_remaining"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      }
+    },
+    {
+      "id": 4,
+      "type": "timeseries",
+      "title": "SLI over time (5m / 1h / 6h)",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "slo:fleet_state_batch_latency_1s:ratio_rate5m",
+          "legendFormat": "5m"
+        },
+        {
+          "refId": "B",
+          "expr": "slo:fleet_state_batch_latency_1s:ratio_rate1h",
+          "legendFormat": "1h"
+        },
+        {
+          "refId": "C",
+          "expr": "slo:fleet_state_batch_latency_1s:ratio_rate6h",
+          "legendFormat": "6h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percentunit",
+          "min": 0,
+          "max": 1,
+          "decimals": 3
+        },
+        "overrides": null
+      }
+    },
+    {
+      "id": 5,
+      "type": "timeseries",
+      "title": "Burn rate (1h / 6h)",
+      "description": "Bad-event ratio multiplied so the y-axis is in 'budgets per hour' units.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 12,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(1 - slo:fleet_state_batch_latency_1s:ratio_rate1h) / (1 - 0.99)",
+          "legendFormat": "1h"
+        },
+        {
+          "refId": "B",
+          "expr": "(1 - slo:fleet_state_batch_latency_1s:ratio_rate6h) / (1 - 0.99)",
+          "legendFormat": "6h"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 3
+        },
+        "overrides": null
+      }
+    },
+    {
+      "id": 6,
+      "type": "timeseries",
+      "title": "Latency (with Tempo exemplars)",
+      "description": "Histogram of the underlying SLI denominator. Exemplars link to Tempo for trace IDs that touched the latency bucket.",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "DS_TESLASYNC_PROMETHEUS"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 20,
+        "w": 24,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "histogram_quantile(0.99, sum by (le) (rate(teslasync_red_http_request_duration_seconds_bucket{route=\"/api/v1/vehicles/states\"}[5m])))",
+          "legendFormat": "p99",
+          "exemplar": true
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s"
+        },
+        "overrides": null
+      }
+    }
+  ],
+  "templating": {
+    "list": []
+  },
+  "links": [
+    {
+      "title": "Tempo (traces)",
+      "type": "link",
+      "url": "/explore?left=%7B%22datasource%22:%22tempo%22%7D"
+    }
+  ],
+  "annotations": {
+    "list": []
+  }
+}

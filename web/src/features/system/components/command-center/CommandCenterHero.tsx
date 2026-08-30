@@ -149,7 +149,7 @@ export function CommandCenterHero({
             />
           </div>
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: live vehicle state and permissions determine availability in this panel */
             icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
             title={t('commands.hero.noTelemetryTitle', 'Live state unavailable')}
             message={t(

@@ -473,7 +473,7 @@ func TestT06_RedactsBodyFieldsByCaseInsensitiveKey(t *testing.T) {
 	srv := httptest.NewServer(newTestRouterWithLogger(t, store, true))
 	defer srv.Close()
 
-	body := `{"username":"u","password":"p","api_token":"t","Note":"keep","nested":{"secret":"s","ok":"k"},"list":[{"PASSWORD":"x","label":"a"}]}`
+	body := `{"username":"u","password":"p","api_token":"t","access_key":"a","account_key":"b","private_key":"c","signing_key":"d","user_key":"e","key":"f","vin":"5YJ3E1EA7JF000123","email":"owner@example.com","latitude":37.7749,"savings":"keep","driving":"keep","moving":"keep","tokens":"keep","max_tokens":42,"Note":"keep","nested":{"secret":"s","ok":"k"},"push_subscription":{"keys":{"p256dh":"push-public-key","auth":"push-auth-secret"}},"push_fields":{"p256dh":"push-public-key","auth":"push-auth-secret"},"list":[{"PASSWORD":"x","label":"a"}]}`
 	resp, err := http.Post(srv.URL+"/api/v1/vehicles", "application/json", strings.NewReader(body))
 	if err != nil {
 		t.Fatalf("POST failed: %v", err)
@@ -499,6 +499,22 @@ func TestT06_RedactsBodyFieldsByCaseInsensitiveKey(t *testing.T) {
 	if got := parsed["api_token"]; got != "REDACTED" {
 		t.Errorf("api_token=%v, want REDACTED", got)
 	}
+	for _, field := range []string{"access_key", "account_key", "private_key", "signing_key", "user_key", "key", "vin", "email", "latitude"} {
+		if got := parsed[field]; got != "REDACTED" {
+			t.Errorf("%s=%v, want REDACTED", field, got)
+		}
+	}
+	for _, field := range []string{"savings", "driving", "moving"} {
+		if got := parsed[field]; got != "keep" {
+			t.Errorf("%s=%v, want keep", field, got)
+		}
+	}
+	if got := parsed["tokens"]; got != "keep" {
+		t.Errorf("tokens=%v, want keep", got)
+	}
+	if got := parsed["max_tokens"]; got != float64(42) {
+		t.Errorf("max_tokens=%v, want 42", got)
+	}
 	if got := parsed["username"]; got != "u" {
 		t.Errorf("username=%v, want u (kept)", got)
 	}
@@ -511,6 +527,16 @@ func TestT06_RedactsBodyFieldsByCaseInsensitiveKey(t *testing.T) {
 	}
 	if got := nested["ok"]; got != "k" {
 		t.Errorf("nested.ok=%v, want k (kept)", got)
+	}
+	push, _ := parsed["push_subscription"].(map[string]any)
+	if got := push["keys"]; got != "REDACTED" {
+		t.Errorf("push_subscription.keys=%v, want REDACTED", got)
+	}
+	pushFields, _ := parsed["push_fields"].(map[string]any)
+	for _, field := range []string{"p256dh", "auth"} {
+		if got := pushFields[field]; got != "REDACTED" {
+			t.Errorf("push_fields.%s=%v, want REDACTED", field, got)
+		}
 	}
 	list, _ := parsed["list"].([]any)
 	if len(list) != 1 {

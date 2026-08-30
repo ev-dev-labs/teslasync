@@ -282,7 +282,7 @@ describe('CommandHistoryPage — happy path', () => {
 
     await waitForCount(5);
 
-    expect(screen.getByRole('heading', { level: 3, name: 'Daily Activity' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
     expect(screen.getByRole('heading', { level: 3, name: 'Top Commands' })).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Status Breakdown' })).toBeInTheDocument();
 
@@ -323,7 +323,7 @@ describe('CommandHistoryPage — loading / error / empty branches', () => {
       expect(container.querySelectorAll('.animate-pulse').length).toBeGreaterThan(0),
     );
     // Panels stay mounted; the KPI band is present even while the feed loads.
-    expect(screen.getByRole('heading', { level: 3, name: 'Daily Activity' })).toBeInTheDocument();
+    expect(screen.getAllByRole('heading', { level: 3, name: 'Daily Activity' }).length).toBeGreaterThan(0);
     expect(kpiBand()).toBeInTheDocument();
     // No analytics empty copy while genuinely loading.
     expect(screen.queryByText('No commands in the selected range')).not.toBeInTheDocument();

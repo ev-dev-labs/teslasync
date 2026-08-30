@@ -244,11 +244,13 @@ describe('YearChargingBreakdown — empty state', () => {
     expect(screen.queryByRole('list')).toBeNull();
     expect(screen.queryByText('Supercharger')).toBeNull();
 
-    // The title + accessible chart frame stay mounted (never a blank panel).
+    // The title + accessible figure stay mounted (never a blank panel), while
+    // the image role is withheld because there is no chart body to describe.
     expect(screen.getByRole('heading', { level: 3, name: 'Charging mix' })).toBeInTheDocument();
+    expect(screen.getByRole('figure', { name: 'Charging mix' })).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Donut chart of charging mix by connector type' }),
-    ).toBeInTheDocument();
+      screen.queryByRole('img', { name: 'Donut chart of charging mix by connector type' }),
+    ).toBeNull();
   });
 });
 

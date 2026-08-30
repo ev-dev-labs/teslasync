@@ -50,9 +50,11 @@ func TestClassifyError_RetryableSentinels(t *testing.T) {
 		{"vehicle_asleep", tesla.ErrVehicleAsleep},
 		{"rate_limited", domain.ErrRateLimited},
 		{"external_api", domain.ErrExternalAPI},
+		{"budget_unavailable", tesla.ErrBudgetUnavailable},
 		{"wrapped_vehicle_asleep", fmt.Errorf("wake failed: %w", tesla.ErrVehicleAsleep)},
 		{"wrapped_rate_limited", fmt.Errorf("call tesla: %w", domain.ErrRateLimited)},
 		{"wrapped_external_api", fmt.Errorf("geocode: %w", domain.ErrExternalAPI)},
+		{"wrapped_budget_unavailable", fmt.Errorf("read budget snapshot: %w", tesla.ErrBudgetUnavailable)},
 	}
 
 	for _, tt := range tests {
@@ -176,6 +178,104 @@ func TestClassifyError_SentinelPrecedenceOverString(t *testing.T) {
 	err := fmt.Errorf("timeout waiting for auth: %w", domain.ErrUnauthorized)
 	if got := ClassifyError(err); got != ErrorPermanent {
 		t.Errorf("sentinel should take precedence: got %s, want permanent", got)
+	}
+}
+
+// TestClassifyError_BudgetExceededIsPermanent pins the Fleet API daily
+// budget exhaustion classification: retrying an ErrBudgetExceeded action
+// cannot succeed before the next UTC reset, so it must be permanent
+// regardless of how deeply the sentinel is wrapped.
+func TestClassifyError_BudgetExceededIsPermanent(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"bare_sentinel", tesla.ErrBudgetExceeded},
+		{"wrapped_once", fmt.Errorf("send command: %w", tesla.ErrBudgetExceeded)},
+		{"deeply_wrapped", fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", tesla.ErrBudgetExceeded))},
+		{"typed_budget_exceeded_error", &tesla.BudgetExceededError{
+			Category: tesla.BudgetCategoryCommand,
+			Snapshot: tesla.BudgetSnapshot{DailyLimitMicroUSD: 1_000_000, EstimatedCostMicroUSD: 1_000_000},
+		}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ClassifyError(tt.err); got != ErrorPermanent {
+				t.Errorf("ClassifyError(%v) = %s, want permanent", tt.err, got)
+			}
+		})
+	}
+}
+
+// TestClassifyError_BudgetUnavailableIsRetryable pins the budget evidence
+// store outage as retryable — distinct from ErrBudgetExceeded, since the
+// store may recover independently of the UTC budget window.
+func TestClassifyError_BudgetUnavailableIsRetryable(t *testing.T) {
+	tests := []struct {
+		name string
+		err  error
+	}{
+		{"bare_sentinel", tesla.ErrBudgetUnavailable},
+		{"wrapped_once", fmt.Errorf("read budget snapshot: %w", tesla.ErrBudgetUnavailable)},
+		{"deeply_wrapped", fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", tesla.ErrBudgetUnavailable))},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := ClassifyError(tt.err); got != ErrorRetryable {
+				t.Errorf("ClassifyError(%v) = %s, want retryable", tt.err, got)
+			}
+		})
+	}
+}
+
+// TestClassifyError_BudgetExceededPrecedesRateLimitedString guards against
+// a regression where ErrBudgetExceeded's message ("...daily budget
+// exceeded...") is misclassified retryable by the generic "too many
+// requests" substring fallback instead of the dedicated permanent sentinel
+// check.
+func TestClassifyError_BudgetExceededPrecedesRateLimitedString(t *testing.T) {
+	err := &tesla.BudgetExceededError{
+		Category: tesla.BudgetCategoryCommand,
+		Snapshot: tesla.BudgetSnapshot{DailyLimitMicroUSD: 1_000_000, EstimatedCostMicroUSD: 1_000_000},
+	}
+	if got := ClassifyError(err); got != ErrorPermanent {
+		t.Errorf("ClassifyError(%v) = %s, want permanent (sentinel must win over string fallback)", err, got)
+	}
+}
+
+func TestEvaluate_BudgetExceeded_NeverRetries(t *testing.T) {
+	rp := NewRetryPolicy(WithJitter(0))
+
+	err := fmt.Errorf("send command: %w", tesla.ErrBudgetExceeded)
+	dec := rp.Evaluate(err, 0, 3)
+
+	if dec.ShouldRetry {
+		t.Fatal("expected ShouldRetry=false for Fleet API budget exceeded")
+	}
+	if dec.ErrorClass != ErrorPermanent {
+		t.Errorf("ErrorClass = %s, want permanent", dec.ErrorClass)
+	}
+	if dec.Delay != 0 {
+		t.Errorf("Delay = %v, want 0 for permanent error", dec.Delay)
+	}
+}
+
+func TestEvaluate_BudgetUnavailable_RetriesWithBackoff(t *testing.T) {
+	rp := NewRetryPolicy(WithJitter(0))
+
+	err := fmt.Errorf("read budget snapshot: %w", tesla.ErrBudgetUnavailable)
+	dec := rp.Evaluate(err, 0, 3)
+
+	if !dec.ShouldRetry {
+		t.Fatal("expected ShouldRetry=true for Fleet API budget evidence unavailable")
+	}
+	if dec.ErrorClass != ErrorRetryable {
+		t.Errorf("ErrorClass = %s, want retryable", dec.ErrorClass)
+	}
+	if dec.Delay != 5*time.Second {
+		t.Errorf("Delay = %v, want 5s", dec.Delay)
 	}
 }
 

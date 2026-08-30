@@ -6,6 +6,7 @@ import {
   Tooltip, ReferenceLine,
   chartGrid, axisTickSm, useThemeChartPalette,
   AREA_DEFAULTS, areaGradient,
+  EmbeddedChart,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -68,34 +69,43 @@ export default function BatteryDegradationTrendWidget({ vehicleId, size }: Widge
     void refetch();
   }, [refetch]);
 
-  const chart = chartData.length > 1 ? (
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
-        {areaGradient('degradation-grad', palette.series[1])}
-        {chartGrid}
-        <XAxis dataKey="month" {...axisTickSm} />
-        <YAxis
-          domain={['dataMin - 2', 100]}
-          tickFormatter={(v: number) => `${v}%`}
-          {...axisTickSm}
-        />
-        <Tooltip content={<ChartTooltip />} />
-        <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.4} />
-        <Area
-          {...AREA_DEFAULTS}
-          dataKey="health"
-          stroke={palette.series[1]}
-          fill="url(#degradation-grad)"
-          name={t('widget.healthPct', 'Health %')}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-  ) : (
-    <div className="flex h-full items-center justify-center">
-      <p className="text-xs text-[var(--text-muted)]">
-        {t('widget.needMoreData', 'More data needed for trend')}
-      </p>
-    </div>
+  const chart = (
+    <EmbeddedChart
+      title={t('widget.batteryDegradation', 'Battery Degradation')}
+      ariaLabel={t(
+        'widget.batteryDegradationChart.aria',
+        'Monthly battery health trend',
+      )}
+      empty={chartData.length <= 1}
+      emptyMessage={t('widget.needMoreData', 'More data needed for trend')}
+      data={chartData}
+      dataColumns={[
+        { key: 'month', label: t('widget.batteryDegradationChart.month', 'Month') },
+        { key: 'health', label: t('widget.healthPct', 'Health %') },
+      ]}
+    >
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart data={chartData} margin={{ top: 4, right: 4, bottom: 0, left: -20 }}>
+          {areaGradient('degradation-grad', palette.series[1])}
+          {chartGrid}
+          <XAxis dataKey="month" {...axisTickSm} />
+          <YAxis
+            domain={['dataMin - 2', 100]}
+            tickFormatter={(v: number) => `${v}%`}
+            {...axisTickSm}
+          />
+          <Tooltip content={<ChartTooltip />} />
+          <ReferenceLine y={80} stroke="#ef4444" strokeDasharray="4 4" strokeOpacity={0.4} />
+          <Area
+            {...AREA_DEFAULTS}
+            dataKey="health"
+            stroke={palette.series[1]}
+            fill="url(#degradation-grad)"
+            name={t('widget.healthPct', 'Health %')}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </EmbeddedChart>
   );
 
   return (

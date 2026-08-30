@@ -1,0 +1,214 @@
+# OPS-04 — Migration review manifest.
+#
+# Every schema migration added after `baseline_version` MUST have an entry
+# here recording the four review dimensions the gate enforces:
+#
+#   forward_compatible  — can the PREVIOUS application revision still run
+#                         against the NEW schema? (Required for canary /
+#                         rolling deploys, where both revisions are live.)
+#   rollback_notes      — what an operator must do if the deploy is rolled
+#                         back after this migration applied.
+#   expected_duration   — measured or estimated apply time on production
+#                         data volumes.
+#   lock_risk           — none | low | medium | high, with the locks taken.
+#
+# Enforced by `go run ./cmd/ops-gate -check migrations`, which additionally
+# runs static SQL lock-risk analysis over EVERY migration and fails when a
+# declared lock_risk is weaker than the statically detected one.
+version: 1
+
+# Migrations at or below this version predate the manifest and are exempt
+# from the entry requirement (they still get static analysis, reported as
+# advisories).
+#
+# THE RATCHET IS ENFORCED, not merely asserted. A static gate cannot read
+# git history, so it cannot distinguish a legitimate baseline from one
+# raised this morning to skip a review. Instead both boundary values are
+# pinned in `internal/ops/migrations.go`
+# (`PinnedMigrationBaseline` / `PinnedBackfillThrough`) and the gate fails
+# if this file disagrees with them. Raising the baseline therefore needs a
+# reviewed Go change as well as a YAML change — it cannot be done in a
+# one-character diff.
+#
+# What this does NOT prove: that the pre-baseline migrations were ever
+# reviewed. They were not; they predate the manifest. The baseline is an
+# honest "we start from here", not a claim about history.
+baseline_version: 229
+
+# Entries at or below this version were backfilled from static analysis
+# when the manifest was introduced, so they may use the `ops-gate-backfill`
+# reviewer sentinel. Anything above it MUST name a real GitHub handle.
+# Also pinned in code (see above).
+backfill_through: 231
+
+# The review fields the gate requires on every non-exempt entry.
+review_requirements:
+  - forward_compatible
+  - rollback_notes
+  - expected_duration
+  - lock_risk
+  - reviewed_by
+
+lock_risk_levels: [none, low, medium, high]
+
+# Static analysis rules. `detects` is documentation; the implementation
+# lives in internal/ops/migrations.go and is covered by unit tests so the
+# two cannot silently diverge.
+static_rules:
+  - id: index-without-concurrently
+    level: high
+    detects: CREATE INDEX on a pre-existing table without CONCURRENTLY (ShareLock blocks writes).
+  - id: not-null-without-default
+    level: high
+    detects: ALTER TABLE ... ADD COLUMN ... NOT NULL without DEFAULT (full table rewrite on PG < 11 semantics / validation scan).
+  - id: column-type-change
+    level: high
+    detects: ALTER TABLE ... ALTER COLUMN ... TYPE (AccessExclusiveLock + rewrite).
+  - id: drop-column-or-table
+    level: medium
+    detects: DROP COLUMN / DROP TABLE (AccessExclusiveLock, irreversible data loss).
+  - id: validated-constraint
+    level: medium
+    detects: ADD CONSTRAINT ... CHECK/FOREIGN KEY without NOT VALID (full scan under lock).
+  - id: unqualified-dml
+    level: medium
+    detects: UPDATE or DELETE without a WHERE clause (whole-table row locks).
+  - id: create-table-only
+    level: none
+    detects: Migration only creates new objects — no lock contention with live traffic.
+
+migrations:
+  - version: 230
+    name: onboarding_setup_state
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Purely additive: creates `onboarding_state` and seeds a single row.
+      The previous application revision never reads or writes the table,
+      so old and new pods coexist safely.
+    rollback_notes: >-
+      `migrate down 1` drops `onboarding_state`. Safe to leave applied on
+      rollback — the old revision ignores it. Only drop the table if the
+      feature is abandoned; dropping it loses the operator's
+      "setup completed" acknowledgement and re-shows the onboarding wizard.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: >-
+      CREATE TABLE + two guarded INSERTs against a brand-new relation.
+      No lock is taken on any table serving live traffic.
+    reversible: true
+    reviewed_by: ops-gate-backfill
+    reviewed_on: "2026-08-26"
+
+  - version: 231
+    name: data_repair_cases
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds four new tables plus two indexes on the existing `drives` and
+      `charging_sessions` tables. No existing column is altered or
+      dropped, so the previous revision's queries and INSERTs are
+      unaffected and old/new pods coexist.
+    rollback_notes: >-
+      `migrate down 1` drops the four data_repair_* tables and the two
+      helper indexes. PREFER LEAVING IT APPLIED on an application
+      rollback — the old revision simply never touches the tables, while
+      dropping them destroys any operator case history and quarantine
+      rows recorded since the deploy. Only run the down migration when
+      the feature is being permanently removed, and export
+      `data_repair_cases` / `data_repair_quarantine` first.
+    expected_duration: seconds to minutes
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: >-
+      `CREATE INDEX ... ON drives` and `CREATE INDEX ... ON
+      charging_sessions` are NOT CONCURRENTLY, so each takes a SHARE lock
+      that blocks writes to those tables for the duration of the build.
+      On a large fleet history this can stall telemetry-driven session
+      writes. Mitigation for future re-application: build both indexes
+      with CREATE INDEX CONCURRENTLY outside the migration transaction,
+      or schedule the deploy in a low-ingest window.
+    reversible: true
+    reviewed_by: ops-gate-backfill
+    reviewed_on: "2026-08-26"
+
+  - version: 232
+    name: signal_log_normalization_version
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds two nullable provenance columns and a defensive update trigger to
+      `signal_log`. The previous application revision omits both columns, so
+      old and new pods can write concurrently during a rolling deployment.
+      If an old pod overwrites a row written by a new pod, the unchanged
+      attestation token causes the trigger to clear the trusted version.
+    rollback_notes: >-
+      Leave the migration applied if the application is rolled back. Older
+      revisions ignore the nullable column, while dropping it destroys the
+      provenance needed to keep legacy unit conversions out of analytics.
+      Only run the down migration if the provenance contract is permanently
+      abandoned.
+    expected_duration: seconds to minutes
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: >-
+      ALTER TABLE ADD COLUMN takes an ACCESS EXCLUSIVE lock on the signal_log
+      hypertable and TimescaleDB propagates the nullable metadata columns and
+      trigger to existing chunks. There is no default, validation scan, or row
+      rewrite, so hold time should be brief; deploy during a low-ingest window
+      and let the migration complete before starting new pods.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-08-28"
+
+  - version: 233
+    name: tesla_api_budget_usage
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Purely additive: creates one new aggregate table that previous application
+      revisions do not read or write. Old and new pods can coexist during a
+      rolling deployment without changing any existing query or write path.
+    rollback_notes: >-
+      Leave the table applied when rolling the application back. Older
+      revisions ignore it, while retaining the rows preserves the current
+      billing-period evidence. Drop it only if Fleet API budget enforcement is
+      permanently removed; doing so deletes spend counters for prior UTC days.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: >-
+      CREATE TABLE and COMMENT operate only on a new relation and take no lock
+      on tables serving live traffic.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-08-28"
+
+  - version: 234
+    name: signal_log_ingest_provenance
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds nullable signal_log metadata, a NOT VALID CHECK constraint, and the
+      independent signal_transport_evidence hypertable. Previous writers omit
+      the columns and cannot populate the evidence table. If one overwrites a
+      new writer's typed payload, the guard clears source-time/receipt evidence
+      before the capture trigger runs, preventing a false transport claim.
+      New writers retain one HTTP and one MQTT observation per source key
+      without changing signal_log's canonical primary key.
+    rollback_notes: >-
+      Prefer leaving this additive migration applied during an application
+      rollback; older writers safely ignore the nullable columns and the guard
+      prevents them from retaining trusted provenance after a payload change.
+      Down drops the capture trigger and evidence hypertable, then restores the
+      exact 000232 normalization-only trigger body before dropping DT-01
+      columns. This permanently removes independent transport evidence.
+    expected_duration: seconds to minutes
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: >-
+      ALTER TABLE metadata and CREATE TRIGGER take an ACCESS EXCLUSIVE lock on
+      signal_log and may propagate to TimescaleDB chunks. The new hypertable
+      and its vehicle/source-time-leading primary index contain no existing
+      rows. Existing columns have no defaults and the CHECK is NOT VALID, so
+      there is no signal_log rewrite or validation scan; deploy in a
+      low-ingest window before rolling new pods.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-08-29"

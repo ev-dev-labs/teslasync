@@ -1,5 +1,5 @@
 import { lazy, Suspense, memo, type ReactNode } from 'react';
-import { Heading, Text } from '@/components/ui';
+import { Heading, Table, Text } from '@/components/ui';
 import { CodeBlock } from './CodeBlock';
 
 /**
@@ -105,9 +105,9 @@ const ReactMarkdownLazy = lazy(async () => {
           table({ children }) {
             return (
               <div className="overflow-x-auto my-2">
-                <table className="text-xs border-collapse border border-[var(--border-subtle)]">
+                <Table className="text-xs border border-[var(--border-subtle)]">
                   {children}
-                </table>
+                </Table>
               </div>
             );
           },

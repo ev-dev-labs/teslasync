@@ -72,8 +72,24 @@ function makeWrapper() {
 }
 
 /** Reads the [url, options] pair from the Nth mocked request call. */
-function callArgs(n = 0): [string, { signal?: unknown; method?: string; body?: string }] {
-  return mockedRequest.mock.calls[n] as [string, { signal?: unknown; method?: string; body?: string }];
+function callArgs(n = 0): [
+  string,
+  {
+    signal?: unknown;
+    method?: string;
+    body?: string;
+    requiresLiveMode?: boolean;
+  },
+] {
+  return mockedRequest.mock.calls[n] as [
+    string,
+    {
+      signal?: unknown;
+      method?: string;
+      body?: string;
+      requiresLiveMode?: boolean;
+    },
+  ];
 }
 
 /** Lets a disabled hook settle so we can assert it never fired. */
@@ -519,6 +535,7 @@ describe('useBulkDeleteDrives', () => {
     const [url, opts] = callArgs();
     expect(url).toBe('/drives/bulk');
     expect(opts.method).toBe('DELETE');
+    expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual({ ids: [1, 2, 3] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['drives'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['drive'] });

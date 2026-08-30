@@ -38,6 +38,7 @@ const toast = vi.hoisted(() => ({
 }))
 vi.mock('@/components/feedback/Toast', () => ({
   useToast: () => toast,
+  useOptionalToast: () => toast,
 }))
 
 import { request } from '@/api/client'

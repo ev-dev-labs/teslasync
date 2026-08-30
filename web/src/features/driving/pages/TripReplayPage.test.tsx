@@ -363,7 +363,9 @@ describe('TripReplayPage — page state branches', () => {
     };
     renderPage();
 
-    expect(screen.getByText('drive fetch exploded')).toBeInTheDocument();
+    // ErrorDisplay renders production-safe structured copy rather than the
+    // raw error.message — status-less errors fall into the network branch.
+    expect(screen.getByText("Can't reach server")).toBeInTheDocument();
     expect(screen.queryByText('Distance')).toBeNull();
     expect(screen.queryByTestId('playback-controls')).toBeNull();
   });

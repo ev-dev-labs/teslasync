@@ -58,6 +58,7 @@ vi.mock('framer-motion', () => {
     motion: new Proxy({} as Record<string, any>, { get: () => renderDiv }),
     AnimatePresence: ({ children }: { children: React.ReactNode }) =>
       React.createElement(React.Fragment, null, children),
+    useReducedMotion: () => false,
   }
 })
 
@@ -206,8 +207,11 @@ describe('InstallPrompt', () => {
     fireInstallEvent(event)
 
     expect(screen.queryByTestId('install-prompt')).not.toBeInTheDocument()
-    // The listener is never attached, so the event is left untouched.
-    expect(event.defaultPrevented).toBe(false)
+    // The event IS still captured (and the browser's mini-infobar suppressed)
+    // so the offer can be re-surfaced once the 14-day snooze expires without
+    // waiting for Chromium to fire `beforeinstallprompt` a second time —
+    // which it only does on a fresh navigation.
+    expect(event.defaultPrevented).toBe(true)
   })
 
   it('stays hidden when running as an installed standalone PWA', () => {

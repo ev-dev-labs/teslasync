@@ -13,6 +13,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
@@ -110,20 +111,34 @@ type savedViewUpdateRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// List returns the saved views for the requesting user scoped to the
-// given route (taken from the `route` query param).
+// List returns saved views for the requesting user. When `route` is supplied,
+// results are scoped to that page; omitting it returns all routes for global
+// discovery surfaces such as the command palette.
 //
 //	GET /api/v1/saved-views?route=/drives
+//	GET /api/v1/saved-views
 func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
-	route, ok := normalizeRoute(r.URL.Query().Get("route"))
-	if !ok {
-		httpx.WriteError(w, http.StatusBadRequest, "route is required and must be a valid SPA path")
-		return
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.saved_views.list")
+	defer span.End()
+
+	filter := dbadmin.SavedViewListFilter{}
+	if rawRoute := strings.TrimSpace(r.URL.Query().Get("route")); rawRoute != "" {
+		route, ok := normalizeRoute(rawRoute)
+		if !ok {
+			httpx.WriteError(w, http.StatusBadRequest, "route must be a valid SPA path")
+			return
+		}
+		filter.Route = route
 	}
 
-	rows, err := h.repo.List(r.Context(), dbadmin.SavedViewListFilter{Route: route})
+	rows, err := h.repo.List(ctx, filter)
 	if err != nil {
-		log.Error().Err(err).Str("route", route).Msg("saved_views list failed")
+		span.RecordError(err)
+		log.Error().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Str("route", filter.Route).
+			Msg("saved_views list failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to list saved views")
 		return
 	}

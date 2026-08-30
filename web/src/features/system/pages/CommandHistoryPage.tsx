@@ -27,8 +27,8 @@ import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { RangePicker } from '@/components/forms';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ChartLegend,
+  ResponsiveContainer, ChartTooltip, CHART_COLORS, axisTickSm, EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
@@ -141,7 +141,7 @@ export default function CommandHistoryPage() {
   // (deep-links from notifications), persists across pages via localStorage,
   // and falls back to the first vehicle. We mirror picker changes back to
   // the URL so /command-history?vehicle_id=N stays bookmarkable.
-  const { vehicleId, vehicles, setVehicleId } = useSelectedVehicle();
+  const { vehicleId, vehicles } = useSelectedVehicle();
   const activeVehicleId = vehicleId != null ? String(vehicleId) : undefined;
   const noVehicle = !activeVehicleId;
 
@@ -195,7 +195,6 @@ export default function CommandHistoryPage() {
   const handleVehicleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const n = Number(e.target.value);
     if (Number.isFinite(n) && n > 0) {
-      setVehicleId(n);
       setUrl({ vehicle_id: e.target.value, page: null });
     }
   };
@@ -472,30 +471,36 @@ export default function CommandHistoryPage() {
               <BarChart3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               {t('commandHistory.dailyActivity', 'Daily Activity')}
             </PanelTitle>
-            {isLoading ? (
-              <Skeleton height={240} />
-            ) : error ? (
-              <QueryError error={error} onRetry={() => refetch()} />
-            ) : dailyActivity.length === 0 ? (
-              <EmptyState /* no-action: transient — no command activity in the selected window */
-                icon={<BarChart3 className="h-8 w-8" />}
-                message={analyticsEmptyMsg}
-              />
-            ) : (
-              <div className="h-56 sm:h-64 xl:h-72">
+            <EmbeddedChart
+              chartKey="system-command-daily-activity"
+              title={t('commandHistory.dailyActivity', 'Daily Activity')}
+              ariaLabel={t('commandHistory.dailyActivityAria', 'Stacked bar chart of daily command success and failure counts')}
+              loading={isLoading}
+              error={error ?? undefined}
+              onRetry={() => refetch()}
+              empty={!isLoading && !error && dailyActivity.length === 0}
+              emptyMessage={analyticsEmptyMsg}
+              data={dailyActivity}
+              dataColumns={[
+                { key: 'label', label: t('commandHistory.col.day', 'Day') },
+                { key: 'success', label: t('commandHistory.success', 'Success') },
+                { key: 'failed', label: t('commandHistory.failedLabel', 'Failed') },
+              ]}
+            >
+              {({ hiddenSeries }) => (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={dailyActivity}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="label" tick={axisTickSm} />
                     <YAxis tick={axisTickSm} allowDecimals={false} />
                     <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="success" name={t('commandHistory.success', 'Success')} stackId="a" fill={SUCCESS_COLOR} fillOpacity={0.85} />
-                    <Bar dataKey="failed" name={t('commandHistory.failedLabel', 'Failed')} stackId="a" fill={FAILED_COLOR} fillOpacity={0.85} radius={[4, 4, 0, 0]} />
+                    <ChartLegend />
+                    <Bar dataKey="success" name={t('commandHistory.success', 'Success')} stackId="a" fill={SUCCESS_COLOR} fillOpacity={0.85} hide={hiddenSeries?.isHidden('success') ?? false} />
+                    <Bar dataKey="failed" name={t('commandHistory.failedLabel', 'Failed')} stackId="a" fill={FAILED_COLOR} fillOpacity={0.85} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('failed') ?? false} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
-            )}
+              )}
+            </EmbeddedChart>
           </GlassPanel>
 
           {/* Top commands — most-used commands in the range. */}

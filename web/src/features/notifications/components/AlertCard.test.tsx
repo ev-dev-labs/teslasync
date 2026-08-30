@@ -51,7 +51,15 @@ function makeAlert(overrides: Partial<Alert> = {}): Alert {
 }
 
 type Handlers = Partial<
-  Pick<AlertCardProps, 'onMarkRead' | 'onAcknowledge' | 'onOpenDetail' | 'onReopen'>
+  Pick<
+    AlertCardProps,
+    | 'onMarkRead'
+    | 'onAcknowledge'
+    | 'onOpenDetail'
+    | 'onReopen'
+    | 'selected'
+    | 'onToggleSelect'
+  >
 >;
 
 function renderCard(alert: Alert, handlers: Handlers = {}) {
@@ -70,6 +78,8 @@ function renderCard(alert: Alert, handlers: Handlers = {}) {
         onAcknowledge={onAcknowledge}
         onOpenDetail={onOpenDetail}
         onReopen={onReopen}
+        selected={handlers.selected}
+        onToggleSelect={handlers.onToggleSelect}
       />
     );
   }
@@ -154,10 +164,20 @@ describe('AlertCard', () => {
     expect(screen.queryByText(/acknowledged by/i)).not.toBeInTheDocument();
   });
 
-  it('opens the audit timeline via onOpenDetail', () => {
+  it('opens the alert evidence drawer via onOpenDetail', () => {
     const { onOpenDetail } = renderCard(makeAlert());
-    fireEvent.click(screen.getByRole('button', { name: /audit timeline/i }));
+    fireEvent.click(screen.getByRole('button', { name: /inspect alert/i }));
     expect(onOpenDetail).toHaveBeenCalledTimes(1);
+  });
+
+  it('exposes an accessible controlled selection checkbox for bulk workflows', () => {
+    const onToggleSelect = vi.fn();
+    renderCard(makeAlert(), { selected: true, onToggleSelect });
+
+    const checkbox = screen.getByRole('checkbox', { name: 'Select Battery low' });
+    expect(checkbox).toBeChecked();
+    fireEvent.click(checkbox);
+    expect(onToggleSelect).toHaveBeenCalledWith(false);
   });
 
   it('links both "View context" affordances to the mapped page for a known signal', () => {

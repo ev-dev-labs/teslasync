@@ -174,9 +174,11 @@ describe('FeatureConfigTable — sorting (the bug this fix closes)', () => {
       'aria-sort',
       'descending',
     );
-    // The previously-active Feature column no longer advertises a sort.
-    expect(screen.getByRole('button', { name: 'Feature' }).closest('th')).not.toHaveAttribute(
+    // The previously-active Feature column drops back to the neutral
+    // `aria-sort="none"` that marks it sortable-but-inactive.
+    expect(screen.getByRole('button', { name: 'Feature' }).closest('th')).toHaveAttribute(
       'aria-sort',
+      'none',
     );
 
     // Second click on the same column → ascending → disabled first.

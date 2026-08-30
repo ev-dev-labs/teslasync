@@ -1,0 +1,87 @@
+{
+  "alerts": {
+    "toast": {
+      "title": "Alert",
+      "view": "View"
+    },
+    "viewContext": "View context",
+    "searchPlaceholder": "Search by title or message…",
+    "emptyTitle": "No alerts",
+    "noAlertsInRange": "No alerts in this range. Your fleet is running smoothly.",
+    "noAlertsInRangeDescription": "Alert rules continue monitoring new telemetry and will surface actionable events here.",
+    "noSearchResults": "No alerts match your search.",
+    "noSearchResultsDescription": "Try a broader title or message search, or clear the search to restore all alerts.",
+    "noneForFilterDescription": "Clear the active filters to review alerts in every status.",
+    "noAlerts": "Your fleet is running smoothly. Alerts will appear here.",
+    "noAlertsDescription": "Configured rules continue monitoring incoming fleet telemetry.",
+    "clearSearch": "Clear search",
+    "clearFilters": "Clear filters",
+    "tabFlash": "(!) ALERT — ",
+    "delete": {
+      "title": "Delete rule?",
+      "message": "This cannot be undone."
+    },
+    "signal": "Signal",
+    "ack": {
+      "button": "Acknowledge",
+      "buttonAcked": "Acknowledged",
+      "dialogTitle": "Acknowledge alert",
+      "noteLabel": "Note (optional)",
+      "notePlaceholder": "Optional: what's being done?",
+      "noteHint": "Up to {{max}} characters. Shared in the audit timeline.",
+      "submit": "Acknowledge",
+      "cancel": "Cancel",
+      "undo": "Undo",
+      "ackedBy": "Acknowledged by {{actor}}",
+      "ackedByAnonymous": "Acknowledged",
+      "ackedAt": "{{time}}",
+      "success": "Alert acknowledged"
+    },
+    "comment": {
+      "button": "Comment",
+      "dialogTitle": "Add comment",
+      "noteLabel": "Comment",
+      "notePlaceholder": "Add a note to the audit timeline…",
+      "submit": "Add comment",
+      "cancel": "Cancel"
+    },
+    "timeline": {
+      "title": "Audit timeline",
+      "anonymous": "Unknown",
+      "kind": {
+        "created": "Alert created",
+        "acknowledged": "Acknowledged by {{actor}}",
+        "reopened": "Reopened by {{actor}}",
+        "commented": "Comment by {{actor}}"
+      },
+      "kindAnonymous": {
+        "acknowledged": "Acknowledged",
+        "reopened": "Reopened",
+        "commented": "Comment added",
+        "created": "Alert created"
+      },
+      "empty": "No events yet"
+    },
+    "rule": "Rule",
+    "filterLabel": {
+      "search": "Search",
+      "status": "Status"
+    },
+    "unsavedRule": "You have an unsaved alert rule.",
+    "time": {
+      "minutesAgo": "{{count}}m ago",
+      "minutesAgo_one": "{{count}}m ago",
+      "minutesAgo_other": "{{count}}m ago",
+      "hoursAgo": "{{count}}h ago",
+      "hoursAgo_one": "{{count}}h ago",
+      "hoursAgo_other": "{{count}}h ago",
+      "daysAgo": "{{count}}d ago",
+      "daysAgo_one": "{{count}}d ago",
+      "daysAgo_other": "{{count}}d ago"
+    },
+    "count": "Alerts",
+    "day": "Day",
+    "type": "Alert type",
+    "typeDistributionAria": "Alert distribution by type"
+  }
+}

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Modal, Button } from '@/components/ui'
+import { Modal, Button } from '@/components/ui/runtime'
 import { Clock, AlertTriangle } from 'lucide-react'
 import { useSessionMonitor } from '@/hooks/useSessionMonitor'
 import { navigateToReauth } from '@/lib/resilience'

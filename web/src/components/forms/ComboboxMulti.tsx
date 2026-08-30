@@ -448,7 +448,7 @@ export function ComboboxMulti<T>(props: ComboboxMultiProps<T>) {
         )}
         {value.map((opt, i) => (
           <span key={getOptionKey(opt)} className={chipBase}>
-            <span className="truncate">
+            <span className="truncate" title={(getChipLabel ?? getOptionLabel)(opt)}>
               {(getChipLabel ?? getOptionLabel)(opt)}
             </span>
             <button

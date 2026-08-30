@@ -1,0 +1,150 @@
+title = "TeslaSync checkout secret scan"
+
+[extend]
+useDefault = true
+
+[[rules]]
+id = "refresh-token-assignment"
+description = "Detected a refresh-token assignment"
+regex = '''(?i)refresh[_-]?token\s*=\s*["']([A-Za-z0-9_-]{16,})["']'''
+secretGroup = 1
+keywords = ["refresh_token", "refresh-token"]
+
+[[allowlists]]
+description = "Generated dependencies, browser artifacts, and caches do not contain maintained source."
+paths = [
+  '''(^|/)node_modules/''',
+  '''(^|/)test-results/''',
+  '''(^|/)playwright-report/''',
+  '''(^|/)coverage/''',
+  '''(^|/)dist/''',
+  '''(^|/)\.cache/''',
+  '''(^|/)\.git/''',
+  '''(^|/)web/e2e/\.app-dist/''',
+]
+
+[[allowlists]]
+description = "Documented internal telemetry URL example"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)\.github/instructions/helm-docker\.instructions\.md$''']
+regexes = ['''http://teslasync-api:8080/api/v1/telemetry''']
+
+[[allowlists]]
+description = "Fleet comparison localStorage preference fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/features/analytics/pages/FleetComparePage\.tsx$''']
+regexes = ["BANNER_DISMISSED_KEY = 'phase40\\.compareBanner\\.dismissed\\.fleet'"]
+
+[[allowlists]]
+description = "Period comparison localStorage preference fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/features/analytics/pages/PeriodComparePage\.tsx$''']
+regexes = ["BANNER_DISMISSED_KEY = 'phase40\\.compareBanner\\.dismissed\\.period'"]
+
+[[allowlists]]
+description = "Departure chart identifier"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/features/driving/components/departure-forecast/DepartureForecastNext24Plot\.tsx$''']
+regexes = ['''chartKey="departure-forecast-24h"''']
+
+[[allowlists]]
+description = "Automation worker masking test vector"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)cmd/automation-worker/main_test\.go$''']
+regexes = ['''token: "0123456789abcdef"''']
+
+[[allowlists]]
+description = "SLO generator test catalog"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)cmd/slogen/generate_alerts_test\.go$''']
+regexes = ['''"api_availability":\s+"ApiAvailability",''']
+
+[[allowlists]]
+description = "Synthetic seed JWT"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)db/seeds/seed_comprehensive\.sql$''']
+regexes = ['''^  'eyJ''']
+
+[[allowlists]]
+description = "Support bundle synthetic JWT redaction fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/lib/__tests__/supportBundle\.test\.ts$''']
+regexes = ['''^\s*'eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+'\s*$''']
+
+[[allowlists]]
+description = "Synthetic seed public-key fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)db/seeds/seed_comprehensive\.sql$''']
+regexes = ['''BEGIN PUBLIC KEY-----\\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfake0seed0key0data0for0test''']
+
+[[allowlists]]
+description = "Push subscription test vector"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)internal/api/push/handler_test\.go$''']
+regexes = ['''https://fcm\.googleapis\.com/fcm/send/abc-123''']
+
+[[allowlists]]
+description = "Share-token test vector"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)internal/api/share/handler_test\.go$''']
+regexes = ['''st\.Token = "0123456789abcdef0123456789abcdef"''']
+
+[[allowlists]]
+description = "Encryption test vector"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)internal/crypto/crypto_test\.go$''']
+regexes = ['''"token-like",''']
+
+[[allowlists]]
+description = "VAPID test vectors"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)internal/webpush/service_test\.go$''']
+regexes = ['''(?:validVAPIDPub|validVAPIDPriv|Auth:\s+)''']
+
+[[allowlists]]
+description = "API key card test fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/features/admin/components/api-keys/ApiKeyCard\.test\.tsx$''']
+regexes = ["keyPrefix: 'tsk_live_ab12'"]
+
+[[allowlists]]
+description = "Fleet comparison test localStorage fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/features/analytics/pages/FleetComparePage\.test\.tsx$''']
+regexes = ["BANNER_KEY = 'phase40\\.compareBanner\\.dismissed\\.fleet'"]
+
+[[allowlists]]
+description = "Period comparison test localStorage fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/features/analytics/pages/PeriodComparePage\.test\.tsx$''']
+regexes = ["BANNER_KEY = 'phase40\\.compareBanner\\.dismissed\\.period'"]
+
+[[allowlists]]
+description = "Masked-value utility Stripe-like test fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/lib/maskValue\.test\.ts$''']
+regexes = ['''sk_live_abcdef1234''']
+
+[[allowlists]]
+description = "Masked-value component Stripe-like test fixture"
+condition = "AND"
+regexTarget = "line"
+paths = ['''(^|/)web/src/components/ui/__tests__/MaskedValue\.test\.tsx$''']
+regexes = ['''sk_live_abcdef1234''']

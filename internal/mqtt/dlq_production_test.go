@@ -57,7 +57,10 @@ func TestProductionPipelineOptions_ManualAckContract(t *testing.T) {
 	if got, want := opts.ConnectTimeout, 30*time.Second; got != want {
 		t.Errorf("ConnectTimeout = %s, want %s", got, want)
 	}
-	if got, want := opts.MaxReconnectInterval, 5*time.Minute; got != want {
+	if got, want := opts.WriteTimeout, 10*time.Second; got != want {
+		t.Errorf("WriteTimeout = %s, want %s", got, want)
+	}
+	if got, want := opts.MaxReconnectInterval, 30*time.Second; got != want {
 		t.Errorf("MaxReconnectInterval = %s, want %s", got, want)
 	}
 	if opts.Order {
@@ -65,6 +68,9 @@ func TestProductionPipelineOptions_ManualAckContract(t *testing.T) {
 	}
 	if !opts.AutoReconnect {
 		t.Errorf("AutoReconnect = false, want true (transport failures must reconnect and resume the persistent queue)")
+	}
+	if opts.ResumeSubs {
+		t.Errorf("ResumeSubs = true, want false (explicit serialized reconciliation owns SUBSCRIBE recovery)")
 	}
 	if got, want := opts.ClientID, "teslasync-pipeline-1"; got != want {
 		t.Errorf("ClientID = %q, want %q", got, want)
@@ -116,7 +122,7 @@ func TestNewProductionPipelineMQTT_RejectsEmptyArgs(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, dlq, err := NewProductionPipelineMQTT(ctx, tc.brokerURL, tc.clientID, "u", "p", tc.dlqTopic, log, nil)
+			c, dlq, err := NewProductionPipelineMQTT(ctx, tc.brokerURL, tc.clientID, "u", "p", tc.dlqTopic, log, nil, nil)
 			if err == nil {
 				t.Fatalf("err = nil, want non-nil")
 			}
@@ -158,7 +164,7 @@ func TestNewProductionPipelineMQTT_ConnectionFailureWrapped(t *testing.T) {
 	defer cancel()
 
 	log := zerolog.New(zerolog.NewTestWriter(t))
-	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil)
+	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil, nil)
 
 	if err == nil {
 		// Defensive cleanup if paho somehow succeeded against the closed port.
@@ -196,7 +202,7 @@ func TestNewProductionPipelineMQTT_ContextCancelledDuringConnect(t *testing.T) {
 	cancel() // cancel BEFORE the call so ctx.Done() is already closed
 
 	log := zerolog.New(zerolog.NewTestWriter(t))
-	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil)
+	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil, nil)
 
 	if err == nil {
 		if c != nil {

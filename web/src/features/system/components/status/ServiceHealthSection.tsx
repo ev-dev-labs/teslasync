@@ -58,7 +58,17 @@ export function ServiceHealthSection() {
       ) : error && !data ? (
         <QueryError error={error as Error} onRetry={() => refetch()} />
       ) : !data ? (
-        <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */ message={t('No telemetry data available')} />
+        // no-action: health data appears when the telemetry service publishes its first report.
+        <EmptyState
+          message={t(
+            'system.empty.telemetry',
+            'Telemetry service health has not reported yet.',
+          )}
+          description={t(
+            'system.empty.telemetryDescription',
+            'Connection mode, vehicle counts, and signal throughput appear after the telemetry service publishes health data.',
+          )}
+        />
       ) : (
         <div className="space-y-4">
           <Grid cols={{ default: 2, md: 4 }} gap={3}>

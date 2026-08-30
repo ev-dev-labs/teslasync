@@ -19,7 +19,7 @@
  *
  * i18n is stubbed with a passthrough `t(key, default)` so assertions run
  * against deterministic English defaults, matching the sibling co-located
- * RecentlyViewedWidget test convention. No network is touched — the component
+ * component-test convention. No network is touched — the component
  * is pure presentation over its props.
  */
 import { describe, it, expect, vi, afterEach } from 'vitest';

@@ -2,7 +2,7 @@
  * ActiveVehicleSegment — behaviour, a11y, and hardening coverage.
  *
  * The footer status-bar segment shows the active vehicle and, for multi-vehicle
- * accounts, opens a `role="listbox"` popover to switch between them. These tests
+ * accounts, opens a dialog of ordinary buttons to switch between them. These tests
  * pin every branch of the component:
  *   - render guards (empty fleet → nothing; the state hook is still called with a
  *     safe `0` so hook order stays stable);
@@ -13,8 +13,6 @@
  * They also lock in the hardening applied while elevating the file:
  *   - `metricsLabel` never renders a literal "NaN%" / "NaN km" when a direct
  *     backend `state` payload carries non-finite battery / range values;
- *   - the trigger advertises `aria-controls` only while the listbox is open and
- *     points it at the listbox id;
  *   - keyboard dismissal (Escape) and option selection both return focus to the
  *     trigger instead of dropping it on <body>.
  *
@@ -77,14 +75,18 @@ vi.mock('react-i18next', async () => {
 
 // Thin Tooltip stand-in: renders the trigger (children) plus the tooltip content
 // in a queryable container, so the two never collide in role/text lookups.
-vi.mock('@/components/ui', () => ({
-  Tooltip: ({ content, children }: { content: ReactNode; children: ReactNode }) => (
-    <span data-testid="tooltip">
-      <span data-testid="tooltip-content">{content}</span>
-      {children}
-    </span>
-  ),
-}))
+vi.mock('@/components/ui/runtime', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/ui')>()
+  return {
+    ...actual,
+    Tooltip: ({ content, children }: { content: ReactNode; children: ReactNode }) => (
+      <span data-testid="tooltip">
+        <span data-testid="tooltip-content">{content}</span>
+        {children}
+      </span>
+    ),
+  }
+})
 
 import { ActiveVehicleSegment } from './ActiveVehicleSegment'
 
@@ -265,37 +267,36 @@ describe('ActiveVehicleSegment — multi-vehicle switcher', () => {
     setStateData({ state: makeState() })
   })
 
-  it('renders a collapsed switcher button with listbox aria semantics', () => {
+  it('renders a collapsed switcher button with dialog aria semantics', () => {
     render(<ActiveVehicleSegment />)
 
     const trigger = screen.getByRole('button', { name: /Switch vehicle \(Model 3\)/ })
-    expect(trigger).toHaveAttribute('aria-haspopup', 'listbox')
+    expect(trigger).toHaveAttribute('aria-haspopup', 'dialog')
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    // aria-controls only exists while the popover is open (points at a real node).
     expect(trigger).not.toHaveAttribute('aria-controls')
-    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Switch vehicle' })).toBeNull()
   })
 
-  it('opens the listbox on click and wires aria-expanded + aria-controls', () => {
+  it('opens a dialog containing ordinary vehicle buttons', () => {
     render(<ActiveVehicleSegment />)
 
     const trigger = screen.getByRole('button', { name: /Switch vehicle/ })
     fireEvent.click(trigger)
 
-    const listbox = screen.getByRole('listbox', { name: 'Active vehicle' })
+    const dialog = screen.getByRole('dialog', { name: 'Switch vehicle' })
     expect(trigger).toHaveAttribute('aria-expanded', 'true')
-    expect(listbox.id).toBeTruthy()
-    expect(trigger).toHaveAttribute('aria-controls', listbox.id)
-    expect(within(listbox).getAllByRole('option')).toHaveLength(2)
+    expect(within(dialog).getAllByRole('button')).toHaveLength(2)
   })
 
-  it('marks the active vehicle as the selected option', () => {
+  it('marks the active vehicle as current', () => {
     render(<ActiveVehicleSegment />)
     fireEvent.click(screen.getByRole('button', { name: /Switch vehicle/ }))
 
-    const options = within(screen.getByRole('listbox')).getAllByRole('option')
-    expect(options[0]).toHaveAttribute('aria-selected', 'true') // id 1 == vehicleId
-    expect(options[1]).toHaveAttribute('aria-selected', 'false')
+    const options = within(
+      screen.getByRole('dialog', { name: 'Switch vehicle' }),
+    ).getAllByRole('button')
+    expect(options[0]).toHaveAttribute('aria-current', 'true')
+    expect(options[1]).not.toHaveAttribute('aria-current')
     expect(within(options[1]).getByText('Model Y')).toBeInTheDocument()
   })
 
@@ -304,14 +305,16 @@ describe('ActiveVehicleSegment — multi-vehicle switcher', () => {
     const trigger = screen.getByRole('button', { name: /Switch vehicle/ })
     fireEvent.click(trigger)
 
-    const secondOption = within(screen.getByRole('listbox')).getAllByRole('option')[1]
+    const secondOption = within(
+      screen.getByRole('dialog', { name: 'Switch vehicle' }),
+    ).getAllByRole('button')[1]
     fireEvent.click(secondOption)
 
     expect(mocks.setVehicleId).toHaveBeenCalledTimes(1)
     expect(mocks.setVehicleId).toHaveBeenCalledWith(2)
-    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Switch vehicle' })).toBeNull()
     expect(trigger).toHaveAttribute('aria-expanded', 'false')
-    // Focus returns to the trigger — the option button unmounted with the listbox.
+    // Focus returns to the trigger — the option button unmounted with the dialog.
     expect(document.activeElement).toBe(trigger)
   })
 
@@ -319,40 +322,40 @@ describe('ActiveVehicleSegment — multi-vehicle switcher', () => {
     render(<ActiveVehicleSegment />)
     const trigger = screen.getByRole('button', { name: /Switch vehicle/ })
     fireEvent.click(trigger)
-    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Switch vehicle' })).toBeInTheDocument()
 
     act(() => {
       fireEvent.keyDown(document, { key: 'Escape' })
     })
 
-    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Switch vehicle' })).toBeNull()
     expect(document.activeElement).toBe(trigger)
     expect(mocks.setVehicleId).not.toHaveBeenCalled()
   })
 
-  it('closes on an outside mousedown without committing a selection', () => {
+  it('closes on an outside pointer interaction without committing a selection', () => {
     render(<ActiveVehicleSegment />)
     fireEvent.click(screen.getByRole('button', { name: /Switch vehicle/ }))
-    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Switch vehicle' })).toBeInTheDocument()
 
     act(() => {
-      fireEvent.mouseDown(document.body)
+      fireEvent.pointerDown(document.body)
     })
 
-    expect(screen.queryByRole('listbox')).toBeNull()
+    expect(screen.queryByRole('dialog', { name: 'Switch vehicle' })).toBeNull()
     expect(mocks.setVehicleId).not.toHaveBeenCalled()
   })
 
   it('keeps the click inside the popover from closing it', () => {
     render(<ActiveVehicleSegment />)
     fireEvent.click(screen.getByRole('button', { name: /Switch vehicle/ }))
-    const listbox = screen.getByRole('listbox')
+    const dialog = screen.getByRole('dialog', { name: 'Switch vehicle' })
 
     act(() => {
-      fireEvent.mouseDown(listbox)
+      fireEvent.pointerDown(dialog)
     })
 
-    expect(screen.getByRole('listbox')).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Switch vehicle' })).toBeInTheDocument()
   })
 
   it('renders an icon-only trigger without the visible label or chevron text', () => {

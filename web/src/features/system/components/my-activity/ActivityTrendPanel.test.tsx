@@ -66,6 +66,29 @@ vi.mock('@/hooks/useOnlineStatus', () => ({
   useOnlineStatus: () => true,
 }));
 
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  const Inert = () => null;
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartTooltip: Inert,
+    chartGrid: null,
+    axisTickSm: {},
+    BarChart: ({ data, children }: { data?: unknown[]; children?: ReactNode }) => (
+      <div data-testid="bar-chart" data-count={String((data ?? []).length)}>
+        {children}
+      </div>
+    ),
+    Bar: ({ dataKey }: { dataKey?: string }) => (
+      <div data-testid="bar" data-key={String(dataKey ?? '')} />
+    ),
+    XAxis: Inert,
+    YAxis: Inert,
+    Tooltip: Inert,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  };
+});
+
 const TITLE = 'Activity over time';
 const EMPTY = 'No activity recorded in this window.';
 
@@ -144,7 +167,7 @@ describe('ActivityTrendPanel — loading / error', () => {
 
     expect(screen.getByRole('heading', { name: new RegExp(TITLE, 'i') })).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).toBeTruthy();
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
     expect(screen.queryByText(EMPTY)).toBeNull();
   });
 
@@ -191,14 +214,14 @@ describe('ActivityTrendPanel — empty states', () => {
     const status = screen.getByRole('status');
     expect(status).toBeInTheDocument();
     expect(screen.getByText(EMPTY)).toBeInTheDocument();
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
   });
 
   it('shows the empty placeholder for a zero-length window', () => {
     renderPanel({ isEmpty: false, data: [] });
 
     expect(screen.getByText(EMPTY)).toBeInTheDocument();
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
   });
 
   it('degrades to the empty state instead of throwing when data is null', () => {
@@ -207,7 +230,7 @@ describe('ActivityTrendPanel — empty states', () => {
 
     expect(run).not.toThrow();
     expect(screen.getByText(EMPTY)).toBeInTheDocument();
-    expect(screen.queryByRole('img')).toBeNull();
+    expect(screen.queryByTestId('bar-chart')).toBeNull();
   });
 });
 

@@ -63,9 +63,6 @@ function renderSidebar(overrides: Partial<LinearSidebarProps> = {}) {
   return { ...result, props, rerender }
 }
 
-const typeFilter = (value: string) =>
-  fireEvent.change(screen.getByRole('searchbox'), { target: { value } })
-
 describe('LinearSidebar', () => {
   it('collapses every section except the one holding the active page', () => {
     renderSidebar({ activeSectionTitle: 'Fleet' })
@@ -132,7 +129,7 @@ describe('LinearSidebar', () => {
     expect(screen.getByRole('link', { name: /Analytics/ })).toBeInTheDocument()
   })
 
-  it('renders the favorites group with an accessible unpin action', () => {
+  it('renders the Quick access group with an accessible unpin action', () => {
     const onUnpin = vi.fn()
     renderSidebar({
       pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
@@ -140,14 +137,14 @@ describe('LinearSidebar', () => {
       activeSectionTitle: 'Fleet',
     })
 
-    expect(screen.getByText('Favorites')).toBeInTheDocument()
+    expect(screen.getByText('Quick access')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'Unpin Vehicles' }))
     expect(onUnpin).toHaveBeenCalledWith('/vehicles')
   })
 
-  it('omits the favorites group entirely when nothing is pinned', () => {
+  it('omits the Quick access group entirely when nothing is pinned', () => {
     renderSidebar({ pinnedItems: [], activeSectionTitle: 'Fleet' })
-    expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
+    expect(screen.queryByText('Quick access')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Unpin/ })).not.toBeInTheDocument()
   })
 
@@ -162,9 +159,20 @@ describe('LinearSidebar', () => {
     // /drives is not pinned → pin button present; /vehicles is pinned → none.
     const pinDrives = screen.getByRole('button', { name: 'Pin Drives to favorites' })
     expect(screen.queryByRole('button', { name: 'Pin Vehicles to favorites' })).not.toBeInTheDocument()
-
     fireEvent.click(pinDrives)
     expect(onPin).toHaveBeenCalledWith('/drives')
+  })
+
+  it('keeps one canonical active row when the current page is also a favorite', () => {
+    renderSidebar({
+      pinnedItems: [{ to: '/vehicles', icon: Icons.vehicle, label: 'Vehicles' }],
+      activeSectionTitle: 'Fleet',
+      pathname: '/vehicles',
+    })
+
+    const vehicleLinks = screen.getAllByRole('link', { name: /Vehicles/ })
+    expect(vehicleLinks).toHaveLength(2)
+    expect(vehicleLinks.filter(link => link.getAttribute('aria-current') === 'page')).toHaveLength(1)
   })
 
   it('renders trailing badges for alerts, vehicle count, and clamps at 99+', () => {
@@ -228,67 +236,6 @@ describe('LinearSidebar', () => {
     expect(onItemSelect).toHaveBeenCalledTimes(1)
   })
 
-  it('exposes a labelled search box that filters the tree and auto-expands matches', () => {
-    renderSidebar({ activeSectionTitle: 'Fleet' })
-
-    const box = screen.getByRole('searchbox')
-    expect(box).toHaveAttribute('type', 'search')
-
-    // Analytics lives in the collapsed "Insights" section — hidden until it matches.
-    expect(screen.queryByRole('link', { name: /Analytics/ })).not.toBeInTheDocument()
-
-    typeFilter('anal')
-    expect(screen.getByRole('link', { name: /Analytics/ })).toBeInTheDocument()
-    // Non-matching rows drop out even from the active section.
-    expect(screen.queryByRole('link', { name: /Vehicles/ })).not.toBeInTheDocument()
-  })
-
-  it('shows an empty state with a working "Clear filter" action', () => {
-    renderSidebar({ activeSectionTitle: 'Fleet' })
-
-    typeFilter('zzznomatch')
-    expect(screen.getByText('No matches.')).toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Vehicles/ })).not.toBeInTheDocument()
-
-    fireEvent.click(screen.getByRole('button', { name: /Clear filter/ }))
-    expect(screen.queryByText('No matches.')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Vehicles/ })).toBeInTheDocument()
-  })
-
-  it('hides the favorites header when the active filter excludes every pinned item', () => {
-    renderSidebar({
-      pinnedItems: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
-      activeSectionTitle: 'Fleet',
-    })
-
-    // Before filtering, the pinned favorite is visible under its header.
-    expect(screen.getByText('Favorites')).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
-
-    typeFilter('vehicles')
-
-    // The favorite no longer matches → header + row both gone (no orphan label).
-    expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
-    expect(screen.queryByRole('link', { name: /Settings/ })).not.toBeInTheDocument()
-    // A section item matched, so this is NOT an empty result.
-    expect(screen.queryByText('No matches.')).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /Vehicles/ })).toBeInTheDocument()
-  })
-
-  it('keeps a matching favorite visible without a false "No matches" message', () => {
-    renderSidebar({
-      pinnedItems: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
-      activeSectionTitle: 'Fleet',
-    })
-
-    // "settings" matches only the (unmirrored) favorite, no section item.
-    typeFilter('settings')
-
-    expect(screen.getByRole('link', { name: /Settings/ })).toBeInTheDocument()
-    // Regression: the empty state must not appear while a favorite still matches.
-    expect(screen.queryByText('No matches.')).not.toBeInTheDocument()
-  })
-
   it('applies navLabel to translate item label keys', () => {
     const navLabel = (key: string) => (key === 'key.vehicles' ? 'Fahrzeuge' : key)
     const sections: LinearSidebarSectionInput[] = [
@@ -328,6 +275,165 @@ describe('LinearSidebar', () => {
       </MemoryRouter>,
     )
     expect(screen.getByRole('navigation', { name: 'Sidebar navigation' })).toBeInTheDocument()
-    expect(screen.queryByText('Favorites')).not.toBeInTheDocument()
+    expect(screen.queryByText('Quick access')).not.toBeInTheDocument()
+  })
+})
+
+// ══════════════════════════════════════════════════════════════════════
+// "Browse all features" escape hatch (compact IA)
+// ══════════════════════════════════════════════════════════════════════
+
+describe('LinearSidebar — Feature Hub escape hatch', () => {
+  const compactSections: LinearSidebarSectionInput[] = [
+    {
+      title: 'Overview',
+      items: [
+        { to: '/', icon: Icons.home, label: 'Dashboard' },
+        { to: '/explore', icon: Icons.sparkles, label: 'Explore Features' },
+      ],
+    },
+    {
+      title: 'Driving',
+      items: [{ to: '/drives', icon: Icons.drive, label: 'Drives' }],
+    },
+  ]
+
+  it('omits the footer link while the Overview /explore row is on screen', () => {
+    renderSidebar({ sections: compactSections, pathname: '/', activeSectionTitle: 'Overview' })
+
+    expect(screen.getByRole('link', { name: /Explore Features/ })).toBeInTheDocument()
+    // No duplicate: the footer stays out of the way when the row is visible.
+    expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
+  })
+
+  it('surfaces a footer link to /explore when Overview is collapsed', () => {
+    renderSidebar({ sections: compactSections, pathname: '/drives', activeSectionTitle: 'Driving' })
+
+    // Overview is collapsed, so its /explore row is not rendered…
+    expect(screen.getByRole('button', { name: /Overview/ })).toHaveAttribute('aria-expanded', 'false')
+    const footer = screen.getByTestId('linear-sidebar-explore-footer')
+    const link = within(footer).getByRole('link', { name: /Browse all features/ })
+    expect(link).toHaveAttribute('href', '/explore')
+  })
+
+  it('closes the mobile drawer when the footer link is followed', async () => {
+    const onItemSelect = vi.fn()
+    renderSidebar({
+      sections: compactSections,
+      pathname: '/drives',
+      activeSectionTitle: 'Driving',
+      onItemSelect,
+    })
+
+    await act(async () => {
+      fireEvent.click(
+        within(screen.getByTestId('linear-sidebar-explore-footer')).getByRole('link'),
+      )
+    })
+    expect(onItemSelect).toHaveBeenCalledTimes(1)
+  })
+
+  it('never renders the footer for trees that have no /explore entry', () => {
+    renderSidebar({ activeSectionTitle: 'Fleet' })
+    expect(screen.queryByTestId('linear-sidebar-explore-footer')).not.toBeInTheDocument()
+  })
+})
+
+// ─── Two-tier IA: primary hierarchy vs advanced parking spots ───────────────
+
+describe('LinearSidebar — advanced tier', () => {
+  function tieredSections(): LinearSidebarSectionInput[] {
+    return [
+      {
+        title: 'Overview',
+        tier: 'primary',
+        restricted: false,
+        items: [{ to: '/', icon: Icons.home, label: 'Dashboard' }],
+      },
+      {
+        title: 'Drives',
+        tier: 'primary',
+        restricted: false,
+        items: [{ to: '/drives', icon: Icons.drive, label: 'Drives' }],
+      },
+      {
+        title: 'Administration',
+        tier: 'advanced',
+        restricted: false,
+        items: [{ to: '/backup', icon: Icons.database, label: 'Backup' }],
+      },
+      {
+        title: 'Developer',
+        tier: 'advanced',
+        restricted: true,
+        items: [{ to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools' }],
+      },
+    ]
+  }
+
+  it('renders exactly one Advanced divider, before the first advanced group', () => {
+    renderSidebar({ sections: tieredSections(), pathname: '/' })
+
+    const dividers = screen.getAllByTestId('linear-sidebar-advanced-divider')
+    expect(dividers).toHaveLength(1)
+
+    const groups = Array.from(document.querySelectorAll('[data-nav-group]'))
+    const dividerOwner = dividers[0].closest('[data-nav-group]')
+    expect(dividerOwner?.getAttribute('data-nav-group')).toBe('Administration')
+    expect(groups.map((g) => g.getAttribute('data-nav-tier'))).toEqual([
+      'primary',
+      'primary',
+      'advanced',
+      'advanced',
+    ])
+  })
+
+  it('keeps restricted advanced destinations rendered, never deleted', () => {
+    renderSidebar({ sections: tieredSections(), pathname: '/' })
+
+    const developer = document.querySelector('[data-nav-group="Developer"]')
+    expect(developer).not.toBeNull()
+    expect(developer?.getAttribute('data-nav-restricted')).toBe('true')
+    // Header is present (collapsed by default) so the group is discoverable.
+    expect(
+      within(developer as HTMLElement).getByRole('button', { name: /Developer/ }),
+    ).toHaveAttribute('aria-expanded', 'false')
+  })
+
+  it('still expands a restricted group when it owns the active route', () => {
+    renderSidebar({
+      sections: tieredSections(),
+      pathname: '/dev-tools',
+      activeSectionTitle: 'Developer',
+    })
+
+    expect(screen.getByRole('link', { name: /Developer Tools/ })).toBeInTheDocument()
+  })
+
+  it('omits the divider entirely when no advanced group is present', () => {
+    renderSidebar({
+      sections: tieredSections().filter((s) => s.tier === 'primary'),
+      pathname: '/',
+    })
+    expect(screen.queryByTestId('linear-sidebar-advanced-divider')).toBeNull()
+  })
+
+  it('falls back to the blueprint tier when the caller omits it', () => {
+    renderSidebar({
+      sections: [
+        { title: 'Overview', items: [{ to: '/', icon: Icons.home, label: 'Dashboard' }] },
+        {
+          title: 'Settings & Account',
+          items: [{ to: '/settings', icon: Icons.settings, label: 'Settings' }],
+        },
+      ],
+      pathname: '/',
+    })
+    const groups = Array.from(document.querySelectorAll('[data-nav-group]'))
+    expect(groups.map((g) => g.getAttribute('data-nav-tier'))).toEqual([
+      'primary',
+      'advanced',
+    ])
+    expect(screen.getAllByTestId('linear-sidebar-advanced-divider')).toHaveLength(1)
   })
 })

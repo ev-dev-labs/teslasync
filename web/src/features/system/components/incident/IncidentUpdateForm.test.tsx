@@ -92,7 +92,7 @@ function renderForm(incident: Incident = buildIncident()) {
 
 /** The single native <textarea> for the draft message. */
 function messageInput(): HTMLTextAreaElement {
-  return screen.getByLabelText('Update message') as HTMLTextAreaElement
+  return screen.getByLabelText(/^Update message/) as HTMLTextAreaElement
 }
 
 /** The status <select>. */

@@ -1,17 +1,18 @@
 /**
- * OnboardingWizard tests.
+ * OnboardingWizard tests (correction round).
  *
- * The wizard is a self-contained first-run surface with three collaborators
- * we stub so the specs stay deterministic:
- *   - the cross-tab bus (`@/lib/broadcast`) — we capture the `subscribe`
- *     handler so a "peer tab" message can be simulated, and spy on outgoing
- *     `broadcast()` calls.
- *   - `react-i18next` — the real `useTranslation` is swapped for a stub that
- *     returns the English fallback (interpolating `{{vars}}`) so we can assert
- *     copy + the progress label without booting an i18n instance.
- *   - `localStorage` — the real jsdom store, cleared around each test.
+ * Two behaviours changed and both are asserted here rather than assumed:
  *
- * Timers are faked because the wizard defers its reveal by 1.5s.
+ * 1. **It is controlled.** The self-reveal timer is gone — HELP-01 removed
+ *    automatic modals, and a component that opens itself 1.5s after mount is
+ *    the definition of one. It now renders only when a caller passes `open`.
+ * 2. **It is a real modal.** Unlike `<TourOverlay>` (a non-modal spotlight
+ *    that must leave the page reachable), this covers the app, so it uses the
+ *    shared `useDialogFocus` primitive for the trap, Escape, and restoration.
+ *    The previous hand-rolled effects had no trap at all and restored focus
+ *    nowhere.
+ *
+ * Collaborators stubbed for determinism: the cross-tab bus and i18n.
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
@@ -57,19 +58,18 @@ vi.mock('react-i18next', async () => {
 })
 
 import OnboardingWizard from '../OnboardingWizard'
+import {
+  ONBOARDING_COMPLETION_KEY,
+  isOnboardingCompleted,
+} from '@/features/onboarding/completion'
 
-const ONBOARDED_KEY = 'teslasync-onboarded'
-const REVEAL_DELAY_MS = 1500
-
-/** Render already happened — fast-forward past the deferred reveal. */
-function reveal() {
-  act(() => {
-    vi.advanceTimersByTime(REVEAL_DELAY_MS)
-  })
+function renderWizard(open = true) {
+  const onClose = vi.fn()
+  const utils = render(<OnboardingWizard open={open} onClose={onClose} />)
+  return { onClose, ...utils }
 }
 
 beforeEach(() => {
-  vi.useFakeTimers()
   broadcastSpy.mockClear()
   setPeerHandler(null)
   window.localStorage.clear()
@@ -77,189 +77,208 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup()
-  vi.runOnlyPendingTimers()
-  vi.useRealTimers()
   window.localStorage.clear()
 })
 
-describe('OnboardingWizard — visibility lifecycle', () => {
-  it('stays hidden until the reveal delay elapses on first run', () => {
-    render(<OnboardingWizard />)
-    // Nothing before the timer fires.
-    expect(screen.queryByRole('dialog')).toBeNull()
-
-    reveal()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+describe('OnboardingWizard — controlled visibility (HELP-01)', () => {
+  it('renders nothing when closed', () => {
+    const { container } = renderWizard(false)
+    expect(container).toBeEmptyDOMElement()
   })
 
-  it('never reveals when localStorage already records completed onboarding', () => {
-    window.localStorage.setItem(ONBOARDED_KEY, 'true')
-    render(<OnboardingWizard />)
-
-    reveal()
-    expect(screen.queryByRole('dialog')).toBeNull()
+  it('renders when a caller explicitly opens it', () => {
+    renderWizard(true)
+    expect(screen.getByTestId('onboarding-wizard')).toBeInTheDocument()
   })
 
-  it('does not persist or broadcast merely by revealing', () => {
-    render(<OnboardingWizard />)
-    reveal()
+  it('never opens itself on a timer, even on a first-run install', () => {
+    vi.useFakeTimers()
+    try {
+      const { container } = renderWizard(false)
+      act(() => {
+        vi.advanceTimersByTime(10_000)
+      })
+      expect(container).toBeEmptyDOMElement()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
-    expect(broadcastSpy).not.toHaveBeenCalled()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBeNull()
+  it('does not read first-run storage to decide whether to show', () => {
+    // Previously the component probed `teslasync-onboarded` and revealed
+    // itself when unset. `open` is now the only input.
+    window.localStorage.setItem(ONBOARDING_COMPLETION_KEY, 'true')
+    renderWizard(true)
+    expect(screen.getByTestId('onboarding-wizard')).toBeInTheDocument()
+  })
+
+  it('restarts at the first step when re-opened', () => {
+    const { rerender } = render(<OnboardingWizard open onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(screen.getByText('Connect Your Tesla')).toBeInTheDocument()
+
+    rerender(<OnboardingWizard open={false} onClose={vi.fn()} />)
+    rerender(<OnboardingWizard open onClose={vi.fn()} />)
+
+    expect(screen.getByText('Welcome to TeslaSync')).toBeInTheDocument()
   })
 })
 
-describe('OnboardingWizard — accessibility', () => {
-  it('exposes dialog semantics wired to the title and description', () => {
-    render(<OnboardingWizard />)
-    reveal()
+describe('OnboardingWizard — modal focus containment', () => {
+  it('focuses the primary action on open, not the close button', () => {
+    renderWizard()
+    // `[data-autofocus]` marks the Next control; without it the shared hook
+    // would focus the first focusable element, which is "Close".
+    expect(document.activeElement).toBe(screen.getByRole('button', { name: /next/i }))
+  })
 
-    const dialog = screen.getByRole('dialog')
+  it('declares itself modal and is wired to its title and description', () => {
+    renderWizard()
+    const dialog = screen.getByTestId('onboarding-wizard')
     expect(dialog).toHaveAttribute('aria-modal', 'true')
     expect(dialog).toHaveAttribute('aria-labelledby', 'onboarding-title')
     expect(dialog).toHaveAttribute('aria-describedby', 'onboarding-desc')
-    // The referenced ids must actually exist on the heading + copy.
-    expect(document.getElementById('onboarding-title')).toHaveTextContent('Welcome to TeslaSync')
-    expect(document.getElementById('onboarding-desc')?.textContent ?? '').toContain('dashboard')
+  })
+
+  it('wraps Tab from the last control back to the first', () => {
+    renderWizard()
+    const dialog = screen.getByTestId('onboarding-wizard')
+    const focusables = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button:not(:disabled)'),
+    )
+    expect(focusables.length).toBeGreaterThan(1)
+
+    const last = focusables[focusables.length - 1]
+    last.focus()
+    fireEvent.keyDown(dialog, { key: 'Tab' })
+
+    expect(document.activeElement).toBe(focusables[0])
+  })
+
+  it('wraps Shift+Tab from the first control back to the last', () => {
+    renderWizard()
+    const dialog = screen.getByTestId('onboarding-wizard')
+    const focusables = Array.from(
+      dialog.querySelectorAll<HTMLElement>('button:not(:disabled)'),
+    )
+
+    focusables[0].focus()
+    fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
+
+    expect(document.activeElement).toBe(focusables[focusables.length - 1])
+  })
+
+  it('restores focus to the trigger when it closes', () => {
+    const trigger = document.createElement('button')
+    document.body.appendChild(trigger)
+    trigger.focus()
+
+    const { rerender } = render(<OnboardingWizard open onClose={vi.fn()} />)
+    expect(document.activeElement).not.toBe(trigger)
+
+    rerender(<OnboardingWizard open={false} onClose={vi.fn()} />)
+
+    expect(document.activeElement).toBe(trigger)
+    trigger.remove()
   })
 
   it('gives the icon-only close control an accessible name', () => {
-    render(<OnboardingWizard />)
-    reveal()
-    expect(
-      screen.getByRole('button', { name: /close and skip introduction/i }),
-    ).toBeInTheDocument()
+    renderWizard()
+    const close = screen.getByRole('button', { name: 'Close and skip introduction' })
+    expect(close.querySelector('svg')).toHaveAttribute('aria-hidden', 'true')
   })
 
   it('announces the current position via the progress group label', () => {
-    render(<OnboardingWizard />)
-    reveal()
-    expect(screen.getByRole('group')).toHaveAttribute('aria-label', 'Step 1 of 4')
-  })
-
-  it('moves focus onto the dialog when it opens', () => {
-    render(<OnboardingWizard />)
-    reveal()
-    expect(screen.getByRole('dialog')).toHaveFocus()
+    renderWizard()
+    expect(screen.getByRole('group', { name: 'Step 1 of 4' })).toBeInTheDocument()
   })
 })
 
 describe('OnboardingWizard — step navigation', () => {
   it('advances through every step, swapping the CTA on the final slide', () => {
-    render(<OnboardingWizard />)
-    reveal()
+    renderWizard()
+    expect(screen.getByText('Welcome to TeslaSync')).toBeInTheDocument()
 
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Welcome to TeslaSync')
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(screen.getByText('Connect Your Tesla')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Connect Your Tesla')
-    expect(screen.getByRole('group')).toHaveAttribute('aria-label', 'Step 2 of 4')
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(screen.getByText('Configure Settings')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent('Configure Settings')
-
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    expect(screen.getByRole('heading', { level: 2 })).toHaveTextContent("You're All Set!")
-
-    // On the last slide the primary action becomes "Get Started".
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+    fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    expect(screen.getByText("You're All Set!")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Get Started' })).toBeInTheDocument()
-  })
-
-  it('completes onboarding when the final CTA is pressed', () => {
-    render(<OnboardingWizard />)
-    reveal()
-
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
-    fireEvent.click(screen.getByRole('button', { name: 'Get Started' }))
-
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBe('true')
-    expect(broadcastSpy).toHaveBeenCalledWith({ type: 'onboarded' })
   })
 })
 
-describe('OnboardingWizard — dismissal paths', () => {
-  it('dismisses and persists when Skip is clicked', () => {
-    render(<OnboardingWizard />)
-    reveal()
+describe('OnboardingWizard — dismissal and completion', () => {
+  it('calls onClose and records completion when the final CTA is pressed', () => {
+    const { onClose } = renderWizard()
+    for (let i = 0; i < 3; i++) {
+      fireEvent.click(screen.getByRole('button', { name: /next/i }))
+    }
+    fireEvent.click(screen.getByRole('button', { name: 'Get Started' }))
 
-    fireEvent.click(screen.getByRole('button', { name: 'Skip' }))
-
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBe('true')
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(isOnboardingCompleted()).toBe(true)
     expect(broadcastSpy).toHaveBeenCalledWith({ type: 'onboarded' })
   })
 
-  it('dismisses and persists when the close button is clicked', () => {
-    render(<OnboardingWizard />)
-    reveal()
-
-    fireEvent.click(screen.getByRole('button', { name: /close and skip introduction/i }))
-
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBe('true')
+  it('calls onClose when Skip is clicked', () => {
+    const { onClose } = renderWizard()
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('dismisses when the decorative backdrop is clicked', () => {
-    render(<OnboardingWizard />)
-    reveal()
+  it('calls onClose when the close button is clicked', () => {
+    const { onClose } = renderWizard()
+    fireEvent.click(screen.getByRole('button', { name: 'Close and skip introduction' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 
+  it('calls onClose when the decorative backdrop is clicked', () => {
+    const { onClose } = renderWizard()
     fireEvent.click(screen.getByTestId('onboarding-backdrop'))
-
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBe('true')
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
-  it('dismisses on Escape via the document-level listener (regression)', () => {
-    // The previous implementation put onKeyDown on a non-focusable wrapper,
-    // so Escape silently did nothing. This guards the document listener fix.
-    render(<OnboardingWizard />)
-    reveal()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-
-    fireEvent.keyDown(document, { key: 'Escape' })
-
-    expect(screen.queryByRole('dialog')).toBeNull()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBe('true')
+  it('closes on Escape via the shared dialog primitive', () => {
+    const { onClose } = renderWizard()
+    fireEvent.keyDown(screen.getByTestId('onboarding-wizard'), { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it('ignores non-Escape keys', () => {
-    render(<OnboardingWizard />)
-    reveal()
+    const { onClose } = renderWizard()
+    fireEvent.keyDown(screen.getByTestId('onboarding-wizard'), { key: 'a' })
+    expect(onClose).not.toHaveBeenCalled()
+  })
 
-    fireEvent.keyDown(document, { key: 'Enter' })
+  it('does not re-broadcast when completion was already recorded', () => {
+    window.localStorage.setItem(ONBOARDING_COMPLETION_KEY, 'true')
+    const { onClose } = renderWizard()
+    fireEvent.click(screen.getByRole('button', { name: 'Skip' }))
 
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    expect(window.localStorage.getItem(ONBOARDED_KEY)).toBeNull()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(broadcastSpy).not.toHaveBeenCalled()
   })
 })
 
 describe('OnboardingWizard — cross-tab coordination', () => {
-  it('dismisses when a peer tab reports onboarding is done, without echoing', () => {
-    render(<OnboardingWizard />)
-    reveal()
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-
+  it('closes when a peer tab reports onboarding is done, without echoing', () => {
+    const { onClose } = renderWizard()
     act(() => {
       getPeerHandler()?.({ type: 'onboarded' })
     })
-
-    expect(screen.queryByRole('dialog')).toBeNull()
-    // A peer-driven dismissal must NOT re-broadcast, or two tabs ping-pong.
+    expect(onClose).toHaveBeenCalledTimes(1)
     expect(broadcastSpy).not.toHaveBeenCalled()
   })
 
   it('ignores unrelated broadcast messages', () => {
-    render(<OnboardingWizard />)
-    reveal()
-
+    const { onClose } = renderWizard()
     act(() => {
-      getPeerHandler()?.({ type: 'theme.changed' })
+      getPeerHandler()?.({ type: 'dashboard.layout' })
     })
-
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
   })
 })

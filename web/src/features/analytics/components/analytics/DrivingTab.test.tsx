@@ -42,6 +42,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ToastProvider } from '@/components/feedback';
 import type { ReactNode } from 'react';
 import type { FleetAnalytics } from '@/api/types';
 import { DrivingTab } from './DrivingTab';
@@ -66,6 +68,21 @@ vi.mock('@/components/motion', () => ({
   FadeIn: ({ children, className }: { children?: ReactNode; className?: string }) => (
     <div className={className}>{children}</div>
   ),
+  // MetricBar animates its fill via `motion.div`, and the real `ToastProvider`
+  // (rendered here, not mocked) needs `AnimatePresence` for its toast stack
+  // transitions. Both now come from this barrel rather than 'framer-motion'
+  // directly, so the mock must supply them too.
+  motion: new Proxy(
+    {},
+    {
+      get: () => (props: Record<string, unknown>) => {
+        const Component = (props.as as string) ?? 'div';
+        const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>;
+        return <Component {...(rest as Record<string, unknown>)}>{children as ReactNode}</Component>;
+      },
+    },
+  ),
+  AnimatePresence: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
 // ── Mutable settings double so the unit branches are testable. The real
@@ -103,7 +120,8 @@ vi.mock('@/hooks/useSettings', async () => {
 //    chart surfaces its `data` prop (as JSON), each cartesian series surfaces
 //    its dataKey binding, and Scatter surfaces its projected `data` array so
 //    the page-computed conversions are directly assertable. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
   const Inert = () => null;
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   const makeChart =
@@ -136,6 +154,7 @@ vi.mock('@/components/charts', () => {
     </span>
   );
   return {
+    ...actual,
     ChartTooltip: Inert,
     ChartGradient: Inert,
     chartGrid: null,
@@ -222,10 +241,15 @@ function makeQuery(over: QueryOverride = {}): FleetAnalyticsQuery {
 }
 
 function renderTab(query: FleetAnalyticsQuery) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <MemoryRouter>
-      <DrivingTab query={query} />
-    </MemoryRouter>,
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <ToastProvider>
+          <DrivingTab query={query} />
+        </ToastProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
   );
 }
 
@@ -366,15 +390,18 @@ describe('DrivingTab — populated', () => {
     expect(screen.getByTestId('series-scatter')).toBeInTheDocument();
   });
 
-  it('exposes each chart as an accessible image with a unit-aware label', () => {
+  it('exposes each chart with accessible semantics and unit-aware labels', () => {
     renderTab(makeQuery({ data: populated() }));
 
-    expect(screen.getAllByRole('img')).toHaveLength(7);
+    expect(screen.getAllByRole('img')).toHaveLength(5);
+    expect(
+      screen.getByRole('group', { name: 'Drives and distance by hour of day' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Trip count by speed range' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Daily driving distance and drive count (km)' }),
+      screen.getByRole('group', { name: 'Daily driving distance and drive count (km)' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Daily efficiency trend (Wh/km)' }),
@@ -423,7 +450,7 @@ describe('DrivingTab — miles preference', () => {
 
     // Accessible labels reflect the active units.
     expect(
-      screen.getByRole('img', { name: 'Daily driving distance and drive count (mi)' }),
+      screen.getByRole('group', { name: 'Daily driving distance and drive count (mi)' }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('img', { name: 'Daily efficiency trend (Wh/mi)' }),

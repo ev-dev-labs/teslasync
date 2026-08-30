@@ -60,6 +60,12 @@ vi.mock('react-i18next', async () => {
   };
 });
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // ── Fixtures ────────────────────────────────────────────────────────────────
 
 const baseMetrics: DigestMetrics = {
@@ -207,8 +213,9 @@ describe('AlertsSection — error', () => {
     fireEvent.click(screen.getByRole('button', { name: /retry/i }));
     expect(onRetry).toHaveBeenCalledTimes(1);
 
-    // The data list must not render behind the error affordance.
-    expect(screen.queryByRole('list')).toBeNull();
+    // The data list must not render behind the error affordance. (QueryError
+    // renders its own help-links list, so target the labelled severity list.)
+    expect(screen.queryByRole('list', { name: 'Alerts by Severity' })).toBeNull();
   });
 
   it('prioritises the error over the empty state (error wins even at zero alerts)', () => {

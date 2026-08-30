@@ -6,11 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
+	"github.com/google/uuid"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
@@ -27,7 +29,8 @@ func sseTracer() oteltrace.Tracer { return otel.Tracer(sseTracerName) }
 // SignalChangeEvent is the typed-envelope SSE payload emitted by
 // BroadcastSignalChange for a single live-signal update. Wire shape:
 //
-//	{ "vehicle_id": <int64>, "field": <proto-name>, "kind": <ValueKind>,
+//	{ "stream_id": <server-epoch>, "sequence": <monotonic uint64>,
+//	  "vehicle_id": <int64>, "field": <proto-name>, "kind": <ValueKind>,
 //	  "value": <typed primitive>, "ts": <RFC3339> }
 //
 // `kind` is the protomodel.ValueKind discriminator (matching redis_cache's
@@ -37,6 +40,8 @@ func sseTracer() oteltrace.Tracer { return otel.Tracer(sseTracerName) }
 // int64, float32, float64, string, time.Time, ftproto enums) without
 // reflection or stringification fallbacks.
 type SignalChangeEvent struct {
+	StreamID  string               `json:"stream_id"`
+	Sequence  uint64               `json:"sequence"`
 	VehicleID int64                `json:"vehicle_id"`
 	Field     string               `json:"field"`
 	Kind      protomodel.ValueKind `json:"kind"`
@@ -46,15 +51,24 @@ type SignalChangeEvent struct {
 
 // EventHub manages SSE connections for real-time updates.
 type EventHub struct {
-	mu      sync.RWMutex
-	clients map[string]chan []byte
+	mu             sync.RWMutex
+	clients        map[string]chan []byte
+	streamID       string
+	signalSequence atomic.Uint64
 }
 
 // NewEventHub creates a new SSE event hub.
 func NewEventHub() *EventHub {
 	return &EventHub{
-		clients: make(map[string]chan []byte),
+		clients:  make(map[string]chan []byte),
+		streamID: uuid.NewString(),
 	}
+}
+
+// StreamID identifies this process lifetime so clients can distinguish a
+// sequence reset after a pod restart from a dropped frame within one stream.
+func (h *EventHub) StreamID() string {
+	return h.streamID
 }
 
 // Subscribe adds a client to the hub and returns a channel + unsubscribe func.
@@ -70,8 +84,15 @@ func (h *EventHub) Subscribe(id string) (<-chan []byte, func()) {
 		h.mu.Lock()
 		delete(h.clients, id)
 		close(ch)
+		maxSaturation := 0.0
+		for _, client := range h.clients {
+			if saturation := channelSaturation(client); saturation > maxSaturation {
+				maxSaturation = saturation
+			}
+		}
 		h.mu.Unlock()
 		metrics.SSEConnectionsActive.Dec()
+		metrics.SSEClientBufferSaturationRatio.Set(maxSaturation)
 	}
 }
 
@@ -113,6 +134,7 @@ func (h *EventHub) BroadcastWithContext(ctx context.Context, eventType string, d
 	clientCount := len(h.clients)
 	delivered := 0
 	dropped := 0
+	maxSaturation := 0.0
 	for id, ch := range h.clients {
 		select {
 		case ch <- msg:
@@ -124,8 +146,12 @@ func (h *EventHub) BroadcastWithContext(ctx context.Context, eventType string, d
 			dropped++
 			log.Warn().Str("client", id).Msg("SSE client buffer full, dropping event")
 		}
+		if saturation := channelSaturation(ch); saturation > maxSaturation {
+			maxSaturation = saturation
+		}
 	}
 	h.mu.RUnlock()
+	metrics.SSEClientBufferSaturationRatio.Set(maxSaturation)
 	metrics.SSEBroadcastDuration.Observe(time.Since(start).Seconds())
 	span.SetAttributes(
 		attribute.Int("sse.client_count", clientCount),
@@ -174,6 +200,8 @@ func (h *EventHub) BroadcastSignalChangeWithContext(ctx context.Context, vehicle
 		kind = meta.ValueKind
 	}
 	h.BroadcastWithContext(ctx, "signal_change", SignalChangeEvent{
+		StreamID:  h.streamID,
+		Sequence:  h.signalSequence.Add(1),
 		VehicleID: vehicleID,
 		Field:     field,
 		Kind:      kind,
@@ -219,6 +247,7 @@ func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisS
 			clientCount := len(h.clients)
 			delivered := 0
 			dropped := 0
+			maxSaturation := 0.0
 			for id, c := range h.clients {
 				select {
 				case c <- msg:
@@ -230,8 +259,12 @@ func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisS
 					dropped++
 					log.Warn().Str("client", id).Msg("SSE client buffer full (redis), dropping event")
 				}
+				if saturation := channelSaturation(c); saturation > maxSaturation {
+					maxSaturation = saturation
+				}
 			}
 			h.mu.RUnlock()
+			metrics.SSEClientBufferSaturationRatio.Set(maxSaturation)
 			span.SetAttributes(
 				attribute.Int("sse.client_count", clientCount),
 				attribute.Int("sse.delivered_count", delivered),
@@ -244,8 +277,41 @@ func (h *EventHub) SubscribeRedis(ctx context.Context, redisCache *signal.RedisS
 	}()
 }
 
+func channelSaturation(ch chan []byte) float64 {
+	if cap(ch) == 0 {
+		return 0
+	}
+	return float64(len(ch)) / float64(cap(ch))
+}
+
+// HandlerOption configures the SSE handler.
+type HandlerOption func(*handlerConfig)
+
+type handlerConfig struct {
+	drain <-chan struct{}
+}
+
+// WithDrainSignal wires a channel that is closed when the process starts
+// draining (the Kubernetes preStop hook flipping the readiness gate).
+//
+// This matters more than it looks. http.Server.Shutdown does NOT cancel
+// the request context of an in-flight handler: it stops accepting new
+// connections and then waits. An SSE handler blocked on its event
+// channel therefore keeps the shutdown pending for the entire grace
+// budget (30s in internal/app), after which every stream is severed
+// abruptly. With a drain signal the handler returns immediately, emits a
+// `shutdown` event so the SPA can reconnect deliberately instead of
+// treating it as an error, and the pod drains in milliseconds.
+func WithDrainSignal(ch <-chan struct{}) HandlerOption {
+	return func(c *handlerConfig) { c.drain = ch }
+}
+
 // SSEHandler handles Server-Sent Events connections.
-func SSEHandler(hub *EventHub) http.HandlerFunc {
+func SSEHandler(hub *EventHub, opts ...HandlerOption) http.HandlerFunc {
+	cfg := handlerConfig{}
+	for _, opt := range opts {
+		opt(&cfg)
+	}
 	return func(w http.ResponseWriter, r *http.Request) {
 		flusher, ok := w.(http.Flusher)
 		if !ok {
@@ -265,7 +331,12 @@ func SSEHandler(hub *EventHub) http.HandlerFunc {
 		log.Info().Str("client", clientID).Msg("SSE client connected")
 
 		// Send initial heartbeat
-		fmt.Fprintf(w, "event: connected\ndata: {\"client_id\":\"%s\"}\n\n", clientID)
+		fmt.Fprintf(
+			w,
+			"event: connected\ndata: {\"client_id\":\"%s\",\"stream_id\":\"%s\"}\n\n",
+			clientID,
+			hub.StreamID(),
+		)
 		flusher.Flush()
 
 		// Heartbeat ticker
@@ -276,6 +347,11 @@ func SSEHandler(hub *EventHub) http.HandlerFunc {
 			select {
 			case <-r.Context().Done():
 				log.Info().Str("client", clientID).Msg("SSE client disconnected")
+				return
+			case <-cfg.drain:
+				fmt.Fprint(w, "event: shutdown\ndata: {\"reason\":\"draining\"}\n\n")
+				flusher.Flush()
+				log.Info().Str("client", clientID).Msg("SSE client released for pod drain")
 				return
 			case msg, ok := <-events:
 				if !ok {

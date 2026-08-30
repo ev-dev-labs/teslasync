@@ -31,6 +31,8 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog"
+
+	"github.com/ev-dev-labs/teslasync/internal/metrics"
 )
 
 const (
@@ -49,7 +51,11 @@ const (
 
 	// pipelineMaxReconnectInterval is the cap on backoff between reconnect
 	// attempts.
-	pipelineMaxReconnectInterval = 5 * time.Minute
+	pipelineMaxReconnectInterval = 30 * time.Second
+
+	// pipelineWriteTimeout bounds socket writes, including SUBSCRIBE packets.
+	// Token waiting is bounded separately by PipelineSubscriber.
+	pipelineWriteTimeout = 10 * time.Second
 )
 
 // productionPipelineOptions builds the paho ClientOptions used for the
@@ -63,7 +69,9 @@ const (
 //   - SetKeepAlive(30s)               — matches legacy + mosquitto default.
 //   - SetPingTimeout(10s)             — half-open detection cutoff.
 //   - SetConnectTimeout(30s)          — initial handshake cap.
-//   - SetMaxReconnectInterval(5min)   — backoff cap between reconnects.
+//   - SetWriteTimeout(10s)            — bounds MQTT control-packet writes.
+//   - SetMaxReconnectInterval(30s)    — bounded recovery without a multi-minute
+//     broker-queue growth window.
 //   - SetOrderMatters(false)          — writers are idempotent so concurrent
 //     message handling is safe and lets paho fan out across goroutines.
 //   - SetAutoReconnect(true)          — reconnect after transport failures;
@@ -91,6 +99,7 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 		SetKeepAlive(pipelineKeepAlive).
 		SetPingTimeout(pipelinePingTimeout).
 		SetConnectTimeout(pipelineConnectTimeout).
+		SetWriteTimeout(pipelineWriteTimeout).
 		SetMaxReconnectInterval(pipelineMaxReconnectInterval).
 		SetOrderMatters(false).
 		SetAutoReconnect(true)
@@ -125,7 +134,11 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 // callbacks attached to the client; subsequent broker events log against
 // this logger asynchronously.
 //
-// onConnect (optional, may be nil) is invoked from inside the paho
+// onConnect and onConnectionLost (optional, may be nil) are invoked from the
+// corresponding paho callbacks so PipelineSubscriber can keep its connection
+// and subscription state accurate.
+//
+// onConnect is invoked from inside the paho
 // SetOnConnectHandler AFTER the broker-connected log line, on every
 // successful (re)connect. This is the seam the PipelineSubscriber wires
 // its re-subscribe + tracker-reset into so that a session-expired
@@ -147,6 +160,7 @@ func NewProductionPipelineMQTT(
 	dlqTopic string,
 	log zerolog.Logger,
 	onConnect func(pahomqtt.Client),
+	onConnectionLost func(error),
 ) (pahomqtt.Client, *MQTTDLQPublisher, error) {
 	if strings.TrimSpace(brokerURL) == "" {
 		return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: brokerURL must be non-empty")
@@ -160,13 +174,19 @@ func NewProductionPipelineMQTT(
 
 	opts := productionPipelineOptions(brokerURL, clientID, username, password)
 	opts.SetOnConnectHandler(func(c pahomqtt.Client) {
+		metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
 		log.Info().Str("broker", brokerURL).Msg("mqtt: PipelineSubscriber broker connected")
 		if onConnect != nil {
 			onConnect(c)
 		}
 	})
 	opts.SetConnectionLostHandler(func(_ pahomqtt.Client, err error) {
+		metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 		log.Warn().Err(err).Str("broker", brokerURL).Msg("mqtt: PipelineSubscriber broker connection lost")
+		if onConnectionLost != nil {
+			onConnectionLost(err)
+		}
 	})
 
 	client := pahomqtt.NewClient(opts)

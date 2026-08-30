@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -62,7 +62,7 @@ function renderCard(now = NOW) {
 }
 
 function getForm(): HTMLFormElement {
-  const form = screen.getByLabelText('Start (local)').closest('form')
+  const form = screen.getByLabelText(/^Start \(local\)/).closest('form')
   if (!form) throw new Error('ScheduledMaintenanceCard: <form> not found')
   return form
 }
@@ -99,8 +99,8 @@ describe('ScheduledMaintenanceCard', () => {
     renderCard()
     fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
 
-    expect(screen.getByLabelText('Start (local)')).toBeInTheDocument()
-    expect(screen.getByLabelText('Duration (minutes)')).toHaveValue(60)
+    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Duration \(minutes\)/)).toHaveValue(60)
     expect(screen.getByPlaceholderText("What's happening (optional)")).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Schedule' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
@@ -109,19 +109,39 @@ describe('ScheduledMaintenanceCard', () => {
   it('collapses the scheduler again when Cancel is pressed', () => {
     renderCard()
     fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    expect(screen.getByLabelText('Start (local)')).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
-    expect(screen.queryByLabelText('Start (local)')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Schedule a window/ })).toBeInTheDocument()
   })
 
-  it('blocks submission and toasts when no start time is picked', async () => {
+  it('protects edited maintenance details from an accidental cancel', async () => {
+    renderCard()
+    fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
+    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), {
+      target: { value: '2026-07-06T02:00' },
+    })
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+    const confirm = await screen.findByRole('dialog', { name: 'Unsaved changes' })
+    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
+
+    fireEvent.click(within(confirm).getByRole('button', { name: 'Discard changes' }))
+    await waitFor(() => {
+      expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument()
+    })
+  })
+
+  it('blocks submission and associates an error when no start time is picked', async () => {
     renderCard()
     fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
     fireEvent.submit(getForm())
 
-    expect(await screen.findByText('Pick a start time.')).toBeInTheDocument()
+    const start = screen.getByLabelText(/^Start \(local\)/)
+    expect(screen.getByText('Pick a start time.')).toBeInTheDocument()
+    expect(start).toHaveAttribute('aria-invalid', 'true')
+    expect(start).toHaveAttribute('aria-describedby')
     expect(postCount()).toBe(0)
   })
 
@@ -132,8 +152,8 @@ describe('ScheduledMaintenanceCard', () => {
     const startVal = '2026-07-06T02:00'
     const expectedUntil = new Date(Date.parse(startVal) + 90 * 60_000).toISOString()
 
-    fireEvent.change(screen.getByLabelText('Start (local)'), { target: { value: startVal } })
-    fireEvent.change(screen.getByLabelText('Duration (minutes)'), { target: { value: '90' } })
+    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: startVal } })
+    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)/), { target: { value: '90' } })
     fireEvent.change(screen.getByPlaceholderText("What's happening (optional)"), {
       target: { value: '  Upgrading firmware  ' },
     })
@@ -145,7 +165,7 @@ describe('ScheduledMaintenanceCard', () => {
     expect(body).toEqual({ mode: 'maintenance', message: 'Upgrading firmware', until: expectedUntil })
 
     expect(await screen.findByText('Maintenance window scheduled.')).toBeInTheDocument()
-    await waitFor(() => expect(screen.queryByLabelText('Start (local)')).not.toBeInTheDocument())
+    await waitFor(() => expect(screen.queryByLabelText(/^Start \(local\)/)).not.toBeInTheDocument())
   })
 
   it('clamps sub-minimum durations to 5 minutes and auto-fills a default message', async () => {
@@ -155,8 +175,8 @@ describe('ScheduledMaintenanceCard', () => {
     const startVal = '2026-07-06T02:00'
     const expectedUntil = new Date(Date.parse(startVal) + 5 * 60_000).toISOString()
 
-    fireEvent.change(screen.getByLabelText('Start (local)'), { target: { value: startVal } })
-    fireEvent.change(screen.getByLabelText('Duration (minutes)'), { target: { value: '1' } })
+    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: startVal } })
+    fireEvent.change(screen.getByLabelText(/^Duration \(minutes\)/), { target: { value: '1' } })
     fireEvent.submit(getForm())
 
     await waitFor(() => expect(postCount()).toBe(1))
@@ -202,14 +222,14 @@ describe('ScheduledMaintenanceCard', () => {
     stub(makeState({ mode: 'ok' }), new Error('backend exploded'))
     renderCard()
     fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    fireEvent.change(screen.getByLabelText('Start (local)'), { target: { value: '2026-07-06T02:00' } })
+    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: '2026-07-06T02:00' } })
     fireEvent.submit(getForm())
 
     // Both the hook's onError toast and the component's catch toast carry the
     // same detail, so there may be more than one node — assert at least one.
     const hits = await screen.findAllByText('backend exploded')
     expect(hits.length).toBeGreaterThan(0)
-    expect(screen.getByLabelText('Start (local)')).toBeInTheDocument()
+    expect(screen.getByLabelText(/^Start \(local\)/)).toBeInTheDocument()
   })
 
   it('disables the actions and shows a pending label while the schedule is in flight', async () => {
@@ -220,7 +240,7 @@ describe('ScheduledMaintenanceCard', () => {
     })
     renderCard()
     fireEvent.click(screen.getByRole('button', { name: /Schedule a window/ }))
-    fireEvent.change(screen.getByLabelText('Start (local)'), { target: { value: '2026-07-06T02:00' } })
+    fireEvent.change(screen.getByLabelText(/^Start \(local\)/), { target: { value: '2026-07-06T02:00' } })
     fireEvent.submit(getForm())
 
     const pending = await screen.findByRole('button', { name: /Scheduling/ })

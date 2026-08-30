@@ -178,8 +178,8 @@ func decodeError(t *testing.T, rec *httptest.ResponseRecorder) map[string]string
 	return m
 }
 
-func ptrStr(s string) *string { return &s }
-func ptrI16(v int16) *int16   { return &v }
+func ptrStr(s string) *string   { return &s }
+func ptrI16(v int16) *int16     { return &v }
 func ptrF64(v float64) *float64 { return &v }
 
 func approx(a, b, tol float64) bool { return math.Abs(a-b) <= tol }
@@ -994,9 +994,11 @@ func TestGetPublicShare_SpeedExcludedWhenFlagOff(t *testing.T) {
 		positions[i].ElevationM = ptrF64(50)
 	}
 	h := &ShareHandler{
-		shareRepo:   &fakeShareStore{getFn: func(context.Context, string) (*drivemodel.ShareToken, error) { return share, nil }},
-		driveRepo:   &fakeDriveStore{driveFn: func(context.Context, int64) (*drivemodel.Drive, error) { return completedDrive(7, 42), nil }},
-		posRepo:     &fakePositionStore{listFn: func(context.Context, int64, time.Time, time.Time) ([]telemetrymodel.Position, error) { return positions, nil }},
+		shareRepo: &fakeShareStore{getFn: func(context.Context, string) (*drivemodel.ShareToken, error) { return share, nil }},
+		driveRepo: &fakeDriveStore{driveFn: func(context.Context, int64) (*drivemodel.Drive, error) { return completedDrive(7, 42), nil }},
+		posRepo: &fakePositionStore{listFn: func(context.Context, int64, time.Time, time.Time) ([]telemetrymodel.Position, error) {
+			return positions, nil
+		}},
 		vehicleRepo: &fakeVehicleStore{},
 	}
 	rec := httptest.NewRecorder()

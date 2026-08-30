@@ -139,6 +139,21 @@ function InnerSection({ fromUnix, toUnix, vehicleId }: InnerSectionProps) {
     url: '/ai/system/logs/summarize',
     body,
     onEvent: () => {},
+    // AI-01: only the VEHICLE scope is part of stream identity here.
+    // LiveLogsPage recomputes fromUnix/toUnix on every live log event
+    // (newest event time minus a fixed 30-minute lookback), so keying
+    // scope on the window as well would abort an in-flight summary —
+    // or silently wipe a just-completed one — on every incoming log
+    // line. The window is instead snapshotted into `body` at the
+    // moment the user clicks Summarize (useAiStream stringifies body
+    // once inside start()), so the request always reflects the
+    // freshest window without treating its drift as a scope change.
+    // Switching the selected vehicle is a real scope change and must
+    // still abort/clear.
+    scopeKey:
+      typeof vehicleId === 'number' && Number.isFinite(vehicleId) && vehicleId > 0
+        ? vehicleId
+        : null,
   })
 
   return (

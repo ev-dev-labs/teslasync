@@ -1,12 +1,13 @@
-import { useEffect, useId, useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Car, Check, ChevronUp } from 'lucide-react';
-import { Tooltip } from '@/components/ui';
+import { Button, PanelTitle, Popover, Text, Tooltip } from '@/components/ui/runtime';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useVehicleState } from '@/api/hooks/useVehicles';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { cn } from '@/lib/cn';
+import { useStatusBarPopover } from './StatusBarContext';
 
 /**
  * ActiveVehicleSegment.
@@ -22,15 +23,19 @@ import { cn } from '@/lib/cn';
 
 interface ActiveVehicleSegmentProps {
   iconOnly?: boolean;
+  embedded?: boolean;
+  onSelect?: () => void;
 }
 
-export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentProps) {
+export function ActiveVehicleSegment({
+  iconOnly = false,
+  embedded = false,
+  onSelect,
+}: ActiveVehicleSegmentProps) {
   const { t } = useTranslation();
   const { vehicle, vehicles, vehicleId, setVehicleId } = useSelectedVehicle();
-  const [open, setOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const { open, toggle, close } = useStatusBarPopover('vehicle');
   const triggerRef = useRef<HTMLButtonElement | null>(null);
-  const listboxId = useId();
 
   // Footer-tier polling: 60s is plenty for an always-mounted micro-segment.
   // The full-vehicle state hook is shared via TanStack Query dedup with any
@@ -55,38 +60,13 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
     return `${battery}% · ${range} ${distanceLabel}`;
   }, [liveState, distanceLabel]);
 
-  // Close popover on outside click / Escape so it behaves like a real menu.
-  useEffect(() => {
-    if (!open) return;
-    const onClick = (e: MouseEvent) => {
-      if (!containerRef.current) return;
-      if (!containerRef.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setOpen(false);
-        // Escape is a keyboard dismissal — return focus to the trigger so the
-        // user is not dropped onto <body> after the listbox unmounts.
-        triggerRef.current?.focus();
-      }
-    };
-    document.addEventListener('mousedown', onClick);
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('mousedown', onClick);
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [open]);
-
   const pick = useCallback(
     (id: number) => {
       setVehicleId(id);
-      setOpen(false);
-      // The chosen option button unmounts with the listbox; move focus back to
-      // the trigger so keyboard users keep a sensible focus anchor.
-      triggerRef.current?.focus();
+      close();
+      onSelect?.();
     },
-    [setVehicleId],
+    [close, onSelect, setVehicleId],
   );
 
   if (vehicles.length === 0) {
@@ -106,6 +86,71 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
       {metricsLabel ? ` · ${metricsLabel}` : ''}
     </span>
   );
+
+  const vehicleOptions = (
+    <div
+      className="max-h-[280px] overflow-y-auto p-1"
+    >
+      {vehicles.map((v) => {
+        const selected = v.id === vehicleId;
+        const name =
+          v.display_name ||
+          v.vin ||
+          `${t('statusBar.vehicle.fallback', 'Vehicle')} ${v.id}`;
+        return (
+          <Button
+            key={v.id}
+            type="button"
+            aria-current={selected ? 'true' : undefined}
+            variant="ghost"
+            size="sm"
+            onClick={() => pick(v.id)}
+            className={cn(
+              'flex h-auto min-h-9 w-full justify-start gap-2 rounded-md px-2 py-1.5 text-left',
+              selected
+                ? 'bg-[var(--surface-2)] text-[var(--text-primary)]'
+                : 'text-[var(--text-secondary)]',
+            )}
+          >
+            <Car className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
+            <Text
+              as="span"
+              size="xs"
+              weight="medium"
+              className="min-w-0 flex-1 truncate text-left"
+            >
+              {name}
+              {v.model && (
+                <Text as="span" size="2xs" color="muted" className="ml-1.5">
+                  {v.model}
+                </Text>
+              )}
+            </Text>
+            {selected && (
+              <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden />
+            )}
+          </Button>
+        );
+      })}
+    </div>
+  );
+
+  if (embedded) {
+    return (
+      <section
+        className="border-b border-[var(--border-subtle)] last:border-b-0"
+        data-testid="status-bar-vehicle-embedded"
+      >
+        <div className="flex items-center justify-between gap-2 px-3 pb-1 pt-3">
+          <PanelTitle>{t('statusBar.vehicle.switch', 'Switch vehicle')}</PanelTitle>
+          <Text as="span" size="2xs" color="muted" className="max-w-32 truncate">
+            {label}
+          </Text>
+        </div>
+        {vehicleOptions}
+      </section>
+    );
+  }
 
   // Single-vehicle owners get a static, non-interactive chip — no need
   // for a switcher when there's nothing to switch to.
@@ -134,19 +179,20 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
   }
 
   return (
-    <div ref={containerRef} className="relative inline-flex">
+    <div className="relative inline-flex">
       <Tooltip content={tooltip} side="top">
-        <button
+        <Button
           type="button"
           ref={triggerRef}
+          variant="ghost"
+          size="sm"
           aria-label={`${t('statusBar.vehicle.switch', 'Switch vehicle')} (${label})`}
-          aria-haspopup="listbox"
+          aria-haspopup="dialog"
           aria-expanded={open}
-          aria-controls={open ? listboxId : undefined}
-          onClick={() => setOpen((o) => !o)}
+          onClick={toggle}
           className={cn(
-            'inline-flex items-center gap-1.5 rounded px-1.5 py-0.5 text-xs leading-none',
-            'text-[var(--text-secondary)] hover:bg-white/[0.04] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
+            'h-5 min-h-0 gap-1.5 rounded px-1.5 py-0 text-xs leading-none',
+            'text-[var(--text-secondary)]',
           )}
         >
           <Car className="h-3 w-3 shrink-0" aria-hidden />
@@ -159,47 +205,20 @@ export function ActiveVehicleSegment({ iconOnly = false }: ActiveVehicleSegmentP
               <ChevronUp className={cn('h-3 w-3 shrink-0 transition-transform', open ? '' : 'rotate-180')} aria-hidden />
             </>
           )}
-        </button>
+        </Button>
       </Tooltip>
 
-      {open && (
-        <div
-          id={listboxId}
-          role="listbox"
-          aria-label={t('statusBar.vehicle.aria', 'Active vehicle')}
-          className={cn(
-            'absolute bottom-full right-0 mb-1 z-[120] min-w-[220px] max-h-[280px] overflow-y-auto',
-            'rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)] shadow-2xl backdrop-blur-xl',
-            'p-1',
-          )}
-        >
-          {vehicles.map((v) => {
-            const selected = v.id === vehicleId;
-            const name = v.display_name || v.vin || `${t('statusBar.vehicle.fallback', 'Vehicle')} ${v.id}`;
-            return (
-              <button
-                key={v.id}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => pick(v.id)}
-                className={cn(
-                  'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs',
-                  'hover:bg-white/[0.06] focus:outline-none focus-visible:ring-1 focus-visible:ring-[var(--theme-primary)]',
-                  selected ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)]',
-                )}
-              >
-                <Car className="h-3.5 w-3.5 shrink-0 text-[var(--text-muted)]" aria-hidden />
-                <span className="flex-1 min-w-0 truncate">
-                  <span className="font-medium">{name}</span>
-                  {v.model && <span className="ml-1.5 text-[var(--text-muted)]">{v.model}</span>}
-                </span>
-                {selected && <Check className="h-3.5 w-3.5 shrink-0 text-emerald-300" aria-hidden />}
-              </button>
-            );
-          })}
-        </div>
-      )}
+      <Popover
+        open={open}
+        onClose={close}
+        anchorRef={triggerRef}
+        side="top"
+        align="end"
+        ariaLabel={t('statusBar.vehicle.switch', 'Switch vehicle')}
+        className="min-w-[220px]"
+      >
+        {vehicleOptions}
+      </Popover>
     </div>
   );
 }

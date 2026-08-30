@@ -360,7 +360,7 @@ describe('SignalLogWidget — pause / resume', () => {
     setup({ obs: makeQuery({ data: [makeObs()], refetch }) });
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });

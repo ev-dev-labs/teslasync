@@ -661,6 +661,10 @@ export interface Alert {
   message: string
   is_read: boolean
   created_at: string
+  /** Canonical alert-rule scope. `null`/omitted means the originating rule
+   * no longer exists or the row is a fleet-wide system notification. */
+  all_vehicles?: boolean | null
+  vehicle_ids?: number[] | null
   /** Drill-through metadata. Populated when the
    *  notification log links to a still-existing alert rule. Used by
    *  `getAlertDrillthroughHref()` (web/src/lib/alertDrillthrough.ts) to
@@ -1450,30 +1454,29 @@ export interface SoftwareUpdate {
 }
 
 export interface VampireDrainEvent {
-  id: number
-  vehicle_id: number
-  start_date: string
-  end_date: string | null
-  start_battery: number
-  end_battery: number | null
-  battery_lost: number
-  /** Range lost in kilometers (km, derived SI). */
-  range_lost_km: number
+  started_at: string
+  ended_at: string
   duration_hours: number
-  drain_rate_pct_per_hour: number
-  outside_temp_avg: number | null
-  sentry_mode: boolean
-  created_at: string
+  start_battery_pct: number
+  end_battery_pct: number
+  drain_pct: number
+  drain_pct_per_day: number
+  /** SI degrees Celsius; nullable when the parked window has no ambient join. */
+  ambient_temp_c_avg: number | null
+}
+
+export interface VampireDrainEventsResponse {
+  vehicle_id: number
+  events: VampireDrainEvent[]
 }
 
 export interface VampireDrainStats {
-  avg_drain_rate: number
-  max_drain_rate: number
-  total_range_lost: number
-  total_hours: number
   event_count: number
-  avg_sentry_drain: number
-  avg_nosentry_drain: number
+  total_observed_hours: number
+  avg_drain_pct_per_day: number | null
+  median_drain_pct_per_day: number | null
+  p95_drain_pct_per_day: number | null
+  sample_window_days: number
 }
 
 export interface DailyMileage {
@@ -1635,12 +1638,39 @@ export interface CompressionStats {
   estimated_saved_bytes: number
 }
 
+export interface ExtendedHealthComponent {
+  status: string
+  latency_ms?: number
+  last_check?: string
+  consecutive_failures?: number
+  [key: string]: unknown
+}
+
+export type ExtendedHealthComponents = Record<string, ExtendedHealthComponent> & {
+  database?: ExtendedHealthComponent & {
+    latency_ms: number
+  }
+  database_pool?: ExtendedHealthComponent & {
+    total_conns: number
+    idle_conns: number
+    acquired_conns: number
+  }
+  system?: ExtendedHealthComponent & {
+    goroutines: number
+    go_version: string
+    uptime_seconds: number
+  }
+}
+
 export interface ExtendedHealthResponse {
   status: string
-  components: Record<string, { status: string; latency_ms?: number; last_check?: string; consecutive_failures?: number }>
-  database: { status: string; latency_ms: number }
-  database_pool: { total_conns: number; idle_conns: number; acquired_conns: number }
-  system: { goroutines: number; go_version: string; uptime_seconds: number }
+  components: ExtendedHealthComponents
+  checked_at?: string
+  mode?: 'ok' | 'degraded' | 'maintenance'
+  source?: 'env' | 'db' | 'default'
+  maintenance_message?: string
+  maintenance_until?: string
+  maintenance_updated_at?: string
 }
 
 // === Aggregated diagnostic / self-test ===
@@ -1730,7 +1760,8 @@ export interface VersionInfo {
   arch: string
   uptime_seconds: number
   goroutines: number
-  endpoints?: {
+  require_cookie_consent?: boolean
+  endpoints?: Record<string, string | undefined> & {
     api?: string
     web?: string
     oauth_callback?: string
@@ -2503,6 +2534,48 @@ export interface SignalHistoryPoint {
   /** Row's source-of-truth ValueKind (e.g. "ValueKindDouble"). */
   kind: string
   value: number | string | boolean | null
+  ingest_origin: SignalIngestOrigin | null
+  source_emitted_at: string | null
+  received_at: string | null
+  normalization_version: number | null
+}
+
+export type TransportAgreementStatus =
+  | 'measured'
+  | 'insufficient_overlap'
+  | 'no_evidence'
+
+export interface TransportAgreementField {
+  field: string
+  status: TransportAgreementStatus
+  agreement_pct: number | null
+  http_evidence_rows: number
+  mqtt_evidence_rows: number
+  comparable_pairs: number
+  agreeing_pairs: number
+  disagreeing_pairs: number
+}
+
+/** Bounded source-time comparison from /signals/{vehicleID}/transport-agreement. */
+export interface TransportAgreementResponse {
+  vehicle_id: number
+  from: string
+  to: string
+  pair_tolerance_ms: number
+  row_limit: number
+  truncated: boolean
+  source_time_only: true
+  generated_at: string
+  status: TransportAgreementStatus
+  agreement_pct: number | null
+  scanned_rows: number
+  invalid_value_rows: number
+  http_evidence_rows: number
+  mqtt_evidence_rows: number
+  comparable_pairs: number
+  agreeing_pairs: number
+  disagreeing_pairs: number
+  fields: TransportAgreementField[]
 }
 
 export interface AutomationHistoryListResponse {
@@ -2860,6 +2933,20 @@ export interface SignalEnvelope {
   ts: string
 }
 
+/** Closed provenance vocabulary persisted by signal_log. */
+export type SignalIngestOrigin =
+  | 'unknown'
+  | 'fleet_telemetry_mqtt'
+  | 'fleet_telemetry_http'
+
+/** A typed history row with durable ingest/source-time evidence. */
+export interface SignalHistoryEnvelope extends SignalEnvelope {
+  ingest_origin: SignalIngestOrigin | null
+  source_emitted_at: string | null
+  received_at: string | null
+  normalization_version: number | null
+}
+
 /** UnitKind discriminator surfaced by /signals/{vehicleID}/available.
  *  Mirrors `protomodel.UnitKind` (none/distance/temperature/pressure/
  *  charge); `speed` is included so the frontend can flag distance-derived
@@ -2887,6 +2974,10 @@ export interface SignalDescriptor {
  *  Per-signal companion to the existing `vehicle_update` batch event so
  *  dashboards can apply O(1) keyed updates. */
 export interface SignalChangeEvent extends SignalEnvelope {
+  /** Process-lifetime epoch; changes when the serving SSE hub restarts. */
+  stream_id: string
+  /** Monotonic sequence within stream_id, used to detect dropped frames. */
+  sequence: number
   vehicle_id: number
   field: string
 }
@@ -2915,7 +3006,7 @@ export interface SignalHistoryResponseTyped {
   from: string
   to: string
   count: number
-  data: SignalEnvelope[]
+  data: SignalHistoryEnvelope[]
 }
 
 /** One row of the per-category routing destination map served by
@@ -3124,6 +3215,8 @@ export interface ScopeBudget {
   reset_at?: string | null
   /** Colour band the panel renders. */
   severity: RateLimitSeverity
+  /** Display unit. Omitted for request/token counts. */
+  unit?: 'usd'
   /** Operator-facing footnote shown under the row. */
   detail?: string
 }
@@ -3132,6 +3225,8 @@ export interface ScopeBudget {
 export interface RateLimitStatusResponse {
   generated_at: string
   scopes: ScopeBudget[]
+  /** Explicit partial-evidence notices; unaffected scope rows remain usable. */
+  warnings?: string[]
 }
 
 // === Job queue status ===

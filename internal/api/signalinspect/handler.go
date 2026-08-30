@@ -2,6 +2,7 @@ package signalinspect
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"sort"
@@ -10,10 +11,13 @@ import (
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	signaldb "github.com/ev-dev-labs/teslasync/internal/database/signal"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
+	"github.com/ev-dev-labs/teslasync/internal/signal/agreement"
 	"github.com/ev-dev-labs/teslasync/internal/tesla/protomodel"
 	"github.com/go-chi/chi/v5"
 )
@@ -44,6 +48,16 @@ type Handler struct {
 	db                  *database.DB                  // primary Postgres for typed signal_log queries
 	redisCache          *signal.RedisSignalCache
 	liveSignals         signal.LiveSignalStore
+	transportAgreement  transportAgreementReader
+}
+
+type transportAgreementReader interface {
+	AgreementEvidence(
+		ctx context.Context,
+		vehicleID int64,
+		from, to time.Time,
+		limit int,
+	) ([]agreement.Sample, bool, error)
 }
 
 // NewHandler creates a new Handler. The MongoDB repo is
@@ -57,6 +71,9 @@ func NewHandler(repo *signaldb.SignalLogRepo) *Handler {
 // typed signal_log query routes through this.
 func (h *Handler) WithDB(db *database.DB) *Handler {
 	h.db = db
+	if db != nil && db.Pool != nil {
+		h.transportAgreement = signaldb.NewTransportAgreementRepo(db)
+	}
 	return h
 }
 
@@ -92,14 +109,134 @@ const historyMaxLimit = 10000
 // `limit` query parameter.
 const historyDefaultLimit = 1000
 
+const (
+	transportAgreementDefaultHours = 24
+	transportAgreementMaxHours     = 168
+	transportAgreementRowLimit     = 10000
+	transportAgreementTolerance    = 2 * time.Second
+)
+
 // signalHistoryPoint is a single row in a /history response. The `kind`
 // field echoes the row's stored protomodel.ValueKind discriminator so
 // the frontend can switch on it; `value` is the typed Go scalar that
 // the kind selects from the typed signal_log columns.
 type signalHistoryPoint struct {
-	Ts    time.Time   `json:"ts"`
-	Kind  string      `json:"kind"`
-	Value interface{} `json:"value"`
+	Ts                   time.Time   `json:"ts"`
+	Kind                 string      `json:"kind"`
+	Value                interface{} `json:"value"`
+	IngestOrigin         *string     `json:"ingest_origin"`
+	SourceEmittedAt      *time.Time  `json:"source_emitted_at"`
+	ReceivedAt           *time.Time  `json:"received_at"`
+	NormalizationVersion *int16      `json:"normalization_version"`
+}
+
+type transportAgreementResponse struct {
+	VehicleID       int64     `json:"vehicle_id"`
+	From            time.Time `json:"from"`
+	To              time.Time `json:"to"`
+	PairToleranceMS int64     `json:"pair_tolerance_ms"`
+	RowLimit        int       `json:"row_limit"`
+	Truncated       bool      `json:"truncated"`
+	SourceTimeOnly  bool      `json:"source_time_only"`
+	GeneratedAt     time.Time `json:"generated_at"`
+	agreement.Report
+}
+
+// TransportAgreement compares independently attested HTTP and MQTT samples
+// over a bounded source-time window. Samples without producer timestamps are
+// deliberately excluded instead of being aligned by receipt time.
+func (h *Handler) TransportAgreement(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.signals.transport_agreement")
+	defer span.End()
+
+	vehicleID, err := strconv.ParseInt(chi.URLParam(r, "vehicleID"), 10, 64)
+	if err != nil || vehicleID <= 0 {
+		validationErr := errors.New("vehicle ID must be a positive integer")
+		span.RecordError(validationErr)
+		httpx.WriteError(w, http.StatusBadRequest, validationErr.Error())
+		return
+	}
+
+	from, to, err := parseTransportAgreementRange(r, time.Now().UTC())
+	if err != nil {
+		span.RecordError(err)
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if h.transportAgreement == nil {
+		configErr := errors.New("transport agreement evidence is unavailable")
+		span.RecordError(configErr)
+		httpx.WriteError(w, http.StatusServiceUnavailable, configErr.Error())
+		return
+	}
+
+	samples, truncated, err := h.transportAgreement.AgreementEvidence(
+		ctx,
+		vehicleID,
+		from,
+		to,
+		transportAgreementRowLimit,
+	)
+	if err != nil {
+		span.RecordError(err)
+		log.Error().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Int64("vehicle_id", vehicleID).
+			Msg("signal transport agreement evidence query failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to evaluate transport agreement")
+		return
+	}
+
+	report := agreement.Analyze(samples, transportAgreementTolerance)
+	httpx.WriteJSON(w, http.StatusOK, transportAgreementResponse{
+		VehicleID:       vehicleID,
+		From:            from,
+		To:              to,
+		PairToleranceMS: transportAgreementTolerance.Milliseconds(),
+		RowLimit:        transportAgreementRowLimit,
+		Truncated:       truncated,
+		SourceTimeOnly:  true,
+		GeneratedAt:     time.Now().UTC(),
+		Report:          report,
+	})
+}
+
+func parseTransportAgreementRange(r *http.Request, now time.Time) (time.Time, time.Time, error) {
+	query := r.URL.Query()
+	rawFrom := strings.TrimSpace(query.Get("from"))
+	rawTo := strings.TrimSpace(query.Get("to"))
+	if rawFrom != "" || rawTo != "" {
+		if rawFrom == "" || rawTo == "" {
+			return time.Time{}, time.Time{}, errors.New("from and to must be supplied together")
+		}
+		from, err := time.Parse(time.RFC3339, rawFrom)
+		if err != nil {
+			return time.Time{}, time.Time{}, errors.New("from must be an RFC3339 timestamp")
+		}
+		to, err := time.Parse(time.RFC3339, rawTo)
+		if err != nil {
+			return time.Time{}, time.Time{}, errors.New("to must be an RFC3339 timestamp")
+		}
+		if !from.Before(to) {
+			return time.Time{}, time.Time{}, errors.New("from must be before to")
+		}
+		if to.Sub(from) > transportAgreementMaxHours*time.Hour {
+			return time.Time{}, time.Time{}, fmt.Errorf("time range must not exceed %d hours", transportAgreementMaxHours)
+		}
+		return from.UTC(), to.UTC(), nil
+	}
+
+	hours := transportAgreementDefaultHours
+	if rawHours := strings.TrimSpace(query.Get("hours")); rawHours != "" {
+		parsed, err := strconv.Atoi(rawHours)
+		if err != nil || parsed <= 0 {
+			return time.Time{}, time.Time{}, errors.New("hours must be a positive integer")
+		}
+		hours = min(parsed, transportAgreementMaxHours)
+	}
+	to := now.UTC()
+	return to.Add(-time.Duration(hours) * time.Hour), to, nil
 }
 
 // History returns the typed time-series for one signal on one vehicle.
@@ -165,10 +302,13 @@ func (h *Handler) History(w http.ResponseWriter, r *http.Request) {
 // per the row's value_kind. Forward-only typed signal_log schema:
 //
 //	signal_log(vehicle_id, ts, field, value_kind,
-//	           str_value, bool_value, int_value, float_value, time_value)
+//	           str_value, bool_value, int_value, float_value, time_value,
+//	           ingest_origin, source_emitted_at, received_at,
+//	           normalization_version)
 func (h *Handler) queryHistory(ctx context.Context, vehicleID int64, signalName string, from, to time.Time, limit int) ([]signalHistoryPoint, error) {
 	const q = `
-		SELECT ts, value_kind, str_value, bool_value, int_value, float_value, time_value
+		SELECT ts, value_kind, str_value, bool_value, int_value, float_value, time_value,
+		       ingest_origin, source_emitted_at, received_at, normalization_version
 		  FROM signal_log
 		 WHERE vehicle_id = $1
 		   AND field      = $2
@@ -184,21 +324,32 @@ func (h *Handler) queryHistory(ctx context.Context, vehicleID int64, signalName 
 	out := make([]signalHistoryPoint, 0)
 	for rows.Next() {
 		var (
-			ts        time.Time
-			valueKind int16
-			strVal    *string
-			boolVal   *bool
-			intVal    *int64
-			floatVal  *float64
-			timeVal   *time.Time
+			ts                   time.Time
+			valueKind            int16
+			strVal               *string
+			boolVal              *bool
+			intVal               *int64
+			floatVal             *float64
+			timeVal              *time.Time
+			ingestOrigin         *string
+			sourceEmittedAt      *time.Time
+			receivedAt           *time.Time
+			normalizationVersion *int16
 		)
-		if err := rows.Scan(&ts, &valueKind, &strVal, &boolVal, &intVal, &floatVal, &timeVal); err != nil {
+		if err := rows.Scan(
+			&ts, &valueKind, &strVal, &boolVal, &intVal, &floatVal, &timeVal,
+			&ingestOrigin, &sourceEmittedAt, &receivedAt, &normalizationVersion,
+		); err != nil {
 			return nil, err
 		}
 		out = append(out, signalHistoryPoint{
-			Ts:    ts,
-			Kind:  protomodel.ValueKind(valueKind).String(),
-			Value: decodeTypedRow(protomodel.ValueKind(valueKind), strVal, boolVal, intVal, floatVal, timeVal),
+			Ts:                   ts,
+			Kind:                 protomodel.ValueKind(valueKind).String(),
+			Value:                decodeTypedRow(protomodel.ValueKind(valueKind), strVal, boolVal, intVal, floatVal, timeVal),
+			IngestOrigin:         ingestOrigin,
+			SourceEmittedAt:      sourceEmittedAt,
+			ReceivedAt:           receivedAt,
+			NormalizationVersion: normalizationVersion,
 		})
 	}
 	return out, rows.Err()

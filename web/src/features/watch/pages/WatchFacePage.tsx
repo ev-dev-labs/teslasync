@@ -1,11 +1,13 @@
 import { useCallback, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useWatchSummary, useWatchCommand } from '@/api/hooks/useWatch';
-import { Spinner } from '@/components/feedback';
+import { Skeleton } from '@/components/feedback';
 import { Badge, Button as ControlButton } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { OperationalModeBadge } from '@/components/data-display';
 import {
   convertDistanceFromSI,
   convertTempFromSI,
@@ -38,19 +40,20 @@ import { AIWatchFaceNLResponse } from '@/components/ai/AIWatchFaceNLResponse';
  */
 export default function WatchFacePage() {
   const { t } = useTranslation();
-  const [searchParams] = useSearchParams();
-  const vehicleIdParam = searchParams.get('vehicle_id');
-  const vehicleId = vehicleIdParam ? Number(vehicleIdParam) : undefined;
+  const { vehicleId: selectedVehicleId } = useSelectedVehicle();
+  const vehicleId = selectedVehicleId ?? undefined;
   const { data, isLoading, error } = useWatchSummary(vehicleId);
   const commandMutation = useWatchCommand();
+  const operationalMode = useOperationalMode();
   const { unitPrefs } = useUnits();
 
   const { mutate: sendWatchCommand } = commandMutation;
   const sendCommand = useCallback(
     (command: string) => {
+      if (!operationalMode.canWrite) return;
       sendWatchCommand({ vehicleId, command });
     },
-    [sendWatchCommand, vehicleId],
+    [operationalMode.canWrite, sendWatchCommand, vehicleId],
   );
 
   // Render the wearable WatchShell first as the primary surface;
@@ -60,7 +63,25 @@ export default function WatchFacePage() {
   // DOM, preserving the wearable invariant).
   let watchContent: React.ReactNode;
   if (isLoading) {
-    watchContent = <Spinner size="lg" />;
+    watchContent = (
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('watch.loading', 'Loading watch summary…')}
+        className="flex h-full flex-col items-center"
+      >
+        <Skeleton className="h-3 w-24" />
+        <div className="flex flex-1 items-center justify-center">
+          <Skeleton rounded className="h-32 w-32" />
+        </div>
+        <div className="flex gap-4 pb-2">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <Skeleton key={index} rounded className="h-11 w-11" />
+          ))}
+        </div>
+        <Skeleton className="h-3 w-16" />
+      </div>
+    );
   } else if (error || !data) {
     watchContent = (
       <p className="text-[var(--text-secondary)] text-sm text-center px-4">
@@ -88,6 +109,11 @@ export default function WatchFacePage() {
         <div className="text-2xs text-[var(--text-muted)] text-center truncate px-2">
           {data.vehicle_name}
         </div>
+        {operationalMode.isReadOnly && (
+          <div className="flex justify-center pt-1">
+            <OperationalModeBadge compact />
+          </div>
+        )}
 
         {/* Battery gauge — center focus */}
         <div className="flex-1 flex flex-col items-center justify-center min-h-0">
@@ -132,6 +158,8 @@ export default function WatchFacePage() {
             }
             onClick={() => sendCommand(data.is_locked ? 'unlock' : 'lock')}
             loading={commandMutation.isPending}
+            disabled={!operationalMode.canWrite}
+            disabledReason={operationalMode.writeBlockReason ?? undefined}
           />
           <StatusIcon
             icon={Thermometer}
@@ -144,6 +172,8 @@ export default function WatchFacePage() {
             }
             onClick={() => sendCommand(data.is_climate_on ? 'climate_off' : 'climate_on')}
             loading={commandMutation.isPending}
+            disabled={!operationalMode.canWrite}
+            disabledReason={operationalMode.writeBlockReason ?? undefined}
           />
           <StatusIcon
             icon={Shield}
@@ -248,9 +278,11 @@ export interface StatusIconProps {
   ariaLabel?: string;
   onClick?: () => void;
   loading?: boolean;
+  disabled?: boolean;
+  disabledReason?: string;
 }
 
-export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClick, loading }: StatusIconProps) {
+export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClick, loading, disabled = false, disabledReason }: StatusIconProps) {
   const colorClasses = {
     emerald: 'text-emerald-400',
     red: 'text-red-400',
@@ -264,12 +296,13 @@ export function StatusIcon({ icon: Icon, active, color, label, ariaLabel, onClic
       variant="ghost"
       size="sm"
       onClick={onClick}
-      disabled={loading}
+      disabled={loading || disabled}
+      title={disabled ? disabledReason : undefined}
       className={cn(
         'h-11 w-11 flex-col rounded-full px-0 py-0 font-normal transition-colors duration-normal',
         active ? `bg-[var(--surface-2)] ${activeColor}` : 'bg-[var(--surface-2)] text-[var(--text-muted)]',
         onClick && 'active:scale-95',
-        loading && 'opacity-50',
+        (loading || disabled) && 'opacity-50',
       )}
       aria-label={ariaLabel ?? label}
     >

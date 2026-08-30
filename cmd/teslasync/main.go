@@ -27,6 +27,9 @@ func run() int {
 		switch os.Args[1] {
 		case "healthcheck":
 			return healthcheck()
+		case "drain":
+			// Kubernetes preStop hook. See cmd/teslasync/drain.go.
+			return drain()
 		case "vapid-keygen":
 			runVAPIDKeygen()
 			return 0

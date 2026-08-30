@@ -1,0 +1,26 @@
+{
+  "savedViews": {
+    "title": "Saved views",
+    "saveCurrent": "Save current view…",
+    "manage": "Manage views",
+    "name": "Name",
+    "namePlaceholder": "View name",
+    "empty": "No saved views yet",
+    "emptyQuery": "No filters",
+    "appliedBadge": "View",
+    "clearApplied": "Clear applied view",
+    "deleteTitle": "Delete saved view",
+    "deleteConfirm": "Delete saved view \"{{name}}\"?",
+    "renamePrompt": "Rename view",
+    "makeDefault": "Apply automatically when I open this page",
+    "setDefault": "Set as default",
+    "unsetDefault": "Clear default",
+    "defaultBadge": "Default",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "announceApplied": "View {{name}} applied",
+    "announceCleared": "Saved view cleared",
+    "loading": "Loading saved views…",
+    "error": "Unable to load saved views"
+  }
+}

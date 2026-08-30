@@ -1,0 +1,239 @@
+# OPS-11 — Degraded-mode dependency register.
+#
+# Every external dependency the platform can lose must have: a declared
+# degraded behaviour, the signals that detect it, the fallback the code
+# actually implements, and an operator runbook that exists in the repo.
+#
+# `go run ./cmd/ops-gate -check runbooks` fails if a dependency is
+# missing any of those, or if the referenced runbook file is absent.
+version: 1
+
+# Every dependency below must be covered. Adding a new external
+# dependency to the platform means adding it here first.
+required_criticalities: [critical, degraded-tolerable]
+
+dependencies:
+  - id: database
+    title: PostgreSQL / TimescaleDB
+    criticality: critical
+    used_for: >-
+      Durable signal_log history, drives, charging sessions, all
+      analytics reads, migrations, and the api_call_logs audit trail.
+    degraded_behaviour: >-
+      /readyz reports database: unhealthy and the pod leaves the Service
+      endpoints, so Kubernetes stops routing to it. The write circuit
+      breaker (gobreaker, database.WriteBreaker) opens after sustained
+      write failures, which flips /readyz to database_writes: unhealthy
+      before the pool is fully exhausted.
+    fallback: >-
+      None for durable reads — Postgres is the system of record. Live
+      current-state reads continue to be served from signal.Store (L1)
+      and Redis (L2) for as long as those layers stay warm.
+    detection:
+      - signal: teslasync_red_http_requests_total{status_class="5xx"}
+        note: 5xx ratio climbs first on analytics/list endpoints.
+      - signal: /readyz
+        note: database and database_writes keys.
+    runbook: docs/runbooks/degraded-mode-database.md
+
+  - id: redis
+    title: Redis (L2 live signal cache + SSE fan-out)
+    criticality: degraded-tolerable
+    used_for: >-
+      Cross-pod live signal state (HSET vehicle:{id}:signals), restart
+      recovery, SSE Pub/Sub fan-out, and ordinary response caching.
+    degraded_behaviour: >-
+      Cross-pod live reads stop being shared; each pod answers from its
+      own signal.Store L1. SSE events are only delivered to clients
+      attached to the pod that produced them. Cached responses miss and
+      fall through to Postgres, raising read latency.
+    fallback: >-
+      LIVE_SIGNAL_STORE_MODE=local is the documented rollback switch; the
+      cache package degrades to its in-memory fallback. Ingest is never
+      blocked on Redis (ADR-007).
+    detection:
+      - signal: teslasync_sse_connections_active
+        note: Client count holds but events stop arriving on non-producing pods.
+      - signal: cache hit ratio / Postgres read QPS
+        note: A sudden read-QPS step change is the clearest Redis-outage tell.
+    runbook: docs/runbooks/degraded-mode-redis.md
+
+  - id: mqtt
+    title: MQTT broker (Mosquitto) / Fleet Telemetry transport
+    criticality: critical
+    used_for: >-
+      The only ingest path for Tesla Fleet Telemetry (topic
+      telemetry/+/v/+) plus the internal teslasync/* worker topics
+      (notifications, exports, automation reload).
+    degraded_behaviour: >-
+      Telemetry ingest stops: signal_log stops advancing, the FSM stops
+      seeing transitions, and telemetry freshness breaches its SLO. The
+      REST API keeps serving historical data normally.
+    fallback: >-
+      Mosquitto retains a bounded persistent-client queue; paho reconnects
+      with capped backoff, the subscription supervisor retries failed
+      SUBACKs, and cmd/resubscribe re-establishes the vehicle subscriptions.
+      Worker topics queue locally.
+    detection:
+      - signal: teslasync_mqtt_pipeline_subscribed
+        note: slo/catalog.yaml mqtt_pipeline_subscription.
+      - signal: teslasync_mqtt_consumer_backlog
+        note: slo/catalog.yaml mqtt_handler_backlog; this is API handler concurrency, not broker offline queue depth.
+      - signal: telemetry freshness
+        note: slo/catalog.yaml telemetry_freshness; the earliest reliable alarm.
+    runbook: docs/runbooks/degraded-mode-mqtt.md
+
+  - id: tesla-api
+    title: Tesla Fleet API
+    criticality: degraded-tolerable
+    used_for: >-
+      OAuth token refresh, vehicle list/state polling, command dispatch
+      via the vehicle-command-proxy, and telemetry subscription config.
+    degraded_behaviour: >-
+      The gobreaker circuit breaker in internal/tesla opens after
+      sustained failures; commands fail fast with a user-visible error
+      instead of hanging. /readyz reports tesla_auth: no_token when the
+      refresh token itself is the problem, which is NOT fatal — the
+      endpoint stays ready so historical data keeps serving.
+    fallback: >-
+      Streaming telemetry is independent of the REST API, so live data
+      keeps flowing while the API is down. Polling backs off adaptively
+      rather than hammering the upstream.
+    detection:
+      - signal: slo:tesla_api_availability
+        note: slo/catalog.yaml tesla_api_availability.
+      - signal: circuit breaker state
+        note: /readyz plus the breaker state gauge.
+    runbook: docs/runbooks/degraded-mode-tesla-api.md
+
+  - id: ai-provider
+    title: AI provider (Ollama / hosted LLM)
+    criticality: degraded-tolerable
+    used_for: >-
+      AI insight strategies, natural-language QA over fleet data, and
+      changelog summarisation.
+    degraded_behaviour: >-
+      AI-backed panels return an explicit unavailable state. No
+      non-AI page is affected — the subsystem is isolated behind
+      internal/ai/provider decorators (rate limit, cost, redaction).
+    fallback: >-
+      Cached/eval'd responses where present; otherwise the feature
+      registry reports the capability as unavailable and the UI renders
+      an EmptyState rather than hiding the panel.
+    detection:
+      - signal: internal/ai/health ollama_poll
+        note: Provider health poller flips the registry availability flag.
+      - signal: AI call error ratio
+        note: Provider audit decorator records failures per provider.
+    runbook: docs/runbooks/degraded-mode-ai-provider.md
+
+  - id: object-storage
+    title: Object storage (local / S3 / Azure Blob / GCS)
+    criticality: degraded-tolerable
+    used_for: >-
+      Backup artifact upload + retrieval (internal/backup storage
+      providers) and generated export artifacts.
+    degraded_behaviour: >-
+      Backups fail to upload and cmd/backup-verify reports the most
+      recent run as unverifiable. Export jobs fail at the upload step
+      after generating their payload. No read path for live fleet data
+      is affected.
+    fallback: >-
+      The `local` storage provider writes to the mounted volume, which is
+      the documented break-glass target when a remote provider is
+      unreachable. Failed export jobs are retried by the worker.
+    detection:
+      - signal: cmd/backup-verify exit status
+        note: Weekly CronJob; non-zero exit means the latest artifact did not round-trip.
+      - signal: export job failure ratio
+        note: Export worker job outcomes.
+    runbook: docs/runbooks/degraded-mode-object-storage.md
+
+# ── Lifecycle procedures ─────────────────────────────────────────────
+#
+# Not degraded-mode dependencies: these are operator-controlled transitions
+# whose safe sequence or scope boundary must not be left to memory.
+# `go run ./cmd/ops-gate -check runbooks` fails if a runbook loses a required
+# section, command, warning, or cross-link.
+lifecycle_procedures:
+  - id: migration-gate-lifecycle
+    title: Migration gate hook <-> ordinary manifest transitions
+    why: >-
+      Helm tracks hook resources and ordinary manifests separately and
+      offers no supported in-place transition between them. Converting a
+      secret source into a hook, rolling back across that boundary, or
+      leaving hook mode each leave the release manifest and the live
+      cluster disagreeing about who manages the credentials. This is a
+      property of Helm, not something the chart can template away, so it
+      must be carried as an explicit operator procedure.
+    runbook: docs/runbooks/migration-gate-lifecycle.md
+    required_sections:
+      - "## Preflight: remove a pre-fix ExternalSecret ownerReference"
+      - "## Procedure 1 — First conversion (ordinary source -> hook mode)"
+      - "## Procedure 2 — Rollback across a conversion boundary"
+      - "## Procedure 3 — Leaving hook mode (hook -> none/require)"
+      - "## Uninstall"
+      - "## Escalation"
+    required_commands:
+      # Preflight: inspect, then remove ONLY the ExternalSecret ownership.
+      - "TARGET=${TARGET:-$RELEASE}"
+      - "kubectl -n \"$NS\" get secret \"$TARGET\" \\\n  -o jsonpath='{.metadata.ownerReferences}'"
+      - "select(.kind != \"ExternalSecret\")"
+      - "kubectl -n \"$NS\" patch secret \"$TARGET\" --type=merge"
+      # Rollback: delete the hook source before rolling back.
+      - "kubectl -n \"$NS\" delete externalsecret \"$RELEASE\""
+      - "helm -n \"$NS\" rollback \"$RELEASE\" \"$PRE_CONVERSION_REVISION\""
+    required_warnings:
+      # The rendered Orphan value must never be claimed as retroactive.
+      - "does **not** retroactively strip an\nownerReference"
+      # A bare rollback across the boundary must be called out.
+      - "bare `helm rollback` across a conversion boundary can abort"
+      # hook -> none/require must be named as sticky, not a values change.
+      - "Hook mode is sticky for a source identity"
+      # `none` must not be sold as a general escape hatch.
+      - "not a\ngeneral escape hatch"
+    cross_links:
+      # Any generic rollback guidance must point at this procedure, or an
+      # operator following the README alone destroys the secret source.
+      - path: helm/teslasync/README.md
+        section: "## Rollback"
+        must_reference: docs/runbooks/migration-gate-lifecycle.md
+      - path: helm/teslasync/values.yaml
+        must_reference: docs/runbooks/migration-gate-lifecycle.md
+
+  - id: node-reboot-recovery
+    title: Homelab Kubernetes node reboot and recovery
+    why: >-
+      The default deployment pins single-instance PostgreSQL, Redis, Mosquitto,
+      and application workloads to the homelab node named carbon. Kubernetes
+      restarts pods in no dependency order, and local-path volumes cannot move
+      to another node. A reboot therefore needs a defined persistence,
+      shutdown, startup, and verification sequence rather than a manual API
+      restart after telemetry silently stalls.
+    runbook: docs/runbooks/kubernetes-node-reboot.md
+    required_sections:
+      - "## Scope and guarantee"
+      - "## Preflight"
+      - "## Planned reboot"
+      - "## Unplanned reboot recovery"
+      - "## Verification"
+      - "## Escalation"
+    required_commands:
+      - "kubectl -n \"$NS\" get pvc"
+      - "kubectl -n \"$NS\" get pods -o wide"
+      - "kubectl drain \"$NODE\" --ignore-daemonsets --delete-emptydir-data --grace-period=180 --timeout=15m"
+      - "kubectl wait --for=condition=Ready node/\"$NODE\" --timeout=10m"
+      - "kubectl uncordon \"$NODE\""
+      - "kubectl -n \"$NS\" rollout status deployment/\"$RELEASE\"-postgresql --timeout=10m"
+      - "kubectl -n \"$NS\" rollout status deployment/\"$RELEASE\"-api --timeout=15m"
+    required_warnings:
+      - "same-node reboot, not permanent node or disk loss"
+      - "Do not delete or recreate a PVC"
+      - "do not bypass it with `--disable-eviction`"
+    cross_links:
+      - path: helm/teslasync/README.md
+        section: "## Node reboot recovery"
+        must_reference: docs/runbooks/kubernetes-node-reboot.md
+      - path: docs/deployment/kubernetes.md
+        section: "## Homelab node reboot recovery"
+        must_reference: ../runbooks/kubernetes-node-reboot.md

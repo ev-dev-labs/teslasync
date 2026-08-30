@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { act, renderHook } from '@testing-library/react';
+import { act, renderHook as renderHookBase } from '@testing-library/react';
+import { createElement, type ReactNode } from 'react';
+import { BrowserRouter } from 'react-router-dom';
 
 import {
   useKioskMode,
@@ -25,6 +27,16 @@ import type { SavedDashboard } from '../widgets/types';
 // Not exported by the source (matches the useOnboardingSkip.test convention of
 // hardcoding the storage key), but it is the stable persistence contract.
 const KIOSK_CONFIG_KEY = 'teslasync-kiosk-config';
+
+function browserRouterWrapper({ children }: { children: ReactNode }) {
+  return createElement(BrowserRouter, null, children);
+}
+
+const renderHook: typeof renderHookBase = (callback, options) =>
+  renderHookBase(callback, {
+    ...options,
+    wrapper: browserRouterWrapper,
+  });
 
 function makeDashboard(id: string, name = id): SavedDashboard {
   return {
@@ -430,7 +442,7 @@ describe('useKioskMode — screen dim (burn-in prevention)', () => {
 });
 
 describe('useKioskMode — URL auto-entry', () => {
-  it('auto-enters kiosk on ?kiosk=true and strips the param, preserving others', async () => {
+  it('auto-enters kiosk on ?kiosk=true and canonicalizes the URL', async () => {
     window.history.replaceState({}, '', '/dashboard?kiosk=true&tab=fleet');
 
     const { result } = renderHook(() => useKioskMode(THREE, 'a', vi.fn()));
@@ -441,8 +453,10 @@ describe('useKioskMode — URL auto-entry', () => {
 
     expect(requestFullscreen).toHaveBeenCalledTimes(1);
     expect(result.current.isKiosk).toBe(true);
-    // The kiosk flag is removed but unrelated params survive.
-    expect(window.location.search).toBe('?tab=fleet');
+    const params = new URLSearchParams(window.location.search);
+    expect(params.get('kiosk')).toBeNull();
+    expect(params.get('presentation')).toBe('kiosk');
+    expect(params.get('tab')).toBe('fleet');
   });
 
   it('does not auto-enter kiosk without the query flag', async () => {

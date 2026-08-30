@@ -373,7 +373,7 @@ describe('RouteEfficiencyWidget refresh', () => {
     routeRequest(routeData([makeRoute()]));
     renderWidget({ vehicleId: 1 });
 
-    const refresh = await screen.findByRole('button', { name: 'Refresh' });
+    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     const before = routeEffCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

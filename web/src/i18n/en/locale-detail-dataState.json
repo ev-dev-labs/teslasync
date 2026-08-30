@@ -1,0 +1,25 @@
+{
+  "dataState": {
+    "stale": {
+      "title": "Data may be stale",
+      "message": "The latest values are temporarily unavailable. Previously loaded data remains visible."
+    },
+    "systemStatus": {
+      "maintenance": {
+        "readOnly": "Maintenance controls are read-only"
+      }
+    },
+    "partial": {
+      "title": "Partial data",
+      "message": "Some sources did not respond. Available results remain visible and are not treated as complete."
+    },
+    "unavailable": {
+      "title": "Service unavailable",
+      "message": "A required service is unavailable. This section will recover when the dependency returns."
+    },
+    "unsupported": {
+      "title": "Feature not supported",
+      "message": "This feature is not enabled by the current deployment configuration."
+    }
+  }
+}

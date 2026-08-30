@@ -36,12 +36,12 @@ var (
 // ---------------------------------------------------------------------------
 
 type calCall struct {
-	siteID                              int64
+	siteID                             int64
 	kind, start, end, period, timeZone string
 }
 
 type telCall struct {
-	siteID                      int64
+	siteID                     int64
 	kind, start, end, timeZone string
 }
 
@@ -198,7 +198,7 @@ func sampleEnergyRow() *teslamodel.TeslaEnergyHistory {
 	v := 1234.5
 	return &teslamodel.TeslaEnergyHistory{
 		ID: 1, EnergySiteID: 42, Period: "day",
-		Timestamp: time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
+		Timestamp:     time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC),
 		SolarEnergyWh: &v, FetchedAt: time.Now().UTC(),
 	}
 }
@@ -509,20 +509,20 @@ func TestRefreshEnergyHistory(t *testing.T) {
 		},
 		{
 			name: "upsert_error", siteID: "42",
-			client: &fakeEnergyClient{calStatus: 200, calBody: []byte(validEnergyBody)},
-			repo:   &fakeEnergyRepo{upsertErr: errors.New("write failed")},
+			client:     &fakeEnergyClient{calStatus: 200, calBody: []byte(validEnergyBody)},
+			repo:       &fakeEnergyRepo{upsertErr: errors.New("write failed")},
 			wantStatus: http.StatusInternalServerError, wantClientHit: true,
 		},
 		{
 			name: "readback_error", siteID: "42",
-			client: &fakeEnergyClient{calStatus: 200, calBody: []byte(validEnergyBody)},
-			repo:   &fakeEnergyRepo{getErr: errors.New("read failed")},
+			client:     &fakeEnergyClient{calStatus: 200, calBody: []byte(validEnergyBody)},
+			repo:       &fakeEnergyRepo{getErr: errors.New("read failed")},
 			wantStatus: http.StatusInternalServerError, wantClientHit: true,
 		},
 		{
 			name: "success", siteID: "42",
-			client: &fakeEnergyClient{calStatus: 200, calBody: []byte(validEnergyBody)},
-			repo:   &fakeEnergyRepo{rows: []*teslamodel.TeslaEnergyHistory{sampleEnergyRow()}},
+			client:     &fakeEnergyClient{calStatus: 200, calBody: []byte(validEnergyBody)},
+			repo:       &fakeEnergyRepo{rows: []*teslamodel.TeslaEnergyHistory{sampleEnergyRow()}},
 			wantStatus: http.StatusOK, wantClientHit: true,
 		},
 	}

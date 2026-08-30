@@ -54,38 +54,42 @@ const H = vi.hoisted(() => ({
   xAxisProps: null as Record<string, unknown> | null,
 }));
 
-vi.mock('@/components/charts', () => ({
-  ChartTooltip: () => null,
-  chartGrid: null,
-  axisTickSm: {},
-  BarChart: ({ data, children }: { data: HourPoint[]; children?: ReactNode }) => {
-    H.barChartData = data;
-    return (
-      <div data-testid="bar-chart" data-count={data?.length ?? 0}>
-        {children}
-      </div>
-    );
-  },
-  Bar: (props: Record<string, unknown>) => {
-    H.barProps = props;
-    return (
-      <div
-        data-testid="bar"
-        data-datakey={String(props.dataKey ?? '')}
-        data-fill={String(props.fill ?? '')}
-      />
-    );
-  },
-  XAxis: (props: Record<string, unknown>) => {
-    H.xAxisProps = props;
-    return <div data-testid="xaxis" data-datakey={String(props.dataKey ?? '')} />;
-  },
-  YAxis: () => null,
-  Tooltip: () => null,
-  ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
-    <div data-testid="responsive">{children}</div>
-  ),
-}));
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartTooltip: () => null,
+    chartGrid: null,
+    axisTickSm: {},
+    BarChart: ({ data, children }: { data: HourPoint[]; children?: ReactNode }) => {
+      H.barChartData = data;
+      return (
+        <div data-testid="bar-chart" data-count={data?.length ?? 0}>
+          {children}
+        </div>
+      );
+    },
+    Bar: (props: Record<string, unknown>) => {
+      H.barProps = props;
+      return (
+        <div
+          data-testid="bar"
+          data-datakey={String(props.dataKey ?? '')}
+          data-fill={String(props.fill ?? '')}
+        />
+      );
+    },
+    XAxis: (props: Record<string, unknown>) => {
+      H.xAxisProps = props;
+      return <div data-testid="xaxis" data-datakey={String(props.dataKey ?? '')} />;
+    },
+    YAxis: () => null,
+    Tooltip: () => null,
+    ResponsiveContainer: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="responsive">{children}</div>
+    ),
+  };
+});
 
 /* ── Fixtures ─────────────────────────────────────────────────────────────── */
 /** A full, canonical 24-bucket histogram — matches what the page always feeds. */
@@ -167,7 +171,6 @@ describe('ActivityHourPanel — state machine', () => {
 
     expect(screen.getByText(EMPTY_MESSAGE)).toBeInTheDocument();
     expect(screen.queryByTestId('bar-chart')).toBeNull();
-    expect(screen.queryByRole('img', { name: CHART_ARIA })).toBeNull();
   });
 
   it('shows the empty state when the derived series is an empty array', () => {

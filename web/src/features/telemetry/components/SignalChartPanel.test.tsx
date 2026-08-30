@@ -58,33 +58,44 @@ vi.mock('@/components/motion', () => ({
 // `SmallMultiplesChart` echo their bound props as data-* attributes so the
 // mode/axis/animation wiring is observable without recharts' real layout.
  
-vi.mock('@/components/charts', () => ({
-  ResponsiveContainer: ({ children }: any) => (
-    <div data-testid="responsive-container">{children}</div>
-  ),
-  LineChart: ({ children, margin }: any) => (
-    <div data-testid="line-chart" data-margin-right={String(margin?.right)}>
-      {children}
-    </div>
-  ),
-  Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke }: any) => (
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
+    ChartLegend: chartTestDoubles.ChartLegend,
+    ResponsiveContainer: ({ children }: any) => (
+      <div data-testid="responsive-container">{children}</div>
+    ),
+    LineChart: ({ children, margin }: any) => (
+      <div data-testid="line-chart" data-margin-right={String(margin?.right)}>
+        {children}
+      </div>
+    ),
+    Line: ({ dataKey, name, yAxisId, isAnimationActive, connectNulls, stroke, data }: any) => (
+      <div
+        data-testid="line"
+        data-key={String(dataKey)}
+        data-name={String(name)}
+        data-yaxis={String(yAxisId)}
+        data-animated={String(isAnimationActive)}
+        data-connect-nulls={String(connectNulls)}
+        data-stroke={String(stroke)}
+        data-x-values={(data ?? []).map((row: Record<string, unknown>) => row.timestampMs).join(',')}
+      />
+    ),
+  XAxis: ({ dataKey, type, allowDuplicatedCategory }: any) => (
     <div
-      data-testid="line"
+      data-testid="x-axis"
       data-key={String(dataKey)}
-      data-name={String(name)}
-      data-yaxis={String(yAxisId)}
-      data-animated={String(isAnimationActive)}
-      data-connect-nulls={String(connectNulls)}
-      data-stroke={String(stroke)}
+      data-type={String(type)}
+      data-allow-duplicated-category={String(allowDuplicatedCategory)}
     />
   ),
-  XAxis: ({ dataKey }: any) => <div data-testid="x-axis" data-key={String(dataKey)} />,
   YAxis: ({ yAxisId, orientation }: any) => (
     <div data-testid={`y-axis-${yAxisId}`} data-orientation={orientation ?? 'left'} />
   ),
   CartesianGrid: () => <div data-testid="cartesian-grid" />,
   Tooltip: () => <div data-testid="tooltip" />,
-  Legend: () => <div data-testid="legend" />,
   SmallMultiplesChart: ({ series, cellHeight, syncId }: any) => (
     <div
       data-testid="small-multiples"
@@ -93,10 +104,16 @@ vi.mock('@/components/charts', () => ({
       data-sync-id={String(syncId)}
     />
   ),
-}));
+  projectSmallMultipleSeries: vi.fn((data: Record<string, unknown>[], signal: string) => ({
+    rows: data.filter((row) => typeof row[signal] === 'number'),
+    showDots: false,
+  })),
+  };
+});
  
 
 import { SignalChartPanel, type SignalChartPanelProps } from './SignalChartPanel';
+import { projectSmallMultipleSeries } from '@/components/charts';
 import type { SignalStat } from '../hooks/useLiveSignalStream';
 
 // U+00B7 middle dot joins the live event/point counters. Declared via an escape
@@ -253,7 +270,7 @@ describe('SignalChartPanel — loading state', () => {
     renderPanel({ loading: true, isLive: true, data: [] });
 
     expect(screen.queryByRole('status', { name: /Loading chart/ })).toBeNull();
-    expect(screen.getByText(/Waiting for signal data/)).toBeInTheDocument();
+    expect(screen.getByText(/Waiting for live signal data/)).toBeInTheDocument();
   });
 });
 
@@ -261,24 +278,26 @@ describe('SignalChartPanel — loading state', () => {
 
 describe('SignalChartPanel — empty states', () => {
   it('shows the historical empty state announced via role=status', () => {
-    const { container } = renderPanel({ data: [] });
+    renderPanel({ data: [] });
 
-    expect(screen.getByText('No data for this time range')).toBeInTheDocument();
-    expect(screen.getByRole('status')).toHaveTextContent('No data for this time range');
-    expect(container.querySelector('.lucide-activity')).toHaveAttribute(
-      'aria-hidden',
-      'true',
+    expect(
+      screen.getByText('No signal samples were recorded in this time range.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'No signal samples were recorded in this time range.',
     );
+    expect(screen.getByText(/Expand the range or select another signal/)).toBeInTheDocument();
     expect(screen.queryByTestId('line-chart')).toBeNull();
   });
 
   it('shows the live waiting state with decorative radio glyphs', () => {
     const { container } = renderPanel({ isLive: true, data: [] });
 
-    expect(screen.getByText(/Waiting for signal data/)).toBeInTheDocument();
-    // Header glyph + waiting glyph — both decorative.
+    expect(screen.getByText(/Waiting for live signal data/)).toBeInTheDocument();
+    expect(screen.getByText(/publishes the chosen signals/)).toBeInTheDocument();
+    // Only the header glyph — EmbeddedChart's empty state does not add a Radio icon.
     const radios = container.querySelectorAll('.lucide-radio');
-    expect(radios).toHaveLength(2);
+    expect(radios).toHaveLength(1);
     radios.forEach((r) => expect(r).toHaveAttribute('aria-hidden', 'true'));
   });
 });
@@ -374,6 +393,18 @@ describe('SignalChartPanel — chart mode resolution', () => {
       'signal-chart-live',
     );
   });
+
+  it('does not compute unused overlay projections in grid mode', () => {
+    vi.mocked(projectSmallMultipleSeries).mockClear();
+
+    renderPanel({
+      chartMode: 'grid',
+      selectedSignals: ['a', 'b'],
+      data: TWO_SERIES_DATA,
+    });
+
+    expect(projectSmallMultipleSeries).not.toHaveBeenCalled();
+  });
 });
 
 // ── Overlay internals ─────────────────────────────────────────────────────────
@@ -391,6 +422,45 @@ describe('SignalChartPanel — overlay internals', () => {
     expect(lines).toHaveLength(2);
     expect(lines[0]).toHaveAttribute('data-key', 'a');
     expect(lines[1]).toHaveAttribute('data-name', 'b');
+  });
+
+  it('matches per-signal rows by timestamp instead of concatenated array index', () => {
+    renderPanel({
+      selectedSignals: ['a', 'b'],
+      chartMode: 'overlay',
+      data: TWO_SERIES_DATA,
+      stats: COMPARABLE_STATS,
+    });
+
+    const xAxis = screen.getByTestId('x-axis');
+    expect(xAxis).toHaveAttribute('data-key', 'timestampMs');
+    expect(xAxis).toHaveAttribute('data-type', 'number');
+    expect(xAxis).toHaveAttribute('data-allow-duplicated-category', 'false');
+  });
+
+  it('projects interleaved sparse signals onto globally comparable epoch values', () => {
+    const timestamps = [
+      '2024-01-01T00:00:00Z',
+      '2024-01-01T00:00:05Z',
+      '2024-01-01T00:00:10Z',
+    ];
+    renderPanel({
+      selectedSignals: ['a', 'b'],
+      chartMode: 'overlay',
+      data: [
+        { timestamp: timestamps[0], a: 1 },
+        { timestamp: timestamps[1], b: 2 },
+        { timestamp: timestamps[2], a: 3 },
+      ],
+      stats: COMPARABLE_STATS,
+    });
+
+    const lines = screen.getAllByTestId('line');
+    expect(lines[0]).toHaveAttribute(
+      'data-x-values',
+      `${Date.parse(timestamps[0])},${Date.parse(timestamps[2])}`,
+    );
+    expect(lines[1]).toHaveAttribute('data-x-values', String(Date.parse(timestamps[1])));
   });
 
   it('keeps a single left axis when signal ranges are comparable', () => {
@@ -452,7 +522,9 @@ describe('SignalChartPanel — null-safety', () => {
     expect(() =>
       renderPanel({ data: undefined as unknown as SignalChartPanelProps['data'] }),
     ).not.toThrow();
-    expect(screen.getByText('No data for this time range')).toBeInTheDocument();
+    expect(
+      screen.getByText('No signal samples were recorded in this time range.'),
+    ).toBeInTheDocument();
   });
 
   it('tolerates an undefined selectedSignals list (zero lines, no crash)', () => {

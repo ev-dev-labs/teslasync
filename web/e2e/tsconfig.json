@@ -1,0 +1,14 @@
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    "types": ["node"],
+    "noEmit": true
+  },
+  "include": [
+    "./**/*.ts",
+    "../playwright.config.ts",
+    "../playwright.visual.config.ts",
+    "../playwright.contract.config.ts"
+  ],
+  "exclude": []
+}

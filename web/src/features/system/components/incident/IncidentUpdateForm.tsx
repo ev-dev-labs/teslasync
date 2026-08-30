@@ -5,7 +5,9 @@
 import { useState, type FormEvent } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Button, Textarea, Select } from '@/components/ui'
-import { useToast } from '@/components/feedback/Toast'
+import { useToast } from '@/components/feedback'
+import { useDirtyForm } from '@/hooks/useDirtyForm'
+import { useNavigationGuard } from '@/hooks/useNavigationGuard'
 import {
   useAppendIncidentUpdate,
   type Incident,
@@ -24,7 +26,14 @@ export function IncidentUpdateForm({ incident }: IncidentUpdateFormProps) {
   const appendUpdate = useAppendIncidentUpdate()
 
   const [message, setMessage] = useState('')
+  const [messageError, setMessageError] = useState('')
   const [nextStatus, setNextStatus] = useState<IncidentStatus | ''>('')
+  const isDirty = message !== '' || nextStatus !== ''
+  useDirtyForm(isDirty)
+  useNavigationGuard(
+    isDirty,
+    t('incidentTimeline.unsavedUpdate', 'You have an unsaved incident update.'),
+  )
 
   const statusOptions = [
     { value: '', label: `${t('incidentTimeline.keepStatus', 'Keep status as')} ${statusLabel(incident.status)}` },
@@ -38,9 +47,10 @@ export function IncidentUpdateForm({ incident }: IncidentUpdateFormProps) {
     e.preventDefault()
     const m = message.trim()
     if (!m) {
-      toast.error(t('incidentTimeline.updateRequired', 'Update message is required.'))
+      setMessageError(t('incidentTimeline.updateRequired', 'Update message is required.'))
       return
     }
+    setMessageError('')
     try {
       await appendUpdate.mutateAsync({
         id: incident.id,
@@ -64,13 +74,17 @@ export function IncidentUpdateForm({ incident }: IncidentUpdateFormProps) {
       aria-label={t('incidentTimeline.formLabel', 'Add incident update')}
     >
       <Textarea
+        label={t('incidentTimeline.updateLabel', 'Update message')}
         value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        onChange={(e) => {
+          setMessage(e.target.value)
+          setMessageError('')
+        }}
         placeholder={t('incidentTimeline.updatePlaceholder', "What's new? Investigation step, mitigation applied, hypothesis…")}
         rows={4}
         maxLength={4000}
         required
-        aria-label={t('incidentTimeline.updateLabel', 'Update message')}
+        error={messageError || undefined}
       />
       <Select
         value={nextStatus}
@@ -78,7 +92,7 @@ export function IncidentUpdateForm({ incident }: IncidentUpdateFormProps) {
         aria-label={t('incidentTimeline.changeStatus', 'Change status with this update')}
         options={statusOptions}
       />
-      <Button type="submit" variant="primary" disabled={appendUpdate.isPending} className="w-full">
+      <Button type="submit" variant="primary" loading={appendUpdate.isPending} className="w-full">
         {appendUpdate.isPending ? t('incidentTimeline.adding', 'Adding…') : t('incidentTimeline.addUpdate', 'Add update')}
       </Button>
     </form>

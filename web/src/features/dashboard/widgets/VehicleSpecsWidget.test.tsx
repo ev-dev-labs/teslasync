@@ -366,7 +366,7 @@ describe('VehicleSpecsWidget refresh', () => {
     routeAll({ specs: envelope(specsData()), options: envelope({ ADX1: 'EAP' }), config: configData() });
     renderWidget({ vehicleId: 1 });
 
-    const refresh = await screen.findByRole('button', { name: 'Refresh' });
+    const refresh = await screen.findByRole('button', { name: /^Refresh/i });
     const before = specsCalls().length;
     expect(before).toBeGreaterThanOrEqual(1);
 

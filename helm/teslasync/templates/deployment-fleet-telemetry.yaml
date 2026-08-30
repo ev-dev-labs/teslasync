@@ -1,4 +1,6 @@
 {{- if .Values.fleetTelemetry.enabled }}
+{{- $fleetTelemetryTag := .Values.fleetTelemetry.imageTag | default .Chart.AppVersion }}
+{{- $fleetTelemetryImage := .Values.fleetTelemetry.image | default (printf "%s:%s" .Values.fleetTelemetry.imageRepository $fleetTelemetryTag) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,22 +10,30 @@ metadata:
     app.kubernetes.io/component: fleet-telemetry
 spec:
   replicas: 1
+  strategy:
+    # The configured MQTT client ID is stable. Do not overlap revisions.
+    type: Recreate
   selector:
     matchLabels:
       {{- include "teslasync.selectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: fleet-telemetry
   template:
     metadata:
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap-fleet-telemetry.yaml") . | sha256sum }}
       labels:
         {{- include "teslasync.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: fleet-telemetry
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 60
+      initContainers:
+        {{- include "teslasync.dependencyWaitInitContainer" (dict "root" . "name" "mqtt" "host" (include "teslasync.mqtt.host" .) "port" (include "teslasync.mqtt.port" .)) | nindent 8 }}
       containers:
         - name: fleet-telemetry
-          image: {{ .Values.fleetTelemetry.image | quote }}
-          imagePullPolicy: IfNotPresent
+          image: {{ $fleetTelemetryImage | quote }}
+          imagePullPolicy: {{ .Values.fleetTelemetry.imagePullPolicy }}
           ports:
             - name: wss
               containerPort: 4443
@@ -31,6 +41,22 @@ spec:
             - name: metrics
               containerPort: 9090
               protocol: TCP
+          startupProbe:
+            tcpSocket:
+              port: wss
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
+          livenessProbe:
+            tcpSocket:
+              port: wss
+            periodSeconds: 30
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: wss
+            periodSeconds: 10
+            failureThreshold: 3
           volumeMounts:
             - name: config
               mountPath: /etc/fleet-telemetry
@@ -91,48 +117,4 @@ spec:
   selector:
     {{- include "teslasync.selectorLabels" . | nindent 4 }}
     app.kubernetes.io/component: fleet-telemetry
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
-  labels:
-    {{- include "teslasync.labels" . | nindent 4 }}
-    app.kubernetes.io/component: fleet-telemetry
-data:
-  config.json: |
-    {
-      "host": "0.0.0.0",
-      "port": 4443,
-      "log_level": "info",
-      "transmit_decoded_records": true,
-      "tls": {
-        "server_cert": "/certs/tls.crt",
-        "server_key": "/certs/tls.key"
-      },
-      "mqtt": {
-        "broker": "{{ include "teslasync.mqtt.host" . }}:{{ include "teslasync.mqtt.port" . }}",
-        "client_id": "fleet-telemetry",
-        "topic_base": {{ .Values.fleetTelemetry.topicBase | default "telemetry" | quote }},
-        "qos": 1,
-        "retained": false
-      },
-      "records": {
-        "V": [
-          "mqtt"
-        ],
-        "alerts": [
-          "mqtt"
-        ],
-        "errors": [
-          "logger"
-        ],
-        "connectivity": [
-          "mqtt"
-        ]
-      },
-      "monitoring": {
-        "prometheus_metrics_port": 9090
-      }
-    }
 {{- end }}

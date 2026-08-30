@@ -1,13 +1,25 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 import { CopyLinkButton } from './CopyLinkButton';
-import { Spinner } from '@/components/feedback/Spinner';
+import { PageActions } from './PageActions';
+import { EmptyState } from '@/components/feedback/EmptyState';
+import { ErrorDisplay } from '@/components/feedback/ErrorDisplay';
 import { PageErrorBoundary } from '@/components/feedback/PageErrorBoundary';
+import { PageLoadSkeleton } from '@/components/feedback/PageLoadSkeleton';
+import {
+  DataSourceNotice,
+  type DataSourceDescriptor,
+} from '@/components/feedback/DataSourceNotice';
+import { GlassPanel } from '@/components/ui/GlassPanel';
+import { Heading, Text } from '@/components/ui/Typography';
 import { useSetBreadcrumbOverrides } from './BreadcrumbOverridesContext';
 import {
   DataFreshnessAuto,
   type FreshnessQuery,
 } from '@/components/data-display/DataFreshness';
+import { OperationalModeBadge } from '@/components/data-display/OperationalModeBadge';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
+import { useLoadAnnouncement } from '@/hooks/useStatusAnnouncer';
 
 /**
  * Pick the most-degraded query in a list so the single page-tier badge
@@ -33,11 +45,26 @@ function pickWorstQuery(queries: readonly FreshnessQuery[]): FreshnessQuery {
   return worst;
 }
 
-interface PageContainerProps {
+export interface PageContainerProps {
   title: string;
   subtitle?: string;
+  /** @deprecated Use the semantic action slots below for new or touched pages. */
   actions?: ReactNode;
+  /** Vehicle, time-range, and other scope controls. */
+  contextActions?: ReactNode;
+  /** Freshness or source metadata that precedes scope controls. */
+  metadataActions?: ReactNode;
+  /** Repeatable utility commands such as refresh or compare. */
+  secondaryActions?: ReactNode;
+  /** Rare visible destructive commands; prefer overflow for infrequent actions. */
+  destructiveActions?: ReactNode;
+  /** Saved views, print, share, export, and other low-frequency commands. */
+  overflowActions?: ReactNode;
+  /** The single dominant page command. Rendered at the far right. */
+  primaryAction?: ReactNode;
   loading?: boolean;
+  /** Announces background loading without replacing progressively rendered content. */
+  busy?: boolean;
   error?: Error | null;
   empty?: boolean;
   emptyMessage?: string;
@@ -58,23 +85,52 @@ interface PageContainerProps {
    */
   copyLink?: boolean;
   /**
-   * When provided, renders `<DataFreshnessAuto>` in the header next to
-   * `actions`. Pass either a single `useQuery()` result
+   * When provided, renders `<DataFreshnessAuto>` in the header metadata zone.
+   * Pass either a single `useQuery()` result
    * or an array; arrays surface the most-degraded state via
    * `pickWorstQuery` so a single chip can stand in for the whole page.
    *
    * Pages that need finer control (e.g. `forceStaleAfterMs` for cagg-driven
-   * data) should keep mounting `<DataFreshnessAuto>` directly via the
-   * `actions` prop instead of using this convenience.
+   * data) should mount `<DataFreshnessAuto>` via `metadataActions`.
    */
   query?: FreshnessQuery | readonly FreshnessQuery[];
+  /**
+   * Named independent sources used by this page. When some sources are
+   * delayed or unavailable, a non-fatal notice is rendered while successful
+   * sections remain on screen.
+   */
+  dataSources?: readonly DataSourceDescriptor[];
+  /**
+   * Set false to suppress the automatic "loaded" / "could not refresh"
+   * live-region announcement. Use for pages that announce their own,
+   * richer result (e.g. a search page that reports a match count), so
+   * the user does not hear the same event twice.
+   */
+  announce?: boolean;
 }
 
 export function PageContainer({
-  title, subtitle, actions, loading, error, empty, emptyMessage,
+  title, subtitle, actions, contextActions, metadataActions, secondaryActions,
+  destructiveActions, overflowActions, primaryAction,
+  loading, busy, error, empty, emptyMessage,
   breadcrumbLabels,
-  children, className, copyLink, query,
+  children, className, copyLink, query, dataSources,
+  announce = true,
 }: PageContainerProps) {
+  const operationalMode = useOperationalMode();
+  // A11Y-06: every page funnels through here, so the "your data finished
+  // loading" / "the refresh failed" announcements can be centralised
+  // instead of asking 140 pages to remember a hook. Fires only on the
+  // loading → settled edge, so background refetches stay silent, and it
+  // is governed (deduped + rate-limited) by `useStatusAnnouncer`.
+  useLoadAnnouncement({
+    label: title,
+    isLoading: Boolean(loading),
+    isError: Boolean(error),
+    count: empty ? 0 : undefined,
+    enabled: announce,
+  });
+
   // Push per-page breadcrumb label overrides up to the global Layout
   // breadcrumb. The Layout itself reads from BreadcrumbOverridesContext +
   // `useBreadcrumbs(...)` and renders the single canonical breadcrumb row
@@ -93,35 +149,81 @@ export function PageContainer({
   })();
 
   return (
-    <div className={cn('space-y-6', className)}>
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-        <div className="min-w-0 sm:flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-          {subtitle && <p className="mt-1 text-sm text-[var(--text-muted)] dark:text-[var(--text-muted)]">{subtitle}</p>}
-        </div>
-        {(actions || copyLink || resolvedQuery) && (
-          <div className="flex items-center gap-2 flex-wrap min-w-0 max-w-full justify-start sm:justify-end">
-            {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
-            {copyLink && <CopyLinkButton />}
-            {actions}
+    <div
+      className={cn('min-w-0 space-y-6', className)}
+      data-role="page-container"
+      aria-busy={loading || busy || undefined}
+    >
+      <header
+        className="relative flex flex-col gap-5 overflow-hidden rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] px-5 py-5 shadow-e1 sm:px-6 xl:flex-row xl:items-center xl:justify-between"
+        data-role="page-header"
+      >
+        <div className="flex min-w-0 max-w-4xl gap-4 xl:flex-1">
+          <span
+            className="w-1 shrink-0 self-stretch rounded-pill bg-[var(--theme-primary)]"
+            aria-hidden="true"
+          />
+          <div className="min-w-0 py-0.5">
+            {/* Route-focus target (A11Y-03). `tabIndex={-1}` makes the
+                heading programmatically focusable without adding it to
+                the tab order, so `RouteFocusManager` can park focus at
+                the start of the new page's content after a client-side
+                navigation. The attribute name is asserted against
+                `ROUTE_FOCUS_TARGET_ATTR` by the PageContainer test. */}
+            <Heading
+              level="page"
+              className="font-bold tracking-[-0.025em] outline-none"
+              tabIndex={-1}
+              data-route-focus-target="true"
+            >
+              {title}
+            </Heading>
+            {subtitle && (
+              <Text as="p" variant="bodySm" className="mt-2 max-w-3xl leading-relaxed">
+                {subtitle}
+              </Text>
+            )}
           </div>
-        )}
-      </div>
+        </div>
+        <PageActions
+          metadata={
+            resolvedQuery || metadataActions || operationalMode.isReadOnly
+              ? <>
+                  {operationalMode.isReadOnly && <OperationalModeBadge />}
+                  {resolvedQuery && <DataFreshnessAuto query={resolvedQuery} />}
+                  {metadataActions}
+                </>
+              : undefined
+          }
+          context={contextActions}
+          secondary={
+            actions || secondaryActions
+              ? <>{actions}{secondaryActions}</>
+              : undefined
+          }
+          destructive={destructiveActions}
+          overflow={
+            copyLink || overflowActions
+              ? <>{overflowActions}{copyLink && <CopyLinkButton />}</>
+              : undefined
+          }
+          primary={primaryAction}
+        />
+      </header>
 
       {loading ? (
-        <div className="flex justify-center py-20">
-          <Spinner size="lg" />
-        </div>
+        <PageLoadSkeleton panels={2} showHeader={false} />
       ) : error ? (
-        <div className="rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
-          <p className="text-sm text-red-700 dark:text-red-300">{error.message}</p>
-        </div>
+        <ErrorDisplay error={error} />
       ) : empty ? (
-        <div className="flex flex-col items-center justify-center py-16 text-center">
-          <p className="text-sm text-[var(--text-muted)]">{emptyMessage ?? `No ${title.toLowerCase()} found.`}</p>
-        </div>
+        <GlassPanel>
+          <EmptyState message={emptyMessage ?? `No ${title.toLowerCase()} found.`} />
+        </GlassPanel>
       ) : (
-        <PageErrorBoundary pageName={title}>{children}</PageErrorBoundary>
+        <PageErrorBoundary pageName={title}>
+          {dataSources && <DataSourceNotice sources={dataSources} />}
+          {children}
+        </PageErrorBoundary>
       )}
     </div>
   );

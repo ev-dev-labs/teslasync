@@ -70,6 +70,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/battery/health/narrate',
     body,
     onEvent: noopEvent,
+    // AI-01: vehicle scope is part of stream identity — switching the
+    // active vehicle aborts any in-flight narration and clears the
+    // previous vehicle's narrative before the new scope streams in.
+    scopeKey: Number.isFinite(numericVehicleId) && numericVehicleId > 0 ? numericVehicleId : null,
   })
   const haveInputs = Number.isFinite(numericVehicleId) && numericVehicleId > 0
 

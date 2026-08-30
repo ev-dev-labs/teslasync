@@ -149,9 +149,10 @@ describe('sseManager — server event dispatch', () => {
     expect(spy).toHaveBeenCalledWith({ client_id: 'sse-7' })
   })
 
-  it('forwards parsed vehicle_update, alert, export_status and achievement frames', () => {
+  it('forwards every parsed application event on the shared connection', () => {
     const events = [
       'vehicle_update',
+      'signal_change',
       'alert',
       'export_status',
       'achievement_unlocked',

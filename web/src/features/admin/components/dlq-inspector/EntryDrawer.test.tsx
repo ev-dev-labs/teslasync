@@ -275,12 +275,15 @@ describe('EntryDrawer — metadata + payload', () => {
 });
 
 describe('EntryDrawer — loading + empty', () => {
-  it('shows the spinner and hides the metadata + payload while the full entry loads', async () => {
+  it('shows the spinner and summary metadata (but no payload tabs) while the full entry loads', async () => {
     renderDrawer(baseProps({ loading: true, full: undefined }));
 
     const dialog = await screen.findByRole('dialog', { name: /DLQ entry #1/ });
-    expect(within(dialog).getByRole('status', { name: 'Loading' })).toBeInTheDocument();
-    expect(within(dialog).queryByText(SOURCE_TOPIC)).toBeNull();
+    expect(within(dialog).getByRole('status', { name: /Loading/i })).toBeInTheDocument();
+    // Summary metadata is intentionally visible during loading (pulled from
+    // the already-cached summary row while the full payload is fetched).
+    expect(within(dialog).getByText(SOURCE_TOPIC)).toBeInTheDocument();
+    // Payload tab controls and content are withheld until the full entry arrives.
     expect(within(dialog).queryByRole('tabpanel')).toBeNull();
     expect(screen.getByRole('button', { name: 'Replay' })).toBeDisabled();
   });

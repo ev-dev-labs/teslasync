@@ -65,13 +65,13 @@ export const glassCardClasses = {
 
 export const tableTokens = {
   wrapper: 'w-full text-sm',
-  head: 'border-b border-white/[0.06] text-[var(--text-muted)] text-xs uppercase tracking-wider',
-  headCell: 'px-4 py-3 text-left font-medium',
-  body: 'divide-y divide-white/[0.03]',
-  row: 'hover:bg-white/[0.02] transition-colors',
-  cell: 'px-4 py-3',
+  head: 'border-b border-[var(--border-default)] bg-[var(--surface-2)] text-[var(--text-muted)] text-xs uppercase tracking-wider',
+  headCell: 'px-4 py-3.5 text-left font-semibold',
+  body: 'divide-y divide-[var(--border-subtle)]',
+  row: 'hover:bg-[var(--surface-2)] transition-colors duration-fast',
+  cell: 'px-4 py-3.5',
   /** Wrapper applied when stickyHeader / maxHeight is in use — needs scroll + relative for sticky thead. */
-  scrollContainer: 'relative overflow-auto rounded-xl',
+  scrollContainer: 'relative overflow-auto rounded-panel border border-[var(--border-default)]',
   /** Applied to <thead> rows when stickyHeader is true. The bg matches GlassPanel
    *  surface so rows scrolling underneath don't bleed through. z-20 keeps the
    *  sticky thead above selected-row z-10 hover states. */
@@ -213,16 +213,16 @@ export const typography = {
    * Use these via <Heading level="..."> / <Text variant="..."> in components/ui.
    */
   role: {
-    pageTitle: 'text-xl sm:text-2xl lg:text-3xl font-bold tracking-tight text-[var(--text-primary)]',
-    sectionTitle: 'text-lg font-semibold tracking-tight text-[var(--text-primary)]',
-    panelTitle: 'text-base font-semibold text-[var(--text-primary)]',
+    pageTitle: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)]',
+    sectionTitle: 'text-xl font-semibold tracking-tight text-[var(--text-primary)]',
+    panelTitle: 'text-lg font-semibold tracking-tight text-[var(--text-primary)]',
     subhead: 'text-sm font-medium text-[var(--text-secondary)]',
     body: 'text-sm text-[var(--text-primary)]',
-    bodySm: 'text-xs text-[var(--text-secondary)]',
+    bodySm: 'text-sm text-[var(--text-secondary)]',
     caption: 'text-xs text-[var(--text-muted)]',
     label: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
     metricValue: 'text-2xl sm:text-3xl font-bold tracking-tight text-[var(--text-primary)] tabular-nums',
-    metricLabel: 'text-2xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
+    metricLabel: 'text-xs font-medium uppercase tracking-wider text-[var(--text-muted)]',
     code: 'text-xs font-mono text-[var(--text-primary)]',
     helper: 'text-xs text-[var(--text-muted)]',
     error: 'text-xs text-rose-300',
@@ -299,6 +299,70 @@ export function normalizeSeverity(s: string | null | undefined): Severity {
   if (v === 'ok' || v === 'success') return 'success'
   if (v === 'info' || v === 'warn' || v === 'critical') return v as Severity
   return 'info'
+}
+
+// ── Gauge / bar tone tokens — one map for every semantic fill colour ──
+//
+// Before this existed, every gauge call site picked its own hex
+// (`color="#10b981"`, `color="#f59e0b"`, `color={pct > 80 ? '#ef4444' : …}`),
+// which meant (a) "good" was three different greens depending on the page and
+// (b) the brand-coloured gauges stayed hard-blue on warm / light / custom
+// themes because a hex literal cannot follow `--theme-primary`.
+//
+// `gaugeTone` is the single source of truth. Two families live in it:
+//
+//   - THEME tones (`primary`, `accent`) resolve through the CSS variables the
+//     ThemeProvider rewrites, so a gauge that means "this vehicle's headline
+//     number" re-tints with the active preset.
+//   - STATUS tones (`success`…`neutral`) are deliberately FIXED colours. A
+//     danger bar must read as danger on all 140 presets, so it cannot inherit
+//     an arbitrary accent. They are the same hues the chart series palette and
+//     severity tokens use, chosen for contrast against both dark and light
+//     surfaces.
+//
+// Callers with a legitimately caller-defined series colour (a chart legend
+// swatch, a per-series bar) keep using the raw `color` escape hatch.
+
+export type GaugeTone =
+  | 'primary'
+  | 'accent'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'info'
+  | 'purple'
+  | 'neutral'
+
+export const gaugeTone: Record<GaugeTone, string> = {
+  /** The active theme's primary brand colour — follows warm/light/custom presets. */
+  primary: 'var(--theme-primary)',
+  /** The active theme's secondary accent — follows warm/light/custom presets. */
+  accent: 'var(--theme-accent)',
+  success: '#10b981',
+  warning: '#f59e0b',
+  danger: '#ef4444',
+  info: '#0ea5e9',
+  purple: '#8b5cf6',
+  /** Theme-aware muted grey for "no signal" / de-emphasised readings. */
+  neutral: 'var(--text-muted)',
+}
+
+/** Default tone applied when a gauge names neither a tone nor a raw colour. */
+export const DEFAULT_GAUGE_TONE: GaugeTone = 'primary'
+
+/**
+ * Resolve a gauge fill to a CSS colour string.
+ *
+ * Precedence is deliberate and pinned by tests: **an explicit `tone` always
+ * wins over a raw `color`**. `color` is the legacy/escape-hatch input, so a
+ * call site that has been migrated to a semantic tone cannot be silently
+ * overridden by a stale `color` prop left behind next to it. When neither is
+ * given the gauge falls back to {@link DEFAULT_GAUGE_TONE}.
+ */
+export function resolveGaugeColor(tone?: GaugeTone, color?: string): string {
+  if (tone && tone in gaugeTone) return gaugeTone[tone]
+  if (color) return color
+  return gaugeTone[DEFAULT_GAUGE_TONE]
 }
 
 // ── Chart tokens — single source of truth for theme-aware chart styling ──

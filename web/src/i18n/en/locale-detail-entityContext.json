@@ -1,0 +1,16 @@
+{
+  "entityContext": {
+    "title": "Related context",
+    "vehicle": "Vehicle",
+    "drives": "Drive history",
+    "charging": "Charging sessions",
+    "location": "Charge location",
+    "locations": "Visited locations",
+    "startLocation": "Start location",
+    "endLocation": "Destination",
+    "alerts": "Alerts",
+    "service": "Service history",
+    "telemetry": "Telemetry evidence",
+    "evidencePack": "Build service evidence pack"
+  }
+}

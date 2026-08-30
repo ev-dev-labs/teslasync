@@ -171,9 +171,15 @@ describe('SignalSnapshotPanel — sortable columns are actually wired', () => {
     expect(screen.getByRole('button', { name: 'Value' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Updated' })).toBeInTheDocument();
 
-    // Nothing is sorted until the user asks — the incoming order is preserved
-    // and no column advertises an aria-sort direction yet.
-    expect(screen.getByRole('columnheader', { name: 'Signal' })).not.toHaveAttribute('aria-sort');
+    // Nothing is sorted until the user asks — the incoming order is preserved.
+    // The column still advertises `aria-sort="none"` rather than omitting the
+    // attribute: that is what tells a screen-reader user the column IS
+    // sortable but is not the current sort key. Omitting it entirely would
+    // make a sortable column indistinguishable from a static one.
+    expect(screen.getByRole('columnheader', { name: 'Signal' })).toHaveAttribute(
+      'aria-sort',
+      'none',
+    );
     expect(labelOrder()).toEqual(['Bravo', 'Alpha', 'Charlie']);
   });
 

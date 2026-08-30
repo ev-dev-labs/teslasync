@@ -17,7 +17,7 @@ import { AlertTriangle } from 'lucide-react'
 
 import { Drawer } from '@/components/ui'
 import { Text, Caption } from '@/components/ui/Typography'
-import { Spinner } from '@/components/feedback'
+import { ListSkeleton } from '@/components/feedback'
 import { formatDateTime, formatDurationMsLong } from '@/lib/dateFormat'
 import { useQueueJobs } from '@/api/hooks/useSystemQueues'
 import type { QueueJobView } from '@/api/types'
@@ -162,15 +162,11 @@ export function QueueJobDrawer({
     <Drawer open={open} onClose={onClose} title={title}>
       <div data-testid="queue-job-drawer-body">
         {isLoading ? (
-          <div
-            className="flex items-center gap-3 py-6 text-[var(--text-secondary)]"
-            data-testid="queue-job-drawer-loading"
-          >
-            <Spinner size="sm" />
-            <Text variant="bodySm">
-              {t('queueStatus.drawer.loading', 'Loading recent jobs…')}
-            </Text>
-          </div>
+          <ListSkeleton
+            rows={4}
+            label={t('queueStatus.drawer.loading', 'Loading recent jobs…')}
+            testId="queue-job-drawer-loading"
+          />
         ) : error ? (
           <div
             className="flex items-start gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3"

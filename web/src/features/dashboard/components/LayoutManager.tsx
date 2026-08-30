@@ -1,8 +1,20 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Plus, Pencil, Trash2, Check, X, Copy, Settings } from 'lucide-react';
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Copy,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Settings,
+  Trash2,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { Button as UiButton, Input as UiInput } from '@/components/ui';
+import { useAnnouncer } from '@/hooks/useAnnouncer';
 import type { SavedDashboard } from '../widgets/types';
 
 interface LayoutManagerProps {
@@ -37,6 +49,7 @@ function CtxItem({
       type="button"
       variant="ghost"
       size="sm"
+      role="menuitem"
       onClick={onClick}
       disabled={disabled}
       className={cn(
@@ -75,9 +88,15 @@ export function LayoutManager({
   /* ─── Drag state ─── */
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const { announce } = useAnnouncer();
 
   /* ─── Context menu state ─── */
-  const [ctxMenu, setCtxMenu] = useState<{ x: number; y: number; dashId: string } | null>(null);
+  const [ctxMenu, setCtxMenu] = useState<{
+    x: number;
+    y: number;
+    dashId: string;
+    trigger: HTMLElement | null;
+  } | null>(null);
   const ctxRef = useRef<HTMLDivElement>(null);
 
   // Close context menu on outside click or Escape
@@ -89,7 +108,11 @@ export function LayoutManager({
       }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setCtxMenu(null);
+      if (e.key === 'Escape') {
+        const trigger = ctxMenu.trigger;
+        setCtxMenu(null);
+        queueMicrotask(() => trigger?.focus());
+      }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
@@ -106,7 +129,25 @@ export function LayoutManager({
     const menuH = 160;
     const x = Math.min(e.clientX, window.innerWidth - menuW);
     const y = Math.min(e.clientY, window.innerHeight - menuH);
-    setCtxMenu({ x, y, dashId });
+    setCtxMenu({ x, y, dashId, trigger: e.currentTarget as HTMLElement });
+    requestAnimationFrame(() => {
+      ctxRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+    });
+  }, []);
+
+  const handleActionsClick = useCallback((dashId: string) => (
+    e: React.MouseEvent<HTMLButtonElement>,
+  ) => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuW = 180;
+    const menuH = 220;
+    const x = Math.max(8, Math.min(rect.right - menuW, window.innerWidth - menuW - 8));
+    const y = Math.max(8, Math.min(rect.bottom + 4, window.innerHeight - menuH - 8));
+    setCtxMenu({ x, y, dashId, trigger: e.currentTarget });
+    requestAnimationFrame(() => {
+      ctxRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')?.focus();
+    });
   }, []);
 
   /* ─── Drag handlers ─── */
@@ -179,7 +220,7 @@ export function LayoutManager({
     <>
       <div className="flex items-center gap-1 overflow-x-auto pb-2 scrollbar-thin">
         {dashboardList.map((d, i) => (
-          <div key={d.id} className="flex items-center shrink-0">
+          <div key={d.id} className="flex shrink-0 items-center gap-0.5">
             {editingId === d.id ? (
               <div className="flex items-center gap-1">
                 <UiInput
@@ -200,7 +241,7 @@ export function LayoutManager({
                   variant="ghost"
                   size="sm"
                   onClick={confirmRename}
-                  className="h-auto rounded p-1 text-emerald-400 hover:bg-emerald-500/10"
+                  className="h-7 w-7 rounded p-0 text-emerald-400 hover:bg-emerald-500/10"
                   aria-label={t('dashboard.confirmRename', 'Confirm rename')}
                 >
                   <Check className="h-3 w-3" />
@@ -210,7 +251,7 @@ export function LayoutManager({
                   variant="ghost"
                   size="sm"
                   onClick={() => setEditingId(null)}
-                  className="h-auto rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
+                  className="h-7 w-7 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
                   aria-label={t('dashboard.cancelRename', 'Cancel rename')}
                 >
                   <X className="h-3 w-3" />
@@ -257,6 +298,20 @@ export function LayoutManager({
                 )}
               </div>
             )}
+            {editingId !== d.id ? (
+              <UiButton
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={handleActionsClick(d.id)}
+                className="h-7 w-7 shrink-0 rounded-md p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)] hover:text-[var(--text-secondary)]"
+                aria-label={t('dashboard.layoutActions', 'Actions for {{name}}', { name: d.name })}
+                aria-haspopup="menu"
+                aria-expanded={ctxMenu?.dashId === d.id}
+              >
+                <MoreHorizontal className="h-3.5 w-3.5" />
+              </UiButton>
+            ) : null}
           </div>
         ))}
 
@@ -282,7 +337,7 @@ export function LayoutManager({
               variant="ghost"
               size="sm"
               onClick={confirmCreate}
-              className="h-auto rounded p-1 text-emerald-400 hover:bg-emerald-500/10"
+              className="h-7 w-7 rounded p-0 text-emerald-400 hover:bg-emerald-500/10"
               aria-label={t('dashboard.confirmCreate', 'Confirm create')}
             >
               <Check className="h-3 w-3" />
@@ -292,7 +347,7 @@ export function LayoutManager({
               variant="ghost"
               size="sm"
               onClick={() => setIsCreating(false)}
-              className="h-auto rounded p-1 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
+              className="h-7 w-7 rounded p-0 text-[var(--text-muted)] hover:bg-[var(--surface-2)]"
               aria-label={t('dashboard.cancelCreate', 'Cancel create')}
             >
               <X className="h-3 w-3" />
@@ -318,6 +373,24 @@ export function LayoutManager({
       {ctxMenu && ctxDash && (
         <div
           ref={ctxRef}
+          role="menu"
+          tabIndex={-1}
+          aria-label={t('dashboard.layoutActions', 'Actions for {{name}}', { name: ctxDash.name })}
+          onKeyDown={(event) => {
+            if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const items = Array.from(
+              ctxRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')
+                ?? [],
+            );
+            if (items.length === 0) return;
+            const current = items.indexOf(document.activeElement as HTMLButtonElement);
+            const next = event.key === 'Home' ? 0
+              : event.key === 'End' ? items.length - 1
+                : event.key === 'ArrowDown' ? (current + 1 + items.length) % items.length
+                  : (current - 1 + items.length) % items.length;
+            items[next]?.focus();
+          }}
           className="fixed z-50 bg-[var(--bg-secondary)] border border-[var(--border-subtle)]
             rounded-lg shadow-xl py-1 min-w-[160px]"
           style={{ top: ctxMenu.y, left: ctxMenu.x }}
@@ -337,7 +410,49 @@ export function LayoutManager({
             label={t('dashboard.settings', 'Settings')}
             onClick={() => { onOpenSettings(ctxMenu.dashId); setCtxMenu(null); }}
           />
-          <div className="my-1 border-t border-[var(--border-subtle)]" />
+          <div role="separator" className="my-1 border-t border-[var(--border-subtle)]" />
+          <CtxItem
+            icon={ArrowLeft}
+            label={t('dashboard.moveLayoutEarlier', 'Move earlier')}
+            onClick={() => {
+              const index = dashboardList.findIndex((dashboard) => dashboard.id === ctxMenu.dashId);
+              if (index > 0) {
+                const trigger = ctxMenu.trigger;
+                onReorder(index, index - 1);
+                announce(t(
+                  'dashboard.layoutMovedEarlier',
+                  '{{name}} moved earlier',
+                  { name: ctxDash.name },
+                ));
+                queueMicrotask(() => trigger?.focus());
+              }
+              setCtxMenu(null);
+            }}
+            disabled={dashboardList.findIndex((dashboard) => dashboard.id === ctxMenu.dashId) <= 0}
+          />
+          <CtxItem
+            icon={ArrowRight}
+            label={t('dashboard.moveLayoutLater', 'Move later')}
+            onClick={() => {
+              const index = dashboardList.findIndex((dashboard) => dashboard.id === ctxMenu.dashId);
+              if (index >= 0 && index < dashboardList.length - 1) {
+                const trigger = ctxMenu.trigger;
+                onReorder(index, index + 1);
+                announce(t(
+                  'dashboard.layoutMovedLater',
+                  '{{name}} moved later',
+                  { name: ctxDash.name },
+                ));
+                queueMicrotask(() => trigger?.focus());
+              }
+              setCtxMenu(null);
+            }}
+            disabled={
+              dashboardList.findIndex((dashboard) => dashboard.id === ctxMenu.dashId)
+              >= dashboardList.length - 1
+            }
+          />
+          <div role="separator" className="my-1 border-t border-[var(--border-subtle)]" />
           <CtxItem
             icon={Trash2}
             label={t('dashboard.delete', 'Delete')}

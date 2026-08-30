@@ -2,10 +2,10 @@ import { useTranslation } from 'react-i18next';
 import { Power } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip,
   ChartTooltip, ChartGradient, chartGrid, axisTickSm, AREA_DEFAULTS,
+  EmbeddedChart,
 } from '@/components/charts';
 
 import { POWER_COLOR, type TrendPoint } from './constants';
@@ -31,24 +31,26 @@ export function PowerTrendPanel({ points, isLoading, error, onRetry }: PowerTren
         <Power className="h-4 w-4 text-amber-300" aria-hidden="true" />
         {t('powershare.powerTrend.title', 'Output Power Trend')}
       </PanelTitle>
-      {isLoading ? (
-        <Skeleton height={240} />
-      ) : error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : data.length === 0 ? (
-        <EmptyState /* no-action: transient — chart fills once telemetry streams */
-          icon={<Power className="h-8 w-8" />}
-          message={t(
+      <EmbeddedChart
+        title={t('powershare.powerTrend.title', 'Output Power Trend')}
+        ariaLabel={t('powershare.powerTrend.ariaLabel', 'Output power trend chart')}
+        data={data.map(({ label, value }) => ({ label, value }))}
+        dataColumns={[
+          { key: 'label', label: t('powershare.time', 'Time') },
+          { key: 'value', label: t('powershare.kpi.outputPower', 'Output Power (kW)') },
+        ]}
+        loading={isLoading}
+        error={error}
+        onRetry={onRetry}
+        empty={data.length === 0}
+        emptyMessage={t(
             'powershare.powerTrend.noData',
             'No power readings yet. The chart fills in as your vehicle streams Powershare telemetry.',
-          )}
-        />
-      ) : (
-        <div
-          className="h-56 sm:h-64 xl:h-72"
-          role="img"
-          aria-label={t('powershare.powerTrend.ariaLabel', 'Output power trend chart')}
-        >
+        )}
+        fluid={false}
+        mobileHeight={224}
+        height={288}
+      >
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={data}>
               <defs>
@@ -67,8 +69,7 @@ export function PowerTrendPanel({ points, isLoading, error, onRetry }: PowerTren
               />
             </AreaChart>
           </ResponsiveContainer>
-        </div>
-      )}
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

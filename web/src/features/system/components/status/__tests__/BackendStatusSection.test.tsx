@@ -45,10 +45,19 @@ function makeExtHealth(overrides: Partial<ExtendedHealthResponse> = {}): Extende
     components: {
       database: { status: 'healthy', latency_ms: 12.5, last_check: '2025-06-15T12:00:00Z', consecutive_failures: 0 },
       redis: { status: 'healthy', latency_ms: 3.2, last_check: '', consecutive_failures: 0 },
+      database_pool: {
+        status: 'healthy',
+        total_conns: 10,
+        idle_conns: 5,
+        acquired_conns: 5,
+      },
+      system: {
+        status: 'healthy',
+        goroutines: 137,
+        go_version: 'go1.24.0',
+        uptime_seconds: 93784,
+      },
     },
-    database: { status: 'ok', latency_ms: 1 },
-    database_pool: { total_conns: 10, idle_conns: 5, acquired_conns: 5 },
-    system: { goroutines: 137, go_version: 'go1.24.0', uptime_seconds: 93784 },
     ...overrides,
   }
 }
@@ -123,14 +132,14 @@ describe('BackendStatusSection', () => {
     // Per-component rows.
     expect(screen.getByText('database')).toBeInTheDocument()
     expect(screen.getByText('redis')).toBeInTheDocument()
-    expect(screen.getAllByText('healthy')).toHaveLength(2)
+    expect(screen.getAllByText('healthy')).toHaveLength(4)
     expect(screen.getByText('12.5 ms')).toBeInTheDocument()
     expect(screen.getByText('3.2 ms')).toBeInTheDocument()
     // database has a last_check timestamp (year renders), redis falls back to em-dash.
     expect(container.textContent).toContain('2025')
 
     // Roll-up badge: all healthy → success variant.
-    const badge = screen.getByText(/^2\/2 healthy$/)
+    const badge = screen.getByText(/^4\/4 healthy$/)
     expect(badge).toHaveClass('bg-green-100')
 
     // DB connection pool stat cards.
@@ -141,7 +150,7 @@ describe('BackendStatusSection', () => {
     expect(screen.getByText('100')).toBeInTheDocument()
     expect(screen.getByText('9')).toBeInTheDocument()
 
-    // System runtime: version wins over extHealth.system for go_version.
+    // System runtime: version wins over extHealth.components.system for go_version.
     expect(await screen.findByText('go1.25.1')).toBeInTheDocument()
     expect(screen.queryByText('go1.24.0')).not.toBeInTheDocument()
     expect(screen.getByText('1d 2h 3m')).toBeInTheDocument()
@@ -181,7 +190,7 @@ describe('BackendStatusSection', () => {
     expect(screen.getByText('5.0 ms')).toBeInTheDocument()
   })
 
-  it('falls back to extHealth.system when the version endpoint fails, and shows em-dash for OS/Arch', async () => {
+  it('falls back to extHealth.components.system when the version endpoint fails, and shows em-dash for OS/Arch', async () => {
     mockExtHealth.value = makeExtHealth()
     mockExtHealth.mode = 'resolve'
     mockVersion.mode = 'reject' // version query errors → version is undefined
@@ -190,9 +199,9 @@ describe('BackendStatusSection', () => {
     harness()
 
     expect(await screen.findByText('Component Health')).toBeInTheDocument()
-    // Go version falls back to extHealth.system.go_version.
+    // Go version falls back to extHealth.components.system.go_version.
     expect(await screen.findByText('go1.24.0')).toBeInTheDocument()
-    // Uptime + goroutines also come from extHealth.system.
+    // Uptime + goroutines also come from extHealth.components.system.
     expect(screen.getByText('1d 2h 3m')).toBeInTheDocument()
     expect(screen.getByText('137')).toBeInTheDocument()
     // OS / Arch has no extHealth fallback → em-dash placeholder.

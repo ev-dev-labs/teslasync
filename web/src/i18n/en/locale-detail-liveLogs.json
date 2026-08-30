@@ -1,0 +1,82 @@
+{
+  "liveLogs": {
+    "title": "Live logs",
+    "subtitle": "Stream the API server's structured log events in real time. Filter by severity and an optional regular expression. The connection is dropped when you navigate away.",
+    "filters": {
+      "level": "Minimum level",
+      "grep": "Grep (regular expression)",
+      "grepPlaceholder": "e.g. mqtt|signal_log",
+      "grepHelp": "Server-side filter. Maximum 256 characters. Invalid expressions are rejected before connecting.",
+      "vehicleId": "Vehicle ID",
+      "vehicleIdPlaceholder": "Numeric — applied client-side"
+    },
+    "controls": {
+      "pause": "Pause",
+      "resume": "Resume",
+      "autoscroll": "Auto-scroll",
+      "clear": "Clear buffer",
+      "download": "Download visible (.txt)",
+      "reconnect": "Reconnect"
+    },
+    "status": {
+      "connected": "Live",
+      "paused": "Paused (still receiving)",
+      "disconnected": "Disconnected",
+      "connecting": "Connecting…",
+      "error": "Connection error"
+    },
+    "stats": {
+      "buffered": "Buffered: {{count}}",
+      "received": "Received: {{count}}",
+      "drops": "Server drops: {{count}}"
+    },
+    "table": {
+      "time": "Time",
+      "level": "Level",
+      "message": "Message",
+      "fields": "Fields",
+      "noLevel": "—"
+    },
+    "empty": {
+      "noEvents": "No log events yet. Trigger activity (e.g. start a charging session) to see live output."
+    },
+    "error": {
+      "title": "Could not connect to log stream",
+      "hint": "Check your network and admin permissions, then click Reconnect."
+    },
+    "aiSummary": {
+      "title": "Helix log/trace summary",
+      "badge": "Helix",
+      "description": "Get a 3-6 sentence factual summary of the recent log and trace window. The narrator is grounded in a redacted envelope of the same window the table below shows; it never invents log lines and never speculates about root cause.",
+      "button": "Summarize",
+      "emptyHint": "Waiting for a valid log window…"
+    },
+    "filename": "teslasync-logs-{{ts}}.txt",
+    "level": {
+      "debug": "Debug",
+      "info": "Info",
+      "warn": "Warn",
+      "error": "Error"
+    },
+    "section": {
+      "filters": "Filters"
+    },
+    "stream": {
+      "title": "Live stream"
+    },
+    "kpi": {
+      "aria": "Live stream metrics",
+      "connection": "Connection",
+      "visible": "Visible",
+      "visibleSub": "After filters",
+      "buffered": "Buffered",
+      "capacity": "{{max}} max",
+      "received": "Received",
+      "receivedSub": "Since mount",
+      "drops": "Server drops",
+      "dropsSub": "Buffer overflow",
+      "minLevel": "Min level",
+      "minLevelSub": "Server filter"
+    }
+  }
+}

@@ -8,7 +8,7 @@ import {
   Image as ImageIcon,
 } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Button } from '@/components/ui/Button';
+import { Button } from '@/components/ui';
 import { useOptionalToast } from '@/components/feedback/Toast';
 import type { ClipboardOutcome } from '@/hooks/useChartExport';
 
@@ -47,7 +47,7 @@ export interface ChartExportMenuProps {
   onCopyImage: () => Promise<ClipboardOutcome>;
   /** Optional CSV download — when provided, "Download data as CSV"
    *  appears as the first menu item. */
-  onExportCsv?: () => void;
+  onExportCsv?: () => void | Promise<void>;
   /** Disable the trigger button (e.g. while the chart container is
    *  loading or empty). The menu cannot open while disabled. */
   disabled?: boolean;
@@ -70,6 +70,9 @@ export function ChartExportMenu({
   const { t } = useTranslation();
   const toast = useOptionalToast();
   const [open, setOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<
+    'csv' | 'png' | 'svg' | 'copy' | null
+  >(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const close = useCallback(() => setOpen(false), []);
@@ -91,45 +94,83 @@ export function ChartExportMenu({
     };
   }, [open, close]);
 
-  const triggerLabel = disabled
+  const triggerLabel = pendingAction
+    ? t('chart.export.preparing', 'Preparing chart export…')
+    : disabled
     ? t('chart.export.disabledTooltip', 'Chart not ready to export')
     : t('chart.export.menuLabel', 'Export chart');
 
-  const handlePng = useCallback(() => {
+  const runDownload = useCallback((
+    format: 'csv' | 'png' | 'svg',
+    action: () => void | Promise<void>,
+  ) => {
+    if (pendingAction) return;
     close();
-    void onExportPNG();
-  }, [onExportPNG, close]);
+    setPendingAction(format);
+    const handleError = (error: unknown) => {
+      console.error(`[ChartExportMenu] ${format.toUpperCase()} export failed`, error);
+      toast?.error(
+        t('chart.export.failed', 'Could not prepare the {{format}} export.', {
+          format: format.toUpperCase(),
+        }),
+      );
+    };
+    try {
+      const pending = action();
+      if (pending) {
+        void pending
+          .catch(handleError)
+          .finally(() => setPendingAction(null));
+      } else {
+        setPendingAction(null);
+      }
+    } catch (error) {
+      handleError(error);
+      setPendingAction(null);
+    }
+  }, [close, pendingAction, t, toast]);
+
+  const handlePng = useCallback(() => {
+    void runDownload('png', onExportPNG);
+  }, [onExportPNG, runDownload]);
 
   const handleSvg = useCallback(() => {
-    close();
-    void onExportSVG();
-  }, [onExportSVG, close]);
+    void runDownload('svg', onExportSVG);
+  }, [onExportSVG, runDownload]);
 
   const handleCopy = useCallback(async () => {
+    if (pendingAction) return;
     close();
-    const result = await onCopyImage();
-    if (!toast) return;
-    if (result === 'copied') {
-      toast.success(
-        t('chart.export.copySuccess', 'Chart image copied to clipboard'),
-      );
-    } else if (result === 'fallback') {
-      toast.info(
-        t(
-          'chart.export.copyFallback',
-          'Clipboard not available — image downloaded instead',
-        ),
-      );
-    } else {
-      toast.error(t('chart.export.copyFailed', 'Failed to copy chart image'));
+    setPendingAction('copy');
+    try {
+      const result = await onCopyImage();
+      if (!toast) return;
+      if (result === 'copied') {
+        toast.success(
+          t('chart.export.copySuccess', 'Chart image copied to clipboard'),
+        );
+      } else if (result === 'fallback') {
+        toast.info(
+          t(
+            'chart.export.copyFallback',
+            'Clipboard not available — image downloaded instead',
+          ),
+        );
+      } else {
+        toast.error(t('chart.export.copyFailed', 'Failed to copy chart image'));
+      }
+    } catch (error) {
+      console.error('[ChartExportMenu] clipboard export failed', error);
+      toast?.error(t('chart.export.copyFailed', 'Failed to copy chart image'));
+    } finally {
+      setPendingAction(null);
     }
-  }, [onCopyImage, close, toast, t]);
+  }, [onCopyImage, close, pendingAction, toast, t]);
 
   const handleCsv = useCallback(() => {
     if (!onExportCsv) return;
-    close();
-    onExportCsv();
-  }, [onExportCsv, close]);
+    void runDownload('csv', onExportCsv);
+  }, [onExportCsv, runDownload]);
 
   return (
     <div ref={containerRef} className={cn('relative', className)}>
@@ -140,81 +181,90 @@ export function ChartExportMenu({
         className="!h-7 !w-7 !p-0 text-[var(--text-muted)] hover:text-[var(--text-secondary)]"
         icon={<Download className="h-3.5 w-3.5" />}
         onClick={() => setOpen((v) => !v)}
-        disabled={disabled}
+        disabled={disabled || pendingAction !== null}
+        loading={pendingAction !== null}
         aria-haspopup="menu"
         aria-expanded={open}
         aria-label={triggerLabel}
         title={triggerLabel}
       />
-      {open && !disabled && (
+      {open && !disabled && pendingAction === null && (
         <div
           role="menu"
           aria-label={t('chart.export.menuLabel', 'Export chart')}
           className={cn(
             'absolute right-0 z-30 mt-1 w-56 rounded-lg p-1',
-            'border border-white/[0.08] bg-[var(--surface-elevated)] shadow-xl',
+            'border border-[var(--border-subtle)] bg-[var(--surface-elevated)] shadow-xl',
           )}
         >
           {onExportCsv && (
-            <button
+            <Button
               type="button"
               role="menuitem"
+              variant="ghost"
+              size="sm"
               onClick={handleCsv}
+              icon={<FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />}
               className={cn(
-                'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-                'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-                'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+                '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+                'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+                'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               )}
             >
-              <FileSpreadsheet className="h-3.5 w-3.5" aria-hidden="true" />
               <span>{t('chart.export.csv', 'Download data as CSV')}</span>
-            </button>
+            </Button>
           )}
-          <button
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handlePng}
             disabled={busy}
+            icon={<ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            <ImageIcon className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('chart.export.png', 'Save as PNG')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handleSvg}
             disabled={busy}
+            icon={<FileImage className="h-3.5 w-3.5" aria-hidden="true" />}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            <FileImage className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('chart.export.svg', 'Save as SVG')}</span>
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
             role="menuitem"
+            variant="ghost"
+            size="sm"
             onClick={handleCopy}
             disabled={busy}
+            icon={<Copy className="h-3.5 w-3.5" aria-hidden="true" />}
             className={cn(
-              'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-sm',
-              'text-[var(--text-secondary)] hover:bg-white/[0.06] hover:text-[var(--text-primary)]',
-              'focus-visible:outline-none focus-visible:bg-white/[0.06]',
+              '!h-auto w-full justify-start rounded px-2 py-1.5 text-left text-sm',
+              'text-[var(--text-secondary)] hover:bg-[var(--control-bg-hover)] hover:text-[var(--text-primary)]',
+              'focus-visible:outline-none focus-visible:bg-[var(--control-bg-hover)]',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
           >
-            <Copy className="h-3.5 w-3.5" aria-hidden="true" />
             <span>{t('chart.export.copy', 'Copy image to clipboard')}</span>
-          </button>
+          </Button>
         </div>
       )}
     </div>

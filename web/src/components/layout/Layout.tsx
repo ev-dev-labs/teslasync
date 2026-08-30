@@ -1,7 +1,6 @@
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { GuardedNavLink } from '../feedback/GuardedLink'
+import { PrefetchNavLink } from './PrefetchLink'
 import InstallPrompt from '../feedback/InstallPrompt'
-import { OfflineBanner } from '../feedback/OfflineBanner'
 import { NewVersionBanner } from '../feedback/NewVersionBanner'
 import { TeslaReauthBanner } from '../feedback/TeslaReauthBanner'
 import { RateLimitBanner } from '../feedback/RateLimitBanner'
@@ -11,14 +10,12 @@ import { TopProgress } from '../feedback/TopProgress'
 import { SessionExpiringModal } from '../feedback/SessionExpiringModal'
 import { SessionExpiredModal } from '../feedback/SessionExpiredModal'
 import { AnnouncerRegion } from '@/components/a11y'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useKeyboardShortcuts } from '@/hooks/useKeyboardShortcuts'
 import { GlobalShortcuts } from '@/lib/globalShortcuts'
 import { useTour } from '@/hooks/useTour'
 import { GotoIndicator } from '../feedback/GotoIndicator'
-import { KeyboardShortcutsModal } from '../feedback/KeyboardShortcutsModal'
-import { FeedbackModal } from '../feedback/FeedbackModal'
 import { TourOverlay } from '../feedback/TourOverlay'
 import { ChangelogModal } from '../feedback/ChangelogModal'
 import { DraftRestorePrompt } from '../feedback/DraftRestorePrompt'
@@ -31,38 +28,49 @@ import {
   TOUR_START_EVENT,
   TOURS,
   dispatchTourStart,
-  isTourCompleted as isTourCompletedById,
   completedTourToken,
   seedCompletedFromServer,
   markTourCompleted,
   type TourStartEventDetail,
 } from '@/lib/tourRegistry'
 import { subscribe as subscribeToBroadcast } from '@/lib/broadcast'
-import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { motion, AnimatePresence } from 'framer-motion'
+import { useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
 import { cn } from '@/lib/cn'
-import { RouteTransition } from '@/components/motion'
+import { AnimatePresence, motion, RouteTransition } from '@/components/motion/runtime'
 import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { LinearSidebar } from './sidebar/LinearSidebar'
+import {
+  buildCompactNavTree,
+  prioritizeCanonicalNavSections,
+  prioritizeCompactNavTree,
+} from './sidebar/compactNav'
 import { NotionSidebar } from './sidebar/NotionSidebar'
 import { useSidebarStyle } from '@/hooks/useSidebarStyle'
 import { StatusBar, useStatusBarPrefs } from './StatusBar'
-import { CommandPalette, CommandPaletteTrigger } from '../ui/CommandPalette'
 import { ServiceStatusBanner } from '../data-display/ServiceStatus'
-import { RuntimeHealthBanner } from '@/components/feedback'
-import Logo from '../ui/Logo'
-import { Button, ThemePicker } from '@/components/ui'
+import { RuntimeHealthBanner } from '@/components/feedback/runtime'
+import {
+  Button,
+  CommandPaletteTrigger,
+  Logo,
+} from '@/components/ui/runtime'
 import {
   BreadcrumbOverridesProvider,
 } from './BreadcrumbOverridesContext'
-import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { VehiclePicker } from './VehiclePicker'
+import { WorkspaceHeader } from './WorkspaceHeader'
+import { WorkspaceContextControl } from './WorkspaceContextControl'
+import { CommandPaletteHost } from './CommandPaletteHost'
+import { LayoutBreadcrumbs } from './LayoutBreadcrumbs'
 import { NavSectionHeader } from './sidebar/NavSectionHeader'
 import { request } from '@/api/client'
-import { useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useAuthMode, useIsForwardAuth } from '@/api/hooks/useAuthMode'
+import { useAlerts } from '@/api/hooks/useNotifications'
+import { useRepairCaseStats } from '@/api/hooks/useRepairCaseStats'
 import { useSettings, settingsKeys } from '@/api/hooks/useSettings'
-import type { Alert, Vehicle, StaleSessionsResponse } from '@/api/types'
+import { useVehicles } from '@/api/hooks/useVehicles'
+import type { Alert } from '@/api/types'
 import { useRealtimeEvents } from '../../hooks/useRealtimeEvents'
 import { useNotificationListener } from '../../hooks/useNotificationListener'
 import { useTitleBadge } from '../../hooks/useTitleBadge'
@@ -74,6 +82,40 @@ import { NotificationBellPopover } from './NotificationBellPopover'
 import { getAlertDrillthroughHref } from '@/lib/alertDrillthrough'
 import { Icons } from '@/lib/icons';
 import { HelixMark } from '@/components/branding/HelixMark';
+import { usePresentationMode } from '@/hooks/usePresentationMode';
+import { useProductPreferences } from '@/hooks/useProductPreferences';
+import { WorkspaceScopeProvider } from '@/hooks/useWorkspaceScope';
+import { getWorkspaceRouteScope } from '@/lib/workspaceScope';
+import { resolveNavCapabilitiesFromAuthMode } from '@/lib/navCapabilities';
+import {
+  MAX_PINNED_NAV_ITEMS,
+  MAX_RECENT_NAV_ITEMS,
+  getPinnedNavPaths,
+  getRecentNavPaths,
+  navPathsEqual,
+  pinnedNavPathsNeedRewrite,
+  recentNavPathsNeedRewrite,
+  setPinnedNavPaths,
+  setRecentNavPaths,
+  subscribeNavPins,
+} from '@/lib/navPins';
+import { PresentationOverlay } from './presentation/PresentationOverlay';
+import { ReportMasthead } from './presentation/ReportMasthead';
+
+const LazyFeedbackModal = lazy(async () => {
+  const module = await import('../feedback/FeedbackModal')
+  return { default: module.FeedbackModal }
+})
+
+const LazyKeyboardShortcutsModal = lazy(async () => {
+  const module = await import('../feedback/KeyboardShortcutsModal')
+  return { default: module.KeyboardShortcutsModal }
+})
+
+const LazyThemePicker = lazy(async () => {
+  const module = await import('@/components/ui/ThemePicker')
+  return { default: module.ThemePicker }
+})
 
 const navI18nKeys: Record<string, string> = {
   // Sidebar nav labels are rendered verbatim from `navSections` below. The
@@ -102,6 +144,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/journey-fragmentation': ['journey fragmentation', 'trip chains', 'stopovers'],
   '/seasonal-efficiency': ['seasonal efficiency', 'annual trend', 'energy seasonality'],
   '/drive-score': ['score', 'driving score', 'safe driving'],
+  '/fsd': ['fsd', 'full self driving', 'supervised self-driving', 'autopilot distance', 'self driving miles', 'autonomy usage'],
   '/speed-profile': ['speed', 'profile', 'velocity'],
   '/driving-dynamics': ['dynamics', 'handling', 'performance', 'acceleration'],
   '/regen-efficiency': ['regen', 'regenerative', 'braking', 'recovery'],
@@ -152,6 +195,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/lifetime-stats': ['lifetime', 'all time', 'totals'],
   '/vehicle-comparison': ['compare vehicles', 'fleet comparison', 'side by side', 'two vehicles'],
   '/timeline': ['timeline', 'events', 'history'],
+  '/activity': ['activity', 'drives', 'charging', 'alerts', 'software updates', 'annotations', 'operations timeline'],
   '/locations': ['places', 'locations', 'visited'],
   '/commands': ['commands', 'control', 'remote'],
   '/command-history': ['command log', 'remote history'],
@@ -237,12 +281,9 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/ownership/subscription-roi': ['subscription roi', 'connectivity', 'premium features', 'cancel', 'break even', 'recurring cost'],
 }
 
-const DEFAULT_PINNED_NAV_PATHS = ['/', '/digital-twin', '/vehicles', '/charging', '/live']
-const MAX_PINNED_NAV_ITEMS = 8
-const MAX_RECENT_NAV_ITEMS = 3
+// Pinned / recent nav persistence lives in `lib/navPins.ts` so the command
+// palette can surface the same Quick-access list the sidebar renders.
 const EXPANDED_NAV_STORAGE_KEY = 'teslasync-expanded-nav-sections'
-const RECENT_NAV_STORAGE_KEY = 'teslasync-recent-nav-paths'
-const PINNED_NAV_STORAGE_KEY = 'teslasync-pinned-nav-paths'
 
 const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string; icon: typeof Icons.home; gradient: string }> = {
   Home:           { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.home,            gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
@@ -281,7 +322,7 @@ const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; rin
  * Used + canonical section added noise). Code is kept in place so we
  * can re-enable it by flipping this flag back to `true` without a diff.
  * Recent-page tracking itself still runs (it's wired into the command
- * palette + the dashboard widget) — only the sidebar render is muted.
+ * palette + the global status bar) — only the sidebar render is muted.
  */
 const SHOW_RECENTLY_USED_NAV = false;
 
@@ -306,6 +347,7 @@ export const navSections = [
       { to: '/explore', icon: Icons.sparkles, label: 'Explore Features', color: 'text-amber-400' },
       { to: '/live', icon: Icons.radar, label: 'Live Map', color: 'text-emerald-400' },
       { to: '/timeline', icon: Icons.clock, label: 'Timeline', color: 'text-sky-400' },
+      { to: '/activity', icon: Icons.activity, label: 'Activity Timeline', color: 'text-teal-400' },
       { to: '/weekly-digest', icon: Icons.calendarCheck, label: 'Weekly Digest', color: 'text-purple-400' },
     ],
   },
@@ -345,6 +387,7 @@ export const navSections = [
       { to: '/milestones', icon: Icons.trip, label: 'Milestones', color: 'text-yellow-400' },
       { to: '/lifetime-stats', icon: Icons.award, label: 'Lifetime Stats', color: 'text-yellow-400' },
       { to: '/drive-score', icon: Icons.trophy, label: 'Drive Score', color: 'text-yellow-400' },
+      { to: '/fsd', icon: Icons.cpu, label: 'FSD Insights', color: 'text-cyan-400' },
       { to: '/speed-profile', icon: Icons.speed, label: 'Speed Profile', color: 'text-rose-400' },
       { to: '/driving-dynamics', icon: Icons.efficiency, label: 'Driving Dynamics', color: 'text-red-400' },
       { to: '/regen-efficiency', icon: Icons.recycle, label: 'Regen Braking', color: 'text-green-400' },
@@ -569,6 +612,7 @@ export const navSections = [
       { to: '/admin/schema-drift', icon: Icons.fingerprint, label: 'Schema Drift', color: 'text-purple-400' },
       { to: '/admin/slow-queries', icon: Icons.timer, label: 'Slow Queries', color: 'text-amber-400' },
       { to: '/admin/vehicle-cost', icon: Icons.wallet, label: 'Vehicle Cost', color: 'text-lime-400' },
+      { to: '/admin/data-quality', icon: Icons.scanSearch, label: 'Data Quality', color: 'text-sky-400' },
       { to: '/admin/disk-forecast', icon: Icons.hardDrive, label: 'Disk Forecast', color: 'text-teal-400' },
       { to: '/admin/secret-rotation', icon: Icons.securityCheck, label: 'Secret Rotation', color: 'text-cyan-400' },
       { to: '/admin/audit-log', icon: Icons.history, label: 'Audit Log', color: 'text-indigo-400' },
@@ -627,6 +671,24 @@ function findNavItemByExactPath(to: string) {
     if (item) return { section, item }
   }
   return null
+}
+
+/**
+ * Every destination the canonical catalog knows about.
+ *
+ * Used to reconcile persisted pin / recent lists: a stored path that no longer
+ * exists (route removed or renamed between releases) is a dead link, so it is
+ * dropped before it can be rendered OR re-persisted. Visibility predicates
+ * (`minVehicles`, `requiresAuth`) are deliberately NOT applied here — those
+ * are transient states, and a pin must survive plugging in a second vehicle.
+ */
+const NAV_CATALOG_PATHS: ReadonlySet<string> = new Set(
+  navSections.flatMap(section => section.items.map(item => item.to)),
+)
+
+/** Drop paths the catalog no longer contains, preserving order. */
+export function reconcileNavPaths(paths: readonly string[]): string[] {
+  return paths.filter(path => NAV_CATALOG_PATHS.has(path))
 }
 
 /**
@@ -744,7 +806,7 @@ function ThemeQuickSwitcher({
         aria-expanded={open}
         aria-label={t('theme.openPicker', 'Open theme picker')}
         onClick={() => setOpen(v => !v)}
-        className="h-9 w-9 rounded-lg p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)]"
+        className="h-9 w-9 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)]"
       >
         <Icons.palette className="h-5 w-5" aria-hidden="true" />
       </Button>
@@ -759,10 +821,26 @@ function ThemeQuickSwitcher({
             ...(coords.left !== undefined ? { left: coords.left } : {}),
             ...(coords.right !== undefined ? { right: coords.right } : {}),
           }}
-          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-xl border border-[var(--glass-border)] bg-[var(--surface-1)] p-4 shadow-2xl"
+          className="z-[80] w-[22rem] max-w-[calc(100vw-1rem)] rounded-panel border border-[var(--border-default)] bg-[var(--surface-1)] p-4 shadow-e3"
         >
-          <ThemePicker compact showMode showCustom={false} onChange={() => setOpen(false)} onModeChange={() => setOpen(false)} />
-          <div className="mt-3 flex justify-end border-t border-[var(--glass-border)] pt-3">
+          <Suspense
+            fallback={
+              <div
+                role="status"
+                aria-label={t('theme.loadingPicker', 'Loading theme picker…')}
+                className="min-h-64 animate-pulse rounded-shape-md bg-[var(--surface-2)] motion-reduce:animate-none"
+              />
+            }
+          >
+            <LazyThemePicker
+              compact
+              showMode
+              showCustom={false}
+              onChange={() => setOpen(false)}
+              onModeChange={() => setOpen(false)}
+            />
+          </Suspense>
+          <div className="mt-3 flex justify-end border-t border-[var(--border-subtle)] pt-3">
             <Button
               type="button"
               variant="ghost"
@@ -770,7 +848,7 @@ function ThemeQuickSwitcher({
                 setOpen(false)
                 navigate('/settings#appearance')
               }}
-              className="h-auto px-2 py-1 text-xs font-medium text-cyan-300 hover:bg-transparent hover:text-cyan-200"
+              className="h-auto px-2 py-1 text-xs font-medium text-[var(--theme-primary)] hover:bg-transparent hover:brightness-110"
             >
               {t('theme.customize', 'Customize…')}
             </Button>
@@ -783,6 +861,8 @@ function ThemeQuickSwitcher({
 }
 
 export default function Layout() {
+  const presentation = usePresentationMode()
+  const { preferences: productPreferences } = useProductPreferences()
   // Sidebar style preference — localStorage-backed, cross-tab synced.
   // Defaults to 'linear'; user can change via Settings → Appearance.
   const sidebarStyle = useSidebarStyle()
@@ -796,25 +876,17 @@ export default function Layout() {
       return new Set(['Home'])
     }
   })
-  const [recentNavPaths, setRecentNavPaths] = useState<string[]>(() => {
-    try {
-      const stored = window.localStorage.getItem(RECENT_NAV_STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) as string[] : []
-      return parsed.slice(0, MAX_RECENT_NAV_ITEMS)
-    } catch {
-      return []
-    }
-  })
-  const [pinnedNavPaths, setPinnedNavPaths] = useState<string[]>(() => {
-    try {
-      const stored = window.localStorage.getItem(PINNED_NAV_STORAGE_KEY)
-      const parsed = stored ? JSON.parse(stored) as string[] : []
-      return (stored ? parsed : DEFAULT_PINNED_NAV_PATHS).slice(0, MAX_PINNED_NAV_ITEMS)
-    } catch {
-      return DEFAULT_PINNED_NAV_PATHS
-    }
-  })
+  const [recentNavPaths, setRecentNavPathsState] = useState<string[]>(
+    () => reconcileNavPaths(getRecentNavPaths()),
+  )
+  const [pinnedNavPaths, setPinnedNavPathsState] = useState<string[]>(
+    () => reconcileNavPaths(getPinnedNavPaths()),
+  )
   const location = useLocation()
+  const workspaceScope = useMemo(
+    () => getWorkspaceRouteScope(location.pathname),
+    [location.pathname],
+  )
   const { t } = useTranslation()
 
   // SSE alert toasts. Live-pipe health is rendered by `<LiveIndicator>`
@@ -911,7 +983,7 @@ export default function Layout() {
   // used to re-appear after every clear. Mirror the flags into the persisted
   // settings row (like theme/units) so completion survives a clear and syncs
   // across devices.
-  const { data: settings, isFetched: settingsFetched } = useSettings()
+  const { data: settings } = useSettings()
   const queryClient = useQueryClient()
   const settingsRef = useRef(settings)
   settingsRef.current = settings
@@ -1010,53 +1082,61 @@ export default function Layout() {
   // in the footer <VersionSegment>.
 
   // Live data for sidebar
-  const { data: alerts } = useQuery({ queryKey: ['alerts-sidebar'], queryFn: () => request<Alert[]>('/alerts?limit=50&offset=0'), refetchInterval: 30_000, retry: 1 })
-  const { data: vehicles } = useQuery({ queryKey: ['vehicles-sidebar'], queryFn: () => request<Vehicle[]>('/vehicles'), refetchInterval: 60_000, retry: 1 })
+  const { data: alerts } = useAlerts()
+  const { data: vehicles } = useVehicles()
   const unreadAlerts = alerts?.filter(a => !a.is_read).length ?? 0
   const vehicleCount = vehicles?.length ?? 0
 
-  // Auto-start the dashboard tour the first time a user lands on `/` with at
-  // least one vehicle linked. Per-feature tours stay launcher-only — see
-  // `tourRegistry.TOURS[*].autoStart` for the predicate. Re-evaluates when
-  // the route or fleet size changes; the per-tour completion key (versioned)
-  // prevents duplicate prompts.
-  useEffect(() => {
-    if (activeTourId) return
-    // Wait until settings have loaded (and thus the server-side completion
-    // list has been seeded into localStorage) before auto-starting, so a
-    // cleared browser that already finished the tour on the server does not
-    // flash it again before the seed lands.
-    if (!settingsFetched) return
-    for (const def of Object.values(TOURS)) {
-      if (!def.autoStart) continue
-      if (isTourCompletedById(def.id, def.version)) continue
-      if (def.autoStart({ pathname: location.pathname, vehicleCount })) {
-        const timer = window.setTimeout(() => setActiveTourId(def.id), 1500)
-        return () => window.clearTimeout(timer)
-      }
-    }
-  }, [location.pathname, vehicleCount, activeTourId, settingsFetched])
+  // HELP-01: there is no tour auto-start effect here any more.
+  //
+  // This used to walk `TOURS`, evaluate each `autoStart` predicate on every
+  // route change, and open the seven-step dashboard spotlight 1.5s after a
+  // user with a linked vehicle landed on `/`. Nobody asked for it, it fired on
+  // a route the user had chosen for some other purpose, and it took the whole
+  // screen. Tours are now reachable only through the launcher (help button,
+  // command palette, settings card), and unsolicited onboarding is limited to
+  // the single inline, dismissible hint rendered by `<TaskOnboardingHost>` —
+  // route-scoped, state-gated, versioned, and suppressed for experienced
+  // users. See `lib/onboardingTasks.ts`.
+  //
+  // `TOURS` is still imported: the TOUR_START_EVENT listener above resolves
+  // explicitly-requested tour ids against it.
 
-  // Stale sessions count for Data Repair badge
-  const { data: staleSessions } = useQuery({ queryKey: ['stale-sessions-sidebar'], queryFn: () => request<StaleSessionsResponse>('/data-repair/stale-sessions'), refetchInterval: 60_000, retry: 1 })
-  const staleCount = (staleSessions?.stale_charging?.length ?? 0) + (staleSessions?.stale_drives?.length ?? 0)
+  // Use the durable case summary for the navigation badge. Running the direct
+  // stale-session diagnostic in global chrome made every route pay for a
+  // comparatively expensive forensic query.
+  const { data: repairStats } = useRepairCaseStats()
+  const staleCount = (repairStats?.open ?? 0) + (repairStats?.in_review ?? 0)
 
   // Hide auth-gated nav items (e.g. "My Activity") when the deployment isn't
   // running behind a ForwardAuth identity provider — the underlying endpoints
   // 503 in open mode and there is nothing useful to show.
   const isForwardAuth = useIsForwardAuth()
+  // Raw auth-mode contract — the only permission infrastructure the SPA has.
+  // Feeds capability-aware navigation grouping (see `navCapabilities` below).
+  const { data: authMode } = useAuthMode()
 
   const activeNavEntry = useMemo(() => findNavItemByPath(location.pathname), [location.pathname])
   const activeSectionTitle = activeNavEntry?.section.title
   const activeSectionStyle = activeSectionTitle ? SECTION_ICON_STYLES[activeSectionTitle] : undefined
-  const visibleNavSections = useMemo(() =>
-    navSections
-      .map(section => ({
-        ...section,
-        items: section.items.filter(item => isVisibleNavItem(item, vehicleCount, isForwardAuth)),
-      }))
-      .filter(section => section.items.length > 0),
-    [vehicleCount, isForwardAuth],
+  const visibleNavSections = useMemo(
+    () =>
+      prioritizeCanonicalNavSections(
+        navSections
+          .map(section => ({
+            ...section,
+            items: section.items.filter(item =>
+              isVisibleNavItem(item, vehicleCount, isForwardAuth),
+            ),
+          }))
+          .filter(section => section.items.length > 0),
+        productPreferences.persona,
+      ),
+    [
+      vehicleCount,
+      isForwardAuth,
+      productPreferences.persona,
+    ],
   )
   const pinnedNavItems = useMemo(() =>
     pinnedNavPaths
@@ -1078,6 +1158,41 @@ export default function Layout() {
       // indicator. Quick-jump rows for *other* recent pages remain.
       .filter(item => !isActiveNavPath(location.pathname, item.to)),
     [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
+  )
+
+  // Progressive disclosure for the DEFAULT (Linear) sidebar only.
+  //
+  // `visibleNavSections` is the complete 20-group catalog — it still feeds
+  // the `notion` and `legacy` styles (explicit user choice to see
+  // everything), the `/explore` Feature Hub, and the command palette. The
+  // Linear style instead renders a curated two-tier tree: seven everyday
+  // primary groups (Overview · Vehicles · Drives · Charging · Energy ·
+  // Insights · Operations) followed by intentional advanced groups. Nothing
+  // is deleted — long-tail routes stay reachable through the always-visible
+  // command-palette trigger and `/explore` (pinned into Overview), and the
+  // exact active item is injected when the current route is outside the
+  // curated set so location context is never lost. Capability resolution
+  // comes from the real permission contract (`/system/auth-mode`) and only
+  // demotes advanced groups; it never removes them.
+  // See `sidebar/compactNav.ts` and `lib/navCapabilities.ts`.
+  const navCapabilities = useMemo(
+    () => resolveNavCapabilitiesFromAuthMode(authMode, productPreferences.persona),
+    [authMode, productPreferences.persona],
+  )
+  const compactNav = useMemo(
+    () =>
+      prioritizeCompactNavTree(
+        buildCompactNavTree(visibleNavSections, location.pathname, {
+          capabilities: navCapabilities,
+        }),
+        productPreferences.persona,
+      ),
+    [
+      visibleNavSections,
+      location.pathname,
+      navCapabilities,
+      productPreferences.persona,
+    ],
   )
 
   useEffect(() => {
@@ -1138,27 +1253,55 @@ export default function Layout() {
   useEffect(() => {
     const activeTo = activeNavEntry?.item.to
     if (!activeTo || activeTo === '/' || pinnedNavPaths.includes(activeTo)) return
-    setRecentNavPaths(prev => {
+    setRecentNavPathsState(prev => {
       const next = [activeTo, ...prev.filter(path => path !== activeTo)].slice(0, MAX_RECENT_NAV_ITEMS)
       return next.join('|') === prev.join('|') ? prev : next
     })
   }, [activeNavEntry, pinnedNavPaths])
 
+  // Persist through `lib/navPins` so the command palette's Pinned/Recent
+  // sections observe the same storage keys and change bus.
+  //
+  // Write-loop guard: `setPinnedNavPaths` notifies the bus, and this component
+  // also SUBSCRIBES to that bus. Comparing against what storage already holds
+  // means a no-op render never writes, so a notify can never bounce back into
+  // another write. It also stops a first mount from persisting the curated
+  // defaults, which would silently convert "never customized" into an explicit
+  // user list.
   useEffect(() => {
-    try {
-      window.localStorage.setItem(RECENT_NAV_STORAGE_KEY, JSON.stringify(recentNavPaths))
-    } catch {
-      // Ignore storage failures; recent links are convenience-only.
-    }
+    if (!recentNavPathsNeedRewrite(recentNavPaths)) return
+    setRecentNavPaths(recentNavPaths)
   }, [recentNavPaths])
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(PINNED_NAV_STORAGE_KEY, JSON.stringify(pinnedNavPaths))
-    } catch {
-      // Ignore storage failures; pinned links still work for the current session.
-    }
+    if (!pinnedNavPathsNeedRewrite(pinnedNavPaths)) return
+    setPinnedNavPaths(pinnedNavPaths)
   }, [pinnedNavPaths])
+
+  // Same-tab (`NAV_PINS_EVENT`) and cross-tab (`storage`) reconciliation.
+  //
+  // The listener uses the payload the bus delivers rather than re-reading
+  // storage: after a rejected write (quota, private browsing) storage still
+  // holds the PREVIOUS list, so a re-read would roll the user's change back.
+  // Reading through `reconcileNavPaths` means a foreign tab that persisted a
+  // path this build no longer serves cannot resurrect a dead link here, and
+  // returning the previous array reference when nothing changed keeps the
+  // update from re-rendering — and therefore from re-entering the effects
+  // above.
+  useEffect(
+    () =>
+      subscribeNavPins(detail => {
+        setPinnedNavPathsState(prev => {
+          const next = reconcileNavPaths(detail?.pinned ?? getPinnedNavPaths())
+          return navPathsEqual(prev, next) ? prev : next
+        })
+        setRecentNavPathsState(prev => {
+          const next = reconcileNavPaths(detail?.recent ?? getRecentNavPaths())
+          return navPathsEqual(prev, next) ? prev : next
+        })
+      }),
+    [],
+  )
 
   const toggleSection = useCallback((title: string) => {
     setExpandedSections(prev => {
@@ -1181,30 +1324,28 @@ export default function Layout() {
 
   const navLabel = useCallback((label: string) => {
     if (!navI18nKeys[label]) return label
-    const translated = t(navI18nKeys[label])
-    return translated === navI18nKeys[label] ? label : translated
+    return t(navI18nKeys[label], label)
   }, [t])
   const activeNavPath = activeNavEntry?.item.to
   const activeIsPinned = activeNavPath ? pinnedNavPaths.includes(activeNavPath) : false
   const pinNavPath = useCallback((to: string) => {
-    setPinnedNavPaths(prev => {
+    setPinnedNavPathsState(prev => {
       if (prev.includes(to)) return prev
       return [to, ...prev].slice(0, MAX_PINNED_NAV_ITEMS)
     })
-    setRecentNavPaths(prev => prev.filter(path => path !== to))
+    setRecentNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
   const unpinNavPath = useCallback((to: string) => {
-    setPinnedNavPaths(prev => prev.filter(path => path !== to))
+    setPinnedNavPathsState(prev => prev.filter(path => path !== to))
   }, [])
   const mainRef = useRef<HTMLElement>(null)
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
-    const { to, icon: Icon, label, color, ...rest } = item
+    const { to, icon: Icon, label, ...rest } = item
     const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
     const isActive = isActiveNavPath(location.pathname, to)
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
-    const sectionStyle = SECTION_ICON_STYLES[findNavItemByExactPath(to)?.section.title ?? '']
     return (
-      <GuardedNavLink
+      <PrefetchNavLink
         key={to}
         to={to}
         onClick={() => setSidebarOpen(false)}
@@ -1212,52 +1353,53 @@ export default function Layout() {
         aria-current={isActive ? 'page' : undefined}
         data-tour={dataTour}
         className={cn(
-          'group relative flex min-h-9 items-center gap-2.5 rounded-xl px-2.5 py-1.5 text-sm font-medium transition-all duration-normal',
+          'group relative flex min-h-9 items-center gap-2.5 rounded-shape-md px-2.5 py-1.5 text-sm font-medium transition-colors duration-fast',
           isInTabBar && 'opacity-50 lg:opacity-100'
         )}
       >
         {isActive && (
           <motion.div
             layoutId={compact ? `nav-active-${activeScope}-${to}` : 'nav-active'}
-            className="absolute inset-0 rounded-xl bg-white/[0.06] border border-white/[0.08]"
-            style={{ boxShadow: '0 0 20px rgba(0, 240, 255, 0.05)' }}
-            transition={{ type: 'spring', bounce: 0.15, duration: 0.5 }}
+            className="absolute inset-0 rounded-shape-md border border-[rgba(var(--theme-primary-rgb),0.2)] bg-[rgba(var(--theme-primary-rgb),0.09)]"
+            transition={{ duration: 0.16, ease: 'easeOut' }}
           />
         )}
         <span
           className={cn(
-            'relative z-10 grid shrink-0 place-items-center border border-white/[0.06] transition-all duration-normal',
-            'h-7 w-7 rounded-lg',
-            sectionStyle?.surface ?? 'bg-white/[0.035]',
-            sectionStyle?.ring && 'ring-1',
-            sectionStyle?.ring,
-            isActive ? 'bg-white/[0.09] ring-white/20' : 'group-hover:bg-white/[0.07] group-hover:ring-white/15'
+            'relative z-10 grid h-7 w-7 shrink-0 place-items-center rounded-shape-sm border transition-colors duration-fast',
+            isActive
+              ? 'border-[rgba(var(--theme-primary-rgb),0.24)] bg-[rgba(var(--theme-primary-rgb),0.12)]'
+              : 'border-[var(--border-subtle)] bg-[var(--surface-2)] group-hover:border-[var(--border-default)]'
           )}
         >
-          <Icon className={cn('h-4 w-4 transition-all duration-normal', color, isActive ? 'opacity-100 drop-shadow-[0_0_8px_currentColor]' : 'opacity-75 group-hover:opacity-100')} />
+          <Icon
+            className={cn(
+              'h-4 w-4 transition-colors duration-fast',
+              isActive
+                ? 'text-[var(--theme-primary)]'
+                : 'text-[var(--text-muted)] group-hover:text-[var(--text-secondary)]',
+            )}
+          />
         </span>
         <span className={cn('relative z-10 min-w-0 truncate transition-colors', isActive ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover:text-[var(--text-primary)]')}>
           {navLabel(label)}
         </span>
         {to === '/notifications/alerts' && unreadAlerts > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-red/20 px-1.5 text-2xs font-bold text-neon-red ring-1 ring-neon-red/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-rose-500/20 bg-rose-500/10 px-1.5 text-2xs font-semibold text-rose-300">
             {unreadAlerts > 9 ? '9+' : unreadAlerts}
           </span>
         )}
         {to === '/vehicles' && vehicles && vehicles.length > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-cyan/10 px-1.5 text-2xs font-bold text-neon-cyan ring-1 ring-neon-cyan/20">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-[var(--border-default)] bg-[var(--surface-3)] px-1.5 text-2xs font-semibold text-[var(--text-secondary)]">
             {vehicles.length}
           </span>
         )}
         {to === '/data-repair' && staleCount > 0 && (
-          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-neon-amber/20 px-1.5 text-2xs font-bold text-neon-amber ring-1 ring-neon-amber/30">
+          <span className="relative z-10 ms-auto flex h-5 min-w-[20px] items-center justify-center rounded-pill border border-amber-500/20 bg-amber-500/10 px-1.5 text-2xs font-semibold text-amber-300">
             {staleCount > 9 ? '9+' : staleCount}
           </span>
         )}
-        {isActive && !compact && (
-          <span className="absolute end-3 h-1.5 w-1.5 rounded-full bg-neon-cyan shadow-[0_0_6px_rgba(0,240,255,0.5)]" />
-        )}
-      </GuardedNavLink>
+      </PrefetchNavLink>
     )
   }
 
@@ -1268,24 +1410,21 @@ export default function Layout() {
           it before any sidebar / header / banner control. Supersedes the
           previous `a11y.skipToMain` link.
           Audit anchor: skipToContent|skip.to.content */}
-      <SkipToContent />
+      {presentation.mode === 'standard' && <SkipToContent />}
       <BreadcrumbOverridesProvider>
-      <div className="flex h-dvh bg-[var(--bg)] text-[var(--text-primary)]">
+      <WorkspaceScopeProvider scope={workspaceScope}>
+      <div
+        data-presentation-mode={presentation.mode}
+        className="flex h-dvh bg-[var(--bg-app)] text-[var(--text-primary)]"
+      >
       {/* Global SR announcer. Mounted once here
           so any component can fire imperative live-region messages via
           `useAnnouncer()` without rendering its own hidden region. */}
       <AnnouncerRegion />
 
-      {/* Ambient background effects */}
-      <div className="pointer-events-none fixed inset-0 z-0">
-        <div className="absolute -top-40 -left-40 h-96 w-96 rounded-full bg-neon-cyan/[0.02] blur-[100px]" />
-        <div className="absolute -bottom-40 -right-40 h-96 w-96 rounded-full bg-neon-purple/[0.02] blur-[100px]" />
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-[600px] w-[600px] rounded-full bg-neon-blue/[0.01] blur-[120px]" />
-      </div>
-
       {/* Mobile overlay */}
       <AnimatePresence>
-        {sidebarOpen && (
+        {presentation.mode === 'standard' && sidebarOpen && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -1295,7 +1434,7 @@ export default function Layout() {
             // with the <aside> sidebar (drawer pattern), not a dialog. New
             // interactive dialogs MUST use <Modal>.
             // eslint-disable-next-line no-restricted-syntax
-            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] lg:hidden"
+            className="fixed inset-0 z-[65] bg-[var(--bg-app)] backdrop-blur-sm dark:bg-[var(--surface-overlay)] xl:hidden"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -1309,23 +1448,24 @@ export default function Layout() {
         data-role="sidebar"
         data-sidebar-open={sidebarOpen}
         className={cn(
-          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,256px)] transform transition-transform duration-normal ease-out lg:top-0 lg:static lg:z-auto lg:w-64 lg:translate-x-0',
-          'flex flex-col border-r border-[var(--glass-border)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-2xl backdrop-blur-xl lg:shadow-none',
+          'fixed start-0 bottom-0 z-[66] w-[clamp(240px,70vw,272px)] transform transition-transform duration-normal ease-out xl:top-0 xl:static xl:z-auto xl:w-[var(--shell-sidebar-width)] xl:translate-x-0',
+          'flex flex-col border-r border-[var(--border-default)] bg-[var(--surface-1)] text-[var(--text-primary)] shadow-e3 xl:shadow-none',
+          presentation.mode !== 'standard' && 'hidden',
           sidebarOpen ? 'top-0 translate-x-0' : 'top-14 -translate-x-full',
           // Reserve space for the fixed footer StatusBar
           // so the bottom "Take a tour / Report bug" row never slides under
           // it. Mobile open-state already overlays StatusBar (sidebar z-66 >
           // StatusBar z-55), so the reservation only matters on desktop where
-          // the sidebar is `lg:static` and shares layout space with <main>.
-          statusBarPrefs.enabled && 'lg:pb-7'
+          // the sidebar is `xl:static` and shares layout space with <main>.
+          statusBarPrefs.enabled && 'xl:pb-7'
         )}
       >
         {/* Mobile sidebar brand. Build version intentionally not rendered
             here; canonical provenance lives in the footer <VersionSegment>. */}
-        <div className="flex items-center gap-2 border-b border-[var(--glass-border)] px-5 py-4 shrink-0 lg:hidden">
-          <GuardedNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-xl transition-colors" onClick={() => setSidebarOpen(false)}>
+        <div className="flex items-center gap-2 border-b border-[var(--border-default)] px-5 py-4 shrink-0 xl:hidden">
+          <PrefetchNavLink to="/" className="min-w-0 flex flex-1 items-center gap-3 rounded-shape-md transition-colors" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-          </GuardedNavLink>
+          </PrefetchNavLink>
           <Button
             type="button"
             variant="ghost"
@@ -1333,7 +1473,7 @@ export default function Layout() {
             aria-label={t('nav.closeSidebar', 'Close sidebar')}
             aria-expanded={sidebarOpen}
             onClick={() => setSidebarOpen(false)}
-            className="h-10 w-10 shrink-0 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+            className="h-10 w-10 shrink-0 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
             <Icons.close className="h-5 w-5" />
           </Button>
@@ -1342,35 +1482,42 @@ export default function Layout() {
         {/* Logo — desktop sidebar header. Build version intentionally not
             rendered here; canonical provenance lives in the footer
             <VersionSegment>. */}
-        <div className="hidden lg:flex items-center gap-2 px-5 py-5 border-b border-[var(--glass-border)] shrink-0">
-          <GuardedNavLink to="/" className="flex flex-1 items-center gap-3 hover:bg-[var(--surface-2)] -mx-2 px-2 py-1 rounded-md transition-colors" onClick={() => setSidebarOpen(false)}>
+        <div className="hidden h-[4.5rem] shrink-0 items-center border-b border-[var(--border-default)] px-5 xl:flex">
+          <PrefetchNavLink to="/" className="flex min-w-0 flex-1 items-center gap-3 rounded-shape-md py-1 transition-colors hover:opacity-90" onClick={() => setSidebarOpen(false)}>
             <Logo size={32} showWordmark />
-          </GuardedNavLink>
-          <ThemeQuickSwitcher placement="left" />
-          <NotificationBellPopover />
+          </PrefetchNavLink>
         </div>
 
-        {/* Sticky search trigger */}
-        <div className="px-3 py-2 lg:px-4 lg:py-3 border-b border-[var(--glass-border)] shrink-0">
+        {/* Mobile drawer search; desktop discovery lives in WorkspaceHeader. */}
+        <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
           <CommandPaletteTrigger />
         </div>
 
-        {/* Persistent vehicle scope picker.
-            Renders its own bordered wrapper; returns null for single-vehicle
-            owners so no empty padding is visible. */}
-        <VehiclePicker />
+        {/* Mobile drawer owns the same route-aware context controls as the
+            desktop header; the footer remains informational only. */}
+        {workspaceScope.vehicle && (
+          <VehiclePicker hideWhenSingle={false} className="xl:hidden" />
+        )}
+        {workspaceScope.range && (
+          <div className="shrink-0 border-b border-[var(--border-default)] px-3 py-2 xl:hidden">
+            <WorkspaceContextControl
+              className="w-full max-w-none"
+              listenForCommands={false}
+            />
+          </div>
+        )}
 
         {/* Navigation */}
         {sidebarStyle === 'linear' ? (
           <LinearSidebar
-            sections={visibleNavSections}
+            sections={compactNav.sections}
             pinnedItems={pinnedNavItems}
             pathname={location.pathname}
             navLabel={navLabel}
             onPin={pinNavPath}
             onUnpin={unpinNavPath}
             onItemSelect={() => setSidebarOpen(false)}
-            activeSectionTitle={activeSectionTitle}
+            activeSectionTitle={compactNav.activeSectionTitle}
             alertCount={unreadAlerts}
             vehicleCount={vehicleCount}
             staleCount={staleCount}
@@ -1391,7 +1538,8 @@ export default function Layout() {
           />
         ) : (
         <nav
-          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 lg:py-4 px-3 space-y-3 scrollbar-thin"
+          aria-label={t('a11y.navSections', 'Navigation sections')}
+          className="flex-1 min-h-0 overflow-y-auto overscroll-contain py-2 xl:py-4 px-3 space-y-3 scrollbar-thin"
           style={{ WebkitOverflowScrolling: 'touch', touchAction: 'pan-y', overscrollBehaviorY: 'contain' }}
         >
           {activeNavEntry && (
@@ -1525,26 +1673,21 @@ export default function Layout() {
                     {isActiveSection && (
                       <span
                         aria-hidden="true"
-                        className={cn(
-                          'pointer-events-none absolute inset-x-0 -inset-y-0.5 rounded-md bg-gradient-to-r opacity-80',
-                          sectionStyle?.gradient ?? 'from-[rgba(var(--theme-primary-rgb),0.18)] via-[rgba(var(--theme-primary-rgb),0.05)] to-transparent'
-                        )}
+                        className="pointer-events-none absolute inset-x-0 -inset-y-0.5 rounded-shape-sm bg-[var(--surface-2)]"
                       />
                     )}
                     <span className="relative z-10 flex min-w-0 flex-1 items-center gap-2">
                       <SectionIcon
                         className={cn(
-                          'h-3 w-3 shrink-0 transition-all duration-normal',
-                          sectionStyle?.accent ?? 'text-neon-cyan',
-                          isActiveSection && 'drop-shadow-[0_0_6px_currentColor]'
+                          'h-3.5 w-3.5 shrink-0 transition-colors duration-fast',
+                          isActiveSection ? 'text-[var(--theme-primary)]' : 'text-[var(--text-muted)]'
                         )}
                         aria-hidden="true"
                       />
                       <span
                         className={cn(
-                          'truncate text-2xs font-bold uppercase tracking-[0.16em] transition-colors',
-                          sectionStyle?.accent ?? 'text-[var(--text-secondary)]',
-                          isActiveSection ? 'opacity-100' : 'opacity-85 group-hover/section:opacity-100'
+                          'truncate text-xs font-semibold tracking-[0.035em] transition-colors',
+                          isActiveSection ? 'text-[var(--text-primary)]' : 'text-[var(--text-secondary)] group-hover/section:text-[var(--text-primary)]'
                         )}
                         title={section.title}
                       >
@@ -1553,8 +1696,8 @@ export default function Layout() {
                       <span
                         aria-hidden="true"
                         className={cn(
-                          'ms-1 h-px flex-1 bg-gradient-to-r from-black/15 to-transparent transition-opacity dark:from-white/15',
-                          isActiveSection ? 'opacity-60' : 'opacity-25 group-hover/section:opacity-40'
+                          'ms-1 h-px flex-1 bg-[var(--border-subtle)] transition-opacity',
+                          isActiveSection ? 'opacity-100' : 'opacity-60 group-hover/section:opacity-100'
                         )}
                       />
                     </span>
@@ -1563,8 +1706,8 @@ export default function Layout() {
                         className={cn(
                           'flex h-4 min-w-[18px] items-center justify-center rounded-full px-1 text-2xs font-semibold tabular-nums',
                           isActiveSection
-                            ? cn(sectionStyle?.surface ?? 'bg-white/[0.08]', sectionStyle?.accent ?? 'text-[var(--text-primary)]')
-                            : 'bg-black/[0.05] text-[var(--text-muted)] dark:bg-white/[0.04]'
+                            ? 'bg-[var(--surface-3)] text-[var(--text-secondary)]'
+                            : 'bg-[var(--surface-2)] text-[var(--text-muted)]'
                         )}
                       >
                         {section.items.length}
@@ -1572,7 +1715,7 @@ export default function Layout() {
                       <Icons.expand
                         className={cn(
                           'h-3 w-3 transition-transform',
-                          isActiveSection ? (sectionStyle?.accent ?? 'text-[var(--text-primary)]') : 'text-[var(--text-muted)]',
+                          isActiveSection ? 'text-[var(--text-secondary)]' : 'text-[var(--text-muted)]',
                           isExpanded && 'rotate-180'
                         )}
                       />
@@ -1613,8 +1756,8 @@ export default function Layout() {
       </aside>
 
       {/* Mobile top bar */}
-      {!sidebarOpen && (
-        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--glass-border)] bg-[var(--surface-1)] backdrop-blur-xl px-4 py-3 lg:hidden [touch-action:manipulation]">
+      {presentation.mode === 'standard' && !sidebarOpen && (
+        <header data-role="appbar" role="banner" aria-label={t('a11y.primaryHeader', 'Site header')} className="fixed inset-x-0 top-0 z-[60] flex items-center border-b border-[var(--border-default)] bg-[var(--surface-1)]/95 backdrop-blur-md px-4 py-3 xl:hidden [touch-action:manipulation]">
           <Button
             onClick={() => setSidebarOpen(true)}
             type="button"
@@ -1622,7 +1765,7 @@ export default function Layout() {
             size="sm"
             aria-label={t('nav.openSidebar', 'Open sidebar')}
             aria-expanded={false}
-            className="relative z-10 h-11 w-11 -ml-1 rounded-xl p-0 text-[var(--text-secondary)] hover:bg-white/[0.08] hover:text-[var(--text-primary)] active:scale-95 [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
+            className="relative z-10 -ml-1 h-11 w-11 rounded-shape-md p-0 text-[var(--text-secondary)] hover:bg-[var(--control-bg)] hover:text-[var(--text-primary)] [-webkit-tap-highlight-color:transparent] [touch-action:manipulation]"
           >
             <Icons.menu className="h-6 w-6" />
           </Button>
@@ -1637,23 +1780,33 @@ export default function Layout() {
       {/* Main content */}
       <div className="relative z-10 flex flex-1 flex-col overflow-hidden">
         {/* Spacer for fixed mobile header */}
-        <div className="h-14 shrink-0 lg:hidden" />
+        <div className="h-14 shrink-0 xl:hidden" />
+        {presentation.mode === 'standard' && (
+          <WorkspaceHeader
+            notifications={<NotificationBellPopover />}
+            themeControl={<ThemeQuickSwitcher />}
+          />
+        )}
 
         {/* Browser-compat warning — topmost banner
             in the main content column so users on outdated browsers see
             WHY the SPA is breaking instead of staring at a white page.
             Sits BELOW the SkipToContent link in DOM order so keyboard
             users still hit the WCAG bypass-blocks link first. */}
-        <BrowserCompatBanner />
+        {presentation.mode === 'standard' && <BrowserCompatBanner />}
         {/* Time-machine "viewing data as of …" banner — visible only
             when ?as_of= is set or the inline picker is
             open. Stacked between BrowserCompatBanner and ServiceStatusBanner
             so the historical-mode warning sits at the top of the main
             content column without displacing the higher-priority compat
             and service status notices. */}
-        <TimeMachineBanner />
-        <ServiceStatusBanner />
-        <RuntimeHealthBanner />
+        {presentation.mode === 'standard' && (
+          <>
+            <TimeMachineBanner />
+            <ServiceStatusBanner />
+            <RuntimeHealthBanner />
+          </>
+        )}
         <main
           id="main-content"
           data-role="main-content"
@@ -1661,17 +1814,34 @@ export default function Layout() {
           role="main"
           tabIndex={-1}
           className={cn(
-            'flex-1 overflow-y-auto outline-none pb-16 lg:pb-0',
+            'flex-1 overflow-y-auto outline-none pb-16 xl:pb-0',
             // Reserve space for the footer status bar
             // so it never overlaps page content. On mobile it stacks ABOVE
             // the BottomTabBar (which already adds 56px via pb-16), so we
             // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
             // single 28px reservation is enough.
-            statusBarPrefs.enabled && 'lg:pb-7 pb-20',
+            presentation.mode === 'standard' &&
+              statusBarPrefs.enabled &&
+              'xl:pb-7 pb-20',
           )}
         >
-          <div className="w-full px-3 py-4 pb-safe sm:px-5 sm:py-5 lg:px-8 lg:py-8 2xl:px-10 3xl:px-12">
-            <LayoutBreadcrumbs className="min-w-0 text-xs" />
+          <div
+            data-role="page-viewport"
+            className={cn(
+              'w-full pb-safe',
+              presentation.mode === 'standard' &&
+                'px-4 py-4 sm:px-6 sm:py-5 lg:px-8 lg:py-6 2xl:px-10',
+              presentation.mode === 'report' &&
+                'mx-auto max-w-[1600px] px-5 py-6 sm:px-8 lg:px-12',
+              presentation.mode === 'kiosk' && 'p-0',
+            )}
+          >
+            {presentation.mode === 'report' && <ReportMasthead />}
+            {presentation.mode === 'standard' && (
+              <div data-role="compact-breadcrumbs" className="xl:hidden">
+                <LayoutBreadcrumbs className="min-w-0 text-sm" />
+              </div>
+            )}
             <RouteTransition>
               <Outlet />
             </RouteTransition>
@@ -1680,18 +1850,31 @@ export default function Layout() {
       </div>
 
       {/* Mobile bottom tab bar */}
-      <BottomTabBar />
+      {presentation.mode === 'standard' && <BottomTabBar />}
 
       {/* Footer status bar — always-on health/version
           surface pinned to the bottom of the viewport. Hides itself when the
           user toggles it off in Settings → Appearance. */}
-      <StatusBar />
+      {presentation.mode === 'standard' && <StatusBar />}
+
+      <PresentationOverlay
+        mode={presentation.mode}
+        config={presentation.config}
+        isDimmed={presentation.isDimmed}
+        isCursorHidden={presentation.isCursorHidden}
+        dashboardCount={presentation.rotation.dashboardCount}
+        currentIndex={presentation.rotation.currentIndex}
+        showRotation={presentation.rotation.enabled}
+        onExit={presentation.exitPresentation}
+      />
 
       {/* Command Palette */}
-      <CommandPalette onOpen={() => setSidebarOpen(false)} />
+      {presentation.mode === 'standard' && (
+        <CommandPaletteHost onOpen={() => setSidebarOpen(false)} />
+      )}
 
       {/* PWA Install Prompt */}
-      <InstallPrompt />
+      {presentation.mode === 'standard' && <InstallPrompt />}
 
       {/* Route-change / mutation progress bar —
           mounted ABOVE every banner so the slim 2 px strip at the very
@@ -1701,8 +1884,15 @@ export default function Layout() {
           long-running mutations. */}
       <TopProgress />
 
-      {/* Offline status banner (PWA / mobile) */}
-      <OfflineBanner />
+      {/* Offline status banner (PWA / mobile).
+          NOT mounted here any more. `<OfflineBanner>` is now owned by
+          `<ReloadPrompt>` at the application root so the offline transition
+          is announced exactly once on EVERY route — including the six that
+          never mount this Layout (/quick-stats, /glance, /year-review/:year,
+          /s/:token, /watch, /onboarding) — and in report/kiosk mode, where it
+          renders as a screen-reader-only live region instead of floating
+          chrome. Re-adding a mount here would create a duplicate live region
+          and double the announcement on standard routes. */}
 
       {/* Impersonation banner — security context,
           highest priority. Mounted ABOVE every other banner because an
@@ -1716,7 +1906,7 @@ export default function Layout() {
           version banners because an operator-declared outage is the
           highest-priority operational message and should not be hidden
           under transient client-side notices. */}
-      <MaintenanceBanner />
+      {presentation.mode === 'standard' && <MaintenanceBanner />}
 
       {/* Rate-limit / circuit-breaker banner —
           most-transient surface, sits on top so the user sees the
@@ -1724,17 +1914,17 @@ export default function Layout() {
           order from top to bottom: rate-limit → tesla-reauth →
           new-version. Each banner is ≤ 48 px tall so the stack stays
           under 144 px even when all three fire simultaneously. */}
-      <RateLimitBanner />
+      {presentation.mode === 'standard' && <RateLimitBanner />}
 
       {/* New-version banner — proactive reload nudge
           when the backend redeploys mid-session, before the next chunk-load
           failure surfaces as an ErrorBoundary fallback. */}
-      <NewVersionBanner />
+      {presentation.mode === 'standard' && <NewVersionBanner />}
 
       {/* Tesla third-party token expiry banner —
           sticky top-of-page recovery surface for the partial-failure case
           where Tesla-backed calls 401 but non-Tesla data still loads. */}
-      <TeslaReauthBanner />
+      {presentation.mode === 'standard' && <TeslaReauthBanner />}
 
       {/* ForwardAuth session-expiry modals —
           SessionExpiringModal opens ~60s before the proxy cookie ages
@@ -1749,13 +1939,21 @@ export default function Layout() {
       {/* Keyboard shortcut overlays */}
       <GlobalShortcuts />
       <GotoIndicator visible={shortcutMode === 'goto'} />
-      <KeyboardShortcutsModal open={showCheatSheet} onClose={toggleCheatSheet} />
+      {showCheatSheet && (
+        <Suspense fallback={null}>
+          <LazyKeyboardShortcutsModal open onClose={toggleCheatSheet} />
+        </Suspense>
+      )}
 
       {/* In-app feedback modal — opened via the
           sidebar footer button, the Cmd+K palette ("feedback.open"
           command), or any other surface that dispatches the
           `open-feedback-modal` window event. */}
-      <FeedbackModal open={feedbackOpen} onClose={() => setFeedbackOpen(false)} />
+      {feedbackOpen && (
+        <Suspense fallback={null}>
+          <LazyFeedbackModal open onClose={() => setFeedbackOpen(false)} />
+        </Suspense>
+      )}
 
       {/* Onboarding tour */}
       {tour.isActive && tour.step && (
@@ -1792,6 +1990,7 @@ export default function Layout() {
           dialogs the user is interacting with. */}
       <CookieConsentBanner />
       </div>
+      </WorkspaceScopeProvider>
       </BreadcrumbOverridesProvider>
     </>
   )

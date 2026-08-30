@@ -25,7 +25,7 @@ export function ChargeAdvisorScenarioDirectory({ analysis, state }: ChargeAdviso
       dataTestId="charge-advisor-directory"
     >
       {days.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: vehicle and scenario controls in the surrounding section determine this result */
           className="py-10"
           message={t(
             'chargeAdvisor.directory.empty',

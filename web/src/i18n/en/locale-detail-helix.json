@@ -1,0 +1,20 @@
+{
+  "helix": {
+    "badge": "Helix",
+    "ariaLabel": "Helix",
+    "tooltip": "Helix grounds responses in redacted TeslaSync data, application knowledge, and explicit tool evidence.",
+    "evidence": {
+      "title": "Evidence trail",
+      "grounded": "Grounded in",
+      "source": "TeslaSync source",
+      "sources": "TeslaSync sources",
+      "limited": "Limited evidence",
+      "gathering": "Gathering",
+      "reading": "Reading",
+      "used": "Used",
+      "unavailable": "Unavailable",
+      "successful": "successful",
+      "tokens": "tokens"
+    }
+  }
+}

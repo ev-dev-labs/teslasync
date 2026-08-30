@@ -517,17 +517,21 @@ func computePhaseRProgress(pkgs []PkgMetric) []HotspotProgress {
 func filesByPackage(pkgs []PkgMetric) map[string][]string {
 	out := make(map[string][]string, len(pkgs))
 	for _, p := range pkgs {
-		files := make([]string, 0, len(p.Files))
-		for _, f := range p.Files {
-			if strings.HasSuffix(f, "_test.go") {
-				continue
-			}
-			files = append(files, f)
-		}
-		sort.Strings(files)
-		out[p.Path] = files
+		out[p.Path] = productionGoFiles(p.Files)
 	}
 	return out
+}
+
+func productionGoFiles(files []string) []string {
+	production := make([]string, 0, len(files))
+	for _, f := range files {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		production = append(production, f)
+	}
+	sort.Strings(production)
+	return production
 }
 
 func gitHead() string {
@@ -666,16 +670,16 @@ func diff(base, cur Snapshot) []string {
 			continue
 		}
 		if !hadBase {
-			for _, f := range cp.Files {
+			for _, f := range productionGoFiles(cp.Files) {
 				regs = append(regs, fmt.Sprintf("new file in %s/%s (frozen package)", fp, f))
 			}
 			continue
 		}
 		baseFiles := map[string]bool{}
-		for _, f := range bp.Files {
+		for _, f := range productionGoFiles(bp.Files) {
 			baseFiles[f] = true
 		}
-		for _, f := range cp.Files {
+		for _, f := range productionGoFiles(cp.Files) {
 			if !baseFiles[f] {
 				regs = append(regs, fmt.Sprintf("new file in %s/%s (frozen package)", fp, f))
 			}

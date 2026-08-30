@@ -15,10 +15,14 @@
  * ResizeObserver shim, mirroring DashboardGrid.mobile.test.tsx.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, cleanup, screen, fireEvent } from '@testing-library/react';
+import { render, cleanup, screen, fireEvent, waitFor } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import '@/i18n';
+import {
+  __resetAnnouncerForTests,
+  subscribeAnnouncer,
+} from '@/hooks/useAnnouncer';
 
 import { DashboardGrid } from '../DashboardGrid';
 import { getWidgetDef } from '../../widgets/registry';
@@ -95,12 +99,16 @@ class MockResizeObserver {
 }
 
 let originalOffsetWidth: PropertyDescriptor | undefined;
+const announcementListener = vi.fn();
 
 function setViewport(px: number) {
   Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: px });
 }
 
 beforeEach(() => {
+  __resetAnnouncerForTests();
+  announcementListener.mockReset();
+  subscribeAnnouncer(announcementListener);
   vi.stubGlobal('ResizeObserver', MockResizeObserver);
   originalOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth');
   Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
@@ -111,6 +119,7 @@ beforeEach(() => {
 
 afterEach(() => {
   cleanup();
+  __resetAnnouncerForTests();
   vi.unstubAllGlobals();
   if (originalOffsetWidth) {
     Object.defineProperty(HTMLElement.prototype, 'offsetWidth', originalOffsetWidth);
@@ -186,6 +195,38 @@ describe('DashboardGrid — edit-mode chrome', () => {
       onLayoutChange,
     });
     expect(onLayoutChange).not.toHaveBeenCalled();
+  });
+
+  it('provides one-click move and resize alternatives to dragging', async () => {
+    setViewport(1440);
+    const onLayoutChange = vi.fn();
+    renderGrid({
+      dashboard: makeDashboard([
+        { id: 'wid-1', widgetId: W1_ID },
+        { id: 'wid-2', widgetId: W2_ID },
+      ]),
+      editMode: true,
+      onLayoutChange,
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: `Arrange ${W1_NAME}` }));
+    expect(screen.getByRole('dialog', { name: `Arrange ${W1_NAME}` })).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Move down' })).toHaveFocus();
+    });
+
+    fireEvent.click(screen.getByRole('button', { name: 'Move down' }));
+    const movedLayouts = onLayoutChange.mock.lastCall?.[0] as RGLLayouts;
+    const first = movedLayouts.lg.find((item) => item.i === 'wid-1');
+    const second = movedLayouts.lg.find((item) => item.i === 'wid-2');
+    expect(first?.y).toBeGreaterThan(second?.y ?? Number.MAX_SAFE_INTEGER);
+    expect(announcementListener.mock.lastCall?.[0]).toContain(`${W1_NAME} moved down`);
+
+    fireEvent.click(screen.getByRole('button', { name: `Arrange ${W1_NAME}` }));
+    fireEvent.click(screen.getByRole('button', { name: 'Taller' }));
+    const resizedLayouts = onLayoutChange.mock.lastCall?.[0] as RGLLayouts;
+    expect(resizedLayouts.lg.find((item) => item.i === 'wid-1')?.h).toBe(4);
+    expect(announcementListener.mock.lastCall?.[0]).toContain(`${W1_NAME} made taller`);
   });
 });
 

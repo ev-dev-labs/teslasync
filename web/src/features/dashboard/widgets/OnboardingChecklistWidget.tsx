@@ -109,15 +109,17 @@ export default function OnboardingChecklistWidget(_props: WidgetProps) {
 
   // ── Header actions: dismiss button (always visible while widget renders) ──
   const headerActions = (
-    <button
+    <Button
       type="button"
+      variant="ghost"
+      size="sm"
       onClick={dismiss}
-      className="rounded-md p-1.5 text-[var(--text-muted)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-400/40 transition-colors"
+      className="h-auto rounded-md p-1.5 text-[var(--text-muted)] hover:bg-white/[0.06] hover:text-[var(--text-primary)] focus-visible:ring-cyan-400/40"
       aria-label={t('checklist.dismiss', 'Dismiss')}
       title={t('checklist.dismiss', 'Dismiss')}
     >
       <X className="h-3.5 w-3.5" />
-    </button>
+    </Button>
   )
 
   return (

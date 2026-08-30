@@ -132,6 +132,12 @@ function InnerSection({
     url: `/ai/alerts/rules/${ruleId}/tune/draft`,
     body,
     onEvent: handleEvent,
+    // AI-01: rule scope is part of stream identity through the
+    // canonical useAiStream scopeKey mechanism — switching the
+    // selected rule aborts an in-flight draft and clears the
+    // stream's own completed output (text/activity/usage) in
+    // addition to the local `proposal` state cleared below.
+    scopeKey: ruleId ?? null,
   })
 
   // Pull cancel out so the cleanup effect's deps stay narrow.
@@ -142,10 +148,12 @@ function InnerSection({
   // wipe the captured proposal mid-stream.
   const { cancel: cancelStream } = stream
 
-  // Cancel + reset on ruleId change so a stale stream from a
-  // previously-selected rule cannot bleed proposals into the new
-  // rule's editor. Dedicated effect so the cleanup deps stay
-  // explicit and Rule-of-Hooks safe.
+  // Reset the locally-captured proposal on ruleId change/unmount so a
+  // stale proposal from a previously-selected rule cannot bleed into
+  // the new rule's editor. The stream's own text/activity/usage reset
+  // is now handled by useAiStream's scopeKey above; cancelStream()
+  // here only covers unmount (scopeKey has no "next" value to compare
+  // against once the component is gone).
   useEffect(() => {
     return () => {
       cancelStream()

@@ -5,6 +5,7 @@ import {
   __resetErrorReporterForTests,
   __setErrorReporterEnabledForTests,
   __getBufferedCountForTests,
+  getRecentReportsForFeedback,
 } from '../errorReporter'
 import { RateLimitError, UpstreamUnavailableError } from '../resilience'
 
@@ -149,6 +150,26 @@ describe('errorReporter', () => {
     const body = JSON.parse(init.body as string) as Record<string, unknown>
     expect(body.name).toBe('Error')
     expect(body.message).toContain('42')
+  })
+
+  it('redacts sensitive diagnostic data before it reaches telemetry or support reports', () => {
+    const err = new Error(
+      'VIN 5YJ3E1EA7JF000123 owner=alice@example.com token=secret-value at 37.7749, -122.4194',
+    )
+    err.stack = 'Bearer secret-token\nat /share/private-token'
+
+    reportFrontendError(err, 'react')
+
+    const init = fetchSpy.mock.calls[0][1] as RequestInit
+    const body = JSON.parse(init.body as string) as Record<string, string>
+    const attached = getRecentReportsForFeedback()[0]
+    for (const value of [body.message, body.stack, attached.message, attached.stack]) {
+      expect(value).not.toContain('5YJ3E1EA7JF000123')
+      expect(value).not.toContain('alice@example.com')
+      expect(value).not.toContain('secret-value')
+      expect(value).not.toContain('37.7749')
+      expect(value).not.toContain('secret-token')
+    }
   })
 
   it('buffers reports while offline (up to MAX_BUFFER_SIZE)', () => {

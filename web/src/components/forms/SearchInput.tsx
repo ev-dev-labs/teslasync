@@ -25,6 +25,15 @@ export interface SearchInputProps {
   value: string;
   /** Called with the new value once the debounce window elapses. */
   onChange: (value: string) => void;
+  /**
+   * Programmatic label for the underlying search field.
+   *
+   * Optional because the component guarantees a name regardless: it
+   * falls back to `placeholder`, then to a translated "Search". Pass an
+   * explicit value whenever the page has more than one search box so
+   * each one is distinguishable ("Search drives" vs "Search vehicles").
+   */
+  ariaLabel?: string;
   /** Placeholder shown when the field is empty. */
   placeholder?: string;
   /** Debounce window in milliseconds. Defaults to 250ms. */
@@ -71,6 +80,7 @@ export interface SearchInputProps {
 export function SearchInput({
   value,
   onChange,
+  ariaLabel,
   placeholder,
   debounceMs = 250,
   autoFocus,
@@ -225,6 +235,14 @@ export function SearchInput({
   }, []);
 
   const label = clearLabel ?? t('common.clear', 'Clear');
+  // A11Y: a search field must never be named by its placeholder alone —
+  // placeholder text disappears the moment the user types, so the
+  // control becomes anonymous to voice-control and screen-reader users
+  // exactly when they need to refer to it. Fall back to the placeholder
+  // as a *label* (which persists), then to a generic translated name,
+  // so no call site can ship an unnamed search box.
+  const accessibleName =
+    ariaLabel ?? placeholder ?? t('search.input.aria', 'Search');
   const historyEnabled = Boolean(historyScope);
   const activeOptionId = activeIdx >= 0 ? `${listboxId}-opt-${activeIdx}` : undefined;
 
@@ -239,6 +257,7 @@ export function SearchInput({
         type="search"
         value={local}
         onChange={handleInputChange}
+        aria-label={accessibleName}
         placeholder={placeholder}
         autoFocus={autoFocus}
         onFocus={historyEnabled ? handleFocus : undefined}

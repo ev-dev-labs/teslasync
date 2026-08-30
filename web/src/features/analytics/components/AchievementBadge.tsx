@@ -1,6 +1,6 @@
 import { cn } from '@/lib/cn';
-import { ProgressRing } from '@/components/data-display';
-import { Text } from '@/components/ui';
+import { ProgressRing } from '@/components/data-display/runtime';
+import { Text } from '@/components/ui/runtime';
 import { type TypographySize } from '@/lib/tokens';
 import { useTranslation } from 'react-i18next';
 

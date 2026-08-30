@@ -2,6 +2,7 @@ package vehicle
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -96,6 +97,47 @@ func (r *VehicleRepo) GetAll(ctx context.Context) ([]*vehiclemodel.Vehicle, erro
 		vehicles = append(vehicles, v)
 	}
 	return vehicles, rows.Err()
+}
+
+// GetPage returns a deterministic page of vehicles for the public list
+// endpoint. GetAll remains available to trusted internal fleet-wide workflows
+// (analytics, maintenance) that explicitly own their aggregate cost.
+func (r *VehicleRepo) GetPage(ctx context.Context, limit, offset int) ([]*vehiclemodel.Vehicle, error) {
+	ctx, span := tracing.DBSpan(ctx, "select_page", "vehicles")
+	defer span.End()
+	if limit <= 0 || limit > 1000 {
+		limit = 50
+	}
+	if offset < 0 {
+		offset = 0
+	}
+	const query = `SELECT id, tesla_id, vin, display_name, model, trim_level, color, timezone, archived_at, created_at, updated_at
+		FROM vehicles
+		ORDER BY id
+		LIMIT $1 OFFSET $2`
+	rows, err := r.db.Pool.Query(ctx, query, limit, offset)
+	if err != nil {
+		tracing.EndSpan(span, err)
+		return nil, fmt.Errorf("list vehicle page: %w", err)
+	}
+	defer rows.Close()
+
+	vehicles := make([]*vehiclemodel.Vehicle, 0, limit)
+	for rows.Next() {
+		v := &vehiclemodel.Vehicle{}
+		if err := rows.Scan(
+			&v.ID, &v.TeslaID, &v.VIN, &v.DisplayName, &v.Model, &v.TrimLevel, &v.Color, &v.Timezone, &v.ArchivedAt, &v.CreatedAt, &v.UpdatedAt,
+		); err != nil {
+			tracing.EndSpan(span, err)
+			return nil, fmt.Errorf("scan vehicle page: %w", err)
+		}
+		vehicles = append(vehicles, v)
+	}
+	if err := rows.Err(); err != nil {
+		tracing.EndSpan(span, err)
+		return nil, fmt.Errorf("iterate vehicle page: %w", err)
+	}
+	return vehicles, nil
 }
 
 func (r *VehicleRepo) Delete(ctx context.Context, id int64) error {

@@ -12,9 +12,27 @@ export { MiniChart } from './MiniChart';
 export { SmallMultiplesChart, type SmallMultiplesChartProps } from './SmallMultiplesChart';
 export {
   ChartContainer,
+  type ChartContainerProps,
   type ChartDataColumn,
   type ChartDataRow,
+  type ChartMetadata,
 } from './ChartContainer';
+export { EmbeddedChart, type EmbeddedChartProps } from './EmbeddedChart';
+export {
+  chartSizeHeights,
+  resolveChartHeights,
+  chartViewportStyle,
+  type ChartSize,
+  type ResolvedChartHeights,
+} from './chartSizing';
+export {
+  downsampleChartRows,
+  resolveChartPointBudget,
+  type ChartSamplingDisclosure,
+  type DownsampledChartRows,
+} from './chartSampling';
+export { useChartPointBudget } from './useChartPointBudget';
+export { projectSmallMultipleSeries } from './SmallMultiplesChart';
 export { ChartExportMenu, type ChartExportMenuProps } from './ChartExportMenu';
 export { AreaChartWrapper } from './AreaChartWrapper';
 export { Sparkline } from './Sparkline';
@@ -26,7 +44,12 @@ export { ElevationProfile, type ElevationDataPoint } from './ElevationProfile';
 export { renderAnnotationLines } from './ChartAnnotationLayer';
 export { AddAnnotationPopover } from './AddAnnotationPopover';
 export { AnnotationList } from './AnnotationList';
-export { AREA_DEFAULTS, areaGradient } from './chartDefaults';
+export {
+  AREA_DEFAULTS,
+  areaGradient,
+  chartAnimationProps,
+  DEFAULT_ANIMATION_MS,
+} from './chartDefaults';
 export { TimeMarker, type TimeMarkerProps } from './TimeMarker';
 // Shared brush, sync, legend, and tooltip primitives.
 // Persistent cursor sync builds on recharts' syncId.

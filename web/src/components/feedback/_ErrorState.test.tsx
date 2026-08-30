@@ -137,4 +137,22 @@ describe('ErrorState', () => {
     // Base chrome is preserved alongside the override.
     expect(region).toHaveClass('rounded-xl')
   })
+
+  it.each([
+    ['danger', 'border-rose-500/20', 'bg-rose-500/5'],
+    ['warning', 'border-amber-500/25', 'bg-amber-500/5'],
+    ['info', 'border-cyan-500/20', 'bg-cyan-500/5'],
+    ['neutral', 'border-[var(--border-default)]', 'bg-[var(--surface-2)]'],
+  ] as const)('applies the %s semantic tone', (tone, borderClass, backgroundClass) => {
+    render(
+      <ErrorState
+        Icon={AlertCircle}
+        title={`${tone} state`}
+        message="Distinct semantic treatment."
+        tone={tone}
+      />,
+    )
+
+    expect(screen.getByRole('alert')).toHaveClass(borderClass, backgroundClass)
+  })
 })

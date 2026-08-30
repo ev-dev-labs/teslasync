@@ -1,0 +1,14 @@
+{
+  "requiresAuth": {
+    "title": "{{feature}} requires authentication mode",
+    "body": "{{feature}} is only available when TeslaSync is configured behind an authentication provider (Authentik, Authelia, oauth2-proxy, Keycloak, or similar). Set FORWARD_AUTH_HEADER on the API service to enable it.",
+    "bodyWithHint": "{{feature}} is only available when TeslaSync is configured behind an authentication provider ({{provider}}). Set FORWARD_AUTH_HEADER on the API service to enable it.",
+    "featureName": {
+      "stepUpReauth": "Step-up reauthentication",
+      "totpEnrollment": "TOTP enrollment",
+      "sessionList": "Active sessions",
+      "impersonation": "User impersonation",
+      "rbac": "Role-based access control"
+    }
+  }
+}

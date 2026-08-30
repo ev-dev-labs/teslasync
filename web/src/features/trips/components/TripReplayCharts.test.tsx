@@ -141,16 +141,24 @@ vi.mock('@/components/charts', () => {
       subtitle?: string;
       ariaLabel?: string;
       height?: number;
-      children?: ReactNode;
-    }) => (
-      <section aria-label="chart-container" data-height={String(height ?? '')}>
-        <h3>{title}</h3>
-        {subtitle ? <p data-testid="cc-subtitle">{subtitle}</p> : null}
-        <div role="img" aria-label={ariaLabel}>
-          {children}
-        </div>
-      </section>
-    ),
+      children?: ReactNode | ((context: {
+        hiddenSeries: { isHidden: (key: string) => boolean };
+      }) => ReactNode);
+    }) => {
+        const content = typeof children === 'function'
+          ? children({ hiddenSeries: { isHidden: () => false } })
+          : children;
+        return (
+          <section aria-label="chart-container" data-height={String(height ?? '')}>
+            <h3>{title}</h3>
+            {subtitle ? <p data-testid="cc-subtitle">{subtitle}</p> : null}
+            <div role="img" aria-label={ariaLabel}>
+              {content}
+            </div>
+          </section>
+        );
+      },
+      ChartLegend: Inert,
     AreaChart: (props: {
       data?: ReadonlyArray<Record<string, unknown>>;
       syncId?: string;

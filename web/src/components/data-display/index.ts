@@ -49,10 +49,40 @@ export {
   type FreshnessStatus,
   type FreshnessQuery,
 } from './DataFreshness';
+export {
+  DataProvenanceBadge,
+  type DataProvenanceBadgeProps,
+} from './DataProvenanceBadge';
 export { LiveIndicator, type LiveIndicatorVariant } from './LiveIndicator';
+export {
+  OperationalModeBadge,
+  type OperationalModeBadgeProps,
+} from './OperationalModeBadge';
 export { Delta, type DeltaProps } from './Delta';
 export { ComparisonHeader, type ComparisonHeaderProps } from './ComparisonHeader';
 export { KpiOverviewCard, type KpiOverviewCardProps } from './KpiOverviewCard';
+export {
+  OperationalBrief,
+  type OperationalBriefProps,
+  type OperationalBriefMetric,
+  type OperationalAttention,
+  type OperationalTone,
+} from './OperationalBrief';
+export {
+  OperationalNarrativeDetails,
+  type OperationalNarrativeDetailsProps,
+} from './OperationalNarrativeDetails';
+export {
+  CalculationDetails,
+  type CalculationDetailsProps,
+} from './CalculationDetails';
+export {
+  EntityPreviewDrawer,
+  type EntityPreviewDrawerProps,
+  type EntityPreviewField,
+  type EntityPreviewRelatedAction,
+  type EntityPreviewTone,
+} from './EntityPreviewDrawer';
 export {
   DateGroupedList,
   type DateGroupedListProps,

@@ -321,7 +321,7 @@ describe('AppearanceSettings — sidebar style (localStorage-backed)', () => {
   it('never touches the network for a client-only preference', () => {
     renderPanel()
     const group = screen.getByRole('radiogroup', { name: 'Sidebar style' })
-    fireEvent.click(within(group).getByRole('radio', { name: /Compact/i }))
+    fireEvent.click(within(group).getByRole('radio', { name: /All groups/i }))
     expect(getSidebarStyle()).toBe('notion')
     expect(mockedRequest).not.toHaveBeenCalled()
   })

@@ -1,0 +1,28 @@
+{
+  "browserNotifications": {
+    "title": "Browser Notifications",
+    "subtitle": "Get notified when the app tab is in the background",
+    "unsupported": "Browser notifications are not supported in this browser.",
+    "enable": "Enable Browser Notifications",
+    "enabled": "Enabled",
+    "blocked": "Notifications are blocked. Enable in your browser settings.",
+    "events": "Notify me about",
+    "alerts": "Alerts",
+    "exportStatus": "Export completions",
+    "hint": "Notifications only fire when the app tab is in the background.",
+    "summaryAria": "Notification status summary",
+    "status": {
+      "granted": "Enabled",
+      "denied": "Blocked",
+      "default": "Not enabled",
+      "unsupported": "Unsupported"
+    },
+    "kpi": {
+      "permission": "Browser permission",
+      "pushEvents": "Push events",
+      "tabSignals": "Tab signals",
+      "soundChannels": "Sound channels",
+      "activeOfTotal": "{{active}} of {{total}} on"
+    }
+  }
+}

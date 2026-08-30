@@ -20,7 +20,7 @@ export function JourneyDirectory({ result }: JourneyFragmentationSectionProps) {
         <Text as="p" variant="caption" className="mt-1">{t('journeyFragmentation.directory.subtitle', 'Top chains by included drive count, then distance. This is a directory of records, not a recommendation list.')}</Text>
       </div>
       {journeys.length === 0 ? (
-        <EmptyState icon={<MapPin className="h-7 w-7" />} message={t('journeyFragmentation.directory.empty', 'No observed journeys are available for the directory.')} />
+        <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ icon={<MapPin className="h-7 w-7" />} message={t('journeyFragmentation.directory.empty', 'No observed journeys are available for the directory.')} />
       ) : (
         <div className="grid gap-3 md:grid-cols-2">
           {journeys.map((journey, index) => (

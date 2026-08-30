@@ -47,6 +47,7 @@ vi.mock('react-i18next', () => ({
 }))
 
 import { OfflineBanner } from './OfflineBanner'
+import { isVisuallyHiddenLiveRegion } from '@/test/visuallyHiddenContract'
 
 function goOffline() {
   act(() => {
@@ -146,5 +147,78 @@ describe('OfflineBanner', () => {
     expect(screen.queryByTestId('offline-banner')).toBeNull()
     goOffline()
     expect(screen.getByTestId('offline-banner')).toBeInTheDocument()
+  })
+})
+
+/**
+ * Presentation-aware VISUALS, unconditional ANNOUNCEMENT.
+ *
+ * Report and kiosk views deliberately carry no floating chrome. The previous
+ * design achieved that by not mounting the component at all, which silenced
+ * the announcement too. Now only the visual treatment changes.
+ */
+describe('OfflineBanner presentation modes', () => {
+  function setMode(mode: 'standard' | 'report' | 'kiosk') {
+    const search = mode === 'standard' ? '' : `?presentation=${mode}`
+    window.history.replaceState({}, '', `/dashboard${search}`)
+  }
+
+  beforeEach(() => {
+    setMode('standard')
+  })
+
+  it('renders the visible banner in standard mode', () => {
+    setMode('standard')
+    render(<OfflineBanner />)
+    goOffline()
+
+    expect(screen.getByTestId('offline-banner')).toBeInTheDocument()
+    expect(screen.queryByTestId('offline-announcement')).toBeNull()
+  })
+
+  it.each(['report', 'kiosk'] as const)(
+    'announces without floating chrome in %s mode',
+    (mode) => {
+      setMode(mode)
+      render(<OfflineBanner />)
+      goOffline()
+
+      // No visible banner — the print/projection surface stays clean…
+      expect(screen.queryByTestId('offline-banner')).toBeNull()
+      // …but the transition is still announced exactly once, politely.
+      const region = screen.getByTestId('offline-announcement')
+      // Asserted against the shared <VisuallyHidden liveRegion> contract
+      // rather than the Tailwind class name: the accessibility owners define
+      // what "visually hidden" means, and this follows them automatically.
+      expect(isVisuallyHiddenLiveRegion(region, 'polite')).toBe(true)
+      expect(region).toHaveAttribute('role', 'status')
+      expect(region).toHaveAttribute('aria-live', 'polite')
+      expect(region.textContent).toContain("You're offline")
+      expect(screen.getAllByRole('status')).toHaveLength(1)
+    },
+  )
+
+  it('stays silent while online in report mode', () => {
+    setMode('report')
+    const { container } = render(<OfflineBanner />)
+    expect(container.firstChild).toBeNull()
+  })
+
+  it('honours an explicit presentation override', () => {
+    setMode('standard')
+    render(<OfflineBanner presentation="screen-reader-only" />)
+    goOffline()
+
+    expect(screen.queryByTestId('offline-banner')).toBeNull()
+    expect(screen.getByTestId('offline-announcement')).toBeInTheDocument()
+  })
+
+  it('renders without a Router — it is mounted above the route tree', () => {
+    // `usePresentationMode()` is Router-bound; this component deliberately
+    // reads the module-level store instead so it can never crash the shell.
+    setMode('kiosk')
+    expect(() => render(<OfflineBanner />)).not.toThrow()
+    goOffline()
+    expect(screen.getByTestId('offline-announcement')).toBeInTheDocument()
   })
 })

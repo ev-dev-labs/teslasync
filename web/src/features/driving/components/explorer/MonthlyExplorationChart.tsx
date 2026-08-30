@@ -93,7 +93,7 @@ export function MonthlyExplorationChart({
               <QueryError error={state.error} onRetry={state.onRetry} />
             </div>
           ) : !hasRows ? (
-            <EmptyState
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */
               className="h-full"
               icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
               message={t(

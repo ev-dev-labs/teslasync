@@ -11,7 +11,7 @@
  *  3. The per-hypertable detail table renders each row (name + chunk count).
  *  4. Accessible landmarks + chart labels are present (a11y contract).
  *  5. The "Quota pressure" banner appears only when a hypertable is critical.
- *  6. A 503 renders the "Subsystem unavailable" explainer (not an error).
+ *  6. A 503 renders the unsupported-deployment explainer (not an error).
  *  7. A genuine (non-503) failure renders <QueryError> everywhere — and the
  *     KPI band must NOT surface fabricated zero totals.
  *  8. Zero hypertables renders empty states for every section.
@@ -197,11 +197,15 @@ describe('DiskForecastPage', () => {
     // Totals are summed and byte-formatted.
     expect(screen.getByText('4.5 GB')).toBeInTheDocument()
 
-    // Uncompressed / compressed carry their share-of-total subtitles.
-    expect(screen.getByText('Uncompressed')).toBeInTheDocument()
-    expect(screen.getByText('66.7% of total')).toBeInTheDocument()
-    expect(screen.getByText('Compressed')).toBeInTheDocument()
-    expect(screen.getByText('33.3% of total')).toBeInTheDocument()
+    // Uncompressed / compressed carry their share-of-total subtitles. Scope
+    // these assertions away from the chart's accessible fallback table.
+    const summary = within(
+      screen.getByRole('region', { name: 'Fleet disk summary' }),
+    )
+    expect(summary.getByText('Uncompressed')).toBeInTheDocument()
+    expect(summary.getByText('66.7% of total')).toBeInTheDocument()
+    expect(summary.getByText('Compressed')).toBeInTheDocument()
+    expect(summary.getByText('33.3% of total')).toBeInTheDocument()
 
     // Daily growth is summed across all rows.
     expect(screen.getByText('150.0 MB/d')).toBeInTheDocument()
@@ -216,7 +220,9 @@ describe('DiskForecastPage', () => {
 
     renderPage()
 
-    const table = await waitFor(() => screen.getByRole('table'))
+    const table = await waitFor(() =>
+      within(screen.getByRole('region', { name: 'Hypertables' })).getByRole('table'),
+    )
 
     expect(within(table).getByText(LONG_NAME)).toBeInTheDocument()
     expect(within(table).getByText('drives')).toBeInTheDocument()
@@ -241,9 +247,9 @@ describe('DiskForecastPage', () => {
       screen.getByRole('region', { name: 'Fleet disk summary' }),
     ).toBeInTheDocument()
 
-    // Charts are announced to assistive tech via role=img + descriptive labels.
+    // Interactive charts are named groups; static charts retain image semantics.
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: /stacked bar chart of the largest hypertables/i,
       }),
     ).toBeInTheDocument()
@@ -295,7 +301,7 @@ describe('DiskForecastPage', () => {
     renderPage()
 
     await waitFor(() =>
-      expect(screen.getByText('Subsystem unavailable')).toBeInTheDocument(),
+      expect(screen.getByText('Feature not supported')).toBeInTheDocument(),
     )
     expect(
       screen.getByText(/TimescaleDB hypertable metrics are unavailable/i),
@@ -315,7 +321,7 @@ describe('DiskForecastPage', () => {
     // The KPI band must not lie with "0 B" totals when the fetch failed.
     expect(screen.queryByText('Total disk')).toBeNull()
     // A hard failure is distinct from the 503 not-configured state.
-    expect(screen.queryByText('Subsystem unavailable')).toBeNull()
+    expect(screen.queryByText('Feature not supported')).toBeNull()
   })
 
   it('renders empty states for every section when there are zero hypertables', async () => {

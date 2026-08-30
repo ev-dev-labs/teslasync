@@ -19,6 +19,11 @@ services:
       - "${TESLASYNC_PORT:-8080}:8080"
     environment:
       - TESLASYNC_PORT=8080
+      # OPS-09: isolated drain listener serving the preStop hook
+      # (POST/GET /internal/flush). Deliberately NOT published to the
+      # host — the endpoint is one-way and pod-fatal, so it must stay
+      # reachable only from inside the container network.
+      - TESLASYNC_DRAIN_PORT=8090
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=${POSTGRES_USER:-teslasync}
@@ -37,6 +42,8 @@ services:
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_REDIRECT_URI=${TESLA_REDIRECT_URI:-http://localhost:8080/api/v1/auth/callback}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - TESLA_API_DAILY_BUDGET_USD=${TESLA_API_DAILY_BUDGET_USD:-0.30}
+      - TESLA_API_COMMAND_RESERVE_USD=${TESLA_API_COMMAND_RESERVE_USD:-0.05}
       - WORKER_POLL_INTERVAL=${WORKER_POLL_INTERVAL:-30s}
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
@@ -69,11 +76,22 @@ services:
       # Data quality scoring over signal_log.
       - DATA_QUALITY_ENABLED=${DATA_QUALITY_ENABLED:-true}
       - DATA_QUALITY_WINDOW_MINS=${DATA_QUALITY_WINDOW_MINS:-60}
+      # Bounded by default; set explicitly only after accepting the storage risk.
+      - DATA_RETENTION_DAYS=${DATA_RETENTION_DAYS:-0}
+      - POSITION_RETENTION_DAYS=${POSITION_RETENTION_DAYS:-0}
+      - SIGNAL_HISTORY_RETENTION_DAYS=${SIGNAL_HISTORY_RETENTION_DAYS:-365}
+      # Set true only after verifying a recoverable backup. Existing installs
+      # remain non-destructive when upgrading to the bounded-retention release.
+      - SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED=${SIGNAL_HISTORY_RETENTION_ACKNOWLEDGED:-false}
       # Synthetic monitoring (outside-in probes). Opt-in.
       - SYNTHETIC_ENABLED=${SYNTHETIC_ENABLED:-false}
       - SYNTHETIC_INTERVAL_SECONDS=${SYNTHETIC_INTERVAL_SECONDS:-60}
       - SYNTHETIC_TIMEOUT_SECONDS=${SYNTHETIC_TIMEOUT_SECONDS:-30}
       - SYNTHETIC_PROBE_URLS=${SYNTHETIC_PROBE_URLS:-}
+      # Critical-operator-chain synthetic journey (dashboard/fleet state ->
+      # vehicle inspect -> battery health -> charging history). Opt-in;
+      # empty disables it even when SYNTHETIC_ENABLED=true.
+      - SYNTHETIC_JOURNEY_BASE_URL=${SYNTHETIC_JOURNEY_BASE_URL:-}
       # Phase-44 / observability-batch / Prompt F4 — DLQ Inspector.
       # Replay is opt-in because re-publishing a payload that already
       # triggered a production exception is consequential. Replay is
@@ -178,7 +196,33 @@ services:
         VITE_OTLP_HTTP_ENDPOINT: ${VITE_OTLP_HTTP_ENDPOINT:-}
         VITE_OTEL_SERVICE_NAME: ${VITE_OTEL_SERVICE_NAME:-teslasync-web}
         VITE_OTEL_DEPLOY_ENV: ${VITE_OTEL_DEPLOY_ENV:-dev-compose}
-        VITE_APP_VERSION: ${VERSION:-dev}
+        # The SPA build identity is deliberately NOT wired to the shared
+        # `VERSION` variable that the four Go image builds above use.
+        #
+        # It was, and that was a footgun: a self-hoster who legitimately set
+        # `VERSION=1.2.3` in `.env` to stamp their API image also stamped the
+        # web image with a version but no commit id, producing the
+        # unpublishable `1.2.3+dev` identity and failing `docker compose build`
+        # on the web service alone. The web identity now has its own opt-in
+        # variables, so nothing about the Go images can reach it.
+        #
+        # Leave both blank (the default) for an UNVERSIONED build: vite.config
+        # reports `dev-<package version>`, which the PWA handshake's
+        # `parseVersion` cannot read, so a local image can never look "older"
+        # than the API and pin an undismissible update prompt.
+        #
+        # To stamp your own image, set BOTH in `.env` — a version without an
+        # immutable id cannot rotate cache buckets, so supplying only
+        # WEB_APP_VERSION degrades back to the unversioned identity (with a
+        # warning) rather than shipping a fake release identity:
+        #   WEB_APP_VERSION=1.2.3
+        #   WEB_GIT_SHA=$(git rev-parse --short HEAD)
+        #
+        # Release images get their identity from
+        # .github/workflows/release.yml, which additionally sets
+        # VITE_RELEASE_BUILD=1 so a half-configured identity fails hard.
+        VITE_APP_VERSION: ${WEB_APP_VERSION:-}
+        VITE_GIT_SHA: ${WEB_GIT_SHA:-}
     container_name: teslasync-web
     restart: unless-stopped
     ports:
@@ -378,7 +422,7 @@ services:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --appendfsync everysec --maxmemory 128mb --maxmemory-policy noeviction --save ""
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -455,6 +499,8 @@ services:
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
+      - TESLA_API_DAILY_BUDGET_USD=${TESLA_API_DAILY_BUDGET_USD:-0.30}
+      - TESLA_API_COMMAND_RESERVE_USD=${TESLA_API_COMMAND_RESERVE_USD:-0.05}
       - LOG_LEVEL=${LOG_LEVEL:-error}
       - HEALTH_PORT=8083
       - OTEL_ENABLED=${OTEL_ENABLED:-false}
@@ -603,7 +649,7 @@ services:
   # Requires TLS certificates and Tesla Developer account with Fleet Telemetry access.
   # See: https://github.com/teslamotors/fleet-telemetry
   fleet-telemetry:
-    image: tesla/fleet-telemetry:latest
+    image: ghcr.io/ev-dev-labs/teslasync-fleet-telemetry:${TESLASYNC_VERSION:-latest}
     container_name: teslasync-fleet-telemetry
     restart: unless-stopped
     profiles:

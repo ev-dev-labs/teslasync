@@ -206,14 +206,20 @@ describe('GasPriceAutoPollPage — full render', () => {
 
     // Every section panel is present.
     expect(screen.getByText('Configuration')).toBeInTheDocument()
-    expect(screen.getByText('Price Trend')).toBeInTheDocument()
-    expect(screen.getByText('Price History')).toBeInTheDocument()
+    expect(
+      screen.getAllByRole('heading', { name: 'Price Trend' }).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByRole('heading', { name: 'Price History' })).toBeInTheDocument()
 
     // Trend chart draws (role=img wrapper) and the table lists rows.
     expect(
       screen.getByRole('img', { name: /line chart of historical gas prices/i }),
     ).toBeInTheDocument()
-    expect(screen.getByRole('table')).toBeInTheDocument()
+    const historyPanel = screen
+      .getByRole('heading', { name: 'Price History' })
+      .closest('[data-print-card]')
+    expect(historyPanel).not.toBeNull()
+    expect(within(historyPanel as HTMLElement).getByRole('table')).toBeInTheDocument()
   })
 })
 
@@ -370,7 +376,10 @@ describe('GasPriceAutoPollPage — history table', () => {
     install()
     renderPage()
 
-    const table = await screen.findByRole('table')
+    const historyHeading = await screen.findByRole('heading', { name: 'Price History' })
+    const historyPanel = historyHeading.closest('[data-print-card]')
+    expect(historyPanel).not.toBeNull()
+    const table = await within(historyPanel as HTMLElement).findByRole('table')
     // Both distinct historical prices surface in the table body.
     expect(within(table).getByText('$3.29')).toBeInTheDocument()
     expect(within(table).getByText('$3.10')).toBeInTheDocument()

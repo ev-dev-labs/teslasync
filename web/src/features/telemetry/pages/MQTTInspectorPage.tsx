@@ -11,6 +11,7 @@ import { MetricCard } from '@/components/data-display';
 import {
   ChartTooltip, ChartGradient,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  EmbeddedChart,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError, AlertBanner } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
@@ -130,6 +131,10 @@ export default function MQTTInspectorPage() {
   /* ---- throughput history (local UI-derived series, not a data fetch) ---- */
   const [throughputHistory, setThroughputHistory] = useState<ThroughputPoint[]>([]);
   const prevTotalRef = useRef<number | null>(null);
+  const throughputChartRows = useMemo(
+    () => throughputHistory.map(({ time, signals }) => ({ time, signals })),
+    [throughputHistory],
+  );
 
   useEffect(() => {
     if (totalSignals === 0 && prevTotalRef.current === null) return;
@@ -230,10 +235,20 @@ export default function MQTTInspectorPage() {
             </PanelTitle>
             {error && !status ? (
               <QueryError error={error} />
-            ) : isLoading && throughputHistory.length === 0 ? (
-              <Skeleton height={224} />
-            ) : throughputHistory.length > 2 ? (
-              <div className="h-56 sm:h-64 xl:h-72">
+            ) : (
+              <EmbeddedChart
+                title={t('mqtt.signalThroughput', 'Signal Throughput')}
+                ariaLabel={t('mqtt.throughputAria', 'MQTT signal throughput over time')}
+                loading={isLoading && throughputHistory.length === 0}
+                error={!status && error != null ? error : undefined}
+                empty={throughputHistory.length <= 2}
+                emptyMessage={t('mqtt.collectingData', 'Collecting throughput data…')}
+                data={throughputChartRows}
+                dataColumns={[
+                  { key: 'time', label: t('mqtt.time', 'Time') },
+                  { key: 'signals', label: t('mqtt.signals', 'Signals') },
+                ]}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={throughputHistory}>
                     <defs>
@@ -253,14 +268,7 @@ export default function MQTTInspectorPage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              </div>
-            ) : (
-              <div className="flex h-56 items-center justify-center sm:h-64">
-                <EmptyState /* no-action: transient — accumulates a live delta series after a few poll cycles */
-                  icon={<Activity className="h-8 w-8" />}
-                  message={t('mqtt.collectingData', 'Collecting throughput data…')}
-                />
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 

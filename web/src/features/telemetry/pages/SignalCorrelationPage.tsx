@@ -40,6 +40,38 @@ export default function SignalCorrelationPage() {
   const signalsQuery = useSignals(id);
   const historyA = useSignalHistory(id, signalA, HOURS);
   const historyB = useSignalHistory(id, signalB, HOURS);
+  const signalAChosen = signalA !== '';
+  const signalBChosen = signalB !== '';
+  const bothChosen = signalAChosen && signalBChosen;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'signal-catalog',
+        label: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+        query: signalsQuery,
+      },
+      {
+        id: 'signal-a-history',
+        label: t('dataSources.labels.signalAHistory', 'Signal A history'),
+        query: historyA,
+        enabled: signalAChosen,
+      },
+      {
+        id: 'signal-b-history',
+        label: t('dataSources.labels.signalBHistory', 'Signal B history'),
+        query: historyB,
+        enabled: signalBChosen,
+      },
+    ],
+    [
+      historyA,
+      historyB,
+      signalAChosen,
+      signalBChosen,
+      signalsQuery,
+      t,
+    ],
+  );
 
   const options = useMemo(
     () => (signalsQuery.data ?? []).map((name) => ({ value: name, label: name })),
@@ -89,10 +121,20 @@ export default function SignalCorrelationPage() {
     return <NoVehicleSelected pageTitle={t('signalCorrelation.title', 'Signal Correlation')} />;
   }
 
-  const bothChosen = signalA !== '' && signalB !== '';
-  const isLoading = signalsQuery.isLoading || (bothChosen && (historyA.isLoading || historyB.isLoading));
-  const isError = signalsQuery.isError || historyA.isError || historyB.isError;
-  const error = signalsQuery.error ?? historyA.error ?? historyB.error;
+  const historyAHasData = historyA.data !== undefined;
+  const historyBHasData = historyB.data !== undefined;
+  const isLoading = bothChosen && (
+    (!historyAHasData && historyA.isLoading)
+    || (!historyBHasData && historyB.isLoading)
+  );
+  const isError = bothChosen && (
+    (historyA.isError && !historyAHasData)
+    || (historyB.isError && !historyBHasData)
+  );
+  const error =
+    historyA.isError && !historyAHasData
+      ? historyA.error
+      : historyB.error;
 
   const leadLabel =
     result == null
@@ -112,7 +154,8 @@ export default function SignalCorrelationPage() {
         'signalCorrelation.subtitle',
         'Sweep one telemetry signal against another across time shifts to find not just whether they move together, but which one moves first',
       )}
-      query={signalsQuery}
+      query={[signalsQuery, historyA, historyB]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* 1 — Signal pickers */}

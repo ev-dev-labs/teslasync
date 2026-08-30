@@ -8,7 +8,7 @@ interface SkeletonProps {
   className?: string;
 }
 
-export function Skeleton({ width, height = 16, rounded, lines = 1, className }: SkeletonProps) {
+export function Skeleton({ width, height, rounded, lines = 1, className }: SkeletonProps) {
   // Normalise `lines` to a safe positive integer. Guards against callers
   // passing a fractional value (which would leave the "last line is 60% wide"
   // branch below unreachable) or a non-finite value like Infinity (which would
@@ -25,8 +25,11 @@ export function Skeleton({ width, height = 16, rounded, lines = 1, className }: 
         {Array.from({ length: lineCount }).map((_, i) => (
           <div
             key={i}
-            className="animate-pulse rounded bg-[var(--skeleton-bg)]"
-            style={{ width: i === lineCount - 1 ? '60%' : width ?? '100%', height }}
+            className="h-4 animate-pulse rounded bg-[var(--skeleton-bg)]"
+            style={{
+              width: i === lineCount - 1 ? '60%' : width ?? '100%',
+              ...(height !== undefined ? { height } : {}),
+            }}
           />
         ))}
       </div>
@@ -37,11 +40,14 @@ export function Skeleton({ width, height = 16, rounded, lines = 1, className }: 
     <div
       aria-hidden="true"
       className={cn(
-        'animate-pulse bg-[var(--skeleton-bg)]',
+        'h-4 w-full animate-pulse bg-[var(--skeleton-bg)]',
         rounded ? 'rounded-full' : 'rounded',
         className,
       )}
-      style={{ width: width ?? '100%', height }}
+      style={{
+        ...(width !== undefined ? { width } : {}),
+        ...(height !== undefined ? { height } : {}),
+      }}
     />
   );
 }

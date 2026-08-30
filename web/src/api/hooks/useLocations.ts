@@ -127,6 +127,7 @@ export function useBulkGeofencesDelete() {
     mutationFn: (ids: number[]) =>
       request<GeofenceBulkResult>('/geofences/bulk', {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify({ ids, op: 'delete' }),
       }),
     onSuccess: () => {
@@ -201,7 +202,10 @@ export function useArchiveGeofence() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (geofenceId: number) =>
-      request<ApiGeofence>(`/geofences/${geofenceId}/archive`, { method: 'POST' }),
+      request<ApiGeofence>(`/geofences/${geofenceId}/archive`, {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
     onSuccess: () => {
       invalidateGeofenceLifecycle(qc);
       success('toast.geofence.archive.success', 'Place archived');
@@ -221,7 +225,10 @@ export function useUnarchiveGeofence() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (geofenceId: number) =>
-      request<ApiGeofence>(`/geofences/${geofenceId}/unarchive`, { method: 'POST' }),
+      request<ApiGeofence>(`/geofences/${geofenceId}/unarchive`, {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
     onSuccess: () => {
       invalidateGeofenceLifecycle(qc);
       success('toast.geofence.unarchive.success', 'Place restored');
@@ -242,7 +249,10 @@ export function useMarkGeofenceReviewed() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: (geofenceId: number) =>
-      request<ApiGeofence>(`/geofences/${geofenceId}/reviewed`, { method: 'POST' }),
+      request<ApiGeofence>(`/geofences/${geofenceId}/reviewed`, {
+        method: 'POST',
+        requiresLiveMode: true,
+      }),
     onSuccess: () => {
       invalidateGeofenceLifecycle(qc);
       success('toast.geofence.reviewed.success', 'Marked reviewed');
@@ -259,6 +269,7 @@ export function useRenameGeofence() {
     mutationFn: ({ geofenceId, name }: { geofenceId: number; name: string }) =>
       request<ApiGeofence>(`/geofences/${geofenceId}`, {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify({ name }),
       }),
     onSuccess: () => {
@@ -283,6 +294,7 @@ export function useUpdateGeofenceCategory() {
     }) =>
       request<ApiGeofence>(`/geofences/${geofenceId}`, {
         method: 'PUT',
+        requiresLiveMode: true,
         body: JSON.stringify({ category }),
       }),
     onSuccess: () => {
@@ -327,6 +339,7 @@ export function useCreateGeofenceRate() {
     mutationFn: ({ geofenceId, ...body }: { geofenceId: number } & GeofenceRateCreateRequest) =>
       request<GeofenceRate>(`/geofences/${geofenceId}/rates`, {
         method: 'POST',
+        requiresLiveMode: true,
         body: JSON.stringify(body),
       }),
     onSuccess: (_data, vars) => {
@@ -351,7 +364,10 @@ export function useDeleteGeofenceRate() {
   const { success, error } = useMutationToast();
   return useMutation({
     mutationFn: ({ geofenceId, rateId }: { geofenceId: number; rateId: number }) =>
-      request<void>(`/geofences/${geofenceId}/rates/${rateId}`, { method: 'DELETE' }),
+      request<void>(`/geofences/${geofenceId}/rates/${rateId}`, {
+        method: 'DELETE',
+        requiresLiveMode: true,
+      }),
     onSuccess: (_data, vars) => {
       invalidateAndBroadcast(qc, { queryKey: locationKeys.geofenceRates(vars.geofenceId) });
       invalidateAndBroadcast(qc, { queryKey: locationKeys.geofenceRatesCurrent });
@@ -428,7 +444,7 @@ export function useApplyGeofenceRate() {
       const qs = params.toString();
       return request<GeofenceRateApplyResult>(
         `/geofences/${geofenceId}/rates/${rateId}/apply${qs ? `?${qs}` : ''}`,
-        { method: 'POST' },
+        { method: 'POST', requiresLiveMode: true },
       );
     },
     onSuccess: (_data, vars) => {

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { act, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import type { ReactNode } from 'react'
+import { OperationalModeProvider } from '@/hooks/useOperationalMode'
 
 /**
  * TimeMachineBanner contract.
@@ -44,7 +45,9 @@ import {
 
 function wrapperWith(initial: string) {
   return ({ children }: { children: ReactNode }) => (
-    <MemoryRouter initialEntries={[initial]}>{children}</MemoryRouter>
+    <MemoryRouter initialEntries={[initial]}>
+      <OperationalModeProvider>{children}</OperationalModeProvider>
+    </MemoryRouter>
   )
 }
 
@@ -62,7 +65,7 @@ describe('TimeMachineBanner', () => {
     })
     const banner = screen.getByTestId('time-machine-banner')
     expect(banner).toBeInTheDocument()
-    expect(banner.getAttribute('data-as-of')).toBe('2024-11-12T14:30:00Z')
+    expect(banner.getAttribute('data-as-of')).toBe('2024-11-12T14:30:00.000Z')
     expect(screen.getByTestId('time-machine-banner-body')).toBeInTheDocument()
   })
 

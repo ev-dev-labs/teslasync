@@ -4,7 +4,7 @@ import { Footprints } from 'lucide-react';
 
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
 import { LinearGauge } from '@/components/charts';
-import { EmptyState, Spinner, QueryError } from '@/components/feedback';
+import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import { useDriveDynamicsLatest } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 
@@ -54,11 +54,19 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
 
   let body: ReactNode;
   if (isLoading) {
-    // First fetch in flight (never the disabled/no-vehicle case, which stays
-    // idle) — show a spinner instead of the misleading "no telemetry" state.
     body = (
-      <div className="flex min-h-[8rem] items-center justify-center py-8">
-        <Spinner label={t('dynamics.pedalLoading', 'Loading pedal telemetry…')} />
+      <div
+        role="status"
+        aria-busy="true"
+        aria-label={t('dynamics.pedalLoading', 'Loading pedal telemetry…')}
+        className="grid min-h-[8rem] grid-cols-1 gap-4 py-2 @md:grid-cols-3"
+      >
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div key={index} className="flex flex-col items-center gap-3">
+            <Skeleton rounded className="h-24 w-24" />
+            <Skeleton className="h-3 w-24" />
+          </div>
+        ))}
       </div>
     );
   } else if (hasAny) {
@@ -70,7 +78,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
             max={100}
             label={t('dynamics.throttle', 'Throttle')}
             unit={throttle != null ? '%' : '—'}
-            color="#06b6d4"
+            tone="info"
             size={120}
           />
           <Caption>{t('dynamics.throttlePosition', 'Throttle Position')}</Caption>
@@ -81,7 +89,7 @@ export default function PedalUsage({ vehicleId }: PedalUsageProps) {
             max={100}
             label={t('dynamics.brake', 'Brake')}
             unit={brakePos != null ? '%' : '—'}
-            color="#ef4444"
+            tone="danger"
             size={120}
           />
           <Caption>{t('dynamics.brakePedalPosition', 'Brake Pedal Position')}</Caption>

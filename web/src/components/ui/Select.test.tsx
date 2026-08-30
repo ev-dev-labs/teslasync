@@ -133,12 +133,13 @@ describe('Select — error state', () => {
     const errorEl = document.getElementById('model-error');
     expect(errorEl?.textContent).toBe('Please pick a model');
     expect(select.getAttribute('aria-describedby')).toBe('model-error');
+    expect(screen.getByRole('alert')).toHaveTextContent('Please pick a model');
   });
 
   it('applies the red border class when in error', () => {
     const { container } = render(<Select options={OPTIONS} label="Model" error="x" />);
     const select = container.querySelector('select') as HTMLSelectElement;
-    expect(select.className).toContain('border-red-500');
+    expect(select.className).toContain('border-rose-500');
   });
 });
 
@@ -164,6 +165,24 @@ describe('Select — hint state', () => {
     const select = container.querySelector('select') as HTMLSelectElement;
     expect(select.getAttribute('aria-describedby')).toBeNull();
   });
+
+  it('preserves caller descriptions while appending the hint association', () => {
+    render(
+      <>
+        <span id="external-help">External help</span>
+        <Select
+          options={OPTIONS}
+          label="Model"
+          hint="Pick your trim"
+          aria-describedby="external-help"
+        />
+      </>,
+    );
+    expect(screen.getByLabelText('Model')).toHaveAttribute(
+      'aria-describedby',
+      'external-help model-hint',
+    );
+  });
 });
 
 describe('Select — size variants', () => {
@@ -173,7 +192,7 @@ describe('Select — size variants', () => {
   });
 
   const sizeCases: Array<['sm' | 'lg' | 'auto', string]> = [
-    ['sm', 'text-xs'],
+    ['sm', 'min-h-9'],
     ['lg', 'text-base'],
     ['auto', 'min-h-d-row'],
   ];

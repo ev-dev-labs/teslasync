@@ -155,6 +155,23 @@ describe('HistoryListRow', () => {
     expect(onRowClick).not.toHaveBeenCalled();
   });
 
+  it('keeps quick actions outside the navigation link', () => {
+    wrap(
+      <HistoryListRow
+        primary={<span>x</span>}
+        actions={[<button key="a">Quick view</button>]}
+        href="/drives/42"
+        testId="hlr"
+      />,
+    );
+
+    const row = screen.getByTestId('hlr');
+    const link = row.querySelector('a');
+    expect(link).not.toContainElement(
+      screen.getByRole('button', { name: 'Quick view' }),
+    );
+  });
+
   it('applies the selected ring class when selected', () => {
     wrap(
       <HistoryListRow

@@ -1,6 +1,7 @@
 package analytics
 
 import (
+	"fmt"
 	"math"
 	"net/http"
 	"sort"
@@ -8,45 +9,57 @@ import (
 	"time"
 
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 )
 
-func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
-	// Bounds: clients can scope the window via either an explicit
-	// `days=N` (legacy widget contract — gives a trailing N-day window
-	// rooted at now) or a date range via `start=YYYY-MM-DD` and/or
-	// `end=YYYY-MM-DD` from the unified RangePicker. When NONE of those
-	// params is supplied we return full history rather than silently
-	// applying a hardcoded default — per the no-hardcoded-day-windows
-	// rule established for filter UI in the web app.
-	//
-	// Either bound may be zero to mean "unbounded on that side". A
-	// supplied `end` is treated as inclusive end-of-day so the picker's
-	// YYYY-MM-DD upper bound matches user intent.
-	var cutoff, endCutoff time.Time
-	if s := r.URL.Query().Get("start"); s != "" {
-		if t, err := time.Parse("2006-01-02", s); err == nil {
-			cutoff = t
-		}
+const (
+	maxAnalyticsRecordsPerVehicle = 1000
+)
+
+func analyticsWindow(r *http.Request, now time.Time) (time.Time, time.Time, error) {
+	query := r.URL.Query()
+	start, end, err := apiparams.ParseDateRangeValues(query.Get("start"), query.Get("end"))
+	if err != nil {
+		return time.Time{}, time.Time{}, err
 	}
-	if e := r.URL.Query().Get("end"); e != "" {
-		if t, err := time.Parse("2006-01-02", e); err == nil {
-			endCutoff = t.Add(24*time.Hour - time.Nanosecond)
-		}
-	}
-	if cutoff.IsZero() && endCutoff.IsZero() {
-		if d := r.URL.Query().Get("days"); d != "" {
-			if parsed, err := strconv.Atoi(d); err == nil && parsed > 0 && parsed <= 3650 {
-				cutoff = time.Now().UTC().AddDate(0, 0, -parsed)
-			}
-		}
+	if !start.IsZero() || !end.IsZero() {
+		return start, end, nil
 	}
 
-	vehicles, err := h.vehicleRepo.GetAll(r.Context())
+	if raw := query.Get("days"); raw != "" {
+		parsed, parseErr := strconv.Atoi(raw)
+		if parseErr != nil || parsed <= 0 {
+			return time.Time{}, time.Time{}, fmt.Errorf("days must be a positive integer")
+		}
+		return now.AddDate(0, 0, -parsed), now, nil
+	}
+	// No filter is the established all-history contract. The record cap below
+	// continues to disclose a possibly incomplete aggregation via
+	// partial_result rather than silently changing the requested time range.
+	return time.Time{}, time.Time{}, nil
+}
+
+func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.analytics.fleet")
+	defer span.End()
+	now := time.Now().UTC()
+
+	cutoff, endCutoff, err := analyticsWindow(r, now)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to get vehicles for analytics")
+		span.RecordError(err)
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	traceID := span.SpanContext().TraceID().String()
+
+	vehicles, err := h.vehicleRepo.GetAll(ctx)
+	if err != nil {
+		span.RecordError(err)
+		log.Error().Err(err).Str("trace_id", traceID).Msg("failed to get vehicles for analytics")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get analytics")
 		return
 	}
@@ -100,32 +113,55 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		CycleCount  int     `json:"cycle_count"`
 	}
 	var batteryTrend []batteryPoint
+	partialReasons := make(map[string]struct{})
+	markPartial := func(reason string) {
+		partialReasons[reason] = struct{}{}
+	}
 
 	for _, v := range vehicles {
-		drives, err := h.driveRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, endCutoff)
+		drives, err := h.driveRepo.GetByVehicle(ctx, v.ID, maxAnalyticsRecordsPerVehicle, 0, cutoff, endCutoff)
 		if err != nil {
-			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get drives")
+			span.RecordError(err)
+			log.Error().Err(err).Int64("vehicle_id", v.ID).Str("trace_id", traceID).
+				Msg("analytics: failed to get drives")
+			markPartial("drive_query_failed")
 			drives = nil
+		} else if len(drives) >= maxAnalyticsRecordsPerVehicle {
+			markPartial("drive_record_cap_reached")
 		}
-		sessions, err := h.chargingRepo.GetByVehicle(r.Context(), v.ID, 2000, 0, cutoff, endCutoff)
+		sessions, err := h.chargingRepo.GetByVehicle(ctx, v.ID, maxAnalyticsRecordsPerVehicle, 0, cutoff, endCutoff)
 		if err != nil {
-			log.Error().Err(err).Int64("vehicleID", v.ID).Msg("analytics: failed to get charging sessions")
+			span.RecordError(err)
+			log.Error().Err(err).Int64("vehicle_id", v.ID).Str("trace_id", traceID).
+				Msg("analytics: failed to get charging sessions")
+			markPartial("charging_query_failed")
 			sessions = nil
+		} else if len(sessions) >= maxAnalyticsRecordsPerVehicle {
+			markPartial("charging_record_cap_reached")
 		}
 		// Per-vehicle battery health from latest signal snapshot via
 		// StateReader.State at time.Now(). State() returns the forward-folded
 		// current state, so the BatteryLevel signal is carried across
 		// emissions. Errors are logged and skipped so a single vehicle's
 		// failure does not 500 the entire fleet response.
-		snap, snapErr := h.state.State(r.Context(), v.ID, time.Now())
+		var snap signal.State
+		var snapErr error
+		if h.state == nil {
+			markPartial("state_reader_unavailable")
+		} else {
+			snap, snapErr = h.state.State(ctx, v.ID, now)
+		}
 		if snapErr != nil {
-			log.Error().Err(snapErr).Int64("vehicleID", v.ID).Msg("analytics: failed to get latest signal snapshot")
+			span.RecordError(snapErr)
+			log.Error().Err(snapErr).Int64("vehicle_id", v.ID).Str("trace_id", traceID).
+				Msg("analytics: failed to get latest signal snapshot")
+			markPartial("state_query_failed")
 		} else if snap != nil {
 			if bl, ok := signal.Float64(snap["BatteryLevel"]); ok && bl > 0 {
 				const nomCap = 75000.0
 				const nomRange = 531.0
 				batteryTrend = append(batteryTrend, batteryPoint{
-					Date:        time.Now().Format("2006-01-02"),
+					Date:        now.Format("2006-01-02"),
 					HealthScore: bl,
 					CapacityWh:  bl * nomCap / 100,
 					Degradation: 100 - bl,
@@ -305,12 +341,15 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 				query += " AND bucket <= $" + strconv.Itoa(len(args))
 			}
 			query += " ORDER BY bucket ASC"
-			btRows, btErr := h.db.Pool.Query(r.Context(), query, args...)
+			btRows, btErr := h.db.Pool.Query(ctx, query, args...)
 			if btErr == nil {
 				for btRows.Next() {
 					var bucket time.Time
 					var endSOC, minSOC, maxSOC *float64
 					if scanErr := btRows.Scan(&bucket, &endSOC, &minSOC, &maxSOC); scanErr != nil {
+						log.Warn().Err(scanErr).Int64("vehicle_id", v.ID).Str("trace_id", traceID).
+							Msg("analytics: failed to scan battery trend row")
+						markPartial("battery_trend_row_scan_failed")
 						continue
 					}
 					soc := 0.0
@@ -326,6 +365,17 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 					})
 				}
 				btRows.Close()
+				if rowsErr := btRows.Err(); rowsErr != nil {
+					span.RecordError(rowsErr)
+					log.Warn().Err(rowsErr).Int64("vehicle_id", v.ID).Str("trace_id", traceID).
+						Msg("analytics: failed to iterate battery trend")
+					markPartial("battery_trend_query_failed")
+				}
+			} else {
+				span.RecordError(btErr)
+				log.Warn().Err(btErr).Int64("vehicle_id", v.ID).Str("trace_id", traceID).
+					Msg("analytics: failed to query battery trend")
+				markPartial("battery_trend_query_failed")
 			}
 		}
 	}
@@ -551,24 +601,28 @@ func (h *AnalyticsHandler) Fleet(w http.ResponseWriter, r *http.Request) {
 		return batteryTrend[i].Date < batteryTrend[j].Date
 	})
 
-	// period_days describes the inclusive day count of the requested
-	// window. When neither bound is set we return 0 as a sentinel for
-	// "all time" rather than the (millions-of-days-since-year-1)
-	// nonsense produced by time.Since(time.Time{}).
+	partialReasonList := make([]string, 0, len(partialReasons))
+	for reason := range partialReasons {
+		partialReasonList = append(partialReasonList, reason)
+	}
+	sort.Strings(partialReasonList)
 	periodDays := 0
 	if !cutoff.IsZero() {
-		end := endCutoff
-		if end.IsZero() {
-			end = time.Now().UTC()
+		periodEnd := endCutoff
+		if periodEnd.IsZero() {
+			periodEnd = now
 		}
-		periodDays = int(end.Sub(cutoff).Hours()/24) + 1
-	} else if !endCutoff.IsZero() {
-		// Lower bound unknown — treat the day count as "up to end".
-		periodDays = 0
+		periodDays = int(periodEnd.Sub(cutoff).Hours()/24) + 1
 	}
 
 	// === Build total response ===
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"generated_at": now,
+		"source":       "derived_fleet_analytics",
+		"partial_result": map[string]interface{}{
+			"is_partial": len(partialReasonList) > 0,
+			"reasons":    partialReasonList,
+		},
 		// Core fleet stats (existing)
 		"period_days":             periodDays,
 		"total_vehicles":          len(vehicles),

@@ -6,6 +6,7 @@ import { CHARGER_COLORS } from '@/lib/colors';
 import { Text } from '@/components/ui';
 import {
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
   chartGrid,
   axisTickSm,
@@ -19,6 +20,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from '@/components/charts';
+import { useHiddenSeries } from '@/hooks/useHiddenSeries';
 import { avg, durationMinutes, getChargerLabel } from './helpers';
 import type { ChargerTypeStats } from './types';
 
@@ -28,6 +30,7 @@ interface ChargerTypeChartProps {
 
 export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
   const { t } = useTranslation();
+  const hidden = useHiddenSeries('charger-type-chart');
 
   const chargerTypeStats = useMemo((): ChargerTypeStats[] => {
     const list = sessions ?? [];
@@ -91,6 +94,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
       height={280}
       exportable
       exportFilename="charge-rate-by-type"
+      chartKey="charger-type-chart"
     >
       <ResponsiveContainer width="100%" height={280}>
         <ComposedChart
@@ -102,12 +106,14 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
           <YAxis yAxisId="kw" tick={axisTickSm} orientation="left" />
           <YAxis yAxisId="kwh" tick={axisTickSm} orientation="right" />
           <Tooltip content={<ChartTooltip />} />
+          <ChartLegend state={hidden} />
           <Bar
             yAxisId="kw"
             dataKey="avgKw"
             name={t('charging.curve.avgPower', 'Avg Power')}
             unit=" kW"
             radius={[4, 4, 0, 0]}
+            hide={hidden.isHidden('avgKw')}
           >
             {chargerTypeStats.map((entry) => (
               <Cell
@@ -123,6 +129,7 @@ export default function ChargerTypeChart({ sessions }: ChargerTypeChartProps) {
             unit=" kWh"
             radius={[4, 4, 0, 0]}
             opacity={0.6}
+            hide={hidden.isHidden('avgKwh')}
           >
             {chargerTypeStats.map((entry) => (
               <Cell

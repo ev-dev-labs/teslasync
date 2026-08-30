@@ -12,7 +12,9 @@
  *   • the group is exposed to assistive tech as a named list of three items.
  *
  * framer-motion is mocked to a passthrough because MetricBar animates its fill
- * via `motion.div`; the mock keeps assertions on the synchronous DOM and avoids
+ * via `motion.div` and also reads `useReducedMotion()` (via the shared
+ * `useMotionPreference` hook) to decide whether that fill tween runs; the
+ * mock stubs both so assertions stay on the synchronous DOM and avoid
  * act() churn. react-i18next is mocked to echo the English fallback so labels
  * and the aria group name are deterministic.
  */
@@ -32,6 +34,7 @@ vi.mock('framer-motion', () => ({
       },
     },
   ),
+  useReducedMotion: () => false,
 }))
 
 vi.mock('react-i18next', () => ({

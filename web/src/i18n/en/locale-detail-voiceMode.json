@@ -1,0 +1,28 @@
+{
+  "voiceMode": {
+    "title": "Voice mode",
+    "description": "Speak to Helix and hear the reply out loud. Voice input and playback both stay on this device — only the transcribed text is sent to the assistant, never the raw audio.",
+    "button": "Speak to Helix",
+    "transcriptLabel": "Voice transcript",
+    "listeningHint": "Listening — speak now…",
+    "idleHint": "Tap the mic and ask Helix anything about your Tesla.",
+    "unsupportedHint": "Voice input is not available in this browser. You can still type your question into the chatbot below.",
+    "emptyHint": "Tap the mic and dictate a question first.",
+    "actions": {
+      "startListening": "Start listening",
+      "stopListening": "Stop listening",
+      "startListeningShort": "Speak",
+      "stopListeningShort": "Stop mic",
+      "muteTts": "Mute spoken replies",
+      "unmuteTts": "Unmute spoken replies",
+      "muteTtsShort": "Mute Helix",
+      "unmuteTtsShort": "Unmute Helix",
+      "stopAll": "Stop Helix",
+      "stopAllShort": "Stop"
+    },
+    "errors": {
+      "unsupported": "Your browser does not support voice input. Try Chrome, Edge, or Safari.",
+      "sttFailed": "Voice input failed: {{reason}}"
+    }
+  }
+}

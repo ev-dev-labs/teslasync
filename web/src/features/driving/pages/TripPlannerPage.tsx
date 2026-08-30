@@ -31,6 +31,8 @@ import { AddressInput } from '../components/AddressInput';
 import { SOCRouteChart } from '../components/SOCRouteChart';
 import { TripLegList } from '../components/TripLegList';
 import { TripPlannerMap } from '../components/TripPlannerMap';
+import { TripShareImportBanner } from '../components/TripShareImportBanner';
+import { useTripShareTarget } from '../hooks/useTripShareTarget';
 import type { TripLocation, TripPlan, TripPlanRequest } from '@/types/driving';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
@@ -63,6 +65,25 @@ export default function TripPlannerPage() {
 
   const activeVehicle = vehicleId != null ? String(vehicleId) : '';
   const canPlan = origin != null && destination != null && activeVehicle !== '';
+
+  const handleSharedDestination = useCallback(
+    ({ text, location }: { text: string; location: TripLocation | null }) => {
+      setDestText(text);
+      setDestination(location);
+    },
+    [],
+  );
+  const shareImport = useTripShareTarget(handleSharedDestination);
+
+  const handleOriginTextChange = useCallback((value: string) => {
+    setOriginText(value);
+    setOrigin(null);
+  }, []);
+
+  const handleDestinationTextChange = useCallback((value: string) => {
+    setDestText(value);
+    setDestination(null);
+  }, []);
 
   const handlePlan = useCallback(() => {
     if (!origin || !destination || !activeVehicle) return;
@@ -184,6 +205,8 @@ export default function TripPlannerPage() {
         <AITripPlannerLLMAgent {...aiAgentInputs} />
       </FadeIn>
 
+      <TripShareImportBanner status={shareImport} />
+
       {/* Row 1 — Hero: control form (left rail) + route map (spans wide) */}
       <FadeIn>
         <section
@@ -199,14 +222,14 @@ export default function TripPlannerPage() {
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-1">
               <AddressInput
                 value={originText}
-                onChange={setOriginText}
+                onChange={handleOriginTextChange}
                 onSelect={setOrigin}
                 placeholder={t('tripPlanner.form.origin', 'Enter starting location...')}
                 label={t('tripPlanner.form.from', 'From')}
               />
               <AddressInput
                 value={destText}
-                onChange={setDestText}
+                onChange={handleDestinationTextChange}
                 onSelect={setDestination}
                 placeholder={t('tripPlanner.form.destination', 'Enter destination...')}
                 label={t('tripPlanner.form.to', 'To')}

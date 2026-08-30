@@ -1,0 +1,489 @@
+{
+  "toast": {
+    "common": {
+      "error": "Something went wrong"
+    },
+    "feedback": {
+      "bulkUpdate": {
+        "success": "Updated {{count}} feedback items",
+        "error": "Some feedback items could not be updated"
+      }
+    },
+    "dataRepair": {
+      "charging": {
+        "update": {
+          "success": "Charging session updated",
+          "error": "Failed to update charging session"
+        },
+        "close": {
+          "success": "Charging session closed",
+          "error": "Failed to close charging session"
+        },
+        "quarantine": {
+          "success": "Charging session moved to quarantine",
+          "error": "Failed to quarantine charging session"
+        },
+        "apply": {
+          "success": "Charging boundary repaired",
+          "error": "Failed to repair charging boundary"
+        }
+      },
+      "drive": {
+        "update": {
+          "success": "Drive updated",
+          "error": "Failed to update drive"
+        },
+        "close": {
+          "success": "Drive closed",
+          "error": "Failed to close drive"
+        },
+        "quarantine": {
+          "success": "Drive moved to quarantine",
+          "error": "Failed to quarantine drive"
+        },
+        "apply": {
+          "success": "Drive boundary repaired",
+          "error": "Failed to repair drive boundary"
+        }
+      },
+      "case": {
+        "transition": {
+          "success": "Repair case updated",
+          "error": "Failed to update repair case"
+        },
+        "bulk": {
+          "success": "Updated {{count}} repair cases",
+          "partial": "Updated {{updated}} repair cases; {{skipped}} skipped",
+          "skipped": "No repair cases were updated; {{skipped}} skipped",
+          "error": "Failed to update repair cases"
+        },
+        "assign": {
+          "success": "Case assignment updated",
+          "error": "Failed to update case assignment"
+        },
+        "comment": {
+          "success": "Comment added",
+          "error": "Failed to add comment"
+        }
+      },
+      "scan": {
+        "success": "Data integrity scan completed",
+        "error": "Data integrity scan failed"
+      },
+      "quarantine": {
+        "success": "Session moved to quarantine",
+        "error": "Failed to quarantine session"
+      },
+      "restore": {
+        "success": "Session restored",
+        "error": "Failed to restore session"
+      }
+    },
+    "quietHours": {
+      "save": {
+        "created": "Quiet hours window created",
+        "updated": "Quiet hours window updated",
+        "error": "Failed to save quiet hours window"
+      },
+      "delete": {
+        "success": "Quiet hours window removed",
+        "error": "Failed to delete quiet hours window"
+      },
+      "updated": "Quiet hours window updated",
+      "created": "Quiet hours window created",
+      "saveError": "Failed to save quiet hours window",
+      "deleted": "Quiet hours window removed",
+      "deleteError": "Failed to delete quiet hours window"
+    },
+    "pin": {
+      "pinned": {
+        "success": "Pinned",
+        "error": "Failed to pin"
+      },
+      "unpinned": {
+        "success": "Unpinned",
+        "error": "Failed to unpin"
+      },
+      "reorder": {
+        "error": "Failed to reorder pins"
+      }
+    },
+    "annotation": {
+      "created": {
+        "success": "Annotation added",
+        "error": "Failed to add annotation"
+      },
+      "updated": {
+        "success": "Annotation updated",
+        "error": "Failed to update annotation"
+      },
+      "deleted": {
+        "success": "Annotation removed",
+        "error": "Failed to remove annotation"
+      }
+    },
+    "savedViews": {
+      "create": {
+        "success": "Saved view created",
+        "error": "Failed to save view"
+      },
+      "update": {
+        "success": "View updated",
+        "error": "Failed to update view"
+      },
+      "delete": {
+        "success": "View deleted",
+        "error": "Failed to delete view"
+      },
+      "setDefault": {
+        "success": "Default view set",
+        "error": "Failed to update default"
+      },
+      "unsetDefault": {
+        "success": "Default cleared"
+      }
+    },
+    "chatbot": {
+      "rename": {
+        "success": "Conversation renamed",
+        "error": "Failed to rename conversation"
+      },
+      "delete": {
+        "success": "Conversation deleted",
+        "error": "Failed to delete conversation"
+      },
+      "send": {
+        "error": "Failed to send message"
+      }
+    },
+    "export": {
+      "create": {
+        "success": "Export started",
+        "error": "Failed to start export"
+      },
+      "account": {
+        "success": "Account export queued — track progress in the floating widget",
+        "error": "Failed to queue account export"
+      }
+    },
+    "alerts": {
+      "markRead": {
+        "success": "Alert marked as read",
+        "error": "Failed to mark alert as read"
+      },
+      "saveRule": {
+        "success": "Alert rule saved",
+        "error": "Failed to save alert rule"
+      },
+      "deleteRule": {
+        "success": "Alert rule deleted",
+        "error": "Failed to delete alert rule"
+      },
+      "toggleRule": {
+        "enabled": "Alert rule enabled",
+        "disabled": "Alert rule disabled",
+        "error": "Failed to toggle alert rule"
+      },
+      "test": {
+        "success": "Test alert sent",
+        "error": "Failed to send test alert"
+      },
+      "snooze": {
+        "success": "Rule snoozed",
+        "cleared": "Snooze cleared",
+        "error": "Failed to snooze rule"
+      },
+      "ack": {
+        "success": "Alert acknowledged",
+        "error": "Failed to acknowledge alert"
+      },
+      "comment": {
+        "success": "Comment added",
+        "error": "Failed to add comment"
+      },
+      "reopen": {
+        "success": "Alert reopened",
+        "error": "Failed to reopen alert"
+      }
+    },
+    "channels": {
+      "save": {
+        "created": "Channel created",
+        "updated": "Channel updated",
+        "error": "Failed to save channel"
+      },
+      "delete": {
+        "success": "Channel deleted",
+        "error": "Failed to delete channel"
+      },
+      "toggle": {
+        "success": "Channel toggled",
+        "error": "Failed to toggle channel"
+      },
+      "test": {
+        "success": "Test notification sent",
+        "error": "Failed to send test"
+      }
+    },
+    "notifications": {
+      "markRead": {
+        "success": "Marked as read",
+        "error": "Failed to mark as read"
+      },
+      "markUnread": {
+        "success": "Marked as unread",
+        "error": "Failed to mark as unread"
+      },
+      "archive": {
+        "success": "Archived",
+        "error": "Failed to archive"
+      },
+      "unarchive": {
+        "success": "Restored from archive",
+        "error": "Failed to unarchive"
+      },
+      "delete": {
+        "success": "Deleted",
+        "error": "Failed to delete notifications"
+      }
+    },
+    "webpush": {
+      "subscribe": {
+        "success": "Browser push enabled on this device",
+        "error": "Failed to enable browser push"
+      },
+      "unsubscribe": {
+        "success": "Browser push removed for this device",
+        "error": "Failed to remove browser push"
+      }
+    },
+    "geofence": {
+      "archive": {
+        "success": "Place archived",
+        "error": "Failed to archive place"
+      },
+      "unarchive": {
+        "success": "Place restored",
+        "error": "Failed to restore place"
+      },
+      "reviewed": {
+        "success": "Marked reviewed",
+        "error": "Failed to mark reviewed"
+      },
+      "rename": {
+        "success": "Place renamed",
+        "error": "Failed to rename place"
+      },
+      "category": {
+        "success": "Category updated",
+        "error": "Failed to update category"
+      }
+    },
+    "geofenceRate": {
+      "create": {
+        "success": "Rate saved",
+        "error": "Failed to save rate"
+      },
+      "delete": {
+        "success": "Scheduled rate cancelled",
+        "error": "Failed to cancel scheduled rate"
+      },
+      "apply": {
+        "success": "Rate applied to matching sessions",
+        "error": "Failed to apply rate"
+      }
+    },
+    "settings": {
+      "save": {
+        "success": "Settings saved",
+        "error": "Failed to save settings"
+      },
+      "ai": {
+        "save": {
+          "success": "Helix settings saved",
+          "error": "Failed to save Helix settings"
+        }
+      },
+      "auth": {
+        "url": {
+          "success": "Auth URL generated",
+          "error": "Failed to get auth URL"
+        },
+        "refresh": {
+          "success": "Auth refreshed",
+          "error": "Failed to refresh auth"
+        },
+        "disconnect": {
+          "success": "Tesla account disconnected",
+          "error": "Failed to disconnect"
+        }
+      },
+      "vehicles": {
+        "sync": {
+          "success": "Vehicles synced",
+          "error": "Failed to sync vehicles"
+        }
+      },
+      "gasPrice": {
+        "poll": {
+          "success": "Gas prices updated",
+          "error": "Failed to poll gas prices"
+        },
+        "toggle": {
+          "enabled": "Gas price tracking enabled",
+          "disabled": "Gas price tracking disabled",
+          "error": "Failed to toggle gas price tracking"
+        },
+        "config": {
+          "success": "Gas price config updated",
+          "error": "Failed to update gas price config"
+        }
+      },
+      "dashboardLayouts": {
+        "success": "Dashboard layout saved",
+        "error": "Failed to save dashboard layout"
+      },
+      "api": {
+        "toggle": {
+          "suspended": "API suspended",
+          "resumed": "API resumed",
+          "error": "Failed to toggle API suspension"
+        }
+      },
+      "polling": {
+        "success": "Polling config saved",
+        "error": "Failed to save polling config"
+      }
+    },
+    "dashboard": {
+      "layoutSaved": {
+        "success": "Layout saved to library",
+        "error": "Failed to save layout"
+      },
+      "layoutUpdated": {
+        "success": "Layout updated",
+        "error": "Failed to update layout"
+      },
+      "layoutDeleted": {
+        "success": "Layout deleted",
+        "error": "Failed to delete layout"
+      },
+      "layoutApplied": {
+        "success": "Layout applied",
+        "error": "Failed to apply layout"
+      }
+    },
+    "admin": {
+      "apiKey": {
+        "create": {
+          "success": "API key created",
+          "error": "Failed to create API key"
+        },
+        "delete": {
+          "success": "API key deleted",
+          "error": "Failed to delete API key"
+        },
+        "revoke": {
+          "success": "API key revoked",
+          "error": "Failed to revoke API key"
+        }
+      },
+      "export": {
+        "create": {
+          "success": "Export job created",
+          "error": "Failed to create export"
+        }
+      },
+      "maintenance": {
+        "success": "Maintenance state updated",
+        "error": "Failed to update maintenance state"
+      }
+    },
+    "vehicles": {
+      "refresh": {
+        "success": "Vehicle refreshed",
+        "error": "Failed to refresh vehicle"
+      },
+      "delete": {
+        "success": "Vehicle deleted",
+        "error": "Failed to delete vehicle"
+      },
+      "sync": {
+        "success": "Vehicles synced ({{count}} updated)",
+        "error": "Failed to sync vehicles"
+      },
+      "wake": {
+        "success": "Wake command sent",
+        "error": "Failed to wake vehicle"
+      },
+      "mobileEnabled": {
+        "refresh": {
+          "success": "Mobile access status refreshed",
+          "error": "Failed to refresh mobile access"
+        }
+      },
+      "options": {
+        "refresh": {
+          "success": "Vehicle options refreshed",
+          "error": "Failed to refresh options"
+        }
+      },
+      "specs": {
+        "refresh": {
+          "success": "Vehicle specs refreshed",
+          "error": "Failed to refresh specs"
+        }
+      },
+      "subscriptions": {
+        "refresh": {
+          "success": "Subscriptions refreshed",
+          "error": "Failed to refresh subscriptions"
+        }
+      },
+      "upgrades": {
+        "refresh": {
+          "success": "Upgrades refreshed",
+          "error": "Failed to refresh upgrades"
+        }
+      },
+      "warranty": {
+        "refresh": {
+          "success": "Warranty details refreshed",
+          "error": "Failed to refresh warranty details"
+        }
+      },
+      "pricing": {
+        "success": "Tesla vehicle pricing query completed",
+        "error": "Failed to query Tesla vehicle pricing"
+      },
+      "enterpriseRoles": {
+        "refresh": {
+          "success": "Enterprise roles refreshed",
+          "error": "Failed to refresh enterprise roles"
+        }
+      },
+      "enterprisePayer": {
+        "success": "Enterprise payer updated",
+        "error": "Failed to update enterprise payer"
+      }
+    },
+    "ordersRefreshed": "Orders refreshed",
+    "ordersFailed": "Failed to refresh orders",
+    "featureConfigRefreshed": "Feature config refreshed",
+    "featureConfigFailed": "Failed to refresh feature config",
+    "unitsSynced": "Units synced from car",
+    "noChanges": "No changes",
+    "noChangesDesc": "Could not detect car unit preferences",
+    "saved": "Settings saved",
+    "savedDesc": "Your preferences have been updated",
+    "saveFailed": "Failed to save",
+    "saveFailedDesc": "Could not update settings",
+    "regionRefreshed": "Region info refreshed",
+    "regionFailed": "Failed to refresh region",
+    "disconnected": "Tesla account disconnected",
+    "disconnectFailed": "Disconnect failed",
+    "tokenRefreshed": "Token refreshed",
+    "tokenRefreshFailed": "Token refresh failed",
+    "syncFailed": "Vehicle sync failed"
+  }
+}

@@ -11,6 +11,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	domain "github.com/ev-dev-labs/teslasync/internal/domain/actioncenter"
@@ -24,8 +25,9 @@ var (
 )
 
 const (
-	defaultLimit = 25
-	maxLimit     = 100
+	defaultLimit        = 25
+	maxLimit            = 100
+	providerConcurrency = 4
 )
 
 type ListFilter struct {
@@ -74,9 +76,13 @@ func New(source port.SourceReader, states port.StateRepository, options ...Optio
 	service := &Service{
 		providers: []provider{
 			alertsProvider{source: source},
+			batteryHealthProvider{source: source},
 			chargingProvider{source: source},
+			driveEfficiencyProvider{source: source},
 			workOrdersProvider{source: source},
+			vehicleReadinessProvider{source: source},
 			signalProvider{source: source},
+			systemHealthProvider{source: source},
 		},
 		source: source,
 		states: states,
@@ -227,20 +233,47 @@ func (s *Service) generate(
 ) ([]domain.Recommendation, []domain.ProviderStatus) {
 	candidates := make([]domain.Candidate, 0, providerLimit*len(s.providers))
 	statuses := make([]domain.ProviderStatus, 0, len(s.providers))
-	for _, candidateProvider := range s.providers {
-		items, err := candidateProvider.Recommendations(ctx, filter, now)
+	type providerResult struct {
+		items []domain.Candidate
+		err   error
+	}
+	results := make([]providerResult, len(s.providers))
+	limit := make(chan struct{}, providerConcurrency)
+	var providersFinished sync.WaitGroup
+	providersFinished.Add(len(s.providers))
+	for index, candidateProvider := range s.providers {
+		go func() {
+			defer providersFinished.Done()
+			select {
+			case limit <- struct{}{}:
+				defer func() { <-limit }()
+			case <-ctx.Done():
+				results[index].err = ctx.Err()
+				return
+			}
+			results[index].items, results[index].err = candidateProvider.Recommendations(
+				ctx,
+				filter,
+				now,
+			)
+		}()
+	}
+	providersFinished.Wait()
+
+	for index, candidateProvider := range s.providers {
+		result := results[index]
 		status := domain.ProviderStatus{
 			SourceFeature: candidateProvider.SourceFeature(),
 			Status:        domain.ProviderAvailable,
 			Limitations:   []string{},
 		}
-		if err != nil {
+		if result.err != nil {
 			status.Status = domain.ProviderUnavailable
 			status.Limitations = []string{
 				"Source data is temporarily unavailable; no findings were inferred for this provider.",
 			}
 		} else {
-			for _, item := range items {
+			for _, item := range result.items {
 				if candidateValid(item) && item.ExpiresAt.After(now) {
 					candidates = append(candidates, item)
 					status.ItemCount++

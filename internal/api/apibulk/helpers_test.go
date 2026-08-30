@@ -6,6 +6,7 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -179,6 +180,52 @@ func TestComputeMissingIDs_EmptyRequested(t *testing.T) {
 	}
 	if len(got) != 0 {
 		t.Errorf("len = %d, want 0", len(got))
+	}
+}
+
+func TestComputeDeleteFailures(t *testing.T) {
+	tests := []struct {
+		name      string
+		requested []int64
+		existing  []int64
+		deleted   []int64
+		want      []apibulk.FailedID
+	}{
+		{
+			name:      "all deleted",
+			requested: []int64{1, 2},
+			existing:  []int64{1, 2},
+			deleted:   []int64{1, 2},
+			want:      []apibulk.FailedID{},
+		},
+		{
+			name:      "missing IDs retain request order",
+			requested: []int64{3, 1, 2},
+			existing:  []int64{1},
+			deleted:   []int64{1},
+			want: []apibulk.FailedID{
+				{ID: 3, Reason: "not_found"},
+				{ID: 2, Reason: "not_found"},
+			},
+		},
+		{
+			name:      "concurrent deletion is a conflict",
+			requested: []int64{1, 2, 3},
+			existing:  []int64{1, 2},
+			deleted:   []int64{1},
+			want: []apibulk.FailedID{
+				{ID: 2, Reason: "conflict"},
+				{ID: 3, Reason: "not_found"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := apibulk.ComputeDeleteFailures(tt.requested, tt.existing, tt.deleted); !reflect.DeepEqual(got, tt.want) {
+				t.Fatalf("ComputeDeleteFailures() = %#v, want %#v", got, tt.want)
+			}
+		})
 	}
 }
 

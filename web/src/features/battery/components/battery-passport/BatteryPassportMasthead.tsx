@@ -186,7 +186,7 @@ export function BatteryPassportMasthead({
         </div>
 
         {!state.vehicleSelected ? (
-          <EmptyState
+          <EmptyState /* no-action: certificate evidence appears only when the selected vehicle has source data */
             className="py-7"
             icon={<FileCheck2 className="h-7 w-7" aria-hidden="true" />}
             title={t(
@@ -364,7 +364,7 @@ export function BatteryPassportMasthead({
             />
           </div>
         ) : state.isResolved ? (
-          <EmptyState
+          <EmptyState /* no-action: certificate evidence appears only when the selected vehicle has source data */
             className="py-7"
             icon={<FileCheck2 className="h-7 w-7" aria-hidden="true" />}
             message={t(
@@ -373,7 +373,7 @@ export function BatteryPassportMasthead({
             )}
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: certificate evidence appears only when the selected vehicle has source data */
             className="py-7"
             message={t(
               'batteryPassport.states.pending',

@@ -596,14 +596,17 @@ func (r *NotificationRepo) ListDeferred(ctx context.Context, limit int) ([]*noti
 // = inbox only, true = archived only) because the inbox view defaults to the
 // non-archived list.
 type NotificationLogFilters struct {
-	Severities []string  // wire severities as stored on alert_rules: info, warn, critical
-	VehicleIDs []int64   // join via alert_rules.vehicle_id
-	RuleIDs    []int64   // notification_logs.alert_id (== alert_rules.id)
-	From       time.Time // inclusive lower bound on created_at
-	To         time.Time // inclusive upper bound on created_at
-	Read       *bool     // nil = both, false = unread only, true = read only
-	Archived   *bool     // nil = both, false = inbox only, true = archived only
-	Query      string    // ILIKE %query% across title and message
+	Severities                 []string  // wire severities as stored on alert_rules: info, warn, critical
+	IncludeFailedInfoAsWarning bool      // match the /alerts DTO warning floor for failed info deliveries
+	VehicleIDs                 []int64   // rule applies to any requested vehicle; unscoped system rows remain visible
+	RuleIDs                    []int64   // notification_logs.alert_id (== alert_rules.id)
+	From                       time.Time // inclusive lower bound on created_at
+	To                         time.Time // inclusive upper bound on created_at
+	BeforeCreatedAt            time.Time // keyset cursor: rows strictly before this created_at/id tuple
+	BeforeID                   int64
+	Read                       *bool  // nil = both, false = unread only, true = read only
+	Archived                   *bool  // nil = both, false = inbox only, true = archived only
+	Query                      string // ILIKE %query% across title and message
 	// GroupKey, when non-empty, restricts the result to rows whose
 	// group_key column equals exactly this value. It fetches members of a
 	// single threaded group via the existing flat-list endpoint without
@@ -643,6 +646,17 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 	if !f.To.IsZero() {
 		addClause("nl.created_at <= "+ph(1), f.To.UTC())
 	}
+	if !f.BeforeCreatedAt.IsZero() && f.BeforeID > 0 {
+		createdAtPlaceholder := ph(1)
+		idPlaceholder := ph(2)
+		addClause(
+			"(nl.created_at < "+createdAtPlaceholder+
+				" OR (nl.created_at = "+createdAtPlaceholder+
+				" AND nl.id < "+idPlaceholder+"))",
+			f.BeforeCreatedAt.UTC(),
+			f.BeforeID,
+		)
+	}
 	if f.Read != nil {
 		if *f.Read {
 			w.clauses = append(w.clauses, "nl.read_at IS NOT NULL")
@@ -669,10 +683,22 @@ func buildNotificationLogWhere(f NotificationLogFilters) notificationLogWhere {
 	}
 	if w.needsRuleJoin {
 		if len(f.Severities) > 0 {
-			addClause("ar.severity = ANY("+ph(1)+")", f.Severities)
+			if f.IncludeFailedInfoAsWarning {
+				addClause(
+					"(CASE WHEN nl.status = 'failed' AND COALESCE(ar.severity, 'info') = 'info' THEN 'warn' ELSE COALESCE(ar.severity, 'info') END) = ANY("+ph(1)+")",
+					f.Severities,
+				)
+			} else {
+				addClause("ar.severity = ANY("+ph(1)+")", f.Severities)
+			}
 		}
 		if len(f.VehicleIDs) > 0 {
-			addClause("ar.vehicle_id = ANY("+ph(1)+")", f.VehicleIDs)
+			addClause(
+				"(nl.alert_id IS NULL OR ar.id IS NULL OR ar.all_vehicles OR EXISTS ("+
+					"SELECT 1 FROM alert_rule_vehicles arv "+
+					"WHERE arv.rule_id = ar.id AND arv.vehicle_id = ANY("+ph(1)+")))",
+				f.VehicleIDs,
+			)
 		}
 	}
 	return w
@@ -705,7 +731,7 @@ func (r *NotificationRepo) GetLogsFiltered(ctx context.Context, f NotificationLo
 	if len(w.clauses) > 0 {
 		query += " WHERE " + strings.Join(w.clauses, " AND ")
 	}
-	query += " ORDER BY nl.created_at DESC LIMIT " + ph(1)
+	query += " ORDER BY nl.created_at DESC, nl.id DESC LIMIT " + ph(1)
 	args = append(args, f.Limit)
 	query += " OFFSET " + ph(1)
 	args = append(args, f.Offset)

@@ -2,8 +2,8 @@
  * ExplorePage — behaviour + hardening coverage (co-located).
  *
  * ExplorePage default-exports a single orchestrator that composes a set of
- * internal, non-exported sub-components (KPI band, RecentStrip,
- * SectionAnchorStrip, SectionBand, FeatureCard, Highlight, EmptyResult). We
+ * internal, non-exported sub-components (KPI band, SectionAnchorStrip,
+ * SectionBand, FeatureCard, Highlight, EmptyResult). We
  * therefore exercise every facet through the public page:
  *
  *   - Page shell: PageContainer h1 + interpolated subtitle, document-title
@@ -21,15 +21,12 @@
  *   - Visibility gates: minVehicles (Compare Vehicles) and requiresAuth
  *     (2FA / Sessions / My Activity) mirror the sidebar, plus the
  *     vehicles-undefined null-safety path.
- *   - Recently-visited strip: resolves localStorage recents against the visible
- *     catalog, navigates on click, and hides itself while filtering.
  *   - a11y / keyboard: "/" focuses search from anywhere, other keys don't, and
  *     icon-only KPI/card glyphs are aria-hidden with visible text labels.
  *
  * Network is never touched: useVehicles / useIsForwardAuth / usePageTitle are
  * stubbed and i18n is stubbed to the English fallback with {{placeholder}}
- * interpolation. The recentPages store is the real module (localStorage-backed)
- * and reset between tests.
+ * interpolation.
  */
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, cleanup, act, within } from '@testing-library/react';
@@ -38,7 +35,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import ExplorePage from './ExplorePage';
 import { buildFeatureCatalog } from '../featureCatalog';
-import { recordPageView, __resetRecentPagesForTests } from '@/lib/recentPages';
 import { usePageTitle } from '@/hooks/usePageTitle';
 
 // ── Hoisted, per-test controllable gating state ──────────────────────
@@ -117,7 +113,6 @@ function kpiValue(label: string): string {
 beforeEach(() => {
   state.vehicles = [{ id: 1 }, { id: 2 }];
   state.forwardAuth = true;
-  __resetRecentPagesForTests();
   vi.mocked(usePageTitle).mockClear();
   // jsdom doesn't lay out, so scrollIntoView is a no-op stub.
   Element.prototype.scrollIntoView = vi.fn();
@@ -159,8 +154,9 @@ describe('ExplorePage — results layout', () => {
     // The Home band is present for everyone.
     expect(screen.getByRole('heading', { level: 2, name: 'Home' })).toBeInTheDocument();
     const homeList = screen.getByTestId('explore-section-home');
-    // Home includes the decision inbox alongside the five established entries.
-    expect(within(homeList).getAllByRole('listitem')).toHaveLength(6);
+    // Home includes the decision inbox + the activity timeline alongside the
+    // five established entries.
+    expect(within(homeList).getAllByRole('listitem')).toHaveLength(7);
 
     // A representative card + its description render.
     expect(screen.getByTestId('explore-card-/')).toBeInTheDocument();
@@ -314,32 +310,6 @@ describe('ExplorePage — visibility gates', () => {
     renderPage();
     expect(kpiValue('Vehicles')).toBe('0');
     expect(screen.queryByTestId('explore-card-/vehicle-comparison')).toBeNull();
-  });
-});
-
-describe('ExplorePage — recently visited', () => {
-  it('resolves localStorage recents against the visible catalog and navigates on click', () => {
-    recordPageView({ path: '/battery', title: 'Battery Health' });
-    recordPageView({ path: '/charging', title: 'Charging Overview' });
-
-    const { getLocation } = renderPage();
-    const strip = screen.getByTestId('explore-recent-strip');
-    expect(within(strip).getByTestId('explore-recent-/charging')).toBeInTheDocument();
-    expect(within(strip).getByTestId('explore-recent-/battery')).toBeInTheDocument();
-
-    fireEvent.click(within(strip).getByTestId('explore-recent-/charging'));
-    expect(getLocation().pathname).toBe('/charging');
-  });
-
-  it('hides the recent strip while filtering', () => {
-    recordPageView({ path: '/battery', title: 'Battery Health' });
-    renderPage('/explore?q=charging');
-    expect(screen.queryByTestId('explore-recent-strip')).toBeNull();
-  });
-
-  it('omits the recent strip entirely when there is no history', () => {
-    renderPage();
-    expect(screen.queryByTestId('explore-recent-strip')).toBeNull();
   });
 });
 

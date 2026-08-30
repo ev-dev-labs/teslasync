@@ -63,11 +63,10 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 
 	expected := map[string]string{
-		"X-Content-Type-Options":    "nosniff",
-		"X-Frame-Options":           "DENY",
-		"X-XSS-Protection":          "1; mode=block",
-		"Strict-Transport-Security": "max-age=31536000; includeSubDomains",
-		"Referrer-Policy":           "strict-origin-when-cross-origin",
+		"X-Content-Type-Options": "nosniff",
+		"X-Frame-Options":        "DENY",
+		"X-XSS-Protection":       "0",
+		"Referrer-Policy":        "strict-origin-when-cross-origin",
 	}
 
 	for header, want := range expected {
@@ -76,8 +75,8 @@ func TestSecurityHeadersMiddleware(t *testing.T) {
 			t.Errorf("header %s: expected %q, got %q", header, want, got)
 		}
 	}
-	if csp := rec.Header().Get("Content-Security-Policy"); csp == "" {
-		t.Error("expected Content-Security-Policy header to be set")
+	if csp := rec.Header().Get("Content-Security-Policy"); csp != "default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'" {
+		t.Errorf("unexpected Content-Security-Policy: %q", csp)
 	}
 	if pp := rec.Header().Get("Permissions-Policy"); pp == "" {
 		t.Error("expected Permissions-Policy header to be set")

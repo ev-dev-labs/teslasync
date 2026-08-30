@@ -4,9 +4,9 @@ import { BarChart3 } from 'lucide-react';
 
 import { GlassPanel } from '@/components/ui';
 import { PanelTitle } from '@/components/ui/Typography';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ChartTooltip,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  ChartTooltip, ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { getChartFontSize } from '@/lib/chartTypography';
 import type { FeatureCompositionRow, FeatureFlagKind } from './parseFeatureFlags';
@@ -59,37 +59,37 @@ export function FeatureConfigComposition({
         {t('featureConfig.composition', 'Enabled vs Disabled by Type')}
       </PanelTitle>
 
-      {isLoading ? (
-        <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
-          <Skeleton height={224} />
-        </div>
-      ) : error ? (
-        <QueryError error={error} onRetry={onRetry} />
-      ) : chartData.length === 0 ? (
-        <EmptyState
-          /* no-action: transient — no feature-config rows to chart; header Refresh CTA owns recovery */
-          icon={<BarChart3 className="h-8 w-8" aria-hidden="true" />}
-          message={t('featureConfig.noComposition', 'No feature composition to chart yet.')}
-        />
-      ) : (
-        <div
-          className="h-56 sm:h-64 xl:h-72"
-          role="img"
-          aria-label={t('featureConfig.compositionChartLabel', 'Enabled versus disabled feature counts grouped by feature type')}
-        >
+      <EmbeddedChart
+        chartKey="admin-feature-config-composition"
+        title={t('featureConfig.composition', 'Enabled vs Disabled by Type')}
+        ariaLabel={t('featureConfig.compositionChartLabel', 'Enabled versus disabled feature counts grouped by feature type')}
+        loading={isLoading}
+        error={error instanceof Error ? error : error ? new Error(String(error)) : undefined}
+        onRetry={onRetry}
+        empty={!error && !isLoading && chartData.length === 0}
+        emptyMessage={t('featureConfig.noComposition', 'No feature composition to chart yet.')}
+        data={chartData}
+        dataColumns={[
+          { key: 'name', label: t('featureConfig.type.label', 'Type') },
+          { key: 'enabled', label: t('featureConfig.enabled', 'Enabled') },
+          { key: 'disabled', label: t('featureConfig.disabled', 'Disabled') },
+        ]}
+      >
+        {({ hiddenSeries }) => (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData} barGap={6}>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
               <XAxis dataKey="name" tick={{ fill: 'var(--text-muted)', fontSize: getChartFontSize(12) }} />
               <YAxis tick={{ fill: 'var(--text-muted)', fontSize: getChartFontSize(10) }} allowDecimals={false} />
               <Tooltip content={<ChartTooltip />} cursor={{ fill: 'var(--glass-border)', fillOpacity: 0.2 }} />
-              <Legend wrapperStyle={{ fontSize: getChartFontSize(12) }} />
+              <ChartLegend />
               <Bar
                 dataKey="enabled"
                 name={t('featureConfig.enabled', 'Enabled')}
                 fill={ENABLED_COLOR}
                 fillOpacity={0.85}
                 radius={[4, 4, 0, 0]}
+                hide={hiddenSeries?.isHidden('enabled') ?? false}
               />
               <Bar
                 dataKey="disabled"
@@ -97,11 +97,12 @@ export function FeatureConfigComposition({
                 fill={DISABLED_COLOR}
                 fillOpacity={0.7}
                 radius={[4, 4, 0, 0]}
+                hide={hiddenSeries?.isHidden('disabled') ?? false}
               />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      )}
+        )}
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

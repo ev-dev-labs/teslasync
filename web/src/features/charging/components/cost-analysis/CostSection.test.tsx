@@ -23,7 +23,7 @@
  * DrivingSection test). Only `react-i18next` is mocked so `t(key, fallback)` /
  * `t(key, fallback, { vars })` render the English fallback deterministically —
  * exactly how QueryError builds "{{thing}} not found" and how CostSection builds
- * its "No data available" default. `@testing-library/user-event` is
+ * its default selected-window guidance. `@testing-library/user-event` is
  * intentionally NOT a dependency of this repo; `fireEvent.click` is the
  * established interaction convention for the Retry CTA.
  */
@@ -239,7 +239,7 @@ describe('CostSection — error branch', () => {
       isEmpty: true,
       emptyMessage: 'Nothing here',
     });
-    expect(screen.getByText('Server error')).toBeInTheDocument();
+    expect(screen.getByText('Service unavailable')).toBeInTheDocument();
     expect(screen.queryByText('Nothing here')).toBeNull();
   });
 });
@@ -257,12 +257,13 @@ describe('CostSection — empty branch', () => {
     expect(screen.queryByTestId('body')).toBeNull();
   });
 
-  it('falls back to a localized default when empty without a message (never a blank panel)', () => {
-    // Regression guard: `emptyMessage ?? ''` previously rendered a message-less
-    // <EmptyState> — a blank panel. It now defaults to common.noData.
+  it('falls back to localized charging guidance when empty without a message', () => {
     renderSection({ isEmpty: true, emptyMessage: undefined });
 
-    expect(screen.getByText('No data available')).toBeInTheDocument();
+    expect(
+      screen.getByText('No charging records match the current selection.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Adjust the vehicle or date filters/)).toBeInTheDocument();
     expect(screen.getByRole('status')).toBeInTheDocument();
   });
 

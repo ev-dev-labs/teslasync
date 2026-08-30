@@ -71,6 +71,54 @@ func (f *driveTrackingFakeState) snapshotCalls() []driveStateCallRecord {
 // Compile-time guarantee.
 var _ signal.StateReader = (*driveTrackingFakeState)(nil)
 
+func TestTrackDriving_SpeedZeroTimeoutUsesEventTime(t *testing.T) {
+	const vehicleID = int64(71)
+	eventStart := time.Date(2026, 8, 22, 10, 0, 0, 0, time.UTC)
+	store := signal.New()
+	store.Set(vehicleID, "Gear", "D", eventStart)
+	active := &streamingDrive{
+		DriveID:            9,
+		VehicleID:          vehicleID,
+		StartTime:          eventStart.Add(-10 * time.Minute),
+		accumulatedSignals: map[string]interface{}{},
+	}
+	tracker := &TelemetrySessionTracker{
+		localSignals:  store,
+		activeDrives:  map[int64]*streamingDrive{vehicleID: active},
+		activeCharges: map[int64]*streamingCharge{},
+	}
+
+	tracker.trackDriving(
+		context.Background(),
+		vehicleID,
+		"VIN",
+		map[string]interface{}{"VehicleSpeed": float32(0)},
+		nil,
+		eventStart,
+		map[string]time.Time{"VehicleSpeed": eventStart},
+	)
+	if !active.LastSpeedZeroTime.Equal(eventStart) {
+		t.Fatalf("first zero-speed timestamp = %v, want %v", active.LastSpeedZeroTime, eventStart)
+	}
+
+	later := eventStart.Add(3 * time.Minute)
+	tracker.trackDriving(
+		context.Background(),
+		vehicleID,
+		"VIN",
+		map[string]interface{}{"VehicleSpeed": float32(0)},
+		nil,
+		later,
+		map[string]time.Time{"VehicleSpeed": later},
+	)
+	if !active.LastSpeedZeroTime.Equal(later) {
+		t.Fatalf("zero-speed timeout reset = %v, want event time %v", active.LastSpeedZeroTime, later)
+	}
+	if _, ok := tracker.activeDrives[vehicleID]; !ok {
+		t.Fatal("drive ended despite last-known Gear=D")
+	}
+}
+
 // TestDriveTracking_SetDriveStateReader_RoundTrip pins the wiring seam
 // installed in this prompt: SetDriveStateReader stashes the reader in
 // the package-level driveStateRegistry, and driveStateReader recovers

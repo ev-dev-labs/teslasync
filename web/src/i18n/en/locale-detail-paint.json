@@ -1,0 +1,13 @@
+{
+  "paint": {
+    "label": "Paint",
+    "pickerLabel": "Vehicle paint color",
+    "reset": "Reset to auto-detected",
+    "detected": "Auto-detected",
+    "pearlWhite": "Pearl White Multi-Coat",
+    "midnightSilver": "Midnight Silver Metallic",
+    "deepBlue": "Deep Blue Metallic",
+    "solidBlack": "Solid Black",
+    "redMulticoat": "Red Multi-Coat"
+  }
+}

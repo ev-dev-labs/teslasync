@@ -14,6 +14,8 @@ interface ChargingPolicyMatrixProps {
   onAdd: () => void;
   onEdit: (item: FleetChargingPolicy) => void;
   onDelete: (item: FleetChargingPolicy) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 const dayKeys = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const;
@@ -26,6 +28,8 @@ export function ChargingPolicyMatrix({
   onAdd,
   onEdit,
   onDelete,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: ChargingPolicyMatrixProps) {
   const { t } = useTranslation();
   const { formatPower } = useUnits();
@@ -85,22 +89,22 @@ export function ChargingPolicyMatrix({
       align: 'right',
       render: (item) => (
         <div className="flex justify-end gap-1">
-          <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0" aria-label={t('fleetOps.policies.edit', 'Edit {{name}}', { name: item.name })} onClick={() => onEdit(item)}>
+          <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0" aria-label={t('fleetOps.policies.edit', 'Edit {{name}}', { name: item.name })} onClick={() => onEdit(item)} disabled={actionsDisabled} title={actionsDisabledReason}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0 text-rose-300" aria-label={t('fleetOps.policies.delete', 'Delete {{name}}', { name: item.name })} onClick={() => onDelete(item)}>
+          <Button type="button" variant="ghost" size="sm" className="min-h-11 min-w-11 px-0 text-rose-300" aria-label={t('fleetOps.policies.delete', 'Delete {{name}}', { name: item.name })} onClick={() => onDelete(item)} disabled={actionsDisabled} title={actionsDisabledReason}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
       ),
     },
-  ], [formatPower, onDelete, onEdit, t]);
+  ], [actionsDisabled, actionsDisabledReason, formatPower, onDelete, onEdit, t]);
 
   return (
     <GlassPanel className="p-5">
       <div className="flex items-center justify-between gap-3">
         <PanelTitle>{t('fleetOps.policies.title', 'Charging policy matrix')}</PanelTitle>
-        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd}>
+        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
           {t('fleetOps.policies.add', 'Add policy')}
         </Button>
       </div>
@@ -110,7 +114,9 @@ export function ChargingPolicyMatrix({
         <EmptyState
           icon={<BatteryCharging className="h-8 w-8" />}
           message={t('fleetOps.policies.empty', 'No charging policies are configured.')}
-          action={{ label: t('fleetOps.policies.add', 'Add policy'), onClick: onAdd }}
+          action={actionsDisabled
+            ? undefined
+            : { label: t('fleetOps.policies.add', 'Add policy'), onClick: onAdd }}
         />
       ) : (
         <div className="mt-4">

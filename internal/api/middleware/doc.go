@@ -19,8 +19,9 @@
 //   - Recovery        — converts panics into a structured 500 with stack trace.
 //   - Tracing         — otelhttp inbound span "http.request" with method+path
 //     formatter. Falls back to the noop tracer when OTel is not initialised.
-//   - SecurityHeaders — pins CSP / HSTS / X-Content-Type-Options / X-Frame-
+//   - SecurityHeaders — pins API CSP / X-Content-Type-Options / X-Frame-
 //     Options / X-XSS-Protection / Referrer-Policy / Permissions-Policy.
+//     HSTS is emitted only by the TLS-terminating ingress.
 //   - Prometheus      — legacy {method,path,status} HTTP metrics kept for
 //     backwards-compatible Grafana dashboards during the RED migration window.
 //     Mutually exclusive with Metrics at the data layer (two histograms ≠ one

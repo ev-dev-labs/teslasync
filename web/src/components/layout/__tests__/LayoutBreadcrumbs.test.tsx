@@ -32,6 +32,7 @@ interface RenderOpts {
   withProvider?: boolean;
   /** Optional override map to push through context before asserting. */
   register?: Record<string, string>;
+  variant?: 'page' | 'workspace';
 }
 
 function renderCrumbs({
@@ -40,11 +41,12 @@ function renderCrumbs({
   className,
   withProvider = true,
   register,
+  variant,
 }: RenderOpts) {
   const element = (
     <>
       {register ? <RegisterOverride map={register} /> : null}
-      <LayoutBreadcrumbs className={className} />
+      <LayoutBreadcrumbs className={className} variant={variant} />
     </>
   );
   const routed = (
@@ -66,6 +68,18 @@ describe('LayoutBreadcrumbs', () => {
     expect(container.querySelector('a[href="/"]')).toBeInTheDocument();
     expect(screen.getByText('Drives').closest('a')).toBeNull();
     expect(screen.getByText('Ctrl+K to jump')).toBeInTheDocument();
+  });
+
+  it('uses compact workspace framing without duplicating the command-search hint', () => {
+    const { container } = renderCrumbs({
+      url: '/drives',
+      pattern: '/drives',
+      variant: 'workspace',
+    });
+    expect(screen.getByRole('navigation', { name: 'Breadcrumb' })).toBeInTheDocument();
+    expect(screen.queryByText('Ctrl+K to jump')).toBeNull();
+    expect(container.firstElementChild).toHaveClass('min-h-5');
+    expect(container.firstElementChild).not.toHaveClass('mb-5');
   });
 
   it('renders nothing for an unknown / chrome-less route (empty chain)', () => {

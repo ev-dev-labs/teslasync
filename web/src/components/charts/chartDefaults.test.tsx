@@ -13,21 +13,29 @@ function mount(node: ReturnType<typeof areaGradient>) {
 
 describe('AREA_DEFAULTS', () => {
   it('exposes the exact smoothing/animation contract callers spread onto <Area>', () => {
-    expect(AREA_DEFAULTS).toEqual({
+    // Spread first: `animationDuration` and `isAnimationActive` are
+    // getters (A11Y-08) that re-read the reduced-motion preference on
+    // every render, so the object must be evaluated the way call sites
+    // evaluate it.
+    expect({ ...AREA_DEFAULTS }).toEqual({
       type: 'monotone',
       dot: false,
-      connectNulls: true,
+      connectNulls: false,
       strokeWidth: 2,
       animationDuration: 300,
+      isAnimationActive: true,
     })
   })
 
   it('pins each individual default so a silent field drift is caught', () => {
     expect(AREA_DEFAULTS.type).toBe('monotone')
     expect(AREA_DEFAULTS.dot).toBe(false)
-    expect(AREA_DEFAULTS.connectNulls).toBe(true)
+    expect(AREA_DEFAULTS.connectNulls).toBe(false)
     expect(AREA_DEFAULTS.strokeWidth).toBe(2)
     expect(AREA_DEFAULTS.animationDuration).toBe(300)
+    // Recharts animates by default; the explicit `true` is what makes
+    // the reduced-motion `false` meaningful rather than a no-op.
+    expect(AREA_DEFAULTS.isAnimationActive).toBe(true)
   })
 
   it('is a valid props bag that renders when spread onto a recharts <Area>', () => {

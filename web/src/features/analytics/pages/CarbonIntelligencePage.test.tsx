@@ -404,7 +404,7 @@ describe('CarbonIntelligencePage', () => {
     expect(screen.getAllByText(
       'Select a vehicle to load this vehicle-dependent evidence.',
     ).length).toBeGreaterThan(0);
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
     expect(h.intensityRefetch).toHaveBeenCalledTimes(1);
     expect(h.periodRefetch).not.toHaveBeenCalled();
     expect(h.lifetimeRefetch).not.toHaveBeenCalled();

@@ -17,9 +17,9 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState, Skeleton, AlertBanner, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import {
-  ChartTooltip, AREA_DEFAULTS,
+  ChartTooltip, ChartLegend, EmbeddedChart, AREA_DEFAULTS,
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Legend, BarChart, Bar,
+  ResponsiveContainer, BarChart, Bar,
   chartMarginLabeled, axisTick, chartAnimation,
 } from '@/components/charts';
 
@@ -767,32 +767,41 @@ export default function FleetComparePage() {
                   message={t('comparison.noMonthlyData', 'No monthly data available yet')}
                 />
               ) : (
-                <div className="h-64 sm:h-72">
-                  {/* chart-a11y:no-table multi-vehicle overlay — compare via each vehicle's page */}
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart
-                      data={monthlyChartData}
-                      margin={chartMarginLabeled}
-                      aria-label={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="month" tick={axisTick} />
-                      <YAxis tick={axisTick} />
-                      <Tooltip
-                        content={({ active, payload, label }) => (
-                          <ChartTooltip
-                            active={active}
-                            payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                            label={label as string}
-                          />
-                        )}
-                      />
-                      <Legend />
-                      <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} stroke={palette[0]} {...chartAnimation} />
-                      <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} stroke={palette[1]} {...chartAnimation} />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
+                <EmbeddedChart
+                  title={t('comparison.monthlyDistance', 'Monthly Distance')}
+                  ariaLabel={t('comparison.monthlyDistance.aria', 'Monthly distance comparison line chart between two vehicles')}
+                  data={monthlyChartData}
+                  dataColumns={[
+                    { key: 'month', label: t('comparison.month', 'Month') },
+                    { key: 'distA', label: nameA, format: (value) => fmtNumber(Number(value ?? 0)) },
+                    { key: 'distB', label: nameB, format: (value) => fmtNumber(Number(value ?? 0)) },
+                  ]}
+                  height={288}
+                  mobileHeight={256}
+                  chartKey="fleet-compare-monthly-distance"
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={monthlyChartData} margin={chartMarginLabeled}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis dataKey="month" tick={axisTick} />
+                        <YAxis tick={axisTick} />
+                        <Tooltip
+                          content={({ active, payload, label }) => (
+                            <ChartTooltip
+                              active={active}
+                              payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                              label={label as string}
+                            />
+                          )}
+                        />
+                        <ChartLegend />
+                        <Line {...AREA_DEFAULTS} dataKey="distA" name={nameA} stroke={palette[0]} hide={hiddenSeries?.isHidden('distA')} {...chartAnimation} />
+                        <Line {...AREA_DEFAULTS} dataKey="distB" name={nameB} stroke={palette[1]} hide={hiddenSeries?.isHidden('distB')} {...chartAnimation} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               )}
             </GlassPanel>
 
@@ -813,32 +822,41 @@ export default function FleetComparePage() {
                   message={t('comparison.noDrivesData', 'No drive data available yet')}
                 />
               ) : (
-                <div className="h-64 sm:h-72">
-                  {/* chart-a11y:no-table multi-vehicle overlay — fleet rollup; compare via per-vehicle pages */}
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={drivesChartData}
-                      margin={chartMarginLabeled}
-                      aria-label={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis dataKey="month" tick={axisTick} />
-                      <YAxis tick={axisTick} allowDecimals={false} />
-                      <Tooltip
-                        content={({ active, payload, label }) => (
-                          <ChartTooltip
-                            active={active}
-                            payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
-                            label={label as string}
-                          />
-                        )}
-                      />
-                      <Legend />
-                      <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} {...chartAnimation} />
-                      <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} {...chartAnimation} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                <EmbeddedChart
+                  title={t('comparison.drivesPerMonth', 'Drives per Month')}
+                  ariaLabel={t('comparison.drivesPerMonth.aria', 'Drives per month bar chart comparing two vehicles')}
+                  data={drivesChartData}
+                  dataColumns={[
+                    { key: 'month', label: t('comparison.month', 'Month') },
+                    { key: 'drivesA', label: nameA, format: (value) => fmtNumber(Number(value ?? 0)) },
+                    { key: 'drivesB', label: nameB, format: (value) => fmtNumber(Number(value ?? 0)) },
+                  ]}
+                  height={288}
+                  mobileHeight={256}
+                  chartKey="fleet-compare-drives-per-month"
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={drivesChartData} margin={chartMarginLabeled}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis dataKey="month" tick={axisTick} />
+                        <YAxis tick={axisTick} allowDecimals={false} />
+                        <Tooltip
+                          content={({ active, payload, label }) => (
+                            <ChartTooltip
+                              active={active}
+                              payload={payload as { name: string; value: unknown; color?: string; fill?: string; unit?: string }[]}
+                              label={label as string}
+                            />
+                          )}
+                        />
+                        <ChartLegend />
+                        <Bar dataKey="drivesA" name={nameA} fill={palette[0]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drivesA')} {...chartAnimation} />
+                        <Bar dataKey="drivesB" name={nameB} fill={palette[1]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drivesB')} {...chartAnimation} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               )}
             </GlassPanel>
           </div>

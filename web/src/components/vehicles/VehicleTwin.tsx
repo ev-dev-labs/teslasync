@@ -10,6 +10,8 @@ import {
 } from '@/lib/vehicleColors';
 import { buildCompositorUrl, COMPOSITOR_METRICS } from '@/lib/teslaCompositor';
 import { useVehiclePaint } from '@/hooks/useVehiclePaint';
+import { ambientFrames, ambientLoop } from '@/components/motion/ambient';
+import { useMotionPreference } from '@/hooks/useMotionPreference';
 
 const SIZE_MAP = { sm: 300, md: 440, lg: 560 } as const;
 const VIEWBOX_WIDTH = 560;
@@ -331,8 +333,8 @@ function ChargingUnderglow() {
         ry={16}
         fill="rgba(34,197,94,0.18)"
         filter={`url(#${ids.glow})`}
-        animate={{ opacity: [0.2, 0.55, 0.2], rx: [160, 205, 160] }}
-        transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+        animate={ambientFrames({ opacity: [0.2, 0.55, 0.2], rx: [160, 205, 160] })}
+        transition={ambientLoop({ duration: 2.4, repeat: Infinity, ease: 'easeInOut' })}
       />
       <motion.path
         d="M 152 246 C 240 253 360 253 446 244"
@@ -340,8 +342,8 @@ function ChargingUnderglow() {
         stroke="rgba(34,197,94,0.38)"
         strokeWidth={2}
         strokeLinecap="round"
-        animate={{ opacity: [0.18, 0.75, 0.18] }}
-        transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
+        animate={ambientFrames({ opacity: [0.18, 0.75, 0.18] })}
+        transition={ambientLoop({ duration: 1.8, repeat: Infinity, ease: 'easeInOut' })}
       />
     </g>
   );
@@ -625,14 +627,14 @@ function BodyReflections() {
         stroke={`url(#${ids.shoulderHighlight})`}
         strokeWidth={1.4}
         strokeLinecap="round"
-        animate={{ opacity: [0.4, 0.7, 0.4] }}
-        transition={{ duration: 5.5, repeat: Infinity, ease: 'easeInOut' }}
+        animate={ambientFrames({ opacity: [0.4, 0.7, 0.4] })}
+        transition={ambientLoop({ duration: 5.5, repeat: Infinity, ease: 'easeInOut' })}
       />
       <motion.path
         d="M 212 154 C 280 150 380 145 458 136 L 450 144 C 372 151 282 156 218 160 Z"
         fill={`url(#${ids.softReflection})`}
-        animate={{ opacity: [0.28, 0.55, 0.28] }}
-        transition={{ duration: 6.5, repeat: Infinity, ease: 'easeInOut' }}
+        animate={ambientFrames({ opacity: [0.28, 0.55, 0.28] })}
+        transition={ambientLoop({ duration: 6.5, repeat: Infinity, ease: 'easeInOut' })}
       />
       <motion.path
         d="M 118 166 C 230 148 390 134 508 120"
@@ -641,8 +643,8 @@ function BodyReflections() {
         strokeWidth={1}
         strokeLinecap="round"
         strokeDasharray="58 420"
-        animate={{ strokeDashoffset: [0, -420], opacity: [0, 0.32, 0] }}
-        transition={{ duration: 7.5, repeat: Infinity, ease: 'easeInOut' }}
+        animate={ambientFrames({ strokeDashoffset: [0, -420], opacity: [0, 0.32, 0] })}
+        transition={ambientLoop({ duration: 7.5, repeat: Infinity, ease: 'easeInOut' })}
       />
     </g>
   );
@@ -739,8 +741,8 @@ function SideWindows({
           strokeWidth={1}
           strokeLinecap="round"
           strokeDasharray="42 260"
-          animate={{ strokeDashoffset: [0, -260], opacity: [0.1, 0.42, 0.1] }}
-          transition={{ duration: 6.8, repeat: Infinity, ease: 'easeInOut' }}
+          animate={ambientFrames({ strokeDashoffset: [0, -260], opacity: [0.1, 0.42, 0.1] })}
+          transition={ambientLoop({ duration: 6.8, repeat: Infinity, ease: 'easeInOut' })}
         />
       </g>
 
@@ -788,8 +790,8 @@ function SideWindows({
           stroke={C.amber}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={{ opacity: [0.35, 1, 0.35] }}
-          transition={{ duration: 1.4, repeat: Infinity }}
+          animate={ambientFrames({ opacity: [0.35, 1, 0.35] })}
+          transition={ambientLoop({ duration: 1.4, repeat: Infinity })}
         />
       )}
       <InteractiveHotspot
@@ -910,8 +912,8 @@ function PassengerDoorAlerts({
           stroke={C.doorOpen}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={{ opacity: [0.45, 1, 0.45] }}
-          transition={{ duration: 1.2, repeat: Infinity }}
+          animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
+          transition={ambientLoop({ duration: 1.2, repeat: Infinity })}
         />
       )}
       {passengerRear && (
@@ -921,8 +923,8 @@ function PassengerDoorAlerts({
           stroke={C.doorOpen}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={{ opacity: [0.45, 1, 0.45] }}
-          transition={{ duration: 1.2, repeat: Infinity }}
+          animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
+          transition={ambientLoop({ duration: 1.2, repeat: Infinity })}
         />
       )}
     </g>
@@ -976,14 +978,14 @@ function HeadlightGlows({
             ry={6}
             fill={C.headlightGlow}
             filter={`url(#${ids.glow})`}
-            animate={{ opacity: driveIn ? [0.1, 0.95, 0.22, 0.85, 0.28] : [0.35, 0.85, 0.35] }}
-            transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+            animate={ambientFrames({ opacity: driveIn ? [0.1, 0.95, 0.22, 0.85, 0.28] : [0.35, 0.85, 0.35] })}
+            transition={ambientLoop(driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' })}
           />
           <motion.path
             d="M 44 194 L 0 180 L 0 216 Z"
             fill={C.headlightBeam}
-            animate={{ opacity: driveIn ? [0, 0.72, 0.18, 0.58, 0.12] : [0.45, 0.8, 0.45] }}
-            transition={driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' }}
+            animate={ambientFrames({ opacity: driveIn ? [0, 0.72, 0.18, 0.58, 0.12] : [0.45, 0.8, 0.45] })}
+            transition={ambientLoop(driveIn ? { duration: 1.35, ease: 'easeInOut' } : { duration: 2.8, repeat: Infinity, ease: 'easeInOut' })}
           />
         </>
       )}
@@ -994,8 +996,8 @@ function HeadlightGlows({
           rx={6}
           ry={3.5}
           fill={C.amber}
-          animate={{ opacity: [1, 0.15, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
+          animate={ambientFrames({ opacity: [1, 0.15, 1] })}
+          transition={ambientLoop({ duration: 0.8, repeat: Infinity })}
         />
       )}
     </g>
@@ -1043,8 +1045,8 @@ function TaillightGlows({
           stroke={C.amber}
           strokeWidth={2}
           strokeLinecap="round"
-          animate={{ opacity: [1, 0.15, 1] }}
-          transition={{ duration: 0.8, repeat: Infinity }}
+          animate={ambientFrames({ opacity: [1, 0.15, 1] })}
+          transition={ambientLoop({ duration: 0.8, repeat: Infinity })}
         />
       )}
       {driveIn && (
@@ -1056,7 +1058,7 @@ function TaillightGlows({
             ry={9}
             fill={C.taillightActive}
             filter={`url(#${ids.glow})`}
-            animate={{ opacity: [0, 0.95, 0.18, 0.9, 0.22] }}
+            animate={ambientFrames({ opacity: [0, 0.95, 0.18, 0.9, 0.22] })}
             transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
           />
           <motion.path
@@ -1065,7 +1067,7 @@ function TaillightGlows({
             stroke={C.taillightActive}
             strokeWidth={3.6}
             strokeLinecap="round"
-            animate={{ opacity: [0, 1, 0.2, 1, 0.35] }}
+            animate={ambientFrames({ opacity: [0, 1, 0.2, 1, 0.35] })}
             transition={{ delay: 1.2, duration: 0.75, ease: 'easeOut' }}
           />
         </>
@@ -1106,8 +1108,8 @@ function ChargePortIndicator({
             cy={cy}
             r={5}
             fill={C.chargeGreen}
-            animate={{ opacity: [0.45, 1, 0.45] }}
-            transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+            animate={ambientFrames({ opacity: [0.45, 1, 0.45] })}
+            transition={ambientLoop({ duration: 1.2, repeat: Infinity, ease: 'easeInOut' })}
           />
           <motion.circle
             cx={cx}
@@ -1116,8 +1118,8 @@ function ChargePortIndicator({
             fill="none"
             stroke={C.chargeGreen}
             strokeWidth={1}
-            animate={{ opacity: [0.75, 0, 0.75], r: [8, 18, 8] }}
-            transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
+            animate={ambientFrames({ opacity: [0.75, 0, 0.75], r: [8, 18, 8] })}
+            transition={ambientLoop({ duration: 1.5, repeat: Infinity, ease: 'easeInOut' })}
           />
           <path
             d="M 532 129.5 L 526.5 138 L 532 138 L 529 144.5 L 538.5 134 L 533 134 Z"
@@ -1166,8 +1168,8 @@ function SecurityOverlay({
           fill="none"
           stroke={C.sentryGlow}
           strokeWidth={1.2}
-          animate={{ opacity: [0.65, 0.18, 0.65], rx: [13, 21, 13] }}
-          transition={{ duration: 2, repeat: Infinity }}
+          animate={ambientFrames({ opacity: [0.65, 0.18, 0.65], rx: [13, 21, 13] })}
+          transition={ambientLoop({ duration: 2, repeat: Infinity })}
         />
       )}
       {sentryMode && (
@@ -1175,8 +1177,8 @@ function SecurityOverlay({
           <Tooltip content="Sentry mode active" side="top">
             <motion.span
               className="flex items-center justify-center w-full h-full rounded-full bg-[var(--bg-app)]"
-              animate={{ opacity: [1, 0.45, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              animate={ambientFrames({ opacity: [1, 0.45, 1] })}
+              transition={ambientLoop({ duration: 2, repeat: Infinity })}
             >
               <Shield className="w-4 h-4" fill={C.sentryRed} stroke={C.sentryRed} />
             </motion.span>
@@ -1435,6 +1437,14 @@ export function VehicleTwin({
   paint: paintOverride,
   model,
 }: VehicleTwinProps) {
+  // A11Y-08 (WCAG 2.2.2). Every looping layer below is wrapped in
+  // `ambientLoop` / `ambientFrames`, which read the preference
+  // synchronously at render time. Subscribing to it once here is what
+  // makes a mid-session OS toggle take effect: the hook re-renders this
+  // subtree, and each helper re-evaluates on the way down. Without this
+  // call the scene would keep animating until some unrelated state
+  // change happened to repaint it.
+  useMotionPreference();
   const width = SIZE_MAP[size];
   const height = Math.round(width * ASPECT_RATIO);
 

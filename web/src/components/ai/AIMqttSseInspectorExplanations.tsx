@@ -135,6 +135,10 @@ function InnerSection({ fromUnix, toUnix }: InnerSectionProps) {
     url: '/ai/system/streams/explain',
     body,
     onEvent: () => {},
+    // AI-01: time-window scope is part of stream identity — changing
+    // the window aborts an in-flight explanation and clears the
+    // previous window's narrative before the new scope streams in.
+    scopeKey: haveWindow ? `${fromUnix}:${toUnix}` : null,
   })
 
   return (

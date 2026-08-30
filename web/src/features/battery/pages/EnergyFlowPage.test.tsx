@@ -31,6 +31,12 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 
+vi.mock('@/components/charts', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return { ...actual, ...chartTestDoubles };
+});
+
 // i18n stub: return the fallback string, interpolating {{var}} tokens so
 // assertions can target the rendered English copy. When called with a bare
 // key (e.g. t('Charging')) it echoes the key.

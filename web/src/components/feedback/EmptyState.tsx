@@ -7,6 +7,8 @@ interface EmptyStateProps {
   icon?: React.ReactNode;
   title?: string;
   message: string;
+  /** Supporting context that explains prerequisites or the next expected system event. */
+  description?: string;
   /** Imperative action — runs on click (mutates state, opens modal, etc.) */
   action?: { label: string; onClick: () => void };
   /** Navigation action — preferred when the CTA just goes somewhere. Takes priority over `action`. */
@@ -18,29 +20,50 @@ interface EmptyStateProps {
 // shared Button constants rather than hand-copied, so the visual stays in
 // lock-step with the component library by construction — a re-skin of the
 // neutral variants now reaches this CTA automatically.
-const linkButtonClasses = cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-8 px-3 text-xs');
+const linkButtonClasses = cn(BUTTON_BASE, BUTTON_VARIANTS.secondary, 'h-10 px-4 text-sm');
 
-export function EmptyState({ icon, title, message, action, actionTo, className }: EmptyStateProps) {
+export function EmptyState({
+  icon,
+  title,
+  message,
+  description,
+  action,
+  actionTo,
+  className,
+}: EmptyStateProps) {
   return (
     <div
       role="status"
-      className={cn('flex flex-col items-center justify-center py-16 text-center', className)}
+      className={cn('flex flex-col items-center justify-center px-4 py-16 text-center', className)}
     >
-      {icon && <div className="mb-4 text-[var(--text-muted)]">{icon}</div>}
+      {icon && (
+        <div className="mb-5 rounded-shape-xl border border-[var(--border-default)] bg-[var(--surface-2)] p-3 text-[var(--theme-primary)] shadow-e1">
+          {icon}
+        </div>
+      )}
       {title && (
-        <Heading level="panel" className="mb-1">
+        <Heading level="panel" className="mb-2">
           {title}
         </Heading>
       )}
-      <Text variant="bodySm" as="p" className="mb-4 max-w-md">
+      <Text
+        variant="bodySm"
+        as="p"
+        className={cn(description ? 'mb-2' : 'mb-6', 'max-w-lg leading-relaxed')}
+      >
         {message}
       </Text>
+      {description && (
+        <Text variant="bodySm" as="p" color="muted" className="mb-6 max-w-lg leading-relaxed">
+          {description}
+        </Text>
+      )}
       {actionTo ? (
         <Link to={actionTo.to} className={linkButtonClasses}>
           {actionTo.label}
         </Link>
       ) : action ? (
-        <CtaButton onClick={action.onClick} variant="secondary" size="sm">
+        <CtaButton onClick={action.onClick} variant="secondary" size="md">
           {action.label}
         </CtaButton>
       ) : null}

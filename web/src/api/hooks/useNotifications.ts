@@ -53,6 +53,13 @@ export type {
 
 export type AlertRuleSaveRequest = AlertRuleInput | (AlertRuleUpdate & Pick<AlertRule, 'id'>);
 
+export interface AlertListScope {
+  from?: string;
+  to?: string;
+  vehicle_id?: number;
+  fetchAll?: boolean;
+}
+
 /**
  * Payload for creating a notification channel: omits server-managed fields.
  * Remains a discriminated union so each `kind` requires its own config shape.
@@ -72,6 +79,18 @@ export type NotificationChannelInput =
 
 export const notificationKeys = {
   alerts: ['alerts'] as const,
+  alertList: (scope: AlertListScope) =>
+    [
+      'alerts',
+      'list',
+      {
+        from: scope.from ?? '',
+        to: scope.to ?? '',
+        vehicle_id: scope.vehicle_id ?? null,
+        fetchAll: scope.fetchAll ?? false,
+      },
+    ] as const,
+  priorityAlerts: ['alerts', 'priority'] as const,
   alertHistory: (limit: number) => ['alerts', 'history', limit] as const,
   alertDetail: (id: number) => ['alerts', 'detail', id] as const,
   alertRules: ['alert-rules'] as const,
@@ -136,12 +155,105 @@ function serializeNotificationFilters(filters: NotificationFilters): string {
 // Exported only for unit tests; callers should not depend on the URL shape.
 export const __serializeNotificationFiltersForTest = serializeNotificationFilters;
 
-export function useAlerts() {
+const ALERT_LIST_PAGE_SIZE = 1000;
+
+function serializeAlertListScope(
+  scope: AlertListScope,
+  page?: {
+    limit: number;
+    before_created_at?: string;
+    before_id?: number;
+  },
+): string {
+  const params = new URLSearchParams();
+  if (scope.from) params.set('from', scope.from);
+  if (scope.to) params.set('to', scope.to);
+  if (typeof scope.vehicle_id === 'number') {
+    params.set('vehicle_id', String(scope.vehicle_id));
+  }
+  if (page) {
+    params.set('limit', String(page.limit));
+    if (page.before_created_at && page.before_id) {
+      params.set('before_created_at', page.before_created_at);
+      params.set('before_id', String(page.before_id));
+    }
+  }
+  return params.toString();
+}
+
+export function useAlerts(scope: AlertListScope = {}) {
+  const isScoped = Boolean(scope.from || scope.to || scope.vehicle_id || scope.fetchAll);
   return useQuery({
-    queryKey: notificationKeys.alerts,
-    queryFn: ({ signal }) => request<Alert[]>('/alerts', { signal }),
+    queryKey: isScoped ? notificationKeys.alertList(scope) : notificationKeys.alerts,
+    queryFn: async ({ signal }) => {
+      if (!scope.fetchAll) {
+        const query = serializeAlertListScope(scope);
+        return request<Alert[]>(query ? `/alerts?${query}` : '/alerts', { signal });
+      }
+
+      const alerts: Alert[] = [];
+      let cursor: { created_at: string; id: number } | undefined;
+      let hasMore = true;
+      while (hasMore) {
+        const query = serializeAlertListScope(scope, {
+          limit: ALERT_LIST_PAGE_SIZE,
+          before_created_at: cursor?.created_at,
+          before_id: cursor?.id,
+        });
+        const page = safeArray(
+          await request<Alert[]>(`/alerts?${query}`, { signal }),
+        );
+        alerts.push(...page);
+        hasMore = page.length === ALERT_LIST_PAGE_SIZE;
+        if (hasMore) {
+          const lastAlert = page[page.length - 1];
+          if (!lastAlert?.created_at || lastAlert.id <= 0) {
+            throw new Error('Alert pagination response is missing its cursor fields');
+          }
+          cursor = { created_at: lastAlert.created_at, id: lastAlert.id };
+        }
+      }
+      return alerts;
+    },
     refetchInterval: INTERVALS.STANDARD,
     select: safeArray,
+  });
+}
+
+const PRIORITY_ALERT_PREVIEW_CAP = 50;
+
+export interface PriorityAlertsSnapshot {
+  alerts: Alert[];
+  count: number;
+  hasMore: boolean;
+}
+
+export function usePriorityAlerts() {
+  return useQuery({
+    queryKey: notificationKeys.priorityAlerts,
+    queryFn: async ({ signal }): Promise<PriorityAlertsSnapshot> => {
+      const limit = PRIORITY_ALERT_PREVIEW_CAP + 1;
+      const base = `read=false&archived=false&limit=${limit}`;
+      const [criticalResponse, warningResponse] = await Promise.all([
+        request<Alert[]>(`/alerts?severity=critical&${base}`, { signal }),
+        request<Alert[]>(`/alerts?severity=warn&${base}`, { signal }),
+      ]);
+      const critical = safeArray(criticalResponse);
+      const warnings = safeArray(warningResponse);
+      const hasMore =
+        critical.length > PRIORITY_ALERT_PREVIEW_CAP ||
+        warnings.length > PRIORITY_ALERT_PREVIEW_CAP;
+      const alerts = [
+        ...critical.slice(0, PRIORITY_ALERT_PREVIEW_CAP),
+        ...warnings.slice(0, PRIORITY_ALERT_PREVIEW_CAP),
+      ];
+      return {
+        alerts,
+        count: critical.length + warnings.length,
+        hasMore,
+      };
+    },
+    refetchInterval: INTERVALS.STANDARD,
   });
 }
 
@@ -186,6 +298,54 @@ export function useMarkAlertRead() {
   });
 }
 
+export interface BulkSetAlertsReadInput {
+  ids: number[];
+  read: boolean;
+}
+
+export function useBulkSetAlertsRead() {
+  const qc = useQueryClient();
+  const { error } = useMutationToast();
+  return useOptimisticMutation<
+    { updated: number },
+    BulkSetAlertsReadInput,
+    Alert[]
+  >({
+    mutationFn: ({ ids, read }) =>
+      request<{ updated: number }>(
+        read ? '/notifications/mark-read' : '/notifications/mark-unread',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ ids }),
+        },
+      ),
+    queryKeys: [notificationKeys.alerts],
+    updater: (prev, { ids, read }) => {
+      if (!Array.isArray(prev)) return prev;
+      const selected = new Set(ids);
+      return prev.map((alert) =>
+        selected.has(alert.id) ? { ...alert, is_read: read } : alert,
+      );
+    },
+    broadcast: true,
+    onError: (mutationError, { read }) =>
+      error(
+        mutationError,
+        read
+          ? 'toast.alerts.bulkMarkRead.error'
+          : 'toast.alerts.bulkMarkUnread.error',
+        read
+          ? 'Failed to mark selected alerts as read'
+          : 'Failed to restore selected alerts to unread',
+      ),
+    onSettled: () => {
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.logs });
+      invalidateAndBroadcast(qc, { queryKey: notificationKeys.unreadCount });
+    },
+  });
+}
+
 // Alert acknowledgement and audit timeline.
 
 /**
@@ -215,6 +375,11 @@ export interface AcknowledgeAlertInput {
   note?: string;
 }
 
+export interface AcknowledgeAlertOptions {
+  /** Keep enabled for standalone callers; disable when the caller supplies an Undo toast. */
+  showSuccessToast?: boolean;
+}
+
 /**
  * useAcknowledgeAlert posts to /alerts/{id}/acknowledge with an optional note.
  * Optimistically marks the alert as acknowledged in the inbox cache so the
@@ -222,9 +387,10 @@ export interface AcknowledgeAlertInput {
  * back into the alertDetail cache so the detail view re-renders without an
  * extra fetch.
  */
-export function useAcknowledgeAlert() {
+export function useAcknowledgeAlert(options: AcknowledgeAlertOptions = {}) {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
+  const showSuccessToast = options.showSuccessToast ?? true;
   return useOptimisticMutation<AlertDetail, AcknowledgeAlertInput, Alert[]>({
     mutationFn: ({ id, note }) =>
       request<AlertDetail>(`/alerts/${id}/acknowledge`, {
@@ -252,7 +418,9 @@ export function useAcknowledgeAlert() {
     broadcast: true,
     onSuccess: (detail, vars) => {
       qc.setQueryData(notificationKeys.alertDetail(vars.id), detail);
-      success('toast.alerts.ack.success', 'Alert acknowledged');
+      if (showSuccessToast) {
+        success('toast.alerts.ack.success', 'Alert acknowledged');
+      }
     },
     onError: (e) =>
       error(e, 'toast.alerts.ack.error', 'Failed to acknowledge alert'),

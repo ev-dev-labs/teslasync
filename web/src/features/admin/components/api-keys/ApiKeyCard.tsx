@@ -14,13 +14,22 @@ interface ApiKeyCardProps {
   onRevoke: (id: string) => void;
   onDelete: (key: APIKey) => void;
   revoking?: boolean;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 /** 44×44 square override so icon-only actions meet the WCAG touch-target size. */
 const ICON_BTN = '!h-11 !w-11 !px-0 text-[var(--text-muted)]';
 
 /** A single API key surface: identity + permission + lifecycle metadata + actions. */
-export function ApiKeyCard({ apiKey, onRevoke, onDelete, revoking = false }: ApiKeyCardProps) {
+export function ApiKeyCard({
+  apiKey,
+  onRevoke,
+  onDelete,
+  revoking = false,
+  actionsDisabled = false,
+  actionsDisabledReason,
+}: ApiKeyCardProps) {
   const { t } = useTranslation();
   const expired = isKeyExpired(apiKey);
   const KeyIcon = KEY_ICON;
@@ -64,18 +73,20 @@ export function ApiKeyCard({ apiKey, onRevoke, onDelete, revoking = false }: Api
               variant="ghost"
               onClick={() => onRevoke(apiKey.id)}
               loading={revoking}
+              disabled={actionsDisabled}
               icon={<XCircle className="h-4 w-4" aria-hidden="true" />}
               aria-label={t('apiKeys.revokeAria', 'Revoke key {{name}}', { name: displayName })}
-              title={t('apiKeys.revoke', 'Revoke')}
+              title={actionsDisabledReason ?? t('apiKeys.revoke', 'Revoke')}
               className={cn(ICON_BTN, 'hover:bg-neon-amber/10 hover:text-amber-300')}
             />
           )}
           <Button
             variant="ghost"
             onClick={() => onDelete(apiKey)}
+            disabled={actionsDisabled}
             icon={<Trash2 className="h-4 w-4" aria-hidden="true" />}
             aria-label={t('apiKeys.deleteAria', 'Delete key {{name}}', { name: displayName })}
-            title={t('apiKeys.delete', 'Delete')}
+            title={actionsDisabledReason ?? t('apiKeys.delete', 'Delete')}
             className={cn(ICON_BTN, 'hover:bg-neon-red/10 hover:text-rose-300')}
           />
         </div>

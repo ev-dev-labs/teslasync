@@ -225,7 +225,8 @@ describe('ServiceHealthSection', () => {
     renderSection()
     fireEvent.click(header())
 
-    expect(await screen.findByText('No telemetry data available')).toBeInTheDocument()
+    expect(await screen.findByText('Telemetry service health has not reported yet.')).toBeInTheDocument()
+    expect(screen.getByText(/signal throughput appear after the telemetry service/)).toBeInTheDocument()
     expect(screen.queryByText('Mode')).not.toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })

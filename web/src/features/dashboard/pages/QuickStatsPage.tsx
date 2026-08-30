@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
@@ -53,9 +54,35 @@ export default function QuickStatsPage() {
   // Spotlight vehicle: URL > sticky store > first vehicle. The picker only
   // re-scopes the spotlight — the KPI band stays fleet-wide.
   const { vehicleId, vehicle, vehicles, setVehicleId } = useSelectedVehicle();
-  const { isLoading: vehiclesLoading, error: vehiclesError, refetch: refetchVehicles } = useVehicles();
+  const vehiclesQuery = useVehicles();
+  const {
+    isLoading: vehiclesLoading,
+    error: vehiclesError,
+    refetch: refetchVehicles,
+  } = vehiclesQuery;
   const stateQuery = useVehicleState(vehicleId ?? 0);
   const { data: stateData, refetch: refetchState } = stateQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'fleet-analytics',
+        label: t('dataSources.labels.fleetAnalytics', 'Fleet analytics'),
+        query: analyticsQuery,
+      },
+      {
+        id: 'vehicle-registry',
+        label: t('dataSources.labels.vehicleRegistry', 'Vehicle registry'),
+        query: vehiclesQuery,
+      },
+      {
+        id: 'live-vehicle-state',
+        label: t('dataSources.labels.liveVehicleState', 'Live vehicle state'),
+        query: stateQuery,
+        enabled: vehicleId != null,
+      },
+    ],
+    [analyticsQuery, stateQuery, t, vehicleId, vehiclesQuery],
+  );
 
   const onPickVehicle = (id: string) => {
     const n = Number(id);
@@ -99,7 +126,8 @@ export default function QuickStatsPage() {
       title={t('quickStats.title', 'Quick Stats')}
       subtitle={t('quickStats.subtitle', 'Fleet snapshot · last 30 days')}
       actions={actions}
-      query={[analyticsQuery, stateQuery]}
+      query={[analyticsQuery, vehiclesQuery, stateQuery]}
+      dataSources={dataSources}
     >
       {/* 1 — Fleet KPI band: full-width responsive metric grid */}
       <FadeIn>

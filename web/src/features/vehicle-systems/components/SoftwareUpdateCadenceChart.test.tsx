@@ -42,7 +42,8 @@ const captured = vi.hoisted(() => ({
 
 // Replace the charts barrel with layout-free doubles. recharts BarChart drops
 // its axis children when it can't measure, so we surface every prop we assert.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => ({
+  ...(await import('@/test/chartTestDoubles')).chartTestDoubles,
   ResponsiveContainer: ({ children }: { children: ReactNode }) => (
     <div data-testid="responsive-container">{children}</div>
   ),
@@ -138,9 +139,7 @@ describe('SoftwareUpdateCadenceChart — chart canvas', () => {
     render(<SoftwareUpdateCadenceChart data={POINTS} />);
 
     const figure = screen.getByRole('img');
-    expect(figure.className).toContain('h-56');
-    expect(figure.className).toContain('sm:h-64');
-    expect(figure.className).toContain('xl:h-72');
+    expect(figure.parentElement).toHaveClass('h-56', 'sm:h-64', 'xl:h-72');
   });
 
   it('keeps the margin + tooltip cursor referentially stable across renders (perf)', () => {
@@ -170,7 +169,9 @@ describe('SoftwareUpdateCadenceChart — empty / null-safety', () => {
     expect(screen.getByText('No update activity in this range')).toBeInTheDocument();
     // The chart canvas must not mount at all.
     expect(screen.queryByTestId('bar-chart')).toBeNull();
-    expect(screen.queryByRole('img', { name: /software updates per calendar month/i })).toBeNull();
+    expect(
+      screen.getByRole('img', { name: /software updates per calendar month/i }),
+    ).toContainElement(status);
   });
 
   it('treats absent data as empty via null-safety and shows the same empty state', () => {

@@ -23,12 +23,15 @@
  * "active now" case; we don't double up.
  */
 
-import { useId, useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
+import { useTranslation } from 'react-i18next'
 import { CalendarClock, AlertTriangle, X } from 'lucide-react'
-import { GlassPanel, Button, Input, Badge } from '@/components/ui'
-import { useToast } from '@/components/feedback/Toast'
+import { GlassPanel, Button, ConfirmDialog, Input, Badge, PanelTitle, Text } from '@/components/ui'
+import { OperationalWriteNotice, useToast } from '@/components/feedback'
 import { useMaintenanceState, useUpdateMaintenance } from '@/api/hooks/useAdmin'
 import { useDateFormat } from '@/hooks/useDateFormat'
+import { useDiscardChangesGuard } from '@/hooks/useDiscardChangesGuard'
+import { useOperationalMode } from '@/hooks/useOperationalMode'
 import { cn } from '@/lib/cn'
 
 interface ScheduledMaintenanceCardProps {
@@ -37,17 +40,26 @@ interface ScheduledMaintenanceCardProps {
 
 const ONE_DAY_MS = 24 * 60 * 60 * 1000
 
+function interpolateCopy(template: string, values: Record<string, string | number>): string {
+  return Object.entries(values).reduce(
+    (copy, [key, value]) => copy.split(`{{${key}}}`).join(String(value)),
+    template,
+  )
+}
+
 export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps) {
+  const { t } = useTranslation()
   const { data: state } = useMaintenanceState()
   const mutation = useUpdateMaintenance()
+  const operationalMode = useOperationalMode()
   const toast = useToast()
   const { formatDateTime } = useDateFormat()
-  const startId = useId()
-  const durationId = useId()
   const [showSchedule, setShowSchedule] = useState(false)
   const [whenLocal, setWhenLocal] = useState('')
   const [duration, setDuration] = useState('60')
   const [message, setMessage] = useState('')
+  const [startError, setStartError] = useState('')
+  const [durationError, setDurationError] = useState('')
 
   const isActive = state?.mode === 'maintenance'
   // Guard against a malformed `maintenance_until` (non-ISO string → NaN). A raw
@@ -62,41 +74,95 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
     if (!untilTs || !isActive) return null
     return Math.floor((untilTs - now) / 60_000)
   }, [untilTs, now, isActive])
+  const discardSchedule = () => {
+    setShowSchedule(false)
+    setWhenLocal('')
+    setDuration('60')
+    setMessage('')
+    setStartError('')
+    setDurationError('')
+  }
+  useEffect(() => {
+    if (!operationalMode.canWrite) discardSchedule()
+  }, [operationalMode.canWrite])
+  const scheduleIsDirty = showSchedule
+    && (whenLocal !== '' || duration !== '60' || message !== '')
+  const { requestClose, dialogProps: discardDialogProps } = useDiscardChangesGuard(
+    scheduleIsDirty,
+    discardSchedule,
+    {
+      message: t(
+        'systemStatus.maintenance.unsaved',
+        'You have unsaved maintenance-window details. Discard them?',
+      ),
+    },
+  )
 
   const handleSchedule = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
+    setStartError('')
+    setDurationError('')
     if (!whenLocal) {
-      toast.error('Pick a start time.')
+      const error = t('systemStatus.maintenance.startRequired', 'Pick a start time.')
+      setStartError(error)
       return
     }
     const startMs = Date.parse(whenLocal)
     if (!Number.isFinite(startMs)) {
-      toast.error('Invalid start time.')
+      const error = t('systemStatus.maintenance.startInvalid', 'Invalid start time.')
+      setStartError(error)
       return
     }
-    const durMin = Math.max(5, Number(duration) || 60)
+    const parsedDuration = Number(duration)
+    if (!duration.trim() || !Number.isFinite(parsedDuration) || parsedDuration <= 0) {
+      const error = t(
+        'systemStatus.maintenance.durationRequired',
+        'Enter a valid duration in minutes.',
+      )
+      setDurationError(error)
+      return
+    }
+    if (parsedDuration > 1440) {
+      const error = t(
+        'systemStatus.maintenance.durationInvalid',
+        'Duration cannot exceed 1,440 minutes.',
+      )
+      setDurationError(error)
+      return
+    }
+    const durMin = Math.max(5, parsedDuration || 60)
     const endMs = startMs + durMin * 60_000
     try {
       await mutation.mutateAsync({
         mode: 'maintenance',
-        message: message.trim() || `Scheduled maintenance · ends ${formatDateTime(new Date(endMs))}`,
+        message: message.trim() || interpolateCopy(
+          t(
+            'systemStatus.maintenance.defaultMessage',
+            'Scheduled maintenance · ends {{time}}',
+          ),
+          {
+          time: formatDateTime(new Date(endMs)),
+          },
+        ),
         until: new Date(endMs).toISOString(),
       })
-      setShowSchedule(false)
-      setWhenLocal('')
-      setMessage('')
-      toast.success('Maintenance window scheduled.')
+      discardSchedule()
+      toast.success(t('systemStatus.maintenance.scheduled', 'Maintenance window scheduled.'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to schedule')
+      toast.error(err instanceof Error
+        ? err.message
+        : t('systemStatus.maintenance.scheduleFailed', 'Failed to schedule'))
     }
   }
 
   const handleClear = async () => {
     try {
       await mutation.mutateAsync({ mode: 'ok', message: '', until: null })
-      toast.success('Maintenance cleared.')
+      toast.success(t('systemStatus.maintenance.cleared', 'Maintenance cleared.'))
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to clear maintenance')
+      toast.error(err instanceof Error
+        ? err.message
+        : t('systemStatus.maintenance.clearFailed', 'Failed to clear maintenance'))
     }
   }
 
@@ -112,76 +178,148 @@ export function ScheduledMaintenanceCard({ now }: ScheduledMaintenanceCardProps)
       <div className="flex items-start justify-between gap-3">
         <div className="flex items-center gap-2">
           <CalendarClock className={cn('h-4 w-4', isActive ? 'text-blue-300' : 'text-[var(--text-secondary)]')} aria-hidden />
-          <h3 className="text-sm font-semibold text-[var(--text-primary)]">Scheduled maintenance</h3>
-          {isActive && <Badge variant="info">Maintenance active</Badge>}
+          <PanelTitle>{t('systemStatus.maintenance.title', 'Scheduled maintenance')}</PanelTitle>
+          {isActive && <Badge variant="info">{t('systemStatus.maintenance.active', 'Maintenance active')}</Badge>}
           {within24h && (
             <span className="inline-flex items-center gap-1 text-xs text-amber-200">
               <AlertTriangle className="h-3 w-3" aria-hidden />
-              Within 24h
+              {t('systemStatus.maintenance.within24h', 'Within 24h')}
             </span>
           )}
         </div>
       </div>
 
       <div className="mt-3 space-y-3 text-sm">
+        <OperationalWriteNotice
+          title={t(
+            'systemStatus.maintenance.readOnly',
+            'Maintenance controls are read-only',
+          )}
+        />
         {isActive && state?.maintenance_message && (
-          <p className="text-[var(--text-secondary)]">{state.maintenance_message}</p>
+          <Text variant="bodySm">{state.maintenance_message}</Text>
         )}
         {isActive && untilTs != null && (
           <p className="text-xs text-[var(--text-muted)]">
             {minutesToStart != null && minutesToStart > 0
-              ? `Active until ${formatDateTime(new Date(untilTs))} (${minutesToStart} min remaining)`
-              : `Until ${formatDateTime(new Date(untilTs))}`}
+              ? interpolateCopy(
+                t(
+                  'systemStatus.maintenance.activeUntil',
+                  'Active until {{time}} ({{minutes}} min remaining)',
+                ),
+                {
+                  time: formatDateTime(new Date(untilTs)),
+                  minutes: minutesToStart,
+                },
+              )
+              : interpolateCopy(
+                t('systemStatus.maintenance.until', 'Until {{time}}'),
+                { time: formatDateTime(new Date(untilTs)) },
+              )}
           </p>
         )}
         {!isActive && !showSchedule && (
           <p className="text-xs text-[var(--text-muted)]">
-            Schedule a window for upgrades or hardware moves. The status banner will switch to blue
-            “Maintenance” instead of red “Down”.
+            {t(
+              'systemStatus.maintenance.description',
+              'Schedule a window for upgrades or hardware moves. The status banner will switch to blue “Maintenance” instead of red “Down”.',
+            )}
           </p>
         )}
 
         {!isActive && !showSchedule && (
-          <Button type="button" variant="ghost" size="sm" onClick={() => setShowSchedule(true)} className="gap-1.5">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => setShowSchedule(true)}
+            disabled={!operationalMode.canWrite}
+            title={operationalMode.writeBlockReason ?? undefined}
+            className="gap-1.5"
+          >
             <CalendarClock className="h-3.5 w-3.5" aria-hidden />
-            Schedule a window
+            {t('systemStatus.maintenance.scheduleAction', 'Schedule a window')}
           </Button>
         )}
 
         {!isActive && showSchedule && (
           <form onSubmit={handleSchedule} className="space-y-3 border-t border-[var(--border-subtle)] pt-3">
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label htmlFor={startId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Start (local)</label>
-                <Input id={startId} type="datetime-local" value={whenLocal} onChange={(e) => setWhenLocal(e.target.value)} required />
-              </div>
-              <div>
-                <label htmlFor={durationId} className="block text-xs font-medium text-[var(--text-secondary)] mb-1">Duration (minutes)</label>
-                <Input id={durationId} type="number" min={5} max={1440} value={duration} onChange={(e) => setDuration(e.target.value)} />
-              </div>
+              <Input
+                label={t('systemStatus.maintenance.start', 'Start (local)')}
+                type="datetime-local"
+                value={whenLocal}
+                onChange={(e) => {
+                  setWhenLocal(e.target.value)
+                  setStartError('')
+                }}
+                error={startError || undefined}
+                disabled={!operationalMode.canWrite}
+                required
+              />
+              <Input
+                label={t('systemStatus.maintenance.duration', 'Duration (minutes)')}
+                type="number"
+                min={5}
+                max={1440}
+                value={duration}
+                onChange={(e) => {
+                  setDuration(e.target.value)
+                  setDurationError('')
+                }}
+                error={durationError || undefined}
+                disabled={!operationalMode.canWrite}
+                required
+              />
             </div>
             <Input
-              placeholder="What's happening (optional)"
+              label={t('systemStatus.maintenance.message', 'Operator message')}
+              hint={t('systemStatus.maintenance.messageHint', 'Optional context shown in the maintenance banner.')}
+              placeholder={t('systemStatus.maintenance.messagePlaceholder', "What's happening (optional)")}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               maxLength={500}
+              disabled={!operationalMode.canWrite}
             />
             <div className="flex justify-end gap-2">
-              <Button type="button" variant="ghost" size="sm" onClick={() => setShowSchedule(false)} disabled={mutation.isPending}>Cancel</Button>
-              <Button type="submit" variant="primary" size="sm" disabled={mutation.isPending}>
-                {mutation.isPending ? 'Scheduling…' : 'Schedule'}
+              <Button type="button" variant="ghost" size="sm" onClick={requestClose} disabled={mutation.isPending}>
+                {t('common.cancel', 'Cancel')}
+              </Button>
+              <Button
+                type="submit"
+                variant="primary"
+                size="sm"
+                loading={mutation.isPending}
+                disabled={!operationalMode.canWrite}
+                title={operationalMode.writeBlockReason ?? undefined}
+              >
+                {mutation.isPending
+                  ? t('systemStatus.maintenance.scheduling', 'Scheduling…')
+                  : t('systemStatus.maintenance.schedule', 'Schedule')}
               </Button>
             </div>
           </form>
         )}
 
         {isActive && (
-          <Button type="button" variant="ghost" size="sm" onClick={handleClear} disabled={mutation.isPending} className="gap-1.5 text-amber-200">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={handleClear}
+            loading={mutation.isPending}
+            disabled={!operationalMode.canWrite}
+            title={operationalMode.writeBlockReason ?? undefined}
+            className="gap-1.5 text-amber-200"
+          >
             <X className="h-3.5 w-3.5" aria-hidden />
-            {mutation.isPending ? 'Clearing…' : 'Clear maintenance'}
+            {mutation.isPending
+              ? t('systemStatus.maintenance.clearing', 'Clearing…')
+              : t('systemStatus.maintenance.clear', 'Clear maintenance')}
           </Button>
         )}
       </div>
+      {discardDialogProps && <ConfirmDialog {...discardDialogProps} />}
     </GlassPanel>
   )
 }

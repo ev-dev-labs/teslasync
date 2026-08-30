@@ -5,6 +5,15 @@ import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/feedback';
 
+const operationalMode = vi.hoisted(() => ({
+  canWrite: true,
+  writeBlockReason: null as string | null,
+}));
+
+vi.mock('@/hooks/useOperationalMode', () => ({
+  useOperationalMode: () => operationalMode,
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (_key: string, fallback: string, values?: Record<string, string>) =>
@@ -183,6 +192,8 @@ beforeEach(() => {
   refetch.mockReset();
   reset.mockReset();
   mutate.mockReset();
+  operationalMode.canWrite = true;
+  operationalMode.writeBlockReason = null;
 });
 
 describe('FleetOperationsPage', () => {
@@ -214,6 +225,26 @@ describe('FleetOperationsPage', () => {
     expect(screen.getAllByText('Pool Y').length).toBeGreaterThan(0);
     fireEvent.click(screen.getByRole('button', { name: 'New reservation' }));
     expect(screen.getByRole('dialog', { name: 'Create reservation' })).toBeInTheDocument();
+  });
+
+  it('renders the read-only explanation outside the disabled reservation action', () => {
+    operationalMode.canWrite = false;
+    operationalMode.writeBlockReason =
+      'Reconnect before making operational changes.';
+    renderPage();
+
+    const reservationButton = screen.getByRole('button', { name: 'New reservation' });
+    const noticeTitle = screen.getByText('Fleet Operations is read-only');
+
+    expect(reservationButton).toBeDisabled();
+    expect(reservationButton).toHaveAttribute(
+      'title',
+      'Reconnect before making operational changes.',
+    );
+    expect(noticeTitle.closest('button')).toBeNull();
+    expect(
+      screen.getByText('Reconnect before making operational changes.'),
+    ).toBeInTheDocument();
   });
 
   it('creates and version-updates a driver with typed payloads', () => {

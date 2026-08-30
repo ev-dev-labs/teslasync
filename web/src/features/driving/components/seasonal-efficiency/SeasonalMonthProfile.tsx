@@ -34,7 +34,7 @@ export function SeasonalMonthProfile({
         </Text>
         <SeasonalSectionBody state={state}>
           {analysis.includedCount === 0 ? (
-            <EmptyState message={t('seasonalEfficiency.states.noMonthProfile', 'No included rows are available for a local-month profile.')} />
+            <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('seasonalEfficiency.states.noMonthProfile', 'No included rows are available for a local-month profile.')} />
           ) : (
             <ChartContainer
               title={t('seasonalEfficiency.monthProfile.chartTitle', 'Twelve local calendar months')}

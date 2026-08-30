@@ -50,8 +50,13 @@ documented at the top of the file:
     objective: 99.5                        # percentage; 0 < x < 100
     window: 30d                            # m / h / d / w
     owner: platform                        # team name (snake_case)
+    fast_burn_severity: ticket             # optional; defaults to page
     tags: [http, red]                      # inline array; lowercase
 ```
+
+Use `fast_burn_severity: ticket` only for non-urgent planning signals where a
+fast burn needs operator attention but must not page on-call, such as an
+intentionally enforced spend ceiling.
 
 ### 2. Validate
 
@@ -69,9 +74,9 @@ This runs the strict-YAML parser + schema check. Common failures:
 ### 3. Run all codegens
 
 ```powershell
-go run ./cmd/slogen generate recording  -in slo/catalog.yaml -out helm/teslasync/files/prometheus/recording-rules.yaml
-go run ./cmd/slogen generate alerts     -in slo/catalog.yaml -out helm/teslasync/files/prometheus/alerting-rules.yaml
-go run ./cmd/slogen generate dashboards -in slo/catalog.yaml -out helm/teslasync/files/grafana/dashboards/
+go run ./cmd/slogen generate recording  -catalog slo/catalog.yaml -out helm/teslasync/files/prometheus/recording-rules.yaml
+go run ./cmd/slogen generate alerts     -catalog slo/catalog.yaml -out helm/teslasync/files/prometheus/alerting-rules.yaml
+go run ./cmd/slogen generate dashboards -catalog slo/catalog.yaml -out-dir helm/teslasync/files/grafana/dashboards/
 ```
 
 Each command writes idempotently — re-runs are byte-stable so the diff
@@ -178,9 +183,9 @@ go run ./cmd/slogen validate slo/catalog.yaml
 ### Step 3 — generate
 
 ```powershell
-go run ./cmd/slogen generate recording  -in slo/catalog.yaml -out helm/teslasync/files/prometheus/recording-rules.yaml
-go run ./cmd/slogen generate alerts     -in slo/catalog.yaml -out helm/teslasync/files/prometheus/alerting-rules.yaml
-go run ./cmd/slogen generate dashboards -in slo/catalog.yaml -out helm/teslasync/files/grafana/dashboards/
+go run ./cmd/slogen generate recording  -catalog slo/catalog.yaml -out helm/teslasync/files/prometheus/recording-rules.yaml
+go run ./cmd/slogen generate alerts     -catalog slo/catalog.yaml -out helm/teslasync/files/prometheus/alerting-rules.yaml
+go run ./cmd/slogen generate dashboards -catalog slo/catalog.yaml -out-dir helm/teslasync/files/grafana/dashboards/
 ```
 
 Diff inspection confirms:

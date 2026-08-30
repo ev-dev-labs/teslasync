@@ -35,6 +35,23 @@ export default function SignalChangePointsPage() {
 
   const signalsQuery = useSignals(id);
   const historyQuery = useSignalAnalysisHistory(id, signalName, HOURS);
+  const chosen = signalName !== '';
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'signal-catalog',
+        label: t('dataSources.labels.signalCatalog', 'Signal catalog'),
+        query: signalsQuery,
+      },
+      {
+        id: 'signal-history',
+        label: t('dataSources.labels.selectedSignalHistory', 'Selected signal history'),
+        query: historyQuery,
+        enabled: chosen,
+      },
+    ],
+    [chosen, historyQuery, signalsQuery, t],
+  );
 
   const options = useMemo(
     () => (signalsQuery.data ?? []).map((name) => ({ value: name, label: name })),
@@ -71,10 +88,10 @@ export default function SignalChangePointsPage() {
     return <NoVehicleSelected pageTitle={t('signalChangePoints.title', 'Signal Change Points')} />;
   }
 
-  const chosen = signalName !== '';
-  const isLoading = signalsQuery.isLoading || (chosen && historyQuery.isLoading);
-  const isError = signalsQuery.isError || historyQuery.isError;
-  const error = signalsQuery.error ?? historyQuery.error;
+  const historyHasData = historyQuery.data !== undefined;
+  const isLoading = chosen && !historyHasData && historyQuery.isLoading;
+  const isError = chosen && historyQuery.isError && !historyHasData;
+  const error = historyQuery.error;
   const hasData = chosen && summary.samples > 0;
   const biggest = summary.biggestChange;
 
@@ -85,7 +102,8 @@ export default function SignalChangePointsPage() {
         'signalChangePoints.subtitle',
         'Robust Page-Hinkley detection of abrupt level shifts in a numeric signal — deliberately distinct from slow drift (Signal Trend) and drive-week regime clustering',
       )}
-      query={signalsQuery}
+      query={[signalsQuery, historyQuery]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* 1 — Signal picker */}
@@ -215,7 +233,7 @@ export default function SignalChangePointsPage() {
                   <ReferenceLine key={time} x={time} stroke={chartTokens.series[3]} strokeDasharray="4 4" />
                 ))}
                 <Line type="monotone" dataKey="value" name={t('signalChangePoints.col.value', 'Value')} stroke={chartTokens.series[0]} strokeWidth={1.5} dot={false} />
-                <Line type="stepAfter" dataKey="level" name={t('signalChangePoints.col.level', 'Segment mean')} stroke={chartTokens.series[3]} strokeWidth={2} dot={false} connectNulls />
+                <Line type="stepAfter" dataKey="level" name={t('signalChangePoints.col.level', 'Segment mean')} stroke={chartTokens.series[3]} strokeWidth={2} dot={false} connectNulls={false} />
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>

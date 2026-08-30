@@ -131,6 +131,10 @@ function InnerSection({ vehicleId }: InnerSectionProps) {
     url: '/ai/maintenance/predict',
     body,
     onEvent: noopStreamEvent,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight prediction and clears the
+    // previous vehicle's narrative before the new scope streams in.
+    scopeKey: haveScope ? vehicleId : null,
   })
 
   return (

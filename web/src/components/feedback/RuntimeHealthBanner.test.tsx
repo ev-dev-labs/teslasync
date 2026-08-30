@@ -108,6 +108,7 @@ describe('RuntimeHealthBanner', () => {
     renderBanner();
 
     expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('role', 'status');
+    expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('data-data-state', 'partial');
     expect(screen.getByText(/Affected components: MQTT, Fleet Telemetry/i)).toBeInTheDocument();
     expect(screen.getByText(/formatted:2026-01-01T00:00:00Z/i)).toBeInTheDocument();
     expect(screen.getByText(/Stored history remains available/i)).toBeInTheDocument();
@@ -124,6 +125,7 @@ describe('RuntimeHealthBanner', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Health alerts' }));
     expect(navigate).toHaveBeenCalledWith('/notifications/channels');
     expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('role', 'alert');
+    expect(screen.getByTestId('runtime-health-banner')).toHaveAttribute('data-data-state', 'unavailable');
   });
 
   it('does not show runtime degradation as an onboarding error for a fresh install', () => {

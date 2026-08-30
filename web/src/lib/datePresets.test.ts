@@ -15,6 +15,14 @@ describe('DATE_PRESETS — resolve()', () => {
     expect(preset('today').resolve(NOW)).toEqual({ start: '2026-05-15', end: '2026-05-15' });
   });
 
+  it('live → today as the calendar compatibility window', () => {
+    expect(preset('live').resolve(NOW)).toEqual({ start: '2026-05-15', end: '2026-05-15' });
+  });
+
+  it('24h → yesterday through today for calendar-only APIs', () => {
+    expect(preset('24h').resolve(NOW)).toEqual({ start: '2026-05-14', end: '2026-05-15' });
+  });
+
   it('yesterday → start=end=now-1', () => {
     expect(preset('yesterday').resolve(NOW)).toEqual({ start: '2026-05-14', end: '2026-05-14' });
   });
@@ -132,5 +140,9 @@ describe('matchPresetId', () => {
 
   it('returns undefined for an arbitrary range that no preset produces', () => {
     expect(matchPresetId('2026-03-07', '2026-04-12', NOW)).toBeUndefined();
+  });
+
+  it('does not infer rolling scopes from ambiguous calendar dates', () => {
+    expect(matchPresetId('2026-05-14', '2026-05-15', NOW)).toBeUndefined();
   });
 });

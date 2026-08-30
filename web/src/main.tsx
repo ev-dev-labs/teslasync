@@ -2,7 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { QueryClientProvider } from '@tanstack/react-query'
 import { BrowserRouter } from 'react-router-dom'
-import { createQueryClient } from './api/queryClient'
+import { createQueryClient } from '@/api/queryClient'
 import { ToastProvider } from './components/feedback/Toast'
 import { ErrorBoundary } from './components/feedback/ErrorBoundary'
 import { NavigationGuardProvider } from './components/feedback/NavigationGuardProvider'
@@ -13,18 +13,27 @@ import { ThemeProvider } from './components/ui/ThemeProvider'
 import { FontProvider, applyFontCSS, readStoredFontPrefs } from './components/ui/FontProvider'
 import ReloadPrompt from './components/feedback/ReloadPrompt'
 import { SelectedVehicleProvider } from './store/selectedVehicle'
+import { OperationalModeProvider } from './hooks/useOperationalMode'
 import { installGlobalErrorReporting, reportFrontendError } from './lib/errorReporter'
-import { initRum } from './observability/rum'
 import App from './App'
 import './i18n'
 import './index.css'
 
 // ── RUM bootstrap (Phase 44 / Prompt 0060) ────────────────────────────────────
-// Install the OpenTelemetry browser SDK BEFORE React mounts so the
-// auto-instrumentations (page load, fetch, XHR) can capture even the very
-// first request the app fires. No-ops if VITE_OTLP_HTTP_ENDPOINT is unset
-// (the dev default), so this is safe in every environment.
-initRum()
+// OpenTelemetry and Zone.js are intentionally loaded outside the entry chunk.
+// Most deployments leave RUM disabled; they should not download the SDK only
+// to execute its no-op branch. Configured deployments start it concurrently
+// with React bootstrap so instrumentation never blocks first paint.
+const rumEndpoint = (import.meta.env.VITE_OTLP_HTTP_ENDPOINT ?? '').trim()
+if (rumEndpoint) {
+  void import('./observability/rum')
+    .then(({ initRum }) => initRum())
+    .catch((error) => {
+      console.warn('[rum] OpenTelemetry bootstrap failed:', error)
+    })
+} else if (import.meta.env.DEV) {
+  console.info('[rum] VITE_OTLP_HTTP_ENDPOINT not set; OpenTelemetry RUM disabled.')
+}
 
 // ── Frontend error reporting (Phase 46 / Prompt 01) ───────────────────────────
 // Install global window.error / window.unhandledrejection listeners BEFORE
@@ -112,7 +121,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
             settings even on pages that never call useSettings() and after
             cross-tab settings broadcasts. */}
         <FormatterPrefsBridge />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true }}>
           {/* Phase-45 / Prompt 16: in-app unsaved-changes guard. Intercepts
               <GuardedLink> / <GuardedNavLink> clicks and browser back/forward
               navigation when any registered useNavigationGuard reports a
@@ -124,12 +133,14 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
               <FontProvider>
                 <SelectedVehicleProvider>
                   <ToastProvider>
-                    <App />
-                    <ReloadPrompt />
-                    {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
-                        with a transient toast + confetti. Mounted alongside the
-                        standard toast stack so the SSE subscription is global. */}
-                    <AchievementUnlockListener />
+                    <OperationalModeProvider>
+                      <App />
+                      <ReloadPrompt />
+                      {/* Phase-40 / Prompt 63: celebrate locked → unlocked transitions
+                          with a transient toast + confetti. Mounted alongside the
+                          standard toast stack so the SSE subscription is global. */}
+                      <AchievementUnlockListener />
+                    </OperationalModeProvider>
                   </ToastProvider>
                 </SelectedVehicleProvider>
               </FontProvider>
@@ -140,6 +151,18 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// The splash is an inline no-FOUC surface, not a network loading gate. Dismiss
+// it after React has had two animation frames to commit and paint the shell;
+// waiting for window.load would keep it visible behind slow fonts or images.
+window.requestAnimationFrame(() => {
+  window.requestAnimationFrame(() => {
+    const splash = document.getElementById('splash')
+    if (!splash) return
+    splash.classList.add('fade-out')
+    window.setTimeout(() => splash.remove(), 200)
+  })
+})
 
 // ── Web Vitals reporting (Phase 40 / Prompt 35, Phase 45 / Prompt 12) ──────
 // Lazy-loaded so it never blocks first paint. In production, ship metrics to

@@ -87,10 +87,21 @@ function makeTelemetry(over: Partial<TelemetryStatus> = {}): TelemetryStatus {
 function makeExtHealth(over: Partial<ExtendedHealthResponse> = {}): ExtendedHealthResponse {
   return {
     status: 'ok',
-    components: {},
-    database: { status: 'ok', latency_ms: 3 },
-    database_pool: { total_conns: 30, idle_conns: 23, acquired_conns: 7 },
-    system: { goroutines: 42, go_version: 'go1.25', uptime_seconds: 3600 },
+    components: {
+      database: { status: 'ok', latency_ms: 3 },
+      database_pool: {
+        status: 'healthy',
+        total_conns: 30,
+        idle_conns: 23,
+        acquired_conns: 7,
+      },
+      system: {
+        status: 'healthy',
+        goroutines: 42,
+        go_version: 'go1.25',
+        uptime_seconds: 3600,
+      },
+    },
     ...over,
   }
 }

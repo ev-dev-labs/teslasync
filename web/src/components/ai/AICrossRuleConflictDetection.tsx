@@ -134,14 +134,21 @@ function InnerSection({
     url: `/ai/alerts/rules/conflicts`,
     body,
     onEvent: handleEvent,
+    // AI-01: rule-set + vehicle scope is part of stream identity —
+    // switching either aborts an in-flight detection and clears the
+    // stream's own completed output in addition to the local
+    // `conflicts` state cleared below.
+    scopeKey: `${ruleIdsKey}:${vehicleId ?? ''}`,
   })
 
   // Pull cancel out so the cleanup effect's deps stay narrow.
   const { cancel: cancelStream } = stream
 
-  // Cancel + reset on ruleIds change so a stale stream from a
-  // previously-selected rule set cannot bleed conflicts into the
-  // new scope.
+  // Reset the locally-captured conflicts on ruleIds change/unmount so
+  // a stale result from a previously-selected rule set cannot bleed
+  // into the new scope. The stream's own text/activity/usage reset is
+  // now handled by useAiStream's scopeKey above; cancelStream() here
+  // only covers unmount.
   useEffect(() => {
     return () => {
       cancelStream()

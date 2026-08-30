@@ -24,6 +24,10 @@ func (*NoopLiveSignalStore) UpdateNonBlocking(_ context.Context, _ int64, _ map[
 	return nil
 }
 
+func (*NoopLiveSignalStore) UpdateValuesNonBlocking(_ context.Context, _ int64, _ map[string]*Value) error {
+	return nil
+}
+
 func (*NoopLiveSignalStore) GetSignal(_ context.Context, _ int64, _ string, _ LiveSignalReadPreference) (*Value, error) {
 	return nil, nil
 }

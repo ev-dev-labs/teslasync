@@ -304,11 +304,11 @@ describe('CostAnalysisPage', () => {
 
     // All nine section headings are present — nothing stubbed out.
     expect(screen.getByText('Monthly Cost Trend')).toBeInTheDocument()
-    expect(screen.getByText('Cost by Charger Type')).toBeInTheDocument()
+    expect(screen.getAllByText('Cost by Charger Type').length).toBeGreaterThan(0)
     expect(screen.getByText('Gas vs Electric Savings Calculator')).toBeInTheDocument()
     expect(screen.getByText('Monthly Cost Breakdown')).toBeInTheDocument()
     expect(screen.getByText('Electricity Rate Analysis (Time-of-Use)')).toBeInTheDocument()
-    expect(screen.getByText('Cost Forecast')).toBeInTheDocument()
+    expect(screen.getAllByText('Cost Forecast').length).toBeGreaterThan(0)
     expect(screen.getByText('Lifetime Summary')).toBeInTheDocument()
     expect(screen.getByText('Environmental Impact')).toBeInTheDocument()
 
@@ -342,7 +342,7 @@ describe('CostAnalysisPage', () => {
 
     // Once the fleet loads and the vehicle auto-selects, the enabled-but-pending
     // sessions query drives the data sections into their loading state.
-    const spinners = await screen.findAllByRole('status', { name: 'Loading' })
+    const spinners = await screen.findAllByRole('status', { name: /Loading/i })
     expect(spinners.length).toBeGreaterThan(0)
 
     // The KPI values are not fabricated while data is loading.
@@ -362,7 +362,7 @@ describe('CostAnalysisPage', () => {
     // The forecast query is independent and succeeded — its confidence-band
     // chart still renders, proving graceful degradation.
     expect(
-      screen.getByRole('img', {
+      screen.getByRole('group', {
         name: /Historical and projected monthly charging cost/i,
       }),
     ).toBeInTheDocument()

@@ -50,6 +50,21 @@ export default function ChargeDepartureAlignmentPage() {
 
   const sessionsQuery = useChargingHistory(vehicleIdStr);
   const drivesQuery = useDriveHistory(vehicleIdStr);
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'charging-history',
+        label: t('dataSources.labels.chargingHistory', 'Charging history'),
+        query: sessionsQuery,
+      },
+      {
+        id: 'drive-history',
+        label: t('dataSources.labels.driveHistory', 'Drive history'),
+        query: drivesQuery,
+      },
+    ],
+    [drivesQuery, sessionsQuery, t],
+  );
 
   const summary = useMemo(
     () => analyzeChargeDepartureAlignment(sessionsQuery.data ?? [], drivesQuery.data ?? []),
@@ -78,8 +93,14 @@ export default function ChargeDepartureAlignmentPage() {
     return <NoVehicleSelected pageTitle={t('chargeDepartureAlignment.title', 'Charge \u2192 Departure Alignment')} />;
   }
 
-  const isLoading = sessionsQuery.isLoading || drivesQuery.isLoading;
-  const isError = sessionsQuery.isError || drivesQuery.isError;
+  const sessionsHaveData = sessionsQuery.data !== undefined;
+  const drivesHaveData = drivesQuery.data !== undefined;
+  const isLoading =
+    (!sessionsHaveData && sessionsQuery.isLoading)
+    || (!drivesHaveData && drivesQuery.isLoading);
+  const isError =
+    (sessionsQuery.isError && !sessionsHaveData)
+    || (drivesQuery.isError && !drivesHaveData);
 
   return (
     <PageContainer
@@ -89,6 +110,7 @@ export default function ChargeDepartureAlignmentPage() {
         'How well each charge matched the very next drive \u2014 a temporal pairing, never proof of intent',
       )}
       query={[sessionsQuery, drivesQuery]}
+      dataSources={dataSources}
       actions={<VehicleSelect />}
     >
       {/* 1 — KPI band */}

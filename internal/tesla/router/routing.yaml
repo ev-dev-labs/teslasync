@@ -597,10 +597,9 @@ routes:
     column: play_status
   # MilesSinceReset is the lifetime distance counter for the user-
   # resettable trip meter (safety_security, UnitKindDistance). The
-  # protomodel codegen tags this field UnitKindDistance so
-  # normalize.toSI converts to meters via the vehicle_unit_history
-  # layer; the SI value lands in signal_log. Despite the legacy
-  # "Miles" name the wire value is in the active SettingDistanceUnit.
+  # wire value is fixed in miles regardless of SettingDistanceUnit, so
+  # normalize.toSI bypasses vehicle_unit_history and converts it directly
+  # to meters before the SI value lands in signal_log.
   - field: MilesSinceReset
     dest: signal_log
   - field: MilesToArrival
@@ -753,8 +752,8 @@ routes:
   # SelfDrivingMilesSinceReset is the lifetime distance counter for
   # the user-resettable FSD-engaged trip meter (safety_security,
   # UnitKindDistance). Same routing rationale as MilesSinceReset —
-  # normalize.toSI converts to meters via the vehicle_unit_history
-  # layer and the SI value lands in signal_log.
+  # the wire value is fixed in miles, normalize.toSI bypasses
+  # vehicle_unit_history, and the SI value lands in signal_log.
   - field: SelfDrivingMilesSinceReset
     dest: signal_log
   - field: SemitruckPassengerSeatFoldPosition

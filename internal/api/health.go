@@ -13,6 +13,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	"github.com/ev-dev-labs/teslasync/internal/mqtt"
+	"github.com/ev-dev-labs/teslasync/internal/ops"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -31,20 +32,49 @@ type MaintenanceView = apiadminmnt.MaintenanceView
 
 var startTime = time.Now()
 
+// LivenessCheck is an optional process-local dependency check. It is reserved
+// for failures a pod restart can repair; shared dependency outages belong in
+// readiness or status endpoints to avoid restart storms.
+type LivenessCheck struct {
+	Component string
+	Check     func() error
+}
+
 // HealthHandler returns a simple health check.
-func HealthHandler(db *database.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+//
+// It is the LIVENESS probe, so it is wrapped by the drain watchdog: a
+// pod that latched the one-way drain but was never terminated would
+// otherwise sit forever as "unready but alive" — invisible dead
+// capacity that nothing restarts. See ops.ReadinessGate.GuardLiveness.
+func HealthHandler(db *database.DB, extraChecks ...LivenessCheck) http.HandlerFunc {
+	return ShutdownGate.GuardLiveness(StuckDrainBudget, nil)(func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Health(r.Context()); err != nil {
 			writeError(w, http.StatusServiceUnavailable, "database unhealthy")
 			return
 		}
+		for _, check := range extraChecks {
+			if check.Check == nil {
+				continue
+			}
+			if err := check.Check(); err != nil {
+				writeError(w, http.StatusServiceUnavailable, check.Component+" unhealthy")
+				return
+			}
+		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
-	}
+	})
 }
 
 // ReadyHandler checks if the service is ready to serve traffic.
+//
+// The returned handler is wrapped by a package-level [ReadinessGate] so
+// that once the preStop hook has fired the endpoint answers 503
+// unconditionally. Without that, the Pod keeps advertising itself as
+// ready for the whole (asynchronous) endpoint-deregistration window and
+// kube-proxy keeps routing new requests into a process that is shutting
+// down.
 func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
+	return ShutdownGate.GuardReadiness(func(w http.ResponseWriter, r *http.Request) {
 		checks := map[string]string{}
 
 		if err := db.Health(r.Context()); err != nil {
@@ -78,7 +108,50 @@ func ReadyHandler(db *database.DB, tc *tesla.Client) http.HandlerFunc {
 			}
 		}
 		writeJSON(w, http.StatusOK, checks)
-	}
+	})
+}
+
+// ShutdownGate is the process-wide readiness gate. The preStop hook
+// (GET/POST /internal/flush on the ISOLATED internal drain listener, see
+// internal/app/drain.go) flips it to draining; [ReadyHandler] then fails
+// closed so Kubernetes removes this Pod from Service endpoints before
+// the container is signalled.
+var ShutdownGate = ops.NewReadinessGate()
+
+// EndpointPropagationDelay is how long the preStop handler holds its
+// response open after flipping the gate, giving the endpoint controller
+// and every kube-proxy a chance to observe the failing readiness probe
+// before the container receives SIGTERM.
+//
+// It is one term of the shutdown budget locked in
+// ops/rollout/stages.yaml `shutdown` and asserted against
+// terminationGracePeriodSeconds by TestShutdownBudgetFitsGracePeriod.
+const EndpointPropagationDelay = 5 * time.Second
+
+// StuckDrainBudget is how long a pod may sit drained before its LIVENESS
+// probe starts failing.
+//
+// A real termination completes inside the shutdown budget (80s) and the
+// container is gone, so this branch is unreachable during intentional
+// shutdown. It only fires for a pod that latched the one-way drain and
+// was then never terminated — an accidental preStop invocation, an
+// operator curl, a bug — which would otherwise remain permanently
+// unready, permanently alive, and permanently invisible. Generous
+// headroom over the 80s budget keeps a slow-but-legitimate shutdown from
+// tripping it.
+const StuckDrainBudget = 3 * time.Minute
+
+// DrainStatusHandler is the READ-ONLY drain contract mounted on the
+// public router at /internal/drain-status.
+//
+// The mutating /internal/flush endpoint is deliberately NOT on this
+// router: it is one-way and pod-fatal (permanent readiness 503, all SSE
+// streams released), so a public route — or a post-deploy smoke probe —
+// could take a healthy pod out of service. It lives on an isolated
+// listener that no Service or Ingress targets; kubelet reaches it by
+// dialling the pod IP directly.
+func DrainStatusHandler(internalPort int) http.HandlerFunc {
+	return ops.DrainStatusHandler(ShutdownGate, internalPort, EndpointPropagationDelay)
 }
 
 // teslaBreakerTimeout mirrors gobreaker.Settings.Timeout from
@@ -426,6 +499,13 @@ func MetricsCatalogHandler() http.HandlerFunc {
 		{Name: "teslasync_mqtt_connected", Type: "gauge", Help: "MQTT broker connection state (1=connected, 0=disconnected)"},
 		{Name: "teslasync_mqtt_messages_published_total", Type: "counter", Help: "MQTT messages published"},
 		{Name: "teslasync_mqtt_reconnects_total", Type: "counter", Help: "MQTT reconnection attempts"},
+		{Name: "teslasync_mqtt_pipeline_connected", Type: "gauge", Help: "Dedicated Fleet Telemetry MQTT transport state", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_pipeline_subscribed", Type: "gauge", Help: "Recently SUBACK-confirmed Fleet Telemetry subscription state", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_pipeline_subscription_attempts_total", Type: "counter", Help: "Fleet Telemetry subscription attempts", Labels: []string{"trigger", "result"}},
+		{Name: "teslasync_mqtt_pipeline_subscription_last_success_timestamp_seconds", Type: "gauge", Help: "Last successful Fleet Telemetry SUBACK time", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_pipeline_liveness_unhealthy_seconds", Type: "gauge", Help: "Restart-eligible Fleet Telemetry consumer wedge duration", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_telemetry_event_time_total", Type: "counter", Help: "Fleet Telemetry event-time source and rejection outcomes", Labels: []string{"outcome"}},
+		{Name: "teslasync_mqtt_telemetry_replay_lag_seconds", Type: "histogram", Help: "Tesla source-to-MQTT receipt lag", Labels: []string{}},
 		{Name: "teslasync_sse_connections_active", Type: "gauge", Help: "Active SSE client connections"},
 		{Name: "teslasync_sse_events_sent_total", Type: "counter", Help: "SSE events sent", Labels: []string{"event_type"}},
 
@@ -477,43 +557,71 @@ func MetricsCatalogHandler() http.HandlerFunc {
 // estimated costs based on the Tesla Fleet API pricing.
 func APIUsageHandler(db *database.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		costPerRequest := 0.00222 // ~$10 / 4500 requests
-		monthlyCredit := 10.0
-
 		ctx := r.Context()
-		var totalRequests int
-		err := db.Pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW())`).Scan(&totalRequests)
+		rows, err := db.Pool.Query(ctx, `
+			SELECT http_method, endpoint, status_code
+			FROM api_call_logs
+			WHERE ts >= date_trunc('month', NOW())
+			  AND service IN ('tesla-api', 'tesla-fleet')`)
 		if err != nil {
-			writeJSON(w, http.StatusOK, map[string]interface{}{
-				"total_requests":      0,
-				"skipped_polls":       0,
-				"estimated_cost":      0.0,
-				"cost_per_request":    costPerRequest,
-				"monthly_credit":      monthlyCredit,
-				"estimated_remaining": monthlyCredit,
-			})
+			writeJSON(w, http.StatusOK, newAPIUsageSummary())
 			return
 		}
-		var skippedPolls int
-		_ = db.Pool.QueryRow(ctx,
-			`SELECT COUNT(*) FROM api_call_logs WHERE ts >= date_trunc('month', NOW()) AND (status_code = 408 OR status_code = 504)`).Scan(&skippedPolls)
+		defer rows.Close()
 
-		estimatedCost := float64(totalRequests) * costPerRequest
-		remaining := monthlyCredit - estimatedCost
-		if remaining < 0 {
-			remaining = 0
+		summary := newAPIUsageSummary()
+		for rows.Next() {
+			var method, endpoint string
+			var statusCode int
+			if err := rows.Scan(&method, &endpoint, &statusCode); err != nil {
+				writeJSON(w, http.StatusOK, newAPIUsageSummary())
+				return
+			}
+			summary.add(method, endpoint, statusCode)
+		}
+		if rows.Err() != nil {
+			writeJSON(w, http.StatusOK, newAPIUsageSummary())
+			return
 		}
 
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"total_requests":      totalRequests,
-			"skipped_polls":       skippedPolls,
-			"estimated_cost":      estimatedCost,
-			"cost_per_request":    costPerRequest,
-			"monthly_credit":      monthlyCredit,
-			"estimated_remaining": remaining,
-		})
+		summary.complete()
+		writeJSON(w, http.StatusOK, summary)
 	}
+}
+
+const teslaMonthlyCreditUSD = 10.0
+
+type apiUsageSummary struct {
+	TotalRequests      int     `json:"total_requests"`
+	SkippedPolls       int     `json:"skipped_polls"`
+	EstimatedCost      float64 `json:"estimated_cost"`
+	CostPerRequest     float64 `json:"cost_per_request"`
+	MonthlyCredit      float64 `json:"monthly_credit"`
+	EstimatedRemaining float64 `json:"estimated_remaining"`
+}
+
+func newAPIUsageSummary() *apiUsageSummary {
+	return &apiUsageSummary{
+		CostPerRequest:     tesla.EstimatedCostUSD(tesla.BudgetCategoryVehicleData),
+		MonthlyCredit:      teslaMonthlyCreditUSD,
+		EstimatedRemaining: teslaMonthlyCreditUSD,
+	}
+}
+
+func (s *apiUsageSummary) add(method, endpoint string, statusCode int) {
+	s.TotalRequests++
+	if statusCode == http.StatusRequestTimeout || statusCode == http.StatusGatewayTimeout {
+		s.SkippedPolls++
+	}
+	charge := tesla.ClassifyBudgetCharge(method, endpoint)
+	s.EstimatedCost += tesla.EstimatedCostUSD(charge.Category)
+}
+
+func (s *apiUsageSummary) complete() {
+	if s.TotalRequests > 0 {
+		s.CostPerRequest = s.EstimatedCost / float64(s.TotalRequests)
+	}
+	s.EstimatedRemaining = max(0, s.MonthlyCredit-s.EstimatedCost)
 }
 
 // CompressionStatsHandler returns position table statistics including

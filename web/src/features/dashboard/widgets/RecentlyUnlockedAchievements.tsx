@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Trophy } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
+import { Button } from '@/components/ui';
 import { useLifetimeStats } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
 import { useAchievementCelebrationPrefs } from '@/hooks/useAchievementCelebrationPrefs';
@@ -112,14 +113,16 @@ export default function RecentlyUnlockedAchievementsWidget({ vehicleId, size }: 
         <ul className="flex flex-wrap gap-3 items-start" data-testid="recently-unlocked-list">
           {recent.map(a => (
             <li key={a.id}>
-              <button
+              <Button
                 type="button"
+                variant="ghost"
+                size="sm"
                 onClick={() => handleOpen(a.id)}
-                className="rounded-lg p-1 transition-colors hover:bg-white/[0.04] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500/50"
+                className="h-auto rounded-lg p-1 hover:bg-white/[0.04] focus-visible:ring-yellow-500/50"
                 aria-label={t('achievements.viewNamed', 'View achievement: {{name}}', { name: a.name })}
               >
                 <AchievementBadge achievement={a} size="sm" />
-              </button>
+              </Button>
             </li>
           ))}
         </ul>

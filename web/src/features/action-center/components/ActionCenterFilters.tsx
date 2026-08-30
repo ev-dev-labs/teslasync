@@ -39,14 +39,27 @@ export function ActionCenterFilters({ filter, vehicles, onChange }: ActionCenter
       label: t('actionCenter.source.advanced_intelligence', 'Advanced intelligence'),
     },
     {
+      value: 'battery_health',
+      label: t('actionCenter.source.battery_health', 'Battery health'),
+    },
+    {
       value: 'charging_reliability',
       label: t('actionCenter.source.charging_reliability', 'Charging reliability'),
+    },
+    {
+      value: 'drive_efficiency',
+      label: t('actionCenter.source.drive_efficiency', 'Drive efficiency'),
     },
     {
       value: 'fleet_maintenance',
       label: t('actionCenter.source.fleet_maintenance', 'Fleet maintenance'),
     },
     { value: 'signal_health', label: t('actionCenter.source.signal_health', 'Signal health') },
+    { value: 'system_health', label: t('actionCenter.source.system_health', 'System health') },
+    {
+      value: 'vehicle_readiness',
+      label: t('actionCenter.source.vehicle_readiness', 'Vehicle readiness'),
+    },
   ];
   const stateOptions = [
     { value: '', label: t('actionCenter.filters.allStates', 'All states') },

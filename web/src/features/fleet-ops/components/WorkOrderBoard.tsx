@@ -14,6 +14,8 @@ interface WorkOrderBoardProps {
   onAdd: () => void;
   onEdit: (item: FleetWorkOrder) => void;
   onDelete: (item: FleetWorkOrder) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 const columns: WorkOrderStatus[] = ['open', 'scheduled', 'in_progress', 'completed', 'cancelled'];
@@ -32,6 +34,8 @@ export function WorkOrderBoard({
   onAdd,
   onEdit,
   onDelete,
+  actionsDisabled = false,
+  actionsDisabledReason,
 }: WorkOrderBoardProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
@@ -53,7 +57,7 @@ export function WorkOrderBoard({
     <GlassPanel className="p-5">
       <div className="flex items-center justify-between gap-3">
         <PanelTitle>{t('fleetOps.workOrders.title', 'Maintenance work-order board')}</PanelTitle>
-        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd}>
+        <Button type="button" size="sm" icon={<Plus className="h-4 w-4" />} onClick={onAdd} disabled={actionsDisabled} title={actionsDisabledReason}>
           {t('fleetOps.workOrders.add', 'Add work order')}
         </Button>
       </div>
@@ -63,7 +67,9 @@ export function WorkOrderBoard({
         <EmptyState
           icon={<Wrench className="h-8 w-8" />}
           message={t('fleetOps.workOrders.empty', 'No maintenance work orders are open.')}
-          action={{ label: t('fleetOps.workOrders.add', 'Add work order'), onClick: onAdd }}
+          action={actionsDisabled
+            ? undefined
+            : { label: t('fleetOps.workOrders.add', 'Add work order'), onClick: onAdd }}
         />
       ) : (
         <div className="mt-4 grid grid-cols-1 gap-3 xl:grid-cols-5">
@@ -101,6 +107,8 @@ export function WorkOrderBoard({
                           size="sm"
                           className="min-h-11 min-w-11 px-0"
                           aria-label={t('fleetOps.workOrders.edit', 'Edit {{name}}', { name: item.title })}
+                          disabled={actionsDisabled}
+                          title={actionsDisabledReason}
                           onClick={() => onEdit(item)}
                         >
                           <Pencil className="h-4 w-4" />
@@ -111,6 +119,8 @@ export function WorkOrderBoard({
                           size="sm"
                           className="min-h-11 min-w-11 px-0 text-rose-300"
                           aria-label={t('fleetOps.workOrders.delete', 'Delete {{name}}', { name: item.title })}
+                          disabled={actionsDisabled}
+                          title={actionsDisabledReason}
                           onClick={() => onDelete(item)}
                         >
                           <Trash2 className="h-4 w-4" />

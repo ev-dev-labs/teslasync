@@ -137,7 +137,10 @@ vi.mock('./shared', async () => {
 // charts barrel double — prop-recording stubs. ComposedChart serialises its
 // `data` (the derived rows) into the DOM; the axes / tooltip / band / lines push
 // their props so formatters, domains and bindings are directly assertable.
-vi.mock('@/components/charts', () => ({
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
+  return {
+  ...chartTestDoubles,
   chartGrid: null,
   chartMargin: {},
   chartAnimation: {},
@@ -189,7 +192,8 @@ vi.mock('@/components/charts', () => ({
       />
     );
   },
-}));
+  };
+});
 
 import MotorHistoryWidget from './MotorHistoryWidget';
 
@@ -592,7 +596,7 @@ describe('MotorHistoryWidget — interactions & a11y', () => {
     const q = setHistory({ data: [makeSnapshot(T1, { di_torque: 10 })] });
     renderWidget();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
 
     expect(q.refetch).toHaveBeenCalledTimes(1);
   });
@@ -601,7 +605,7 @@ describe('MotorHistoryWidget — interactions & a11y', () => {
     const q = setHistory({ data: [makeSnapshot(T1, { di_torque: 10 })] });
     renderWidget({ cols: 1, rows: 2 });
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
 
     expect(q.refetch).toHaveBeenCalledTimes(1);
   });

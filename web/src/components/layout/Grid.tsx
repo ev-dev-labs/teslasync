@@ -1,10 +1,23 @@
 import { type ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
-type Breakpoint = 'default' | 'sm' | 'md' | 'lg' | 'xl';
+type Breakpoint = 'default' | 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl';
 
 interface GridProps {
-  cols?: { default?: number; sm?: number; md?: number; lg?: number; xl?: number };
+  cols?: {
+    default?: number;
+    sm?: number;
+    md?: number;
+    lg?: number;
+    xl?: number;
+    '2xl'?: number;
+    '3xl'?: number;
+  };
+  /**
+   * Container-aware auto-fit layout. Prefer this for metric cards nested
+   * inside panels; viewport breakpoints cannot know how wide the panel is.
+   */
+  minItemWidth?: 'compact' | 'standard' | 'wide';
   gap?: number;
   children: ReactNode;
   className?: string;
@@ -23,7 +36,15 @@ const COL_CLASSES: Record<Breakpoint, Record<number, string>> = {
   md: { 1: 'md:grid-cols-1', 2: 'md:grid-cols-2', 3: 'md:grid-cols-3', 4: 'md:grid-cols-4', 5: 'md:grid-cols-5', 6: 'md:grid-cols-6' },
   lg: { 1: 'lg:grid-cols-1', 2: 'lg:grid-cols-2', 3: 'lg:grid-cols-3', 4: 'lg:grid-cols-4', 5: 'lg:grid-cols-5', 6: 'lg:grid-cols-6' },
   xl: { 1: 'xl:grid-cols-1', 2: 'xl:grid-cols-2', 3: 'xl:grid-cols-3', 4: 'xl:grid-cols-4', 5: 'xl:grid-cols-5', 6: 'xl:grid-cols-6' },
+  '2xl': { 1: '2xl:grid-cols-1', 2: '2xl:grid-cols-2', 3: '2xl:grid-cols-3', 4: '2xl:grid-cols-4', 5: '2xl:grid-cols-5', 6: '2xl:grid-cols-6' },
+  '3xl': { 1: '3xl:grid-cols-1', 2: '3xl:grid-cols-2', 3: '3xl:grid-cols-3', 4: '3xl:grid-cols-4', 5: '3xl:grid-cols-5', 6: '3xl:grid-cols-6' },
 };
+
+const AUTO_FIT_CLASSES = {
+  compact: '[grid-template-columns:repeat(auto-fit,minmax(min(100%,8rem),1fr))]',
+  standard: '[grid-template-columns:repeat(auto-fit,minmax(min(100%,10rem),1fr))]',
+  wide: '[grid-template-columns:repeat(auto-fit,minmax(min(100%,14rem),1fr))]',
+} as const;
 
 const GAP_CLASSES: Record<number, string> = {
   0: 'gap-0', 1: 'gap-1', 2: 'gap-2', 3: 'gap-3', 4: 'gap-4', 5: 'gap-5',
@@ -40,16 +61,29 @@ function colClass(bp: Breakpoint, n: number | undefined): string | undefined {
   return COL_CLASSES[bp][Math.min(6, Math.round(n))];
 }
 
-export function Grid({ cols = { default: 1 }, gap = 4, children, className }: GridProps) {
+export function Grid({
+  cols = { default: 1 },
+  minItemWidth,
+  gap = 4,
+  children,
+  className,
+}: GridProps) {
   return (
     <div
+      data-layout={minItemWidth ? 'auto-fit' : 'responsive-columns'}
       className={cn(
         'grid',
-        colClass('default', cols.default),
-        colClass('sm', cols.sm),
-        colClass('md', cols.md),
-        colClass('lg', cols.lg),
-        colClass('xl', cols.xl),
+        minItemWidth
+          ? AUTO_FIT_CLASSES[minItemWidth]
+          : [
+              colClass('default', cols.default),
+              colClass('sm', cols.sm),
+              colClass('md', cols.md),
+              colClass('lg', cols.lg),
+              colClass('xl', cols.xl),
+              colClass('2xl', cols['2xl']),
+              colClass('3xl', cols['3xl']),
+            ],
         GAP_CLASSES[gap] ?? 'gap-4',
         className,
       )}

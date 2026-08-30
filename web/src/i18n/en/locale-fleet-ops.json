@@ -1,0 +1,241 @@
+{
+  "fleetOps": {
+    "readOnly": {
+      "title": "Fleet Operations is read-only"
+    },
+    "actions": {
+      "reserve": "New reservation"
+    },
+    "assignments": {
+      "driver": "Driver",
+      "empty": "No driver assignments are scheduled.",
+      "ends": "Ends",
+      "ongoing": "Ongoing",
+      "resource": "Assignments",
+      "starts": "Starts",
+      "title": "Assignment roster",
+      "vehicle": "Vehicle",
+      "edit": "Edit assignment for {{name}}",
+      "delete": "Delete assignment for {{name}}",
+      "add": "Add assignment"
+    },
+    "conflict": {
+      "message": "This vehicle or driver is already committed during that period. Refresh the schedule and choose another time.",
+      "title": "Scheduling conflict"
+    },
+    "costCenters": {
+      "bookings": "Bookings",
+      "empty": "No cost centers have been configured.",
+      "openOrders": "Open orders",
+      "resource": "Cost centers",
+      "title": "Cost-center allocation",
+      "add": "Add cost center",
+      "active": "Active",
+      "inactive": "Inactive",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "maintenanceCost": "Maintenance cost"
+    },
+    "error": {
+      "message": "The operation failed. Review the details and try again.",
+      "title": "Reservation could not be saved"
+    },
+    "forecast": {
+      "aria": "Daily fleet utilization forecast with lower and upper uncertainty bounds",
+      "date": "Date",
+      "expected": "Expected utilization",
+      "fair": "Fair confidence",
+      "good": "Good confidence",
+      "lower": "Lower bound",
+      "quality": "Forecast quality: {{quality}}",
+      "resource": "Utilization forecast",
+      "sparse": "Sparse history",
+      "subtitle": "Expected daily fleet utilization with uncertainty band",
+      "title": "Utilization forecast",
+      "uncertainty": "Uncertainty",
+      "upper": "Upper bound"
+    },
+    "kpi": {
+      "assignedVehicles": "Assigned vehicles",
+      "forecastAverage": "14-day fleet average",
+      "forecastUtilization": "Forecast utilization",
+      "openWorkOrders": "Open work orders",
+      "reservations": "Active reservations"
+    },
+    "policies": {
+      "allowedWindows": "Allowed windows",
+      "disabled": "Disabled",
+      "empty": "No charging policies are configured.",
+      "enabled": "Enabled",
+      "maxPower": "Max power",
+      "policy": "Policy",
+      "priority": "Priority",
+      "resource": "Charging policies",
+      "state": "State",
+      "targetSoc": "Target SoC",
+      "title": "Charging policy matrix",
+      "vehicle": "Vehicle",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "add": "Add policy"
+    },
+    "reservationDialog": {
+      "costCenter": "Cost center",
+      "create": "Create reservation",
+      "driver": "Driver",
+      "ends": "Ends",
+      "name": "Reservation name",
+      "noCostCenter": "No cost center",
+      "periodError": "End time must be after start time.",
+      "required": "Complete all required fields.",
+      "selectVehicle": "Select vehicle",
+      "starts": "Starts",
+      "title": "Create reservation",
+      "unassigned": "Leave unassigned",
+      "vehicle": "Vehicle",
+      "validation": "Enter a name, vehicle, valid period, and a driver assigned for the full reservation.",
+      "editTitle": "Edit reservation",
+      "purpose": "Purpose",
+      "status": "Status"
+    },
+    "reservations": {
+      "driver": "Driver",
+      "empty": "No reservations in this planning window.",
+      "period": "Period",
+      "reservation": "Reservation",
+      "resource": "Reservations",
+      "status": "Status",
+      "title": "Reservation calendar",
+      "vehicle": "Vehicle",
+      "cancelTitle": "Cancel reservation?",
+      "cancelMessage": "Cancel “{{name}}”? Its vehicle and driver time will become available.",
+      "cancelAction": "Cancel reservation",
+      "edit": "Edit {{name}}",
+      "cancelNamed": "Cancel {{name}}",
+      "delete": "Delete {{name}}"
+    },
+    "status": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "confirmed": "Confirmed",
+      "requested": "Requested"
+    },
+    "subtitle": "Coordinate drivers, bookings, charging, costs, maintenance, and capacity.",
+    "title": "Fleet operations",
+    "workOrders": {
+      "cancelled": "Cancelled",
+      "completed": "Completed",
+      "critical": "Critical",
+      "dueDate": "Due {{date}}",
+      "dueDistance": "Due at {{distance}}",
+      "empty": "No maintenance work orders are open.",
+      "high": "High",
+      "inProgress": "In progress",
+      "low": "Low",
+      "medium": "Medium",
+      "noDue": "No due threshold",
+      "noneInColumn": "No orders",
+      "open": "Open",
+      "resource": "Work orders",
+      "scheduled": "Scheduled",
+      "title": "Maintenance work-order board",
+      "add": "Add work order",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}"
+    },
+    "assignmentDialog": {
+      "validation": "Choose a driver and vehicle, and enter a valid period. Notes may use up to 500 characters.",
+      "editTitle": "Edit assignment",
+      "createTitle": "Add assignment",
+      "chooseVehicle": "Choose vehicle",
+      "chooseDriver": "Choose driver",
+      "ongoingHint": "Leave blank for an ongoing assignment.",
+      "notes": "Notes"
+    },
+    "delete": {
+      "assignment": "assignment",
+      "reservation": "reservation",
+      "policy": "charging policy",
+      "costCenter": "cost center",
+      "driver": "driver",
+      "workOrder": "work order",
+      "record": "record",
+      "title": "Delete {{resource}}?",
+      "message": "Delete “{{name}}”? This cannot be undone and may be blocked while related records are active."
+    },
+    "policyDialog": {
+      "validation": "Check the vehicle, 1–100% target, power, priority, effective period, and non-overlapping windows.",
+      "editTitle": "Edit charging policy",
+      "createTitle": "Add charging policy",
+      "chooseVehicle": "Choose vehicle",
+      "name": "Policy name",
+      "powerHint": "Optional SI-canonical power limit in watts.",
+      "effectiveFrom": "Effective from",
+      "effectiveTo": "Effective to",
+      "noEnd": "Leave blank for no end date.",
+      "windows": "Allowed charging windows",
+      "addWindow": "Add window",
+      "noWindows": "Add at least one local-time window. Overnight windows are supported.",
+      "day": "Day",
+      "windowStart": "Start",
+      "windowEnd": "End",
+      "removeWindow": "Remove charging window"
+    },
+    "costCenterDialog": {
+      "validation": "Code and name are required and must fit their limits.",
+      "editTitle": "Edit cost center",
+      "createTitle": "Add cost center",
+      "code": "Code",
+      "name": "Name",
+      "active": "Available for new fleet activity"
+    },
+    "driverDialog": {
+      "validation": "Name and reference are required and must fit their limits.",
+      "editTitle": "Edit driver",
+      "createTitle": "Add driver",
+      "name": "Display name",
+      "reference": "Non-sensitive reference code",
+      "status": "Status"
+    },
+    "drivers": {
+      "active": "Active",
+      "inactive": "Inactive",
+      "name": "Driver",
+      "reference": "Reference",
+      "status": "Status",
+      "edit": "Edit {{name}}",
+      "delete": "Delete {{name}}",
+      "title": "Fleet drivers",
+      "add": "Add driver",
+      "resource": "Drivers",
+      "empty": "No fleet drivers are configured."
+    },
+    "mutation": {
+      "versionTitle": "Record changed",
+      "conflictTitle": "Conflicting change",
+      "errorTitle": "Change could not be saved",
+      "versionMessage": "Someone updated this {{resource}} after it was loaded. Refresh before trying again.",
+      "conflictMessage": "This {{resource}} conflicts with another active record. Review periods and unique values.",
+      "errorMessage": "The server could not apply this change. Your existing data was not modified.",
+      "refresh": "Refresh data"
+    },
+    "workOrderDialog": {
+      "validation": "Check required fields, non-negative distance/cost, the three-letter currency, and scheduled downtime.",
+      "editTitle": "Edit work order",
+      "createTitle": "Add work order",
+      "chooseVehicle": "Choose vehicle",
+      "costCenter": "Cost center",
+      "noCostCenter": "No cost center",
+      "title": "Title",
+      "status": "Status",
+      "severity": "Severity",
+      "dueDistance": "Due odometer ({{unit}})",
+      "dueAt": "Due at",
+      "scheduledStart": "Downtime starts",
+      "scheduledEnd": "Downtime ends",
+      "costMinor": "Cost (minor units)",
+      "currency": "Currency",
+      "description": "Description"
+    }
+  }
+}

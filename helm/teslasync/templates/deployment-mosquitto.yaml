@@ -16,14 +16,21 @@ spec:
     type: Recreate
   template:
     metadata:
+      annotations:
+        checksum/mosquitto-config: {{ include (print $.Template.BasePath "/configmap-mosquitto.yaml") . | sha256sum }}
       labels:
         {{- include "teslasync.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: mosquitto
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 60
+      securityContext:
+        {{- toYaml .Values.mqtt.podSecurityContext | nindent 8 }}
       containers:
         - name: mosquitto
+          securityContext:
+            {{- toYaml .Values.mqtt.securityContext | nindent 12 }}
           image: {{ .Values.mqtt.image | quote }}
           ports:
             - name: mqtt
@@ -32,6 +39,14 @@ spec:
             - name: websocket
               containerPort: 9001
               protocol: TCP
+          # Loading a large persistent-session queue must finish before
+          # liveness can recycle the broker.
+          startupProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
           livenessProbe:
             tcpSocket:
               port: mqtt
@@ -48,15 +63,22 @@ spec:
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- if .Values.mqtt.persistence.enabled }}
           volumeMounts:
             - name: mosquitto-data
               mountPath: /mosquitto/data
-          {{- end }}
-      {{- if .Values.mqtt.persistence.enabled }}
+            - name: mosquitto-config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+              readOnly: true
       volumes:
+        - name: mosquitto-config
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-mosquitto
         - name: mosquitto-data
+        {{- if .Values.mqtt.persistence.enabled }}
           persistentVolumeClaim:
             claimName: {{ include "teslasync.fullname" . }}-mosquitto-data
-      {{- end }}
+        {{- else }}
+          emptyDir: {}
+        {{- end }}
 {{- end }}

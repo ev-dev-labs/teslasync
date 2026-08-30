@@ -57,10 +57,12 @@ const DESCRIPTIONS: Record<string, string> = {
   '/explore': 'Browse and search every feature in TeslaSync with a 1-line description for each.',
   '/live': 'Real-time map of where your vehicle is right now.',
   '/timeline': 'Hour-by-hour history of drives, charges, and events.',
+  '/activity': 'Unified timeline of drives, charging, alerts, software updates, and annotations.',
   '/weekly-digest': 'A printable weekly recap of usage, range, and cost.',
 
   // ── Vehicles ───────────────────────────────────────────────────────
   '/vehicles': 'Manage every Tesla on your account — VIN, options, status.',
+  '/vehicle-management': 'Fleet API options, specs, warranty, pricing, and payer roles per vehicle.',
   '/digital-twin': 'A live 3D model of your car mirroring doors, lights, and motion.',
   '/vehicle-comparison': 'Side-by-side stats for two or more of your vehicles.',
   '/locations': 'Frequent destinations — home, work, favorite Superchargers.',
@@ -93,6 +95,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/mileage': 'Odometer log with monthly and yearly totals.',
   '/lifetime-stats': 'Every drive ever — distance, energy, and time totals.',
   '/drive-score': 'Smoothness rating per drive (acceleration, braking, cornering).',
+  '/fsd': 'Supervised self-driving distance, usage share, and data confidence.',
   '/speed-profile': 'Speed-vs-time chart for any drive.',
   '/driving-dynamics': 'G-forces, lateral and longitudinal acceleration analysis.',
   '/regen-efficiency': 'How much energy regenerative braking recaptures.',
@@ -256,6 +259,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/admin/schema-drift': 'Detect divergence between code models and the live DB schema.',
   '/admin/slow-queries': 'Top slow SQL queries with explain plans.',
   '/admin/vehicle-cost': 'Per-vehicle infrastructure cost attribution.',
+  '/admin/data-quality': 'Signal freshness, gaps, duplicates, and normalization provenance.',
   '/admin/disk-forecast': 'When will the database run out of disk?',
   '/admin/secret-rotation': 'Track and rotate secrets, tokens, and credentials.',
   '/admin/audit-log': 'Every privileged action with actor, target, and timestamp.',

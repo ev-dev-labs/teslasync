@@ -4,7 +4,6 @@ import type { UseQueryResult } from '@tanstack/react-query';
 import { TrendingUp } from 'lucide-react';
 
 import { GlassPanel, PanelTitle } from '@/components/ui';
-import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import {
   AreaChart,
   Area,
@@ -14,6 +13,7 @@ import {
   Tooltip,
   ResponsiveContainer,
   ChartTooltip,
+  EmbeddedChart,
   AREA_DEFAULTS,
   areaGradient,
 } from '@/components/charts';
@@ -33,7 +33,7 @@ interface GasPriceTrendChartProps {
  * returns rows newest-first, so we reverse to chronological order for the time
  * axis. Loading, empty, and error states are all handled independently.
  */
-export function GasPriceTrendChart({ query, onPollNow }: GasPriceTrendChartProps) {
+export function GasPriceTrendChart({ query }: GasPriceTrendChartProps) {
   const { t } = useTranslation();
   const palette = useChartPalette();
   const { formatCurrency } = useFormatting();
@@ -59,51 +59,42 @@ export function GasPriceTrendChart({ query, onPollNow }: GasPriceTrendChartProps
         {t('gas.priceTrend', 'Price Trend')}
       </PanelTitle>
 
-      {isError ? (
-        <QueryError
-          error={error}
-          onRetry={() => void refetch()}
-          resourceName={t('gas.title', 'Gas Price Auto-Poll')}
-        />
-      ) : isLoading && rows.length === 0 ? (
-        <div role="status" aria-busy="true" aria-label={t('common.loading', 'Loading')}>
-          <Skeleton height={240} className="rounded-xl" />
-        </div>
-      ) : rows.length === 0 ? (
-        <EmptyState
-          icon={<TrendingUp className="h-8 w-8" />}
-          message={t('gas.noHistory', 'No price history recorded yet. Trigger a poll to get started.')}
-          action={onPollNow ? { label: t('gas.pollNow', 'Poll Now'), onClick: onPollNow } : undefined}
-        />
-      ) : (
-        <div
-          role="img"
-          aria-label={t('gas.priceTrendAria', 'Line chart of historical gas prices over time')}
-          className="h-56 sm:h-64 xl:h-72"
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              {areaGradient('gasPriceGrad', color)}
-              <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-              <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
-              <YAxis
-                width={56}
-                tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
-                domain={['auto', 'auto']}
-                tickFormatter={(v) => formatCurrency(Number(v))}
-              />
-              <Tooltip content={<ChartTooltip />} />
-              <Area
-                {...AREA_DEFAULTS}
-                dataKey="price"
-                name={t('gas.priceSeries', 'Price')}
-                stroke={color}
-                fill="url(#gasPriceGrad)"
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      )}
+      <EmbeddedChart
+        title={t('gas.priceTrend', 'Price Trend')}
+        ariaLabel={t('gas.priceTrendAria', 'Line chart of historical gas prices over time')}
+        loading={isLoading && rows.length === 0}
+        error={isError ? error : undefined}
+        onRetry={() => void refetch()}
+        empty={!isError && !isLoading && rows.length === 0}
+        emptyMessage={t('gas.noHistory', 'No price history recorded yet. Trigger a poll to get started.')}
+        data={rows}
+        dataColumns={[
+          { key: 'date', label: t('gas.priceTrendDateCol', 'Date') },
+          { key: 'price', label: t('gas.priceSeries', 'Price') },
+        ]}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+            {areaGradient('gasPriceGrad', color)}
+            <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+            <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} />
+            <YAxis
+              width={56}
+              tick={{ fontSize: 10, fill: 'var(--text-muted)' }}
+              domain={['auto', 'auto']}
+              tickFormatter={(v) => formatCurrency(Number(v))}
+            />
+            <Tooltip content={<ChartTooltip />} />
+            <Area
+              {...AREA_DEFAULTS}
+              dataKey="price"
+              name={t('gas.priceSeries', 'Price')}
+              stroke={color}
+              fill="url(#gasPriceGrad)"
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </EmbeddedChart>
     </GlassPanel>
   );
 }

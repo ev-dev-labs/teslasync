@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"time"
+
+	platformhttp "github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 )
 
 // HTTPProbe asserts an HTTP endpoint returns a status in the
@@ -26,10 +28,13 @@ type HTTPProbe struct {
 // to a 10s-timeout net/http.Client.
 func NewHTTPProbe(name, url string) *HTTPProbe {
 	return &HTTPProbe{
-		ProbeName:      name,
-		URL:            url,
-		Method:         http.MethodGet,
-		Client:         &http.Client{Timeout: 10 * time.Second},
+		ProbeName: name,
+		URL:       url,
+		Method:    http.MethodGet,
+		Client: platformhttp.NewClient(platformhttp.ClientConfig{
+			Name:    "synthetic-http-probe",
+			Timeout: 10 * time.Second,
+		}),
 		StatusAllowed:  []int{200},
 		MaxBodyReadKiB: 64,
 	}
@@ -56,7 +61,10 @@ func (p *HTTPProbe) Run(ctx context.Context) error {
 	}
 	client := p.Client
 	if client == nil {
-		client = http.DefaultClient
+		client = platformhttp.NewClient(platformhttp.ClientConfig{
+			Name:    "synthetic-http-probe",
+			Timeout: 10 * time.Second,
+		})
 	}
 	resp, err := client.Do(req)
 	if err != nil {
@@ -64,13 +72,14 @@ func (p *HTTPProbe) Run(ctx context.Context) error {
 	}
 	defer resp.Body.Close()
 	if !statusAllowed(resp.StatusCode, p.StatusAllowed) {
+		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64*1024))
 		return fmt.Errorf("unexpected status %d for %s %s", resp.StatusCode, method, p.URL)
 	}
+	readMax := p.MaxBodyReadKiB
+	if readMax <= 0 {
+		readMax = 64
+	}
 	if p.ExpectBodyHas != "" {
-		readMax := p.MaxBodyReadKiB
-		if readMax <= 0 {
-			readMax = 64
-		}
 		body, err := io.ReadAll(io.LimitReader(resp.Body, int64(readMax)*1024))
 		if err != nil {
 			return fmt.Errorf("read body: %w", err)
@@ -78,6 +87,8 @@ func (p *HTTPProbe) Run(ctx context.Context) error {
 		if !containsString(string(body), p.ExpectBodyHas) {
 			return fmt.Errorf("body did not contain %q (first %d bytes shown above)", p.ExpectBodyHas, len(body))
 		}
+	} else if _, err := io.Copy(io.Discard, io.LimitReader(resp.Body, int64(readMax)*1024)); err != nil {
+		return fmt.Errorf("read body: %w", err)
 	}
 	return nil
 }

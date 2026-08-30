@@ -115,10 +115,10 @@ describe('Tabs', () => {
       setup({ activeTab: 'overview' });
       const overview = tab('Overview');
       const charging = tab('Charging');
-      expect(overview.className).toContain('border-blue-600');
-      expect(overview.className).toContain('text-blue-600');
+      expect(overview.className).toContain('border-[var(--theme-primary)]');
+      expect(overview.className).toContain('text-[var(--text-primary)]');
       expect(charging.className).toContain('text-[var(--text-muted)]');
-      expect(charging.className).not.toContain('border-blue-600');
+      expect(charging.className).not.toContain('border-[var(--theme-primary)]');
     });
   });
 

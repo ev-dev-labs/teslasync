@@ -2,7 +2,9 @@ package alerts
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 	"time"
 
@@ -12,6 +14,7 @@ import (
 
 	pahomqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/rs/zerolog/log"
+	"go.opentelemetry.io/otel"
 
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
@@ -51,7 +54,8 @@ type alertRuleBulkRepository interface {
 }
 
 type notificationRepository interface {
-	GetLogs(context.Context, int, int) ([]*notificationmodel.NotificationLog, error)
+	GetLogsFiltered(context.Context, dbnotif.NotificationLogFilters) ([]*notificationmodel.NotificationLog, error)
+	BulkSetRead(context.Context, []int64, bool) (int64, error)
 	CreateLog(context.Context, *notificationmodel.NotificationLog) error
 	GetChannel(context.Context, int64) (*notificationmodel.NotificationChannel, error)
 	GetAllChannels(context.Context) ([]*notificationmodel.NotificationChannel, error)
@@ -91,23 +95,160 @@ func (h *AlertHandler) WithForwardAuthHeader(name string) *AlertHandler {
 // kept for backward compatibility with the frontend /alerts route, which
 // expects {id, vehicle_id, type, severity, title, message, is_read, created_at}.
 func (h *AlertHandler) List(w http.ResponseWriter, r *http.Request) {
-	limit, offset := pagination(r)
-	logs, err := h.notifRepo.GetLogs(r.Context(), limit, offset)
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.list")
+	defer span.End()
+
+	filters, err := parseAlertListFilters(r)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to list notification logs")
+		span.RecordError(err)
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	logs, err := h.notifRepo.GetLogsFiltered(ctx, filters)
+	if err != nil {
+		span.RecordError(err)
+		log.Error().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to list notification logs")
 		writeError(w, http.StatusInternalServerError, "failed to list alerts")
 		return
 	}
 	if logs == nil {
 		logs = []*notificationmodel.NotificationLog{}
 	}
-	out, err := h.adaptNotificationLogsToAlerts(r.Context(), logs)
+	out, err := h.adaptNotificationLogsToAlerts(ctx, logs)
 	if err != nil {
-		log.Error().Err(err).Msg("failed to adapt notification logs to alert DTOs")
+		span.RecordError(err)
+		log.Error().
+			Err(err).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to adapt notification logs to alert DTOs")
 		writeError(w, http.StatusInternalServerError, "failed to list alerts")
 		return
 	}
 	writeJSON(w, http.StatusOK, out)
+}
+
+func parseAlertListFilters(r *http.Request) (dbnotif.NotificationLogFilters, error) {
+	limit, offset := pagination(r)
+	filters := dbnotif.NotificationLogFilters{
+		Limit:                      limit,
+		Offset:                     offset,
+		IncludeFailedInfoAsWarning: true,
+	}
+	query := r.URL.Query()
+
+	seenSeverities := make(map[string]struct{})
+	for _, value := range query["severity"] {
+		for _, severity := range strings.Split(value, ",") {
+			severity = strings.ToLower(strings.TrimSpace(severity))
+			if severity == "" {
+				continue
+			}
+			if severity == "warning" {
+				severity = "warn"
+			}
+			switch severity {
+			case "info", "warn", "critical":
+			default:
+				return filters, fmt.Errorf("invalid severity %q", severity)
+			}
+			if _, exists := seenSeverities[severity]; exists {
+				continue
+			}
+			seenSeverities[severity] = struct{}{}
+			filters.Severities = append(filters.Severities, severity)
+		}
+	}
+
+	seenVehicleIDs := make(map[int64]struct{})
+	for _, value := range query["vehicle_id"] {
+		for _, rawID := range strings.Split(value, ",") {
+			rawID = strings.TrimSpace(rawID)
+			if rawID == "" {
+				continue
+			}
+			vehicleID, err := strconv.ParseInt(rawID, 10, 64)
+			if err != nil || vehicleID <= 0 {
+				return filters, fmt.Errorf("invalid vehicle_id %q", rawID)
+			}
+			if _, exists := seenVehicleIDs[vehicleID]; exists {
+				continue
+			}
+			seenVehicleIDs[vehicleID] = struct{}{}
+			filters.VehicleIDs = append(filters.VehicleIDs, vehicleID)
+		}
+	}
+
+	parseRangeTime := func(name string, inclusiveDateEnd bool) (time.Time, error) {
+		raw := strings.TrimSpace(query.Get(name))
+		if raw == "" {
+			return time.Time{}, nil
+		}
+		if parsed, err := time.Parse("2006-01-02", raw); err == nil {
+			if inclusiveDateEnd {
+				parsed = parsed.Add(24*time.Hour - time.Nanosecond)
+			}
+			return parsed, nil
+		}
+		parsed, err := time.Parse(time.RFC3339Nano, raw)
+		if err != nil {
+			return time.Time{}, fmt.Errorf("invalid %s: must be an RFC3339 timestamp or YYYY-MM-DD date", name)
+		}
+		return parsed, nil
+	}
+
+	var err error
+	filters.From, err = parseRangeTime("from", false)
+	if err != nil {
+		return filters, err
+	}
+	filters.To, err = parseRangeTime("to", true)
+	if err != nil {
+		return filters, err
+	}
+	if !filters.From.IsZero() && !filters.To.IsZero() && filters.From.After(filters.To) {
+		return filters, fmt.Errorf("invalid date range: from must not be after to")
+	}
+
+	beforeCreatedAt := strings.TrimSpace(query.Get("before_created_at"))
+	beforeID := strings.TrimSpace(query.Get("before_id"))
+	if (beforeCreatedAt == "") != (beforeID == "") {
+		return filters, fmt.Errorf("before_created_at and before_id must be provided together")
+	}
+	if beforeCreatedAt != "" {
+		filters.BeforeCreatedAt, err = time.Parse(time.RFC3339Nano, beforeCreatedAt)
+		if err != nil {
+			return filters, fmt.Errorf("invalid before_created_at: must be an RFC3339 timestamp")
+		}
+		filters.BeforeID, err = strconv.ParseInt(beforeID, 10, 64)
+		if err != nil || filters.BeforeID <= 0 {
+			return filters, fmt.Errorf("invalid before_id %q", beforeID)
+		}
+	}
+
+	parseOptionalBool := func(name string) (*bool, error) {
+		raw := strings.TrimSpace(query.Get(name))
+		if raw == "" {
+			return nil, nil
+		}
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			return nil, fmt.Errorf("invalid %s: must be true or false", name)
+		}
+		return &value, nil
+	}
+
+	filters.Read, err = parseOptionalBool("read")
+	if err != nil {
+		return filters, err
+	}
+	filters.Archived, err = parseOptionalBool("archived")
+	if err != nil {
+		return filters, err
+	}
+	return filters, nil
 }
 
 // AlertResponse is the wire shape returned by GET /alerts. Mirrors the
@@ -129,6 +270,16 @@ type AlertResponse struct {
 	Message   string    `json:"message"`
 	IsRead    bool      `json:"is_read"`
 	CreatedAt time.Time `json:"created_at"`
+
+	// Rule scope is included because multi-vehicle rules cannot be represented
+	// truthfully by the deprecated single vehicle_id field. A nil scope denotes
+	// a system notification or a deleted originating rule.
+	AllVehicles *bool   `json:"all_vehicles,omitempty"`
+	VehicleIDs  []int64 `json:"vehicle_ids"`
+
+	AcknowledgedAt      *time.Time `json:"acknowledged_at,omitempty"`
+	AcknowledgedBy      *string    `json:"acknowledged_by,omitempty"`
+	AcknowledgementNote *string    `json:"acknowledgement_note,omitempty"`
 
 	// Drill-through metadata populated when the notification log links to a
 	// still-existing alert rule.
@@ -211,19 +362,34 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 	out := make([]*AlertResponse, len(logs))
 	for i, l := range logs {
 		resp := &AlertResponse{
-			ID:        l.ID,
-			Title:     l.Title,
-			Message:   l.Message,
-			IsRead:    false, // notifications are append-only; read state is client-side
-			CreatedAt: l.CreatedAt,
-			Type:      "notification",
-			Severity:  "info",
+			ID:                  l.ID,
+			Title:               l.Title,
+			Message:             l.Message,
+			IsRead:              l.ReadAt != nil,
+			CreatedAt:           l.CreatedAt,
+			Type:                "notification",
+			Severity:            "info",
+			AcknowledgedAt:      l.AcknowledgedAt,
+			AcknowledgedBy:      l.AcknowledgedBy,
+			AcknowledgementNote: l.AcknowledgementNote,
 		}
 		if l.AlertID != nil {
 			if rule, ok := rules[*l.AlertID]; ok {
 				resp.Type = slugifyRuleName(rule.Name)
 				resp.Severity = alertRuleSeverityToWire(rule.Severity)
-				if rule.VehicleID != nil {
+				allVehicles := rule.AllVehicles
+				resp.AllVehicles = &allVehicles
+				if rule.VehicleIDs != nil {
+					resp.VehicleIDs = append([]int64{}, rule.VehicleIDs...)
+				}
+				switch {
+				case rule.AllVehicles:
+					resp.VehicleID = 0
+				case len(rule.VehicleIDs) == 1:
+					resp.VehicleID = rule.VehicleIDs[0]
+				case rule.VehicleIDs == nil && rule.VehicleID != nil:
+					// Rolling-deploy fallback for repositories that have not
+					// hydrated the canonical junction scope yet.
 					resp.VehicleID = *rule.VehicleID
 				}
 				// Carry the owning rule's identity so the frontend can deep-link from
@@ -252,11 +418,26 @@ func (h *AlertHandler) adaptNotificationLogsToAlerts(ctx context.Context, logs [
 	return out, nil
 }
 
-// MarkRead is a no-op kept for backward compatibility. The notifications
-// table is append-only (ADR-010); "read" status is tracked client-side.
+// MarkRead persists the legacy alert-route action against the canonical
+// notification_logs read state.
 func (h *AlertHandler) MarkRead(w http.ResponseWriter, r *http.Request) {
-	if _, err := urlParamInt64(r, "alertID"); err != nil {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.alerts.mark_read")
+	defer span.End()
+
+	alertID, err := urlParamInt64(r, "alertID")
+	if err != nil {
+		span.RecordError(err)
 		writeError(w, http.StatusBadRequest, "invalid alert ID")
+		return
+	}
+	if _, err := h.notifRepo.BulkSetRead(ctx, []int64{alertID}, true); err != nil {
+		span.RecordError(err)
+		log.Error().
+			Err(err).
+			Int64("alert_id", alertID).
+			Str("trace_id", span.SpanContext().TraceID().String()).
+			Msg("failed to mark alert read")
+		writeError(w, http.StatusInternalServerError, "failed to mark alert read")
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})

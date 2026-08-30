@@ -79,25 +79,25 @@ function renderRow(props: Partial<Props> = {}) {
   return render(<SummaryStatsRow {...merged} />);
 }
 
-/** The <MetricCard> root (`div.rounded-xl`) that wraps a given label. */
+/** The <MetricCard> root (`[data-role="metric-card"]`) that wraps a given label. */
 function card(label: string): HTMLElement {
-  const root = screen.getByText(label).closest('div.rounded-xl');
+  const root = screen.getByText(label).closest('[data-role="metric-card"]');
   if (!root) throw new Error(`no card for "${label}"`);
   return root as HTMLElement;
 }
 
-/** The bold value <p> inside a card. */
+/** The bold value node inside a card. */
 function cardValue(label: string): string {
-  const p = card(label).querySelector('p.text-xl');
-  if (!p) throw new Error(`no value <p> in card "${label}"`);
+  const p = card(label).querySelector('[data-role="metric-value"]');
+  if (!p) throw new Error(`no value node in card "${label}"`);
   return p.textContent ?? '';
 }
 
-/** The rounded icon chip inside a card — carries the accent-tone tokens. */
-function cardChipClass(label: string): string {
-  const chip = card(label).querySelector('div.rounded-lg');
-  if (!chip) throw new Error(`no icon chip in card "${label}"`);
-  return chip.className;
+/** The icon wrapper inside a card — carries the `data-color` accent tone. */
+function cardTone(label: string): string {
+  const chip = card(label).querySelector('[data-role="metric-icon"]');
+  if (!(chip instanceof HTMLElement)) throw new Error(`no icon chip in card "${label}"`);
+  return chip.dataset.color ?? '';
 }
 
 describe('SummaryStatsRow', () => {
@@ -128,14 +128,14 @@ describe('SummaryStatsRow', () => {
     renderRow({ isSecure: true });
 
     expect(cardValue(LABELS.status)).toBe('Secure');
-    expect(cardChipClass(LABELS.status)).toContain('bg-neon-green/10');
+    expect(cardTone(LABELS.status)).toBe('green');
   });
 
   it('shows a red "Unsecure" status when isSecure is false', () => {
     renderRow({ isSecure: false });
 
     expect(cardValue(LABELS.status)).toBe('Unsecure');
-    expect(cardChipClass(LABELS.status)).toContain('bg-neon-red/10');
+    expect(cardTone(LABELS.status)).toBe('red');
   });
 
   it('degrades an undefined last-lock timestamp to an em dash', () => {
@@ -177,9 +177,9 @@ describe('SummaryStatsRow', () => {
   it('wires the non-status cards to their cyan / blue / purple accent tones', () => {
     renderRow({ lastLockChange: undefined, sentryUptime: 50, totalEvents: 10 });
 
-    expect(cardChipClass(LABELS.lastLock)).toContain('bg-neon-cyan/10');
-    expect(cardChipClass(LABELS.sentryUptime)).toContain('bg-neon-blue/10');
-    expect(cardChipClass(LABELS.totalEvents)).toContain('bg-neon-purple/10');
+    expect(cardTone(LABELS.lastLock)).toBe('cyan');
+    expect(cardTone(LABELS.sentryUptime)).toBe('blue');
+    expect(cardTone(LABELS.totalEvents)).toBe('purple');
   });
 
   it("marks each card's decorative icon aria-hidden (a11y)", () => {

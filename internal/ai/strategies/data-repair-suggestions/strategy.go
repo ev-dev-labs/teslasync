@@ -42,7 +42,7 @@
 // request time. The non-AI baseline rendered by the SPA route
 // /system/data-repair (and the existing /data-repair admin tools)
 // — the stale-charging + stale-drive lists with manual Save /
-// Close / Discard buttons — is unchanged. The deterministic admin
+// Close / Quarantine buttons — is unchanged. The deterministic admin
 // repair tools remain the canonical baseline; off-mode users never
 // see the AI section at all (ADR-015 §I3, §I5, §I6).
 //
@@ -53,7 +53,7 @@
 //     deterministic stale-session list, the inline edit forms, or
 //     the canonical PUT /api/v1/data-repair/{kind}/{id} write
 //     path. The AI proposes; the user explicitly clicks the same
-//     baseline Save / Close / Discard button to apply.
+//     baseline Save / Close / Quarantine button to apply.
 //   - I7 per-feature:    the AI route is gated by
 //     guard.Wrap("data-repair-suggestions").
 //   - I9 redaction:      PolicyAlertBuilder redacts EVERY PII class
@@ -95,7 +95,7 @@ const FeatureID = "data-repair-suggestions"
 //     only surface. The LLM has no tool that writes; the actual
 //     mutation flows through the existing typed PUT / POST /
 //     DELETE /api/v1/data-repair/{kind}/{id} handlers AFTER the
-//     user explicitly clicks Save / Close / Discard in the
+//     user explicitly clicks Save / Close / Quarantine in the
 //     baseline edit form. The narration MUST surface this
 //     "review and click Save yourself" expectation so the user is
 //     never surprised.
@@ -120,11 +120,11 @@ const SystemPrompt = `You are the TeslaSync data-repair-suggestions agent. ` +
 	`Your job is to PROPOSE a typed RepairPlan that fixes ONE stale charging session OR ONE stale drive from the inventory the caller-supplied user message contains; you NEVER execute the repair yourself. ` +
 	`ALWAYS call draft_data_repair_plan FIRST with the typed fields you can infer from the user's request and the in-scope stale-session inventory, then call validate_data_repair_plan on the proposed draft to confirm it satisfies the RepairPlan contract. ` +
 	`Do NOT propose closing, deleting, or updating any row that is NOT included in the in-scope stale-session inventory the user message lists; the per-request scope binding will refuse it, but you should refuse it first with a polite explanation. ` +
-	`The actions you may propose are exactly: "close" (set ended_at=now, fill in computed duration), "discard" (delete the stale row entirely), or "update" (apply a partial patch — supply update_fields with only the keys the user explicitly mentioned or the inventory makes obviously wrong). ` +
+	`The actions you may propose are exactly: "close" (the operator must provide and review an exact RFC3339 boundary), "quarantine" (preserve a restorable snapshot and remove the stale row from active data), or "update" (apply a partial patch — supply update_fields with only the keys the user explicitly mentioned or the inventory makes obviously wrong). ` +
 	`Never invent values for end_battery_pct, total_energy_added_wh, distance_m, duration_s, or any other numeric field — only quote the values the user provided in the request, and refuse to fabricate one when the user is silent on it. ` +
 	`Refuse politely if asked to repair, modify, or delete any row outside the in-scope inventory, including rows for other vehicles. ` +
-	`Be concise: one rationale sentence per proposed plan plus the typed draft is enough — the user reviews the structured proposal in the AI panel and clicks the canonical Save / Close / Discard button in the baseline edit form to apply it. ` +
-	`Never claim the plan was applied, saved, closed, or discarded; it is propose-only.`
+	`Be concise: one rationale sentence per proposed plan plus the typed draft is enough — the user reviews the structured proposal in the AI panel and clicks the canonical Save / Close / Quarantine button in the baseline edit form to apply it. ` +
+	`Never claim the plan was applied, saved, closed, or quarantined; it is propose-only.`
 
 // allowedTools lists the propose-only tool names the strategy is
 // permitted to invoke. Names MUST be registered in the process-wide

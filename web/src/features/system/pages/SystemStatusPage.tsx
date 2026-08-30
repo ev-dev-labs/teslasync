@@ -252,11 +252,14 @@ export default function SystemStatusPage() {
   const okCount = components.filter(([, c]) => c.status === 'ok' || c.status === 'healthy').length
   const totalCount = components.length
 
-  const dbStatus: HeroStatus =
-    extHealth?.database?.status === 'ok' || extHealth?.database?.status === 'healthy' ? 'healthy'
-    : extHealth?.database?.status ? 'degraded'
+  const extendedComponents = extHealth?.components
+  const extendedDatabase = extendedComponents?.database
+  const extendedPool = extendedComponents?.database_pool
+  const extendedSystem = extendedComponents?.system
+  const dbStatus: HeroStatus = extendedDatabase?.status
+    ? resolveCompStatus(extendedDatabase.status)
     : 'unknown'
-  const dbLatency = extHealth?.database?.latency_ms
+  const dbLatency = extendedDatabase?.latency_ms
 
   const teslaAuthStatus: HeroStatus =
     teslaTokenWarn?.severity === 'error' ? 'unhealthy'
@@ -307,10 +310,10 @@ export default function SystemStatusPage() {
   const resourceRows: ResourceRow[] = useMemo(() => {
     const rows: ResourceRow[] = []
 
-    if (extHealth?.database_pool) {
-      const acquired = extHealth.database_pool.acquired_conns ?? 0
-      const idle = extHealth.database_pool.idle_conns ?? 0
-      const total = extHealth.database_pool.total_conns ?? 0
+    if (extendedPool) {
+      const acquired = extendedPool.acquired_conns ?? 0
+      const idle = extendedPool.idle_conns ?? 0
+      const total = extendedPool.total_conns ?? 0
       const max = total > 0 ? total : acquired + idle
       rows.push({
         label: 'DB connections',
@@ -339,10 +342,10 @@ export default function SystemStatusPage() {
       })
     }
 
-    if (extHealth?.system?.goroutines != null) {
+    if (extendedSystem?.goroutines != null) {
       rows.push({
         label: 'Runtime threads',
-        valueText: fmtInt(extHealth.system.goroutines),
+        valueText: fmtInt(extendedSystem.goroutines),
         metaText: 'goroutines',
         icon: <Cpu className="h-4 w-4" />,
       })
@@ -364,16 +367,24 @@ export default function SystemStatusPage() {
         valueText: formatUptime(version.uptime_seconds),
         icon: <Clock className="h-4 w-4" />,
       })
-    } else if (extHealth?.system?.uptime_seconds != null) {
+    } else if (extendedSystem?.uptime_seconds != null) {
       rows.push({
         label: 'Uptime',
-        valueText: formatUptime(extHealth.system.uptime_seconds),
+        valueText: formatUptime(extendedSystem.uptime_seconds),
         icon: <Clock className="h-4 w-4" />,
       })
     }
 
     return rows
-  }, [extHealth, version, backupStats, totalRows, positionCount, workers])
+  }, [
+    backupStats,
+    extendedPool,
+    extendedSystem,
+    positionCount,
+    totalRows,
+    version,
+    workers,
+  ])
 
   // ── 30-day uptime heatmap ───────────────────────────────────────
   const uptimeDays: UptimeDay[] = useMemo(() => {
@@ -751,8 +762,8 @@ export default function SystemStatusPage() {
             <DefList
               rows={[
                 { label: t('Latency'), value: dbLatency != null ? `${Math.round(dbLatency)}ms` : '—' },
-                { label: t('Pool acquired'), value: extHealth?.database_pool ? `${extHealth.database_pool.acquired_conns} / ${extHealth.database_pool.total_conns || (extHealth.database_pool.acquired_conns + extHealth.database_pool.idle_conns)}` : '—' },
-                { label: t('Pool idle'), value: extHealth?.database_pool ? String(extHealth.database_pool.idle_conns) : '—' },
+                { label: t('Pool acquired'), value: extendedPool ? `${extendedPool.acquired_conns} / ${extendedPool.total_conns || (extendedPool.acquired_conns + extendedPool.idle_conns)}` : '—' },
+                { label: t('Pool idle'), value: extendedPool ? String(extendedPool.idle_conns) : '—' },
                 { label: t('Storage used'), value: backupStats?.database_size ?? '—' },
                 { label: t('Tables'), value: backupStats?.table_count != null ? String(backupStats.table_count) : '—' },
                 { label: t('Total rows'), value: totalRows > 0 ? fmtInt(totalRows) : '—' },
@@ -926,7 +937,7 @@ export default function SystemStatusPage() {
             description={t('Version, build, runtime')}
             defaultOpen
           >
-            <SystemInfoRows version={version} extHealth={extHealth} />
+            <SystemInfoRows version={version} system={extendedSystem} />
           </AccordionSection>
         </section>
 
@@ -1065,10 +1076,10 @@ function DefList({ rows }: { rows: DefListRow[] }) {
 // ── Helper: system info rows ────────────────────────────────────────
 function SystemInfoRows({
   version,
-  extHealth,
+  system,
 }: {
   version?: { app_version: string; chart_version: string; go_version: string; os: string; arch: string; uptime_seconds: number }
-  extHealth?: { system?: { goroutines: number; uptime_seconds: number; go_version: string } }
+  system?: { goroutines: number; uptime_seconds: number; go_version: string }
 }) {
   if (!version) {
     return <Text as="div" size="sm" color="muted">Loading system info…</Text>
@@ -1081,8 +1092,8 @@ function SystemInfoRows({
     { label: 'OS / arch', value: `${version.os}/${version.arch}` },
     { label: 'Uptime', value: formatUptime(version.uptime_seconds) },
   ]
-  if (extHealth?.system?.goroutines != null) {
-    rows.push({ label: 'Goroutines', value: fmtInt(extHealth.system.goroutines) })
+  if (system?.goroutines != null) {
+    rows.push({ label: 'Goroutines', value: fmtInt(system.goroutines) })
   }
 
   return <DefList rows={rows} />

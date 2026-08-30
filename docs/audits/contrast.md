@@ -1,6 +1,6 @@
 # Color Contrast Verification
 
-Generated baseline for the TeslaSync palette. WCAG 2.1 Level AA targets:
+Generated baseline for the TeslaSync palette. WCAG 2.2 Level AA targets:
 
 | Type | Required ratio |
 |---|---|

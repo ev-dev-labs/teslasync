@@ -1,0 +1,284 @@
+name: Capacity test
+
+# OPS-10 — Repeatable capacity-test profiles.
+#
+# Profiles: ops/capacity/profiles.yaml
+#
+# THIS WORKFLOW GENERATES REAL LOAD. Every guardrail below is
+# deliberate:
+#
+#   * manual only — no schedule, no push trigger;
+#   * `confirm: RUN` must be typed, matching
+#     safety.confirmation_token in the profile manifest;
+#   * the target must be an ephemeral stack this job boots itself, or an
+#     environment explicitly listed in safety.allowed_environments
+#     (which cannot contain production — the gate rejects any entry
+#     containing "prod");
+#   * a hard timeout below safety.max_duration.
+#
+# Nothing in ops/capacity/profiles.yaml claims a profile has been run.
+# `last_executed: never` means never. When a run completes, record its
+# URL in the profile's `run_reference` field — the gate fails if a
+# profile claims a date without one.
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: 'Capacity profile to execute'
+        type: choice
+        options:
+          - sse-fanout
+          - analytics-query
+          - fleet-state-batch-100
+          - fleet-state-batch-500
+          - fleet-state-batch-5000
+          - fleet-state-mixed
+          - export-generation
+          - reconnect-storm
+        default: sse-fanout
+      confirm:
+        description: 'Type RUN to confirm you intend to generate load'
+        type: string
+        required: true
+      duration:
+        description: 'Hold duration override (e.g. 2m). Capped by safety.max_duration.'
+        type: string
+        required: false
+        default: '2m'
+
+concurrency:
+  group: capacity-test
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  capacity:
+    name: ${{ inputs.profile }}
+    runs-on: ubuntu-latest
+    # Below safety.max_duration (30m) with room for stack boot/teardown.
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.25'
+
+      - name: Refuse unconfirmed runs
+        env:
+          CONFIRM: ${{ inputs.confirm }}
+          DURATION: ${{ inputs.duration }}
+        run: |
+          if [ "$CONFIRM" != "RUN" ]; then
+            echo "::error::confirm must be RUN (ops/capacity/profiles.yaml safety.require_confirmation)"
+            exit 1
+          fi
+          if ! [[ "$DURATION" =~ ^[1-9][0-9]*[sm]$ ]]; then
+            echo "::error::duration must be a positive whole number of seconds or minutes"
+            exit 1
+          fi
+          VALUE=${DURATION%?}
+          UNIT=${DURATION: -1}
+          if [ "$UNIT" = "m" ]; then
+            SECONDS_TOTAL=$((VALUE * 60))
+          else
+            SECONDS_TOTAL=$VALUE
+          fi
+          if [ "$SECONDS_TOTAL" -gt 1800 ]; then
+            echo "::error::duration exceeds safety.max_duration (30m)"
+            exit 1
+          fi
+
+      - name: Validate capacity profiles
+        run: go run ./cmd/ops-gate -check capacity
+
+      # The target is an ephemeral docker-compose stack created and
+      # destroyed by this job. There is no input by which an operator can
+      # aim this workflow at a long-lived environment.
+      - name: Boot ephemeral stack
+        env:
+          POSTGRES_PASSWORD: ci_capacity
+          SECRET_KEY: ci_capacity_secret_32chars_minimum_padding
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          if [ "$PROFILE" = "reconnect-storm" ]; then
+            FLEET_TELEMETRY_ENABLED=true docker compose \
+              -f docker-compose.yml \
+              -f tests/chaos/docker-compose.capacity.yml \
+              --profile chaos \
+              up -d postgres redis mosquitto toxiproxy teslasync-api
+          else
+            docker compose up -d postgres redis mosquitto teslasync-api
+          fi
+          for i in $(seq 1 90); do
+            if curl -fsS http://localhost:8080/healthz -o /dev/null; then
+              echo "API up after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::API failed to start"
+          docker compose logs teslasync-api >&2
+          exit 1
+
+      - name: Install k6
+        if: ${{ inputs.profile != 'reconnect-storm' }}
+        uses: grafana/setup-k6-action@db07bd9765aac508ef18982e52ab937fe633a065 # v1.2.1
+        with:
+          k6-version: v1.8.1
+
+      - name: Build pinned SSE-capable k6
+        if: ${{ inputs.profile == 'sse-fanout' || inputs.profile == 'fleet-state-mixed' }}
+        run: |
+          go install go.k6.io/xk6/cmd/xk6@v1.4.12
+          "$(go env GOPATH)/bin/xk6" build v1.8.1 \
+            --with github.com/phymbert/xk6-sse@v0.1.12 \
+            --output "$RUNNER_TEMP/k6-sse"
+          echo "K6_BIN=$RUNNER_TEMP/k6-sse" >> "$GITHUB_ENV"
+
+      - name: Seed fleet read path
+        if: ${{ startsWith(inputs.profile, 'fleet-state-batch') || inputs.profile == 'fleet-state-mixed' || inputs.profile == 'reconnect-storm' }}
+        env:
+          PROFILE: ${{ inputs.profile }}
+        run: |
+          case "$PROFILE" in
+            fleet-state-batch-100)  FLEET_SIZE=100 ;;
+            fleet-state-batch-500)  FLEET_SIZE=500 ;;
+            fleet-state-batch-5000) FLEET_SIZE=5000 ;;
+            fleet-state-mixed)      FLEET_SIZE=500 ;;
+            reconnect-storm)        FLEET_SIZE=1 ;;
+            *) echo "::error::unsupported fleet seed profile"; exit 1 ;;
+          esac
+          docker compose exec -T postgres psql \
+            -U teslasync \
+            -d teslasync \
+            -v fleet_size="$FLEET_SIZE" \
+            -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO vehicles (tesla_id, vin, display_name, model)
+          SELECT
+            9900000000 + fleet_id,
+            'CAP' || lpad(fleet_id::text, 14, '0'),
+            'Capacity Vehicle ' || fleet_id,
+            CASE fleet_id % 4
+              WHEN 0 THEN 'Model S'
+              WHEN 1 THEN 'Model 3'
+              WHEN 2 THEN 'Model X'
+              ELSE 'Model Y'
+            END
+          FROM generate_series(1, :fleet_size) AS fleet_id
+          ON CONFLICT (vin) DO NOTHING;
+          SQL
+          if [ "$PROFILE" = "reconnect-storm" ]; then
+            VEHICLE_ID=$(docker compose exec -T postgres psql \
+              -U teslasync \
+              -d teslasync \
+              -At \
+              -v ON_ERROR_STOP=1 \
+              -c "SELECT id FROM vehicles WHERE vin = 'CAP00000000000001'")
+            if ! [[ "$VEHICLE_ID" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::failed to resolve seeded recovery-probe vehicle"
+              exit 1
+            fi
+            OBSERVED_NS=$(date +%s%N)
+            SIGNAL_PAYLOAD=$(printf '{"kind":5,"v":73,"ts":%s,"observed":true}' "$OBSERVED_NS")
+            docker compose exec -T redis redis-cli \
+              HSET "vehicle:${VEHICLE_ID}:signals" BatteryLevel "$SIGNAL_PAYLOAD" >/dev/null
+            docker compose exec -T redis redis-cli \
+              EXPIRE "vehicle:${VEHICLE_ID}:signals" 3600 >/dev/null
+          fi
+
+      - name: Run profile
+        env:
+          BASE_URL: http://localhost:8080
+          CONFIRM: RUN
+          TARGET_ENV: ephemeral-ci
+          # export-generation is marked destructive; the script refuses to
+          # run without this assertion that the stack is disposable.
+          EPHEMERAL: '1'
+          # Untrusted dispatch inputs travel through the environment.
+          HOLD: ${{ inputs.duration }}
+          PROFILE: ${{ inputs.profile }}
+          K6_AUTO_EXTENSION_RESOLUTION: 'false'
+        run: |
+          set -o pipefail
+          PUBLISHER_PID=
+          cleanup_publisher() {
+            if [ -n "$PUBLISHER_PID" ]; then
+              kill "$PUBLISHER_PID" 2>/dev/null || true
+              wait "$PUBLISHER_PID" 2>/dev/null || true
+            fi
+          }
+          trap cleanup_publisher EXIT
+          if [ "$PROFILE" = "sse-fanout" ] || [ "$PROFILE" = "fleet-state-mixed" ]; then
+            # Feed the same Redis channel consumed by EventHub.SubscribeRedis
+            # at the manifest's declared 50 events/second. A real SSE profile
+            # must exercise fan-out, not merely hold idle HTTP connections.
+            docker compose exec -T redis sh -c '
+              while true; do
+                printf "%s\n" "PUBLISH vehicle_signals \"event: vehicle_update\\ndata: {}\\n\\n\""
+                sleep 0.02
+              done | redis-cli
+            ' >/dev/null &
+            PUBLISHER_PID=$!
+          fi
+          case "$PROFILE" in
+            sse-fanout)             SCRIPT=tests/k6/sse_fanout.js ;;
+            analytics-query)        SCRIPT=tests/k6/analytics_read.js ;;
+            fleet-state-batch-100)  SCRIPT=tests/k6/fleet_state_batch.js; export VEHICLES=100 ;;
+            fleet-state-batch-500)  SCRIPT=tests/k6/fleet_state_batch.js; export VEHICLES=500 ;;
+            fleet-state-batch-5000) SCRIPT=tests/k6/fleet_state_batch.js; export VEHICLES=5000; export VUS=10 ;;
+            fleet-state-mixed)      SCRIPT=tests/k6/fleet_state_mixed.js; export VEHICLES=500; export SUBSCRIBERS=200 ;;
+            export-generation)      SCRIPT=tests/k6/export_generation.js ;;
+            reconnect-storm)
+              TOXIPROXY_URL=http://localhost:8474 \
+              API_BASE_URL=http://localhost:8080 \
+              CHAOS_EXPECT_FLEET_BATTERY_LEVEL=73 \
+              CHAOS_SCENARIOS=redis_latency_500ms_60s,redis_blackhole_20s \
+                timeout --signal=TERM 30m go run ./cmd/chaos-runner | tee k6-output.txt
+              exit ${PIPESTATUS[0]}
+              ;;
+            *) echo "::error::unknown profile"; exit 1 ;;
+          esac
+          timeout --signal=TERM 30m "${K6_BIN:-k6}" run "$SCRIPT" | tee k6-output.txt
+
+      - name: Publish results
+        if: always()
+        env:
+          PROFILE: ${{ inputs.profile }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          {
+            echo "## Capacity profile: \`${PROFILE}\`"
+            echo ""
+            echo "Target: ephemeral docker-compose stack (this job)."
+            echo ""
+            echo "To record this run as evidence, set \`last_executed\` and"
+            echo "\`run_reference: ${RUN_URL}\`"
+            echo "on the \`${PROFILE}\` profile in \`ops/capacity/profiles.yaml\`."
+            echo ""
+            echo '```'
+            tail -n 60 k6-output.txt 2>/dev/null || echo "no k6 output captured"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload k6 summaries
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: capacity-${{ inputs.profile }}-${{ github.run_number }}
+          path: |
+            k6-output.txt
+            tests/k6/summary-*.json
+          if-no-files-found: warn
+
+      - name: Tear down stack
+        if: always()
+        run: |
+          docker compose \
+            -f docker-compose.yml \
+            -f tests/chaos/docker-compose.capacity.yml \
+            --profile chaos \
+            down -v

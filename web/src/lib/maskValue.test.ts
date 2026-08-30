@@ -64,6 +64,10 @@ describe('maskFor', () => {
       expect(maskFor('5YJ', 'vin')).toBe(BULLET.repeat(3))
     })
 
+    it('does not disclose prefixes for malformed non-VIN values', () => {
+      expect(maskFor('5YJ12345678', 'vin')).toBe(BULLET.repeat(11))
+    })
+
     it('respects an explicit showLast', () => {
       expect(maskFor('5YJ3E1EA7JF000123', 'vin', 2)).toBe(`5YJ${BULLET.repeat(12)}23`)
     })

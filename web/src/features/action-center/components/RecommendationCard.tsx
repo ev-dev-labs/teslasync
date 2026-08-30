@@ -16,6 +16,8 @@ interface RecommendationCardProps {
     recommendation: ActionCenterRecommendation,
     action: ActionCenterStateAction | 'navigate',
   ) => void;
+  actionsDisabled?: boolean;
+  actionsDisabledReason?: string;
 }
 
 const priorityVariant: Record<
@@ -50,7 +52,12 @@ function actionAllowed(
   return action === 'restore';
 }
 
-export function RecommendationCard({ recommendation, onAction }: RecommendationCardProps) {
+export function RecommendationCard({
+  recommendation,
+  onAction,
+  actionsDisabled = false,
+  actionsDisabledReason,
+}: RecommendationCardProps) {
   const { t } = useTranslation();
   const [detailsOpen, setDetailsOpen] = useState(false);
   const confidencePct = Math.round(recommendation.confidence.score * 100);
@@ -116,6 +123,8 @@ export function RecommendationCard({ recommendation, onAction }: RecommendationC
               size="sm"
               variant={action === 'dismiss' ? 'ghost' : 'secondary'}
               icon={<Icon className="h-4 w-4" aria-hidden="true" />}
+              disabled={actionsDisabled}
+              title={actionsDisabled ? actionsDisabledReason : undefined}
               onClick={() => onAction(recommendation, action)}
             >
               {t(`actionCenter.action.${action}`, action)}

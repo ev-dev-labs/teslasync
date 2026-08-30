@@ -1,9 +1,13 @@
 export type ActionCenterSourceFeature =
   | 'active_alerts'
   | 'advanced_intelligence'
+  | 'battery_health'
   | 'charging_reliability'
+  | 'drive_efficiency'
   | 'fleet_maintenance'
-  | 'signal_health';
+  | 'signal_health'
+  | 'system_health'
+  | 'vehicle_readiness';
 
 export type ActionCenterPriority = 'critical' | 'high' | 'medium' | 'low';
 export type ActionCenterSeverity = 'critical' | 'warning' | 'info';

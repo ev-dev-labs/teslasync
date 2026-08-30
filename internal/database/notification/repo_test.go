@@ -3,6 +3,7 @@ package notification
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // helper for *int64 literals.
@@ -163,6 +164,94 @@ func TestBuildNotificationLogWhere_RuleJoinFlagSetByVehicleOrSeverity(t *testing
 				t.Fatalf("expected needsRuleJoin=true")
 			}
 		})
+	}
+}
+
+func TestBuildNotificationLogWhere_UsesCanonicalVehicleScope(t *testing.T) {
+	w := buildNotificationLogWhere(NotificationLogFilters{
+		VehicleIDs: []int64{7, 9},
+	})
+	if len(w.clauses) != 1 {
+		t.Fatalf("vehicle clauses = %v, want one clause", w.clauses)
+	}
+	clause := w.clauses[0]
+	for _, expected := range []string{
+		"nl.alert_id IS NULL",
+		"ar.all_vehicles",
+		"alert_rule_vehicles",
+		"arv.vehicle_id = ANY($1)",
+	} {
+		if !strings.Contains(clause, expected) {
+			t.Fatalf("vehicle clause = %q, missing %q", clause, expected)
+		}
+	}
+	if strings.Contains(clause, "ar.vehicle_id") {
+		t.Fatalf("vehicle clause still uses deprecated alert_rules.vehicle_id: %q", clause)
+	}
+	if len(w.args) != 1 {
+		t.Fatalf("vehicle args = %v, want one canonical vehicle array", w.args)
+	}
+}
+
+func TestBuildNotificationLogWhere_UsesStableKeysetCursor(t *testing.T) {
+	before := time.Date(2025, time.January, 2, 12, 30, 0, 0, time.UTC)
+	w := buildNotificationLogWhere(NotificationLogFilters{
+		BeforeCreatedAt: before,
+		BeforeID:        123,
+	})
+	if len(w.clauses) != 1 {
+		t.Fatalf("cursor clauses = %v, want one clause", w.clauses)
+	}
+	clause := w.clauses[0]
+	for _, expected := range []string{
+		"nl.created_at < $1",
+		"nl.created_at = $1",
+		"nl.id < $2",
+	} {
+		if !strings.Contains(clause, expected) {
+			t.Fatalf("cursor clause = %q, missing %q", clause, expected)
+		}
+	}
+	if len(w.args) != 2 || w.args[0] != before || w.args[1] != int64(123) {
+		t.Fatalf("cursor args = %v, want [%v 123]", w.args, before)
+	}
+}
+
+func TestBuildNotificationLogWhere_UsesEffectiveAlertWarningSeverity(t *testing.T) {
+	effective := buildNotificationLogWhere(NotificationLogFilters{
+		Severities:                 []string{"warn"},
+		IncludeFailedInfoAsWarning: true,
+	})
+	if len(effective.clauses) != 1 {
+		t.Fatalf("effective severity clauses = %v, want one clause", effective.clauses)
+	}
+	if !strings.Contains(effective.clauses[0], "nl.status = 'failed'") {
+		t.Fatalf("effective warning clause = %q, want failed-delivery promotion", effective.clauses[0])
+	}
+	if !strings.Contains(effective.clauses[0], "CASE WHEN") {
+		t.Fatalf("effective warning clause = %q, want computed DTO severity", effective.clauses[0])
+	}
+	if len(effective.args) != 1 {
+		t.Fatalf("effective warning args = %v, want one severity array", effective.args)
+	}
+
+	effectiveInfo := buildNotificationLogWhere(NotificationLogFilters{
+		Severities:                 []string{"info"},
+		IncludeFailedInfoAsWarning: true,
+	})
+	if len(effectiveInfo.clauses) != 1 ||
+		!strings.Contains(effectiveInfo.clauses[0], "CASE WHEN") {
+		t.Fatalf("effective info clause = %v, want computed DTO severity", effectiveInfo.clauses)
+	}
+
+	raw := buildNotificationLogWhere(NotificationLogFilters{
+		Severities: []string{"warn"},
+	})
+	if len(raw.clauses) != 1 {
+		t.Fatalf("raw severity clauses = %v, want one clause", raw.clauses)
+	}
+	if strings.Contains(raw.clauses[0], "nl.status = 'failed'") {
+		t.Fatalf("raw notification severity unexpectedly promoted failures: %q", raw.clauses[0])
 	}
 }
 

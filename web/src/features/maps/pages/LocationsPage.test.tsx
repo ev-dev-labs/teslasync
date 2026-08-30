@@ -214,8 +214,8 @@ function kpiRegion() {
 // Read a MetricCard's value by its label so numeric assertions never collide.
 function kpiValue(label: string): string {
   const labelEl = within(kpiRegion()).getByText(label);
-  const card = labelEl.closest('.flex-1') as HTMLElement;
-  return card.querySelector('p.text-xl')?.textContent ?? '';
+  const card = labelEl.closest('[data-role="metric-card"]') as HTMLElement;
+  return card.querySelector('[data-role="metric-value"]')?.textContent ?? '';
 }
 
 beforeEach(() => {
@@ -363,6 +363,35 @@ describe('LocationsPage — detail list', () => {
     expect(within(card).getByText('Home, Seattle')).toBeInTheDocument();
     // All four ranks render, in order.
     ['#1', '#2', '#3', '#4'].forEach((r) => expect(screen.getByText(r)).toBeInTheDocument());
+  });
+
+  it('opens location evidence with vehicle, activity, service, and telemetry links', async () => {
+    renderPage();
+    fireEvent.click(
+      await screen.findByRole('button', { name: 'Inspect Home, Seattle' }),
+    );
+
+    const drawer = await screen.findByRole('dialog', { name: 'Home, Seattle' });
+    expect(within(drawer).getByText('Location evidence')).toBeInTheDocument();
+    expect(within(drawer).getByRole('link', { name: 'Vehicle' }))
+      .toHaveAttribute('href', '/vehicles/2');
+    expect(within(drawer).getByRole('link', { name: 'Drive history' }))
+      .toHaveAttribute(
+        'href',
+        '/drives?q=Home%2C+Seattle&from=2000-01-01&to=2099-12-31',
+      );
+    expect(within(drawer).getByRole('link', { name: 'Charging sessions' }))
+      .toHaveAttribute(
+        'href',
+        '/charging?q=Home%2C+Seattle&from=2000-01-01&to=2099-12-31',
+      );
+    expect(within(drawer).getByRole('link', { name: 'Service history' }))
+      .toHaveAttribute('href', '/maintenance');
+    expect(within(drawer).getByRole('link', { name: 'Telemetry evidence' }))
+      .toHaveAttribute(
+        'href',
+        '/signals?from=2000-01-01&to=2099-12-31',
+      );
   });
 
   it('filters the list by the search box and shows a no-match empty state', async () => {

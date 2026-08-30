@@ -104,9 +104,11 @@ vi.mock('framer-motion', () => {
 //    shared barrel; recharts needs a sized container that jsdom can't give it,
 //    so we swap the whole module for inert passthroughs. LinearGauge surfaces
 //    its label/value/max as data-* so gauge maths stays assertable. ───────────
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Passthrough = ({ children }: { children?: ReactNode }) => <div>{children}</div>;
   return {
+    ...chartTestDoubles,
     LinearGauge: ({
       label,
       value,
@@ -537,8 +539,18 @@ describe('ChargingDetailPage — AC session without telemetry', () => {
 
   it('shows a per-panel empty state for each time-axis chart that has no data', () => {
     renderPage();
-    // SoC/Energy/Range, Temperature, and Voltage/Current all fall back.
-    expect(screen.getAllByText('No data available').length).toBeGreaterThanOrEqual(3);
+    expect(
+      screen.getByText('No battery level, energy, or range samples were recorded for this session.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('No battery, cabin, or ambient temperature samples were recorded for this session.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('No voltage or current samples were recorded for this session.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByText(/This closed session cannot recover missing samples/),
+    ).toHaveLength(3);
   });
 });
 
@@ -577,6 +589,7 @@ describe('ChargingDetailPage — live-state branches', () => {
     renderPage();
 
     expect(screen.getByText('No live charging telemetry available.')).toBeInTheDocument();
+    expect(screen.getByText(/appear only while the selected vehicle is actively charging/)).toBeInTheDocument();
     // Without a live row there is no charging-state chip in the summary.
     const summary = screen.getByRole('region', { name: 'Session summary' });
     expect(within(summary).queryByText('Charging')).toBeNull();

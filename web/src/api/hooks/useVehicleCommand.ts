@@ -56,9 +56,11 @@ export function useVehicleCommand() {
     mutationFn: ({ vehicleId, command, params }: SendCommandParams) =>
       request<CommandResult>(`/vehicles/${vehicleId}/command`, {
         method: 'POST',
+        requiresLiveMode: true,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command, params }),
       }),
+    networkMode: 'always',
     onSuccess: (data, { vehicleId }) => {
       queryClient.invalidateQueries({ queryKey: vehicleKeys.state(vehicleId) });
       queryClient.invalidateQueries({ queryKey: commandKeys.latest(vehicleId) });

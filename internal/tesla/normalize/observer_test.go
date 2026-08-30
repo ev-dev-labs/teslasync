@@ -169,6 +169,40 @@ func TestPipelineObserver_InvokedWithPostRouteAtomicsSlice(t *testing.T) {
 	}
 }
 
+func TestPipelineObserver_ExcludesAtomicsRejectedByNormalization(t *testing.T) {
+	t.Parallel()
+
+	emittedAt := time.Date(2026, 5, 5, 9, 0, 0, 0, time.UTC)
+	atomics := []codec.Atomic{
+		{
+			Field:     "VehicleSpeed",
+			Value:     float64(72),
+			EmittedAt: emittedAt,
+			VehicleID: "VIN-NO-UNIT",
+		},
+		{
+			Field:     "BatteryHeaterOn",
+			Value:     true,
+			EmittedAt: emittedAt,
+			VehicleID: "VIN-NO-UNIT",
+		},
+	}
+
+	obs := newRecordingObserver("accepted-only")
+	p := New(&fakeRepo{}, &fakeRouter{}, zerolog.Nop(), obs)
+	if err := p.processAtomics(context.Background(), atomics, 41); err != nil {
+		t.Fatalf("processAtomics returned error: %v", err)
+	}
+
+	captured := obs.lastCapture()
+	if len(captured) != 1 {
+		t.Fatalf("observer captured %d atomics, want only accepted pass-through value: %+v", len(captured), captured)
+	}
+	if captured[0].Field != "BatteryHeaterOn" {
+		t.Fatalf("observer captured field %q, want BatteryHeaterOn", captured[0].Field)
+	}
+}
+
 func findAtomic(atomics []codec.Atomic, field string) *codec.Atomic {
 	for i := range atomics {
 		if atomics[i].Field == field {

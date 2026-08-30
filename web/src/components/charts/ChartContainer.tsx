@@ -1,13 +1,21 @@
-import { forwardRef, useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tag, Plus, Eye, EyeOff } from 'lucide-react';
 import { cn } from '@/lib/cn';
-import { Spinner } from '@/components/feedback/Spinner';
+import { ChartSkeleton } from '@/components/feedback/ChartSkeleton';
 import { EmptyState } from '@/components/feedback/EmptyState';
+import { QueryError } from '@/components/feedback/QueryError';
 import { SectionErrorBoundary } from '@/components/feedback/SectionErrorBoundary';
-import { Button } from '@/components/ui/Button';
-import { Text } from '@/components/ui/Typography';
-import { FullscreenButton } from '@/components/ui/FullscreenButton';
+import { Button, FullscreenButton, Heading, Text } from '@/components/ui';
 import { VisuallyHidden } from '@/components/a11y';
 import { useChartExport } from '@/hooks/useChartExport';
 import { downloadCSV, objectsToCSV, defaultExportFilename, type CsvCellValue } from '@/lib/csvExport';
@@ -16,6 +24,12 @@ import { AnnotationList } from './AnnotationList';
 import { AddAnnotationPopover } from './AddAnnotationPopover';
 import { ChartExportMenu } from './ChartExportMenu';
 import { ChartHiddenSeriesProvider } from './ChartHiddenSeriesContext';
+import {
+  chartViewportStyle,
+  resolveChartHeights,
+  type ChartSize,
+} from './chartSizing';
+import type { ChartSamplingDisclosure } from './chartSampling';
 import {
   useChartAnnotationsAsData,
   useCreateAnnotation,
@@ -58,12 +72,45 @@ type ChartContainerChildren =
   | React.ReactNode
   | ((ctx: ChartContainerRenderProps) => React.ReactNode);
 
-interface ChartContainerProps {
+export interface ChartContainerProps {
   title: string;
+  /**
+   * `embedded` removes panel chrome and the visible title bar while retaining
+   * loading/error/empty states, chart semantics, and the fallback data table.
+   * Use through `<EmbeddedChart>` inside an existing widget or panel shell.
+   */
+  variant?: 'panel' | 'embedded';
+  /** Optional decorative title icon. */
+  icon?: React.ReactNode;
   subtitle?: string;
+  /**
+   * Presentation metadata shared by every chart frame. Values are already
+   * localized at the call site because this component cannot infer a
+   * vehicle timezone, display unit, or API freshness policy.
+   */
+  metadata?: ChartMetadata;
   loading?: boolean;
   empty?: boolean;
+  /** Initial query failure. Cached-refresh failures should keep rendering data instead. */
+  error?: unknown;
+  onRetry?: () => void;
+  /** Semantic responsive height preset. Defaults to `standard`. */
+  size?: ChartSize;
+  /** Desktop height override. Prefer `size` for new charts. */
   height?: number;
+  /** Mobile height override; otherwise the selected size preset is used. */
+  mobileHeight?: number;
+  /** Fill the available host height instead of applying a fixed size preset. */
+  fluid?: boolean;
+  emptyTitle?: string;
+  emptyMessage?: string;
+  emptyDescription?: string;
+  /** Optional empty-state illustration rendered inside the chart viewport. */
+  emptyIcon?: React.ReactNode;
+  /** Imperative empty-state recovery action. */
+  emptyAction?: { label: string; onClick: () => void };
+  /** Navigation empty-state recovery action; takes priority over `emptyAction`. */
+  emptyActionTo?: { label: string; to: string };
   action?: React.ReactNode;
   children: ChartContainerChildren;
   className?: string;
@@ -155,6 +202,21 @@ interface ChartContainerProps {
   chartKey?: string;
 }
 
+export interface ChartMetadata {
+  /** Human-readable time window, for example "Apr 1–30 · vehicle time". */
+  rangeLabel?: string;
+  /** Human-readable source, for example "Fleet telemetry". */
+  sourceLabel?: string;
+  /** Human-readable freshness, for example "Updated 2 min ago". */
+  freshnessLabel?: string;
+  /** Semantic freshness state for styling/audits without parsing prose. */
+  freshness?: 'fresh' | 'stale' | 'unknown';
+  /** Display-unit label used by the visible axes/tooltips. */
+  unitLabel?: string;
+  /** Honest disclosure for a rendering-only downsampled series. */
+  sampling?: ChartSamplingDisclosure;
+}
+
 /**
  * Row shape accepted by the fallback
  * `<table>`. Keys must match the `key`s declared in `dataColumns`.
@@ -210,7 +272,28 @@ function isFunctionChildren(
 export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
   function ChartContainer(
     {
-      title, subtitle, loading, empty, height = 300, action, children, className,
+      title,
+      variant = 'panel',
+      icon,
+      subtitle,
+      metadata,
+      loading,
+      empty,
+      error,
+      onRetry,
+      size = 'standard',
+      height,
+      mobileHeight,
+      fluid = false,
+      emptyTitle,
+      emptyMessage,
+      emptyDescription,
+      emptyIcon,
+      emptyAction,
+      emptyActionTo,
+      action,
+      children,
+      className,
       exportable, exportFilename, exportData,
       annotations: annotationsConfig,
       ariaLabel,
@@ -232,6 +315,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // rather not couple the fullscreen primitive to an internal
     // implementation detail of the export hook.
     const figureRef = useRef<HTMLElement | null>(null);
+    const resolvedHeights = resolveChartHeights(size, height, mobileHeight);
+    const chartHeightStyle = chartViewportStyle(resolvedHeights) as CSSProperties;
 
     // Stable ids for figure ↔ figcaption wiring.
     const reactId = useId();
@@ -249,9 +334,11 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     }, [annotationsEnabled, annotationKey]);
 
     const { annotations: fetchedAnnotations } = useChartAnnotationsAsData(
-      annotationsEnabled
-        ? { vehicleId: annotationsConfig?.vehicleId, scope: annotationsConfig?.scope }
-        : {},
+      {
+        vehicleId: annotationsConfig?.vehicleId,
+        scope: annotationsConfig?.scope,
+        enabled: annotationsEnabled,
+      },
     );
     const createMutation = useCreateAnnotation();
     const deleteMutation = useDeleteAnnotation();
@@ -320,7 +407,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
     // CSV-only exports stay available because they don't need the chart
     // DOM, but the image actions only make sense once the chart is
     // actually rendered with data.
-    const showExportMenu = exportableResolved && !loading && !empty;
+    const showExportMenu = exportableResolved && !loading && !error && !empty;
 
     // `childrenContent` is a function of the
     // resolved `hiddenSeries` state because the function-children
@@ -356,6 +443,13 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         data-print-card
         aria-labelledby={titleId}
         aria-describedby={fallbackId}
+        aria-busy={loading || undefined}
+        data-chart-size={size}
+        data-chart-key={chartKey}
+        data-chart-variant={variant}
+        data-chart-fluid={fluid || undefined}
+        data-chart-state={loading ? 'loading' : error ? 'error' : empty ? 'empty' : 'ready'}
+        data-chart-freshness={metadata?.freshness}
         className={cn(
           // Chart frames are panels too: resolve them from the same panel
           // surface contract as GlassPanel and Card (index.css → PANEL
@@ -363,11 +457,16 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // ignored the active theme entirely — on all 140 presets a chart
           // frame rendered generic white/near-black instead of the palette's
           // own surface, so charts never matched the panels beside them.
-          'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-4 shadow-panel',
+          variant === 'embedded'
+            ? cn(
+                'group m-0 border-0 bg-transparent p-0 shadow-none',
+                fluid && 'h-full min-h-0 max-h-full',
+              )
+            : 'group rounded-panel border border-[var(--panel-border)] bg-[var(--panel-bg)] p-5 shadow-panel',
           // Tailwind preflight already removes default <figure> margins;
           // re-state `m-0` defensively so any consumer override of preflight
           // doesn't shift the chart vertical rhythm.
-          'm-0',
+          variant === 'panel' && 'm-0',
           'print:break-inside-avoid print:border-gray-300 print:bg-white',
           // Windows High Contrast / forced-colors mode.
           // Pin the chart-container boundary to a system colour so the
@@ -376,26 +475,61 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           // forced-colors overrides via the global rules in `index.css`
           // (axis ticks / grid lines / legend text → `CanvasText`).
           'forced-colors:border-[CanvasText] forced-colors:bg-[Canvas]',
+          // Grid and flex items default to min-width:auto, allowing an SVG's
+          // intrinsic width to enlarge the entire page. Keep every chart frame
+          // inside its assigned track instead.
+          'min-w-0 max-w-full',
           className,
         )}
       >
-        <div className="mb-3 flex items-start justify-between">
-          <div>
-            <Text
-              as="h3"
-              id={titleId}
-              size="sm"
-              weight="semibold"
-              color="primary"
-            >
+        {variant === 'embedded' ? (
+          <>
+            <VisuallyHidden as="h3" id={titleId}>
               {title}
-            </Text>
+            </VisuallyHidden>
             {subtitle && (
-              <Text as="p" variant="caption">{subtitle}</Text>
+              <VisuallyHidden as="p">
+                {subtitle}
+              </VisuallyHidden>
             )}
+          </>
+        ) : (
+          <div className="mb-5 flex flex-col gap-3 border-b border-[var(--border-subtle)] pb-4 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+          <div className="flex min-w-0 items-start gap-2.5">
+            {icon && (
+              <span
+                className="mt-0.5 inline-flex shrink-0 text-[var(--theme-primary)]"
+                aria-hidden="true"
+              >
+                {icon}
+              </span>
+            )}
+            <div className="min-w-0">
+              <Heading level="panel" id={titleId}>
+                {title}
+              </Heading>
+              {subtitle && (
+                <Text as="p" variant="caption" className="mt-1 leading-relaxed">{subtitle}</Text>
+              )}
+              {(metadata?.rangeLabel || metadata?.sourceLabel || metadata?.freshnessLabel || metadata?.unitLabel) && (
+                <Text
+                  as="p"
+                  variant="caption"
+                  className="mt-1 flex flex-wrap gap-x-2 gap-y-0.5"
+                  data-chart-metadata
+                >
+                  {metadata.rangeLabel && <span data-chart-range>{metadata.rangeLabel}</span>}
+                  {metadata.sourceLabel && <span data-chart-source>{metadata.sourceLabel}</span>}
+                  {metadata.freshnessLabel && (
+                    <span data-chart-freshness-label>{metadata.freshnessLabel}</span>
+                  )}
+                  {metadata.unitLabel && <span data-chart-unit>{metadata.unitLabel}</span>}
+                </Text>
+              )}
+            </div>
           </div>
           <div
-            className="flex items-center gap-1"
+            className="flex w-full flex-wrap items-center justify-end gap-1 sm:w-auto"
             // Exclude the title-bar action toolbar
             // (annotation buttons, export menu, page-supplied actions)
             // from the chart capture so the exported PNG/clipboard image
@@ -454,7 +588,8 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
 
             {fullscreen && <FullscreenButton targetRef={figureRef} />}
           </div>
-        </div>
+          </div>
+        )}
 
         {showMarkerRow && (
           <div
@@ -464,7 +599,7 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             {visibleAnnotations.map((ann) => (
               <span
                 key={ann.id}
-                className="inline-flex items-center gap-1 rounded-full border border-white/10 bg-white/[0.04] px-2 py-0.5 text-2xs text-[var(--text-secondary)]"
+                className="inline-flex items-center gap-1 rounded-full border border-[var(--border-subtle)] bg-[var(--surface-2)] px-2 py-0.5 text-2xs text-[var(--text-secondary)]"
                 title={ann.description ?? ann.label}
               >
                 <Tag className="h-2.5 w-2.5" aria-hidden="true" />
@@ -475,9 +610,22 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
         )}
 
         <div
-          style={{ height }}
+          style={chartHeightStyle}
+          data-chart-viewport="bounded"
           className={cn(
-            'relative',
+            // Recharts' ResponsiveContainer measures this viewport. Width,
+            // overflow, and size containment ensure the measured child can
+            // never feed a larger intrinsic size back into its own ancestor.
+            'relative w-full min-w-0 max-w-full overflow-hidden [contain:layout_size]',
+            fluid
+              ? cn(
+                  'h-full min-h-[var(--chart-height-mobile)] max-h-full',
+                  'sm:min-h-[var(--chart-height-desktop)]',
+                )
+              : cn(
+                  'h-[var(--chart-height-mobile)] min-h-[var(--chart-height-mobile)] max-h-[var(--chart-height-mobile)]',
+                  'sm:h-[var(--chart-height-desktop)] sm:min-h-[var(--chart-height-desktop)] sm:max-h-[var(--chart-height-desktop)]',
+                ),
             // In Windows High Contrast / forced-colors
             // mode the SVG strokes collapse to a small palette of system
             // colours and the multi-series chart becomes illegible. Hide
@@ -486,21 +634,39 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             // readers.
             'forced-colors:hidden',
           )}
-          // The figure ancestor already provides the accessible name via
-          // `aria-labelledby={titleId}`; this inner wrapper still carries
-          // `role="img" aria-label` so a focus-stop on the chart body
-          // re-states the summary the user heard at the figure boundary
-          // (browsers don't always re-announce ancestor regions).
-          role="img"
-          aria-label={ariaLabel}
+          // Charts with toggleable legends contain focusable controls, which
+          // cannot live inside role="img". Expose those viewports as named
+          // groups while static charts retain image semantics.
+          role={loading || error || empty ? undefined : chartKey ? 'group' : 'img'}
+          aria-label={loading || error || empty ? undefined : ariaLabel}
         >
           {loading ? (
-            <div className="flex h-full items-center justify-center">
-              <Spinner size="md" />
-            </div>
+            <ChartSkeleton
+              className="h-full"
+              label={t('chart.loading', 'Loading chart…')}
+            />
+          ) : error ? (
+            <QueryError
+              error={error}
+              onRetry={onRetry}
+              compact
+              className="h-full"
+            />
           ) : empty ? (
-            <EmptyState /* no-action: chart cannot meaningfully recover without data — show prose only */
-              message={t('chart.noData', 'No data available')}
+            <EmptyState
+              icon={emptyIcon}
+              title={emptyTitle}
+              message={emptyMessage ?? t('chart.noData', 'No data available')}
+              description={
+                emptyDescription
+                ?? t(
+                  'chart.noDataDescription',
+                  'No chartable observations are available for the current selection yet.',
+                )
+              }
+              action={emptyAction}
+              actionTo={emptyActionTo}
+              className="h-full py-8"
             />
           ) : (
             <ChartHiddenSeriesProvider chartKey={chartKey}>
@@ -515,6 +681,19 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
             </ChartHiddenSeriesProvider>
           )}
         </div>
+
+        {metadata?.sampling?.sampled && (
+          <Text as="p" variant="caption" className="mt-2" data-chart-sampling>
+            {t(
+              'chart.sampling.disclosure',
+              'Showing {{rendered}} of {{source}} observations for display.',
+              {
+                rendered: metadata.sampling.renderedCount,
+                source: metadata.sampling.sourceCount,
+              },
+            )}
+          </Text>
+        )}
 
         {/*
           Accessible chart fallback.
@@ -544,6 +723,18 @@ export const ChartContainer = forwardRef<HTMLDivElement, ChartContainerProps>(
           {ariaDescription && (
             <p className="forced-colors:mb-2 forced-colors:text-[CanvasText]">
               {ariaDescription}
+            </p>
+          )}
+          {metadata?.sampling?.sampled && (
+            <p>
+              {t(
+                'chart.sampling.a11yDisclosure',
+                'Visual series is sampled: {{rendered}} of {{source}} observations are rendered.',
+                {
+                  rendered: metadata.sampling.renderedCount,
+                  source: metadata.sampling.sourceCount,
+                },
+              )}
             </p>
           )}
           {hasFallbackTable ? (

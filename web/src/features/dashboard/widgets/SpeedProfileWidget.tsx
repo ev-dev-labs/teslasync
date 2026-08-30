@@ -4,6 +4,7 @@ import { Activity } from 'lucide-react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartLegend, ChartTooltip, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { useSpeedProfile } from '@/api/hooks/useDriving';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -14,7 +15,7 @@ import { WidgetShell } from './WidgetShell';
 import type { WidgetProps } from './types';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   bucket: string;
   frequency: number;
   efficiency: number;
@@ -194,8 +195,23 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<Activity className="h-5 w-5" />}
         stats={stats}
         chart={
-          <ResponsiveContainer width="100%" height="100%">
-            <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
+          <EmbeddedChart
+            title={t('widget.speedProfile.title', 'Speed Profile')}
+            ariaLabel={t(
+              'widget.speedProfile.chartAria',
+              'Speed frequency and efficiency by speed range',
+            )}
+            data={chartData}
+            dataColumns={[
+              { key: 'bucket', label: `${t('widget.speedProfile.speedRange', 'Speed range')} (${speedUnit})` },
+              { key: 'frequency', label: t('widget.speedProfile.frequency', 'Frequency') },
+              { key: 'efficiency', label: t('widget.speedProfile.efficiency', 'Efficiency') },
+            ]}
+            chartKey="dashboard-speed-profile"
+          >
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <ComposedChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="bucket"
@@ -221,12 +237,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 tickFormatter={(v: number) => fmt(v, 0)}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                content={<ChartTooltip />}
                 formatter={(value: number, name: string) => {
                   if (name === 'frequency') {
                     return [`${fmtNumber(value, 1)}%`, t('widget.speedProfile.frequency', 'Frequency')];
@@ -235,6 +246,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 }}
                 cursor={{ fill: 'rgba(255,255,255,0.04)' }}
               />
+              <ChartLegend />
               <Bar
                 yAxisId="freq"
                 dataKey="frequency"
@@ -242,6 +254,7 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 maxBarSize={32}
                 fill="#6366f1"
                 name="frequency"
+                hide={hiddenSeries?.isHidden('frequency')}
               />
               <Line
                 yAxisId="eff"
@@ -251,9 +264,12 @@ export default function SpeedProfileWidget({ vehicleId, size }: WidgetProps) {
                 strokeWidth={2}
                 dot={{ r: 3, fill: '#f59e0b' }}
                 name="efficiency"
+                hide={hiddenSeries?.isHidden('efficiency')}
               />
-            </ComposedChart>
-          </ResponsiveContainer>
+                </ComposedChart>
+              </ResponsiveContainer>
+            )}
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

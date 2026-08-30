@@ -186,7 +186,7 @@ export function ShareCardMonthlyTrend({
                 </ComposedChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: the shared report is read-only and reflects its fixed evidence scope */
                 message={t(
                   'shareCard.monthly.empty',
                   'No eligible drives support a selected-window monthly trend.',

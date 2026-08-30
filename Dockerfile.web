@@ -17,16 +17,62 @@ COPY CHANGELOG.md /CHANGELOG.md
 ARG VITE_OTLP_HTTP_ENDPOINT=""
 ARG VITE_OTEL_SERVICE_NAME="teslasync-web"
 ARG VITE_OTEL_DEPLOY_ENV="dev-compose"
-ARG VITE_APP_VERSION="dev"
+# ── Build identity ───────────────────────────────────────────────────────────
+# Both args are REQUIRED for a release build and are threaded by
+# `.github/workflows/release.yml` in the single build-scan/export step, so the
+# exact archive that is scanned and promoted carries them.
+#
+#   VITE_APP_VERSION  canonical release version (e.g. 2.1.0). Blank means an
+#                     UNVERSIONED build: vite.config.ts then reports
+#                     `dev-<package version>`, which the PWA handshake's
+#                     `parseVersion` deliberately cannot read. That matters —
+#                     a bare `2.0.0` here would look OLDER than a v2.1 API and
+#                     pin an undismissible "update required" prompt forever,
+#                     which reloading could never clear.
+#   VITE_GIT_SHA      immutable per-build commit id. There is no `.git` in this
+#                     context, so `git rev-parse` inside the container always
+#                     fails and the value falls back to `dev`. BUILD_ID is
+#                     `<version>+<sha>` and suffixes every versioned Cache
+#                     Storage bucket, so without this arg every deploy reused
+#                     the same buckets and stale chunks survived `activate()`.
+#   VITE_RELEASE_BUILD  set to `1` ONLY by the release workflow. It asserts
+#                     "this image is going to be published", which makes a
+#                     half-configured identity (version without SHA) a hard
+#                     failure instead of a safe degradation. Without it, a
+#                     version supplied with no resolvable SHA degrades to the
+#                     unversioned identity — so an operator who sets a version
+#                     for their own build gets a harmless image, not a build
+#                     that refuses to complete.
+#
+# `web/scripts/check-release-build-identity.mjs` fails the release gate when
+# any of the three is missing from this file or from the workflow; ordinary
+# local and compose builds stay green because they are unversioned by design.
+ARG VITE_APP_VERSION=""
+ARG VITE_GIT_SHA=""
+ARG VITE_RELEASE_BUILD=""
 ENV VITE_OTLP_HTTP_ENDPOINT=$VITE_OTLP_HTTP_ENDPOINT \
     VITE_OTEL_SERVICE_NAME=$VITE_OTEL_SERVICE_NAME \
     VITE_OTEL_DEPLOY_ENV=$VITE_OTEL_DEPLOY_ENV \
-    VITE_APP_VERSION=$VITE_APP_VERSION
+    VITE_APP_VERSION=$VITE_APP_VERSION \
+    VITE_GIT_SHA=$VITE_GIT_SHA \
+    VITE_RELEASE_BUILD=$VITE_RELEASE_BUILD
 
 RUN npm run build
 
-# Serve with nginx
-FROM nginx:1.25-alpine
+# CLEAN-04 — the runtime stage below copies `dist/` straight into the nginx
+# document root, so anything left here is public. `vite.config.ts` already
+# defaults `build.sourcemap` to false (maps are only emitted under
+# VITE_SOURCEMAP_MODE=private, which this image never sets), but this prune is
+# the belt-and-braces guarantee that a future config regression cannot publish
+# a byte-exact copy of the frontend source tree. `nginx.conf` additionally
+# refuses `.map` requests, and `web/scripts/check-source-maps.mjs` gates all
+# three layers.
+RUN find dist -name '*.map' -delete
+
+# Serve with a supported, digest-pinned nginx runtime.
+FROM nginx:1.30.4-alpine3.24@sha256:97d490c12ba55b4946b01546d1c3ed324e8d41ab1c9fcb2a616aa470620e5b46
+
+RUN apk upgrade --no-cache
 
 COPY --from=builder /app/dist /usr/share/nginx/html
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf

@@ -56,7 +56,7 @@ func TestStrategy_System(t *testing.T) {
 		"Refuse politely",
 		// Propose-only pin — never claim the plan was applied.
 		"Never claim the plan was applied",
-		// Action enumeration pin — only close / discard / update.
+		// Action enumeration pin — only close / quarantine / update.
 		`actions you may propose are exactly: "close"`,
 	} {
 		if !contains(sys, must) {

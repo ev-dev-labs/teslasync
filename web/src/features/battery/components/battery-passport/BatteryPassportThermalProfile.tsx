@@ -155,7 +155,7 @@ export function BatteryPassportThermalProfile({
             </div>
           </div>
           {thermal.status === 'no_data' ? (
-            <EmptyState
+            <EmptyState /* no-action: certificate evidence appears only when the selected vehicle has source data */
               className="py-6"
               icon={
                 <Thermometer
@@ -169,7 +169,7 @@ export function BatteryPassportThermalProfile({
               )}
             />
           ) : thermal.status === 'invalid' ? (
-            <EmptyState
+            <EmptyState /* no-action: certificate evidence appears only when the selected vehicle has source data */
               className="py-6"
               message={t(
                 'batteryPassport.thermal.invalid',

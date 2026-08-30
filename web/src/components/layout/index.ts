@@ -1,5 +1,6 @@
 export { PageContainer } from './PageContainer';
 export { PageHeader } from './PageHeader';
+export { PageActions, type PageActionsProps } from './PageActions';
 export { PageHeaderSticky, type PageHeaderStickyProps } from './PageHeaderSticky';
 export { Breadcrumbs, type BreadcrumbItem } from './Breadcrumbs';
 export { Stack } from './Stack';

@@ -538,46 +538,45 @@ describe('EnergyFlowData', () => {
   });
 });
 
-// ── VampireDrainStats + VampireDrainEvent (deprecated route, shape preserved) ──
+// ── VampireDrainStats + VampireDrainEvent (canonical derived-history shape) ──
 
 describe('VampireDrainStats & VampireDrainEvent', () => {
   const stats: VampireDrainStats = {
-    avg_drain_rate: 1.2,
-    total_range_lost: 45,
-    total_hours: 200,
     event_count: 14,
-    avg_sentry_drain: 2.1,
-    avg_nosentry_drain: 0.8,
+    total_observed_hours: 200,
+    avg_drain_pct_per_day: 1.2,
+    median_drain_pct_per_day: 0.8,
+    p95_drain_pct_per_day: 2.1,
+    sample_window_days: 90,
   };
 
-  it('shows sentry-mode drain exceeding non-sentry drain', () => {
-    expect(stats.avg_sentry_drain).toBeGreaterThan(stats.avg_nosentry_drain);
+  it('preserves nullable distribution statistics and observed coverage', () => {
+    expect(stats.p95_drain_pct_per_day ?? 0).toBeGreaterThan(stats.median_drain_pct_per_day ?? 0);
     expect(stats.event_count).toBeGreaterThan(0);
     expectTypeOf<VampireDrainStats>().toEqualTypeOf<{
-      avg_drain_rate: number;
-      total_range_lost: number;
-      total_hours: number;
       event_count: number;
-      avg_sentry_drain: number;
-      avg_nosentry_drain: number;
+      total_observed_hours: number;
+      avg_drain_pct_per_day: number | null;
+      median_drain_pct_per_day: number | null;
+      p95_drain_pct_per_day: number | null;
+      sample_window_days: number;
     }>();
   });
 
-  it('allows a VampireDrainEvent with a null outside temperature', () => {
+  it('allows a VampireDrainEvent with a null ambient temperature', () => {
     const event: VampireDrainEvent = {
-      id: 1,
-      start_date: '2024-01-01T00:00:00Z',
-      duration_hours: 8,
-      battery_lost: 3,
-      drain_rate_pct_per_hour: 0.375,
-      outside_temp_avg: null,
-      sentry_mode: true,
+      started_at: '2024-01-01T00:00:00Z',
+      ended_at: '2024-01-02T00:00:00Z',
+      duration_hours: 24,
+      start_battery_pct: 80,
+      end_battery_pct: 79,
+      drain_pct: 1,
+      drain_pct_per_day: 1,
+      ambient_temp_c_avg: null,
     };
-    expect(event.sentry_mode).toBe(true);
-    expect(event.outside_temp_avg).toBeNull();
-    expect(event.drain_rate_pct_per_hour).toBeCloseTo(event.battery_lost / event.duration_hours, 6);
-    expectTypeOf<VampireDrainEvent['outside_temp_avg']>().toEqualTypeOf<number | null>();
-    expectTypeOf<VampireDrainEvent['sentry_mode']>().toEqualTypeOf<boolean>();
+    expect(event.ambient_temp_c_avg).toBeNull();
+    expect(event.drain_pct_per_day).toBeCloseTo(event.drain_pct / event.duration_hours * 24, 6);
+    expectTypeOf<VampireDrainEvent['ambient_temp_c_avg']>().toEqualTypeOf<number | null>();
   });
 });
 

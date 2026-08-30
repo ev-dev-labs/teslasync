@@ -72,6 +72,19 @@ vi.mock('@/components/motion', () => ({
     <div className={className}>{children}</div>
   ),
   StaggerItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  // MetricBar (rendered inside the route cards) animates its fill via
+  // `motion.div`, now imported from this barrel rather than 'framer-motion'
+  // directly — the mock must supply it.
+  motion: new Proxy(
+    {},
+    {
+      get: () => (props: Record<string, unknown>) => {
+        const Component = (props.as as string) ?? 'div';
+        const { children, ...rest } = props as { children?: unknown } & Record<string, unknown>;
+        return <Component {...(rest as Record<string, unknown>)}>{children as ReactNode}</Component>;
+      },
+    },
+  ),
 }));
 
 // ── charts barrel: a deterministic <ChartContainer> double that surfaces the

@@ -50,7 +50,7 @@ func (f *fakeSavedViewsRepo) List(_ context.Context, filter dbadmin.SavedViewLis
 	}
 	out := make([]*dashboardmodel.SavedView, 0)
 	for _, row := range f.rows {
-		if row.Route != filter.Route {
+		if filter.Route != "" && row.Route != filter.Route {
 			continue
 		}
 		if !sameUserScope(row.UserID, filter.UserID) {
@@ -61,6 +61,9 @@ func (f *fakeSavedViewsRepo) List(_ context.Context, filter dbadmin.SavedViewLis
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].IsPinned != out[j].IsPinned {
 			return out[i].IsPinned
+		}
+		if out[i].Route != out[j].Route {
+			return out[i].Route < out[j].Route
 		}
 		if out[i].SortOrder != out[j].SortOrder {
 			return out[i].SortOrder < out[j].SortOrder
@@ -208,12 +211,29 @@ func newSavedViewRequest(method, target, body, idParam string) *http.Request {
 
 // ── List ────────────────────────────────────────────────────────────────────
 
-func TestSavedViews_List_RequiresRoute(t *testing.T) {
-	handler := newHandlerForTest(newFakeSavedViewsRepo())
+func TestSavedViews_List_WithoutRouteReturnsAllRoutes(t *testing.T) {
+	repo := newFakeSavedViewsRepo()
+	for _, view := range []*dashboardmodel.SavedView{
+		{Name: "Drives", Route: "/drives", Query: "range=7d"},
+		{Name: "Charging", Route: "/charging", Query: "type=supercharger"},
+	} {
+		if err := repo.Create(context.Background(), view); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	handler := newHandlerForTest(repo)
 	rec := httptest.NewRecorder()
 	handler.List(rec, httptest.NewRequest(http.MethodGet, "/saved-views", nil))
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status = %d, want 400; body=%s", rec.Code, rec.Body.String())
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var out []*dashboardmodel.SavedView
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+	if len(out) != 2 || out[0].Route != "/charging" || out[1].Route != "/drives" {
+		t.Fatalf("expected both routes in stable order, got %#v", out)
 	}
 }
 

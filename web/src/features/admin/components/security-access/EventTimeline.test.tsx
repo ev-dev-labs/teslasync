@@ -120,8 +120,11 @@ describe('EventTimeline — state precedence', () => {
     fireEvent.click(retry);
     expect(onRetry).toHaveBeenCalledTimes(1);
 
-    // The error branch pre-empts the list entirely.
-    expect(screen.queryByRole('list')).toBeNull();
+    // The error branch pre-empts the event list entirely. (QueryError renders
+    // its own help-links list, so target the labelled timeline list.)
+    expect(
+      screen.queryByRole('list', { name: 'Security Event Timeline' }),
+    ).toBeNull();
   });
 
   it('prioritises the error branch over the loading skeleton', () => {
@@ -133,7 +136,9 @@ describe('EventTimeline — state precedence', () => {
 
     expect(screen.getByRole('alert')).toBeInTheDocument();
     expect(container.querySelector('.animate-pulse')).toBeNull();
-    expect(screen.queryByRole('list')).toBeNull();
+    expect(
+      screen.queryByRole('list', { name: 'Security Event Timeline' }),
+    ).toBeNull();
   });
 
   it('shows a skeleton on first load (loading, no error)', () => {

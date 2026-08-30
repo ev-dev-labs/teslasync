@@ -12,6 +12,7 @@ export interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTex
  */
   help?: Omit<HelpIconProps, 'for'> & { for?: string };
   error?: string;
+  hint?: string;
   /**
  * Sizing scale. Defaults to `'md'` for back-compat. Pass `'auto'` to
  * follow the user's `ui_density` setting via density-aware Tailwind
@@ -28,7 +29,18 @@ const sizeClasses: Record<NonNullable<TextareaProps['size']>, string> = {
 };
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
-  ({ className, label, help, error, size = 'md', id, required, ...props }, ref) => {
+  ({
+    className,
+    label,
+    help,
+    error,
+    hint,
+    size = 'md',
+    id,
+    required,
+    'aria-describedby': ariaDescribedBy,
+    ...props
+  }, ref) => {
     // Stable fallback id so the error message is always programmatically
     // associated via aria-describedby — even for aria-label-only textareas
     // that supply neither `id` nor `label`. useId is SSR-safe and unique
@@ -36,6 +48,9 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
     const reactId = useId();
     const textareaId = id ?? (label ? label.toLowerCase().replace(/\s+/g, '-') : reactId);
     const errorId = `${textareaId}-error`;
+    const hintId = `${textareaId}-hint`;
+    const feedbackId = error ? errorId : hint ? hintId : undefined;
+    const describedBy = [ariaDescribedBy, feedbackId].filter(Boolean).join(' ') || undefined;
     return (
       <div>
         {label && (
@@ -56,7 +71,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           required={required}
           aria-required={required ? 'true' : undefined}
           className={cn(
-            'w-full rounded-lg border border-[var(--glass-border)] bg-[var(--surface-1)]',
+            'w-full rounded-shape-md border border-[var(--control-border)] bg-[var(--control-bg)]',
             // Colour base MUST precede sizeClasses: tailwind-merge classifies
             // the custom density utility `text-d-base` in the same group as
             // the arbitrary colour `text-[var(--text-primary)]`, so whichever
@@ -65,18 +80,23 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
             // silently drop its density font-size.
             'text-[var(--text-primary)] placeholder:text-[var(--text-muted)]',
             sizeClasses[size],
-            'focus:border-cyan-500/50 focus:outline-none focus:ring-1 focus:ring-cyan-500/30',
+            'focus-visible:border-[var(--theme-primary)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--focus-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg-app)]',
             'resize-y transition-colors disabled:cursor-not-allowed disabled:border-[var(--border-default)] disabled:bg-[var(--surface-2)] disabled:text-[var(--text-secondary)] disabled:opacity-100',
-            error && 'border-red-500/50',
+            error && 'border-rose-500',
             className,
           )}
           aria-invalid={error ? 'true' : undefined}
-          aria-describedby={error ? errorId : undefined}
+          aria-describedby={describedBy}
           {...props}
         />
         {error && (
-          <p id={errorId} className="mt-1 text-xs text-red-400">
+          <p id={errorId} role="alert" className="mt-1 text-xs text-rose-300">
             {error}
+          </p>
+        )}
+        {hint && !error && (
+          <p id={hintId} className="mt-1 text-xs text-[var(--text-muted)]">
+            {hint}
           </p>
         )}
       </div>

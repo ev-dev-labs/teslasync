@@ -21,7 +21,7 @@ export function EnterpriseRolesDataView({
   if (roles.length === 0) {
     return (
       <div>
-        <EmptyState
+        <EmptyState /* no-action: refresh and management controls are provided by the parent workspace */
           title={t(
             'vehicleManagement.roles.emptyTitle',
             'No enterprise roles returned',

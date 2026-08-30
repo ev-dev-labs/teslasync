@@ -213,8 +213,11 @@ describe('TripDrivesTable — functional column sorting', () => {
   it('leaves rows in API order until a header is clicked', () => {
     renderTable();
     expect(distanceOrder()).toEqual(['dist:5000', 'dist:1000', 'dist:12000']);
-    // No column advertises an active sort yet.
-    expect(document.querySelector('th[aria-sort]')).toBeNull();
+    // Sortable columns advertise `aria-sort="none"` until one becomes the
+    // active sort key; no column claims ascending/descending yet.
+    expect(
+      document.querySelector('th[aria-sort="ascending"], th[aria-sort="descending"]'),
+    ).toBeNull();
   });
 
   it('sorts by distance descending then ascending on repeat clicks', () => {
@@ -222,7 +225,7 @@ describe('TripDrivesTable — functional column sorting', () => {
     const distanceHeader = () => screen.getByRole('button', { name: 'Distance' });
     fireEvent.click(distanceHeader()); // first click → desc
     expect(distanceOrder()).toEqual(['dist:12000', 'dist:5000', 'dist:1000']);
-    const sortedTh = container.querySelector('th[aria-sort]');
+    const sortedTh = container.querySelector('th[aria-sort="descending"]');
     expect(sortedTh).toHaveAttribute('aria-sort', 'descending');
     expect(sortedTh?.textContent).toContain('Distance');
     fireEvent.click(distanceHeader()); // second click → asc

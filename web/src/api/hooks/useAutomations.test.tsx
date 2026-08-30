@@ -244,6 +244,7 @@ describe('useImportAutomations', () => {
 
     expect(calledUrl()).toBe('/automations/import');
     expect(calledOpts().method).toBe('POST');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     expect(JSON.parse(calledOpts().body as string)).toEqual(envelope);
     expect(out?.imported).toBe(1);
 
@@ -279,6 +280,7 @@ describe('useToggleAutomation', () => {
 
     expect(calledUrl()).toBe('/automations/1/toggle');
     expect(calledOpts().method).toBe('PATCH');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     expect(calledOpts().body).toBe(JSON.stringify({ enabled: false }));
     const cached = client.getQueryData<Automation[]>(automationKeys.all) ?? [];
     expect(cached[0]?.enabled).toBe(false);
@@ -355,6 +357,7 @@ describe('useReEnableAutomation', () => {
 
     expect(calledUrl()).toBe('/automations/4/re-enable');
     expect(calledOpts().method).toBe('PATCH');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     expect(invalidateSpy).toHaveBeenCalledWith(expect.anything(), { queryKey: automationKeys.all });
     expect(toastSuccess).toHaveBeenCalledWith('toast.automation.reEnable.success', 'Automation re-enabled');
   });
@@ -381,6 +384,7 @@ describe('useDeleteAutomation', () => {
 
     expect(calledUrl()).toBe('/automations/9');
     expect(calledOpts().method).toBe('DELETE');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     const keys = invalidateSpy.mock.calls.map((c) => JSON.stringify(c[1]));
     expect(keys).toContain(JSON.stringify({ queryKey: automationKeys.all }));
     expect(keys).toContain(JSON.stringify({ queryKey: ['automation-history'] }));
@@ -400,6 +404,7 @@ describe('useBulkAutomationsUpdate', () => {
 
     expect(calledUrl()).toBe('/automations/bulk');
     expect(calledOpts().method).toBe('POST');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     // Content-Type must be explicit so it survives the resilientFetch fallback.
     expect((calledOpts().headers as Record<string, string>)['Content-Type']).toBe('application/json');
     expect(JSON.parse(calledOpts().body as string)).toEqual({ ids: [1, 2], op: 'enable' });
@@ -445,6 +450,7 @@ describe('useTestRunAutomation', () => {
 
     expect(calledUrl()).toBe('/automations/6/test-run');
     expect(calledOpts().method).toBe('POST');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     // Test-run is a per-click local poke — it uses invalidateQueries directly
     // rather than the cross-tab broadcast helper.
     expect(invalidateQueries).toHaveBeenCalledWith({ queryKey: ['automation-history'] });
@@ -512,6 +518,7 @@ describe('useCreateAutomationFull', () => {
 
     expect(calledUrl()).toBe('/automations');
     expect(calledOpts().method).toBe('POST');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     expect(JSON.parse(calledOpts().body as string)).toEqual(validFullInput);
     expect(out?.id).toBe(42);
     expect(invalidateSpy).toHaveBeenCalledWith(expect.anything(), { queryKey: automationKeys.all });
@@ -541,6 +548,7 @@ describe('useUpdateAutomationFull', () => {
 
     expect(calledUrl()).toBe('/automations/7');
     expect(calledOpts().method).toBe('PUT');
+    expect(calledOpts().requiresLiveMode).toBe(true);
     const keys = invalidateSpy.mock.calls.map((c) => JSON.stringify(c[1]));
     expect(keys).toContain(JSON.stringify({ queryKey: automationKeys.all }));
     expect(keys).toContain(JSON.stringify({ queryKey: automationKeys.detail(7) }));

@@ -159,7 +159,7 @@ export function ShareCardWeekdayProfile({
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: the shared report is read-only and reflects its fixed evidence scope */
                 message={t(
                   'shareCard.weekday.empty',
                   'No eligible drives support a weekday activity profile.',

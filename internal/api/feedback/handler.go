@@ -12,6 +12,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	dbuser "github.com/ev-dev-labs/teslasync/internal/database/user"
 )
@@ -120,10 +121,20 @@ func (h *Handler) Submit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	insert := dbuser.FeedbackInsert{
-		Category:         req.Category,
-		Title:            req.Title,
-		Body:             req.Body,
-		PageRoute:        req.PageRoute,
+		Category: req.Category,
+		Title:    req.Title,
+		Body:     req.Body,
+		// Route TEMPLATE, never the raw pathname the browser reported.
+		//
+		// A feedback row is durable, is read by every admin with queue access,
+		// and can be forwarded verbatim to a GitHub issue. A raw pathname puts
+		// `/s/<share-token>`, `/vehicles/<vin>` and `/drives/<id>` into all
+		// three of those places. Normalising here — rather than trusting the
+		// SPA — means an older client, a scripted POST, or a future caller
+		// cannot bypass it. `NormalizeRoute` is the same function the RUM and
+		// web-error ingest paths use, so the label is byte-identical across
+		// every diagnostic surface.
+		PageRoute:        normalizePageRoute(req.PageRoute),
 		UserAgent:        firstNonEmpty(req.UserAgent, r.UserAgent()),
 		AppVersion:       req.AppVersion,
 		UserEmail:        req.UserEmail,
@@ -166,6 +177,20 @@ func (h *Handler) callNow() time.Time {
 		return h.now()
 	}
 	return time.Now()
+}
+
+// normalizePageRoute converts a browser-reported pathname into a bounded,
+// privacy-safe route template.
+//
+// An empty value stays empty: `NormalizeRoute("")` would return "/", which
+// would claim the report came from the dashboard when in fact the client did
+// not say where it came from. "Unknown" and "the dashboard" are different
+// facts, and a triager acts on them differently.
+func normalizePageRoute(raw string) string {
+	if strings.TrimSpace(raw) == "" {
+		return ""
+	}
+	return webvitals.NormalizeRoute(raw)
 }
 
 func actorFromRequest(r *http.Request, headerName string) string {

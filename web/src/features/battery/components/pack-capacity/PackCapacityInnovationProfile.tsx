@@ -75,12 +75,17 @@ export function PackCapacityInnovationProfile({
           'packCapacity.innovation.aria',
           'Distribution of standardized filter innovations',
         )}
-        height={320}
+        size="standard"
         loading={state.isLoading}
         empty={false}
         exportable={state.isResolved && !state.error}
         exportData={rows}
         data={rows}
+        dataColumns={[
+          { key: 'band', label: t('packCapacity.columns.band', 'Innovation band') },
+          { key: 'samples', label: t('packCapacity.series.samples', 'Qualified samples') },
+          { key: 'share', label: t('packCapacity.columns.share', 'Share (%)') },
+        ]}
       >
         <PackCapacitySectionBody
           result={result}

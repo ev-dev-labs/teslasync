@@ -54,9 +54,11 @@ vi.mock('@/hooks/useOnlineStatus', () => ({ useOnlineStatus: () => true }));
 // ── recharts barrel double: ResponsiveContainer renders its children so the
 //    AreaChart double can surface the page-computed `data` (as JSON) plus the
 //    series binding + the Y-axis tick formatter's output for direct assertion. ──
-vi.mock('@/components/charts', () => {
+vi.mock('@/components/charts', async () => {
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   const Inert = () => null;
   return {
+    EmbeddedChart: chartTestDoubles.EmbeddedChart,
     AREA_DEFAULTS: {},
     areaGradient: () => null,
     ChartTooltip: Inert,
@@ -157,10 +159,7 @@ describe('GasPriceTrendChart — loading', () => {
   it('shows an accessible loading skeleton and withholds the chart on first load', () => {
     const { container } = renderChart(makeQuery({ isLoading: true, data: undefined }));
 
-    const status = screen.getByRole('status');
-    expect(status).toHaveAttribute('aria-busy', 'true');
-    expect(status).toHaveAccessibleName('Loading');
-    // The pulsing Skeleton is present, but no chart is drawn yet.
+    // EmbeddedChart in loading state renders a skeleton (animate-pulse).
     expect(container.querySelector('.animate-pulse')).not.toBeNull();
     expect(screen.queryByTestId('area-chart')).not.toBeInTheDocument();
     // The title still frames the panel while loading.

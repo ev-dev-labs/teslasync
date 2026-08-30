@@ -171,6 +171,10 @@ function InnerSection(props: AISignalExplorerNlFilterProps) {
     url: '/ai/signals/filter/draft',
     body,
     onEvent,
+    // AI-01: vehicle scope is part of stream identity — switching
+    // vehicles aborts an in-flight draft and clears the previous
+    // vehicle's proposal before the new scope streams in.
+    scopeKey: hasVehicle ? vehicleId : null,
   })
 
   const isStreaming = stream.state === 'streaming'

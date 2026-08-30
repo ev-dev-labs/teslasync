@@ -6,7 +6,7 @@ import { EmptyState } from '@/components/feedback';
 import {
   ChartTooltip, chartGrid, axisTickSm,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell,
+  ResponsiveContainer, Cell, EmbeddedChart,
 } from '@/components/charts';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { CostSection } from './CostSection';
@@ -101,7 +101,23 @@ export function TimeOfUseAnalysis({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
         {/* Hourly bar chart */}
         <div className="lg:col-span-2">
-          <div className="h-56 sm:h-64" role="img" aria-label={t('costAnalysis.tou.chartAria', 'Charging sessions by hour of day with peak and off-peak coloring')}>
+          <EmbeddedChart
+            title={t('costAnalysis.tou.hourlyDistribution', 'Hourly charging distribution')}
+            ariaLabel={t('costAnalysis.tou.chartAria', 'Charging sessions by hour of day with peak and off-peak coloring')}
+            data={rows.map(({ label, sessions, hour }) => ({
+              label,
+              sessions,
+              period: classifyHour(hour),
+            }))}
+            dataColumns={[
+              { key: 'label', label: t('costAnalysis.tou.hour', 'Hour') },
+              { key: 'sessions', label: t('costAnalysis.tou.sessions', 'Sessions') },
+              { key: 'period', label: t('costAnalysis.tou.ratePeriod', 'Rate period') },
+            ]}
+            fluid={false}
+            mobileHeight={224}
+            height={256}
+          >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={rows}>
                 <CartesianGrid {...chartGrid} />
@@ -119,7 +135,7 @@ export function TimeOfUseAnalysis({
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
-          </div>
+          </EmbeddedChart>
 
           {/* Legend — dot colors sourced from TOU_PERIOD_COLORS so they always
               match the bars above (previously drifted: rose vs red, neon vs cyan). */}

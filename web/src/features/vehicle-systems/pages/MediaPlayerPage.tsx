@@ -19,7 +19,7 @@ import { FadeIn } from '@/components/motion';
 import {
   LinearGauge, ChartTooltip, ChartGradient, chartGrid, axisTickSm, CHART_COLORS,
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell,
+  PieChart, Pie, Cell, EmbeddedChart,
 } from '@/components/charts';
 
 import { useMedia, useMediaHistory } from '@/api/hooks/useVehicleSystems';
@@ -538,29 +538,36 @@ export default function MediaPlayerPage() {
               />
             ) : (
               <div className="h-56 sm:h-64 xl:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={volumeChartData}>
-                    <defs>
-                      <ChartGradient id="volGrad" color={CHART_COLORS[0]} />
-                    </defs>
-                    <CartesianGrid {...chartGrid} />
-                    <XAxis dataKey="time" {...axisTickSm} />
-                    <YAxis
-                      {...axisTickSm}
-                      allowDecimals={false}
-                      domain={[0, volumeAxisMax]}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Area
-                      type="monotone"
-                      dataKey="volume"
-                      name={t('media.volume', 'Volume')}
-                      stroke={CHART_COLORS[0]}
-                      fill="url(#volGrad)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {/* chart-a11y:no-table media volume time-series — continuous audio levels, not tabular */}
+                <EmbeddedChart
+                  title={t('media.volumeOverTime', 'Volume over Time')}
+                  ariaLabel={t('media.volumeAria', 'Media volume over time area chart')}
+                  fluid
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={volumeChartData}>
+                      <defs>
+                        <ChartGradient id="volGrad" color={CHART_COLORS[0]} />
+                      </defs>
+                      <CartesianGrid {...chartGrid} />
+                      <XAxis dataKey="time" {...axisTickSm} />
+                      <YAxis
+                        {...axisTickSm}
+                        allowDecimals={false}
+                        domain={[0, volumeAxisMax]}
+                      />
+                      <Tooltip content={<ChartTooltip />} />
+                      <Area
+                        type="monotone"
+                        dataKey="volume"
+                        name={t('media.volume', 'Volume')}
+                        stroke={CHART_COLORS[0]}
+                        fill="url(#volGrad)"
+                        strokeWidth={2}
+                      />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>
@@ -587,27 +594,34 @@ export default function MediaPlayerPage() {
               />
             ) : (
               <>
+                {/* chart-a11y:no-table pie chart with dynamic source names — legend list below chart serves as accessible summary */}
                 <div className="h-48 sm:h-56">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={sourceData}
-                        dataKey="value"
-                        nameKey="name"
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={45}
-                        outerRadius={80}
-                        paddingAngle={3}
-                        strokeWidth={0}
-                      >
-                        {sourceData.map((entry) => (
-                          <Cell key={entry.name} fill={entry.color} />
-                        ))}
-                      </Pie>
-                      <Tooltip content={<ChartTooltip />} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <EmbeddedChart
+                    title={t('media.sourceDistribution', 'Source Distribution')}
+                    ariaLabel={t('media.sourceAria', 'Pie chart of media source distribution')}
+                    fluid
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={sourceData}
+                          dataKey="value"
+                          nameKey="name"
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={80}
+                          paddingAngle={3}
+                          strokeWidth={0}
+                        >
+                          {sourceData.map((entry) => (
+                            <Cell key={entry.name} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip content={<ChartTooltip />} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </EmbeddedChart>
                 </div>
                 <ul className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
                   {sourceData.map((s) => (

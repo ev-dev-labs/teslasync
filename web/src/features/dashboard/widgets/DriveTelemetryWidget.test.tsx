@@ -94,8 +94,10 @@ vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
 // the chart-data transform / legend paths are exercised.
 vi.mock('@/components/charts', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@/components/charts')>();
+  const { chartTestDoubles } = await import('@/test/chartTestDoubles');
   return {
     ...actual,
+    ...chartTestDoubles,
     useThemeChartPalette: () => ({
       primary: '#00b4d8',
       accent: '#e63946',
@@ -375,15 +377,15 @@ describe('DriveTelemetryWidget — standard layout (metric)', () => {
     expect(screen.getByText('Wh/km')).toBeInTheDocument();
   });
 
-  it('renders the custom legend (speed / power / battery) but no wide-only entries', () => {
-    mockTelemetry.mockReturnValue(qr({ data: [] }));
+  it('renders the shared persisted legend for populated telemetry', () => {
+    mockTelemetry.mockReturnValue(qr({ data: [makePoint()] }));
     renderWidget(STANDARD);
 
-    expect(screen.getByText('Speed')).toBeInTheDocument();
-    expect(screen.getByText('Power (kW)')).toBeInTheDocument();
-    expect(screen.getByText('Battery %')).toBeInTheDocument();
-    // cols=2 is not "wide" (≥3): no elevation entry, no address badge.
-    expect(screen.queryByText('Elevation')).toBeNull();
+    expect(screen.getByTestId('embedded-chart')).toHaveAttribute(
+      'data-chart-key',
+      'dashboard-drive-telemetry',
+    );
+    // cols=2 is not "wide" (≥3): no address badge.
     expect(screen.queryByText('123 Main St')).toBeNull();
   });
 
@@ -397,13 +399,15 @@ describe('DriveTelemetryWidget — standard layout (metric)', () => {
 });
 
 describe('DriveTelemetryWidget — wide layout', () => {
-  it('adds the start-address badge and the elevation legend entry', () => {
-    mockTelemetry.mockReturnValue(qr({ data: [] }));
+  it('adds the start-address badge and keeps the shared legend in wide mode', () => {
+    mockTelemetry.mockReturnValue(qr({ data: [makePoint()] }));
     renderWidget(WIDE);
 
     expect(screen.getByText('123 Main St')).toBeInTheDocument();
-    expect(screen.getByText('Elevation')).toBeInTheDocument();
-    expect(screen.getByText('Speed')).toBeInTheDocument();
+    expect(screen.getByTestId('embedded-chart')).toHaveAttribute(
+      'data-chart-key',
+      'dashboard-drive-telemetry',
+    );
   });
 
   it('renders the chart, exercising both value and null speed points without crashing', () => {
@@ -418,7 +422,10 @@ describe('DriveTelemetryWidget — wide layout', () => {
     const { container } = renderWidget(WIDE);
 
     expect(container.querySelector('.recharts-surface')).not.toBeNull();
-    expect(screen.getByText('Speed')).toBeInTheDocument();
+    expect(screen.getByTestId('embedded-chart')).toHaveAttribute(
+      'data-chart-key',
+      'dashboard-drive-telemetry',
+    );
     expect(screen.queryByText('No telemetry for this drive')).toBeNull();
   });
 });
@@ -447,7 +454,7 @@ describe('DriveTelemetryWidget — compact layout', () => {
     expect(screen.getByText('30')).toBeInTheDocument();
     // Compact tiles suppress the shell title, the chart, and the legend.
     expect(screen.queryByText('Drive Telemetry')).toBeNull();
-    expect(screen.queryByText('Speed')).toBeNull();
+    expect(screen.queryByTestId('chart-legend')).toBeNull();
   });
 
   it('shows the empty state (compact) when there are no drives', () => {
@@ -518,7 +525,10 @@ describe('DriveTelemetryWidget — null-safety & hardening', () => {
     const { container } = renderWidget(WIDE);
 
     expect(container.querySelector('.recharts-surface')).not.toBeNull();
-    expect(screen.getByText('Speed')).toBeInTheDocument();
+    expect(screen.getByTestId('embedded-chart')).toHaveAttribute(
+      'data-chart-key',
+      'dashboard-drive-telemetry',
+    );
   });
 });
 
@@ -530,7 +540,7 @@ describe('DriveTelemetryWidget — refresh wiring', () => {
     mockTelemetry.mockReturnValue(qr({ data: [makePoint()], refetch: refetchTelemetry }));
     renderWidget(STANDARD);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /Refresh data/ }));
 
     expect(refetchDrives).toHaveBeenCalledTimes(1);
     expect(refetchTelemetry).toHaveBeenCalledTimes(1);

@@ -115,7 +115,7 @@ export function TrueCostMonthlyCostChart({
                 </BarChart>
               </ResponsiveContainer>
             ) : (
-              <EmptyState message={t('tco.charts.monthlyCost.empty', 'No month has supported EV and modeled gas values.')} />
+              <EmptyState /* no-action: the active filters and recorded telemetry determine this read-only result */ message={t('tco.charts.monthlyCost.empty', 'No month has supported EV and modeled gas values.')} />
             )}
           </TrueCostSectionBody>
         )}

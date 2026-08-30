@@ -3,16 +3,18 @@ import { useTranslation } from 'react-i18next';
 import { PieChart as PieChartIcon, Trophy, Radar as RadarIcon, BarChart3 } from 'lucide-react';
 import {
   ChartTooltip,
+  ChartLegend,
   chartGrid, axisTick, axisTickSm, chartMarginLabeled, chartAnimation, safe, CHART_COLORS,
   BarChart, Bar, RadarChart, Radar, PolarGrid, PolarAngleAxis,
   PieChart, Pie, Cell,
-  XAxis, YAxis, Tooltip, ResponsiveContainer, Legend,
+  XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from '@/components/charts';
 import { Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { convertDistanceFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { AnalyticsPanel } from './AnalyticsPanel';
+import { AnalyticsChartPanel } from './AnalyticsChartPanel';
 import { PIE_COLORS } from './constants';
 import type { FleetAnalyticsQuery } from './constants';
 
@@ -104,7 +106,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
   return (
     <>
       {/* Fleet Usage Donut */}
-      <AnalyticsPanel
+      <AnalyticsChartPanel
         title={t('analytics.overview.fleetUsage', 'Fleet Usage')}
         icon={<PieChartIcon className="h-4 w-4" />}
         loading={isLoading}
@@ -112,34 +114,35 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
         onRetry={refetch}
         isEmpty={vehicles.length === 0}
         emptyMessage={t('analytics.overview.noVehicles', 'No vehicle data')}
+        ariaLabel={`${t('analytics.overview.fleetUsageAria', 'Fleet distance share by vehicle')} (${distanceUnit})`}
+        data={pieData}
+        dataColumns={[
+          { key: 'name', label: t('analytics.overview.vehicle', 'Vehicle') },
+          { key: 'value', label: `${t('analytics.driving.distance', 'Distance')} (${distanceUnit})` },
+        ]}
+        exportFilename="fleet-distance-share"
       >
-        <div
-          className="h-64 sm:h-72"
-          role="img"
-          aria-label={`${t('analytics.overview.fleetUsageAria', 'Fleet distance share by vehicle')} (${distanceUnit})`}
-        >
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie
-                data={pieData}
-                dataKey="value"
-                nameKey="name"
-                cx="50%"
-                cy="50%"
-                innerRadius={55}
-                outerRadius={95}
-                paddingAngle={3}
-              >
-                {vehicles.map((_, i) => (
-                  <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
-                ))}
-              </Pie>
-              <Tooltip content={<ChartTooltip />} />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </AnalyticsPanel>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={pieData}
+              dataKey="value"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={55}
+              outerRadius={95}
+              paddingAngle={3}
+            >
+              {vehicles.map((_, i) => (
+                <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip content={<ChartTooltip />} />
+            <ChartLegend />
+          </PieChart>
+        </ResponsiveContainer>
+      </AnalyticsChartPanel>
 
       {/* Efficiency Leaderboard */}
       <AnalyticsPanel
@@ -162,9 +165,10 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
                   {fmtNumber(whPerKmToDisplay(safe(v.efficiency)), 1)} {efficiencyUnit}
                 </Text>
               </div>
-              <div className="h-2 overflow-hidden rounded-full bg-white/[0.06]" aria-hidden="true">
+              <div className="h-2 overflow-hidden rounded-full bg-[var(--surface-2)]" aria-hidden="true">
                 <div
-                  className="h-full rounded-full bg-neon-cyan transition-all duration-slow"
+                  data-testid="efficiency-leader-fill"
+                  className="h-full rounded-full bg-[var(--theme-primary)] transition-all duration-slow"
                   style={{ width: `${v.pct}%` }}
                 />
               </div>
@@ -174,7 +178,7 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
       </AnalyticsPanel>
 
       {/* Radar Vehicle Comparison */}
-      <AnalyticsPanel
+      <AnalyticsChartPanel
         title={t('analytics.overview.vehicleComparison', 'Vehicle Comparison')}
         icon={<RadarIcon className="h-4 w-4" />}
         loading={isLoading}
@@ -182,12 +186,16 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
         onRetry={refetch}
         isEmpty={radarData.length === 0}
         emptyMessage={t('analytics.overview.noComparison', 'Need 2+ vehicles for comparison')}
+        ariaLabel={t('analytics.overview.vehicleComparisonAria', 'Normalized vehicle metric comparison')}
+        data={radarData}
+        dataColumns={[
+          { key: 'metric', label: t('analytics.overview.metric', 'Metric') },
+          ...vehicles.map((vehicle) => ({ key: vehicle.name, label: vehicle.name })),
+        ]}
+        exportFilename="fleet-vehicle-comparison"
+        chartKey="analytics-vehicle-radar-comparison"
       >
-        <div
-          className="h-64 sm:h-72"
-          role="img"
-          aria-label={t('analytics.overview.vehicleComparisonAria', 'Normalized vehicle metric comparison')}
-        >
+        {({ hiddenSeries }) => (
           <ResponsiveContainer width="100%" height="100%">
             <RadarChart data={radarData} cx="50%" cy="50%" outerRadius="70%">
               <PolarGrid stroke="var(--glass-border)" />
@@ -201,16 +209,18 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
                   fill={CHART_COLORS[i % CHART_COLORS.length]}
                   fillOpacity={0.15}
                   strokeWidth={2}
+                  hide={hiddenSeries?.isHidden(v.name)}
                 />
               ))}
               <Tooltip content={<ChartTooltip />} />
+              <ChartLegend />
             </RadarChart>
           </ResponsiveContainer>
-        </div>
-      </AnalyticsPanel>
+        )}
+      </AnalyticsChartPanel>
 
       {/* Energy & Activity */}
-      <AnalyticsPanel
+      <AnalyticsChartPanel
         title={t('analytics.overview.energyActivity', 'Energy & Activity')}
         icon={<BarChart3 className="h-4 w-4" />}
         loading={isLoading}
@@ -218,25 +228,30 @@ export function OverviewVehicleComparison({ query }: { query: FleetAnalyticsQuer
         onRetry={refetch}
         isEmpty={vehicles.length === 0}
         emptyMessage={t('analytics.overview.noVehicles', 'No vehicle data')}
+        ariaLabel={t('analytics.overview.energyActivityAria', 'Energy and drive count by vehicle')}
+        data={vehicles}
+        dataColumns={[
+          { key: 'name', label: t('analytics.overview.vehicle', 'Vehicle') },
+          { key: 'energy', label: t('analytics.overview.energykWh', 'Energy (kWh)') },
+          { key: 'drives', label: t('analytics.overview.drives', 'Drives') },
+        ]}
+        exportFilename="fleet-energy-activity"
+        chartKey="analytics-energy-activity"
       >
-        <div
-          className="h-64 sm:h-72"
-          role="img"
-          aria-label={t('analytics.overview.energyActivityAria', 'Energy and drive count by vehicle')}
-        >
+        {({ hiddenSeries }) => (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={vehicles} margin={chartMarginLabeled} {...chartAnimation}>
               {chartGrid}
               <XAxis dataKey="name" tick={axisTickSm} />
               <YAxis tick={axisTick} />
               <Tooltip content={<ChartTooltip />} />
-              <Legend />
-              <Bar dataKey="energy" name={t('analytics.overview.energykWh', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} />
-              <Bar dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} />
+              <ChartLegend />
+              <Bar dataKey="energy" name={t('analytics.overview.energykWh', 'Energy (kWh)')} fill={CHART_COLORS[1]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('energy')} />
+              <Bar dataKey="drives" name={t('analytics.overview.drives', 'Drives')} fill={CHART_COLORS[3]} radius={[4, 4, 0, 0]} hide={hiddenSeries?.isHidden('drives')} />
             </BarChart>
           </ResponsiveContainer>
-        </div>
-      </AnalyticsPanel>
+        )}
+      </AnalyticsChartPanel>
     </>
   );
 }

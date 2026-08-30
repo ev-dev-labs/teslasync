@@ -1,4 +1,5 @@
 {{- if .Values.web.enabled }}
+{{- include "teslasync.assertCanarySelectors" . }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -8,15 +9,21 @@ metadata:
     app.kubernetes.io/component: web
 spec:
   replicas: {{ .Values.web.replicaCount }}
+  {{- if .Values.rollout.paused }}
+  # OPS-05: rollout.paused freezes an in-flight rollout in place.
+  paused: true
+  {{- end }}
   selector:
     matchLabels:
-      {{- include "teslasync.selectorLabels" . | nindent 6 }}
+      {{- include "teslasync.stableSelectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: web
   strategy:
-    type: RollingUpdate
+    type: {{ .Values.rollout.web.strategy.type }}
+    {{- if eq .Values.rollout.web.strategy.type "RollingUpdate" }}
     rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+      maxSurge: {{ .Values.rollout.web.strategy.maxSurge }}
+      maxUnavailable: {{ .Values.rollout.web.strategy.maxUnavailable }}
+    {{- end }}
   template:
     metadata:
       {{- with .Values.web.podAnnotations }}
@@ -24,7 +31,7 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "teslasync.selectorLabels" . | nindent 8 }}
+        {{- include "teslasync.stableSelectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: web
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
@@ -86,4 +93,7 @@ spec:
       tolerations:
         {{- toYaml . | nindent 8 }}
       {{- end }}
+      # OPS-09: nginx drains fast, but keep it explicit so a node drain
+      # is never the thing that decides how long the SPA has.
+      terminationGracePeriodSeconds: {{ .Values.web.terminationGracePeriodSeconds | default 30 }}
 {{- end }}

@@ -308,10 +308,10 @@ function renderPage() {
 const summary = () => within(screen.getByRole('region', { name: 'Geofence summary' }));
 const zones = () => within(screen.getByRole('region', { name: 'Places and charging zones' }));
 
-// Read a KPI card's value <p> by its label text.
+// Read a KPI card's value by its label text.
 function kpiValue(label: string): string {
-  const card = summary().getByText(label).closest('.rounded-xl');
-  return card?.querySelector('p.text-xl')?.textContent ?? '';
+  const card = summary().getByText(label).closest('[data-role="metric-card"]');
+  return card?.querySelector('[data-role="metric-value"]')?.textContent ?? '';
 }
 
 async function openCreateModal() {

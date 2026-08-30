@@ -14,11 +14,11 @@ import {
 } from '@/components/ui';
 import { MetricCard } from '@/components/data-display';
 import {
-  ChartContainer, ChartTooltip, ChartGradient,
+  ChartContainer, ChartLegend, ChartTooltip, ChartGradient, EmbeddedChart,
   axisTick, axisTickSm, chartMargin, chartMarginLabeled, CHART_COLORS,
   renderAnnotationLines,
   BarChart, Bar, LineChart, Line, AreaChart, Area,
-  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, ReferenceLine,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
   AREA_DEFAULTS,
 } from '@/components/charts';
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
@@ -452,7 +452,21 @@ export default function BatteryCellsPage() {
                 label={t('battery.cells.heatmap.subtitle', 'Cells colored by deviation from average')}
               />
             ) : (
-              <div className="h-72">
+              <EmbeddedChart
+                title={t('battery.cells.heatmap.title', 'Cell Voltage Heatmap')}
+                ariaLabel={t(
+                  'battery.cells.barView.aria',
+                  'Voltage reading for each battery cell',
+                )}
+                data={cells.map(({ cell_number, voltage }) => ({ cell_number, voltage }))}
+                dataColumns={[
+                  { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #') },
+                  { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)') },
+                ]}
+                fluid={false}
+                mobileHeight={288}
+                height={288}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={cells} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -467,7 +481,7 @@ export default function BatteryCellsPage() {
                     <Bar dataKey="voltage" name={t('battery.cells.voltage', 'Voltage')} radius={[2, 2, 0, 0]} fill={CHART_COLORS[0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
 
@@ -488,7 +502,21 @@ export default function BatteryCellsPage() {
                 message={t('battery.cells.distribution.empty', 'No distribution data available.')}
               />
             ) : (
-              <div className="h-56 sm:h-64">
+              <EmbeddedChart
+                title={t('battery.cells.distribution.title', 'Voltage Distribution')}
+                ariaLabel={t(
+                  'battery.cells.distribution.aria',
+                  'Distribution of battery cells by voltage range',
+                )}
+                data={histogram}
+                dataColumns={[
+                  { key: 'bucket', label: t('battery.cells.distribution.range', 'Voltage range') },
+                  { key: 'count', label: t('battery.cells.distribution.count', 'Cell Count') },
+                ]}
+                fluid={false}
+                mobileHeight={224}
+                height={256}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={histogram} margin={chartMarginLabeled}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -498,7 +526,7 @@ export default function BatteryCellsPage() {
                     <Bar dataKey="count" name={t('battery.cells.distribution.count', 'Cell Count')} fill={CHART_COLORS[2]} radius={[3, 3, 0, 0]} maxBarSize={40} />
                   </BarChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
         </section>
@@ -523,7 +551,21 @@ export default function BatteryCellsPage() {
               message={t('battery.cells.bar.empty', 'No cell voltages available.')}
             />
           ) : (
-            <div className="h-64 sm:h-72">
+            <EmbeddedChart
+              title={t('battery.cells.bar.title', 'Cell Voltage Bar Chart')}
+              ariaLabel={t(
+                'battery.cells.bar.aria',
+                'Battery cell voltage readings with pack minimum, average, and maximum references',
+              )}
+              data={cells.map(({ cell_number, voltage }) => ({ cell_number, voltage }))}
+              dataColumns={[
+                { key: 'cell_number', label: t('battery.cells.table.cell', 'Cell #') },
+                { key: 'voltage', label: t('battery.cells.table.voltage', 'Voltage (V)') },
+              ]}
+              fluid={false}
+              mobileHeight={256}
+              height={288}
+            >
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={cells} margin={chartMarginLabeled}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
@@ -547,7 +589,7 @@ export default function BatteryCellsPage() {
                   <Bar dataKey="voltage" name={t('battery.cells.voltage', 'Voltage')} radius={[3, 3, 0, 0]} fill={CHART_COLORS[0]} maxBarSize={24} />
                 </BarChart>
               </ResponsiveContainer>
-            </div>
+            </EmbeddedChart>
           )}
         </GlassPanel>
       </FadeIn>
@@ -572,9 +614,32 @@ export default function BatteryCellsPage() {
                 message={t('battery.cells.overTime.empty', 'Not enough history yet.')}
               />
             ) : (
-              <div className="h-64 sm:h-72">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={history} margin={chartMarginLabeled}>
+              <EmbeddedChart
+                title={t('battery.cells.overTime.title', 'Cell Voltage Over Time')}
+                ariaLabel={t(
+                  'battery.cells.overTime.aria',
+                  'Minimum, average, and maximum battery cell voltage over time',
+                )}
+                data={history.map(({ timestamp, min_voltage, avg_voltage, max_voltage }) => ({
+                  timestamp,
+                  min_voltage,
+                  avg_voltage,
+                  max_voltage,
+                }))}
+                dataColumns={[
+                  { key: 'timestamp', label: t('battery.cells.time', 'Time') },
+                  { key: 'min_voltage', label: t('battery.cells.overTime.min', 'Min Voltage') },
+                  { key: 'avg_voltage', label: t('battery.cells.overTime.avg', 'Avg Voltage') },
+                  { key: 'max_voltage', label: t('battery.cells.overTime.max', 'Max Voltage') },
+                ]}
+                chartKey="battery-cells-voltage-history"
+                fluid={false}
+                mobileHeight={256}
+                height={288}
+              >
+                {({ hiddenSeries }) => (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={history} margin={chartMarginLabeled}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="timestamp" tick={axisTick} tickFormatter={(v: string) => formatDateTime(v).split(',')[0]} />
                     <YAxis
@@ -584,13 +649,14 @@ export default function BatteryCellsPage() {
                       width={55}
                     />
                     <Tooltip content={<ChartTooltip />} labelFormatter={(v: string) => formatDateTime(v)} />
-                    <Legend />
-                    <Line {...AREA_DEFAULTS} dataKey="min_voltage" name={t('battery.cells.overTime.min', 'Min Voltage')} stroke={CHART_COLORS[5]} strokeDasharray="4 2" />
-                    <Line {...AREA_DEFAULTS} dataKey="avg_voltage" name={t('battery.cells.overTime.avg', 'Avg Voltage')} stroke={CHART_COLORS[0]} />
-                    <Line {...AREA_DEFAULTS} dataKey="max_voltage" name={t('battery.cells.overTime.max', 'Max Voltage')} stroke={CHART_COLORS[1]} strokeDasharray="4 2" />
-                  </LineChart>
-                </ResponsiveContainer>
-              </div>
+                      <ChartLegend />
+                      <Line {...AREA_DEFAULTS} dataKey="min_voltage" name={t('battery.cells.overTime.min', 'Min Voltage')} stroke={CHART_COLORS[5]} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('min_voltage')} />
+                      <Line {...AREA_DEFAULTS} dataKey="avg_voltage" name={t('battery.cells.overTime.avg', 'Avg Voltage')} stroke={CHART_COLORS[0]} hide={hiddenSeries?.isHidden('avg_voltage')} />
+                      <Line {...AREA_DEFAULTS} dataKey="max_voltage" name={t('battery.cells.overTime.max', 'Max Voltage')} stroke={CHART_COLORS[1]} strokeDasharray="4 2" hide={hiddenSeries?.isHidden('max_voltage')} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                )}
+              </EmbeddedChart>
             )}
           </GlassPanel>
 
@@ -611,20 +677,33 @@ export default function BatteryCellsPage() {
                 message={t('battery.cells.imbalance.empty', 'Not enough history yet.')}
               />
             ) : (
-              <div className="h-64 sm:h-72">
+              <EmbeddedChart
+                title={t('battery.cells.imbalance.title', 'Imbalance Trend')}
+                ariaLabel={t(
+                  'battery.cells.imbalance.aria',
+                  'Battery cell voltage imbalance over time with nominal and warning thresholds',
+                )}
+                data={history.map(({ timestamp, imbalance_mv }) => ({ timestamp, imbalance_mv }))}
+                dataColumns={[
+                  { key: 'timestamp', label: t('battery.cells.time', 'Time') },
+                  { key: 'imbalance_mv', label: t('battery.cells.imbalance.series', 'Imbalance (mV)') },
+                ]}
+                fluid={false}
+                mobileHeight={256}
+                height={288}
+              >
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={history} margin={chartMargin}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
                     <XAxis dataKey="timestamp" tick={axisTick} tickFormatter={(v: string) => formatDateTime(v).split(',')[0]} />
                     <YAxis tick={axisTick} unit=" mV" width={55} />
                     <Tooltip content={<ChartTooltip />} labelFormatter={(v: string) => formatDateTime(v)} />
-                    <Legend />
                     <Line {...AREA_DEFAULTS} dataKey="imbalance_mv" name={t('battery.cells.imbalance.series', 'Imbalance (mV)')} stroke={CHART_COLORS[3]} activeDot={{ r: 4 }} />
                     <ReferenceLine y={5} stroke={CHART_COLORS[1]} strokeDasharray="4 4" label={{ value: t('battery.cells.legend.nominal', 'Nominal'), position: 'right', fill: CHART_COLORS[1], fontSize: 10 }} />
                     <ReferenceLine y={15} stroke={CHART_COLORS[5]} strokeDasharray="4 4" label={{ value: t('battery.cells.ref.warning', 'Warning'), position: 'right', fill: CHART_COLORS[5], fontSize: 10 }} />
                   </LineChart>
                 </ResponsiveContainer>
-              </div>
+              </EmbeddedChart>
             )}
           </GlassPanel>
         </section>

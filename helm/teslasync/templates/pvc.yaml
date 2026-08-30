@@ -90,6 +90,8 @@ metadata:
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
     app.kubernetes.io/component: mongodb
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes:
     {{- toYaml .Values.mongodb.persistence.accessModes | nindent 4 }}

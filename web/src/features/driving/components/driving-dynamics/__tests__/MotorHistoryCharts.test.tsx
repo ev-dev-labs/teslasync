@@ -173,16 +173,16 @@ describe('MotorHistoryCharts', () => {
   it('exposes a screen-reader image role with a descriptive name for each chart body', () => {
     renderCharts([fullSnap('2026-05-10T12:00:00Z'), fullSnap('2026-05-10T12:01:00Z')]);
 
-    // The inner chart wrapper carries role="img" + the ariaLabel so a
-    // focus-stop on the SVG re-states the summary.
+    // Each interactive chart is a named group so its legend controls do not
+    // sit inside image semantics.
     expect(
-      screen.getByRole('img', { name: 'Motor power and regen over time area chart' }),
+      screen.getByRole('group', { name: 'Motor power and regen over time area chart' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Front and rear motor torque over time line chart' }),
+      screen.getByRole('group', { name: 'Front and rear motor torque over time line chart' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('img', { name: 'Front and rear motor RPM over time line chart' }),
+      screen.getByRole('group', { name: 'Front and rear motor RPM over time line chart' }),
     ).toBeInTheDocument();
   });
 

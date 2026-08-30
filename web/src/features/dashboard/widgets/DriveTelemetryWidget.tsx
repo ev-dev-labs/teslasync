@@ -5,6 +5,7 @@ import {
   ComposedChart, Line, Area, XAxis, YAxis, Tooltip, ResponsiveContainer,
   chartGrid, axisTick, axisTickSm, chartAnimation, fmt, useThemeChartPalette,
   areaGradient,
+  ChartLegend, EmbeddedChart, type ChartDataRow,
 } from '@/components/charts';
 import { ChartTooltip } from '@/components/charts';
 import { Badge } from '@/components/ui';
@@ -18,7 +19,7 @@ import { WidgetShell } from './WidgetShell';
 import { WidgetChartSummary, type ChartSummaryStat } from './shared';
 import type { WidgetProps } from './types';
 
-interface ChartDatum {
+interface ChartDatum extends ChartDataRow {
   time: string;
   speed: number | null;
   power: number | null;
@@ -131,8 +132,25 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
   const chart = useMemo(() => {
     if (chartData.length === 0) return null;
     return (
-      <ResponsiveContainer width="100%" height="100%">
-        <ComposedChart
+      <EmbeddedChart
+        title={t('widget.driveTelemetry.title', 'Drive Telemetry')}
+        ariaLabel={t(
+          'widget.driveTelemetry.chartAria',
+          'Speed, power, battery, and elevation during the latest drive',
+        )}
+        data={chartData}
+        dataColumns={[
+          { key: 'time', label: t('widget.driveTelemetry.time', 'Time') },
+          { key: 'speed', label: `${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})` },
+          { key: 'power', label: t('widget.driveTelemetry.power', 'Power (kW)') },
+          { key: 'battery', label: t('widget.driveTelemetry.battery', 'Battery %') },
+          { key: 'elevation', label: t('widget.driveTelemetry.elevation', 'Elevation') },
+        ]}
+        chartKey="dashboard-drive-telemetry"
+      >
+        {({ hiddenSeries }) => (
+          <ResponsiveContainer width="100%" height="100%">
+            <ComposedChart
           data={chartData}
           margin={{ top: 4, right: 4, bottom: 0, left: isCompact ? -30 : -10 }}
           {...chartAnimation}
@@ -173,6 +191,7 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
           />
 
           <Tooltip content={<ChartTooltip />} />
+          <ChartLegend />
 
           {/* Wide: elevation as gray area under speed */}
           {isWide && (
@@ -184,7 +203,8 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
               fillOpacity={0.15}
               name={t('widget.driveTelemetry.elevation', 'Elevation')}
               isAnimationActive={false}
-              connectNulls
+              connectNulls={false}
+              hide={hiddenSeries?.isHidden('elevation')}
             />
           )}
 
@@ -197,7 +217,8 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             fillOpacity={0.3}
             strokeWidth={1.5}
             name={t('widget.driveTelemetry.power', 'Power (kW)')}
-            connectNulls
+            connectNulls={false}
+            hide={hiddenSeries?.isHidden('power')}
           />
 
           {/* Speed as cyan line on left axis */}
@@ -208,7 +229,8 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             strokeWidth={2}
             dot={false}
             name={`${t('widget.driveTelemetry.speed', 'Speed')} (${unitPrefs.speed})`}
-            connectNulls
+            connectNulls={false}
+            hide={hiddenSeries?.isHidden('speed')}
           />
 
           {/* Battery % as amber dashed line on left axis (0-100 range fits well) */}
@@ -220,10 +242,13 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
             strokeDasharray="4 3"
             dot={false}
             name={t('widget.driveTelemetry.battery', 'Battery %')}
-            connectNulls
+            connectNulls={false}
+            hide={hiddenSeries?.isHidden('battery')}
           />
-        </ComposedChart>
-      </ResponsiveContainer>
+            </ComposedChart>
+          </ResponsiveContainer>
+        )}
+      </EmbeddedChart>
     );
   }, [chartData, isCompact, isWide, tick, unitPrefs.speed, t, palette]);
 
@@ -299,36 +324,6 @@ export default function DriveTelemetryWidget({ vehicleId, size }: WidgetProps) {
                 message={t('widget.driveTelemetry.noTelemetry', 'No telemetry for this drive')}
                 className="py-4"
               />
-            )}
-          </div>
-
-          {/* Legend */}
-          <div className="flex flex-wrap items-center justify-center gap-3 pt-1 flex-shrink-0">
-            <div className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: palette.series[0] }} />
-              <span className="text-2xs text-[var(--text-secondary)]">
-                {t('widget.driveTelemetry.speed', 'Speed')}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: palette.series[1] }} />
-              <span className="text-2xs text-[var(--text-secondary)]">
-                {t('widget.driveTelemetry.power', 'Power (kW)')}
-              </span>
-            </div>
-            <div className="flex items-center gap-1">
-              <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#f59e0b' }} />
-              <span className="text-2xs text-[var(--text-secondary)]">
-                {t('widget.driveTelemetry.battery', 'Battery %')}
-              </span>
-            </div>
-            {isWide && (
-              <div className="flex items-center gap-1">
-                <span className="inline-block h-2 w-2 rounded-full" style={{ background: '#9ca3af' }} />
-                <span className="text-2xs text-[var(--text-secondary)]">
-                  {t('widget.driveTelemetry.elevation', 'Elevation')}
-                </span>
-              </div>
             )}
           </div>
         </div>

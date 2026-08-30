@@ -51,7 +51,7 @@ import {
   YAxis,
   Tooltip,
   ResponsiveContainer,
-  Legend,
+  ChartLegend,
   ChartTooltip,
   ChartGradient,
   chartGrid,
@@ -59,6 +59,7 @@ import {
   chartMargin,
   AREA_DEFAULTS,
   CHART_COLORS,
+  EmbeddedChart,
 } from '@/components/charts';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -806,60 +807,73 @@ export default function NavigationRoutePage() {
                       )}
                     />
                   ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <AreaChart data={chartData} margin={chartMargin}>
-                        <defs>
-                          <ChartGradient id="speedGrad" color={CHART_COLORS[0]} />
-                          <ChartGradient id="odoGrad" color={CHART_COLORS[1]} opacity={0.15} />
-                        </defs>
-                        {chartGrid}
-                        <XAxis
-                          dataKey="time"
-                          tick={axisTick}
-                          tickFormatter={(v: string) => v.split(',').pop()?.trim() ?? v}
-                        />
-                        <YAxis
-                          yAxisId="speed"
-                          tick={axisTick}
-                          label={{
-                            value: t('nav.chartSpeedV2', { defaultValue: 'Speed ({{unit}})', unit: speedUnit }),
-                            angle: -90,
-                            position: 'insideLeft',
-                            style: { fill: 'var(--text-muted)', fontSize: 10 },
-                          }}
-                        />
-                        <YAxis
-                          yAxisId="odo"
-                          orientation="right"
-                          tick={axisTick}
-                          label={{
-                            value: t('nav.chartDistanceV2', { defaultValue: 'Distance to Arrival ({{unit}})', unit: distanceUnit }),
-                            angle: 90,
-                            position: 'insideRight',
-                            style: { fill: 'var(--text-muted)', fontSize: 10 },
-                          }}
-                        />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Legend verticalAlign="top" height={28} wrapperStyle={{ fontSize: 11 }} />
-                        <Area
-                          {...AREA_DEFAULTS}
-                          yAxisId="speed"
-                          dataKey="speed"
-                          stroke={CHART_COLORS[0]}
-                          fill="url(#speedGrad)"
-                          name={t('nav.legendSpeedV2', { defaultValue: 'Speed ({{unit}})', unit: speedUnit })}
-                        />
-                        <Area
-                          {...AREA_DEFAULTS}
-                          yAxisId="odo"
-                          dataKey="miles"
-                          stroke={CHART_COLORS[1]}
-                          fill="url(#odoGrad)"
-                          strokeWidth={1.5}
-                          name={t('nav.legendDistanceToArrivalV2', { defaultValue: 'Distance to Arrival ({{unit}})', unit: distanceUnit })}
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
+                    // chart-a11y:no-table dense live location time-series — too many rows for meaningful accessibility table
+                    <EmbeddedChart
+                      chartKey="nav-speed-history"
+                      title={t('nav.speedHistoryTitle', 'Speed & Distance History')}
+                      ariaLabel={t('nav.speedHistoryAria', 'Speed and distance-to-arrival area chart over time')}
+                      height={260}
+                      fluid={false}
+                    >
+                      {({ hiddenSeries }) => (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart data={chartData} margin={chartMargin}>
+                            <defs>
+                              <ChartGradient id="speedGrad" color={CHART_COLORS[0]} />
+                              <ChartGradient id="odoGrad" color={CHART_COLORS[1]} opacity={0.15} />
+                            </defs>
+                            {chartGrid}
+                            <XAxis
+                              dataKey="time"
+                              tick={axisTick}
+                              tickFormatter={(v: string) => v.split(',').pop()?.trim() ?? v}
+                            />
+                            <YAxis
+                              yAxisId="speed"
+                              tick={axisTick}
+                              label={{
+                                value: t('nav.chartSpeedV2', { defaultValue: 'Speed ({{unit}})', unit: speedUnit }),
+                                angle: -90,
+                                position: 'insideLeft',
+                                style: { fill: 'var(--text-muted)', fontSize: 10 },
+                              }}
+                            />
+                            <YAxis
+                              yAxisId="odo"
+                              orientation="right"
+                              tick={axisTick}
+                              label={{
+                                value: t('nav.chartDistanceV2', { defaultValue: 'Distance to Arrival ({{unit}})', unit: distanceUnit }),
+                                angle: 90,
+                                position: 'insideRight',
+                                style: { fill: 'var(--text-muted)', fontSize: 10 },
+                              }}
+                            />
+                            <Tooltip content={<ChartTooltip />} />
+                            <ChartLegend verticalAlign="top" align="right" />
+                            <Area
+                              {...AREA_DEFAULTS}
+                              yAxisId="speed"
+                              dataKey="speed"
+                              stroke={CHART_COLORS[0]}
+                              fill="url(#speedGrad)"
+                              name={t('nav.legendSpeedV2', { defaultValue: 'Speed ({{unit}})', unit: speedUnit })}
+                              hide={hiddenSeries?.isHidden('speed') ?? false}
+                            />
+                            <Area
+                              {...AREA_DEFAULTS}
+                              yAxisId="odo"
+                              dataKey="miles"
+                              stroke={CHART_COLORS[1]}
+                              fill="url(#odoGrad)"
+                              strokeWidth={1.5}
+                              name={t('nav.legendDistanceToArrivalV2', { defaultValue: 'Distance to Arrival ({{unit}})', unit: distanceUnit })}
+                              hide={hiddenSeries?.isHidden('miles') ?? false}
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
+                      )}
+                    </EmbeddedChart>
                   )}
                 </GlassPanel>
 
@@ -881,23 +895,34 @@ export default function NavigationRoutePage() {
                       message={t('nav.noPresence', 'No presence history available.')}
                     />
                   ) : (
-                    <ResponsiveContainer width="100%" height={260}>
-                      <LineChart data={presenceChartData} margin={chartMargin}>
-                        {chartGrid}
-                        <XAxis dataKey="time" tick={axisTick} />
-                        <YAxis
-                          domain={[0, 1]}
-                          ticks={[0, 1]}
-                          tick={axisTick}
-                          tickFormatter={(v: number) => (v === 1 ? t('common.yes', 'Yes') : t('common.no', 'No'))}
-                        />
-                        <Tooltip content={<ChartTooltip />} />
-                        <Legend />
-                        <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="home" name={t('nav.atHome', 'At Home')} stroke={CHART_COLORS[1]} />
-                        <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="work" name={t('nav.atWork', 'At Work')} stroke={CHART_COLORS[3]} />
-                        <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="homelink" name={t('nav.homelinkNearby', 'HomeLink')} stroke={CHART_COLORS[4]} />
-                      </LineChart>
-                    </ResponsiveContainer>
+                    // chart-a11y:no-table dense presence time-series — binary on/off states over many timestamps, not tabular
+                    <EmbeddedChart
+                      chartKey="nav-home-work-presence"
+                      title={t('nav.presenceChart', 'Home / Work Presence')}
+                      ariaLabel={t('nav.presenceAria', 'Home, work, and HomeLink presence over time')}
+                      height={260}
+                      fluid={false}
+                    >
+                      {({ hiddenSeries }) => (
+                        <ResponsiveContainer width="100%" height="100%">
+                          <LineChart data={presenceChartData} margin={chartMargin}>
+                            {chartGrid}
+                            <XAxis dataKey="time" tick={axisTick} />
+                            <YAxis
+                              domain={[0, 1]}
+                              ticks={[0, 1]}
+                              tick={axisTick}
+                              tickFormatter={(v: number) => (v === 1 ? t('common.yes', 'Yes') : t('common.no', 'No'))}
+                            />
+                            <Tooltip content={<ChartTooltip />} />
+                            <ChartLegend verticalAlign="top" align="right" />
+                            <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="home" name={t('nav.atHome', 'At Home')} stroke={CHART_COLORS[1]} hide={hiddenSeries?.isHidden('home') ?? false} />
+                            <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="work" name={t('nav.atWork', 'At Work')} stroke={CHART_COLORS[3]} hide={hiddenSeries?.isHidden('work') ?? false} />
+                            <Line {...AREA_DEFAULTS} type="stepAfter" dataKey="homelink" name={t('nav.homelinkNearby', 'HomeLink')} stroke={CHART_COLORS[4]} hide={hiddenSeries?.isHidden('homelink') ?? false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      )}
+                    </EmbeddedChart>
                   )}
                 </GlassPanel>
               </section>
@@ -962,9 +987,17 @@ export default function NavigationRoutePage() {
                       pagination
                     />
                   ) : (
-                    <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
+                    // no-action: waypoint details depend on metadata supplied by active navigation.
+                    <EmptyState
                       icon={<Activity className="h-8 w-8 opacity-20" aria-hidden="true" />}
-                      message={t('common.noData', 'No data available')}
+                      message={t(
+                        'nav.noWaypoints',
+                        'The active route does not include waypoint details.',
+                      )}
+                      description={t(
+                        'nav.noWaypointsDescription',
+                        'Stops appear here when vehicle navigation supplies waypoint metadata for the active route.',
+                      )}
                       className="py-8"
                     />
                   )}

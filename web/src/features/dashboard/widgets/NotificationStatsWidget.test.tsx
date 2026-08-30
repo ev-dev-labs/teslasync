@@ -230,7 +230,7 @@ describe('NotificationStatsWidget — compact layout', () => {
     mockUseLogs.mockReturnValue(qr({ data: [], refetch: logsRefetch }));
     renderWidget(COMPACT);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Refresh/i }));
 
     expect(statsRefetch).toHaveBeenCalledTimes(1);
     expect(logsRefetch).toHaveBeenCalledTimes(1);

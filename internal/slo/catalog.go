@@ -46,7 +46,15 @@ type SLO struct {
 	Objective   float64
 	Window      string
 	Owner       string
-	Tags        []string
+	// FastBurnSeverity optionally routes the fast-burn alert tier to
+	// "ticket" instead of the default "page". Continuity-style SLOs (e.g.
+	// upstream polling-budget continuity) are operationally important but
+	// must not page at 3am, so they declare ticket-only fast burn. Empty
+	// means "page" — the cmd/slogen default. This field MUST stay in sync
+	// with cmd/slogen's parser; a runtime parser that rejects it makes
+	// LoadCatalog fail and blanks the whole admin SLO board.
+	FastBurnSeverity string
+	Tags             []string
 }
 
 // SLI is the good/valid event pair used to compute the SLO ratio.
@@ -110,6 +118,13 @@ func validateCatalog(c *Catalog) error {
 		}
 		if !windowRE.MatchString(s.Window) {
 			return fmt.Errorf("slos[%d] (%s).window: %q must match %s", i, s.Name, s.Window, windowRE)
+		}
+		if s.FastBurnSeverity != "" &&
+			s.FastBurnSeverity != "page" && s.FastBurnSeverity != "ticket" {
+			return fmt.Errorf(
+				"slos[%d] (%s).fast_burn_severity: %q must be page or ticket",
+				i, s.Name, s.FastBurnSeverity,
+			)
 		}
 		if _, dup := seen[s.Name]; dup {
 			return fmt.Errorf("slos[%d].name: %q duplicates earlier entry", i, s.Name)
@@ -243,6 +258,9 @@ func parseCatalog(text string) (*Catalog, error) {
 			inSLI = false
 		case "owner":
 			current.Owner = unquote(val)
+			inSLI = false
+		case "fast_burn_severity":
+			current.FastBurnSeverity = unquote(val)
 			inSLI = false
 		case "tags":
 			tags, err := parseInlineArray(val)

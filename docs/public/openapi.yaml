@@ -291,6 +291,225 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /vehicles/states:
+    get:
+      operationId: getFleetVehicleStates
+      summary: Batch current state for the fleet
+      description: >-
+        Returns the current state of every requested vehicle in ONE request,
+        replacing the per-vehicle fan-out. Every item carries its own outcome
+        and provenance, so a single unreadable vehicle degrades that item only —
+        it never fails the batch and is never reported as "offline". All items in
+        one response are classified against a single request-level `now`.
+
+
+        Storage reads are BULK: one pipelined Redis read (L2), one set-based
+        signal_log query (durable last-known values) and one set-based
+        fsm_transitions query cover the whole page, instead of three round
+        trips per vehicle. The layering and every per-vehicle verdict are
+        unchanged.
+
+
+        Concurrent IDENTICAL requests are coalesced into one execution and a
+        successful result is micro-cached for ~1s (never more than 2s).
+        Failures are never cached, and the cache key carries every dimension
+        that changes the result (scope, the exact id set, limit, offset), so
+        results can never cross scopes.
+      tags: [Vehicles]
+      parameters:
+        - name: vehicle_ids
+          in: query
+          required: false
+          description: Comma-separated positive vehicle ids. Omitted means the whole fleet. Ids outside the caller's fleet are silently dropped.
+          schema:
+            type: string
+            example: "1,2,3"
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 200
+            minimum: 1
+            maximum: 500
+        - name: offset
+          in: query
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+      responses:
+        "200":
+          description: Batch of per-vehicle current states
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    required: [now, total, limit, offset, counts, summary, vehicles]
+                    properties:
+                      now:
+                        type: string
+                        format: date-time
+                        description: The single instant every item was classified against.
+                      total:
+                        type: integer
+                        description: Matching vehicles before pagination.
+                      limit:
+                        type: integer
+                      offset:
+                        type: integer
+                      counts:
+                        type: object
+                        properties:
+                          resolved: { type: integer }
+                          missing: { type: integer }
+                          failed: { type: integer }
+                      summary:
+                        type: object
+                        description: >-
+                          Server-derived Fleet Posture roll-up of THIS page,
+                          computed from the same items, the same request-level
+                          `now` and the same trust precedence (verified
+                          charging → verified motion → verified FSM state), so
+                          a client can paint the posture panel on first frame
+                          without re-deriving anything. Every item lands in
+                          exactly one bucket:
+                          sum(operational) + sum(attention) == counted ==
+                          length(vehicles). Operational totals count only
+                          TRUSTED claims; `offline` is reachable only from a
+                          verified, currently-fresh FSM state and is NEVER
+                          inferred from missing, stale, unverified or failed
+                          data.
+                        required:
+                          [counted, verified_count, attention_count, operational,
+                           attention, oldest_observed_at, newest_observed_at, observed_count]
+                        properties:
+                          counted:
+                            type: integer
+                            description: Items in this page the summary describes (length of vehicles, not total).
+                          verified_count:
+                            type: integer
+                            description: Items carrying a trusted operational status ("N of M verified").
+                          attention_count:
+                            type: integer
+                            description: counted - verified_count.
+                          operational:
+                            type: object
+                            description: >-
+                              Trusted operational status totals. The vocabulary
+                              is the backend FSM's (internal/enums); `updating`
+                              is a Tesla-API/front-end-only label with no FSM
+                              transition behind it and is therefore absent
+                              rather than reported as a permanent zero. Any
+                              trusted state outside the vocabulary is counted
+                              in `other`.
+                            required: [charging, driving, parked, asleep, online, offline, other]
+                            properties:
+                              charging: { type: integer }
+                              driving: { type: integer }
+                              parked: { type: integer }
+                              asleep: { type: integer }
+                              online: { type: integer }
+                              offline: { type: integer }
+                              other: { type: integer }
+                          attention:
+                            type: object
+                            description: >-
+                              Items with NO trusted operational status, split by
+                              the reason. These are statements about our
+                              EVIDENCE, never about the vehicle.
+                            required: [unverified, stale, unknown, missing, failed]
+                            properties:
+                              unverified:
+                                type: integer
+                                description: Stream is fresh but the deciding field is not backed by a real observation.
+                              stale:
+                                type: integer
+                                description: A real observation exists but is outside the freshness window.
+                              unknown:
+                                type: integer
+                                description: No real observation at all (durable fallback / legacy values only).
+                              missing:
+                                type: integer
+                                description: The read succeeded and there is authoritatively no state.
+                              failed:
+                                type: integer
+                                description: Resolution failed for this vehicle. A fact about us.
+                          oldest_observed_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: Oldest REAL observation among items that have one; null when none does. Never a fetch time.
+                          newest_observed_at:
+                            type: string
+                            format: date-time
+                            nullable: true
+                            description: Newest REAL observation among items that have one; null when none does.
+                          observed_count:
+                            type: integer
+                            description: Items carrying a real observation instant.
+                      vehicles:
+                        type: array
+                        items:
+                          type: object
+                          required: [vehicle_id, outcome, state, live, data_source, freshness, verified_fields]
+                          properties:
+                            vehicle_id:
+                              type: integer
+                              format: int64
+                            outcome:
+                              type: string
+                              enum: [resolved, missing, failed]
+                              description: >-
+                                resolved = a state was assembled; missing = the read
+                                succeeded and there is authoritatively no state;
+                                failed = resolution failed for this vehicle. A null
+                                state is never an offline classification.
+                            state:
+                              type: object
+                              nullable: true
+                              description: Assembled vehicle state; null for missing/failed items.
+                            live:
+                              type: boolean
+                            data_source:
+                              type: string
+                              enum: [live_signal_store, db_fallback, unavailable]
+                              description: >-
+                                Provenance of a resolved state. Missing and
+                                failed items use unavailable because no state
+                                source can be asserted.
+                            observed_at:
+                              type: string
+                              format: date-time
+                              nullable: true
+                              description: Instant of the newest real live observation. Absent when unknown.
+                            freshness:
+                              type: string
+                              enum: [fresh, stale, unknown]
+                            verified_fields:
+                              type: array
+                              items:
+                                type: string
+                              description: State fields backed by real live signals.
+                            error:
+                              type: string
+                              enum: [state_unavailable]
+                              description: Stable machine code; present only for failed items.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Fleet state subsystem not configured on this deployment
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /vehicles/{vehicleID}:
     get:
       operationId: getVehicle
@@ -3755,27 +3974,495 @@ paths:
                   stale_drives:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        vehicle_id:
-                          type: integer
-                        start_time:
-                          type: string
-                          format: date-time
+                      $ref: "#/components/schemas/Drive"
                   stale_charging:
                     type: array
                     items:
-                      type: object
-                      properties:
-                        id:
-                          type: integer
-                        vehicle_id:
-                          type: integer
-                        start_time:
-                          type: string
-                          format: date-time
+                      $ref: "#/components/schemas/ChargingSession"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/suggestions:
+    get:
+      operationId: diagnoseDataRepairSuggestions
+      summary: Diagnose session-boundary anomalies
+      description: Returns bounded, evidence-backed repair proposals without changing source data.
+      tags: [Data Repair]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: lookback_days
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 365
+            default: 30
+        - name: limit
+          in: query
+          description: Maximum candidates inspected per session kind.
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 20
+      responses:
+        "200":
+          description: Evidence-backed repair diagnosis
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairSuggestionReport"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Diagnosis source is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases:
+    get:
+      operationId: listDataRepairCases
+      summary: List durable repair cases
+      description: Returns a bounded keyset-paginated repair worklist.
+      tags: [Data Repair]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: status
+          in: query
+          schema:
+            $ref: "#/components/schemas/DataRepairCaseStatus"
+        - name: kind
+          in: query
+          schema:
+            $ref: "#/components/schemas/DataRepairSessionKind"
+        - name: confidence
+          in: query
+          schema:
+            $ref: "#/components/schemas/DataRepairConfidence"
+        - name: assigned_to
+          in: query
+          schema:
+            type: string
+            maxLength: 255
+        - name: cursor_last_seen_at
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: cursor_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Repair case page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCaseList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Case management is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/stats:
+    get:
+      operationId: getDataRepairCaseStats
+      summary: Get repair-case statistics
+      tags: [Data Repair]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Repair-case counts and latest successful scan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCaseStats"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Case management is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/scan:
+    post:
+      operationId: runDataRepairCaseScan
+      summary: Run a bounded integrity scan
+      description: Creates or refreshes durable cases using the shared cluster-locked scanner. Never mutates drive or charging source rows.
+      tags: [Data Repair]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              properties:
+                vehicle_id:
+                  type: integer
+                  minimum: 1
+      responses:
+        "200":
+          description: Completed scan
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairScanResult"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Another scanner currently owns the cluster-wide lock
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "429":
+          $ref: "#/components/responses/RateLimited"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Scanner is unavailable
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /data-repair/cases/bulk-transition:
+    post:
+      operationId: bulkTransitionDataRepairCases
+      summary: Begin review or dismiss multiple cases
+      tags: [Data Repair]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [case_ids, status]
+              properties:
+                case_ids:
+                  type: array
+                  minItems: 1
+                  maxItems: 100
+                  uniqueItems: true
+                  items:
+                    type: integer
+                    minimum: 1
+                status:
+                  type: string
+                  enum: [in_review, dismissed]
+                resolution_note:
+                  type: string
+                  maxLength: 4000
+      responses:
+        "200":
+          description: Bulk transition result
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [updated, skipped]
+                properties:
+                  updated:
+                    type: integer
+                    minimum: 0
+                  skipped:
+                    type: integer
+                    minimum: 0
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/{id}:
+    get:
+      operationId: getDataRepairCase
+      summary: Get one repair case and its review trail
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      responses:
+        "200":
+          description: Repair case detail
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCaseDetail"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/{id}/transition:
+    post:
+      operationId: transitionDataRepairCase
+      summary: Change a repair case lifecycle state
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [status, expected_updated_at]
+              properties:
+                status:
+                  type: string
+                  enum: [open, in_review, dismissed, resolved]
+                expected_updated_at:
+                  type: string
+                  format: date-time
+                resolution_note:
+                  type: string
+                  maxLength: 4000
+      responses:
+        "200":
+          description: Updated repair case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Lifecycle conflict or stale optimistic-concurrency token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/{id}/assignment:
+    put:
+      operationId: assignDataRepairCase
+      summary: Assign or unassign a repair case
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [assigned_to]
+              properties:
+                assigned_to:
+                  type: string
+                  nullable: true
+                  maxLength: 255
+      responses:
+        "200":
+          description: Updated repair case
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCase"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/{id}/comments:
+    post:
+      operationId: addDataRepairCaseComment
+      summary: Add a review note to a repair case
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 4000
+      responses:
+        "201":
+          description: Created review note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairCaseComment"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/cases/{id}/quarantine:
+    post:
+      operationId: quarantineDataRepairCase
+      summary: Move a case's source session into reversible quarantine
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        $ref: "#/components/requestBodies/DataRepairReason"
+      responses:
+        "200":
+          description: Quarantine ledger record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairQuarantine"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Case, source, or quarantine state conflicts with the request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/quarantine:
+    get:
+      operationId: listDataRepairQuarantine
+      summary: List payload-free quarantine records
+      description: Returns recovery metadata only. Opaque source snapshots are never serialized.
+      tags: [Data Repair]
+      parameters:
+        - name: vehicle_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: kind
+          in: query
+          schema:
+            $ref: "#/components/schemas/DataRepairSessionKind"
+        - name: restored
+          in: query
+          schema:
+            type: boolean
+        - name: cursor_quarantined_at
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: cursor_id
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 200
+            default: 50
+      responses:
+        "200":
+          description: Quarantine ledger page
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairQuarantineList"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/quarantine/{id}/restore:
+    post:
+      operationId: restoreDataRepairQuarantine
+      summary: Verify and restore a quarantined session
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        $ref: "#/components/requestBodies/DataRepairReason"
+      responses:
+        "200":
+          description: Restored quarantine record
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairQuarantine"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Snapshot integrity, schema, or lifecycle conflict
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
@@ -3783,7 +4470,7 @@ paths:
     put:
       operationId: updateChargingData
       summary: Update charging session data
-      description: Manually updates charging session data for repair purposes.
+      description: Applies an audited partial correction. Session boundaries must use the preview and close endpoints.
       tags: [Data Repair]
       parameters:
         - name: id
@@ -3803,21 +4490,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: charging session updated
+                $ref: "#/components/schemas/ChargingSession"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Session changed while the correction was being applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
       operationId: deleteChargingData
-      summary: Delete charging session
-      description: Permanently deletes a charging session.
+      summary: Quarantine a charging session
+      description: Legacy compatibility route that atomically snapshots the session, creates an operator case, removes it from active data, and retains a verified restore path.
       tags: [Data Repair]
       parameters:
         - name: id
@@ -3825,27 +4516,31 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/DataRepairReason"
       responses:
-        "200":
-          description: Charging session deleted
+        "204":
+          description: Charging session moved to reversible quarantine
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Source or quarantine state conflicts with the request
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: charging session deleted
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /data-repair/charging/{id}/close:
     post:
       operationId: closeChargingSession
-      summary: Force close charging session
-      description: Forces a stale charging session to close.
+      summary: Apply a charging-session boundary repair
+      description: Revalidates the reviewed boundary and applies it atomically with the case transition and audit trail.
       tags: [Data Repair]
       parameters:
         - name: id
@@ -3853,17 +4548,23 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRepairCloseRequest"
       responses:
         "200":
           description: Charging session closed
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: charging session closed
+                $ref: "#/components/schemas/DataRepairCloseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
@@ -3875,11 +4576,45 @@ paths:
         "500":
           $ref: "#/components/responses/InternalError"
 
+  /data-repair/charging/{id}/preview:
+    post:
+      operationId: previewChargingSessionRepair
+      summary: Preview a charging-session boundary repair
+      description: Validates the requested boundary and reports exact changed and preserved fields without mutating data.
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRepairCloseRequest"
+      responses:
+        "200":
+          description: Server-calculated impact preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Reviewed boundary no longer matches durable evidence
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
   /data-repair/drive/{id}:
     put:
       operationId: updateDriveData
       summary: Update drive session data
-      description: Manually updates drive session data for repair purposes.
+      description: Applies an audited partial correction. Session boundaries must use the preview and close endpoints.
       tags: [Data Repair]
       parameters:
         - name: id
@@ -3899,21 +4634,25 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: drive session updated
+                $ref: "#/components/schemas/Drive"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "409":
+          description: Drive changed while the correction was being applied
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
         "404":
           $ref: "#/components/responses/NotFound"
         "500":
           $ref: "#/components/responses/InternalError"
     delete:
       operationId: deleteDriveData
-      summary: Delete drive session
-      description: Permanently deletes a drive session.
+      summary: Quarantine a drive session
+      description: Legacy compatibility route that atomically snapshots the drive and linked relationships, creates an operator case, removes it from active data, and retains a verified restore path.
       tags: [Data Repair]
       parameters:
         - name: id
@@ -3921,27 +4660,31 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        $ref: "#/components/requestBodies/DataRepairReason"
       responses:
-        "200":
-          description: Drive session deleted
+        "204":
+          description: Drive moved to reversible quarantine
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Source or quarantine state conflicts with the request
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: drive session deleted
-        "404":
-          $ref: "#/components/responses/NotFound"
+                $ref: "#/components/schemas/ErrorResponse"
         "500":
           $ref: "#/components/responses/InternalError"
 
   /data-repair/drive/{id}/close:
     post:
       operationId: closeDriveSession
-      summary: Force close drive session
-      description: Forces a stale drive session to close.
+      summary: Apply a drive boundary repair
+      description: Revalidates the reviewed boundary and applies it atomically with the case transition and audit trail.
       tags: [Data Repair]
       parameters:
         - name: id
@@ -3949,21 +4692,61 @@ paths:
           required: true
           schema:
             type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRepairCloseRequest"
       responses:
         "200":
           description: Drive session closed
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  message:
-                    type: string
-                    example: drive session closed
+                $ref: "#/components/schemas/DataRepairCloseResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "403":
+          $ref: "#/components/responses/Forbidden"
         "404":
           $ref: "#/components/responses/NotFound"
         "409":
           description: Session still active
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+
+  /data-repair/drive/{id}/preview:
+    post:
+      operationId: previewDriveSessionRepair
+      summary: Preview a drive boundary repair
+      description: Validates the requested boundary and reports exact changed and preserved fields without mutating data.
+      tags: [Data Repair]
+      parameters:
+        - $ref: "#/components/parameters/dataRepairID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DataRepairCloseRequest"
+      responses:
+        "200":
+          description: Server-calculated impact preview
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DataRepairPreview"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "404":
+          $ref: "#/components/responses/NotFound"
+        "409":
+          description: Reviewed boundary no longer matches durable evidence
           content:
             application/json:
               schema:
@@ -4566,6 +5349,16 @@ components:
       schema:
         type: string
 
+    dataRepairID:
+      name: id
+      in: path
+      required: true
+      description: Data-repair case, session, or quarantine identifier
+      schema:
+        type: integer
+        format: int64
+        minimum: 1
+
     limitParam:
       name: limit
       in: query
@@ -4584,6 +5377,21 @@ components:
         type: integer
         default: 0
         minimum: 0
+
+  requestBodies:
+    DataRepairReason:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+            required: [reason]
+            properties:
+              reason:
+                type: string
+                minLength: 1
+                maxLength: 1000
 
   responses:
     BadRequest:
@@ -4695,7 +5503,7 @@ components:
   schemas:
     ErrorResponse:
       type: object
-      required: [error, code, category]
+      required: [error, code]
       properties:
         error:
           type: string
@@ -4706,6 +5514,13 @@ components:
           description: Machine-readable error code
           example: DB_RECORD_NOT_FOUND
           enum:
+            - BAD_REQUEST
+            - UNAUTHORIZED
+            - FORBIDDEN
+            - NOT_FOUND
+            - METHOD_NOT_ALLOWED
+            - CONFLICT
+            - UNPROCESSABLE_ENTITY
             - AUTH_INVALID_CREDENTIALS
             - AUTH_TOKEN_EXPIRED
             - AUTH_TOKEN_INVALID
@@ -4761,7 +5576,9 @@ components:
             - RATE_LIMITED
             - INTERNAL_ERROR
             - SERVICE_UNAVAILABLE
+            - GATEWAY_TIMEOUT
             - NOT_IMPLEMENTED
+            - ERROR
         category:
           type: string
           description: Error category
@@ -4783,6 +5600,576 @@ components:
             - export
             - rate_limiting
             - internal
+
+    DataRepairSessionKind:
+      type: string
+      enum: [drive, charging]
+
+    DataRepairConfidence:
+      type: string
+      enum: [high, medium]
+
+    DataRepairCaseStatus:
+      type: string
+      enum: [open, in_review, applied, dismissed, quarantined, restored, resolved]
+
+    DataRepairEvidence:
+      type: object
+      required: [ts, source, field, value]
+      properties:
+        ts:
+          type: string
+          format: date-time
+        source:
+          type: string
+          enum: [signal_log, drive_telemetry, charging_telemetry, drives, charging_sessions]
+        field:
+          type: string
+        value:
+          type: string
+
+    DataRepairSuggestion:
+      type: object
+      required:
+        - kind
+        - session_id
+        - vehicle_id
+        - rule
+        - confidence
+        - started_at
+        - contradicting_evidence
+        - suggested_ended_at
+        - suggested_duration_s
+        - evidence_gap_s
+        - applicable
+      properties:
+        kind:
+          $ref: "#/components/schemas/DataRepairSessionKind"
+        session_id:
+          type: integer
+          format: int64
+        vehicle_id:
+          type: integer
+          format: int64
+        rule:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/DataRepairConfidence"
+        started_at:
+          type: string
+          format: date-time
+        stored_ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        stored_duration_s:
+          type: integer
+          format: int64
+          nullable: true
+        last_in_session_evidence:
+          allOf:
+            - $ref: "#/components/schemas/DataRepairEvidence"
+          nullable: true
+        contradicting_evidence:
+          $ref: "#/components/schemas/DataRepairEvidence"
+        suggested_ended_at:
+          type: string
+          format: date-time
+        suggested_duration_s:
+          type: integer
+          format: int64
+          minimum: 0
+        evidence_gap_s:
+          type: integer
+          format: int64
+          minimum: 0
+        applicable:
+          type: boolean
+        blocked_reason:
+          type: string
+
+    DataRepairSuggestionReport:
+      type: object
+      required:
+        - generated_at
+        - lookback_days
+        - scanned_drives
+        - scanned_charging_sessions
+        - drive_suggestions
+        - charging_suggestions
+        - truncated
+      properties:
+        generated_at:
+          type: string
+          format: date-time
+        lookback_days:
+          type: integer
+        scanned_drives:
+          type: integer
+        scanned_charging_sessions:
+          type: integer
+        drive_suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataRepairSuggestion"
+        charging_suggestions:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataRepairSuggestion"
+        truncated:
+          type: boolean
+
+    DataRepairCase:
+      type: object
+      required:
+        - id
+        - fingerprint
+        - kind
+        - session_id
+        - vehicle_id
+        - rule
+        - confidence
+        - status
+        - evidence_started_at
+        - evidence_contradiction_ts
+        - evidence_contradiction_src
+        - evidence_contradiction_field
+        - evidence_contradiction_value
+        - evidence_gap_s
+        - applicable
+        - first_seen_at
+        - last_seen_at
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        fingerprint:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        kind:
+          $ref: "#/components/schemas/DataRepairSessionKind"
+        session_id:
+          type: integer
+          format: int64
+        related_session_id:
+          type: integer
+          format: int64
+          nullable: true
+        vehicle_id:
+          type: integer
+          format: int64
+        rule:
+          type: string
+        confidence:
+          $ref: "#/components/schemas/DataRepairConfidence"
+        status:
+          $ref: "#/components/schemas/DataRepairCaseStatus"
+        suggested_ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        evidence_started_at:
+          type: string
+          format: date-time
+        evidence_stored_ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        evidence_contradiction_ts:
+          type: string
+          format: date-time
+        evidence_contradiction_src:
+          type: string
+        evidence_contradiction_field:
+          type: string
+        evidence_contradiction_value:
+          type: string
+        evidence_last_in_session_ts:
+          type: string
+          format: date-time
+          nullable: true
+        evidence_last_in_session_src:
+          type: string
+          nullable: true
+        evidence_last_in_session_field:
+          type: string
+          nullable: true
+        evidence_last_in_session_value:
+          type: string
+          nullable: true
+        evidence_gap_s:
+          type: integer
+          format: int64
+          minimum: 0
+        assigned_to:
+          type: string
+          nullable: true
+        resolution_note:
+          type: string
+          nullable: true
+        applicable:
+          type: boolean
+        blocked_reason:
+          type: string
+          nullable: true
+        first_seen_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+        applied_at:
+          type: string
+          format: date-time
+          nullable: true
+        dismissed_at:
+          type: string
+          format: date-time
+          nullable: true
+        quarantined_at:
+          type: string
+          format: date-time
+          nullable: true
+        restored_at:
+          type: string
+          format: date-time
+          nullable: true
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    DataRepairCaseComment:
+      type: object
+      required: [id, case_id, actor, body, created_at]
+      properties:
+        id:
+          type: integer
+          format: int64
+        case_id:
+          type: integer
+          format: int64
+        actor:
+          type: string
+        body:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+    DataRepairQuarantine:
+      type: object
+      description: Payload-free quarantine metadata. The opaque source snapshot is never exposed.
+      required:
+        - id
+        - case_id
+        - kind
+        - session_id
+        - vehicle_id
+        - schema_version
+        - checksum
+        - reason
+        - quarantined_by
+        - quarantined_at
+      properties:
+        id:
+          type: integer
+          format: int64
+        case_id:
+          type: integer
+          format: int64
+        kind:
+          $ref: "#/components/schemas/DataRepairSessionKind"
+        session_id:
+          type: integer
+          format: int64
+        vehicle_id:
+          type: integer
+          format: int64
+        schema_version:
+          type: integer
+          minimum: 1
+        checksum:
+          type: string
+          pattern: "^[0-9a-f]{64}$"
+        reason:
+          type: string
+        quarantined_by:
+          type: string
+        quarantined_at:
+          type: string
+          format: date-time
+        restored_by:
+          type: string
+          nullable: true
+        restored_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DataRepairCaseList:
+      type: object
+      required: [cases, has_more]
+      properties:
+        cases:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataRepairCase"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: object
+          nullable: true
+          required: [last_seen_at, id]
+          properties:
+            last_seen_at:
+              type: string
+              format: date-time
+            id:
+              type: integer
+              format: int64
+
+    DataRepairCaseDetail:
+      type: object
+      required: [case, comments]
+      properties:
+        case:
+          $ref: "#/components/schemas/DataRepairCase"
+        comments:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataRepairCaseComment"
+        quarantine:
+          allOf:
+            - $ref: "#/components/schemas/DataRepairQuarantine"
+          nullable: true
+
+    DataRepairCaseStats:
+      type: object
+      required:
+        - total
+        - open
+        - in_review
+        - applied
+        - dismissed
+        - quarantined
+        - restored
+        - resolved
+        - drive
+        - charging
+      properties:
+        total:
+          type: integer
+        open:
+          type: integer
+        in_review:
+          type: integer
+        applied:
+          type: integer
+        dismissed:
+          type: integer
+        quarantined:
+          type: integer
+        restored:
+          type: integer
+        resolved:
+          type: integer
+        drive:
+          type: integer
+        charging:
+          type: integer
+        oldest_open_at:
+          type: string
+          format: date-time
+          nullable: true
+        last_scan_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    DataRepairQuarantineList:
+      type: object
+      required: [quarantines, has_more]
+      properties:
+        quarantines:
+          type: array
+          items:
+            $ref: "#/components/schemas/DataRepairQuarantine"
+        has_more:
+          type: boolean
+        next_cursor:
+          type: object
+          nullable: true
+          required: [quarantined_at, id]
+          properties:
+            quarantined_at:
+              type: string
+              format: date-time
+            id:
+              type: integer
+              format: int64
+
+    DataRepairScanResult:
+      type: object
+      required: [run_id, status, discovered, refreshed, truncated]
+      properties:
+        run_id:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [completed]
+        discovered:
+          type: integer
+          minimum: 0
+        refreshed:
+          type: integer
+          minimum: 0
+        truncated:
+          type: boolean
+
+    DataRepairCloseRequest:
+      type: object
+      additionalProperties: false
+      required: [ended_at, rule, expected_stored_ended_at]
+      properties:
+        case_id:
+          type: integer
+          format: int64
+          minimum: 1
+        ended_at:
+          type: string
+          format: date-time
+        rule:
+          type: string
+          description: Server-provided diagnosis rule, or manual for an explicit operator boundary.
+        expected_stored_ended_at:
+          type: string
+          description: RFC3339 timestamp, or an empty string to assert that the session remains open.
+
+    DataRepairCloseResponse:
+      type: object
+      required: [status, session_id, ended_at]
+      properties:
+        status:
+          type: string
+          enum: [closed, already_applied]
+        session_id:
+          type: integer
+          format: int64
+        ended_at:
+          type: string
+          format: date-time
+        duration_s:
+          type: integer
+          format: int64
+        recomputed_fields:
+          type: array
+          items:
+            type: string
+
+    DataRepairPreviewValue:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [null, timestamp, int64, float64, string]
+        "null":
+          type: boolean
+        timestamp:
+          type: string
+          format: date-time
+        int64:
+          type: integer
+          format: int64
+        float64:
+          type: number
+          format: double
+        string:
+          type: string
+
+    DataRepairPreview:
+      type: object
+      required:
+        - kind
+        - session_id
+        - rule
+        - source
+        - status
+        - started_at
+        - proposed_ended_at
+        - proposed_duration_s
+        - fields_changed
+        - fields_preserved
+        - warnings
+      properties:
+        kind:
+          $ref: "#/components/schemas/DataRepairSessionKind"
+        session_id:
+          type: integer
+          format: int64
+        rule:
+          type: string
+        source:
+          type: string
+          enum: [manual, suggestion]
+        status:
+          type: string
+          enum: [ready, already_applied]
+        started_at:
+          type: string
+          format: date-time
+        current_ended_at:
+          type: string
+          format: date-time
+          nullable: true
+        proposed_ended_at:
+          type: string
+          format: date-time
+        current_duration_s:
+          type: integer
+          format: int64
+          nullable: true
+        proposed_duration_s:
+          type: integer
+          format: int64
+        fields_changed:
+          type: array
+          items:
+            type: object
+            required: [field, before, after]
+            properties:
+              field:
+                type: string
+              before:
+                $ref: "#/components/schemas/DataRepairPreviewValue"
+              after:
+                $ref: "#/components/schemas/DataRepairPreviewValue"
+        fields_preserved:
+          type: array
+          items:
+            type: object
+            required: [field, value, reason]
+            properties:
+              field:
+                type: string
+              value:
+                $ref: "#/components/schemas/DataRepairPreviewValue"
+              reason:
+                type: string
+        warnings:
+          type: array
+          items:
+            type: string
 
     Vehicle:
       type: object

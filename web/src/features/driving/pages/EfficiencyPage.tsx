@@ -1,13 +1,14 @@
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
-  Zap, TrendingUp, Thermometer, Fuel, Gauge, Car, Leaf, Route, AlertCircle,
+  Zap, TrendingUp, Thermometer, Fuel, Gauge, Car, Leaf, Route,
 } from 'lucide-react';
 
 import { PageContainer } from '@/components/layout';
 import {
   GlassPanel, DataTable, PanelTitle, SectionTitle, Text,
 } from '@/components/ui';
+import { GlossaryTerm } from '@/components/ui/GlossaryTerm';
 import { MetricCard, MetricBar, SavedViewMenu } from '@/components/data-display';
 import {
   ChartContainer, ChartTooltip, renderAnnotationLines,
@@ -17,7 +18,8 @@ import {
 } from '@/components/charts';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
-import { EmptyState, Skeleton, AlertBanner } from '@/components/feedback';
+import { EmptyState, Skeleton } from '@/components/feedback';
+import { EmptyStateGuidanceDetails } from '@/components/feedback/ActionableEmptyState';
 
 import { useDrivingStats, useDrives } from '@/api/hooks/useDriving';
 import { useUnits } from '@/hooks/useUnits';
@@ -27,11 +29,10 @@ import { useSavedViewUrl } from '@/hooks/useSavedViewUrl';
 import { useRangeState } from '@/hooks/useRangeState';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
-import { getErrorMessage } from '@/lib/errorMessage';
 import {
   convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI,
 } from '@/lib/unitConversion';
-import type { Drive } from '@/types/driving';
+import { getEfficiency } from '@/lib/drivesAggregation';
 
 /* ------------------------------------------------------------------ */
 /*  Helpers                                                            */
@@ -57,12 +58,7 @@ export function efficiencyColor(wh: number): string {
   return '#ef4444';
 }
 
-/** Derive Wh/km efficiency for a drive from battery delta + distance, or null. */
-export function getEfficiency(drive: Drive): number | null {
-  const battUsed = (drive.startBatteryPct ?? 0) - (drive.endBatteryPct ?? 0);
-  if (drive.distanceM > 0 && battUsed > 0) return (battUsed * 0.75 * 1000) / (drive.distanceM / 1000);
-  return null;
-}
+export { getEfficiency };
 
 /* ------------------------------------------------------------------ */
 /*  EfficiencyPage                                                     */
@@ -79,8 +75,23 @@ export default function EfficiencyPage() {
 
   const statsQuery = useDrivingStats(vehicleIdStr);
   const drivesQuery = useDrives(vehicleIdStr);
-  const { data: stats, isLoading: statsLoading, isError: statsError, error: statsErr } = statsQuery;
-  const { data: drives, isLoading: drivesLoading, isError: drivesError, error: drivesErr } = drivesQuery;
+  const { data: stats, isLoading: statsLoading } = statsQuery;
+  const { data: drives, isLoading: drivesLoading } = drivesQuery;
+  const dataSources = useMemo(
+    () => [
+      {
+        id: 'efficiency-summary',
+        label: t('dataSources.labels.efficiencySummary', 'Efficiency summary'),
+        query: statsQuery,
+      },
+      {
+        id: 'drive-history',
+        label: t('dataSources.labels.driveHistory', 'Drive history'),
+        query: drivesQuery,
+      },
+    ],
+    [drivesQuery, statsQuery, t],
+  );
 
   const { unitPrefs, formatDuration, formatEnergy } = useUnits();
   const isFahrenheit = unitPrefs.temperature === '°F';
@@ -123,21 +134,33 @@ export default function EfficiencyPage() {
     [unitPrefs.speed],
   );
 
-  const { start: startDate, end: endDate, setRange } = useRangeState({
+  const {
+    start: startDate, end: endDate, startInstant, endInstantExclusive, setRange,
+  } = useRangeState({
     persistKey: 'efficiency.range',
   });
 
   /* ---- Filtered drives ---- */
+  // Compare against the half-open [startInstant, endInstantExclusive) API
+  // window rather than a naive `d.startTs.split('T')[0]` vs. calendar-day
+  // string comparison. `startTs` is a UTC ISO instant while `startDate`/
+  // `endDate` are calendar days resolved in the local timezone — for any
+  // vehicle west of UTC, a drive that started "today" locally can carry a
+  // UTC date component one day ahead, which the naive string compare
+  // dropped as being past `endDate`. See src/lib/dateRange.ts.
   const filteredDrives = useMemo(() => {
     if (!drives) return [];
+    const startMs = startInstant ? new Date(startInstant).getTime() : undefined;
+    const endMs = endInstantExclusive ? new Date(endInstantExclusive).getTime() : undefined;
     return drives.filter((d) => {
-      const driveDate = d.startTs?.split('T')[0];
-      if (!driveDate) return true;
-      if (startDate && driveDate < startDate) return false;
-      if (endDate && driveDate > endDate) return false;
+      if (!d.startTs) return true;
+      const t = new Date(d.startTs).getTime();
+      if (Number.isNaN(t)) return true;
+      if (startMs !== undefined && t < startMs) return false;
+      if (endMs !== undefined && t >= endMs) return false;
       return true;
     });
-  }, [drives, startDate, endDate]);
+  }, [drives, startInstant, endInstantExclusive]);
 
   /* ---- Daily efficiency trend ---- */
   const dailyTrend = useMemo(() => {
@@ -265,13 +288,12 @@ export default function EfficiencyPage() {
       ]
     : [];
 
-  const anyError = statsError || drivesError;
-
   return (
     <PageContainer
       title={t('efficiency.title', 'Efficiency')}
       subtitle={t('efficiency.subtitle', 'Energy consumption and driving efficiency analysis')}
       query={[statsQuery, drivesQuery]}
+      dataSources={dataSources}
       actions={
         <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <VehicleSelect />
@@ -289,16 +311,23 @@ export default function EfficiencyPage() {
         </div>
       }
     >
-      {anyError && (
-        <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" aria-hidden="true" />}>
-          {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(statsErr ?? drivesErr)}
-        </AlertBanner>
-      )}
-
       {/* ── A · KPI band ─────────────────────────────────────────── */}
       <FadeIn>
         <section aria-label={t('efficiency.section.kpis', 'Key metrics')} className="space-y-3">
           <SectionTitle>{t('efficiency.section.kpis', 'Key Metrics')}</SectionTitle>
+          {/* HELP-03. "Efficiency" is the most over-assumed word in the
+              product: users read a Wh/km figure as a wall-meter cost and then
+              cannot reconcile it with their electricity bill. The definition
+              says plainly that charging losses are excluded. */}
+          <p
+            className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--text-muted)]"
+            data-testid="efficiency-glossary-strip"
+          >
+            <span>{t('efficiency.glossary.lead', 'Terms on this page:')}</span>
+            <GlossaryTerm term="efficiency" />
+            <GlossaryTerm term="rated_range" />
+            <GlossaryTerm term="phantom_drain" />
+          </p>
           {statsLoading ? (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">
               {Array.from({ length: 8 }).map((_, i) => (
@@ -308,6 +337,13 @@ export default function EfficiencyPage() {
           ) : !stats ? (
             <GlassPanel className="p-4 sm:p-5">
               <EmptyState /* no-action: transient — no stats for the selected vehicle/range */ message={t('efficiency.noStats', 'No efficiency data available yet')} />
+              {/* HELP-02 — the governed answer for "why is efficiency blank":
+                  the selected range almost always contains no completed
+                  drives, which is a range problem rather than a data problem. */}
+              <EmptyStateGuidanceDetails
+                guidanceId="analytics.efficiency"
+                className="mx-auto"
+              />
             </GlassPanel>
           ) : (
             <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 3xl:grid-cols-8">

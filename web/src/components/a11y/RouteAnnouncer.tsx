@@ -12,18 +12,18 @@
  * --------------
  * Mounts once near the top of `<App />`. Subscribes to React Router's
  * `useLocation()` and, on every pathname change AFTER the first
- * render, schedules a 100 ms timeout that reads `document.title` and
- * pushes it into a `VisuallyHidden liveRegion`.
+ * render, waits for the destination title to replace the shell's temporary
+ * `TeslaSync` title, and pushes the settled value into a
+ * `VisuallyHidden liveRegion`.
  *
  * The 100 ms delay exists because `usePageTitle` runs INSIDE the
  * lazy-loaded page component — at the instant `useLocation()` fires,
  * the new page's chunk may still be downloading and the canonical
  * title for the new route hasn't been written to `document.title`
- * yet. Waiting 100 ms lets the React commit phase flush, the page
- * render, and the title to settle. If a future page genuinely takes
- * longer than 100 ms to set its title, the announcement carries the
- * stale title — that's still a strict accessibility improvement over
- * silence and is what the browser back/forward already does.
+ * yet. The first read waits 100 ms; if the shell placeholder is still
+ * present, a `MutationObserver` watches the document title until the route
+ * supplies a meaningful value. A CPU-constrained lazy load therefore cannot
+ * turn the placeholder into a false route announcement.
  *
  * Why NOT route through `useAnnouncer()` / `<AnnouncerRegion>`
  * -----------------------------------------------------------
@@ -47,6 +47,7 @@ import { VisuallyHidden } from './VisuallyHidden';
 
 /** Default delay before reading `document.title` after a route change. */
 const DEFAULT_ANNOUNCE_DELAY_MS = 100;
+const SHELL_TITLE = 'TeslaSync';
 
 export interface RouteAnnouncerProps {
   /**
@@ -74,15 +75,25 @@ export function RouteAnnouncer({
       return;
     }
 
-    const id = window.setTimeout(() => {
+    let titleObserver: MutationObserver | null = null;
+
+    const readSettledTitle = () => {
       const title =
         typeof document !== 'undefined' ? document.title : '';
-      if (!title) {
-        // Nothing meaningful to announce — leave the region empty
-        // rather than reading whatever was there before.
-        setMessage('');
+      if (!title || title === SHELL_TITLE) {
+        if (!title) setMessage('');
+        if (!titleObserver && document.head) {
+          titleObserver = new MutationObserver(readSettledTitle);
+          titleObserver.observe(document.head, {
+            childList: true,
+            characterData: true,
+            subtree: true,
+          });
+        }
         return;
       }
+      titleObserver?.disconnect();
+      titleObserver = null;
       // Rotate a 0-3 zero-width-space suffix on every announcement.
       // Without this, two consecutive routes that resolve to the same
       // `document.title` (e.g. `/charging/123` → `/charging/456` —
@@ -92,9 +103,14 @@ export function RouteAnnouncer({
       counter.current = (counter.current + 1) % 4;
       const padding = '\u200B'.repeat(counter.current);
       setMessage(`${title}${padding}`);
-    }, delayMs);
+    };
 
-    return () => window.clearTimeout(id);
+    const id = window.setTimeout(readSettledTitle, delayMs);
+
+    return () => {
+      window.clearTimeout(id);
+      titleObserver?.disconnect();
+    };
   }, [pathname, delayMs]);
 
   return (

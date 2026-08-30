@@ -27,12 +27,31 @@
  * pipeline.
  */
 import { resilientFetch, ApiError, getApiBase, isApiError, camelCaseKeys } from '../lib/resilience'
+import { assertOperationalWriteAllowed } from '../lib/operationalMode'
+import { assertNeverQueuedOffline } from './offlineCache'
+import {
+  demoCredentialsMode,
+  getDemoApiBase,
+  stripCredentialHeadersForDemo,
+} from '../lib/demoMode'
 
 export { ApiError, getApiBase, isApiError }
 
 export interface ApiRequestOptions extends RequestInit {
   responseType?: 'json' | 'text'
   skipAuthRefresh?: boolean
+  /**
+   * Non-2xx response codes whose JSON body is still a successful domain
+   * response. Use only for endpoints such as `/system/health`, where a
+   * generated degraded snapshot intentionally carries HTTP 503.
+   */
+  acceptedStatuses?: readonly number[]
+  /**
+   * Marks a mutation as unsafe outside live mode. The client rejects it
+   * before any network attempt while viewing `?as_of=` data or while offline,
+   * preventing delayed vehicle/configuration changes from replaying later.
+   */
+  requiresLiveMode?: boolean
   /**
    * Optional. If provided, the fetch + retry loop honors cancellation:
    * the underlying fetch is wired to an abort signal that is the merge of
@@ -58,8 +77,18 @@ function normalizePath(path: string): string {
   return withSlash.replace(/^\/api\/v1\//, '/')
 }
 
-/** Builds a fully qualified API URL for browser-owned flows such as downloads. */
+/**
+ * Builds a fully qualified API URL for browser-owned flows such as downloads.
+ *
+ * HELP-12: when demo mode is fully and validly configured, the validated
+ * isolated demo base is authoritative and the production base is never
+ * consulted. `getDemoApiBase()` returns null for every partially-configured
+ * state, so a malformed demo build falls back to normal behaviour rather than
+ * producing half-demo traffic.
+ */
 export function apiUrl(path: string): string {
+  const demoBase = getDemoApiBase()
+  if (demoBase !== null) return `${demoBase}${normalizePath(path)}`
   return `${getApiBase()}/api/v1${normalizePath(path)}`
 }
 
@@ -67,7 +96,9 @@ function buildHeaders(headers: HeadersInit | undefined, hasBody: boolean): Heade
   const merged = new Headers(headers)
   if (!merged.has('Accept')) merged.set('Accept', 'application/json')
   if (hasBody && !merged.has('Content-Type')) merged.set('Content-Type', 'application/json')
-  return merged
+  // HELP-12: never ship caller identity to a cross-origin demo fixture host.
+  // No-op in normal mode and for a same-origin demo base.
+  return stripCredentialHeadersForDemo(merged)
 }
 
 /**
@@ -222,15 +253,20 @@ async function directRequest<T>(
   path: string,
   options: RequestInit,
   responseType: 'json' | 'text',
+  acceptedStatuses: readonly number[],
 ): Promise<T> {
   const { headers, body, ...rest } = options
+  const credentials = demoCredentialsMode()
   const res = await fetch(apiUrl(path), {
     ...rest,
     body,
     headers: buildHeaders(headers, body != null),
+    // Only set when a cross-origin demo base is active; `undefined` leaves
+    // fetch's `same-origin` default untouched for every normal request.
+    ...(credentials ? { credentials } : {}),
   })
 
-  if (!res.ok) {
+  if (!res.ok && !acceptedStatuses.includes(res.status)) {
     const { message, code } = await parseError(res)
     throw new ApiError(message, res.status, code)
   }
@@ -328,7 +364,16 @@ function expiresAtMsFromCredential(cred: SudoCredential): number {
  * @returns Parsed JSON response of type T
  */
 export async function request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { responseType = 'json', skipAuthRefresh = false, headers, ...fetchOptions } = options
+  const {
+    responseType = 'json',
+    skipAuthRefresh = false,
+    acceptedStatuses = [],
+    requiresLiveMode = false,
+    headers,
+    ...fetchOptions
+  } = options
+
+  assertOperationalWriteAllowed(fetchOptions.method, requiresLiveMode)
 
   // Normalise once at the entry point: ensures a leading slash AND
   // defensively strips any stray `/api/v1` prefix the caller passed.
@@ -336,6 +381,13 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
   // directRequest (via apiUrl) nor the resilientFetch fallback (which
   // also concatenates `/api/v1` directly) can double-prefix.
   const normalisedPath = normalizePath(path)
+
+  // Defence in depth for the offline contract: vehicle commands, data-repair
+  // writes and security writes must fail loudly right here rather than be
+  // attempted (and, under any future retry/persistence layer, queued) while
+  // the device has no network. `requiresLiveMode` already covers the hooks
+  // that opted in; this covers the class of path regardless of the flag.
+  assertNeverQueuedOffline(fetchOptions.method, normalisedPath)
 
   const directResponseType: 'json' | 'text' = responseType
   const cached = getCachedSudoToken()
@@ -351,6 +403,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
       normalisedPath,
       { ...fetchOptions, headers: headersWithToken },
       directResponseType,
+      acceptedStatuses,
     )
   } catch (err) {
     // Caller-initiated cancellation (route change / unmount via the
@@ -382,6 +435,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
           normalisedPath,
           { ...fetchOptions, headers: withSudoToken(headers, null) },
           directResponseType,
+          acceptedStatuses,
         )
       }
 
@@ -398,6 +452,7 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
         normalisedPath,
         { ...fetchOptions, headers: withSudoToken(headers, cred.token) },
         directResponseType,
+        acceptedStatuses,
       )
     }
 
@@ -412,6 +467,10 @@ export async function request<T>(path: string, options: ApiRequestOptions = {}):
     // Fall through: rerun via resilientFetch so the original retry,
     // circuit-breaker, and 401-refresh policies still apply for
     // transient or non-sudo failures.
-    return resilientFetch<T>(normalisedPath, { ...fetchOptions, headers: headersWithToken })
+    return resilientFetch<T>(normalisedPath, {
+      ...fetchOptions,
+      headers: headersWithToken,
+      acceptedStatuses,
+    })
   }
 }

@@ -84,3 +84,20 @@ func TestHTTPProbe_RejectsEmptyURL(t *testing.T) {
 		t.Fatal("expected error for empty url")
 	}
 }
+
+func TestRunner_StopBeforeStartIsSafeAndIdempotent(t *testing.T) {
+	t.Parallel()
+	r := NewRunner(nil, time.Hour, time.Second)
+	done := make(chan struct{})
+	go func() {
+		r.Stop()
+		r.Stop()
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("Stop blocked when Runner had not started")
+	}
+	r.Start(context.Background())
+}

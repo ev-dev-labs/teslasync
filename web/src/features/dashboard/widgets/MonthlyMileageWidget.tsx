@@ -4,6 +4,7 @@ import { BarChart3 } from 'lucide-react';
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
   chartGrid, chartMargin, axisTick, axisTickSm, chartAnimation, fmt,
+  ChartTooltip, EmbeddedChart,
 } from '@/components/charts';
 import { useMonthlyMileage } from '@/api/hooks/useAnalytics';
 import { useVehicles } from '@/api/hooks/useVehicles';
@@ -88,6 +89,10 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
     const cur = chartData.find((d) => d.isCurrent);
     return cur?.distance ?? 0;
   }, [chartData]);
+  const chartTableData = useMemo(
+    () => chartData.map(({ month, distance }) => ({ month, distance })),
+    [chartData],
+  );
 
   const isCompact = size.cols <= 1;
   const isWide = size.cols >= 3;
@@ -167,8 +172,23 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
         emptyIcon={<BarChart3 className="h-5 w-5" />}
         stats={summaryStats}
         chart={
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
+          <EmbeddedChart
+            title={t('widget.monthlyMileage.title', 'Monthly Mileage')}
+            ariaLabel={t(
+              'widget.monthlyMileage.chartAria',
+              'Distance driven by month',
+            )}
+            data={chartTableData}
+            dataColumns={[
+              { key: 'month', label: t('widget.monthlyMileage.month', 'Month') },
+              {
+                key: 'distance',
+                label: `${t('widget.monthlyMileage.distance', 'Distance')} (${distanceUnit})`,
+              },
+            ]}
+          >
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} margin={chartMargin} {...chartAnimation}>
               {chartGrid}
               <XAxis
                 dataKey="month"
@@ -184,12 +204,7 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                 tickFormatter={(v: number) => fmt(v, 0)}
               />
               <Tooltip
-                contentStyle={{
-                  background: 'rgba(0,0,0,0.85)',
-                  border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 8,
-                  fontSize: 12,
-                }}
+                content={<ChartTooltip />}
                 formatter={(value: number) => [
                   `${fmtNumber(value, 1)} ${distanceUnit}`,
                   t('widget.monthlyMileage.distance', 'Distance'),
@@ -209,8 +224,9 @@ export default function MonthlyMileageWidget({ vehicleId, size }: WidgetProps) {
                   />
                 ))}
               </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              </BarChart>
+            </ResponsiveContainer>
+          </EmbeddedChart>
         }
       />
     </WidgetShell>

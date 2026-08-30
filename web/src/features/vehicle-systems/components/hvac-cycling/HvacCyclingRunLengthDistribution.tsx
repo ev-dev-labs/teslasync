@@ -6,8 +6,8 @@ import {
   BarChart,
   CartesianGrid,
   ChartContainer,
+  ChartLegend,
   ChartTooltip,
-  Legend,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -114,27 +114,31 @@ export function HvacCyclingRunLengthDistribution({
               { key: 'completeOn', label: t('hvacCycling.distribution.complete', 'Complete on runs') },
             ]}
           >
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data}>
+            {({ hiddenSeries }) => (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartTokens.gridStroke} />
                 <XAxis dataKey="band" tick={{ fill: chartTokens.axisStroke, fontSize: 10 }} />
                 <YAxis allowDecimals={false} tick={{ fill: chartTokens.axisStroke, fontSize: 11 }} />
                 <Tooltip content={<ChartTooltip />} />
-                <Legend />
+                <ChartLegend />
                 <Bar
                   dataKey="on"
                   name={t('hvacCycling.distribution.on', 'On fragments')}
                   fill={chartTokens.series[0]}
                   radius={[3, 3, 0, 0]}
+                  hide={hiddenSeries?.isHidden('on')}
                 />
                 <Bar
                   dataKey="off"
                   name={t('hvacCycling.distribution.off', 'Off fragments')}
                   fill={chartTokens.series[3]}
                   radius={[3, 3, 0, 0]}
+                  hide={hiddenSeries?.isHidden('off')}
                 />
-              </BarChart>
-            </ResponsiveContainer>
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </ChartContainer>
           <Grid cols={{ default: 2, md: 4 }} gap={2} className="mt-3">
             <Quantile label={t('hvacCycling.distribution.onP25', 'On fragment P25')} value={formatDuration(on.p25S, { precision: 1 })} />

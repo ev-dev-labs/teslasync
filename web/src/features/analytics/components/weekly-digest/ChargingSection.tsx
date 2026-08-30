@@ -4,11 +4,10 @@ import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { Zap, Activity, Fuel } from 'lucide-react';
 import { GlassPanel, Badge, PanelTitle, Caption } from '@/components/ui';
-import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
 import {
   ChartTooltip, CHART_COLORS,
   chartGrid, axisTickSm, chartMarginLabeled, chartAnimation,
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, EmbeddedChart,
 } from '@/components/charts';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { convertEnergyFromSI } from '@/lib/unitConversion';
@@ -65,12 +64,35 @@ export function ChargingSection({
             unit: unitPrefs.energy,
           })}
         </Caption>
-        {isLoading ? (
-          <Skeleton height={220} />
-        ) : isError ? (
-          <QueryError error={error} onRetry={onRetry} />
-        ) : hasChart ? (
-          <div className="h-56 sm:h-64 xl:h-72">
+        <EmbeddedChart
+          title={t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added')}
+          ariaLabel={t(
+            'analytics.weeklyDigest.dailyEnergyChartLabel',
+            'Bar chart of daily charging energy in {{unit}}',
+            { unit: unitPrefs.energy },
+          )}
+          data={energyChartData}
+          dataColumns={[
+            { key: 'day', label: t('analytics.weeklyDigest.day', 'Day') },
+            {
+              key: 'energy',
+              label: t('analytics.weeklyDigest.dailyEnergyAdded', 'Daily Energy Added ({{unit}})', {
+                unit: unitPrefs.energy,
+              }),
+            },
+          ]}
+          loading={isLoading}
+          error={isError ? error : undefined}
+          onRetry={onRetry}
+          empty={!hasChart}
+          emptyMessage={t(
+            'analytics.weeklyDigest.noDailyEnergy',
+            'No charging energy data is available for this week.',
+          )}
+          fluid={false}
+          mobileHeight={224}
+          height={288}
+        >
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={energyChartData} margin={chartMarginLabeled}>
                 {chartGrid}
@@ -86,13 +108,7 @@ export function ChargingSection({
                 />
               </BarChart>
             </ResponsiveContainer>
-          </div>
-        ) : (
-          <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-            message={t('analytics.weeklyDigest.noDailyEnergy', 'No charging energy data is available for this week.')}
-            className="py-8"
-          />
-        )}
+        </EmbeddedChart>
       </div>
 
       {/* Charging stats row */}

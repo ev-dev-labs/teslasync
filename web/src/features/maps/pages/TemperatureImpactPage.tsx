@@ -14,8 +14,8 @@ import { VehicleSelect } from '@/components/forms';
 import {
   ChartTooltip, CHART_COLORS, AREA_DEFAULTS,
   ScatterChart, Scatter, Cell, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, LineChart, Line, Legend, ReferenceLine,
-  ComposedChart, Bar,
+  ResponsiveContainer, LineChart, Line, ChartLegend, ReferenceLine,
+  ComposedChart, Bar, EmbeddedChart,
 } from '@/components/charts';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
@@ -386,39 +386,46 @@ export default function TemperatureImpactPage() {
               icon: <Thermometer className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
               <>
+                {/* chart-a11y:no-table per-drive scatter cloud — each point is one drive, not meaningful as a table */}
                 <div className="h-72 sm:h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ScatterChart margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                      <XAxis
-                        dataKey="outside_temp"
-                        type="number"
-                        name={`${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`}
-                        tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                      />
-                      <YAxis
-                        dataKey="efficiency_wh_km"
-                        type="number"
-                        name={`${t('tempImpact.efficiency', 'Efficiency')} (${effLabel})`}
-                        tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
-                        width={44}
-                      />
-                      <Tooltip content={<ChartTooltip />} />
-                      {stats && (
-                        <ReferenceLine
-                          y={stats.avgEff}
-                          stroke={CHART_COLORS[1]}
-                          strokeDasharray="4 4"
-                          strokeOpacity={0.6}
+                  <EmbeddedChart
+                    title={t('tempImpact.scatterTitle', 'Temperature vs Efficiency')}
+                    ariaLabel={t('tempImpact.scatterAria', 'Scatter plot of energy efficiency against outdoor temperature per drive')}
+                    fluid
+                  >
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ScatterChart margin={{ top: 10, right: 16, bottom: 8, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis
+                          dataKey="outside_temp"
+                          type="number"
+                          name={`${t('tempImpact.temperature', 'Temperature')} (${tempUnit})`}
+                          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
                         />
-                      )}
-                      <Scatter data={scatterData} name={t('tempImpact.scatterName', 'Drives')}>
-                        {scatterData.map((d, i) => (
-                          <Cell key={i} fill={d.fill} />
-                        ))}
-                      </Scatter>
-                    </ScatterChart>
-                  </ResponsiveContainer>
+                        <YAxis
+                          dataKey="efficiency_wh_km"
+                          type="number"
+                          name={`${t('tempImpact.efficiency', 'Efficiency')} (${effLabel})`}
+                          tick={{ fill: 'var(--text-muted)', fontSize: 11 }}
+                          width={44}
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        {stats && (
+                          <ReferenceLine
+                            y={stats.avgEff}
+                            stroke={CHART_COLORS[1]}
+                            strokeDasharray="4 4"
+                            strokeOpacity={0.6}
+                          />
+                        )}
+                        <Scatter data={scatterData} name={t('tempImpact.scatterName', 'Drives')}>
+                          {scatterData.map((d, i) => (
+                            <Cell key={i} fill={d.fill} />
+                          ))}
+                        </Scatter>
+                      </ScatterChart>
+                    </ResponsiveContainer>
+                  </EmbeddedChart>
                 </div>
                 <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
                   {tempBuckets.map((b) => (
@@ -502,26 +509,33 @@ export default function TemperatureImpactPage() {
               icon: <BarChart3 className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
               <div className="h-56 sm:h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart
-                    data={stats?.bucketAvgs ?? []}
-                    margin={{ top: 10, right: 16, bottom: 8, left: 0 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
-                    <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} width={44} />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Line
-                      {...AREA_DEFAULTS}
-                      dataKey="avg"
-                      name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
-                      stroke={CHART_COLORS[0]}
-                      dot={{ r: 5, fill: CHART_COLORS[0] }}
-                      activeDot={{ r: 7 }}
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+                {/* chart-a11y:no-table efficiency-by-temp buckets — aggregate metric per range, not row-oriented */}
+                <EmbeddedChart
+                  title={t('tempImpact.bucketTitle', 'Efficiency by Temperature Range')}
+                  ariaLabel={t('tempImpact.bucketAria', 'Average efficiency line chart by temperature range bucket')}
+                  fluid
+                >
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={stats?.bucketAvgs ?? []}
+                      margin={{ top: 10, right: 16, bottom: 8, left: 0 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                      <XAxis dataKey="label" tick={{ fill: 'var(--text-muted)', fontSize: 11 }} />
+                      <YAxis tick={{ fill: 'var(--text-muted)', fontSize: 11 }} width={44} />
+                      <Tooltip content={<ChartTooltip />} />
+                      <ChartLegend wrapperStyle={{ fontSize: 12 }} />
+                      <Line
+                        {...AREA_DEFAULTS}
+                        dataKey="avg"
+                        name={`${t('tempImpact.avgEff', 'Avg Efficiency')} (${effLabel})`}
+                        stroke={CHART_COLORS[0]}
+                        dot={{ r: 5, fill: CHART_COLORS[0] }}
+                        activeDot={{ r: 7 }}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>
@@ -536,42 +550,54 @@ export default function TemperatureImpactPage() {
               icon: <CalendarRange className="h-8 w-8" aria-hidden="true" />,
             }) ?? (
               <div className="h-56 sm:h-64">
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={monthlyData} margin={{ top: 10, right: 8, bottom: 8, left: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
-                    <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
-                    <YAxis
-                      yAxisId="left"
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      allowDecimals={false}
-                      width={36}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
-                      width={40}
-                    />
-                    <Tooltip content={<ChartTooltip />} />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar
-                      yAxisId="left"
-                      dataKey="drives"
-                      name={t('tempImpact.driveCount', 'Drives')}
-                      fill={CHART_COLORS[0]}
-                      fillOpacity={0.75}
-                      radius={[4, 4, 0, 0]}
-                    />
-                    <Line
-                      yAxisId="right"
-                      {...AREA_DEFAULTS}
-                      dataKey="temp"
-                      name={`${t('tempImpact.avgTemp', 'Avg Temp')} (${tempUnit})`}
-                      stroke={CHART_COLORS[3] ?? CHART_COLORS[1]}
-                      dot={false}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                {/* chart-a11y:no-table dual-axis monthly composite (bars + line) — dual-scale not representable as single table */}
+                <EmbeddedChart
+                  chartKey="temp-monthly-trend"
+                  title={t('tempImpact.monthlyTitle', 'Monthly Seasonal Trend')}
+                  ariaLabel={t('tempImpact.monthlyAria', 'Monthly drive count bars and average temperature line')}
+                  fluid
+                >
+                  {({ hiddenSeries }) => (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={monthlyData} margin={{ top: 10, right: 8, bottom: 8, left: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="var(--glass-border)" strokeOpacity={0.4} />
+                        <XAxis dataKey="month" tick={{ fill: 'var(--text-muted)', fontSize: 10 }} />
+                        <YAxis
+                          yAxisId="left"
+                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          allowDecimals={false}
+                          width={36}
+                        />
+                        <YAxis
+                          yAxisId="right"
+                          orientation="right"
+                          tick={{ fill: 'var(--text-muted)', fontSize: 10 }}
+                          width={40}
+                        />
+                        <Tooltip content={<ChartTooltip />} />
+                        <ChartLegend wrapperStyle={{ fontSize: 12 }} />
+                        <Bar
+                          yAxisId="left"
+                          dataKey="drives"
+                          name={t('tempImpact.driveCount', 'Drives')}
+                          fill={CHART_COLORS[0]}
+                          fillOpacity={0.75}
+                          radius={[4, 4, 0, 0]}
+                          hide={hiddenSeries?.isHidden('drives') ?? false}
+                        />
+                        <Line
+                          yAxisId="right"
+                          {...AREA_DEFAULTS}
+                          dataKey="temp"
+                          name={`${t('tempImpact.avgTemp', 'Avg Temp')} (${tempUnit})`}
+                          stroke={CHART_COLORS[3] ?? CHART_COLORS[1]}
+                          dot={false}
+                          hide={hiddenSeries?.isHidden('temp') ?? false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  )}
+                </EmbeddedChart>
               </div>
             )}
           </GlassPanel>

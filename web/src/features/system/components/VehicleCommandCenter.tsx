@@ -7,6 +7,7 @@ import {
   useVehicleCommand,
 } from '@/api/hooks/useVehicleCommand';
 import { useVehicleState } from '@/api/hooks/useVehicles';
+import { useOperationalMode } from '@/hooks/useOperationalMode';
 import { isTeslaAuthExpiredError } from '@/lib/resilience';
 import type { Vehicle } from '../commands';
 import { CommandCenterHero } from './command-center/CommandCenterHero';
@@ -37,6 +38,7 @@ const LOWER_GRID_COLUMNS = { default: 1, lg: 2 } as const;
  */
 export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
   const { t } = useTranslation();
+  const operationalMode = useOperationalMode();
   const stateQuery = useVehicleState(vehicle.id, {
     refetchInterval: COMMAND_STATE_REFRESH_MS,
   });
@@ -59,6 +61,19 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
 
   const executeCommand = useCallback(
     (command: string, params?: Record<string, unknown>) => {
+      if (!operationalMode.canWrite) {
+        setFeedback({
+          command,
+          success: false,
+          message:
+            operationalMode.writeBlockReason ??
+            t(
+              'operationalMode.writeBlocked',
+              'Return to live mode before making operational changes.',
+            ),
+        });
+        return;
+      }
       const commandLabel = getCommandLabel(command, t);
       const vehicleName =
         vehicle.display_name?.trim() ||
@@ -115,7 +130,7 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
         },
       );
     },
-    [sendCommand, t, vehicle],
+    [operationalMode, sendCommand, t, vehicle],
   );
 
   return (
@@ -144,6 +159,8 @@ export function VehicleCommandCenter({ vehicle }: VehicleCommandCenterProps) {
         state={state}
         latestCommands={latestCommands}
         loading={commandPending}
+        disabled={!operationalMode.canWrite}
+        disabledReason={operationalMode.writeBlockReason ?? undefined}
         onExecute={executeCommand}
       />
 

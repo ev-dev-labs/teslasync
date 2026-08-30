@@ -1,0 +1,17 @@
+{
+  "editConflict": {
+    "banner": {
+      "title": "Another browser tab is editing this",
+      "body": "This resource is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "bodyWithLabel": "{{resource}} is open in another tab of this browser. Saving here will overwrite changes made there.",
+      "takeOver": "Take over editing",
+      "switchHint": "Or switch to your other tab to keep editing there.",
+      "saveBlocked": "Another tab is editing — take over or close that tab first."
+    },
+    "resource": {
+      "settings": "Your settings",
+      "automation": "This automation",
+      "alertRules": "Your alert rules"
+    }
+  }
+}
