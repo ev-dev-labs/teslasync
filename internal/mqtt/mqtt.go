@@ -619,7 +619,11 @@ func (s *PipelineSubscriber) Stop() {
 		return
 	}
 
+	// Join any in-flight SUBACK before finalizing the stopped lifecycle.
 	s.subscribeMu.Lock()
+	s.mu.Lock()
+	s.started = false
+	s.mu.Unlock()
 	s.subscribeMu.Unlock()
 	metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 	metrics.MQTTPipelineSubscriptionLastSuccess.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
