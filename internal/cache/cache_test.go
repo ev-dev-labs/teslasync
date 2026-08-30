@@ -2,8 +2,11 @@ package cache
 
 import (
 	"context"
+	"net"
 	"testing"
 	"time"
+
+	"github.com/alicebob/miniredis/v2"
 
 	"github.com/ev-dev-labs/teslasync/internal/config"
 )
@@ -35,6 +38,61 @@ func TestMemoryCache(t *testing.T) {
 	store.Delete(ctx, "key1")
 	if store.Get(ctx, "key1", &result) {
 		t.Error("Get() should return false after Delete()")
+	}
+}
+
+func TestRedisClientSurvivesInitialUnavailability(t *testing.T) {
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("listen: %v", err)
+	}
+	port := listener.Addr().(*net.TCPAddr).Port
+	if err := listener.Close(); err != nil {
+		t.Fatalf("close listener: %v", err)
+	}
+
+	store := New(config.RedisConfig{
+		Enabled: true,
+		Host:    "127.0.0.1",
+		Port:    port,
+	})
+	defer store.Close()
+
+	if !store.IsRedis() {
+		t.Fatal("IsRedis() = false, want configured Redis client retained for reconnect")
+	}
+	if store.Underlying() == nil {
+		t.Fatal("Underlying() = nil, want reconnect-capable Redis client")
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 250*time.Millisecond)
+	defer cancel()
+	store.Set(ctx, "during-outage", "fallback", time.Minute)
+
+	var got string
+	if !store.Get(ctx, "during-outage", &got) {
+		t.Fatal("Get() missed in-memory fallback while Redis was unavailable")
+	}
+	if got != "fallback" {
+		t.Fatalf("Get() = %q, want fallback", got)
+	}
+
+	mr := miniredis.NewMiniRedis()
+	if err := mr.StartAddr(listener.Addr().String()); err != nil {
+		t.Fatalf("start Redis after cache initialization: %v", err)
+	}
+	t.Cleanup(mr.Close)
+
+	recoveryCtx, recoveryCancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer recoveryCancel()
+	store.Set(recoveryCtx, "after-recovery", "redis", time.Minute)
+
+	gotRedis, err := mr.Get("teslasync:after-recovery")
+	if err != nil {
+		t.Fatalf("Redis key after recovery: %v", err)
+	}
+	if gotRedis != `"redis"` {
+		t.Fatalf("Redis value after recovery = %q, want %q", gotRedis, `"redis"`)
 	}
 }
 

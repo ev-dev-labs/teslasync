@@ -210,19 +210,35 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 For production-grade Postgres, run the database with persistent volumes backed by your fastest available storage class. Telemetry writes are bursty; a slow disk turns into back-pressure that propagates to the ingest worker.
 
+## Homelab node reboot recovery
+
+The default Helm values target the self-hosted `carbon` node and preserve
+PostgreSQL, Redis, Mosquitto, Grafana, and optional MongoDB/Tempo state on
+PVCs. Recovery probes tolerate storage replay, and MQTT-dependent workloads
+wait for the broker instead of entering a delayed CrashLoop. API workloads
+also wait for Redis so live-state hydration and cross-pod fanout are available
+from the first request after a reboot.
+
+This is same-node reboot protection, not permanent node or disk-loss high
+availability. Follow
+[the Kubernetes node reboot runbook](../runbooks/kubernetes-node-reboot.md)
+before planned maintenance and after an unexpected restart.
+
 ## Scaling
 
 Three things scale independently:
 
 | Layer       | How to scale                                                                   | Notes                                                                |
 | ----------- | ------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
-| API         | `api.replicas` or HPA on CPU                                                   | Set `LIVE_SIGNAL_STORE_MODE=hybrid` so L2 + Pub/Sub fans state out   |
-| Workers     | Per-worker `replicas` (notification, export, automation)                       | Queues are partitioned; multiple replicas drain in parallel          |
+| API         | `replicaCount` or HPA on CPU                                                    | Fleet Telemetry requires one API owner until vehicle leases exist    |
+| Workers     | One replica per notification, export, and automation worker                    | Stable MQTT client IDs and in-memory state are single-owner           |
 | Web         | `web.replicas` or HPA                                                          | Web is stateless; scale freely                                        |
 | Postgres    | Vertical (more CPU / RAM / faster disk) — Timescale handles single-instance well | Read replicas possible but not required for typical fleet sizes  |
 | Redis       | Vertical for typical loads; cluster mode if you have unusual scale              | Pub/Sub is the bottleneck on extreme fanout                          |
 
-For multi-replica API, the L2 Redis cache + Pub/Sub fanout is what makes it work. Without `LIVE_SIGNAL_STORE_MODE=hybrid` (the default in Helm), each replica has its own L1 view and they drift.
+For multi-replica API without Fleet Telemetry ingestion, the L2 Redis cache
+and Pub/Sub fanout keep request-serving replicas coherent. Fleet Telemetry
+ingestion remains single-owner until vehicle ownership or leases exist.
 
 ## Verify after install
 
@@ -270,6 +286,8 @@ Before pointing real users at the deployment:
 - [ ] If you have signed-command vehicles, `commandProxy.enabled: true` (or `commandProxy.external.url`)
 - [ ] Resource requests + limits set on API and worker pods
 - [ ] Pod Disruption Budgets in place for any deployment running ≥2 replicas
+- [ ] `nodeRecovery.enforcePersistentState: true` and every bundled PVC is `Bound`
+- [ ] Same-node reboot procedure tested; an off-node backup covers disk/node loss
 - [ ] NetworkPolicies restricting east-west traffic to what's needed
 
 ## When something goes wrong
@@ -291,4 +309,5 @@ The X-Request-Id header from a failed request is the most useful breadcrumb — 
 - [Architecture](/guide/architecture) — the runtime view of how requests flow
 - [Helix AI](/guide/helix-ai) — the off-by-default AI layer
 - [Backup & Restore](/features/backup-restore) — recovery procedures
+- [Kubernetes node reboot](../runbooks/kubernetes-node-reboot.md) — homelab reboot procedure and limits
 - [Troubleshooting](/guide/troubleshooting) — the symptom-driven playbook

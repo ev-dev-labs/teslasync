@@ -1624,10 +1624,9 @@ func (a *App) onboardingCompleteForHealthNotifications(ctx context.Context) bool
 // actually configured (REDIS_ENABLED=true) — an install that never
 // enabled Redis must see "redis" stay unknown forever, never
 // "healthy" (there's nothing to be healthy about) and never "degraded"
-// (nothing broke). When Redis IS enabled but internal/cache.Store
-// never connected (Underlying() == nil — Store falls back to in-memory
-// permanently after a failed startup Ping), that is a real, ongoing
-// failure and is reported as such every tick.
+// (nothing broke). When Redis IS enabled, internal/cache.Store retains its
+// go-redis client through startup failures so this check both reports the
+// outage and observes recovery without an API restart.
 func (a *App) checkRedisHealth(tickCtx context.Context) {
 	if a.Cfg == nil || !a.Cfg.Redis.Enabled {
 		return

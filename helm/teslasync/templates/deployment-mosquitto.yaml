@@ -24,6 +24,7 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 60
       securityContext:
         {{- toYaml .Values.mqtt.podSecurityContext | nindent 8 }}
       containers:
@@ -38,6 +39,14 @@ spec:
             - name: websocket
               containerPort: 9001
               protocol: TCP
+          # Loading a large persistent-session queue must finish before
+          # liveness can recycle the broker.
+          startupProbe:
+            tcpSocket:
+              port: mqtt
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
           livenessProbe:
             tcpSocket:
               port: mqtt

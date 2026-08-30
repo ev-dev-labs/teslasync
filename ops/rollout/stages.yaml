@@ -6,10 +6,9 @@
 # must exist in helm/teslasync/values.yaml under rollout, and every stage
 # gate must name a real, implemented gate).
 #
-# DEFAULT BEHAVIOUR IS UNCHANGED. Every canary block ships `enabled:
-# false` and every strategy reproduces the pre-existing
-# RollingUpdate/maxSurge=1/maxUnavailable=0 (or Recreate, for the
-# single-writer workers). Staging is opt-in per deploy.
+# Every canary block ships `enabled: false`. API/web retain
+# RollingUpdate/maxSurge=1/maxUnavailable=0, while the MQTT-backed workers use
+# Recreate so stable client IDs never overlap during an upgrade.
 version: 1
 
 # Rollout is paused by flipping .Values.rollout.paused — it maps to the
@@ -160,16 +159,12 @@ components:
     canary_supported: false
     traffic_split: none
     default_strategy:
-      type: kubernetes-default
-      rendered_by_default: false
+      type: Recreate
+      rendered_by_default: true
       note: >-
-        The chart renders NO strategy block for the workers, so the
-        Kubernetes default (RollingUpdate 25%/25%) applies exactly as it
-        did before rollout controls existed — existing deployment
-        behaviour is unchanged. Operators who want strict single-writer
-        semantics set rollout.notificationWorker.strategy.type to
-        Recreate; the template only emits a strategy block when that
-        value is non-empty.
+        The stable MQTT client ID has exactly one owner. Recreate prevents a
+        rolling surge from evicting the current worker or double-delivering
+        side effects.
 
   - id: export-worker
     workload: Deployment/<release>-export-worker
@@ -177,13 +172,11 @@ components:
     canary_supported: false
     traffic_split: none
     default_strategy:
-      type: kubernetes-default
-      rendered_by_default: false
+      type: Recreate
+      rendered_by_default: true
       note: >-
-        Same as notification-worker: nothing is rendered by default, so
-        the Kubernetes default applies. Set
-        rollout.exportWorker.strategy.type to Recreate to opt in to
-        strict single-writer rollouts.
+        The stable MQTT client ID has exactly one owner. Recreate avoids
+        revision overlap; the database claim still protects job idempotency.
 
   - id: automation-worker
     workload: Deployment/<release>-automation-worker
@@ -191,13 +184,11 @@ components:
     canary_supported: false
     traffic_split: none
     default_strategy:
-      type: kubernetes-default
-      rendered_by_default: false
+      type: Recreate
+      rendered_by_default: true
       note: >-
-        Same as notification-worker: nothing is rendered by default, so
-        the Kubernetes default applies. Set
-        rollout.automationWorker.strategy.type to Recreate to opt in to
-        strict single-writer rollouts.
+        The stable MQTT client ID and in-memory trigger state have exactly one
+        owner, so revisions must never overlap.
 
 # High-risk behaviour changes ship dark and are enabled per stage rather
 # than at image-promotion time. The chart renders these into the

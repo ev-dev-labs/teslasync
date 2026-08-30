@@ -22,6 +22,9 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      # Longer than the API's 90s drain budget so Postgres can wait for
+      # clients to disconnect and complete its shutdown checkpoint.
+      terminationGracePeriodSeconds: 120
       securityContext:
         {{- toYaml .Values.postgresql.podSecurityContext | nindent 8 }}
       containers:
@@ -62,6 +65,19 @@ spec:
                   key: DATABASE_PASS
             - name: PGDATA
               value: {{ .Values.postgresql.persistence.pgdataPath | quote }}
+          # WAL replay after an abrupt homelab reboot can take minutes.
+          # startupProbe suppresses liveness until recovery accepts clients.
+          startupProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - {{ .Values.postgresql.auth.username | quote }}
+                - -d
+                - {{ .Values.postgresql.auth.database | quote }}
+            initialDelaySeconds: 10
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
           livenessProbe:
             exec:
               command:
@@ -70,7 +86,7 @@ spec:
                 - {{ .Values.postgresql.auth.username | quote }}
                 - -d
                 - {{ .Values.postgresql.auth.database | quote }}
-            initialDelaySeconds: 30
+            initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 5
           readinessProbe:

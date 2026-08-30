@@ -83,7 +83,10 @@ The embedded broker retains up to 10,000 QoS 1/2 messages per offline
 persistent client. This is restart headroom, not a health signal:
 `teslasync_mqtt_consumer_backlog` counts messages already inside API handlers
 and cannot report Mosquitto's offline queue depth. For an external broker,
-configure and monitor its persistent-session queue independently.
+configure and monitor its persistent-session queue independently. The bundled
+broker snapshots session state every five seconds, so a hard power loss may
+still lose the most recent unsaved broker state; only an orderly node drain or
+an upstream replay source can close that final window.
 
 ## Verify
 

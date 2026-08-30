@@ -463,6 +463,39 @@ imagePullSecrets:
 {{- end }}
 {{- end }}
 
+{{/*
+Bounded TCP dependency wait used by workloads that cannot do useful work
+without a service. The init container exits after the configured attempt
+budget so Kubernetes records a visible failure and retries it with backoff
+instead of leaving an opaque infinite shell loop.
+
+Usage:
+  include "teslasync.dependencyWaitInitContainer" (dict
+    "root" . "name" "database" "host" "db" "port" "5432")
+*/}}
+{{- define "teslasync.dependencyWaitInitContainer" -}}
+- name: wait-for-{{ .name }}
+  image: {{ .root.Values.nodeRecovery.dependencyWait.image | quote }}
+  imagePullPolicy: IfNotPresent
+  securityContext:
+    {{- toYaml .root.Values.initSecurityContext | nindent 4 }}
+  command:
+    - sh
+    - -ec
+  args:
+    - |
+      attempt=1
+      until nc -z -w 2 {{ .host | quote }} {{ .port | quote }}; do
+        if [ "$attempt" -ge {{ .root.Values.nodeRecovery.dependencyWait.maxAttempts }} ]; then
+          echo "{{ .name }} dependency {{ .host }}:{{ .port }} unavailable after $attempt attempts" >&2
+          exit 1
+        fi
+        echo "waiting for {{ .name }} dependency {{ .host }}:{{ .port }} (attempt $attempt)"
+        attempt=$((attempt + 1))
+        sleep {{ .root.Values.nodeRecovery.dependencyWait.intervalSeconds }}
+      done
+{{- end }}
+
 {{/* ── Redis connection helpers ────────────────────────────────────────── */}}
 
 {{- define "teslasync.redis.host" -}}
@@ -665,6 +698,79 @@ duplicate-client-ID eviction and split-brain session state.
   {{- if .Values.rollout.api.canary.enabled -}}
   {{- fail "Fleet Telemetry cannot use rollout.api.canary.enabled=true: stable and canary API pods would evict each other's persistent MQTT client" -}}
   {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+The three worker Deployments use stable MQTT client IDs and process
+side-effecting messages. More than one replica would cause client eviction or
+duplicate delivery, so fail before Kubernetes can create an unsafe topology.
+*/}}
+{{- define "teslasync.assertSingleOwnerWorkers" -}}
+{{- if and .Values.notificationWorker.enabled (ne (int .Values.notificationWorker.replicaCount) 1) -}}
+{{- fail "notificationWorker.replicaCount must be 1: the worker has one stable MQTT client ID and is not active-active" -}}
+{{- end -}}
+{{- if and .Values.notificationWorker.enabled (ne .Values.rollout.notificationWorker.strategy.type "Recreate") -}}
+{{- fail "rollout.notificationWorker.strategy.type must be Recreate: the worker's stable MQTT client ID cannot have overlapping revision owners" -}}
+{{- end -}}
+{{- if and .Values.exportWorker.enabled (ne (int .Values.exportWorker.replicaCount) 1) -}}
+{{- fail "exportWorker.replicaCount must be 1: the worker has one stable MQTT client ID and is not active-active" -}}
+{{- end -}}
+{{- if and .Values.exportWorker.enabled (ne .Values.rollout.exportWorker.strategy.type "Recreate") -}}
+{{- fail "rollout.exportWorker.strategy.type must be Recreate: the worker's stable MQTT client ID cannot have overlapping revision owners" -}}
+{{- end -}}
+{{- if and .Values.automationWorker.enabled (ne (int .Values.automationWorker.replicaCount) 1) -}}
+{{- fail "automationWorker.replicaCount must be 1: in-memory trigger state and the stable MQTT client ID are not active-active" -}}
+{{- end -}}
+{{- if and .Values.automationWorker.enabled (ne .Values.rollout.automationWorker.strategy.type "Recreate") -}}
+{{- fail "rollout.automationWorker.strategy.type must be Recreate: the worker's stable MQTT client ID cannot have overlapping revision owners" -}}
+{{- end -}}
+{{- end }}
+
+{{/*
+Homelab node-reboot recovery relies on the same PVC being reattached when the
+node returns. Refuse accidental emptyDir-backed state unless the operator
+explicitly opts into a disposable development install.
+*/}}
+{{- define "teslasync.assertNodeRecoveryPersistence" -}}
+{{- if empty .Values.nodeRecovery.dependencyWait.image -}}
+{{- fail "nodeRecovery.dependencyWait.image must be set" -}}
+{{- end -}}
+{{- if lt (int .Values.nodeRecovery.dependencyWait.intervalSeconds) 1 -}}
+{{- fail "nodeRecovery.dependencyWait.intervalSeconds must be at least 1" -}}
+{{- end -}}
+{{- if lt (int .Values.nodeRecovery.dependencyWait.maxAttempts) 1 -}}
+{{- fail "nodeRecovery.dependencyWait.maxAttempts must be at least 1" -}}
+{{- end -}}
+{{- if lt (int .Values.nodeRecovery.startupProbe.periodSeconds) 1 -}}
+{{- fail "nodeRecovery.startupProbe.periodSeconds must be at least 1" -}}
+{{- end -}}
+{{- if lt (int .Values.nodeRecovery.startupProbe.failureThreshold) 1 -}}
+{{- fail "nodeRecovery.startupProbe.failureThreshold must be at least 1" -}}
+{{- end -}}
+{{- if .Values.nodeRecovery.enforcePersistentState -}}
+  {{- if and .Values.postgresql.enabled (not .Values.postgresql.persistence.enabled) -}}
+  {{- fail "nodeRecovery.enforcePersistentState=true requires postgresql.persistence.enabled=true" -}}
+  {{- end -}}
+  {{- if and .Values.redis.enabled (not .Values.redis.persistence.enabled) -}}
+  {{- fail "nodeRecovery.enforcePersistentState=true requires redis.persistence.enabled=true" -}}
+  {{- end -}}
+  {{- if and .Values.mqtt.enabled (not .Values.mqtt.persistence.enabled) -}}
+  {{- fail "nodeRecovery.enforcePersistentState=true requires mqtt.persistence.enabled=true" -}}
+  {{- end -}}
+  {{- if and .Values.grafana.enabled (not .Values.grafana.persistence.enabled) -}}
+  {{- fail "nodeRecovery.enforcePersistentState=true requires grafana.persistence.enabled=true" -}}
+  {{- end -}}
+  {{- if and .Values.mongodb.enabled (not .Values.mongodb.persistence.enabled) -}}
+  {{- fail "nodeRecovery.enforcePersistentState=true requires mongodb.persistence.enabled=true" -}}
+  {{- end -}}
+  {{- if and .Values.observability.tempo.enabled (not .Values.observability.tempo.persistence.enabled) -}}
+  {{- fail "nodeRecovery.enforcePersistentState=true requires observability.tempo.persistence.enabled=true" -}}
+  {{- end -}}
+{{- end -}}
+{{- $ftHost := include "teslasync.fleetTelemetry.host" . -}}
+{{- if and (or .Values.fleetTelemetry.enabled $ftHost) .Values.mqtt.enabled (not .Values.mqtt.persistence.enabled) -}}
+{{- fail "Fleet Telemetry with bundled MQTT requires mqtt.persistence.enabled=true so the persistent consumer queue survives a broker restart" -}}
 {{- end -}}
 {{- end }}
 

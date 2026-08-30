@@ -104,14 +104,14 @@ podDisruptionBudget:
 # Defined in ops/rollout/stages.yaml; `go run ./cmd/ops-gate -check
 # rollout` fails if this block and that manifest drift apart.
 #
-# DEFAULTS PRESERVE EXISTING BEHAVIOUR EXACTLY:
+# DEFAULTS PRESERVE EXISTING API/WEB BEHAVIOUR:
 #   * api/web strategies reproduce the previously hard-coded
 #     RollingUpdate maxSurge=1 / maxUnavailable=0.
 #     When Fleet Telemetry is enabled, the API template safely overrides
 #     its strategy to Recreate because the persistent MQTT client ID has
 #     exactly one owner.
-#   * worker strategies render nothing (empty `type`), so the Kubernetes
-#     default applies exactly as before.
+#   * worker strategies use Recreate so stable MQTT client IDs never have
+#     overlapping revision owners.
 #   * every canary is disabled, so no extra workload is created.
 rollout:
   # Maps to Deployment.spec.paused. Set true to freeze an in-flight
@@ -171,20 +171,17 @@ rollout:
         tag: ""
       podAnnotations: {}
 
-  # Workers are single-writer: two revisions consuming the same MQTT
-  # subscription would double-deliver. Canary is therefore unavailable,
-  # and `type: ""` means the chart renders no strategy block at all
-  # (Kubernetes default preserved). Set to `Recreate` to opt in to
-  # strict single-writer rollouts.
+  # Workers use stable MQTT client IDs and are single-owner. Recreate prevents
+  # two revisions from evicting each other or double-delivering work.
   notificationWorker:
     strategy:
-      type: ""
+      type: Recreate
   exportWorker:
     strategy:
-      type: ""
+      type: Recreate
   automationWorker:
     strategy:
-      type: ""
+      type: Recreate
 
   # High-risk behaviour changes registered in ops/rollout/stages.yaml.
   # Rendered into the <release>-rollout ConfigMap for deploy tooling and
@@ -213,6 +210,23 @@ initSecurityContext:
   capabilities:
     drop:
       - ALL
+
+# Same-node reboot recovery for the self-hosted homelab deployment.
+# This does not claim tolerance of permanent node or disk loss: that depends
+# on the configured StorageClass and independently verified backups.
+nodeRecovery:
+  # Refuse accidental emptyDir-backed state for bundled durable services.
+  # Set false only for disposable development installs.
+  enforcePersistentState: true
+  dependencyWait:
+    image: busybox:1.36
+    intervalSeconds: 5
+    maxAttempts: 120
+  # Ten minutes lets WAL/AOF/persistence replay and API state hydration finish
+  # before kubelet liveness checks are allowed to restart a recovering pod.
+  startupProbe:
+    periodSeconds: 5
+    failureThreshold: 120
 
 # Pin api + workers (notification, export, automation, command-proxy) to carbon
 # so all teslasync workloads colocate on the node that hosts TimescaleDB, MQTT,
@@ -1198,7 +1212,22 @@ redis:
 
   image: redis:7-alpine
 
-  command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+  # Keep Redis below its 192Mi pod limit so AOF rewrite copy-on-write and
+  # allocator overhead cannot turn a busy reboot recovery into an OOM loop.
+  # AOF is the single persistence mechanism; periodic RDB snapshots are
+  # disabled to avoid a second fork-heavy persistence path in the small pod.
+  command:
+    - redis-server
+    - --appendonly
+    - "yes"
+    - --appendfsync
+    - everysec
+    - --maxmemory
+    - 128mb
+    - --maxmemory-policy
+    - noeviction
+    - --save
+    - ""
 
   service:
     type: ClusterIP
@@ -1265,8 +1294,9 @@ mqtt:
     storageClass: ""
     accessModes:
       - ReadWriteOnce
-    # -- Seconds between broker persistence snapshots.
-    autosaveIntervalSeconds: 30
+    # -- Seconds between broker persistence snapshots. Five seconds limits the
+    # hard-reboot loss window without forcing a disk write for every signal.
+    autosaveIntervalSeconds: 5
 
   queue:
     # -- QoS 1/2 messages retained per offline persistent client. The

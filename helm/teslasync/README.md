@@ -1,9 +1,9 @@
 # TeslaSync Helm Chart
 
 <!-- badges -->
-![Version: 0.1.0](https://img.shields.io/badge/Version-0.1.0-informational?style=flat-square)
+![Version: 0.6.2](https://img.shields.io/badge/Version-0.6.2-informational?style=flat-square)
 ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square)
-![AppVersion: 1.0.0](https://img.shields.io/badge/AppVersion-1.0.0-informational?style=flat-square)
+![AppVersion: 1.1.0](https://img.shields.io/badge/AppVersion-1.1.0-informational?style=flat-square)
 
 Helm chart for deploying TeslaSync — a Tesla fleet intelligence platform.
 
@@ -11,7 +11,7 @@ Helm chart for deploying TeslaSync — a Tesla fleet intelligence platform.
 
 - Kubernetes 1.24+
 - Helm 3.12+
-- PV provisioner support (for PostgreSQL, Redis, Grafana persistence)
+- PV provisioner support (for PostgreSQL, Redis, Mosquitto, Grafana, and optional MongoDB/Tempo persistence)
 - Optional: Traefik for IngressRoute support
 
 ## Quick Start
@@ -68,7 +68,7 @@ The following table lists all configurable parameters and their default values.
 | Parameter | Description | Default |
 |-----------|-------------|---------|
 | `replicaCount` | Backend replicas | `1` |
-| `image.repository` | Backend image repository | `ghcr.io/ev-dev-labs/teslasync` |
+| `image.repository` | Backend image repository | `ghcr.io/ev-dev-labs/teslasync-api` |
 | `image.pullPolicy` | Backend image pull policy | `IfNotPresent` |
 | `image.tag` | Backend image tag (defaults to chart appVersion) | `""` |
 | `web.enabled` | Enable frontend deployment | `true` |
@@ -111,16 +111,18 @@ The following table lists all configurable parameters and their default values.
 | `ingress.hosts` | Ingress host rules | See `values.yaml` |
 | `ingress.tls` | Ingress TLS configuration | `[]` |
 | `resources.limits.cpu` | Backend CPU limit | `500m` |
-| `resources.limits.memory` | Backend memory limit | `256Mi` |
+| `resources.limits.memory` | Backend memory limit | `512Mi` |
 | `resources.requests.cpu` | Backend CPU request | `100m` |
 | `resources.requests.memory` | Backend memory request | `128Mi` |
 | `autoscaling.enabled` | Enable HPA | `false` |
 | `autoscaling.minReplicas` | Minimum replicas | `1` |
-| `autoscaling.maxReplicas` | Maximum replicas | `3` |
+| `autoscaling.maxReplicas` | Maximum replicas | `5` |
 | `autoscaling.targetCPUUtilizationPercentage` | Target CPU utilization | `80` |
-| `nodeSelector` | Node selector labels | `{}` |
+| `nodeSelector` | Node selector labels | `kubernetes.io/hostname: carbon` |
 | `tolerations` | Pod tolerations | `[]` |
 | `affinity` | Pod affinity rules | `{}` |
+| `nodeRecovery.enforcePersistentState` | Reject ephemeral bundled stateful services | `true` |
+| `nodeRecovery.dependencyWait.maxAttempts` | Five-second dependency checks before retry | `120` |
 | `config.logLevel` | Application log level | `info` |
 | `config.pollInterval` | Vehicle polling interval | `30s` |
 | `config.apiEndpoint` | Internal API endpoint for Nginx proxy_pass and frontend API base URL. Nginx proxies `/api/*`, `/.well-known/*`, `/healthz`, `/readyz`, `/metrics` to this address. Also injected into the frontend at runtime via Nginx `sub_filter` as `window.__TESLASYNC_API_BASE__`. Defaults to auto-derived `http://<release>-api:<port>` if empty. | `""` |
@@ -131,24 +133,23 @@ The following table lists all configurable parameters and their default values.
 | `tesla.apiBaseUrl` | Fleet API base URL (NA/EU/CN) | `https://fleet-api.prd.na.vn.cloud.tesla.com` |
 | `fleetTelemetry.enabled` | Enable Fleet Telemetry status monitoring | `false` |
 | `fleetTelemetry.host` | Fleet Telemetry server hostname | `` |
-| `fleetTelemetry.port` | Fleet Telemetry server port | `4443` |
+| `fleetTelemetry.service.port` | Fleet Telemetry server port | `4443` |
 | `postgresql.enabled` | Deploy bundled PostgreSQL | `true` |
 | `postgresql.auth.username` | PostgreSQL username | `teslasync` |
-| `postgresql.auth.password` | PostgreSQL password | `teslasync` |
+| `postgresql.auth.password` | PostgreSQL password when chart-managed secrets are enabled | `""` |
 | `postgresql.auth.database` | PostgreSQL database name | `teslasync` |
-| `postgresql.primary.persistence.size` | PostgreSQL PVC size | `10Gi` |
+| `postgresql.persistence.size` | PostgreSQL PVC size | `50Gi` |
 | `redis.enabled` | Deploy bundled Redis | `true` |
-| `redis.auth.enabled` | Enable Redis authentication | `false` |
-| `redis.master.persistence.size` | Redis PVC size | `1Gi` |
+| `redis.persistence.size` | Redis PVC size | `1Gi` |
 | `mqtt.enabled` | Deploy bundled MQTT broker | `true` |
 | `mqtt.service.port` | MQTT service port | `1883` |
 | `grafana.enabled` | Deploy bundled Grafana | `true` |
 | `grafana.adminUser` | Grafana admin username | `admin` |
-| `grafana.adminPassword` | Grafana admin password | `teslasync` |
+| `grafana.adminPassword` | Grafana admin password when chart-managed secrets are enabled | `""` |
 | `grafana.service.port` | Grafana service port | `3000` |
 | `notificationWorker.enabled` | Deploy notification worker | `true` |
 | `notificationWorker.replicaCount` | Notification worker replicas | `1` |
-| `notificationWorker.image.repository` | Notification worker image | `ghcr.io/your-org/teslasync-notification-worker` |
+| `notificationWorker.image.repository` | Notification worker image | `ghcr.io/ev-dev-labs/teslasync-notification-worker` |
 | `notificationWorker.resources.limits.memory` | Worker memory limit | `128Mi` |
 | `encryption.key` | Custom encryption key for sensitive data | `""` |
 
@@ -486,8 +487,10 @@ Browser → Traefik/Ingress → teslasync-web (Nginx :80)
 helm upgrade teslasync teslasync/teslasync -f values.yaml
 ```
 
-- **Rolling update strategy** — pods are replaced one at a time for zero-downtime deployments.
-- **Database migrations** run automatically on startup via init containers.
+- **Workload-aware update strategy** — stateless API/web workloads use
+  `RollingUpdate`; the API switches to `Recreate` while it owns Fleet
+  Telemetry, and stable-ID MQTT workers always use `Recreate`.
+- **Database migrations** run through the chart's pre-install/pre-upgrade Job.
 - **PVCs are retained** on uninstall so your data is not lost.
 
 > ⚠️ **Not for migration-gate transitions.** A bare `helm upgrade` is only safe
@@ -528,6 +531,20 @@ helm rollback teslasync [REVISION]
 > kubectl get job -l app.kubernetes.io/component=migrate \
 >   -o jsonpath='{.items[0].metadata.annotations.teslasync\.io/migration-gate}'
 > ```
+
+## Node reboot recovery
+
+The default chart targets TeslaSync's self-hosted homelab topology:
+single-instance stateful services on retained PVCs, with workloads pinned to
+the `carbon` node. Startup probes allow WAL, AOF, and MQTT session replay to
+finish, and dependency init containers hold consumers until PostgreSQL and
+Mosquitto are reachable.
+
+This protects a same-node reboot with the same disk. It is not permanent-node
+or disk-failure high availability; local-path storage cannot move its data to
+another host. Use the preflight, planned-drain, recovery-order, and integrity
+checks in
+[docs/runbooks/kubernetes-node-reboot.md](../../docs/runbooks/kubernetes-node-reboot.md).
 
 ## Testing
 

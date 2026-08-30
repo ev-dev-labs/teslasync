@@ -55,12 +55,16 @@ server — check the API logs for repeated `HSET` failures.
 ## Recovery
 
 1. Restore Redis (restart the pod; the AOF volume replays on start).
-2. Live state re-populates automatically: the pipeline writes every
+2. Do not restart the API just to restore its Redis connection. The cache
+   keeps its configured client after a failed startup probe and reconnects
+   automatically while request caching continues through the in-memory
+   fallback.
+3. Live state re-populates automatically: the pipeline writes every
    signal to the L2 HSET on the next change, and pods rehydrate from
    `signal_log` on restart. No manual backfill is required.
-3. Return `LIVE_SIGNAL_STORE_MODE` to `hybrid` once the shared cache is
+4. Return `LIVE_SIGNAL_STORE_MODE` to `hybrid` once the shared cache is
    healthy, and confirm cross-pod reads agree again.
-4. Treat any live value older than two minutes as stale, per the ADR-007
+5. Treat any live value older than two minutes as stale, per the ADR-007
    layered live-state contract.
 
 ## Verify

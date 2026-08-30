@@ -6,6 +6,8 @@ metadata:
   labels:
     {{- include "teslasync.labels" . | nindent 4 }}
     app.kubernetes.io/component: tempo
+  annotations:
+    helm.sh/resource-policy: keep
 spec:
   accessModes:
     - {{ .Values.observability.tempo.persistence.accessMode | default "ReadWriteOnce" }}

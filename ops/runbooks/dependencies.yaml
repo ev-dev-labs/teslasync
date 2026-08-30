@@ -151,14 +151,10 @@ dependencies:
 
 # ── Lifecycle procedures ─────────────────────────────────────────────
 #
-# Not degraded-mode dependencies: these are operations that are UNSAFE as
-# a bare `helm upgrade` / `helm rollback` because of a limitation in the
-# tooling itself. They are registered here so the warning cannot drift
-# away from the chart it protects — `go run ./cmd/ops-gate -check
-# runbooks` fails if the runbook loses a required section, a required
-# command, a required warning, or a cross-link from the generic
-# documentation that would otherwise send an operator down the dangerous
-# path.
+# Not degraded-mode dependencies: these are operator-controlled transitions
+# whose safe sequence or scope boundary must not be left to memory.
+# `go run ./cmd/ops-gate -check runbooks` fails if a runbook loses a required
+# section, command, warning, or cross-link.
 lifecycle_procedures:
   - id: migration-gate-lifecycle
     title: Migration gate hook <-> ordinary manifest transitions
@@ -204,3 +200,40 @@ lifecycle_procedures:
         must_reference: docs/runbooks/migration-gate-lifecycle.md
       - path: helm/teslasync/values.yaml
         must_reference: docs/runbooks/migration-gate-lifecycle.md
+
+  - id: node-reboot-recovery
+    title: Homelab Kubernetes node reboot and recovery
+    why: >-
+      The default deployment pins single-instance PostgreSQL, Redis, Mosquitto,
+      and application workloads to the homelab node named carbon. Kubernetes
+      restarts pods in no dependency order, and local-path volumes cannot move
+      to another node. A reboot therefore needs a defined persistence,
+      shutdown, startup, and verification sequence rather than a manual API
+      restart after telemetry silently stalls.
+    runbook: docs/runbooks/kubernetes-node-reboot.md
+    required_sections:
+      - "## Scope and guarantee"
+      - "## Preflight"
+      - "## Planned reboot"
+      - "## Unplanned reboot recovery"
+      - "## Verification"
+      - "## Escalation"
+    required_commands:
+      - "kubectl -n \"$NS\" get pvc"
+      - "kubectl -n \"$NS\" get pods -o wide"
+      - "kubectl drain \"$NODE\" --ignore-daemonsets --delete-emptydir-data --grace-period=180 --timeout=15m"
+      - "kubectl wait --for=condition=Ready node/\"$NODE\" --timeout=10m"
+      - "kubectl uncordon \"$NODE\""
+      - "kubectl -n \"$NS\" rollout status deployment/\"$RELEASE\"-postgresql --timeout=10m"
+      - "kubectl -n \"$NS\" rollout status deployment/\"$RELEASE\"-api --timeout=15m"
+    required_warnings:
+      - "same-node reboot, not permanent node or disk loss"
+      - "Do not delete or recreate a PVC"
+      - "do not bypass it with `--disable-eviction`"
+    cross_links:
+      - path: helm/teslasync/README.md
+        section: "## Node reboot recovery"
+        must_reference: docs/runbooks/kubernetes-node-reboot.md
+      - path: docs/deployment/kubernetes.md
+        section: "## Homelab node reboot recovery"
+        must_reference: ../runbooks/kubernetes-node-reboot.md

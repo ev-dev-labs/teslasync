@@ -17,10 +17,9 @@ type RunbookManifest struct {
 	Version               int          `yaml:"version"`
 	RequiredCriticalities []string     `yaml:"required_criticalities"`
 	Dependencies          []Dependency `yaml:"dependencies"`
-	// LifecycleProcedures are operations that are unsafe as a bare
-	// `helm upgrade` / `helm rollback` because of a limitation in the
-	// tooling rather than in this codebase. They are registered here so
-	// the warning cannot drift away from the chart it protects.
+	// LifecycleProcedures are operator-controlled transitions that need an
+	// explicit, tested sequence. They are registered here so critical recovery
+	// steps and scope warnings cannot drift away from the deployed topology.
 	LifecycleProcedures []LifecycleProcedure `yaml:"lifecycle_procedures"`
 }
 

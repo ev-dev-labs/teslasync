@@ -97,6 +97,44 @@ jobs:
             --set exportWorker.enabled=false \
             > /dev/null
 
+      - name: Validate homelab node-recovery invariants
+        run: |
+          set -euo pipefail
+          helm template teslasync helm/teslasync \
+            --set fleetTelemetry.enabled=true \
+            --set fleetTelemetry.host=telemetry.example.com \
+            --set fleetTelemetry.tls.secretName=fleet-telemetry-tls \
+            --set mongodb.enabled=true \
+            --set observability.tempo.enabled=true \
+            > recovery.yaml
+
+          test "$(grep -c 'startupProbe:' recovery.yaml)" -ge 9
+          test "$(grep -c 'name: wait-for-mqtt' recovery.yaml)" -ge 5
+          test "$(grep -c 'name: wait-for-redis' recovery.yaml)" -ge 1
+          grep -q 'persistentVolumeClaimRetentionPolicy:' recovery.yaml
+          grep -q 'autosave_interval 5' recovery.yaml
+          grep -q -- '- --appendfsync' recovery.yaml
+          grep -q -- '- noeviction' recovery.yaml
+
+          if helm template teslasync helm/teslasync \
+            --set postgresql.persistence.enabled=false > /dev/null 2>&1; then
+            echo "::error::node-recovery persistence guard accepted ephemeral PostgreSQL"
+            exit 1
+          fi
+          if helm template teslasync helm/teslasync \
+            --set notificationWorker.replicaCount=2 > /dev/null 2>&1; then
+            echo "::error::single-owner notification worker accepted two replicas"
+            exit 1
+          fi
+          if helm template teslasync helm/teslasync \
+            --set rollout.notificationWorker.strategy.type=RollingUpdate > /dev/null 2>&1; then
+            echo "::error::single-owner notification worker accepted an overlapping rollout"
+            exit 1
+          fi
+          helm template teslasync helm/teslasync \
+            --set nodeRecovery.enforcePersistentState=false \
+            --set postgresql.persistence.enabled=false > /dev/null
+
       - name: Validate generated YAML
         run: |
           helm template teslasync helm/teslasync | kubectl apply --dry-run=client -f - 2>&1 || true

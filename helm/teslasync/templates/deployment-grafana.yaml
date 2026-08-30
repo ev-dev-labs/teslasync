@@ -22,6 +22,7 @@ spec:
     spec:
       {{- include "teslasync.imagePullSecrets" . | nindent 6 }}
       serviceAccountName: {{ include "teslasync.serviceAccountName" . }}
+      terminationGracePeriodSeconds: 60
       securityContext:
         {{- toYaml .Values.grafana.podSecurityContext | nindent 8 }}
       containers:
@@ -41,6 +42,13 @@ spec:
                 secretKeyRef:
                   name: {{ include "teslasync.secretName" . }}
                   key: GRAFANA_ADMIN_PASSWORD
+          startupProbe:
+            httpGet:
+              path: /api/health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
+            failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
           livenessProbe:
             httpGet:
               path: /api/health

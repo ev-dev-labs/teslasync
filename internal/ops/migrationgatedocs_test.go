@@ -42,32 +42,57 @@ helm -n "$NS" rollback "$RELEASE" "$PRE_CONVERSION_REVISION"
 
 See docs/runbooks/lifecycle.md before rolling back across a conversion.
 `
+	const rebootRunbook = `# Node recovery
+
+## Recovery
+
+Wait for the original homelab node and its persistent volumes before checking
+the stateful services in dependency order. This fixture intentionally contains
+enough operational detail to prove the lifecycle gate rejects stub sections.
+
+` + "```bash" + `
+kubectl wait --for=condition=Ready node/"$NODE" --timeout=10m
+` + "```" + `
+`
 	m := &RunbookManifest{
 		Version:               1,
 		RequiredCriticalities: []string{"critical"},
-		LifecycleProcedures: []LifecycleProcedure{{
-			ID:               "migration-gate-lifecycle",
-			Title:            "Migration gate transitions",
-			Why:              "Helm offers no in-place hook <-> ordinary transition.",
-			Runbook:          "docs/runbooks/lifecycle.md",
-			RequiredSections: []string{"## Procedure 2 — Rollback across a conversion boundary"},
-			RequiredCommands: []string{
-				`kubectl -n "$NS" delete externalsecret "$RELEASE"`,
-				`helm -n "$NS" rollback "$RELEASE" "$PRE_CONVERSION_REVISION"`,
+		LifecycleProcedures: []LifecycleProcedure{
+			{
+				ID:               "migration-gate-lifecycle",
+				Title:            "Migration gate transitions",
+				Why:              "Helm offers no in-place hook <-> ordinary transition.",
+				Runbook:          "docs/runbooks/lifecycle.md",
+				RequiredSections: []string{"## Procedure 2 — Rollback across a conversion boundary"},
+				RequiredCommands: []string{
+					`kubectl -n "$NS" delete externalsecret "$RELEASE"`,
+					`helm -n "$NS" rollback "$RELEASE" "$PRE_CONVERSION_REVISION"`,
+				},
+				RequiredWarnings: []string{
+					"bare `helm rollback` across a conversion boundary can abort",
+				},
+				CrossLinks: []LifecycleCrossLink{{
+					Path:          "README.md",
+					Section:       "## Rollback",
+					MustReference: "docs/runbooks/lifecycle.md",
+				}},
 			},
-			RequiredWarnings: []string{
-				"bare `helm rollback` across a conversion boundary can abort",
+			{
+				ID:               "node-reboot-recovery",
+				Title:            "Node reboot recovery",
+				Why:              "Single-node state must recover from retained local volumes.",
+				Runbook:          "docs/runbooks/node-reboot.md",
+				RequiredSections: []string{"## Recovery"},
+				RequiredCommands: []string{
+					`kubectl wait --for=condition=Ready node/"$NODE" --timeout=10m`,
+				},
 			},
-			CrossLinks: []LifecycleCrossLink{{
-				Path:          "README.md",
-				Section:       "## Rollback",
-				MustReference: "docs/runbooks/lifecycle.md",
-			}},
-		}},
+		},
 	}
 	fsys := fstest.MapFS{
-		"docs/runbooks/lifecycle.md": &fstest.MapFile{Data: []byte(runbook)},
-		"README.md":                  &fstest.MapFile{Data: []byte(readme)},
+		"docs/runbooks/lifecycle.md":   &fstest.MapFile{Data: []byte(runbook)},
+		"docs/runbooks/node-reboot.md": &fstest.MapFile{Data: []byte(rebootRunbook)},
+		"README.md":                    &fstest.MapFile{Data: []byte(readme)},
 	}
 	return m, fsys
 }

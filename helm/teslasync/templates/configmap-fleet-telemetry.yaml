@@ -1,0 +1,45 @@
+{{- if .Values.fleetTelemetry.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "teslasync.fullname" . }}-fleet-telemetry
+  labels:
+    {{- include "teslasync.labels" . | nindent 4 }}
+    app.kubernetes.io/component: fleet-telemetry
+data:
+  config.json: |
+    {
+      "host": "0.0.0.0",
+      "port": 4443,
+      "log_level": "info",
+      "transmit_decoded_records": true,
+      "tls": {
+        "server_cert": "/certs/tls.crt",
+        "server_key": "/certs/tls.key"
+      },
+      "mqtt": {
+        "broker": "{{ include "teslasync.mqtt.host" . }}:{{ include "teslasync.mqtt.port" . }}",
+        "client_id": "fleet-telemetry",
+        "topic_base": {{ .Values.fleetTelemetry.topicBase | default "telemetry" | quote }},
+        "qos": 1,
+        "retained": false
+      },
+      "records": {
+        "V": [
+          "mqtt"
+        ],
+        "alerts": [
+          "mqtt"
+        ],
+        "errors": [
+          "logger"
+        ],
+        "connectivity": [
+          "mqtt"
+        ]
+      },
+      "monitoring": {
+        "prometheus_metrics_port": 9090
+      }
+    }
+{{- end }}

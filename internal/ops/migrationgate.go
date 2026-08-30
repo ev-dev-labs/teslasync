@@ -202,8 +202,11 @@ func joinConsumed(set map[string]bool) string {
 
 // requiredLifecycleProcedures are the procedure ids that must stay
 // registered. Removing one from the manifest fails the gate rather than
-// silently dropping the warning.
-var requiredLifecycleProcedures = []string{"migration-gate-lifecycle"}
+// silently dropping a recovery or data-safety contract.
+var requiredLifecycleProcedures = []string{
+	"migration-gate-lifecycle",
+	"node-reboot-recovery",
+}
 
 // LifecycleProcedure is one operation that a bare Helm command performs
 // incorrectly, together with the contract its runbook must keep.
@@ -356,8 +359,8 @@ func validateLifecycleProcedures(fsys fs.FS, m *RunbookManifest) []Finding {
 					where = link.Path + " " + link.Section
 				}
 				out = append(out, errf(check, subject,
-					"%s does not reference %s. Generic rollback/upgrade guidance that omits the link sends an operator "+
-						"straight into the hook/ordinary manifest boundary with a bare Helm command",
+					"%s does not reference %s. Generic lifecycle guidance that omits the link leaves operators without "+
+						"the required procedure; for Helm transitions that sends them into the boundary with a bare Helm command",
 					where, link.MustReference))
 			}
 		}
@@ -366,7 +369,7 @@ func validateLifecycleProcedures(fsys fs.FS, m *RunbookManifest) []Finding {
 	for _, id := range requiredLifecycleProcedures {
 		if !seen[id] {
 			out = append(out, errf(check, RunbookManifestPath,
-				"missing mandatory lifecycle procedure %q — Helm's hook/ordinary boundary has not gone away, so the "+
+				"missing mandatory lifecycle procedure %q — its recovery or data-safety boundary still exists, so the "+
 					"procedure may not be deregistered", id))
 		}
 	}
