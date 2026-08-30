@@ -6,14 +6,21 @@ ARG FLEET_TELEMETRY_REF=8fbaa100bd365936dab6ecbf0e2d7070c4d765cb
 ARG FLEET_TELEMETRY_ARCHIVE_SHA256=8a0e2cc31a3c962b4e6296687e75b5fb208fbbe53ccf928af220ec2bf7fdb355
 
 WORKDIR /build
-RUN wget -qO fleet-telemetry.tar.gz \
-      "https://github.com/teslamotors/fleet-telemetry/archive/${FLEET_TELEMETRY_REF}.tar.gz" \
+RUN curl --fail --location --show-error --no-progress-meter \
+      --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300 \
+      --connect-timeout 30 --max-time 300 \
+      --output fleet-telemetry.tar.gz \
+      "https://codeload.github.com/teslamotors/fleet-telemetry/tar.gz/${FLEET_TELEMETRY_REF}" \
     && echo "${FLEET_TELEMETRY_ARCHIVE_SHA256}  fleet-telemetry.tar.gz" | sha256sum -c - \
     && mkdir -p /go/src/fleet-telemetry \
     && tar -xzf fleet-telemetry.tar.gz --strip-components=1 -C /go/src/fleet-telemetry \
     && rm fleet-telemetry.tar.gz
 
-RUN wget -q https://github.com/jedisct1/libsodium/releases/download/1.0.19-RELEASE/libsodium-1.0.19.tar.gz \
+RUN curl --fail --location --show-error --no-progress-meter \
+      --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300 \
+      --connect-timeout 30 --max-time 300 \
+      --output libsodium-1.0.19.tar.gz \
+      "https://github.com/jedisct1/libsodium/releases/download/1.0.19-RELEASE/libsodium-1.0.19.tar.gz" \
     && echo "018d79fe0a045cca07331d37bd0cb57b2e838c51bc48fd837a1472e50068bbea  libsodium-1.0.19.tar.gz" | sha256sum -c - \
     && tar -xzf libsodium-1.0.19.tar.gz
 WORKDIR /build/libsodium-stable
@@ -22,7 +29,11 @@ RUN ./configure --disable-shared --enable-static \
     && make install
 
 WORKDIR /build
-RUN wget -q https://github.com/zeromq/libzmq/releases/download/v4.3.4/zeromq-4.3.4.tar.gz \
+RUN curl --fail --location --show-error --no-progress-meter \
+      --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300 \
+      --connect-timeout 30 --max-time 300 \
+      --output zeromq-4.3.4.tar.gz \
+      "https://github.com/zeromq/libzmq/releases/download/v4.3.4/zeromq-4.3.4.tar.gz" \
     && echo "c593001a89f5a85dd2ddf564805deb860e02471171b3f204944857336295c3e5  zeromq-4.3.4.tar.gz" | sha256sum -c - \
     && tar -xzf zeromq-4.3.4.tar.gz
 WORKDIR /build/zeromq-4.3.4
