@@ -2280,7 +2280,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
-	r.Get("/healthz", HealthHandler(db, opt.LivenessChecks...))
+	r.Get("/healthz", HealthHandler(opt.LivenessChecks...))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
 	// Internal: READ-ONLY drain contract. The mutating drain endpoint

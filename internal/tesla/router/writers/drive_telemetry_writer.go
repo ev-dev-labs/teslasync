@@ -140,6 +140,7 @@ type driveTelemetryWriter struct {
 // router.Writer interface. A signature drift in router.Writer would
 // fail the build here rather than the first integration test.
 var _ router.Writer = (*driveTelemetryWriter)(nil)
+var _ router.BatchWriter = (*driveTelemetryWriter)(nil)
 
 // Write implements router.Writer for destination drive_telemetry.
 //
@@ -180,6 +181,32 @@ func (w *driveTelemetryWriter) Write(ctx context.Context, atom codec.Atomic, dst
 		atom.Value = s
 	}
 	return w.snap.Write(ctx, atom, dst)
+}
+
+func (w *driveTelemetryWriter) WriteBatch(ctx context.Context, items []router.RoutedAtomic) []error {
+	results := make([]error, len(items))
+	valid := make([]router.RoutedAtomic, 0, len(items))
+	validIndexes := make([]int, 0, len(items))
+	for i, item := range items {
+		if _, isEnum := driveTelemetryEnumFields[item.Atomic.Field]; isEnum {
+			value, err := coerceProtoEnumToText(item.Atomic.Value)
+			if err != nil {
+				results[i] = fmt.Errorf(
+					"snapshotWriter[drive_telemetry].%s: %w",
+					item.Atomic.Field,
+					err,
+				)
+				continue
+			}
+			item.Atomic.Value = value
+		}
+		valid = append(valid, item)
+		validIndexes = append(validIndexes, i)
+	}
+	for i, err := range w.snap.WriteBatch(ctx, valid) {
+		results[validIndexes[i]] = err
+	}
+	return results
 }
 
 // coerceProtoEnumToText narrows codec.Atomic.Value to a textual

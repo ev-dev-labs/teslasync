@@ -143,6 +143,7 @@ type tirePressureWriter struct {
 // router.Writer interface. A signature drift in router.Writer would
 // fail the build here rather than the first integration test.
 var _ router.Writer = (*tirePressureWriter)(nil)
+var _ router.BatchWriter = (*tirePressureWriter)(nil)
 
 // Write implements router.Writer for destination tire_pressure_snapshot.
 //
@@ -172,6 +173,42 @@ func (w *tirePressureWriter) Write(ctx context.Context, atom codec.Atomic, dst r
 		return w.writeTimestamp(ctx, atom, col)
 	}
 	return w.snap.Write(ctx, atom, dst)
+}
+
+func (w *tirePressureWriter) WriteBatch(ctx context.Context, items []router.RoutedAtomic) []error {
+	results := make([]error, len(items))
+	valid := make([]router.RoutedAtomic, 0, len(items))
+	validIndexes := make([]int, 0, len(items))
+	for i, item := range items {
+		col, ok := w.columnFor(item.Atomic.Field)
+		if !ok {
+			results[i] = fmt.Errorf(
+				"snapshotWriter[%s].%s: no column mapping for field",
+				w.table,
+				item.Atomic.Field,
+			)
+			continue
+		}
+		if _, isTimestamp := tirePressureTimestampColumns[col]; isTimestamp {
+			value, err := coerceEpochToTime(item.Atomic.Value)
+			if err != nil {
+				results[i] = fmt.Errorf(
+					"snapshotWriter[%s].%s: %w",
+					w.table,
+					item.Atomic.Field,
+					err,
+				)
+				continue
+			}
+			item.Atomic.Value = value
+		}
+		valid = append(valid, item)
+		validIndexes = append(validIndexes, i)
+	}
+	for i, err := range w.snap.WriteBatch(ctx, valid) {
+		results[validIndexes[i]] = err
+	}
+	return results
 }
 
 // writeTimestamp persists a float64 unix-epoch atomic into a

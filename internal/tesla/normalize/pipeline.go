@@ -78,6 +78,14 @@ type Routable interface {
 	Route(ctx context.Context, atomic codec.Atomic) error
 }
 
+// BatchRoutable is the optional router extension used by the production
+// dispatcher to collapse database work across atomics from one ingest batch.
+// Tests and alternate adapters only need to implement Routable; Pipeline
+// falls back to the single-atomic path when this interface is absent.
+type BatchRoutable interface {
+	RouteBatch(ctx context.Context, atomics []codec.Atomic) ([]error, error)
+}
+
 // Pipeline is THE ONE entry between the codec boundary and the
 // typed per-destination writers. Construct one per process via New
 // and share it across MQTT subscriber goroutines: every method is
@@ -284,6 +292,20 @@ func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, v
 func (p *Pipeline) processAtomicsWithCounts(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) (dropped, errs int, _ error) {
 	sortAtomicsSettingUnitFirst(atomics)
 	routeCtx, endRoute := startChildSpan(ctx, "normalize.route")
+	if batchRouter, ok := p.router.(BatchRoutable); ok {
+		dropped, errs, accepted, err := p.processAtomicsBatch(routeCtx, batchRouter, atomics, vehicleIntID)
+		endRoute()
+		if err != nil {
+			return dropped, errs, err
+		}
+		_, endWrite := startChildSpan(ctx, "normalize.write")
+		for _, obs := range p.observers {
+			p.notifyObserver(ctx, obs, vehicleIntID, accepted)
+		}
+		endWrite()
+		return dropped, errs, nil
+	}
+
 	accepted := make([]codec.Atomic, 0, len(atomics))
 	// Index-based loop so processOne can mutate atomics[i].Value in
 	// place after a successful toSI conversion. The mutation is
@@ -319,6 +341,63 @@ func (p *Pipeline) processAtomicsWithCounts(ctx context.Context, atomics []codec
 	return dropped, errs, nil
 }
 
+func (p *Pipeline) processAtomicsBatch(
+	ctx context.Context,
+	batchRouter BatchRoutable,
+	atomics []codec.Atomic,
+	vehicleIntID int64,
+) (dropped, errs int, accepted []codec.Atomic, err error) {
+	outcomes := make([]atomicOutcome, len(atomics))
+	routeIndexes := make([]int, 0, len(atomics))
+	routable := make([]codec.Atomic, 0, len(atomics))
+
+	for i := range atomics {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return dropped, errs, nil, ctxErr
+		}
+		converted, shouldRoute, outcome := p.prepareOne(ctx, &atomics[i], vehicleIntID)
+		outcomes[i] = outcome
+		if shouldRoute {
+			routeIndexes = append(routeIndexes, i)
+			routable = append(routable, converted)
+		}
+	}
+
+	if len(routable) > 0 {
+		routeErrors, routeErr := batchRouter.RouteBatch(ctx, routable)
+		if routeErr != nil {
+			return dropped, errs, nil, routeErr
+		}
+		if len(routeErrors) != len(routable) {
+			return dropped, errs, nil, fmt.Errorf(
+				"normalize: router.RouteBatch returned %d results for %d atomics",
+				len(routeErrors),
+				len(routable),
+			)
+		}
+		for i, routeIndex := range routeIndexes {
+			outcomes[routeIndex] = p.recordRouteOutcome(
+				atomics[routeIndex],
+				vehicleIntID,
+				routeErrors[i],
+			)
+		}
+	}
+
+	accepted = make([]codec.Atomic, 0, len(atomics))
+	for i, outcome := range outcomes {
+		switch outcome {
+		case atomicOutcomeDropped:
+			dropped++
+		case atomicOutcomeError:
+			errs++
+		default:
+			accepted = append(accepted, atomics[i])
+		}
+	}
+	return dropped, errs, accepted, nil
+}
+
 // atomicOutcome is a coarse summary of a single processOne result, used
 // only to feed the parent normalize.process span's count attributes
 // (signal.count / normalize.dropped / normalize.errors). The full per-field
@@ -343,7 +422,20 @@ const (
 // pointer is otherwise unused — this is purely the
 // observer-handoff substitution, not a wider mutation API.
 func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicleIntID int64) atomicOutcome {
+	converted, shouldRoute, outcome := p.prepareOne(ctx, atomic, vehicleIntID)
+	if !shouldRoute {
+		return outcome
+	}
+	return p.recordRouteOutcome(*atomic, vehicleIntID, p.router.Route(ctx, converted))
+}
+
+func (p *Pipeline) prepareOne(
+	ctx context.Context,
+	atomic *codec.Atomic,
+	vehicleIntID int64,
+) (converted codec.Atomic, shouldRoute bool, outcome atomicOutcome) {
 	meta := protomodel.SignalsByName[atomic.Field]
+	var err error
 
 	// Setting*Unit atomics short-circuit the toSI + router.Route
 	// path. They land in vehicle_unit_history and stop there; per
@@ -361,26 +453,26 @@ func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicle
 				Int64("vehicle_id", vehicleIntID).
 				Time("emitted_at", atomic.EmittedAt).
 				Msg("normalize: setting-unit observer failed")
-			return atomicOutcomeError
+			return codec.Atomic{}, false, atomicOutcomeError
 		}
 		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcomeOK).Inc()
-		return atomicOutcomeOK
+		return codec.Atomic{}, false, atomicOutcomeOK
 	}
 
-	converted, err := p.toSI(ctx, *atomic, vehicleIntID)
+	converted, err = p.toSI(ctx, *atomic, vehicleIntID)
 	if err != nil {
-		outcome := outcomeFor(err)
-		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcome).Inc()
+		metricOutcome := outcomeFor(err)
+		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, metricOutcome).Inc()
 		p.log.Warn().
 			Err(err).
 			Str("field", atomic.Field).
 			Int64("vehicle_id", vehicleIntID).
 			Time("emitted_at", atomic.EmittedAt).
 			Msg("normalize: toSI failed; dropping atomic")
-		if outcome == outcomeError {
-			return atomicOutcomeError
+		if metricOutcome == outcomeError {
+			return codec.Atomic{}, false, atomicOutcomeError
 		}
-		return atomicOutcomeDropped
+		return codec.Atomic{}, false, atomicOutcomeDropped
 	}
 
 	// Mutate the slice element in place so the AtomicsObserver
@@ -388,20 +480,27 @@ func (p *Pipeline) processOne(ctx context.Context, atomic *codec.Atomic, vehicle
 	// returns the input unchanged) write back the same Value — the
 	// extra assignment is harmless and keeps the call shape uniform.
 	atomic.Value = converted.Value
+	return converted, true, atomicOutcomeOK
+}
 
-	if err := p.router.Route(ctx, converted); err != nil {
-		outcome := outcomeError
+func (p *Pipeline) recordRouteOutcome(
+	atomic codec.Atomic,
+	vehicleIntID int64,
+	err error,
+) atomicOutcome {
+	if err != nil {
+		metricOutcome := outcomeError
 		if errors.Is(err, router.ErrNoRoute) {
-			outcome = outcomeDroppedNoRoute
+			metricOutcome = outcomeDroppedNoRoute
 		}
-		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, outcome).Inc()
+		p.metrics.ValuesProcessed.WithLabelValues(atomic.Field, metricOutcome).Inc()
 		p.log.Warn().
 			Err(err).
 			Str("field", atomic.Field).
 			Int64("vehicle_id", vehicleIntID).
 			Time("emitted_at", atomic.EmittedAt).
 			Msg("normalize: router.Route failed; atomic not persisted")
-		if outcome == outcomeDroppedNoRoute {
+		if metricOutcome == outcomeDroppedNoRoute {
 			return atomicOutcomeDropped
 		}
 		return atomicOutcomeError

@@ -123,6 +123,28 @@ type fakeRouter struct {
 	err    error // optional: returned from every Route call
 }
 
+type fakeBatchRouter struct {
+	mu          sync.Mutex
+	singleCalls int
+	batches     [][]codec.Atomic
+}
+
+func (r *fakeBatchRouter) Route(_ context.Context, _ codec.Atomic) error {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.singleCalls++
+	return nil
+}
+
+func (r *fakeBatchRouter) RouteBatch(_ context.Context, atomics []codec.Atomic) ([]error, error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	cp := make([]codec.Atomic, len(atomics))
+	copy(cp, atomics)
+	r.batches = append(r.batches, cp)
+	return make([]error, len(atomics)), nil
+}
+
 func (r *fakeRouter) Route(_ context.Context, atomic codec.Atomic) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -136,6 +158,29 @@ func (r *fakeRouter) routesCopy() []codec.Atomic {
 	out := make([]codec.Atomic, len(r.routes))
 	copy(out, r.routes)
 	return out
+}
+
+func TestPipeline_UsesBatchRouterWhenAvailable(t *testing.T) {
+	routes := &fakeBatchRouter{}
+	pipeline := New(&fakeRepo{}, routes, zerolog.Nop())
+	ts := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
+	err := pipeline.ProcessAtomics(context.Background(), []codec.Atomic{
+		{Field: "Soc", Value: float32(75), EmittedAt: ts, VehicleID: "VIN"},
+		{Field: "Locked", Value: true, EmittedAt: ts, VehicleID: "VIN"},
+	}, 42)
+	if err != nil {
+		t.Fatalf("ProcessAtomics: %v", err)
+	}
+
+	routes.mu.Lock()
+	defer routes.mu.Unlock()
+	if routes.singleCalls != 0 {
+		t.Fatalf("single Route calls = %d, want 0", routes.singleCalls)
+	}
+	if len(routes.batches) != 1 || len(routes.batches[0]) != 2 {
+		t.Fatalf("batch calls = %#v, want one two-atomic batch", routes.batches)
+	}
 }
 
 // ---------------------------------------------------------------------------

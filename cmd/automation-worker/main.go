@@ -32,6 +32,7 @@ import (
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
 	tsmqtt "github.com/ev-dev-labs/teslasync/internal/mqtt"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -302,7 +303,8 @@ func main() {
 	// ── Health Endpoint ───────────────────────────────────────────────
 	port := healthPort()
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", healthHandler(db))
+	healthMux.Handle("/healthz", healthprobe.LivenessHandler())
+	healthMux.Handle("/readyz", healthprobe.ReadinessHandler(db))
 	healthMux.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Info().Str("port", port).Msg("health endpoint listening")
@@ -354,37 +356,6 @@ func healthPort() string {
 		port = "8083"
 	}
 	return port
-}
-
-// healthChecker is the minimal database surface the health endpoint needs.
-// Narrowing to this port keeps the handler unit-testable with a fake.
-type healthChecker interface {
-	Health(ctx context.Context) error
-}
-
-// healthHandler returns the /healthz handler. It responds 200 with
-// {"status":"ok"} when the checker is healthy and 503 with a JSON-encoded
-// {"status":"unhealthy","error":...} otherwise. The error message is
-// marshalled rather than string-interpolated so a checker error containing
-// quotes or newlines still produces valid, non-injectable JSON, and the
-// JSON Content-Type is set on both the success and failure paths.
-func healthHandler(checker healthChecker) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if err := checker.Health(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			body, mErr := json.Marshal(struct {
-				Status string `json:"status"`
-				Error  string `json:"error"`
-			}{Status: "unhealthy", Error: err.Error()})
-			if mErr != nil {
-				body = []byte(`{"status":"unhealthy"}`)
-			}
-			_, _ = w.Write(body)
-			return
-		}
-		_, _ = w.Write([]byte(`{"status":"ok"}`))
-	}
 }
 
 func safePrefix(token string) string {

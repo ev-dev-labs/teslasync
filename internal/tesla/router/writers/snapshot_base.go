@@ -4,6 +4,9 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"sort"
+	"strings"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -62,6 +65,7 @@ type snapshotWriter struct {
 // router.Writer interface. A signature drift in router.Writer would
 // fail the build here rather than the first integration test.
 var _ router.Writer = (*snapshotWriter)(nil)
+var _ router.BatchWriter = (*snapshotWriter)(nil)
 
 // newSnapshotWriter validates dependencies and table identifiers at
 // wiring time so typos fail at process start rather than the first
@@ -179,6 +183,150 @@ func (w *snapshotWriter) Write(ctx context.Context, atom codec.Atomic, dst route
 	return nil
 }
 
+type snapshotBatchKey struct {
+	vin string
+	ts  time.Time
+}
+
+type snapshotBatchGroup struct {
+	key         snapshotBatchKey
+	columns     map[string]any
+	itemIndexes []int
+}
+
+// WriteBatch coalesces every field sharing a (vehicle, timestamp) key into a
+// single multi-column upsert. This removes the same-row lock amplification
+// caused by issuing one INSERT ... ON CONFLICT per field.
+func (w *snapshotWriter) WriteBatch(ctx context.Context, items []router.RoutedAtomic) []error {
+	results := make([]error, len(items))
+	if len(items) == 0 {
+		return results
+	}
+
+	ctx, span, end := startWriterSpan(ctx, w.table, "batch")
+	var batchErr error
+	defer func() { end(batchErr) }()
+
+	groups := make(map[snapshotBatchKey]*snapshotBatchGroup)
+	order := make([]snapshotBatchKey, 0, len(items))
+	for i, item := range items {
+		col, ok := w.columnFor(item.Atomic.Field)
+		if !ok {
+			results[i] = fmt.Errorf(
+				"snapshotWriter[%s].%s: no column mapping for field",
+				w.table,
+				item.Atomic.Field,
+			)
+			continue
+		}
+		if !safeIdentRE.MatchString(col) {
+			results[i] = fmt.Errorf(
+				"snapshotWriter[%s].%s: invalid column identifier %q (must match %s)",
+				w.table,
+				item.Atomic.Field,
+				col,
+				safeIdentRE.String(),
+			)
+			continue
+		}
+		bound, err := bindSnapshotBatchValue(item.Atomic.Value)
+		if err != nil {
+			results[i] = fmt.Errorf(
+				"snapshotWriter[%s].%s: %w",
+				w.table,
+				item.Atomic.Field,
+				err,
+			)
+			continue
+		}
+
+		key := snapshotBatchKey{
+			vin: item.Atomic.VehicleID,
+			ts:  item.Atomic.EmittedAt.UTC().Round(0),
+		}
+		group, exists := groups[key]
+		if !exists {
+			group = &snapshotBatchGroup{
+				key:     key,
+				columns: make(map[string]any),
+			}
+			groups[key] = group
+			order = append(order, key)
+		}
+		group.columns[col] = bound
+		group.itemIndexes = append(group.itemIndexes, i)
+	}
+
+	span.SetAttributes(
+		attribute.Int("batch.items", len(items)),
+		attribute.Int("batch.rows", len(order)),
+	)
+	for groupIndex, key := range order {
+		if err := ctx.Err(); err != nil {
+			batchErr = err
+			for _, remainingKey := range order[groupIndex:] {
+				group := groups[remainingKey]
+				for _, itemIndex := range group.itemIndexes {
+					if results[itemIndex] == nil {
+						results[itemIndex] = err
+					}
+				}
+			}
+			return results
+		}
+
+		group := groups[key]
+		columns := make([]string, 0, len(group.columns))
+		for col := range group.columns {
+			columns = append(columns, col)
+		}
+		sort.Strings(columns)
+
+		quotedColumns := make([]string, len(columns))
+		assignments := make([]string, len(columns))
+		args := make([]any, 0, len(columns)+2)
+		args = append(args, group.key.vin, group.key.ts)
+		placeholders := make([]string, len(columns))
+		for i, col := range columns {
+			quoted := pgx.Identifier{col}.Sanitize()
+			quotedColumns[i] = quoted
+			assignments[i] = quoted + " = EXCLUDED." + quoted
+			placeholders[i] = fmt.Sprintf("$%d", i+3)
+			args = append(args, group.columns[col])
+		}
+
+		sql := fmt.Sprintf(
+			"INSERT INTO %s (vehicle_id, ts, %s) "+
+				"SELECT v.id, $2, %s FROM vehicles v WHERE v.vin = $1 "+
+				"ON CONFLICT (vehicle_id, ts) DO UPDATE SET %s",
+			pgx.Identifier{w.table}.Sanitize(),
+			strings.Join(quotedColumns, ", "),
+			strings.Join(placeholders, ", "),
+			strings.Join(assignments, ", "),
+		)
+		tag, err := w.db.Exec(ctx, sql, args...)
+		if err == nil && tag.RowsAffected() == 0 {
+			err = fmt.Errorf("snapshotWriter[%s]: vehicle not registered", w.table)
+		}
+		if err != nil {
+			if batchErr == nil {
+				batchErr = err
+			}
+			for _, itemIndex := range group.itemIndexes {
+				if results[itemIndex] == nil {
+					results[itemIndex] = fmt.Errorf(
+						"snapshotWriter[%s].%s: %w",
+						w.table,
+						items[itemIndex].Atomic.Field,
+						err,
+					)
+				}
+			}
+		}
+	}
+	return results
+}
+
 // bindSnapshotValue narrows codec.Atomic.Value to a SQL-bindable
 // scalar suitable for the snapshot tables' (vehicle_id, ts, <col>)
 // INSERT shape. Compound atomics (Location lat/lng pairs, Doors flags,
@@ -227,4 +375,11 @@ func bindSnapshotValue(v any) (any, error) {
 		return f, nil
 	}
 	return nil, fmt.Errorf("unsupported value type %T (snapshot helper accepts bool, string, and any signal.Float64-coercible numeric)", v)
+}
+
+func bindSnapshotBatchValue(v any) (any, error) {
+	if ts, ok := v.(time.Time); ok {
+		return ts.UTC().Round(0), nil
+	}
+	return bindSnapshotValue(v)
 }

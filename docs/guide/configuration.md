@@ -67,10 +67,10 @@ Rotating `ENCRYPTION_KEY` makes existing encrypted tokens unreadable — every T
 | `DATABASE_PASS`                   | `teslasync`                   | Database password                                  |
 | `DATABASE_NAME`                   | `teslasync`                   | Database name                                      |
 | `DATABASE_SSLMODE`                | `disable`                     | PostgreSQL SSL mode                                |
-| `DATABASE_MAX_CONNS`              | `25`                          | Maximum pgx pool connections                       |
-| `DATABASE_MIN_CONNS`              | `5`                           | Minimum pgx pool connections                       |
+| `DATABASE_MAX_CONNS`              | `12`                          | Maximum API pgx pool connections                   |
+| `DATABASE_MIN_CONNS`              | `2`                           | Minimum warm API pgx connections                   |
 | `DATABASE_STATEMENT_TIMEOUT`      | `30000`                       | Query timeout in milliseconds                      |
-| `DATABASE_HEALTH_CHECK_PERIOD`    | `5s`                          | pgx pool health-check interval                     |
+| `DATABASE_HEALTH_CHECK_PERIOD`    | `30s`                         | pgx pool health-check interval                     |
 | `MQTT_ENABLED`                    | `true`                        | Enable MQTT integration                            |
 | `MQTT_HOST`                       | `mosquitto`                   | MQTT broker host                                   |
 | `MQTT_PORT`                       | `1883`                        | MQTT broker port                                   |
@@ -90,10 +90,14 @@ Rotating `ENCRYPTION_KEY` makes existing encrypted tokens unreadable — every T
 | `FLEET_TELEMETRY_HOST`                    | empty                         | Public telemetry hostname (must have valid TLS)    |
 | `FLEET_TELEMETRY_PORT`                    | `4443`                        | Telemetry server port                              |
 | `FLEET_TELEMETRY_TOPIC_BASE`              | `telemetry`                   | MQTT topic prefix                                  |
-| `FLEET_TELEMETRY_BATCH_MS`                | `100`                         | Signal batching window                             |
+| `FLEET_TELEMETRY_BATCH_MS`                | `100`                         | Per-vehicle persistence batching window            |
+| `FLEET_TELEMETRY_BATCH_MAX_MESSAGES`      | `256`                         | Maximum messages in one persistence batch          |
+| `FLEET_TELEMETRY_PERSISTENCE_CONCURRENCY` | `2`                           | Maximum concurrent telemetry persistence workers   |
+| `FLEET_TELEMETRY_PERSISTENCE_QUEUE_CAPACITY` | `64`                        | Bounded telemetry admission queue capacity         |
+| `FLEET_TELEMETRY_PERSISTENCE_TIMEOUT`       | `30s`                         | Timeout for one coalesced persistence batch        |
 | `FLEET_TELEMETRY_STALE_TIMEOUT`           | `15m`                         | Staleness threshold before polling fallback        |
 | `FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL`  | `5m`                          | Polling fallback interval when stream is stale     |
-| `FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL` | `10s` bare / `1s` compose     | Snapshot write throttle                            |
+| `FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL` | `10s`                         | Session snapshot write throttle                    |
 | `FLEET_TELEMETRY_CLEANUP_INTERVAL`        | `2m`                          | Stale session cleanup interval                     |
 | `FLEET_TELEMETRY_STALE_SESSION_TIMEOUT`   | `5m`                          | Close idle drive/charge sessions after this        |
 

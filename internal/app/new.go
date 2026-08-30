@@ -1067,8 +1067,13 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 		dlq,
 		vinCache.Resolve,
 		mqtt.PipelineSubscriberConfig{
-			TopicBase:         a.Cfg.FleetTelemetry.TopicBase,
-			StreamingRecorder: a.TelemetryHandler,
+			TopicBase:                a.Cfg.FleetTelemetry.TopicBase,
+			BatchWindow:              time.Duration(a.Cfg.FleetTelemetry.BatchMs) * time.Millisecond,
+			BatchMaxMessages:         a.Cfg.FleetTelemetry.BatchMaxMessages,
+			PersistenceConcurrency:   a.Cfg.FleetTelemetry.PersistenceConcurrency,
+			PersistenceQueueCapacity: a.Cfg.FleetTelemetry.PersistenceQueueCapacity,
+			PersistenceTimeout:       a.Cfg.FleetTelemetry.PersistenceTimeout,
+			StreamingRecorder:        a.TelemetryHandler,
 		},
 		pipelineLogger,
 	)

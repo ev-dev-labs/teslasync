@@ -67,9 +67,6 @@ exemptions: []
 #
 # Known real defects captured here (do not "fix" by deleting the entry —
 # fix the config, then regenerate):
-#   * DATABASE_PASSWORD / DATABASE_SSL_MODE / LOG_LEVEL in docker-compose
-#     do not match the names internal/config actually binds
-#     (DATABASE_PASS / DATABASE_SSLMODE / TESLASYNC_LOG_LEVEL).
 #   * The *_WORKER_HOST/PORT, GRAFANA_* and TESLASYNC_OPERATOR_TOKEN keys
 #     rendered by the chart are not bound by internal/config nor read via
 #     os.Getenv anywhere in internal/ or cmd/.
@@ -80,14 +77,8 @@ baseline:
     - CORS_ORIGINS
     - DATABASE_CONN_MAX_IDLE_TIME
     - DATABASE_CONN_MAX_LIFETIME
-    - DATABASE_MAX_CONNS
     - DATABASE_MIGRATIONS
-    - DATABASE_MIN_CONNS
-    - DATABASE_PASS
-    - DATABASE_SSLMODE
     - ENVIRONMENT
-    - FLEET_TELEMETRY_CLEANUP_INTERVAL
-    - FLEET_TELEMETRY_STALE_SESSION_TIMEOUT
     - FORWARD_AUTH_HEADER
     - GAS_PRICE_API_KEY
     - GAS_PRICE_ENABLED
@@ -107,7 +98,6 @@ baseline:
     - REDIS_DB
     - REDIS_PASSWORD
     - TESLASYNC_ENVIRONMENT
-    - TESLASYNC_LOG_LEVEL
     - TESLASYNC_SERVICE_VERSION
     - TESLA_AUTH_URL
     - TESLA_COMMAND_PROXY_URL
@@ -138,10 +128,7 @@ baseline:
     - TESLASYNC_SERVICE_VERSION
     - VERSION
     - WORKER_STREAMING
-  unknown_in_compose:
-    - DATABASE_PASSWORD
-    - DATABASE_SSL_MODE
-    - LOG_LEVEL
+  unknown_in_compose: []
   unknown_in_helm:
     - AUTOMATION_WORKER_HOST
     - AUTOMATION_WORKER_PORT

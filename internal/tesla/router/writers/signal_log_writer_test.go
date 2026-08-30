@@ -231,6 +231,70 @@ func TestSignalLogWriter_StampedProvenancePersistsAtomically(t *testing.T) {
 	}
 }
 
+func TestSignalLogWriter_WriteBatchUsesOneInsert(t *testing.T) {
+	ts := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	rec := &recorder{rows: 2}
+	writer := newSignalLogTestWriter(t, rec)
+
+	results := writer.WriteBatch(context.Background(), []router.RoutedAtomic{
+		{
+			Atomic: codec.Atomic{
+				Field: "Soc", Value: float32(75), EmittedAt: ts, VehicleID: "VIN",
+			},
+			Entry: router.Entry{Field: "Soc", Destination: router.DestSignalLog},
+		},
+		{
+			Atomic: codec.Atomic{
+				Field: "Locked", Value: true, EmittedAt: ts, VehicleID: "VIN",
+			},
+			Entry: router.Entry{Field: "Locked", Destination: router.DestSignalLog},
+		},
+	})
+
+	if len(results) != 2 || results[0] != nil || results[1] != nil {
+		t.Fatalf("WriteBatch results = %#v, want two nil entries", results)
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("Exec calls = %d, want 1", len(rec.calls))
+	}
+	call := rec.calls[0]
+	if !strings.Contains(call.SQL, "CROSS JOIN (VALUES") {
+		t.Errorf("batch SQL missing VALUES input: %s", call.SQL)
+	}
+	if !strings.Contains(call.SQL, "ON CONFLICT (vehicle_id, ts, field) DO UPDATE SET") {
+		t.Errorf("batch SQL missing idempotent conflict clause: %s", call.SQL)
+	}
+	if got := len(call.Args); got != 25 {
+		t.Fatalf("batch args = %d, want 25 (one VIN plus 12 per row)", got)
+	}
+	if call.Args[0] != "VIN" || call.Args[2] != "Soc" || call.Args[14] != "Locked" {
+		t.Errorf("batch args do not preserve VIN/field values: %#v", call.Args)
+	}
+}
+
+func TestSignalLogWriter_WriteBatchCollapsesExactRedelivery(t *testing.T) {
+	ts := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+	rec := &recorder{rows: 1}
+	writer := newSignalLogTestWriter(t, rec)
+	item := router.RoutedAtomic{
+		Atomic: codec.Atomic{
+			Field: "Soc", Value: float32(75), EmittedAt: ts, VehicleID: "VIN",
+		},
+		Entry: router.Entry{Field: "Soc", Destination: router.DestSignalLog},
+	}
+
+	results := writer.WriteBatch(context.Background(), []router.RoutedAtomic{item, item})
+	if len(results) != 2 || results[0] != nil || results[1] != nil {
+		t.Fatalf("WriteBatch results = %#v, want duplicate delivery accepted", results)
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("Exec calls = %d, want 1", len(rec.calls))
+	}
+	if got := len(rec.calls[0].Args); got != 13 {
+		t.Fatalf("deduplicated batch args = %d, want 13", got)
+	}
+}
+
 // TestSignalLogWriter_TimestampNormalisation pins the UTC + monotonic-
 // strip canonicalisation. A Payload.CreatedAt arriving as a
 // non-UTC time.Time MUST land in signal_log as UTC so two atomics

@@ -21,6 +21,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 )
 
 // ── shared helpers ────────────────────────────────────────────────────
@@ -173,7 +174,7 @@ var (
 	_ fleetVehicleLister      = (*fakeVehicleLister)(nil)
 	_ channelLister           = (*fakeChannelLister)(nil)
 	_ computedMetricEvaluator = (*fakeEvaluator)(nil)
-	_ healthChecker           = fakeHealth{}
+	_ healthprobe.Checker     = fakeHealth{}
 )
 
 func computedRule(id int64) *alertmodel.AlertRule {
@@ -353,31 +354,31 @@ func TestHealthzHandler(t *testing.T) {
 		name       string
 		healthErr  error
 		wantStatus int
-		wantBody   healthResponse
+		wantBody   healthprobe.Response
 	}{
 		{
 			name:       "healthy returns 200 ok",
 			healthErr:  nil,
 			wantStatus: http.StatusOK,
-			wantBody:   healthResponse{Status: "ok"},
+			wantBody:   healthprobe.Response{Status: "ok"},
 		},
 		{
 			name:       "unhealthy returns 503 with error",
 			healthErr:  errors.New("db down"),
 			wantStatus: http.StatusServiceUnavailable,
-			wantBody:   healthResponse{Status: "unhealthy", Error: "db down"},
+			wantBody:   healthprobe.Response{Status: "unhealthy", Error: "db down"},
 		},
 		{
 			name:       "error with quotes stays valid json",
 			healthErr:  errors.New(`pq: bad "quote" and \slash`),
 			wantStatus: http.StatusServiceUnavailable,
-			wantBody:   healthResponse{Status: "unhealthy", Error: `pq: bad "quote" and \slash`},
+			wantBody:   healthprobe.Response{Status: "unhealthy", Error: `pq: bad "quote" and \slash`},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			h := healthzHandler(fakeHealth{err: tt.healthErr})
+			h := healthprobe.ReadinessHandler(fakeHealth{err: tt.healthErr})
 			rr := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
@@ -389,7 +390,7 @@ func TestHealthzHandler(t *testing.T) {
 			if ct := rr.Header().Get("Content-Type"); ct != "application/json" {
 				t.Fatalf("Content-Type = %q, want application/json", ct)
 			}
-			var got healthResponse
+			var got healthprobe.Response
 			if err := json.Unmarshal(rr.Body.Bytes(), &got); err != nil {
 				t.Fatalf("response body is not valid JSON: %v (body=%q)", err, rr.Body.String())
 			}

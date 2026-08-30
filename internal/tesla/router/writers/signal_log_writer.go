@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
@@ -155,6 +156,7 @@ type signalLogWriter struct {
 // A signature drift in router.Writer would fail the build here rather
 // than the first integration test.
 var _ router.Writer = (*signalLogWriter)(nil)
+var _ router.BatchWriter = (*signalLogWriter)(nil)
 
 // NewSignalLogWriter constructs the production cold-path writer for
 // destination signal_log.
@@ -183,7 +185,7 @@ func NewSignalLogWriter(pool *pgxpool.Pool) router.Writer {
 //     a producer/codec contract drift surfaces loudly per the writer's
 //     drop-loud contract.
 //
-//  1a. Canonicalise the numeric kind label via
+//     1a. Canonicalise the numeric kind label via
 //     signalLogCanonicalNumericKind so the same signal carries the same
 //     value_kind regardless of which transport attested it. The bound
 //     value itself is never rewritten — only the label.
@@ -276,6 +278,198 @@ func (w *signalLogWriter) Write(ctx context.Context, atom codec.Atomic, dst rout
 		return err
 	}
 	return nil
+}
+
+type signalLogBatchKey struct {
+	vin   string
+	ts    time.Time
+	field string
+}
+
+type signalLogBatchRow struct {
+	atom        codec.Atomic
+	bound       signalLogBound
+	origin      codec.IngestOrigin
+	sourceAt    any
+	receivedAt  any
+	itemIndexes []int
+}
+
+// WriteBatch persists all unique (vehicle, timestamp, field) observations for
+// each VIN with one INSERT. Exact QoS re-deliveries inside the same batch are
+// collapsed last-value-wins before SQL construction so PostgreSQL never sees
+// two ON CONFLICT candidates for the same row in one statement.
+func (w *signalLogWriter) WriteBatch(ctx context.Context, items []router.RoutedAtomic) []error {
+	results := make([]error, len(items))
+	if len(items) == 0 {
+		return results
+	}
+
+	ctx, span, end := startWriterSpan(ctx, "signal_log", "batch")
+	var batchErr error
+	defer func() { end(batchErr) }()
+
+	rowsByKey := make(map[signalLogBatchKey]*signalLogBatchRow, len(items))
+	keyOrder := make([]signalLogBatchKey, 0, len(items))
+	vinOrder := make([]string, 0, 1)
+	seenVIN := make(map[string]struct{})
+	for i, item := range items {
+		bound, err := signalLogClassify(item.Atomic.Value)
+		if err != nil {
+			results[i] = fmt.Errorf("signalLogWriter.%s: %w", item.Atomic.Field, err)
+			continue
+		}
+		bound.kind = signalLogCanonicalNumericKind(item.Atomic.Field, bound.kind)
+		ts := item.Atomic.EmittedAt.UTC().Round(0)
+		origin, sourceAt, receivedAt := signalLogProvenance(item.Atomic)
+		key := signalLogBatchKey{
+			vin:   item.Atomic.VehicleID,
+			ts:    ts,
+			field: item.Atomic.Field,
+		}
+		row, exists := rowsByKey[key]
+		if !exists {
+			row = &signalLogBatchRow{}
+			rowsByKey[key] = row
+			keyOrder = append(keyOrder, key)
+		}
+		row.atom = item.Atomic
+		row.atom.EmittedAt = ts
+		row.bound = bound
+		row.origin = origin
+		row.sourceAt = sourceAt
+		row.receivedAt = receivedAt
+		row.itemIndexes = append(row.itemIndexes, i)
+		if _, exists := seenVIN[key.vin]; !exists {
+			seenVIN[key.vin] = struct{}{}
+			vinOrder = append(vinOrder, key.vin)
+		}
+	}
+
+	rowsByVIN := make(map[string][]*signalLogBatchRow, len(vinOrder))
+	for _, key := range keyOrder {
+		rowsByVIN[key.vin] = append(rowsByVIN[key.vin], rowsByKey[key])
+	}
+	span.SetAttributes(
+		attribute.Int("batch.items", len(items)),
+		attribute.Int("batch.rows", len(keyOrder)),
+		attribute.Int("batch.vehicles", len(vinOrder)),
+	)
+
+	for _, vin := range vinOrder {
+		rows := rowsByVIN[vin]
+		if err := ctx.Err(); err != nil {
+			batchErr = err
+			setSignalLogBatchErrors(results, rows, err)
+			continue
+		}
+
+		args := make([]any, 0, 1+len(rows)*12)
+		args = append(args, vin)
+		valueRows := make([]string, 0, len(rows))
+		for _, row := range rows {
+			base := len(args) + 1
+			valueRows = append(valueRows, fmt.Sprintf(
+				"($%d::timestamptz, $%d::text, $%d::smallint, "+
+					"$%d::text, $%d::boolean, $%d::bigint, $%d::double precision, $%d::timestamptz, "+
+					"$%d::smallint, $%d::text, $%d::timestamptz, $%d::timestamptz)",
+				base,
+				base+1,
+				base+2,
+				base+3,
+				base+4,
+				base+5,
+				base+6,
+				base+7,
+				base+8,
+				base+9,
+				base+10,
+				base+11,
+			))
+			args = append(
+				args,
+				row.atom.EmittedAt,
+				row.atom.Field,
+				row.bound.kind,
+				row.bound.str,
+				row.bound.boolean,
+				row.bound.integer,
+				row.bound.float,
+				row.bound.timeVal,
+				signalLogNormalizationVersion,
+				row.origin,
+				row.sourceAt,
+				row.receivedAt,
+			)
+		}
+
+		sql := `INSERT INTO signal_log (
+	vehicle_id, ts, field, value_kind,
+	str_value, bool_value, int_value, float_value, time_value,
+	normalization_version, normalization_write_token,
+	ingest_origin, source_emitted_at, received_at, provenance_write_token
+)
+SELECT v.id, input.ts, input.field, input.value_kind,
+	input.str_value, input.bool_value, input.int_value, input.float_value, input.time_value,
+	input.normalization_version, TRUE,
+	input.ingest_origin, input.source_emitted_at, input.received_at, TRUE
+FROM vehicles v
+CROSS JOIN (VALUES ` + strings.Join(valueRows, ", ") + `) AS input(
+	ts, field, value_kind,
+	str_value, bool_value, int_value, float_value, time_value,
+	normalization_version, ingest_origin, source_emitted_at, received_at
+)
+WHERE v.vin = $1
+ON CONFLICT (vehicle_id, ts, field) DO UPDATE SET
+	value_kind            = EXCLUDED.value_kind,
+	str_value             = EXCLUDED.str_value,
+	bool_value            = EXCLUDED.bool_value,
+	int_value             = EXCLUDED.int_value,
+	float_value           = EXCLUDED.float_value,
+	time_value            = EXCLUDED.time_value,
+	normalization_version = EXCLUDED.normalization_version,
+	normalization_write_token = NOT COALESCE(
+		signal_log.normalization_write_token,
+		FALSE
+	),
+	ingest_origin         = EXCLUDED.ingest_origin,
+	source_emitted_at     = EXCLUDED.source_emitted_at,
+	received_at           = EXCLUDED.received_at,
+	provenance_write_token = NOT COALESCE(
+		signal_log.provenance_write_token,
+		FALSE
+	)`
+
+		tag, err := w.db.Exec(ctx, sql, args...)
+		if err == nil && tag.RowsAffected() != int64(len(rows)) {
+			err = fmt.Errorf(
+				"signalLogWriter batch: persisted %d of %d rows; vehicle not registered",
+				tag.RowsAffected(),
+				len(rows),
+			)
+		}
+		if err != nil {
+			if batchErr == nil {
+				batchErr = err
+			}
+			setSignalLogBatchErrors(results, rows, err)
+		}
+	}
+	return results
+}
+
+func setSignalLogBatchErrors(results []error, rows []*signalLogBatchRow, err error) {
+	for _, row := range rows {
+		for _, itemIndex := range row.itemIndexes {
+			if results[itemIndex] == nil {
+				results[itemIndex] = fmt.Errorf(
+					"signalLogWriter.%s: %w",
+					row.atom.Field,
+					err,
+				)
+			}
+		}
+	}
 }
 
 // signalLogProvenance converts codec provenance into database-ready values.

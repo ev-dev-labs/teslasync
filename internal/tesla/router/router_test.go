@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla/codec"
@@ -153,4 +154,147 @@ type nopWriter struct{}
 
 func (nopWriter) Write(ctx context.Context, atomic codec.Atomic, dst Entry) error {
 	return nil
+}
+
+type recordingBatchWriter struct {
+	mu          sync.Mutex
+	singleCalls int
+	batches     [][]RoutedAtomic
+	batchErrors []error
+}
+
+func (w *recordingBatchWriter) Write(context.Context, codec.Atomic, Entry) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.singleCalls++
+	return nil
+}
+
+func (w *recordingBatchWriter) WriteBatch(_ context.Context, items []RoutedAtomic) []error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	cp := make([]RoutedAtomic, len(items))
+	copy(cp, items)
+	w.batches = append(w.batches, cp)
+	if w.batchErrors != nil {
+		return w.batchErrors
+	}
+	return make([]error, len(items))
+}
+
+func TestRouteBatch_UsesBatchWritersAndPreservesDualLog(t *testing.T) {
+	primary := &recordingBatchWriter{}
+	signalLog := &recordingBatchWriter{}
+	r := &Router{
+		entries: map[string]Entry{
+			"InsideTemp": {
+				Field:       "InsideTemp",
+				Destination: DestClimateSnapshot,
+				Column:      "inside_temp_c",
+			},
+			"OutsideTemp": {
+				Field:       "OutsideTemp",
+				Destination: DestClimateSnapshot,
+				Column:      "outside_temp_c",
+			},
+		},
+		writers: map[Destination]Writer{
+			DestClimateSnapshot: primary,
+			DestSignalLog:       signalLog,
+		},
+	}
+
+	results, err := r.RouteBatch(context.Background(), []codec.Atomic{
+		{Field: "InsideTemp"},
+		{Field: "OutsideTemp"},
+	})
+	if err != nil {
+		t.Fatalf("RouteBatch: %v", err)
+	}
+	if len(results) != 2 || results[0] != nil || results[1] != nil {
+		t.Fatalf("results = %#v, want two nil entries", results)
+	}
+	primaryBatchSize := 0
+	if len(primary.batches) == 1 {
+		primaryBatchSize = len(primary.batches[0])
+	}
+	if primary.singleCalls != 0 || len(primary.batches) != 1 || primaryBatchSize != 2 {
+		t.Fatalf(
+			"primary calls: singles=%d batches=%d batch size=%d, want 0/1/2",
+			primary.singleCalls,
+			len(primary.batches),
+			primaryBatchSize,
+		)
+	}
+	signalLogBatchSize := 0
+	if len(signalLog.batches) == 1 {
+		signalLogBatchSize = len(signalLog.batches[0])
+	}
+	if signalLog.singleCalls != 0 || len(signalLog.batches) != 1 || signalLogBatchSize != 2 {
+		t.Fatalf(
+			"signal_log calls: singles=%d batches=%d batch size=%d, want 0/1/2",
+			signalLog.singleCalls,
+			len(signalLog.batches),
+			signalLogBatchSize,
+		)
+	}
+	for _, item := range signalLog.batches[0] {
+		if item.Entry.Destination != DestSignalLog {
+			t.Errorf("dual destination = %q, want %q", item.Entry.Destination, DestSignalLog)
+		}
+	}
+}
+
+func TestRouteBatch_PreservesPerItemPrimaryFailures(t *testing.T) {
+	sentinel := errors.New("write failed")
+	primary := &recordingBatchWriter{batchErrors: []error{nil, sentinel}}
+	signalLog := &recordingBatchWriter{}
+	r := &Router{
+		entries: map[string]Entry{
+			"InsideTemp": {
+				Field:       "InsideTemp",
+				Destination: DestClimateSnapshot,
+				Column:      "inside_temp_c",
+			},
+			"OutsideTemp": {
+				Field:       "OutsideTemp",
+				Destination: DestClimateSnapshot,
+				Column:      "outside_temp_c",
+			},
+		},
+		writers: map[Destination]Writer{
+			DestClimateSnapshot: primary,
+			DestSignalLog:       signalLog,
+		},
+	}
+
+	results, err := r.RouteBatch(context.Background(), []codec.Atomic{
+		{Field: "InsideTemp"},
+		{Field: "OutsideTemp"},
+	})
+	if err != nil {
+		t.Fatalf("RouteBatch: %v", err)
+	}
+	if len(results) != 2 || results[0] != nil || !errors.Is(results[1], sentinel) {
+		t.Fatalf("results = %#v, want [nil, sentinel]", results)
+	}
+	if len(signalLog.batches) != 1 || len(signalLog.batches[0]) != 2 {
+		t.Fatalf("signal_log batches = %#v, want both atomics despite primary failure", signalLog.batches)
+	}
+}
+
+func TestWriteBatch_RejectsMisalignedBatchWriterResults(t *testing.T) {
+	writer := &recordingBatchWriter{batchErrors: []error{nil}}
+	results := writeBatch(context.Background(), writer, []RoutedAtomic{
+		{Atomic: codec.Atomic{Field: "InsideTemp"}},
+		{Atomic: codec.Atomic{Field: "OutsideTemp"}},
+	})
+	if len(results) != 2 {
+		t.Fatalf("results = %d, want 2", len(results))
+	}
+	for i, err := range results {
+		if err == nil || !strings.Contains(err.Error(), "returned 1 results for 2 items") {
+			t.Errorf("results[%d] = %v, want result-count error", i, err)
+		}
+	}
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
@@ -34,6 +33,7 @@ import (
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 	"github.com/ev-dev-labs/teslasync/internal/webpush"
@@ -77,41 +77,12 @@ type computedMetricEvaluator interface {
 	Evaluate(ctx context.Context, rule *alertmodel.AlertRule, vehicleID int64) (computed.Result, error)
 }
 
-// healthChecker is the narrow slice of *database.DB the liveness probe needs.
-type healthChecker interface {
-	Health(ctx context.Context) error
-}
-
 var (
 	_ computedRuleLister      = (*dbalert.AlertRuleRepo)(nil)
 	_ fleetVehicleLister      = (*vehicledb.VehicleRepo)(nil)
 	_ channelLister           = (*dbnotif.NotificationRepo)(nil)
 	_ computedMetricEvaluator = (*computed.Evaluator)(nil)
-	_ healthChecker           = (*database.DB)(nil)
 )
-
-// healthResponse is the JSON body returned by the /healthz endpoint.
-type healthResponse struct {
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
-}
-
-// healthzHandler reports database liveness for k8s probes. It encodes the
-// body with encoding/json so an error string containing quotes or
-// backslashes cannot corrupt the response (the previous fmt.Fprintf shim
-// interpolated err.Error() straight into a JSON literal), and always sets
-// the JSON content type before writing the status line.
-func healthzHandler(hc healthChecker) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if err := hc.Health(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_ = json.NewEncoder(w).Encode(healthResponse{Status: "unhealthy", Error: err.Error()})
-			return
-		}
-		_ = json.NewEncoder(w).Encode(healthResponse{Status: "ok"})
-	}
-}
 
 func main() {
 	// Built-in healthcheck for distroless containers
@@ -384,7 +355,8 @@ func main() {
 		healthPort = "8081"
 	}
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", healthzHandler(db))
+	healthMux.Handle("/healthz", healthprobe.LivenessHandler())
+	healthMux.Handle("/readyz", healthprobe.ReadinessHandler(db))
 	healthMux.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Info().Str("port", healthPort).Msg("health endpoint listening")

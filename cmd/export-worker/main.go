@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -26,6 +25,7 @@ import (
 	dbbackup "github.com/ev-dev-labs/teslasync/internal/database/backup"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
 	"github.com/ev-dev-labs/teslasync/internal/export"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 
@@ -211,7 +211,8 @@ func main() {
 	// Health endpoint for Kubernetes probes.
 	healthPort := resolveHealthPort()
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", newHealthHandler(db))
+	healthMux.Handle("/healthz", healthprobe.LivenessHandler())
+	healthMux.Handle("/readyz", healthprobe.ReadinessHandler(db))
 	healthMux.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Info().Str("port", healthPort).Msg("health endpoint listening")
@@ -290,34 +291,6 @@ func healthcheckExitCode(ctx context.Context, client *http.Client, url string) i
 		return 1
 	}
 	return 0
-}
-
-// healthChecker is the minimal surface newHealthHandler needs from the database
-// pool, letting the handler be exercised without a live connection.
-type healthChecker interface {
-	Health(ctx context.Context) error
-}
-
-// newHealthHandler returns the /healthz handler. It responds 200 with
-// {"status":"ok"} when the dependency is reachable and 503 with a JSON error
-// body otherwise. The error string is JSON-encoded (not string-interpolated) so
-// a driver message containing quotes cannot produce a malformed body, and
-// Content-Type is set on both paths.
-func newHealthHandler(hc healthChecker) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if err := hc.Health(r.Context()); err != nil {
-			body, _ := json.Marshal(map[string]string{
-				"status": "unhealthy",
-				"error":  err.Error(),
-			})
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_, _ = w.Write(body)
-			return
-		}
-		body, _ := json.Marshal(map[string]string{"status": "ok"})
-		_, _ = w.Write(body)
-	}
 }
 
 // newScheduledBackupRun builds the queued BackupRun the scheduler persists for a

@@ -430,6 +430,27 @@ type PipelineSubscriberConfig struct {
 	// Default 90s.
 	LivenessFailureAfter time.Duration
 
+	// BatchWindow is the maximum time a persistence worker waits to coalesce
+	// per-field MQTT deliveries for the same vehicle. Default 100ms.
+	BatchWindow time.Duration
+
+	// BatchMaxMessages caps one persistence batch. Default 256.
+	BatchMaxMessages int
+
+	// PersistenceConcurrency bounds concurrent normalize/router/database work.
+	// A vehicle is assigned to one stable worker so its event order is
+	// preserved. Default 2.
+	PersistenceConcurrency int
+
+	// PersistenceQueueCapacity bounds admitted work across all persistence
+	// workers. Once full, MQTT callbacks wait and broker-side QoS flow control
+	// becomes the overflow buffer. Default 64.
+	PersistenceQueueCapacity int
+
+	// PersistenceTimeout bounds queue-external normalize/router/database work
+	// for one coalesced batch. Default 30s.
+	PersistenceTimeout time.Duration
+
 	// StreamingRecorder, when non-nil, receives a callback for every
 	// successfully decoded MQTT batch (after pipeline dispatch returns
 	// nil). It powers the /telemetry status MQTT Inspector. Before the
@@ -472,6 +493,21 @@ func (c *PipelineSubscriberConfig) withDefaults() {
 	if c.LivenessFailureAfter <= 0 {
 		c.LivenessFailureAfter = 90 * time.Second
 	}
+	if c.BatchWindow <= 0 {
+		c.BatchWindow = 100 * time.Millisecond
+	}
+	if c.BatchMaxMessages <= 0 {
+		c.BatchMaxMessages = 256
+	}
+	if c.PersistenceConcurrency <= 0 {
+		c.PersistenceConcurrency = 2
+	}
+	if c.PersistenceQueueCapacity <= 0 {
+		c.PersistenceQueueCapacity = 64
+	}
+	if c.PersistenceTimeout <= 0 {
+		c.PersistenceTimeout = 30 * time.Second
+	}
 	c.TopicBase = strings.TrimSuffix(c.TopicBase, "/")
 }
 
@@ -498,6 +534,9 @@ type PipelineSubscriber struct {
 	mu                     sync.Mutex
 	subscribeMu            sync.Mutex
 	recoveryWG             sync.WaitGroup
+	persistenceWG          sync.WaitGroup
+	persistenceStarted     atomic.Bool
+	persistenceShards      []chan persistenceWork
 	started                bool
 	stopped                bool
 	subscribed             bool
@@ -536,7 +575,7 @@ func NewPipelineSubscriber(
 	}
 	cfg.withDefaults()
 	ctx, cancel := context.WithCancel(context.Background())
-	return &PipelineSubscriber{
+	subscriber := &PipelineSubscriber{
 		client:     client,
 		pipeline:   pipeline,
 		dlq:        dlq,
@@ -546,6 +585,11 @@ func NewPipelineSubscriber(
 		ctx:        ctx,
 		cancel:     cancel,
 	}
+	subscriber.persistenceShards = makePersistenceShards(
+		cfg.PersistenceConcurrency,
+		cfg.PersistenceQueueCapacity,
+	)
+	return subscriber
 }
 
 // pipelineTopicFilter returns the SUBSCRIBE filter for the per-field
@@ -581,11 +625,17 @@ func (s *PipelineSubscriber) Start() error {
 		return err
 	}
 
+	s.startPersistenceWorkers()
 	s.recoveryWG.Add(1)
 	go s.subscriptionRecoveryLoop()
 
 	s.logger.Info().
 		Str("topic", topic).
+		Dur("batch_window", s.cfg.BatchWindow).
+		Int("batch_max_messages", s.cfg.BatchMaxMessages).
+		Int("persistence_concurrency", s.cfg.PersistenceConcurrency).
+		Int("persistence_queue_capacity", s.cfg.PersistenceQueueCapacity).
+		Dur("persistence_timeout", s.cfg.PersistenceTimeout).
 		Dur("subscription_retry_interval", s.cfg.SubscriptionRetryInterval).
 		Str("codec_failure_disposition", "dlq_ack").
 		Msg("phase-42 PipelineSubscriber started")
@@ -612,6 +662,8 @@ func (s *PipelineSubscriber) Stop() {
 
 	s.cancel()
 	s.recoveryWG.Wait()
+	s.persistenceWG.Wait()
+	s.persistenceStarted.Store(false)
 	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 	if !started {
 		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
@@ -1134,7 +1186,7 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	// Stamp only final, flattened atomics. Compatibility bare JSON has no
 	// SourceEmittedAt; a valid production envelope retains source evidence.
 	atomics = codec.StampTransport(atomics, codec.IngestOriginFleetTelemetryMQTT, receivedAt)
-	if err := s.pipeline.ProcessAtomics(ctx, atomics, vehicleID); err != nil {
+	if err := s.persistAtomics(ctx, vehicleID, atomics); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
 		return
 	}

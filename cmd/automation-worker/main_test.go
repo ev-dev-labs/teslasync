@@ -15,6 +15,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbauto "github.com/ev-dev-labs/teslasync/internal/database/automation"
 	automationmodel "github.com/ev-dev-labs/teslasync/internal/models/automation"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 )
 
 // ── compile-time contracts ────────────────────────────────────────────────
@@ -24,7 +25,7 @@ import (
 var (
 	_ action.VariableRepo = (*variableRepoAdapter)(nil)
 	_ variableStore       = (*dbauto.AutomationVariableRepo)(nil)
-	_ healthChecker       = (*database.DB)(nil)
+	_ healthprobe.Checker = (*database.DB)(nil)
 )
 
 // ── healthPort ─────────────────────────────────────────────────────────────
@@ -171,7 +172,7 @@ func TestHealthHandler(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			fake := &fakeHealthChecker{err: tc.healthErr}
-			handler := healthHandler(fake)
+			handler := healthprobe.ReadinessHandler(fake)
 
 			req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 			rec := httptest.NewRecorder()

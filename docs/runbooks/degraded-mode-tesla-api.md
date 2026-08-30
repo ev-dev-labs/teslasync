@@ -34,7 +34,7 @@ Separate the three causes, because they have nothing in common:
 Also confirm streaming is unaffected:
 
 ```sql
-SELECT max(recorded_at) FROM signal_log;
+SELECT max(ts) FROM signal_log;
 ```
 
 If that timestamp is still moving, the platform's core value is intact

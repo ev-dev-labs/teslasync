@@ -120,6 +120,98 @@ func TestNewSnapshotWriter_Validation(t *testing.T) {
 	}
 }
 
+func TestWriteBatch_CoalescesSameRowIntoOneUpsert(t *testing.T) {
+	rec := &recorder{rows: 1}
+	columns := map[string]string{
+		"InsideTemp":  "inside_temp_c",
+		"OutsideTemp": "outside_temp_c",
+	}
+	writer := newTestWriter(t, rec, func(field string) (string, bool) {
+		col, ok := columns[field]
+		return col, ok
+	})
+	ts := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
+	results := writer.WriteBatch(context.Background(), []router.RoutedAtomic{
+		{
+			Atomic: codec.Atomic{
+				Field: "InsideTemp", Value: float32(21.5), EmittedAt: ts, VehicleID: "VIN",
+			},
+			Entry: router.Entry{Field: "InsideTemp", Destination: router.DestClimateSnapshot},
+		},
+		{
+			Atomic: codec.Atomic{
+				Field: "OutsideTemp", Value: float64(12.25), EmittedAt: ts, VehicleID: "VIN",
+			},
+			Entry: router.Entry{Field: "OutsideTemp", Destination: router.DestClimateSnapshot},
+		},
+	})
+
+	if len(results) != 2 || results[0] != nil || results[1] != nil {
+		t.Fatalf("WriteBatch results = %#v, want two nil entries", results)
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("Exec calls = %d, want 1", len(rec.calls))
+	}
+	call := rec.calls[0]
+	for _, token := range []string{
+		`"inside_temp_c"`,
+		`"outside_temp_c"`,
+		`"inside_temp_c" = EXCLUDED."inside_temp_c"`,
+		`"outside_temp_c" = EXCLUDED."outside_temp_c"`,
+	} {
+		if !strings.Contains(call.SQL, token) {
+			t.Errorf("batch SQL missing %q: %s", token, call.SQL)
+		}
+	}
+	if got := len(call.Args); got != 4 {
+		t.Fatalf("batch args = %d, want 4 (VIN, timestamp, two values)", got)
+	}
+	if call.Args[0] != "VIN" || !reflect.DeepEqual(call.Args[1], ts) {
+		t.Errorf("batch key args = %#v, want VIN and %v", call.Args[:2], ts)
+	}
+}
+
+func TestWriteBatch_ReportsInvalidItemsWithoutBlockingValidFields(t *testing.T) {
+	rec := &recorder{rows: 1}
+	writer := newTestWriter(t, rec, staticColumnFor("InsideTemp", "inside_temp_c"))
+	ts := time.Date(2026, 9, 1, 12, 0, 0, 0, time.UTC)
+
+	results := writer.WriteBatch(context.Background(), []router.RoutedAtomic{
+		{
+			Atomic: codec.Atomic{
+				Field: "Unknown", Value: float64(1), EmittedAt: ts, VehicleID: "VIN",
+			},
+		},
+		{
+			Atomic: codec.Atomic{
+				Field: "InsideTemp", Value: []byte("invalid"), EmittedAt: ts, VehicleID: "VIN",
+			},
+		},
+		{
+			Atomic: codec.Atomic{
+				Field: "InsideTemp", Value: float64(21.5), EmittedAt: ts, VehicleID: "VIN",
+			},
+		},
+	})
+
+	if len(results) != 3 {
+		t.Fatalf("results = %d, want 3", len(results))
+	}
+	if results[0] == nil || !strings.Contains(results[0].Error(), "no column mapping") {
+		t.Errorf("unknown-field result = %v, want mapping error", results[0])
+	}
+	if results[1] == nil || !strings.Contains(results[1].Error(), "unsupported value type") {
+		t.Errorf("invalid-value result = %v, want binding error", results[1])
+	}
+	if results[2] != nil {
+		t.Errorf("valid-field result = %v, want nil", results[2])
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("Exec calls = %d, want 1 for the valid item", len(rec.calls))
+	}
+}
+
 // TestWrite_TypeMatrix covers the four locked scalar types: float64,
 // int64, bool, and string. Each case asserts the SQL shape AND that the bound $3 argument is
 // the bare value (no coercion applied by the helper).

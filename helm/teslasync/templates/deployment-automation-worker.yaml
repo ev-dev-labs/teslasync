@@ -50,25 +50,30 @@ spec:
               port: health
             periodSeconds: {{ .Values.nodeRecovery.startupProbe.periodSeconds }}
             failureThreshold: {{ .Values.nodeRecovery.startupProbe.failureThreshold }}
+            timeoutSeconds: 2
           livenessProbe:
             httpGet:
               path: /healthz
               port: health
             initialDelaySeconds: 10
             periodSeconds: 30
+            timeoutSeconds: 2
+            failureThreshold: 5
           readinessProbe:
             httpGet:
-              path: /healthz
+              path: /readyz
               port: health
             initialDelaySeconds: 5
             periodSeconds: 10
+            timeoutSeconds: 5
+            failureThreshold: 2
           env:
             - name: HEALTH_PORT
               value: "8083"
             - name: DATABASE_MAX_CONNS
-              value: {{ .Values.automationWorker.dbMaxConns | default 5 | quote }}
+              value: {{ .Values.automationWorker.dbMaxConns | default 2 | quote }}
             - name: DATABASE_MIN_CONNS
-              value: {{ .Values.automationWorker.dbMinConns | default 2 | quote }}
+              value: {{ .Values.automationWorker.dbMinConns | default 1 | quote }}
           envFrom:
             - configMapRef:
                 name: {{ include "teslasync.fullname" . }}

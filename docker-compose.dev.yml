@@ -29,9 +29,12 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=teslasync
-      - DATABASE_PASSWORD=teslasync
+      - DATABASE_PASS=teslasync
       - DATABASE_NAME=teslasync
-      - DATABASE_SSL_MODE=disable
+      - DATABASE_SSLMODE=disable
+      - DATABASE_MAX_CONNS=12
+      - DATABASE_MIN_CONNS=2
+      - DATABASE_HEALTH_CHECK_PERIOD=30s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
       - REDIS_HOST=redis
@@ -41,14 +44,21 @@ services:
       - TESLA_REDIRECT_URI=http://localhost:8080/api/v1/auth/callback
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
       - WORKER_POLL_INTERVAL=30s
-      - LOG_LEVEL=error
+      - TESLASYNC_LOG_LEVEL=error
       - FLEET_TELEMETRY_ENABLED=${FLEET_TELEMETRY_ENABLED:-false}
       - FLEET_TELEMETRY_HOST=${FLEET_TELEMETRY_HOST:-}
       - FLEET_TELEMETRY_PORT=4443
       - FLEET_TELEMETRY_TOPIC_BASE=telemetry
       - FLEET_TELEMETRY_BATCH_MS=100
+      - FLEET_TELEMETRY_BATCH_MAX_MESSAGES=256
+      - FLEET_TELEMETRY_PERSISTENCE_CONCURRENCY=2
+      - FLEET_TELEMETRY_PERSISTENCE_QUEUE_CAPACITY=64
+      - FLEET_TELEMETRY_PERSISTENCE_TIMEOUT=30s
       - FLEET_TELEMETRY_STALE_TIMEOUT=15m
       - FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL=5m
+      - FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL=10s
+      - FLEET_TELEMETRY_CLEANUP_INTERVAL=2m
+      - FLEET_TELEMETRY_STALE_SESSION_TIMEOUT=5m
       # Tracing enabled by default in dev
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=otel-collector:4317
@@ -96,12 +106,15 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=teslasync
-      - DATABASE_PASSWORD=teslasync
+      - DATABASE_PASS=teslasync
       - DATABASE_NAME=teslasync
-      - DATABASE_SSL_MODE=disable
+      - DATABASE_SSLMODE=disable
+      - DATABASE_MAX_CONNS=2
+      - DATABASE_MIN_CONNS=1
+      - DATABASE_HEALTH_CHECK_PERIOD=30s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=error
+      - TESLASYNC_LOG_LEVEL=error
       - HEALTH_PORT=8081
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=otel-collector:4317
@@ -133,12 +146,15 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=teslasync
-      - DATABASE_PASSWORD=teslasync
+      - DATABASE_PASS=teslasync
       - DATABASE_NAME=teslasync
-      - DATABASE_SSL_MODE=disable
+      - DATABASE_SSLMODE=disable
+      - DATABASE_MAX_CONNS=2
+      - DATABASE_MIN_CONNS=1
+      - DATABASE_HEALTH_CHECK_PERIOD=30s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
-      - LOG_LEVEL=error
+      - TESLASYNC_LOG_LEVEL=error
       - HEALTH_PORT=8082
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=otel-collector:4317
@@ -170,15 +186,18 @@ services:
       - DATABASE_HOST=postgres
       - DATABASE_PORT=5432
       - DATABASE_USER=teslasync
-      - DATABASE_PASSWORD=teslasync
+      - DATABASE_PASS=teslasync
       - DATABASE_NAME=teslasync
-      - DATABASE_SSL_MODE=disable
+      - DATABASE_SSLMODE=disable
+      - DATABASE_MAX_CONNS=2
+      - DATABASE_MIN_CONNS=1
+      - DATABASE_HEALTH_CHECK_PERIOD=30s
       - MQTT_HOST=mosquitto
       - MQTT_PORT=1883
       - TESLA_CLIENT_ID=${TESLA_CLIENT_ID:-dev-client-id}
       - TESLA_CLIENT_SECRET=${TESLA_CLIENT_SECRET:-dev-client-secret}
       - TESLA_API_BASE_URL=${TESLA_API_BASE_URL:-https://fleet-api.prd.na.vn.cloud.tesla.com}
-      - LOG_LEVEL=error
+      - TESLASYNC_LOG_LEVEL=error
       - HEALTH_PORT=8083
       - OTEL_ENABLED=true
       - OTEL_ENDPOINT=otel-collector:4317
@@ -211,6 +230,7 @@ services:
     image: timescale/timescaledb-ha:pg17
     container_name: teslasync-postgres-dev
     restart: unless-stopped
+    command: ["postgres", "-c", "max_connections=50", "-c", "shared_buffers=128MB", "-c", "effective_cache_size=512MB", "-c", "maintenance_work_mem=64MB", "-c", "shared_preload_libraries=timescaledb,pg_stat_statements,pg_textsearch", "-c", "pg_stat_statements.track=all"]
     ports:
       - "5432:5432"
     environment:
@@ -235,7 +255,7 @@ services:
       - "6379:6379"
     volumes:
       - dev_redis_data:/data
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -313,6 +333,10 @@ services:
       - "16686:16686"   # Jaeger UI
     environment:
       - COLLECTOR_OTLP_ENABLED=true
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
   tempo:
     image: grafana/tempo:2.7.0
@@ -346,6 +370,10 @@ services:
         condition: service_started
       tempo:
         condition: service_started
+    deploy:
+      resources:
+        limits:
+          memory: 256M
 
 volumes:
   dev_postgres_data:

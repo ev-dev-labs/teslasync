@@ -828,6 +828,21 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 	if sub.cfg.LivenessFailureAfter != 90*time.Second {
 		t.Errorf("LivenessFailureAfter default = %s, want 90s", sub.cfg.LivenessFailureAfter)
 	}
+	if sub.cfg.BatchWindow != 100*time.Millisecond {
+		t.Errorf("BatchWindow default = %s, want 100ms", sub.cfg.BatchWindow)
+	}
+	if sub.cfg.BatchMaxMessages != 256 {
+		t.Errorf("BatchMaxMessages default = %d, want 256", sub.cfg.BatchMaxMessages)
+	}
+	if sub.cfg.PersistenceConcurrency != 2 {
+		t.Errorf("PersistenceConcurrency default = %d, want 2", sub.cfg.PersistenceConcurrency)
+	}
+	if sub.cfg.PersistenceQueueCapacity != 64 {
+		t.Errorf("PersistenceQueueCapacity default = %d, want 64", sub.cfg.PersistenceQueueCapacity)
+	}
+	if sub.cfg.PersistenceTimeout != 30*time.Second {
+		t.Errorf("PersistenceTimeout default = %s, want 30s", sub.cfg.PersistenceTimeout)
+	}
 	if sub.cfg.AllowMissingSourceTimestamp {
 		t.Error("AllowMissingSourceTimestamp default = true, want false")
 	}

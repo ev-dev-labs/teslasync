@@ -75,6 +75,18 @@ var (
 		Name:      "pool_canceled_acquire_count",
 		Help:      "Cumulative PostgreSQL pool acquires canceled before a connection was obtained.",
 	})
+	databasePoolEmptyAcquireWait = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "pool_empty_acquire_wait_seconds",
+		Help:      "Cumulative time spent waiting because the PostgreSQL pool had no idle connection.",
+	})
+	databasePoolAcquireDuration = promauto.NewGauge(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Subsystem: "database",
+		Name:      "pool_acquire_duration_seconds",
+		Help:      "Cumulative time spent acquiring PostgreSQL connections.",
+	})
 )
 
 // queryBudgetCounter is a per-request atomic counter installed at the
@@ -190,6 +202,8 @@ func observePoolStats(s *pgxpool.Stat) {
 	}
 	databasePoolEmptyAcquires.Set(float64(s.EmptyAcquireCount()))
 	databasePoolCanceledAcquires.Set(float64(s.CanceledAcquireCount()))
+	databasePoolEmptyAcquireWait.Set(s.EmptyAcquireWaitTime().Seconds())
+	databasePoolAcquireDuration.Set(s.AcquireDuration().Seconds())
 }
 
 // newCompositeTracer returns the otelpgx + queryBudget composite that

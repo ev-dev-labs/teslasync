@@ -302,8 +302,8 @@ notificationWorker:
   # -- Database connection pool size for this worker. Workers need far fewer
   # connections than the API server. Keeps total connection budget low to avoid
   # exhausting Postgres max_connections during startup.
-  dbMaxConns: 5
-  dbMinConns: 2
+  dbMaxConns: 2
+  dbMinConns: 1
 
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-notification-worker
@@ -338,8 +338,8 @@ exportWorker:
   replicaCount: 1
 
   # -- Database connection pool size for this worker.
-  dbMaxConns: 5
-  dbMinConns: 2
+  dbMaxConns: 2
+  dbMinConns: 1
 
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-export-worker
@@ -376,8 +376,8 @@ automationWorker:
   replicaCount: 1
 
   # -- Database connection pool size for this worker.
-  dbMaxConns: 5
-  dbMinConns: 2
+  dbMaxConns: 2
+  dbMinConns: 1
 
   image:
     repository: ghcr.io/ev-dev-labs/teslasync-automation-worker
@@ -678,14 +678,25 @@ fleetTelemetry:
   # Must match FLEET_TELEMETRY_TOPIC_BASE env var on the TeslaSync API.
   topicBase: "telemetry"
 
-  # -- DEPRECATED — no-op on the per-field MQTT path. The legacy
-  # proto-batch subscriber buffered atomics into per-VIN payloads
-  # within this window before invoking the codec; the new per-field
-  # subscriber processes each {VIN, field} message individually
-  # (one codec.Atomic per MQTT message, one signal_log row per
-  # codec.Atomic). The knob is kept for compat with legacy values
-  # files but no production code reads it.
+  # -- Messages for the same vehicle are coalesced for this long before
+  # persistence. This trades a small amount of latency for substantially
+  # fewer database round-trips and same-row lock conflicts.
   batchMs: 100
+
+  # -- Maximum messages coalesced into one persistence batch.
+  batchMaxMessages: 256
+
+  # -- Maximum concurrent persistence workers. Vehicle IDs are assigned to a
+  # stable worker so one vehicle's telemetry is always written in event order.
+  persistenceConcurrency: 2
+
+  # -- Total bounded in-process admission capacity before MQTT callbacks apply
+  # backpressure and leave excess QoS 1 work broker-side.
+  persistenceQueueCapacity: 64
+
+  # -- Maximum time for one coalesced persistence batch, including database
+  # connection acquisition. Prevents a saturated pool from pinning workers.
+  persistenceTimeout: "30s"
 
   # -- Time without signals before a vehicle is considered stale.
   staleTimeout: "15m"
@@ -695,7 +706,7 @@ fleetTelemetry:
   fallbackPollInterval: "5m"
 
   # -- How often to flush accumulated signals to snapshot tables per vehicle.
-  snapshotWriteInterval: "1s"
+  snapshotWriteInterval: "10s"
 
   # -- How often to run stale-session cleanup.
   cleanupInterval: "2m"
@@ -1112,15 +1123,18 @@ postgresql:
         - ALL
 
   # -- Connection pool tuning
-  maxConns: 25
-  minConns: 5
+  # Twelve connections leave enough room for bounded telemetry persistence and
+  # interactive API reads without turning a slow home-server disk into 25
+  # concurrent queries. Scale up explicitly for larger fleets.
+  maxConns: 12
+  minConns: 2
 
   # -- DSN connection timeout in seconds (prevents hanging on network issues)
   connectTimeout: 5
   # -- Per-statement timeout in milliseconds (kills long-running queries)
   statementTimeout: 30000
   # -- Pool health check interval (detects stale connections)
-  healthCheckPeriod: "5s"
+  healthCheckPeriod: "30s"
 
   # ⚠️  TimescaleDB-HA migration (ADR-007):
   #   The embedded Postgres image is timescale/timescaledb-ha:pg17, which
@@ -1172,18 +1186,20 @@ postgresql:
   # `command:` block — both surfaces must enable the same extensions
   # so dev + prod observability features behave identically.
   serverConfig:
-    max_connections: 100
-    shared_buffers: 256MB
+    max_connections: 50
+    shared_buffers: 128MB
+    effective_cache_size: 512MB
+    maintenance_work_mem: 64MB
     shared_preload_libraries: timescaledb,pg_stat_statements,pg_textsearch
     pg_stat_statements.track: all
 
   resources:
     limits:
-      cpu: 2000m
-      memory: 4Gi
-    requests:
-      cpu: 500m
+      cpu: 1000m
       memory: 1Gi
+    requests:
+      cpu: 100m
+      memory: 256Mi
 
   # External PostgreSQL — used when postgresql.enabled is false.
   external:

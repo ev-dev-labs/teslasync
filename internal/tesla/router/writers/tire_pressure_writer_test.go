@@ -202,6 +202,44 @@ func TestTirePressureWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
+func TestTirePressureWriter_WriteBatchCoalescesTimestampAndPressure(t *testing.T) {
+	const vin = "5YJ3E1EA0KF000142"
+	emittedAt := time.Date(2026, 5, 6, 18, 0, 0, 0, time.UTC)
+	lastSeenAt := time.Unix(1746541200, 250_000_000).UTC()
+	rec := &recorder{rows: 1}
+	writer := newTirePressureTestWriter(t, rec)
+
+	results := writer.WriteBatch(context.Background(), []router.RoutedAtomic{
+		{
+			Atomic: codec.Atomic{
+				Field: "TpmsLastSeenPressureTimeFl", Value: float64(1746541200.25), EmittedAt: emittedAt, VehicleID: vin,
+			},
+			Entry: router.Entry{Field: "TpmsLastSeenPressureTimeFl", Destination: router.DestTirePressure},
+		},
+		{
+			Atomic: codec.Atomic{
+				Field: "TpmsPressureFl", Value: float64(222000), EmittedAt: emittedAt, VehicleID: vin,
+			},
+			Entry: router.Entry{Field: "TpmsPressureFl", Destination: router.DestTirePressure},
+		},
+	})
+
+	if len(results) != 2 || results[0] != nil || results[1] != nil {
+		t.Fatalf("WriteBatch results = %#v, want two nil entries", results)
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("Exec calls = %d, want 1", len(rec.calls))
+	}
+	call := rec.calls[0]
+	if !strings.Contains(call.SQL, `"front_left_last_seen_at"`) ||
+		!strings.Contains(call.SQL, `"front_left_pa"`) {
+		t.Fatalf("batch SQL missing tire-pressure columns: %s", call.SQL)
+	}
+	if got, want := call.Args, []any{vin, emittedAt, lastSeenAt, float64(222000)}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("batch args = %#v, want %#v", got, want)
+	}
+}
+
 // TestTirePressureWriter_FractionalEpochPreserved guards the
 // math.Modf + math.Round implementation in coerceEpochToTime
 // against truncation/rounding regressions. Tesla emits epoch as

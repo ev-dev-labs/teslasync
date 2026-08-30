@@ -40,18 +40,18 @@ type LivenessCheck struct {
 	Check     func() error
 }
 
-// HealthHandler returns a simple health check.
+// HealthHandler returns a process-local liveness check.
 //
-// It is the LIVENESS probe, so it is wrapped by the drain watchdog: a
+// Shared dependencies such as PostgreSQL are deliberately excluded: restarting
+// the API cannot repair them and turns pool or disk pressure into a restart
+// storm. Dependency health belongs in ReadyHandler.
+//
+// It is wrapped by the drain watchdog: a
 // pod that latched the one-way drain but was never terminated would
 // otherwise sit forever as "unready but alive" — invisible dead
 // capacity that nothing restarts. See ops.ReadinessGate.GuardLiveness.
-func HealthHandler(db *database.DB, extraChecks ...LivenessCheck) http.HandlerFunc {
+func HealthHandler(extraChecks ...LivenessCheck) http.HandlerFunc {
 	return ShutdownGate.GuardLiveness(StuckDrainBudget, nil)(func(w http.ResponseWriter, r *http.Request) {
-		if err := db.Health(r.Context()); err != nil {
-			writeError(w, http.StatusServiceUnavailable, "database unhealthy")
-			return
-		}
 		for _, check := range extraChecks {
 			if check.Check == nil {
 				continue
