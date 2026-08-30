@@ -47,6 +47,7 @@ const (
 type LiveSignalStore interface {
 	Update(ctx context.Context, vehicleID int64, signals map[string]interface{}) error
 	UpdateNonBlocking(ctx context.Context, vehicleID int64, signals map[string]interface{}) error
+	UpdateValuesNonBlocking(ctx context.Context, vehicleID int64, values map[string]*Value) error
 	GetSignal(ctx context.Context, vehicleID int64, name string, preference LiveSignalReadPreference) (*Value, error)
 	GetAll(ctx context.Context, vehicleID int64, preference LiveSignalReadPreference) (map[string]*Value, error)
 	Warm(ctx context.Context, vehicleID int64) error
@@ -169,6 +170,38 @@ func (s *HybridLiveSignalStore) UpdateNonBlocking(ctx context.Context, vehicleID
 		defer cancel()
 		if err := l2.Update(redisCtx, vehicleID, signalsCopy); err != nil {
 			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("live signal store: Redis mirror failed")
+		}
+	}()
+	return nil
+}
+
+// UpdateValuesNonBlocking preserves each signal's event time in L1 and L2.
+// Redis mirroring remains bounded and asynchronous so telemetry ingestion does
+// not depend on Redis availability.
+func (s *HybridLiveSignalStore) UpdateValuesNonBlocking(ctx context.Context, vehicleID int64, values map[string]*Value) error {
+	if err := validateLiveSignalContext(ctx); err != nil {
+		return err
+	}
+	if err := validateLiveSignalVehicleID(vehicleID); err != nil {
+		return err
+	}
+	if values == nil {
+		return ErrNilLiveSignalBatch
+	}
+
+	s.l1.UpdateValues(vehicleID, values)
+	metrics.RecordSignalReceived(strconv.FormatInt(vehicleID, 10), time.Now())
+	l2 := s.redisCache()
+	if len(values) == 0 || l2 == nil {
+		return nil
+	}
+
+	valuesCopy := cloneSignalValues(values)
+	go func() {
+		redisCtx, cancel := context.WithTimeout(contextWithRedisAsync(context.WithoutCancel(ctx)), liveSignalRedisMirrorTimeout)
+		defer cancel()
+		if err := l2.UpdateValues(redisCtx, vehicleID, valuesCopy); err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", vehicleID).Msg("live signal store: timestamped Redis mirror failed")
 		}
 	}()
 	return nil

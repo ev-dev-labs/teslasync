@@ -247,9 +247,13 @@ type e2eLiveStore struct {
 	state map[int64]map[string]any
 }
 
-func (s *e2eLiveStore) UpdateAll(_ context.Context, vehicleID int64, signals map[string]any) error {
+func (s *e2eLiveStore) UpdateAll(_ context.Context, vehicleID int64, timedSignals map[string]TimedSignal) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	signals := make(map[string]any, len(timedSignals))
+	for name, value := range timedSignals {
+		signals[name] = value.Value
+	}
 	// Defensive copy — the Pipeline reuses the same signals map across
 	// observers, so a recorder that retains the live reference would
 	// race with the next test (or, in production, with later

@@ -76,11 +76,30 @@ var (
 		Help:      "Fleet Telemetry MQTT subscription attempts by trigger and result",
 	}, []string{"trigger", "result"})
 
+	MQTTPipelineSubscriptionLastSuccess = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_pipeline_subscription_last_success_timestamp_seconds",
+		Help:      "Unix timestamp of the last successful Fleet Telemetry MQTT SUBACK",
+	}, []string{"consumer"})
+
 	MQTTPipelineLivenessUnhealthySeconds = promauto.NewGaugeVec(prometheus.GaugeOpts{
 		Namespace: "teslasync",
 		Name:      "mqtt_pipeline_liveness_unhealthy_seconds",
 		Help:      "Seconds the Fleet Telemetry consumer has been unhealthy while the broker is independently reachable",
 	}, []string{"consumer"})
+
+	MQTTTelemetryEventTime = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_telemetry_event_time_total",
+		Help:      "Fleet Telemetry messages by bounded event-time outcome: source, receipt_fallback, rejected_missing, or rejected_invalid",
+	}, []string{"outcome"})
+
+	MQTTTelemetryReplayLag = promauto.NewHistogram(prometheus.HistogramOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_telemetry_replay_lag_seconds",
+		Help:      "Elapsed seconds between Tesla source emission and MQTT receipt",
+		Buckets:   []float64{0.1, 1, 5, 30, 60, 300, 3600, 21600, 86400, 604800, 2592000},
+	})
 
 	SSEConnectionsActive = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: "teslasync",

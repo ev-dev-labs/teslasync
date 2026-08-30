@@ -44,6 +44,7 @@ cmd/protogen-tesla/testdata/golden/*_gen.go text eol=lf
 *.sh         text eol=lf
 *.bash       text eol=lf
 *.py         text eol=lf
+*.patch      text eol=lf -whitespace
 *.css        text eol=lf
 *.scss       text eol=lf
 *.html       text eol=lf
@@ -86,4 +87,3 @@ Dockerfile*  text eol=lf
 # marked above (top of file) for clarity; the rule below covers the
 # generic case for any other proto we may vendor.
 *.proto      binary
-

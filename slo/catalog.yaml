@@ -225,7 +225,7 @@ slos:
     tags: [throughput, pipeline]
 
   - name: mqtt_pipeline_subscription
-    description: "The dedicated Fleet Telemetry MQTT consumer must remain subscribed."
+    description: "The dedicated Fleet Telemetry MQTT consumer must retain a recent broker-confirmed subscription lease."
     sli:
       good_events: "sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[5m:30s])"
       valid_events: "count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[5m:30s])"

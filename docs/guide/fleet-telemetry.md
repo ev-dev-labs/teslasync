@@ -44,7 +44,7 @@ sequenceDiagram
     participant DB as TimescaleDB
     participant UI as Browser
 
-    FT->>MQTT: Publish signal batch
+    FT->>MQTT: Publish {value, ts} signal envelope
     MQTT->>API: Deliver message
     API->>API: Decode + normalise to SI
     API->>L1: Write-through (FSM, typed rules, sessions)
@@ -61,6 +61,7 @@ sequenceDiagram
 | Public HTTPS/WSS endpoint    | Vehicles require a publicly trusted TLS certificate                                |
 | Tesla public-key URL         | Serve `/.well-known/appspecific/com.tesla.3p.public-key.pem` unauthenticated       |
 | MQTT broker                  | Compose and Helm include Mosquitto by default                                      |
+| Event-time producer image    | Use TeslaSync's Fleet Telemetry image; Tesla's stock MQTT output drops `CreatedAt` |
 | API config                   | Set `FLEET_TELEMETRY_*` envs (see [Configuration](/guide/configuration))           |
 
 ## Docker Compose
@@ -72,6 +73,31 @@ docker compose --profile telemetry up -d --build
 ```
 
 Configure the public host, TLS certificates, topic base, and Tesla Developer settings in `.env` and `fleet-telemetry/config.json` before enabling it.
+
+TeslaSync ships a pinned Fleet Telemetry build that keeps the upstream
+`Payload.CreatedAt` value in every per-field MQTT payload. Do not replace it
+with `tesla/fleet-telemetry` unless that upstream image gains the same
+`{"value": ..., "ts": ...}` contract; the stock image currently publishes
+bare values and queued messages would otherwise be timestamped when replayed.
+
+For the first event-time cutover, deploy the TeslaSync Fleet Telemetry image
+**before** the strict API consumer. Do not rely on a simultaneous Helm upgrade:
+Kubernetes does not guarantee which Deployment becomes ready first.
+
+1. Update only the Fleet Telemetry Deployment to
+   `ghcr.io/ev-dev-labs/teslasync-fleet-telemetry:<version>`.
+2. Wait for its rollout and inspect a canary MQTT message; its body must contain
+   both `value` and an RFC3339Nano `ts`.
+3. Upgrade the Helm release so the API begins enforcing source timestamps, then
+   confirm `teslasync_mqtt_telemetry_event_time_total{outcome="source"}`
+   increases while the `rejected_missing` and `rejected_invalid` outcomes stay
+   flat.
+
+After the API upgrade, valid signals without `ts` are sent to the MQTT DLQ and
+acknowledged rather than written with receipt time. Any bare messages already
+queued by the stock producer are intentionally quarantined because MQTT 3.1.1
+contains no timestamp from which their original event time can be recovered.
+External Fleet Telemetry producers must emit the same envelope contract.
 
 ## Kubernetes
 

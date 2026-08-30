@@ -85,7 +85,9 @@ FLEET_TELEMETRY_HOST=
 
 Enable with: `docker compose --profile telemetry up -d`
 
-- Uses official `tesla/fleet-telemetry:latest` image
+- Uses TeslaSync's pinned `ghcr.io/ev-dev-labs/teslasync-fleet-telemetry`
+  image, which preserves the upstream `Payload.CreatedAt` timestamp in every
+  MQTT field envelope
 - Config mounted from `fleet-telemetry-config.json`
 - TLS cert/key mounted from paths in `.env`
 - Dispatches vehicle data to `http://teslasync:8080/api/v1/telemetry`

@@ -60,26 +60,39 @@ func (s *Store) SetRedisCache(cache *RedisSignalCache) {
 // This is called on every MQTT batch and must be as fast as possible.
 func (s *Store) Update(vehicleID int64, signals map[string]interface{}) {
 	now := time.Now().UTC()
+	values := make(map[string]*Value, len(signals))
+	for field, raw := range signals {
+		values[field] = &Value{Raw: raw, Timestamp: now}
+	}
+	s.UpdateValues(vehicleID, values)
+}
 
+// UpdateValues merges timestamped signals while preserving the newest
+// observation for each field. Older replayed values never overwrite newer
+// live state; equal timestamps remain idempotently replaceable.
+func (s *Store) UpdateValues(vehicleID int64, values map[string]*Value) {
 	s.mu.Lock()
 	m, ok := s.vehicles[vehicleID]
 	if !ok {
-		m = make(map[string]*Value, len(signals))
+		m = make(map[string]*Value, len(values))
 		s.vehicles[vehicleID] = m
 	}
-	for k, v := range signals {
-		if v == nil {
+	for field, value := range values {
+		if value == nil || value.Raw == nil {
 			continue
 		}
 		// Skip {invalid: true} markers from Tesla
-		if im, isMap := v.(map[string]interface{}); isMap {
+		if im, isMap := value.Raw.(map[string]interface{}); isMap {
 			if inv, has := im["invalid"]; has {
 				if b, isBool := inv.(bool); isBool && b {
 					continue
 				}
 			}
 		}
-		m[k] = &Value{Raw: v, Timestamp: now}
+		if current := m[field]; current != nil && !shouldReplaceSignalValue(current, value) {
+			continue
+		}
+		m[field] = cloneSignalValue(value)
 	}
 	s.mu.Unlock()
 
@@ -128,27 +141,22 @@ func (s *Store) Get(vehicleID int64, name string) *Value {
 // time.Now() at the boundary. Callers that have no precise timestamp
 // SHOULD pass time.Now().UTC() explicitly.
 func (s *Store) Set(vehicleID int64, field string, value any, ts time.Time) {
-	if value == nil {
-		return
-	}
-	if im, isMap := value.(map[string]interface{}); isMap {
-		if inv, has := im["invalid"]; has {
-			if b, isBool := inv.(bool); isBool && b {
-				return
-			}
-		}
-	}
+	s.UpdateValues(vehicleID, map[string]*Value{
+		field: {Raw: value, Timestamp: ts},
+	})
+}
 
-	s.mu.Lock()
-	m, ok := s.vehicles[vehicleID]
-	if !ok {
-		m = make(map[string]*Value)
-		s.vehicles[vehicleID] = m
+func shouldReplaceSignalValue(current, incoming *Value) bool {
+	if current == nil {
+		return true
 	}
-	m[field] = &Value{Raw: value, Timestamp: ts}
-	s.mu.Unlock()
-
-	metrics.VehicleLastSeen.WithLabelValues(strconv.FormatInt(vehicleID, 10)).Set(0)
+	if incoming.Timestamp.IsZero() {
+		return current.Timestamp.IsZero()
+	}
+	if current.Timestamp.IsZero() {
+		return true
+	}
+	return !incoming.Timestamp.Before(current.Timestamp)
 }
 
 // GetFloat returns a numeric signal value as float64. When the field is

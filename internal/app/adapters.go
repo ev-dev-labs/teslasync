@@ -6,6 +6,7 @@ import (
 
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	sigsvc "github.com/ev-dev-labs/teslasync/internal/signal"
+	teslapipeline "github.com/ev-dev-labs/teslasync/internal/tesla_pipeline"
 )
 
 // liveSignalStoreAdapter bridges signal.LiveSignalStore (whose
@@ -21,8 +22,12 @@ type liveSignalStoreAdapter struct {
 	store sigsvc.LiveSignalStore
 }
 
-func (a *liveSignalStoreAdapter) UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error {
-	return a.store.UpdateNonBlocking(ctx, vehicleID, signals)
+func (a *liveSignalStoreAdapter) UpdateAll(ctx context.Context, vehicleID int64, signals map[string]teslapipeline.TimedSignal) error {
+	values := make(map[string]*sigsvc.Value, len(signals))
+	for name, value := range signals {
+		values[name] = &sigsvc.Value{Raw: value.Value, Timestamp: value.EmittedAt}
+	}
+	return a.store.UpdateValuesNonBlocking(ctx, vehicleID, values)
 }
 
 // GetAll returns the cross-batch snapshot of all signals the live

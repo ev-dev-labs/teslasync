@@ -376,6 +376,7 @@ var dlqPublishesTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 const (
 	reasonCodecDrop         = "codec_drop"
 	reasonContextCanceled   = "context_canceled"
+	reasonSourceTimeMissing = "source_timestamp_missing"
 	reasonVINUnknown        = "vin_unknown"
 	reasonVINResolverError  = "vin_resolver_error"
 	reasonOther             = "other"
@@ -390,6 +391,8 @@ const (
 // pipeline-side ErrPayloadDrop wraps. Kept package-private so nothing
 // outside this package can synthesise a false poison pill.
 var errPayloadDrop = errors.New("mqtt: payload-level failure")
+
+var errSourceTimestampMissing = errors.New("mqtt: source timestamp missing")
 
 // PipelineSubscriberConfig captures the runtime knobs of PipelineSubscriber.
 // Zero values fall back to defaults documented per field.
@@ -415,6 +418,12 @@ type PipelineSubscriberConfig struct {
 	// failed SUBSCRIBE while the MQTT transport remains connected. Default 5s.
 	SubscriptionRetryInterval time.Duration
 
+	// SubscriptionReconcileInterval controls how often an acknowledged
+	// subscription is idempotently reasserted. MQTT 3.1.1 cannot query broker
+	// subscription state, so a periodic SUBACK is the only traffic-independent
+	// way to repair a silently lost subscription. Default 30s.
+	SubscriptionReconcileInterval time.Duration
+
 	// LivenessFailureAfter is the continuous period for which the dedicated
 	// pipeline client may remain unhealthy while the broker is independently
 	// reachable before LivenessError asks Kubernetes to restart the pod.
@@ -429,6 +438,12 @@ type PipelineSubscriberConfig struct {
 	// became the production path. Implementations MUST be safe for
 	// concurrent calls (paho dispatches messages on multiple goroutines).
 	StreamingRecorder StreamingHealthRecorder
+
+	// AllowMissingSourceTimestamp is an emergency compatibility escape hatch
+	// for legacy MQTT producers that publish bare values. It is false by
+	// default because receipt-time fallback can turn queued historical
+	// telemetry into current drive or charging transitions.
+	AllowMissingSourceTimestamp bool
 }
 
 // StreamingHealthRecorder bridges PipelineSubscriber to the per-VIN streaming
@@ -450,6 +465,9 @@ func (c *PipelineSubscriberConfig) withDefaults() {
 	}
 	if c.SubscriptionRetryInterval <= 0 {
 		c.SubscriptionRetryInterval = 5 * time.Second
+	}
+	if c.SubscriptionReconcileInterval <= 0 {
+		c.SubscriptionReconcileInterval = 30 * time.Second
 	}
 	if c.LivenessFailureAfter <= 0 {
 		c.LivenessFailureAfter = 90 * time.Second
@@ -483,6 +501,8 @@ type PipelineSubscriber struct {
 	started                bool
 	stopped                bool
 	subscribed             bool
+	connectionEpoch        uint64
+	lastSubACK             time.Time
 	livenessUnhealthySince time.Time
 }
 
@@ -573,7 +593,9 @@ func (s *PipelineSubscriber) Start() error {
 	return nil
 }
 
-// Stop unsubscribes and cancels in-flight handler contexts. Idempotent.
+// Stop cancels in-flight handler contexts without sending UNSUBSCRIBE.
+// The persistent broker subscription must survive ordinary pod restarts so
+// QoS 1 messages continue queuing while the client is offline. Idempotent.
 func (s *PipelineSubscriber) Stop() {
 	s.mu.Lock()
 	if s.stopped {
@@ -582,6 +604,8 @@ func (s *PipelineSubscriber) Stop() {
 	}
 	s.stopped = true
 	s.subscribed = false
+	s.connectionEpoch++
+	s.lastSubACK = time.Time{}
 	s.livenessUnhealthySince = time.Time{}
 	started := s.started
 	s.mu.Unlock()
@@ -596,12 +620,13 @@ func (s *PipelineSubscriber) Stop() {
 	}
 
 	s.subscribeMu.Lock()
-	defer s.subscribeMu.Unlock()
-	topic := s.pipelineTopicFilter()
-	s.client.Unsubscribe(topic)
+	s.subscribeMu.Unlock()
 	metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	metrics.MQTTPipelineSubscriptionLastSuccess.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 	metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
-	s.logger.Info().Str("topic", topic).Msg("phase-42 PipelineSubscriber stopped")
+	s.logger.Info().
+		Str("topic", s.pipelineTopicFilter()).
+		Msg("phase-42 PipelineSubscriber stopped; persistent broker subscription preserved")
 }
 
 // OnBrokerReconnect re-establishes the SUBSCRIBE on every paho OnConnect
@@ -625,6 +650,7 @@ func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 	started := s.started
 	stopped := s.stopped
 	s.subscribed = false
+	s.connectionEpoch++
 	s.mu.Unlock()
 	if !started || stopped {
 		// First OnConnect during initial Connect, or post-Stop reconnect:
@@ -658,6 +684,7 @@ func (s *PipelineSubscriber) OnBrokerConnectionLost() {
 	s.mu.Lock()
 	if s.started && !s.stopped {
 		s.subscribed = false
+		s.connectionEpoch++
 	}
 	s.mu.Unlock()
 	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
@@ -676,9 +703,19 @@ func (s *PipelineSubscriber) IsHealthy() bool {
 	started := s.started
 	stopped := s.stopped
 	subscribed := s.subscribed
+	lastSubACK := s.lastSubACK
 	client := s.client
 	s.mu.Unlock()
-	return started && !stopped && subscribed && client != nil && client.IsConnected()
+	healthy := started &&
+		!stopped &&
+		subscribed &&
+		subscriptionLeaseCurrent(time.Now(), lastSubACK, s.cfg) &&
+		client != nil &&
+		client.IsConnectionOpen()
+	if !healthy && started && !stopped {
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	}
+	return healthy
 }
 
 // LivenessError returns an error only for a subscriber-specific wedge. A
@@ -695,10 +732,12 @@ func (s *PipelineSubscriber) LivenessError(brokerReachable bool) error {
 	started := s.started
 	stopped := s.stopped
 	subscribed := s.subscribed
+	lastSubACK := s.lastSubACK
 	client := s.client
-	connected := client != nil && client.IsConnected()
+	connected := client != nil && client.IsConnectionOpen()
+	leaseCurrent := subscriptionLeaseCurrent(now, lastSubACK, s.cfg)
 
-	if !started || stopped || (connected && subscribed) || (!connected && !brokerReachable) {
+	if !started || stopped || (connected && subscribed && leaseCurrent) || (!connected && !brokerReachable) {
 		s.livenessUnhealthySince = time.Time{}
 		s.mu.Unlock()
 		metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
@@ -719,9 +758,17 @@ func (s *PipelineSubscriber) LivenessError(brokerReachable bool) error {
 		"mqtt pipeline subscriber unhealthy for %s (pipeline_connected=%t subscribed=%t broker_reachable=%t)",
 		unhealthyFor.Round(time.Second),
 		connected,
-		subscribed,
+		subscribed && leaseCurrent,
 		brokerReachable,
 	)
+}
+
+func subscriptionLeaseCurrent(now, lastSubACK time.Time, cfg PipelineSubscriberConfig) bool {
+	if lastSubACK.IsZero() {
+		return false
+	}
+	maxAge := 2*cfg.SubscriptionReconcileInterval + cfg.SubscribeTimeout
+	return !now.After(lastSubACK.Add(maxAge))
 }
 
 func (s *PipelineSubscriber) subscriptionRecoveryLoop() {
@@ -747,20 +794,27 @@ func (s *PipelineSubscriber) subscriptionRecoveryTick() {
 	client := s.client
 	active := s.started && !s.stopped
 	subscribed := s.subscribed
+	lastSubACK := s.lastSubACK
 	s.mu.Unlock()
 	if !active || client == nil {
 		return
 	}
-	if !client.IsConnected() {
+	if !client.IsConnectionOpen() {
 		s.OnBrokerConnectionLost()
 		return
 	}
 	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
-	if subscribed {
+	reconcileDue := subscribed &&
+		(lastSubACK.IsZero() || time.Since(lastSubACK) >= s.cfg.SubscriptionReconcileInterval)
+	if subscribed && !reconcileDue {
 		return
 	}
 
-	if err := s.subscribe(client, "supervisor", false); err != nil {
+	trigger := "supervisor"
+	if reconcileDue {
+		trigger = "reconcile"
+	}
+	if err := s.subscribe(client, trigger, reconcileDue); err != nil {
 		span.RecordError(err)
 		span.SetStatus(codes.Error, "subscription recovery failed")
 		s.logger.Warn().
@@ -769,10 +823,16 @@ func (s *PipelineSubscriber) subscriptionRecoveryTick() {
 			Msg("mqtt: PipelineSubscriber subscription recovery attempt failed")
 		return
 	}
-	s.logger.Info().
+	event := s.logger.Info()
+	message := "mqtt: PipelineSubscriber subscription recovered by supervisor"
+	if reconcileDue {
+		event = s.logger.Debug()
+		message = "mqtt: PipelineSubscriber subscription lease reconciled"
+	}
+	event.
 		Str("topic", s.pipelineTopicFilter()).
 		Uint8("qos", s.cfg.SubscribeQoS).
-		Msg("mqtt: PipelineSubscriber subscription recovered by supervisor")
+		Msg(message)
 }
 
 func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, force bool) error {
@@ -788,34 +848,70 @@ func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, f
 		s.mu.Unlock()
 		return nil
 	}
+	epoch := s.connectionEpoch
 	s.mu.Unlock()
 
+	if client == nil || !client.IsConnectionOpen() {
+		s.markSubscriptionFailure(epoch)
+		metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "disconnected").Inc()
+		return fmt.Errorf("mqtt: PipelineSubscriber: connection is not open for topic %s", s.pipelineTopicFilter())
+	}
+
 	token := client.Subscribe(s.pipelineTopicFilter(), s.cfg.SubscribeQoS, s.onPipelineMessage)
-	if !token.WaitTimeout(s.cfg.SubscribeTimeout) {
+	timer := time.NewTimer(s.cfg.SubscribeTimeout)
+	defer timer.Stop()
+	select {
+	case <-token.Done():
+	case <-timer.C:
+		s.markSubscriptionFailure(epoch)
 		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "timeout").Inc()
-		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe timeout for topic %s", s.pipelineTopicFilter())
+	case <-s.ctx.Done():
+		s.markSubscriptionFailure(epoch)
+		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "canceled").Inc()
+		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe canceled for topic %s: %w", s.pipelineTopicFilter(), s.ctx.Err())
 	}
 	if err := token.Error(); err != nil {
+		s.markSubscriptionFailure(epoch)
 		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "error").Inc()
-		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe %s: %w", s.pipelineTopicFilter(), err)
 	}
 
+	now := time.Now().UTC()
 	s.mu.Lock()
-	subscriptionActive := !s.stopped
-	if !s.stopped {
+	subscriptionActive := s.started &&
+		!s.stopped &&
+		s.connectionEpoch == epoch &&
+		client.IsConnectionOpen()
+	if subscriptionActive {
 		s.subscribed = true
+		s.lastSubACK = now
 		s.livenessUnhealthySince = time.Time{}
 	}
 	s.mu.Unlock()
-	metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "success").Inc()
-	if subscriptionActive {
-		metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
-		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
-		metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	if !subscriptionActive {
+		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "stale").Inc()
+		return fmt.Errorf("mqtt: PipelineSubscriber: stale SUBACK for topic %s", s.pipelineTopicFilter())
 	}
+	metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "success").Inc()
+	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
+	metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
+	metrics.MQTTPipelineSubscriptionLastSuccess.WithLabelValues(fleetTelemetryConsumerLabel).Set(float64(now.Unix()))
+	metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 	return nil
+}
+
+func (s *PipelineSubscriber) markSubscriptionFailure(epoch uint64) {
+	s.mu.Lock()
+	current := s.connectionEpoch == epoch && !s.stopped
+	if current {
+		s.subscribed = false
+	}
+	s.mu.Unlock()
+	if current {
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	}
 }
 
 // mqttPayload is the test-friendly seam for the Paho-specific
@@ -915,14 +1011,10 @@ func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.M
 //     surface it through handlePipelineError using the same context-cancel /
 //     other classification the proto-batch path used.
 //
-// Note on event-time: Tesla's per-field MQTT publisher does NOT include a
-// timestamp in the body (only the topic + bare JSON value). The
-// "receivedAt" we hand DecodeJSONField is the wall-clock at which the
-// subscriber received the message — a regression from the proto-batch case
-// where Payload.CreatedAt carried event-time, but it is the only signal
-// the upstream wire format gives us. The optional replay envelope
-// `{"value":...,"ts":...}` written by cmd/pub-test-signal preserves
-// event-time on the test path.
+// Event-time contract: TeslaSync's Fleet Telemetry image wraps each value as
+// `{"value":...,"ts":...}` using Payload.CreatedAt. Production rejects a
+// valid signal without that source timestamp so an old broker-queued message
+// can never be written or applied to a session at replay receipt time.
 func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload) {
 	span := trace.SpanFromContext(ctx)
 	vin, field, ok := parsePipelineTopic(s.cfg.TopicBase, msg.Topic)
@@ -975,13 +1067,9 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 
 	span.SetAttributes(attribute.Int64("vehicle_id", vehicleID))
 
-	// receivedAt is the wall-clock at which we ingested this message. It
-	// is the codec's fallback EmittedAt for the bare-JSON production
-	// path; the optional replay envelope overrides it with the producer's
-	// "ts" when present (cmd/pub-test-signal injects this for offline
-	// historical replays). time.Now() is the right call here — we are
-	// the boundary that just received the bytes; substituting any other
-	// clock would silently misattribute event-time.
+	// receivedAt is transport evidence kept separately from source event time.
+	// It is only an EmittedAt fallback for explicitly enabled compatibility
+	// callers; production requires the producer's envelope timestamp.
 	receivedAt := msg.ReceivedAt
 	if receivedAt.IsZero() {
 		// Direct unit-test callers do not pass through Paho's receive
@@ -991,6 +1079,10 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 
 	atomics, err := codec.DecodeJSONFieldCtx(ctx, field, msg.Payload, vin, receivedAt)
 	if err != nil {
+		if errors.Is(err, codec.ErrSourceTimestampInvalid) {
+			metrics.MQTTTelemetryEventTime.WithLabelValues("rejected_invalid").Inc()
+			span.SetAttributes(attribute.String("telemetry.event_time_outcome", "rejected_invalid"))
+		}
 		// Per the codec contract, every err from DecodeJSONField wraps
 		// codec.ErrPayloadDrop; rather than inventing a separate sentinel
 		// for the per-field path we synthesise the same wrapped error
@@ -1008,9 +1100,35 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 		msg.Ack()
 		return
 	}
-	// Stamp only final, flattened atomics. Bare production JSON has no
-	// SourceEmittedAt (its EmittedAt is receivedAt for ordering), while a
-	// valid replay-envelope ts remains the decoder's source evidence.
+	if atomics[0].SourceEmittedAt == nil && !s.cfg.AllowMissingSourceTimestamp {
+		metrics.MQTTTelemetryEventTime.WithLabelValues("rejected_missing").Inc()
+		span.SetAttributes(attribute.String("telemetry.event_time_outcome", "rejected_missing"))
+		s.handlePipelineError(
+			ctx,
+			msg,
+			vehicleID,
+			vin,
+			fmt.Errorf("%w: %w", errPayloadDrop, errSourceTimestampMissing),
+		)
+		return
+	}
+	if atomics[0].SourceEmittedAt == nil {
+		metrics.MQTTTelemetryEventTime.WithLabelValues("receipt_fallback").Inc()
+		span.SetAttributes(attribute.String("telemetry.event_time_outcome", "receipt_fallback"))
+	} else {
+		replayLag := receivedAt.Sub(*atomics[0].SourceEmittedAt).Seconds()
+		if replayLag < 0 {
+			replayLag = 0
+		}
+		metrics.MQTTTelemetryEventTime.WithLabelValues("source").Inc()
+		metrics.MQTTTelemetryReplayLag.Observe(replayLag)
+		span.SetAttributes(
+			attribute.String("telemetry.event_time_outcome", "source"),
+			attribute.Float64("telemetry.replay_lag_seconds", replayLag),
+		)
+	}
+	// Stamp only final, flattened atomics. Compatibility bare JSON has no
+	// SourceEmittedAt; a valid production envelope retains source evidence.
 	atomics = codec.StampTransport(atomics, codec.IngestOriginFleetTelemetryMQTT, receivedAt)
 	if err := s.pipeline.ProcessAtomics(ctx, atomics, vehicleID); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
@@ -1058,8 +1176,12 @@ func (s *PipelineSubscriber) handlePipelineError(
 		return
 
 	case errors.Is(err, errPayloadDrop):
-		normalizeFailuresTotal.WithLabelValues(reasonCodecDrop).Inc()
-		s.quarantineAndAck(ctx, msg, vehicleID, vin, err, reasonCodecDrop)
+		reason := reasonCodecDrop
+		if errors.Is(err, errSourceTimestampMissing) {
+			reason = reasonSourceTimeMissing
+		}
+		normalizeFailuresTotal.WithLabelValues(reason).Inc()
+		s.quarantineAndAck(ctx, msg, vehicleID, vin, err, reason)
 		return
 
 	default:

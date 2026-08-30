@@ -2,6 +2,7 @@ package signal
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strconv"
@@ -71,6 +72,41 @@ func (f *fakeRedisSignalClient) HSet(ctx context.Context, key string, values ...
 		hash[fmt.Sprint(values[i])] = fmt.Sprint(values[i+1])
 	}
 	return redis.NewIntResult(int64(len(values)/2), nil)
+}
+
+func (f *fakeRedisSignalClient) Eval(_ context.Context, _ string, keys []string, args ...interface{}) *redis.Cmd {
+	if len(keys) != 1 || len(args) < 1 || (len(args)-1)%3 != 0 {
+		return redis.NewCmdResult(nil, errors.New("unexpected timestamped update arguments"))
+	}
+
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if f.hsetErr != nil {
+		return redis.NewCmdResult(nil, f.hsetErr)
+	}
+	key := keys[0]
+	hash, ok := f.hashes[key]
+	if !ok {
+		hash = make(map[string]string)
+		f.hashes[key] = hash
+	}
+	var written int64
+	for i := 1; i < len(args); i += 3 {
+		field := fmt.Sprint(args[i])
+		incomingTs, err := strconv.ParseInt(fmt.Sprint(args[i+1]), 10, 64)
+		if err != nil {
+			return redis.NewCmdResult(nil, err)
+		}
+		if current, exists := hash[field]; exists {
+			var envelope redisSignalValueEnvelope
+			if jsonErr := json.Unmarshal([]byte(current), &envelope); jsonErr == nil && envelope.TS > incomingTs {
+				continue
+			}
+		}
+		hash[field] = fmt.Sprint(args[i+2])
+		written++
+	}
+	return redis.NewCmdResult(written, nil)
 }
 
 func (f *fakeRedisSignalClient) Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd {
@@ -1241,4 +1277,39 @@ func TestWithStaleAfterOverride(t *testing.T) {
 	if cache.staleAfter != 7*time.Second {
 		t.Fatalf("WithStaleAfter override staleAfter = %v, want 7s", cache.staleAfter)
 	}
+}
+
+func TestRedisSignalCacheUpdateValuesLuaRejectsOlderReplay(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("miniredis.Run() error = %v", err)
+	}
+	t.Cleanup(mr.Close)
+	rdb := redis.NewClient(&redis.Options{Addr: mr.Addr()})
+	t.Cleanup(func() { _ = rdb.Close() })
+
+	cache := NewRedisSignalCache(rdb)
+	ctx := context.Background()
+	newer := time.Date(2026, 8, 29, 10, 0, 0, 987654321, time.UTC)
+	older := newer.Add(-7 * 24 * time.Hour)
+
+	if err := cache.UpdateValues(ctx, 77, map[string]*Value{
+		"BatteryLevel": {Raw: float32(81), Timestamp: newer},
+	}); err != nil {
+		t.Fatalf("UpdateValues(newer) error = %v", err)
+	}
+	if err := cache.UpdateValues(ctx, 77, map[string]*Value{
+		"BatteryLevel": {Raw: float32(12), Timestamp: older},
+	}); err != nil {
+		t.Fatalf("UpdateValues(older) error = %v", err)
+	}
+
+	got, err := cache.GetSignalValue(ctx, 77, "BatteryLevel")
+	if err != nil {
+		t.Fatalf("GetSignalValue() error = %v", err)
+	}
+	if got == nil || !got.Timestamp.Equal(newer) {
+		t.Fatalf("Redis value = %#v, want event time %v", got, newer)
+	}
+	assertFloat32(t, got.Raw, 81)
 }

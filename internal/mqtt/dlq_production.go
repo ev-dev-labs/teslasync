@@ -52,6 +52,10 @@ const (
 	// pipelineMaxReconnectInterval is the cap on backoff between reconnect
 	// attempts.
 	pipelineMaxReconnectInterval = 30 * time.Second
+
+	// pipelineWriteTimeout bounds socket writes, including SUBSCRIBE packets.
+	// Token waiting is bounded separately by PipelineSubscriber.
+	pipelineWriteTimeout = 10 * time.Second
 )
 
 // productionPipelineOptions builds the paho ClientOptions used for the
@@ -65,6 +69,7 @@ const (
 //   - SetKeepAlive(30s)               — matches legacy + mosquitto default.
 //   - SetPingTimeout(10s)             — half-open detection cutoff.
 //   - SetConnectTimeout(30s)          — initial handshake cap.
+//   - SetWriteTimeout(10s)            — bounds MQTT control-packet writes.
 //   - SetMaxReconnectInterval(30s)    — bounded recovery without a multi-minute
 //     broker-queue growth window.
 //   - SetOrderMatters(false)          — writers are idempotent so concurrent
@@ -94,6 +99,7 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 		SetKeepAlive(pipelineKeepAlive).
 		SetPingTimeout(pipelinePingTimeout).
 		SetConnectTimeout(pipelineConnectTimeout).
+		SetWriteTimeout(pipelineWriteTimeout).
 		SetMaxReconnectInterval(pipelineMaxReconnectInterval).
 		SetOrderMatters(false).
 		SetAutoReconnect(true)

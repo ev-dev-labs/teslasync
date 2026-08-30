@@ -45,6 +45,9 @@ func (f *failingLiveStore) Update(context.Context, int64, map[string]interface{}
 func (f *failingLiveStore) UpdateNonBlocking(context.Context, int64, map[string]interface{}) error {
 	return nil
 }
+func (f *failingLiveStore) UpdateValuesNonBlocking(context.Context, int64, map[string]*signal.Value) error {
+	return nil
+}
 func (f *failingLiveStore) GetSignal(context.Context, int64, string, signal.LiveSignalReadPreference) (*signal.Value, error) {
 	return nil, f.err
 }

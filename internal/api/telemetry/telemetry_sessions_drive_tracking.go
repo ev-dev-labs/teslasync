@@ -221,23 +221,28 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		// Speed = 0, active drive → check for drive end (2-min timeout fallback)
 		active.LastSeen = time.Now().UTC()
 		active.LastSpeed = 0
+		speedEventTs := payloadTs
+		if ts, ok := fieldTs["VehicleSpeed"]; ok && !ts.IsZero() {
+			speedEventTs = ts
+		}
+		speedEventTs = eventTimeOrNow(speedEventTs)
 
 		if active.LastSpeedZeroTime.IsZero() {
-			active.LastSpeedZeroTime = time.Now().UTC()
+			active.LastSpeedZeroTime = speedEventTs
 		}
 
 		// Before ending: check SignalStore for last known Gear.
 		// If the car's gear is still D/R (traffic light, jam, long stop), do NOT end the drive.
 		// Gear signals only fire on CHANGE — a Gear=D from 2 hours ago is still valid
 		// as long as no Gear=P was received since.
-		if !active.LastSpeedZeroTime.IsZero() && time.Since(active.LastSpeedZeroTime) > 2*time.Minute {
+		if !active.LastSpeedZeroTime.IsZero() && speedEventTs.Sub(active.LastSpeedZeroTime) > 2*time.Minute {
 			if t.localSignals != nil {
 				if gv := t.localSignals.Get(vehicleID, "Gear"); gv != nil {
 					gearStr, _ := gv.Raw.(string)
 					if gearStr == enums.GearDrive || gearStr == enums.GearReverse {
 						// Last known Gear is D/R — car hasn't shifted to P.
 						// Keep the drive alive (traffic light, jam, accident, etc.)
-						active.LastSpeedZeroTime = time.Now().UTC()
+						active.LastSpeedZeroTime = speedEventTs
 						log.Debug().Int64("vehicle_id", vehicleID).Str("gear", gearStr).
 							Msg("telemetry: speed=0 >2min but last Gear=D/R — keeping drive alive")
 						return
@@ -1241,7 +1246,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	// the drive-completion geocode, because the end label has to be resolved
 	// from the endpoint that survives that correction.
 	go func() {
-		t.backfillDriveValues(active, vehicleID)
+		t.backfillDriveValues(active, vehicleID, endTs)
 		t.finalizeDriveEndpoints(active.DriveID)
 	}()
 
@@ -1278,7 +1283,7 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 // backfillDriveValues checks if a completed drive has missing start/end values
 // (SOC, odometer, range, elevation) and fills them from the nearest position data.
 // Runs async after drive completion — does not block the telemetry pipeline.
-func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, vehicleID int64) {
+func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, vehicleID int64, endTime time.Time) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -1303,7 +1308,6 @@ func (t *TelemetrySessionTracker) backfillDriveValues(active *streamingDrive, ve
 	}
 
 	// --- Backfill end values ---
-	endTime := time.Now().UTC()
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {

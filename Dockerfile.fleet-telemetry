@@ -1,0 +1,60 @@
+# Build Tesla Fleet Telemetry from a pinned upstream revision, applying the
+# TeslaSync MQTT event-time envelope patch before compilation.
+FROM golang:1.26-bookworm AS build
+
+ARG FLEET_TELEMETRY_REF=8fbaa100bd365936dab6ecbf0e2d7070c4d765cb
+ARG FLEET_TELEMETRY_ARCHIVE_SHA256=8a0e2cc31a3c962b4e6296687e75b5fb208fbbe53ccf928af220ec2bf7fdb355
+
+WORKDIR /build
+RUN wget -qO fleet-telemetry.tar.gz \
+      "https://github.com/teslamotors/fleet-telemetry/archive/${FLEET_TELEMETRY_REF}.tar.gz" \
+    && echo "${FLEET_TELEMETRY_ARCHIVE_SHA256}  fleet-telemetry.tar.gz" | sha256sum -c - \
+    && mkdir -p /go/src/fleet-telemetry \
+    && tar -xzf fleet-telemetry.tar.gz --strip-components=1 -C /go/src/fleet-telemetry \
+    && rm fleet-telemetry.tar.gz
+
+RUN wget -q https://github.com/jedisct1/libsodium/releases/download/1.0.19-RELEASE/libsodium-1.0.19.tar.gz \
+    && echo "018d79fe0a045cca07331d37bd0cb57b2e838c51bc48fd837a1472e50068bbea  libsodium-1.0.19.tar.gz" | sha256sum -c - \
+    && tar -xzf libsodium-1.0.19.tar.gz
+WORKDIR /build/libsodium-stable
+RUN ./configure --disable-shared --enable-static \
+    && make -j"$(nproc)" \
+    && make install
+
+WORKDIR /build
+RUN wget -q https://github.com/zeromq/libzmq/releases/download/v4.3.4/zeromq-4.3.4.tar.gz \
+    && echo "c593001a89f5a85dd2ddf564805deb860e02471171b3f204944857336295c3e5  zeromq-4.3.4.tar.gz" | sha256sum -c - \
+    && tar -xzf zeromq-4.3.4.tar.gz
+WORKDIR /build/zeromq-4.3.4
+RUN ./configure --enable-static --disable-shared --disable-Werror \
+    && make -j"$(nproc)" \
+    && make install
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends patch \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /go/src/fleet-telemetry
+COPY build/fleet-telemetry/mqtt-event-time.patch /tmp/mqtt-event-time.patch
+COPY build/fleet-telemetry/event_time_patch_test.go datastore/mqtt/event_time_patch_test.go
+RUN sed -i 's/\r$//' /tmp/mqtt-event-time.patch \
+    && patch -p1 < /tmp/mqtt-event-time.patch
+
+ENV CGO_ENABLED=1
+ENV CGO_LDFLAGS="-lstdc++"
+RUN go test -tags fleettelemetry_patch ./datastore/mqtt -count=1 \
+    && make build
+
+FROM gcr.io/distroless/cc-debian12:nonroot
+
+LABEL org.opencontainers.image.source="https://github.com/ev-dev-labs/teslasync" \
+      org.opencontainers.image.description="Tesla Fleet Telemetry with TeslaSync replay-safe MQTT event timestamps" \
+      org.opencontainers.image.licenses="Apache-2.0"
+
+COPY --from=build /go/bin/fleet-telemetry /fleet-telemetry
+COPY --from=build /go/src/fleet-telemetry/LICENSE /licenses/fleet-telemetry/LICENSE
+
+USER nonroot:nonroot
+
+ENTRYPOINT ["/fleet-telemetry"]
+CMD ["-config", "/etc/fleet-telemetry/config.json"]

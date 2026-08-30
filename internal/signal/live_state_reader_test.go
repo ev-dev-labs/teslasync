@@ -27,6 +27,10 @@ func (s *stubLiveSignalStore) UpdateNonBlocking(_ context.Context, _ int64, _ ma
 	return nil
 }
 
+func (s *stubLiveSignalStore) UpdateValuesNonBlocking(_ context.Context, _ int64, _ map[string]*signal.Value) error {
+	return nil
+}
+
 func (s *stubLiveSignalStore) GetSignal(_ context.Context, _ int64, name string, pref signal.LiveSignalReadPreference) (*signal.Value, error) {
 	s.signalCalls++
 	s.lastPreference = pref

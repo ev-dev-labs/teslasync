@@ -305,6 +305,8 @@ jobs:
             file: Dockerfile.notification
           - image: export-worker
             file: Dockerfile.export-worker
+          - image: fleet-telemetry
+            file: Dockerfile.fleet-telemetry
           - image: web
             file: Dockerfile.web
     steps:

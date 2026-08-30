@@ -43,6 +43,9 @@ func (c *countingLiveStore) Update(context.Context, int64, map[string]interface{
 func (c *countingLiveStore) UpdateNonBlocking(context.Context, int64, map[string]interface{}) error {
 	return nil
 }
+func (c *countingLiveStore) UpdateValuesNonBlocking(context.Context, int64, map[string]*signal.Value) error {
+	return nil
+}
 func (c *countingLiveStore) GetSignal(context.Context, int64, string, signal.LiveSignalReadPreference) (*signal.Value, error) {
 	return nil, nil
 }
@@ -419,6 +422,9 @@ type plainLiveStore struct {
 
 func (p *plainLiveStore) Update(context.Context, int64, map[string]interface{}) error { return nil }
 func (p *plainLiveStore) UpdateNonBlocking(context.Context, int64, map[string]interface{}) error {
+	return nil
+}
+func (p *plainLiveStore) UpdateValuesNonBlocking(context.Context, int64, map[string]*signal.Value) error {
 	return nil
 }
 func (p *plainLiveStore) GetSignal(context.Context, int64, string, signal.LiveSignalReadPreference) (*signal.Value, error) {

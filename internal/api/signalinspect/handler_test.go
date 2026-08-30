@@ -35,6 +35,10 @@ func (f *fakeLiveSignalStore) UpdateNonBlocking(_ context.Context, _ int64, _ ma
 	return nil
 }
 
+func (f *fakeLiveSignalStore) UpdateValuesNonBlocking(_ context.Context, _ int64, _ map[string]*signal.Value) error {
+	return nil
+}
+
 func (f *fakeLiveSignalStore) GetSignal(_ context.Context, vehicleID int64, name string, _ signal.LiveSignalReadPreference) (*signal.Value, error) {
 	if f.getErr != nil {
 		return nil, f.getErr

@@ -263,8 +263,9 @@ func (p *Pipeline) ProcessAtomics(ctx context.Context, atomics []codec.Atomic, v
 //
 // AtomicsObserver fan-out: AFTER the dispatch loop drains every
 // atomic, every registered observer's OnPayloadProcessed is invoked
-// once with the (possibly mutated — see processOne for the in-place
-// SI substitution) atomics slice. Observers run in registration
+// once with the accepted atomics only. Values that fail unit conversion
+// or routing are excluded so raw, non-SI data cannot reach live state,
+// FSMs, or session tracking. Observers run in registration
 // order; a panic in any observer is recovered + logged inside
 // notifyObserver so a buggy observer cannot kill ingest. Observers
 // are NOT invoked when codec.Decode fails because in that case
@@ -283,6 +284,7 @@ func (p *Pipeline) processAtomics(ctx context.Context, atomics []codec.Atomic, v
 func (p *Pipeline) processAtomicsWithCounts(ctx context.Context, atomics []codec.Atomic, vehicleIntID int64) (dropped, errs int, _ error) {
 	sortAtomicsSettingUnitFirst(atomics)
 	routeCtx, endRoute := startChildSpan(ctx, "normalize.route")
+	accepted := make([]codec.Atomic, 0, len(atomics))
 	// Index-based loop so processOne can mutate atomics[i].Value in
 	// place after a successful toSI conversion. The mutation is
 	// observable to the AtomicsObserver fan-out below — observers
@@ -302,13 +304,15 @@ func (p *Pipeline) processAtomicsWithCounts(ctx context.Context, atomics []codec
 			dropped++
 		case atomicOutcomeError:
 			errs++
+		default:
+			accepted = append(accepted, atomics[i])
 		}
 	}
 	endRoute()
 
 	_, endWrite := startChildSpan(ctx, "normalize.write")
 	for _, obs := range p.observers {
-		p.notifyObserver(ctx, obs, vehicleIntID, atomics)
+		p.notifyObserver(ctx, obs, vehicleIntID, accepted)
 	}
 	endWrite()
 

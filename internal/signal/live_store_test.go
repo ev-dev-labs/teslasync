@@ -94,6 +94,60 @@ func TestHybridLiveSignalStoreUpdateNonBlockingWritesL1AndAttemptsL2(t *testing.
 	assertFloat64(t, redisValue.Raw, 45)
 }
 
+func TestHybridLiveSignalStoreUpdateValuesNonBlockingPreservesEventTime(t *testing.T) {
+	ctx := context.Background()
+	local := New()
+	redisClient := newFakeRedisSignalClient()
+	redisCache := &RedisSignalCache{rdb: redisClient}
+	liveStore, err := NewHybridLiveSignalStore(local, redisCache, LiveSignalStoreModeHybrid)
+	if err != nil {
+		t.Fatalf("NewHybridLiveSignalStore() error = %v", err)
+	}
+	eventTime := time.Date(2026, 8, 22, 10, 0, 0, 123456789, time.UTC)
+
+	if err := liveStore.UpdateValuesNonBlocking(ctx, 8, map[string]*Value{
+		"BatteryLevel": {Raw: 45.0, Timestamp: eventTime},
+	}); err != nil {
+		t.Fatalf("UpdateValuesNonBlocking() error = %v", err)
+	}
+
+	localValue := local.Get(8, "BatteryLevel")
+	if localValue == nil || !localValue.Timestamp.Equal(eventTime) {
+		t.Fatalf("L1 timestamp = %v, want %v", localValue, eventTime)
+	}
+	redisValue := waitForRedisSignalValue(t, redisCache, 8, "BatteryLevel")
+	if !redisValue.Timestamp.Equal(eventTime) {
+		t.Fatalf("L2 timestamp = %v, want %v", redisValue.Timestamp, eventTime)
+	}
+}
+
+func TestRedisSignalCacheUpdateValuesRejectsOlderReplay(t *testing.T) {
+	ctx := context.Background()
+	redisClient := newFakeRedisSignalClient()
+	cache := &RedisSignalCache{rdb: redisClient}
+	newer := time.Date(2026, 8, 29, 10, 0, 0, 0, time.UTC)
+	older := newer.Add(-7 * 24 * time.Hour)
+
+	if err := cache.UpdateValues(ctx, 9, map[string]*Value{
+		"BatteryLevel": {Raw: 80.0, Timestamp: newer},
+	}); err != nil {
+		t.Fatalf("UpdateValues(newer) error = %v", err)
+	}
+	if err := cache.UpdateValues(ctx, 9, map[string]*Value{
+		"BatteryLevel": {Raw: 20.0, Timestamp: older},
+	}); err != nil {
+		t.Fatalf("UpdateValues(older) error = %v", err)
+	}
+
+	got, err := cache.GetSignalValue(ctx, 9, "BatteryLevel")
+	if err != nil {
+		t.Fatalf("GetSignalValue() error = %v", err)
+	}
+	if got == nil || got.Raw != 80.0 || !got.Timestamp.Equal(newer) {
+		t.Fatalf("Redis value = %#v, want newer value 80 at %v", got, newer)
+	}
+}
+
 func TestHybridLiveSignalStoreLocalModeDoesNotUseRedisBackedReadsOrWrites(t *testing.T) {
 	ctx := context.Background()
 	local := New()
@@ -667,6 +721,10 @@ type failingRedisSignalClient struct {
 
 func (f failingRedisSignalClient) HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd {
 	return redis.NewIntResult(0, f.err)
+}
+
+func (f failingRedisSignalClient) Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd {
+	return redis.NewCmdResult(nil, f.err)
 }
 
 func (f failingRedisSignalClient) Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd {

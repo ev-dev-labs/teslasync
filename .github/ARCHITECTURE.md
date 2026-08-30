@@ -662,7 +662,7 @@ Tesla Vehicle ── mTLS stream ──▶ Tesla Fleet Telemetry ──▶│ Mo
 
 **Five-line summary:**
 
-1. **Vehicle → Mosquitto:** Tesla streams Fleet Telemetry over mTLS; with `transmit_decoded_records: true` (helm-pinned) the upstream emits ONE signal per topic of the form `telemetry/{VIN}/v/{Field}` with the bare JSON value as body.
+1. **Vehicle → Mosquitto:** Tesla streams Fleet Telemetry over mTLS; TeslaSync's pinned Fleet Telemetry build emits ONE signal per topic of the form `telemetry/{VIN}/v/{Field}` with `{"value":...,"ts":"<Payload.CreatedAt>"}` as the body.
 2. **Decode → Normalize:** `PipelineSubscriber` filters `{base}/+/v/+`, codec `DecodeJSONField` translates the per-field body to a `[]codec.Atomic` keyed by canonical proto field name, and `normalize.Pipeline.ProcessAtomics` converts each value to SI using per-vehicle `Setting*Unit` history.
 3. **Route → Persist:** `routing.yaml` (static, no per-vehicle logic) routes each field to a destination table writer + optional `signal_log` history. **Codec failures route to the DLQ via `ErrPayloadDrop`; writer failures only log+counter** (never redeliver — a poisoned per-VIN topic would otherwise pin redelivery forever).
 4. **Live state, three tiers:** L1 = in-process `signal.Store` (FSM, sessions hot path) · L2 = Redis `vehicle:{id}:signals` HSET + Pub/Sub (cross-pod, restart recovery) · durable = `signal_log` hypertable (charts, replay, point-in-time snapshots).
@@ -998,12 +998,13 @@ amendment.
    period.
 2. **Codec entry point.** `internal/tesla/codec.DecodeJSONField(field,
    body, vin, fallbackTs)` is the SINGLE per-field MQTT translation
-   point. Body shape is per `protomodel.SignalsByName[field].ValueKind`:
-   bare JSON value for atomic kinds, JSON object for compound kinds, the
-   proto-prefixed string form (`"ShiftStateD"`) for typed enums (codec
-   strips `EnumStringPrefix`). An optional envelope `{"value":<bare>,
-   "ts":"<RFC3339>"}` carries replay event-time; production traffic uses
-   bare bodies.
+   point. The production body is an envelope `{"value":<bare>,
+   "ts":"<RFC3339Nano>"}` where `ts` is Tesla's original
+   `Payload.CreatedAt`; the inner value shape follows
+   `protomodel.SignalsByName[field].ValueKind`. Bare values remain
+   decoder-compatible for controlled tests and emergency tooling, but the
+   production MQTT boundary rejects and quarantines them because replay
+   receipt time is not valid event time.
 3. **Pipeline interface narrowed.** `mqtt.Pipeline` exposes a single
    method `ProcessAtomics(ctx, []codec.Atomic, vehicleID)` —
    `Process(ctx, []byte, vehicleID)` is removed. This re-affirms ADR-004
@@ -1052,6 +1053,11 @@ amendment.
   config.json is REQUIRED. A future fleet-telemetry release that
   removes this knob would break the wire shape; the helm template
   pins the value explicitly.
+- The TeslaSync Fleet Telemetry derivative image is REQUIRED until upstream
+  preserves `Payload.CreatedAt` in its per-field MQTT output. Deploy the
+  timestamp-producing image before or with the strict API consumer. Legacy
+  queued bare messages are intentionally quarantined because their original
+  event time cannot be reconstructed from MQTT 3.1.1.
 - DLQ depth is now a per-field, per-VIN concern — a single vehicle's
   malformed `Soc` body no longer delays neighbour vehicles. This is a
   net improvement, but operators must sweep the DLQ topic regularly to

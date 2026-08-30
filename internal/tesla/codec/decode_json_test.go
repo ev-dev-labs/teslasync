@@ -369,4 +369,48 @@ func TestDecodeJSONField_EnvelopeBadTsWrapsErrPayloadDrop(t *testing.T) {
 	if !errors.Is(err, ErrPayloadDrop) {
 		t.Fatalf("err %v does not wrap ErrPayloadDrop", err)
 	}
+	if !errors.Is(err, ErrSourceTimestampInvalid) {
+		t.Fatalf("err %v does not wrap ErrSourceTimestampInvalid", err)
+	}
+}
+
+func TestDecodeJSONField_EnvelopeRejectsImplausiblyFutureTimestamp(t *testing.T) {
+	future := jsonFixedTs.Add(maxSourceTimestampFutureSkew + time.Second)
+	body := []byte(`{"value":65.5,"ts":"` + future.Format(time.RFC3339Nano) + `"}`)
+
+	got, err := DecodeJSONField("Soc", body, jsonFixedVIN, jsonFixedTs)
+	if err == nil {
+		t.Fatalf("got nil err for future envelope timestamp (atoms=%v)", got)
+	}
+	if !errors.Is(err, ErrPayloadDrop) || !errors.Is(err, ErrSourceTimestampInvalid) {
+		t.Fatalf("err %v must wrap ErrPayloadDrop and ErrSourceTimestampInvalid", err)
+	}
+}
+
+func TestDecodeJSONField_EnvelopeRejectsZeroTimestamp(t *testing.T) {
+	got, err := DecodeJSONField(
+		"Soc",
+		[]byte(`{"value":65.5,"ts":"0001-01-01T00:00:00Z"}`),
+		jsonFixedVIN,
+		jsonFixedTs,
+	)
+	if err == nil {
+		t.Fatalf("got nil err for zero envelope timestamp (atoms=%v)", got)
+	}
+	if !errors.Is(err, ErrPayloadDrop) || !errors.Is(err, ErrSourceTimestampInvalid) {
+		t.Fatalf("err %v must wrap ErrPayloadDrop and ErrSourceTimestampInvalid", err)
+	}
+}
+
+func TestDecodeJSONField_EnvelopeAcceptsOldTimestamp(t *testing.T) {
+	old := jsonFixedTs.Add(-7 * 24 * time.Hour)
+	body := []byte(`{"value":65.5,"ts":"` + old.Format(time.RFC3339Nano) + `"}`)
+
+	got, err := DecodeJSONField("Soc", body, jsonFixedVIN, jsonFixedTs)
+	if err != nil {
+		t.Fatalf("DecodeJSONField() old source timestamp error = %v", err)
+	}
+	if len(got) != 1 || !got[0].EmittedAt.Equal(old) {
+		t.Fatalf("EmittedAt = %v, want old source timestamp %v", got, old)
+	}
 }

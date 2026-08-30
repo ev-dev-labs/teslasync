@@ -1,4 +1,6 @@
 {{- if .Values.fleetTelemetry.enabled }}
+{{- $fleetTelemetryTag := .Values.fleetTelemetry.imageTag | default .Chart.AppVersion }}
+{{- $fleetTelemetryImage := .Values.fleetTelemetry.image | default (printf "%s:%s" .Values.fleetTelemetry.imageRepository $fleetTelemetryTag) }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -30,8 +32,8 @@ spec:
         {{- include "teslasync.dependencyWaitInitContainer" (dict "root" . "name" "mqtt" "host" (include "teslasync.mqtt.host" .) "port" (include "teslasync.mqtt.port" .)) | nindent 8 }}
       containers:
         - name: fleet-telemetry
-          image: {{ .Values.fleetTelemetry.image | quote }}
-          imagePullPolicy: IfNotPresent
+          image: {{ $fleetTelemetryImage | quote }}
+          imagePullPolicy: {{ .Values.fleetTelemetry.imagePullPolicy }}
           ports:
             - name: wss
               containerPort: 4443

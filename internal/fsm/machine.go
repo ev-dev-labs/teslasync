@@ -187,17 +187,27 @@ func (m *VehicleFSM) HandleTimeout(ctx context.Context, vehicleID int64) error {
 
 // HandleSignalReceived is called when any signal arrives for a vehicle in Asleep/Offline state.
 func (m *VehicleFSM) HandleSignalReceived(ctx context.Context, vehicleID int64) error {
+	return m.HandleSignalReceivedAt(ctx, vehicleID, time.Now().UTC())
+}
+
+// HandleSignalReceivedAt wakes an asleep/offline vehicle using the signal's
+// event time. This keeps replayed transitions anchored to when Tesla emitted
+// the signal rather than when a queued MQTT message was consumed.
+func (m *VehicleFSM) HandleSignalReceivedAt(ctx context.Context, vehicleID int64, eventTime time.Time) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
 	if m.current != Asleep && m.current != Offline {
 		return nil
 	}
+	if eventTime.IsZero() {
+		eventTime = time.Now().UTC()
+	}
 
 	sctx := &SignalContext{
 		CurrentState:  m.current,
 		IsGearCapable: m.isGearCapable,
-		Now:           time.Now().UTC(),
+		Now:           eventTime,
 	}
 	return m.tryTransition(ctx, vehicleID, TriggerSignalReceived, sctx)
 }

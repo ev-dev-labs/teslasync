@@ -86,6 +86,9 @@ The following table lists all configurable parameters and their default values.
 | `web.resources.limits.memory` | Frontend memory limit | `128Mi` |
 | `web.resources.requests.cpu` | Frontend CPU request | `50m` |
 | `web.resources.requests.memory` | Frontend memory request | `64Mi` |
+| `fleetTelemetry.image` | Optional complete Fleet Telemetry image override | `""` |
+| `fleetTelemetry.imageRepository` | Event-time-preserving Fleet Telemetry image | `ghcr.io/ev-dev-labs/teslasync-fleet-telemetry` |
+| `fleetTelemetry.imageTag` | Fleet Telemetry image tag (defaults to chart appVersion) | `""` |
 | `imagePullSecrets` | Image pull secrets | `[]` |
 | `nameOverride` | Override chart name | `""` |
 | `fullnameOverride` | Override full release name | `""` |

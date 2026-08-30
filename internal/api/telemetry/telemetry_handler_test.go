@@ -101,6 +101,16 @@ func (s *recordingLiveSignalStore) UpdateNonBlocking(ctx context.Context, vehicl
 	return s.err
 }
 
+func (s *recordingLiveSignalStore) UpdateValuesNonBlocking(ctx context.Context, vehicleID int64, values map[string]*signal.Value) error {
+	signals := make(map[string]interface{}, len(values))
+	for name, value := range values {
+		if value != nil {
+			signals[name] = value.Raw
+		}
+	}
+	return s.UpdateNonBlocking(ctx, vehicleID, signals)
+}
+
 func (s *recordingLiveSignalStore) GetSignal(ctx context.Context, vehicleID int64, name string, preference signal.LiveSignalReadPreference) (*signal.Value, error) {
 	return nil, nil
 }

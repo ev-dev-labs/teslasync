@@ -1,7 +1,7 @@
 {
   "uid": "slo-mqtt_pipeline_subscription",
   "title": "SLO: mqtt_pipeline_subscription",
-  "description": "The dedicated Fleet Telemetry MQTT consumer must remain subscribed.",
+  "description": "The dedicated Fleet Telemetry MQTT consumer must retain a recent broker-confirmed subscription lease.",
   "tags": [
     "slo",
     "owner:ingest",

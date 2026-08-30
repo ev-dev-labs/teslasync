@@ -649,7 +649,7 @@ services:
   # Requires TLS certificates and Tesla Developer account with Fleet Telemetry access.
   # See: https://github.com/teslamotors/fleet-telemetry
   fleet-telemetry:
-    image: tesla/fleet-telemetry:latest
+    image: ghcr.io/ev-dev-labs/teslasync-fleet-telemetry:${TESLASYNC_VERSION:-latest}
     container_name: teslasync-fleet-telemetry
     restart: unless-stopped
     profiles:

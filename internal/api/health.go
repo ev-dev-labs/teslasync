@@ -499,6 +499,13 @@ func MetricsCatalogHandler() http.HandlerFunc {
 		{Name: "teslasync_mqtt_connected", Type: "gauge", Help: "MQTT broker connection state (1=connected, 0=disconnected)"},
 		{Name: "teslasync_mqtt_messages_published_total", Type: "counter", Help: "MQTT messages published"},
 		{Name: "teslasync_mqtt_reconnects_total", Type: "counter", Help: "MQTT reconnection attempts"},
+		{Name: "teslasync_mqtt_pipeline_connected", Type: "gauge", Help: "Dedicated Fleet Telemetry MQTT transport state", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_pipeline_subscribed", Type: "gauge", Help: "Recently SUBACK-confirmed Fleet Telemetry subscription state", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_pipeline_subscription_attempts_total", Type: "counter", Help: "Fleet Telemetry subscription attempts", Labels: []string{"trigger", "result"}},
+		{Name: "teslasync_mqtt_pipeline_subscription_last_success_timestamp_seconds", Type: "gauge", Help: "Last successful Fleet Telemetry SUBACK time", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_pipeline_liveness_unhealthy_seconds", Type: "gauge", Help: "Restart-eligible Fleet Telemetry consumer wedge duration", Labels: []string{"consumer"}},
+		{Name: "teslasync_mqtt_telemetry_event_time_total", Type: "counter", Help: "Fleet Telemetry event-time source and rejection outcomes", Labels: []string{"outcome"}},
+		{Name: "teslasync_mqtt_telemetry_replay_lag_seconds", Type: "histogram", Help: "Tesla source-to-MQTT receipt lag", Labels: []string{}},
 		{Name: "teslasync_sse_connections_active", Type: "gauge", Help: "Active SSE client connections"},
 		{Name: "teslasync_sse_events_sent_total", Type: "counter", Help: "SSE events sent", Labels: []string{"event_type"}},
 

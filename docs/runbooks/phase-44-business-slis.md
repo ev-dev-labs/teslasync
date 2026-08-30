@@ -25,6 +25,8 @@ upstream-API health.
 | `teslasync_mqtt_pipeline_subscribed`                         | gauge       | `consumer`     | Last acknowledged Fleet Telemetry subscription state.                                   |
 | `teslasync_mqtt_pipeline_subscription_attempts_total`        | counter     | `trigger,result` | Initial, reconnect, and supervisor SUBSCRIBE outcomes.                                |
 | `teslasync_mqtt_pipeline_liveness_unhealthy_seconds`         | gauge       | `consumer`     | Restart-eligible consumer wedge duration while the broker is independently reachable.   |
+| `teslasync_mqtt_telemetry_event_time_total`                  | counter     | `outcome`      | Source timestamps, compatibility fallbacks, and rejected missing/invalid timestamps.    |
+| `teslasync_mqtt_telemetry_replay_lag_seconds`                | histogram   | (none)         | Tesla source-emission to MQTT receipt delay, including broker replay lag.                |
 | `teslasync_tesla_api_circuit_breaker_state`                  | gauge       | `endpoint`     | `SetTeslaAPICircuitBreakerState(endpoint, state)` from the resilience layer.             |
 
 ### `teslasync_telemetry_lag_seconds`
@@ -95,19 +97,35 @@ consumer-availability SLO and broker-native metrics for offline queue depth.
 ### Fleet Telemetry consumer lifecycle
 
 `teslasync_mqtt_pipeline_connected` tracks the dedicated persistent client's
-transport, while `teslasync_mqtt_pipeline_subscribed` tracks successful SUBACK
-state. Keep these separate: a connected client can have zero subscriptions
-after a broker session loss or failed reconnect SUBACK.
+open transport, while `teslasync_mqtt_pipeline_subscribed` tracks a recent
+SUBACK-confirmed subscription lease. Keep these separate: a connected client
+can have zero subscriptions after a broker session loss or failed SUBACK.
 
 `teslasync_mqtt_pipeline_subscription_attempts_total` uses only the bounded
-`trigger={initial,reconnect,supervisor}` and
-`result={success,timeout,error}` labels. The supervisor retries every five
-seconds while connected. `teslasync_mqtt_pipeline_liveness_unhealthy_seconds`
+`trigger={initial,reconnect,supervisor,reconcile}` and
+`result={success,timeout,error,canceled,disconnected,stale}` labels. The
+supervisor retries every five seconds while unhealthy and reasserts the
+idempotent subscription every 30 seconds even while healthy.
+`teslasync_mqtt_pipeline_subscription_last_success_timestamp_seconds` exposes
+the last successful SUBACK. `teslasync_mqtt_pipeline_liveness_unhealthy_seconds`
 advances only while a consumer-specific failure is eligible for restart; it
 stays zero during a broker-wide outage to prevent restart storms.
 
 **SLO target:** `mqtt_pipeline_subscribed == 1` for 99.9% of the seven-day
 window.
+
+### Fleet Telemetry event time
+
+`teslasync_mqtt_telemetry_event_time_total` uses the bounded outcomes
+`source`, `receipt_fallback`, `rejected_missing`, and `rejected_invalid`.
+Production should emit only `source`; any rejection means the producer image
+or its clock is outside the event-time contract. The replay-lag histogram
+retains week-scale buckets so a reconnect draining a durable broker queue is
+distinguishable from normal near-real-time delivery.
+
+Alert when `rate(teslasync_mqtt_telemetry_event_time_total{outcome=~"rejected_.*"}[5m]) > 0`
+for five minutes. A non-zero `receipt_fallback` rate is also unexpected in
+production because the compatibility option is disabled by default.
 
 ### `teslasync_tesla_api_circuit_breaker_state`
 

@@ -840,13 +840,13 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	}
 
 	// Backfill missing start/end values from nearest position data (async)
-	go t.backfillChargeValues(active, vehicleID)
+	go t.backfillChargeValues(active, vehicleID, endTs)
 	return true
 }
 
 // backfillChargeValues fills missing charging session start/end values
 // from the nearest position data, similar to backfillDriveValues.
-func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, vehicleID int64) {
+func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, vehicleID int64, endTime time.Time) {
 	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 
@@ -862,7 +862,6 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 	}
 
 	// Backfill end battery from nearest position to end time
-	endTime := time.Now().UTC()
 	endPos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, endTime, lookupWindow)
 	if err == nil && endPos != nil {
 		if endPos.BatteryLvl > 0 {

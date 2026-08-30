@@ -163,6 +163,8 @@ jobs:
             file: Dockerfile.automation
             build-args: |
               VERSION=${{ needs.version.outputs.new_tag }}
+          - image: fleet-telemetry
+            file: Dockerfile.fleet-telemetry
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
@@ -402,7 +404,7 @@ jobs:
       fail-fast: false
       matrix:
         # No `file` / `build-args` here: this stage does NOT build.
-        image: [api, web, notification-worker, export-worker, automation-worker]
+        image: [api, web, notification-worker, export-worker, automation-worker, fleet-telemetry]
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -717,6 +719,9 @@ jobs:
 
           # Automation Worker
           docker pull ghcr.io/${{ github.repository }}-automation-worker:${VERSION}
+
+          # Fleet Telemetry (event-time preserving)
+          docker pull ghcr.io/${{ github.repository }}-fleet-telemetry:${VERSION}
           \`\`\`
 
           ### ⎈ Helm Chart
@@ -772,6 +777,7 @@ jobs:
           | Notification Worker | \`ghcr.io/${{ github.repository }}-notification-worker:${VERSION}\` |
           | Export Worker | \`ghcr.io/${{ github.repository }}-export-worker:${VERSION}\` |
           | Automation Worker | \`ghcr.io/${{ github.repository }}-automation-worker:${VERSION}\` |
+          | Fleet Telemetry | \`ghcr.io/${{ github.repository }}-fleet-telemetry:${VERSION}\` |
           | Helm Chart | \`oci://ghcr.io/${{ github.repository_owner }}/charts/teslasync:${VERSION}\` |
           NOTES_EOF
 

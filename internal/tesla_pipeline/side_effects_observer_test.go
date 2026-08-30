@@ -34,6 +34,7 @@ type fakeLiveStore struct {
 	calls     int
 	lastVeh   int64
 	lastSigs  map[string]any
+	lastTimed map[string]TimedSignal
 	err       error
 	rec       *callRecorder
 	orderTick int64
@@ -61,12 +62,20 @@ type fakeLiveStore struct {
 	getAllOrderTick int64
 }
 
-func (s *fakeLiveStore) UpdateAll(_ context.Context, vehicleID int64, signals map[string]any) error {
+func (s *fakeLiveStore) UpdateAll(_ context.Context, vehicleID int64, timedSignals map[string]TimedSignal) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	signals := make(map[string]any, len(timedSignals))
+	for name, value := range timedSignals {
+		signals[name] = value.Value
+	}
 	s.calls++
 	s.lastVeh = vehicleID
 	s.lastSigs = signals
+	s.lastTimed = make(map[string]TimedSignal, len(timedSignals))
+	for name, value := range timedSignals {
+		s.lastTimed[name] = value
+	}
 	if s.rec != nil {
 		s.orderTick = s.rec.next()
 	}
@@ -352,10 +361,10 @@ func TestSideEffectsObserver_AtomicsConvertedToSignalsMap(t *testing.T) {
 // addresses).
 // ---------------------------------------------------------------------------
 
-func TestSideEffectsObserver_ThreadsPerFieldEventTimeToFSMAndSessions(t *testing.T) {
+func TestSideEffectsObserver_ThreadsPerFieldEventTimeToLiveFSMAndSessions(t *testing.T) {
 	t.Parallel()
 
-	obs, _, fsm, sess, _, _, _ := newDefaultObserver(t)
+	obs, live, fsm, sess, _, _, _ := newDefaultObserver(t)
 
 	gearTs := time.Date(2026, 4, 18, 0, 22, 13, 0, time.UTC)
 	speedTs := time.Date(2026, 4, 18, 0, 22, 14, 0, time.UTC)
@@ -389,6 +398,12 @@ func TestSideEffectsObserver_ThreadsPerFieldEventTimeToFSMAndSessions(t *testing
 	if got := sess.lastFieldTs["Gear"]; !got.Equal(gearTs) {
 		t.Errorf("sessions.lastFieldTs[Gear] = %v, want %v", got, gearTs)
 	}
+	if got := live.lastTimed["Gear"].EmittedAt; !got.Equal(gearTs) {
+		t.Errorf("live Gear event time = %v, want %v", got, gearTs)
+	}
+	if got := live.lastTimed["VehicleSpeed"].EmittedAt; !got.Equal(speedTs) {
+		t.Errorf("live VehicleSpeed event time = %v, want %v", got, speedTs)
+	}
 
 	// Field count must equal atomic count (no fields silently dropped)
 	if len(fsm.lastFieldTs) != 3 {
@@ -396,8 +411,8 @@ func TestSideEffectsObserver_ThreadsPerFieldEventTimeToFSMAndSessions(t *testing
 	}
 }
 
-// Duplicate Field with later EmittedAt wins (last-write-wins on the value)
-// AND its EmittedAt is the one preserved in fieldTs.
+// Duplicate fields retain the newest event even when an older replay appears
+// later in the input slice.
 func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *testing.T) {
 	t.Parallel()
 
@@ -407,12 +422,12 @@ func TestSideEffectsObserver_DuplicateFieldKeepsLatestEmittedAtInFieldTs(t *test
 	second := time.Date(2026, 4, 18, 0, 22, 11, 0, time.UTC)
 
 	atomics := []codec.Atomic{
-		{Field: "Gear", Value: "D", EmittedAt: first, VehicleID: "VIN-DUP"},
 		{Field: "Gear", Value: "P", EmittedAt: second, VehicleID: "VIN-DUP"},
+		{Field: "Gear", Value: "D", EmittedAt: first, VehicleID: "VIN-DUP"},
 	}
 	obs.OnPayloadProcessed(context.Background(), 9, atomics)
 
-	// last-write-wins on value
+	// Newest-event-wins on value.
 	if v, ok := fsm.lastSigs["Gear"].(string); !ok || v != "P" {
 		t.Errorf("fsm.lastSigs[Gear] = %v, want P", fsm.lastSigs["Gear"])
 	}

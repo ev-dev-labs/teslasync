@@ -53,8 +53,15 @@ const sideEffectsTracerName = "teslapipeline"
 // signal, so sessions need the cross-batch snapshot to use last-known battery,
 // odometer, and location when starting a new session.
 type LiveSignalStore interface {
-	UpdateAll(ctx context.Context, vehicleID int64, signals map[string]any) error
+	UpdateAll(ctx context.Context, vehicleID int64, signals map[string]TimedSignal) error
 	GetAll(ctx context.Context, vehicleID int64) (map[string]any, error)
+}
+
+// TimedSignal carries a normalized value and its producer event time across
+// the side-effects boundary into the layered live store.
+type TimedSignal struct {
+	Value     any
+	EmittedAt time.Time
 }
 
 // FSMHandler mirrors (*internal/api.FSMHandler).ProcessSignals. The
@@ -257,6 +264,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	defer parent.End()
 
 	signals := make(map[string]any, len(atomics))
+	timedSignals := make(map[string]TimedSignal, len(atomics))
 	// fieldTs preserves per-atomic EmittedAt across the map-reduction.
 	// Reducing []codec.Atomic → map[Field]Value collapses duplicate
 	// fields to last-write-wins; fieldTs tracks the EmittedAt of the
@@ -270,8 +278,12 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 	fieldTs := make(map[string]time.Time, len(atomics))
 	var payloadTs time.Time
 	for _, a := range atomics {
+		if current, ok := timedSignals[a.Field]; ok && current.EmittedAt.After(a.EmittedAt) {
+			continue
+		}
 		signals[a.Field] = a.Value
 		fieldTs[a.Field] = a.EmittedAt
+		timedSignals[a.Field] = TimedSignal{Value: a.Value, EmittedAt: a.EmittedAt}
 		if a.EmittedAt.After(payloadTs) {
 			payloadTs = a.EmittedAt
 		}
@@ -290,7 +302,7 @@ func (o *SideEffectsObserver) OnPayloadProcessed(ctx context.Context, vehicleID 
 				attribute.Int("signal_count", len(signals)),
 			),
 		)
-		if err := o.live.UpdateAll(stepCtx, vehicleID, signals); err != nil {
+		if err := o.live.UpdateAll(stepCtx, vehicleID, timedSignals); err != nil {
 			span.RecordError(err)
 			span.SetStatus(codes.Error, "live.update_all")
 			o.log.Warn().

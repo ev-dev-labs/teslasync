@@ -629,9 +629,15 @@ fleetTelemetry:
   # Example: telemetry.example.com
   host: ""
 
-  # -- Tesla's official Fleet Telemetry Docker image.
-  # See: https://hub.docker.com/r/tesla/fleet-telemetry
-  image: tesla/fleet-telemetry:latest
+  # -- Optional complete image reference override. Leave empty to use
+  # imageRepository with imageTag (or the chart appVersion).
+  image: ""
+  # -- TeslaSync's pinned Fleet Telemetry build. It preserves Payload.CreatedAt
+  # in each MQTT field envelope so broker replay cannot rewrite event time.
+  imageRepository: ghcr.io/ev-dev-labs/teslasync-fleet-telemetry
+  # -- Image tag. Empty uses the chart appVersion.
+  imageTag: ""
+  imagePullPolicy: IfNotPresent
 
   service:
     # NodePort opens port 30443 on every node's host network. The router

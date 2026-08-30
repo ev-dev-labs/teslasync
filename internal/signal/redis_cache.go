@@ -136,6 +136,7 @@ var staleTotal = promauto.NewCounterVec(prometheus.CounterOpts{
 
 type redisSignalClient interface {
 	HSet(ctx context.Context, key string, values ...interface{}) *redis.IntCmd
+	Eval(ctx context.Context, script string, keys []string, args ...interface{}) *redis.Cmd
 	Expire(ctx context.Context, key string, expiration time.Duration) *redis.BoolCmd
 	HGetAll(ctx context.Context, key string) *redis.MapStringStringCmd
 	HGet(ctx context.Context, key string, field string) *redis.StringCmd
@@ -145,6 +146,31 @@ type redisSignalClient interface {
 	Publish(ctx context.Context, channel string, message interface{}) *redis.IntCmd
 	Subscribe(ctx context.Context, channels ...string) *redis.PubSub
 }
+
+const updateTimestampedSignalsScript = `
+local written = 0
+for i = 2, #ARGV, 3 do
+  local field = ARGV[i]
+  local incoming_ts = tonumber(ARGV[i + 1])
+  local encoded = ARGV[i + 2]
+  local current = redis.call("HGET", KEYS[1], field)
+  local current_ts = nil
+  if current then
+    local ok, envelope = pcall(cjson.decode, current)
+    if ok and envelope then
+      current_ts = tonumber(envelope["ts"])
+    end
+  end
+  if not current_ts or current_ts <= incoming_ts then
+    redis.call("HSET", KEYS[1], field, encoded)
+    written = written + 1
+  end
+end
+if written > 0 then
+  redis.call("EXPIRE", KEYS[1], tonumber(ARGV[1]))
+end
+return written
+`
 
 // redisSignalValueEnvelope is the wire format for a single HSET field
 // value. Writers populate BOTH the typed envelope fields (Kind, V, TS)
@@ -286,6 +312,68 @@ func (c *RedisSignalCache) Update(ctx context.Context, vehicleID int64, signals 
 		log.Warn().Err(expErr).Int64("vehicle_id", vehicleID).Msg("redis signal cache: EXPIRE failed")
 	}
 
+	return nil
+}
+
+// UpdateValues writes timestamped values without allowing an older replay to
+// replace a newer value. The compare-and-set runs atomically in Redis so
+// concurrent async mirrors and multiple API pods preserve per-field ordering.
+func (c *RedisSignalCache) UpdateValues(ctx context.Context, vehicleID int64, values map[string]*Value) (err error) {
+	if len(values) == 0 {
+		return nil
+	}
+
+	ctx, span := otel.Tracer(redisCacheTracerName).Start(
+		ctx,
+		"signal.redis_cache.update_values",
+		trace.WithSpanKind(trace.SpanKindClient),
+		trace.WithAttributes(
+			attribute.Int64("vehicle_id", vehicleID),
+			attribute.Int("signal_count", len(values)),
+			attribute.Bool("async", redisAsyncFromContext(ctx)),
+		),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "redis_cache.update_values")
+		}
+		span.End()
+	}()
+
+	args := make([]interface{}, 0, 1+len(values)*3)
+	args = append(args, int64(signalKeyTTL/time.Second))
+	for name, value := range values {
+		if value == nil || value.Raw == nil {
+			continue
+		}
+		if im, isMap := value.Raw.(map[string]interface{}); isMap {
+			if invalid, ok := im["invalid"].(bool); ok && invalid {
+				continue
+			}
+		}
+		encoded, encErr := encodeTimestampedSignalValueForFieldWithMetadata(
+			name,
+			value.Raw,
+			value.Timestamp,
+			value.TimestampSynthetic,
+		)
+		if encErr != nil {
+			return fmt.Errorf("encode timestamped Redis signal %s: %w", name, encErr)
+		}
+		args = append(args, name, value.Timestamp.UTC().UnixNano(), encoded)
+	}
+
+	candidateCount := (len(args) - 1) / 3
+	span.SetAttributes(attribute.Int("candidate_count", candidateCount))
+	if candidateCount == 0 {
+		return nil
+	}
+	key := fmt.Sprintf("vehicle:%d:signals", vehicleID)
+	if evalErr := c.rdb.Eval(ctx, updateTimestampedSignalsScript, []string{key}, args...).Err(); evalErr != nil {
+		log.Warn().Err(evalErr).Int64("vehicle_id", vehicleID).Msg("redis signal cache: timestamped update failed")
+		return fmt.Errorf("conditionally update Redis live signals for vehicle %d: %w", vehicleID, evalErr)
+	}
 	return nil
 }
 
