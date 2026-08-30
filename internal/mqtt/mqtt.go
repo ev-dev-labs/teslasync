@@ -34,6 +34,8 @@ import (
 // context for downstream normalize/router spans.
 const mqttTracerName = "mqtt"
 
+const fleetTelemetryConsumerLabel = "fleet_telemetry"
+
 // Client wraps MQTT publishing.
 type Client struct {
 	client    pahomqtt.Client
@@ -409,6 +411,16 @@ type PipelineSubscriberConfig struct {
 	// SubscribeTimeout caps how long Start waits for the SUBACK. Default 10s.
 	SubscribeTimeout time.Duration
 
+	// SubscriptionRetryInterval controls how often the supervisor retries a
+	// failed SUBSCRIBE while the MQTT transport remains connected. Default 5s.
+	SubscriptionRetryInterval time.Duration
+
+	// LivenessFailureAfter is the continuous period for which the dedicated
+	// pipeline client may remain unhealthy while the broker is independently
+	// reachable before LivenessError asks Kubernetes to restart the pod.
+	// Default 90s.
+	LivenessFailureAfter time.Duration
+
 	// StreamingRecorder, when non-nil, receives a callback for every
 	// successfully decoded MQTT batch (after pipeline dispatch returns
 	// nil). It powers the /telemetry status MQTT Inspector. Before the
@@ -436,6 +448,12 @@ func (c *PipelineSubscriberConfig) withDefaults() {
 	if c.SubscribeTimeout <= 0 {
 		c.SubscribeTimeout = 10 * time.Second
 	}
+	if c.SubscriptionRetryInterval <= 0 {
+		c.SubscriptionRetryInterval = 5 * time.Second
+	}
+	if c.LivenessFailureAfter <= 0 {
+		c.LivenessFailureAfter = 90 * time.Second
+	}
 	c.TopicBase = strings.TrimSuffix(c.TopicBase, "/")
 }
 
@@ -459,14 +477,17 @@ type PipelineSubscriber struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 
-	mu         sync.Mutex
-	started    bool
-	stopped    bool
-	subscribed bool
+	mu                     sync.Mutex
+	subscribeMu            sync.Mutex
+	recoveryWG             sync.WaitGroup
+	started                bool
+	stopped                bool
+	subscribed             bool
+	livenessUnhealthySince time.Time
 }
 
-// NewPipelineSubscriber constructs a PipelineSubscriber. All non-config
-// arguments MUST be non-nil; nil panics (constructor invariant). The caller
+// NewPipelineSubscriber constructs a PipelineSubscriber. Pipeline, dlq, and
+// resolveVIN MUST be non-nil; nil panics (constructor invariant). The caller
 // retains ownership of client; PipelineSubscriber.Stop does NOT disconnect.
 //
 // Per the manual-ack contract documented at the top of this section, the
@@ -525,25 +546,27 @@ func (s *PipelineSubscriber) Start() error {
 		s.mu.Unlock()
 		return errors.New("mqtt: PipelineSubscriber: already started")
 	}
+	if s.stopped {
+		s.mu.Unlock()
+		return errors.New("mqtt: PipelineSubscriber: cannot start after Stop")
+	}
 	s.started = true
 	s.mu.Unlock()
 
 	topic := s.pipelineTopicFilter()
-	token := s.client.Subscribe(topic, s.cfg.SubscribeQoS, s.onPipelineMessage)
-	if !token.WaitTimeout(s.cfg.SubscribeTimeout) {
-		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe timeout for topic %s", topic)
+	if err := s.subscribe(s.client, "initial", false); err != nil {
+		s.mu.Lock()
+		s.started = false
+		s.mu.Unlock()
+		return err
 	}
-	if err := token.Error(); err != nil {
-		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe %s: %w", topic, err)
-	}
-	s.mu.Lock()
-	if !s.stopped {
-		s.subscribed = true
-	}
-	s.mu.Unlock()
+
+	s.recoveryWG.Add(1)
+	go s.subscriptionRecoveryLoop()
 
 	s.logger.Info().
 		Str("topic", topic).
+		Dur("subscription_retry_interval", s.cfg.SubscriptionRetryInterval).
 		Str("codec_failure_disposition", "dlq_ack").
 		Msg("phase-42 PipelineSubscriber started")
 
@@ -559,20 +582,31 @@ func (s *PipelineSubscriber) Stop() {
 	}
 	s.stopped = true
 	s.subscribed = false
+	s.livenessUnhealthySince = time.Time{}
+	started := s.started
 	s.mu.Unlock()
 
 	s.cancel()
+	s.recoveryWG.Wait()
+	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	if !started {
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		return
+	}
+
+	s.subscribeMu.Lock()
+	defer s.subscribeMu.Unlock()
 	topic := s.pipelineTopicFilter()
 	s.client.Unsubscribe(topic)
+	metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 	s.logger.Info().Str("topic", topic).Msg("phase-42 PipelineSubscriber stopped")
 }
 
 // OnBrokerReconnect re-establishes the SUBSCRIBE on every paho OnConnect
-// callback after the initial Start. Production wiring threads this through
-// the SetOnConnectHandler in NewProductionPipelineMQTT so the paho v1.5.0
-// reconnect path (which by default does NOT re-issue SUBSCRIBE — see
-// SetResumeSubs in dlq_production.go) cannot leave the client connected to
-// the broker indefinitely with subscriptions=0.
+// callback after the initial Start. A failed attempt is retried by the
+// subscription supervisor while the transport remains connected.
 //
 // Failure modes addressed:
 //   - EMQX session_expiry_interval (default 7200s) elapses while the
@@ -601,31 +635,33 @@ func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 	if client == nil {
 		client = s.client
 	}
-	topic := s.pipelineTopicFilter()
-	token := client.Subscribe(topic, s.cfg.SubscribeQoS, s.onPipelineMessage)
-	if !token.WaitTimeout(s.cfg.SubscribeTimeout) {
-		s.logger.Error().
-			Str("topic", topic).
-			Dur("timeout", s.cfg.SubscribeTimeout).
-			Msg("mqtt: PipelineSubscriber: re-subscribe timeout on broker reconnect; telemetry stream will be silent until next reconnect")
-		return
-	}
-	if err := token.Error(); err != nil {
-		s.logger.Error().
+	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
+	metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	if err := s.subscribe(client, "reconnect", true); err != nil {
+		s.logger.Warn().
 			Err(err).
-			Str("topic", topic).
-			Msg("mqtt: PipelineSubscriber: re-subscribe failed on broker reconnect; telemetry stream will be silent until next reconnect")
+			Str("topic", s.pipelineTopicFilter()).
+			Dur("retry_interval", s.cfg.SubscriptionRetryInterval).
+			Msg("mqtt: PipelineSubscriber re-subscribe failed; supervisor will retry")
 		return
 	}
+	s.logger.Info().
+		Str("topic", s.pipelineTopicFilter()).
+		Uint8("qos", s.cfg.SubscribeQoS).
+		Msg("mqtt: PipelineSubscriber subscription restored after broker reconnect")
+}
+
+// OnBrokerConnectionLost records that the persistent consumer no longer has
+// an active subscription. The transport's auto-reconnect loop owns the socket;
+// the subscription supervisor resumes work after OnBrokerReconnect.
+func (s *PipelineSubscriber) OnBrokerConnectionLost() {
 	s.mu.Lock()
-	if !s.stopped {
-		s.subscribed = true
+	if s.started && !s.stopped {
+		s.subscribed = false
 	}
 	s.mu.Unlock()
-	s.logger.Info().
-		Str("topic", topic).
-		Str("codec_failure_disposition", "dlq_ack").
-		Msg("phase-42 PipelineSubscriber re-subscribed on broker reconnect")
+	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 }
 
 // IsHealthy reports whether the Fleet Telemetry subscriber is started,
@@ -643,6 +679,143 @@ func (s *PipelineSubscriber) IsHealthy() bool {
 	client := s.client
 	s.mu.Unlock()
 	return started && !stopped && subscribed && client != nil && client.IsConnected()
+}
+
+// LivenessError returns an error only for a subscriber-specific wedge. A
+// broker-wide outage remains live so Kubernetes does not restart the API while
+// the dependency is unavailable. brokerReachable must come from an independent
+// MQTT client, not the pipeline client itself.
+func (s *PipelineSubscriber) LivenessError(brokerReachable bool) error {
+	if s == nil {
+		return nil
+	}
+
+	now := time.Now()
+	s.mu.Lock()
+	started := s.started
+	stopped := s.stopped
+	subscribed := s.subscribed
+	client := s.client
+	connected := client != nil && client.IsConnected()
+
+	if !started || stopped || (connected && subscribed) || (!connected && !brokerReachable) {
+		s.livenessUnhealthySince = time.Time{}
+		s.mu.Unlock()
+		metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		return nil
+	}
+	if s.livenessUnhealthySince.IsZero() {
+		s.livenessUnhealthySince = now
+	}
+	unhealthyFor := now.Sub(s.livenessUnhealthySince)
+	failAfter := s.cfg.LivenessFailureAfter
+	s.mu.Unlock()
+
+	metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(unhealthyFor.Seconds())
+	if unhealthyFor < failAfter {
+		return nil
+	}
+	return fmt.Errorf(
+		"mqtt pipeline subscriber unhealthy for %s (pipeline_connected=%t subscribed=%t broker_reachable=%t)",
+		unhealthyFor.Round(time.Second),
+		connected,
+		subscribed,
+		brokerReachable,
+	)
+}
+
+func (s *PipelineSubscriber) subscriptionRecoveryLoop() {
+	defer s.recoveryWG.Done()
+
+	ticker := time.NewTicker(s.cfg.SubscriptionRetryInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-s.ctx.Done():
+			return
+		case <-ticker.C:
+			s.subscriptionRecoveryTick()
+		}
+	}
+}
+
+func (s *PipelineSubscriber) subscriptionRecoveryTick() {
+	_, span := otel.Tracer(mqttTracerName).Start(s.ctx, "mqtt.subscription_recovery_tick")
+	defer span.End()
+
+	s.mu.Lock()
+	client := s.client
+	active := s.started && !s.stopped
+	subscribed := s.subscribed
+	s.mu.Unlock()
+	if !active || client == nil {
+		return
+	}
+	if !client.IsConnected() {
+		s.OnBrokerConnectionLost()
+		return
+	}
+	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
+	if subscribed {
+		return
+	}
+
+	if err := s.subscribe(client, "supervisor", false); err != nil {
+		span.RecordError(err)
+		span.SetStatus(codes.Error, "subscription recovery failed")
+		s.logger.Warn().
+			Err(err).
+			Str("topic", s.pipelineTopicFilter()).
+			Msg("mqtt: PipelineSubscriber subscription recovery attempt failed")
+		return
+	}
+	s.logger.Info().
+		Str("topic", s.pipelineTopicFilter()).
+		Uint8("qos", s.cfg.SubscribeQoS).
+		Msg("mqtt: PipelineSubscriber subscription recovered by supervisor")
+}
+
+func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, force bool) error {
+	s.subscribeMu.Lock()
+	defer s.subscribeMu.Unlock()
+
+	s.mu.Lock()
+	if !s.started || s.stopped {
+		s.mu.Unlock()
+		return nil
+	}
+	if s.subscribed && !force {
+		s.mu.Unlock()
+		return nil
+	}
+	s.mu.Unlock()
+
+	token := client.Subscribe(s.pipelineTopicFilter(), s.cfg.SubscribeQoS, s.onPipelineMessage)
+	if !token.WaitTimeout(s.cfg.SubscribeTimeout) {
+		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "timeout").Inc()
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe timeout for topic %s", s.pipelineTopicFilter())
+	}
+	if err := token.Error(); err != nil {
+		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "error").Inc()
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+		return fmt.Errorf("mqtt: PipelineSubscriber: subscribe %s: %w", s.pipelineTopicFilter(), err)
+	}
+
+	s.mu.Lock()
+	subscriptionActive := !s.stopped
+	if !s.stopped {
+		s.subscribed = true
+		s.livenessUnhealthySince = time.Time{}
+	}
+	s.mu.Unlock()
+	metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "success").Inc()
+	if subscriptionActive {
+		metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
+		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
+		metrics.MQTTPipelineLivenessUnhealthySeconds.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
+	}
+	return nil
 }
 
 // mqttPayload is the test-friendly seam for the Paho-specific

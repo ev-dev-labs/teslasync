@@ -75,6 +75,9 @@ func (a *App) Run(ctx context.Context) error {
 		SignalStore:       a.SignalStore,
 		CacheStore:        a.Cache,
 		DataRepairScanner: a.DataRepairScanner,
+		LivenessChecks: []apirouter.LivenessCheck{
+			{Component: "mqtt_pipeline", Check: a.mqttPipelineLivenessError},
+		},
 
 		// Dead-letter and feature-flag observability.
 		DLQInspector:           a.DLQInspector,

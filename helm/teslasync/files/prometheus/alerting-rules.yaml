@@ -632,35 +632,65 @@ groups:
           summary: "SLO normalize_throughput slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
           description: "Error budget for SLO \"normalize_throughput\" (objective 95%, owner ingest) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
-  - name: slo_mqtt_no_backlog_burn
+  - name: slo_mqtt_pipeline_subscription_burn
     rules:
-      - alert: SLOMqttNoBacklogFastBurn
-        expr: "(1 - slo:mqtt_no_backlog:ratio_rate1h) > 0.144000 and (1 - slo:mqtt_no_backlog:ratio_rate5m) > 0.144000"
+      - alert: SLOMqttPipelineSubscriptionFastBurn
+        expr: "(1 - slo:mqtt_pipeline_subscription:ratio_rate1h) > 0.014400 and (1 - slo:mqtt_pipeline_subscription:ratio_rate5m) > 0.014400"
         for: 2m
         labels:
           severity: page
-          slo: "mqtt_no_backlog"
+          slo: "mqtt_pipeline_subscription"
           owner: "ingest"
           burn_rate: "14.4"
           long_window: "1h"
           short_window: "5m"
         annotations:
-          summary: "SLO mqtt_no_backlog fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
-          description: "Error budget for SLO \"mqtt_no_backlog\" (objective 99%, owner ingest) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          summary: "SLO mqtt_pipeline_subscription fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"mqtt_pipeline_subscription\" (objective 99.9%, owner ingest) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
-      - alert: SLOMqttNoBacklogSlowBurn
-        expr: "(1 - slo:mqtt_no_backlog:ratio_rate6h) > 0.060000 and (1 - (((((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[30m:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[30m:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[30m:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[30m:30s])) > 0)) or on() vector(1)) > 0.060000"
+      - alert: SLOMqttPipelineSubscriptionSlowBurn
+        expr: "(1 - slo:mqtt_pipeline_subscription:ratio_rate6h) > 0.006000 and (1 - (((((sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[30m:30s])) or on() (0 * (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[30m:30s]))))) / (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[30m:30s]))) and on() ((count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[30m:30s])) > 0)) or on() vector(1)) > 0.006000"
         for: 15m
         labels:
           severity: ticket
-          slo: "mqtt_no_backlog"
+          slo: "mqtt_pipeline_subscription"
           owner: "ingest"
           burn_rate: "6"
           long_window: "6h"
           short_window: "30m"
         annotations:
-          summary: "SLO mqtt_no_backlog slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
-          description: "Error budget for SLO \"mqtt_no_backlog\" (objective 99%, owner ingest) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          summary: "SLO mqtt_pipeline_subscription slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"mqtt_pipeline_subscription\" (objective 99.9%, owner ingest) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+  - name: slo_mqtt_handler_backlog_burn
+    rules:
+      - alert: SLOMqttHandlerBacklogFastBurn
+        expr: "(1 - slo:mqtt_handler_backlog:ratio_rate1h) > 0.144000 and (1 - slo:mqtt_handler_backlog:ratio_rate5m) > 0.144000"
+        for: 2m
+        labels:
+          severity: page
+          slo: "mqtt_handler_backlog"
+          owner: "ingest"
+          burn_rate: "14.4"
+          long_window: "1h"
+          short_window: "5m"
+        annotations:
+          summary: "SLO mqtt_handler_backlog fast burn: error budget consumed at >=14.4x sustainable rate over the last 1h"
+          description: "Error budget for SLO \"mqtt_handler_backlog\" (objective 99%, owner ingest) is burning at >=14.4x the sustainable rate on both the 1h and 5m windows."
+          runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
+      - alert: SLOMqttHandlerBacklogSlowBurn
+        expr: "(1 - slo:mqtt_handler_backlog:ratio_rate6h) > 0.060000 and (1 - (((((sum_over_time((teslasync_mqtt_consumer_backlog < 100)[30m:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[30m:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[30m:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[30m:30s])) > 0)) or on() vector(1)) > 0.060000"
+        for: 15m
+        labels:
+          severity: ticket
+          slo: "mqtt_handler_backlog"
+          owner: "ingest"
+          burn_rate: "6"
+          long_window: "6h"
+          short_window: "30m"
+        annotations:
+          summary: "SLO mqtt_handler_backlog slow burn: error budget consumed at >=6x sustainable rate over the last 6h"
+          description: "Error budget for SLO \"mqtt_handler_backlog\" (objective 99%, owner ingest) is burning at >=6x the sustainable rate on both the 6h and 30m windows."
           runbook_url: "docs/runbooks/phase-44-respond-to-burn-alert.md"
   - name: slo_tesla_api_availability_burn
     rules:

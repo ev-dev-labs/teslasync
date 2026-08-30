@@ -58,6 +58,30 @@ var (
 		Help:      "Total MQTT reconnection attempts",
 	})
 
+	MQTTPipelineConnected = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_pipeline_connected",
+		Help:      "Whether the dedicated Fleet Telemetry MQTT consumer is connected to the broker (1=yes, 0=no)",
+	}, []string{"consumer"})
+
+	MQTTPipelineSubscribed = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_pipeline_subscribed",
+		Help:      "Whether the dedicated Fleet Telemetry MQTT consumer has an acknowledged active subscription (1=yes, 0=no)",
+	}, []string{"consumer"})
+
+	MQTTPipelineSubscriptionAttempts = promauto.NewCounterVec(prometheus.CounterOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_pipeline_subscription_attempts_total",
+		Help:      "Fleet Telemetry MQTT subscription attempts by trigger and result",
+	}, []string{"trigger", "result"})
+
+	MQTTPipelineLivenessUnhealthySeconds = promauto.NewGaugeVec(prometheus.GaugeOpts{
+		Namespace: "teslasync",
+		Name:      "mqtt_pipeline_liveness_unhealthy_seconds",
+		Help:      "Seconds the Fleet Telemetry consumer has been unhealthy while the broker is independently reachable",
+	}, []string{"consumer"})
+
 	SSEConnectionsActive = promauto.NewGauge(prometheus.GaugeOpts{
 		Namespace: "teslasync",
 		Name:      "sse_connections_active",

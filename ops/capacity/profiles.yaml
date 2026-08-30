@@ -44,16 +44,16 @@ profiles:
       ramp_up: 1m
       duration: 5m
     thresholds:
-      - metric: teslasync_mqtt_backlog
+      - metric: teslasync_mqtt_consumer_backlog
         comparison: lt
-        value: 1000
-        rationale: slo/catalog.yaml mqtt_no_backlog treats a persistent backlog as an availability breach.
+        value: 100
+        rationale: slo/catalog.yaml mqtt_handler_backlog bounds messages already admitted to concurrent API handlers; it does not measure Mosquitto's offline queue.
       - metric: normalize_pipeline_process_seconds_p99
         comparison: lt
         value: 0.25
         rationale: Ingest must stay well inside the 15s FSM reconciliation tick.
     observability:
-      dashboards: [slo-normalize_throughput, slo-telemetry_freshness, slo-mqtt_no_backlog]
+      dashboards: [slo-normalize_throughput, slo-telemetry_freshness, slo-mqtt_pipeline_subscription, slo-mqtt_handler_backlog]
     last_executed: never
 
   - id: sse-fanout

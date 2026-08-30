@@ -1,12 +1,13 @@
 {
-  "uid": "slo-mqtt_no_backlog",
-  "title": "SLO: mqtt_no_backlog",
-  "description": "MQTT consumer backlog must stay below 1000 messages.",
+  "uid": "slo-mqtt_pipeline_subscription",
+  "title": "SLO: mqtt_pipeline_subscription",
+  "description": "The dedicated Fleet Telemetry MQTT consumer must remain subscribed.",
   "tags": [
     "slo",
     "owner:ingest",
     "mqtt",
-    "backlog"
+    "subscription",
+    "availability"
   ],
   "schemaVersion": 38,
   "version": 1,
@@ -34,7 +35,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "slo:mqtt_no_backlog:ratio_rate5m",
+          "expr": "slo:mqtt_pipeline_subscription:ratio_rate5m",
           "legendFormat": "ratio_5m"
         }
       ],
@@ -66,7 +67,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "vector(0.99)",
+          "expr": "vector(0.9990000000000001)",
           "legendFormat": "objective"
         }
       ],
@@ -98,7 +99,7 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "1 - ((1 - slo:mqtt_no_backlog:ratio_rate30d) / (1 - 0.99))",
+          "expr": "1 - ((1 - slo:mqtt_pipeline_subscription:ratio_rate30d) / (1 - 0.9990000000000001))",
           "legendFormat": "budget_remaining"
         }
       ],
@@ -129,17 +130,17 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "slo:mqtt_no_backlog:ratio_rate5m",
+          "expr": "slo:mqtt_pipeline_subscription:ratio_rate5m",
           "legendFormat": "5m"
         },
         {
           "refId": "B",
-          "expr": "slo:mqtt_no_backlog:ratio_rate1h",
+          "expr": "slo:mqtt_pipeline_subscription:ratio_rate1h",
           "legendFormat": "1h"
         },
         {
           "refId": "C",
-          "expr": "slo:mqtt_no_backlog:ratio_rate6h",
+          "expr": "slo:mqtt_pipeline_subscription:ratio_rate6h",
           "legendFormat": "6h"
         }
       ],
@@ -171,12 +172,12 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "(1 - slo:mqtt_no_backlog:ratio_rate1h) / (1 - 0.99)",
+          "expr": "(1 - slo:mqtt_pipeline_subscription:ratio_rate1h) / (1 - 0.9990000000000001)",
           "legendFormat": "1h"
         },
         {
           "refId": "B",
-          "expr": "(1 - slo:mqtt_no_backlog:ratio_rate6h) / (1 - 0.99)",
+          "expr": "(1 - slo:mqtt_pipeline_subscription:ratio_rate6h) / (1 - 0.9990000000000001)",
           "legendFormat": "6h"
         }
       ],

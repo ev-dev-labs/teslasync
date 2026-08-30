@@ -1,4 +1,7 @@
 {{- include "teslasync.assertCanarySelectors" . }}
+{{- include "teslasync.assertFleetTelemetrySingleOwner" . }}
+{{- $ftHost := include "teslasync.fleetTelemetry.host" . }}
+{{- $fleetTelemetryOwner := or .Values.fleetTelemetry.enabled $ftHost }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -19,11 +22,17 @@ spec:
       {{- include "teslasync.stableSelectorLabels" . | nindent 6 }}
       app.kubernetes.io/component: api
   strategy:
+    {{- if $fleetTelemetryOwner }}
+    # The persistent MQTT client ID and telemetry FSM have one owner. A
+    # rolling surge would briefly run two consumers that evict each other.
+    type: Recreate
+    {{- else }}
     type: {{ .Values.rollout.api.strategy.type }}
     {{- if eq .Values.rollout.api.strategy.type "RollingUpdate" }}
     rollingUpdate:
       maxSurge: {{ .Values.rollout.api.strategy.maxSurge }}
       maxUnavailable: {{ .Values.rollout.api.strategy.maxUnavailable }}
+    {{- end }}
     {{- end }}
   template:
     metadata:

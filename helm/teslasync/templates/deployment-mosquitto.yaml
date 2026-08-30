@@ -16,6 +16,8 @@ spec:
     type: Recreate
   template:
     metadata:
+      annotations:
+        checksum/mosquitto-config: {{ include (print $.Template.BasePath "/configmap-mosquitto.yaml") . | sha256sum }}
       labels:
         {{- include "teslasync.selectorLabels" . | nindent 8 }}
         app.kubernetes.io/component: mosquitto
@@ -55,7 +57,14 @@ spec:
           volumeMounts:
             - name: mosquitto-data
               mountPath: /mosquitto/data
+            - name: mosquitto-config
+              mountPath: /mosquitto/config/mosquitto.conf
+              subPath: mosquitto.conf
+              readOnly: true
       volumes:
+        - name: mosquitto-config
+          configMap:
+            name: {{ include "teslasync.fullname" . }}-mosquitto
         - name: mosquitto-data
         {{- if .Values.mqtt.persistence.enabled }}
           persistentVolumeClaim:

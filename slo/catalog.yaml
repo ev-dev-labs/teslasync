@@ -224,15 +224,25 @@ slos:
     owner: ingest
     tags: [throughput, pipeline]
 
-  - name: mqtt_no_backlog
-    description: "MQTT consumer backlog must stay below 1000 messages."
+  - name: mqtt_pipeline_subscription
+    description: "The dedicated Fleet Telemetry MQTT consumer must remain subscribed."
     sli:
-      good_events: "sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[5m:30s])"
+      good_events: "sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[5m:30s])"
+      valid_events: "count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[5m:30s])"
+    objective: 99.9
+    window: 7d
+    owner: ingest
+    tags: [mqtt, subscription, availability]
+
+  - name: mqtt_handler_backlog
+    description: "MQTT messages admitted to the API must not accumulate in handlers."
+    sli:
+      good_events: "sum_over_time((teslasync_mqtt_consumer_backlog < 100)[5m:30s])"
       valid_events: "count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])"
     objective: 99.0
     window: 7d
     owner: ingest
-    tags: [mqtt, backlog]
+    tags: [mqtt, handlers, saturation]
 
   - name: tesla_api_availability
     description: "Tesla upstream API circuit breaker must remain closed."

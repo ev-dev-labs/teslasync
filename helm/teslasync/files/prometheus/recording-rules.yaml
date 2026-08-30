@@ -652,34 +652,65 @@ groups:
           window: "30d"
           owner: "ingest"
           objective: "95"
-  - name: slo_mqtt_no_backlog
+  - name: slo_mqtt_pipeline_subscription
     interval: 30s
     rules:
-      - record: slo:mqtt_no_backlog:ratio_rate5m
-        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[5m:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[5m:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[5m:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])) > 0)) or on() vector(1)"
+      - record: slo:mqtt_pipeline_subscription:ratio_rate5m
+        expr: "(((((sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[5m:30s])) or on() (0 * (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[5m:30s]))))) / (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[5m:30s]))) and on() ((count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[5m:30s])) > 0)) or on() vector(1)"
         labels:
-          slo: "mqtt_no_backlog"
+          slo: "mqtt_pipeline_subscription"
+          window: "5m"
+          owner: "ingest"
+          objective: "99.9"
+      - record: slo:mqtt_pipeline_subscription:ratio_rate1h
+        expr: "(((((sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[1h:30s])) or on() (0 * (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[1h:30s]))))) / (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[1h:30s]))) and on() ((count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[1h:30s])) > 0)) or on() vector(1)"
+        labels:
+          slo: "mqtt_pipeline_subscription"
+          window: "1h"
+          owner: "ingest"
+          objective: "99.9"
+      - record: slo:mqtt_pipeline_subscription:ratio_rate6h
+        expr: "(((((sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[6h:30s])) or on() (0 * (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[6h:30s]))))) / (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[6h:30s]))) and on() ((count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[6h:30s])) > 0)) or on() vector(1)"
+        labels:
+          slo: "mqtt_pipeline_subscription"
+          window: "6h"
+          owner: "ingest"
+          objective: "99.9"
+      - record: slo:mqtt_pipeline_subscription:ratio_rate30d
+        expr: "(((((sum_over_time((teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"} == 1)[30d:30s])) or on() (0 * (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[30d:30s]))))) / (count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[30d:30s]))) and on() ((count_over_time(teslasync_mqtt_pipeline_subscribed{consumer=\"fleet_telemetry\"}[30d:30s])) > 0)) or on() vector(1)"
+        labels:
+          slo: "mqtt_pipeline_subscription"
+          window: "30d"
+          owner: "ingest"
+          objective: "99.9"
+  - name: slo_mqtt_handler_backlog
+    interval: 30s
+    rules:
+      - record: slo:mqtt_handler_backlog:ratio_rate5m
+        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 100)[5m:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[5m:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[5m:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[5m:30s])) > 0)) or on() vector(1)"
+        labels:
+          slo: "mqtt_handler_backlog"
           window: "5m"
           owner: "ingest"
           objective: "99"
-      - record: slo:mqtt_no_backlog:ratio_rate1h
-        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[1h:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[1h:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[1h:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[1h:30s])) > 0)) or on() vector(1)"
+      - record: slo:mqtt_handler_backlog:ratio_rate1h
+        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 100)[1h:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[1h:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[1h:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[1h:30s])) > 0)) or on() vector(1)"
         labels:
-          slo: "mqtt_no_backlog"
+          slo: "mqtt_handler_backlog"
           window: "1h"
           owner: "ingest"
           objective: "99"
-      - record: slo:mqtt_no_backlog:ratio_rate6h
-        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[6h:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[6h:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[6h:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[6h:30s])) > 0)) or on() vector(1)"
+      - record: slo:mqtt_handler_backlog:ratio_rate6h
+        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 100)[6h:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[6h:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[6h:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[6h:30s])) > 0)) or on() vector(1)"
         labels:
-          slo: "mqtt_no_backlog"
+          slo: "mqtt_handler_backlog"
           window: "6h"
           owner: "ingest"
           objective: "99"
-      - record: slo:mqtt_no_backlog:ratio_rate30d
-        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 1000)[30d:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[30d:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[30d:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[30d:30s])) > 0)) or on() vector(1)"
+      - record: slo:mqtt_handler_backlog:ratio_rate30d
+        expr: "(((((sum_over_time((teslasync_mqtt_consumer_backlog < 100)[30d:30s])) or on() (0 * (count_over_time(teslasync_mqtt_consumer_backlog[30d:30s]))))) / (count_over_time(teslasync_mqtt_consumer_backlog[30d:30s]))) and on() ((count_over_time(teslasync_mqtt_consumer_backlog[30d:30s])) > 0)) or on() vector(1)"
         labels:
-          slo: "mqtt_no_backlog"
+          slo: "mqtt_handler_backlog"
           window: "30d"
           owner: "ingest"
           objective: "99"

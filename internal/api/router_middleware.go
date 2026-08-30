@@ -38,6 +38,7 @@ type RouterOptions struct {
 	WebhookTrigger    apiwhrx.WebhookProcessor // If set, enables public webhook receiver endpoint
 	CacheStore        *cache.Store             // If set, enables cached endpoints (trip planner, etc.)
 	DataRepairScanner *apidatarepair.Scanner   // If set, shared by manual and scheduled integrity scans
+	LivenessChecks    []LivenessCheck          // Restart-repairable process-local health checks
 
 	// DLQInspector and the replay audit repo enable
 	// /system/dlq{,/{id},/{id}/replay} when set.

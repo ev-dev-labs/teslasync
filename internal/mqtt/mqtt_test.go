@@ -761,6 +761,12 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 	if sub.cfg.SubscribeQoS != 1 {
 		t.Errorf("SubscribeQoS default = %d, want 1", sub.cfg.SubscribeQoS)
 	}
+	if sub.cfg.SubscriptionRetryInterval != 5*time.Second {
+		t.Errorf("SubscriptionRetryInterval default = %s, want 5s", sub.cfg.SubscriptionRetryInterval)
+	}
+	if sub.cfg.LivenessFailureAfter != 90*time.Second {
+		t.Errorf("LivenessFailureAfter default = %s, want 90s", sub.cfg.LivenessFailureAfter)
+	}
 }
 
 func TestSetPayloadDropSentinel_Removed(t *testing.T) {
@@ -869,10 +875,20 @@ func (f *fakePahoClient) LastQoS() byte {
 	return f.lastSubscribeQoS
 }
 
+func (f *fakePahoClient) SetConnected(connected bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.connected = connected
+}
+
 // Unused pahomqtt.Client methods. They panic so that an accidental
 // dependency on broker-side behaviour in a test surfaces immediately.
-func (f *fakePahoClient) IsConnected() bool      { return f.connected }
-func (f *fakePahoClient) IsConnectionOpen() bool { return f.connected }
+func (f *fakePahoClient) IsConnected() bool {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	return f.connected
+}
+func (f *fakePahoClient) IsConnectionOpen() bool { return f.IsConnected() }
 func (f *fakePahoClient) Connect() pahoToken     { panic("Connect not used") }
 func (f *fakePahoClient) Disconnect(_ uint)      { panic("Disconnect not used") }
 func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoToken {
@@ -881,7 +897,7 @@ func (f *fakePahoClient) Publish(_ string, _ byte, _ bool, _ interface{}) pahoTo
 func (f *fakePahoClient) SubscribeMultiple(_ map[string]byte, _ pahoMessageHandler) pahoToken {
 	panic("SubscribeMultiple not used")
 }
-func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken       { panic("Unsubscribe not used") }
+func (f *fakePahoClient) Unsubscribe(_ ...string) pahoToken       { return immediatePahoToken{} }
 func (f *fakePahoClient) AddRoute(_ string, _ pahoMessageHandler) {}
 func (f *fakePahoClient) OptionsReader() pahoOptionsReader        { panic("OptionsReader not used") }
 
@@ -1034,17 +1050,217 @@ func TestPipelineSubscriber_IsHealthy(t *testing.T) {
 	if !sub.IsHealthy() {
 		t.Fatal("IsHealthy() = false for active connected subscription")
 	}
-	client.connected = false
+	client.SetConnected(false)
 	if sub.IsHealthy() {
 		t.Fatal("IsHealthy() = true after broker disconnect")
 	}
-	client.connected = true
+	client.SetConnected(true)
 	sub.mu.Lock()
 	sub.subscribed = false
 	sub.mu.Unlock()
 	if sub.IsHealthy() {
 		t.Fatal("IsHealthy() = true without an active subscription")
 	}
+}
+
+func TestPipelineSubscriber_RecoveryRetriesFailedReconnectSubscribe(t *testing.T) {
+	client := &sequencedPahoClient{
+		fakePahoClient: fakePahoClient{connected: true},
+		tokens: []pahoToken{
+			immediatePahoToken{},
+			erroringPahoToken{err: errors.New("transient SUBACK failure")},
+			immediatePahoToken{},
+		},
+	}
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscribeTimeout:          20 * time.Millisecond,
+			SubscriptionRetryInterval: 5 * time.Millisecond,
+			LivenessFailureAfter:      time.Second,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err != nil {
+		t.Fatalf("Start() error = %v", err)
+	}
+	sub.OnBrokerReconnect(client)
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true after failed reconnect subscription")
+	}
+
+	deadline := time.Now().Add(500 * time.Millisecond)
+	for !sub.IsHealthy() && time.Now().Before(deadline) {
+		time.Sleep(time.Millisecond)
+	}
+	if !sub.IsHealthy() {
+		t.Fatalf("subscriber did not recover; Subscribe calls = %d", client.Calls())
+	}
+	if got := client.Calls(); got != 3 {
+		t.Fatalf("Subscribe calls = %d, want 3 (initial + failed reconnect + supervisor retry)", got)
+	}
+}
+
+func TestPipelineSubscriber_InitialSubscribeFailureDoesNotRunDegraded(t *testing.T) {
+	client := &erroringPahoSubscribeClient{err: errors.New("acl: not authorized")}
+	client.SetConnected(true)
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscriptionRetryInterval: 5 * time.Millisecond,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	if err := sub.Start(); err == nil {
+		t.Fatal("Start() error = nil, want initial SUBACK failure")
+	}
+	time.Sleep(15 * time.Millisecond)
+	if got := client.Calls(); got != 1 {
+		t.Fatalf("Subscribe calls = %d, want 1; failed startup must not enter degraded retry mode", got)
+	}
+	if sub.IsHealthy() {
+		t.Fatal("IsHealthy() = true after initial SUBACK failure")
+	}
+}
+
+func TestPipelineSubscriber_SubscribeAttemptsAreSerialized(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.mu.Lock()
+	sub.started = true
+	sub.mu.Unlock()
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		sub.OnBrokerReconnect(client)
+	}()
+	<-client.entered
+	go func() {
+		defer wg.Done()
+		sub.OnBrokerReconnect(client)
+	}()
+	time.Sleep(10 * time.Millisecond)
+	close(client.release)
+	wg.Wait()
+
+	if got := client.MaxConcurrent(); got != 1 {
+		t.Fatalf("concurrent Subscribe calls = %d, want 1", got)
+	}
+	if got := client.Calls(); got != 2 {
+		t.Fatalf("Subscribe calls = %d, want 2 serialized reconnect attempts", got)
+	}
+}
+
+func TestPipelineSubscriber_LivenessFailsOnlyForRepairableWedge(t *testing.T) {
+	client := &fakePahoClient{connected: true}
+	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))
+	sub.client = client
+	sub.cfg.LivenessFailureAfter = 10 * time.Millisecond
+	sub.mu.Lock()
+	sub.started = true
+	sub.subscribed = false
+	sub.mu.Unlock()
+
+	if err := sub.LivenessError(true); err != nil {
+		t.Fatalf("LivenessError() before grace = %v", err)
+	}
+	time.Sleep(15 * time.Millisecond)
+	if err := sub.LivenessError(true); err == nil {
+		t.Fatal("LivenessError() = nil after connected-but-unsubscribed grace")
+	}
+
+	client.SetConnected(false)
+	if err := sub.LivenessError(false); err != nil {
+		t.Fatalf("LivenessError() during broker-wide outage = %v", err)
+	}
+	time.Sleep(15 * time.Millisecond)
+	if err := sub.LivenessError(false); err != nil {
+		t.Fatalf("LivenessError() restarted outage timer while broker unavailable: %v", err)
+	}
+
+	if err := sub.LivenessError(true); err != nil {
+		t.Fatalf("LivenessError() immediately after broker recovery = %v", err)
+	}
+	time.Sleep(15 * time.Millisecond)
+	if err := sub.LivenessError(true); err == nil {
+		t.Fatal("LivenessError() = nil for disconnected pipeline while independent client reaches broker")
+	}
+}
+
+type sequencedPahoClient struct {
+	fakePahoClient
+	tokens []pahoToken
+}
+
+func (s *sequencedPahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.subscribeCalls++
+	s.lastSubscribeTop = topic
+	s.lastSubscribeQoS = qos
+	if len(s.tokens) == 0 {
+		return immediatePahoToken{}
+	}
+	token := s.tokens[0]
+	s.tokens = s.tokens[1:]
+	return token
+}
+
+type blockingPahoClient struct {
+	fakePahoClient
+	entered chan struct{}
+	release chan struct{}
+	active  int
+	max     int
+}
+
+func newBlockingPahoClient() *blockingPahoClient {
+	return &blockingPahoClient{
+		fakePahoClient: fakePahoClient{connected: true},
+		entered:        make(chan struct{}, 2),
+		release:        make(chan struct{}),
+	}
+}
+
+func (b *blockingPahoClient) Subscribe(topic string, qos byte, _ pahoMessageHandler) pahoToken {
+	b.mu.Lock()
+	b.subscribeCalls++
+	b.lastSubscribeTop = topic
+	b.lastSubscribeQoS = qos
+	b.active++
+	if b.active > b.max {
+		b.max = b.active
+	}
+	b.mu.Unlock()
+
+	b.entered <- struct{}{}
+	<-b.release
+
+	b.mu.Lock()
+	b.active--
+	b.mu.Unlock()
+	return immediatePahoToken{}
+}
+
+func (b *blockingPahoClient) MaxConcurrent() int {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.max
 }
 
 // erroringPahoSubscribeClient wraps fakePahoClient to return an erroring

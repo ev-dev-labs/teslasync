@@ -32,17 +32,34 @@ type MaintenanceView = apiadminmnt.MaintenanceView
 
 var startTime = time.Now()
 
+// LivenessCheck is an optional process-local dependency check. It is reserved
+// for failures a pod restart can repair; shared dependency outages belong in
+// readiness or status endpoints to avoid restart storms.
+type LivenessCheck struct {
+	Component string
+	Check     func() error
+}
+
 // HealthHandler returns a simple health check.
 //
 // It is the LIVENESS probe, so it is wrapped by the drain watchdog: a
 // pod that latched the one-way drain but was never terminated would
 // otherwise sit forever as "unready but alive" — invisible dead
 // capacity that nothing restarts. See ops.ReadinessGate.GuardLiveness.
-func HealthHandler(db *database.DB) http.HandlerFunc {
+func HealthHandler(db *database.DB, extraChecks ...LivenessCheck) http.HandlerFunc {
 	return ShutdownGate.GuardLiveness(StuckDrainBudget, nil)(func(w http.ResponseWriter, r *http.Request) {
 		if err := db.Health(r.Context()); err != nil {
 			writeError(w, http.StatusServiceUnavailable, "database unhealthy")
 			return
+		}
+		for _, check := range extraChecks {
+			if check.Check == nil {
+				continue
+			}
+			if err := check.Check(); err != nil {
+				writeError(w, http.StatusServiceUnavailable, check.Component+" unhealthy")
+				return
+			}
 		}
 		writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
 	})

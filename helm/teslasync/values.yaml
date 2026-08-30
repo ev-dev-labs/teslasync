@@ -107,6 +107,9 @@ podDisruptionBudget:
 # DEFAULTS PRESERVE EXISTING BEHAVIOUR EXACTLY:
 #   * api/web strategies reproduce the previously hard-coded
 #     RollingUpdate maxSurge=1 / maxUnavailable=0.
+#     When Fleet Telemetry is enabled, the API template safely overrides
+#     its strategy to Recreate because the persistent MQTT client ID has
+#     exactly one owner.
 #   * worker strategies render nothing (empty `type`), so the Kubernetes
 #     default applies exactly as before.
 #   * every canary is disabled, so no extra workload is created.
@@ -1262,6 +1265,14 @@ mqtt:
     storageClass: ""
     accessModes:
       - ReadWriteOnce
+    # -- Seconds between broker persistence snapshots.
+    autosaveIntervalSeconds: 30
+
+  queue:
+    # -- QoS 1/2 messages retained per offline persistent client. The
+    # subscriber normally recovers within seconds; this is additional headroom
+    # for a pod restart and must not be treated as a recovery mechanism.
+    maxQueuedMessages: 10000
 
   resources:
     limits:

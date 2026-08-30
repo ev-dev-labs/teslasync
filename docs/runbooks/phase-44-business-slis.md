@@ -6,8 +6,9 @@
 > - [`phase-44-metrics-conventions.md`](./phase-44-metrics-conventions.md) — generic HTTP RED metric vocabulary
 > - [`phase-44-context-propagation-audit.md`](./phase-44-context-propagation-audit.md)
 
-This runbook documents the five business-critical Prometheus series declared
-in [`internal/metrics/business.go`](../../internal/metrics/business.go).
+This runbook documents the business-critical Prometheus series declared in
+[`internal/metrics/business.go`](../../internal/metrics/business.go) and
+[`internal/metrics/metrics_telemetry.go`](../../internal/metrics/metrics_telemetry.go).
 These complement the per-route HTTP RED metrics with deeper insight into
 ingestion freshness, FSM agreement, pipeline throughput, MQTT pressure, and
 upstream-API health.
@@ -20,6 +21,10 @@ upstream-API health.
 | `teslasync_fsm_state_correctness_ratio`                      | gauge       | `vehicle_id`   | Periodic reconciliation pass calls `SetFSMStateCorrectness(vid, ratio)`.                 |
 | `teslasync_normalize_pipeline_throughput_signals_per_second` | gauge       | (none)         | Each `normalize.Pipeline.Process*` batch publishes `signal.count / batch_duration`.      |
 | `teslasync_mqtt_consumer_backlog`                            | gauge       | (none)         | Inc on `mqtt.consume` entry, Dec on exit (success / drop / panic / non-ack error).       |
+| `teslasync_mqtt_pipeline_connected`                          | gauge       | `consumer`     | Dedicated persistent Fleet Telemetry client transport state.                            |
+| `teslasync_mqtt_pipeline_subscribed`                         | gauge       | `consumer`     | Last acknowledged Fleet Telemetry subscription state.                                   |
+| `teslasync_mqtt_pipeline_subscription_attempts_total`        | counter     | `trigger,result` | Initial, reconnect, and supervisor SUBSCRIBE outcomes.                                |
+| `teslasync_mqtt_pipeline_liveness_unhealthy_seconds`         | gauge       | `consumer`     | Restart-eligible consumer wedge duration while the broker is independently reachable.   |
 | `teslasync_tesla_api_circuit_breaker_state`                  | gauge       | `endpoint`     | `SetTeslaAPICircuitBreakerState(endpoint, state)` from the resilience layer.             |
 
 ### `teslasync_telemetry_lag_seconds`
@@ -81,6 +86,28 @@ downstream stages (normalize / writers / DB) cannot keep up with MQTT
 ingest rate.
 
 **SLO target:** `mqtt_consumer_backlog < 100` sustained over `5m`.
+
+This gauge is **not** the broker-side persistent-session queue. Mosquitto's
+offline queue can grow while this gauge remains zero because messages have not
+yet entered an API handler. Use `teslasync_mqtt_pipeline_subscribed` for the
+consumer-availability SLO and broker-native metrics for offline queue depth.
+
+### Fleet Telemetry consumer lifecycle
+
+`teslasync_mqtt_pipeline_connected` tracks the dedicated persistent client's
+transport, while `teslasync_mqtt_pipeline_subscribed` tracks successful SUBACK
+state. Keep these separate: a connected client can have zero subscriptions
+after a broker session loss or failed reconnect SUBACK.
+
+`teslasync_mqtt_pipeline_subscription_attempts_total` uses only the bounded
+`trigger={initial,reconnect,supervisor}` and
+`result={success,timeout,error}` labels. The supervisor retries every five
+seconds while connected. `teslasync_mqtt_pipeline_liveness_unhealthy_seconds`
+advances only while a consumer-specific failure is eligible for restart; it
+stays zero during a broker-wide outage to prevent restart storms.
+
+**SLO target:** `mqtt_pipeline_subscribed == 1` for 99.9% of the seven-day
+window.
 
 ### `teslasync_tesla_api_circuit_breaker_state`
 

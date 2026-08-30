@@ -715,12 +715,19 @@ func (a *App) initStateReader() {
 // hydrates AlertEvaluator prevSignals, starts the FSM reconcile loop,
 // optionally wires the MongoDB raw-telemetry capture, and starts the
 // MQTT PipelineSubscriber, its writers, and side-effects observer.
-// Returns an error only for fatal misconfigurations
-// (invalid LIVE_SIGNAL_STORE_MODE, router.New writer-coverage failure,
-// MQTT pipeline construction failure when MQTT is configured).
+// Returns an error for fatal misconfigurations or when the required MQTT
+// ingest path cannot be established
+// (invalid LIVE_SIGNAL_STORE_MODE, unavailable MQTT while Fleet Telemetry is
+// enabled, or router/pipeline construction failure).
 func (a *App) initTelemetryHandler(ctx context.Context) error {
 	if !a.Cfg.FleetTelemetry.Enabled {
 		return nil
+	}
+	if a.MQTT == nil {
+		return errors.New("fleet telemetry is enabled but MQTT is unavailable")
+	}
+	if strings.TrimSpace(a.Cfg.FleetTelemetry.TopicBase) == "" {
+		return errors.New("fleet telemetry is enabled but FLEET_TELEMETRY_TOPIC_BASE is empty")
 	}
 
 	a.TelemetryHandler = apitelem.NewHandler(
@@ -858,10 +865,8 @@ func (a *App) initTelemetryHandler(ctx context.Context) error {
 		go sessionTracker.BackfillAddresses(ctx)
 	}
 
-	if a.MQTT != nil && a.Cfg.FleetTelemetry.TopicBase != "" {
-		if err := a.initPipelineSubscriber(ctx, vehicleRepo); err != nil {
-			return err
-		}
+	if err := a.initPipelineSubscriber(ctx, vehicleRepo); err != nil {
+		return err
 	}
 	return nil
 }
@@ -988,6 +993,11 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 			sub.OnBrokerReconnect(c)
 		}
 	}
+	pipelineOnConnectionLost := func(_ error) {
+		if sub := subRef.Load(); sub != nil {
+			sub.OnBrokerConnectionLost()
+		}
+	}
 
 	pahoClient, dlq, err := mqtt.NewProductionPipelineMQTT(
 		ctx,
@@ -998,6 +1008,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 		dlqTopic,
 		pipelineLogger,
 		pipelineOnConnect,
+		pipelineOnConnectionLost,
 	)
 	if err != nil {
 		return fmt.Errorf("phase-42a: NewProductionPipelineMQTT failed; broker=%s dlq_topic=%s: %w",
@@ -1068,10 +1079,9 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 	// pre-start invocations via the started/stopped flags.
 	subRef.Store(pipelineSubscriber)
 	if err := pipelineSubscriber.Start(); err != nil {
-		log.Warn().Err(err).
-			Str("topic_base", a.Cfg.FleetTelemetry.TopicBase).
-			Msg("phase-42a: PipelineSubscriber failed to start")
-		return nil
+		pipelineSubscriber.Stop()
+		return fmt.Errorf("phase-42a: PipelineSubscriber failed to start for topic base %q: %w",
+			a.Cfg.FleetTelemetry.TopicBase, err)
 	}
 	a.pipelineSubscriber = pipelineSubscriber
 	a.addCloser("pipeline-subscriber", func(_ context.Context) error {

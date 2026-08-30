@@ -70,13 +70,15 @@ dependencies:
       seeing transitions, and telemetry freshness breaches its SLO. The
       REST API keeps serving historical data normally.
     fallback: >-
-      Tesla Fleet Telemetry buffers and redelivers on reconnect for a
-      bounded window; resilience.ConnectWithRetry reconnects with
-      backoff and cmd/resubscribe re-establishes the vehicle
-      subscriptions. Worker topics queue locally.
+      Mosquitto retains a bounded persistent-client queue; paho reconnects
+      with capped backoff, the subscription supervisor retries failed
+      SUBACKs, and cmd/resubscribe re-establishes the vehicle subscriptions.
+      Worker topics queue locally.
     detection:
-      - signal: teslasync_mqtt_backlog
-        note: slo/catalog.yaml mqtt_no_backlog.
+      - signal: teslasync_mqtt_pipeline_subscribed
+        note: slo/catalog.yaml mqtt_pipeline_subscription.
+      - signal: teslasync_mqtt_consumer_backlog
+        note: slo/catalog.yaml mqtt_handler_backlog; this is API handler concurrency, not broker offline queue depth.
       - signal: telemetry freshness
         note: slo/catalog.yaml telemetry_freshness; the earliest reliable alarm.
     runbook: docs/runbooks/degraded-mode-mqtt.md

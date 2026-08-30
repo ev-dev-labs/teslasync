@@ -648,6 +648,27 @@ than producing manifests where the stable HPA scales on canary pods.
 {{- end }}
 
 {{/*
+Fleet Telemetry ingestion has one persistent MQTT client ID and one in-process
+FSM owner. Until owner election exists, more than one API pod causes
+duplicate-client-ID eviction and split-brain session state.
+*/}}
+{{- define "teslasync.assertFleetTelemetrySingleOwner" -}}
+{{- $ftHost := include "teslasync.fleetTelemetry.host" . -}}
+{{- $enabled := or .Values.fleetTelemetry.enabled $ftHost -}}
+{{- if $enabled -}}
+  {{- if ne (int .Values.replicaCount) 1 -}}
+  {{- fail "Fleet Telemetry requires replicaCount=1: API replicas share one persistent MQTT client ID and telemetry/FSM ownership is not active-active" -}}
+  {{- end -}}
+  {{- if .Values.autoscaling.enabled -}}
+  {{- fail "Fleet Telemetry requires autoscaling.enabled=false: an HPA can create duplicate persistent MQTT consumers before owner election exists" -}}
+  {{- end -}}
+  {{- if .Values.rollout.api.canary.enabled -}}
+  {{- fail "Fleet Telemetry cannot use rollout.api.canary.enabled=true: stable and canary API pods would evict each other's persistent MQTT client" -}}
+  {{- end -}}
+{{- end -}}
+{{- end }}
+
+{{/*
 Stable-workload selector labels. Adds the rollout discriminator only in
 disjoint mode, so legacy installs render byte-identical selectors and a
 plain `helm upgrade` never hits the immutable-field error.
