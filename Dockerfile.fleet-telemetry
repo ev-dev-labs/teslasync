@@ -4,6 +4,12 @@ FROM golang:1.26-bookworm AS build
 
 ARG FLEET_TELEMETRY_REF=8fbaa100bd365936dab6ecbf0e2d7070c4d765cb
 ARG FLEET_TELEMETRY_ARCHIVE_SHA256=8a0e2cc31a3c962b4e6296687e75b5fb208fbbe53ccf928af220ec2bf7fdb355
+ARG LOGRUS_VERSION=v1.9.3
+ARG PAHO_MQTT_VERSION=v1.5.1
+ARG GRPC_VERSION=v1.82.1
+ARG GOOGLE_API_VERSION=v0.271.0
+ARG X_NET_VERSION=v0.58.0
+ARG X_TEXT_VERSION=v0.41.0
 
 WORKDIR /build
 RUN curl --fail --location --show-error --no-progress-meter \
@@ -16,6 +22,20 @@ RUN curl --fail --location --show-error --no-progress-meter \
     && tar -xzf fleet-telemetry.tar.gz --strip-components=1 -C /go/src/fleet-telemetry \
     && rm fleet-telemetry.tar.gz
 
+# The pinned upstream revision predates security fixes in these transitive
+# modules. Keep the overrides explicit and reproducible until the source pin is
+# advanced to an upstream revision that includes equivalent or newer versions.
+WORKDIR /go/src/fleet-telemetry
+RUN go get \
+      "github.com/eclipse/paho.mqtt.golang@${PAHO_MQTT_VERSION}" \
+      "github.com/sirupsen/logrus@${LOGRUS_VERSION}" \
+      "google.golang.org/grpc@${GRPC_VERSION}" \
+      "google.golang.org/api@${GOOGLE_API_VERSION}" \
+      "golang.org/x/net@${X_NET_VERSION}" \
+      "golang.org/x/text@${X_TEXT_VERSION}" \
+    && go mod tidy
+
+WORKDIR /build
 RUN curl --fail --location --show-error --no-progress-meter \
       --retry 8 --retry-all-errors --retry-delay 5 --retry-max-time 300 \
       --connect-timeout 30 --max-time 300 \
