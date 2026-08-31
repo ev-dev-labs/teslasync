@@ -539,6 +539,7 @@ describe('useBulkDeleteDrives', () => {
     expect(JSON.parse(opts.body as string)).toEqual({ ids: [1, 2, 3] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['drives'] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['drive'] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ['analytics', 'fsd'] });
     expect(successToast).toHaveBeenCalledWith('toast.bulk.delete.success', '{{count}} deleted', {
       count: 3,
     });

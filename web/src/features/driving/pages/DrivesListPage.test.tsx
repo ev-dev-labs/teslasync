@@ -30,7 +30,7 @@
  *   - empty state offers a reset-filters CTA.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import { act, render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
@@ -141,8 +141,20 @@ vi.mock('@/components/charts', () => ({
 // ── Peripheral header / mobile / AI components pull their own data or touch
 //    device APIs (matchMedia, EventSource, saved-view network). Stub them so the
 //    suite stays deterministic and focused on the page's own orchestration. ────
+const pullToRefreshState = vi.hoisted(() => ({
+  onRefresh: null as null | (() => Promise<unknown>),
+}));
 vi.mock('@/components/mobile', () => ({
-  PullToRefresh: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  PullToRefresh: ({
+    children,
+    onRefresh,
+  }: {
+    children?: ReactNode;
+    onRefresh: () => Promise<unknown>;
+  }) => {
+    pullToRefreshState.onRefresh = onRefresh;
+    return <div>{children}</div>;
+  },
 }));
 vi.mock('@/components/ai/AINLDriveSearch', () => ({ AINLDriveSearch: () => null }));
 vi.mock('@/components/data-display/SavedViewMenu', () => ({ SavedViewMenu: () => null }));
@@ -162,18 +174,26 @@ vi.mock('@/api/hooks/useDriving', () => ({
   useDrives: vi.fn(),
   useBulkDeleteDrives: vi.fn(),
 }));
+vi.mock('@/api/hooks/useAnalytics', () => ({
+  useFsdInsightsRange: vi.fn(),
+}));
 vi.mock('@/hooks/useSelectedVehicle', () => ({ useSelectedVehicle: vi.fn() }));
 vi.mock('@/hooks/useUnits', () => ({ useUnits: vi.fn() }));
+vi.mock('@/hooks/useCrossTabRefresh', () => ({ useCrossTabRefresh: vi.fn() }));
 
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
+import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useUnits } from '@/hooks/useUnits';
+import { useCrossTabRefresh } from '@/hooks/useCrossTabRefresh';
 import DrivesListPage from './DrivesListPage';
 
 const mockDrives = useDrives as unknown as ReturnType<typeof vi.fn>;
 const mockBulkDelete = useBulkDeleteDrives as unknown as ReturnType<typeof vi.fn>;
+const mockFsdInsights = useFsdInsightsRange as unknown as ReturnType<typeof vi.fn>;
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
 const mockUnits = useUnits as unknown as ReturnType<typeof vi.fn>;
+const mockCrossTabRefresh = useCrossTabRefresh as unknown as ReturnType<typeof vi.fn>;
 
  
 function makeQuery(over: Record<string, unknown> = {}): any {
@@ -191,6 +211,7 @@ function makeQuery(over: Record<string, unknown> = {}): any {
 }
 
 let mutateAsyncSpy: ReturnType<typeof vi.fn>;
+let refreshAcrossTabsSpy: ReturnType<typeof vi.fn>;
 
 function makeDrive(over: Partial<Drive> & Pick<Drive, 'id' | 'startTs' | 'distanceM'>): Drive {
   return {
@@ -316,6 +337,7 @@ const kpiRegion = () => screen.getByTestId('drives-overview-kpis');
 const listRegion = () => screen.getByRole('region', { name: 'Drive list' });
 const analysisRegion = () => screen.getByRole('region', { name: 'Trends and highlights' });
 const collectionsBar = () => screen.getByRole('tablist', { name: 'Filter drives by collection' });
+const fsdFilterBar = () => screen.getByRole('tablist', { name: 'Filter drives by FSD evidence' });
 
 /** Value <p> that immediately follows a MetricCard's label span. */
 function cardValue(region: HTMLElement, label: string): string {
@@ -329,12 +351,20 @@ beforeEach(() => {
   mockBulkDelete.mockReset();
   mockSelected.mockReset();
   mockUnits.mockReset();
+  mockFsdInsights.mockReset();
+  mockCrossTabRefresh.mockReset();
+  pullToRefreshState.onRefresh = null;
 
   mutateAsyncSpy = vi.fn().mockResolvedValue({ deleted: 1 });
+  refreshAcrossTabsSpy = vi.fn().mockReturnValue(true);
+  mockCrossTabRefresh.mockReturnValue({ refresh: refreshAcrossTabsSpy });
   mockBulkDelete.mockReturnValue({ mutateAsync: mutateAsyncSpy, mutate: vi.fn(), isPending: false });
   mockSelected.mockReturnValue(selected(7));
   mockUnits.mockReturnValue(makeUnits('km'));
   mockDrives.mockReturnValue(makeQuery({ data: DRIVES }));
+  mockFsdInsights.mockReturnValue(makeQuery({
+    data: { drive_analytics: { contributing_drives: [] } },
+  }));
 });
 
 afterEach(() => {
@@ -585,8 +615,123 @@ describe('DrivesListPage — collections', () => {
     await waitFor(() => {
       expect(within(listRegion()).queryByText(/Beach/)).toBeNull();
     });
+
     // Only the three commute drives remain.
     expect(within(listRegion()).getAllByText('40.00 km')).toHaveLength(3);
+  });
+});
+
+describe('DrivesListPage — FSD evidence', () => {
+  it('shows badges and filters drives by attribution confidence', async () => {
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: {
+        drive_analytics: {
+          contributing_drives: [
+            { drive_id: 1, fsd_distance_m: 28_800, fsd_share_pct: 72, confidence: 'high', reset_affected: false },
+            { drive_id: 2, fsd_distance_m: 8_000, fsd_share_pct: 20, confidence: 'estimated', reset_affected: false },
+            { drive_id: 3, fsd_distance_m: null, fsd_share_pct: null, confidence: 'unknown', reset_affected: false },
+            { drive_id: 4, fsd_distance_m: 50_000, fsd_share_pct: 50, confidence: 'ambiguous', reset_affected: false },
+          ],
+        },
+      },
+    }));
+    renderPage();
+
+    expect(within(listRegion()).getByText('FSD 72%')).toBeInTheDocument();
+    expect(within(listRegion()).getByText('FSD data unknown')).toBeInTheDocument();
+
+    const bar = fsdFilterBar();
+    expect(within(bar).getByRole('tab', { name: /High confidence/ })).toHaveTextContent('(1)');
+    expect(within(bar).getByRole('tab', { name: /Unknown/ })).toHaveTextContent('(1)');
+    fireEvent.click(within(bar).getByRole('tab', { name: /High confidence/ }));
+
+    await waitFor(() => {
+      expect(listRegion().querySelector('a[href="/drives/1"]')).not.toBeNull();
+      expect(listRegion().querySelector('a[href="/drives/2"]')).toBeNull();
+      expect(listRegion().querySelector('a[href="/drives/3"]')).toBeNull();
+      expect(listRegion().querySelector('a[href="/drives/4"]')).toBeNull();
+    });
+  });
+
+  it('keeps drive rows visible and does not classify missing query data as unknown', () => {
+    const refetchFsd = vi.fn().mockResolvedValue({});
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: undefined,
+      error: new Error('FSD endpoint unavailable'),
+      isError: true,
+      refetch: refetchFsd,
+    }));
+
+    renderPage([`${DEFAULT_RANGE}&fsd=unknown`]);
+
+    expect(screen.getByText('FSD evidence could not be loaded')).toBeInTheDocument();
+    const ids = new Set(
+      Array.from(listRegion().querySelectorAll<HTMLAnchorElement>('a[href^="/drives/"]'))
+        .map((link) => link.getAttribute('href')),
+    );
+    expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
+    const unknown = within(fsdFilterBar()).getByRole('tab', { name: /Unknown/ });
+    expect(unknown).toHaveTextContent('(0)');
+    expect(unknown).toBeDisabled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    expect(refetchFsd).toHaveBeenCalledOnce();
+  });
+
+  it('ignores persisted FSD filters when an older API omits drive analytics', () => {
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: {
+        vehicle_id: 1,
+        totals: { fsd_distance_m: 1000 },
+      },
+    }));
+
+    renderPage([`${DEFAULT_RANGE}&fsd=unknown`]);
+
+    const ids = new Set(
+      Array.from(listRegion().querySelectorAll<HTMLAnchorElement>('a[href^="/drives/"]'))
+        .map((link) => link.getAttribute('href')),
+    );
+    expect(ids).toEqual(new Set(['/drives/1', '/drives/2', '/drives/3', '/drives/4']));
+    expect(within(fsdFilterBar()).getByRole('tab', { name: /Unknown/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
+  });
+
+  it('refreshes drive history and FSD evidence locally and across tabs', async () => {
+    const refetchDrives = vi.fn().mockResolvedValue({});
+    const refetchFsd = vi.fn().mockResolvedValue({});
+    mockDrives.mockReturnValue(makeQuery({ data: DRIVES, refetch: refetchDrives }));
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: { drive_analytics: { contributing_drives: [] } },
+      refetch: refetchFsd,
+    }));
+
+    renderPage();
+
+    expect(mockCrossTabRefresh).toHaveBeenCalledWith({
+      queryKeys: [['drives'], ['analytics', 'fsd']],
+    });
+    await act(async () => {
+      await pullToRefreshState.onRefresh?.();
+    });
+
+    expect(refreshAcrossTabsSpy).toHaveBeenCalledOnce();
+    expect(refetchDrives).toHaveBeenCalledOnce();
+    expect(refetchFsd).toHaveBeenCalledOnce();
+  });
+
+  it('disables FSD enrichment for ranges beyond the backend limit', () => {
+    renderPage(['/drives?from=2015-01-01&to=2026-04-30']);
+
+    expect(screen.getByText('FSD evidence is unavailable for this range')).toBeInTheDocument();
+    expect(mockFsdInsights).toHaveBeenCalledWith(
+      undefined,
+      expect.any(String),
+      expect.any(String),
+      'UTC',
+    );
+    expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toBeDisabled();
+    expect(within(fsdFilterBar()).getByRole('tab', { name: /High confidence/ })).toBeDisabled();
   });
 });
 
@@ -645,13 +790,68 @@ describe('DrivesListPage — sort controls', () => {
 
     const recent = screen.getByRole('button', { name: 'Sort by Recent' });
     const distance = screen.getByRole('button', { name: 'Sort by Distance' });
+    const fsd = screen.getByRole('button', { name: 'Sort by FSD share' });
     expect(recent).toHaveAttribute('aria-pressed', 'true');
     expect(distance).toHaveAttribute('aria-pressed', 'false');
+    expect(fsd).toHaveAttribute('aria-pressed', 'false');
 
     fireEvent.click(distance);
 
     expect(screen.getByRole('button', { name: 'Sort by Distance' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Sort by Recent' })).toHaveAttribute('aria-pressed', 'false');
+
+    fireEvent.click(fsd);
+    expect(screen.getByRole('button', { name: 'Sort by FSD share' })).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  it('sorts measured shares ahead of missing shares instead of comparing percentages with metres', () => {
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: {
+        drive_analytics: {
+          contributing_drives: [
+            { drive_id: 1, fsd_distance_m: 100, fsd_share_pct: 72, confidence: 'high', reset_affected: false },
+            { drive_id: 2, fsd_distance_m: 50_000, fsd_share_pct: null, confidence: 'estimated', reset_affected: false },
+            { drive_id: 3, fsd_distance_m: 100, fsd_share_pct: 40, confidence: 'high', reset_affected: false },
+            { drive_id: 4, fsd_distance_m: 100, fsd_share_pct: 50, confidence: 'high', reset_affected: false },
+          ],
+        },
+      },
+    }));
+
+    renderPage([`${DEFAULT_RANGE}&sort=fsd`]);
+
+    const ids = Array.from(listRegion().querySelectorAll<HTMLAnchorElement>('a[href^="/drives/"]'))
+      .map((link) => Number(link.getAttribute('href')?.split('/').pop()))
+      .filter((id, index, all) => Number.isFinite(id) && all.indexOf(id) === index);
+    expect(ids).toEqual([1, 4, 3, 2]);
+  });
+
+  it('preserves global FSD rank when two drives share a calendar day', () => {
+    mockDrives.mockReturnValue(makeQuery({
+      data: [
+        makeDrive({ id: 10, startTs: '2026-04-24T15:00:00Z', endTs: '2026-04-24T15:30:00Z', distanceM: 10_000 }),
+        makeDrive({ id: 11, startTs: '2026-04-24T16:00:00Z', endTs: '2026-04-24T16:30:00Z', distanceM: 10_000 }),
+        makeDrive({ id: 12, startTs: '2026-04-23T15:00:00Z', endTs: '2026-04-23T15:30:00Z', distanceM: 10_000 }),
+      ],
+    }));
+    mockFsdInsights.mockReturnValue(makeQuery({
+      data: {
+        drive_analytics: {
+          contributing_drives: [
+            { drive_id: 10, fsd_distance_m: 8_000, fsd_share_pct: 80, confidence: 'high', reset_affected: false },
+            { drive_id: 11, fsd_distance_m: 2_000, fsd_share_pct: 20, confidence: 'high', reset_affected: false },
+            { drive_id: 12, fsd_distance_m: 6_000, fsd_share_pct: 60, confidence: 'high', reset_affected: false },
+          ],
+        },
+      },
+    }));
+
+    renderPage([`${DEFAULT_RANGE}&sort=fsd`]);
+
+    const ids = Array.from(listRegion().querySelectorAll<HTMLAnchorElement>('a[href^="/drives/"]'))
+      .map((link) => Number(link.getAttribute('href')?.split('/').pop()))
+      .filter((id, index, all) => Number.isFinite(id) && all.indexOf(id) === index);
+    expect(ids).toEqual([10, 12, 11]);
   });
 });
 

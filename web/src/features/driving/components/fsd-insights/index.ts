@@ -1,6 +1,7 @@
 export { FsdConfidenceFootnotes } from './FsdConfidenceFootnotes';
 export { FsdConfidencePanel } from './FsdConfidencePanel';
 export { FsdDistanceTrend, type FsdDistanceRow } from './FsdDistanceTrend';
+export { FsdDriveAnalyticsPanels } from './FsdDriveAnalyticsPanels';
 export { FsdKpiBand } from './FsdKpiBand';
 export { FsdMethodologyNotes } from './FsdMethodologyNotes';
 export { FsdPeriodControl } from './FsdPeriodControl';

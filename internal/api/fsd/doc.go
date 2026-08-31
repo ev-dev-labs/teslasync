@@ -18,22 +18,25 @@
 //
 //   - interventions or disengagements (never transmitted),
 //   - safety performance or autonomy quality (no outcome signal exists),
-//   - exact per-drive attribution (the counters are user-resettable trip
-//     meters, not per-drive odometers).
+//   - exact FSD-active route segments (the counters are user-resettable trip
+//     meters, not engagement-state events).
 //
-// What they DO support is the descriptive question "how much supervised
-// self-driving distance accumulated on each local calendar day, and what
-// share of observed driving distance was that?" — which is exactly the
-// contract implemented here.
+// They do support reset-safe period totals and interval-based per-drive
+// attribution when counter observations are synchronized. Drive results carry
+// explicit high, estimated, ambiguous, or unknown confidence, and route
+// evidence is always labelled approximate. Per-drive metrics include only
+// completed drives fully contained in the requested half-open window; boundary
+// drives are excluded rather than mixing partial-period evidence with full-trip
+// distance or energy.
 //
 // # Read semantics
 //
-// signal_log is a sparse change feed (ADR-002): a row exists only where a
-// value CHANGED. This package therefore performs a CHANGE-FEED read (raw
-// ordered events plus one pre-window baseline per counter) and derives
-// reset-safe deltas itself. It deliberately does NOT use signal.StateReader,
-// whose forward-fold semantics answer "value at time T" rather than "how much
-// did the counter advance inside this window".
+// signal_log is primarily a sparse change feed (ADR-002). The Fleet Telemetry
+// subscription additionally requests the paired counter through
+// include_fields, so new driving observations can carry an unchanged FSD value
+// and establish synchronized boundaries. Historical rows may remain sparse.
+// This package reads ordered events plus boundary anchors and derives
+// reset-safe deltas itself.
 //
 // # Absence is not zero
 //
@@ -49,12 +52,12 @@
 // period — AND a delta could be derived from it (baseline + one observation,
 // or two observations).
 //
-// Per day, the value is measured only from the first derivable delta onward
-// and only on days at least one relevant distance counter reported. That
-// second condition is what makes a genuine zero expressible: Tesla transmits a
-// field only when it CHANGES, so the driving counter moving while
-// SelfDrivingMilesSinceReset does not is a measured zero. A day with no
-// relevant counter observation is null.
+// Per day, the value is measured only when a trusted
+// SelfDrivingMilesSinceReset observation can be differenced against an
+// uninterrupted trusted anchor. An invalid or untrusted row breaks that chain.
+// This makes a synchronized unchanged value a genuine zero without turning a
+// driving-only emission from older subscriptions into zero. A day with no
+// derivable FSD counter observation is null.
 //
 // Quality.FSDReportedInPeriod, Quality.FSDDistanceDerivable and
 // Quality.FSDMeasuredDays make that distinction explicit for consumers that

@@ -13,8 +13,7 @@
  * SI **meters**.
  *
  * These counters therefore CANNOT describe interventions, disengagements,
- * safety performance, autonomy quality, or exact per-drive attribution. No
- * type in this file should ever be extended to imply otherwise.
+ * safety performance, autonomy quality, or exact engagement segments.
  *
  * ## Units
  *
@@ -122,8 +121,8 @@ export interface FsdInsightsQuality {
  * present.
  *
  * `fsd_distance_m === null` means the self-driving counter has nothing to say
- * about this day. A measured `0` means at least one relevant distance counter
- * reported and the self-driving counter did not move.
+ * about this day. A measured `0` means the self-driving counter itself
+ * reported an unchanged value; a driving-only emission is not enough.
  * `has_counter_observation === false` says only that neither of these two
  * counters emitted that day; it is not a vehicle-connectivity signal.
  */
@@ -138,6 +137,91 @@ export interface FsdInsightsDay {
   has_counter_observation: boolean;
 }
 
+export type FsdAttributionConfidence = 'high' | 'estimated' | 'ambiguous' | 'unknown';
+
+export interface FsdEvidenceInterval {
+  start_at: string;
+  end_at: string;
+  fsd_distance_m: number;
+  confidence: FsdAttributionConfidence;
+  /** Always true: this is counter-increase evidence, not an engagement segment. */
+  approximate: boolean;
+}
+
+export interface DriveFsdInsight {
+  drive_id: number;
+  started_at: string;
+  ended_at: string | null;
+  start_place: string | null;
+  end_place: string | null;
+  distance_m: number | null;
+  energy_used_wh: number | null;
+  fsd_distance_m: number | null;
+  fsd_share_pct: number | null;
+  confidence: FsdAttributionConfidence;
+  reset_affected: boolean;
+  firmware_version: string | null;
+  evidence: FsdEvidenceInterval[];
+  evidence_truncated: boolean;
+}
+
+export interface FsdPeriodComparison {
+  previous_period: FsdInsightsPeriod;
+  previous_fsd_distance_m: number | null;
+  previous_driving_distance_m: number | null;
+  previous_fsd_share_pct: number | null;
+  fsd_distance_change_m: number | null;
+  fsd_distance_change_pct: number | null;
+  fsd_share_change_pct_points: number | null;
+}
+
+export interface FsdAttributionBreakdown {
+  attributed_distance_m: number | null;
+  estimated_distance_m: number | null;
+  ambiguous_distance_m: number | null;
+  unattributed_distance_m: number | null;
+  unknown_drive_distance_m: number;
+}
+
+export interface FsdCounterResetEvent {
+  field: string;
+  at: string;
+  previous_value_m: number;
+  current_value_m: number;
+  affected_drive_ids: number[];
+}
+
+export interface GroupedFsdInsight {
+  key: string;
+  label: string;
+  drive_count: number;
+  driving_distance_m: number;
+  fsd_distance_m: number;
+  fsd_share_pct: number | null;
+}
+
+export interface FsdRouteEfficiencyComparison {
+  route_key: string;
+  route_label: string;
+  fsd_heavy_drive_count: number;
+  low_fsd_drive_count: number;
+  fsd_heavy_efficiency_wh_per_km: number;
+  low_fsd_efficiency_wh_per_km: number;
+  difference_pct: number;
+}
+
+export interface FsdDriveAnalytics {
+  comparison: FsdPeriodComparison;
+  attribution: FsdAttributionBreakdown;
+  contributing_drives: DriveFsdInsight[];
+  reset_events: FsdCounterResetEvent[];
+  repeated_routes: GroupedFsdInsight[];
+  time_of_day: GroupedFsdInsight[];
+  firmware: GroupedFsdInsight[];
+  route_efficiency: FsdRouteEfficiencyComparison[];
+  correlation_disclaimer: string;
+}
+
 /** Full GET /analytics/fsd payload. */
 export interface FsdInsights {
   vehicle_id: number;
@@ -145,6 +229,7 @@ export interface FsdInsights {
   totals: FsdInsightsTotals;
   quality: FsdInsightsQuality;
   daily: FsdInsightsDay[];
+  drive_analytics: FsdDriveAnalytics;
 }
 
 /** Period presets the backend and the period control agree on. */

@@ -262,7 +262,7 @@ describe('useApplyDriveRepair', () => {
       expected_stored_ended_at: '',
     });
 
-    expect(invalidate).toHaveBeenCalled();
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['analytics', 'fsd'] });
     expect(successToast).toHaveBeenCalledWith(
       'toast.dataRepair.drive.apply.success',
       'Drive boundary repaired',
@@ -572,6 +572,7 @@ describe('useUpdateDrive', () => {
     expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(opts.body as string)).toEqual(patch);
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['analytics', 'fsd'] });
     expect(successToast).toHaveBeenCalledWith('toast.dataRepair.drive.update.success', 'Drive updated');
   });
 
@@ -617,6 +618,7 @@ describe('useCloseDrive', () => {
       expected_stored_ended_at: '',
     });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['analytics', 'fsd'] });
     expect(successToast).toHaveBeenCalledWith('toast.dataRepair.drive.close.success', 'Drive closed');
   });
 
@@ -655,6 +657,7 @@ describe('useQuarantineDrive', () => {
     expect(opts.requiresLiveMode).toBe(true);
     expect(JSON.parse(String(opts.body))).toEqual({ reason: 'Duplicate recovery artifact' });
     expect(invalidate).toHaveBeenCalledWith({ queryKey: dataRepairKeys.stale });
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ['analytics', 'fsd'] });
     expect(successToast).toHaveBeenCalledWith(
       'toast.dataRepair.drive.quarantine.success',
       'Drive moved to quarantine',

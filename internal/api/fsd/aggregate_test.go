@@ -2,6 +2,7 @@ package fsd
 
 import (
 	"math"
+	"reflect"
 	"testing"
 	"time"
 )
@@ -50,6 +51,20 @@ func drivingSample(t *testing.T, iso string, v *float64) Sample {
 		Value:                v,
 		NormalizationVersion: &version,
 	}
+}
+
+func compactedStatsSample(
+	sample Sample,
+	valid, invalid, untrusted int,
+	first, last time.Time,
+) Sample {
+	sample.Compacted = true
+	sample.ValidObservationCount = valid
+	sample.InvalidObservationCount = invalid
+	sample.UntrustedObservationCount = untrusted
+	sample.FirstValidObservationAt = &first
+	sample.LastValidObservationAt = &last
+	return sample
 }
 
 // dayOf finds the dense-series entry for a local date. Fails the test when
@@ -104,6 +119,22 @@ func utcParams(t *testing.T, samples []Sample) AggregateParams {
 // ---------------------------------------------------------------------------
 // monotonic counters
 // ---------------------------------------------------------------------------
+
+func TestAggregate_EndBoundIsExclusive(t *testing.T) {
+	params := utcParams(t, []Sample{
+		fsdSample(t, "2026-02-28T23:59:00Z", fp(100)),
+		fsdSample(t, "2026-03-03T17:59:59Z", fp(150)),
+		fsdSample(t, "2026-03-03T18:00:00Z", fp(250)),
+	})
+
+	resp := Aggregate(params)
+
+	wantMeasured(t, resp.Totals.FSDDistanceM, 50, "half-open FSD distance")
+	if resp.Quality.FSDLastObservationAt == nil ||
+		!resp.Quality.FSDLastObservationAt.Equal(at(t, "2026-03-03T17:59:59Z")) {
+		t.Errorf("last observation = %v, want the final instant before the end bound", resp.Quality.FSDLastObservationAt)
+	}
+}
 
 func TestAggregate_MonotonicCountersAttributeDeltasToLaterSampleDay(t *testing.T) {
 	resp := Aggregate(utcParams(t, []Sample{
@@ -296,10 +327,11 @@ func TestAggregate_GenuineZeroAfterBaselineAndUnchangedSampleIsMeasured(t *testi
 	}
 }
 
-func TestAggregate_MeasuredZeroWhenDrivingCounterReportedButFsdDidNotMove(t *testing.T) {
-	// Day 2 emits the driving counter only. Tesla transmits a field only when
-	// it CHANGES, so a day with a relevant counter observation and no
-	// self-driving emission is a measured zero for the self-driving counter.
+func TestAggregate_DrivingOnlyDayDoesNotInventMeasuredFSDZero(t *testing.T) {
+	// Day 2 emits only the driving counter. The FSD counter has a separate
+	// minimum-delta trigger, so its silence cannot prove that it stayed flat.
+	// New synchronized subscriptions emit both fields together, but historical
+	// data without that paired observation must remain unknown.
 	resp := Aggregate(utcParams(t, []Sample{
 		fsdSample(t, "2026-02-28T22:00:00Z", fp(1000)),
 		drivingSample(t, "2026-02-28T22:00:00Z", fp(5000)),
@@ -309,13 +341,13 @@ func TestAggregate_MeasuredZeroWhenDrivingCounterReportedButFsdDidNotMove(t *tes
 	}))
 
 	wantMeasured(t, dayOf(t, resp, "2026-03-01").FSDDistanceM, 500, "day1 fsd")
-	wantMeasured(t, dayOf(t, resp, "2026-03-02").FSDDistanceM, 0, "day2 fsd")
-	wantMeasured(t, dayOf(t, resp, "2026-03-02").FSDSharePct, 0, "day2 share")
+	wantUnmeasured(t, dayOf(t, resp, "2026-03-02").FSDDistanceM, "day2 fsd")
+	wantUnmeasured(t, dayOf(t, resp, "2026-03-02").FSDSharePct, "day2 share")
 	// Neither relevant distance counter reported on day 3.
 	wantUnmeasured(t, dayOf(t, resp, "2026-03-03").FSDDistanceM, "day3 fsd")
 
-	if resp.Totals.MeasuredDays != 2 {
-		t.Errorf("measured days = %d, want 2", resp.Totals.MeasuredDays)
+	if resp.Totals.MeasuredDays != 1 {
+		t.Errorf("measured days = %d, want 1", resp.Totals.MeasuredDays)
 	}
 	if resp.Totals.ActiveDays != 1 {
 		t.Errorf("active days = %d, want 1", resp.Totals.ActiveDays)
@@ -353,18 +385,26 @@ func TestAggregate_DaysBeforeTheFirstDerivableDeltaAreUnmeasured(t *testing.T) {
 func TestAggregate_CounterResetContributesNoDistanceAndIsCounted(t *testing.T) {
 	resp := Aggregate(utcParams(t, []Sample{
 		fsdSample(t, "2026-02-28T22:00:00Z", fp(9000)),
+		drivingSample(t, "2026-02-28T22:00:00Z", fp(10000)),
 		// +500 on day 1.
 		fsdSample(t, "2026-03-01T09:00:00Z", fp(9500)),
+		drivingSample(t, "2026-03-01T09:00:00Z", fp(11000)),
 		// Trip meter reset by the driver: value collapses to 20.
 		fsdSample(t, "2026-03-02T09:00:00Z", fp(20)),
+		drivingSample(t, "2026-03-02T09:00:00Z", fp(12000)),
 		// +80 after the reset, on day 3.
 		fsdSample(t, "2026-03-03T09:00:00Z", fp(100)),
+		drivingSample(t, "2026-03-03T09:00:00Z", fp(13000)),
 	}))
 
 	wantMeasured(t, resp.Totals.FSDDistanceM, 580, "total fsd (500 pre-reset + 80 post-reset)")
 	if resp.Quality.FSDResetCount != 1 {
 		t.Errorf("reset count = %d, want 1", resp.Quality.FSDResetCount)
 	}
+	if resp.Quality.ShareBasisAvailable {
+		t.Error("a reset in only one counter must invalidate the shared basis")
+	}
+	wantUnmeasured(t, resp.Totals.FSDSharePct, "share across asymmetric reset")
 	resetDay := dayOf(t, resp, "2026-03-02")
 	wantMeasured(t, resetDay.FSDDistanceM, 0, "reset day distance (post-reset value is not distance)")
 	if resetDay.ResetCount != 1 {
@@ -622,7 +662,7 @@ func TestAggregate_DenseSeriesCrossesMidnightDstWithoutDuplicateDate(t *testing.
 // invalid + duplicate samples
 // ---------------------------------------------------------------------------
 
-func TestAggregate_InvalidSamplesAreCountedAndNeverCorruptTheAccumulator(t *testing.T) {
+func TestAggregate_InvalidSamplesBreakContinuityAndAllowAFreshAnchor(t *testing.T) {
 	nan := math.NaN()
 	inf := math.Inf(1)
 	resp := Aggregate(utcParams(t, []Sample{
@@ -631,23 +671,23 @@ func TestAggregate_InvalidSamplesAreCountedAndNeverCorruptTheAccumulator(t *test
 		fsdSample(t, "2026-03-01T02:00:00Z", &nan),
 		fsdSample(t, "2026-03-01T03:00:00Z", &inf),
 		fsdSample(t, "2026-03-01T04:00:00Z", fp(-5)),
-		// The next valid sample must difference against the 1000 m
-		// baseline, not against any rejected row.
+		// The first valid row after the invalid sequence is a fresh anchor.
 		fsdSample(t, "2026-03-01T09:00:00Z", fp(1250)),
+		fsdSample(t, "2026-03-01T10:00:00Z", fp(1300)),
 	}))
 
 	if resp.Quality.FSDInvalidSampleCount != 4 {
 		t.Errorf("invalid sample count = %d, want 4", resp.Quality.FSDInvalidSampleCount)
 	}
-	if resp.Quality.FSDSampleCount != 1 {
-		t.Errorf("valid sample count = %d, want 1", resp.Quality.FSDSampleCount)
+	if resp.Quality.FSDSampleCount != 2 {
+		t.Errorf("valid sample count = %d, want 2", resp.Quality.FSDSampleCount)
 	}
-	wantMeasured(t, resp.Totals.FSDDistanceM, 250, "total fsd")
+	wantMeasured(t, resp.Totals.FSDDistanceM, 50, "post-barrier fsd delta")
 	if resp.Quality.FSDResetCount != 0 {
 		t.Errorf("reset count = %d, want 0 (a negative row is invalid, not a reset)", resp.Quality.FSDResetCount)
 	}
-	if got := dayOf(t, resp, "2026-03-01").FSDObservationCount; got != 1 {
-		t.Errorf("observation count = %d, want 1", got)
+	if got := dayOf(t, resp, "2026-03-01").FSDObservationCount; got != 2 {
+		t.Errorf("observation count = %d, want 2", got)
 	}
 }
 
@@ -682,26 +722,37 @@ func TestAggregate_UnknownFieldsAreIgnored(t *testing.T) {
 	wantUnmeasured(t, resp.Totals.FSDDistanceM, "total fsd")
 }
 
-func TestAggregate_UntrustedNormalizationRowsAreExcludedWithoutBreakingTrustedDeltas(t *testing.T) {
+func TestAggregate_UntrustedNormalizationRowsBreakContinuity(t *testing.T) {
 	legacyFSD := fsdSample(t, "2026-03-01T09:00:00Z", fp(1000))
 	legacyFSD.NormalizationVersion = nil
 	legacyDriving := drivingSample(t, "2026-03-01T09:00:00Z", fp(3000))
 	legacyDriving.NormalizationVersion = nil
+	previousLegacyFSD := fsdSample(t, "2026-02-27T09:00:00Z", fp(500))
+	previousLegacyFSD.NormalizationVersion = nil
+	previousLegacyDriving := drivingSample(t, "2026-02-27T09:00:00Z", fp(1500))
+	previousLegacyDriving.NormalizationVersion = nil
 
 	resp := Aggregate(utcParams(t, []Sample{
-		// Trusted pre-window state must remain the delta anchor even if an
-		// older rolling-deployment writer emits a later unversioned row.
+		// An in-window row from an older rolling-deployment writer breaks the
+		// trusted chain. The first later trusted row is only a fresh anchor.
 		fsdSample(t, "2026-02-28T22:00:00Z", fp(1609.344)),
 		drivingSample(t, "2026-02-28T22:00:00Z", fp(8046.72)),
+		previousLegacyFSD,
+		previousLegacyDriving,
 		legacyFSD,
 		legacyDriving,
 		fsdSample(t, "2026-03-02T09:00:00Z", fp(3218.688)),
 		drivingSample(t, "2026-03-02T09:00:00Z", fp(11265.408)),
+		fsdSample(t, "2026-03-03T09:00:00Z", fp(4828.032)),
+		drivingSample(t, "2026-03-03T09:00:00Z", fp(14484.096)),
 	}))
 
 	wantMeasured(t, resp.Totals.FSDDistanceM, 1609.344, "trusted fsd delta")
 	wantMeasured(t, resp.Totals.DrivingDistanceM, 3218.688, "trusted driving delta")
-	wantMeasured(t, resp.Totals.FSDSharePct, 50, "trusted share")
+	wantUnmeasured(t, resp.Totals.FSDSharePct, "share across rejected rows")
+	if resp.Quality.ShareBasisAvailable {
+		t.Error("rejected in-window rows must make the period share basis unavailable")
+	}
 	if !resp.Quality.HistoricalDataGuarded {
 		t.Error("historical data guard must always be active")
 	}
@@ -718,11 +769,51 @@ func TestAggregate_UntrustedNormalizationRowsAreExcludedWithoutBreakingTrustedDe
 			resp.Quality.DrivingUntrustedSampleCount,
 		)
 	}
-	if resp.Quality.FSDSampleCount != 1 || resp.Quality.DrivingSampleCount != 1 {
-		t.Errorf("trusted in-window counts = %d/%d, want 1/1",
+	if resp.Quality.FSDSampleCount != 2 || resp.Quality.DrivingSampleCount != 2 {
+		t.Errorf("trusted in-window counts = %d/%d, want 2/2",
 			resp.Quality.FSDSampleCount,
 			resp.Quality.DrivingSampleCount,
 		)
+	}
+}
+
+func TestAggregate_LatestUntrustedBaselineBlocksOlderTrustedAnchor(t *testing.T) {
+	legacyBaseline := fsdSample(t, "2026-02-28T23:00:00Z", fp(500))
+	legacyBaseline.NormalizationVersion = nil
+
+	resp := Aggregate(utcParams(t, []Sample{
+		fsdSample(t, "2026-02-28T22:00:00Z", fp(100)),
+		legacyBaseline,
+		fsdSample(t, "2026-03-01T09:00:00Z", fp(510)),
+		fsdSample(t, "2026-03-01T10:00:00Z", fp(520)),
+	}))
+
+	if resp.Quality.FSDBaselineAvailable {
+		t.Error("an untrusted latest pre-window row must invalidate the older baseline")
+	}
+	wantMeasured(t, resp.Totals.FSDDistanceM, 10, "distance after fresh trusted anchor")
+}
+
+func TestAggregate_AsymmetricContinuityBarrierSuppressesShare(t *testing.T) {
+	untrustedFSD := fsdSample(t, "2026-03-01T10:00:00Z", fp(900))
+	untrustedFSD.NormalizationVersion = nil
+
+	resp := Aggregate(utcParams(t, []Sample{
+		fsdSample(t, "2026-02-28T22:00:00Z", fp(100)),
+		drivingSample(t, "2026-02-28T22:00:00Z", fp(1000)),
+		fsdSample(t, "2026-03-01T09:00:00Z", fp(200)),
+		drivingSample(t, "2026-03-01T09:00:00Z", fp(1200)),
+		untrustedFSD,
+		fsdSample(t, "2026-03-01T11:00:00Z", fp(910)),
+		fsdSample(t, "2026-03-01T12:00:00Z", fp(920)),
+		drivingSample(t, "2026-03-01T12:00:00Z", fp(1400)),
+	}))
+
+	wantMeasured(t, resp.Totals.FSDDistanceM, 110, "trusted FSD segments")
+	wantMeasured(t, resp.Totals.DrivingDistanceM, 400, "uninterrupted driving distance")
+	wantUnmeasured(t, resp.Totals.FSDSharePct, "asymmetric continuity share")
+	if resp.Quality.ShareBasisAvailable {
+		t.Error("asymmetric continuity barriers must not produce a common share basis")
 	}
 }
 
@@ -837,6 +928,66 @@ func TestAggregate_BestDayPicksTheLargestFsdDay(t *testing.T) {
 	}
 	if resp.Totals.ActiveDays != 3 {
 		t.Errorf("active days = %d, want 3", resp.Totals.ActiveDays)
+	}
+}
+
+func TestAggregate_CompactedSamplesPreserveRawResponse(t *testing.T) {
+	baselineAt := at(t, "2026-02-28T23:59:50Z")
+	firstAt := at(t, "2026-03-01T09:00:00Z")
+	beforeChangeAt := at(t, "2026-03-01T09:00:20Z")
+	changeAt := at(t, "2026-03-01T09:00:30Z")
+	lastAt := at(t, "2026-03-01T09:00:50Z")
+
+	raw := []Sample{
+		fsdSample(t, baselineAt.Format(time.RFC3339), fp(100)),
+		drivingSample(t, baselineAt.Format(time.RFC3339), fp(1000)),
+	}
+	for index, second := range []int{0, 10, 20, 30, 40, 50} {
+		timestamp := time.Date(2026, 3, 1, 9, 0, second, 0, time.UTC).Format(time.RFC3339)
+		fsdValue := 100.0
+		if index >= 3 {
+			fsdValue = 200
+		}
+		raw = append(
+			raw,
+			fsdSample(t, timestamp, fp(fsdValue)),
+			drivingSample(t, timestamp, fp(1000+float64(index*10))),
+		)
+	}
+
+	fsdOwner := compactedStatsSample(
+		fsdSample(t, lastAt.Format(time.RFC3339), fp(200)),
+		6,
+		0,
+		0,
+		firstAt,
+		lastAt,
+	)
+	drivingOwner := compactedStatsSample(
+		drivingSample(t, lastAt.Format(time.RFC3339), fp(1050)),
+		6,
+		0,
+		0,
+		firstAt,
+		lastAt,
+	)
+	fsdBeforeChange := fsdSample(t, beforeChangeAt.Format(time.RFC3339), fp(100))
+	fsdBeforeChange.Compacted = true
+	fsdChange := fsdSample(t, changeAt.Format(time.RFC3339), fp(200))
+	fsdChange.Compacted = true
+	compacted := []Sample{
+		fsdSample(t, baselineAt.Format(time.RFC3339), fp(100)),
+		drivingSample(t, baselineAt.Format(time.RFC3339), fp(1000)),
+		fsdBeforeChange,
+		fsdChange,
+		fsdOwner,
+		drivingOwner,
+	}
+
+	rawResponse := Aggregate(utcParams(t, raw))
+	compactedResponse := Aggregate(utcParams(t, compacted))
+	if !reflect.DeepEqual(compactedResponse, rawResponse) {
+		t.Fatalf("compacted response differs from raw\ncompacted: %+v\nraw: %+v", compactedResponse, rawResponse)
 	}
 }
 

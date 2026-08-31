@@ -46,6 +46,21 @@ func newTestDevToolsHandler(t *testing.T, mode string, withCache bool, withStore
 	return h, mr, store
 }
 
+func TestFleetTelemetryFieldWithPolicyPreservesRequestedIntervalAndCounterPair(t *testing.T) {
+	t.Parallel()
+
+	field := fleetTelemetryFieldWithPolicy("MilesSinceReset", 37)
+	if field.IntervalSeconds != 37 {
+		t.Errorf("interval = %d, want requested 37 seconds", field.IntervalSeconds)
+	}
+	if field.MinimumDelta == nil || *field.MinimumDelta != 0.01 {
+		t.Errorf("minimum_delta = %v, want 0.01", field.MinimumDelta)
+	}
+	if len(field.IncludeFields) != 1 || field.IncludeFields[0] != "SelfDrivingMilesSinceReset" {
+		t.Errorf("include_fields = %v", field.IncludeFields)
+	}
+}
+
 func TestRedisSignals_503WhenNoRedis(t *testing.T) {
 	h, _, _ := newTestDevToolsHandler(t, "hybrid", false, false)
 

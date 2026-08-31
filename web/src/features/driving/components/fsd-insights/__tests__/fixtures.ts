@@ -1,4 +1,10 @@
-import type { FsdInsights, FsdInsightsDay, FsdInsightsQuality, FsdInsightsTotals } from '@/types/fsd';
+import type {
+  FsdDriveAnalytics,
+  FsdInsights,
+  FsdInsightsDay,
+  FsdInsightsQuality,
+  FsdInsightsTotals,
+} from '@/types/fsd';
 
 /**
  * Shared FSD Insights fixtures.
@@ -129,6 +135,80 @@ const BASE_PERIOD = {
   end_at: '2026-03-03T18:00:00Z',
 } as const;
 
+const BASE_DRIVE_ANALYTICS: FsdDriveAnalytics = {
+  comparison: {
+    previous_period: {
+      ...BASE_PERIOD,
+      start_date: '2026-01-03',
+      end_date: '2026-02-01',
+      start_at: '2026-01-03T08:00:00Z',
+      end_at: '2026-02-02T07:59:59Z',
+    },
+    previous_fsd_distance_m: 12_000,
+    previous_driving_distance_m: 60_000,
+    previous_fsd_share_pct: 20,
+    fsd_distance_change_m: 4_093.44,
+    fsd_distance_change_pct: 34.11,
+    fsd_share_change_pct_points: 5,
+  },
+  attribution: {
+    attributed_distance_m: 12_000,
+    estimated_distance_m: 2_000,
+    ambiguous_distance_m: 1_000,
+    unattributed_distance_m: 1_093.44,
+    unknown_drive_distance_m: 5_000,
+  },
+  contributing_drives: [{
+    drive_id: 295,
+    started_at: '2026-03-02T17:00:00Z',
+    ended_at: '2026-03-02T17:30:00Z',
+    start_place: 'Home',
+    end_place: 'Office',
+    distance_m: 10_000,
+    energy_used_wh: 1_800,
+    fsd_distance_m: 8_000,
+    fsd_share_pct: 80,
+    confidence: 'high',
+    reset_affected: false,
+    firmware_version: '2026.20.3',
+    evidence_truncated: false,
+    evidence: [{
+      start_at: '2026-03-02T17:05:00Z',
+      end_at: '2026-03-02T17:20:00Z',
+      fsd_distance_m: 8_000,
+      confidence: 'high',
+      approximate: true,
+    }],
+  }],
+  reset_events: [],
+  repeated_routes: [{
+    key: 'geofence:1:2',
+    label: 'Home to Office',
+    drive_count: 4,
+    driving_distance_m: 40_000,
+    fsd_distance_m: 24_000,
+    fsd_share_pct: 60,
+  }],
+  time_of_day: [{
+    key: 'morning',
+    label: 'Morning (05:00-11:59)',
+    drive_count: 3,
+    driving_distance_m: 30_000,
+    fsd_distance_m: 18_000,
+    fsd_share_pct: 60,
+  }],
+  firmware: [{
+    key: '2026.20.3',
+    label: '2026.20.3',
+    drive_count: 4,
+    driving_distance_m: 40_000,
+    fsd_distance_m: 24_000,
+    fsd_share_pct: 60,
+  }],
+  route_efficiency: [],
+  correlation_disclaimer: 'This is a same-route correlation, not proof that supervised driving caused an efficiency difference.',
+};
+
 const BASE_DAILY: FsdInsightsDay[] = [
   fsdDay({
     date: '2026-03-01',
@@ -159,5 +239,6 @@ export function fsdInsights(overrides: Partial<FsdInsights> = {}): FsdInsights {
     totals: { ...BASE_TOTALS, ...(overrides.totals ?? {}) },
     quality: { ...BASE_QUALITY, ...(overrides.quality ?? {}) },
     daily: overrides.daily ?? BASE_DAILY,
+    drive_analytics: overrides.drive_analytics ?? BASE_DRIVE_ANALYTICS,
   };
 }

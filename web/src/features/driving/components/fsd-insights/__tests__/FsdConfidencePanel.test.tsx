@@ -273,11 +273,11 @@ describe('FsdConfidencePanel', () => {
 
     expect(
       screen.getByText(
-        /cannot describe interventions, disengagements, safety performance, or per-drive attribution/,
+        /cannot describe interventions, disengagements, safety performance, or exact FSD-active segments/,
       ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(/No intervention, disengagement, safety, or autonomy-quality metric/),
+      screen.getByText(/No intervention, disengagement, safety, autonomy-quality, or exact FSD-active route segment/),
     ).toBeInTheDocument();
     expect(
       screen.getByText(/Only signal-history rows carrying a proven canonical normalization version/),
@@ -295,7 +295,7 @@ describe('FsdConfidencePanel', () => {
     );
     expect(
       screen.getByText(
-        /cannot describe interventions, disengagements, safety performance, or per-drive attribution/,
+        /cannot describe interventions, disengagements, safety performance, or exact FSD-active segments/,
       ),
     ).toBeInTheDocument();
   });

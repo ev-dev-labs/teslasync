@@ -17,6 +17,7 @@ import { FSD_DEFAULT_PERIOD_DAYS, type FsdPeriodDays } from '@/types/fsd';
 import {
   FsdConfidencePanel,
   FsdDistanceTrend,
+  FsdDriveAnalyticsPanels,
   FsdKpiBand,
   FsdPeriodControl,
   FsdShareTrend,
@@ -131,6 +132,12 @@ export default function FSDInsightsPage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
+        <div className="space-y-4 sm:space-y-5">
+          <FsdDriveAnalyticsPanels insights={insightsState.data} state={sectionState} />
+        </div>
+      </FadeIn>
+
+      <FadeIn delay={0.25}>
         <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
       </FadeIn>
     </PageContainer>

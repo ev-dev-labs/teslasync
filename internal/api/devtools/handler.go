@@ -28,6 +28,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/platform/httputil"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
 )
 
 // devToolsStartTime records when this process started, for uptime calculation.
@@ -720,22 +721,12 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 			"Locked", "SentryMode",
 		}
 	}
-	// Fields that require minimum_delta to be explicitly set
-	minDeltaFields := map[string]float64{
-		"SelfDrivingMilesSinceReset": 1.0,
-		"MilesSinceReset":            1.0,
-	}
-
 	for _, f := range req.Fields {
 		interval := req.Interval
 		if perSignal, ok := req.FieldIntervals[f]; ok {
 			interval = perSignal
 		}
-		field := tesla.FleetTelemetryField{IntervalSeconds: interval}
-		if delta, ok := minDeltaFields[f]; ok {
-			field.MinimumDelta = &delta
-		}
-		fields[f] = field
+		fields[f] = fleetTelemetryFieldWithPolicy(f, interval)
 	}
 
 	var caValue string
@@ -786,6 +777,15 @@ func (h *DevToolsHandler) FleetTelemetrySubscribe(w http.ResponseWriter, r *http
 			"details": details,
 		})
 	}
+}
+
+func fleetTelemetryFieldWithPolicy(fieldName string, interval int) tesla.FleetTelemetryField {
+	field := tesla.FleetTelemetryField{IntervalSeconds: interval}
+	if policy, ok := teslaconfig.PolicyFor(fieldName); ok {
+		field.MinimumDelta = policy.MinimumDelta
+		field.IncludeFields = policy.IncludeFields
+	}
+	return field
 }
 
 // FleetTelemetryGetConfig returns the fleet telemetry configuration for a vehicle.

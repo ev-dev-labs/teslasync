@@ -61,13 +61,14 @@ func NewBuilder() *Builder {
 	return &Builder{Hostname: DefaultHostname, Port: DefaultPort}
 }
 
-// FieldEntry is the rendered (Field, interval_seconds) tuple emitted
-// into the subscription's fields map. Exposed so tests and previews
-// can inspect the exact list the Builder will send to Tesla without
-// having to parse the JSON body back.
+// FieldEntry is one rendered Fleet Telemetry field policy. Exposed so tests
+// and previews can inspect the exact list the Builder will send to Tesla
+// without parsing the JSON body back.
 type FieldEntry struct {
 	Name            string
 	IntervalSeconds int
+	MinimumDelta    *float64
+	IncludeFields   []string
 }
 
 // templateData is the input to full_subscription.json.tmpl. Kept
@@ -97,11 +98,16 @@ func (b *Builder) SubscriptionFields() []FieldEntry {
 		if s.Category == "metadata" {
 			continue
 		}
-		iv, ok := IntervalFor(s.Field)
-		if !ok || iv <= 0 {
+		policy, ok := PolicyFor(s.Field)
+		if !ok || policy.IntervalSeconds <= 0 {
 			continue
 		}
-		out = append(out, FieldEntry{Name: s.Field, IntervalSeconds: iv})
+		out = append(out, FieldEntry{
+			Name:            s.Field,
+			IntervalSeconds: policy.IntervalSeconds,
+			MinimumDelta:    policy.MinimumDelta,
+			IncludeFields:   policy.IncludeFields,
+		})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Name < out[j].Name })
 	return out

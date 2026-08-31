@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 import { useMutationToast } from './_toastHelpers';
 import type { Drive as ApiDrive } from '../types';
 import type {
@@ -329,9 +330,10 @@ export function useBulkDeleteDrives() {
         body: JSON.stringify({ ids }),
       }),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ['drives'] });
-      qc.invalidateQueries({ queryKey: ['drive'] });
-      success('toast.bulk.delete.success', '{{count}} deleted', {
+        invalidateAndBroadcast(qc, { queryKey: ['drives'] });
+        invalidateAndBroadcast(qc, { queryKey: ['drive'] });
+        invalidateAndBroadcast(qc, { queryKey: ['analytics', 'fsd'] });
+        success('toast.bulk.delete.success', '{{count}} deleted', {
         count: res.deleted ?? 0,
       });
     },

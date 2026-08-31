@@ -5,7 +5,7 @@
     "port": {{ .Port }},
     "fields": {
 {{- range $i, $f := .Fields }}{{ if $i }},{{ end }}
-      {{ json $f.Name }}: { "interval_seconds": {{ $f.IntervalSeconds }} }
+      {{ json $f.Name }}: { "interval_seconds": {{ $f.IntervalSeconds }}{{ with $f.MinimumDelta }}, "minimum_delta": {{ . }}{{ end }}{{ if $f.IncludeFields }}, "include_fields": {{ json $f.IncludeFields }}{{ end }} }
 {{- end }}
     }
   }

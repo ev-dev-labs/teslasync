@@ -203,6 +203,46 @@ describe('DriveCard — primary line + status badge', () => {
     expect(screen.queryByText('High energy use')).toBeNull();
   });
 
+  it('renders honest high-confidence, estimated, ambiguous, and unknown FSD badges', () => {
+    const base = {
+      drive_id: 1,
+      started_at: '2024-06-01T14:30:00Z',
+      ended_at: '2024-06-01T15:00:00Z',
+      start_place: 'Home',
+      end_place: 'Office',
+      distance_m: 50_000,
+      energy_used_wh: 7_500,
+      fsd_distance_m: 36_000,
+      fsd_share_pct: 72,
+      confidence: 'high' as const,
+      reset_affected: false,
+      firmware_version: '2026.20.3',
+      evidence: [],
+      evidence_truncated: false,
+    };
+
+    const high = renderCard({ fsdInsight: base });
+    expect(within(high.container).getByText('FSD 72%')).toBeInTheDocument();
+    high.unmount();
+
+    const estimated = renderCard({
+      fsdInsight: { ...base, confidence: 'estimated', fsd_share_pct: null, fsd_distance_m: 8_000 },
+    });
+    expect(within(estimated.container).getByText(/FSD ~8.* km/)).toBeInTheDocument();
+    estimated.unmount();
+
+    const ambiguous = renderCard({
+      fsdInsight: { ...base, confidence: 'ambiguous', fsd_share_pct: 50 },
+    });
+    expect(within(ambiguous.container).getByText(/FSD ~50%.*ambiguous/)).toBeInTheDocument();
+    ambiguous.unmount();
+
+    renderCard({
+      fsdInsight: { ...base, confidence: 'unknown', fsd_distance_m: null, fsd_share_pct: null },
+    });
+    expect(screen.getByText('FSD data unknown')).toBeInTheDocument();
+  });
+
   it('opens the quick preview without nesting the action in the detail link', () => {
     const onPreview = vi.fn();
     renderCard({ onPreview });

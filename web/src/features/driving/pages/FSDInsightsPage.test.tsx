@@ -135,6 +135,7 @@ vi.mock('../components/fsd-insights', async () => {
     FsdShareTrend: passthrough('fsd-share-trend'),
     FsdWeekdayPattern: passthrough('fsd-weekday-pattern'),
     FsdTopDays: passthrough('fsd-top-days'),
+    FsdDriveAnalyticsPanels: passthrough('fsd-drive-analytics'),
     FsdConfidencePanel: passthrough('fsd-confidence'),
     FsdPeriodControl: ({
       value,
@@ -164,6 +165,7 @@ const SECTION_IDS = [
   'fsd-share-trend',
   'fsd-weekday-pattern',
   'fsd-top-days',
+  'fsd-drive-analytics',
   'fsd-confidence',
 ] as const;
 

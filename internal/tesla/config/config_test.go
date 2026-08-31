@@ -19,7 +19,9 @@ type parsedSubscription struct {
 		Hostname string `json:"hostname"`
 		Port     int    `json:"port"`
 		Fields   map[string]struct {
-			IntervalSeconds int `json:"interval_seconds"`
+			IntervalSeconds int      `json:"interval_seconds"`
+			MinimumDelta    *float64 `json:"minimum_delta,omitempty"`
+			IncludeFields   []string `json:"include_fields,omitempty"`
 		} `json:"fields"`
 	} `json:"config"`
 }
@@ -189,6 +191,8 @@ func TestIntervalForKnownAndUnknownFields(t *testing.T) {
 		{"VehicleSpeed", 1, true},
 		{"Gear", 1, true},
 		{"BatteryLevel", 30, true},
+		{"MilesSinceReset", 10, true},
+		{"SelfDrivingMilesSinceReset", 1, true},
 		// Setting unit fields use the setting_unit category default,
 		// which the coverage test independently asserts is 1.
 		{"SettingDistanceUnit", 1, true},
@@ -207,5 +211,34 @@ func TestIntervalForKnownAndUnknownFields(t *testing.T) {
 		if got != tc.want {
 			t.Errorf("IntervalFor(%q) = %d, want %d", tc.field, got, tc.want)
 		}
+	}
+}
+
+func TestCounterPoliciesAreSynchronized(t *testing.T) {
+	t.Parallel()
+
+	raw, err := NewBuilder().BuildSubscription()
+	if err != nil {
+		t.Fatalf("BuildSubscription: %v", err)
+	}
+	var sub parsedSubscription
+	if err := json.Unmarshal(raw, &sub); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	miles := sub.Config.Fields["MilesSinceReset"]
+	if miles.MinimumDelta == nil || *miles.MinimumDelta != 0.01 {
+		t.Errorf("MilesSinceReset minimum_delta = %v, want 0.01", miles.MinimumDelta)
+	}
+	if len(miles.IncludeFields) != 1 || miles.IncludeFields[0] != "SelfDrivingMilesSinceReset" {
+		t.Errorf("MilesSinceReset include_fields = %v", miles.IncludeFields)
+	}
+
+	fsd := sub.Config.Fields["SelfDrivingMilesSinceReset"]
+	if fsd.MinimumDelta == nil || *fsd.MinimumDelta != 1 {
+		t.Errorf("SelfDrivingMilesSinceReset minimum_delta = %v, want 1", fsd.MinimumDelta)
+	}
+	if len(fsd.IncludeFields) != 1 || fsd.IncludeFields[0] != "MilesSinceReset" {
+		t.Errorf("SelfDrivingMilesSinceReset include_fields = %v", fsd.IncludeFields)
 	}
 }
