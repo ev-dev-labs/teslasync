@@ -186,26 +186,55 @@ function renderAt(path: string) {
 }
 
 describe('TeslaOnlyPage', () => {
-  it('keeps ingest time, MQTT, FSD meters, and true range unknown instead of inventing zeros', () => {
+  it('renders the physics hub as feature cards without inventing zeros', () => {
     renderAt('/tesla-only');
     expect(screen.getByText('Tesla Physics')).toBeInTheDocument();
-    expect(screen.getByText(/Ingest time is unknown/)).toBeInTheDocument();
-    expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
-    expect(screen.queryByText('MQTT not connected')).toBeNull();
-    expect(screen.getByText('FSD trip meter')).toBeInTheDocument();
+    expect(screen.getByText('Three Clocks')).toBeInTheDocument();
+    expect(screen.getByText('Life Tape')).toBeInTheDocument();
+    expect(screen.getByText('Range Disagreement')).toBeInTheDocument();
     expect(screen.queryByText('0.0 km')).toBeNull();
-    expect(screen.getAllByText(/Complete still latched is expected/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/never picks a true range/)).toBeInTheDocument();
-    expect(screen.queryByText('true_range must stay empty')).toBeNull();
-    expect(screen.getByText(/Transport is unknown without a Tesla field/)).toBeInTheDocument();
-    expect(screen.getByText('neutral_rolling · 5.0 min')).toBeInTheDocument();
+    expect(screen.queryByText(/FSD is on/i)).toBeNull();
   });
 
-  it('does not claim FSD engagement on the hub or range page', () => {
+  it('keeps ingest time unknown on the clocks page', () => {
+    renderAt('/tesla-only/clocks');
+    expect(screen.getAllByText(/Ingest time is unknown/).length).toBeGreaterThan(0);
+  });
+
+  it('keeps Neutral rolling on the life tape', () => {
+    renderAt('/tesla-only/life-tape');
+    expect(screen.getByText('neutral_rolling')).toBeInTheDocument();
+    expect(screen.getByText('5.0 min')).toBeInTheDocument();
+  });
+
+  it('keeps MQTT unknown instead of inventing a disconnect', () => {
+    renderAt('/tesla-only/car-kept-living');
+    expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
+    expect(screen.queryByText('MQTT not connected')).toBeNull();
+  });
+
+  it('keeps FSD trip meters unknown instead of zero', () => {
+    renderAt('/tesla-only/meters');
+    expect(screen.getByText('FSD trip meter')).toBeInTheDocument();
+    expect(screen.queryByText('0.0 km')).toBeNull();
+  });
+
+  it('keeps Complete still latched as expected, not a contradiction', () => {
+    renderAt('/tesla-only/contradictions');
+    expect(screen.getAllByText(/Complete still latched is expected/).length).toBeGreaterThan(0);
+  });
+
+  it('keeps Transport unknown on mode laws', () => {
+    renderAt('/tesla-only/modes');
+    expect(screen.getByText(/Transport is unknown without a Tesla field/)).toBeInTheDocument();
+  });
+
+  it('does not claim FSD engagement on the range page', () => {
     renderAt('/tesla-only/range');
-    expect(screen.getAllByText('Range disagreement').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Range Disagreement').length).toBeGreaterThan(0);
     expect(screen.queryByText(/FSD is on/i)).toBeNull();
     expect(screen.getByText(/No true range/)).toBeInTheDocument();
     expect(screen.queryByText('true_range must stay empty')).toBeNull();
+    expect(screen.getAllByText(/never picks a true range/).length).toBeGreaterThan(0);
   });
 });
