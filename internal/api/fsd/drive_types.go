@@ -105,6 +105,31 @@ type CounterResetEvent struct {
 	PreviousValueM   float64   `json:"previous_value_m"`
 	CurrentValueM    float64   `json:"current_value_m"`
 	AffectedDriveIDs []int64   `json:"affected_drive_ids"`
+	FirmwareVersion  *string   `json:"firmware_version"`
+}
+
+// CommuteMonthShare is one calendar month of a commute identity.
+type CommuteMonthShare struct {
+	Month           string                 `json:"month"`
+	DriveCount      int                    `json:"drive_count"`
+	FSDDistanceM    *float64               `json:"fsd_distance_m"`
+	DrivingDistanceM float64               `json:"driving_distance_m"`
+	FSDSharePct     *float64               `json:"fsd_share_pct"`
+	Confidence      AttributionConfidence  `json:"confidence"`
+	UnknownDays     int                    `json:"unknown_days"`
+}
+
+// CommuteIdentity compares the same route and time-of-day window this month
+// versus last. It is a trip-meter correlation, not proof FSD improved.
+type CommuteIdentity struct {
+	RouteKey             string            `json:"route_key"`
+	RouteLabel           string            `json:"route_label"`
+	WindowKey            string            `json:"window_key"`
+	WindowLabel          string            `json:"window_label"`
+	ThisMonth            CommuteMonthShare `json:"this_month"`
+	LastMonth            CommuteMonthShare `json:"last_month"`
+	ShareChangePctPoints *float64          `json:"share_change_pct_points"`
+	Honesty              string            `json:"honesty"`
 }
 
 // GroupedFSDInsight is used for repeated routes, time-of-day, and firmware
@@ -240,5 +265,6 @@ type DriveAnalytics struct {
 	FirmwareSpotlight     FirmwareSpotlight           `json:"firmware_spotlight"`
 	RouteEfficiency       []RouteEfficiencyComparison `json:"route_efficiency"`
 	Observatory           Observatory                 `json:"observatory"`
+	CommuteIdentities     []CommuteIdentity           `json:"commute_identities"`
 	CorrelationDisclaimer string                      `json:"correlation_disclaimer"`
 }

@@ -33,6 +33,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import type {
   DriveFsdInsight,
   FsdAttributionConfidence,
+  FsdCommuteIdentity,
   FsdFirmwareRouteSpotlight,
   FsdInsights,
   FsdRouteEfficiencyComparison,
@@ -228,6 +229,9 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
                 >
                   <Text as="span" weight="medium">{formatDateTime(event.at)}</Text>
                   <Badge variant="warning" size="sm">{event.field}</Badge>
+                  {event.firmware_version ? (
+                    <Badge variant="neutral" size="sm">{event.firmware_version}</Badge>
+                  ) : null}
                   <Text as="span" color="muted">
                     {t('fsd.resets.changed', 'Counter moved from {{previous}} to {{current}}.', {
                       previous: formatDistance(event.previous_value_m, { precision: 1 }),
@@ -661,6 +665,85 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   );
 }
 
+function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
+  const { t } = useTranslation();
+  const rows = insights?.drive_analytics?.commute_identities ?? [];
+  const columns: Column<FsdCommuteIdentity>[] = useMemo(() => [
+    {
+      key: 'route_label',
+      header: t('fsd.commute.route', 'Commute'),
+      render: (row) => (
+        <div>
+          <div>{row.route_label}</div>
+          <Text as="p" variant="caption">{row.window_label}</Text>
+        </div>
+      ),
+    },
+    {
+      key: 'this_month',
+      header: t('fsd.commute.thisMonth', 'This month'),
+      render: (row) => row.this_month.fsd_share_pct == null
+        ? t('fsd.commute.unknown', 'Unknown')
+        : `${fmtNumber(row.this_month.fsd_share_pct, 1)}%`,
+    },
+    {
+      key: 'last_month',
+      header: t('fsd.commute.lastMonth', 'Last month'),
+      render: (row) => row.last_month.fsd_share_pct == null
+        ? t('fsd.commute.unknown', 'Unknown')
+        : `${fmtNumber(row.last_month.fsd_share_pct, 1)}%`,
+    },
+    {
+      key: 'share_change_pct_points',
+      header: t('fsd.commute.change', 'Change'),
+      render: (row) => row.share_change_pct_points == null
+        ? '—'
+        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points, 1)} pt`,
+    },
+    {
+      key: 'unknown_days',
+      header: t('fsd.commute.unknownDays', 'Unknown days'),
+      render: (row) => String(row.this_month.unknown_days),
+    },
+  ], [t]);
+
+  return (
+    <GlassPanel className="p-4 sm:p-5" data-testid="fsd-commute-identity">
+      <PanelTitle className="mb-1 flex items-center gap-2">
+        <Route className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('fsd.commute.title', 'Commute supervised identity')}
+      </PanelTitle>
+      <Text as="p" variant="caption" className="mb-3">
+        {rows[0]?.honesty
+          ?? t(
+            'fsd.commute.honesty',
+            'Same route and time-of-day window. Month-over-month supervised share is a trip-meter correlation, not proof FSD improved.',
+          )}
+      </Text>
+      <FsdSectionBody state={state} className="min-h-40">
+        {rows.length > 0 ? (
+          <DataTable
+            tableId="fsd-commute-identity"
+            name="FsdCommuteIdentity"
+            columns={columns}
+            data={rows}
+            keyExtractor={(row) => `${row.route_key}|${row.window_key}`}
+            mobileColumns={['route_label', 'this_month']}
+          />
+        ) : (
+          <EmptyState
+            icon={<Route className="h-8 w-8" aria-hidden="true" />}
+            message={t(
+              'fsd.commute.empty',
+              'No repeated commute window has enough high-confidence drives this month.',
+            )}
+          />
+        )}
+      </FsdSectionBody>
+    </GlassPanel>
+  );
+}
+
 export function FsdDriveAnalyticsPanels(props: FsdDriveAnalyticsPanelsProps) {
   return (
     <>
@@ -669,6 +752,7 @@ export function FsdDriveAnalyticsPanels(props: FsdDriveAnalyticsPanelsProps) {
       <ContributingDrivesPanel {...props} />
       <ComparisonGroupsPanel {...props} />
       <FirmwareSpotlightPanel {...props} />
+      <CommuteIdentityPanel {...props} />
       <EfficiencyPanel {...props} />
     </>
   );

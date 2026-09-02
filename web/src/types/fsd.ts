@@ -189,6 +189,28 @@ export interface FsdCounterResetEvent {
   previous_value_m: number;
   current_value_m: number;
   affected_drive_ids: number[];
+  firmware_version: string | null;
+}
+
+export interface FsdCommuteMonthShare {
+  month: string;
+  drive_count: number;
+  fsd_distance_m: number | null;
+  driving_distance_m: number;
+  fsd_share_pct: number | null;
+  confidence: FsdAttributionConfidence;
+  unknown_days: number;
+}
+
+export interface FsdCommuteIdentity {
+  route_key: string;
+  route_label: string;
+  window_key: string;
+  window_label: string;
+  this_month: FsdCommuteMonthShare;
+  last_month: FsdCommuteMonthShare;
+  share_change_pct_points: number | null;
+  honesty: string;
 }
 
 export interface GroupedFsdInsight {
@@ -302,6 +324,7 @@ export interface FsdDriveAnalytics {
   firmware_spotlight: FsdFirmwareSpotlight;
   route_efficiency: FsdRouteEfficiencyComparison[];
   observatory: FsdObservatory;
+  commute_identities: FsdCommuteIdentity[];
   correlation_disclaimer: string;
 }
 

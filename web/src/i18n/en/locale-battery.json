@@ -1904,6 +1904,16 @@
       "wake": "Avoid opening the app frequently — each wake cycle costs battery.",
       "energySaver": "Enable energy-saving mode in vehicle settings for better standby."
     },
-    "date": "Date"
+    "date": "Date",
+    "split": {
+      "title": "Complete-plugged vs unplugged drain",
+      "kind": "Kind",
+      "complete": "Complete, still plugged",
+      "unplugged": "Unplugged",
+      "started": "Started",
+      "drain": "Drain",
+      "completePct": "At-limit plugged",
+      "unpluggedPct": "After unplug"
+    }
   }
 }

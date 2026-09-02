@@ -156,8 +156,25 @@ describe('useVehicleLive', () => {
     const { result } = renderHook(() => useVehicleLive(1))
     emit({ vehicle_id: 1, state: { PackVoltage: 400, PackCurrent: 100 } })
     expect(result.current.state.power).toBe(40) // 400 * 100 / 1000
+    expect(result.current.state.packVoltage).toBe(400)
+    expect(result.current.state.packCurrent).toBe(100)
     emit({ vehicle_id: 1, state: { Power: 25 } })
     expect(result.current.state.power).toBe(25)
+  })
+
+  it('surfaces charge-port latch and trip-meter counters without inventing zeros from absence', () => {
+    const { result } = renderHook(() => useVehicleLive(1))
+    emit({
+      vehicle_id: 1,
+      state: {
+        ChargePortLatch: 'Engaged',
+        SelfDrivingMilesSinceReset: 16093.44,
+        MilesSinceReset: 32186.88,
+      },
+    })
+    expect(result.current.state.chargePortLatch).toBe('Engaged')
+    expect(result.current.state.fsdDistanceM).toBe(16093.44)
+    expect(result.current.state.drivingDistanceM).toBe(32186.88)
   })
 
   it('derives isCharging and clears it again when charging stops (regression)', () => {

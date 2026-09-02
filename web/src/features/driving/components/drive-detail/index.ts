@@ -4,6 +4,8 @@ export { HeroGauges } from './HeroGauges';
 export { DriveTimeline } from './DriveTimeline';
 export { DriveStatCards } from './DriveStatCards';
 export { SupervisedDrivingPanel } from './SupervisedDrivingPanel';
+export { GearTheaterPanel } from './GearTheaterPanel';
+export { SilentCounterPanel } from './SilentCounterPanel';
 export { MoreDetailsPanel } from './MoreDetailsPanel';
 export { EnergySummaryPanel } from './EnergySummaryPanel';
 export { CostSavingsPanel } from './CostSavingsPanel';

@@ -213,6 +213,7 @@ func BuildDriveAnalytics(
 		currentDriveIDs,
 		current.Period.StartAt,
 		current.Period.EndAt,
+		firmware,
 	)
 
 	var attributedDistance, estimatedDistance, unknownDriveDistance float64
@@ -306,6 +307,7 @@ func BuildDriveAnalytics(
 	analytics.FirmwareSpotlight = buildFirmwareSpotlight(summaries, driveByID)
 	analytics.RouteEfficiency = buildEfficiencyComparisons(summaries, driveByID)
 	analytics.Observatory = buildObservatory(summaries, driveByID, analytics.ResetEvents)
+	analytics.CommuteIdentities = buildCommuteIdentities(summaries, driveByID, loc, current.Period.EndAt)
 
 	return analytics
 }
@@ -326,6 +328,7 @@ func emptyDriveAnalytics(current, previous Response) DriveAnalytics {
 		FirmwareSpotlight:     FirmwareSpotlight{Routes: make([]FirmwareRouteSpotlight, 0)},
 		RouteEfficiency:       make([]RouteEfficiencyComparison, 0),
 		Observatory:           emptyObservatory(),
+		CommuteIdentities:     make([]CommuteIdentity, 0),
 		CorrelationDisclaimer: "This is a same-route correlation, not proof that supervised driving caused an efficiency difference.",
 	}
 
@@ -500,6 +503,7 @@ func counterResetEvents(
 	states []*driveAttributionState,
 	currentDriveIDs map[int64]struct{},
 	start, end time.Time,
+	firmware []firmwareTransition,
 ) []CounterResetEvent {
 	events := make([]CounterResetEvent, 0)
 	counters := []struct {
@@ -536,6 +540,7 @@ func counterResetEvents(
 				PreviousValueM:   roundMeters(earlier.value),
 				CurrentValueM:    roundMeters(later.value),
 				AffectedDriveIDs: driveIDs,
+				FirmwareVersion:  firmwareAtTimeline(firmware, later.at),
 			})
 		}
 	}
@@ -1037,10 +1042,11 @@ func buildObservatory(
 	resetEvents := make([]ObservatoryEvent, 0, len(resets))
 	for _, event := range resets {
 		resetEvents = append(resetEvents, ObservatoryEvent{
-			Kind:       ObservatoryKindReset,
-			At:         event.At,
-			ResetBreak: true,
-			Field:      stringPointer(event.Field),
+			Kind:            ObservatoryKindReset,
+			At:              event.At,
+			ResetBreak:      true,
+			Field:           stringPointer(event.Field),
+			FirmwareVersion: event.FirmwareVersion,
 		})
 	}
 	observatory.Totals.ResetBreakCount += len(resets)

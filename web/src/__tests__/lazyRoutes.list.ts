@@ -300,4 +300,6 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'JurisdictionCompliance', load: () => import('../features/ownership/pages/JurisdictionCompliancePage') },
   { name: 'ConsumablesLifecycle', load: () => import('../features/ownership/pages/ConsumablesLifecyclePage') },
   { name: 'SubscriptionROI', load: () => import('../features/ownership/pages/SubscriptionROIPage') },
+  { name: 'PhysicsCockpit', load: () => import('../features/vehicles/pages/PhysicsCockpitPage') },
+  { name: 'OutageAutobiography', load: () => import('../features/system/pages/OutageAutobiographyPage') },
 ]

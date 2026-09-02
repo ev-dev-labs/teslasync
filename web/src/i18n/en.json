@@ -5645,7 +5645,18 @@
       "charger": "Charger",
       "openDetails": "Open session details"
     },
-    "invoice": "Invoice"
+    "invoice": "Invoice",
+    "physics": {
+      "title": "Charge physics",
+      "atLimit": "at limit",
+      "stillPlugged": "At limit, still plugged {{duration}}.",
+      "etiquettePending": "DC session reached Complete; unplug not observed yet.",
+      "etiquette": "Supercharger dwell after Complete: {{duration}}.",
+      "chargedAnyway": "Charged before the scheduled window",
+      "scheduledAt": "Scheduled start {{when}}",
+      "waited": "Stopped waited for the scheduled window.",
+      "cockpit": "Open Tesla physics cockpit"
+    }
   },
   "compare": {
     "title": "Period Comparison",
@@ -11195,7 +11206,17 @@
       "wake": "Avoid opening the app frequently — each wake cycle costs battery.",
       "energySaver": "Enable energy-saving mode in vehicle settings for better standby."
     },
-    "date": "Date"
+    "date": "Date",
+    "split": {
+      "title": "Complete-plugged vs unplugged drain",
+      "kind": "Kind",
+      "complete": "Complete, still plugged",
+      "unplugged": "Unplugged",
+      "started": "Started",
+      "drain": "Drain",
+      "completePct": "At-limit plugged",
+      "unpluggedPct": "After unplug"
+    }
   },
   "climate": {
     "aiPreheatPrecool": {
@@ -13419,7 +13440,22 @@
       "powerProfileFailed": "Power profile chart failed to load",
       "tirePressureFailed": "Tire pressure section failed to load",
       "aiCoachingFailed": "Helix drive coaching failed to load",
-      "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load"
+      "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load",
+      "theaterFailed": "Gear theater failed to load",
+      "silentFailed": "Counter-silent panel failed to load",
+      "fsdFailed": "Supervised-driving panel failed to load"
+    },
+    "theater": {
+      "title": "Gear theater",
+      "empty": "No P/R/N/D or charge-port changes were recorded for this drive.",
+      "portOpen": "Port open",
+      "portClosed": "Port closed"
+    },
+    "silent": {
+      "title": "Counter silent while moving",
+      "unknown": "The FSD trip meter did not report on this drive. Absence is not a disengagement.",
+      "none": "No moving interval had a frozen FSD trip meter.",
+      "fsd": "Open FSD Insights"
     },
     "aiCoaching": {
       "title": "Drive coaching",
@@ -17476,6 +17512,35 @@
     "noLiveData": "No live data",
     "unknownModel": "Unknown model"
   },
+  "physicsCockpit": {
+    "title": "Tesla physics cockpit",
+    "subtitle": "Live Gear, charge state, port latch, BMS, and trip meters.",
+    "certificate": "Session certificate",
+    "gear": "Gear",
+    "charge": "Charge state",
+    "latch": "Charge port",
+    "portOpen": "Open",
+    "battery": "Battery",
+    "pack": "Pack",
+    "energy": "Energy remaining",
+    "trip": "Trip meter",
+    "speed": "Speed",
+    "fsdUnknown": "FSD trip meter unknown",
+    "lastTick": "Last tick {{when}}",
+    "noTick": "No trip-meter tick in the recent window",
+    "valet": "Valet",
+    "service": "Service",
+    "park": "Park truth",
+    "confirmedPark": "Confirmed Park",
+    "notPark": "Not confirmed Park",
+    "neutral": "Neutral is rolling",
+    "sentry": "Sentry",
+    "sentryIgnored": "Sentry reported, not counted",
+    "overheat": "Cabin overheat",
+    "overheatIgnored": "Cabin overheat reported, not counted",
+    "precondition": "Preconditioning",
+    "preconditionIgnored": "Preconditioning reported, not counted"
+  },
   "card": {
     "interior": "Interior",
     "charging": "Charging",
@@ -18800,6 +18865,20 @@
     "thumbMax": "{{label}} maximum"
   },
   "system": {
+    "outage": {
+      "title": "Outage autobiography",
+      "subtitle": "What queued, what replayed with original event time, what stayed unknown.",
+      "certificate": "Session certificate",
+      "catchUp": "Catch-up after MQTT or carbon loss",
+      "mqttUp": "MQTT connected",
+      "mqttDown": "MQTT not connected",
+      "mqttUnknown": "MQTT state unknown",
+      "replay": "Replay keeps event time",
+      "lastTelemetry": "Last telemetry: {{when}}",
+      "never": "unknown",
+      "gap": "Gap {{minutes}} min",
+      "unknownSince": "Unknown since {{when}} — a gap is not a measured zero."
+    },
     "page": {
       "title": "System budgets",
       "subtitle": "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."

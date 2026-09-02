@@ -21,6 +21,8 @@ import {
   DriveTimeline,
   DriveStatCards,
   SupervisedDrivingPanel,
+  GearTheaterPanel,
+  SilentCounterPanel,
   MoreDetailsPanel,
   EnergySummaryPanel,
   CostSavingsPanel,
@@ -204,6 +206,10 @@ export default function DriveDetailPage() {
             <DriveTimeline drive={drive} />
           </SectionErrorBoundary>
 
+          <SectionErrorBoundary name="drive-detail:gear-theater" fallbackTitle={t('driveDetail.section.theaterFailed', 'Gear theater failed to load')}>
+            <GearTheaterPanel driveId={id} />
+          </SectionErrorBoundary>
+
           {/* KPI band — full-width responsive stat grid. */}
           {hasMeaningfulDriveStats && (
             <SectionErrorBoundary name="drive-detail:stat-cards" fallbackTitle={t('driveDetail.section.statCardsFailed', 'Drive stats failed to load')}>
@@ -218,6 +224,10 @@ export default function DriveDetailPage() {
               error={fsdState.fatalError}
               isOngoing={!drive.endTs}
             />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary name="drive-detail:silent-counter" fallbackTitle={t('driveDetail.section.silentFailed', 'Counter-silent panel failed to load')}>
+            <SilentCounterPanel driveId={id} />
           </SectionErrorBoundary>
 
           {/*

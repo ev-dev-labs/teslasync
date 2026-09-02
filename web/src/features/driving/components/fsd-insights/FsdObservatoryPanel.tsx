@@ -107,7 +107,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               subtitle={t(
                 'fsd.observatory.unknownHint',
                 '{{count}} drives with no measured FSD',
-                { count: fmtInt(totals?.unknown_drive_count ?? 0) },
+                { count: totals?.unknown_drive_count ?? 0 },
               )}
             />
             <MetricCard
@@ -177,7 +177,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
                     </Text>
                     <Text as="div" size="xs" color="muted" className="mb-2">
                       {t('fsd.observatory.driveCount', '{{count}} drives', {
-                        count: fmtInt(story.drive_count),
+                        count: story.drive_count,
                       })}
                     </Text>
                     <ol className="space-y-2">
@@ -203,14 +203,14 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
                             {chapter.unknown_count > 0 ? (
                               <Badge variant="neutral" size="sm">
                                 {t('fsd.observatory.unknownDrives', '{{count}} unknown', {
-                                  count: fmtInt(chapter.unknown_count),
+                                  count: chapter.unknown_count,
                                 })}
                               </Badge>
                             ) : null}
                             {chapter.ambiguous_count > 0 ? (
                               <Badge variant="warning" size="sm">
                                 {t('fsd.observatory.ambiguousDrives', '{{count}} ambiguous', {
-                                  count: fmtInt(chapter.ambiguous_count),
+                                  count: chapter.ambiguous_count,
                                 })}
                               </Badge>
                             ) : null}

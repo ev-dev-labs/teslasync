@@ -131,6 +131,8 @@ vi.mock('../components/drive-detail', () => {
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
     SupervisedDrivingPanel: stub('fsd-panel'),
+    GearTheaterPanel: stub('gear-theater'),
+    SilentCounterPanel: stub('silent-counter'),
     MoreDetailsPanel: stub('more-details'),
     EnergySummaryPanel: stub('energy-summary'),
     CostSavingsPanel: stub('cost-savings'),
@@ -323,7 +325,9 @@ const GATED_NUMERIC_SECTIONS = [
 
 const ALWAYS_ON_SECTIONS = [
   'drive-timeline',
+  'gear-theater',
   'fsd-panel',
+  'silent-counter',
   'route-map',
   'journey-details',
   'overview-chart',

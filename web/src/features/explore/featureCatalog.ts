@@ -69,6 +69,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/parking': 'Parking patterns, dwell time, location mix, and recurring occupancy.',
   '/utilization': 'Vehicle availability and productive use across your fleet.',
   '/time-machine': 'Reconstruct vehicle state at any recorded point in time.',
+  '/physics-cockpit': 'Live Gear, charge state, port latch, BMS, and trip meters.',
   '/fleet-operations': 'Coordinate drivers, bookings, policies, work orders, and utilization.',
   '/resale-vault': 'Create verifiable, selectively disclosed vehicle-history reports.',
 
@@ -240,6 +241,7 @@ const DESCRIPTIONS: Record<string, string> = {
 
   // ── Diagnostics ────────────────────────────────────────────────────
   '/system-status': 'Health of every dependent service — MQTT, Redis, DB, Tesla API.',
+  '/outage': 'What queued, replayed with original event time, or stayed unknown.',
   '/db-health': 'Database size, query latency, and replication lag.',
   '/anomaly-detection': 'Auto-detected outliers in charging, range, and drives.',
   '/diagnostics/rul': 'Estimate remaining useful life for monitored components.',

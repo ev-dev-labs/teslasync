@@ -33,6 +33,7 @@ const VehicleAccess = lazy(() => import('./features/vehicles/pages/VehicleAccess
 const VehicleManagement = lazy(() => import('./features/vehicles/pages/VehicleManagementPage'))
 const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
+const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -278,6 +279,7 @@ const PowerDashboards = lazy(() => import('./features/power-user/pages/Dashboard
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const OutageAutobiography = lazy(() => import('./features/system/pages/OutageAutobiographyPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
 const Help = lazy(() => import('./features/system/pages/HelpPage'))
@@ -543,6 +545,7 @@ export default function App() {
         <Route path="vehicle-management" element={<SafeRoute name="VehicleManagement"><VehicleManagement /></SafeRoute>} />
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="time-machine" element={<SafeRoute name="TimeMachine"><TimeMachine /></SafeRoute>} />
+        <Route path="physics-cockpit" element={<SafeRoute name="PhysicsCockpit"><PhysicsCockpit /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
@@ -624,6 +627,7 @@ export default function App() {
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="analytics/lifetime" element={<Navigate to="/lifetime-stats" replace />} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
+        <Route path="outage" element={<SafeRoute name="OutageAutobiography"><OutageAutobiography /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
         {/* HELP-06/08/09/11 — the help index, glossary, release notes,

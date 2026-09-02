@@ -69,6 +69,11 @@ export interface VehicleLiveState {
   chargeLimitSoc: number
   timeToFullCharge: number
   isCharging: boolean
+  chargePortLatch: string
+  packCurrent: number
+  packVoltage: number
+  fsdDistanceM: number
+  drivingDistanceM: number
 
   // Security
   locked: boolean
@@ -181,6 +186,7 @@ const EMPTY_STATE: VehicleLiveState = {
   autoSeatClimateLeft: false, autoSeatClimateRight: false, seatVentEnabled: false,
   chargeState: '', detailedChargeState: '', chargerVoltage: 0, chargeAmps: 0,
   chargeRate: 0, chargerPower: 0, chargeLimitSoc: 0, timeToFullCharge: 0, isCharging: false,
+  chargePortLatch: '', packCurrent: 0, packVoltage: 0, fsdDistanceM: 0, drivingDistanceM: 0,
   locked: false, sentryMode: false, doorState: '', centerDisplay: '',
   fdWindow: '', fpWindow: '', rdWindow: '', rpWindow: '',
   guestMode: false, guestMobileAccess: '', valetMode: false, serviceMode: false,
@@ -288,6 +294,11 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   else if (raw['ACChargingPower'] != null) s.chargerPower = n('ACChargingPower')
   if (raw['ChargeLimitSoc'] != null) s.chargeLimitSoc = Math.round(n('ChargeLimitSoc'))
   if (raw['TimeToFullCharge'] != null) s.timeToFullCharge = n('TimeToFullCharge')
+  if (raw['ChargePortLatch'] != null) s.chargePortLatch = str('ChargePortLatch')
+  if (raw['PackCurrent'] != null) s.packCurrent = n('PackCurrent')
+  if (raw['PackVoltage'] != null) s.packVoltage = n('PackVoltage')
+  if (raw['SelfDrivingMilesSinceReset'] != null) s.fsdDistanceM = n('SelfDrivingMilesSinceReset')
+  if (raw['MilesSinceReset'] != null) s.drivingDistanceM = n('MilesSinceReset')
   
   // Derive isCharging from the live charge signals. Only override when a
   // charge-related signal is present in this update so the merge in
