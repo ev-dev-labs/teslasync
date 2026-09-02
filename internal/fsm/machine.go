@@ -30,6 +30,7 @@ type VehicleFSM struct {
 	current          State
 	pending          *pendingTransition
 	lastTransitionAt time.Time
+	lastMovingAt     time.Time
 	isGearCapable    bool
 
 	actions ActionExecutor
@@ -112,7 +113,7 @@ func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, sign
 	sctx := m.buildSignalContextAt(signals, payloadTs)
 
 	// Cancel any pending Park-debounce when the same batch carries
-	// contradicting evidence (Gear=D/R or
+	// contradicting evidence (Gear=D/R/N or
 	// VehicleSpeed > 1.0). Without this, a spurious single-frame Gear=P
 	// would silently arm the debounce and CheckPending would later commit
 	// Driving→Parked even though the vehicle had been moving the entire
@@ -122,7 +123,7 @@ func (m *VehicleFSM) ProcessSignalsAt(ctx context.Context, vehicleID int64, sign
 		contradicts := false
 		if sctx.HasGearInBatch {
 			switch sctx.Gear {
-			case enums.GearDrive, enums.GearReverse:
+			case enums.GearDrive, enums.GearReverse, enums.GearNeutral:
 				contradicts = true
 			}
 		}
@@ -239,7 +240,7 @@ func (m *VehicleFSM) tryTransition(ctx context.Context, vehicleID int64, trigger
 	return m.commit(ctx, vehicleID, tr, sctx)
 }
 
-func (m *VehicleFSM) handleDebounced(_ context.Context, vehicleID int64, tr Transition, sctx *SignalContext) error {
+func (m *VehicleFSM) handleDebounced(ctx context.Context, vehicleID int64, tr Transition, sctx *SignalContext) error {
 	now := sctx.Now
 	if now.IsZero() {
 		now = time.Now().UTC()
@@ -266,17 +267,21 @@ func (m *VehicleFSM) handleDebounced(_ context.Context, vehicleID int64, tr Tran
 		return nil // not yet confirmed
 	}
 
-	// Confirmed — promote to a real transition and commit
+	// Confirmed — commit now. Clearing pending without commit used to
+	// restart the timer whenever Gear=P kept arriving (REST polling or
+	// interval resend), so Driving never became Parked. CheckPending
+	// still covers the Fleet Telemetry case where Park is sent once and
+	// later batches have no Gear. commit() clears pending on success so
+	// a failed persist can retry on the next batch.
 	m.logger.Debug().
 		Int64("vehicle_id", vehicleID).
 		Str("to", string(m.pending.To)).
-		Dur("elapsed", time.Since(m.pending.Since)).
-		Msg("fsm: debounce confirmed, will commit on next batch")
+		Dur("elapsed", now.Sub(m.pending.Since)).
+		Msg("fsm: debounce confirmed, committing")
 
-	m.pending = nil
 	confirmedTr := tr
 	confirmedTr.Mode = Immediate
-	return nil // debounced transitions commit on the NEXT signal batch after confirmation
+	return m.commit(ctx, vehicleID, confirmedTr, sctx)
 }
 
 // CheckPending should be called on each signal batch to commit debounced transitions
@@ -295,7 +300,8 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 		return nil
 	}
 
-	// Confirmed — commit
+	// Confirmed — commit. Leave pending in place until commit succeeds so a
+	// failed persist retries instead of dropping the Park confirmation.
 	to := m.pending.To
 	trigger := m.pending.Trigger
 	m.logger.Debug().
@@ -303,7 +309,6 @@ func (m *VehicleFSM) CheckPending(ctx context.Context, vehicleID int64, sctx *Si
 		Str("to", string(to)).
 		Str("trigger", trigger.String()).
 		Msg("fsm: committing confirmed debounced transition")
-	m.pending = nil
 
 	tr := Transition{
 		From:    m.current,
@@ -391,17 +396,24 @@ func (m *VehicleFSM) buildSignalContextAt(signals map[string]interface{}, payloa
 	// Speed
 	if s, ok := toFloat(signals["VehicleSpeed"]); ok {
 		sctx.Speed = s
+		if s > 0 {
+			m.lastMovingAt = now
+		}
 	}
+	sctx.WasMoving = !m.lastMovingAt.IsZero() && now.Sub(m.lastMovingAt) <= DriveHoldDuration
 
-	// Charging — any charge state signal in the batch counts as a change
+	// Charging — any charge state signal in the batch counts as a change.
+	// ChargeAmps is only a fallback when Tesla omitted ChargeState in this
+	// batch; residual amps after Disconnected must not keep IsCharging true.
 	if dcs, ok := signals["DetailedChargeState"]; ok {
-		sctx.IsCharging = isChargingState(toString(dcs))
+		sctx.ChargeState = toString(dcs)
+		sctx.IsCharging = isChargingState(sctx.ChargeState)
 		sctx.ChargeStateChanged = true
 	} else if cs, ok := signals["ChargeState"]; ok {
-		sctx.IsCharging = isChargingState(toString(cs))
+		sctx.ChargeState = toString(cs)
+		sctx.IsCharging = isChargingState(sctx.ChargeState)
 		sctx.ChargeStateChanged = true
-	}
-	if amps, ok := toFloat(signals["ChargeAmps"]); ok && amps > 1.0 {
+	} else if amps, ok := toFloat(signals["ChargeAmps"]); ok && amps > 1.0 {
 		sctx.IsCharging = true
 	}
 
@@ -440,12 +452,7 @@ func toFloat(v interface{}) (float64, bool) {
 
 // isChargingState returns true if the charge state string indicates active charging.
 func isChargingState(s string) bool {
-	switch s {
-	case enums.ChargeStateCharging, enums.ChargeStateStarting, "ChargeStateCharging", "ChargeStateStarting",
-		"DetailedChargeStateCharging", "DetailedChargeStateStarting", "Enable":
-		return true
-	}
-	return false
+	return enums.IsCharging(s)
 }
 
 // FSMDebugInfo holds diagnostic information about a vehicle FSM.

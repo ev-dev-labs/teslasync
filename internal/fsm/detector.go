@@ -29,11 +29,13 @@ func DetectTriggers(sctx *SignalContext) []Trigger {
 		}
 	}
 
-	// Priority 2: Charge state changes
+	// Priority 2: Charge state changes.
+	// Tesla Stopped/Complete/NoPower/Unknown mean still plugged (or unknown).
+	// Only unplug (Disconnected) ends the charge session.
 	if sctx.ChargeStateChanged {
 		if sctx.IsCharging {
 			triggers = append(triggers, TriggerChargeStarted)
-		} else {
+		} else if enums.IsChargeEnded(sctx.ChargeState) {
 			triggers = append(triggers, TriggerChargeEnded)
 		}
 	}

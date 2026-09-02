@@ -36,8 +36,8 @@ import (
 )
 
 const (
-	// pipelineConnectTimeout caps how long NewProductionPipelineMQTT waits for
-	// the broker handshake. If the caller-supplied ctx has an earlier
+	// pipelineConnectTimeout caps how long ConnectProductionPipelineMQTT waits
+	// for the broker handshake. If the caller-supplied ctx has an earlier
 	// deadline, that takes precedence (Decision #3).
 	pipelineConnectTimeout = 30 * time.Second
 
@@ -113,17 +113,10 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 }
 
 // NewProductionPipelineMQTT constructs the paho client and DLQPublisher used
-// by PipelineSubscriber in production. It returns the connected client AND a
-// *MQTTDLQPublisher wired against the same client.
-//
-// Connection contract (Decision #3): the function blocks until either
-//
-//	(a) the broker handshake completes within the lesser of 30 seconds and
-//	    ctx.Deadline(), in which case the connected client is returned, or
-//	(b) the connection fails / ctx is cancelled / the timeout elapses, in
-//	    which case the client is disconnected before the function returns
-//	    (so the caller does not have to remember to clean up) and the
-//	    returned error wraps the broker URL for triage context.
+// by PipelineSubscriber in production. It does not Connect: the caller must
+// install PipelineSubscriber (and DefaultPublishHandler) first, then call
+// ConnectProductionPipelineMQTT. Otherwise EMQX can deliver queued QoS 1
+// messages after CONNACK into a client that has no handler yet.
 //
 // dlqTopic naming convention (Decision #4 — recommended, NOT enforced):
 // "tesla/dlq/{env}" where {env} is one of "dev"/"staging"/"prod". The
@@ -137,6 +130,10 @@ func productionPipelineOptions(brokerURL, clientID, username, password string) *
 // onConnect and onConnectionLost (optional, may be nil) are invoked from the
 // corresponding paho callbacks so PipelineSubscriber can keep its connection
 // and subscription state accurate.
+//
+// onMessage (optional) is SetDefaultPublishHandler before the client is
+// created so early deliveries have a route. Pass PipelineSubscriber.HandlePublish
+// via an atomic pointer the caller stores before Connect.
 //
 // onConnect is invoked from inside the paho
 // SetOnConnectHandler AFTER the broker-connected log line, on every
@@ -161,6 +158,7 @@ func NewProductionPipelineMQTT(
 	log zerolog.Logger,
 	onConnect func(pahomqtt.Client),
 	onConnectionLost func(error),
+	onMessage pahomqtt.MessageHandler,
 ) (pahomqtt.Client, *MQTTDLQPublisher, error) {
 	if strings.TrimSpace(brokerURL) == "" {
 		return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: brokerURL must be non-empty")
@@ -171,6 +169,8 @@ func NewProductionPipelineMQTT(
 	if strings.TrimSpace(dlqTopic) == "" {
 		return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: dlqTopic must be non-empty")
 	}
+
+	_ = ctx
 
 	opts := productionPipelineOptions(brokerURL, clientID, username, password)
 	opts.SetOnConnectHandler(func(c pahomqtt.Client) {
@@ -188,17 +188,25 @@ func NewProductionPipelineMQTT(
 			onConnectionLost(err)
 		}
 	})
+	if onMessage != nil {
+		opts.SetDefaultPublishHandler(onMessage)
+	}
 
 	client := pahomqtt.NewClient(opts)
+	dlq := NewMQTTDLQPublisher(client, dlqTopic)
+	return client, dlq, nil
+}
+
+// ConnectProductionPipelineMQTT performs the broker handshake. Call this only
+// after PipelineSubscriber exists and subRef / DefaultPublishHandler can route
+// early deliveries. On failure the client is disconnected.
+func ConnectProductionPipelineMQTT(ctx context.Context, client pahomqtt.Client, brokerURL string) error {
+	if client == nil {
+		return fmt.Errorf("mqtt: ConnectProductionPipelineMQTT: client is nil")
+	}
+
 	token := client.Connect()
 
-	// Decision #3: 30s timeout, but observe ctx.Deadline if earlier;
-	// ctx.Done() short-circuits the wait so a shutdown signal is not delayed
-	// by the timeout. A token.Wait() that never returns is acceptable
-	// because client.Disconnect(0) on the failure path causes paho to fail
-	// the in-flight token, which unblocks the wait goroutine; if it does
-	// not (paho-internal bug) the goroutine leaks at most once per failed
-	// startup attempt — bounded by the deployment's restart count.
 	timeout := pipelineConnectTimeout
 	if d, ok := ctx.Deadline(); ok {
 		if rem := time.Until(d); rem < timeout {
@@ -222,16 +230,14 @@ func NewProductionPipelineMQTT(
 	case <-done:
 		if err := token.Error(); err != nil {
 			client.Disconnect(0)
-			return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: connect %s: %w", brokerURL, err)
+			return fmt.Errorf("mqtt: ConnectProductionPipelineMQTT: connect %s: %w", brokerURL, err)
 		}
+		return nil
 	case <-ctx.Done():
 		client.Disconnect(0)
-		return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: connect %s: %w", brokerURL, ctx.Err())
+		return fmt.Errorf("mqtt: ConnectProductionPipelineMQTT: connect %s: %w", brokerURL, ctx.Err())
 	case <-timer.C:
 		client.Disconnect(0)
-		return nil, nil, fmt.Errorf("mqtt: NewProductionPipelineMQTT: connect %s: timeout after %s", brokerURL, timeout)
+		return fmt.Errorf("mqtt: ConnectProductionPipelineMQTT: connect %s: timeout after %s", brokerURL, timeout)
 	}
-
-	dlq := NewMQTTDLQPublisher(client, dlqTopic)
-	return client, dlq, nil
 }

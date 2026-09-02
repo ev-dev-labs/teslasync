@@ -975,18 +975,17 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 	dlqTopic := strings.TrimSuffix(a.Cfg.FleetTelemetry.TopicBase, "/") + "/dlq"
 
 	// subRef bridges the chicken-and-egg between the paho client (which
-	// must register an OnConnect handler BEFORE Connect) and the
-	// PipelineSubscriber (which owns the topic + Subscribe call but cannot
-	// be constructed until we have a connected client). On every
-	// post-Start reconnect, paho fires OnConnect → callback derefs subRef
-	// → PipelineSubscriber.OnBrokerReconnect re-issues SUBSCRIBE.
+	// must register OnConnect and DefaultPublishHandler BEFORE Connect)
+	// and PipelineSubscriber (which owns Subscribe). Connect is delayed
+	// until after subRef.Store so queued QoS 1 messages that EMQX delivers
+	// immediately after CONNACK enter HandlePublish instead of filling the
+	// AutoAckDisabled receive window with no handler.
 	//
-	// Without this, paho v1.5.0's default ResumeSubs=false leaves a
-	// reconnected client with no subscriptions whenever the broker drops
-	// the persistent session (EMQX session_expiry_interval elapsed,
-	// node restart on a non-replicated cluster, etc), silently halting
-	// the entire fleet-telemetry stream — observed in production as
-	// `subscriptions=0, delivered_msgs=0` with `connected=true` for days.
+	// On every post-Start reconnect, paho fires OnConnect → callback
+	// derefs subRef → PipelineSubscriber.OnBrokerReconnect re-issues
+	// SUBSCRIBE. Without this, paho v1.5.0's default ResumeSubs=false
+	// leaves a reconnected client with no subscriptions whenever the
+	// broker drops the persistent session.
 	var subRef atomic.Pointer[mqtt.PipelineSubscriber]
 	pipelineOnConnect := func(c pahomqtt.Client) {
 		if sub := subRef.Load(); sub != nil {
@@ -996,6 +995,11 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 	pipelineOnConnectionLost := func(_ error) {
 		if sub := subRef.Load(); sub != nil {
 			sub.OnBrokerConnectionLost()
+		}
+	}
+	pipelineOnMessage := func(c pahomqtt.Client, msg pahomqtt.Message) {
+		if sub := subRef.Load(); sub != nil {
+			sub.HandlePublish(c, msg)
 		}
 	}
 
@@ -1009,6 +1013,7 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 		pipelineLogger,
 		pipelineOnConnect,
 		pipelineOnConnectionLost,
+		pipelineOnMessage,
 	)
 	if err != nil {
 		return fmt.Errorf("phase-42a: NewProductionPipelineMQTT failed; broker=%s dlq_topic=%s: %w",
@@ -1077,12 +1082,14 @@ func (a *App) initPipelineSubscriber(ctx context.Context, vehicleRepo *vehicledb
 		},
 		pipelineLogger,
 	)
-	// Publish subRef BEFORE Start so any post-Start reconnect (or even a
-	// pathological mid-Start reconnect that fires the goroutine-scheduled
-	// OnConnect after subRef is published) routes through
-	// PipelineSubscriber.OnBrokerReconnect, which guards itself against
-	// pre-start invocations via the started/stopped flags.
+	// Publish subRef BEFORE Connect so CONNACK-time queued messages and
+	// OnConnect resubscribe both route through PipelineSubscriber.
 	subRef.Store(pipelineSubscriber)
+	if err := mqtt.ConnectProductionPipelineMQTT(ctx, pahoClient, a.Cfg.MQTT.BrokerURL()); err != nil {
+		pipelineSubscriber.Stop()
+		return fmt.Errorf("phase-42a: ConnectProductionPipelineMQTT failed; broker=%s: %w",
+			a.Cfg.MQTT.BrokerURL(), err)
+	}
 	if err := pipelineSubscriber.Start(); err != nil {
 		pipelineSubscriber.Stop()
 		return fmt.Errorf("phase-42a: PipelineSubscriber failed to start for topic base %q: %w",

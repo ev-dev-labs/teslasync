@@ -21,8 +21,9 @@ type SignalContext struct {
 	WasMoving bool // Had Speed > 0 within driveHoldDuration
 
 	// Charging
-	IsCharging         bool // DetailedChargeState is active
-	ChargeStateChanged bool // ChargeState changed since last batch
+	IsCharging         bool   // DetailedChargeState is actively transferring energy
+	ChargeState        string // Canonical charge-state short form when present in this batch
+	ChargeStateChanged bool   // ChargeState/DetailedChargeState present in this batch
 
 	// Raw signal maps — forwarded to sub-FSMs and actions.
 	Signals            map[string]interface{}

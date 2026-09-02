@@ -34,12 +34,11 @@ func isExplicitChargeState(raw, state string) bool {
 		raw == "DetailedChargeState"+state
 }
 
-// IsChargeEnded reports whether a charge-state transition definitively ends an
-// active charging session. Unknown values are intentionally excluded: absence
-// of positive charging evidence is not proof that charging stopped.
+// IsChargeEnded reports whether a charge-state transition means the cable is
+// unplugged. Tesla Stopped is a pause (schedule, user pause, Supercharger
+// hold). Complete is charge-limit reached while still plugged. NoPower is
+// plugged with a dead EVSE. Unknown is not evidence. None of those end a
+// session. Only Disconnected is unplug.
 func IsChargeEnded(raw string) bool {
-	return isExplicitChargeState(raw, ChargeStateComplete) ||
-		isExplicitChargeState(raw, ChargeStateStopped) ||
-		isExplicitChargeState(raw, ChargeStateDisconnected) ||
-		isExplicitChargeState(raw, ChargeStateNoPower)
+	return isExplicitChargeState(raw, ChargeStateDisconnected)
 }

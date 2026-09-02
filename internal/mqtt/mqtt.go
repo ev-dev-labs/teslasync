@@ -981,6 +981,14 @@ type mqttPayload struct {
 	Ack        func()
 }
 
+// HandlePublish is the early-delivery route for messages that arrive after
+// CONNACK and before this process's Subscribe. With CleanSession=false and
+// AutoAckDisabled, EMQX can deliver queued QoS 1 payloads immediately; those
+// must enter the pipeline instead of sitting unacked in paho's receive window.
+func (s *PipelineSubscriber) HandlePublish(c pahomqtt.Client, msg pahomqtt.Message) {
+	s.onPipelineMessage(c, msg)
+}
+
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
 	// Capture receipt time before any parsing, VIN resolution, or tracing.
 	// This is the subscriber boundary, not a later pipeline-processing time.

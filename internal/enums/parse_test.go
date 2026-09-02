@@ -66,11 +66,12 @@ func TestIsChargeEnded(t *testing.T) {
 		input    string
 		expected bool
 	}{
-		{"DetailedChargeStateComplete", true},
-		{"Stopped", true},
+		{"DetailedChargeStateComplete", false},
+		{"Stopped", false},
 		{"Disconnected", true},
-		{"NoPower", true},
-		{"DetailedChargeStateNoPower", true},
+		{"DetailedChargeStateDisconnected", true},
+		{"NoPower", false},
+		{"DetailedChargeStateNoPower", false},
 		{"Charging", false},
 		{"Starting", false},
 		{"Unknown", false},

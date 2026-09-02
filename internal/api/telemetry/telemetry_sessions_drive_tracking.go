@@ -14,6 +14,7 @@ import (
 	dbadmin "github.com/ev-dev-labs/teslasync/internal/database/admin"
 	"github.com/ev-dev-labs/teslasync/internal/enums"
 	"github.com/ev-dev-labs/teslasync/internal/events"
+	"github.com/ev-dev-labs/teslasync/internal/fsm"
 	"github.com/ev-dev-labs/teslasync/internal/metrics"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	signalcounter "github.com/ev-dev-labs/teslasync/internal/signal/counter"
@@ -74,8 +75,9 @@ type streamingDrive struct {
 	LastSpeed         float64
 	LastSeen          time.Time
 	LastSpeedZeroTime time.Time
-	GearBased         bool // true if drive was started by Gear signal (not speed)
-	Completing        bool // true while being completed — prevents double-completion
+	PendingParkSince  time.Time // Gear=P debounce; Tesla Neutral is not Park
+	GearBased         bool      // true if drive was started by Gear signal (not speed)
+	Completing        bool      // true while being completed — prevents double-completion
 
 	// Signal accumulator — merges signals across MQTT batches for rich telemetry writes.
 	// Fleet telemetry sends each field as a separate MQTT message, so individual batches
@@ -153,7 +155,7 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 	// === GEAR-BASED PATH (primary) ===
 	if hasGear {
 		isDrivingGear := gear == enums.GearDrive || gear == enums.GearReverse
-		isParkGear := gear == enums.GearPark || gear == enums.GearNeutral
+		isParkGear := gear == enums.GearPark
 
 		if isDrivingGear && !hasDrive {
 			// Gear→D/R with no active drive → START DRIVE immediately
@@ -168,23 +170,58 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		}
 
 		if isDrivingGear && hasDrive {
-			// Gear still D/R — update active drive
+			// Gear still D/R — update active drive and cancel a spurious Park debounce
 			active.LastSeen = time.Now().UTC()
-			active.LastSpeedZeroTime = time.Time{} // reset any speed-zero timer
+			active.LastSpeedZeroTime = time.Time{}
+			active.PendingParkSince = time.Time{}
+			t.updateActiveDriveLocked(ctx, active, signals, speed, hasSpeed)
+			return
+		}
+
+		if gear == enums.GearNeutral && hasDrive {
+			// Neutral is in-gear rolling (car wash, tow, bump). It is not Park.
+			active.LastSeen = time.Now().UTC()
+			active.PendingParkSince = time.Time{}
 			t.updateActiveDriveLocked(ctx, active, signals, speed, hasSpeed)
 			return
 		}
 
 		if isParkGear && hasDrive {
-			// Gear→P with active drive → END DRIVE immediately
-			log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
-				Str("gear", gear).Msg("telemetry: gear→P, ending drive")
-			t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
+			now := parkEventTime(payloadTs, fieldTs)
+			if hasSpeed && speed > 1.0 {
+				active.PendingParkSince = time.Time{}
+				active.LastSeen = time.Now().UTC()
+				t.updateActiveDriveLocked(ctx, active, signals, speed, hasSpeed)
+				return
+			}
+			if active.PendingParkSince.IsZero() {
+				active.PendingParkSince = now
+			}
+			if now.Sub(active.PendingParkSince) >= fsm.StateConfirmDuration {
+				log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
+					Str("gear", gear).Msg("telemetry: gear→P confirmed, ending drive")
+				t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
+				return
+			}
+			active.LastSeen = time.Now().UTC()
+			t.updateActiveDriveLocked(ctx, active, signals, speed, hasSpeed)
 			return
 		}
 
 		// Gear=P/N with no active drive — nothing to do
 		if !hasDrive {
+			return
+		}
+	}
+
+	if hasDrive && !active.PendingParkSince.IsZero() {
+		now := eventTimeOrNow(payloadTs)
+		if hasSpeed && speed > 1.0 {
+			active.PendingParkSince = time.Time{}
+		} else if now.Sub(active.PendingParkSince) >= fsm.StateConfirmDuration {
+			log.Info().Int64("vehicle_id", vehicleID).Int64("drive_id", active.DriveID).
+				Msg("telemetry: gear→P debounce elapsed, ending drive")
+			t.completeDriveLocked(ctx, vehicleID, active, signals, payloadTs, fieldTs)
 			return
 		}
 	}
@@ -215,6 +252,9 @@ func (t *TelemetrySessionTracker) trackDriving(ctx context.Context, vehicleID in
 		// Speed > 0, active drive → UPDATE
 		active.LastSeen = time.Now().UTC()
 		active.LastSpeedZeroTime = time.Time{}
+		if speed > 1.0 {
+			active.PendingParkSince = time.Time{}
+		}
 		t.updateActiveDriveLocked(ctx, active, signals, speed, true)
 
 	} else if speed == 0 && hasDrive {
@@ -745,8 +785,8 @@ func (t *TelemetrySessionTracker) completeDriveLocked(ctx context.Context, vehic
 	}
 	active.Completing = true
 
-	// Resolve end timestamp from event-time first: prefer Gear=P /
-	// Gear=N's EmittedAt for gear-based ends, then
+	// Resolve end timestamp from event-time first: prefer Gear=P
+	// EmittedAt for gear-based ends, then
 	// VehicleSpeed for speed-fallback ends, then payloadTs (batch
 	// high-water), then wall-clock. Without this, replaying a 24-min
 	// historical batch produces an end timestamp at the replay clock

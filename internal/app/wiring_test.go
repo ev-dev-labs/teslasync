@@ -142,6 +142,18 @@ func TestCutover_ProductionMQTTHelperWired(t *testing.T) {
 	if !strings.Contains(src, "mqtt.NewProductionPipelineMQTT(") {
 		t.Fatal("phase-42a/0050 cutover incomplete: mqtt.NewProductionPipelineMQTT( missing from internal/app; the PipelineSubscriber requires the auto-ack-disabled paho client + DLQ produced by this helper (added in phase-42a/0040)")
 	}
+	if !strings.Contains(src, "mqtt.ConnectProductionPipelineMQTT(") {
+		t.Fatal("phase-42a cutover incomplete: mqtt.ConnectProductionPipelineMQTT( missing; Connect must happen after PipelineSubscriber is stored so queued QoS 1 messages have a handler")
+	}
+	if !strings.Contains(src, "HandlePublish") {
+		t.Fatal("phase-42a cutover incomplete: HandlePublish missing; DefaultPublishHandler must route CONNACK-time deliveries")
+	}
+	storeAt := strings.Index(src, "subRef.Store(pipelineSubscriber)")
+	connectAt := strings.Index(src, "mqtt.ConnectProductionPipelineMQTT(")
+	startAt := strings.Index(src, "pipelineSubscriber.Start()")
+	if storeAt < 0 || connectAt < storeAt || startAt < connectAt {
+		t.Fatalf("MQTT order must be Store → Connect → Start: store=%d connect=%d start=%d", storeAt, connectAt, startAt)
+	}
 }
 
 func TestChargingPlaceHistoryBackfillRunsWithoutFleetTelemetry(t *testing.T) {

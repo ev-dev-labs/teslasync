@@ -144,7 +144,7 @@ func newChargingPreviewFixture(storedEnd *time.Time) *applyFixture {
 		powerObs:    []datarepairObs{chargingPowerObs(testNow.Add(-6*time.Hour-5*time.Minute), 11000)},
 		chargeStates: []datarepairObs{
 			chargeStateObs(testNow.Add(-7*time.Hour), enums.ChargeStateCharging),
-			chargeStateObs(stopped, enums.ChargeStateComplete),
+			chargeStateObs(stopped, enums.ChargeStateDisconnected),
 		},
 	}
 	f.handler = &DataRepairHandler{

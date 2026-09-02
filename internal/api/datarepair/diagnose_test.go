@@ -363,7 +363,7 @@ func TestDiagnoseCharging_OpenSessionWithChargeStopped(t *testing.T) {
 		powerObs: []datarepairObs{chargingPowerObs(lastPower, 11000)},
 		chargeStates: []datarepairObs{
 			chargeStateObs(testNow.Add(-7*time.Hour), enums.ChargeStateCharging),
-			chargeStateObs(stopped, enums.ChargeStateComplete),
+			chargeStateObs(stopped, enums.ChargeStateDisconnected),
 		},
 	}
 	h := newDiagnosisHandler(src)
@@ -373,7 +373,7 @@ func TestDiagnoseCharging_OpenSessionWithChargeStopped(t *testing.T) {
 		t.Fatalf("diagnoseCharging returned error: %v", err)
 	}
 	if sug == nil {
-		t.Fatal("expected a suggestion for an open charge contradicted by a Complete state")
+		t.Fatal("expected a suggestion for an open charge contradicted by a Disconnected state")
 	}
 	if sug.Rule != systemmodel.SessionRepairRuleChargingOpenChargeEnded {
 		t.Errorf("rule = %q, want %q", sug.Rule, systemmodel.SessionRepairRuleChargingOpenChargeEnded)
@@ -398,6 +398,33 @@ func TestDiagnoseCharging_OpenSessionWithChargeStopped(t *testing.T) {
 	}
 	if sug.Kind != systemmodel.SessionRepairKindCharging {
 		t.Errorf("kind = %q, want charging", sug.Kind)
+	}
+}
+
+func TestDiagnoseCharging_CompleteIsNotUnplug(t *testing.T) {
+	t.Parallel()
+
+	start := testNow.Add(-8 * time.Hour)
+	src := &fakeDiagnosis{
+		powerObs: []datarepairObs{
+			chargingPowerObs(testNow.Add(-7*time.Hour), 11000),
+		},
+		chargeStates: []datarepairObs{
+			chargeStateObs(testNow.Add(-7*time.Hour), enums.ChargeStateCharging),
+			chargeStateObs(testNow.Add(-6*time.Hour), enums.ChargeStateComplete),
+		},
+	}
+
+	sug, err := newDiagnosisHandler(src).diagnoseCharging(
+		context.Background(),
+		candidate(3, 7, start, nil),
+		testNow,
+	)
+	if err != nil {
+		t.Fatalf("diagnoseCharging returned error: %v", err)
+	}
+	if sug != nil {
+		t.Fatalf("Complete (still plugged) must not create a charge-ended suggestion: %+v", sug)
 	}
 }
 
@@ -549,7 +576,7 @@ func TestDiagnoseCharging_EvidenceAfterNextChargeIsIgnored(t *testing.T) {
 	src := &fakeDiagnosis{
 		chargeStarts: []sessionStart{{ts: nextCharge, id: 44}},
 		chargeStates: []datarepairObs{
-			chargeStateObs(testNow.Add(-4*time.Hour), enums.ChargeStateComplete),
+			chargeStateObs(testNow.Add(-4*time.Hour), enums.ChargeStateDisconnected),
 		},
 		driveStarts: []sessionStart{{ts: testNow.Add(-3 * time.Hour), id: 77}},
 		powerObs: []datarepairObs{
@@ -583,7 +610,7 @@ func TestGetSuggestions_HappyPath(t *testing.T) {
 		chargeStarts: []sessionStart{{ts: testNow.Add(-4 * time.Hour), id: 900}},
 		openCharges:  []datarepairCandidate{candidate(3, 7, testNow.Add(-8*time.Hour), nil)},
 		powerObs:     []datarepairObs{chargingPowerObs(testNow.Add(-7*time.Hour), 11000)},
-		chargeStates: []datarepairObs{chargeStateObs(testNow.Add(-6*time.Hour), enums.ChargeStateComplete)},
+		chargeStates: []datarepairObs{chargeStateObs(testNow.Add(-6*time.Hour), enums.ChargeStateDisconnected)},
 	}
 	h := newDiagnosisHandler(src)
 

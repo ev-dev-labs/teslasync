@@ -504,9 +504,9 @@ func TestValidateRecoveredChargeIgnoresTerminalStateAfterNextChargeStarts(t *tes
 		},
 		firstChargeStateFn: func(values []string, _, until time.Time) (*datarepairdb.Observation, error) {
 			for _, value := range values {
-				if value == enums.ChargeStateComplete && !laterTerminal.After(until) {
+				if value == enums.ChargeStateDisconnected && !laterTerminal.After(until) {
 					return &datarepairdb.Observation{
-						Ts: laterTerminal, Field: "DetailedChargeState", Value: enums.ChargeStateComplete,
+						Ts: laterTerminal, Field: "DetailedChargeState", Value: enums.ChargeStateDisconnected,
 					}, nil
 				}
 			}
