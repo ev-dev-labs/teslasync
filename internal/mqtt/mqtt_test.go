@@ -1351,6 +1351,100 @@ func TestPipelineSubscriber_FailedReconciliationBecomesUnhealthyAndRetries(t *te
 	}
 }
 
+func TestPipelineSubscriber_StartSucceedsWhenOnConnectOverlapsInitialSubscribe(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscribeTimeout:          2 * time.Second,
+			SubscriptionRetryInterval: time.Hour,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- sub.Start() }()
+
+	select {
+	case <-client.entered:
+	case <-time.After(time.Second):
+		t.Fatal("Start did not issue the initial Subscribe")
+	}
+
+	reconnectDone := make(chan struct{})
+	go func() {
+		defer close(reconnectDone)
+		sub.OnBrokerReconnect(client)
+	}()
+	time.Sleep(20 * time.Millisecond)
+	close(client.release)
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Start() error = %v, want nil when OnConnect overlaps the initial SUBACK", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start hung")
+	}
+	select {
+	case <-reconnectDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnBrokerReconnect hung")
+	}
+	if !sub.IsHealthy() {
+		t.Fatal("subscriber unhealthy after overlapping OnConnect")
+	}
+}
+
+func TestPipelineSubscriber_StartRetriesStaleSUBACKFromConnectionLoss(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscribeTimeout:          2 * time.Second,
+			SubscriptionRetryInterval: time.Hour,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- sub.Start() }()
+
+	select {
+	case <-client.entered:
+	case <-time.After(time.Second):
+		t.Fatal("Start did not issue the initial Subscribe")
+	}
+	sub.OnBrokerConnectionLost()
+	close(client.release)
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Start() error = %v, want retry to succeed after a stale startup SUBACK", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start hung")
+	}
+	if got := client.Calls(); got < 2 {
+		t.Fatalf("Subscribe calls = %d, want at least 2 (stale initial + retry)", got)
+	}
+	if !sub.IsHealthy() {
+		t.Fatal("subscriber unhealthy after stale-SUBACK retry")
+	}
+}
+
 func TestPipelineSubscriber_StaleSUBACKCannotRestoreLostConnection(t *testing.T) {
 	client := newBlockingPahoClient()
 	sub := newTestSubscriber(t, &fakePipeline{}, &fakeDLQ{}, staticResolver(1))

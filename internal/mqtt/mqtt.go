@@ -618,7 +618,7 @@ func (s *PipelineSubscriber) Start() error {
 	s.mu.Unlock()
 
 	topic := s.pipelineTopicFilter()
-	if err := s.subscribe(s.client, "initial", false); err != nil {
+	if err := s.subscribeInitial(); err != nil {
 		s.mu.Lock()
 		s.started = false
 		s.mu.Unlock()
@@ -697,21 +697,39 @@ func (s *PipelineSubscriber) Stop() {
 //     the restarted one (this cluster does not session-replicate cross-node).
 //
 // Concurrency: paho invokes OnConnect on an internal goroutine. The method
-// guards against the first OnConnect (which may fire before or
-// concurrently with Start in pathological cases) by requiring started==true
-// && stopped==false; the initial Subscribe is owned by Start. Subsequent
-// reconnect-driven invocations only re-issue SUBSCRIBE.
+// guards against the first OnConnect (which may fire before Start) by
+// requiring started==true && stopped==false; the initial Subscribe is
+// owned by Start. When OnConnect races with Start's in-flight SUBACK,
+// connectionEpoch is not bumped until that subscribe() returns, so startup
+// does not fail with a stale SUBACK. Subsequent reconnects re-issue SUBSCRIBE.
 func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 	s.mu.Lock()
 	started := s.started
 	stopped := s.stopped
-	s.subscribed = false
-	s.connectionEpoch++
 	s.mu.Unlock()
 	if !started || stopped {
 		// First OnConnect during initial Connect, or post-Stop reconnect:
 		// the initial Subscribe is owned by Start, post-Stop reconnects are
 		// not our concern. Either way: no-op.
+		return
+	}
+
+	// Paho often runs OnConnect after Connect() returns and after Start()
+	// has set started=true. Bumping the epoch while Start is blocked on
+	// SUBACK used to fail startup with "stale SUBACK" even though the
+	// broker accepted the subscribe. Wait out any in-flight subscribe
+	// before invalidating it.
+	s.subscribeMu.Lock()
+	s.mu.Lock()
+	started = s.started
+	stopped = s.stopped
+	if started && !stopped {
+		s.subscribed = false
+		s.connectionEpoch++
+	}
+	s.mu.Unlock()
+	s.subscribeMu.Unlock()
+	if !started || stopped {
 		return
 	}
 	if client == nil {
@@ -891,6 +909,45 @@ func (s *PipelineSubscriber) subscriptionRecoveryTick() {
 		Msg(message)
 }
 
+// errStaleSubscription is returned when a SUBACK arrives after the connection
+// epoch moved (disconnect or a later reconnect). Callers must not treat the
+// token as proof the current socket is subscribed.
+var errStaleSubscription = errors.New("stale SUBACK")
+
+const initialSubscribeAttempts = 3
+
+// subscribeInitial issues the first SUBSCRIBE and retries only the startup
+// race where a connection-loss/reconnect invalidates the in-flight SUBACK.
+// Broker rejection and timeout still fail Start so the process does not run
+// without a confirmed subscription.
+func (s *PipelineSubscriber) subscribeInitial() error {
+	var err error
+	for attempt := 0; attempt < initialSubscribeAttempts; attempt++ {
+		trigger := "initial"
+		if attempt > 0 {
+			trigger = "initial-retry"
+		}
+		err = s.subscribe(s.client, trigger, attempt > 0)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, errStaleSubscription) {
+			return err
+		}
+		s.mu.Lock()
+		already := s.started && !s.stopped && s.subscribed
+		alive := s.started && !s.stopped
+		s.mu.Unlock()
+		if already {
+			return nil
+		}
+		if !alive {
+			return err
+		}
+	}
+	return err
+}
+
 func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, force bool) error {
 	s.subscribeMu.Lock()
 	defer s.subscribeMu.Unlock()
@@ -948,7 +1005,7 @@ func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, f
 	s.mu.Unlock()
 	if !subscriptionActive {
 		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "stale").Inc()
-		return fmt.Errorf("mqtt: PipelineSubscriber: stale SUBACK for topic %s", s.pipelineTopicFilter())
+		return fmt.Errorf("mqtt: PipelineSubscriber: stale SUBACK for topic %s: %w", s.pipelineTopicFilter(), errStaleSubscription)
 	}
 	metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "success").Inc()
 	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
