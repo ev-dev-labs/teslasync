@@ -242,7 +242,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/tesla-charging-history', name: 'TeslaChargingHistory', label: 'Tesla Charging History', i18nKey: 'routes.teslaChargingHistory' },
   { path: '/tesla-charging-sessions', name: 'TeslaChargingSessions', label: 'Tesla Charging Sessions', i18nKey: 'routes.teslaChargingSessions' },
   { path: '/tesla-features', name: 'TeslaFeatureFlags', label: 'Tesla Feature Flags', i18nKey: 'routes.teslaFeatureFlags' },
-  { path: '/tesla-only', name: 'TeslaOnly', label: 'Tesla Only', i18nKey: 'routes.teslaOnly' },
+  { path: '/tesla-only', name: 'TeslaOnly', label: 'Tesla Physics', i18nKey: 'routes.teslaOnly' },
   { path: '/tesla-only/black-box', name: 'TeslaOnlyBlackBox', label: 'Tesla Only Black Box', i18nKey: 'routes.teslaOnlyBlackBox' },
   { path: '/tesla-only/car-kept-living', name: 'TeslaOnlyCarKeptLiving', label: 'Tesla Only Car Kept Living', i18nKey: 'routes.teslaOnlyCarKeptLiving' },
   { path: '/tesla-only/charge-port', name: 'TeslaOnlyChargePort', label: 'Tesla Only Charge Port', i18nKey: 'routes.teslaOnlyChargePort' },

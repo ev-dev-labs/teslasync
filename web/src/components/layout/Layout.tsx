@@ -306,7 +306,7 @@ const EXPANDED_NAV_STORAGE_KEY = 'teslasync-expanded-nav-sections'
 const SECTION_ICON_STYLES: Record<string, { accent: string; surface: string; ring: string; dot: string; icon: typeof Icons.home; gradient: string }> = {
   Home:           { accent: 'text-sky-700 dark:text-sky-300',         surface: 'bg-sky-400/10',     ring: 'ring-sky-400/20',     dot: 'bg-sky-400',     icon: Icons.home,            gradient: 'from-sky-500/20 via-sky-400/5 to-transparent' },
   Vehicles:       { accent: 'text-cyan-700 dark:text-cyan-300',       surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.vehicle,         gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
-  'TeslaSync only': { accent: 'text-cyan-700 dark:text-cyan-300',     surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.sparkles,        gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
+  'Tesla Physics': { accent: 'text-cyan-700 dark:text-cyan-300',     surface: 'bg-cyan-400/10',    ring: 'ring-cyan-400/20',    dot: 'bg-cyan-400',    icon: Icons.sparkles,        gradient: 'from-cyan-500/20 via-cyan-400/5 to-transparent' },
   Driving:        { accent: 'text-violet-700 dark:text-violet-300',   surface: 'bg-violet-400/10',  ring: 'ring-violet-400/20',  dot: 'bg-violet-400',  icon: Icons.drive,           gradient: 'from-violet-500/25 via-violet-400/8 to-transparent' },
   Charging:       { accent: 'text-emerald-700 dark:text-emerald-300', surface: 'bg-emerald-400/10', ring: 'ring-emerald-400/20', dot: 'bg-emerald-400', icon: Icons.batteryCharging, gradient: 'from-emerald-500/20 via-emerald-400/5 to-transparent' },
   Battery:        { accent: 'text-amber-700 dark:text-amber-300',     surface: 'bg-amber-400/10',   ring: 'ring-amber-400/20',   dot: 'bg-amber-400',   icon: Icons.battery,         gradient: 'from-amber-500/20 via-amber-400/5 to-transparent' },
@@ -387,9 +387,9 @@ export const navSections = [
     ],
   },
   {
-    title: 'TeslaSync only',
+    title: 'Tesla Physics',
     items: [
-      { to: '/tesla-only', icon: Icons.sparkles, label: 'TeslaSync only', color: 'text-cyan-400' },
+      { to: '/tesla-only', icon: Icons.sparkles, label: 'Physics hub', color: 'text-cyan-400' },
       { to: '/tesla-only/clocks', icon: Icons.clock, label: 'Three Clocks', color: 'text-cyan-400' },
       { to: '/tesla-only/life-tape', icon: Icons.activity, label: 'Life Tape', color: 'text-violet-400' },
       { to: '/tesla-only/contradictions', icon: Icons.fingerprint, label: 'Contradiction Court', color: 'text-amber-400' },

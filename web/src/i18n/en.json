@@ -17542,10 +17542,10 @@
     "preconditionIgnored": "Preconditioning reported, not counted"
   },
   "teslaOnly": {
-    "title": "TeslaSync only",
-    "subtitle": "Physics Tesla app, TeslaMate, and Tessie cannot own.",
-    "hub": "All TeslaSync-only physics",
-    "empty": "Select a vehicle to load TeslaSync-only physics.",
+    "title": "Tesla Physics",
+    "subtitle": "Gear, charge, park, and meters as Tesla language.",
+    "hub": "All Tesla physics",
+    "empty": "Select a vehicle to load Tesla physics.",
     "unknown": "unknown",
     "clocks": "Three clocks",
     "eventTime": "Event time",

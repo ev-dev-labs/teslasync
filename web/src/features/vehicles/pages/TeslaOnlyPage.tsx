@@ -52,7 +52,7 @@ export default function TeslaOnlyPage() {
   const location = useLocation();
   const slug = location.pathname.replace(/^\/tesla-only\/?/, '');
   const feature = TESLA_ONLY_FEATURES.find((item) => item.slug === slug);
-  usePageTitle(feature?.title ?? t('teslaOnly.title', 'TeslaSync only'));
+  usePageTitle(feature?.title ?? t('teslaOnly.title', 'Tesla Physics'));
   const { vehicleId } = useSelectedVehicle();
   const vehicleIdStr = vehicleId != null ? String(vehicleId) : undefined;
   const query = useTeslaExclusive(vehicleIdStr);
@@ -62,7 +62,7 @@ export default function TeslaOnlyPage() {
 
   return (
     <PageContainer
-      title={feature?.title ?? t('teslaOnly.title', 'TeslaSync only')}
+      title={feature?.title ?? t('teslaOnly.title', 'Tesla Physics')}
       subtitle={report ? undefined : t('teslaOnly.subtitle', 'Physics Tesla app, TeslaMate, and Tessie cannot own.')}
       contextActions={<VehicleSelect />}
       query={query}
@@ -79,7 +79,7 @@ export default function TeslaOnlyPage() {
       )}
       {feature && (
         <Text as="p" variant="caption" className="mb-4">
-          <Link to="/tesla-only">{t('teslaOnly.hub', 'All TeslaSync-only physics')}</Link>
+          <Link to="/tesla-only">{t('teslaOnly.hub', 'All Tesla physics')}</Link>
         </Text>
       )}
       {state.fatalError ? (
@@ -103,7 +103,7 @@ export default function TeslaOnlyPage() {
           {show(slug, 'range') && <RangePanel report={report} t={t} formatDistance={formatDistance} formatEnergy={formatEnergy} />}
         </div>
       ) : (
-        <Text as="p" variant="caption">{t('teslaOnly.empty', 'Select a vehicle to load TeslaSync-only physics.')}</Text>
+        <Text as="p" variant="caption">{t('teslaOnly.empty', 'Select a vehicle to load Tesla physics.')}</Text>
       )}
     </PageContainer>
   );

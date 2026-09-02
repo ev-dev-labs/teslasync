@@ -247,7 +247,7 @@ export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<
 > = {
   Home: 'Overview',
   Vehicles: 'Vehicles',
-  'TeslaSync only': 'Vehicles',
+  'Tesla Physics': 'Vehicles',
   Service: 'Vehicles',
   Cabin: 'Vehicles',
   Commands: 'Vehicles',

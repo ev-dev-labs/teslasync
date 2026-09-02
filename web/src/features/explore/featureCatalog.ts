@@ -70,7 +70,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/utilization': 'Vehicle availability and productive use across your fleet.',
   '/time-machine': 'Reconstruct vehicle state at any recorded point in time.',
   '/physics-cockpit': 'Live Gear, charge state, port latch, BMS, and trip meters.',
-  '/tesla-only': 'Fifteen TeslaSync-only physics views Tesla app and TeslaMate cannot own.',
+  '/tesla-only': 'Fifteen Tesla physics views Tesla app and TeslaMate cannot own.',
   '/tesla-only/clocks': 'Event, ingest, and display time. Ingest stays unknown if not stored.',
   '/tesla-only/life-tape': 'Every second is Park, Neutral, Drive, Charge, or Unknown — not GPS.',
   '/tesla-only/contradictions': 'Gear=P with speed is a contradiction. Complete still latched is not.',

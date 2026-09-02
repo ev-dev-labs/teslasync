@@ -188,7 +188,7 @@ function renderAt(path: string) {
 describe('TeslaOnlyPage', () => {
   it('keeps ingest time, MQTT, FSD meters, and true range unknown instead of inventing zeros', () => {
     renderAt('/tesla-only');
-    expect(screen.getByText('TeslaSync only')).toBeInTheDocument();
+    expect(screen.getByText('Tesla Physics')).toBeInTheDocument();
     expect(screen.getByText(/Ingest time is unknown/)).toBeInTheDocument();
     expect(screen.getByText('MQTT state unknown')).toBeInTheDocument();
     expect(screen.queryByText('MQTT not connected')).toBeNull();
