@@ -119,7 +119,10 @@ func (h *Handler) ChargePhysics(w http.ResponseWriter, r *http.Request) {
 	if end.Sub(from) > maxChargeLookback {
 		from = end.Add(-maxChargeLookback)
 	}
-	rows, err := h.state.Timeline(ctx, session.VehicleID, chargePhysicsFields(), from, end.Add(time.Nanosecond), signal.TimelineOptions{})
+	rows, err := h.state.Timeline(ctx, session.VehicleID, chargePhysicsFields(), from, end.Add(time.Nanosecond), signal.TimelineOptions{
+		CollapseBy: []string{"detailed_charge_state", "charge_state", "scheduled_charging_mode"},
+		MaxRows:    maxPhysicsRows,
+	})
 	if err != nil {
 		log.Error().Err(err).Int64("session_id", id).Msg("charge physics timeline failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load charge physics")
@@ -149,6 +152,7 @@ func (h *Handler) Theater(w http.ResponseWriter, r *http.Request) {
 	}
 	rows, err := h.state.Timeline(ctx, drive.VehicleID, theaterFields(), from, to, signal.TimelineOptions{
 		CollapseBy: []string{"gear", "charge_port_door_open", "charge_port_latch"},
+		MaxRows:    maxPhysicsRows,
 	})
 	if err != nil {
 		log.Error().Err(err).Int64("drive_id", drive.ID).Msg("gear theater timeline failed")
@@ -165,7 +169,10 @@ func (h *Handler) Silent(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	rows, err := h.state.Timeline(ctx, drive.VehicleID, silentFields(), from, to, signal.TimelineOptions{})
+	rows, err := h.state.Timeline(ctx, drive.VehicleID, silentFields(), from, to, signal.TimelineOptions{
+		CollapseBy: []string{"gear", "fsd_distance_m"},
+		MaxRows:    maxPhysicsRows,
+	})
 	if err != nil {
 		log.Error().Err(err).Int64("drive_id", drive.ID).Msg("silent-counter timeline failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load counter-silent report")
@@ -191,6 +198,7 @@ func (h *Handler) Cockpit(w http.ResponseWriter, r *http.Request) {
 	from := now.Add(-10 * time.Minute)
 	rows, err := h.state.Timeline(ctx, vehicleID, parkFields(), from, now.Add(time.Nanosecond), signal.TimelineOptions{
 		CollapseBy: []string{"gear", "sentry_mode", "cabin_overheat_mode", "hvac_power"},
+		MaxRows:    maxPhysicsRows,
 	})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("physics cockpit park timeline failed")
@@ -216,7 +224,10 @@ func (h *Handler) Heartbeat(w http.ResponseWriter, r *http.Request) {
 	now := h.now()
 	var samples []MotionSample
 	if h.state != nil {
-		rows, timelineErr := h.state.Timeline(ctx, vehicleID, silentFields(), now.Add(-30*time.Minute), now.Add(time.Nanosecond), signal.TimelineOptions{})
+		rows, timelineErr := h.state.Timeline(ctx, vehicleID, silentFields(), now.Add(-30*time.Minute), now.Add(time.Nanosecond), signal.TimelineOptions{
+			CollapseBy: []string{"gear", "fsd_distance_m"},
+			MaxRows:    maxPhysicsRows,
+		})
 		if timelineErr != nil {
 			log.Error().Err(timelineErr).Int64("vehicle_id", vehicleID).Msg("fsd heartbeat timeline failed")
 		} else {
@@ -236,6 +247,7 @@ func (h *Handler) ParkTruth(w http.ResponseWriter, r *http.Request) {
 	now := h.now()
 	rows, err := h.state.Timeline(ctx, vehicleID, parkFields(), now.Add(-30*time.Minute), now.Add(time.Nanosecond), signal.TimelineOptions{
 		CollapseBy: []string{"gear", "sentry_mode", "cabin_overheat_mode", "hvac_power"},
+		MaxRows:    maxPhysicsRows,
 	})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("park-truth timeline failed")
@@ -260,7 +272,8 @@ func (h *Handler) Vampire(w http.ResponseWriter, r *http.Request) {
 	}
 	now := h.now()
 	rows, err := h.state.Timeline(ctx, vehicleID, vampireFields(), now.Add(-maxVampireLookback), now.Add(time.Nanosecond), signal.TimelineOptions{
-		CollapseBy: []string{"gear", "detailed_charge_state", "charge_state", "battery_level"},
+		CollapseBy: []string{"gear", "detailed_charge_state", "charge_state"},
+		MaxRows:    maxExclusiveRows,
 	})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire split timeline failed")
@@ -337,8 +350,9 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 	from := now.Add(-maxExclusiveLookback)
 	var frames []PhysicsFrame
 	if h.state != nil {
-		rows, err := h.state.Timeline(ctx, vehicleID, exclusiveFields(), from, now.Add(time.Nanosecond), signal.TimelineOptions{
-			CollapseBy: []string{"gear", "detailed_charge_state", "charge_state", "charge_port_latch", "firmware", "valet_mode", "service_mode"},
+		rows, err := h.state.Timeline(ctx, vehicleID, exclusiveHistoryFields(), from, now.Add(time.Nanosecond), signal.TimelineOptions{
+			CollapseBy: exclusiveCollapseBy(),
+			MaxRows:    maxExclusiveRows,
 		})
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics timeline failed")
@@ -346,6 +360,18 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		frames = physicsFramesFromTimeline(rows)
+		boxFrom := now.Add(-blackBoxWindow)
+		if len(frames) > 0 {
+			boxFrom = frames[len(frames)-1].At.Add(-blackBoxWindow)
+		}
+		hiRes, boxErr := h.state.Timeline(ctx, vehicleID, exclusiveFields(), boxFrom, now.Add(time.Nanosecond), signal.TimelineOptions{
+			MaxRows: maxBlackBoxRows,
+		})
+		if boxErr != nil {
+			log.Warn().Err(boxErr).Int64("vehicle_id", vehicleID).Msg("exclusive black-box timeline failed")
+		} else {
+			frames = append(frames, physicsFramesFromTimeline(hiRes)...)
+		}
 	}
 	if h.live != nil {
 		if state, liveErr := h.live.LiveState(ctx, vehicleID); liveErr == nil {
@@ -409,7 +435,10 @@ func (h *Handler) Outage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	now := h.now()
-	rows, err := h.state.Timeline(ctx, vehicleID, outageFields(), now.Add(-maxOutageLookback), now.Add(time.Nanosecond), signal.TimelineOptions{})
+	rows, err := h.state.Timeline(ctx, vehicleID, outageFields(), now.Add(-maxOutageLookback), now.Add(time.Nanosecond), signal.TimelineOptions{
+		CollapseBy: []string{"gear"},
+		MaxRows:    maxOutageRows,
+	})
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("outage timeline failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load outage autobiography")
@@ -502,7 +531,6 @@ func vampireFields() []signal.FieldMapping {
 
 func outageFields() []signal.FieldMapping {
 	return []signal.FieldMapping{
-		{Signal: "MilesSinceReset", Field: "driving_distance_m"},
 		{Signal: "Gear", Field: "gear"},
 	}
 }

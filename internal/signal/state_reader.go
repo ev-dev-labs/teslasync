@@ -92,6 +92,10 @@ type TimelineOptions struct {
 	// CollapseBy lists output Field names whose value-tuple identifies a
 	// distinct row in list mode. Empty = chart mode (no collapsing).
 	CollapseBy []string
+	// MaxRows caps rows returned after collapse. Zero means unlimited.
+	// The cap keeps the oldest prefix of the window; callers that need
+	// the newest data must choose a window that fits.
+	MaxRows int
 }
 
 // StateReader is the canonical state-read interface for cold-path callers

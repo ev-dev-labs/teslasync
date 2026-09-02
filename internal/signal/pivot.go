@@ -101,60 +101,103 @@ type rawEvent struct {
 func forwardFold(seed map[string]SignalValue, events []rawEvent, mappings []FieldMapping, from, to time.Time) []TimelineRow {
 	_ = from
 	_ = to
-
-	rows := make([]TimelineRow, 0, len(events))
-	if len(events) == 0 {
-		return rows
+	folder := newTimelineFolder(seed, mappings, nil, 0)
+	for i := range events {
+		if !folder.Add(events[i]) {
+			break
+		}
 	}
+	return folder.Finish()
+}
 
+// timelineFolder forward-folds one event at a time and optionally collapses
+// consecutive list-mode keys. Callers must not buffer the whole window.
+type timelineFolder struct {
+	mappings   []FieldMapping
+	collapseBy []string
+	maxRows    int
+	state      map[string]SignalValue
+	groupTs    time.Time
+	grouping   bool
+	leadingNil bool
+	hasPrev    bool
+	prevKey    string
+	rows       []TimelineRow
+	truncated  bool
+	events     int
+}
+
+func newTimelineFolder(seed map[string]SignalValue, mappings []FieldMapping, collapseBy []string, maxRows int) *timelineFolder {
 	state := make(map[string]SignalValue, len(seed)+len(mappings))
 	for k, v := range seed {
 		state[k] = v
 	}
-
-	leadingDropped := false
-	i := 0
-	for i < len(events) {
-		// Find the [i, j) range of events sharing the same exact timestamp
-		// so they collapse into a single output row.
-		j := i + 1
-		for j < len(events) && events[j].Ts.Equal(events[i].Ts) {
-			j++
-		}
-
-		// Apply every event in the group to the running state.
-		for k := i; k < j; k++ {
-			state[events[k].Signal] = events[k].Value
-		}
-
-		// Project the state through the mappings to a row.
-		fields := make(map[string]SignalValue, len(mappings))
-		anyNonNil := false
-		for _, m := range mappings {
-			v, ok := state[m.Signal]
-			if ok && v != nil {
-				fields[m.Field] = v
-				anyNonNil = true
-			} else {
-				fields[m.Field] = nil
-			}
-		}
-
-		if !leadingDropped && !anyNonNil {
-			// Still in the leading all-nil zone; skip this row entirely.
-			i = j
-			continue
-		}
-		leadingDropped = true
-
-		rows = append(rows, TimelineRow{
-			Timestamp: events[i].Ts,
-			Fields:    fields,
-		})
-		i = j
+	return &timelineFolder{
+		mappings:   mappings,
+		collapseBy: collapseBy,
+		maxRows:    maxRows,
+		state:      state,
+		leadingNil: true,
 	}
+}
 
-	return rows
+func (f *timelineFolder) Add(ev rawEvent) bool {
+	if f.truncated {
+		return false
+	}
+	f.events++
+	if f.grouping && !ev.Ts.Equal(f.groupTs) {
+		if !f.flush() {
+			return false
+		}
+	}
+	f.state[ev.Signal] = ev.Value
+	f.groupTs = ev.Ts
+	f.grouping = true
+	return true
+}
+
+func (f *timelineFolder) Finish() []TimelineRow {
+	if f.grouping && !f.truncated {
+		_ = f.flush()
+	}
+	if f.rows == nil {
+		return []TimelineRow{}
+	}
+	return f.rows
+}
+
+func (f *timelineFolder) flush() bool {
+	fields := make(map[string]SignalValue, len(f.mappings))
+	anyNonNil := false
+	for _, m := range f.mappings {
+		v, ok := f.state[m.Signal]
+		if ok && v != nil {
+			fields[m.Field] = v
+			anyNonNil = true
+		} else {
+			fields[m.Field] = nil
+		}
+	}
+	if f.leadingNil && !anyNonNil {
+		return true
+	}
+	f.leadingNil = false
+	row := TimelineRow{Timestamp: f.groupTs, Fields: fields}
+	if len(f.collapseBy) > 0 {
+		key := projectCollapseKey(row, f.collapseBy)
+		if f.hasPrev && key == f.prevKey {
+			return true
+		}
+		f.prevKey = key
+		f.hasPrev = true
+	}
+	if f.maxRows > 0 && len(f.rows) >= f.maxRows {
+		f.truncated = true
+		return false
+	}
+	f.rows = append(f.rows, row)
+	return true
 }
 
 // collapseTimeline implements the list-mode collapse step described in

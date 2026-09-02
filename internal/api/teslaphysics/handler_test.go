@@ -143,7 +143,7 @@ func TestHandler_ChargePhysicsAndMissingVehicle(t *testing.T) {
 }
 
 func TestHandler_CockpitHeartbeatCertificate(t *testing.T) {
-	h, _, _ := testPhysicsHandler(t)
+	h, state, _ := testPhysicsHandler(t)
 	router := physicsRouter(h)
 
 	cockpitRec := httptest.NewRecorder()
@@ -189,6 +189,13 @@ func TestHandler_CockpitHeartbeatCertificate(t *testing.T) {
 	}
 	if exclusive.VehicleID != 7 || exclusive.Range.TrueRangeM != nil || exclusive.Clocks.Latest == nil || exclusive.Clocks.Latest.IngestTime != nil {
 		t.Fatalf("exclusive = %+v", exclusive)
+	}
+	if calls := state.TimelineCalls(); calls < 2 {
+		t.Fatalf("exclusive timeline calls = %d, want history + 90s black box", calls)
+	}
+	opts := state.LastTimelineOptions()
+	if opts.MaxRows != maxBlackBoxRows {
+		t.Fatalf("black-box MaxRows = %d, want %d", opts.MaxRows, maxBlackBoxRows)
 	}
 
 	driveRec := httptest.NewRecorder()

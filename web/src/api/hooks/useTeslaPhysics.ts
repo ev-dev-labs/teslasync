@@ -34,7 +34,7 @@ export function useChargePhysics(sessionId: string | undefined) {
     queryKey: physicsKeys.charge(sessionId ?? ''),
     queryFn: ({ signal }) => request<ChargePhysics>(`/physics/charging/${sessionId}`, { signal }),
     enabled: !!sessionId,
-    ...queryPolicy('operational'),
+    ...queryPolicy('historical'),
   });
 }
 
@@ -102,7 +102,7 @@ export function useOutageAutobiography(vehicleId: string | undefined) {
     queryKey: physicsKeys.outage(scope),
     queryFn: ({ signal }) => request<OutageAutobiography>(scopedPath('/physics/outage', scope), { signal }),
     enabled: !!vehicleId,
-    ...queryPolicy('operational'),
+    ...queryPolicy('historical'),
   });
 }
 
@@ -112,7 +112,7 @@ export function useTeslaExclusive(vehicleId: string | undefined) {
     queryKey: physicsKeys.exclusive(scope),
     queryFn: ({ signal }) => request<ExclusiveReport>(scopedPath('/physics/exclusive', scope), { signal }),
     enabled: !!vehicleId,
-    ...queryPolicy('live'),
+    ...queryPolicy('historical'),
   });
 }
 

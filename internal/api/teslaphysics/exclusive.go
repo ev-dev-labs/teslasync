@@ -753,38 +753,48 @@ func physicsFramesFromTimeline(rows []signal.TimelineRow) []PhysicsFrame {
 
 func livePhysicsFrame(state signal.State, now time.Time) PhysicsFrame {
 	return PhysicsFrame{
-		At:                now.UTC(),
-		Gear:              fieldString(state, "Gear"),
-		SpeedMps:          fieldFloat(state, "VehicleSpeed"),
-		ChargeState:       firstNonEmpty(fieldString(state, "DetailedChargeState"), fieldString(state, "ChargeState")),
-		Latch:             fieldString(state, "ChargePortLatch"),
-		DoorOpen:          fieldBool(state, "ChargePortDoorOpen"),
-		PackCurrentA:      fieldFloat(state, "PackCurrent"),
-		PackVoltageV:      fieldFloat(state, "PackVoltage"),
-		BatteryPct:        fieldFloat(state, "BatteryLevel"),
-		EnergyRemainingWh: fieldFloat(state, "EnergyRemaining"),
-		RatedRangeM:       fieldFloat(state, "RatedRange"),
-		EstRangeM:         fieldFloat(state, "EstBatteryRange"),
-		IdealRangeM:       fieldFloat(state, "IdealBatteryRange"),
-		FSDDistanceM:      fieldFloat(state, "SelfDrivingMilesSinceReset"),
-		DrivingDistanceM:  fieldFloat(state, "MilesSinceReset"),
-		OdometerM:         fieldFloat(state, "Odometer"),
-		Firmware:          fieldString(state, "Version"),
-		Valet:             fieldBool(state, "ValetModeEnabled"),
-		Service:           fieldBool(state, "ServiceMode"),
+		At:                 now.UTC(),
+		Gear:               fieldString(state, "Gear"),
+		SpeedMps:           fieldFloat(state, "VehicleSpeed"),
+		ChargeState:        firstNonEmpty(fieldString(state, "DetailedChargeState"), fieldString(state, "ChargeState")),
+		Latch:              fieldString(state, "ChargePortLatch"),
+		DoorOpen:           fieldBool(state, "ChargePortDoorOpen"),
+		PackCurrentA:       fieldFloat(state, "PackCurrent"),
+		PackVoltageV:       fieldFloat(state, "PackVoltage"),
+		BatteryPct:         fieldFloat(state, "BatteryLevel"),
+		EnergyRemainingWh:  fieldFloat(state, "EnergyRemaining"),
+		RatedRangeM:        fieldFloat(state, "RatedRange"),
+		EstRangeM:          fieldFloat(state, "EstBatteryRange"),
+		IdealRangeM:        fieldFloat(state, "IdealBatteryRange"),
+		FSDDistanceM:       fieldFloat(state, "SelfDrivingMilesSinceReset"),
+		DrivingDistanceM:   fieldFloat(state, "MilesSinceReset"),
+		OdometerM:          fieldFloat(state, "Odometer"),
+		Firmware:           fieldString(state, "Version"),
+		Valet:              fieldBool(state, "ValetModeEnabled"),
+		Service:            fieldBool(state, "ServiceMode"),
 		FastChargerPresent: fieldBool(state, "FastChargerPresent"),
-		ScheduledMode:     fieldString(state, "ScheduledChargingMode"),
+		ScheduledMode:      fieldString(state, "ScheduledChargingMode"),
 	}
 }
 
-func exclusiveFields() []signal.FieldMapping {
+func exclusiveHistoryFields() []signal.FieldMapping {
 	return []signal.FieldMapping{
 		{Signal: "Gear", Field: "gear"},
-		{Signal: "VehicleSpeed", Field: "speed"},
 		{Signal: "DetailedChargeState", Field: "detailed_charge_state"},
 		{Signal: "ChargeState", Field: "charge_state"},
 		{Signal: "ChargePortLatch", Field: "charge_port_latch"},
 		{Signal: "ChargePortDoorOpen", Field: "charge_port_door_open"},
+		{Signal: "Version", Field: "firmware"},
+		{Signal: "ValetModeEnabled", Field: "valet_mode"},
+		{Signal: "ServiceMode", Field: "service_mode"},
+		{Signal: "FastChargerPresent", Field: "fast_charger_present"},
+		{Signal: "ScheduledChargingMode", Field: "scheduled_charging_mode"},
+	}
+}
+
+func exclusiveFields() []signal.FieldMapping {
+	return append(exclusiveHistoryFields(), []signal.FieldMapping{
+		{Signal: "VehicleSpeed", Field: "speed"},
 		{Signal: "PackCurrent", Field: "pack_current"},
 		{Signal: "PackVoltage", Field: "pack_voltage"},
 		{Signal: "BatteryLevel", Field: "battery_level"},
@@ -795,12 +805,11 @@ func exclusiveFields() []signal.FieldMapping {
 		{Signal: "SelfDrivingMilesSinceReset", Field: "fsd_distance_m"},
 		{Signal: "MilesSinceReset", Field: "driving_distance_m"},
 		{Signal: "Odometer", Field: "odometer"},
-		{Signal: "Version", Field: "firmware"},
-		{Signal: "ValetModeEnabled", Field: "valet_mode"},
-		{Signal: "ServiceMode", Field: "service_mode"},
-		{Signal: "FastChargerPresent", Field: "fast_charger_present"},
-		{Signal: "ScheduledChargingMode", Field: "scheduled_charging_mode"},
-	}
+	}...)
+}
+
+func exclusiveCollapseBy() []string {
+	return []string{"gear", "detailed_charge_state", "charge_state", "charge_port_latch", "firmware", "valet_mode", "service_mode"}
 }
 
 func sortFrames(frames []PhysicsFrame) []PhysicsFrame {

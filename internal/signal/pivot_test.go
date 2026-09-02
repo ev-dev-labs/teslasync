@@ -285,3 +285,49 @@ func TestCollapseTimeline_KeepsFirstAlways(t *testing.T) {
 		t.Fatalf("expected 1 row (single all-nil row kept), got %d", len(gotSingle))
 	}
 }
+
+func TestTimelineFolder_MatchesFoldThenCollapse(t *testing.T) {
+	seed := map[string]SignalValue{"Gear": "D", "VehicleSpeed": 10.0}
+	mappings := []FieldMapping{
+		{Signal: "Gear", Field: "gear"},
+		{Signal: "VehicleSpeed", Field: "speed"},
+	}
+	events := []rawEvent{
+		{Ts: ts(1), Signal: "VehicleSpeed", Value: 11.0},
+		{Ts: ts(2), Signal: "VehicleSpeed", Value: 12.0},
+		{Ts: ts(3), Signal: "Gear", Value: "P"},
+		{Ts: ts(4), Signal: "VehicleSpeed", Value: 0.0},
+	}
+	want := collapseTimeline(forwardFold(seed, events, mappings, ts(0), ts(60)), []string{"gear"})
+	folder := newTimelineFolder(seed, mappings, []string{"gear"}, 0)
+	for _, ev := range events {
+		if !folder.Add(ev) {
+			t.Fatal("folder rejected events under unlimited MaxRows")
+		}
+	}
+	got := folder.Finish()
+	if len(got) != 2 {
+		t.Fatalf("collapsed rows = %d, want 2 (Drive then Park); got %+v", len(got), got)
+	}
+	if len(want) != len(got) {
+		t.Fatalf("fold+collapse rows = %d, stream rows = %d", len(want), len(got))
+	}
+	if got[0].Fields["gear"] != "D" || got[1].Fields["gear"] != "P" {
+		t.Fatalf("gear sequence = %+v", got)
+	}
+}
+
+func TestTimelineFolder_MaxRowsStopsAfterCollapse(t *testing.T) {
+	mappings := []FieldMapping{{Signal: "Gear", Field: "gear"}}
+	folder := newTimelineFolder(nil, mappings, []string{"gear"}, 1)
+	if !folder.Add(rawEvent{Ts: ts(1), Signal: "Gear", Value: "D"}) {
+		t.Fatal("first gear change must be kept")
+	}
+	if !folder.Add(rawEvent{Ts: ts(2), Signal: "Gear", Value: "P"}) {
+		t.Fatal("second event is applied before the cap is checked on flush")
+	}
+	got := folder.Finish()
+	if !folder.truncated || len(got) != 1 || got[0].Fields["gear"] != "D" {
+		t.Fatalf("truncated=%v rows=%+v", folder.truncated, got)
+	}
+}
