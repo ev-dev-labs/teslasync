@@ -3363,6 +3363,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/park-truth", physicsHandler.ParkTruth)
 			r.Get("/vampire", physicsHandler.Vampire)
 			r.Get("/outage", physicsHandler.Outage)
+			r.Get("/exclusive", physicsHandler.Exclusive)
 			r.Get("/certificate", physicsHandler.Certificate)
 			r.Get("/charging/{sessionID}", physicsHandler.ChargePhysics)
 			r.Get("/drives/{driveID}/theater", physicsHandler.Theater)

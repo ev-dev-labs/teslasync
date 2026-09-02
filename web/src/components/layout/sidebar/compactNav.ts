@@ -125,6 +125,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/climate-control',
       '/maintenance',
       '/software-updates',
+      '/tesla-only',
     ],
   },
   {
@@ -246,6 +247,7 @@ export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<
 > = {
   Home: 'Overview',
   Vehicles: 'Vehicles',
+  'TeslaSync only': 'Vehicles',
   Service: 'Vehicles',
   Cabin: 'Vehicles',
   Commands: 'Vehicles',

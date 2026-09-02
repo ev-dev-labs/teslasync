@@ -12,4 +12,6 @@
 // Charge sessions end at Disconnected. Park is confirmed Gear=P. FSD numbers
 // are resettable trip meters (SelfDrivingMilesSinceReset), and a silent
 // counter while moving is labelled counter-silent, never a disengagement.
+// TeslaSync-only views never invent ingest time, queue depth, Transport mode,
+// or a true range.
 package teslaphysics

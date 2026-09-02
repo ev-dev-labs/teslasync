@@ -34,6 +34,7 @@ const VehicleManagement = lazy(() => import('./features/vehicles/pages/VehicleMa
 const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
 const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
+const TeslaOnly = lazy(() => import('./features/vehicles/pages/TeslaOnlyPage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -546,6 +547,22 @@ export default function App() {
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="time-machine" element={<SafeRoute name="TimeMachine"><TimeMachine /></SafeRoute>} />
         <Route path="physics-cockpit" element={<SafeRoute name="PhysicsCockpit"><PhysicsCockpit /></SafeRoute>} />
+        <Route path="tesla-only" element={<SafeRoute name="TeslaOnly"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/clocks" element={<SafeRoute name="TeslaOnlyClocks"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/life-tape" element={<SafeRoute name="TeslaOnlyLifeTape"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/contradictions" element={<SafeRoute name="TeslaOnlyContradictions"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/meters" element={<SafeRoute name="TeslaOnlyMeters"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/unknown" element={<SafeRoute name="TeslaOnlyUnknown"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/car-kept-living" element={<SafeRoute name="TeslaOnlyCarKeptLiving"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/logbook" element={<SafeRoute name="TeslaOnlyLogbook"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/firmware-epochs" element={<SafeRoute name="TeslaOnlyFirmwareEpochs"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/charge-port" element={<SafeRoute name="TeslaOnlyChargePort"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/black-box" element={<SafeRoute name="TeslaOnlyBlackBox"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/dictionary" element={<SafeRoute name="TeslaOnlyDictionary"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/vault" element={<SafeRoute name="TeslaOnlyVault"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/modes" element={<SafeRoute name="TeslaOnlyModes"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/nervous-system" element={<SafeRoute name="TeslaOnlyNervousSystem"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/range" element={<SafeRoute name="TeslaOnlyRange"><TeslaOnly /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />

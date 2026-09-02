@@ -10,6 +10,7 @@ import type {
   OutageAutobiography,
   PhysicsCockpit,
   ParkTruth,
+  ExclusiveReport,
   SessionCertificate,
   SilentReport,
   VampireSplit,
@@ -25,6 +26,7 @@ export const physicsKeys = {
   vampire: (scope: QueryScope) => ['physics', 'vampire', ...scopeKey(scope)] as const,
   outage: (scope: QueryScope) => ['physics', 'outage', ...scopeKey(scope)] as const,
   certificate: (scope: QueryScope) => ['physics', 'certificate', ...scopeKey(scope)] as const,
+  exclusive: (scope: QueryScope) => ['physics', 'exclusive', ...scopeKey(scope)] as const,
 };
 
 export function useChargePhysics(sessionId: string | undefined) {
@@ -101,6 +103,16 @@ export function useOutageAutobiography(vehicleId: string | undefined) {
     queryFn: ({ signal }) => request<OutageAutobiography>(scopedPath('/physics/outage', scope), { signal }),
     enabled: !!vehicleId,
     ...queryPolicy('operational'),
+  });
+}
+
+export function useTeslaExclusive(vehicleId: string | undefined) {
+  const scope: QueryScope = { vehicleId: vehicleId ?? null };
+  return useQuery({
+    queryKey: physicsKeys.exclusive(scope),
+    queryFn: ({ signal }) => request<ExclusiveReport>(scopedPath('/physics/exclusive', scope), { signal }),
+    enabled: !!vehicleId,
+    ...queryPolicy('live'),
   });
 }
 

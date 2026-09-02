@@ -326,6 +326,81 @@ func (h *Handler) Certificate(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, BuildSessionCertificate(vehicleID, now, from, to, driveBounds, chargeBounds, h.hmacKey))
 }
 
+func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
+	ctx, span := otel.Tracer("api").Start(r.Context(), "api.physics.exclusive")
+	defer span.End()
+	vehicleID, ok := parseVehicleID(w, r)
+	if !ok {
+		return
+	}
+	now := h.now()
+	from := now.Add(-maxExclusiveLookback)
+	var frames []PhysicsFrame
+	if h.state != nil {
+		rows, err := h.state.Timeline(ctx, vehicleID, exclusiveFields(), from, now.Add(time.Nanosecond), signal.TimelineOptions{
+			CollapseBy: []string{"gear", "detailed_charge_state", "charge_state", "charge_port_latch", "firmware", "valet_mode", "service_mode"},
+		})
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics timeline failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
+			return
+		}
+		frames = physicsFramesFromTimeline(rows)
+	}
+	if h.live != nil {
+		if state, liveErr := h.live.LiveState(ctx, vehicleID); liveErr == nil {
+			frames = append(frames, livePhysicsFrame(state, now))
+		}
+	}
+	var connected *bool
+	if h.mqttConnected != nil {
+		connected = h.mqttConnected()
+	}
+	driveBounds := []SessionBoundary{}
+	chargeBounds := []SessionBoundary{}
+	if h.driveList != nil {
+		drives, err := h.driveList.GetByVehicle(ctx, vehicleID, 200, 0, from, now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics drives failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
+			return
+		}
+		for _, drive := range drives {
+			if drive == nil {
+				continue
+			}
+			driveBounds = append(driveBounds, SessionBoundary{
+				Kind:      "drive",
+				ID:        drive.ID,
+				StartedAt: drive.StartTs.UTC(),
+				EndedAt:   drive.EndTs,
+				EndRule:   "confirmed Park (Gear=P)",
+			})
+		}
+	}
+	if h.chargeList != nil {
+		charges, err := h.chargeList.GetByVehicle(ctx, vehicleID, 200, 0, from, now)
+		if err != nil {
+			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics charges failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
+			return
+		}
+		for _, charge := range charges {
+			if charge == nil {
+				continue
+			}
+			chargeBounds = append(chargeBounds, SessionBoundary{
+				Kind:      "charge",
+				ID:        charge.ID,
+				StartedAt: charge.StartedAt.UTC(),
+				EndedAt:   charge.EndedAt,
+				EndRule:   "Disconnected (unplug)",
+			})
+		}
+	}
+	httpx.WriteJSON(w, http.StatusOK, BuildExclusiveReport(vehicleID, frames, now, connected, driveBounds, chargeBounds, h.hmacKey))
+}
+
 func (h *Handler) Outage(w http.ResponseWriter, r *http.Request) {
 	ctx, span := otel.Tracer("api").Start(r.Context(), "api.physics.outage")
 	defer span.End()

@@ -171,3 +171,214 @@ export interface PhysicsCockpit {
   honesty: string;
 }
 
+export interface ClockReading {
+  event_time: string;
+  ingest_time: string | null;
+  display_time: string;
+  gap_s: number | null;
+  unknown: boolean;
+}
+
+export interface ThreeClocks {
+  vehicle_id: number;
+  latest: ClockReading | null;
+  samples: ClockReading[];
+  honesty: string;
+}
+
+export interface LifeSegment {
+  state: string;
+  started_at: string;
+  ended_at: string;
+  duration_s: number;
+}
+
+export interface LifeTape {
+  vehicle_id: number;
+  from: string;
+  to: string;
+  segments: LifeSegment[];
+  honesty: string;
+}
+
+export interface Contradiction {
+  at: string;
+  kind: string;
+  detail: string;
+  unknown: boolean;
+}
+
+export interface ContradictionCourt {
+  vehicle_id: number;
+  findings: Contradiction[];
+  honesty: string;
+}
+
+export interface MeterReset {
+  at: string;
+  meter: string;
+  from_m: number | null;
+  to_m: number | null;
+  cause: string;
+  unknown: boolean;
+}
+
+export interface MeterGenealogy {
+  vehicle_id: number;
+  odometer_m: number | null;
+  driving_distance_m: number | null;
+  fsd_distance_m: number | null;
+  resets: MeterReset[];
+  honesty: string;
+}
+
+export interface UnknownBudget {
+  kind: string;
+  hours: number;
+  unknown: boolean;
+}
+
+export interface UnknownOS {
+  vehicle_id: number;
+  window_hours: number;
+  sample_hours: number | null;
+  unknown_hours: number | null;
+  budgets: UnknownBudget[];
+  honesty: string;
+}
+
+export interface CarKeptLiving {
+  vehicle_id: number;
+  last_telemetry_at: string | null;
+  mqtt_connected: boolean | null;
+  queued_count: number | null;
+  replay_preserves_event_time: boolean;
+  never_received_gap_s: number | null;
+  notes: string[];
+  honesty: string;
+}
+
+export interface LogbookEntry {
+  word: string;
+  at: string;
+  ended_at: string | null;
+  kind: string;
+  id: number;
+}
+
+export interface TeslaLogbook {
+  vehicle_id: number;
+  entries: LogbookEntry[];
+  honesty: string;
+}
+
+export interface FirmwareEpoch {
+  version: string;
+  started_at: string;
+  ended_at: string | null;
+  fsd_meter_start_m: number | null;
+  fsd_meter_end_m: number | null;
+  complete_to_unplug_s: number | null;
+  honesty: string;
+}
+
+export interface FirmwareEpochs {
+  vehicle_id: number;
+  epochs: FirmwareEpoch[];
+  honesty: string;
+}
+
+export interface PortEvidence {
+  at: string;
+  latch?: string;
+  door_open: boolean | null;
+  pack_current_a: number | null;
+  charge_state?: string;
+  scheduled_mode?: string;
+}
+
+export interface ChargePortCourt {
+  vehicle_id: number;
+  evidence: PortEvidence[];
+  honesty: string;
+}
+
+export interface BlackBox {
+  vehicle_id: number;
+  trigger: string;
+  from: string | null;
+  to: string | null;
+  frames: PortEvidence[];
+  honesty: string;
+}
+
+export interface OwnerDictionary {
+  vehicle_id: number;
+  typical_complete_unplug_s: number | null;
+  park_confirm_dwell_s: number | null;
+  complete_without_schedule: number | null;
+  honesty: string;
+}
+
+export interface PhysicsVault {
+  vehicle_id: number;
+  certificate: SessionCertificate;
+  unknown_hours: number | null;
+  firmware_versions: string[];
+  etiquette_dwells_s: number[];
+  honesty: string;
+}
+
+export interface ModeLaws {
+  vehicle_id: number;
+  valet: boolean | null;
+  service: boolean | null;
+  transport: boolean | null;
+  allowed: string[];
+  forbidden: string[];
+  honesty: string;
+}
+
+export interface Nerve {
+  field: string;
+  status: string;
+  detail: string;
+}
+
+export interface NervousSystem {
+  vehicle_id: number;
+  nerves: Nerve[];
+  honesty: string;
+}
+
+export interface RangeDisagreement {
+  vehicle_id: number;
+  rated_range_m: number | null;
+  est_range_m: number | null;
+  ideal_range_m: number | null;
+  energy_remaining_wh: number | null;
+  recent_wh_per_km: number | null;
+  disagree: boolean;
+  true_range_m: number | null;
+  honesty: string;
+}
+
+export interface ExclusiveReport {
+  vehicle_id: number;
+  clocks: ThreeClocks;
+  life_tape: LifeTape;
+  contradictions: ContradictionCourt;
+  meters: MeterGenealogy;
+  unknown_os: UnknownOS;
+  car_kept_living: CarKeptLiving;
+  logbook: TeslaLogbook;
+  firmware_epochs: FirmwareEpochs;
+  charge_port_court: ChargePortCourt;
+  black_box: BlackBox;
+  dictionary: OwnerDictionary;
+  vault: PhysicsVault;
+  modes: ModeLaws;
+  nervous_system: NervousSystem;
+  range: RangeDisagreement;
+}
+

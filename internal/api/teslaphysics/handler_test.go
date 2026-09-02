@@ -109,6 +109,7 @@ func physicsRouter(h *Handler) http.Handler {
 	r.Get("/physics/park-truth", h.ParkTruth)
 	r.Get("/physics/vampire", h.Vampire)
 	r.Get("/physics/outage", h.Outage)
+	r.Get("/physics/exclusive", h.Exclusive)
 	r.Get("/physics/certificate", h.Certificate)
 	r.Get("/physics/charging/{sessionID}", h.ChargePhysics)
 	r.Get("/physics/drives/{driveID}/theater", h.Theater)
@@ -175,6 +176,19 @@ func TestHandler_CockpitHeartbeatCertificate(t *testing.T) {
 	}
 	if cert.IntegritySHA256 == "" || len(cert.Drives) != 1 {
 		t.Fatalf("certificate = %+v", cert)
+	}
+
+	exRec := httptest.NewRecorder()
+	router.ServeHTTP(exRec, httptest.NewRequest(http.MethodGet, "/physics/exclusive?vehicle_id=7", nil))
+	if exRec.Code != http.StatusOK {
+		t.Fatalf("exclusive status = %d body=%s", exRec.Code, exRec.Body.String())
+	}
+	var exclusive ExclusiveReport
+	if err := json.Unmarshal(exRec.Body.Bytes(), &exclusive); err != nil {
+		t.Fatal(err)
+	}
+	if exclusive.VehicleID != 7 || exclusive.Range.TrueRangeM != nil || exclusive.Clocks.Latest == nil || exclusive.Clocks.Latest.IngestTime != nil {
+		t.Fatalf("exclusive = %+v", exclusive)
 	}
 
 	driveRec := httptest.NewRecorder()

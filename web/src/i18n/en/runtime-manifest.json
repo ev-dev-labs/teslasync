@@ -564,6 +564,7 @@
       "fleet",
       "parking",
       "telemetry",
+      "teslaOnly",
       "utilization",
       "vehicleAccess",
       "vehicleManagement",
