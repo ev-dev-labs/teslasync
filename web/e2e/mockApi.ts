@@ -275,7 +275,31 @@ function fsdInsightsFixture(scenario: DataScenario): FsdInsights {
       repeated_routes: [],
       time_of_day: [],
       firmware: [],
+      firmware_spotlight: {
+        from_version: '',
+        to_version: '',
+        changed_at: null,
+        routes: [],
+      },
       route_efficiency: [],
+      observatory: {
+        honesty:
+          'Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed.',
+        truncated: false,
+        totals: {
+          stitched_fsd_distance_m: null,
+          high_fsd_distance_m: null,
+          estimated_fsd_distance_m: null,
+          ambiguous_fsd_distance_m: null,
+          unknown_drive_distance_m: 0,
+          reset_break_count: 0,
+          drive_count: 0,
+          measured_drive_count: 0,
+          unknown_drive_count: 0,
+        },
+        timeline: [],
+        commute_stories: [],
+      },
       correlation_disclaimer:
         'This is a same-route correlation, not proof that supervised driving caused an efficiency difference.',
     },

@@ -62,6 +62,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(screen.getByText('Contributing drives')).toBeInTheDocument();
     expect(screen.getByText('Route, time, and firmware comparisons')).toBeInTheDocument();
     expect(screen.getByText('Firmware spotlight')).toBeInTheDocument();
+    expect(screen.getByTestId('fsd-firmware-spotlight')).toHaveAttribute('id', 'fsd-firmware-spotlight');
     expect(screen.getByText('Same-route efficiency comparison')).toBeInTheDocument();
 
     expect(screen.getByRole('link', { name: /2026/ })).toHaveAttribute('href', '/drives/295');

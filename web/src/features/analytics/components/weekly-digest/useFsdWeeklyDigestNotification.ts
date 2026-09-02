@@ -42,13 +42,17 @@ export function useFsdWeeklyDigestNotification({
 }: FsdWeeklyDigestNotificationArgs) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
-  const { permission, sendNotification } = useWebPush();
+  const { permission, sendNotification, isSubscribed } = useWebPush();
 
   useEffect(() => {
     if (!isReady || !isCurrentWeek || !vehicleId) return;
     const distanceM = insights?.totals?.fsd_distance_m;
     if (distanceM == null) return;
     if (permission !== 'granted') return;
+    // Subscribed devices get the worker Web Push with the tab closed.
+    // Skip the in-tab Notification API so opening Weekly Digest does not
+    // double-notify the same week.
+    if (isSubscribed) return;
 
     const key = fsdWeeklyDigestNoticeKey(vehicleId, weekStart);
     try {
@@ -94,6 +98,7 @@ export function useFsdWeeklyDigestNotification({
     insights,
     isCurrentWeek,
     isReady,
+    isSubscribed,
     permission,
     sendNotification,
     t,

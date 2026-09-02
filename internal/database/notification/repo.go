@@ -428,6 +428,29 @@ func (r *NotificationRepo) CreateLog(ctx context.Context, l *notificationmodel.N
 	).Scan(&l.ID)
 }
 
+// ExistsTitleSince reports whether a non-failed notification_logs row with
+// this exact title was created at or after since. Used to send the weekly
+// FSD digest at most once per vehicle/week without a new column.
+func (r *NotificationRepo) ExistsTitleSince(ctx context.Context, title string, since time.Time) (bool, error) {
+	if r == nil || r.db == nil || r.db.Pool == nil {
+		return false, fmt.Errorf("exists notification title %q: database pool is nil", title)
+	}
+	var exists bool
+	err := r.db.Pool.QueryRow(ctx,
+		`SELECT EXISTS(
+		     SELECT 1 FROM notification_logs
+		      WHERE title = $1
+		        AND created_at >= $2
+		        AND status IS DISTINCT FROM 'failed'
+		 )`,
+		title, since.UTC(),
+	).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("exists notification title %q: %w", title, err)
+	}
+	return exists, nil
+}
+
 // MarkLogSent flips a deferred row to status='sent' and stamps the
 // supplied delivery timestamp / latency. Used by the quiet-hours
 // replay loop in cmd/notification-worker after the original Send call

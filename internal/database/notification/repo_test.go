@@ -1,6 +1,7 @@
 package notification
 
 import (
+	"context"
 	"strings"
 	"testing"
 	"time"
@@ -8,6 +9,14 @@ import (
 
 // helper for *int64 literals.
 func i64Ptr(v int64) *int64 { return &v }
+
+func TestExistsTitleSince_NilPool(t *testing.T) {
+	r := &NotificationRepo{}
+	_, err := r.ExistsTitleSince(context.Background(), "Weekly FSD digest (#7 · 2026-03-02)", time.Now().UTC())
+	if err == nil {
+		t.Fatal("nil pool must error rather than scanning")
+	}
+}
 
 func TestDeriveNotificationLogGroupKey_NilAlertID(t *testing.T) {
 	if got := deriveNotificationLogGroupKey(nil, "warn"); got != nil {

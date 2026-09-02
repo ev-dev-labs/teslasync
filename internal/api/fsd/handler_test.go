@@ -216,7 +216,9 @@ func TestInsights_ExplicitRangeUsesBatchDriveAnalyticsPath(t *testing.T) {
 	}
 	if resp.Analytics.ContributingDrives == nil ||
 		resp.Analytics.ResetEvents == nil ||
-		resp.Analytics.RepeatedRoutes == nil {
+		resp.Analytics.RepeatedRoutes == nil ||
+		resp.Analytics.Observatory.Timeline == nil ||
+		resp.Analytics.Observatory.CommuteStories == nil {
 		t.Error("drive analytics arrays must serialize as empty arrays, not null")
 	}
 }

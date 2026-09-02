@@ -542,7 +542,7 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
   const hasFirmwarePair = Boolean(spotlight?.from_version && spotlight?.to_version);
 
   return (
-    <GlassPanel className="p-4 sm:p-5" data-testid="fsd-firmware-spotlight">
+    <GlassPanel id="fsd-firmware-spotlight" className="p-4 sm:p-5" data-testid="fsd-firmware-spotlight">
       <PanelTitle className="mb-1 flex items-center gap-2">
         <Cpu className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('fsd.firmwareSpotlight.title', 'Firmware spotlight')}

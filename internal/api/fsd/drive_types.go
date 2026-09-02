@@ -149,10 +149,83 @@ type FirmwareRouteSpotlight struct {
 // FirmwareSpotlight is the latest firmware pair in the period, plus any
 // high-confidence routes observed on both versions.
 type FirmwareSpotlight struct {
-	FromVersion string                    `json:"from_version"`
-	ToVersion   string                    `json:"to_version"`
-	ChangedAt   *time.Time                `json:"changed_at"`
-	Routes      []FirmwareRouteSpotlight  `json:"routes"`
+	FromVersion string                   `json:"from_version"`
+	ToVersion   string                   `json:"to_version"`
+	ChangedAt   *time.Time               `json:"changed_at"`
+	Routes      []FirmwareRouteSpotlight `json:"routes"`
+}
+
+// ObservatoryKind is one journal row in the FSD observatory.
+type ObservatoryKind string
+
+const (
+	ObservatoryKindDrive ObservatoryKind = "drive"
+	ObservatoryKindReset ObservatoryKind = "reset"
+)
+
+// ObservatoryEvent is one stitched journal entry. Drive rows may have a null
+// FSD distance (unknown). Reset rows never contribute travelled distance.
+type ObservatoryEvent struct {
+	Kind             ObservatoryKind        `json:"kind"`
+	At               time.Time              `json:"at"`
+	EndAt            *time.Time             `json:"end_at"`
+	DriveID          *int64                 `json:"drive_id"`
+	RouteKey         *string                `json:"route_key"`
+	RouteLabel       *string                `json:"route_label"`
+	FirmwareVersion  *string                `json:"firmware_version"`
+	FSDDistanceM     *float64               `json:"fsd_distance_m"`
+	DrivingDistanceM *float64               `json:"driving_distance_m"`
+	Confidence       *AttributionConfidence `json:"confidence"`
+	ResetBreak       bool                   `json:"reset_break"`
+	Approximate      bool                   `json:"approximate"`
+	Field            *string                `json:"field"`
+}
+
+// ObservatoryTotals rolls up the journal without turning absence into zero.
+type ObservatoryTotals struct {
+	StitchedFSDDistanceM  *float64 `json:"stitched_fsd_distance_m"`
+	HighFSDDistanceM      *float64 `json:"high_fsd_distance_m"`
+	EstimatedFSDDistanceM *float64 `json:"estimated_fsd_distance_m"`
+	AmbiguousFSDDistanceM *float64 `json:"ambiguous_fsd_distance_m"`
+	UnknownDriveDistanceM float64  `json:"unknown_drive_distance_m"`
+	ResetBreakCount       int      `json:"reset_break_count"`
+	DriveCount            int      `json:"drive_count"`
+	MeasuredDriveCount    int      `json:"measured_drive_count"`
+	UnknownDriveCount     int      `json:"unknown_drive_count"`
+}
+
+// ObservatoryCommuteChapter is one firmware era of a repeated commute.
+type ObservatoryCommuteChapter struct {
+	FirmwareVersion  *string   `json:"firmware_version"`
+	FirstAt          time.Time `json:"first_at"`
+	LastAt           time.Time `json:"last_at"`
+	DriveCount       int       `json:"drive_count"`
+	HighCount        int       `json:"high_count"`
+	EstimatedCount   int       `json:"estimated_count"`
+	AmbiguousCount   int       `json:"ambiguous_count"`
+	UnknownCount     int       `json:"unknown_count"`
+	ResetBreaks      int       `json:"reset_breaks"`
+	FSDDistanceM     *float64  `json:"fsd_distance_m"`
+	DrivingDistanceM float64   `json:"driving_distance_m"`
+	FSDSharePct      *float64  `json:"fsd_share_pct"`
+}
+
+// ObservatoryCommuteStory is one repeated route told across firmware chapters.
+type ObservatoryCommuteStory struct {
+	RouteKey   string                      `json:"route_key"`
+	RouteLabel string                      `json:"route_label"`
+	DriveCount int                         `json:"drive_count"`
+	Chapters   []ObservatoryCommuteChapter `json:"chapters"`
+}
+
+// Observatory is a reset-safe journal of reported FSD kilometres. It never
+// claims exact engagement segments.
+type Observatory struct {
+	Honesty        string                    `json:"honesty"`
+	Truncated      bool                      `json:"truncated"`
+	Totals         ObservatoryTotals         `json:"totals"`
+	Timeline       []ObservatoryEvent        `json:"timeline"`
+	CommuteStories []ObservatoryCommuteStory `json:"commute_stories"`
 }
 
 // DriveAnalytics contains the enhanced dashboard and per-drive intelligence.
@@ -166,5 +239,6 @@ type DriveAnalytics struct {
 	Firmware              []GroupedFSDInsight         `json:"firmware"`
 	FirmwareSpotlight     FirmwareSpotlight           `json:"firmware_spotlight"`
 	RouteEfficiency       []RouteEfficiencyComparison `json:"route_efficiency"`
+	Observatory           Observatory                 `json:"observatory"`
 	CorrelationDisclaimer string                      `json:"correlation_disclaimer"`
 }

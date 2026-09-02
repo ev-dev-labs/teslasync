@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useFsdInsights } from '@/api/hooks/useAnalytics';
@@ -19,6 +19,7 @@ import {
   FsdDistanceTrend,
   FsdDriveAnalyticsPanels,
   FsdKpiBand,
+  FsdObservatoryPanel,
   FsdPeriodControl,
   FsdShareTrend,
   FsdTopDays,
@@ -79,6 +80,13 @@ export default function FSDInsightsPage() {
     retry?.();
   }, [retry]);
 
+  useEffect(() => {
+    if (insightsState.status === 'initial') return;
+    const id = window.location.hash.replace(/^#/, '');
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [insightsState.status, insightsState.data]);
+
   const sectionState: FsdSectionState = {
     // `initial` is the only status with nothing retained AND no failure, so it
     // is the only one that should show a skeleton. A failed refresh keeps the
@@ -114,6 +122,10 @@ export default function FSDInsightsPage() {
 
       <FadeIn>
         <FsdKpiBand insights={insightsState.data} state={sectionState} />
+      </FadeIn>
+
+      <FadeIn delay={0.04}>
+        <FsdObservatoryPanel insights={insightsState.data} state={sectionState} />
       </FadeIn>
 
       <FadeIn delay={0.05}>

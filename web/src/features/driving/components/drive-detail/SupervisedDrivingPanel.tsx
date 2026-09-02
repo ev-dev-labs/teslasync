@@ -92,13 +92,25 @@ export function SupervisedDrivingPanel({
               )}
             </Text>
           </div>
-          <Link
-            to="/fsd"
-            className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200"
-          >
-            {t('driveDetail.fsd.openInsights', 'Open FSD Insights')}
-            <ExternalLink className="h-3 w-3" aria-hidden="true" />
-          </Link>
+          <div className="flex flex-col items-end gap-1">
+            <Link
+              to="/fsd"
+              className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200"
+            >
+              {t('driveDetail.fsd.openInsights', 'Open FSD Insights')}
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+            </Link>
+            {insight?.firmware_version ? (
+              <Link
+                to="/fsd#fsd-firmware-spotlight"
+                className="inline-flex items-center gap-1 text-xs font-medium text-cyan-300 hover:text-cyan-200"
+              >
+                {t('driveDetail.fsd.afterFirmware', 'After firmware {{version}}', {
+                  version: insight.firmware_version,
+                })}
+              </Link>
+            ) : null}
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -177,12 +189,16 @@ export function SupervisedDrivingPanel({
                 'driveDetail.fsd.method',
                 'Evidence times bound where the counter increased; they do not identify exact FSD-active road segments.',
               )}
-          {insight?.firmware_version
-            ? ` ${t('driveDetail.fsd.firmware', 'Firmware: {{version}}.', {
-                version: insight.firmware_version,
-              })}`
-            : ''}
         </Text>
+        {insight?.firmware_version ? (
+          <Text as="p" size="xs" color="muted">
+            {t(
+              'driveDetail.fsd.afterFirmwareHonesty',
+              'This drive ran firmware {{version}}. The spotlight compares FSD share before vs after — correlation, not proof the update caused a change.',
+              { version: insight.firmware_version },
+            )}
+          </Text>
+        ) : null}
       </GlassPanel>
     </section>
   );

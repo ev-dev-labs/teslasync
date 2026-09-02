@@ -56,7 +56,11 @@ describe('SupervisedDrivingPanel', () => {
     expect(screen.getByText('7.2 km')).toBeInTheDocument();
     expect(screen.getByText('72.0%')).toBeInTheDocument();
     expect(screen.getByText(/do not identify exact FSD-active road segments/)).toBeInTheDocument();
-    expect(screen.getByText(/Firmware: 2026.20.3/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /After firmware 2026.20.3/ })).toHaveAttribute(
+      'href',
+      '/fsd#fsd-firmware-spotlight',
+    );
+    expect(screen.getByText(/correlation, not proof the update caused a change/)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Open FSD Insights/ })).toHaveAttribute('href', '/fsd');
   });
 

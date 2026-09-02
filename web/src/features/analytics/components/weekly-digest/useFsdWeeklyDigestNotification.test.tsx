@@ -10,6 +10,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   permission: 'granted' as NotificationPermission,
+  isSubscribed: false,
   sendNotification: vi.fn(() => ({ close: vi.fn() })),
 }));
 
@@ -33,6 +34,7 @@ vi.mock('@/hooks/useUnits', () => ({
 vi.mock('@/hooks/useWebPush', () => ({
   useWebPush: () => ({
     permission: mocks.permission,
+    isSubscribed: mocks.isSubscribed,
     sendNotification: mocks.sendNotification,
   }),
 }));
@@ -65,6 +67,7 @@ function renderNotice(
 beforeEach(() => {
   window.localStorage.clear();
   mocks.permission = 'granted';
+  mocks.isSubscribed = false;
   mocks.sendNotification.mockReset();
   mocks.sendNotification.mockReturnValue({ close: vi.fn() });
 });
@@ -84,6 +87,12 @@ describe('useFsdWeeklyDigestNotification', () => {
 
   it('does not prompt or notify when permission is not granted', () => {
     mocks.permission = 'default';
+    renderNotice();
+    expect(mocks.sendNotification).not.toHaveBeenCalled();
+  });
+
+  it('does not send an in-tab notice when Web Push is already subscribed', () => {
+    mocks.isSubscribed = true;
     renderNotice();
     expect(mocks.sendNotification).not.toHaveBeenCalled();
   });

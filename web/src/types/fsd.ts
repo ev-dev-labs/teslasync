@@ -231,6 +231,66 @@ export interface FsdFirmwareSpotlight {
   routes: FsdFirmwareRouteSpotlight[];
 }
 
+export type FsdObservatoryKind = 'drive' | 'reset';
+
+export interface FsdObservatoryEvent {
+  kind: FsdObservatoryKind;
+  at: string;
+  end_at: string | null;
+  drive_id: number | null;
+  route_key: string | null;
+  route_label: string | null;
+  firmware_version: string | null;
+  fsd_distance_m: number | null;
+  driving_distance_m: number | null;
+  confidence: FsdAttributionConfidence | null;
+  reset_break: boolean;
+  approximate: boolean;
+  field: string | null;
+}
+
+export interface FsdObservatoryTotals {
+  stitched_fsd_distance_m: number | null;
+  high_fsd_distance_m: number | null;
+  estimated_fsd_distance_m: number | null;
+  ambiguous_fsd_distance_m: number | null;
+  unknown_drive_distance_m: number;
+  reset_break_count: number;
+  drive_count: number;
+  measured_drive_count: number;
+  unknown_drive_count: number;
+}
+
+export interface FsdObservatoryCommuteChapter {
+  firmware_version: string | null;
+  first_at: string;
+  last_at: string;
+  drive_count: number;
+  high_count: number;
+  estimated_count: number;
+  ambiguous_count: number;
+  unknown_count: number;
+  reset_breaks: number;
+  fsd_distance_m: number | null;
+  driving_distance_m: number;
+  fsd_share_pct: number | null;
+}
+
+export interface FsdObservatoryCommuteStory {
+  route_key: string;
+  route_label: string;
+  drive_count: number;
+  chapters: FsdObservatoryCommuteChapter[];
+}
+
+export interface FsdObservatory {
+  honesty: string;
+  truncated: boolean;
+  totals: FsdObservatoryTotals;
+  timeline: FsdObservatoryEvent[];
+  commute_stories: FsdObservatoryCommuteStory[];
+}
+
 export interface FsdDriveAnalytics {
   comparison: FsdPeriodComparison;
   attribution: FsdAttributionBreakdown;
@@ -241,6 +301,7 @@ export interface FsdDriveAnalytics {
   firmware: GroupedFsdInsight[];
   firmware_spotlight: FsdFirmwareSpotlight;
   route_efficiency: FsdRouteEfficiencyComparison[];
+  observatory: FsdObservatory;
   correlation_disclaimer: string;
 }
 

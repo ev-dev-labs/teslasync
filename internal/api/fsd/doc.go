@@ -24,10 +24,12 @@
 // They do support reset-safe period totals and interval-based per-drive
 // attribution when counter observations are synchronized. Drive results carry
 // explicit high, estimated, ambiguous, or unknown confidence, and route
-// evidence is always labelled approximate. Per-drive metrics include only
-// completed drives fully contained in the requested half-open window; boundary
-// drives are excluded rather than mixing partial-period evidence with full-trip
-// distance or energy.
+// evidence is always labelled approximate. The observatory journal stitches
+// those drive events and counter resets without treating a reset as travelled
+// FSD, and keeps unknown and ambiguous kilometres first-class. Per-drive
+// metrics include only completed drives fully contained in the requested
+// half-open window; boundary drives are excluded rather than mixing
+// partial-period evidence with full-trip distance or energy.
 //
 // # Read semantics
 //

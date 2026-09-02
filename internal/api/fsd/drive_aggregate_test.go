@@ -3,6 +3,7 @@ package fsd
 import (
 	"encoding/json"
 	"math"
+	"strings"
 	"testing"
 	"time"
 )
@@ -740,5 +741,155 @@ func TestBuildFirmwareSpotlight_ReportsFirmwarePairWithoutOverlappingRoutes(t *t
 	}
 	if len(spotlight.Routes) != 0 {
 		t.Fatalf("routes = %+v, want none without a shared route", spotlight.Routes)
+	}
+}
+
+func TestBuildObservatory_ResetDoesNotAddStitchedDistance(t *testing.T) {
+	home, office := "Home", "Office"
+	distance := 10000.0
+	fsd := 4000.0
+	fw := "2026.20.3"
+	start := at(t, "2026-03-02T10:00:00Z")
+	end := start.Add(time.Hour)
+	summaries := []DriveFSDInsight{{
+		DriveID: 1, StartedAt: start, EndedAt: &end, StartPlace: &home, EndPlace: &office,
+		DistanceM: &distance, FSDDistanceM: &fsd, Confidence: ConfidenceHigh, FirmwareVersion: &fw,
+	}}
+	driveByID := map[int64]DriveRecord{
+		1: {ID: 1, StartedAt: start, EndedAt: &end, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+	}
+	resets := []CounterResetEvent{{
+		Field:            SignalFSDDistance,
+		At:               start.Add(30 * time.Minute),
+		PreviousValueM:   50000,
+		CurrentValueM:    100,
+		AffectedDriveIDs: []int64{1},
+	}}
+
+	observatory := buildObservatory(summaries, driveByID, resets)
+	wantMeasured(t, observatory.Totals.StitchedFSDDistanceM, 4000, "stitched FSD")
+	if observatory.Totals.ResetBreakCount != 1 {
+		t.Fatalf("reset_break_count = %d, want 1", observatory.Totals.ResetBreakCount)
+	}
+	if len(observatory.Timeline) != 2 {
+		t.Fatalf("timeline = %d events, want drive + reset", len(observatory.Timeline))
+	}
+	if observatory.Timeline[0].Kind != ObservatoryKindDrive {
+		t.Fatalf("first event = %s, want drive", observatory.Timeline[0].Kind)
+	}
+	reset := observatory.Timeline[1]
+	if reset.Kind != ObservatoryKindReset {
+		t.Fatalf("second event = %s, want reset", reset.Kind)
+	}
+	if reset.FSDDistanceM != nil {
+		t.Fatalf("reset FSD = %v, want null (not travelled distance)", *reset.FSDDistanceM)
+	}
+}
+
+func TestBuildObservatory_UnknownDriveKeepsNullFSD(t *testing.T) {
+	home, office := "Home", "Office"
+	distance := 12000.0
+	start := at(t, "2026-03-02T10:00:00Z")
+	end := start.Add(time.Hour)
+	summaries := []DriveFSDInsight{{
+		DriveID: 7, StartedAt: start, EndedAt: &end, StartPlace: &home, EndPlace: &office,
+		DistanceM: &distance, Confidence: ConfidenceUnknown,
+	}}
+	driveByID := map[int64]DriveRecord{
+		7: {ID: 7, StartedAt: start, EndedAt: &end, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+	}
+
+	observatory := buildObservatory(summaries, driveByID, nil)
+	if observatory.Totals.StitchedFSDDistanceM != nil {
+		t.Fatalf("stitched = %v, want null", *observatory.Totals.StitchedFSDDistanceM)
+	}
+	if observatory.Totals.UnknownDriveCount != 1 {
+		t.Fatalf("unknown_drive_count = %d", observatory.Totals.UnknownDriveCount)
+	}
+	if observatory.Totals.UnknownDriveDistanceM != 12000 {
+		t.Fatalf("unknown_drive_distance_m = %v", observatory.Totals.UnknownDriveDistanceM)
+	}
+	if len(observatory.Timeline) != 1 || observatory.Timeline[0].FSDDistanceM != nil {
+		t.Fatalf("unknown drive must stay a timeline event with null FSD: %+v", observatory.Timeline)
+	}
+	if observatory.Timeline[0].Confidence == nil || *observatory.Timeline[0].Confidence != ConfidenceUnknown {
+		t.Fatalf("confidence = %v, want unknown", observatory.Timeline[0].Confidence)
+	}
+}
+
+func TestBuildObservatory_CommuteStorySplitsByFirmware(t *testing.T) {
+	home, office := "Home", "Office"
+	distance := 10000.0
+	oldFSD, newFSD := 3000.0, 8000.0
+	oldFw, newFw := "2026.8.1", "2026.20.3"
+	first := at(t, "2026-03-01T08:00:00Z")
+	second := at(t, "2026-03-02T08:00:00Z")
+	third := at(t, "2026-03-10T08:00:00Z")
+	end := func(start time.Time) *time.Time { at := start.Add(time.Hour); return &at }
+
+	summaries := []DriveFSDInsight{
+		{
+			DriveID: 1, StartedAt: first, EndedAt: end(first), StartPlace: &home, EndPlace: &office,
+			DistanceM: &distance, FSDDistanceM: &oldFSD, Confidence: ConfidenceHigh, FirmwareVersion: &oldFw,
+		},
+		{
+			DriveID: 2, StartedAt: second, EndedAt: end(second), StartPlace: &home, EndPlace: &office,
+			DistanceM: &distance, Confidence: ConfidenceUnknown,
+		},
+		{
+			DriveID: 3, StartedAt: third, EndedAt: end(third), StartPlace: &home, EndPlace: &office,
+			DistanceM: &distance, FSDDistanceM: &newFSD, Confidence: ConfidenceHigh, FirmwareVersion: &newFw,
+		},
+	}
+	driveByID := map[int64]DriveRecord{
+		1: {ID: 1, StartedAt: first, EndedAt: end(first), StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+		2: {ID: 2, StartedAt: second, EndedAt: end(second), StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+		3: {ID: 3, StartedAt: third, EndedAt: end(third), StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+	}
+
+	observatory := buildObservatory(summaries, driveByID, nil)
+	if len(observatory.CommuteStories) != 1 {
+		t.Fatalf("stories = %+v, want one commute", observatory.CommuteStories)
+	}
+	story := observatory.CommuteStories[0]
+	if story.RouteLabel != "Home to Office" || story.DriveCount != 3 {
+		t.Fatalf("story = %+v", story)
+	}
+	if len(story.Chapters) != 3 {
+		t.Fatalf("chapters = %+v, want old firmware, unknown firmware, new firmware", story.Chapters)
+	}
+	if story.Chapters[0].FirmwareVersion == nil || *story.Chapters[0].FirmwareVersion != oldFw {
+		t.Fatalf("first chapter firmware = %v", story.Chapters[0].FirmwareVersion)
+	}
+	if story.Chapters[1].FirmwareVersion != nil || story.Chapters[1].UnknownCount != 1 {
+		t.Fatalf("unknown chapter = %+v", story.Chapters[1])
+	}
+	if story.Chapters[1].FSDDistanceM != nil {
+		t.Fatalf("unknown chapter FSD = %v, want null", *story.Chapters[1].FSDDistanceM)
+	}
+	if story.Chapters[2].FirmwareVersion == nil || *story.Chapters[2].FirmwareVersion != newFw {
+		t.Fatalf("last chapter firmware = %v", story.Chapters[2].FirmwareVersion)
+	}
+	wantMeasured(t, story.Chapters[2].FSDDistanceM, 8000, "new firmware FSD")
+}
+
+func TestBuildObservatory_EmptySlicesNotNil(t *testing.T) {
+	observatory := buildObservatory(nil, nil, nil)
+	if observatory.Honesty == "" {
+		t.Fatal("honesty contract missing")
+	}
+	if observatory.Timeline == nil || observatory.CommuteStories == nil {
+		t.Fatalf("slices must serialize as arrays: timeline=%v stories=%v", observatory.Timeline, observatory.CommuteStories)
+	}
+	if observatory.Totals.StitchedFSDDistanceM != nil || observatory.Totals.AmbiguousFSDDistanceM != nil {
+		t.Fatalf("empty totals must stay null, not zero: %+v", observatory.Totals)
+	}
+	payload, err := json.Marshal(observatory)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded := string(payload)
+	if !strings.Contains(encoded, `"timeline":[]`) || !strings.Contains(encoded, `"commute_stories":[]`) {
+		t.Fatalf("empty observatory JSON = %s", encoded)
 	}
 }

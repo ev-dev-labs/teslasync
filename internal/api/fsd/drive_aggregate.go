@@ -16,6 +16,10 @@ const (
 	fsdHeavySharePct             = 50.0
 	lowFSDSharePct               = 10.0
 	maxEvidenceIntervalsPerDrive = 512
+	maxObservatoryTimelineEvents = 200
+	maxObservatoryCommuteStories = 8
+	minObservatoryCommuteDrives  = 2
+	observatoryHonesty           = "Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed."
 )
 
 type driveAttributionState struct {
@@ -301,6 +305,7 @@ func BuildDriveAnalytics(
 	analytics.Firmware = buildFirmwareGroups(summaries)
 	analytics.FirmwareSpotlight = buildFirmwareSpotlight(summaries, driveByID)
 	analytics.RouteEfficiency = buildEfficiencyComparisons(summaries, driveByID)
+	analytics.Observatory = buildObservatory(summaries, driveByID, analytics.ResetEvents)
 
 	return analytics
 }
@@ -320,6 +325,7 @@ func emptyDriveAnalytics(current, previous Response) DriveAnalytics {
 		Firmware:              make([]GroupedFSDInsight, 0),
 		FirmwareSpotlight:     FirmwareSpotlight{Routes: make([]FirmwareRouteSpotlight, 0)},
 		RouteEfficiency:       make([]RouteEfficiencyComparison, 0),
+		Observatory:           emptyObservatory(),
 		CorrelationDisclaimer: "This is a same-route correlation, not proof that supervised driving caused an efficiency difference.",
 	}
 
@@ -960,6 +966,328 @@ func buildEfficiencyComparisons(
 		return math.Abs(result[i].DifferencePct) > math.Abs(result[j].DifferencePct)
 	})
 	return result
+}
+
+func emptyObservatory() Observatory {
+	return Observatory{
+		Honesty:        observatoryHonesty,
+		Timeline:       make([]ObservatoryEvent, 0),
+		CommuteStories: make([]ObservatoryCommuteStory, 0),
+	}
+}
+
+func buildObservatory(
+	summaries []DriveFSDInsight,
+	driveByID map[int64]DriveRecord,
+	resets []CounterResetEvent,
+) Observatory {
+	observatory := emptyObservatory()
+	driveEvents := make([]ObservatoryEvent, 0, len(summaries))
+	var highM, estimatedM, ambiguousM, unknownDriveM float64
+	var highCount, estimatedCount, ambiguousCount, unknownCount, measuredCount int
+
+	for _, summary := range summaries {
+		drive := observatoryDriveRecord(summary, driveByID)
+		event := ObservatoryEvent{
+			Kind:             ObservatoryKindDrive,
+			At:               summary.StartedAt,
+			EndAt:            summary.EndedAt,
+			DriveID:          int64Pointer(summary.DriveID),
+			FirmwareVersion:  summary.FirmwareVersion,
+			FSDDistanceM:     summary.FSDDistanceM,
+			DrivingDistanceM: summary.DistanceM,
+			Confidence:       confidencePointer(summary.Confidence),
+			ResetBreak:       summary.ResetAffected,
+			Approximate:      driveEvidenceIsApproximate(summary),
+		}
+		if key, label, ok := routeIdentity(drive); ok {
+			event.RouteKey = stringPointer(key)
+			event.RouteLabel = stringPointer(label)
+		}
+		driveEvents = append(driveEvents, event)
+
+		observatory.Totals.DriveCount++
+		switch summary.Confidence {
+		case ConfidenceHigh:
+			highCount++
+			measuredCount++
+			if summary.FSDDistanceM != nil {
+				highM += *summary.FSDDistanceM
+			}
+		case ConfidenceEstimated:
+			estimatedCount++
+			measuredCount++
+			if summary.FSDDistanceM != nil {
+				estimatedM += *summary.FSDDistanceM
+			}
+		case ConfidenceAmbiguous:
+			ambiguousCount++
+			measuredCount++
+			if summary.FSDDistanceM != nil {
+				ambiguousM += *summary.FSDDistanceM
+			}
+		default:
+			unknownCount++
+			if summary.DistanceM != nil && *summary.DistanceM > 0 {
+				unknownDriveM += *summary.DistanceM
+			}
+		}
+	}
+
+	resetEvents := make([]ObservatoryEvent, 0, len(resets))
+	for _, event := range resets {
+		resetEvents = append(resetEvents, ObservatoryEvent{
+			Kind:       ObservatoryKindReset,
+			At:         event.At,
+			ResetBreak: true,
+			Field:      stringPointer(event.Field),
+		})
+	}
+	observatory.Totals.ResetBreakCount += len(resets)
+
+	timeline, truncated := capObservatoryTimeline(driveEvents, resetEvents, maxObservatoryTimelineEvents)
+	observatory.Timeline = timeline
+	observatory.Truncated = truncated
+	observatory.Totals.MeasuredDriveCount = measuredCount
+	observatory.Totals.UnknownDriveCount = unknownCount
+	observatory.Totals.UnknownDriveDistanceM = roundMeters(unknownDriveM)
+	if highCount > 0 {
+		observatory.Totals.HighFSDDistanceM = floatPointer(roundMeters(highM))
+	}
+	if estimatedCount > 0 {
+		observatory.Totals.EstimatedFSDDistanceM = floatPointer(roundMeters(estimatedM))
+	}
+	if highCount+estimatedCount > 0 {
+		observatory.Totals.StitchedFSDDistanceM = floatPointer(roundMeters(highM + estimatedM))
+	}
+	if ambiguousCount > 0 {
+		observatory.Totals.AmbiguousFSDDistanceM = floatPointer(roundMeters(ambiguousM))
+	}
+	observatory.CommuteStories = buildObservatoryCommuteStories(summaries, driveByID)
+	return observatory
+}
+
+func observatoryDriveRecord(summary DriveFSDInsight, driveByID map[int64]DriveRecord) DriveRecord {
+	if drive, ok := driveByID[summary.DriveID]; ok {
+		return drive
+	}
+	return DriveRecord{
+		ID:         summary.DriveID,
+		StartedAt:  summary.StartedAt,
+		EndedAt:    summary.EndedAt,
+		StartPlace: summary.StartPlace,
+		EndPlace:   summary.EndPlace,
+		DistanceM:  summary.DistanceM,
+	}
+}
+
+func driveEvidenceIsApproximate(summary DriveFSDInsight) bool {
+	if len(summary.Evidence) == 0 {
+		return summary.Confidence == ConfidenceEstimated || summary.Confidence == ConfidenceAmbiguous
+	}
+	for _, interval := range summary.Evidence {
+		if interval.Approximate {
+			return true
+		}
+	}
+	return false
+}
+
+func capObservatoryTimeline(
+	drives, resets []ObservatoryEvent,
+	maxEvents int,
+) ([]ObservatoryEvent, bool) {
+	if len(drives)+len(resets) <= maxEvents {
+		events := make([]ObservatoryEvent, 0, len(drives)+len(resets))
+		events = append(events, drives...)
+		events = append(events, resets...)
+		sortObservatoryEvents(events)
+		return events, false
+	}
+
+	keepDrives := maxEvents - len(resets)
+	if keepDrives < 0 {
+		keepDrives = 0
+	}
+	sort.Slice(drives, func(i, j int) bool {
+		if drives[i].At.Equal(drives[j].At) {
+			return ptrInt64(drives[i].DriveID) > ptrInt64(drives[j].DriveID)
+		}
+		return drives[i].At.After(drives[j].At)
+	})
+	if keepDrives > len(drives) {
+		keepDrives = len(drives)
+	}
+	events := make([]ObservatoryEvent, 0, keepDrives+len(resets))
+	events = append(events, drives[:keepDrives]...)
+	events = append(events, resets...)
+	sortObservatoryEvents(events)
+	return events, true
+}
+
+func sortObservatoryEvents(events []ObservatoryEvent) {
+	sort.Slice(events, func(i, j int) bool {
+		if events[i].At.Equal(events[j].At) {
+			if events[i].Kind != events[j].Kind {
+				return events[i].Kind == ObservatoryKindReset
+			}
+			return ptrInt64(events[i].DriveID) < ptrInt64(events[j].DriveID)
+		}
+		return events[i].At.Before(events[j].At)
+	})
+}
+
+func ptrInt64(value *int64) int64 {
+	if value == nil {
+		return 0
+	}
+	return *value
+}
+
+type observatoryRouteBucket struct {
+	key    string
+	label  string
+	drives []DriveFSDInsight
+}
+
+func buildObservatoryCommuteStories(
+	summaries []DriveFSDInsight,
+	driveByID map[int64]DriveRecord,
+) []ObservatoryCommuteStory {
+	buckets := make(map[string]*observatoryRouteBucket)
+	for _, summary := range summaries {
+		key, label, ok := routeIdentity(observatoryDriveRecord(summary, driveByID))
+		if !ok {
+			continue
+		}
+		bucket := buckets[key]
+		if bucket == nil {
+			bucket = &observatoryRouteBucket{key: key, label: label}
+			buckets[key] = bucket
+		}
+		bucket.drives = append(bucket.drives, summary)
+	}
+
+	stories := make([]ObservatoryCommuteStory, 0)
+	for _, bucket := range buckets {
+		if len(bucket.drives) < minObservatoryCommuteDrives {
+			continue
+		}
+		sort.Slice(bucket.drives, func(i, j int) bool {
+			if bucket.drives[i].StartedAt.Equal(bucket.drives[j].StartedAt) {
+				return bucket.drives[i].DriveID < bucket.drives[j].DriveID
+			}
+			return bucket.drives[i].StartedAt.Before(bucket.drives[j].StartedAt)
+		})
+		stories = append(stories, ObservatoryCommuteStory{
+			RouteKey:   bucket.key,
+			RouteLabel: bucket.label,
+			DriveCount: len(bucket.drives),
+			Chapters:   observatoryFirmwareChapters(bucket.drives),
+		})
+	}
+	sort.Slice(stories, func(i, j int) bool {
+		if stories[i].DriveCount == stories[j].DriveCount {
+			return stories[i].RouteLabel < stories[j].RouteLabel
+		}
+		return stories[i].DriveCount > stories[j].DriveCount
+	})
+	if len(stories) > maxObservatoryCommuteStories {
+		stories = stories[:maxObservatoryCommuteStories]
+	}
+	return stories
+}
+
+func observatoryFirmwareChapters(drives []DriveFSDInsight) []ObservatoryCommuteChapter {
+	chapters := make([]ObservatoryCommuteChapter, 0)
+	var current *ObservatoryCommuteChapter
+	var currentKey string
+	var fsdM float64
+	var measured int
+
+	flush := func() {
+		if current == nil {
+			return
+		}
+		current.DrivingDistanceM = roundMeters(current.DrivingDistanceM)
+		if measured > 0 {
+			distance := roundMeters(fsdM)
+			current.FSDDistanceM = &distance
+			current.FSDSharePct, _ = sharePct(current.FSDDistanceM, &current.DrivingDistanceM)
+		}
+		chapters = append(chapters, *current)
+	}
+
+	for _, drive := range drives {
+		key := firmwareKey(drive.FirmwareVersion)
+		if current == nil || key != currentKey {
+			flush()
+			chapter := ObservatoryCommuteChapter{
+				FirstAt: drive.StartedAt,
+				LastAt:  drive.StartedAt,
+			}
+			if drive.EndedAt != nil {
+				chapter.LastAt = *drive.EndedAt
+			}
+			if drive.FirmwareVersion != nil {
+				version := *drive.FirmwareVersion
+				chapter.FirmwareVersion = &version
+			}
+			current = &chapter
+			currentKey = key
+			fsdM = 0
+			measured = 0
+		}
+		current.DriveCount++
+		if drive.StartedAt.After(current.LastAt) {
+			current.LastAt = drive.StartedAt
+		}
+		if drive.EndedAt != nil && drive.EndedAt.After(current.LastAt) {
+			current.LastAt = *drive.EndedAt
+		}
+		if drive.DistanceM != nil && *drive.DistanceM > 0 {
+			current.DrivingDistanceM += *drive.DistanceM
+		}
+		if drive.ResetAffected {
+			current.ResetBreaks++
+		}
+		switch drive.Confidence {
+		case ConfidenceHigh:
+			current.HighCount++
+		case ConfidenceEstimated:
+			current.EstimatedCount++
+		case ConfidenceAmbiguous:
+			current.AmbiguousCount++
+		default:
+			current.UnknownCount++
+		}
+		if drive.FSDDistanceM != nil {
+			fsdM += *drive.FSDDistanceM
+			measured++
+		}
+	}
+	flush()
+	return chapters
+}
+
+func firmwareKey(version *string) string {
+	if version == nil {
+		return ""
+	}
+	return *version
+}
+
+func confidencePointer(value AttributionConfidence) *AttributionConfidence {
+	copied := value
+	return &copied
+}
+
+func stringPointer(value string) *string {
+	return &value
+}
+
+func int64Pointer(value int64) *int64 {
+	return &value
 }
 
 func routeIdentity(drive DriveRecord) (string, string, bool) {
