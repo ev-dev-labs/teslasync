@@ -146,11 +146,13 @@ export default function TeslaOnlyPage() {
           {show(slug, 'range') && <RangePanel report={report} t={t} formatDistance={formatDistance} formatEnergy={formatEnergy} />}
         </div>
       ) : (
-        {/* no-action: exclusive physics has not arrived yet; VehicleSelect is already in the header */}
-        <EmptyState
-          title={title}
-          message={t('teslaOnly.empty', 'Select a vehicle to load Tesla physics.')}
-        />
+        <>
+          {/* no-action: exclusive physics has not arrived yet; VehicleSelect is already in the header */}
+          <EmptyState
+            title={title}
+            message={t('teslaOnly.empty', 'Select a vehicle to load Tesla physics.')}
+          />
+        </>
       )}
     </PageContainer>
   );
@@ -257,7 +259,7 @@ function HubOverview({ report, t }: { report: ExclusiveReport; t: Translate }) {
 
 function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const latest = report.clocks.latest;
-  const columns: Column<NonNullable<ExclusiveReport['clocks']['samples']>[number]> = [
+  const columns: Column<NonNullable<ExclusiveReport['clocks']['samples']>[number]>[] = [
     { key: 'event', header: t('teslaOnly.eventTime', 'Event time'), render: (row) => formatDateTime(row.event_time) },
     { key: 'ingest', header: t('teslaOnly.ingestTime', 'Ingest time'), render: (row) => (row.ingest_time ? formatDateTime(row.ingest_time) : unknownText(t)) },
     { key: 'display', header: t('teslaOnly.displayTime', 'Display time'), render: (row) => formatDateTime(row.display_time) },
@@ -284,7 +286,7 @@ function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
 
 function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const segments = report.life_tape.segments;
-  const columns: Column<(typeof segments)[number]> = [
+  const columns: Column<(typeof segments)[number]>[] = [
     { key: 'state', header: t('teslaOnly.state', 'State'), render: (row) => row.state },
     { key: 'duration', header: t('teslaOnly.duration', 'Duration'), render: (row) => `${fmtNumber(row.duration_s / 60, 1)} min`, align: 'right' },
     { key: 'started', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.started_at) },
@@ -325,7 +327,7 @@ function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate })
 
 function ContradictionPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const findings = report.contradictions.findings;
-  const columns: Column<(typeof findings)[number]> = [
+  const columns: Column<(typeof findings)[number]>[] = [
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (row) => row.kind },
     { key: 'detail', header: t('teslaOnly.detail', 'Detail'), render: (row) => row.detail },
@@ -357,7 +359,7 @@ function MetersPanel({
   formatDistance: (meters: number, opts?: { precision?: number }) => string;
 }) {
   const meters = report.meters;
-  const columns: Column<(typeof meters.resets)[number]> = [
+  const columns: Column<(typeof meters.resets)[number]>[] = [
     { key: 'meter', header: t('teslaOnly.meter', 'Meter'), render: (row) => row.meter },
     { key: 'cause', header: t('teslaOnly.cause', 'Cause'), render: (row) => `${row.cause}${row.unknown ? `, ${unknownText(t)}` : ''}` },
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
@@ -403,7 +405,7 @@ function UnknownPanel({ report, t }: { report: ExclusiveReport; t: Translate }) 
 
 function CarKeptLivingPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const living = report.car_kept_living;
-  const columns: Column<{ note: string }> = [
+  const columns: Column<{ note: string }>[] = [
     { key: 'note', header: t('teslaOnly.detail', 'Detail'), render: (row) => row.note },
   ];
   return (
@@ -438,7 +440,7 @@ function CarKeptLivingPanel({ report, t }: { report: ExclusiveReport; t: Transla
 
 function LogbookPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const entries = report.logbook.entries;
-  const columns: Column<(typeof entries)[number]> = [
+  const columns: Column<(typeof entries)[number]>[] = [
     { key: 'word', header: t('teslaOnly.word', 'Word'), render: (row) => row.word },
     { key: 'kind', header: t('teslaOnly.kind', 'Kind'), render: (row) => row.kind },
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
@@ -465,7 +467,7 @@ function EpochsPanel({
   formatDistance: (meters: number, opts?: { precision?: number }) => string;
 }) {
   const epochs = report.firmware_epochs.epochs;
-  const columns: Column<(typeof epochs)[number]> = [
+  const columns: Column<(typeof epochs)[number]>[] = [
     { key: 'version', header: t('teslaOnly.version', 'Version'), render: (row) => row.version },
     {
       key: 'fsd',
@@ -491,7 +493,7 @@ function EpochsPanel({
 
 function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const evidence = report.charge_port_court.evidence;
-  const columns: Column<(typeof evidence)[number]> = [
+  const columns: Column<(typeof evidence)[number]>[] = [
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'state', header: t('teslaOnly.chargeState', 'Charge state'), render: (row) => row.charge_state || unknownText(t) },
     { key: 'latch', header: t('teslaOnly.latch', 'Latch'), render: (row) => row.latch || unknownText(t) },
@@ -516,7 +518,7 @@ function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
 
 function BlackBoxPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const box = report.black_box;
-  const columns: Column<(typeof box.frames)[number]> = [
+  const columns: Column<(typeof box.frames)[number]>[] = [
     { key: 'at', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.at) },
     { key: 'state', header: t('teslaOnly.chargeState', 'Charge state'), render: (row) => row.charge_state || unknownText(t) },
     { key: 'latch', header: t('teslaOnly.latch', 'Latch'), render: (row) => row.latch || unknownText(t) },
@@ -587,7 +589,7 @@ function ModesPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const modeLabel = (value: boolean | null, on: string, off: string) => (
     value == null ? unknownText(t) : value ? on : off
   );
-  const columns: Column<{ rule: string }> = [
+  const columns: Column<{ rule: string }>[] = [
     { key: 'rule', header: t('teslaOnly.laws', 'Mode laws'), render: (row) => row.rule },
   ];
   return (
@@ -610,7 +612,7 @@ function ModesPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
 
 function NervousPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const nerves = report.nervous_system.nerves;
-  const columns: Column<(typeof nerves)[number]> = [
+  const columns: Column<(typeof nerves)[number]>[] = [
     { key: 'field', header: t('teslaOnly.field', 'Signal'), render: (row) => row.field },
     { key: 'status', header: t('teslaOnly.status', 'Status'), render: (row) => row.status },
     { key: 'detail', header: t('teslaOnly.detail', 'Detail'), render: (row) => row.detail },
