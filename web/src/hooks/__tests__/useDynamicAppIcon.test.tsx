@@ -66,7 +66,7 @@ describe('useDynamicAppIcon', () => {
     vi.restoreAllMocks()
   })
 
-  it('paints the favicon with the active framed brand mark as an SVG data URL', () => {
+  it('paints the favicon with the active bolt mark as an SVG data URL', () => {
     renderHook(() => useDynamicAppIcon(), { wrapper })
 
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]')!

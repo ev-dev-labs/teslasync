@@ -1,28 +1,29 @@
 /**
  * Dynamic PWA / favicon SVG and PNG generation.
  *
- * The build-time icons in `web/public/icons/` use the same restrained framed
- * mark. Once a user picks a different theme in Appearance settings, the bolt
- * and frame accent follow that choice without turning the entire launcher
- * icon into a saturated gradient.
+ * Launcher and splash icons are full-bleed: a solid canvas plus the bolt.
+ * Android and iOS apply their own squircle/circle masks, so an inner frame
+ * gets clipped into ugly border arcs on the splash screen.
+ *
+ * Once a user picks a different theme in Appearance settings, the bolt
+ * follows that primary colour. Accent is accepted for API stability but is
+ * not drawn on launcher icons.
  *
  * This module generates all the icon variants we need at runtime as a pure
  * function of (primary, accent). The companion hook `useDynamicAppIcon`
  * wires the output into `<link rel="icon">` etc. and the manifest blob.
- *
- * All SVG strings share the same artwork (rounded square + lightning bolt)
- * as `web/public/icons/icon-192.svg`, `icon-maskable-192.svg`, and
- * `apple-touch-icon.png` so swapping in a dynamic version does not change
- * the silhouette — only the semantic accent.
  */
 
 const VIEWBOX = 200
 const RX_STANDARD = 44
 const BOLT_PATH = 'M112 30L62 108h34L78 170l58-82h-34z'
 const BRAND_BG = '#0b0d12'
-const BRAND_SURFACE = '#171c25'
 const DEFAULT_PRIMARY = '#3b82f6'
 const DEFAULT_ACCENT = '#06b6d4'
+
+function bolt(primary: string): string {
+  return `<path d="${BOLT_PATH}" fill="${primary}"/>`
+}
 
 /** Sanity-check a colour string before pasting it into an SVG; defends
  * against malformed values from corrupted localStorage / API.
@@ -39,15 +40,16 @@ function safeHex(value: string, fallback: string): string {
 }
 
 export type AppIconMode =
-  /** Standard rounded-square brand mark. Used for browser tab favicon
-   *  and as the base for the PWA `icons[]` "any" purpose entries. */
+  /** Rounded-square favicon for browser tabs. Not used as a PWA launcher
+   *  icon — Android/iOS mask those, and a pre-rounded canvas leaves
+   *  transparent corners that look like a clipped frame. */
   | 'standard'
-  /** Maskable variant: same artwork scaled into the inner 80% safe-zone
-   *  so Android's adaptive-icon mask can crop the outer 10% on each
-   *  side without clipping the bolt. See https://web.dev/maskable-icon/. */
+  /** Maskable variant: full-bleed canvas, bolt scaled into the inner 80%
+   *  safe-zone so Android's adaptive-icon mask can crop the outer 10%
+   *  without clipping the bolt. No inner frame. See https://web.dev/maskable-icon/. */
   | 'maskable'
-  /** Apple-touch-icon variant with a full-bleed background. iOS applies its
-   *  own outer clip mask, so the canvas itself must not be pre-rounded. */
+  /** Full-bleed opaque square. Used for apple-touch-icon and PWA `any`
+   *  launcher/splash icons. OS applies its own clip — do not pre-round. */
   | 'apple'
 
 export interface BuildIconOptions {
@@ -70,12 +72,15 @@ export function buildAppIconSvg(opts: BuildIconOptions): string {
   const accent = safeHex(opts.accent, DEFAULT_ACCENT)
   const mode: AppIconMode = opts.mode ?? 'standard'
 
+  // Accent is validated so a corrupt theme cannot leak into SVG, even though
+  // launcher artwork no longer draws a frame stroke.
+  void accent
+
   if (mode === 'apple') {
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEWBOX} ${VIEWBOX}">`,
       `<rect width="${VIEWBOX}" height="${VIEWBOX}" fill="${BRAND_BG}"/>`,
-      `<rect x="12" y="12" width="176" height="176" rx="36" fill="${BRAND_SURFACE}" stroke="${accent}" stroke-opacity="0.4" stroke-width="6"/>`,
-      `<path d="${BOLT_PATH}" fill="${primary}"/>`,
+      bolt(primary),
       `</svg>`,
     ].join('')
   }
@@ -84,20 +89,18 @@ export function buildAppIconSvg(opts: BuildIconOptions): string {
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEWBOX} ${VIEWBOX}">`,
       `<rect width="${VIEWBOX}" height="${VIEWBOX}" fill="${BRAND_BG}"/>`,
-      `<rect x="20" y="20" width="160" height="160" rx="32" fill="${BRAND_SURFACE}" stroke="${accent}" stroke-opacity="0.4" stroke-width="6"/>`,
       `<g transform="translate(20 20) scale(0.8)">`,
-      `<path d="${BOLT_PATH}" fill="${primary}"/>`,
+      bolt(primary),
       `</g>`,
       `</svg>`,
     ].join('')
   }
 
-  // standard
+  // Favicon / browser tab: rounded canvas, still no inner frame.
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${VIEWBOX} ${VIEWBOX}">`,
     `<rect width="${VIEWBOX}" height="${VIEWBOX}" rx="${RX_STANDARD}" fill="${BRAND_BG}"/>`,
-    `<rect x="8" y="8" width="184" height="184" rx="38" fill="${BRAND_SURFACE}" stroke="${accent}" stroke-opacity="0.4" stroke-width="6"/>`,
-    `<path d="${BOLT_PATH}" fill="${primary}"/>`,
+    bolt(primary),
     `</svg>`,
   ].join('')
 }
