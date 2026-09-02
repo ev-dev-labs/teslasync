@@ -210,6 +210,27 @@ export interface FsdRouteEfficiencyComparison {
   difference_pct: number;
 }
 
+export interface FsdFirmwareRouteSpotlight {
+  route_key: string;
+  route_label: string;
+  before_drive_count: number;
+  after_drive_count: number;
+  before_fsd_distance_m: number;
+  after_fsd_distance_m: number;
+  before_driving_distance_m: number;
+  after_driving_distance_m: number;
+  before_fsd_share_pct: number | null;
+  after_fsd_share_pct: number | null;
+  share_change_pct_points: number | null;
+}
+
+export interface FsdFirmwareSpotlight {
+  from_version: string;
+  to_version: string;
+  changed_at: string | null;
+  routes: FsdFirmwareRouteSpotlight[];
+}
+
 export interface FsdDriveAnalytics {
   comparison: FsdPeriodComparison;
   attribution: FsdAttributionBreakdown;
@@ -218,6 +239,7 @@ export interface FsdDriveAnalytics {
   repeated_routes: GroupedFsdInsight[];
   time_of_day: GroupedFsdInsight[];
   firmware: GroupedFsdInsight[];
+  firmware_spotlight: FsdFirmwareSpotlight;
   route_efficiency: FsdRouteEfficiencyComparison[];
   correlation_disclaimer: string;
 }

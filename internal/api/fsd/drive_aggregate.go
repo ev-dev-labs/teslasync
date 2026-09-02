@@ -299,6 +299,7 @@ func BuildDriveAnalytics(
 	analytics.RepeatedRoutes = buildRouteGroups(summaries, driveByID)
 	analytics.TimeOfDay = buildTimeOfDayGroups(summaries, loc)
 	analytics.Firmware = buildFirmwareGroups(summaries)
+	analytics.FirmwareSpotlight = buildFirmwareSpotlight(summaries, driveByID)
 	analytics.RouteEfficiency = buildEfficiencyComparisons(summaries, driveByID)
 
 	return analytics
@@ -317,6 +318,7 @@ func emptyDriveAnalytics(current, previous Response) DriveAnalytics {
 		RepeatedRoutes:        make([]GroupedFSDInsight, 0),
 		TimeOfDay:             make([]GroupedFSDInsight, 0),
 		Firmware:              make([]GroupedFSDInsight, 0),
+		FirmwareSpotlight:     FirmwareSpotlight{Routes: make([]FirmwareRouteSpotlight, 0)},
 		RouteEfficiency:       make([]RouteEfficiencyComparison, 0),
 		CorrelationDisclaimer: "This is a same-route correlation, not proof that supervised driving caused an efficiency difference.",
 	}
@@ -723,6 +725,130 @@ func buildFirmwareGroups(summaries []DriveFSDInsight) []GroupedFSDInsight {
 		group.fsdM += *summary.FSDDistanceM
 	}
 	return finalizedGroups(groups, 1)
+}
+
+func buildFirmwareSpotlight(
+	summaries []DriveFSDInsight,
+	driveByID map[int64]DriveRecord,
+) FirmwareSpotlight {
+	type versionStats struct {
+		firstAt    time.Time
+		driveCount int
+		distanceM  float64
+		fsdM       float64
+	}
+	type routeStats struct {
+		label    string
+		versions map[string]*versionStats
+	}
+
+	routes := make(map[string]*routeStats)
+	versionFirst := make(map[string]time.Time)
+	for _, summary := range summaries {
+		if summary.Confidence != ConfidenceHigh ||
+			summary.FirmwareVersion == nil ||
+			summary.FSDDistanceM == nil ||
+			summary.DistanceM == nil ||
+			*summary.DistanceM <= 0 {
+			continue
+		}
+		drive, ok := driveByID[summary.DriveID]
+		if !ok {
+			continue
+		}
+		key, label, ok := routeIdentity(drive)
+		if !ok {
+			continue
+		}
+		version := *summary.FirmwareVersion
+		route := routes[key]
+		if route == nil {
+			route = &routeStats{label: label, versions: make(map[string]*versionStats)}
+			routes[key] = route
+		}
+		stats := route.versions[version]
+		if stats == nil {
+			stats = &versionStats{firstAt: summary.StartedAt}
+			route.versions[version] = stats
+		}
+		if summary.StartedAt.Before(stats.firstAt) {
+			stats.firstAt = summary.StartedAt
+		}
+		stats.driveCount++
+		stats.distanceM += *summary.DistanceM
+		stats.fsdM += *summary.FSDDistanceM
+		if existing, seen := versionFirst[version]; !seen || summary.StartedAt.Before(existing) {
+			versionFirst[version] = summary.StartedAt
+		}
+	}
+
+	spotlight := FirmwareSpotlight{Routes: make([]FirmwareRouteSpotlight, 0)}
+	if len(versionFirst) < 2 {
+		return spotlight
+	}
+
+	ordered := make([]string, 0, len(versionFirst))
+	for version := range versionFirst {
+		ordered = append(ordered, version)
+	}
+	sort.Slice(ordered, func(i, j int) bool {
+		if versionFirst[ordered[i]].Equal(versionFirst[ordered[j]]) {
+			return ordered[i] < ordered[j]
+		}
+		return versionFirst[ordered[i]].Before(versionFirst[ordered[j]])
+	})
+	from := ordered[len(ordered)-2]
+	to := ordered[len(ordered)-1]
+	changedAt := versionFirst[to]
+	spotlight.FromVersion = from
+	spotlight.ToVersion = to
+	spotlight.ChangedAt = &changedAt
+
+	for key, route := range routes {
+		before := route.versions[from]
+		after := route.versions[to]
+		if before == nil || after == nil {
+			continue
+		}
+		beforeDistance := roundMeters(before.distanceM)
+		afterDistance := roundMeters(after.distanceM)
+		beforeFSD := roundMeters(before.fsdM)
+		afterFSD := roundMeters(after.fsdM)
+		beforeShare, _ := sharePct(&beforeFSD, &beforeDistance)
+		afterShare, _ := sharePct(&afterFSD, &afterDistance)
+		var change *float64
+		if beforeShare != nil && afterShare != nil {
+			points := roundPct(*afterShare - *beforeShare)
+			change = &points
+		}
+		spotlight.Routes = append(spotlight.Routes, FirmwareRouteSpotlight{
+			RouteKey:               key,
+			RouteLabel:             route.label,
+			BeforeDriveCount:       before.driveCount,
+			AfterDriveCount:        after.driveCount,
+			BeforeFSDDistanceM:     beforeFSD,
+			AfterFSDDistanceM:      afterFSD,
+			BeforeDrivingDistanceM: beforeDistance,
+			AfterDrivingDistanceM:  afterDistance,
+			BeforeFSDSharePct:      beforeShare,
+			AfterFSDSharePct:       afterShare,
+			ShareChangePctPoints:   change,
+		})
+	}
+	sort.Slice(spotlight.Routes, func(i, j int) bool {
+		left, right := 0.0, 0.0
+		if spotlight.Routes[i].ShareChangePctPoints != nil {
+			left = math.Abs(*spotlight.Routes[i].ShareChangePctPoints)
+		}
+		if spotlight.Routes[j].ShareChangePctPoints != nil {
+			right = math.Abs(*spotlight.Routes[j].ShareChangePctPoints)
+		}
+		if left == right {
+			return spotlight.Routes[i].RouteLabel < spotlight.Routes[j].RouteLabel
+		}
+		return left > right
+	})
+	return spotlight
 }
 
 func finalizedGroups(groups map[string]*groupAccumulator, minimumDrives int) []GroupedFSDInsight {

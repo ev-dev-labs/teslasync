@@ -3,9 +3,11 @@ import { useVehicles } from '@/api/hooks/useVehicles';
 import { useDrives } from '@/api/hooks/useDriving';
 import { useChargingSessionsPaginated } from '@/api/hooks/useCharging';
 import { useAlertHistory } from '@/api/hooks/useNotifications';
+import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { formatDateShort } from '@/lib/dateFormat';
 import { fmtNumber, safeNumber } from '@/lib/numberFormat';
+import { browserTimezone } from '@/lib/timezone';
 import { convertDistanceFromSI, convertEnergyFromSI } from '@/lib/unitConversion';
 
 import type {
@@ -145,6 +147,20 @@ export function useWeeklyDigest() {
     refetch: refetchAlerts,
   } = alertsQuery;
 
+  const weekStartIso = useMemo(() => weekStart.toISOString(), [weekStart]);
+  const fsdQuery = useFsdInsightsRange(
+    selectedVehicleId || undefined,
+    weekStartIso,
+    queryEndExclusive,
+    browserTimezone(),
+  );
+  const {
+    data: fsdInsights,
+    isLoading: fsdLoading,
+    error: fsdError,
+    refetch: refetchFsd,
+  } = fsdQuery;
+
   const isLoading = drivesLoading || chargingLoading || alertsLoading;
   const error = drivesError || chargingError || alertsError;
 
@@ -154,11 +170,12 @@ export function useWeeklyDigest() {
   const drivesBusy = drivesLoading || vehiclesLoading;
   const chargingBusy = chargingLoading || vehiclesLoading;
   const alertsBusy = alertsLoading || vehiclesLoading;
+  const fsdBusy = fsdLoading || vehiclesLoading;
 
   /** Representative queries for the page-tier freshness chip (PageContainer). */
   const freshnessQueries = useMemo(
-    () => [drivesQuery, chargingQuery, alertsQuery],
-    [drivesQuery, chargingQuery, alertsQuery],
+    () => [drivesQuery, chargingQuery, alertsQuery, fsdQuery],
+    [drivesQuery, chargingQuery, alertsQuery, fsdQuery],
   );
 
   /** Refetch every domain query — used by the aggregate KPI bands' retry CTA. */
@@ -166,7 +183,8 @@ export function useWeeklyDigest() {
     void refetchDrives();
     void refetchCharging();
     void refetchAlerts();
-  }, [refetchDrives, refetchCharging, refetchAlerts]);
+    void refetchFsd();
+  }, [refetchDrives, refetchCharging, refetchAlerts, refetchFsd]);
 
   /* ── Filter data by week ── */
   const weekDrives = useMemo(
@@ -346,6 +364,7 @@ export function useWeeklyDigest() {
 
   return {
     weekLabel,
+    weekStart,
     isCurrentWeek,
     isLoading,
     error,
@@ -370,6 +389,10 @@ export function useWeeklyDigest() {
     alertsLoading: alertsBusy,
     alertsError,
     refetchAlerts,
+    fsdInsights,
+    fsdLoading: fsdBusy,
+    fsdError,
+    refetchFsd,
     refetchAll,
     freshnessQueries,
   };

@@ -626,3 +626,119 @@ func TestCompactEvidenceCoalescesAdjacentIntervalsAndCapsOutput(t *testing.T) {
 		t.Fatalf("capped = %+v, truncated=%v", capped, truncated)
 	}
 }
+
+func TestBuildFirmwareSpotlight_ComparesSameRouteAcrossLatestFirmwarePair(t *testing.T) {
+	home, office := "Home", "Office"
+	distance := 10000.0
+	fsdBefore := 4000.0
+	fsdAfter := 7000.0
+	oldFw := "2026.8.1"
+	newFw := "2026.20.3"
+	beforeStart := at(t, "2026-03-01T10:00:00Z")
+	afterStart := at(t, "2026-03-10T10:00:00Z")
+	beforeEnd := beforeStart.Add(time.Hour)
+	afterEnd := afterStart.Add(time.Hour)
+
+	summaries := []DriveFSDInsight{
+		{
+			DriveID: 1, StartedAt: beforeStart, EndedAt: &beforeEnd,
+			DistanceM: &distance, FSDDistanceM: &fsdBefore,
+			Confidence: ConfidenceHigh, FirmwareVersion: &oldFw,
+		},
+		{
+			DriveID: 2, StartedAt: afterStart, EndedAt: &afterEnd,
+			DistanceM: &distance, FSDDistanceM: &fsdAfter,
+			Confidence: ConfidenceHigh, FirmwareVersion: &newFw,
+		},
+		{
+			DriveID: 3, StartedAt: beforeStart.Add(24 * time.Hour), EndedAt: &beforeEnd,
+			DistanceM: &distance, FSDDistanceM: &fsdBefore,
+			Confidence: ConfidenceEstimated, FirmwareVersion: &oldFw,
+		},
+	}
+	driveByID := map[int64]DriveRecord{
+		1: {ID: 1, StartedAt: beforeStart, EndedAt: &beforeEnd, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+		2: {ID: 2, StartedAt: afterStart, EndedAt: &afterEnd, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+		3: {ID: 3, StartedAt: beforeStart.Add(24 * time.Hour), EndedAt: &beforeEnd, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+	}
+
+	spotlight := buildFirmwareSpotlight(summaries, driveByID)
+	if spotlight.FromVersion != oldFw || spotlight.ToVersion != newFw {
+		t.Fatalf("firmware pair = %s -> %s", spotlight.FromVersion, spotlight.ToVersion)
+	}
+	if spotlight.ChangedAt == nil || !spotlight.ChangedAt.Equal(afterStart) {
+		t.Fatalf("changed_at = %v, want %v", spotlight.ChangedAt, afterStart)
+	}
+	if len(spotlight.Routes) != 1 {
+		t.Fatalf("routes = %+v, want 1", spotlight.Routes)
+	}
+	route := spotlight.Routes[0]
+	if route.RouteLabel != "Home to Office" {
+		t.Errorf("label = %q", route.RouteLabel)
+	}
+	if route.BeforeDriveCount != 1 || route.AfterDriveCount != 1 {
+		t.Errorf("drive counts = %d / %d", route.BeforeDriveCount, route.AfterDriveCount)
+	}
+	wantMeasured(t, route.BeforeFSDSharePct, 40, "before share")
+	wantMeasured(t, route.AfterFSDSharePct, 70, "after share")
+	wantMeasured(t, route.ShareChangePctPoints, 30, "share change")
+}
+
+func TestBuildFirmwareSpotlight_EmptyWithoutTwoHighConfidenceFirmwareVersions(t *testing.T) {
+	home, office := "Home", "Office"
+	distance := 10000.0
+	fsd := 4000.0
+	fw := "2026.20.3"
+	start := at(t, "2026-03-01T10:00:00Z")
+	end := start.Add(time.Hour)
+	summaries := []DriveFSDInsight{{
+		DriveID: 1, StartedAt: start, EndedAt: &end,
+		DistanceM: &distance, FSDDistanceM: &fsd,
+		Confidence: ConfidenceHigh, FirmwareVersion: &fw,
+	}}
+	driveByID := map[int64]DriveRecord{
+		1: {ID: 1, StartedAt: start, EndedAt: &end, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+	}
+
+	spotlight := buildFirmwareSpotlight(summaries, driveByID)
+	if spotlight.FromVersion != "" || spotlight.ToVersion != "" || len(spotlight.Routes) != 0 {
+		t.Fatalf("spotlight = %+v, want empty", spotlight)
+	}
+}
+
+func TestBuildFirmwareSpotlight_ReportsFirmwarePairWithoutOverlappingRoutes(t *testing.T) {
+	home, office, beach := "Home", "Office", "Beach"
+	distance := 10000.0
+	fsd := 5000.0
+	oldFw := "2026.8.1"
+	newFw := "2026.20.3"
+	beforeStart := at(t, "2026-03-01T10:00:00Z")
+	afterStart := at(t, "2026-03-10T10:00:00Z")
+	beforeEnd := beforeStart.Add(time.Hour)
+	afterEnd := afterStart.Add(time.Hour)
+
+	summaries := []DriveFSDInsight{
+		{
+			DriveID: 1, StartedAt: beforeStart, EndedAt: &beforeEnd,
+			DistanceM: &distance, FSDDistanceM: &fsd,
+			Confidence: ConfidenceHigh, FirmwareVersion: &oldFw,
+		},
+		{
+			DriveID: 2, StartedAt: afterStart, EndedAt: &afterEnd,
+			DistanceM: &distance, FSDDistanceM: &fsd,
+			Confidence: ConfidenceHigh, FirmwareVersion: &newFw,
+		},
+	}
+	driveByID := map[int64]DriveRecord{
+		1: {ID: 1, StartedAt: beforeStart, EndedAt: &beforeEnd, StartPlace: &home, EndPlace: &office, DistanceM: &distance},
+		2: {ID: 2, StartedAt: afterStart, EndedAt: &afterEnd, StartPlace: &home, EndPlace: &beach, DistanceM: &distance},
+	}
+
+	spotlight := buildFirmwareSpotlight(summaries, driveByID)
+	if spotlight.FromVersion != oldFw || spotlight.ToVersion != newFw {
+		t.Fatalf("firmware pair = %s -> %s", spotlight.FromVersion, spotlight.ToVersion)
+	}
+	if len(spotlight.Routes) != 0 {
+		t.Fatalf("routes = %+v, want none without a shared route", spotlight.Routes)
+	}
+}

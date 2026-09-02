@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   ArrowRight,
   Clock3,
+  Cpu,
+  Download,
   GitCompareArrows,
   ListChecks,
   MapPinned,
@@ -15,6 +17,7 @@ import {
 import { EmptyState } from '@/components/feedback';
 import {
   Badge,
+  Button,
   DataTable,
   GlassPanel,
   PanelTitle,
@@ -24,11 +27,13 @@ import {
 import { Grid } from '@/components/layout';
 import { MetricCard } from '@/components/data-display';
 import { useUnits } from '@/hooks/useUnits';
+import { defaultExportFilename, downloadJSON, downloadRowsAsCSV } from '@/lib/csvExport';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import type {
   DriveFsdInsight,
   FsdAttributionConfidence,
+  FsdFirmwareRouteSpotlight,
   FsdInsights,
   FsdRouteEfficiencyComparison,
   GroupedFsdInsight,
@@ -248,6 +253,40 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   );
 }
 
+const CONTRIBUTING_DRIVE_EXPORT_COLUMNS = [
+  { key: 'drive_id', header: 'drive_id' },
+  { key: 'started_at', header: 'started_at' },
+  { key: 'ended_at', header: 'ended_at' },
+  { key: 'start_place', header: 'start_place' },
+  { key: 'end_place', header: 'end_place' },
+  { key: 'distance_m', header: 'distance_m' },
+  { key: 'energy_used_wh', header: 'energy_used_wh' },
+  { key: 'fsd_distance_m', header: 'fsd_distance_m' },
+  { key: 'fsd_share_pct', header: 'fsd_share_pct' },
+  { key: 'confidence', header: 'confidence' },
+  { key: 'reset_affected', header: 'reset_affected' },
+  { key: 'firmware_version', header: 'firmware_version' },
+] as const;
+
+export function contributingDriveExportRows(drives: readonly DriveFsdInsight[]) {
+  return drives
+    .filter((drive) => drive.fsd_distance_m != null && drive.fsd_distance_m > 0)
+    .map((drive) => ({
+      drive_id: drive.drive_id,
+      started_at: drive.started_at,
+      ended_at: drive.ended_at,
+      start_place: drive.start_place,
+      end_place: drive.end_place,
+      distance_m: drive.distance_m,
+      energy_used_wh: drive.energy_used_wh,
+      fsd_distance_m: drive.fsd_distance_m,
+      fsd_share_pct: drive.fsd_share_pct,
+      confidence: drive.confidence,
+      reset_affected: drive.reset_affected,
+      firmware_version: drive.firmware_version,
+    }));
+}
+
 function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
@@ -256,6 +295,22 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
       .filter((drive) => drive.fsd_distance_m != null && drive.fsd_distance_m > 0),
     [insights],
   );
+  const exportRows = useMemo(() => contributingDriveExportRows(rows), [rows]);
+  const exportDisabled = exportRows.length === 0;
+  const exportCsv = () => {
+    downloadRowsAsCSV(
+      defaultExportFilename('fsd-contributing-drives'),
+      exportRows,
+      [...CONTRIBUTING_DRIVE_EXPORT_COLUMNS],
+    );
+  };
+  const exportJson = () => {
+    downloadJSON(defaultExportFilename('fsd-contributing-drives'), {
+      unit: 'meter',
+      note: 'Distances are SI meters. Null means not measured.',
+      drives: exportRows,
+    });
+  };
   const columns = useMemo<Column<DriveFsdInsight>[]>(() => [
     {
       key: 'started_at',
@@ -317,12 +372,36 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
         <ListChecks className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('fsd.drives.title', 'Contributing drives')}
       </PanelTitle>
-      <Text as="p" variant="caption" className="mb-3">
-        {t(
-          'fsd.drives.subtitle',
-          'Completed drives fully inside this period with positive reported supervised-driving distance.',
-        )}
-      </Text>
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <Text as="p" variant="caption">
+          {t(
+            'fsd.drives.subtitle',
+            'Completed drives fully inside this period with positive reported supervised-driving distance.',
+          )}
+        </Text>
+        <div className="flex shrink-0 flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            icon={<Download className="h-4 w-4" aria-hidden="true" />}
+            disabled={exportDisabled}
+            onClick={exportCsv}
+          >
+            {t('fsd.drives.exportCsv', 'CSV')}
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            icon={<Download className="h-4 w-4" aria-hidden="true" />}
+            disabled={exportDisabled}
+            onClick={exportJson}
+          >
+            {t('fsd.drives.exportJson', 'JSON')}
+          </Button>
+        </div>
+      </div>
       <FsdSectionBody state={state} className="min-h-52">
         {rows.length > 0 ? (
           <DataTable
@@ -427,6 +506,89 @@ function ComparisonGroupsPanel({ insights, state }: FsdDriveAnalyticsPanelsProps
   );
 }
 
+function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
+  const { t } = useTranslation();
+  const spotlight = insights?.drive_analytics?.firmware_spotlight;
+  const rows = spotlight?.routes ?? [];
+  const columns = useMemo<Column<FsdFirmwareRouteSpotlight>[]>(() => [
+    {
+      key: 'route_label',
+      header: t('fsd.firmwareSpotlight.route', 'Route'),
+      render: (row) => row.route_label,
+    },
+    {
+      key: 'before_fsd_share_pct',
+      header: t('fsd.firmwareSpotlight.before', 'Before'),
+      render: (row) => row.before_fsd_share_pct == null
+        ? '-'
+        : `${fmtNumber(row.before_fsd_share_pct, 1)}% · ${row.before_drive_count}`,
+    },
+    {
+      key: 'after_fsd_share_pct',
+      header: t('fsd.firmwareSpotlight.after', 'After'),
+      render: (row) => row.after_fsd_share_pct == null
+        ? '-'
+        : `${fmtNumber(row.after_fsd_share_pct, 1)}% · ${row.after_drive_count}`,
+    },
+    {
+      key: 'share_change_pct_points',
+      header: t('fsd.firmwareSpotlight.change', 'Share change'),
+      render: (row) => row.share_change_pct_points == null
+        ? '-'
+        : `${row.share_change_pct_points >= 0 ? '+' : ''}${fmtNumber(row.share_change_pct_points, 1)} pts`,
+    },
+  ], [t]);
+
+  const hasFirmwarePair = Boolean(spotlight?.from_version && spotlight?.to_version);
+
+  return (
+    <GlassPanel className="p-4 sm:p-5" data-testid="fsd-firmware-spotlight">
+      <PanelTitle className="mb-1 flex items-center gap-2">
+        <Cpu className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        {t('fsd.firmwareSpotlight.title', 'Firmware spotlight')}
+      </PanelTitle>
+      <Text as="p" variant="caption" className="mb-3">
+        {hasFirmwarePair
+          ? t(
+              'fsd.firmwareSpotlight.subtitle',
+              'Same-route FSD share on high-confidence drives, {{from}} vs {{to}}. Correlation, not proof that the update caused the change.',
+              { from: spotlight?.from_version, to: spotlight?.to_version },
+            )
+          : t(
+              'fsd.firmwareSpotlight.subtitleEmpty',
+              'Same-route FSD share before and after a firmware update, using high-confidence drives only.',
+            )}
+      </Text>
+      <FsdSectionBody state={state} className="min-h-40">
+        {rows.length > 0 ? (
+          <DataTable
+            tableId="fsd-firmware-spotlight"
+            name="FsdFirmwareSpotlight"
+            columns={columns}
+            data={rows}
+            keyExtractor={(row) => row.route_key}
+            mobileColumns={['route_label', 'share_change_pct_points']}
+          />
+        ) : (
+          <EmptyState
+            icon={<Cpu className="h-8 w-8" aria-hidden="true" />}
+            message={hasFirmwarePair
+              ? t(
+                  'fsd.firmwareSpotlight.emptyRoutes',
+                  'Firmware moved from {{from}} to {{to}}, but no repeated high-confidence route was observed on both versions.',
+                  { from: spotlight?.from_version, to: spotlight?.to_version },
+                )
+              : t(
+                  'fsd.firmwareSpotlight.empty',
+                  'Need high-confidence drives on two firmware versions to compare the same routes.',
+                )}
+          />
+        )}
+      </FsdSectionBody>
+    </GlassPanel>
+  );
+}
+
 function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
@@ -506,6 +668,7 @@ export function FsdDriveAnalyticsPanels(props: FsdDriveAnalyticsPanelsProps) {
       <AttributionPanel {...props} />
       <ContributingDrivesPanel {...props} />
       <ComparisonGroupsPanel {...props} />
+      <FirmwareSpotlightPanel {...props} />
       <EfficiencyPanel {...props} />
     </>
   );

@@ -130,6 +130,31 @@ type RouteEfficiencyComparison struct {
 	DifferencePct             float64 `json:"difference_pct"`
 }
 
+// FirmwareRouteSpotlight compares FSD share on one repeated route before and
+// after the latest observed firmware pair. It is descriptive correlation only.
+type FirmwareRouteSpotlight struct {
+	RouteKey               string   `json:"route_key"`
+	RouteLabel             string   `json:"route_label"`
+	BeforeDriveCount       int      `json:"before_drive_count"`
+	AfterDriveCount        int      `json:"after_drive_count"`
+	BeforeFSDDistanceM     float64  `json:"before_fsd_distance_m"`
+	AfterFSDDistanceM      float64  `json:"after_fsd_distance_m"`
+	BeforeDrivingDistanceM float64  `json:"before_driving_distance_m"`
+	AfterDrivingDistanceM  float64  `json:"after_driving_distance_m"`
+	BeforeFSDSharePct      *float64 `json:"before_fsd_share_pct"`
+	AfterFSDSharePct       *float64 `json:"after_fsd_share_pct"`
+	ShareChangePctPoints   *float64 `json:"share_change_pct_points"`
+}
+
+// FirmwareSpotlight is the latest firmware pair in the period, plus any
+// high-confidence routes observed on both versions.
+type FirmwareSpotlight struct {
+	FromVersion string                    `json:"from_version"`
+	ToVersion   string                    `json:"to_version"`
+	ChangedAt   *time.Time                `json:"changed_at"`
+	Routes      []FirmwareRouteSpotlight  `json:"routes"`
+}
+
 // DriveAnalytics contains the enhanced dashboard and per-drive intelligence.
 type DriveAnalytics struct {
 	Comparison            PeriodComparison            `json:"comparison"`
@@ -139,6 +164,7 @@ type DriveAnalytics struct {
 	RepeatedRoutes        []GroupedFSDInsight         `json:"repeated_routes"`
 	TimeOfDay             []GroupedFSDInsight         `json:"time_of_day"`
 	Firmware              []GroupedFSDInsight         `json:"firmware"`
+	FirmwareSpotlight     FirmwareSpotlight           `json:"firmware_spotlight"`
 	RouteEfficiency       []RouteEfficiencyComparison `json:"route_efficiency"`
 	CorrelationDisclaimer string                      `json:"correlation_disclaimer"`
 }

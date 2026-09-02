@@ -133,6 +133,28 @@ export function downloadRowsAsCSV<T>(
 }
 
 /**
+ * Trigger a browser download of JSON. Filename gets `.json` appended if
+ * missing. No-op on non-browser environments.
+ */
+export function downloadJSON(filename: string, value: unknown): void {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+
+  const name = filename.toLowerCase().endsWith('.json') ? filename : `${filename}.json`;
+  const blob = new Blob([`${JSON.stringify(value, null, 2)}\n`], {
+    type: 'application/json;charset=utf-8;',
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = name;
+  link.style.display = 'none';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+
+/**
  * Build a default filename like `"drives-2026-05-01"` for ad-hoc exports.
  */
 export function defaultExportFilename(prefix: string, date: Date = new Date()): string {

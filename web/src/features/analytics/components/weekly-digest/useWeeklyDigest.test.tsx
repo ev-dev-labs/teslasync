@@ -138,11 +138,27 @@ interface DataConfig {
   drives?: Drive[] | Error;
   charging?: ChargingSession[] | Error;
   alerts?: Alert[] | Error;
+  fsd?: unknown | Error;
 }
 
 function settle<T>(value: T | Error): Promise<T> {
   return value instanceof Error ? Promise.reject(value) : Promise.resolve(value);
 }
+
+const DEFAULT_FSD = {
+  vehicle_id: 1,
+  totals: {
+    fsd_distance_m: 12_000,
+    driving_distance_m: 30_000,
+    fsd_share_pct: 40,
+  },
+  drive_analytics: {
+    comparison: {
+      fsd_distance_change_m: 2_000,
+      fsd_share_change_pct_points: 5,
+    },
+  },
+};
 
 function installRoutes(cfg: DataConfig = {}) {
   const vehicles = cfg.vehicles ?? DEFAULT_VEHICLES;
@@ -151,6 +167,7 @@ function installRoutes(cfg: DataConfig = {}) {
     if (url.startsWith('/drives')) return settle(cfg.drives ?? []);
     if (url.startsWith('/charging')) return settle(cfg.charging ?? []);
     if (url.startsWith('/alerts')) return settle(cfg.alerts ?? []);
+    if (url.startsWith('/analytics/fsd')) return settle(cfg.fsd ?? DEFAULT_FSD);
     return Promise.resolve([]);
   });
 }
@@ -272,6 +289,7 @@ describe('request wiring', () => {
     expect(result.current.hasData).toBe(false);
     expect(callsFor('/drives')).toBe(0);
     expect(callsFor('/charging')).toBe(0);
+    expect(callsFor('/analytics/fsd')).toBe(0);
     expect(result.current.metrics.totalDistanceM).toBe(0);
   });
 });
@@ -504,7 +522,7 @@ describe('per-domain loading / error state', () => {
     expect(typeof result.current.refetchDrives).toBe('function');
   });
 
-  it('exposes three freshness queries and a refetchAll that re-fires every domain', async () => {
+  it('exposes four freshness queries and a refetchAll that re-fires every domain', async () => {
     installRoutes({ drives: [], charging: [], alerts: [] });
     const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
 
@@ -512,17 +530,39 @@ describe('per-domain loading / error state', () => {
       expect(callsFor('/drives')).toBeGreaterThan(0);
       expect(callsFor('/charging')).toBeGreaterThan(0);
       expect(callsFor('/alerts')).toBeGreaterThan(0);
+      expect(callsFor('/analytics/fsd')).toBeGreaterThan(0);
     });
-    expect(result.current.freshnessQueries).toHaveLength(3);
+    expect(result.current.freshnessQueries).toHaveLength(4);
 
     const drivesBefore = callsFor('/drives');
     const chargingBefore = callsFor('/charging');
     const alertsBefore = callsFor('/alerts');
+    const fsdBefore = callsFor('/analytics/fsd');
 
     act(() => result.current.refetchAll());
 
     await waitFor(() => expect(callsFor('/drives')).toBeGreaterThan(drivesBefore));
     expect(callsFor('/charging')).toBeGreaterThan(chargingBefore);
     expect(callsFor('/alerts')).toBeGreaterThan(alertsBefore);
+    expect(callsFor('/analytics/fsd')).toBeGreaterThan(fsdBefore);
+  });
+
+  it('loads FSD insights for the selected Monday–Sunday week, not the two-week drive window', async () => {
+    installRoutes();
+    const { result } = renderHook(() => useWeeklyDigest(), { wrapper: makeWrapper() });
+
+    await waitFor(() => expect(callsFor('/analytics/fsd')).toBe(1));
+    const url = urlsCalled().find((value) => value.startsWith('/analytics/fsd'));
+    expect(url).toBeDefined();
+    const params = new URLSearchParams(url?.split('?')[1]);
+    const [weekStart, weekEnd] = getWeekRange(0);
+    expect(params.get('vehicle_id')).toBe('1');
+    expect(params.get('days')).toBeNull();
+    expect(params.get('start')).toBe(weekStart.toISOString());
+    expect(params.get('end')).toBe(new Date(weekEnd.getTime() + 1).toISOString());
+    expect(params.get('timezone')).toBeTruthy();
+    expect(result.current.fsdInsights).toMatchObject({
+      totals: { fsd_distance_m: 12_000, fsd_share_pct: 40 },
+    });
   });
 });

@@ -9,12 +9,14 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 
 import {
   useWeeklyDigest,
+  useFsdWeeklyDigestNotification,
   WeekSelector,
   SummaryHeroCards,
   DrivingSection,
   ChargingSection,
   BatteryHealthSection,
   AlertsSection,
+  FsdSection,
   WeekOverWeekSummary,
 } from '../components/weekly-digest';
 
@@ -24,6 +26,7 @@ export default function WeeklyDigestPage() {
 
   const {
     weekLabel,
+    weekStart,
     isCurrentWeek,
     metrics,
     dailyDistanceData,
@@ -42,9 +45,21 @@ export default function WeeklyDigestPage() {
     alertsLoading,
     alertsError,
     refetchAlerts,
+    fsdInsights,
+    fsdLoading,
+    fsdError,
+    refetchFsd,
     refetchAll,
     freshnessQueries,
   } = useWeeklyDigest();
+
+  useFsdWeeklyDigestNotification({
+    vehicleId: selectedVehicleId || undefined,
+    weekStart,
+    isCurrentWeek,
+    insights: fsdInsights,
+    isReady: !fsdLoading && !fsdError,
+  });
 
   // The KPI band + week-over-week comparison aggregate the drive & charge
   // domains, so they share those two domains' loading / error state.
@@ -69,6 +84,12 @@ export default function WeeklyDigestPage() {
         label: t('dataSources.labels.alertHistory', 'Alert history'),
         query: freshnessQueries[2] ?? {},
         enabled: freshnessQueries[2] != null,
+      },
+      {
+        id: 'fsd-insights',
+        label: t('dataSources.labels.fsdInsights', 'Supervised driving'),
+        query: freshnessQueries[3] ?? {},
+        enabled: freshnessQueries[3] != null,
       },
     ],
     [freshnessQueries, t],
@@ -142,6 +163,17 @@ export default function WeeklyDigestPage() {
             onRetry={refetchCharging}
           />
         </section>
+      </FadeIn>
+
+      <FadeIn delay={0.12}>
+        <FsdSection
+          insights={fsdInsights}
+          isLoading={fsdLoading}
+          isError={Boolean(fsdError)}
+          error={fsdError}
+          onRetry={refetchFsd}
+          isCurrentWeek={isCurrentWeek}
+        />
       </FadeIn>
 
       {/* Battery + alerts bento */}
