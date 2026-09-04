@@ -307,6 +307,7 @@ const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 // the opt-in Helix narrator. Routed at /settings/safety to live
 // under the /settings family.
 const SafetySettingsPage = lazy(() => import('./features/settings/pages/SafetyPage'))
+const FleetSetupPage = lazy(() => import('./features/settings/pages/FleetSetupPage'))
 // Account-level security pages promoted out of Settings (Phase-50 split):
 //   /account/2fa       — Two-factor authentication enrollment / disable
 //   /account/sessions  — Active browser/device sessions + revoke
@@ -592,6 +593,7 @@ export default function App() {
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="settings/safety" element={<SafeRoute name="SafetySettingsPage"><SafetySettingsPage /></SafeRoute>} />
+        <Route path="settings/fleet-setup" element={<SafeRoute name="FleetSetup"><FleetSetupPage /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
         <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
         <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />

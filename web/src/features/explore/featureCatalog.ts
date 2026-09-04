@@ -241,6 +241,7 @@ const DESCRIPTIONS: Record<string, string> = {
 
   // ── Settings ───────────────────────────────────────────────────────
   '/settings': 'Units, theme, locale, density, and every app preference.',
+  '/settings/fleet-setup': 'Connect Tesla, refresh the Fleet token, subscribe telemetry, and confirm streaming.',
   '/chatbot': 'Ask Helix anything about your car or this app.',
   '/dev-tools': 'In-app developer surface — flags, debuggers, and inspectors.',
 

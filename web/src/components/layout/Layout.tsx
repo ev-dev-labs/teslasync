@@ -243,6 +243,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/tesla-orders': ['orders', 'tesla orders', 'active orders', 'delivery', 'vehicle delivery'],
   '/gas-price': ['gas price', 'fuel', 'eia', 'gasoline', 'auto poll', 'comparison'],
   '/settings': ['settings', 'preferences', 'configuration'],
+  '/settings/fleet-setup': ['fleet setup', 'onboarding', 'tesla oauth', 'telemetry subscribe', 'fleet telemetry'],
   '/api-keys': ['keys', 'tokens', 'api key'],
   '/notifications/audit': ['audit', 'audit log', 'activity log', 'admin'],
   '/data-export': ['export', 'download', 'csv'],
@@ -615,6 +616,7 @@ export const navSections = [
     title: 'Settings',
     items: [
       { to: '/settings', icon: Icons.settings, label: 'General Settings', color: 'text-[var(--text-muted)]' },
+      { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet Setup', color: 'text-cyan-400' },
       { to: '/chatbot', icon: HelixMark, label: 'Helix Chat', color: 'text-purple-400' },
       { to: '/dev-tools', icon: Icons.hammer, label: 'Developer Tools', color: 'text-cyan-400' },
     ],

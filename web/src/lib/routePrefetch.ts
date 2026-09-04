@@ -113,6 +113,8 @@ const PRELOADERS: Readonly<Record<string, () => Promise<unknown>>> = {
   '/search': () => import('../features/system/pages/SearchPage'),
   '/security-access': () => import('../features/admin/pages/SecurityAccessPage'),
   '/settings': () => import('../features/settings/pages/SettingsPage'),
+  '/settings/fleet-setup': () => import('../features/settings/pages/FleetSetupPage'),
+  '/settings/safety': () => import('../features/settings/pages/SafetyPage'),
   '/signal-diff': () => import('../features/telemetry/pages/SignalDiffPage'),
   '/signal-explorer': () => import('../features/telemetry/pages/SignalExplorerPage'),
   '/signal-gaps': () => import('../features/telemetry/pages/SignalGapDetectorPage'),

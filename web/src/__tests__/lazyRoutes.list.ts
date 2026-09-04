@@ -181,6 +181,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'StatusApiDocs', load: () => import('../features/system/pages/StatusApiDocsPage') },
   { name: 'Help', load: () => import('../features/system/pages/HelpPage') },
   { name: 'SafetySettingsPage', load: () => import('../features/settings/pages/SafetyPage') },
+  { name: 'FleetSetupPage', load: () => import('../features/settings/pages/FleetSetupPage') },
   { name: 'TwoFactorAuth', load: () => import('../features/settings/pages/TwoFactorAuthPage') },
   { name: 'ActiveSessions', load: () => import('../features/settings/pages/ActiveSessionsPage') },
   { name: 'Privacy', load: () => import('../features/settings/pages/PrivacyPage') },

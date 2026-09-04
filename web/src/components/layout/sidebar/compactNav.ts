@@ -224,7 +224,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     title: 'Settings & Account',
     tier: 'advanced',
     capability: 'core',
-    paths: ['/settings', '/tesla-account', '/integrations/helix', '/account/privacy', '/roadmap'],
+    paths: ['/settings', '/settings/fleet-setup', '/tesla-account', '/integrations/helix', '/account/privacy', '/roadmap'],
   },
 ]
 
