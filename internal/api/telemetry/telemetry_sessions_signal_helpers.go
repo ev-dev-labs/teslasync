@@ -16,6 +16,13 @@ func eventTimeOrNow(ts time.Time) time.Time {
 	return ts.UTC()
 }
 
+func parkEventTime(payloadTs time.Time, fieldTs map[string]time.Time) time.Time {
+	if ts, ok := fieldTs["Gear"]; ok && !ts.IsZero() {
+		return ts.UTC()
+	}
+	return eventTimeOrNow(payloadTs)
+}
+
 // resolveFloat gets a float signal from batch → accumulated → SignalStore (last-known).
 func (t *TelemetrySessionTracker) resolveFloat(vehicleID int64, signals, accum map[string]interface{}, keys ...string) (float64, bool) {
 	if v, ok := signalFloat(signals, keys...); ok {

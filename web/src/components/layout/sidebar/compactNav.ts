@@ -125,6 +125,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
       '/climate-control',
       '/maintenance',
       '/software-updates',
+      '/tesla-only',
     ],
   },
   {
@@ -223,7 +224,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     title: 'Settings & Account',
     tier: 'advanced',
     capability: 'core',
-    paths: ['/settings', '/tesla-account', '/integrations/helix', '/account/privacy', '/roadmap'],
+    paths: ['/settings', '/settings/fleet-setup', '/tesla-account', '/integrations/helix', '/account/privacy', '/roadmap'],
   },
 ]
 
@@ -246,6 +247,7 @@ export const CANONICAL_SECTION_TO_COMPACT_GROUP: Readonly<
 > = {
   Home: 'Overview',
   Vehicles: 'Vehicles',
+  'Tesla Physics': 'Vehicles',
   Service: 'Vehicles',
   Cabin: 'Vehicles',
   Commands: 'Vehicles',

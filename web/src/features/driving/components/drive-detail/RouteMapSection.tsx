@@ -16,7 +16,8 @@ import { formatTime, formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { hasMeaningfulRoute, firstValidIndex } from '@/lib/geo';
 import type { DriveDetail } from '@/types/driving';
-import type { SpeedSegment } from './types';
+import type { FsdEvidenceInterval } from '@/types/fsd';
+import type { RoutePoint, SpeedSegment } from './types';
 import { SPEED_SEGMENT_LOW_MPS, SPEED_SEGMENT_MED_MPS, SPEED_SEGMENT_HIGH_MPS } from './constants';
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 
@@ -60,9 +61,20 @@ interface RouteMapSectionProps {
   endPos: [number, number] | undefined;
   centerPos: [number, number];
   speedSegments: SpeedSegment[];
+  routePoints?: RoutePoint[];
+  fsdEvidence?: FsdEvidenceInterval[];
 }
 
-export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, speedSegments }: RouteMapSectionProps) {
+export function RouteMapSection({
+  drive,
+  trail,
+  startPos,
+  endPos,
+  centerPos,
+  speedSegments,
+  routePoints,
+  fsdEvidence,
+}: RouteMapSectionProps) {
   const { t } = useTranslation();
   const { unitPrefs } = useUnits();
   const toSpeedDisplay = (value: number) => convertSpeedFromSI(value, unitPrefs.speed);
@@ -75,6 +87,29 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
   // panel on `.length` / `.map`.
   const safeTrail = trail ?? [];
   const safeSegments = speedSegments ?? [];
+  const fsdSegments = useMemo(() => {
+    const safeRoutePoints = routePoints ?? [];
+    if (!fsdEvidence?.length || safeRoutePoints.length < 2) return [];
+    const windows = fsdEvidence.map((interval) => ({
+      start: Date.parse(interval.start_at),
+      end: Date.parse(interval.end_at),
+    })).filter((interval) => Number.isFinite(interval.start) && Number.isFinite(interval.end));
+
+    const segments: LatLngExpression[][] = [];
+    for (let index = 1; index < safeRoutePoints.length; index++) {
+      const previous = safeRoutePoints[index - 1];
+      const current = safeRoutePoints[index];
+      const previousAt = previous.timestamp ? Date.parse(previous.timestamp) : Number.NaN;
+      const currentAt = current.timestamp ? Date.parse(current.timestamp) : Number.NaN;
+      if (!Number.isFinite(previousAt) || !Number.isFinite(currentAt)) continue;
+      const segmentStart = Math.min(previousAt, currentAt);
+      const segmentEnd = Math.max(previousAt, currentAt);
+      if (windows.some((window) => window.start < segmentEnd && window.end > segmentStart)) {
+        segments.push([[previous.lat, previous.lng], [current.lat, current.lng]]);
+      }
+    }
+    return segments;
+  }, [fsdEvidence, routePoints]);
 
   /* Stationary-GPS detection: positions exist but every recorded coord is
    * within ~10 m of the first. Render a single anchor marker + an overlay
@@ -113,6 +148,18 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
                 {hasRoute && safeSegments.map((seg, i) => (
                   <Polyline key={i} positions={seg.positions} pathOptions={{ color: seg.color, weight: 4, opacity: 0.8 }} />
                 ))}
+                {hasRoute && fsdSegments.map((positions, index) => (
+                  <Polyline
+                    key={`fsd-${index}`}
+                    positions={positions}
+                    pathOptions={{
+                      color: '#c084fc',
+                      weight: 6,
+                      opacity: 0.9,
+                      dashArray: '8 10',
+                    }}
+                  />
+                ))}
                 {hasRoute && startPos && (
                   <CircleMarker center={startPos} radius={8} pathOptions={{ color: '#10b981', fillColor: '#10b981', fillOpacity: 1, weight: 2 }}>
                     <Popup><span className="text-xs font-bold">{t('driveDetail.start', 'Start')}</span><br /><span className="text-xs">{formatDateTime(drive.startTs)}</span></Popup>
@@ -145,6 +192,15 @@ export function RouteMapSection({ drive, trail, startPos, endPos, centerPos, spe
                 </div>
               )}
             </div>
+            {fsdSegments.length > 0 && (
+              <div className="flex items-center gap-2 border-t border-[var(--border-default)] px-4 py-2 text-xs text-[var(--text-muted)]">
+                <span className="w-5 border-t-2 border-dashed border-purple-400" aria-hidden="true" />
+                {t(
+                  'driveDetail.fsd.mapEvidence',
+                  'Approximate area where the FSD counter increased - not an exact FSD-active segment.',
+                )}
+              </div>
+            )}
             <div className="flex items-center justify-between px-4 py-3 text-xs">
               <span className="flex items-center gap-1.5 text-green-400"><Flag className="h-3 w-3" /> {t('driveDetail.start', 'Start')}: {formatTime(drive.startTs)}</span>
               {hasRoute && safeTrail.length > 1 && (

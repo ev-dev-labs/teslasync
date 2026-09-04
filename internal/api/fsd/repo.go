@@ -45,15 +45,17 @@ const windowSamplesSQL = `
 	WHERE vehicle_id = $1
 	  AND field = ANY($2)
 	  AND ts >= $3
-	  AND ts <= $4`
+	  AND ts < $4`
 
 // baselineSamplesSQL reads exactly ONE observation per counter from strictly
 // before the window.
 //
-// This row is what makes the first in-window observation attributable: a
+// A trusted, valid row makes the first in-window observation attributable: a
 // cumulative counter only tells you distance when you can difference it
-// against an earlier reading. DISTINCT ON (field) ... ORDER BY field, ts DESC
-// is an index-only backwards scan per field on
+// against an earlier reading. The newest raw row must be returned even when
+// its provenance or value is invalid, because such a row is a continuity
+// barrier; silently reaching past it to an older trusted row can fabricate a
+// delta. DISTINCT ON (field) ... ORDER BY field, ts DESC is a backwards scan per field on
 // signal_log_vehicle_field_ts, so the cost is O(log n) per counter regardless
 // of how far back the last emission was. Unlike the window read, the ORDER BY
 // here is REQUIRED — it is what DISTINCT ON selects the row by, and it runs in
@@ -66,7 +68,6 @@ const baselineSamplesSQL = `
 	WHERE vehicle_id = $1
 	  AND field = ANY($2)
 	  AND ts < $3
-	  AND normalization_version >= $4
 	ORDER BY field, ts DESC`
 
 // Repo is the production signal_log reader for FSD Insights.
@@ -94,7 +95,7 @@ func NewRepo(db *database.DB) *Repo {
 	return &Repo{pool: db.Pool}
 }
 
-// WindowSamples returns every observation of `fields` inside [from, to].
+// WindowSamples returns every observation of `fields` inside [from, to).
 //
 // Row order is unspecified; Aggregate sorts by timestamp per field.
 // `ctx` carries the caller's deadline — this method adds none of its own.
@@ -117,7 +118,6 @@ func (r *Repo) BaselineSamples(ctx context.Context, vehicleID int64, fields []st
 		vehicleID,
 		fields,
 		before,
-		trustedSignalLogNormalizationVersion,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("query fsd baseline samples for vehicle %d: %w", vehicleID, err)

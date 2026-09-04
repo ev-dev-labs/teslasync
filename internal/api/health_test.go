@@ -1,8 +1,11 @@
 package api
 
 import (
+	"errors"
 	"math"
 	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -10,6 +13,37 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 	"github.com/sony/gobreaker"
 )
+
+func TestHealthHandlerIsProcessOnly(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+
+	HealthHandler()(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusOK)
+	}
+	if !strings.Contains(rec.Body.String(), `"status":"ok"`) {
+		t.Fatalf("body = %q, want process health response", rec.Body.String())
+	}
+}
+
+func TestHealthHandlerFailsForRestartRepairableProcessCheck(t *testing.T) {
+	rec := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
+
+	HealthHandler(LivenessCheck{
+		Component: "mqtt_pipeline",
+		Check:     func() error { return errors.New("subscriber stopped") },
+	})(rec, req)
+
+	if rec.Code != http.StatusServiceUnavailable {
+		t.Fatalf("status = %d, want %d", rec.Code, http.StatusServiceUnavailable)
+	}
+	if !strings.Contains(rec.Body.String(), "mqtt_pipeline unhealthy") {
+		t.Fatalf("body = %q, want failed process component", rec.Body.String())
+	}
+}
 
 func TestAPIUsageSummaryUsesCanonicalCategoryPricing(t *testing.T) {
 	summary := newAPIUsageSummary()

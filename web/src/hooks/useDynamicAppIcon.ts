@@ -22,12 +22,12 @@ const FALLBACK_BG = '#0b0d12'
 /**
  * Re-tints the browser tab favicon, the iOS apple-touch-icon, the
  * `<meta name="theme-color">` tag, AND the PWA manifest icons in real time.
- * The icon accent follows the chosen theme while browser chrome follows the
+ * The bolt follows the chosen theme primary while browser chrome follows the
  * active surface mode, keeping both dark and light installs visually calm.
  *
  * Layer 1 — favicon (instant, every browser):
  *   Mutates every `<link rel="icon">` to a base64-encoded SVG data URL with
- *   the active framed brand mark. Inlines a `data-dynamic-app-icon`
+ *   the active bolt mark. Inlines a `data-dynamic-app-icon`
  *   marker so `useFaviconBadge` knows it can re-snapshot the live href
  *   instead of restoring to the build-time default.
  *
@@ -107,17 +107,18 @@ export function useDynamicAppIcon(): void {
     })
 
     // ── Layer 3: manifest icons ──────────────────────────────────────────
-    // Generate maskable + standard rasters in parallel, assemble a Web App
+    // Generate maskable + full-bleed rasters in parallel, assemble a Web App
     // Manifest blob, and replace the existing `<link rel="manifest">` href.
     // Chrome's install prompt re-reads the manifest each time it opens, so
     // this affects the next install. Existing installs keep their baked
-    // launcher icon.
-    const standardSvg = buildAppIconSvg({ primary, accent, mode: 'standard' })
+    // launcher icon. `any` uses the apple (full-bleed, no rounding) canvas
+    // so Android splash does not clip a pre-drawn frame.
+    const launcherSvg = buildAppIconSvg({ primary, accent, mode: 'apple' })
     const maskableSvg = buildAppIconSvg({ primary, accent, mode: 'maskable' })
 
     Promise.all([
-      renderSvgToPngDataUrl(standardSvg, 192),
-      renderSvgToPngDataUrl(standardSvg, 512),
+      renderSvgToPngDataUrl(launcherSvg, 192),
+      renderSvgToPngDataUrl(launcherSvg, 512),
       renderSvgToPngDataUrl(maskableSvg, 192),
       renderSvgToPngDataUrl(maskableSvg, 512),
     ]).then(([std192, std512, msk192, msk512]) => {

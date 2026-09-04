@@ -12,6 +12,7 @@ import { formatDateTime, formatTime, formatDurationMinutes } from '@/lib/dateFor
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
 import { getEfficiency, gradeFromEfficiency } from '@/lib/drivesAggregation';
 import type { Drive } from '@/types/driving';
+import type { DriveFsdInsight } from '@/types/fsd';
 import { Icons } from '@/lib/icons';
 
 export interface DriveCardProps {
@@ -31,12 +32,14 @@ export interface DriveCardProps {
   /** When true, render a high-energy-use badge to mark this row
  * as the one called out in the page-level anomaly summary. */
   isAnomaly?: boolean;
+  fsdInsight?: DriveFsdInsight;
 }
 
 function DriveCardImpl({
   drive, toDistanceDisplay, toSpeedDisplay, toEfficiencyDisplay,
   distanceUnit, speedUnit, efficiencyUnit, formatEnergyCost,
   selected, onToggleSelect, onPreview, tz, isAnomaly,
+  fsdInsight,
 }: DriveCardProps) {
   const { t } = useTranslation();
   const actualDistance = drive.distanceM;
@@ -57,6 +60,40 @@ function DriveCardImpl({
     !(drive.startBatteryPct === 0 && drive.endBatteryPct === 0 && isCompleted);
 
   const showCheckbox = typeof onToggleSelect === 'function';
+  const fsdBadge = (() => {
+    if (!fsdInsight) return null;
+    if (fsdInsight.confidence === 'unknown' || fsdInsight.fsd_distance_m == null) {
+      return {
+        label: t('drives.fsdUnknown', 'FSD data unknown'),
+        variant: 'neutral' as const,
+        title: t(
+          'drives.fsdUnknownHelp',
+          'The cumulative counters do not provide enough synchronized evidence for this drive.',
+        ),
+      };
+    }
+    const prefix = fsdInsight.confidence === 'high' ? '' : '~';
+    const value = fsdInsight.fsd_share_pct != null
+      ? `${prefix}${fmtNumber(fsdInsight.fsd_share_pct, 0)}%`
+      : `${prefix}${fmtNumber(toDistanceDisplay(fsdInsight.fsd_distance_m))} ${distanceUnit}`;
+    const ambiguous = fsdInsight.confidence === 'ambiguous'
+      ? ` · ${t('drives.fsdAmbiguous', 'ambiguous')}`
+      : '';
+    return {
+      label: `FSD ${value}${ambiguous}`,
+      variant: fsdInsight.confidence === 'high'
+        ? 'success' as const
+        : fsdInsight.confidence === 'ambiguous'
+          ? 'warning' as const
+          : 'info' as const,
+      title: fsdInsight.reset_affected
+        ? t('drives.fsdResetAffected', 'A counter reset lowered confidence for this drive.')
+        : t(
+            'drives.fsdReportedHelp',
+            'Reported supervised-driving distance derived from cumulative counters.',
+          ),
+    };
+  })();
 
   const checkbox = showCheckbox ? (
     <Checkbox
@@ -92,6 +129,11 @@ function DriveCardImpl({
         <Badge variant="danger" size="sm">
           <AlertTriangle className="h-3 w-3" aria-hidden />
           {t('drives.highEnergyUse', 'High energy use')}
+        </Badge>
+      )}
+      {fsdBadge && (
+        <Badge variant={fsdBadge.variant} size="sm" title={fsdBadge.title}>
+          {fsdBadge.label}
         </Badge>
       )}
     </>
@@ -188,5 +230,6 @@ export const DriveCard = memo(DriveCardImpl, (prev, next) =>
   prev.efficiencyUnit === next.efficiencyUnit &&
   prev.tz === next.tz &&
   prev.isAnomaly === next.isAnomaly &&
+  prev.fsdInsight === next.fsdInsight &&
   prev.onToggleSelect === next.onToggleSelect &&
   prev.onPreview === next.onPreview, );

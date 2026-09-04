@@ -37,6 +37,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useDrives, useBulkDeleteDrives } from '@/api/hooks/useDriving';
+import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import { apiUrl } from '@/api/client';
 import { scopedPath } from '@/api/scope';
 import { useFormatting } from '@/hooks/useFormatting';
@@ -54,7 +55,9 @@ import { matchPresetId, getDatePreset } from '@/lib/datePresets';
 import { fmtNumber, fmtInt, fmtCompact } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { buildContextHref } from '@/lib/contextNavigation';
+import { calendarRangeToInstants } from '@/lib/dateRange';
 import type { Drive } from '@/types/driving';
+import type { DriveFsdInsight } from '@/types/fsd';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { convertDistanceFromSI, convertSpeedFromSI } from '@/lib/unitConversion';
 import {
@@ -72,10 +75,22 @@ import { DriveCard } from '../components/DriveCard';
 
 const COLLECTIONS = ['all', 'anomalies', 'notable', 'commutes', 'tagged'] as const;
 type Collection = typeof COLLECTIONS[number];
+const FSD_FILTERS = ['all', 'reported', 'high', 'estimated', 'ambiguous', 'unknown'] as const;
+type FsdFilter = typeof FSD_FILTERS[number];
 const TREND_METRICS = ['drives', 'distance', 'score', 'efficiency', 'cost'] as const;
 
 /** Rows fetched per request. The API rejects anything above 1,000. */
 const DRIVES_FETCH_LIMIT = 1000;
+const FSD_MAX_RANGE_DAYS = 366;
+
+function inclusiveDateKeySpan(start: string, end: string): number {
+  const startMs = Date.parse(`${start}T00:00:00Z`);
+  const endMs = Date.parse(`${end}T00:00:00Z`);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs < startMs) {
+    return Number.POSITIVE_INFINITY;
+  }
+  return Math.floor((endMs - startMs) / 86_400_000) + 1;
+}
 
 export default function DrivesListPage() {
   const { t } = useTranslation();
@@ -132,18 +147,6 @@ export default function DrivesListPage() {
     filters: { format: 'csv' },
   }), [vehicleId, startDate, endDate]);
 
-  /* A deliberate pull-to-refresh is a statement about the whole workspace, not
-   * about this tab. Broadcasting it means a pinned dashboard on a second
-   * monitor stops showing pre-refresh numbers the moment the operator pulls
-   * here. Reuses the existing coalescing bus — no extra channel. */
-  const { refresh: refreshAcrossTabs } = useCrossTabRefresh({
-    queryKeys: [['drives']],
-  });
-  const handlePullToRefresh = useCallback(async () => {
-    refreshAcrossTabs();
-    await refetchDrives();
-  }, [refreshAcrossTabs, refetchDrives]);
-
   /* A full page back means the range almost certainly holds more drives than
    * one request can carry. Say so rather than silently showing a subset. */
   const truncated = (drives?.length ?? 0) >= DRIVES_FETCH_LIMIT;
@@ -154,6 +157,53 @@ export default function DrivesListPage() {
  * grouped list, the chart shows ghost bars on the next UTC day, and
  * the period stats undercount/overcount drives near the boundary. */
   const tz = useTimezone('vehicle');
+  const fsdRange = useMemo(
+    () => calendarRangeToInstants({
+      startDate,
+      endDate,
+      timezone: tz,
+    }),
+    [startDate, endDate, tz],
+  );
+  const fsdRangeSupported = inclusiveDateKeySpan(startDate, endDate) <= FSD_MAX_RANGE_DAYS;
+  const fsdQuery = useFsdInsightsRange(
+    fsdRangeSupported ? vehicleIdStr : undefined,
+    fsdRange.startInstant,
+    fsdRange.endInstantExclusive,
+    tz,
+  );
+  const { refetch: refetchFsd } = fsdQuery;
+  const fsdState = useDataState(fsdQuery, { provenance: 'historical' });
+  const fsdDataAvailable = vehicleIdStr != null
+    && fsdRangeSupported
+    && fsdState.data?.drive_analytics != null;
+  const fsdByDriveID = useMemo(
+    () => new Map<number, DriveFsdInsight>(
+      (fsdState.data?.drive_analytics?.contributing_drives ?? [])
+        .map((insight) => [insight.drive_id, insight]),
+    ),
+    [fsdState.data],
+  );
+
+  /* A deliberate pull-to-refresh covers both the primary drive list and its
+   * FSD enrichment, locally and in other tabs. */
+  const { refresh: refreshAcrossTabs } = useCrossTabRefresh({
+    queryKeys: [['drives'], ['analytics', 'fsd']],
+  });
+  const handlePullToRefresh = useCallback(async () => {
+    refreshAcrossTabs();
+    const refreshes: Promise<unknown>[] = [refetchDrives()];
+    if (vehicleIdStr != null && fsdRangeSupported) {
+      refreshes.push(refetchFsd());
+    }
+    await Promise.all(refreshes);
+  }, [
+    fsdRangeSupported,
+    refetchFsd,
+    refreshAcrossTabs,
+    refetchDrives,
+    vehicleIdStr,
+  ]);
 
   /* Unit conversion */
   const { unitPrefs, formatEnergy } = useUnits();
@@ -175,13 +225,14 @@ export default function DrivesListPage() {
   const { formatEnergyCost, costPerKwh, formatCurrency } = useFormatting();
 
   /* URL-persisted UI state */
-  const [sortBy, setSortBy] = useUrlEnum<'date' | 'distance' | 'efficiency'>(
-    'sort', ['date', 'distance', 'efficiency'] as const, 'date',
+  const [sortBy, setSortBy] = useUrlEnum<'date' | 'distance' | 'efficiency' | 'fsd'>(
+    'sort', ['date', 'distance', 'efficiency', 'fsd'] as const, 'date',
   );
   const [page, setPage] = useUrlNumber('page', 1);
   const [pageSize] = useUrlNumber('size', 50);
   const [search] = useUrlString('q', '');
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');
+  const [fsdFilter] = useUrlEnum<FsdFilter>('fsd', FSD_FILTERS, 'all');
   const [trendMetric, setTrendMetric] = useUrlEnum<TrendMetric>('trend', TREND_METRICS, 'drives');
   const setUrlBatch = useUrlBatch();
 
@@ -239,6 +290,22 @@ export default function DrivesListPage() {
     }
   }, [collection, dateFilteredDrives, anomalyDrives, notableDrives, commuteDrives]);
 
+  const fsdFiltered = useMemo(() => {
+    if (fsdFilter === 'all' || !fsdDataAvailable) return collectionFiltered;
+    return collectionFiltered.filter((drive) => {
+      const insight = fsdByDriveID.get(drive.id);
+      if (fsdFilter === 'unknown') {
+        return insight?.confidence === 'unknown';
+      }
+      if (fsdFilter === 'reported') {
+        return insight != null
+          && insight.confidence !== 'unknown'
+          && insight.fsd_distance_m != null;
+      }
+      return insight?.confidence === fsdFilter;
+    });
+  }, [collectionFiltered, fsdByDriveID, fsdDataAvailable, fsdFilter]);
+
   /* ---- Search filter — supports `grade:X`, legacy `score:X`, `from:Mon`, `distance:>N`
  * plus bare substring (addresses + numbers). The structured
  * parser short-circuits when the query is empty, so the pre-
@@ -253,8 +320,8 @@ export default function DrivesListPage() {
     [deferredSearch],
   );
   const filteredDrives = useMemo(() => {
-    if (searchTokens.length === 0) return collectionFiltered;
-    return collectionFiltered.filter((d) =>
+    if (searchTokens.length === 0) return fsdFiltered;
+    return fsdFiltered.filter((d) =>
       matchesTokens(d, searchTokens, {
         text: (drive) => [
           drive.startAddress,
@@ -290,7 +357,7 @@ export default function DrivesListPage() {
         },
       }),
     );
-  }, [collectionFiltered, searchTokens, toDistanceDisplay, tz]);
+  }, [fsdFiltered, searchTokens, toDistanceDisplay, tz]);
 
   /* ---- Sort ---- */
   const sortedDrives = useMemo(() => {
@@ -298,9 +365,21 @@ export default function DrivesListPage() {
     switch (sortBy) {
       case 'distance':   return sorted.sort((a, b) => (b.distanceM ?? 0) - (a.distanceM ?? 0));
       case 'efficiency': return sorted.sort((a, b) => (getEfficiency(a) ?? 999) - (getEfficiency(b) ?? 999));
+      case 'fsd':        return sorted.sort((a, b) => {
+        const left = fsdByDriveID.get(a.id);
+        const right = fsdByDriveID.get(b.id);
+        const leftHasShare = left?.fsd_share_pct != null;
+        const rightHasShare = right?.fsd_share_pct != null;
+        if (leftHasShare !== rightHasShare) return leftHasShare ? -1 : 1;
+        if (leftHasShare && rightHasShare) {
+          const shareDifference = (right?.fsd_share_pct ?? 0) - (left?.fsd_share_pct ?? 0);
+          if (shareDifference !== 0) return shareDifference;
+        }
+        return (right?.fsd_distance_m ?? -1) - (left?.fsd_distance_m ?? -1);
+      });
       default:           return sorted.sort((a, b) => (b.startTs ?? '').localeCompare(a.startTs ?? ''));
     }
-  }, [filteredDrives, sortBy]);
+  }, [filteredDrives, fsdByDriveID, sortBy]);
 
   /* ---- Pagination ---- */
   // Clamp the URL-provided page into the valid range. A stale `?page=N`
@@ -321,7 +400,25 @@ export default function DrivesListPage() {
     // doesn't get grouped under the next UTC day. formatDayKey then
     // formats the YMD key directly without round-tripping through Date,
     // avoiding the off-by-one rendering at midnight boundaries.
-    const raw = groupByDate(paginatedDrives, (d) => localDayKey(d.startTs, tz));
+    const raw: Array<{
+      dateKey: string;
+      labelDayKey: string;
+      items: Drive[];
+    }> = sortBy === 'date'
+      ? groupByDate(paginatedDrives, (d) => localDayKey(d.startTs, tz))
+        .map((group) => ({ ...group, labelDayKey: group.dateKey }))
+      : paginatedDrives.flatMap((drive) => {
+        const labelDayKey = localDayKey(drive.startTs, tz);
+        if (!labelDayKey) return [];
+        return [{
+          // Non-date sorts must preserve global item order. One group per
+          // drive avoids a same-day group pulling a lower-ranked item ahead
+          // of higher-ranked drives from another day.
+          dateKey: `${labelDayKey}--drive-${drive.id}`,
+          labelDayKey,
+          items: [drive],
+        }];
+      });
     return raw.map((g) => {
       const distM = g.items.reduce((s, d) => s + (d.distanceM ?? 0), 0);
       const distDisplay = fmtNumber(toDistanceDisplay(distM));
@@ -330,14 +427,14 @@ export default function DrivesListPage() {
         : t('bulk.noun.drive_other', 'drives');
       return {
         dateKey: g.dateKey,
-        dateLabel: formatDayKey(g.dateKey, { style: 'long' }),
+        dateLabel: formatDayKey(g.labelDayKey, { style: 'long' }),
         // Compare the vehicle-local YMD key with "today" in that same zone.
-        relativeLabel: formatRelativeDayKey(g.dateKey, { tz }),
+        relativeLabel: formatRelativeDayKey(g.labelDayKey, { tz }),
         summary: `${g.items.length} ${noun} · ${distDisplay} ${distanceUnit}`,
         items: g.items,
       };
     });
-  }, [paginatedDrives, toDistanceDisplay, distanceUnit, t, tz]);
+  }, [paginatedDrives, sortBy, toDistanceDisplay, distanceUnit, t, tz]);
 
   /* ---- Trend-chart series (one entry per available metric) ---- */
   const trendSeries = useMemo(() => ({
@@ -640,8 +737,62 @@ export default function DrivesListPage() {
     { key: 'tagged',    label: t('drives.coll.tagged', 'Tagged'),       count: 0,                          accent: 'amber',  icon: <Tag className="h-3 w-3" />, disabled: true },
   ], [t, dateFilteredDrives.length, anomalyDrives.length, notableDrives.length, commuteDrives.length]);
 
+  const fsdPills: PillItem[] = useMemo(() => {
+    const count = (predicate: (insight: DriveFsdInsight | undefined) => boolean) =>
+      collectionFiltered.reduce(
+        (total, drive) => total + (predicate(fsdByDriveID.get(drive.id)) ? 1 : 0),
+        0,
+      );
+    return [
+      {
+        key: 'all',
+        label: t('drives.fsdFilter.all', 'All FSD data'),
+        count: collectionFiltered.length,
+        accent: 'cyan',
+      },
+      {
+        key: 'reported',
+        label: t('drives.fsdFilter.reported', 'FSD reported'),
+        count: count((insight) => insight != null
+          && insight.confidence !== 'unknown'
+          && insight.fsd_distance_m != null),
+        accent: 'green',
+        disabled: !fsdDataAvailable,
+      },
+      {
+        key: 'high',
+        label: t('drives.fsdFilter.high', 'High confidence'),
+        count: count((insight) => insight?.confidence === 'high'),
+        accent: 'green',
+        disabled: !fsdDataAvailable,
+      },
+      {
+        key: 'estimated',
+        label: t('drives.fsdFilter.estimated', 'Estimated'),
+        count: count((insight) => insight?.confidence === 'estimated'),
+        accent: 'cyan',
+        disabled: !fsdDataAvailable,
+      },
+      {
+        key: 'ambiguous',
+        label: t('drives.fsdFilter.ambiguous', 'Ambiguous'),
+        count: count((insight) => insight?.confidence === 'ambiguous'),
+        accent: 'amber',
+        disabled: !fsdDataAvailable,
+      },
+      {
+        key: 'unknown',
+        label: t('drives.fsdFilter.unknown', 'Unknown'),
+        count: count((insight) => insight?.confidence === 'unknown'),
+        accent: 'red',
+        disabled: !fsdDataAvailable,
+      },
+    ];
+  }, [collectionFiltered, fsdByDriveID, fsdDataAvailable, t]);
+
   /* ---- Compact summary for the sticky bar ---- */
   const collectionLabel = collectionPills.find(p => p.key === collection)?.label ?? 'All';
+  const fsdFilterLabel = fsdPills.find(p => p.key === fsdFilter)?.label ?? 'All FSD data';
   const stickySummary = (
     <>
       <Text as="span" color="secondary" className="truncate">
@@ -990,6 +1141,48 @@ export default function DrivesListPage() {
           label={t('drives.title', 'Drive History')}
         />
 
+        {!fsdRangeSupported && (
+          <DataStateNotice
+            state="unsupported"
+            title={t('drives.fsdRangeUnsupported.title', 'FSD evidence is unavailable for this range')}
+            message={t(
+              'drives.fsdRangeUnsupported.message',
+              'FSD attribution supports up to 366 days at a time. Drive history remains available, but FSD filters and sorting are disabled.',
+            )}
+          />
+        )}
+
+        {fsdRangeSupported && fsdState.fatalError && (
+          <DataStateNotice
+            state="unavailable"
+            title={t('drives.fsdUnavailable.title', 'FSD evidence could not be loaded')}
+          >
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <span>
+                {t(
+                  'drives.fsdUnavailable.message',
+                  'Drive history remains available, but FSD badges, filters, and sorting are disabled until this data loads successfully.',
+                )}
+              </span>
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={() => { void refetchFsd(); }}
+              >
+                {t('common.retry', 'Retry')}
+              </Button>
+            </div>
+          </DataStateNotice>
+        )}
+
+        {fsdRangeSupported && (
+          <StaleRefreshWarning
+            state={fsdState}
+            label={t('drives.fsdEvidence', 'FSD evidence')}
+          />
+        )}
+
         {!isDrivesLoading && currentStats.count > 0 && missingEfficiencyCount > 0 && (
           <DataStateNotice
             state="partial"
@@ -1058,13 +1251,21 @@ export default function DrivesListPage() {
                       onRemove: () => { setUrlBatch({ coll: null, page: null }); },
                     } satisfies FilterChipDescriptor
                   : null,
+                fsdFilter !== 'all'
+                  ? {
+                      key: 'fsd',
+                      label: t('drives.filterLabel.fsd', 'FSD evidence'),
+                      value: fsdFilterLabel,
+                      onRemove: () => { setUrlBatch({ fsd: null, page: null }); },
+                    } satisfies FilterChipDescriptor
+                  : null,
               ].filter(Boolean) as FilterChipDescriptor[]) as readonly FilterChipDescriptor[]
             }
             onClearAll={() => {
               // Only clear filters that are visible as chips. Date range is
               // owned by the RangePicker, so leave it alone here — clearing
               // an invisible filter would be a WYSIWYG violation.
-              setUrlBatch({ q: null, coll: null, page: null });
+              setUrlBatch({ q: null, coll: null, fsd: null, page: null });
             }}
           />
         </FadeIn>
@@ -1238,6 +1439,15 @@ export default function DrivesListPage() {
             testId="drives-collections"
           />
         </FadeIn>
+        <FadeIn>
+          <PillFilterBar
+            items={fsdPills}
+            activeKey={fsdFilter}
+            onChange={(key) => setUrlBatch({ fsd: key === 'all' ? null : key, page: null })}
+            ariaLabel={t('drives.fsdFilter.aria', 'Filter drives by FSD evidence')}
+            testId="drives-fsd-filter"
+          />
+        </FadeIn>
 
         {/* Detail band — full-width drive list */}
         <section
@@ -1256,11 +1466,12 @@ export default function DrivesListPage() {
             {sortedDrives.length > 0 && (
               <div className="flex flex-wrap items-center gap-2">
                 <ArrowUpDown className="h-3.5 w-3.5 text-[var(--text-muted)]" aria-hidden="true" />
-                {(['date', 'distance', 'efficiency'] as const).map((s) => (
+                {(['date', 'distance', 'efficiency', 'fsd'] as const).map((s) => (
                   <Button
                     key={s}
                     variant="ghost"
                     size="sm"
+                    disabled={s === 'fsd' && !fsdDataAvailable}
                     onClick={() => setSortBy(s)}
                     className={cn(
                       sortBy === s
@@ -1272,7 +1483,9 @@ export default function DrivesListPage() {
                         ? t('drives.sortRecent', 'Recent')
                         : s === 'distance'
                           ? t('drives.sortDistance', 'Distance')
-                          : t('drives.sortEfficiency', 'Efficiency'),
+                          : s === 'efficiency'
+                            ? t('drives.sortEfficiency', 'Efficiency')
+                            : t('drives.sortFsd', 'FSD share'),
                     })}
                     aria-pressed={sortBy === s}
                   >
@@ -1281,7 +1494,9 @@ export default function DrivesListPage() {
                         ? t('drives.sortRecent', 'Recent')
                         : s === 'distance'
                           ? t('drives.sortDistance', 'Distance')
-                          : t('drives.sortEfficiency', 'Efficiency')}
+                          : s === 'efficiency'
+                            ? t('drives.sortEfficiency', 'Efficiency')
+                            : t('drives.sortFsd', 'FSD share')}
                       {sortBy === s && (
                         <ArrowDown className="h-3 w-3 opacity-80" aria-hidden />
                       )}
@@ -1348,6 +1563,7 @@ export default function DrivesListPage() {
                       formatEnergyCost={formatEnergyCost}
                       tz={tz}
                       isAnomaly={anomalyDriveIds.has(d.id)}
+                      fsdInsight={fsdByDriveID.get(d.id)}
                       selected={bulkSelected.has(d.id)}
                       onToggleSelect={toggleDriveSelected}
                       onPreview={setPreviewDrive}
@@ -1369,19 +1585,27 @@ export default function DrivesListPage() {
             <EmptyState
               icon={<Route className="h-8 w-8" />}
               title={
-                collection !== 'all'
+                collection !== 'all' || fsdFilter !== 'all'
                   ? t('drives.emptyForCollection', 'No drives in this view')
                   : t('drives.emptyTitle', 'No drives recorded yet')
               }
               message={
-                collection !== 'all'
+                collection !== 'all' || fsdFilter !== 'all'
                   ? t('drives.emptyForCollection.msg', 'Try switching to a different collection or clearing your filters.')
                   : t('drives.emptyMessage', 'Drive data will appear here once your vehicle records trips.')
               }
               action={{
                 label: t('drives.empty.cta', 'Reset filters'),
                 onClick: () => {
-                  setUrlBatch({ q: null, from: null, to: null, coll: null, sort: null, page: null });
+                  setUrlBatch({
+                    q: null,
+                    from: null,
+                    to: null,
+                    coll: null,
+                    fsd: null,
+                    sort: null,
+                    page: null,
+                  });
                 },
               }}
             />

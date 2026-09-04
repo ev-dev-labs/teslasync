@@ -82,6 +82,38 @@ func sampleScanWithVersion(field string, ts time.Time, value *float64, version *
 	}
 }
 
+func compactedSampleScan(
+	field string,
+	ts time.Time,
+	value *float64,
+	validCount, invalidCount, untrustedCount int,
+	firstValidAt, lastValidAt *time.Time,
+) func(dest ...any) error {
+	version := trustedSignalLogNormalizationVersion
+	return func(dest ...any) error {
+		if len(dest) != 10 {
+			return errors.New("unexpected compacted sample projection")
+		}
+		*(dest[0].(*string)) = field
+		*(dest[1].(*time.Time)) = ts
+		if value != nil {
+			*(dest[2].(**float64)) = value
+		}
+		*(dest[3].(**int16)) = &version
+		*(dest[4].(*bool)) = true
+		*(dest[5].(*int)) = validCount
+		*(dest[6].(*int)) = invalidCount
+		*(dest[7].(*int)) = untrustedCount
+		if firstValidAt != nil {
+			*(dest[8].(**time.Time)) = firstValidAt
+		}
+		if lastValidAt != nil {
+			*(dest[9].(**time.Time)) = lastValidAt
+		}
+		return nil
+	}
+}
+
 // ---------------------------------------------------------------------------
 // SQL shape — pinned without a live database so an accidental edit that drops
 // the index-aligned predicates or the NULL-safe projection is caught here.
@@ -93,7 +125,7 @@ func TestWindowSamplesSQL_ShapeIsIndexAligned(t *testing.T) {
 		"vehicle_id = $1",
 		"field = ANY($2)",
 		"ts >= $3",
-		"ts <= $4",
+		"ts < $4",
 		"COALESCE(float_value, int_value::float8)",
 		"normalization_version",
 	} {
@@ -116,16 +148,18 @@ func TestWindowSamplesSQL_ShapeIsIndexAligned(t *testing.T) {
 	}
 }
 
-func TestBaselineSamplesSQL_TakesExactlyOneRowPerField(t *testing.T) {
+func TestBaselineSamplesSQL_TakesNewestRawRowPerField(t *testing.T) {
 	for _, want := range []string{
 		"DISTINCT ON (field)",
 		"ts < $3",
-		"normalization_version >= $4",
 		"ORDER BY field, ts DESC",
 	} {
 		if !strings.Contains(baselineSamplesSQL, want) {
 			t.Errorf("baselineSamplesSQL missing %q", want)
 		}
+	}
+	if strings.Contains(baselineSamplesSQL, "normalization_version >=") {
+		t.Error("baseline query must return an untrusted latest row as a continuity barrier")
 	}
 }
 
@@ -133,6 +167,245 @@ func TestCounterFields_AreTheTwoCanonicalCounters(t *testing.T) {
 	fields := counterFields()
 	if len(fields) != 2 || fields[0] != "SelfDrivingMilesSinceReset" || fields[1] != "MilesSinceReset" {
 		t.Fatalf("counterFields() = %v", fields)
+	}
+}
+
+func TestAnalyticsSQL_UsesHalfOpenSetBasedWindows(t *testing.T) {
+	t.Parallel()
+
+	for _, want := range []string{
+		"FROM signal_log",
+		"vehicle_id = $1",
+		"field = ANY($2)",
+		"ts >= $3",
+		"ts < $5",
+		"DISTINCT ON (field)",
+		"range_samples AS",
+		"date_bin(",
+		"INTERVAL '1 minute'",
+		"selected_timestamps AS",
+		"bucket_first_at",
+		"bucket_last_at",
+		"paired_bucket_first_at",
+		"paired_bucket_last_at",
+		"valid_observation_count",
+		"untrusted_observation_count",
+		"previous_barrier",
+		"next_barrier",
+		"previous_value IS NULL",
+		"ORDER BY ts ASC, field ASC",
+	} {
+		if !strings.Contains(analyticsCounterSamplesSQL, want) {
+			t.Errorf("analyticsCounterSamplesSQL missing %q", want)
+		}
+	}
+	counterBaselineSQL := strings.Split(analyticsCounterSamplesSQL, "raw_values AS")[0]
+	if strings.Contains(counterBaselineSQL, "normalization_version >=") {
+		t.Error("analytics counter baseline must return the newest raw row as a continuity barrier")
+	}
+	for _, want := range []string{
+		"FROM drives",
+		"vehicle_id = $1",
+		"started_at < $3",
+		"COALESCE(ended_at, $3) > $2",
+		"distance_m",
+		"energy_used_wh",
+	} {
+		if !strings.Contains(analyticsDrivesSQL, want) {
+			t.Errorf("analyticsDrivesSQL missing %q", want)
+		}
+	}
+	for _, want := range []string{
+		"field = 'Version'",
+		"ts < $2",
+		"ts >= $2",
+		"ts < $3",
+		"normalization_version",
+		"ORDER BY ts",
+		"range_samples AS",
+	} {
+		if !strings.Contains(analyticsVersionSamplesSQL, want) {
+			t.Errorf("analyticsVersionSamplesSQL missing %q", want)
+		}
+	}
+	if strings.Contains(analyticsVersionSamplesSQL, "normalization_version >=") {
+		t.Error("firmware query must return rejected rows so they can clear stale attribution")
+	}
+
+	all := analyticsCounterSamplesSQL + analyticsDrivesSQL + analyticsVersionSamplesSQL
+	if strings.Contains(strings.ToUpper(all), "WINDOW AS") {
+		t.Error("analytics SQL must not use PostgreSQL's reserved WINDOW keyword as a CTE name")
+	}
+	for _, forbidden := range []string{
+		"start_ts",
+		"end_ts",
+		"energy_used_kwh",
+		"safety_snapshots",
+		"vehicle_live_state",
+	} {
+		if strings.Contains(all, forbidden) {
+			t.Errorf("analytics SQL references stale or unrelated schema token %q", forbidden)
+		}
+	}
+}
+
+func TestRepo_LoadAnalyticsInputScansAllThreeSets(t *testing.T) {
+	t.Parallel()
+
+	start := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+	split := start.Add(24 * time.Hour)
+	end := start.Add(48 * time.Hour)
+	previousFirst := start.Add(55 * time.Minute)
+	previousLast := start.Add(time.Hour)
+	currentFirst := split.Add(55 * time.Minute)
+	currentLast := split.Add(time.Hour)
+	counterRows := &fakeRows{scans: []func(dest ...any) error{
+		compactedSampleScan(
+			SignalFSDDistance,
+			previousLast,
+			fp(1609.344),
+			6,
+			0,
+			0,
+			&previousFirst,
+			&previousLast,
+		),
+		compactedSampleScan(
+			SignalFSDDistance,
+			currentLast,
+			fp(3218.688),
+			6,
+			0,
+			0,
+			&currentFirst,
+			&currentLast,
+		),
+	}}
+	driveEnd := start.Add(3 * time.Hour)
+	startPlace := "Home"
+	endPlace := "Office"
+	startGeofenceID := int64(10)
+	endGeofenceID := int64(20)
+	distanceM := 12000.0
+	energyUsedWh := 2200.0
+	driveRows := &fakeRows{scans: []func(dest ...any) error{
+		func(dest ...any) error {
+			if len(dest) != 9 {
+				t.Fatalf("drive scan destinations = %d, want 9", len(dest))
+			}
+			*(dest[0].(*int64)) = 295
+			*(dest[1].(*time.Time)) = start.Add(2 * time.Hour)
+			*(dest[2].(**time.Time)) = &driveEnd
+			*(dest[3].(**string)) = &startPlace
+			*(dest[4].(**string)) = &endPlace
+			*(dest[5].(**int64)) = &startGeofenceID
+			*(dest[6].(**int64)) = &endGeofenceID
+			*(dest[7].(**float64)) = &distanceM
+			*(dest[8].(**float64)) = &energyUsedWh
+			return nil
+		},
+	}}
+	version := "2026.20.3"
+	versionNormalization := int16(trustedSignalLogNormalizationVersion)
+	versionRows := &fakeRows{scans: []func(dest ...any) error{
+		func(dest ...any) error {
+			if len(dest) != 3 {
+				t.Fatalf("version scan destinations = %d, want 3", len(dest))
+			}
+			*(dest[0].(*time.Time)) = start
+			*(dest[1].(**string)) = &version
+			*(dest[2].(**int16)) = &versionNormalization
+			return nil
+		},
+	}}
+
+	var queries []string
+	var args [][]any
+	call := 0
+	q := &fakeQuerier{queryFn: func(_ context.Context, sql string, queryArgs ...any) (pgx.Rows, error) {
+		queries = append(queries, sql)
+		args = append(args, append([]any(nil), queryArgs...))
+		call++
+		switch call {
+		case 1:
+			return counterRows, nil
+		case 2:
+			return driveRows, nil
+		case 3:
+			return versionRows, nil
+		default:
+			t.Fatalf("unexpected query %d", call)
+			return nil, nil
+		}
+	}}
+
+	input, err := (&Repo{pool: q}).LoadAnalyticsInput(
+		context.Background(),
+		42,
+		start,
+		split,
+		end,
+	)
+	if err != nil {
+		t.Fatalf("LoadAnalyticsInput: %v", err)
+	}
+	if len(input.PreviousCounterSamples) != 1 ||
+		len(input.CounterSamples) != 2 ||
+		len(input.Drives) != 1 ||
+		len(input.VersionSamples) != 1 {
+		t.Fatalf("input sizes = previous counters %d, current counters %d, drives %d, versions %d",
+			len(input.PreviousCounterSamples),
+			len(input.CounterSamples),
+			len(input.Drives),
+			len(input.VersionSamples))
+	}
+	if !input.CounterSamples[0].TS.Equal(previousLast) ||
+		!input.CounterSamples[1].TS.Equal(currentLast) {
+		t.Errorf("current samples must contain latest prior baseline plus current range: %+v", input.CounterSamples)
+	}
+	if !input.CounterSamples[1].Compacted ||
+		input.CounterSamples[1].ValidObservationCount != 6 ||
+		input.CounterSamples[1].FirstValidObservationAt == nil ||
+		!input.CounterSamples[1].FirstValidObservationAt.Equal(currentFirst) {
+		t.Errorf("compacted counter metadata = %+v", input.CounterSamples[1])
+	}
+	if input.Drives[0].ID != 295 ||
+		input.Drives[0].DistanceM == nil ||
+		*input.Drives[0].DistanceM != distanceM ||
+		input.Drives[0].EnergyUsedWh == nil ||
+		*input.Drives[0].EnergyUsedWh != energyUsedWh {
+		t.Errorf("drive = %+v", input.Drives[0])
+	}
+	if input.VersionSamples[0].Version != version {
+		t.Errorf("version = %+v", input.VersionSamples[0])
+	}
+	if input.VersionSamples[0].NormalizationVersion == nil ||
+		*input.VersionSamples[0].NormalizationVersion != trustedSignalLogNormalizationVersion {
+		t.Errorf("version normalization = %+v", input.VersionSamples[0])
+	}
+	if len(queries) != 3 ||
+		queries[0] != analyticsCounterSamplesSQL ||
+		queries[1] != analyticsDrivesSQL ||
+		queries[2] != analyticsVersionSamplesSQL {
+		t.Errorf("queries issued in unexpected order")
+	}
+	if len(args[0]) != 7 ||
+		args[0][0] != int64(42) ||
+		args[0][2] != start ||
+		args[0][3] != split ||
+		args[0][4] != end ||
+		args[0][5] != trustedSignalLogNormalizationVersion ||
+		args[0][6] != SignalFSDDistance {
+		t.Errorf("counter args = %v", args[0])
+	}
+	if len(args[1]) != 3 || args[1][0] != int64(42) || args[1][1] != start || args[1][2] != end {
+		t.Errorf("drive args = %v", args[1])
+	}
+	if len(args[2]) != 3 || args[2][0] != int64(42) || args[2][1] != split || args[2][2] != end {
+		t.Errorf("version args = %v", args[2])
+	}
+	if !counterRows.closed || !driveRows.closed || !versionRows.closed {
+		t.Error("every analytics result set must be closed")
 	}
 }
 
@@ -278,8 +551,8 @@ func TestRepo_BaselineSamples_PassesTheExclusiveUpperBound(t *testing.T) {
 	if q.lastArgs[2] != before {
 		t.Errorf("before arg = %v, want %v", q.lastArgs[2], before)
 	}
-	if q.lastArgs[3] != trustedSignalLogNormalizationVersion {
-		t.Errorf("normalization version arg = %v, want %d", q.lastArgs[3], trustedSignalLogNormalizationVersion)
+	if len(q.lastArgs) != 3 {
+		t.Errorf("baseline args = %v, want vehicle, fields, and boundary only", q.lastArgs)
 	}
 	if q.lastSQL != baselineSamplesSQL {
 		t.Error("BaselineSamples must issue the DISTINCT ON statement")

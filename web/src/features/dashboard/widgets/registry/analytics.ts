@@ -1,7 +1,7 @@
 import { lazy } from 'react';
 import {
   BarChart3, CalendarRange, CalendarDays, Trophy, TrendingUp, Clock,
-  AlertTriangle, GitBranch, PieChart as PieIcon, Calendar,
+  AlertTriangle, GitBranch, PieChart as PieIcon, Calendar, Gauge,
 } from 'lucide-react';
 import type { WidgetDef } from '../types';
 
@@ -49,6 +49,22 @@ export const ANALYTICS_WIDGETS: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../WeeklyDigestWidget')),
+  },
+  {
+    id: 'fsd-weekly',
+    name: 'FSD This Week',
+    description: 'This week vs last week: reported FSD distance and share. Unmeasured is not zero.',
+    icon: Gauge,
+    category: 'analytics',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../FsdWeeklyWidget')),
+    help: {
+      i18nKey: 'help.fsdWeekly.body',
+      defaultValue:
+        'Reported supervised-driving distance this Monday–Sunday versus last week. Unmeasured is not zero.',
+    },
   },
   {
     id: 'monthly-mileage',

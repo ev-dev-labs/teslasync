@@ -452,6 +452,15 @@ export const commandRegistry: CommandDefinition[] = [
     perform: (ctx) => ctx.navigate('/settings'),
   },
   {
+    id: 'action.fleetSetup',
+    labelKey: 'palette.cmd.fleetSetup',
+    labelFallback: 'Open Fleet Setup',
+    icon: Icons.radio,
+    section: 'actions',
+    keywords: ['fleet', 'setup', 'onboarding', 'tesla', 'oauth', 'telemetry', 'subscribe'],
+    perform: (ctx) => ctx.navigate('/settings/fleet-setup'),
+  },
+  {
     id: 'action.shortcuts',
     labelKey: 'palette.cmd.shortcuts',
     labelFallback: 'Show keyboard shortcuts',

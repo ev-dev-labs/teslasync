@@ -25,7 +25,7 @@ type AggregateParams struct {
 	// Nil falls back to UTC.
 	Loc *time.Location
 	// Start is the first valid instant of the first local civil day in the
-	// period; End is the upper bound of the window (usually "now").
+	// period; End is the exclusive upper bound of the window (usually "now").
 	Start time.Time
 	End   time.Time
 	// Samples carries both counters, and both the pre-window baselines
@@ -35,9 +35,10 @@ type AggregateParams struct {
 
 // counterState is the reset-safe per-counter accumulation result.
 type counterState struct {
-	perDayMeters map[string]float64
-	perDayObs    map[string]int
-	perDayResets map[string]int
+	perDayMeters  map[string]float64
+	perDayObs     map[string]int
+	perDayResets  map[string]int
+	perDayDerived map[string]bool
 
 	totalMeters float64
 	samples     int
@@ -46,25 +47,17 @@ type counterState struct {
 	resets      int
 
 	baselineAvailable bool
+	derived           bool
 	firstAt           *time.Time
 	lastAt            *time.Time
-
-	// firstAttributedDay is the local calendar day of the FIRST accepted
-	// delta — the first in-window observation that had a previous accepted
-	// value to difference against. Empty when the counter never produced a
-	// delta inside the window.
-	//
-	// It is the left edge of what this counter can honestly speak about: an
-	// earlier day has no anchor on its left-hand side, so its distance is
-	// unknown rather than zero.
-	firstAttributedDay string
 }
 
 func newCounterState() *counterState {
 	return &counterState{
-		perDayMeters: make(map[string]float64),
-		perDayObs:    make(map[string]int),
-		perDayResets: make(map[string]int),
+		perDayMeters:  make(map[string]float64),
+		perDayObs:     make(map[string]int),
+		perDayResets:  make(map[string]int),
+		perDayDerived: make(map[string]bool),
 	}
 }
 
@@ -84,10 +77,7 @@ func (c *counterState) reported() bool { return c.samples > 0 }
 // Without that there is no honest distance to report — only an unattributable
 // absolute counter reading.
 func (c *counterState) derivable() bool {
-	if !c.reported() {
-		return false
-	}
-	return c.baselineAvailable || c.samples >= 2
+	return c.reported() && c.derived
 }
 
 // commonShareBasis reports whether the two cumulative counters begin from
@@ -113,24 +103,22 @@ func commonShareBasis(fsd, driving *counterState) bool {
 //
 // Two conditions must hold:
 //
-//   - the counter produced at least one delta at or before this day, so the
-//     day sits inside the span the counter can speak about; and
-//   - at least one relevant distance counter reported that day
-//     (`dayHasCounterObservation`).
+//   - the counter produced a trusted, valid observation on that day; and
+//   - that observation had an uninterrupted trusted value to difference
+//     against.
 //
-// The second condition is what makes a genuine zero expressible. Tesla Fleet
-// Telemetry only transmits a field when its value CHANGES, so on a day where
-// a relevant distance counter reported and the self-driving counter did not
-// move, zero is a measurement — not an absence. On a day where neither counter
-// reported, zero would be a fabrication.
-func (c *counterState) measuredDay(day string, dayHasCounterObservation bool) bool {
-	if !c.derivable() || c.firstAttributedDay == "" {
-		return false
-	}
-	if day < c.firstAttributedDay {
-		return false
-	}
-	return dayHasCounterObservation
+// The second condition is what makes a genuine zero expressible without
+// turning a missing emission into manual driving. The synchronized Fleet
+// Telemetry subscription includes the current FSD counter whenever the driving
+// counter advances; older data may not. Only an actual FSD observation can
+// therefore prove an unchanged value.
+func (c *counterState) measuredDay(day string, counterObserved bool) bool {
+	return c.derivable() && counterObserved && c.perDayDerived[day]
+}
+
+func trustedNormalization(sample Sample) bool {
+	return sample.NormalizationVersion != nil &&
+		*sample.NormalizationVersion >= trustedSignalLogNormalizationVersion
 }
 
 // validCounterValue accepts only values a cumulative distance counter can
@@ -148,12 +136,40 @@ func validCounterValue(v *float64) (float64, bool) {
 	return f, true
 }
 
+func applyCompactedObservationStats(
+	state *counterState,
+	sample Sample,
+	loc *time.Location,
+) {
+	validCount := max(sample.ValidObservationCount, 0)
+	invalidCount := max(sample.InvalidObservationCount, 0)
+	state.samples += validCount
+	state.invalid += invalidCount
+	if validCount > 0 {
+		state.perDayObs[sample.TS.In(loc).Format(dayLayout)] += validCount
+	}
+	if sample.FirstValidObservationAt != nil &&
+		(state.firstAt == nil || sample.FirstValidObservationAt.Before(*state.firstAt)) {
+		first := *sample.FirstValidObservationAt
+		state.firstAt = &first
+	}
+	if sample.LastValidObservationAt != nil &&
+		(state.lastAt == nil || sample.LastValidObservationAt.After(*state.lastAt)) {
+		last := *sample.LastValidObservationAt
+		state.lastAt = &last
+	}
+}
+
 // accumulate folds one counter's change feed into per-day meters.
 //
 // Rules (all deliberate, all covered by aggregate_test.go):
 //
-//   - Samples are processed in timestamp order; the newest pre-window sample
-//     becomes the baseline.
+//   - Samples are processed in timestamp order; the newest trusted, valid
+//     pre-window sample becomes the baseline only if no later rejected row
+//     breaks continuity.
+//   - An untrusted or invalid row clears the previous value. The next trusted
+//     value is a fresh anchor, preventing deltas from bridging unknown units,
+//     corrupt values, or a reset hidden by a rejected observation.
 //   - A delta is only produced when a previous accepted value exists, so the
 //     first in-window observation without a baseline contributes nothing and
 //     does not open the attributable span.
@@ -169,19 +185,45 @@ func validCounterValue(v *float64) (float64, bool) {
 func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterState {
 	state := newCounterState()
 
-	ordered := make([]Sample, len(samples))
-	copy(ordered, samples)
-	sort.SliceStable(ordered, func(i, j int) bool { return ordered[i].TS.Before(ordered[j].TS) })
+	ordered := samples
+	if !sort.SliceIsSorted(ordered, func(i, j int) bool {
+		return ordered[i].TS.Before(ordered[j].TS)
+	}) {
+		ordered = append([]Sample(nil), samples...)
+		sort.SliceStable(ordered, func(i, j int) bool {
+			return ordered[i].TS.Before(ordered[j].TS)
+		})
+	}
 
 	var prev *float64
 	var prevTS time.Time
 
 	for _, s := range ordered {
-		value, ok := validCounterValue(s.Value)
 		inWindow := !s.TS.Before(start)
+		if inWindow && s.Compacted {
+			applyCompactedObservationStats(state, s, loc)
+		}
+		if !trustedNormalization(s) {
+			// A row whose unit provenance is unknown is a continuity barrier:
+			// differencing trusted values across it could bridge a hidden reset
+			// or mix wire units.
+			prev = nil
+			if !inWindow {
+				state.baselineAvailable = false
+			}
+			continue
+		}
+
+		value, ok := validCounterValue(s.Value)
 		if !ok {
-			if inWindow {
+			if inWindow && !s.Compacted {
 				state.invalid++
+			}
+			// Invalid observations are also barriers. The next valid row is a
+			// fresh anchor, never a delta against stale pre-error state.
+			prev = nil
+			if !inWindow {
+				state.baselineAvailable = false
 			}
 			continue
 		}
@@ -201,18 +243,19 @@ func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterS
 		}
 
 		day := s.TS.In(loc).Format(dayLayout)
-		state.samples++
-		state.perDayObs[day]++
-		observedAt := s.TS
-		if state.firstAt == nil {
-			state.firstAt = &observedAt
+		if !s.Compacted {
+			state.samples++
+			state.perDayObs[day]++
+			observedAt := s.TS
+			if state.firstAt == nil {
+				state.firstAt = &observedAt
+			}
+			state.lastAt = &observedAt
 		}
-		state.lastAt = &observedAt
 
 		if prev != nil {
-			if state.firstAttributedDay == "" {
-				state.firstAttributedDay = day
-			}
+			state.derived = true
+			state.perDayDerived[day] = true
 			change := signalcounter.Compare(*prev, value)
 			switch change.Kind {
 			case signalcounter.ChangeReset:
@@ -244,21 +287,35 @@ func Aggregate(params AggregateParams) Response {
 		days = 1
 	}
 
-	fsdSamples := make([]Sample, 0, len(params.Samples))
-	drivingSamples := make([]Sample, 0, len(params.Samples))
+	fieldCapacity := len(params.Samples)/2 + 1
+	fsdSamples := make([]Sample, 0, fieldCapacity)
+	drivingSamples := make([]Sample, 0, fieldCapacity)
 	var fsdUntrusted, drivingUntrusted int
 	for _, s := range params.Samples {
+		if !s.TS.Before(params.End) {
+			continue
+		}
 		switch s.Field {
 		case SignalFSDDistance:
-			if s.NormalizationVersion == nil || *s.NormalizationVersion < trustedSignalLogNormalizationVersion {
-				fsdUntrusted++
-				continue
+			if s.Compacted {
+				if !s.TS.Before(params.Start) {
+					fsdUntrusted += max(s.UntrustedObservationCount, 0)
+				}
+			} else if !trustedNormalization(s) {
+				if !s.TS.Before(params.Start) {
+					fsdUntrusted++
+				}
 			}
 			fsdSamples = append(fsdSamples, s)
 		case SignalDrivingDistance:
-			if s.NormalizationVersion == nil || *s.NormalizationVersion < trustedSignalLogNormalizationVersion {
-				drivingUntrusted++
-				continue
+			if s.Compacted {
+				if !s.TS.Before(params.Start) {
+					drivingUntrusted += max(s.UntrustedObservationCount, 0)
+				}
+			} else if !trustedNormalization(s) {
+				if !s.TS.Before(params.Start) {
+					drivingUntrusted++
+				}
 			}
 			drivingSamples = append(drivingSamples, s)
 		}
@@ -268,7 +325,13 @@ func Aggregate(params AggregateParams) Response {
 	driving := accumulate(drivingSamples, params.Start, loc)
 	denominator := driving.derivable()
 	fsdDerivable := fsd.derivable()
-	shareBasisAvailable := commonShareBasis(fsd, driving)
+	shareBasisAvailable := commonShareBasis(fsd, driving) &&
+		fsd.invalid == 0 &&
+		driving.invalid == 0 &&
+		fsd.resets == 0 &&
+		driving.resets == 0 &&
+		fsdUntrusted == 0 &&
+		drivingUntrusted == 0
 
 	dayKeys := denseDayKeys(params.Start, days, loc)
 	daily := make([]DailyPoint, 0, len(dayKeys))
@@ -286,7 +349,7 @@ func Aggregate(params AggregateParams) Response {
 		// different facts, so the value is a pointer and stays nil for the
 		// latter. See counterState.measuredDay.
 		var fsdMeters *float64
-		if fsd.measuredDay(day, hasCounterObservation) {
+		if fsd.measuredDay(day, fsdObs > 0) {
 			m := roundMeters(fsd.perDayMeters[day])
 			fsdMeters = &m
 		}
@@ -405,13 +468,18 @@ func Aggregate(params AggregateParams) Response {
 		ShareClamped:                  clampedTotal || dayShareClamped,
 	}
 
+	endDateAt := params.End
+	if params.End.After(params.Start) {
+		endDateAt = params.End.Add(-time.Nanosecond)
+	}
+
 	return Response{
 		VehicleID: params.VehicleID,
 		Period: Period{
 			Days:      days,
 			Timezone:  loc.String(),
 			StartDate: params.Start.In(loc).Format(dayLayout),
-			EndDate:   params.End.In(loc).Format(dayLayout),
+			EndDate:   endDateAt.In(loc).Format(dayLayout),
 			StartAt:   params.Start.UTC(),
 			EndAt:     params.End.UTC(),
 		},

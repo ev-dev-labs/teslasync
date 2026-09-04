@@ -230,6 +230,42 @@ func TestDriveTelemetryWriter_TypeMatrix(t *testing.T) {
 	}
 }
 
+func TestDriveTelemetryWriter_WriteBatchCoalescesEnumAndNumericFields(t *testing.T) {
+	const vin = "5YJ3E1EA0KF000020"
+	ts := time.Date(2026, 5, 6, 14, 22, 0, 0, time.UTC)
+	rec := &recorder{rows: 1}
+	writer := newDriveTelemetryTestWriter(t, rec)
+
+	results := writer.WriteBatch(context.Background(), []router.RoutedAtomic{
+		{
+			Atomic: codec.Atomic{
+				Field: "Gear", Value: ftproto.ShiftState_ShiftStateD, EmittedAt: ts, VehicleID: vin,
+			},
+			Entry: router.Entry{Field: "Gear", Destination: router.DestDriveTelemetry, Column: "gear"},
+		},
+		{
+			Atomic: codec.Atomic{
+				Field: "VehicleSpeed", Value: float64(28.5), EmittedAt: ts, VehicleID: vin,
+			},
+			Entry: router.Entry{Field: "VehicleSpeed", Destination: router.DestDriveTelemetry, Column: "speed_mps"},
+		},
+	})
+
+	if len(results) != 2 || results[0] != nil || results[1] != nil {
+		t.Fatalf("WriteBatch results = %#v, want two nil entries", results)
+	}
+	if len(rec.calls) != 1 {
+		t.Fatalf("Exec calls = %d, want 1", len(rec.calls))
+	}
+	call := rec.calls[0]
+	if !strings.Contains(call.SQL, `"gear"`) || !strings.Contains(call.SQL, `"speed_mps"`) {
+		t.Fatalf("batch SQL missing drive columns: %s", call.SQL)
+	}
+	if got, want := call.Args, []any{vin, ts, "ShiftStateD", float64(28.5)}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("batch args = %#v, want %#v", got, want)
+	}
+}
+
 // TestDriveTelemetryWriter_DriveIDNotTouched locks the invariant that the
 // writer never references the drive_id column
 // on insert. drive_id is backfilled by the session tracker observer

@@ -480,7 +480,11 @@ func buildFieldMap(b *teslaconfig.Builder) map[string]tesla.FleetTelemetryField 
 	entries := b.SubscriptionFields()
 	out := make(map[string]tesla.FleetTelemetryField, len(entries))
 	for _, e := range entries {
-		out[e.Name] = tesla.FleetTelemetryField{IntervalSeconds: e.IntervalSeconds}
+		out[e.Name] = tesla.FleetTelemetryField{
+			IntervalSeconds: e.IntervalSeconds,
+			MinimumDelta:    e.MinimumDelta,
+			IncludeFields:   append([]string(nil), e.IncludeFields...),
+		}
 	}
 	return out
 }

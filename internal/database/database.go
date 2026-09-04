@@ -179,7 +179,10 @@ func (db *DB) PoolStats() map[string]interface{} {
 		"acquired_conns":         s.AcquiredConns(),
 		"constructing_conns":     s.ConstructingConns(),
 		"max_conns":              s.MaxConns(),
+		"acquire_count":          s.AcquireCount(),
+		"acquire_duration_ms":    s.AcquireDuration().Milliseconds(),
 		"empty_acquire_count":    s.EmptyAcquireCount(),
+		"empty_acquire_wait_ms":  s.EmptyAcquireWaitTime().Milliseconds(),
 		"canceled_acquire_count": s.CanceledAcquireCount(),
 	}
 }

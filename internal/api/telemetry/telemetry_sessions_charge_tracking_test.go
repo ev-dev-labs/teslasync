@@ -482,3 +482,57 @@ func TestChargeTracking_PropagatesError(t *testing.T) {
 		t.Fatalf("stateToLegacyMap(nil) = %v, want empty non-nil map", m)
 	}
 }
+
+func TestTrackCharging_CompleteKeepsSession(t *testing.T) {
+	const vehicleID = int64(91)
+	active := &streamingCharge{
+		SessionID:          4,
+		VehicleID:          vehicleID,
+		accumulatedSignals: map[string]interface{}{},
+		lastTelemetryWrite: time.Now().UTC(),
+	}
+	tracker := &TelemetrySessionTracker{
+		activeCharges: map[int64]*streamingCharge{vehicleID: active},
+		activeDrives:  map[int64]*streamingDrive{},
+	}
+
+	tracker.trackCharging(
+		context.Background(),
+		vehicleID,
+		"VIN",
+		map[string]interface{}{"DetailedChargeState": "Complete"},
+		nil,
+		time.Now().UTC(),
+		nil,
+	)
+	if _, ok := tracker.activeCharges[vehicleID]; !ok {
+		t.Fatal("charge session ended on Complete")
+	}
+}
+
+func TestTrackCharging_StoppedKeepsSession(t *testing.T) {
+	const vehicleID = int64(92)
+	active := &streamingCharge{
+		SessionID:          5,
+		VehicleID:          vehicleID,
+		accumulatedSignals: map[string]interface{}{},
+		lastTelemetryWrite: time.Now().UTC(),
+	}
+	tracker := &TelemetrySessionTracker{
+		activeCharges: map[int64]*streamingCharge{vehicleID: active},
+		activeDrives:  map[int64]*streamingDrive{},
+	}
+
+	tracker.trackCharging(
+		context.Background(),
+		vehicleID,
+		"VIN",
+		map[string]interface{}{"DetailedChargeState": "Stopped"},
+		nil,
+		time.Now().UTC(),
+		nil,
+	)
+	if _, ok := tracker.activeCharges[vehicleID]; !ok {
+		t.Fatal("charge session ended on Stopped")
+	}
+}

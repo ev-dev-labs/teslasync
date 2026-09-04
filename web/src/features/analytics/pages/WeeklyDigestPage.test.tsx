@@ -141,7 +141,9 @@ vi.mock('../components/weekly-digest', () => {
     ChargingSection: sectionSpy('charging-section'),
     BatteryHealthSection: sectionSpy('battery-section'),
     AlertsSection: sectionSpy('alerts-section'),
+    FsdSection: sectionSpy('fsd-section'),
     WeekOverWeekSummary: sectionSpy('wow-summary'),
+    useFsdWeeklyDigestNotification: vi.fn(),
   };
 });
 
@@ -205,6 +207,11 @@ function makeHook(over: Record<string, unknown> = {}): HookReturn {
     alertsLoading: false,
     alertsError: null,
     refetchAlerts: vi.fn(),
+    fsdInsights: undefined,
+    fsdLoading: false,
+    fsdError: null,
+    refetchFsd: vi.fn(),
+    weekStart: new Date(2026, 2, 2),
     refetchAll: vi.fn(),
     freshnessQueries: [],
   };
@@ -253,6 +260,7 @@ describe('WeeklyDigestPage — scaffolding + a11y', () => {
       'charging-section',
       'battery-section',
       'alerts-section',
+      'fsd-section',
       'wow-summary',
       'ai-narration',
     ]) {
@@ -410,6 +418,18 @@ describe('WeeklyDigestPage — per-domain wiring', () => {
 
     fireEvent.click(retryButton('alerts-section'));
     expect(refetchAlerts).toHaveBeenCalledTimes(1);
+  });
+
+  it('wires the FSD section to the FSD query and retries only FSD', () => {
+    const refetchFsd = vi.fn();
+    mockHook.mockReturnValue(makeHook({ fsdError: new Error('fsd down'), refetchFsd }));
+    renderPage();
+
+    expect(errorAttr('fsd-section')).toBe('true');
+    expect(errorMessage('fsd-section')).toBe('fsd down');
+
+    fireEvent.click(retryButton('fsd-section'));
+    expect(refetchFsd).toHaveBeenCalledTimes(1);
   });
 });
 

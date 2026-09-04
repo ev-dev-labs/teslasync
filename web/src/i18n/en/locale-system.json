@@ -831,6 +831,20 @@
     "exampleUnavailable": "Example response is unavailable."
   },
   "system": {
+    "outage": {
+      "title": "Outage autobiography",
+      "subtitle": "What queued, what replayed with original event time, what stayed unknown.",
+      "certificate": "Session certificate",
+      "catchUp": "Catch-up after MQTT or carbon loss",
+      "mqttUp": "MQTT connected",
+      "mqttDown": "MQTT not connected",
+      "mqttUnknown": "MQTT state unknown",
+      "replay": "Replay keeps event time",
+      "lastTelemetry": "Last telemetry: {{when}}",
+      "never": "unknown",
+      "gap": "Gap {{minutes}} min",
+      "unknownSince": "Unknown since {{when}} — a gap is not a measured zero."
+    },
     "page": {
       "title": "System budgets",
       "subtitle": "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."

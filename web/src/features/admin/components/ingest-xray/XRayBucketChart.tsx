@@ -15,18 +15,20 @@ import { useTranslation } from 'react-i18next';
 import {
   BarChart,
   Bar,
-  CartesianGrid,
   ChartContainer,
+  ChartTooltip,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
   axisTick,
+  chartAnimationProps,
   chartGrid,
   chartMargin,
 } from '@/components/charts';
 import { useDateFormat } from '@/hooks/useDateFormat';
 import { fmtInt } from '@/lib/numberFormat';
+import { chartTokens } from '@/lib/tokens';
 import type { IngestXRayBucketPoint } from '@/types/admin-diagnostics';
 
 interface XRayBucketChartProps {
@@ -103,7 +105,7 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
     >
       <ResponsiveContainer width="100%" height={300}>
         <BarChart data={series} margin={chartMargin}>
-          <CartesianGrid {...chartGrid} />
+          {chartGrid}
           <XAxis
             dataKey="ts"
             type="number"
@@ -114,10 +116,25 @@ export function XRayBucketChart({ buckets, loading }: XRayBucketChartProps) {
           />
           <YAxis tick={axisTick} allowDecimals={false} />
           <Tooltip
-            labelFormatter={(v: number) => (Number.isFinite(v) ? formatTime(new Date(v)) : '—')}
-            formatter={(v: number) => [fmtInt(v), t('admin.xray.chart.tooltip', 'Samples')]}
+            content={
+              <ChartTooltip
+                labelFormatter={(v) =>
+                  typeof v === 'number' && Number.isFinite(v)
+                    ? formatTime(new Date(v))
+                    : '—'
+                }
+                valueFormatter={(v) => fmtInt(v)}
+              />
+            }
+            cursor={{ fill: 'rgba(255,255,255,0.04)' }}
           />
-          <Bar dataKey="count" fill="var(--accent-primary)" />
+          <Bar
+            dataKey="count"
+            name={t('admin.xray.chart.tooltip', 'Samples')}
+            fill={chartTokens.series[0]}
+            radius={[4, 4, 0, 0]}
+            {...chartAnimationProps()}
+          />
         </BarChart>
       </ResponsiveContainer>
     </ChartContainer>

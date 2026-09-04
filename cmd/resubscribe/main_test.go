@@ -10,6 +10,7 @@ import (
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
+	teslaconfig "github.com/ev-dev-labs/teslasync/internal/tesla/config"
 )
 
 // stubLister implements vehicleLister with a fixed in-memory list.
@@ -54,6 +55,29 @@ func sampleVehicles() []*vehiclemodel.Vehicle {
 		{ID: 1, VIN: "5YJ3E1EA0001"},
 		{ID: 2, VIN: "5YJ3E1EA0002"},
 		{ID: 3, VIN: "5YJ3E1EA0003"},
+	}
+}
+
+func TestBuildFieldMapPreservesSynchronizedCounterPolicy(t *testing.T) {
+	t.Parallel()
+
+	fields := buildFieldMap(teslaconfig.NewBuilder())
+	miles := fields["MilesSinceReset"]
+	if miles.IntervalSeconds != 10 ||
+		miles.MinimumDelta == nil ||
+		*miles.MinimumDelta != 0.01 ||
+		len(miles.IncludeFields) != 1 ||
+		miles.IncludeFields[0] != "SelfDrivingMilesSinceReset" {
+		t.Errorf("MilesSinceReset policy = %+v", miles)
+	}
+
+	fsd := fields["SelfDrivingMilesSinceReset"]
+	if fsd.IntervalSeconds != 1 ||
+		fsd.MinimumDelta == nil ||
+		*fsd.MinimumDelta != 1 ||
+		len(fsd.IncludeFields) != 1 ||
+		fsd.IncludeFields[0] != "MilesSinceReset" {
+		t.Errorf("SelfDrivingMilesSinceReset policy = %+v", fsd)
 	}
 }
 

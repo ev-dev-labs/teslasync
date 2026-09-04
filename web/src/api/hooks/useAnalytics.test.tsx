@@ -45,6 +45,7 @@ import {
   useRangeProjection,
   useTemperatureImpact,
   useFsdInsights,
+  useFsdInsightsRange,
   type LifetimeStats,
   type LifetimeAchievement,
   type PersonalRecord,
@@ -762,6 +763,61 @@ describe('useFsdInsights', () => {
         has_counter_observation: true,
       },
     ],
+    drive_analytics: {
+      comparison: {
+        previous_period: {
+          days: 30,
+          timezone: 'America/Los_Angeles',
+          start_date: '2026-01-03',
+          end_date: '2026-02-01',
+          start_at: '2026-01-03T08:00:00Z',
+          end_at: '2026-02-02T07:59:59Z',
+        },
+        previous_fsd_distance_m: null,
+        previous_driving_distance_m: null,
+        previous_fsd_share_pct: null,
+        fsd_distance_change_m: null,
+        fsd_distance_change_pct: null,
+        fsd_share_change_pct_points: null,
+      },
+      attribution: {
+        attributed_distance_m: null,
+        estimated_distance_m: null,
+        ambiguous_distance_m: null,
+        unattributed_distance_m: null,
+        unknown_drive_distance_m: 0,
+      },
+      contributing_drives: [],
+      reset_events: [],
+      repeated_routes: [],
+      time_of_day: [],
+      firmware: [],
+      firmware_spotlight: {
+        from_version: '',
+        to_version: '',
+        changed_at: null,
+        routes: [],
+      },
+      route_efficiency: [],
+      observatory: {
+        honesty: 'Reset-safe counter change, not an FSD engagement segment.',
+        truncated: false,
+        totals: {
+          stitched_fsd_distance_m: null,
+          high_fsd_distance_m: null,
+          estimated_fsd_distance_m: null,
+          ambiguous_fsd_distance_m: null,
+          unknown_drive_distance_m: 0,
+          reset_break_count: 0,
+          drive_count: 0,
+          measured_drive_count: 0,
+          unknown_drive_count: 0,
+        },
+        timeline: [],
+        commute_stories: [],
+      },
+      correlation_disclaimer: 'Correlation only.',
+    },
   };
 
   it('builds a snake_case scoped path with no /api/v1 prefix', async () => {
@@ -790,6 +846,79 @@ describe('useFsdInsights', () => {
     expect(result.current.data?.totals.fsd_distance_m).toBe(12_000);
     expect(result.current.data?.daily[0].fsd_distance_m).toBe(6_000);
     expect(result.current.data?.totals.fsd_share_pct).toBe(25);
+  });
+
+  it('builds an explicit range request without a days parameter', async () => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(
+      () => useFsdInsightsRange(
+        '7',
+        '2026-03-01T08:00:00.000Z',
+        '2026-03-02T08:00:00.000Z',
+        'America/Los_Angeles',
+      ),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('start')).toBe('2026-03-01T08:00:00.000Z');
+    expect(params.get('end')).toBe('2026-03-02T08:00:00.000Z');
+    expect(params.get('timezone')).toBe('America/Los_Angeles');
+    expect(params.has('days')).toBe(false);
+    expect(params.has('include_evidence')).toBe(false);
+  });
+
+  it('opts into bounded route evidence only when requested', async () => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(
+      () => useFsdInsightsRange(
+        '7',
+        '2026-03-01T08:00:00.000Z',
+        '2026-03-02T08:00:00.000Z',
+        'America/Los_Angeles',
+        true,
+      ),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('include_evidence')).toBe('true');
+  });
+
+  it('refetches an inactive FSD query after a drive mutation invalidates it', async () => {
+    const client = new QueryClient({
+      defaultOptions: { queries: { retry: false, gcTime: 60_000 } },
+    });
+    const stableWrapper = ({ children }: { children: ReactNode }) => (
+      <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    );
+    const useRange = () => useFsdInsightsRange(
+      '7',
+      '2026-03-01T08:00:00.000Z',
+      '2026-03-02T08:00:00.000Z',
+      'UTC',
+    );
+
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const first = renderHook(useRange, { wrapper: stableWrapper });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    first.unmount();
+
+    await client.invalidateQueries({
+      queryKey: ['analytics', 'fsd'],
+      refetchType: 'none',
+    });
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const second = renderHook(useRange, { wrapper: stableWrapper });
+
+    await waitFor(() => expect(mockedRequest).toHaveBeenCalledTimes(2));
+    second.unmount();
+    client.clear();
   });
 
   it('keys the cache by vehicle, period, and timezone so scopes cannot bleed', () => {

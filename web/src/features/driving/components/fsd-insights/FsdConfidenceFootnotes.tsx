@@ -85,7 +85,7 @@ export function FsdConfidenceFootnotes({ quality }: FsdConfidenceFootnotesProps)
       icon: <Info className="mt-0.5 h-4 w-4 shrink-0 text-cyan-300" aria-hidden="true" />,
       text: t(
         'fsd.confidence.scopeNote',
-        'This is supervised self-driving distance telemetry. It cannot describe interventions, disengagements, safety performance, or per-drive attribution.',
+        'This telemetry cannot describe interventions, disengagements, safety performance, or exact FSD-active segments. Per-drive values are interval attribution with explicit confidence.',
       ),
     },
     {

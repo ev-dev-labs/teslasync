@@ -29,6 +29,16 @@ type Sample struct {
 	TS                   time.Time
 	Value                *float64
 	NormalizationVersion *int16
+	// Compacted samples retain all continuity barriers, resets, and FSD
+	// changes, plus one synchronized snapshot per minute. The count fields
+	// preserve the exact raw quality totals for the bucket represented by
+	// this row; other retained rows from that bucket carry zero counts.
+	Compacted                 bool
+	ValidObservationCount     int
+	InvalidObservationCount   int
+	UntrustedObservationCount int
+	FirstValidObservationAt   *time.Time
+	LastValidObservationAt    *time.Time
 }
 
 // Period describes the window the response covers.
@@ -117,8 +127,10 @@ type Quality struct {
 	FSDDistanceDerivable bool `json:"fsd_distance_derivable"`
 	// Whether observed-driving distance could be derived at all.
 	DrivingDenominatorAvailable bool `json:"driving_denominator_available"`
-	// Whether both counters share a provable start basis. Usage-share values
-	// remain null when false even if each standalone distance is derivable.
+	// Whether both counters share a provable start basis without an in-window
+	// reset, invalid value, or untrusted-provenance continuity barrier.
+	// Usage-share values remain null when false even if each standalone
+	// distance is derivable.
 	ShareBasisAvailable bool `json:"share_basis_available"`
 	// Days whose fsd_distance_m is a measurement rather than null.
 	FSDMeasuredDays int `json:"fsd_measured_days"`
@@ -156,16 +168,14 @@ type Quality struct {
 // FSDDistanceM is a POINTER. It is non-null only when the day carries a
 // measurement:
 //
-//   - the self-driving counter produced at least one delta at or before this
-//     day (so the day sits inside the span the counter can speak about), and
-//   - at least one of the two distance counters emitted a valid observation
-//     on this day (HasCounterObservation).
+//   - a trusted self-driving observation on that day was differenced against
+//     a preceding trusted value without an invalid or untrusted row between.
 //
 // The second condition is what makes a genuine zero expressible: Tesla only
-// transmits a field when its value CHANGES, so a day on which the driving
-// counter reported and the self-driving counter did not move is a measured
-// zero. A day with neither counter is null — sparse counter data is not
-// evidence of absence of self-driving.
+// transmits a field when its value changes unless subscription include_fields
+// carries the unchanged counter alongside MilesSinceReset. A day without that
+// synchronized FSD observation is null — sparse counter data is not evidence
+// of absence of self-driving.
 type DailyPoint struct {
 	Date                    string   `json:"date"`
 	FSDDistanceM            *float64 `json:"fsd_distance_m"`
@@ -179,9 +189,10 @@ type DailyPoint struct {
 
 // Response is the GET /api/v1/analytics/fsd payload.
 type Response struct {
-	VehicleID int64        `json:"vehicle_id"`
-	Period    Period       `json:"period"`
-	Totals    Totals       `json:"totals"`
-	Quality   Quality      `json:"quality"`
-	Daily     []DailyPoint `json:"daily"`
+	VehicleID int64          `json:"vehicle_id"`
+	Period    Period         `json:"period"`
+	Totals    Totals         `json:"totals"`
+	Quality   Quality        `json:"quality"`
+	Daily     []DailyPoint   `json:"daily"`
+	Analytics DriveAnalytics `json:"drive_analytics"`
 }

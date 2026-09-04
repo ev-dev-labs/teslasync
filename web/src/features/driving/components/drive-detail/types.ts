@@ -139,6 +139,8 @@ export interface RoutePoint {
   lng: number;
   /** Speed in metres per second (SI, raw). */
   speed: number;
+  /** Source observation time used to place approximate counter evidence. */
+  timestamp: string | null;
 }
 
 /** A polyline segment of the route, coloured by the speed band it falls in. */

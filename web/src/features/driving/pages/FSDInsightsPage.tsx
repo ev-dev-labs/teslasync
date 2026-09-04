@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useFsdInsights } from '@/api/hooks/useAnalytics';
@@ -17,7 +17,9 @@ import { FSD_DEFAULT_PERIOD_DAYS, type FsdPeriodDays } from '@/types/fsd';
 import {
   FsdConfidencePanel,
   FsdDistanceTrend,
+  FsdDriveAnalyticsPanels,
   FsdKpiBand,
+  FsdObservatoryPanel,
   FsdPeriodControl,
   FsdShareTrend,
   FsdTopDays,
@@ -78,6 +80,13 @@ export default function FSDInsightsPage() {
     retry?.();
   }, [retry]);
 
+  useEffect(() => {
+    if (insightsState.status === 'initial') return;
+    const id = window.location.hash.replace(/^#/, '');
+    if (!id) return;
+    document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, [insightsState.status, insightsState.data]);
+
   const sectionState: FsdSectionState = {
     // `initial` is the only status with nothing retained AND no failure, so it
     // is the only one that should show a skeleton. A failed refresh keeps the
@@ -115,6 +124,10 @@ export default function FSDInsightsPage() {
         <FsdKpiBand insights={insightsState.data} state={sectionState} />
       </FadeIn>
 
+      <FadeIn delay={0.04}>
+        <FsdObservatoryPanel insights={insightsState.data} state={sectionState} />
+      </FadeIn>
+
       <FadeIn delay={0.05}>
         <FsdDistanceTrend insights={insightsState.data} state={sectionState} />
       </FadeIn>
@@ -131,6 +144,12 @@ export default function FSDInsightsPage() {
       </FadeIn>
 
       <FadeIn delay={0.2}>
+        <div className="space-y-4 sm:space-y-5">
+          <FsdDriveAnalyticsPanels insights={insightsState.data} state={sectionState} />
+        </div>
+      </FadeIn>
+
+      <FadeIn delay={0.25}>
         <FsdConfidencePanel insights={insightsState.data} state={sectionState} />
       </FadeIn>
     </PageContainer>

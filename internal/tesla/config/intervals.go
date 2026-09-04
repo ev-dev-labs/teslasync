@@ -88,6 +88,59 @@ var fieldOverrides = map[string]int{
 	// charging. 30s halves signal_log row count for the most-written
 	// charging field with no perceptible UI lag.
 	"BatteryLevel": 30,
+
+	// These two resettable counters are the only authoritative source for
+	// supervised-driving distance. MilesSinceReset is the synchronization
+	// clock: at Tesla's 10-second minimum cadence and smallest supported
+	// delta, its include_fields payload carries the current FSD counter often
+	// enough to bound per-drive attribution instead of waiting for the FSD
+	// counter's own one-mile trigger.
+	"MilesSinceReset":            10,
+	"SelfDrivingMilesSinceReset": 1,
+}
+
+// minimumDeltaOverrides records Tesla-enforced or analytically significant
+// minimum deltas in each field's fixed wire unit. The FSD field cannot be
+// configured below one mile. MilesSinceReset uses Tesla's smallest supported
+// delta so its paired include_fields sample provides useful drive boundaries.
+var minimumDeltaOverrides = map[string]float64{
+	"MilesSinceReset":            0.01,
+	"SelfDrivingMilesSinceReset": 1,
+}
+
+// includeFieldOverrides keeps the resettable distance counters synchronized
+// on Fleet Telemetry clients that support include_fields. Tesla permits these
+// two fields to include each other, but does not permit unrelated fields to
+// include either counter.
+var includeFieldOverrides = map[string][]string{
+	"MilesSinceReset":            {"SelfDrivingMilesSinceReset"},
+	"SelfDrivingMilesSinceReset": {"MilesSinceReset"},
+}
+
+// FieldPolicy is the complete per-field Fleet Telemetry subscription policy.
+// Distances remain in Tesla's fixed wire unit here; normalization to SI occurs
+// only after telemetry is received.
+type FieldPolicy struct {
+	IntervalSeconds int
+	MinimumDelta    *float64
+	IncludeFields   []string
+}
+
+// PolicyFor returns a defensive copy of the complete policy for field.
+func PolicyFor(field string) (FieldPolicy, bool) {
+	interval, ok := IntervalFor(field)
+	if !ok {
+		return FieldPolicy{}, false
+	}
+	policy := FieldPolicy{IntervalSeconds: interval}
+	if delta, exists := minimumDeltaOverrides[field]; exists {
+		value := delta
+		policy.MinimumDelta = &value
+	}
+	if included := includeFieldOverrides[field]; len(included) > 0 {
+		policy.IncludeFields = append([]string(nil), included...)
+	}
+	return policy, true
 }
 
 // IntervalFor returns the subscription interval (seconds) for the

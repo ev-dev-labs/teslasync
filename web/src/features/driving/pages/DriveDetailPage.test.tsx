@@ -130,6 +130,9 @@ vi.mock('../components/drive-detail', () => {
     HeroGauges: stub('hero-gauges'),
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
+    SupervisedDrivingPanel: stub('fsd-panel'),
+    GearTheaterPanel: stub('gear-theater'),
+    SilentCounterPanel: stub('silent-counter'),
     MoreDetailsPanel: stub('more-details'),
     EnergySummaryPanel: stub('energy-summary'),
     CostSavingsPanel: stub('cost-savings'),
@@ -145,6 +148,26 @@ vi.mock('../components/drive-detail', () => {
     WhyEndedPanel: stub('why-ended'),
   }
 })
+
+const useFsdInsightsRangeMock = vi.hoisted(() => vi.fn(() => ({
+    data: {
+      drive_analytics: {
+        contributing_drives: [],
+      },
+    },
+    error: null,
+    isError: false,
+    isPending: false,
+    isFetching: false,
+    fetchStatus: 'idle',
+    dataUpdatedAt: 1_000,
+    refetch: vi.fn(),
+    isStale: false,
+  })))
+
+vi.mock('@/api/hooks/useAnalytics', () => ({
+  useFsdInsightsRange: useFsdInsightsRangeMock,
+}))
 
 vi.mock('@/components/ai/AIDriveCoaching', () => ({
   AIDriveCoaching: ({ driveId }: { driveId?: string }) => (
@@ -302,6 +325,9 @@ const GATED_NUMERIC_SECTIONS = [
 
 const ALWAYS_ON_SECTIONS = [
   'drive-timeline',
+  'gear-theater',
+  'fsd-panel',
+  'silent-counter',
   'route-map',
   'journey-details',
   'overview-chart',
@@ -332,6 +358,7 @@ function renderPage(path = '/drives/42', routePath = '/drives/:id') {
 
 beforeEach(() => {
   hookState.current = emptyState()
+  useFsdInsightsRangeMock.mockClear()
   window.localStorage.clear()
 })
 
@@ -395,6 +422,45 @@ describe('DriveDetailPage', () => {
     expect(screen.getByTestId('stale-refresh-warning')).toBeInTheDocument()
   })
 
+  it('warns when retained FSD evidence could not be refreshed', () => {
+    hookState.current = loadedState()
+    useFsdInsightsRangeMock.mockReturnValueOnce({
+      data: {
+        drive_analytics: {
+          contributing_drives: [],
+        },
+      },
+      error: new Error('FSD refresh failed'),
+      isError: true,
+      isPending: false,
+      isFetching: false,
+      fetchStatus: 'idle',
+      dataUpdatedAt: 1_000,
+      refetch: vi.fn(),
+      isStale: true,
+    })
+
+    renderPage()
+
+    expect(screen.getByText('Supervised driving may be out of date')).toBeInTheDocument()
+    expect(screen.getByTestId('fsd-panel')).toBeInTheDocument()
+  })
+
+  it('does not query FSD analytics until an ongoing drive ends', () => {
+    hookState.current = loadedState({ endTs: null })
+
+    renderPage()
+
+    expect(useFsdInsightsRangeMock).toHaveBeenCalledWith(
+      undefined,
+      undefined,
+      undefined,
+      'UTC',
+      true,
+    )
+    expect(screen.getByTestId('fsd-panel')).toBeInTheDocument()
+  })
+
   it('shows an explicit empty state (never a blank page) when the drive is missing', () => {
     hookState.current = emptyState() // drive null, no error, not loading
     renderPage()
@@ -424,6 +490,13 @@ describe('DriveDetailPage', () => {
     }
     // AI surfaces receive the drive id so they can scope their requests.
     expect(screen.getByTestId('ai-coaching')).toHaveAttribute('data-drive-id', '42')
+    expect(useFsdInsightsRangeMock).toHaveBeenCalledWith(
+      '1',
+      '2025-03-01T09:58:00.000Z',
+      '2025-03-01T10:47:00.001Z',
+      expect.any(String),
+      true,
+    )
     // A rich drive never shows the telemetry-gap banner.
     expect(screen.queryByText(NO_TELEMETRY_BANNER)).toBeNull()
   })

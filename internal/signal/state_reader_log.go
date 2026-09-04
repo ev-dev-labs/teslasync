@@ -573,7 +573,7 @@ ORDER BY ts ASC`
 	}
 	defer windowRows.Close()
 
-	var events []rawEvent
+	folder := newTimelineFolder(seed, fields, opts.CollapseBy, opts.MaxRows)
 	for windowRows.Next() {
 		var eventTs time.Time
 		var fld string
@@ -592,11 +592,13 @@ ORDER BY ts ASC`
 				Msg("timeline window read failed")
 			return nil, fmt.Errorf("timeline window %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
 		}
-		events = append(events, rawEvent{
+		if !folder.Add(rawEvent{
 			Ts:     eventTs,
 			Signal: fld,
 			Value:  r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv),
-		})
+		}) {
+			break
+		}
 	}
 	if err := windowRows.Err(); err != nil {
 		r.log.Error().
@@ -608,31 +610,23 @@ ORDER BY ts ASC`
 		return nil, fmt.Errorf("timeline window %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
 	}
 
-	rows := forwardFold(seed, events, fields, from, to)
+	rows := folder.Finish()
 
-	if elapsed := time.Since(start); elapsed > time.Second {
-		r.log.Warn().
+	if elapsed := time.Since(start); elapsed > time.Second || folder.truncated {
+		event := r.log.Warn()
+		if elapsed <= time.Second {
+			event = r.log.Info()
+		}
+		event.
 			Int64("vehicle_id", vehicleID).
 			Time("from", from).
 			Time("to", to).
 			Dur("duration", elapsed).
 			Int("rows", len(rows)).
-			Int("events", len(events)).
+			Int("events", folder.events).
 			Int("seed", len(seed)).
+			Bool("truncated", folder.truncated).
 			Msg("slow timeline read")
-	}
-
-	if len(opts.CollapseBy) > 0 {
-		// LIST MODE: drop consecutive rows whose projection over the
-		// collapse-key fields is equal to the previous KEPT row. The
-		// CollapseBy entries were validated against `fields` above so
-		// projectCollapseKey cannot silently render every row's key as
-		// nil. Empty CollapseBy is a no-op inside collapseTimeline, so
-		// the chart-mode return below is functionally equivalent — the
-		// branch exists only to keep the chart-mode code path zero-alloc.
-		collapsed := collapseTimeline(rows, opts.CollapseBy)
-		span.SetAttributes(attribute.Int("rows_returned", len(collapsed)))
-		return collapsed, nil
 	}
 
 	span.SetAttributes(attribute.Int("rows_returned", len(rows)))

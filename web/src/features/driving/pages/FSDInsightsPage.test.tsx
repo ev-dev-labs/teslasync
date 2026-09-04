@@ -1,8 +1,8 @@
 /**
  * FSDInsightsPage — orchestration, retained-data, and URL-state contracts.
  *
- * The page owns one query, one URL-backed period control, and six
- * independently mounted panels. These tests pin the parts a refactor could
+ * The page owns one query, one URL-backed period control, and independently
+ * mounted panels. These tests pin the parts a refactor could
  * silently break:
  *
  *   - every panel stays mounted in the complete, empty, loading, error, and
@@ -131,10 +131,12 @@ vi.mock('../components/fsd-insights', async () => {
   return {
     coercePeriodDays: actualHelpers.coercePeriodDays,
     FsdKpiBand: passthrough('fsd-kpis'),
+    FsdObservatoryPanel: passthrough('fsd-observatory'),
     FsdDistanceTrend: passthrough('fsd-distance-trend'),
     FsdShareTrend: passthrough('fsd-share-trend'),
     FsdWeekdayPattern: passthrough('fsd-weekday-pattern'),
     FsdTopDays: passthrough('fsd-top-days'),
+    FsdDriveAnalyticsPanels: passthrough('fsd-drive-analytics'),
     FsdConfidencePanel: passthrough('fsd-confidence'),
     FsdPeriodControl: ({
       value,
@@ -160,10 +162,12 @@ import FSDInsightsPage from './FSDInsightsPage';
 
 const SECTION_IDS = [
   'fsd-kpis',
+  'fsd-observatory',
   'fsd-distance-trend',
   'fsd-share-trend',
   'fsd-weekday-pattern',
   'fsd-top-days',
+  'fsd-drive-analytics',
   'fsd-confidence',
 ] as const;
 

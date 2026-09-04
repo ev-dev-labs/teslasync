@@ -125,6 +125,7 @@ import (
 	apifleetops "github.com/ev-dev-labs/teslasync/internal/api/fleetops"
 	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
 	apifsd "github.com/ev-dev-labs/teslasync/internal/api/fsd"
+	apiphysics "github.com/ev-dev-labs/teslasync/internal/api/teslaphysics"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
@@ -1042,6 +1043,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// signal_log change feed and derives reset-safe per-local-day deltas
 	// server-side, so the browser never downloads a raw counter history.
 	fsdInsightsHandler := apifsd.NewHandler(db)
+	physicsHandler := apiphysics.NewHandler(db, stateReader, liveStateReader)
+	if mqttClient != nil {
+		physicsHandler.WithMQTTConnected(func() *bool {
+			connected := mqttClient.IsConnected()
+			return &connected
+		})
+	}
 	routeEfficiencyHandler := apirouteeff.NewRouteEfficiencyHandler(db)
 	timeMachineHandler := apitimemachine.NewTimeMachineHandler(db)
 	segmentsHandler := apisegments.NewSegmentsHandler(db)
@@ -2280,7 +2288,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 
 	// Wire telemetry handler into settings handler for capture toggle sync
 	settingsHandler.SetTelemetryHandler(telemetryHandler)
-	r.Get("/healthz", HealthHandler(db, opt.LivenessChecks...))
+	r.Get("/healthz", HealthHandler(opt.LivenessChecks...))
 	r.Get("/readyz", ReadyHandler(db, teslaClient))
 
 	// Internal: READ-ONLY drain contract. The mutating drain endpoint
@@ -3348,6 +3356,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/", chargingHandler.Get)
 				r.Get("/telemetry", chargingHandler.TelemetryReadings)
 			})
+		})
+		r.Route("/physics", func(r chi.Router) {
+			r.Get("/cockpit", physicsHandler.Cockpit)
+			r.Get("/heartbeat", physicsHandler.Heartbeat)
+			r.Get("/park-truth", physicsHandler.ParkTruth)
+			r.Get("/vampire", physicsHandler.Vampire)
+			r.Get("/outage", physicsHandler.Outage)
+			r.Get("/exclusive", physicsHandler.Exclusive)
+			r.Get("/certificate", physicsHandler.Certificate)
+			r.Get("/charging/{sessionID}", physicsHandler.ChargePhysics)
+			r.Get("/drives/{driveID}/theater", physicsHandler.Theater)
+			r.Get("/drives/{driveID}/silent", physicsHandler.Silent)
 		})
 
 		// Tesla Charging History (Supercharger/DC billing records)

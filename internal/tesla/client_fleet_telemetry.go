@@ -91,4 +91,5 @@ type FleetTelemetryConfigPayload struct {
 type FleetTelemetryField struct {
 	IntervalSeconds int      `json:"interval_seconds"`
 	MinimumDelta    *float64 `json:"minimum_delta,omitempty"`
+	IncludeFields   []string `json:"include_fields,omitempty"`
 }

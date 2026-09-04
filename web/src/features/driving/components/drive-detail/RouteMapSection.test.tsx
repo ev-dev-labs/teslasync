@@ -52,7 +52,8 @@ import {
 import { convertSpeedFromSI } from '@/lib/unitConversion';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveDetail, DrivePosition } from '@/types/driving';
-import type { SpeedSegment } from './types';
+import type { FsdEvidenceInterval } from '@/types/fsd';
+import type { RoutePoint, SpeedSegment } from './types';
 
 /* ── Hoisted controllable state (read inside the vi.mock factories) ─────────── */
 const mapCtl = vi.hoisted(() => ({
@@ -201,6 +202,8 @@ interface RenderOpts {
   endPos?: [number, number];
   centerPos?: [number, number];
   speedSegments?: SpeedSegment[];
+  routePoints?: RoutePoint[];
+  fsdEvidence?: FsdEvidenceInterval[];
 }
 
 function renderSection(opts: RenderOpts = {}) {
@@ -212,6 +215,8 @@ function renderSection(opts: RenderOpts = {}) {
       endPos={opts.endPos}
       centerPos={opts.centerPos ?? CENTER}
       speedSegments={opts.speedSegments as never}
+      routePoints={opts.routePoints}
+      fsdEvidence={opts.fsdEvidence}
     />,
   );
 }
@@ -307,6 +312,58 @@ describe('RouteMapSection — meaningful route (km)', () => {
 
     expect(mapCtl.fitBounds).toHaveBeenCalledTimes(1);
     expect(mapCtl.setView).not.toHaveBeenCalled();
+  });
+
+  it('renders only a dashed approximate overlay for counter-increase evidence', () => {
+    renderSection({
+      drive: makeDrive({ positions: [makePos(...START), makePos(...END)] }),
+      trail: SPREAD_TRAIL,
+      startPos: START,
+      endPos: END,
+      speedSegments: SEGMENTS,
+      routePoints: [
+        { lat: START[0], lng: START[1], speed: 10, timestamp: '2025-03-01T10:00:00Z' },
+        { lat: END[0], lng: END[1], speed: 12, timestamp: '2025-03-01T10:10:00Z' },
+      ],
+      fsdEvidence: [{
+        start_at: '2025-03-01T10:04:00Z',
+        end_at: '2025-03-01T10:06:00Z',
+        fsd_distance_m: 500,
+        confidence: 'high',
+        approximate: true,
+      }],
+    });
+
+    expect(screen.getAllByTestId('polyline')).toHaveLength(3);
+    expect(screen.getAllByTestId('polyline')[2]).toHaveAttribute('data-color', '#c084fc');
+    expect(screen.getByText(/Approximate area where the FSD counter increased/)).toBeInTheDocument();
+    expect(screen.getByText(/not an exact FSD-active segment/)).toBeInTheDocument();
+  });
+
+  it('does not extend approximate evidence into route segments that only touch a boundary', () => {
+    renderSection({
+      drive: makeDrive({ positions: [makePos(...START), makePos(...END)] }),
+      trail: SPREAD_TRAIL,
+      startPos: START,
+      endPos: END,
+      speedSegments: [],
+      routePoints: [
+        { lat: 47.60, lng: -122.30, speed: 10, timestamp: '2025-03-01T10:00:00Z' },
+        { lat: 47.61, lng: -122.31, speed: 10, timestamp: '2025-03-01T10:05:00Z' },
+        { lat: 47.62, lng: -122.32, speed: 10, timestamp: '2025-03-01T10:10:00Z' },
+        { lat: 47.63, lng: -122.33, speed: 10, timestamp: '2025-03-01T10:15:00Z' },
+      ],
+      fsdEvidence: [{
+        start_at: '2025-03-01T10:05:00Z',
+        end_at: '2025-03-01T10:10:00Z',
+        fsd_distance_m: 500,
+        confidence: 'high',
+        approximate: true,
+      }],
+    });
+
+    expect(screen.getAllByTestId('polyline')).toHaveLength(1);
+    expect(screen.getByTestId('polyline')).toHaveAttribute('data-color', '#c084fc');
   });
 
   it('shows the bottom Start and End labels for a completed drive', () => {

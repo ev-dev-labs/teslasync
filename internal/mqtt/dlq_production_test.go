@@ -122,7 +122,7 @@ func TestNewProductionPipelineMQTT_RejectsEmptyArgs(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			c, dlq, err := NewProductionPipelineMQTT(ctx, tc.brokerURL, tc.clientID, "u", "p", tc.dlqTopic, log, nil, nil)
+			c, dlq, err := NewProductionPipelineMQTT(ctx, tc.brokerURL, tc.clientID, "u", "p", tc.dlqTopic, log, nil, nil, nil)
 			if err == nil {
 				t.Fatalf("err = nil, want non-nil")
 			}
@@ -139,13 +139,12 @@ func TestNewProductionPipelineMQTT_RejectsEmptyArgs(t *testing.T) {
 	}
 }
 
-// TestNewProductionPipelineMQTT_ConnectionFailureWrapped points at a closed
+// TestConnectProductionPipelineMQTT_ConnectionFailureWrapped points at a closed
 // local port to force connection refused, then asserts the returned error
 // wraps the broker URL so an operator can identify
-// which broker is unreachable from the log line alone. Also asserts that
-// nothing leaks (returned client + dlq are nil). Runs offline — no real
+// which broker is unreachable from the log line alone. Runs offline — no real
 // broker required.
-func TestNewProductionPipelineMQTT_ConnectionFailureWrapped(t *testing.T) {
+func TestConnectProductionPipelineMQTT_ConnectionFailureWrapped(t *testing.T) {
 	// Bind to an ephemeral port and IMMEDIATELY close so the OS doesn't
 	// reuse it for a stray socket. The address is now connect-refused.
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
@@ -164,57 +163,51 @@ func TestNewProductionPipelineMQTT_ConnectionFailureWrapped(t *testing.T) {
 	defer cancel()
 
 	log := zerolog.New(zerolog.NewTestWriter(t))
-	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil, nil)
+	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("construct: %v", err)
+	}
+	if c == nil || dlq == nil {
+		t.Fatal("construct returned nil client or dlq")
+	}
 
+	err = ConnectProductionPipelineMQTT(ctx, c, brokerURL)
 	if err == nil {
-		// Defensive cleanup if paho somehow succeeded against the closed port.
-		if c != nil {
-			c.Disconnect(0)
-		}
+		c.Disconnect(0)
 		t.Fatalf("err = nil, want connection failure against closed port %s", brokerURL)
-	}
-	if c != nil {
-		t.Errorf("client = non-nil, want nil on connection failure (caller must not be expected to clean up)")
-	}
-	if dlq != nil {
-		t.Errorf("dlq = non-nil, want nil on connection failure")
 	}
 	if !strings.Contains(err.Error(), brokerURL) {
 		t.Errorf("err = %q, want substring %q (so triage logs show which broker)", err.Error(), brokerURL)
 	}
-	if !strings.Contains(err.Error(), "NewProductionPipelineMQTT") {
-		t.Errorf("err = %q, want substring %q (so triage logs identify the call site)", err.Error(), "NewProductionPipelineMQTT")
+	if !strings.Contains(err.Error(), "ConnectProductionPipelineMQTT") {
+		t.Errorf("err = %q, want substring %q (so triage logs identify the call site)", err.Error(), "ConnectProductionPipelineMQTT")
 	}
 }
 
-// TestNewProductionPipelineMQTT_ContextCancelledDuringConnect covers the
+// TestConnectProductionPipelineMQTT_ContextCancelledDuringConnect covers the
 // shutdown-during-connect path. We cancel the ctx immediately
 // so the select branches on ctx.Done() before token.Wait() has any chance
 // to finish — the function MUST disconnect the client and return an error
 // wrapping context.Canceled.
-func TestNewProductionPipelineMQTT_ContextCancelledDuringConnect(t *testing.T) {
+func TestConnectProductionPipelineMQTT_ContextCancelledDuringConnect(t *testing.T) {
 	// Use an unreachable address so the connect doesn't succeed before we
 	// observe the cancel — TCP-blackhole IPs in the documentation range
 	// (RFC 5737) won't route, so the dialer hangs.
 	const brokerURL = "tcp://192.0.2.1:1883" // RFC 5737 TEST-NET-1
 
+	log := zerolog.New(zerolog.NewTestWriter(t))
+	c, _, err := NewProductionPipelineMQTT(context.Background(), brokerURL, "id", "", "", "tesla/dlq/test", log, nil, nil, nil)
+	if err != nil {
+		t.Fatalf("construct: %v", err)
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel BEFORE the call so ctx.Done() is already closed
 
-	log := zerolog.New(zerolog.NewTestWriter(t))
-	c, dlq, err := NewProductionPipelineMQTT(ctx, brokerURL, "id", "", "", "tesla/dlq/test", log, nil, nil)
-
+	err = ConnectProductionPipelineMQTT(ctx, c, brokerURL)
 	if err == nil {
-		if c != nil {
-			c.Disconnect(0)
-		}
+		c.Disconnect(0)
 		t.Fatalf("err = nil, want context.Canceled")
-	}
-	if c != nil {
-		t.Errorf("client = non-nil, want nil on context cancellation")
-	}
-	if dlq != nil {
-		t.Errorf("dlq = non-nil, want nil on context cancellation")
 	}
 	if !errors.Is(err, context.Canceled) && !errors.Is(err, context.DeadlineExceeded) {
 		// DeadlineExceeded is acceptable too: if a slow CI runner manages to

@@ -73,15 +73,21 @@ The manifest uses:
 - `theme_color: '#0b0d12'` — low-chroma canvas used by browser chrome
 - `background_color: '#0b0d12'` — startup canvas used during the splash screen
 
-Keep new icons consistent with the framed brand mark in
-`web/src/lib/appIcon.ts`.
+Keep launcher/splash icons full-bleed (solid `#0b0d12` canvas + bolt).
+Do **not** draw an inner rounded frame or accent stroke — Android and iOS
+apply their own squircle/circle masks, and a pre-drawn frame gets clipped
+into visible border arcs on the splash screen. Favicon (`favicon.svg`) may
+use a rounded canvas for browser tabs only.
 
 ## Regenerating PNGs from SVG
 
-If you change the SVG sources, regenerate the PNGs at the listed sizes (any
-SVG-to-PNG tool works — ImageMagick, `sharp`, `svgexport`, Figma export). For
-the maskable variants, ensure the artwork is centered with the 10% safe-zone
-padding applied before export.
+If you change the SVG sources, regenerate the PNGs at the listed sizes with
+`sharp`. Maskable SVGs already include the 10% safe-zone padding.
+
+```bash
+cd web
+node -e "const s=require('sharp'); const jobs=[['public/icons/icon-192.svg',192,'public/icons/icon-192.png'],['public/icons/icon-512.svg',512,'public/icons/icon-512.png'],['public/icons/icon-maskable-192.svg',192,'public/icons/icon-maskable-192.png'],['public/icons/icon-maskable-512.svg',512,'public/icons/icon-maskable-512.png'],['public/icons/icon-512.svg',180,'public/icons/apple-touch-icon.png']]; Promise.all(jobs.map(([i,z,o])=>s(i).resize(z,z).png().toFile(o)))"
+```
 
 `badge-72.png` is generated from `badge.svg` via `sharp`. To regenerate after
 editing the SVG:

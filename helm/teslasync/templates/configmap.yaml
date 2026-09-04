@@ -12,11 +12,11 @@ data:
   DATABASE_USER: {{ include "teslasync.postgresql.username" . | quote }}
   DATABASE_NAME: {{ include "teslasync.postgresql.database" . | quote }}
   DATABASE_SSLMODE: {{ include "teslasync.postgresql.sslMode" . | quote }}
-  DATABASE_MAX_CONNS: {{ .Values.postgresql.maxConns | default 25 | quote }}
-  DATABASE_MIN_CONNS: {{ .Values.postgresql.minConns | default 5 | quote }}
+  DATABASE_MAX_CONNS: {{ .Values.postgresql.maxConns | default 12 | quote }}
+  DATABASE_MIN_CONNS: {{ .Values.postgresql.minConns | default 2 | quote }}
   DATABASE_CONNECT_TIMEOUT: {{ .Values.postgresql.connectTimeout | default 5 | quote }}
   DATABASE_STATEMENT_TIMEOUT: {{ .Values.postgresql.statementTimeout | default 30000 | quote }}
-  DATABASE_HEALTH_CHECK_PERIOD: {{ .Values.postgresql.healthCheckPeriod | default "5s" | quote }}
+  DATABASE_HEALTH_CHECK_PERIOD: {{ .Values.postgresql.healthCheckPeriod | default "30s" | quote }}
   MQTT_HOST: {{ include "teslasync.mqtt.host" . | quote }}
   MQTT_PORT: {{ include "teslasync.mqtt.port" . | quote }}
   MQTT_CLIENT_ID: {{ .Values.mqtt.clientId | default "teslasync" | quote }}
@@ -71,9 +71,13 @@ data:
   FLEET_TELEMETRY_PORT: {{ include "teslasync.fleetTelemetry.port" . | quote }}
   FLEET_TELEMETRY_TOPIC_BASE: {{ .Values.fleetTelemetry.topicBase | default "telemetry" | quote }}
   FLEET_TELEMETRY_BATCH_MS: {{ .Values.fleetTelemetry.batchMs | default 100 | quote }}
+  FLEET_TELEMETRY_BATCH_MAX_MESSAGES: {{ .Values.fleetTelemetry.batchMaxMessages | default 256 | quote }}
+  FLEET_TELEMETRY_PERSISTENCE_CONCURRENCY: {{ .Values.fleetTelemetry.persistenceConcurrency | default 2 | quote }}
+  FLEET_TELEMETRY_PERSISTENCE_QUEUE_CAPACITY: {{ .Values.fleetTelemetry.persistenceQueueCapacity | default 64 | quote }}
+  FLEET_TELEMETRY_PERSISTENCE_TIMEOUT: {{ .Values.fleetTelemetry.persistenceTimeout | default "30s" | quote }}
   FLEET_TELEMETRY_STALE_TIMEOUT: {{ .Values.fleetTelemetry.staleTimeout | default "15m" | quote }}
   FLEET_TELEMETRY_FALLBACK_POLL_INTERVAL: {{ .Values.fleetTelemetry.fallbackPollInterval | default "5m" | quote }}
-  FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL: {{ .Values.fleetTelemetry.snapshotWriteInterval | default "1s" | quote }}
+  FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL: {{ .Values.fleetTelemetry.snapshotWriteInterval | default "10s" | quote }}
   FLEET_TELEMETRY_CLEANUP_INTERVAL: {{ .Values.fleetTelemetry.cleanupInterval | default "2m" | quote }}
   FLEET_TELEMETRY_STALE_SESSION_TIMEOUT: {{ .Values.fleetTelemetry.staleSessionTimeout | default "5m" | quote }}
   {{- end }}

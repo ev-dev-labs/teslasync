@@ -46,6 +46,12 @@ describe('localMidnightToInstant', () => {
   it('throws on malformed date input', () => {
     expect(() => localMidnightToInstant('not-a-date', 'UTC')).toThrow();
   });
+
+  it('uses the first valid instant when a timezone skips local midnight', () => {
+    expect(
+      localMidnightToInstant('2025-09-07', 'America/Santiago').toISOString(),
+    ).toBe('2025-09-07T04:00:00.000Z');
+  });
 });
 
 describe('calendarRangeToInstants', () => {

@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import {
   escapeCell,
   toCSV,
   objectsToCSV,
   defaultExportFilename,
+  downloadJSON,
   type CsvColumn,
 } from '../csvExport';
 
@@ -99,6 +100,25 @@ describe('objectsToCSV', () => {
 
   it('handles empty rows', () => {
     expect(objectsToCSV([])).toBe('');
+  });
+});
+
+describe('downloadJSON', () => {
+  it('downloads SI JSON with a .json filename', () => {
+    const createObjectURL = vi.fn(() => 'blob:json');
+    const revokeObjectURL = vi.fn();
+    vi.stubGlobal('URL', { createObjectURL, revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+
+    downloadJSON('fsd-contributing-drives', { unit: 'meter', drives: [] });
+
+    expect(createObjectURL).toHaveBeenCalledTimes(1);
+    const blob = createObjectURL.mock.calls[0][0] as Blob;
+    expect(blob.type).toContain('application/json');
+    expect(click).toHaveBeenCalledTimes(1);
+
+    click.mockRestore();
+    vi.unstubAllGlobals();
   });
 });
 

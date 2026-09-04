@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"os"
 	"os/signal"
@@ -24,6 +23,7 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
+	"github.com/ev-dev-labs/teslasync/internal/api/fsd"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
@@ -32,6 +32,7 @@ import (
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	systemdb "github.com/ev-dev-labs/teslasync/internal/database/system"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/computed"
 	"github.com/ev-dev-labs/teslasync/internal/resilience"
@@ -77,41 +78,14 @@ type computedMetricEvaluator interface {
 	Evaluate(ctx context.Context, rule *alertmodel.AlertRule, vehicleID int64) (computed.Result, error)
 }
 
-// healthChecker is the narrow slice of *database.DB the liveness probe needs.
-type healthChecker interface {
-	Health(ctx context.Context) error
-}
-
 var (
 	_ computedRuleLister      = (*dbalert.AlertRuleRepo)(nil)
 	_ fleetVehicleLister      = (*vehicledb.VehicleRepo)(nil)
 	_ channelLister           = (*dbnotif.NotificationRepo)(nil)
 	_ computedMetricEvaluator = (*computed.Evaluator)(nil)
-	_ healthChecker           = (*database.DB)(nil)
+	_ fsdWeeklyLoader         = (*fsd.Repo)(nil)
+	_ titleDeduper            = (*dbnotif.NotificationRepo)(nil)
 )
-
-// healthResponse is the JSON body returned by the /healthz endpoint.
-type healthResponse struct {
-	Status string `json:"status"`
-	Error  string `json:"error,omitempty"`
-}
-
-// healthzHandler reports database liveness for k8s probes. It encodes the
-// body with encoding/json so an error string containing quotes or
-// backslashes cannot corrupt the response (the previous fmt.Fprintf shim
-// interpolated err.Error() straight into a JSON literal), and always sets
-// the JSON content type before writing the status line.
-func healthzHandler(hc healthChecker) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		if err := hc.Health(r.Context()); err != nil {
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_ = json.NewEncoder(w).Encode(healthResponse{Status: "unhealthy", Error: err.Error()})
-			return
-		}
-		_ = json.NewEncoder(w).Encode(healthResponse{Status: "ok"})
-	}
-}
 
 func main() {
 	// Built-in healthcheck for distroless containers
@@ -376,7 +350,32 @@ func main() {
 		}
 	}()
 
-	log.Info().Msg("notification worker running (MQTT consumer + schedule processor + computed-metric evaluator)")
+	fsdRepo := fsd.NewRepo(db)
+	fsdDigestDeduper := newFsdDigestDeduper(notifRepoForCM)
+	go func() {
+		first := time.NewTimer(30 * time.Second)
+		ticker := time.NewTicker(fsdWeeklyDigestInterval)
+		defer first.Stop()
+		defer ticker.Stop()
+		run := func() {
+			tickCtx, span := workerTracer().Start(ctx, "notification.fsd_weekly_tick",
+				oteltrace.WithSpanKind(oteltrace.SpanKindInternal))
+			runFsdWeeklyDigestTick(tickCtx, vehicleRepo, fsdRepo, fsdDigestDeduper, mqttClient, time.Time{}, span)
+			span.End()
+		}
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-first.C:
+				run()
+			case <-ticker.C:
+				run()
+			}
+		}
+	}()
+
+	log.Info().Msg("notification worker running (MQTT consumer + schedule processor + computed-metric evaluator + fsd weekly digest)")
 
 	// Health endpoint for k8s probes
 	healthPort := os.Getenv("HEALTH_PORT")
@@ -384,7 +383,8 @@ func main() {
 		healthPort = "8081"
 	}
 	healthMux := http.NewServeMux()
-	healthMux.HandleFunc("/healthz", healthzHandler(db))
+	healthMux.Handle("/healthz", healthprobe.LivenessHandler())
+	healthMux.Handle("/readyz", healthprobe.ReadinessHandler(db))
 	healthMux.Handle("/metrics", promhttp.Handler())
 	go func() {
 		log.Info().Str("port", healthPort).Msg("health endpoint listening")

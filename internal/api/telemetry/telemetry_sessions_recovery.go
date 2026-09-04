@@ -120,10 +120,7 @@ var (
 		"Enable",
 	}
 	recoveryTerminalStates = []string{
-		enums.ChargeStateComplete,
-		enums.ChargeStateStopped,
 		enums.ChargeStateDisconnected,
-		enums.ChargeStateNoPower,
 	}
 )
 
@@ -158,7 +155,7 @@ func finalParkBoundary(
 	return evidence.FirstGearObservation(
 		ctx,
 		vehicleID,
-		[]string{enums.GearPark, enums.GearNeutral},
+		[]string{enums.GearPark},
 		searchAfter,
 		until,
 	)

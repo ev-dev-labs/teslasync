@@ -551,3 +551,66 @@ func TestDriveTracking_PropagatesError(t *testing.T) {
 		t.Fatalf("stateToLegacyMap(nil) = %v, want empty non-nil map", m)
 	}
 }
+
+func TestTrackDriving_GearPark_ArmsDebounceWithoutEnding(t *testing.T) {
+	const vehicleID = int64(81)
+	t0 := time.Date(2026, 8, 22, 10, 0, 0, 0, time.UTC)
+	active := &streamingDrive{
+		DriveID:            12,
+		VehicleID:          vehicleID,
+		StartTime:          t0.Add(-10 * time.Minute),
+		accumulatedSignals: map[string]interface{}{},
+	}
+	tracker := &TelemetrySessionTracker{
+		activeDrives:  map[int64]*streamingDrive{vehicleID: active},
+		activeCharges: map[int64]*streamingCharge{},
+	}
+
+	tracker.trackDriving(
+		context.Background(),
+		vehicleID,
+		"VIN",
+		map[string]interface{}{"Gear": "P"},
+		nil,
+		t0,
+		map[string]time.Time{"Gear": t0},
+	)
+	if _, ok := tracker.activeDrives[vehicleID]; !ok {
+		t.Fatal("drive ended on first Gear=P")
+	}
+	if active.PendingParkSince.IsZero() {
+		t.Fatal("expected PendingParkSince to arm")
+	}
+}
+
+func TestTrackDriving_GearNeutral_DoesNotEndDrive(t *testing.T) {
+	const vehicleID = int64(82)
+	t0 := time.Date(2026, 8, 22, 10, 0, 0, 0, time.UTC)
+	active := &streamingDrive{
+		DriveID:            13,
+		VehicleID:          vehicleID,
+		StartTime:          t0.Add(-10 * time.Minute),
+		PendingParkSince:   t0.Add(-5 * time.Second),
+		accumulatedSignals: map[string]interface{}{},
+	}
+	tracker := &TelemetrySessionTracker{
+		activeDrives:  map[int64]*streamingDrive{vehicleID: active},
+		activeCharges: map[int64]*streamingCharge{},
+	}
+
+	tracker.trackDriving(
+		context.Background(),
+		vehicleID,
+		"VIN",
+		map[string]interface{}{"Gear": "N"},
+		nil,
+		t0,
+		map[string]time.Time{"Gear": t0},
+	)
+	if _, ok := tracker.activeDrives[vehicleID]; !ok {
+		t.Fatal("drive ended on Gear=N")
+	}
+	if !active.PendingParkSince.IsZero() {
+		t.Fatal("Neutral should cancel pending Park")
+	}
+}

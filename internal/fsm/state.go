@@ -33,7 +33,7 @@ const (
 	TriggerSpeedDetected                   // Speed > 1 (no Gear available — REST API polling only)
 	TriggerSpeedZero                       // Speed = 0 for driveHoldDuration (REST API polling only)
 	TriggerChargeStarted                   // DetailedChargeState is active
-	TriggerChargeEnded                     // DetailedChargeState = Complete/Disconnected/Stopped
+	TriggerChargeEnded                     // DetailedChargeState = Disconnected (unplugged)
 	TriggerTimeout                         // No signals for staleTimeout
 	TriggerSignalReceived                  // Any telemetry signal arrived (wake from sleep/offline)
 	TriggerActivityDetected                // Non-idle signal while parked

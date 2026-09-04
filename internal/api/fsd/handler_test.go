@@ -64,6 +64,32 @@ func (f *fakeRepo) BaselineSamples(ctx context.Context, vehicleID int64, fields 
 
 var _ insightsRepository = (*fakeRepo)(nil)
 
+type fakeAnalyticsRepo struct {
+	*fakeRepo
+	input        AnalyticsInput
+	inputErr     error
+	gotFrom      time.Time
+	gotSplit     time.Time
+	gotTo        time.Time
+	gotCtx       context.Context
+	gotVehicleID int64
+}
+
+func (f *fakeAnalyticsRepo) LoadAnalyticsInput(
+	ctx context.Context,
+	vehicleID int64,
+	from, split, to time.Time,
+) (AnalyticsInput, error) {
+	f.gotCtx = ctx
+	f.gotVehicleID = vehicleID
+	f.gotFrom = from
+	f.gotSplit = split
+	f.gotTo = to
+	return f.input, f.inputErr
+}
+
+var _ driveAnalyticsRepository = (*fakeAnalyticsRepo)(nil)
+
 func fixedClock(t *testing.T, iso string) clock {
 	t.Helper()
 	now := at(t, iso)
@@ -122,6 +148,14 @@ func TestInsights_ValidationRejectsBadInput(t *testing.T) {
 		{"days over cap", "/analytics/fsd?vehicle_id=1&days=400", "days exceeds maximum"},
 		{"unknown timezone", "/analytics/fsd?vehicle_id=1&timezone=Mars/Olympus", "timezone must be a valid IANA timezone"},
 		{"oversized timezone", "/analytics/fsd?vehicle_id=1&timezone=" + strings.Repeat("A", maxTimezoneLen+1), "timezone must be a valid IANA timezone"},
+		{"missing end", "/analytics/fsd?vehicle_id=1&start=2026-03-01T00:00:00Z", "start and end must be provided together"},
+		{"missing start", "/analytics/fsd?vehicle_id=1&end=2026-03-02T00:00:00Z", "start and end must be provided together"},
+		{"days and range", "/analytics/fsd?vehicle_id=1&days=7&start=2026-03-01T00:00:00Z&end=2026-03-02T00:00:00Z", "days cannot be combined with start and end"},
+		{"invalid start", "/analytics/fsd?vehicle_id=1&start=yesterday&end=2026-03-02T00:00:00Z", "start must be an RFC3339 timestamp"},
+		{"invalid end", "/analytics/fsd?vehicle_id=1&start=2026-03-01T00:00:00Z&end=tomorrow", "end must be an RFC3339 timestamp"},
+		{"reversed range", "/analytics/fsd?vehicle_id=1&start=2026-03-02T00:00:00Z&end=2026-03-01T00:00:00Z", "start must be before end"},
+		{"range over cap", "/analytics/fsd?vehicle_id=1&start=2024-01-01T00:00:00Z&end=2026-03-01T00:00:00Z", "date range exceeds maximum"},
+		{"invalid include evidence", "/analytics/fsd?vehicle_id=1&include_evidence=sometimes", "include_evidence must be a boolean"},
 	}
 
 	repo := &fakeRepo{}
@@ -145,6 +179,135 @@ func TestInsights_ValidationRejectsBadInput(t *testing.T) {
 
 	if len(repo.gotVehicleIDs) != 0 {
 		t.Errorf("rejected requests must not touch the database, got %v", repo.gotVehicleIDs)
+	}
+}
+
+func TestInsights_ExplicitRangeUsesBatchDriveAnalyticsPath(t *testing.T) {
+	repo := &fakeAnalyticsRepo{fakeRepo: &fakeRepo{}}
+	h := newHandler(repo, fixedClock(t, "2026-03-10T18:00:00Z"))
+
+	rec := doGet(
+		t,
+		h,
+		"/analytics/fsd?vehicle_id=42&start=2026-03-03T10:00:00Z&end=2026-03-03T12:00:00Z",
+	)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+	}
+	resp := decode(t, rec)
+
+	if !resp.Period.StartAt.Equal(at(t, "2026-03-03T10:00:00Z")) ||
+		!resp.Period.EndAt.Equal(at(t, "2026-03-03T12:00:00Z")) {
+		t.Errorf("period = %v..%v", resp.Period.StartAt, resp.Period.EndAt)
+	}
+	if repo.gotVehicleID != 42 {
+		t.Errorf("vehicle = %d, want 42", repo.gotVehicleID)
+	}
+	if !repo.gotFrom.Equal(at(t, "2026-03-03T08:00:00Z")) ||
+		!repo.gotSplit.Equal(at(t, "2026-03-03T10:00:00Z")) ||
+		!repo.gotTo.Equal(at(t, "2026-03-03T12:00:00Z")) {
+		t.Errorf("batch bounds = %v..%v..%v", repo.gotFrom, repo.gotSplit, repo.gotTo)
+	}
+	if repo.gotCtx == nil {
+		t.Fatal("batch read must receive the request deadline context")
+	}
+	if len(repo.gotVehicleIDs) != 0 {
+		t.Errorf("legacy baseline/window path was also called: %v", repo.gotVehicleIDs)
+	}
+	if resp.Analytics.ContributingDrives == nil ||
+		resp.Analytics.ResetEvents == nil ||
+		resp.Analytics.RepeatedRoutes == nil ||
+		resp.Analytics.Observatory.Timeline == nil ||
+		resp.Analytics.Observatory.CommuteStories == nil {
+		t.Error("drive analytics arrays must serialize as empty arrays, not null")
+	}
+}
+
+func TestInsights_EvidenceIsOptIn(t *testing.T) {
+	start := at(t, "2026-03-03T09:00:00Z")
+	end := at(t, "2026-03-03T12:00:00Z")
+	driveStart := at(t, "2026-03-03T10:00:00Z")
+	driveEnd := at(t, "2026-03-03T11:00:00Z")
+	distance := 1000.0
+	samples := []Sample{
+		trustedSample(SignalFSDDistance, at(t, "2026-03-03T08:59:00Z"), 100),
+		trustedSample(SignalDrivingDistance, at(t, "2026-03-03T08:59:00Z"), 1000),
+		trustedSample(SignalFSDDistance, at(t, "2026-03-03T10:30:00Z"), 600),
+		trustedSample(SignalDrivingDistance, at(t, "2026-03-03T10:30:00Z"), 2000),
+	}
+	repo := &fakeAnalyticsRepo{
+		fakeRepo: &fakeRepo{},
+		input: AnalyticsInput{
+			CounterSamples: samples,
+			Drives: []DriveRecord{{
+				ID:        295,
+				StartedAt: driveStart,
+				EndedAt:   &driveEnd,
+				DistanceM: &distance,
+			}},
+		},
+	}
+	h := newHandler(repo, fixedClock(t, "2026-03-10T18:00:00Z"))
+
+	target := "/analytics/fsd?vehicle_id=42&start=" +
+		start.Format(time.RFC3339) + "&end=" + end.Format(time.RFC3339)
+	withoutEvidence := decode(t, doGet(t, h, target))
+	withEvidence := decode(t, doGet(t, h, target+"&include_evidence=true"))
+
+	if got := withoutEvidence.Analytics.ContributingDrives[0].Evidence; len(got) != 0 {
+		t.Fatalf("default evidence = %+v, want omitted", got)
+	}
+	if got := withEvidence.Analytics.ContributingDrives[0].Evidence; len(got) != 1 {
+		t.Fatalf("opt-in evidence = %+v, want one interval", got)
+	}
+}
+
+func TestInsights_PresetComparisonUsesEqualDuration(t *testing.T) {
+	repo := &fakeAnalyticsRepo{fakeRepo: &fakeRepo{}}
+	now := at(t, "2026-03-15T12:00:00Z")
+	h := newHandler(repo, func() time.Time { return now })
+
+	rec := doGet(t, h, "/analytics/fsd?vehicle_id=42&days=7&timezone=UTC")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+	}
+	resp := decode(t, rec)
+
+	currentDuration := resp.Period.EndAt.Sub(resp.Period.StartAt)
+	previousPeriod := resp.Analytics.Comparison.PreviousPeriod
+	previousDuration := previousPeriod.EndAt.Sub(previousPeriod.StartAt)
+	if currentDuration != previousDuration {
+		t.Fatalf("durations = current %v, previous %v", currentDuration, previousDuration)
+	}
+	if !repo.gotFrom.Equal(at(t, "2026-03-02T12:00:00Z")) {
+		t.Errorf("combined query start = %v, want equal-duration previous start", repo.gotFrom)
+	}
+	if !repo.gotSplit.Equal(resp.Period.StartAt) {
+		t.Errorf("comparison split = %v, want current start %v", repo.gotSplit, resp.Period.StartAt)
+	}
+	if !previousPeriod.EndAt.Equal(resp.Period.StartAt) {
+		t.Errorf("previous end = %v, want current start %v", previousPeriod.EndAt, resp.Period.StartAt)
+	}
+}
+
+func TestInsights_PreviousComparisonCountsItsOwnCivilDays(t *testing.T) {
+	repo := &fakeAnalyticsRepo{fakeRepo: &fakeRepo{}}
+	h := newHandler(repo, fixedClock(t, "2026-03-10T18:00:00Z"))
+
+	resp := decode(t, doGet(
+		t,
+		h,
+		"/analytics/fsd?vehicle_id=42&start=2026-03-03T23:59:00Z&end=2026-03-04T00:01:00Z&timezone=UTC",
+	))
+
+	if resp.Period.Days != 2 {
+		t.Fatalf("current days = %d, want 2", resp.Period.Days)
+	}
+	previous := resp.Analytics.Comparison.PreviousPeriod
+	if previous.Days != 1 ||
+		previous.StartDate != "2026-03-03" ||
+		previous.EndDate != "2026-03-03" {
+		t.Fatalf("previous period = %+v, want one civil day", previous)
 	}
 }
 

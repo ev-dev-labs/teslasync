@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
@@ -12,12 +12,17 @@ import { AIDriveCoaching } from '@/components/ai/AIDriveCoaching';
 import { AISpeedProfileInsights } from '@/components/ai/AISpeedProfileInsights';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
+import { useTimezone } from '@/lib/timezone';
+import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
 import {
   useDriveDetailData,
   DriveDetailSkeleton,
   HeroGauges,
   DriveTimeline,
   DriveStatCards,
+  SupervisedDrivingPanel,
+  GearTheaterPanel,
+  SilentCounterPanel,
   MoreDetailsPanel,
   EnergySummaryPanel,
   CostSavingsPanel,
@@ -40,12 +45,38 @@ export default function DriveDetailPage() {
 
   const {
     drive, vehicle, isLoading, driveQuery,
-    chartData, stats, trail, startPos, endPos, centerPos, speedSegments, speedHistData,
+    chartData, stats, routeSource, trail, startPos, endPos, centerPos, speedSegments, speedHistData,
   } = useDriveDetailData(id ?? '');
   /* A drive is an immutable historical record. A failed refresh must not
    * delete the one the operator is reading — only a first load with nothing
    * retained may replace the page. */
   const driveState = useDataState(driveQuery, { provenance: 'historical' });
+  const timezone = useTimezone('vehicle');
+  const fsdWindow = useMemo(() => {
+    if (!drive?.endTs) return { start: undefined, end: undefined };
+    const startMs = Date.parse(drive.startTs);
+    const endMs = Date.parse(drive.endTs);
+    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
+      return { start: undefined, end: undefined };
+    }
+    return {
+      start: new Date(startMs - 2 * 60_000).toISOString(),
+      // The endpoint is half-open. One extra millisecond admits an anchor
+      // exactly at the backend's two-minute coverage limit; later anchors
+      // are still rejected by the attribution guard.
+      end: new Date(endMs + 2 * 60_000 + 1).toISOString(),
+    };
+  }, [drive]);
+  const fsdQuery = useFsdInsightsRange(
+    drive?.endTs ? String(drive.vehicleId) : undefined,
+    fsdWindow.start,
+    fsdWindow.end,
+    timezone,
+    true,
+  );
+  const fsdState = useDataState(fsdQuery, { provenance: 'historical' });
+  const fsdInsight = fsdState.data?.drive_analytics?.contributing_drives
+    .find((candidate) => candidate.drive_id === drive?.id);
 
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
@@ -130,6 +161,10 @@ export default function DriveDetailPage() {
         state={driveState}
         label={t('driveDetail.title', 'Drive Detail')}
       />
+      <StaleRefreshWarning
+        state={fsdState}
+        label={t('driveDetail.fsd.title', 'Supervised driving')}
+      />
       {drive && stats && (
         <>
           {/* Meta line — vehicle + drive window, replaces the redundant custom
@@ -171,12 +206,29 @@ export default function DriveDetailPage() {
             <DriveTimeline drive={drive} />
           </SectionErrorBoundary>
 
+          <SectionErrorBoundary name="drive-detail:gear-theater" fallbackTitle={t('driveDetail.section.theaterFailed', 'Gear theater failed to load')}>
+            <GearTheaterPanel driveId={id} />
+          </SectionErrorBoundary>
+
           {/* KPI band — full-width responsive stat grid. */}
           {hasMeaningfulDriveStats && (
             <SectionErrorBoundary name="drive-detail:stat-cards" fallbackTitle={t('driveDetail.section.statCardsFailed', 'Drive stats failed to load')}>
               <DriveStatCards drive={drive} stats={stats} />
             </SectionErrorBoundary>
           )}
+
+          <SectionErrorBoundary name="drive-detail:fsd" fallbackTitle={t('driveDetail.section.fsdFailed', 'Supervised-driving panel failed to load')}>
+            <SupervisedDrivingPanel
+              insight={fsdInsight}
+              isLoading={drive.endTs != null && fsdState.status === 'initial'}
+              error={fsdState.fatalError}
+              isOngoing={!drive.endTs}
+            />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary name="drive-detail:silent-counter" fallbackTitle={t('driveDetail.section.silentFailed', 'Counter-silent panel failed to load')}>
+            <SilentCounterPanel driveId={id} />
+          </SectionErrorBoundary>
 
           {/*
             Per-drive coaching narrative (AI, opt-in). Wrapped in
@@ -230,6 +282,8 @@ export default function DriveDetailPage() {
                   endPos={endPos}
                   centerPos={centerPos}
                   speedSegments={speedSegments}
+                  routePoints={routeSource}
+                  fsdEvidence={fsdInsight?.evidence}
                 />
               </SectionErrorBoundary>
             </div>

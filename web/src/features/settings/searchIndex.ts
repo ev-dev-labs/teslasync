@@ -48,6 +48,18 @@ export interface SettingsEntry {
  */
 export function getSettingsIndex(t: TFunction): SettingsEntry[] {
   return [
+    {
+      id: 'fleet.setup',
+      href: '/settings/fleet-setup',
+      section: 'fleet',
+      title: t('search.entries.fleet.setup.title', 'Fleet Setup'),
+      description: t(
+        'search.entries.fleet.setup.desc',
+        'Connect Tesla, keep the Fleet token fresh, subscribe telemetry on a vehicle, and confirm streaming.',
+      ),
+      keywords: ['onboarding', 'oauth', 'telemetry', 'subscribe', 'fleet api', 'token', 'vin'],
+    },
+
     // ── Workspace preferences ───────────────────────────────────────
     {
       id: 'workspace.persona',

@@ -86,6 +86,30 @@ type Writer interface {
 	Write(ctx context.Context, atomic codec.Atomic, dst Entry) error
 }
 
+// RoutedAtomic couples an atomic with the field-static routing entry that
+// selected its destination. BatchWriter implementations receive this shape so
+// they can coalesce rows without re-reading routing.yaml.
+type RoutedAtomic struct {
+	Atomic codec.Atomic
+	Entry  Entry
+}
+
+// BatchWriter is an optional extension implemented by writers that can reduce
+// database round-trips by persisting multiple atomics together. The returned
+// error slice must align one-for-one with items. A nil entry means that item
+// was accepted.
+//
+// Writer remains the mandatory contract so bespoke and low-volume
+// destinations can keep their simpler single-item implementation.
+type BatchWriter interface {
+	WriteBatch(ctx context.Context, items []RoutedAtomic) []error
+}
+
+type indexedRoutedAtomic struct {
+	index int
+	item  RoutedAtomic
+}
+
 // Router dispatches each codec.Atomic to the writer registered for
 // the destination declared in routing.yaml. Lookup is purely keyed by
 // atomic.Field — per ADR-004 #8 routing is field-static and
@@ -262,6 +286,149 @@ func (r *Router) Route(ctx context.Context, atomic codec.Atomic) (err error) {
 	)
 
 	return primaryErr
+}
+
+// RouteBatch applies the same routing and dual-write semantics as Route while
+// allowing batch-capable writers to collapse database work. Results align
+// one-for-one with atomics and report primary-destination failures only;
+// signal_log dual-write failures remain metric-only per ADR-004 #8.
+func (r *Router) RouteBatch(ctx context.Context, atomics []codec.Atomic) (results []error, err error) {
+	ctx, span := otel.Tracer(routerTracerName).Start(
+		ctx,
+		"tesla.router.route_batch",
+		trace.WithSpanKind(trace.SpanKindInternal),
+		trace.WithAttributes(attribute.Int("signal.count", len(atomics))),
+	)
+	defer func() {
+		if err != nil {
+			span.RecordError(err)
+			span.SetStatus(codes.Error, "router.route_batch")
+		}
+		span.End()
+	}()
+
+	results = make([]error, len(atomics))
+	primaryGroups := make(map[Destination][]indexedRoutedAtomic)
+	primaryOrder := make([]Destination, 0, len(r.writers))
+	dualItems := make([]indexedRoutedAtomic, 0, len(atomics))
+
+	for i, atomic := range atomics {
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return results, ctxErr
+		}
+		entry, ok := r.entries[atomic.Field]
+		if !ok {
+			noRouteTotal.WithLabelValues(atomic.Field).Inc()
+			results[i] = fmt.Errorf("%w: %s", ErrNoRoute, atomic.Field)
+			continue
+		}
+		if entry.Destination == DestDrop {
+			continue
+		}
+		if _, seen := primaryGroups[entry.Destination]; !seen {
+			primaryOrder = append(primaryOrder, entry.Destination)
+		}
+		item := indexedRoutedAtomic{
+			index: i,
+			item:  RoutedAtomic{Atomic: atomic, Entry: entry},
+		}
+		primaryGroups[entry.Destination] = append(primaryGroups[entry.Destination], item)
+		if entry.Destination != DestSignalLog && entry.Destination != DestUnitHistory {
+			dualItems = append(dualItems, indexedRoutedAtomic{
+				index: i,
+				item: RoutedAtomic{
+					Atomic: atomic,
+					Entry:  Entry{Field: entry.Field, Destination: DestSignalLog},
+				},
+			})
+		}
+	}
+
+	for _, destination := range primaryOrder {
+		items := primaryGroups[destination]
+		writer, ok := r.writers[destination]
+		if !ok {
+			for _, item := range items {
+				results[item.index] = fmt.Errorf(
+					"router: no writer for destination %q (field %s)",
+					destination,
+					item.item.Atomic.Field,
+				)
+			}
+			continue
+		}
+		batchErrors := writeBatch(
+			contextWithWriteRole(ctx, writeRolePrimary),
+			writer,
+			routedItems(items),
+		)
+		for i, item := range items {
+			if batchErrors[i] == nil {
+				continue
+			}
+			results[item.index] = batchErrors[i]
+			writerFailuresTotal.WithLabelValues(
+				string(destination),
+				classifyError(batchErrors[i]),
+			).Inc()
+		}
+	}
+
+	if len(dualItems) > 0 {
+		if writer, ok := r.writers[DestSignalLog]; ok {
+			batchErrors := writeBatch(
+				contextWithWriteRole(ctx, writeRoleDual),
+				writer,
+				routedItems(dualItems),
+			)
+			for i := range dualItems {
+				if batchErrors[i] != nil {
+					writerFailuresTotal.WithLabelValues(
+						string(DestSignalLog),
+						classifyError(batchErrors[i]),
+					).Inc()
+				}
+			}
+		}
+	}
+
+	if ctxErr := ctx.Err(); ctxErr != nil {
+		return results, ctxErr
+	}
+	return results, nil
+}
+
+func routedItems(indexed []indexedRoutedAtomic) []RoutedAtomic {
+	items := make([]RoutedAtomic, len(indexed))
+	for i := range indexed {
+		items[i] = indexed[i].item
+	}
+	return items
+}
+
+func writeBatch(ctx context.Context, writer Writer, items []RoutedAtomic) []error {
+	if batchWriter, ok := writer.(BatchWriter); ok {
+		results := batchWriter.WriteBatch(ctx, items)
+		if len(results) == len(items) {
+			return results
+		}
+		err := fmt.Errorf(
+			"router: batch writer returned %d results for %d items",
+			len(results),
+			len(items),
+		)
+		results = make([]error, len(items))
+		for i := range results {
+			results[i] = err
+		}
+		return results
+	}
+
+	results := make([]error, len(items))
+	for i := range items {
+		results[i] = writer.Write(ctx, items[i].Atomic, items[i].Entry)
+	}
+	return results
 }
 
 func routeOutcome(primaryErr error) string {

@@ -472,6 +472,7 @@
       "mi",
       "miles",
       "online",
+      "physicsCockpit",
       "points",
       "pressure",
       "privacy",
@@ -563,6 +564,7 @@
       "fleet",
       "parking",
       "telemetry",
+      "teslaOnly",
       "utilization",
       "vehicleAccess",
       "vehicleManagement",
@@ -609,6 +611,7 @@
     "settings": [
       "advanced",
       "ai",
+      "fleetSetup",
       "orders",
       "quietHours",
       "safetySettings",

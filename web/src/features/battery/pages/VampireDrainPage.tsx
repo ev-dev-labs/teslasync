@@ -19,6 +19,7 @@ import {
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleSelect } from '@/components/forms';
+import { VampireSplitPanel } from '../components/VampireSplitPanel';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -254,6 +255,10 @@ export default function VampireDrainPage() {
             </>
           )}
         </section>
+      </FadeIn>
+
+      <FadeIn delay={0.05}>
+        <VampireSplitPanel vehicleId={activeId || undefined} />
       </FadeIn>
 
       {/* 2 — Primary bento: trend (hero) + rate gauge */}

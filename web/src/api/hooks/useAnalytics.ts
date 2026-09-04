@@ -486,5 +486,41 @@ export function useFsdInsights(
       ),
     enabled: !!vehicleId,
     ...queryPolicy('historical'),
+      // Drive repair/deletion can invalidate this query while its page is
+      // unmounted. Refetch stale cache entries on return instead of serving
+      // pre-mutation attribution indefinitely.
+      refetchOnMount: true,
+  });
+}
+
+/**
+ * Range-scoped FSD intelligence for drive lists and detail pages. `end` is
+ * exclusive, matching the shared calendar-range contract.
+ */
+export function useFsdInsightsRange(
+  vehicleId: string | undefined,
+  start: string | undefined,
+  end: string | undefined,
+  timezone: string = browserTimezone(),
+  includeEvidence = false,
+) {
+  const scope: QueryScope = {
+    vehicleId: vehicleId ?? null,
+    start: start ?? null,
+    end: end ?? null,
+    timezone,
+    filters: includeEvidence ? { include_evidence: true } : undefined,
+  };
+
+  return useQuery({
+    queryKey: analyticsKeys.fsdInsights(scope),
+    queryFn: ({ signal }) =>
+      request<FsdInsights>(
+        scopedPath('/analytics/fsd', scope, { includePresentation: true }),
+        { signal },
+      ),
+    enabled: !!vehicleId && !!start && !!end,
+    ...queryPolicy('historical'),
+      refetchOnMount: true,
   });
 }

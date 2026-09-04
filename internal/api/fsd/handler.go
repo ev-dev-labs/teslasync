@@ -55,6 +55,14 @@ type insightsRepository interface {
 	BaselineSamples(ctx context.Context, vehicleID int64, fields []string, before time.Time) ([]Sample, error)
 }
 
+type driveAnalyticsRepository interface {
+	LoadAnalyticsInput(
+		ctx context.Context,
+		vehicleID int64,
+		from, split, to time.Time,
+	) (AnalyticsInput, error)
+}
+
 // clock is injected so handler tests can pin the period boundary;
 // production wiring leaves it nil and falls through to time.Now().UTC().
 type clock func() time.Time
@@ -83,9 +91,13 @@ func counterFields() []string {
 
 // request is the validated query surface of GET /analytics/fsd.
 type request struct {
-	vehicleID int64
-	days      int
-	loc       *time.Location
+	vehicleID       int64
+	days            int
+	loc             *time.Location
+	startAt         *time.Time
+	endAt           *time.Time
+	explicitRange   bool
+	includeEvidence bool
 }
 
 // parseRequest validates every query parameter. Returns ok=false after
@@ -142,7 +154,69 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (request, bool) {
 		loc = parsed
 	}
 
-	return request{vehicleID: vehicleID, days: days, loc: loc}, true
+	includeEvidence := false
+	if raw := q.Get("include_evidence"); raw != "" {
+		value, err := strconv.ParseBool(raw)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "include_evidence must be a boolean")
+			return request{}, false
+		}
+		includeEvidence = value
+	}
+
+	startRaw := q.Get("start")
+	endRaw := q.Get("end")
+	if startRaw != "" || endRaw != "" {
+		if startRaw == "" || endRaw == "" {
+			httpx.WriteError(w, http.StatusBadRequest, "start and end must be provided together")
+			return request{}, false
+		}
+		if q.Get("days") != "" {
+			httpx.WriteError(w, http.StatusBadRequest, "days cannot be combined with start and end")
+			return request{}, false
+		}
+		startAt, err := time.Parse(time.RFC3339, startRaw)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "start must be an RFC3339 timestamp")
+			return request{}, false
+		}
+		endAt, err := time.Parse(time.RFC3339, endRaw)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "end must be an RFC3339 timestamp")
+			return request{}, false
+		}
+		if !startAt.Before(endAt) {
+			httpx.WriteError(w, http.StatusBadRequest, "start must be before end")
+			return request{}, false
+		}
+		days = inclusiveCivilDayCount(startAt, endAt.Add(-time.Nanosecond), loc)
+		if days > maxDays {
+			httpx.WriteJSON(w, http.StatusBadRequest, daysLimitError{
+				Error: "date range exceeds maximum",
+				Max:   maxDays,
+				Code:  apiparams.HTTPStatusCode(http.StatusBadRequest),
+			})
+			return request{}, false
+		}
+		startAt = startAt.UTC()
+		endAt = endAt.UTC()
+		return request{
+			vehicleID:       vehicleID,
+			days:            days,
+			loc:             loc,
+			startAt:         &startAt,
+			endAt:           &endAt,
+			explicitRange:   true,
+			includeEvidence: includeEvidence,
+		}, true
+	}
+
+	return request{
+		vehicleID:       vehicleID,
+		days:            days,
+		loc:             loc,
+		includeEvidence: includeEvidence,
+	}, true
 }
 
 // Insights serves GET /analytics/fsd?vehicle_id=…&days=…&timezone=….
@@ -164,6 +238,10 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 
 	now := h.now()
 	start := periodStart(now, req.days, req.loc)
+	if req.explicitRange {
+		start = *req.startAt
+		now = *req.endAt
+	}
 
 	span.SetAttributes(
 		attribute.Int64("vehicle_id", req.vehicleID),
@@ -173,7 +251,7 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 
 	fields := counterFields()
 
-	// ONE deadline for the whole read path. Both queries share it, so the
+	// ONE deadline for the whole read path. All queries share it, so the
 	// endpoint's worst case is `insightsQueryBudget`, not N times it, and a
 	// client that disconnects (or a request the server times out) cancels the
 	// in-flight query rather than leaving it to finish against a dead
@@ -182,42 +260,88 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 	readCtx, cancelReads := context.WithTimeout(ctx, insightsQueryBudget)
 	defer cancelReads()
 
-	baselines, err := h.repo.BaselineSamples(readCtx, req.vehicleID, fields, start)
-	if err != nil {
-		span.RecordError(err)
-		log.Error().Err(err).
-			Int64("vehicle_id", req.vehicleID).
-			Int("days", req.days).
-			Str("trace_id", traceID).
-			Msg("fsd.insights: baseline query failed")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
-		return
+	var resp Response
+	if analyticsRepo, ok := h.repo.(driveAnalyticsRepository); ok {
+		previousEnd := start
+		previousStart := start.Add(-now.Sub(start))
+		input, err := analyticsRepo.LoadAnalyticsInput(
+			readCtx,
+			req.vehicleID,
+			previousStart,
+			start,
+			now,
+		)
+		if err != nil {
+			span.RecordError(err)
+			log.Error().Err(err).
+				Int64("vehicle_id", req.vehicleID).
+				Int("days", req.days).
+				Str("trace_id", traceID).
+				Msg("fsd.insights: drive analytics query failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
+			return
+		}
+
+		resp = Aggregate(AggregateParams{
+			VehicleID: req.vehicleID,
+			Days:      req.days,
+			Loc:       req.loc,
+			Start:     start,
+			End:       now,
+			Samples:   input.CounterSamples,
+		})
+		previousDays := inclusiveCivilDayCount(
+			previousStart,
+			previousEnd.Add(-time.Nanosecond),
+			req.loc,
+		)
+		previous := Aggregate(AggregateParams{
+			VehicleID: req.vehicleID,
+			Days:      previousDays,
+			Loc:       req.loc,
+			Start:     previousStart,
+			End:       previousEnd,
+			Samples:   input.PreviousCounterSamples,
+		})
+		resp.Analytics = BuildDriveAnalytics(resp, previous, input, req.loc, req.includeEvidence)
+	} else {
+		baselines, err := h.repo.BaselineSamples(readCtx, req.vehicleID, fields, start)
+		if err != nil {
+			span.RecordError(err)
+			log.Error().Err(err).
+				Int64("vehicle_id", req.vehicleID).
+				Int("days", req.days).
+				Str("trace_id", traceID).
+				Msg("fsd.insights: baseline query failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
+			return
+		}
+
+		samples, err := h.repo.WindowSamples(readCtx, req.vehicleID, fields, start, now)
+		if err != nil {
+			span.RecordError(err)
+			log.Error().Err(err).
+				Int64("vehicle_id", req.vehicleID).
+				Int("days", req.days).
+				Str("trace_id", traceID).
+				Msg("fsd.insights: window query failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
+			return
+		}
+
+		all := make([]Sample, 0, len(baselines)+len(samples))
+		all = append(all, baselines...)
+		all = append(all, samples...)
+
+		resp = Aggregate(AggregateParams{
+			VehicleID: req.vehicleID,
+			Days:      req.days,
+			Loc:       req.loc,
+			Start:     start,
+			End:       now,
+			Samples:   all,
+		})
 	}
-
-	samples, err := h.repo.WindowSamples(readCtx, req.vehicleID, fields, start, now)
-	if err != nil {
-		span.RecordError(err)
-		log.Error().Err(err).
-			Int64("vehicle_id", req.vehicleID).
-			Int("days", req.days).
-			Str("trace_id", traceID).
-			Msg("fsd.insights: window query failed")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
-		return
-	}
-
-	all := make([]Sample, 0, len(baselines)+len(samples))
-	all = append(all, baselines...)
-	all = append(all, samples...)
-
-	resp := Aggregate(AggregateParams{
-		VehicleID: req.vehicleID,
-		Days:      req.days,
-		Loc:       req.loc,
-		Start:     start,
-		End:       now,
-		Samples:   all,
-	})
 
 	span.SetAttributes(
 		attribute.Int("fsd.samples", resp.Quality.FSDSampleCount+resp.Quality.DrivingSampleCount),
@@ -233,6 +357,17 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 	)
 
 	httpx.WriteJSON(w, http.StatusOK, resp)
+}
+
+func inclusiveCivilDayCount(start, end time.Time, loc *time.Location) int {
+	first := civilDateAt(start, loc)
+	last := civilDateAt(end, loc)
+	days := 1
+	for first.compare(last) < 0 && days <= maxDays {
+		first = first.addDays(1)
+		days++
+	}
+	return days
 }
 
 // periodStart resolves the first valid instant of the first requested local

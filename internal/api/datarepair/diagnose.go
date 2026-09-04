@@ -65,12 +65,11 @@ const (
 // routing.yaml order of preference. Both route to signal_log.
 var chargeStateFields = []string{"DetailedChargeState", "ChargeState"}
 
-// drivingGears / parkedGears mirror the FSM's gear classification in
-// internal/api/telemetry/telemetry_sessions_drive_tracking.go: D/R means the
-// drive is in progress, P/N ends it.
+// drivingGears / parkedGears mirror Tesla shift semantics: D/R means the
+// drive is in progress, P ends it. Neutral is rolling, not Park.
 var (
 	drivingGears = []string{enums.GearDrive, enums.GearReverse}
-	parkedGears  = []string{enums.GearPark, enums.GearNeutral}
+	parkedGears  = []string{enums.GearPark}
 )
 
 // blockedReasonOverlapsNextSession is the machine token surfaced when applying
@@ -280,8 +279,8 @@ func (h *DataRepairHandler) diagnoseDrive(ctx context.Context, cand datarepairdb
 	}
 	chargingContradiction := earlier(chargeSession, chargingState)
 
-	// --- contradiction 3: the car was observed in Park / Neutral -----------
-	// Ignore transient Park/Neutral observations that were followed by newer
+	// --- contradiction 3: the car was observed in Park ----------------------
+	// Ignore transient Park observations that were followed by newer
 	// driving evidence; drive-session merging intentionally keeps those rows
 	// inside one continuous drive.
 	lastDrivingOverall, err := src.LastDrivingObservation(ctx, cand.VehicleID, drivingGears, start, evidenceUntil)

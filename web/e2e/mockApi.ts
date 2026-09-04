@@ -1,4 +1,5 @@
 import { expect, type Page, type Request as PlaywrightRequest, type Route } from '@playwright/test';
+import type { FsdInsights } from '../src/types/fsd';
 import { ensureMockSseServer } from './mockSseServer';
 import type { DataScenario } from './routeRegistry';
 
@@ -126,7 +127,7 @@ const repairCase = {
   resolution_note: null, first_seen_at: NOW, last_seen_at: NOW, created_at: NOW, updated_at: NOW,
 };
 
-function fsdInsightsFixture(scenario: DataScenario) {
+function fsdInsightsFixture(scenario: DataScenario): FsdInsights {
   const empty = scenario === 'empty';
   const partial = scenario === 'partial';
   const shareBasisAvailable = !empty && !partial;
@@ -181,6 +182,8 @@ function fsdInsightsFixture(scenario: DataScenario) {
       start_date: '2026-07-28',
       end_date: '2026-08-26',
       timezone: 'UTC',
+      start_at: '2026-07-28T00:00:00Z',
+      end_at: '2026-08-27T00:00:00Z',
     },
     totals: {
       fsd_distance_m: fsdDistanceM,
@@ -206,7 +209,7 @@ function fsdInsightsFixture(scenario: DataScenario) {
       best_day: bestDay
         ? {
             date: bestDay.date,
-            fsd_distance_m: bestDay.fsd_distance_m,
+            fsd_distance_m: bestDay.fsd_distance_m ?? 0,
             driving_distance_m: bestDay.driving_distance_m,
             fsd_share_pct: shareBasisAvailable ? bestDay.fsd_share_pct : null,
           }
@@ -243,6 +246,63 @@ function fsdInsightsFixture(scenario: DataScenario) {
       share_clamped: false,
     },
     daily,
+    drive_analytics: {
+      comparison: {
+        previous_period: {
+          days: 30,
+          start_date: '2026-06-28',
+          end_date: '2026-07-27',
+          timezone: 'UTC',
+          start_at: '2026-06-28T00:00:00Z',
+          end_at: '2026-07-28T00:00:00Z',
+        },
+        previous_fsd_distance_m: null,
+        previous_driving_distance_m: null,
+        previous_fsd_share_pct: null,
+        fsd_distance_change_m: null,
+        fsd_distance_change_pct: null,
+        fsd_share_change_pct_points: null,
+      },
+      attribution: {
+        attributed_distance_m: null,
+        estimated_distance_m: null,
+        ambiguous_distance_m: null,
+        unattributed_distance_m: null,
+        unknown_drive_distance_m: 0,
+      },
+      contributing_drives: [],
+      reset_events: [],
+      repeated_routes: [],
+      time_of_day: [],
+      firmware: [],
+      firmware_spotlight: {
+        from_version: '',
+        to_version: '',
+        changed_at: null,
+        routes: [],
+      },
+      route_efficiency: [],
+      observatory: {
+        honesty:
+          'Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed.',
+        truncated: false,
+        totals: {
+          stitched_fsd_distance_m: null,
+          high_fsd_distance_m: null,
+          estimated_fsd_distance_m: null,
+          ambiguous_fsd_distance_m: null,
+          unknown_drive_distance_m: 0,
+          reset_break_count: 0,
+          drive_count: 0,
+          measured_drive_count: 0,
+          unknown_drive_count: 0,
+        },
+        timeline: [],
+        commute_stories: [],
+      },
+      correlation_disclaimer:
+        'This is a same-route correlation, not proof that supervised driving caused an efficiency difference.',
+    },
   };
 }
 

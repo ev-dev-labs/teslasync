@@ -33,6 +33,8 @@ const VehicleAccess = lazy(() => import('./features/vehicles/pages/VehicleAccess
 const VehicleManagement = lazy(() => import('./features/vehicles/pages/VehicleManagementPage'))
 const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage'))
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
+const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
+const TeslaOnly = lazy(() => import('./features/vehicles/pages/TeslaOnlyPage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -278,6 +280,7 @@ const PowerDashboards = lazy(() => import('./features/power-user/pages/Dashboard
 
 // System & Ops
 const SystemStatus = lazy(() => import('./features/system/pages/SystemStatusPage'))
+const OutageAutobiography = lazy(() => import('./features/system/pages/OutageAutobiographyPage'))
 const IncidentTimeline = lazy(() => import('./features/system/pages/IncidentTimelinePage'))
 const StatusApiDocs = lazy(() => import('./features/system/pages/StatusApiDocsPage'))
 const Help = lazy(() => import('./features/system/pages/HelpPage'))
@@ -304,6 +307,7 @@ const Settings = lazy(() => import('./features/settings/pages/SettingsPage'))
 // the opt-in Helix narrator. Routed at /settings/safety to live
 // under the /settings family.
 const SafetySettingsPage = lazy(() => import('./features/settings/pages/SafetyPage'))
+const FleetSetupPage = lazy(() => import('./features/settings/pages/FleetSetupPage'))
 // Account-level security pages promoted out of Settings (Phase-50 split):
 //   /account/2fa       — Two-factor authentication enrollment / disable
 //   /account/sessions  — Active browser/device sessions + revoke
@@ -543,6 +547,23 @@ export default function App() {
         <Route path="vehicle-management" element={<SafeRoute name="VehicleManagement"><VehicleManagement /></SafeRoute>} />
         <Route path="digital-twin" element={<SafeRoute name="DigitalTwin"><DigitalTwin /></SafeRoute>} />
         <Route path="time-machine" element={<SafeRoute name="TimeMachine"><TimeMachine /></SafeRoute>} />
+        <Route path="physics-cockpit" element={<SafeRoute name="PhysicsCockpit"><PhysicsCockpit /></SafeRoute>} />
+        <Route path="tesla-only" element={<SafeRoute name="TeslaOnly"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/clocks" element={<SafeRoute name="TeslaOnlyClocks"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/life-tape" element={<SafeRoute name="TeslaOnlyLifeTape"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/contradictions" element={<SafeRoute name="TeslaOnlyContradictions"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/meters" element={<SafeRoute name="TeslaOnlyMeters"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/unknown" element={<SafeRoute name="TeslaOnlyUnknown"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/car-kept-living" element={<SafeRoute name="TeslaOnlyCarKeptLiving"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/logbook" element={<SafeRoute name="TeslaOnlyLogbook"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/firmware-epochs" element={<SafeRoute name="TeslaOnlyFirmwareEpochs"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/charge-port" element={<SafeRoute name="TeslaOnlyChargePort"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/black-box" element={<SafeRoute name="TeslaOnlyBlackBox"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/dictionary" element={<SafeRoute name="TeslaOnlyDictionary"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/vault" element={<SafeRoute name="TeslaOnlyVault"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/modes" element={<SafeRoute name="TeslaOnlyModes"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/nervous-system" element={<SafeRoute name="TeslaOnlyNervousSystem"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/range" element={<SafeRoute name="TeslaOnlyRange"><TeslaOnly /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
@@ -572,6 +593,7 @@ export default function App() {
         <Route path="geofences" element={<SafeRoute name="Geofences"><Geofences /></SafeRoute>} />
         <Route path="settings" element={<SafeRoute name="Settings"><Settings /></SafeRoute>} />
         <Route path="settings/safety" element={<SafeRoute name="SafetySettingsPage"><SafetySettingsPage /></SafeRoute>} />
+        <Route path="settings/fleet-setup" element={<SafeRoute name="FleetSetup"><FleetSetupPage /></SafeRoute>} />
         <Route path="account/2fa" element={<SafeRoute name="TwoFactorAuth"><TwoFactorAuth /></SafeRoute>} />
         <Route path="account/sessions" element={<SafeRoute name="ActiveSessions"><ActiveSessions /></SafeRoute>} />
         <Route path="account/privacy" element={<SafeRoute name="Privacy"><Privacy /></SafeRoute>} />
@@ -624,6 +646,7 @@ export default function App() {
         <Route path="lifetime-stats" element={<SafeRoute name="LifetimeStats"><LifetimeStats /></SafeRoute>} />
         <Route path="analytics/lifetime" element={<Navigate to="/lifetime-stats" replace />} />
         <Route path="system-status" element={<SafeRoute name="SystemStatus"><SystemStatus /></SafeRoute>} />
+        <Route path="outage" element={<SafeRoute name="OutageAutobiography"><OutageAutobiography /></SafeRoute>} />
         <Route path="system-status/incidents/:id" element={<SafeRoute name="IncidentTimeline"><IncidentTimeline /></SafeRoute>} />
         <Route path="docs/status-api" element={<SafeRoute name="StatusApiDocs"><StatusApiDocs /></SafeRoute>} />
         {/* HELP-06/08/09/11 — the help index, glossary, release notes,

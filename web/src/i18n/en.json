@@ -5645,7 +5645,18 @@
       "charger": "Charger",
       "openDetails": "Open session details"
     },
-    "invoice": "Invoice"
+    "invoice": "Invoice",
+    "physics": {
+      "title": "Charge physics",
+      "atLimit": "at limit",
+      "stillPlugged": "At limit, still plugged {{duration}}.",
+      "etiquettePending": "DC session reached Complete; unplug not observed yet.",
+      "etiquette": "Supercharger dwell after Complete: {{duration}}.",
+      "chargedAnyway": "Charged before the scheduled window",
+      "scheduledAt": "Scheduled start {{when}}",
+      "waited": "Stopped waited for the scheduled window.",
+      "cockpit": "Open Tesla physics cockpit"
+    }
   },
   "compare": {
     "title": "Period Comparison",
@@ -11195,7 +11206,17 @@
       "wake": "Avoid opening the app frequently — each wake cycle costs battery.",
       "energySaver": "Enable energy-saving mode in vehicle settings for better standby."
     },
-    "date": "Date"
+    "date": "Date",
+    "split": {
+      "title": "Complete-plugged vs unplugged drain",
+      "kind": "Kind",
+      "complete": "Complete, still plugged",
+      "unplugged": "Unplugged",
+      "started": "Started",
+      "drain": "Drain",
+      "completePct": "At-limit plugged",
+      "unpluggedPct": "After unplug"
+    }
   },
   "climate": {
     "aiPreheatPrecool": {
@@ -13419,7 +13440,22 @@
       "powerProfileFailed": "Power profile chart failed to load",
       "tirePressureFailed": "Tire pressure section failed to load",
       "aiCoachingFailed": "Helix drive coaching failed to load",
-      "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load"
+      "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load",
+      "theaterFailed": "Gear theater failed to load",
+      "silentFailed": "Counter-silent panel failed to load",
+      "fsdFailed": "Supervised-driving panel failed to load"
+    },
+    "theater": {
+      "title": "Gear theater",
+      "empty": "No P/R/N/D or charge-port changes were recorded for this drive.",
+      "portOpen": "Port open",
+      "portClosed": "Port closed"
+    },
+    "silent": {
+      "title": "Counter silent while moving",
+      "unknown": "The FSD trip meter did not report on this drive. Absence is not a disengagement.",
+      "none": "No moving interval had a frozen FSD trip meter.",
+      "fsd": "Open FSD Insights"
     },
     "aiCoaching": {
       "title": "Drive coaching",
@@ -15247,6 +15283,139 @@
       "replayAutomations": "Automations tour",
       "resetAll": "Reset all tours",
       "resetDone": "All tours reset — they will play next time you open the matching page"
+    },
+    "fleetSetup": {
+      "title": "Fleet Setup",
+      "subtitle": "Connect Tesla, keep the token fresh, subscribe a vehicle, then wait for telemetry.",
+      "heroAria": "Connect Tesla and follow setup",
+      "subscribeAria": "Subscribe telemetry",
+      "streamAria": "Streaming and domain readiness",
+      "kpi": {
+        "aria": "Fleet setup status summary",
+        "account": "Tesla account",
+        "connected": "Connected",
+        "notConnected": "Not connected",
+        "token": "Access token",
+        "tokenFresh": "Auto-refresh on",
+        "tokenHint": "TeslaSync refreshes the Fleet token before it expires.",
+        "tokenMissing": "Missing",
+        "tokenMissingHint": "Connect Tesla to store a refreshable Fleet token.",
+        "domainKey": "Partner public key",
+        "keyReady": "Published",
+        "keyMissing": "Not published",
+        "keyMissingHint": "Tesla fetches this PEM from your domain during partner registration.",
+        "stream": "Telemetry",
+        "streamHealthy": "Streaming",
+        "streamStale": "Stale",
+        "streamUnknown": "Waiting",
+        "streamHealthyHint": "Packets arrived in the last 24 hours.",
+        "streamStaleHint": "Wake the vehicle or take a short drive.",
+        "streamUnknownHint": "Subscribe a VIN, then wait for the car to wake."
+      },
+      "guide": {
+        "title": "How Fleet Setup works",
+        "subtitle": "Connect → domain TLS → subscribe VIN → stream on wake.",
+        "step1": {
+          "title": "Connect Tesla",
+          "body": "Sign in with Tesla OAuth. TeslaSync stores a refresh token and renews the access token automatically — you should not paste tokens by hand."
+        },
+        "step2": {
+          "title": "Point Tesla at this host",
+          "body": "Fleet Telemetry needs a public hostname with a TLS certificate Tesla trusts (Let’s Encrypt is the default CA). Partner registration also publishes your EC public key at /.well-known/appspecific/com.tesla.3p.public-key.pem."
+        },
+        "step3": {
+          "title": "Subscribe the vehicle",
+          "body": "Call Tesla’s fleet_telemetry_config for the selected VIN. That tells the car (via Tesla) where to stream, which signals to send, and which CA to trust for your server."
+        },
+        "step4": {
+          "title": "Wait for the car to wake",
+          "body": "Streaming starts when the vehicle is awake — usually the next drive or charge. Parked and asleep cars will not push telemetry. Virtual key pairing is for commands, not this stream."
+        }
+      },
+      "progress": {
+        "title": "Setup progress",
+        "subtitle": "{{done}} / {{total}} complete",
+        "connect": {
+          "title": "Connect Tesla account",
+          "body": "Authorize TeslaSync. The refresh token stays on the server and is renewed automatically.",
+          "cta": "Connect now"
+        },
+        "token": {
+          "title": "Keep the Fleet token fresh",
+          "body": "A valid access token is required for subscribe. TeslaSync refreshes it in the background.",
+          "cta": "Refresh token"
+        },
+        "subscribe": {
+          "title": "Subscribe telemetry",
+          "body": "Tell Tesla which VIN should stream to this host. Empty host/CA uses FLEET_TELEMETRY_HOST and Let’s Encrypt.",
+          "cta": "Choose a vehicle"
+        },
+        "stream": {
+          "title": "Confirm streaming",
+          "body": "The car must be awake. First packets usually arrive on the next drive or charge session.",
+          "cta": "Check stream"
+        }
+      },
+      "readiness": {
+        "title": "Domain & certificates",
+        "subtitle": "Tesla verifies your telemetry host with TLS, and your partner key at a well-known URL.",
+        "keyOn": "Public key stored",
+        "keyOff": "Public key not stored",
+        "wellKnown": "Well-known path",
+        "fingerprint": "Fingerprint",
+        "ca": "Default telemetry CA",
+        "caValue": "Let’s Encrypt ISRG Root X1",
+        "body": "Subscribe leaves hostname and CA empty on purpose: TeslaSync sends FLEET_TELEMETRY_HOST (port 4443) and the Let’s Encrypt root. Override those only if your telemetry endpoint uses a different certificate.",
+        "advancedTitle": "Partner key vs virtual key",
+        "advancedBody": "The well-known PEM is for Tesla partner registration and virtual-key pairing. Telemetry streaming does not wait on a phone key pair. Pairing is only required if you want TeslaSync to send vehicle commands.",
+        "openDevTools": "Open Fleet API tools"
+      },
+      "subscribe": {
+        "title": "Subscribe telemetry",
+        "subtitle": "Pick signals (or a preset), then tell Tesla which VIN should stream to this host.",
+        "configureSignals": "Configure signals",
+        "signalsHint": "Optional. Open the signal picker to choose fields and intervals. Leave empty to use TeslaSync’s default set.",
+        "signalsPicked": "{{count}} signals selected. Presets (Balanced, Low Power, Track Mode, …) set intervals per category.",
+        "unnamed": "Vehicle",
+        "needAuth": "Connect Tesla first. Subscribe uses the stored Fleet token.",
+        "needVehicle": "No vehicles yet. Sync vehicles after connecting Tesla.",
+        "vehicle": "Vehicle",
+        "placeholder": "Select a vehicle",
+        "configEmpty": "No fleet_telemetry_config on this VIN yet.",
+        "currentHost": "Configured host",
+        "currentPort": "Port",
+        "fields": "Fields",
+        "pickHint": "Pick a VIN to see whether Tesla already has a telemetry config for it.",
+        "ctaNamed": "Subscribe {{name}}",
+        "cta": "Subscribe selected vehicle",
+        "wake": "Wake vehicle",
+        "wakeHint": "Wake the car so Tesla can apply the config. Asleep vehicles ignore fleet_telemetry_config until the next drive or charge.",
+        "remove": "Remove config",
+        "removeTitle": "Remove telemetry config?",
+        "removeBody": "Tesla will stop streaming this VIN to TeslaSync until you subscribe again.",
+        "removeConfirm": "Remove config",
+        "errorUntitled": "Tesla telemetry error",
+        "errorNoDetail": "Tesla reported a telemetry error for this VIN.",
+        "errorsEmpty": "No Tesla-side telemetry errors for this VIN.",
+        "advanced": "Override host, port, or CA",
+        "advancedHint": "Leave blank to use FLEET_TELEMETRY_HOST, port 4443, and the Let’s Encrypt root CA.",
+        "hostname": "Hostname",
+        "port": "Port",
+        "ca": "CA certificate (PEM)"
+      },
+      "stream": {
+        "title": "Streaming",
+        "subtitle": "Fleet Telemetry only flows while the vehicle is awake.",
+        "healthy": "Healthy",
+        "stale": "Stale",
+        "unknown": "Waiting",
+        "lastPacket": "Last telemetry",
+        "vehicles": "Vehicles seen",
+        "staleMessage": "Telemetry was seen before, but nothing arrived in the last 24 hours. Wake the car or start a drive.",
+        "waitingMessage": "No stream yet. After subscribe, Tesla delivers the first batch when the vehicle next wakes.",
+        "openSignals": "Open live signals",
+        "note": "Virtual key pairing is not part of this step. Use it later if you want TeslaSync to send commands."
+      }
     },
     "tab": {
       "heading": "Browser tab signals",
@@ -17476,6 +17645,108 @@
     "noLiveData": "No live data",
     "unknownModel": "Unknown model"
   },
+  "physicsCockpit": {
+    "title": "Tesla physics cockpit",
+    "subtitle": "Live Gear, charge state, port latch, BMS, and trip meters.",
+    "certificate": "Session certificate",
+    "gear": "Gear",
+    "charge": "Charge state",
+    "latch": "Charge port",
+    "portOpen": "Open",
+    "battery": "Battery",
+    "pack": "Pack",
+    "energy": "Energy remaining",
+    "trip": "Trip meter",
+    "speed": "Speed",
+    "fsdUnknown": "FSD trip meter unknown",
+    "lastTick": "Last tick {{when}}",
+    "noTick": "No trip-meter tick in the recent window",
+    "valet": "Valet",
+    "service": "Service",
+    "park": "Park truth",
+    "confirmedPark": "Confirmed Park",
+    "notPark": "Not confirmed Park",
+    "neutral": "Neutral is rolling",
+    "sentry": "Sentry",
+    "sentryIgnored": "Sentry reported, not counted",
+    "overheat": "Cabin overheat",
+    "overheatIgnored": "Cabin overheat reported, not counted",
+    "precondition": "Preconditioning",
+    "preconditionIgnored": "Preconditioning reported, not counted"
+  },
+  "teslaOnly": {
+    "title": "Tesla Physics",
+    "subtitle": "Gear, charge, park, and meters as Tesla language.",
+    "hub": "All Tesla physics",
+    "empty": "Select a vehicle to load Tesla physics.",
+    "unknown": "unknown",
+    "clocks": "Three Clocks",
+    "eventTime": "Event time",
+    "ingestTime": "Ingest time",
+    "displayTime": "Display time",
+    "lifeTape": "Life Tape",
+    "contradictions": "Contradiction Court",
+    "noContradictions": "No contradictions in the window. Complete still latched is expected.",
+    "meters": "Trip-Meter Genealogy",
+    "odometer": "Odometer",
+    "drivingMeter": "Driving trip meter",
+    "fsdMeter": "FSD trip meter",
+    "reset": "reset",
+    "unknownOS": "Unknown OS",
+    "window": "Window",
+    "sampled": "Sampled",
+    "unknownHours": "Unknown",
+    "carKeptLiving": "Car Kept Living",
+    "mqttUnknown": "MQTT state unknown",
+    "mqttUp": "MQTT connected",
+    "mqttDown": "MQTT not connected",
+    "queued": "Queued",
+    "replay": "Replay keeps event time",
+    "logbook": "Tesla-Language Logbook",
+    "epochs": "Firmware Epochs",
+    "portCourt": "Charge-Port Court",
+    "blackBox": "Black Box 90s",
+    "frames": "{{count}} frames",
+    "dictionary": "Owner Dictionary",
+    "unplug": "Complete → unplug",
+    "parkDwell": "Park confirm dwell",
+    "unscheduled": "Complete without schedule",
+    "vault": "Physics Vault",
+    "modes": "Mode Laws",
+    "nervous": "Nervous System",
+    "range": "Range Disagreement",
+    "rated": "Rated",
+    "typical": "Typical",
+    "ideal": "Ideal",
+    "energy": "Energy remaining",
+    "noTrueRange": "No true range. Recent Wh/km: {{value}}",
+    "trueRangeBug": "true_range must stay empty",
+    "kpis": "Tesla physics summary",
+    "views": "Physics views",
+    "contradictionCount": "Contradictions",
+    "firmware": "Firmware",
+    "state": "State",
+    "duration": "Duration",
+    "started": "Started",
+    "ended": "Ended",
+    "kind": "Kind",
+    "detail": "Detail",
+    "meter": "Meter",
+    "cause": "Cause",
+    "word": "Word",
+    "version": "Version",
+    "latch": "Latch",
+    "door": "Door",
+    "open": "Open",
+    "closed": "Closed",
+    "chargeState": "Charge state",
+    "packCurrent": "Pack current",
+    "integrity": "Integrity",
+    "laws": "Mode laws",
+    "field": "Signal",
+    "status": "Status",
+    "emptyList": "Nothing in this window."
+  },
   "card": {
     "interior": "Interior",
     "charging": "Charging",
@@ -18800,6 +19071,20 @@
     "thumbMax": "{{label}} maximum"
   },
   "system": {
+    "outage": {
+      "title": "Outage autobiography",
+      "subtitle": "What queued, what replayed with original event time, what stayed unknown.",
+      "certificate": "Session certificate",
+      "catchUp": "Catch-up after MQTT or carbon loss",
+      "mqttUp": "MQTT connected",
+      "mqttDown": "MQTT not connected",
+      "mqttUnknown": "MQTT state unknown",
+      "replay": "Replay keeps event time",
+      "lastTelemetry": "Last telemetry: {{when}}",
+      "never": "unknown",
+      "gap": "Gap {{minutes}} min",
+      "unknownSince": "Unknown since {{when}} — a gap is not a measured zero."
+    },
     "page": {
       "title": "System budgets",
       "subtitle": "Operator dashboard for the throttles and budgets that bound this TeslaSync deployment."
@@ -19043,6 +19328,9 @@
       "restoreAll": "Restore all",
       "restore": "Restore"
     }
+  },
+  "fleetSetup": {
+    "title": "Fleet Setup"
   },
   "totp": {
     "disable": {

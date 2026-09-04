@@ -51,7 +51,7 @@ Capture durable-data baselines before a planned reboot:
 
 ```bash
 kubectl -n "$NS" exec deployment/"$RELEASE"-postgresql -- \
-  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT count(*) FROM vehicles; SELECT count(*), max(recorded_at) FROM signal_log;"'
+  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT count(*) FROM vehicles; SELECT count(*), max(ts) FROM signal_log;"'
 kubectl -n "$NS" exec deployment/"$RELEASE"-redis -- \
   redis-cli INFO persistence
 kubectl -n "$NS" exec deployment/"$RELEASE"-mosquitto -- \
@@ -144,14 +144,14 @@ watch new telemetry advance for an awake vehicle:
 
 ```bash
 kubectl -n "$NS" exec deployment/"$RELEASE"-postgresql -- \
-  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT count(*) FROM vehicles; SELECT count(*), max(recorded_at) FROM signal_log;"'
+  sh -c 'psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" -Atc "SELECT count(*) FROM vehicles; SELECT count(*), max(ts) FROM signal_log;"'
 kubectl -n "$NS" logs deployment/"$RELEASE"-api --since=15m | \
   grep -E 'PipelineSubscriber started|signal store hydrated|FSM vehicle state engine active|Redis Pub/Sub subscription started'
 ```
 
 Expected recovery is: stateful services Ready within ten minutes, API Ready
 within fifteen minutes, both MQTT pipeline gauges equal to `1`, and
-`signal_log.recorded_at` advances once an awake vehicle publishes. A sleeping
+`signal_log.ts` advances once an awake vehicle publishes. A sleeping
 vehicle is not evidence of ingest failure.
 
 ## Escalation

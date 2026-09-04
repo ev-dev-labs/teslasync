@@ -31,7 +31,7 @@ export function FsdMethodologyNotes({ quality }: FsdMethodologyNotesProps) {
       icon: <GitCommitHorizontal className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'fsd.method.delta',
-        'Tesla only transmits a signal when it changes. Distance is the difference between consecutive readings of the counter, never the counter value itself.',
+        'Distance is the difference between consecutive counter readings, never the counter value itself. New subscriptions request both counters together; historical observations may still be sparse.',
       ),
     },
     {
@@ -43,7 +43,7 @@ export function FsdMethodologyNotes({ quality }: FsdMethodologyNotesProps) {
           )
         : t(
             'fsd.method.absence',
-            'A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero means at least one distance counter reported that day and the self-driving counter did not move — the two are never collapsed together.',
+            'A day shows “not reported” when the self-driving counter has nothing to say about it. A measured zero requires an actual unchanged self-driving counter observation; driving-only silence is never converted to zero.',
           ),
     },
     {
@@ -89,7 +89,7 @@ export function FsdMethodologyNotes({ quality }: FsdMethodologyNotesProps) {
       icon: <Ban className="h-4 w-4" aria-hidden="true" />,
       text: t(
         'fsd.method.limits',
-        'No intervention, disengagement, safety, or autonomy-quality metric is available from this telemetry, and a day’s distance cannot be tied to a specific drive.',
+        'No intervention, disengagement, safety, autonomy-quality, or exact FSD-active route segment is available. Drive attribution is bounded by observation intervals, includes only completed drives fully inside the period, and always carries confidence.',
       ),
     },
   ];

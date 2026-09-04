@@ -44,6 +44,7 @@ import {
   ChartLegend, EmbeddedChart,
 } from '@/components/charts';
 import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
+import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -497,6 +498,10 @@ export default function ChargingDetailPage() {
             color="cyan"
           />
         </section>
+      </FadeIn>
+
+      <FadeIn delay={0.07}>
+        <ChargePhysicsPanel sessionId={id} />
       </FadeIn>
 
       {/* ── 2. Battery & Power ──────────────────────────────────── */}

@@ -430,6 +430,27 @@ type PipelineSubscriberConfig struct {
 	// Default 90s.
 	LivenessFailureAfter time.Duration
 
+	// BatchWindow is the maximum time a persistence worker waits to coalesce
+	// per-field MQTT deliveries for the same vehicle. Default 100ms.
+	BatchWindow time.Duration
+
+	// BatchMaxMessages caps one persistence batch. Default 256.
+	BatchMaxMessages int
+
+	// PersistenceConcurrency bounds concurrent normalize/router/database work.
+	// A vehicle is assigned to one stable worker so its event order is
+	// preserved. Default 2.
+	PersistenceConcurrency int
+
+	// PersistenceQueueCapacity bounds admitted work across all persistence
+	// workers. Once full, MQTT callbacks wait and broker-side QoS flow control
+	// becomes the overflow buffer. Default 64.
+	PersistenceQueueCapacity int
+
+	// PersistenceTimeout bounds queue-external normalize/router/database work
+	// for one coalesced batch. Default 30s.
+	PersistenceTimeout time.Duration
+
 	// StreamingRecorder, when non-nil, receives a callback for every
 	// successfully decoded MQTT batch (after pipeline dispatch returns
 	// nil). It powers the /telemetry status MQTT Inspector. Before the
@@ -472,6 +493,21 @@ func (c *PipelineSubscriberConfig) withDefaults() {
 	if c.LivenessFailureAfter <= 0 {
 		c.LivenessFailureAfter = 90 * time.Second
 	}
+	if c.BatchWindow <= 0 {
+		c.BatchWindow = 100 * time.Millisecond
+	}
+	if c.BatchMaxMessages <= 0 {
+		c.BatchMaxMessages = 256
+	}
+	if c.PersistenceConcurrency <= 0 {
+		c.PersistenceConcurrency = 2
+	}
+	if c.PersistenceQueueCapacity <= 0 {
+		c.PersistenceQueueCapacity = 64
+	}
+	if c.PersistenceTimeout <= 0 {
+		c.PersistenceTimeout = 30 * time.Second
+	}
 	c.TopicBase = strings.TrimSuffix(c.TopicBase, "/")
 }
 
@@ -498,6 +534,9 @@ type PipelineSubscriber struct {
 	mu                     sync.Mutex
 	subscribeMu            sync.Mutex
 	recoveryWG             sync.WaitGroup
+	persistenceWG          sync.WaitGroup
+	persistenceStarted     atomic.Bool
+	persistenceShards      []chan persistenceWork
 	started                bool
 	stopped                bool
 	subscribed             bool
@@ -536,7 +575,7 @@ func NewPipelineSubscriber(
 	}
 	cfg.withDefaults()
 	ctx, cancel := context.WithCancel(context.Background())
-	return &PipelineSubscriber{
+	subscriber := &PipelineSubscriber{
 		client:     client,
 		pipeline:   pipeline,
 		dlq:        dlq,
@@ -546,6 +585,11 @@ func NewPipelineSubscriber(
 		ctx:        ctx,
 		cancel:     cancel,
 	}
+	subscriber.persistenceShards = makePersistenceShards(
+		cfg.PersistenceConcurrency,
+		cfg.PersistenceQueueCapacity,
+	)
+	return subscriber
 }
 
 // pipelineTopicFilter returns the SUBSCRIBE filter for the per-field
@@ -574,18 +618,24 @@ func (s *PipelineSubscriber) Start() error {
 	s.mu.Unlock()
 
 	topic := s.pipelineTopicFilter()
-	if err := s.subscribe(s.client, "initial", false); err != nil {
+	if err := s.subscribeInitial(); err != nil {
 		s.mu.Lock()
 		s.started = false
 		s.mu.Unlock()
 		return err
 	}
 
+	s.startPersistenceWorkers()
 	s.recoveryWG.Add(1)
 	go s.subscriptionRecoveryLoop()
 
 	s.logger.Info().
 		Str("topic", topic).
+		Dur("batch_window", s.cfg.BatchWindow).
+		Int("batch_max_messages", s.cfg.BatchMaxMessages).
+		Int("persistence_concurrency", s.cfg.PersistenceConcurrency).
+		Int("persistence_queue_capacity", s.cfg.PersistenceQueueCapacity).
+		Dur("persistence_timeout", s.cfg.PersistenceTimeout).
 		Dur("subscription_retry_interval", s.cfg.SubscriptionRetryInterval).
 		Str("codec_failure_disposition", "dlq_ack").
 		Msg("phase-42 PipelineSubscriber started")
@@ -612,6 +662,8 @@ func (s *PipelineSubscriber) Stop() {
 
 	s.cancel()
 	s.recoveryWG.Wait()
+	s.persistenceWG.Wait()
+	s.persistenceStarted.Store(false)
 	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
 	if !started {
 		metrics.MQTTPipelineSubscribed.WithLabelValues(fleetTelemetryConsumerLabel).Set(0)
@@ -645,21 +697,39 @@ func (s *PipelineSubscriber) Stop() {
 //     the restarted one (this cluster does not session-replicate cross-node).
 //
 // Concurrency: paho invokes OnConnect on an internal goroutine. The method
-// guards against the first OnConnect (which may fire before or
-// concurrently with Start in pathological cases) by requiring started==true
-// && stopped==false; the initial Subscribe is owned by Start. Subsequent
-// reconnect-driven invocations only re-issue SUBSCRIBE.
+// guards against the first OnConnect (which may fire before Start) by
+// requiring started==true && stopped==false; the initial Subscribe is
+// owned by Start. When OnConnect races with Start's in-flight SUBACK,
+// connectionEpoch is not bumped until that subscribe() returns, so startup
+// does not fail with a stale SUBACK. Subsequent reconnects re-issue SUBSCRIBE.
 func (s *PipelineSubscriber) OnBrokerReconnect(client pahomqtt.Client) {
 	s.mu.Lock()
 	started := s.started
 	stopped := s.stopped
-	s.subscribed = false
-	s.connectionEpoch++
 	s.mu.Unlock()
 	if !started || stopped {
 		// First OnConnect during initial Connect, or post-Stop reconnect:
 		// the initial Subscribe is owned by Start, post-Stop reconnects are
 		// not our concern. Either way: no-op.
+		return
+	}
+
+	// Paho often runs OnConnect after Connect() returns and after Start()
+	// has set started=true. Bumping the epoch while Start is blocked on
+	// SUBACK used to fail startup with "stale SUBACK" even though the
+	// broker accepted the subscribe. Wait out any in-flight subscribe
+	// before invalidating it.
+	s.subscribeMu.Lock()
+	s.mu.Lock()
+	started = s.started
+	stopped = s.stopped
+	if started && !stopped {
+		s.subscribed = false
+		s.connectionEpoch++
+	}
+	s.mu.Unlock()
+	s.subscribeMu.Unlock()
+	if !started || stopped {
 		return
 	}
 	if client == nil {
@@ -839,6 +909,45 @@ func (s *PipelineSubscriber) subscriptionRecoveryTick() {
 		Msg(message)
 }
 
+// errStaleSubscription is returned when a SUBACK arrives after the connection
+// epoch moved (disconnect or a later reconnect). Callers must not treat the
+// token as proof the current socket is subscribed.
+var errStaleSubscription = errors.New("stale SUBACK")
+
+const initialSubscribeAttempts = 3
+
+// subscribeInitial issues the first SUBSCRIBE and retries only the startup
+// race where a connection-loss/reconnect invalidates the in-flight SUBACK.
+// Broker rejection and timeout still fail Start so the process does not run
+// without a confirmed subscription.
+func (s *PipelineSubscriber) subscribeInitial() error {
+	var err error
+	for attempt := 0; attempt < initialSubscribeAttempts; attempt++ {
+		trigger := "initial"
+		if attempt > 0 {
+			trigger = "initial-retry"
+		}
+		err = s.subscribe(s.client, trigger, attempt > 0)
+		if err == nil {
+			return nil
+		}
+		if !errors.Is(err, errStaleSubscription) {
+			return err
+		}
+		s.mu.Lock()
+		already := s.started && !s.stopped && s.subscribed
+		alive := s.started && !s.stopped
+		s.mu.Unlock()
+		if already {
+			return nil
+		}
+		if !alive {
+			return err
+		}
+	}
+	return err
+}
+
 func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, force bool) error {
 	s.subscribeMu.Lock()
 	defer s.subscribeMu.Unlock()
@@ -896,7 +1005,7 @@ func (s *PipelineSubscriber) subscribe(client pahomqtt.Client, trigger string, f
 	s.mu.Unlock()
 	if !subscriptionActive {
 		metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "stale").Inc()
-		return fmt.Errorf("mqtt: PipelineSubscriber: stale SUBACK for topic %s", s.pipelineTopicFilter())
+		return fmt.Errorf("mqtt: PipelineSubscriber: stale SUBACK for topic %s: %w", s.pipelineTopicFilter(), errStaleSubscription)
 	}
 	metrics.MQTTPipelineSubscriptionAttempts.WithLabelValues(trigger, "success").Inc()
 	metrics.MQTTPipelineConnected.WithLabelValues(fleetTelemetryConsumerLabel).Set(1)
@@ -927,6 +1036,14 @@ type mqttPayload struct {
 	MessageID  uint16
 	ReceivedAt time.Time
 	Ack        func()
+}
+
+// HandlePublish is the early-delivery route for messages that arrive after
+// CONNACK and before this process's Subscribe. With CleanSession=false and
+// AutoAckDisabled, EMQX can deliver queued QoS 1 payloads immediately; those
+// must enter the pipeline instead of sitting unacked in paho's receive window.
+func (s *PipelineSubscriber) HandlePublish(c pahomqtt.Client, msg pahomqtt.Message) {
+	s.onPipelineMessage(c, msg)
 }
 
 func (s *PipelineSubscriber) onPipelineMessage(_ pahomqtt.Client, msg pahomqtt.Message) {
@@ -1134,7 +1251,7 @@ func (s *PipelineSubscriber) handlePayload(ctx context.Context, msg mqttPayload)
 	// Stamp only final, flattened atomics. Compatibility bare JSON has no
 	// SourceEmittedAt; a valid production envelope retains source evidence.
 	atomics = codec.StampTransport(atomics, codec.IngestOriginFleetTelemetryMQTT, receivedAt)
-	if err := s.pipeline.ProcessAtomics(ctx, atomics, vehicleID); err != nil {
+	if err := s.persistAtomics(ctx, vehicleID, atomics); err != nil {
 		s.handlePipelineError(ctx, msg, vehicleID, vin, err)
 		return
 	}

@@ -13,8 +13,9 @@
  *    Inclusive end-of-day is a footgun (DST, sub-second precision,
  *    `23:59:59.999` rounding). Half-open intervals are unambiguous and
  *    composable.
- *  - The boundary is the local midnight of the supplied `timezone`. A
- *    single-day window picks the next local midnight as exclusive end.
+ *  - The boundary is the first valid instant of the local date in the supplied
+ *    `timezone`. This is normally midnight; if a timezone skips midnight, the
+ *    boundary advances to the first representable wall-clock instant.
  *  - `timezone` is required. Vehicle-centric pages should pass the
  *    vehicle's IANA tz; user-centric pages should pass the browser /
  *    user-override tz. Callers must be explicit — we don't pick a
@@ -31,18 +32,17 @@ export interface CalendarRange {
 }
 
 export interface InstantRange {
-  /** RFC 3339 instant of `startDate`'s local midnight. */
+  /** RFC 3339 first valid instant of `startDate`. */
   startInstant: string;
-  /** RFC 3339 instant of the day AFTER `endDate`'s local midnight (exclusive). */
+  /** RFC 3339 first valid instant of the day AFTER `endDate` (exclusive). */
   endInstantExclusive: string;
 }
 
 /**
- * Returns the UTC instant of `YYYY-MM-DD T 00:00:00` interpreted in the
- * given IANA timezone. Uses an `Intl.DateTimeFormat` round-trip which
- * is correct across DST transitions — the local "midnight" on a
- * spring-forward day is still the instant whose wall-clock components
- * print as `HH=00 MM=00`.
+ * Returns the first UTC instant whose local civil date is `YYYY-MM-DD`.
+ * Binary-searching absolute time avoids constructing a nonexistent local
+ * midnight. If a timezone skips the whole date, this returns the first instant
+ * after it, yielding an empty half-open window for that date.
  */
 export function localMidnightToInstant(date: string, timezone: string): Date {
   const [yStr, mStr, dStr] = date.split('-');
@@ -53,43 +53,32 @@ export function localMidnightToInstant(date: string, timezone: string): Date {
     throw new Error(`localMidnightToInstant: invalid date "${date}"`);
   }
 
-  // Start with the UTC instant for the same wall-clock; then correct
-  // by the offset between that wall-clock as seen in `timezone` and
-  // the same wall-clock as seen in UTC. A second pass catches the rare
-  // DST-edge case where the first correction crosses a transition.
-  const guess = Date.UTC(y, m - 1, d, 0, 0, 0, 0);
-  const offsetMs = tzOffsetMs(guess, timezone);
-  const corrected = guess - offsetMs;
-  const offset2 = tzOffsetMs(corrected, timezone);
-  return new Date(guess - offset2);
-}
-
-function tzOffsetMs(instantMs: number, timezone: string): number {
-  // Format the instant as wall-clock components in `timezone`, then
-  // re-encode those components as a UTC instant — the difference is
-  // the tz offset at that instant.
-  const dtf = new Intl.DateTimeFormat('en-US', {
+  const formatter = new Intl.DateTimeFormat('en-US', {
     timeZone: timezone,
     year: 'numeric',
     month: '2-digit',
     day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hourCycle: 'h23',
   });
-  const parts = dtf.formatToParts(new Date(instantMs));
-  const get = (type: string) =>
-    Number(parts.find((p) => p.type === type)?.value ?? 0);
-  const asUtc = Date.UTC(
-    get('year'),
-    get('month') - 1,
-    get('day'),
-    get('hour'),
-    get('minute'),
-    get('second'),
-  );
-  return asUtc - instantMs;
+  const target = y * 10_000 + m * 100 + d;
+  const localDateKey = (instantMs: number): number => {
+    const parts = formatter.formatToParts(new Date(instantMs));
+    const get = (type: string) =>
+      Number(parts.find((part) => part.type === type)?.value ?? 0);
+    return get('year') * 10_000 + get('month') * 100 + get('day');
+  };
+
+  const anchor = Date.UTC(y, m - 1, d, 12);
+  let low = anchor - 48 * 60 * 60 * 1000;
+  let high = anchor + 48 * 60 * 60 * 1000;
+  while (high - low > 1) {
+    const mid = low + Math.floor((high - low) / 2);
+    if (localDateKey(mid) < target) {
+      low = mid;
+    } else {
+      high = mid;
+    }
+  }
+  return new Date(high);
 }
 
 /**

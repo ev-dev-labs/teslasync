@@ -111,6 +111,41 @@ func TestLoad_DatabaseDefaults(t *testing.T) {
 	}
 }
 
+func TestLoad_FleetTelemetryPersistenceDefaults(t *testing.T) {
+	t.Setenv("FLEET_TELEMETRY_BATCH_MS", "")
+	t.Setenv("FLEET_TELEMETRY_BATCH_MAX_MESSAGES", "")
+	t.Setenv("FLEET_TELEMETRY_PERSISTENCE_CONCURRENCY", "")
+	t.Setenv("FLEET_TELEMETRY_PERSISTENCE_QUEUE_CAPACITY", "")
+	t.Setenv("FLEET_TELEMETRY_PERSISTENCE_TIMEOUT", "")
+	t.Setenv("FLEET_TELEMETRY_SNAPSHOT_WRITE_INTERVAL", "")
+
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error from Load(): %v", err)
+	}
+	if cfg.FleetTelemetry.BatchMs != 100 {
+		t.Errorf("BatchMs = %d, want 100", cfg.FleetTelemetry.BatchMs)
+	}
+	if cfg.FleetTelemetry.BatchMaxMessages != 256 {
+		t.Errorf("BatchMaxMessages = %d, want 256", cfg.FleetTelemetry.BatchMaxMessages)
+	}
+	if cfg.FleetTelemetry.PersistenceConcurrency != 2 {
+		t.Errorf("PersistenceConcurrency = %d, want 2", cfg.FleetTelemetry.PersistenceConcurrency)
+	}
+	if cfg.FleetTelemetry.PersistenceQueueCapacity != 64 {
+		t.Errorf("PersistenceQueueCapacity = %d, want 64", cfg.FleetTelemetry.PersistenceQueueCapacity)
+	}
+	if cfg.FleetTelemetry.PersistenceTimeout != 30*time.Second {
+		t.Errorf("PersistenceTimeout = %s, want 30s", cfg.FleetTelemetry.PersistenceTimeout)
+	}
+	if cfg.FleetTelemetry.SnapshotWriteInterval != 10*time.Second {
+		t.Errorf(
+			"SnapshotWriteInterval = %s, want 10s",
+			cfg.FleetTelemetry.SnapshotWriteInterval,
+		)
+	}
+}
+
 func TestLoad_EnvOverride(t *testing.T) {
 	t.Setenv("TESLASYNC_PORT", "8080")
 	t.Setenv("TESLASYNC_LOG_LEVEL", "debug")
@@ -171,14 +206,20 @@ func TestLoad_DatabaseResilienceDefaults(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error from Load(): %v", err)
 	}
+	if cfg.Database.MaxConns != 12 {
+		t.Errorf("expected default MaxConns 12, got %d", cfg.Database.MaxConns)
+	}
+	if cfg.Database.MinConns != 2 {
+		t.Errorf("expected default MinConns 2, got %d", cfg.Database.MinConns)
+	}
 	if cfg.Database.ConnectTimeout != 5 {
 		t.Errorf("expected default ConnectTimeout 5, got %d", cfg.Database.ConnectTimeout)
 	}
 	if cfg.Database.StatementTimeout != 30000 {
 		t.Errorf("expected default StatementTimeout 30000, got %d", cfg.Database.StatementTimeout)
 	}
-	if cfg.Database.HealthCheckPeriod != 5*time.Second {
-		t.Errorf("expected default HealthCheckPeriod 5s, got %v", cfg.Database.HealthCheckPeriod)
+	if cfg.Database.HealthCheckPeriod != 30*time.Second {
+		t.Errorf("expected default HealthCheckPeriod 30s, got %v", cfg.Database.HealthCheckPeriod)
 	}
 }
 

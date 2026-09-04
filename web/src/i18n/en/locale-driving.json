@@ -1008,7 +1008,22 @@
       "powerProfileFailed": "Power profile chart failed to load",
       "tirePressureFailed": "Tire pressure section failed to load",
       "aiCoachingFailed": "Helix drive coaching failed to load",
-      "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load"
+      "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load",
+      "theaterFailed": "Gear theater failed to load",
+      "silentFailed": "Counter-silent panel failed to load",
+      "fsdFailed": "Supervised-driving panel failed to load"
+    },
+    "theater": {
+      "title": "Gear theater",
+      "empty": "No P/R/N/D or charge-port changes were recorded for this drive.",
+      "portOpen": "Port open",
+      "portClosed": "Port closed"
+    },
+    "silent": {
+      "title": "Counter silent while moving",
+      "unknown": "The FSD trip meter did not report on this drive. Absence is not a disengagement.",
+      "none": "No moving interval had a frozen FSD trip meter.",
+      "fsd": "Open FSD Insights"
     },
     "aiCoaching": {
       "title": "Drive coaching",

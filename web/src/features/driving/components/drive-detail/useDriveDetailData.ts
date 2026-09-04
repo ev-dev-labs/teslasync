@@ -50,11 +50,21 @@ export function useDriveDetailData(id: string) {
     if (tele.length > 0) {
       return tele
         .filter((tp) => tp.latitude != null && tp.longitude != null && (tp.latitude !== 0 || tp.longitude !== 0))
-        .map((tp) => ({ lat: tp.latitude!, lng: tp.longitude!, speed: tp.speed ?? 0 }));
+        .map((tp) => ({
+          lat: tp.latitude!,
+          lng: tp.longitude!,
+          speed: tp.speed ?? 0,
+          timestamp: tp.createdAt ?? tp.created_at ?? tp.timestamp ?? null,
+        }));
     }
     return pos
       .filter((p) => p.latitude !== 0 || p.longitude !== 0)
-      .map((p) => ({ lat: p.latitude, lng: p.longitude, speed: p.speed ?? 0 }));
+      .map((p) => ({
+        lat: p.latitude,
+        lng: p.longitude,
+        speed: p.speed ?? 0,
+        timestamp: p.createdAt ?? p.created_at ?? p.timestamp ?? null,
+      }));
   }, [drive]);
 
   const trail: LatLngExpression[] = useMemo(() => routeSource.map((p) => [p.lat, p.lng]), [routeSource]);
@@ -276,6 +286,7 @@ export function useDriveDetailData(id: string) {
     driveQuery,
     chartData,
     stats,
+    routeSource,
     trail,
     startPos,
     endPos,

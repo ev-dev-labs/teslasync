@@ -39,9 +39,11 @@ Distinguish the three failure shapes — they have different fixes:
 | Connected, subscription absent | `teslasync_mqtt_pipeline_connected 1`, `teslasync_mqtt_pipeline_subscribed 0` | SUBSCRIBE/SUBACK failure; the supervisor retries every 5 seconds |
 | Connected and subscribed, no messages | Both pipeline gauges are `1`, `signal_log` frozen | Tesla or the vehicle stopped publishing |
 | Connected, messages dropped | `tesla_router_writer_failures_total` climbing | Ingest works; a **writer** is failing (usually the database) |
+| Handlers admitted faster than persistence completes | `tesla_mqtt_persistence_admission_wait_seconds` or `tesla_mqtt_persistence_queue_wait_seconds` rising | Database backpressure is active; inspect pool pressure before changing MQTT |
+| Coalesced writes timing out | `tesla_mqtt_persistence_batches_total{outcome="timeout"}` rising | PostgreSQL acquisition or execution exceeded the persistence deadline |
 
 ```sql
-SELECT max(recorded_at) FROM signal_log;
+SELECT max(ts) FROM signal_log;
 ```
 
 ## Immediate mitigation
@@ -65,13 +67,18 @@ SELECT max(recorded_at) FROM signal_log;
    failures are logged and counted but never propagated to MQTT
    redelivery (ADR-004), precisely so a stuck table cannot block the
    whole stream. Go to `docs/runbooks/degraded-mode-database.md`.
-5. Check the DLQ before assuming data was lost — codec failures are
+5. **Persistence pressure:** keep the bounded defaults unless measurements
+   show the database has headroom. Increasing
+   `FLEET_TELEMETRY_PERSISTENCE_CONCURRENCY` can recreate pool saturation;
+   prefer a slightly larger `FLEET_TELEMETRY_BATCH_MS` to coalesce more
+   same-timestamp fields with fewer statements.
+6. Check the DLQ before assuming data was lost — codec failures are
    acked and routed to the DLQ rather than redelivered as poison pills.
 
 ## Recovery
 
 1. Restore the broker or the subscription.
-2. Confirm ingest resumes: `max(recorded_at)` in `signal_log` must start
+2. Confirm ingest resumes: `max(ts)` in `signal_log` must start
    moving within a minute.
 3. Reconcile any sessions the FSM missed. The 15s reconciliation loop
    closes stale drive/charge sessions on its own; verify no session is

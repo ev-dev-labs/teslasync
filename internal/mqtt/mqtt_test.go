@@ -828,6 +828,21 @@ func TestNewPipelineSubscriber_DefaultsApplied(t *testing.T) {
 	if sub.cfg.LivenessFailureAfter != 90*time.Second {
 		t.Errorf("LivenessFailureAfter default = %s, want 90s", sub.cfg.LivenessFailureAfter)
 	}
+	if sub.cfg.BatchWindow != 100*time.Millisecond {
+		t.Errorf("BatchWindow default = %s, want 100ms", sub.cfg.BatchWindow)
+	}
+	if sub.cfg.BatchMaxMessages != 256 {
+		t.Errorf("BatchMaxMessages default = %d, want 256", sub.cfg.BatchMaxMessages)
+	}
+	if sub.cfg.PersistenceConcurrency != 2 {
+		t.Errorf("PersistenceConcurrency default = %d, want 2", sub.cfg.PersistenceConcurrency)
+	}
+	if sub.cfg.PersistenceQueueCapacity != 64 {
+		t.Errorf("PersistenceQueueCapacity default = %d, want 64", sub.cfg.PersistenceQueueCapacity)
+	}
+	if sub.cfg.PersistenceTimeout != 30*time.Second {
+		t.Errorf("PersistenceTimeout default = %s, want 30s", sub.cfg.PersistenceTimeout)
+	}
 	if sub.cfg.AllowMissingSourceTimestamp {
 		t.Error("AllowMissingSourceTimestamp default = true, want false")
 	}
@@ -1333,6 +1348,100 @@ func TestPipelineSubscriber_FailedReconciliationBecomesUnhealthyAndRetries(t *te
 	}
 	if got := client.Calls(); got != 3 {
 		t.Fatalf("Subscribe calls = %d, want 3 (initial + failed reconcile + retry)", got)
+	}
+}
+
+func TestPipelineSubscriber_StartSucceedsWhenOnConnectOverlapsInitialSubscribe(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscribeTimeout:          2 * time.Second,
+			SubscriptionRetryInterval: time.Hour,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- sub.Start() }()
+
+	select {
+	case <-client.entered:
+	case <-time.After(time.Second):
+		t.Fatal("Start did not issue the initial Subscribe")
+	}
+
+	reconnectDone := make(chan struct{})
+	go func() {
+		defer close(reconnectDone)
+		sub.OnBrokerReconnect(client)
+	}()
+	time.Sleep(20 * time.Millisecond)
+	close(client.release)
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Start() error = %v, want nil when OnConnect overlaps the initial SUBACK", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start hung")
+	}
+	select {
+	case <-reconnectDone:
+	case <-time.After(2 * time.Second):
+		t.Fatal("OnBrokerReconnect hung")
+	}
+	if !sub.IsHealthy() {
+		t.Fatal("subscriber unhealthy after overlapping OnConnect")
+	}
+}
+
+func TestPipelineSubscriber_StartRetriesStaleSUBACKFromConnectionLoss(t *testing.T) {
+	client := newBlockingPahoClient()
+	sub := NewPipelineSubscriber(
+		client,
+		&fakePipeline{},
+		&fakeDLQ{},
+		staticResolver(1),
+		PipelineSubscriberConfig{
+			TopicBase:                 "telemetry",
+			SubscribeTimeout:          2 * time.Second,
+			SubscriptionRetryInterval: time.Hour,
+		},
+		zerolog.New(zerolog.NewTestWriter(t)),
+	)
+	t.Cleanup(sub.Stop)
+
+	errCh := make(chan error, 1)
+	go func() { errCh <- sub.Start() }()
+
+	select {
+	case <-client.entered:
+	case <-time.After(time.Second):
+		t.Fatal("Start did not issue the initial Subscribe")
+	}
+	sub.OnBrokerConnectionLost()
+	close(client.release)
+
+	select {
+	case err := <-errCh:
+		if err != nil {
+			t.Fatalf("Start() error = %v, want retry to succeed after a stale startup SUBACK", err)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Start hung")
+	}
+	if got := client.Calls(); got < 2 {
+		t.Fatalf("Subscribe calls = %d, want at least 2 (stale initial + retry)", got)
+	}
+	if !sub.IsHealthy() {
+		t.Fatal("subscriber unhealthy after stale-SUBACK retry")
 	}
 }
 

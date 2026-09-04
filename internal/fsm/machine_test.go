@@ -140,14 +140,8 @@ func TestDriving_GearPark_TransitionsToParkedAfterDebounce(t *testing.T) {
 	// commit lands on next batch (or via CheckPending).
 	t1 := t0.Add(StateConfirmDuration + time.Second)
 	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t1)
-	// handleDebounced clears m.pending on confirm but commits on the NEXT
-	// batch — feed one more no-op batch (or invoke CheckPending) to land it.
-	if m.Current() == Parked {
-		return
-	}
-	sctx := &SignalContext{CurrentState: m.Current(), Now: t1.Add(time.Second)}
-	if err := m.CheckPending(context.Background(), 1, sctx); err != nil {
-		t.Fatalf("CheckPending error: %v", err)
+	if m.Current() != Parked {
+		t.Fatalf("expected Parked after confirmed repeated Gear=P, got %s", m.Current())
 	}
 }
 
@@ -187,6 +181,36 @@ func TestDriving_GearDrive_NoTransition(t *testing.T) {
 	}
 	if len(a.transitions) != 0 {
 		t.Fatalf("expected no transitions, got %d", len(a.transitions))
+	}
+}
+
+func TestDriving_SpeedZero_NonGear_CommitsOnlineAfterDebounce(t *testing.T) {
+	m, _ := newTestFSM(Online)
+	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"VehicleSpeed": 35.0}, t0)
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving after speed, got %s", m.Current())
+	}
+	t1 := t0.Add(time.Second)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"VehicleSpeed": 0.0}, t1)
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving during speed-zero debounce, got %s", m.Current())
+	}
+	t2 := t1.Add(StateConfirmDuration + time.Second)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"VehicleSpeed": 0.0}, t2)
+	if m.Current() != Online {
+		t.Fatalf("expected Online after confirmed speed-zero, got %s", m.Current())
+	}
+}
+
+func TestCharging_DisconnectedWithResidualAmps_TransitionsToParked(t *testing.T) {
+	m, _ := newTestFSM(Charging)
+	m.ProcessSignals(context.Background(), 1, map[string]interface{}{
+		"DetailedChargeState": "Disconnected",
+		"ChargeAmps":          4.0,
+	})
+	if m.Current() != Parked {
+		t.Fatalf("expected Parked (unplug wins over residual amps), got %s", m.Current())
 	}
 }
 
@@ -259,6 +283,22 @@ func TestDriving_SpuriousGearP_FollowedByGearD_DoesNotTransitionToParked(t *test
 }
 
 // VehicleSpeed > 1.0 in the same batch as a pending Park also cancels the debounce.
+func TestDriving_PendingPark_Neutral_CancelsDebounce(t *testing.T) {
+	m, _ := newTestFSM(Driving)
+	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "P"}, t0)
+	t1 := t0.Add(2 * time.Second)
+	m.ProcessSignalsAt(context.Background(), 1, map[string]interface{}{"Gear": "N"}, t1)
+	t2 := t1.Add(StateConfirmDuration + time.Second)
+	sctx := &SignalContext{CurrentState: m.Current(), Now: t2}
+	if err := m.CheckPending(context.Background(), 1, sctx); err != nil {
+		t.Fatalf("CheckPending error: %v", err)
+	}
+	if m.Current() != Driving {
+		t.Fatalf("expected Driving (Neutral cancelled pending Park), got %s", m.Current())
+	}
+}
+
 func TestDriving_PendingPark_SpeedAbove1_CancelsDebounce(t *testing.T) {
 	m, _ := newTestFSM(Driving)
 	t0 := time.Date(2026, 5, 7, 12, 0, 0, 0, time.UTC)
@@ -308,9 +348,25 @@ func TestCharging_GearDrive_TransitionsToDriving(t *testing.T) {
 
 func TestCharging_ChargeEnded_TransitionsToParked(t *testing.T) {
 	m, _ := newTestFSM(Charging)
-	m.ProcessSignals(context.Background(), 1, map[string]interface{}{"DetailedChargeState": "Complete"})
+	m.ProcessSignals(context.Background(), 1, map[string]interface{}{"DetailedChargeState": "Disconnected"})
 	if m.Current() != Parked {
 		t.Fatalf("expected Parked, got %s", m.Current())
+	}
+}
+
+func TestCharging_Complete_StaysCharging(t *testing.T) {
+	m, _ := newTestFSM(Charging)
+	m.ProcessSignals(context.Background(), 1, map[string]interface{}{"DetailedChargeState": "Complete"})
+	if m.Current() != Charging {
+		t.Fatalf("expected Charging after Complete (still plugged), got %s", m.Current())
+	}
+}
+
+func TestCharging_Stopped_StaysCharging(t *testing.T) {
+	m, _ := newTestFSM(Charging)
+	m.ProcessSignals(context.Background(), 1, map[string]interface{}{"DetailedChargeState": "Stopped"})
+	if m.Current() != Charging {
+		t.Fatalf("expected Charging after Stopped (paused, still plugged), got %s", m.Current())
 	}
 }
 
@@ -566,8 +622,25 @@ func TestDetect_ChargeStarted(t *testing.T) {
 }
 
 func TestDetect_ChargeEnded(t *testing.T) {
-	triggers := DetectTriggers(&SignalContext{ChargeStateChanged: true, IsCharging: false})
+	triggers := DetectTriggers(&SignalContext{
+		ChargeStateChanged: true,
+		IsCharging:         false,
+		ChargeState:        "Disconnected",
+	})
 	assertTrigger(t, triggers, TriggerChargeEnded)
+}
+
+func TestDetect_ChargeComplete_DoesNotEnd(t *testing.T) {
+	triggers := DetectTriggers(&SignalContext{
+		ChargeStateChanged: true,
+		IsCharging:         false,
+		ChargeState:        "Complete",
+	})
+	for _, tr := range triggers {
+		if tr == TriggerChargeEnded {
+			t.Fatal("Complete must not emit TriggerChargeEnded")
+		}
+	}
 }
 
 func TestDetect_NoSignals_ReturnsEmpty(t *testing.T) {

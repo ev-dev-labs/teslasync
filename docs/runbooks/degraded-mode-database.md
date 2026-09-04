@@ -9,6 +9,8 @@ Registered in `ops/runbooks/dependencies.yaml` (`database`).
 
 - `/readyz` reports `"database": "unhealthy"` or `"database_writes": "unhealthy"`,
   and the pod drops out of Service endpoints.
+- `/healthz` remains healthy because liveness intentionally does not query
+  PostgreSQL. A database stall is not repaired by restarting the API.
 - 5xx ratio climbs on list/analytics endpoints first (they hold a
   connection longest), then spreads to every read.
 - Logs contain `pool exhausted`, `context deadline exceeded`, or
@@ -21,6 +23,9 @@ Registered in `ops/runbooks/dependencies.yaml` (`database`).
 kubectl -n "$NS" exec deploy/"$RELEASE"-api -- wget -qO- localhost:8080/readyz
 kubectl -n "$NS" logs deploy/"$RELEASE"-api --since=10m | grep -Ei 'pool|deadline|refused'
 kubectl -n "$NS" get pods -l app.kubernetes.io/component=postgresql
+kubectl -n "$NS" port-forward svc/"$RELEASE"-api 8080:8080
+curl -s http://127.0.0.1:8080/metrics | grep -E \
+  'teslasync_database_pool_(connections|utilization_ratio|empty_acquire|canceled_acquire|acquire_duration)'
 ```
 
 Then check whether the database is *down* or merely *saturated*:
@@ -41,8 +46,12 @@ for its recorded `lock_risk` and `expected_duration`.
 1. **Stop making it worse.** Pause any in-flight rollout:
    `helm upgrade "$RELEASE" … --set rollout.paused=true`.
 2. **If saturation:** the pgx pool is capped at `DATABASE_MAX_CONNS`
-   (default 25). Terminate the specific offenders rather than restarting
-   the API, which just re-queues the same work:
+   (default 12 for the API; each worker defaults to 2). A sustained
+   `teslasync_database_pool_utilization_ratio` near `1`, increasing
+   `pool_empty_acquire_count`, or increasing
+   `pool_empty_acquire_wait_seconds` confirms connection pressure.
+   Terminate the specific offenders rather than restarting the API, which
+   only re-queues the same work:
    `SELECT pg_cancel_backend(pid) FROM pg_stat_activity WHERE now() - query_start > interval '5 min' AND state <> 'idle';`
 3. **If the write breaker is open:** leave it open. It is shedding load
    deliberately. Fix the underlying write failure; it half-opens on its
@@ -75,7 +84,7 @@ Then confirm the burn-rate alert has cleared and `signal_log` is
 advancing again:
 
 ```sql
-SELECT max(recorded_at) FROM signal_log;
+SELECT max(ts) FROM signal_log;
 ```
 
 Ingest is only healthy once that timestamp is moving; a healthy

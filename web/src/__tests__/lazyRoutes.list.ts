@@ -181,6 +181,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'StatusApiDocs', load: () => import('../features/system/pages/StatusApiDocsPage') },
   { name: 'Help', load: () => import('../features/system/pages/HelpPage') },
   { name: 'SafetySettingsPage', load: () => import('../features/settings/pages/SafetyPage') },
+  { name: 'FleetSetupPage', load: () => import('../features/settings/pages/FleetSetupPage') },
   { name: 'TwoFactorAuth', load: () => import('../features/settings/pages/TwoFactorAuthPage') },
   { name: 'ActiveSessions', load: () => import('../features/settings/pages/ActiveSessionsPage') },
   { name: 'Privacy', load: () => import('../features/settings/pages/PrivacyPage') },
@@ -300,4 +301,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'JurisdictionCompliance', load: () => import('../features/ownership/pages/JurisdictionCompliancePage') },
   { name: 'ConsumablesLifecycle', load: () => import('../features/ownership/pages/ConsumablesLifecyclePage') },
   { name: 'SubscriptionROI', load: () => import('../features/ownership/pages/SubscriptionROIPage') },
+  { name: 'PhysicsCockpit', load: () => import('../features/vehicles/pages/PhysicsCockpitPage') },
+  { name: 'TeslaOnly', load: () => import('../features/vehicles/pages/TeslaOnlyPage') },
+  { name: 'OutageAutobiography', load: () => import('../features/system/pages/OutageAutobiographyPage') },
 ]

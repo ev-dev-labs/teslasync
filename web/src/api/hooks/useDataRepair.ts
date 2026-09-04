@@ -242,6 +242,12 @@ function invalidateRepairViews(qc: ReturnType<typeof useQueryClient>): void {
   invalidateAndBroadcast(qc, { queryKey: ['data-repair', 'suggestions'] });
 }
 
+function invalidateDriveDerivedViews(qc: ReturnType<typeof useQueryClient>): void {
+  invalidateAndBroadcast(qc, { queryKey: ['drives'] });
+  invalidateAndBroadcast(qc, { queryKey: ['drive'] });
+  invalidateAndBroadcast(qc, { queryKey: ['analytics', 'fsd'] });
+}
+
 /**
  * useApplyDriveRepair — POST /data-repair/drive/{id}/close with a reviewed
  * boundary. Sudo-gated server-side; `requiresLiveMode` blocks it in read-only
@@ -261,6 +267,7 @@ export function useApplyDriveRepair() {
     onSuccess: () => {
       invalidateRepairViews(qc);
       invalidateRepairCases(qc);
+      invalidateDriveDerivedViews(qc);
       success('toast.dataRepair.drive.apply.success', 'Drive boundary repaired');
     },
     onError: (e) => error(e, 'toast.dataRepair.drive.apply.error', 'Failed to repair drive boundary'),
@@ -420,6 +427,7 @@ export function useUpdateDrive() {
     networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
+      invalidateDriveDerivedViews(qc);
       success('toast.dataRepair.drive.update.success', 'Drive updated');
     },
     onError: (e) => error(e, 'toast.dataRepair.drive.update.error', 'Failed to update drive'),
@@ -438,6 +446,7 @@ export function useCloseDrive() {
     networkMode: 'always',
     onSuccess: () => {
       invalidateAndBroadcast(qc, { queryKey: dataRepairKeys.stale });
+      invalidateDriveDerivedViews(qc);
       success('toast.dataRepair.drive.close.success', 'Drive closed');
     },
     onError: (e) => error(e, 'toast.dataRepair.drive.close.error', 'Failed to close drive'),
@@ -457,6 +466,7 @@ export function useQuarantineDrive() {
     onSuccess: () => {
       invalidateRepairViews(qc);
       invalidateRepairCases(qc);
+      invalidateDriveDerivedViews(qc);
       success('toast.dataRepair.drive.quarantine.success', 'Drive moved to quarantine');
     },
     onError: (e) => error(e, 'toast.dataRepair.drive.quarantine.error', 'Failed to quarantine drive'),
@@ -797,9 +807,12 @@ export function useQuarantineRepairCase() {
         body: JSON.stringify({ reason }),
       }),
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateRepairCases(qc);
       invalidateRepairViews(qc);
+      if (result.kind === 'drive') {
+        invalidateDriveDerivedViews(qc);
+      }
       success('toast.dataRepair.quarantine.success', 'Session moved to quarantine');
     },
     onError: (e) =>
@@ -818,9 +831,12 @@ export function useRestoreQuarantine() {
         body: JSON.stringify({ reason }),
       }),
     networkMode: 'always',
-    onSuccess: () => {
+    onSuccess: (result) => {
       invalidateRepairCases(qc);
       invalidateRepairViews(qc);
+      if (result.kind === 'drive') {
+        invalidateDriveDerivedViews(qc);
+      }
       success('toast.dataRepair.restore.success', 'Session restored');
     },
     onError: (e) =>

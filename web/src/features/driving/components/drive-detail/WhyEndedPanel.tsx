@@ -138,7 +138,7 @@ export function WhyEndedPanel({ driveId }: WhyEndedPanelProps) {
           </span>
         ),
         time: formatTransitionTime(tx.ts),
-        color: 'var(--accent-primary)',
+        color: 'var(--theme-primary)',
       })),
     [transitions, t],
   );

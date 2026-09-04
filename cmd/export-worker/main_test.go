@@ -11,6 +11,7 @@ import (
 
 	backupmodel "github.com/ev-dev-labs/teslasync/internal/models/backup"
 
+	healthprobe "github.com/ev-dev-labs/teslasync/internal/health"
 	"github.com/rs/zerolog"
 )
 
@@ -177,7 +178,7 @@ func TestNewHealthHandler(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			handler := newHealthHandler(&fakeHealthChecker{err: tt.healthErr})
+			handler := healthprobe.ReadinessHandler(&fakeHealthChecker{err: tt.healthErr})
 			rec := httptest.NewRecorder()
 			req := httptest.NewRequest(http.MethodGet, "/healthz", nil)
 
@@ -213,7 +214,7 @@ func TestNewHealthHandler_PropagatesRequestContext(t *testing.T) {
 	const marker ctxKey = "marker"
 
 	fake := &fakeHealthChecker{}
-	handler := newHealthHandler(fake)
+	handler := healthprobe.ReadinessHandler(fake)
 
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodGet, "/healthz", nil)

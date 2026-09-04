@@ -438,8 +438,8 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
 		t.maybeFlushChargeTelemetry(ctx, active)
 
-	} else if !isCharging && hasCharge {
-		// === CHARGE ENDED ===
+	} else if !isCharging && hasCharge && enums.IsChargeEnded(chargeState) {
+		// === UNPLUGGED ===
 		observeChargeEnergyCounter(active, signals)
 		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok &&
 			t.chargeLocationIsFresh(
@@ -454,6 +454,13 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			active.LocationFresh = true
 		}
 		t.completeChargeLocked(ctx, vehicleID, active, signals, payloadTs)
+	} else if !isCharging && hasCharge {
+		// Stopped / Complete / NoPower / Unknown: still plugged. Keep the
+		// session and keep sampling energy until Tesla sends Disconnected.
+		active.LastSeen = time.Now().UTC()
+		observeChargeEnergyCounter(active, signals)
+		active.accumulatedSignals = accumulateSignals(active.accumulatedSignals, signals)
+		t.maybeFlushChargeTelemetry(ctx, active)
 	}
 }
 

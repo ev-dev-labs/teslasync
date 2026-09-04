@@ -515,7 +515,18 @@
       "charger": "Charger",
       "openDetails": "Open session details"
     },
-    "invoice": "Invoice"
+    "invoice": "Invoice",
+    "physics": {
+      "title": "Charge physics",
+      "atLimit": "at limit",
+      "stillPlugged": "At limit, still plugged {{duration}}.",
+      "etiquettePending": "DC session reached Complete; unplug not observed yet.",
+      "etiquette": "Supercharger dwell after Complete: {{duration}}.",
+      "chargedAnyway": "Charged before the scheduled window",
+      "scheduledAt": "Scheduled start {{when}}",
+      "waited": "Stopped waited for the scheduled window.",
+      "cockpit": "Open Tesla physics cockpit"
+    }
   },
   "chargingThermalTax": {
     "title": "Charging Thermal Tax",
