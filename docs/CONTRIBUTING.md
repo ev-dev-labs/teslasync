@@ -1,5 +1,37 @@
 # Contributing to TeslaSync
 
+Documentation fixes, reproducible bug reports, tests, and focused code changes
+are welcome. For installation rather than development, use
+[Getting Started](/guide/getting-started).
+
+## Choose your first contribution
+
+1. Check [existing issues](https://github.com/ev-dev-labs/teslasync/issues) and discuss
+   substantial changes before investing in an implementation.
+2. Fork or branch, reproduce the problem, and keep the change focused.
+3. Read the repository's `.github/instructions/` rules for the files you touch.
+4. Run the relevant existing checks below; record actual results and limitations.
+5. Open a PR describing what changed, why, how to test it, and any migration impact.
+
+For documentation-only work:
+
+```bash
+cd docs
+npm ci
+npm run docs:dev
+# After editing, stop the preview and verify:
+npm run docs:build
+```
+
+Check links in the rendered site under `/teslasync/`, including screenshots,
+anchors, and sidebar entries. The site currently ignores dead links during
+build, so build success is not a link audit. No Go or frontend build is needed
+for prose-only changes.
+
+Never include credentials, private keys, VINs, or precise locations in reports.
+Follow the [security policy](https://github.com/ev-dev-labs/teslasync/blob/main/SECURITY.md)
+for vulnerabilities instead of opening a public issue.
+
 This is the **first PR runbook**: clone → run → ship your first change.
 For the deeper "how to add a vertical-slice feature" walkthrough, see
 [`contributing/adding-features.md`](contributing/adding-features.md).
@@ -22,8 +54,8 @@ material.
 | Docker Desktop / Engine | 24+ | TimescaleDB, Redis, Mosquitto, integration smoke |
 | `golangci-lint` | v1.64+ | Backend lint gate |
 | `pre-commit` | latest | Local hook runner (pip install) |
-| `make` | GNU Make 4+ | Verification chain. **Windows users**: not installed by default — use Git Bash's `make` (ships with Git for Windows), WSL, or the Docker one-liner shown below. The Makefile uses POSIX-only syntax that doesn't run under nmake. |
-| `gh` CLI | optional | PR management once we open PRs in phase D |
+| `make` | GNU Make 4+ | Verification chain. On Windows use WSL or a separately installed GNU Make with a POSIX shell. Git for Windows does not include Make by default; nmake is not compatible. |
+| `gh` CLI | optional | Issue and pull-request management |
 
 Verify after install:
 
@@ -36,18 +68,12 @@ pre-commit --version
 make --version          # GNU Make 4.x (or run via Docker — see below)
 ```
 
-### Windows-only: running `make` without installing it
+### Windows development
 
-If `make` isn't on your `PATH` and you don't want to install it
-globally, you can run any target via Docker (uses the Alpine `make`
-package; no host install required):
-
-```powershell
-docker run --rm -v "${PWD}:/work" -w /work alpine:3.20 sh -c "apk add --no-cache make >/dev/null && make verify"
-```
-
-Substitute `verify` for any target. This is the same approach the
-maintainer uses for ad-hoc validation on Windows during development.
+Use a WSL development environment with the listed toolchains for Make targets,
+or run the underlying commands directly. A container with only `make` installed
+cannot run Go, Node.js, and lint gates. Go race tests also require a supported
+C toolchain. See [Local Development](/guide/local-development) for service setup.
 
 ## First run — clone to green build
 
@@ -186,8 +212,7 @@ Types: `feat`, `fix`, `refactor`, `perf`, `docs`, `test`, `chore`,
 Scope: `web`, `api`, `db`, `mqtt`, `helm`, `ci`, or a specific feature
 name.
 
-All commits must include the agent attribution trailer (added
-automatically by the agent toolchain):
+For Copilot-assisted commits, retain the applicable attribution trailer:
 
 ```
 Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>

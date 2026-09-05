@@ -55,6 +55,21 @@ sequenceDiagram
 
 ## Required production pieces
 
+::: warning Virtual-key pairing is required for telemetry setup
+Tesla's [official Fleet Telemetry setup sequence](https://github.com/teslamotors/fleet-telemetry#setup-steps)
+requires application registration, pairing the application's virtual key to the
+vehicle, and a Vehicle Command Proxy using the matching private key before
+submitting `fleet_telemetry_config`. Virtual keys are **not only for remote controls**.
+Check Tesla's [vehicle compatibility guidance](https://github.com/teslamotors/fleet-telemetry#vehicle-compatibility)
+for current firmware and model restrictions; not every vehicle or signal is supported.
+:::
+
+Keep the application signing key distinct from the receiver's TLS certificate.
+The public-key URL must be accessible without login. Vehicle connections use
+mutual TLS: terminate mTLS at the Fleet Telemetry receiver, not an ordinary
+web reverse proxy. Tesla's upstream `check_server_cert.sh` validates the public
+receiver configuration before you submit it.
+
 | Requirement                  | Notes                                                                              |
 | ---------------------------- | ---------------------------------------------------------------------------------- |
 | Tesla Developer account      | Fleet Telemetry must be enabled on your app / account                              |
@@ -72,7 +87,31 @@ Fleet Telemetry is optional and runs under the `telemetry` profile:
 docker compose --profile telemetry up -d --build
 ```
 
-Configure the public host, TLS certificates, topic base, and Tesla Developer settings in `.env` and `fleet-telemetry/config.json` before enabling it.
+Configure the public host, TLS certificates, topic base, and Tesla Developer
+settings in `.env` and the repository-root `fleet-telemetry-config.json` before
+enabling it. Compose mounts that file at `/etc/fleet-telemetry/config.json`.
+The receiver publishes host port `FLEET_TELEMETRY_PORT` (default `4443`) to
+container port `4443`. Keep the advertised port, firewall, and receiver consistent.
+
+Set `FLEET_TELEMETRY_ENABLED=true` and the public `FLEET_TELEMETRY_HOST`.
+Configure the `commands` profile and
+[API environment overrides](/deployment/docker#required-environment-overrides)
+for signing; starting either profile alone does not configure the vehicle.
+
+### Subscribe and verify
+
+1. Complete [Fleet API registration](/guide/tesla-fleet-api) and virtual-key pairing.
+2. Deploy and validate the reachable receiver and matching signing proxy.
+3. Open **Settings → Fleet Setup** (`/settings/fleet-setup`), connect your account,
+   select the vehicle, and choose signals and intervals before submitting.
+4. Wait for Tesla's configuration to report `synced: true`. Submission success
+   alone does not prove the vehicle accepted the configuration.
+5. While the vehicle is online, confirm fresh signal timestamps in TeslaSync.
+   Review Fleet Setup's Tesla-reported errors and receiver/API logs if data is absent.
+
+Tesla sends configured signals on change, no more frequently than their minimum
+interval. A quiet signal or sleeping vehicle is not proof of a broken receiver.
+See [Troubleshooting](/guide/troubleshooting) for the next checks.
 
 TeslaSync ships a pinned Fleet Telemetry build that keeps the upstream
 `Payload.CreatedAt` value in every per-field MQTT payload. Do not replace it

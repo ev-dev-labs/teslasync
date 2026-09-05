@@ -1,16 +1,18 @@
 # Docker Compose deployment
 
-Compose is the fastest path from "git clone" to a running TeslaSync. One file (`docker-compose.yml`) describes the full topology: the API, the workers, the data plane, the observability stack, and four optional profile sidecars. One command brings it up.
+Compose is the container installation path. `docker-compose.yml` describes the
+application, data services, and optional profiles. Start with
+[Getting Started](/guide/getting-started) for the complete installation-to-vehicle journey.
 
 This is the right deployment when you're:
 
-- **Trying TeslaSync for the first time.** Compose's startup-to-running time is under 5 minutes on a warm machine.
-- **Running a small fleet on a single host.** A 2-vCPU / 4-GB VPS handles a few vehicles indefinitely.
+- **Trying TeslaSync for the first time.** Build time depends on your host and network.
+- **Running on a single host.** Size resources for your vehicles, signal frequency, retention, and enabled services; monitor growth.
 - **Building or debugging locally.** Compose is the dev-loop topology — bring up the data plane in containers, run the API or web from source.
 
 When you outgrow it — multiple replicas, separate observability stack, hardened secrets, ingress with rate limiting at the edge — graduate to [Kubernetes](/deployment/kubernetes). The Helm chart targets the same architecture; the migration is mostly mechanical.
 
-## The 30-second walkthrough
+## Installation walkthrough
 
 ```bash
 git clone https://github.com/ev-dev-labs/teslasync.git
@@ -21,7 +23,9 @@ docker compose up -d --build
 docker compose ps
 ```
 
-Then open `http://localhost:3000` and complete the Tesla OAuth flow.
+On PowerShell use `Copy-Item .env.example .env`. Open `http://localhost:3000`
+(or `WEB_PORT`) and use **Settings → Fleet Setup** (`/settings/fleet-setup`).
+Configure encryption with the override below **before** authorizing Tesla.
 
 The rest of this page is the longer story — what each service does, when to enable the profiles, how to operate the stack after first boot.
 
@@ -29,7 +33,7 @@ The rest of this page is the longer story — what each service does, when to en
 
 The Compose file defines the core application and data services plus optional profile-gated sidecars.
 
-### Always-on (10 services)
+### Core services
 
 | Service                | Purpose                                          | Default port |
 | ---------------------- | ------------------------------------------------ | -----------: |
@@ -57,9 +61,15 @@ docker compose --profile <name> up -d
 | `tracing`   | `otel-collector`, `tempo`, `jaeger` | OTLP ingest, TraceQL storage/span metrics, and Jaeger UI on `:16686` |
 | `telemetry` | `fleet-telemetry`        | Tesla Fleet Telemetry server on `:4443`; HTTPS endpoint required |
 | `commands`  | `vehicle-command-proxy`  | Signs commands for vehicles that require it; on `:4443`          |
-| `ai`        | `ollama`                 | Local LLM inference for Helix AI on `:11434`                     |
+| `profiling` | `pyroscope`              | Continuous profiling backend |
+| `chaos`     | `toxiproxy`              | Fault injection for development; not needed for onboarding |
+| `ocpp`      | `ocpp-server`            | Optional charger integration |
 
-You can stack profiles: `docker compose --profile telemetry --profile commands --profile ai up -d`.
+You can stack profiles: `docker compose --profile telemetry --profile commands up -d`.
+The current Compose file does not define an `ai` profile or Ollama service;
+configure an independently deployed provider using the [Helix guide](/guide/helix-ai).
+The command proxy listens on HTTPS port `4443` **inside** the Compose network,
+not a published host port. Telemetry publishes its receiver port separately.
 
 The tracing dashboards also require the application processes to emit spans. Set
 `OTEL_ENABLED=true` in `.env` before starting the profile, then run:
@@ -78,11 +88,13 @@ backends; it cannot create application traces or span-derived metrics.
 | ------------------------------------------------------------------ | -------------- |
 | You want low-latency live data instead of polling                  | `telemetry`    |
 | You own a Model 3/Y from 2021+, Model S/X refresh, or Cybertruck   | `commands`     |
-| You want to run Helix without sending data to a cloud provider     | `ai`           |
+| You want local Helix inference                                    | Deploy Ollama separately; no bundled `ai` profile |
 | You're debugging request paths or latency                          | `tracing`      |
 | You're running on a single laptop just to try it out               | None of the above — the default stack is enough |
 
-Each profile has runtime cost. `fleet-telemetry` and `vehicle-command-proxy` need open ports and certificate config. `ollama` wants a GPU (CPU works but is slow). `jaeger` adds a bit of memory pressure. Only opt in to what you use.
+Each profile has runtime cost. Fleet Telemetry needs a public receiver and TLS;
+the command proxy needs signing and TLS configuration but should remain private.
+Starting profiles does not register the application or subscribe a vehicle.
 
 ## First-boot sequence
 
@@ -91,7 +103,7 @@ When you run `docker compose up -d --build`, this is what happens in order:
 1. **Image pulls** — the base images (`timescale/timescaledb-ha:pg17`, `redis:7`, `eclipse-mosquitto:2`, `grafana/grafana:11`, `prom/prometheus:v2.55`) pull if not cached.
 2. **Local builds** — `teslasync-api` and `web` build from the Dockerfiles in the repo. First build is a few minutes; subsequent builds are near-instant thanks to layer caching.
 3. **Data services start** — postgres, redis, mosquitto come up. Compose's health checks gate dependent services.
-4. **Migrations run** — `teslasync-api` waits for postgres, then runs all 197 numbered migrations in order. Watch for `migrations applied` in the log.
+4. **Migrations run** — the API applies pending migrations for this version. Inspect startup logs for failures and back up before upgrading.
 5. **Workers attach** — the three worker binaries come up, register with the scheduler, and start draining their queues.
 6. **Web serves** — Nginx in the `web` container starts serving the React bundle and proxying `/api/*` to `teslasync-api:8080` over the Compose network.
 
@@ -118,7 +130,6 @@ docker compose logs -f mosquitto
 docker compose logs -f notification-worker
 docker compose logs -f export-worker
 docker compose logs -f automation-worker
-docker compose logs -f ollama                # only when --profile ai is up
 docker compose logs -f fleet-telemetry       # only when --profile telemetry is up
 ```
 
@@ -160,13 +171,18 @@ Compose creates named volumes for the data services. Inspect them:
 docker volume ls | grep teslasync
 ```
 
-Back them up via filesystem snapshot (`docker run --rm -v <volume>:/data -v $PWD:/backup ubuntu tar czf /backup/<name>.tar.gz /data`) or by stopping the container and copying the underlying directory. Better still, use the in-app backup feature in **Settings → Backup & Restore** for user-facing data and `pg_dump` / TimescaleDB tooling for the database.
+Use PostgreSQL/TimescaleDB-supported backup tooling or a coordinated, consistent
+snapshot. Copying a live database volume with `tar` is not a reliable backup.
+Back up application configuration and encryption/signing keys securely as well.
+Test restoration into an isolated environment before relying on the backup.
 
 Full recovery procedure: [Backup & Restore](/features/backup-restore).
 
 ## Configuration
 
-All runtime configuration lives in `.env`. The full reference is [Configuration](/guide/configuration) — every variable, every default, every implication.
+Runtime variables must reach the appropriate service environment.
+See [Configuration](/guide/configuration) and the override below; `.env` alone
+does not forward undeclared variables.
 
 The minimum to set on first run:
 
@@ -177,7 +193,7 @@ TESLA_REDIRECT_URI=http://localhost:8080/api/v1/auth/callback
 TESLA_API_BASE_URL=https://fleet-api.prd.na.vn.cloud.tesla.com
 ```
 
-Everything else has a sensible default. Notable variables to consider before going beyond localhost:
+Review defaults before going beyond a firewalled trial:
 
 | Variable                     | When to set                                                        |
 | ---------------------------- | ------------------------------------------------------------------ |
@@ -188,9 +204,62 @@ Everything else has a sensible default. Notable variables to consider before goi
 | `AI_DAILY_BUDGET_USD`        | When you use a cloud Helix provider                                |
 | `CORS_ORIGINS`               | When the browser and API live on different origins                 |
 
+## Required environment overrides
+
+The base Compose file currently omits API environment mappings for token
+encryption, production mode, and the command proxy. Create
+`docker-compose.override.yml` beside it (merge into an existing override rather
+than replacing it):
+
+```yaml
+services:
+  teslasync-api:
+    environment:
+      ENCRYPTION_KEY: ${ENCRYPTION_KEY:?Set ENCRYPTION_KEY in .env}
+      APP_ENV: ${APP_ENV:-production}
+      TESLA_COMMAND_PROXY_URL: ${TESLA_COMMAND_PROXY_URL:-}
+```
+
+Generate an encryption key with `openssl rand -base64 32`, save it in `.env`,
+and keep a secure backup. For signed telemetry configuration or commands, set
+`TESLA_COMMAND_PROXY_URL=https://vehicle-command-proxy:4443`.
+Provision the files expected under `COMMAND_PROXY_DATA_DIR` (default
+`./data/vehicle-command`): `tls-cert.pem`, `tls-key.pem`, and `private-key.pem`.
+Use the same application signing key that was registered and paired with Tesla.
+The TLS certificate must be trusted by the API and valid for the proxy hostname.
+
+Validate interpolation without printing the resolved secrets:
+
+```bash
+docker compose config --quiet
+docker compose config --services
+docker compose config --profiles
+docker compose up -d --build
+```
+
+Compose automatically merges the override. Recreate affected services after
+configuration changes; a plain restart does not apply new environment values.
+Do not paste `.env`, private keys, or full resolved Compose output into issues.
+
+## Before public exposure
+
+- Authenticate through a trusted proxy and set `FORWARD_AUTH_HEADER` to the
+  identity header it **overwrites** after authentication.
+- Block direct access to the API, databases, MQTT, and management dashboards.
+  A forged identity header must not bypass the proxy.
+- Configure HTTPS for the web application and exact OAuth callback; route the
+  public-key URL anonymously. Keep the telemetry receiver's mTLS termination separate.
+- Replace default database/dashboard credentials and enable token encryption
+  in the actual container environment, not only `.env`.
+- Back up the database, configuration, and encryption/signing keys; test restoration.
+- Check Tesla and provider billing, retention, disk alerts, and certificate renewal.
+
 ## Networking
 
-By default everything talks over the Compose-managed bridge network. Only the documented ports are exposed to the host:
+Services communicate over the Compose bridge network. Published ports can bind
+on all host interfaces; a localhost URL does not imply localhost-only access.
+The following are common ports, not an exhaustive firewall inventory; inspect
+the `ports` mappings in your checkout and enabled profiles:
 
 | Host port      | Container                            |
 | -------------- | ------------------------------------ |
@@ -200,22 +269,16 @@ By default everything talks over the Compose-managed bridge network. Only the do
 | 9099           | `prometheus`                         |
 | 1883, 9001     | `mosquitto`                          |
 | 16686          | `jaeger` (only with `--profile tracing`) |
-| 11434          | `ollama` (only with `--profile ai`)  |
+| 4443           | `fleet-telemetry` (default with `--profile telemetry`) |
 
 For production you typically front this with a reverse proxy (Nginx / Caddy / Traefik) on the host or in a separate container, terminate TLS there, and let it route `/.well-known` without auth while requiring auth for everything else.
 
 ## Resource sizing
 
-Rough guidance for a single-host Compose deployment. Real usage depends on fleet size, telemetry rate, and Helix usage.
-
-| Vehicles | Recommended host                                | Notes                                                          |
-| -------: | ----------------------------------------------- | -------------------------------------------------------------- |
-| 1–3      | 2 vCPU, 4 GB RAM, 40 GB disk                    | Comfortable; small VPS works fine                              |
-| 4–10     | 4 vCPU, 8 GB RAM, 100 GB disk                   | Add SSD for snappy chart loads                                 |
-| 10–25    | 8 vCPU, 16 GB RAM, 250 GB disk                  | Consider separate Postgres host                                |
-| 25+      | Graduate to [Kubernetes](/deployment/kubernetes) and dedicated data services | Compose is feasible but operationally cramped at this point |
-
-Helix with Ollama adds GPU pressure or a lot of CPU. A small Ollama model (8 B) fits in 8 GB system RAM but inference is slow without a GPU.
+Measure your own workload before committing to a host size. Signal frequency,
+vehicle activity, retention, database indexes, and observability services affect
+resource use. Reserve disk headroom for migrations and backups. Local AI models
+have separate memory and compute requirements; follow the selected model's guidance.
 
 ## Upgrading
 
@@ -226,9 +289,12 @@ docker compose pull                  # for any non-local image updates
 docker compose up -d --build         # rebuilds API and web from the new source
 ```
 
-Migrations run automatically on the next API start. The platform never drops data on upgrade unless you explicitly run a destructive migration; a clean upgrade is non-destructive by design.
-
-If a release introduces a new env var, the upgrade picks up the default safely. The release notes call out any required configuration changes.
+Before these commands, select the intended release/commit, review its migration
+and configuration changes, and take a tested backup. Migrations run automatically
+on API startup and may be irreversible or destructive. Do not assume checking
+out an older commit rolls the database back. The Compose file includes a historical
+database-image transition warning: never follow volume deletion instructions on
+valuable data without a deliberate migration and recovery plan.
 
 ## When something goes wrong
 

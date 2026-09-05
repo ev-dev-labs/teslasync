@@ -1,6 +1,15 @@
 # Configuration
 
-TeslaSync is configured with environment variables. Docker Compose injects them from `.env`; Helm derives them from chart values. The names below are the variables the Go processes actually read.
+TeslaSync is configured with environment variables. Compose interpolates `.env`
+into its declared service configuration; it does **not** automatically pass every
+variable to every container. Helm derives container environments from chart values.
+Use this reference alongside `internal/config/config.go`, `docker-compose.yml`,
+and the chart templates for your checkout.
+
+For a first installation, follow [Getting Started](/guide/getting-started).
+Before connecting an account, configure token encryption and review the
+[Compose environment overrides](/deployment/docker#required-environment-overrides).
+Never paste resolved `docker compose config` output into an issue: it may contain secrets.
 
 ## Required Tesla settings
 
@@ -11,7 +20,7 @@ TeslaSync is configured with environment variables. Docker Compose injects them 
 | `TESLA_REDIRECT_URI`   | OAuth callback URL (`https://your-domain/api/v1/auth/callback` in prod)|
 | `TESLA_API_BASE_URL`   | Tesla Fleet API region endpoint (NA / EU / CN — see [Tesla Fleet API](/guide/tesla-fleet-api#step-2-pick-a-region)) |
 
-The OAuth scopes TeslaSync requests are fixed in code (`internal/tesla/client_auth.go`): `openid offline_access vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds`. Your Tesla Developer application must have all five enabled or post-OAuth calls fail with `invalid_scope`.
+The six OAuth scopes TeslaSync requests are fixed in code (`internal/tesla/client_auth.go`): `openid offline_access vehicle_device_data vehicle_location vehicle_cmds vehicle_charging_cmds`. Missing permissions can prevent the corresponding features from working; reauthorize after changing granted access.
 
 ## Authentication & identity
 

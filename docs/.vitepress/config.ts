@@ -3,7 +3,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 
 export default withMermaid(defineConfig({
   title: 'TeslaSync Docs',
-  description: 'Documentation for TeslaSync - Tesla Fleet Intelligence Platform',
+  description: 'Open-source Tesla intelligence on your infrastructure. Installation, Tesla connectivity, operations, and contributing.',
   base: '/teslasync/',
 
   ignoreDeadLinks: true,
@@ -42,7 +42,7 @@ export default withMermaid(defineConfig({
       { text: 'Guide', link: '/guide/getting-started', activeMatch: '/guide/' },
       { text: 'Deployment', link: '/deployment/docker', activeMatch: '/deployment/' },
       { text: 'Features', link: '/features/dashboard', activeMatch: '/features/' },
-      { text: 'Contributing', link: '/contributing/code-structure', activeMatch: '/contributing/' },
+      { text: 'Contributing', link: '/CONTRIBUTING', activeMatch: '/(CONTRIBUTING|contributing/)' },
     ],
 
     sidebar: {
@@ -52,6 +52,7 @@ export default withMermaid(defineConfig({
           items: [
             { text: 'Getting Started', link: '/guide/getting-started' },
             { text: 'Tesla Fleet API Setup', link: '/guide/tesla-fleet-api' },
+            { text: 'Enable Fleet Telemetry', link: '/guide/fleet-telemetry' },
             { text: 'Configuration', link: '/guide/configuration' },
             { text: 'Local Development', link: '/guide/local-development' },
             { text: 'Architecture', link: '/guide/architecture' },
@@ -60,7 +61,6 @@ export default withMermaid(defineConfig({
             { text: 'Diagrams', link: '/guide/diagrams' },
             { text: 'Database Schema', link: '/guide/database' },
             { text: 'Technology Stack', link: '/guide/technology' },
-            { text: 'Fleet Telemetry', link: '/guide/fleet-telemetry' },
             { text: 'Helix AI', link: '/guide/helix-ai' },
             { text: 'Remote Commands', link: '/guide/remote-commands' },
             { text: 'Troubleshooting', link: '/guide/troubleshooting' },
@@ -99,6 +99,7 @@ export default withMermaid(defineConfig({
         {
           text: 'Contributing',
           items: [
+            { text: 'Start Contributing', link: '/CONTRIBUTING' },
             { text: 'Code Structure', link: '/contributing/code-structure' },
             { text: 'Adding Features', link: '/contributing/adding-features' },
             { text: 'API Reference', link: '/contributing/api-reference' },
