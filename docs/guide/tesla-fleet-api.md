@@ -20,10 +20,10 @@ The fields on the form, with the things that actually matter:
 
 - **Application name** — shown to your users on the Tesla OAuth consent screen. Use something they will recognise (`TeslaSync at home`, `Acme Fleet Tracker`).
 - **Redirect URIs** — exact match required. Both `http://localhost:8080/api/v1/auth/callback` (local trials) and `https://your-domain.example.com/api/v1/auth/callback` (production) can coexist on the same application.
-- **Scopes** — tick all five listed below. Missing any one of them produces silent post-OAuth failures rather than a registration error.
+- **Scopes** — configure the six requested scopes below. Missing permissions can prevent corresponding features from working.
 - **Partner registration domains** — leave empty during creation; you register them after the application is approved using TeslaSync's DevTools API.
 
-### The five scopes TeslaSync requests
+### The six scopes TeslaSync requests
 
 `internal/tesla/client_auth.go` builds the authorisation URL with exactly this scope set:
 
@@ -42,7 +42,7 @@ openid offline_access vehicle_device_data vehicle_location vehicle_cmds vehicle_
 
 If you find yourself in production with a missing scope, the recovery is to re-tick the scope on the developer application and have every user re-run **Connect Tesla** to mint new tokens. Old refresh tokens minted under the previous scope set continue to work but never gain the new permission.
 
-## Step 2 — Pick a region
+## Step 2 — Pick a region {#step-2-pick-a-region}
 
 Tesla operates three Fleet API regional bases. The base must match the region of the Tesla account whose vehicles you want to control — not the region of the server running TeslaSync.
 
@@ -84,7 +84,11 @@ Returns the base URL, client ID, the regional bases list, and a placeholder for 
 
 ## Step 4 — Complete the user OAuth flow
 
-Open the web UI and click **Connect Tesla**. The frontend hits `/api/v1/auth/login`, which constructs the authorisation URL and redirects to Tesla. The user approves the scope list on `auth.tesla.com`, and Tesla redirects back to `TESLA_REDIRECT_URI` with a `code`. The API exchanges the code for an access token + refresh token, encrypts both with AES-GCM using `ENCRYPTION_KEY`, and stores them in the `users` table.
+Open **Settings → Fleet Setup** (`/settings/fleet-setup`) and connect your account.
+Tesla handles owner consent and redirects to `TESLA_REDIRECT_URI`. Configure
+`ENCRYPTION_KEY` in the actual API container environment before authorizing;
+see [Compose overrides](/deployment/docker#required-environment-overrides).
+Without it, development mode may store tokens unencrypted.
 
 The refresh worker watches for tokens that will expire within a configurable window and renews them silently. You do not have to touch the token lifecycle once the first authorisation succeeds.
 
@@ -97,13 +101,19 @@ After OAuth:
 - The vehicle worker logs `synced N vehicles from fleet API`
 - The dashboard shows your fleet
 
-If any of those does not happen, see the [troubleshooting page](/guide/troubleshooting) — but 90% of the time it is one of the four scope / redirect / region / encryption-key mistakes above.
+If the vehicle list or fresh data is missing, check scopes, callback, region,
+and token encryption, then follow [Troubleshooting](/guide/troubleshooting).
 
 ## Step 5 — Register your partner account
 
-Required for **Fleet Telemetry** streaming and **signed commands**. Not required for polling-only setups.
+Register your application in the Tesla region you use. Do not assume a
+polling-only deployment bypasses Tesla's application onboarding requirements.
+Follow [Tesla's application registration sequence](https://github.com/teslamotors/fleet-telemetry#setup-steps)
+and current developer-portal requirements.
 
-Tesla requires every Fleet API application to publish a public key at a domain it controls and register that domain with Tesla before that application can stream telemetry or sign vehicle commands. TeslaSync generates and serves the key for you; the registration call is a one-time POST.
+Publish the application's public key at a domain you control and register that
+domain with Tesla. Verify that the served key matches the signing proxy's private
+key; do not assume starting containers provisions or pairs the key automatically.
 
 ### Prerequisites
 
@@ -113,7 +123,8 @@ Tesla requires every Fleet API application to publish a public key at a domain i
 
 ### The registration call
 
-Trigger via the DevTools API or **Settings → DevTools → Partner Registration** in the UI:
+The registration API accepts a domain. Use an authenticated administrative session
+when forward-auth is enabled; the example intentionally contains no credentials:
 
 ```bash
 curl -X POST https://teslasync.example.com/api/v1/devtools/register-partner \
@@ -155,7 +166,12 @@ curl 'https://teslasync.example.com/api/v1/devtools/partner-public-key?domain=te
 
 ## Step 6 — Enable Fleet Telemetry
 
-Once the partner account is registered, the Tesla Telemetry servers will accept connections from your install. Bring up the telemetry profile:
+Vehicles connect to **your receiver**, not the other way around. Before subscribing,
+pair the application's virtual key with each vehicle and configure the signing
+proxy with the matching private key. Tesla's
+[official setup sequence](https://github.com/teslamotors/fleet-telemetry#setup-steps)
+requires these steps for telemetry configuration, not only remote controls.
+Then deploy your receiver:
 
 ```bash
 docker compose --profile telemetry up -d
@@ -163,7 +179,7 @@ docker compose --profile telemetry up -d
 
 And set the relevant `FLEET_TELEMETRY_*` variables (see [Configuration](/guide/configuration#fleet-telemetry-settings)). The [Fleet Telemetry guide](/guide/fleet-telemetry) walks through the per-vehicle subscription flow and the codec layer that translates Tesla's protobuf format into TeslaSync's typed signals.
 
-## Step 7 — Enable signed commands (optional)
+## Step 7 — Configure the signing proxy
 
 Newer Tesla vehicles (Model 3 / Y from 2021+, Model S / X refresh, Cybertruck) require commands to be cryptographically signed by the partner key. TeslaSync ships a Vehicle Command Proxy in the `commands` Compose profile that handles signing transparently:
 
@@ -171,9 +187,17 @@ Newer Tesla vehicles (Model 3 / Y from 2021+, Model S / X refresh, Cybertruck) r
 docker compose --profile commands up -d
 ```
 
-Set `TESLA_COMMAND_PROXY_URL=http://vehicle-command-proxy:4445` (the default Compose setup wires this for you). The API routes signed-command-requiring endpoints through the proxy; other endpoints continue to call Tesla directly. `wake_up` is intentionally never proxied — Tesla accepts it unsigned, and forcing it through the proxy adds a failure mode for no benefit.
+Set `TESLA_COMMAND_PROXY_URL=https://vehicle-command-proxy:4443` in the API
+container using the [Compose override](/deployment/docker#required-environment-overrides).
+The base Compose file does not forward this variable automatically. Provision the
+proxy's TLS certificate and signing key at its configured mount, and ensure the
+API trusts the certificate. Do not expose the signing proxy publicly or disable
+certificate verification as a production workaround. Complete this step before
+submitting the telemetry configuration in Step 6.
 
-The full per-command reference (which 65 endpoints exist, which require signing, which work on which model) lives in [Remote Commands](/guide/remote-commands).
+See [Remote Commands](/guide/remote-commands) for command setup. Availability
+depends on vehicle capabilities and Tesla permissions, not simply the number of
+endpoints implemented by TeslaSync.
 
 ## DevTools reference
 
@@ -193,7 +217,7 @@ All of these are forward-auth-protected when `FORWARD_AUTH_HEADER` is set — th
 
 | Symptom                                                                                     | Cause                                                                                                       | Fix                                                                                                  |
 | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
-| Tesla OAuth screen shows the wrong scopes / refuses the request                             | Developer application is missing one of the five scopes                                                     | Re-tick all five in the portal, save, re-run **Connect Tesla**                                       |
+| Tesla OAuth screen shows the wrong scopes / refuses the request | Application or owner grant lacks requested permissions | Review the six requested scopes, save, and reconnect in Fleet Setup |
 | OAuth completes but `/api/1/vehicles` returns `404`                                         | `TESLA_API_BASE_URL` points at the wrong region for this account                                            | Match the base to the user's region (EU account → EU base, etc.)                                     |
 | `register-partner` returns `412 Precondition Failed`                                        | Tesla cannot fetch `/.well-known/appspecific/com.tesla.3p.public-key.pem` on the registered domain          | Verify the route works anonymously over public HTTPS — forward-auth must not gate `.well-known`      |
 | `register-partner` returns `400` with `unauthorized_client`                                 | Developer application is not approved for Fleet Telemetry                                                   | Wait for Tesla approval; check the portal application status                                         |
