@@ -430,6 +430,31 @@ describe('ChargingDetailPage — populated DC session', () => {
     expect(cardValue(kpi, 'Miles Added')).toBe('—');
   });
 
+  it('prefers Tesla billed energy and cost on the KPI tiles without overwriting vehicle energy', () => {
+    mockSession.mockReturnValue(
+      makeQuery({
+        data: makeSession({
+          total_energy_added_wh: 42_620,
+          cost_decimal: 20.88,
+          billed_energy_wh: 44_490.6,
+          billed_cost_decimal: 21.8,
+          billed_currency: 'USD',
+          billed_rate_per_kwh: 0.49,
+          billed_source: 'tesla_charging_history',
+        }),
+      }),
+    );
+    renderPage();
+    const kpi = kpiRegion();
+
+    expect(cardValue(kpi, 'Energy')).toBe('44.49 kWh');
+    expect(cardValue(kpi, 'Total Cost')).toBe('$21.80');
+    expect(cardValue(kpi, 'Per kWh')).toBe('$0.49/kWh');
+    expect(within(kpi).getByText('Vehicle measured 42.62 kWh')).toBeInTheDocument();
+    // Charge-summary restates vehicle energy, not the Supercharger bill.
+    expect(screen.getByText('42.6 kWh')).toBeInTheDocument();
+  });
+
   it('renders the five live gauges with SI-converted values and the DC 250 kW ceiling', () => {
     renderPage();
 

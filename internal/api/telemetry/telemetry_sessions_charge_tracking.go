@@ -159,6 +159,19 @@ func observeChargeEnergyCounter(active *streamingCharge, signals map[string]inte
 	active.EnergyCounterLastWh = floatPtr(value)
 }
 
+// chargeEnergyBaselineLookback excludes the session-start telemetry batch from
+// the cumulative energy baseline. Fleet Telemetry often emits DetailedChargeState
+// and DCChargingEnergyIn at the same timestamp after charging has already added
+// energy; an inclusive State(StartedAt) therefore undercounts the session.
+const chargeEnergyBaselineLookback = time.Millisecond
+
+func chargeEnergyBaselineTime(start time.Time) time.Time {
+	if start.IsZero() {
+		return start
+	}
+	return start.Add(-chargeEnergyBaselineLookback)
+}
+
 func snapshotChargeEnergyDelta(
 	startSnap, endSnap map[string]interface{},
 	preferredField string,
@@ -615,8 +628,20 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		}
 
 		// Energy added: difference in one consistent cumulative counter.
+		// Baseline is strictly before StartedAt so the first in-session
+		// energy sample is attributed to this session, not subtracted as
+		// the starting lifetime reading.
+		energyStartSnap := startSnap
+		if active.state != nil {
+			if energyStart, energyStartErr := active.state.State(ctx, vehicleID, chargeEnergyBaselineTime(active.StartTime)); energyStartErr != nil {
+				log.Warn().Err(energyStartErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State charge energy baseline snapshot failed")
+			} else {
+				energyStartSnap = stateToLegacyMap(energyStart)
+			}
+		}
 		if energyDelta, kind, ok := snapshotChargeEnergyDelta(
-			startSnap,
+			energyStartSnap,
 			endSnap,
 			active.EnergyCounterField,
 		); ok {

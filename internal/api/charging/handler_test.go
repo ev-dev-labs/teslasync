@@ -12,6 +12,8 @@ import (
 
 	"github.com/ev-dev-labs/teslasync/internal/api/apibulk"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 )
@@ -172,11 +174,12 @@ func TestChargingHandler_Latest_UsesNowSnapshot(t *testing.T) {
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
 	}
-	// enrichLiveCharge issues two State() calls: [0] start snapshot, [1] current.
-	if len(calls) < 2 {
-		t.Fatalf("State call count = %d, want at least 2 (start + current)", len(calls))
+	// enrichLiveCharge issues three State() calls: [0] start snapshot,
+	// [1] exclusive energy baseline, [2] current (via LiveState fallback).
+	if len(calls) < 3 {
+		t.Fatalf("State call count = %d, want at least 3 (start + energy baseline + current)", len(calls))
 	}
-	cur := calls[1]
+	cur := calls[len(calls)-1]
 	if cur.vehicleID != session.VehicleID {
 		t.Fatalf("State[1].vehicleID = %d, want %d", cur.vehicleID, session.VehicleID)
 	}
@@ -191,7 +194,7 @@ func TestChargingHandler_LiveDCSessionUsesCanonicalWhAndW(t *testing.T) {
 	session := inProgressChargingSession(11, 42, startTs)
 	fake := &fakeStateReader{
 		stateFn: func(_ context.Context, _ int64, at time.Time) (signal.State, error) {
-			if at.Equal(startTs) {
+			if !at.After(startTs) {
 				return signal.State{
 					"DCChargingEnergyIn": 100000.0,
 					"BatteryLevel":       40.0,
@@ -225,6 +228,112 @@ func TestChargingHandler_LiveDCSessionUsesCanonicalWhAndW(t *testing.T) {
 		t.Fatalf("peak_power_w = %v, want 150000", got.PeakPowerW)
 	}
 }
+
+func TestChargingHandler_LiveEnergyUsesExclusiveStartBaseline(t *testing.T) {
+	startTs := time.Date(2026, 9, 5, 18, 0, 0, 0, time.UTC)
+	session := inProgressChargingSession(254, 42, startTs)
+	fake := &fakeStateReader{
+		stateFn: func(_ context.Context, _ int64, at time.Time) (signal.State, error) {
+			if at.Equal(startTs) {
+				return signal.State{
+					"DCChargingEnergyIn": 101870.0,
+					"BatteryLevel":       19.0,
+				}, nil
+			}
+			if at.Before(startTs) {
+				return signal.State{
+					"DCChargingEnergyIn": 100000.0,
+					"BatteryLevel":       19.0,
+				}, nil
+			}
+			return signal.State{
+				"DCChargingEnergyIn": 142620.0,
+				"DCChargingPower":    197000.0,
+				"BatteryLevel":       79.0,
+			}, nil
+		},
+	}
+	charging := &fakeChargingByIDFetcher{session: session}
+	h := &ChargingHandler{state: fake, live: newTestLiveStateReader(fake), charging: charging}
+
+	rec := httptest.NewRecorder()
+	h.Get(rec, newChargingRequest(t, "254", ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var got map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	energy, ok := got["total_energy_added_wh"].(float64)
+	if !ok || energy != 42620 {
+		t.Fatalf("total_energy_added_wh = %v, want 42620 (exclusive baseline)", got["total_energy_added_wh"])
+	}
+}
+
+func TestChargingHandler_OverlaysTeslaSuperchargerBill(t *testing.T) {
+	startTs := time.Date(2026, 9, 5, 18, 0, 0, 0, time.UTC)
+	endTs := startTs.Add(28 * time.Minute)
+	energy := 42620.0
+	cost := 20.88
+	session := completedChargingSession(254, 42, startTs, endTs)
+	session.TotalEnergyAddedWh = &energy
+	session.CostDecimal = &cost
+
+	usage := 44490.6
+	due := 21.80
+	h := &ChargingHandler{
+		charging: &fakeChargingByIDFetcher{session: session},
+		vehicles: fakeVehicleVIN{vin: "5YJ3E1EA7KF000001"},
+		teslaBills: fakeTeslaBills{entry: &teslamodel.TeslaChargingHistoryEntry{
+			UsageWh:      &usage,
+			TotalDue:     &due,
+			CurrencyCode: strPtr("USD"),
+			RateBase:     floatPtr(0.49),
+		}},
+	}
+
+	rec := httptest.NewRecorder()
+	h.Get(rec, newChargingRequest(t, "254", ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+
+	var got map[string]interface{}
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if got["billed_energy_wh"] != 44490.6 {
+		t.Fatalf("billed_energy_wh = %v, want 44490.6", got["billed_energy_wh"])
+	}
+	if got["billed_cost_decimal"] != 21.80 {
+		t.Fatalf("billed_cost_decimal = %v, want 21.80", got["billed_cost_decimal"])
+	}
+	if got["billed_source"] != "tesla_charging_history" {
+		t.Fatalf("billed_source = %v", got["billed_source"])
+	}
+	if got["total_energy_added_wh"] != 42620.0 {
+		t.Fatalf("vehicle energy should stay 42620, got %v", got["total_energy_added_wh"])
+	}
+}
+
+type fakeVehicleVIN struct{ vin string }
+
+func (f fakeVehicleVIN) GetByID(_ context.Context, _ int64) (*vehiclemodel.Vehicle, error) {
+	return &vehiclemodel.Vehicle{VIN: f.vin}, nil
+}
+
+type fakeTeslaBills struct {
+	entry *teslamodel.TeslaChargingHistoryEntry
+}
+
+func (f fakeTeslaBills) FindBestMatch(_ context.Context, _ string, _ time.Time) (*teslamodel.TeslaChargingHistoryEntry, error) {
+	return f.entry, nil
+}
+
+func strPtr(v string) *string { return &v }
+func floatPtr(v float64) *float64 { return &v }
 
 // TestChargingHandler_Telemetry_ChartMode locks in the chart-mode contract:
 // TelemetryReadings MUST call Timeline with an empty CollapseBy slice so

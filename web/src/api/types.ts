@@ -183,6 +183,13 @@ export interface ChargingSession {
   duration_min: number
   cost?: number | null
   ended_status?: string | null
+  /** Supercharger invoice energy in watt-hours when Tesla billing history matches. */
+  billed_energy_wh?: number | null
+  /** Supercharger invoice total when Tesla billing history matches. */
+  billed_cost_decimal?: number | null
+  billed_currency?: string | null
+  billed_rate_per_kwh?: number | null
+  billed_source?: string | null
 }
 
 export interface DriveTelemetryReading {

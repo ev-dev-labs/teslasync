@@ -536,3 +536,28 @@ func TestTrackCharging_StoppedKeepsSession(t *testing.T) {
 		t.Fatal("charge session ended on Stopped")
 	}
 }
+
+func TestChargeEnergyBaselineTimeExcludesStartBatch(t *testing.T) {
+	start := time.Date(2026, 9, 5, 18, 0, 0, 0, time.UTC)
+	got := chargeEnergyBaselineTime(start)
+	if !got.Before(start) {
+		t.Fatalf("baseline %v is not before start %v", got, start)
+	}
+	if start.Sub(got) != chargeEnergyBaselineLookback {
+		t.Fatalf("lookback = %v, want %v", start.Sub(got), chargeEnergyBaselineLookback)
+	}
+	startSnap := map[string]interface{}{"DCChargingEnergyIn": 101870.0}
+	baselineSnap := map[string]interface{}{"DCChargingEnergyIn": 100000.0}
+	endSnap := map[string]interface{}{"DCChargingEnergyIn": 142620.0}
+	inclusive, _, _ := snapshotChargeEnergyDelta(startSnap, endSnap, "DCChargingEnergyIn")
+	exclusive, kind, ok := snapshotChargeEnergyDelta(baselineSnap, endSnap, "DCChargingEnergyIn")
+	if !ok || kind != signalcounter.ChangeAdvanced {
+		t.Fatalf("exclusive delta ok=%v kind=%v", ok, kind)
+	}
+	if inclusive != 40750 {
+		t.Fatalf("inclusive delta = %v, want 40750", inclusive)
+	}
+	if exclusive != 42620 {
+		t.Fatalf("exclusive delta = %v, want 42620", exclusive)
+	}
+}

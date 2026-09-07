@@ -64,14 +64,13 @@ func (r *TeslaChargingHistoryRepo) GetAll(ctx context.Context, vin string, limit
 	return results, rows.Err()
 }
 
-// GetBySessionID returns a single charging history entry by Tesla session ID.
-func (r *TeslaChargingHistoryRepo) GetBySessionID(ctx context.Context, sessionID int64) (*teslamodel.TeslaChargingHistoryEntry, error) {
-	query := `SELECT id, session_id, vin, site_location_name, charge_start_datetime, charge_stop_datetime,
+const teslaChargingHistoryColumns = `id, session_id, vin, site_location_name, charge_start_datetime, charge_stop_datetime,
 		country, state, county, postal_code, billing_type, fee_type, currency_code, pricing_type,
-		rate_base, usage_wh, total_due, has_invoice, invoice_content_id, fetched_at, created_at
-		FROM tesla_charging_history WHERE session_id = $1`
+		rate_base, usage_wh, total_due, has_invoice, invoice_content_id, fetched_at, created_at`
+
+func scanTeslaChargingHistory(row interface{ Scan(dest ...any) error }) (*teslamodel.TeslaChargingHistoryEntry, error) {
 	e := &teslamodel.TeslaChargingHistoryEntry{}
-	err := r.pool.QueryRow(ctx, query, sessionID).Scan(
+	err := row.Scan(
 		&e.ID, &e.SessionID, &e.VIN, &e.SiteLocationName,
 		&e.ChargeStartDatetime, &e.ChargeStopDatetime,
 		&e.Country, &e.State, &e.County, &e.PostalCode,
@@ -80,11 +79,50 @@ func (r *TeslaChargingHistoryRepo) GetBySessionID(ctx context.Context, sessionID
 		&e.HasInvoice, &e.InvoiceContentID,
 		&e.FetchedAt, &e.CreatedAt,
 	)
+	if err != nil {
+		return nil, err
+	}
+	return e, nil
+}
+
+// GetBySessionID returns a single charging history entry by Tesla session ID.
+func (r *TeslaChargingHistoryRepo) GetBySessionID(ctx context.Context, sessionID int64) (*teslamodel.TeslaChargingHistoryEntry, error) {
+	query := `SELECT ` + teslaChargingHistoryColumns + ` FROM tesla_charging_history WHERE session_id = $1`
+	e, err := scanTeslaChargingHistory(r.pool.QueryRow(ctx, query, sessionID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("get tesla charging history by session: %w", err)
+	}
+	return e, nil
+}
+
+// teslaBillMatchWindow is how far a Supercharger invoice start may sit from a
+// measured charging_sessions.started_at and still be treated as the same event.
+const teslaBillMatchWindow = 2 * time.Hour
+
+// FindBestMatch returns the Tesla charging-history invoice whose start time is
+// closest to startedAt for vin, within teslaBillMatchWindow. No row maps to
+// nil, nil so callers can overlay billed kWh/cost without failing the session.
+func (r *TeslaChargingHistoryRepo) FindBestMatch(ctx context.Context, vin string, startedAt time.Time) (*teslamodel.TeslaChargingHistoryEntry, error) {
+	if vin == "" || startedAt.IsZero() {
+		return nil, nil
+	}
+	query := `SELECT ` + teslaChargingHistoryColumns + `
+FROM tesla_charging_history
+WHERE vin = $1
+  AND charge_start_datetime BETWEEN $2 AND $3
+ORDER BY ABS(EXTRACT(EPOCH FROM (charge_start_datetime - $4))) ASC, session_id DESC
+LIMIT 1`
+	from := startedAt.Add(-teslaBillMatchWindow)
+	to := startedAt.Add(teslaBillMatchWindow)
+	e, err := scanTeslaChargingHistory(r.pool.QueryRow(ctx, query, vin, from, to, startedAt))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("find tesla charging history match: %w", err)
 	}
 	return e, nil
 }
