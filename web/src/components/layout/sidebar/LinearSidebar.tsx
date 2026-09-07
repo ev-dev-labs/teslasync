@@ -36,7 +36,7 @@ import { PrefetchNavLink } from '../PrefetchLink'
 import { Button } from '@/components/ui/runtime'
 import { Icons } from '@/lib/icons'
 import { cn } from '@/lib/cn'
-import { compactGroupTier, EXPLORE_PATH, type CompactGroupTier } from './compactNav'
+import { compactGroupTier, EXPLORE_PATH, isExclusiveActivePath, type CompactGroupTier } from './compactNav'
 
 const COMPACT_GROUP_I18N_KEYS: Readonly<Record<string, string>> = {
   Overview: 'nav.compactOverview',
@@ -93,14 +93,6 @@ export interface LinearSidebarProps {
   staleCount?: number
 }
 
-// ─── Active-path helpers ─────────────────────────────────────────────────
-
-function isActiveLinearPath(pathname: string, to: string) {
-  return to === '/'
-    ? pathname === '/'
-    : pathname === to || pathname.startsWith(to + '/')
-}
-
 // ─── Tiny components ─────────────────────────────────────────────────────
 
 interface LinearNavLinkProps {
@@ -138,6 +130,7 @@ function LinearNavLink({
       <PrefetchNavLink
         to={to}
         onClick={onSelect}
+        end={!active}
         aria-current={active ? 'page' : false}
         data-tour={dataTour}
         className={cn(
@@ -278,6 +271,13 @@ export function LinearSidebar({
     () => new Set(pinnedItems.map(item => item.to)),
     [pinnedItems],
   )
+  const catalogPaths = useMemo(() => {
+    const paths = sections.flatMap(section => section.items.map(item => item.to))
+    for (const item of pinnedItems) paths.push(item.to)
+    paths.push(EXPLORE_PATH)
+    return paths
+  }, [sections, pinnedItems])
+  const itemIsActive = (to: string) => isExclusiveActivePath(effectivePath, to, catalogPaths)
 
   // ── Tree state ─────────────────────────────────────────────────────────
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {
@@ -473,7 +473,7 @@ export function LinearSidebar({
                         to={item.to}
                         label={navLabel(item.label)}
                         icon={item.icon}
-                        active={isActiveLinearPath(effectivePath, item.to)}
+                        active={itemIsActive(item.to)}
                         onSelect={onItemSelect}
                         trailing={trailingFor(item.to)}
                         hoverAction={pinActionFor(item)}
@@ -506,7 +506,7 @@ export function LinearSidebar({
               to={EXPLORE_PATH}
               label={t('nav.browseAllFeatures', 'Browse all features')}
               icon={Icons.sparkles}
-              active={isActiveLinearPath(effectivePath, EXPLORE_PATH)}
+              active={itemIsActive(EXPLORE_PATH)}
               onSelect={onItemSelect}
             />
           </div>

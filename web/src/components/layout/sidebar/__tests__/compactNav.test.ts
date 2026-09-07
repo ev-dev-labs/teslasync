@@ -14,6 +14,7 @@ import {
   compactGroupTier,
   findMostSpecificNavEntry,
   isCompactActivePath,
+  isExclusiveActivePath,
   CANONICAL_SECTION_TO_COMPACT_GROUP,
   COMPACT_GROUP_TITLES,
   COMPACT_NAV_BLUEPRINT,
@@ -168,6 +169,32 @@ describe('isCompactActivePath', () => {
     expect(isCompactActivePath('/drives', '/drives')).toBe(true)
     expect(isCompactActivePath('/drives/42', '/drives')).toBe(true)
     expect(isCompactActivePath('/drives-archive', '/drives')).toBe(false)
+  })
+})
+
+describe('isExclusiveActivePath', () => {
+  const settingsCatalog = ['/settings', '/settings/fleet-setup', '/chatbot', '/dev-tools']
+  const physicsCatalog = [
+    '/tesla-only',
+    '/tesla-only/clocks',
+    '/tesla-only/life-tape',
+    '/physics-cockpit',
+  ]
+
+  it('lights only Fleet Setup on /settings/fleet-setup, not General Settings', () => {
+    expect(isExclusiveActivePath('/settings/fleet-setup', '/settings/fleet-setup', settingsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/settings/fleet-setup', '/settings', settingsCatalog)).toBe(false)
+  })
+
+  it('still lights General Settings on /settings and unlisted settings children', () => {
+    expect(isExclusiveActivePath('/settings', '/settings', settingsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/settings/appearance', '/settings', settingsCatalog)).toBe(true)
+  })
+
+  it('lights only the Tesla Physics child, not the hub, on nested routes', () => {
+    expect(isExclusiveActivePath('/tesla-only/clocks', '/tesla-only/clocks', physicsCatalog)).toBe(true)
+    expect(isExclusiveActivePath('/tesla-only/clocks', '/tesla-only', physicsCatalog)).toBe(false)
+    expect(isExclusiveActivePath('/tesla-only', '/tesla-only', physicsCatalog)).toBe(true)
   })
 })
 

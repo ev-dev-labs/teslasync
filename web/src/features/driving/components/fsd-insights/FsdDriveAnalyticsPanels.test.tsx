@@ -61,6 +61,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(screen.getByText('Attribution and counter resets')).toBeInTheDocument();
     expect(screen.getByText('Contributing drives')).toBeInTheDocument();
     expect(screen.getByText('Route, time, and firmware comparisons')).toBeInTheDocument();
+    expect(screen.getByText('Same-route experiment')).toBeInTheDocument();
     expect(screen.getByText('Firmware spotlight')).toBeInTheDocument();
     expect(screen.getByTestId('fsd-firmware-spotlight')).toHaveAttribute('id', 'fsd-firmware-spotlight');
     expect(screen.getByText('Commute supervised identity')).toBeInTheDocument();
@@ -86,7 +87,7 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(screen.getByText('Change from the previous period')).toBeInTheDocument();
     expect(screen.getByText('Attribution and counter resets')).toBeInTheDocument();
     expect(screen.getByText('Contributing drives')).toBeInTheDocument();
-    expect(screen.getAllByRole('status')).toHaveLength(7);
+    expect(screen.getAllByRole('status')).toHaveLength(8);
   });
 
   it('explains when period deltas lack comparable trusted coverage', () => {

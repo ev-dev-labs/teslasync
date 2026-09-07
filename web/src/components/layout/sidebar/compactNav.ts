@@ -409,11 +409,38 @@ export function prioritizeCanonicalNavSections<TSection extends { title: string 
 }
 
 /**
- * Same semantics as Layout's `isActiveNavPath`: exact match for the root,
- * exact-or-descendant for everything else.
+ * Prefix match used to decide whether a catalog `to` covers a pathname.
+ * Exact match for the root; exact-or-descendant for everything else.
+ * Sibling prefixes (`/drives` vs `/drives-archive`) do not match.
  */
 export function isCompactActivePath(pathname: string, to: string): boolean {
   return to === '/' ? pathname === '/' : pathname === to || pathname.startsWith(to + '/')
+}
+
+/**
+ * Among catalog destinations that cover `pathname`, the longest `to` wins.
+ * `/settings/fleet-setup` must not also light `/settings`; `/tesla-only/clocks`
+ * must not also light `/tesla-only`. Unlisted children still fall back to the
+ * parent (`/drives/42` → `/drives`).
+ */
+export function bestMatchingNavPath(
+  pathname: string,
+  catalog: Iterable<string>,
+): string | null {
+  let best: string | null = null
+  for (const to of catalog) {
+    if (!isCompactActivePath(pathname, to)) continue
+    if (best == null || to.length > best.length) best = to
+  }
+  return best
+}
+
+export function isExclusiveActivePath(
+  pathname: string,
+  to: string,
+  catalog: Iterable<string>,
+): boolean {
+  return bestMatchingNavPath(pathname, catalog) === to
 }
 
 /**

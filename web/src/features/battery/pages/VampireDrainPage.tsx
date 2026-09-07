@@ -20,6 +20,7 @@ import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { FadeIn } from '@/components/motion';
 import { VehicleSelect } from '@/components/forms';
 import { VampireSplitPanel } from '../components/VampireSplitPanel';
+import { VampireCulpritPanel } from '../components/VampireCulpritPanel';
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { usePageTitle } from '@/hooks/usePageTitle';
@@ -255,6 +256,10 @@ export default function VampireDrainPage() {
             </>
           )}
         </section>
+      </FadeIn>
+
+      <FadeIn delay={0.04}>
+        <VampireCulpritPanel vehicleId={activeId || undefined} />
       </FadeIn>
 
       <FadeIn delay={0.05}>

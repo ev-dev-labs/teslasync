@@ -45,6 +45,7 @@ import {
 } from '@/components/charts';
 import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
 import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
+import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -518,6 +519,10 @@ export default function ChargingDetailPage() {
             color="cyan"
           />
         </section>
+      </FadeIn>
+
+      <FadeIn delay={0.06}>
+        <ChargeBillTruthPanel session={session} />
       </FadeIn>
 
       <FadeIn delay={0.07}>

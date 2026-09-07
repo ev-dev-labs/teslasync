@@ -53,6 +53,8 @@ export interface ChargingSession {
   billed_currency?: string | null;
   billed_rate_per_kwh?: number | null;
   billed_source?: string | null;
+  billed_site?: string | null;
+  billed_fee_type?: string | null;
 }
 
 /* ── Cost Forecast ────────────────────────────────────────── */

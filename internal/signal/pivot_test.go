@@ -75,6 +75,26 @@ func TestForwardFold_MergesSameTimestampEvents(t *testing.T) {
 	}
 }
 
+func TestForwardFold_KeepsLaterReceivedAtOnMergedTimestamp(t *testing.T) {
+	early := ts(10).Add(time.Second)
+	late := ts(10).Add(3 * time.Second)
+	mappings := []FieldMapping{
+		{Signal: "VehicleSpeed", Field: "speed_mph"},
+		{Signal: "BatteryLevel", Field: "battery_pct"},
+	}
+	events := []rawEvent{
+		{Ts: ts(10), Signal: "VehicleSpeed", Value: 65.0, ReceivedAt: &early},
+		{Ts: ts(10), Signal: "BatteryLevel", Value: 80.0, ReceivedAt: &late},
+	}
+	got := forwardFold(nil, events, mappings, ts(0), ts(60))
+	if len(got) != 1 {
+		t.Fatalf("expected 1 row, got %d", len(got))
+	}
+	if got[0].ReceivedAt == nil || !got[0].ReceivedAt.Equal(late) {
+		t.Fatalf("received_at: want later ingest %v, got %v", late, got[0].ReceivedAt)
+	}
+}
+
 func TestForwardFold_CarriesForwardAcrossEvents(t *testing.T) {
 	seed := map[string]SignalValue{"VehicleSpeed": 30.0}
 	mappings := []FieldMapping{

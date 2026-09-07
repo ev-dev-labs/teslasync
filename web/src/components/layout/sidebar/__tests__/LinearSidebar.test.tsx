@@ -107,6 +107,44 @@ describe('LinearSidebar', () => {
     expect(screen.getByRole('link', { name: /Vehicles/ })).not.toHaveAttribute('aria-current')
   })
 
+  it('does not keep General Settings selected on /settings/fleet-setup', () => {
+    const sections: LinearSidebarSectionInput[] = [
+      {
+        title: 'Settings',
+        items: [
+          { to: '/settings', icon: Icons.settings, label: 'General Settings' },
+          { to: '/settings/fleet-setup', icon: Icons.radio, label: 'Fleet Setup' },
+        ],
+      },
+    ]
+    renderSidebar({
+      sections,
+      pathname: '/settings/fleet-setup',
+      activeSectionTitle: 'Settings',
+    })
+    expect(screen.getByRole('link', { name: /Fleet Setup/ })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: /General Settings/ })).not.toHaveAttribute('aria-current', 'page')
+  })
+
+  it('does not keep the Tesla Physics hub selected on a nested physics page', () => {
+    const sections: LinearSidebarSectionInput[] = [
+      {
+        title: 'Tesla Physics',
+        items: [
+          { to: '/tesla-only', icon: Icons.sparkles, label: 'Physics hub' },
+          { to: '/tesla-only/clocks', icon: Icons.clock, label: 'Three Clocks' },
+        ],
+      },
+    ]
+    renderSidebar({
+      sections,
+      pathname: '/tesla-only/clocks',
+      activeSectionTitle: 'Tesla Physics',
+    })
+    expect(screen.getByRole('link', { name: /Three Clocks/ })).toHaveAttribute('aria-current', 'page')
+    expect(screen.getByRole('link', { name: /Physics hub/ })).not.toHaveAttribute('aria-current', 'page')
+  })
+
   it('expands and collapses a section when its header is clicked', () => {
     renderSidebar({ activeSectionTitle: 'Fleet' })
 

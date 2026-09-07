@@ -41,10 +41,11 @@ const (
 	blackBoxWindow       = 90 * time.Second
 	packCurrentQuietA    = 2.0
 
-	maxExclusiveRows = 2048
-	maxBlackBoxRows  = 512
-	maxPhysicsRows   = 1024
-	maxOutageRows    = 32
+	maxExclusiveRows     = 2048
+	maxExclusiveSessions = 1000
+	maxBlackBoxRows      = 512
+	maxPhysicsRows       = 1024
+	maxOutageRows        = 32
 )
 
 // ChargePhase is one contiguous Tesla charge-state interval.
@@ -284,6 +285,8 @@ type TheaterSample struct {
 // PhysicsFrame is one Tesla-physics sample used by TeslaSync-only views.
 type PhysicsFrame struct {
 	At                 time.Time
+	IngestTime         *time.Time
+	Live               bool
 	Gear               string
 	SpeedMps           *float64
 	ChargeState        string

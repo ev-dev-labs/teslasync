@@ -1914,6 +1914,27 @@
       "drain": "Drain",
       "completePct": "At-limit plugged",
       "unpluggedPct": "After unplug"
+    },
+    "culprit": {
+      "title": "Vampire culprit",
+      "subtitle": "What to turn off tonight — Sentry, Cabin Overheat, precondition, plugged-Complete, or genuine leak. Not another 12 W tile.",
+      "on": "On",
+      "off": "Off",
+      "tonight": "Tonight: {{id}}",
+      "sentry": "Sentry",
+      "cabin_overheat": "Cabin overheat",
+      "precondition": "Precondition",
+      "plugged_complete": "Plugged complete",
+      "unplugged_leak": "Unplugged leak",
+      "unknown": "Unknown",
+      "action": {
+        "sentry": "Turn Sentry off at home tonight. It is counted only because the car is in Park.",
+        "overheat": "Cabin Overheat is HVAC, not a pack leak. Turn it off if the car sits in shade.",
+        "precondition": "Preconditioning is warming the pack/cabin on purpose. Leave it on only before a drive.",
+        "plugged": "Charge reached Complete and stayed plugged. Unplug after DC Complete to stop idle draw.",
+        "leak": "Unplugged parked drain remains after Sentry/HVAC. That is 12V upkeep or a genuine leak.",
+        "unknown": "No confirmed Park culprit yet. Missing is not zero watts."
+      }
     }
   }
 }

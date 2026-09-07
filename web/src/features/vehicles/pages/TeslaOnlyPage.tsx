@@ -76,6 +76,13 @@ function show(slug: string, want: TeslaOnlySlug) {
   return slug === want;
 }
 
+/** Shared DataTable paging — same 25/50/100 control as FSD and list pages. */
+const PHYSICS_TABLE_PAGINATION = { defaultPageSize: 25, pageSizeOptions: [25, 50, 100] };
+
+function newestFirst<T>(rows: readonly T[]): T[] {
+  return rows.length < 2 ? [...rows] : rows.slice().reverse();
+}
+
 export default function TeslaOnlyPage() {
   const { t: translate } = useTranslation();
   const t: Translate = (key, fallback, options) => String(translate(key, fallback, options));
@@ -275,9 +282,10 @@ function ClocksPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         <DataTable
           tableId="physics:clocks"
           columns={columns}
-          data={report.clocks.samples}
+          data={newestFirst(report.clocks.samples)}
           keyExtractor={(row) => row.event_time}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+          pagination={PHYSICS_TABLE_PAGINATION}
         />
       )}
     </PhysicsPanel>
@@ -315,9 +323,10 @@ function LifeTapePanel({ report, t }: { report: ExclusiveReport; t: Translate })
           <DataTable
             tableId="physics:life-tape"
             columns={columns}
-            data={segments.slice(-24)}
+            data={newestFirst(segments)}
             keyExtractor={(row) => `${row.state}-${row.started_at}`}
             emptyMessage={unknownText(t)}
+            pagination={PHYSICS_TABLE_PAGINATION}
           />
         </>
       )}
@@ -342,9 +351,10 @@ function ContradictionPanel({ report, t }: { report: ExclusiveReport; t: Transla
         <DataTable
           tableId="physics:contradictions"
           columns={columns}
-          data={findings}
+          data={newestFirst(findings)}
           keyExtractor={(row) => `${row.kind}-${row.at}`}
           emptyMessage={t('teslaOnly.noContradictions', 'No contradictions in the window. Complete still latched is expected.')}
+          pagination={PHYSICS_TABLE_PAGINATION}
         />
       )}
     </PhysicsPanel>
@@ -375,9 +385,10 @@ function MetersPanel({
         <DataTable
           tableId="physics:meters"
           columns={columns}
-          data={meters.resets}
+          data={newestFirst(meters.resets)}
           keyExtractor={(row) => `${row.meter}-${row.at}`}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+          pagination={PHYSICS_TABLE_PAGINATION}
         />
       )}
     </PhysicsPanel>
@@ -432,6 +443,7 @@ function CarKeptLivingPanel({ report, t }: { report: ExclusiveReport; t: Transla
           data={living.notes.map((note) => ({ note }))}
           keyExtractor={(row) => row.note}
           emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+          pagination={PHYSICS_TABLE_PAGINATION}
         />
       )}
     </PhysicsPanel>
@@ -451,9 +463,10 @@ function LogbookPanel({ report, t }: { report: ExclusiveReport; t: Translate }) 
       <DataTable
         tableId="physics:logbook"
         columns={columns}
-        data={entries.slice(-40)}
+        data={newestFirst(entries)}
         keyExtractor={(row) => `${row.kind}-${row.id}-${row.word}-${row.at}`}
         emptyMessage={unknownText(t)}
+        pagination={PHYSICS_TABLE_PAGINATION}
       />
     </PhysicsPanel>
   );
@@ -486,6 +499,7 @@ function EpochsPanel({
         data={epochs}
         keyExtractor={(row) => `${row.version}-${row.started_at}`}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
       />
     </PhysicsPanel>
   );
@@ -508,9 +522,10 @@ function PortPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
       <DataTable
         tableId="physics:charge-port"
         columns={columns}
-        data={evidence.slice(-24)}
+        data={newestFirst(evidence)}
         keyExtractor={(row) => row.at}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
       />
     </PhysicsPanel>
   );
@@ -541,6 +556,7 @@ function BlackBoxPanel({ report, t }: { report: ExclusiveReport; t: Translate })
         data={box.frames}
         keyExtractor={(row) => row.at}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
       />
     </PhysicsPanel>
   );
@@ -561,6 +577,22 @@ function DictionaryPanel({ report, t }: { report: ExclusiveReport; t: Translate 
 
 function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
   const vault = report.vault;
+  const driveColumns: Column<(typeof vault.certificate.drives)[number]>[] = [
+    { key: 'id', header: t('teslaOnly.sessionId', 'ID'), render: (row) => String(row.id), align: 'right' },
+    { key: 'started', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.started_at) },
+    { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (row) => (row.ended_at ? formatDateTime(row.ended_at) : unknownText(t)) },
+    { key: 'rule', header: t('teslaOnly.endRule', 'End rule'), render: (row) => row.end_rule },
+  ];
+  const chargeColumns: Column<(typeof vault.certificate.charges)[number]>[] = [
+    { key: 'id', header: t('teslaOnly.sessionId', 'ID'), render: (row) => String(row.id), align: 'right' },
+    { key: 'started', header: t('teslaOnly.started', 'Started'), render: (row) => formatDateTime(row.started_at) },
+    { key: 'ended', header: t('teslaOnly.ended', 'Ended'), render: (row) => (row.ended_at ? formatDateTime(row.ended_at) : unknownText(t)) },
+    { key: 'rule', header: t('teslaOnly.endRule', 'End rule'), render: (row) => row.end_rule },
+  ];
+  const dwellColumns: Column<{ dwell: number; key: string }>[] = [
+    { key: 'dwell', header: t('teslaOnly.unplug', 'Complete → unplug'), render: (row) => secondsLabel(row.dwell, t), align: 'right' },
+  ];
+  const dwells = vault.etiquette_dwells_s.map((dwell, index) => ({ dwell, key: `${dwell}-${index}` }));
   return (
     <PhysicsPanel title={t('teslaOnly.vault', 'Physics Vault')} honesty={vault.honesty}>
       <Grid cols={{ default: 1, md: 2 }} gap={3}>
@@ -580,6 +612,33 @@ function VaultPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
           <Badge key={version} variant="neutral" size="sm">{version}</Badge>
         ))}
       </div>
+      <SectionTitle>{t('teslaOnly.vaultDrives', 'Drive boundaries')}</SectionTitle>
+      <DataTable
+        tableId="physics:vault-drives"
+        columns={driveColumns}
+        data={newestFirst(vault.certificate.drives)}
+        keyExtractor={(row) => `drive-${row.id}-${row.started_at}`}
+        emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
+      />
+      <SectionTitle>{t('teslaOnly.vaultCharges', 'Charge boundaries')}</SectionTitle>
+      <DataTable
+        tableId="physics:vault-charges"
+        columns={chargeColumns}
+        data={newestFirst(vault.certificate.charges)}
+        keyExtractor={(row) => `charge-${row.id}-${row.started_at}`}
+        emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
+      />
+      <SectionTitle>{t('teslaOnly.vaultEtiquette', 'Supercharger etiquette dwells')}</SectionTitle>
+      <DataTable
+        tableId="physics:vault-etiquette"
+        columns={dwellColumns}
+        data={dwells}
+        keyExtractor={(row) => row.key}
+        emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
+      />
     </PhysicsPanel>
   );
 }
@@ -605,6 +664,7 @@ function ModesPanel({ report, t }: { report: ExclusiveReport; t: Translate }) {
         data={modes.forbidden.map((rule) => ({ rule }))}
         keyExtractor={(row) => row.rule}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
       />
     </PhysicsPanel>
   );
@@ -636,6 +696,7 @@ function NervousPanel({ report, t }: { report: ExclusiveReport; t: Translate }) 
         data={nerves}
         keyExtractor={(row) => row.field}
         emptyMessage={t('teslaOnly.emptyList', 'Nothing in this window.')}
+        pagination={PHYSICS_TABLE_PAGINATION}
       />
     </PhysicsPanel>
   );

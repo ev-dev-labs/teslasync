@@ -190,3 +190,11 @@ func timePtr(v time.Time) *time.Time {
 	copied := v.UTC()
 	return &copied
 }
+
+func cloneTime(v *time.Time) *time.Time {
+	if v == nil || v.IsZero() {
+		return nil
+	}
+	copied := v.UTC()
+	return &copied
+}

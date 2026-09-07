@@ -564,16 +564,17 @@ func (s *timelineSeedPgxRows) RawValues() [][]byte    { return nil }
 func (s *timelineSeedPgxRows) Conn() *pgx.Conn        { return nil }
 
 // timelineWindowRow is the in-memory analogue of one signal_log row
-// returned by the window query: 8 columns including ts first.
+// returned by the window query: 9 columns including ts first and received_at last.
 type timelineWindowRow struct {
-	ts    time.Time
-	field string
-	kind  int16
-	sv    *string
-	bv    *bool
-	iv    *int64
-	fv    *float64
-	tv    *time.Time
+	ts         time.Time
+	field      string
+	kind       int16
+	sv         *string
+	bv         *bool
+	iv         *int64
+	fv         *float64
+	tv         *time.Time
+	receivedAt *time.Time
 }
 
 // timelineWindowPgxRows is the window-query counterpart to
@@ -599,8 +600,8 @@ func (w *timelineWindowPgxRows) Scan(dest ...any) error {
 	if w.pos == 0 || w.pos > len(w.rows) {
 		return errors.New("timelineWindowPgxRows: Scan called out of order")
 	}
-	if len(dest) != 8 {
-		return fmt.Errorf("timelineWindowPgxRows: expected 8 destinations, got %d", len(dest))
+	if len(dest) != 9 {
+		return fmt.Errorf("timelineWindowPgxRows: expected 9 destinations, got %d", len(dest))
 	}
 	row := w.rows[w.pos-1]
 	*(dest[0].(*time.Time)) = row.ts
@@ -611,6 +612,7 @@ func (w *timelineWindowPgxRows) Scan(dest ...any) error {
 	*(dest[5].(**int64)) = row.iv
 	*(dest[6].(**float64)) = row.fv
 	*(dest[7].(**time.Time)) = row.tv
+	*(dest[8].(**time.Time)) = row.receivedAt
 	return nil
 }
 func (w *timelineWindowPgxRows) Values() ([]any, error) { return nil, nil }
@@ -747,6 +749,32 @@ func TestLogStateReader_Timeline_ChartMode_SingleEvent(t *testing.T) {
 	}
 	if rows[0].Fields["speed"] != 50.0 {
 		t.Fatalf("speed: want 50.0, got %v", rows[0].Fields["speed"])
+	}
+	if rows[0].ReceivedAt != nil {
+		t.Fatalf("received_at: want nil when the envelope omitted it, got %v", rows[0].ReceivedAt)
+	}
+}
+
+func TestLogStateReader_Timeline_ChartMode_SurfacesReceivedAt(t *testing.T) {
+	t1 := time.Date(2026, 4, 30, 12, 30, 0, 0, time.UTC)
+	ingest := t1.Add(2 * time.Second)
+	row := floatRow(t1, "Speed", 50)
+	row.receivedAt = &ingest
+	q := &timelineQuerier{
+		windowRows: &timelineWindowPgxRows{rows: []timelineWindowRow{row}},
+	}
+	r := &LogStateReader{pool: q, log: zerolog.Nop()}
+	from, to := validWindow()
+
+	rows, err := r.Timeline(context.Background(), 1, []FieldMapping{{Signal: "Speed", Field: "speed"}}, from, to, TimelineOptions{})
+	if err != nil {
+		t.Fatalf("Timeline: %v", err)
+	}
+	if len(rows) != 1 {
+		t.Fatalf("rows: want 1, got %d (%+v)", len(rows), rows)
+	}
+	if rows[0].ReceivedAt == nil || !rows[0].ReceivedAt.Equal(ingest) {
+		t.Fatalf("received_at: want %v, got %v", ingest, rows[0].ReceivedAt)
 	}
 }
 

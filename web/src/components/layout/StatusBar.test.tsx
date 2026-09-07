@@ -83,6 +83,11 @@ vi.mock('./status-bar/LiveTelemetrySegment', () => ({
     <div data-testid="seg-live" data-icon-only={String(!!iconOnly)} />
   ),
 }));
+vi.mock('./status-bar/HonestyMeterSegment', () => ({
+  HonestyMeterSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
+    <div data-testid="seg-honesty" data-icon-only={String(!!iconOnly)} />
+  ),
+}));
 vi.mock('./status-bar/AlertsSegment', () => ({
   AlertsSegment: ({ iconOnly }: { iconOnly?: boolean }) => (
     <div data-testid="seg-alerts" data-icon-only={String(!!iconOnly)} />

@@ -18,6 +18,7 @@ import {
   useDriveDetailData,
   DriveDetailSkeleton,
   HeroGauges,
+  DrivePhysicsDebriefPanel,
   DriveTimeline,
   DriveStatCards,
   SupervisedDrivingPanel,
@@ -201,6 +202,14 @@ export default function DriveDetailPage() {
               <HeroGauges drive={drive} stats={stats} />
             </SectionErrorBoundary>
           )}
+
+          <SectionErrorBoundary name="drive-detail:physics-debrief" fallbackTitle={t('driveDetail.section.debriefFailed', 'Physics debrief failed to load')}>
+            <DrivePhysicsDebriefPanel
+              stats={stats}
+              chartData={chartData}
+              fsdInsight={fsdInsight}
+            />
+          </SectionErrorBoundary>
 
           <SectionErrorBoundary name="drive-detail:timeline" fallbackTitle={t('driveDetail.section.timelineFailed', 'Drive timeline failed to load')}>
             <DriveTimeline drive={drive} />

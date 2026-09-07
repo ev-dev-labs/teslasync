@@ -224,6 +224,12 @@ func chargingSessionResponse(s *chargingmodel.ChargingSession, live bool, bill *
 	if bill.RateBase != nil {
 		resp["billed_rate_per_kwh"] = *bill.RateBase
 	}
+	if bill.SiteLocationName != "" {
+		resp["billed_site"] = bill.SiteLocationName
+	}
+	if bill.FeeType != nil && *bill.FeeType != "" {
+		resp["billed_fee_type"] = *bill.FeeType
+	}
 	resp["billed_source"] = "tesla_charging_history"
 	return resp
 }

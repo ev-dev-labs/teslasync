@@ -41,6 +41,7 @@ import type {
   GroupedFsdInsight,
 } from '@/types/fsd';
 
+import { FsdCommuteExperimentPanel } from './FsdCommuteExperimentPanel';
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
 import { useClientPagination } from './useClientPagination';
@@ -786,6 +787,7 @@ export function FsdDriveAnalyticsPanels(props: FsdDriveAnalyticsPanelsProps) {
       <AttributionPanel {...props} />
       <ContributingDrivesPanel {...props} />
       <ComparisonGroupsPanel {...props} />
+      <FsdCommuteExperimentPanel {...props} />
       <FirmwareSpotlightPanel {...props} />
       <CommuteIdentityPanel {...props} />
       <EfficiencyPanel {...props} />

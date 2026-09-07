@@ -915,6 +915,21 @@
     "gasSavings": "vs Gas Savings",
     "savingsPct": "Savings %",
     "title": "Drive Details",
+    "debrief": {
+      "title": "Post-drive physics",
+      "subtitle": "One story after the drive: launch vs regen vs pads vs thermal vs FSD km. Not more gauges.",
+      "peak": "Peak {{power}}",
+      "regenShare": "Regen {{share}}",
+      "fsdShare": "FSD {{share}}",
+      "fsdUnknown": "FSD km unknown",
+      "reset": "Counter reset",
+      "launch": "Launch load showed up on the inverter. This is peak power, not a 0–60 claim.",
+      "regen": "Regen harvested energy back into the pack. One-pedal is not blended pads.",
+      "blended": "Friction-pad blend is not in this telemetry. Missing, not zero.",
+      "thermal": "Stator derate was not measured on this drive. Missing, not cool.",
+      "fsd": "Supervised-driving km come from the trip meter, not engagement segments.",
+      "gap": "This drive has no power samples. The story would be fanfic."
+    },
     "replay": "Replay",
     "share": "Share",
     "driveChart": "Drive Overview",
@@ -993,6 +1008,7 @@
     "section": {
       "headerFailed": "Drive header failed to load",
       "heroGaugesFailed": "Hero gauges failed to load",
+      "debriefFailed": "Physics debrief failed to load",
       "timelineFailed": "Drive timeline failed to load",
       "statCardsFailed": "Drive stats failed to load",
       "moreDetailsFailed": "More details failed to load",
@@ -1975,6 +1991,32 @@
       "label": "Analysis period",
       "option": "{{days}}d",
       "optionAria": "Last {{days}} days"
+    },
+    "experiment": {
+      "title": "Same-route experiment",
+      "route": "Control route",
+      "before": "Before",
+      "after": "After",
+      "verdict": "Verdict",
+      "changed": "Changed",
+      "unchanged": "No change",
+      "thin": "Too thin",
+      "unknown": "Unknown",
+      "subtitle": "Did {{to}} change this commute versus {{from}}? Same geofence, same window. Unknown km stay unknown.",
+      "subtitleEmpty": "Month-over-month share without a control route is vibes. This panel only compares the same route and window.",
+      "honesty": "{{unknown}} days with no counter · {{resets}} resets. Those km are not zero.",
+      "empty": "Need the same commute window on two firmware versions, with high-confidence drives, before this is an experiment."
+    },
+    "firmwareSpotlight": {
+      "title": "Firmware spotlight",
+      "route": "Route",
+      "before": "Before",
+      "after": "After",
+      "change": "Share change",
+      "subtitle": "Same-route FSD share on high-confidence drives, {{from}} vs {{to}}. Correlation, not proof that the update caused the change.",
+      "subtitleEmpty": "Same-route FSD share before and after a firmware update, using high-confidence drives only.",
+      "emptyRoutes": "Firmware moved from {{from}} to {{to}}, but no repeated high-confidence route was observed on both versions.",
+      "empty": "Need high-confidence drives on two firmware versions to compare the same routes."
     },
     "kpi": {
       "section": "Supervised self-driving summary",

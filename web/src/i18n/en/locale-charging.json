@@ -529,6 +529,26 @@
       "scheduledAt": "Scheduled start {{when}}",
       "waited": "Stopped waited for the scheduled window.",
       "cockpit": "Open Tesla physics cockpit"
+    },
+    "billTruth": {
+      "title": "Bill vs pack",
+      "subtitle": "Invoice, pack, and why they differ. Dashboards do not pay the Supercharger bill.",
+      "billed": "Billed",
+      "pack": "Pack added",
+      "delta": "Cabinet − pack",
+      "deltaPct": "{{pct}}% of invoice",
+      "fees": "Idle / tax remainder",
+      "feesUnknown": "Need invoice rate",
+      "energyPortion": "Energy portion {{amount}}",
+      "empty": "Invoice and pack already agree.",
+      "reason": {
+        "noInvoice": "No Tesla Supercharger invoice matched this session. Pack energy is measured; the bill is missing.",
+        "cabinet": "Tesla bills cabinet (meter) energy. Pack added is exclusive of thermal, HVAC, and conversion loss.",
+        "packHigh": "Pack energy is higher than the invoice. The bill match may be the wrong session.",
+        "idle": "Invoice total is more than energy × rate. The remainder is idle, congestion, or tax — not pack kWh.",
+        "feeType": "Tesla marked this line as idle, congestion, or tax.",
+        "ac": "AC sessions rarely have a Supercharger invoice. Home/work energy is pack truth only."
+      }
     }
   },
   "chargingThermalTax": {

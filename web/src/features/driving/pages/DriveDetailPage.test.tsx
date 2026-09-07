@@ -128,6 +128,7 @@ vi.mock('../components/drive-detail', () => {
     }),
     DriveDetailSkeleton: () => <div data-testid="drive-skeleton" />,
     HeroGauges: stub('hero-gauges'),
+    DrivePhysicsDebriefPanel: stub('physics-debrief'),
     DriveTimeline: stub('drive-timeline'),
     DriveStatCards: stub('stat-cards'),
     SupervisedDrivingPanel: stub('fsd-panel'),
@@ -324,6 +325,7 @@ const GATED_NUMERIC_SECTIONS = [
 ] as const
 
 const ALWAYS_ON_SECTIONS = [
+  'physics-debrief',
   'drive-timeline',
   'gear-theater',
   'fsd-panel',

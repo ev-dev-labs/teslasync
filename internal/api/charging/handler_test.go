@@ -287,10 +287,12 @@ func TestChargingHandler_OverlaysTeslaSuperchargerBill(t *testing.T) {
 		charging: &fakeChargingByIDFetcher{session: session},
 		vehicles: fakeVehicleVIN{vin: "5YJ3E1EA7KF000001"},
 		teslaBills: fakeTeslaBills{entry: &teslamodel.TeslaChargingHistoryEntry{
-			UsageWh:      &usage,
-			TotalDue:     &due,
-			CurrencyCode: strPtr("USD"),
-			RateBase:     floatPtr(0.49),
+			UsageWh:          &usage,
+			TotalDue:         &due,
+			CurrencyCode:     strPtr("USD"),
+			RateBase:         floatPtr(0.49),
+			SiteLocationName: "Hayward, CA",
+			FeeType:          strPtr("CHARGING"),
 		}},
 	}
 
@@ -312,6 +314,12 @@ func TestChargingHandler_OverlaysTeslaSuperchargerBill(t *testing.T) {
 	}
 	if got["billed_source"] != "tesla_charging_history" {
 		t.Fatalf("billed_source = %v", got["billed_source"])
+	}
+	if got["billed_site"] != "Hayward, CA" {
+		t.Fatalf("billed_site = %v", got["billed_site"])
+	}
+	if got["billed_fee_type"] != "CHARGING" {
+		t.Fatalf("billed_fee_type = %v", got["billed_fee_type"])
 	}
 	if got["total_energy_added_wh"] != 42620.0 {
 		t.Fatalf("vehicle energy should stay 42620, got %v", got["total_energy_added_wh"])

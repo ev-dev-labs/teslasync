@@ -556,7 +556,8 @@ ORDER BY field, ts DESC`
 	// signals, ordered ascending so forwardFold can stream events in
 	// chronological order without an in-memory sort.
 	const windowQuery = `SELECT ts, field,
-       value_kind, str_value, bool_value, int_value, float_value, time_value
+       value_kind, str_value, bool_value, int_value, float_value, time_value,
+       received_at
 FROM signal_log
 WHERE vehicle_id = $1 AND ts > $2 AND ts <= $3 AND field = ANY($4)
 ORDER BY ts ASC`
@@ -583,7 +584,8 @@ ORDER BY ts ASC`
 		var iv *int64
 		var fv *float64
 		var tv *time.Time
-		if err := windowRows.Scan(&eventTs, &fld, &kind, &sv, &bv, &iv, &fv, &tv); err != nil {
+		var receivedAt *time.Time
+		if err := windowRows.Scan(&eventTs, &fld, &kind, &sv, &bv, &iv, &fv, &tv, &receivedAt); err != nil {
 			r.log.Error().
 				Err(err).
 				Int64("vehicle_id", vehicleID).
@@ -592,10 +594,16 @@ ORDER BY ts ASC`
 				Msg("timeline window read failed")
 			return nil, fmt.Errorf("timeline window %s..%s for vehicle %d: %w", from.Format(time.RFC3339), to.Format(time.RFC3339), vehicleID, err)
 		}
+		var ingest *time.Time
+		if receivedAt != nil {
+			copied := receivedAt.UTC()
+			ingest = &copied
+		}
 		if !folder.Add(rawEvent{
-			Ts:     eventTs,
-			Signal: fld,
-			Value:  r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv),
+			Ts:         eventTs,
+			Signal:     fld,
+			Value:      r.decodeSignalLogRow(kind, sv, bv, iv, fv, tv),
+			ReceivedAt: ingest,
 		}) {
 			break
 		}

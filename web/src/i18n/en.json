@@ -6,6 +6,16 @@
     "spacious": "Spacious",
     "groupLabel": "List density"
   },
+  "honesty": {
+    "title": "Telemetry honesty",
+    "aria": "Telemetry honesty meter",
+    "subtitle": "Live, stale, guessed, or missing — the same words FSD uses when it refuses to invent km.",
+    "live": "Live",
+    "stale": "Stale",
+    "guessed": "Guessed",
+    "missing": "Missing",
+    "tooltip": "Live {{live}} · Stale {{stale}} · Guessed {{guessed}} · Missing {{missing}} · Stream {{stream}}"
+  },
   "signalTransportAgreement": {
     "title": "HTTP / MQTT Agreement",
     "description": "Compares only SI-normalized observations with producer timestamps from both Fleet Telemetry transports.",
@@ -5110,6 +5120,29 @@
         "liveSignalsHelp": "The raw live-state boundary for a suspected cache gap",
         "vehicle": "Open scoped vehicle",
         "vehicleHelp": "Full detail for the vehicle in scope"
+      },
+      "actions": {
+        "title": "Recommended actions",
+        "none": "No operator action is required while telemetry remains verified.",
+        "wakeScoped": "Wake scoped vehicle",
+        "retryState": "Retry live-state read",
+        "diagnostic": "Run system diagnostic",
+        "wakeBatch": "Wake first {{batch}} of {{count}} offline",
+        "wakeAll": "Wake all {{count}} offline",
+        "reconcile": "Reconcile fleet posture",
+        "progress": "Wake commands: {{completed}} of {{total}} processed.",
+        "partialTitle": "Wake batch completed with exceptions",
+        "completeTitle": "Wake commands sent",
+        "dismissResult": "Dismiss wake result",
+        "result": "{{succeeded}} sent, {{failed}} failed, {{omitted}} deferred.",
+        "diagnosticComplete": "System diagnostic completed",
+        "dismissDiagnostic": "Dismiss diagnostic result",
+        "diagnosticResult": "Overall status: {{status}}.",
+        "reviewDiagnostic": "Review system status",
+        "confirmTitle": "Wake offline vehicles?",
+        "confirmMessage": "Send wake commands to {{count}} vehicle(s)? Waking vehicles may temporarily increase standby energy use.",
+        "batchLimit": "{{remaining}} vehicle(s) will remain queued for a later batch to respect command limits.",
+        "confirmWake": "Send wake commands"
       }
     },
     "title": "Fleet Operations",
@@ -5659,6 +5692,26 @@
       "scheduledAt": "Scheduled start {{when}}",
       "waited": "Stopped waited for the scheduled window.",
       "cockpit": "Open Tesla physics cockpit"
+    },
+    "billTruth": {
+      "title": "Bill vs pack",
+      "subtitle": "Invoice, pack, and why they differ. Dashboards do not pay the Supercharger bill.",
+      "billed": "Billed",
+      "pack": "Pack added",
+      "delta": "Cabinet − pack",
+      "deltaPct": "{{pct}}% of invoice",
+      "fees": "Idle / tax remainder",
+      "feesUnknown": "Need invoice rate",
+      "energyPortion": "Energy portion {{amount}}",
+      "empty": "Invoice and pack already agree.",
+      "reason": {
+        "noInvoice": "No Tesla Supercharger invoice matched this session. Pack energy is measured; the bill is missing.",
+        "cabinet": "Tesla bills cabinet (meter) energy. Pack added is exclusive of thermal, HVAC, and conversion loss.",
+        "packHigh": "Pack energy is higher than the invoice. The bill match may be the wrong session.",
+        "idle": "Invoice total is more than energy × rate. The remainder is idle, congestion, or tax — not pack kWh.",
+        "feeType": "Tesla marked this line as idle, congestion, or tax.",
+        "ac": "AC sessions rarely have a Supercharger invoice. Home/work energy is pack truth only."
+      }
     }
   },
   "compare": {
@@ -11219,6 +11272,27 @@
       "drain": "Drain",
       "completePct": "At-limit plugged",
       "unpluggedPct": "After unplug"
+    },
+    "culprit": {
+      "title": "Vampire culprit",
+      "subtitle": "What to turn off tonight — Sentry, Cabin Overheat, precondition, plugged-Complete, or genuine leak. Not another 12 W tile.",
+      "on": "On",
+      "off": "Off",
+      "tonight": "Tonight: {{id}}",
+      "sentry": "Sentry",
+      "cabin_overheat": "Cabin overheat",
+      "precondition": "Precondition",
+      "plugged_complete": "Plugged complete",
+      "unplugged_leak": "Unplugged leak",
+      "unknown": "Unknown",
+      "action": {
+        "sentry": "Turn Sentry off at home tonight. It is counted only because the car is in Park.",
+        "overheat": "Cabin Overheat is HVAC, not a pack leak. Turn it off if the car sits in shade.",
+        "precondition": "Preconditioning is warming the pack/cabin on purpose. Leave it on only before a drive.",
+        "plugged": "Charge reached Complete and stayed plugged. Unplug after DC Complete to stop idle draw.",
+        "leak": "Unplugged parked drain remains after Sentry/HVAC. That is 12V upkeep or a genuine leak.",
+        "unknown": "No confirmed Park culprit yet. Missing is not zero watts."
+      }
     }
   },
   "climate": {
@@ -13350,6 +13424,21 @@
     "gasSavings": "vs Gas Savings",
     "savingsPct": "Savings %",
     "title": "Drive Details",
+    "debrief": {
+      "title": "Post-drive physics",
+      "subtitle": "One story after the drive: launch vs regen vs pads vs thermal vs FSD km. Not more gauges.",
+      "peak": "Peak {{power}}",
+      "regenShare": "Regen {{share}}",
+      "fsdShare": "FSD {{share}}",
+      "fsdUnknown": "FSD km unknown",
+      "reset": "Counter reset",
+      "launch": "Launch load showed up on the inverter. This is peak power, not a 0–60 claim.",
+      "regen": "Regen harvested energy back into the pack. One-pedal is not blended pads.",
+      "blended": "Friction-pad blend is not in this telemetry. Missing, not zero.",
+      "thermal": "Stator derate was not measured on this drive. Missing, not cool.",
+      "fsd": "Supervised-driving km come from the trip meter, not engagement segments.",
+      "gap": "This drive has no power samples. The story would be fanfic."
+    },
     "replay": "Replay",
     "share": "Share",
     "driveChart": "Drive Overview",
@@ -13428,6 +13517,7 @@
     "section": {
       "headerFailed": "Drive header failed to load",
       "heroGaugesFailed": "Hero gauges failed to load",
+      "debriefFailed": "Physics debrief failed to load",
       "timelineFailed": "Drive timeline failed to load",
       "statCardsFailed": "Drive stats failed to load",
       "moreDetailsFailed": "More details failed to load",
@@ -17205,6 +17295,32 @@
       "label": "Analysis period",
       "option": "{{days}}d",
       "optionAria": "Last {{days}} days"
+    },
+    "experiment": {
+      "title": "Same-route experiment",
+      "route": "Control route",
+      "before": "Before",
+      "after": "After",
+      "verdict": "Verdict",
+      "changed": "Changed",
+      "unchanged": "No change",
+      "thin": "Too thin",
+      "unknown": "Unknown",
+      "subtitle": "Did {{to}} change this commute versus {{from}}? Same geofence, same window. Unknown km stay unknown.",
+      "subtitleEmpty": "Month-over-month share without a control route is vibes. This panel only compares the same route and window.",
+      "honesty": "{{unknown}} days with no counter · {{resets}} resets. Those km are not zero.",
+      "empty": "Need the same commute window on two firmware versions, with high-confidence drives, before this is an experiment."
+    },
+    "firmwareSpotlight": {
+      "title": "Firmware spotlight",
+      "route": "Route",
+      "before": "Before",
+      "after": "After",
+      "change": "Share change",
+      "subtitle": "Same-route FSD share on high-confidence drives, {{from}} vs {{to}}. Correlation, not proof that the update caused the change.",
+      "subtitleEmpty": "Same-route FSD share before and after a firmware update, using high-confidence drives only.",
+      "emptyRoutes": "Firmware moved from {{from}} to {{to}}, but no repeated high-confidence route was observed on both versions.",
+      "empty": "Need high-confidence drives on two firmware versions to compare the same routes."
     },
     "kpi": {
       "section": "Supervised self-driving summary",

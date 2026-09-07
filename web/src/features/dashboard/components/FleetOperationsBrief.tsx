@@ -15,6 +15,7 @@ import {
   PostureDrillThrough,
   PostureActions,
   PostureTaxonomy,
+  FleetHonestyMeter,
   PostureWorkflows,
   buildFleetPosture,
   formatObservationAge,
@@ -279,6 +280,10 @@ export function FleetOperationsBrief({
             />
           </dl>
 
+          <FleetHonestyMeter
+            categories={posture.vehicles.map((row) => row.category)}
+            pending={totalsPending}
+          />
           <PostureTaxonomy counts={posture.counts} pending={totalsPending} />
         </div>
 
