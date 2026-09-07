@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -86,6 +86,61 @@ describe('FsdObservatoryPanel', () => {
     expect(screen.getAllByText('—').length).toBeGreaterThan(0);
     expect(screen.getByTestId('fsd-observatory-drive-fsd')).toHaveTextContent('Not measured');
     expect(screen.queryByText('0.0 km')).not.toBeInTheDocument();
+  });
+
+  it('pages the stitched journal with the shared pagination control', () => {
+    const insights = structuredClone(fsdInsights());
+    insights.drive_analytics.observatory.timeline = Array.from({ length: 26 }, (_, index) => ({
+      kind: 'drive' as const,
+      at: `2026-03-01T10:${String(index).padStart(2, '0')}:00Z`,
+      end_at: `2026-03-01T10:${String(index).padStart(2, '0')}:30Z`,
+      drive_id: 1000 + index,
+      route_key: `route:${index}`,
+      route_label: `Route ${index}`,
+      firmware_version: null,
+      fsd_distance_m: 1_000,
+      driving_distance_m: 2_000,
+      confidence: 'high' as const,
+      reset_break: false,
+      approximate: false,
+      field: null,
+    }));
+
+    renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
+
+    const journal = screen.getByTestId('fsd-observatory-timeline');
+    expect(within(journal).getAllByRole('listitem')).toHaveLength(25);
+    expect(screen.getByText('Showing 1–25 of 26')).toBeInTheDocument();
+
+    const next = screen.getAllByRole('button', { name: 'Next page' })
+      .find((button) => !button.hasAttribute('disabled'));
+    expect(next).toBeDefined();
+    fireEvent.click(next!);
+    expect(within(journal).getAllByRole('listitem')).toHaveLength(1);
+    expect(screen.getByText('Showing 26–26 of 26')).toBeInTheDocument();
+  });
+
+  it('pages commute stories with the shared pagination control', () => {
+    const insights = structuredClone(fsdInsights());
+    const seed = insights.drive_analytics.observatory.commute_stories[0];
+    insights.drive_analytics.observatory.commute_stories = Array.from({ length: 26 }, (_, index) => ({
+      ...seed,
+      route_key: `route:${index}`,
+      route_label: `Commute ${index}`,
+    }));
+
+    renderPanel(<FsdObservatoryPanel insights={insights} state={readyState} />);
+
+    const commute = screen.getByTestId('fsd-observatory-commute');
+    expect(within(commute).getAllByText(/Commute \d+/)).toHaveLength(25);
+    expect(screen.getByText('Showing 1–25 of 26')).toBeInTheDocument();
+
+    const next = screen.getAllByRole('button', { name: 'Next page' })
+      .find((button) => !button.hasAttribute('disabled'));
+    expect(next).toBeDefined();
+    fireEvent.click(next!);
+    expect(within(commute).getAllByText(/Commute \d+/)).toHaveLength(1);
+    expect(screen.getByText('Showing 26–26 of 26')).toBeInTheDocument();
   });
 
   it('keeps the observatory shell visible while loading', () => {

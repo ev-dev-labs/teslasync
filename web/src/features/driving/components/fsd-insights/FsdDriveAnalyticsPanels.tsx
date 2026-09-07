@@ -20,6 +20,7 @@ import {
   Button,
   DataTable,
   GlassPanel,
+  Pagination,
   PanelTitle,
   Text,
   type Column,
@@ -42,6 +43,7 @@ import type {
 
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
+import { useClientPagination } from './useClientPagination';
 
 interface FsdDriveAnalyticsPanelsProps {
   insights: FsdInsights | undefined;
@@ -149,6 +151,8 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
   const { formatDistance } = useUnits();
   const analytics = insights?.drive_analytics;
   const breakdown = analytics?.attribution;
+  const resetEvents = analytics?.reset_events ?? [];
+  const resetPage = useClientPagination(resetEvents);
   const buckets = [
     {
       key: 'attributed',
@@ -220,9 +224,10 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
             <AlertTriangle className="h-4 w-4 text-amber-300" aria-hidden="true" />
             {t('fsd.resets.title', 'Counter-reset timeline')}
           </Text>
-          {(analytics?.reset_events.length ?? 0) > 0 ? (
+          {resetEvents.length > 0 ? (
+            <>
             <ol className="space-y-2">
-              {analytics?.reset_events.map((event) => (
+              {resetPage.slice.map((event) => (
                 <li
                   key={`${event.field}-${event.at}`}
                   className="flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 text-sm"
@@ -246,6 +251,15 @@ function AttributionPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
                 </li>
               ))}
             </ol>
+            <Pagination
+              page={resetPage.page}
+              pageSize={resetPage.pageSize}
+              total={resetPage.total}
+              onPageChange={resetPage.onPageChange}
+              onPageSizeChange={resetPage.onPageSizeChange}
+              pageSizeOptions={resetPage.pageSizeOptions}
+            />
+            </>
           ) : (
             <Text as="p" variant="caption">
               {t('fsd.resets.none', 'No trusted counter reset was observed in this period.')}
@@ -415,6 +429,7 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
             data={rows}
             keyExtractor={(row) => row.drive_id}
             mobileColumns={['started_at', 'fsd_distance_m', 'confidence']}
+            pagination
           />
         ) : (
           <EmptyState /* no-action: this fills automatically when the selected period contains attributable FSD distance */
@@ -429,43 +444,57 @@ function ContributingDrivesPanel({ insights, state }: FsdDriveAnalyticsPanelsPro
 
 function GroupTable({
   title,
+  tableId,
   rows,
 }: {
   title: string;
+  tableId: string;
   rows: GroupedFsdInsight[];
 }) {
   const { t } = useTranslation();
   const { formatDistance } = useUnits();
+  const columns = useMemo<Column<GroupedFsdInsight>[]>(() => [
+    {
+      key: 'label',
+      header: t('fsd.groups.group', 'Group'),
+      render: (row) => row.label,
+    },
+    {
+      key: 'drive_count',
+      header: t('fsd.groups.drives', 'Drives'),
+      render: (row) => <span className="tabular-nums">{row.drive_count}</span>,
+    },
+    {
+      key: 'fsd_distance_m',
+      header: t('fsd.groups.distance', 'FSD distance'),
+      render: (row) => (
+        <span className="tabular-nums">{formatDistance(row.fsd_distance_m, { precision: 1 })}</span>
+      ),
+    },
+    {
+      key: 'fsd_share_pct',
+      header: t('fsd.groups.share', 'Share'),
+      render: (row) => (
+        <span className="tabular-nums">
+          {row.fsd_share_pct == null ? '-' : `${fmtNumber(row.fsd_share_pct, 1)}%`}
+        </span>
+      ),
+    },
+  ], [formatDistance, t]);
+
   return (
     <div>
       <Text as="h3" size="sm" weight="semibold" className="mb-2">{title}</Text>
       {rows.length > 0 ? (
-        <div className="overflow-x-auto rounded-lg border border-[var(--border-default)]">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-[var(--surface-2)] text-xs text-[var(--text-muted)]">
-              <tr>
-                <th className="px-3 py-2">{t('fsd.groups.group', 'Group')}</th>
-                <th className="px-3 py-2">{t('fsd.groups.drives', 'Drives')}</th>
-                <th className="px-3 py-2">{t('fsd.groups.distance', 'FSD distance')}</th>
-                <th className="px-3 py-2">{t('fsd.groups.share', 'Share')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row) => (
-                <tr key={row.key} className="border-t border-[var(--border-default)]">
-                  <td className="px-3 py-2 font-medium">{row.label}</td>
-                  <td className="px-3 py-2 tabular-nums">{row.drive_count}</td>
-                  <td className="px-3 py-2 tabular-nums">
-                    {formatDistance(row.fsd_distance_m, { precision: 1 })}
-                  </td>
-                  <td className="px-3 py-2 tabular-nums">
-                    {row.fsd_share_pct == null ? '-' : `${fmtNumber(row.fsd_share_pct, 1)}%`}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable
+          tableId={tableId}
+          name={tableId}
+          columns={columns}
+          data={rows}
+          keyExtractor={(row) => row.key}
+          mobileColumns={['label', 'fsd_distance_m']}
+          pagination
+        />
       ) : (
         <Text as="p" variant="caption">
           {t('fsd.groups.empty', 'Not enough high-confidence drives for this comparison.')}
@@ -494,14 +523,17 @@ function ComparisonGroupsPanel({ insights, state }: FsdDriveAnalyticsPanelsProps
         <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
           <GroupTable
             title={t('fsd.groups.routes', 'Repeated routes')}
+            tableId="fsd-groups-routes"
             rows={analytics?.repeated_routes ?? []}
           />
           <GroupTable
             title={t('fsd.groups.time', 'Time of day')}
+            tableId="fsd-groups-time"
             rows={analytics?.time_of_day ?? []}
           />
           <GroupTable
             title={t('fsd.groups.firmware', 'Firmware version')}
+            tableId="fsd-groups-firmware"
             rows={analytics?.firmware ?? []}
           />
         </div>
@@ -572,6 +604,7 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
             data={rows}
             keyExtractor={(row) => row.route_key}
             mobileColumns={['route_label', 'share_change_pct_points']}
+            pagination
           />
         ) : (
           <EmptyState
@@ -650,6 +683,7 @@ function EfficiencyPanel({ insights, state }: FsdDriveAnalyticsPanelsProps) {
             data={rows}
             keyExtractor={(row) => row.route_key}
             mobileColumns={['route_label', 'difference_pct']}
+            pagination
           />
         ) : (
           <EmptyState /* no-action: this comparison appears automatically after enough matching high-confidence drives accumulate */
@@ -729,6 +763,7 @@ function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps)
             data={rows}
             keyExtractor={(row) => `${row.route_key}|${row.window_key}`}
             mobileColumns={['route_label', 'this_month']}
+            pagination
           />
         ) : (
           <EmptyState

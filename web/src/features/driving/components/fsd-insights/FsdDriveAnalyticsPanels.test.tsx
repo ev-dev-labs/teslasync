@@ -141,6 +141,56 @@ describe('FsdDriveAnalyticsPanels', () => {
     expect(payload.drives[0]?.distance_m).toBe(10_000);
   });
 
+  it('pages contributing drives with the shared DataTable pagination', () => {
+    const insights = structuredClone(fsdInsights());
+    const seed = insights.drive_analytics.contributing_drives[0];
+    insights.drive_analytics.contributing_drives = Array.from({ length: 26 }, (_, index) => ({
+      ...seed,
+      drive_id: 2000 + index,
+      started_at: `2026-03-01T${String(10 + Math.floor(index / 60)).padStart(2, '0')}:${String(index % 60).padStart(2, '0')}:00Z`,
+    }));
+
+    render(
+      <MemoryRouter>
+        <FsdDriveAnalyticsPanels insights={insights} state={readyState} />
+      </MemoryRouter>,
+    );
+
+    const panel = screen.getByTestId('fsd-contributing-drives');
+    expect(within(panel).getAllByRole('link', { name: /Open drive/ })).toHaveLength(25);
+    expect(within(panel).getByText('Showing 1–25 of 26')).toBeInTheDocument();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Next page' }));
+    expect(within(panel).getAllByRole('link', { name: /Open drive/ })).toHaveLength(1);
+    expect(within(panel).getByText('Showing 26–26 of 26')).toBeInTheDocument();
+  });
+
+  it('pages attribution reset events with the shared pagination control', () => {
+    const insights = structuredClone(fsdInsights());
+    insights.drive_analytics.reset_events = Array.from({ length: 26 }, (_, index) => ({
+      field: 'SelfDrivingMilesSinceReset',
+      at: `2026-03-01T10:${String(index).padStart(2, '0')}:00Z`,
+      previous_value_m: 9_000,
+      current_value_m: 20,
+      affected_drive_ids: [index + 1],
+      firmware_version: null,
+    }));
+
+    render(
+      <MemoryRouter>
+        <FsdDriveAnalyticsPanels insights={insights} state={readyState} />
+      </MemoryRouter>,
+    );
+
+    const panel = screen.getByTestId('fsd-attribution');
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(25);
+    expect(within(panel).getByText('Showing 1–25 of 26')).toBeInTheDocument();
+
+    fireEvent.click(within(panel).getByRole('button', { name: 'Next page' }));
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(panel).getByText('Showing 26–26 of 26')).toBeInTheDocument();
+  });
+
   it('disables contributing-drive export when nothing is measured', () => {
     render(
       <MemoryRouter>

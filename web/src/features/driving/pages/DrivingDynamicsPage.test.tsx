@@ -207,6 +207,9 @@ vi.mock('../components/driving-dynamics', () => ({
       <span data-testid="tips-vid">{String(p.vehicleId)}</span>
     </div>
   ),
+  GrokDynamicsBriefing: (p: any) => (
+    <div data-testid="grok-briefing">{String(p.vehicleId)}</div>
+  ),
 }));
 
 // jsdom lacks matchMedia; framer-motion (via <FadeIn>) reads it.
@@ -345,25 +348,27 @@ afterEach(() => {
 });
 
 describe('DrivingDynamicsPage — structure & a11y', () => {
-  it('renders the title, subtitle, vehicle picker and all eight labelled sections', () => {
+  it('renders the title, subtitle, vehicle picker and all nine labelled sections', () => {
     renderPage();
 
     expect(
       screen.getByRole('heading', { level: 1, name: 'Driving Dynamics' }),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Live motor telemetry, G-forces & driving analysis'),
+      screen.getByText('Live motor telemetry, G-forces, and Grok’s powertrain read'),
     ).toBeInTheDocument();
 
     // VehicleSelect renders a labelled combobox (fleet has vehicles).
     expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
 
-    // Every <section aria-label> becomes an accessible region — exactly eight.
+    // Every <section aria-label> becomes an accessible region — exactly nine.
     const regions = screen.getAllByRole('region');
-    expect(regions).toHaveLength(8);
+    expect(regions).toHaveLength(9);
     expect(screen.getByRole('region', { name: 'Live cockpit' })).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: "Grok's powertrain read" })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Motor efficiency' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Drive Analytics' })).toBeInTheDocument();
+    expect(screen.getByTestId('grok-briefing')).toHaveTextContent('1');
   });
 
   it('sets the document title via usePageTitle', () => {
@@ -529,8 +534,8 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
 
   it('still renders every section and hides the picker for an empty fleet', () => {
     renderPage();
-    // No blank page: all eight regions remain, filtered list is empty.
-    expect(screen.getAllByRole('region')).toHaveLength(8);
+    // No blank page: all nine regions remain, filtered list is empty.
+    expect(screen.getAllByRole('region')).toHaveLength(9);
     expect(num('da-count')).toBe(0);
     expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
     // VehicleSelect renders nothing when the fleet is empty.

@@ -5,7 +5,7 @@ import { AlertTriangle, BookOpen, History, Route } from 'lucide-react';
 import { EmptyState } from '@/components/feedback';
 import { MetricCard } from '@/components/data-display';
 import { Grid } from '@/components/layout';
-import { Badge, GlassPanel, PanelTitle, Text } from '@/components/ui';
+import { Badge, GlassPanel, Pagination, PanelTitle, Text } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtInt, fmtNumber } from '@/lib/numberFormat';
@@ -17,6 +17,7 @@ import type {
 
 import { FsdSectionBody } from './FsdSectionBody';
 import type { FsdSectionState } from './types';
+import { useClientPagination } from './useClientPagination';
 
 interface FsdObservatoryPanelProps {
   insights: FsdInsights | undefined;
@@ -46,6 +47,8 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
   const totals = observatory?.totals;
   const timeline = observatory?.timeline ?? [];
   const stories = observatory?.commute_stories ?? [];
+  const timelinePage = useClientPagination(timeline);
+  const storiesPage = useClientPagination(stories);
   const honesty = observatory?.honesty
     ?? t(
       'fsd.observatory.honesty',
@@ -134,15 +137,25 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               </Text>
             ) : null}
             {timeline.length > 0 ? (
-              <ol className="space-y-2" data-testid="fsd-observatory-timeline">
-                {timeline.map((event) => (
-                  <ObservatoryEventRow
-                    key={eventKey(event)}
-                    event={event}
-                    formatDistance={formatDistance}
-                  />
-                ))}
-              </ol>
+              <>
+                <ol className="space-y-2" data-testid="fsd-observatory-timeline">
+                  {timelinePage.slice.map((event) => (
+                    <ObservatoryEventRow
+                      key={eventKey(event)}
+                      event={event}
+                      formatDistance={formatDistance}
+                    />
+                  ))}
+                </ol>
+                <Pagination
+                  page={timelinePage.page}
+                  pageSize={timelinePage.pageSize}
+                  total={timelinePage.total}
+                  onPageChange={timelinePage.onPageChange}
+                  onPageSizeChange={timelinePage.onPageSizeChange}
+                  pageSizeOptions={timelinePage.pageSizeOptions}
+                />
+              </>
             ) : (
               <EmptyState
                 icon={<History className="h-8 w-8" aria-hidden="true" />}
@@ -166,8 +179,9 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
               )}
             </Text>
             {stories.length > 0 ? (
+              <>
               <ul className="space-y-3" data-testid="fsd-observatory-commute">
-                {stories.map((story) => (
+                {storiesPage.slice.map((story) => (
                   <li
                     key={story.route_key}
                     className="rounded-lg border border-[var(--border-default)] bg-[var(--surface-2)] p-3"
@@ -221,6 +235,15 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
                   </li>
                 ))}
               </ul>
+                <Pagination
+                  page={storiesPage.page}
+                  pageSize={storiesPage.pageSize}
+                  total={storiesPage.total}
+                  onPageChange={storiesPage.onPageChange}
+                  onPageSizeChange={storiesPage.onPageSizeChange}
+                  pageSizeOptions={storiesPage.pageSizeOptions}
+                />
+              </>
             ) : (
               <Text as="p" variant="caption">
                 {t(

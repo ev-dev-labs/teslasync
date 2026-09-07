@@ -26,6 +26,7 @@ import {
   DrivingCoachSection,
   DriveAnalyticsSection,
   DrivingTips,
+  GrokDynamicsBriefing,
 } from '../components/driving-dynamics';
 
 /**
@@ -148,7 +149,7 @@ export default function DrivingDynamicsPage() {
   return (
     <PageContainer
       title={t('dynamics.title', 'Driving Dynamics')}
-      subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces & driving analysis')}
+      subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces, and Grok’s powertrain read')}
       actions={<VehicleSelect />}
       query={motorLatestQuery}
     >
@@ -174,6 +175,13 @@ export default function DrivingDynamicsPage() {
               tempUnit={tempUnit}
             />
             <PedalUsage vehicleId={vehicleId} />
+          </section>
+        </FadeIn>
+
+        {/* 2b — Grok: Tesla powertrain briefing from the same live signals */}
+        <FadeIn delay={0.07}>
+          <section aria-label={t('dynamics.grok.section', "Grok's powertrain read")}>
+            <GrokDynamicsBriefing vehicleId={vehicleId} />
           </section>
         </FadeIn>
 
