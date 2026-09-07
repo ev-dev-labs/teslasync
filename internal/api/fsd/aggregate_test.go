@@ -420,6 +420,54 @@ func TestAggregate_CounterResetContributesNoDistanceAndIsCounted(t *testing.T) {
 	}
 }
 
+func TestAggregate_SpuriousZeroDoesNotAttributeTripMeterAbsolute(t *testing.T) {
+	// SelfDrivingMilesSinceReset / MilesSinceReset sometimes emit 0 on an
+	// include_fields companion row, then snap back to the trip-meter
+	// absolute. That used to become a ~5 000 mile "day".
+	const fsdM = 4_913.0 * 1609.344
+	const drivingM = 12_231.5 * 1609.344
+	resp := Aggregate(utcParams(t, []Sample{
+		fsdSample(t, "2026-02-28T22:00:00Z", fp(fsdM)),
+		drivingSample(t, "2026-02-28T22:00:00Z", fp(drivingM)),
+		fsdSample(t, "2026-03-01T09:00:00Z", fp(fsdM+1_000)),
+		drivingSample(t, "2026-03-01T09:00:00Z", fp(drivingM+1_600)),
+		fsdSample(t, "2026-03-01T09:00:01Z", fp(0)),
+		drivingSample(t, "2026-03-01T09:00:01Z", fp(0)),
+		fsdSample(t, "2026-03-01T09:00:02Z", fp(fsdM+2_000)),
+		drivingSample(t, "2026-03-01T09:00:02Z", fp(drivingM+3_200)),
+	}))
+
+	wantMeasured(t, resp.Totals.FSDDistanceM, 2_000, "total fsd (1 km before glitch + 1 km after restore)")
+	wantMeasured(t, resp.Totals.DrivingDistanceM, 3_200, "total driving")
+	if resp.Quality.FSDResetCount != 0 {
+		t.Errorf("fsd reset count = %d, want 0 after spurious restore", resp.Quality.FSDResetCount)
+	}
+	if resp.Quality.DrivingResetCount != 0 {
+		t.Errorf("driving reset count = %d, want 0 after spurious restore", resp.Quality.DrivingResetCount)
+	}
+	if !resp.Quality.ShareBasisAvailable {
+		t.Error("a restored include_fields zero must not void the shared basis")
+	}
+	day := dayOf(t, resp, "2026-03-01")
+	wantMeasured(t, day.FSDDistanceM, 2_000, "glitch day fsd")
+	wantMeasured(t, day.DrivingDistanceM, 3_200, "glitch day driving")
+	if day.ResetCount != 0 {
+		t.Errorf("glitch day reset_count = %d, want 0", day.ResetCount)
+	}
+}
+
+func TestAggregate_ImplausibleJumpIsNotDistance(t *testing.T) {
+	resp := Aggregate(utcParams(t, []Sample{
+		fsdSample(t, "2026-02-28T22:00:00Z", fp(50)),
+		fsdSample(t, "2026-03-01T09:00:00Z", fp(50+4_913*1609.344)),
+	}))
+	wantMeasured(t, resp.Totals.FSDDistanceM, 0, "implausible jump contributes no distance")
+	wantMeasured(t, dayOf(t, resp, "2026-03-01").FSDDistanceM, 0, "implausible day")
+	if resp.Quality.FSDResetCount != 0 {
+		t.Errorf("reset count = %d, want 0 (discontinuity is not a driver reset)", resp.Quality.FSDResetCount)
+	}
+}
+
 func TestAggregate_IndependentResetsClampShareAtOneHundredPercent(t *testing.T) {
 	resp := Aggregate(utcParams(t, []Sample{
 		fsdSample(t, "2026-02-28T22:00:00Z", fp(0)),

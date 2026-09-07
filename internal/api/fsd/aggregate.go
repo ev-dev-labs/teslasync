@@ -174,12 +174,16 @@ func applyCompactedObservationStats(
 //     first in-window observation without a baseline contributes nothing and
 //     does not open the attributable span.
 //   - A non-negative delta is attributed in full to the local calendar day of
-//     the LATER sample.
+//     the LATER sample, unless it is physically implausible for the interval
+//     (faster than maxAttributableSpeedMps) — that is a discontinuity, not
+//     travel.
 //   - A negative delta is a counter reset: it is recorded, and contributes
 //     exactly zero distance. The post-reset absolute value is NOT treated as
-//     distance travelled, because the distance accumulated between the reset
-//     and the next emission is unknowable. A reset still opens/extends the
-//     attributable span — the counter is demonstrably reporting.
+//     distance travelled. If the next reading returns to the pre-reset
+//     magnitude (include_fields zero / trip-meter glitch), the drop is
+//     uncounted and only any excess past the pre-reset value is travel.
+//   - A reset still opens/extends the attributable span — the counter is
+//     demonstrably reporting.
 //   - A sample whose timestamp does not advance is a duplicate/out-of-order
 //     redelivery and is skipped without touching the accumulator.
 func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterState {
@@ -197,6 +201,7 @@ func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterS
 
 	var prev *float64
 	var prevTS time.Time
+	var cursor tripMeterCursor
 
 	for _, s := range ordered {
 		inWindow := !s.TS.Before(start)
@@ -208,6 +213,7 @@ func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterS
 			// differencing trusted values across it could bridge a hidden reset
 			// or mix wire units.
 			prev = nil
+			cursor.clear()
 			if !inWindow {
 				state.baselineAvailable = false
 			}
@@ -222,6 +228,7 @@ func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterS
 			// Invalid observations are also barriers. The next valid row is a
 			// fresh anchor, never a delta against stale pre-error state.
 			prev = nil
+			cursor.clear()
 			if !inWindow {
 				state.baselineAvailable = false
 			}
@@ -256,14 +263,32 @@ func accumulate(samples []Sample, start time.Time, loc *time.Location) *counterS
 		if prev != nil {
 			state.derived = true
 			state.perDayDerived[day] = true
-			change := signalcounter.Compare(*prev, value)
-			switch change.Kind {
-			case signalcounter.ChangeReset:
+			step := stepTripMeter(*prev, value, s.TS.Sub(prevTS), day, &cursor)
+			switch {
+			case step.Reset:
 				state.resets++
 				state.perDayResets[day]++
-			case signalcounter.ChangeAdvanced:
-				state.perDayMeters[day] += change.Delta
-				state.totalMeters += change.Delta
+			case step.Restored:
+				if state.resets > 0 {
+					state.resets--
+				}
+				if step.UndoResetDay != "" {
+					state.perDayResets[step.UndoResetDay]--
+					if state.perDayResets[step.UndoResetDay] < 0 {
+						delete(state.perDayResets, step.UndoResetDay)
+					}
+				}
+				if step.Delta > 0 {
+					state.perDayMeters[day] += step.Delta
+					state.totalMeters += step.Delta
+				}
+			case step.Implausible:
+				// New baseline after a unit-mix or zero-glitch jump.
+			default:
+				if step.Delta > 0 {
+					state.perDayMeters[day] += step.Delta
+					state.totalMeters += step.Delta
+				}
 			}
 		}
 

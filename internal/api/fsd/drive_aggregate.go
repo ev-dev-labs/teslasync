@@ -130,22 +130,29 @@ func BuildDriveAnalytics(
 	analytics := emptyDriveAnalytics(current, previous)
 	var ambiguousDistance, unattributedDistance float64
 
+	var fsdCursor tripMeterCursor
 	for index := 1; index < len(fsdObservations); index++ {
 		earlier := fsdObservations[index-1]
 		later := fsdObservations[index]
 		if earlier.segment != later.segment {
+			fsdCursor.clear()
 			continue
 		}
+		step := stepTripMeter(
+			earlier.value,
+			later.value,
+			later.at.Sub(earlier.at),
+			"",
+			&fsdCursor,
+		)
 		if later.at.Before(current.Period.StartAt) || !later.at.Before(current.Period.EndAt) {
 			continue
 		}
-
-		change := signalcounter.Compare(earlier.value, later.value)
-		if change.Kind != signalcounter.ChangeAdvanced {
+		if step.Delta <= 0 {
 			continue
 		}
 		if earlier.at.Before(previous.Period.StartAt) {
-			unattributedDistance += change.Delta
+			unattributedDistance += step.Delta
 			continue
 		}
 
@@ -153,14 +160,14 @@ func BuildDriveAnalytics(
 		currentCandidates := currentPeriodStates(candidates, currentDriveIDs)
 		switch len(candidates) {
 		case 0:
-			unattributedDistance += change.Delta
+			unattributedDistance += step.Delta
 		case 1:
 			if len(currentCandidates) == 0 {
-				unattributedDistance += change.Delta
+				unattributedDistance += step.Delta
 				continue
 			}
 			state := currentCandidates[0]
-			state.uniqueDistanceM += change.Delta
+			state.uniqueDistanceM += step.Delta
 			if !intervalIsBoundedByDrive(
 				state.drive,
 				earlier.at,
@@ -173,21 +180,21 @@ func BuildDriveAnalytics(
 				state.summary.Evidence = append(state.summary.Evidence, EvidenceInterval{
 					StartAt:      maxTime(earlier.at, state.drive.StartedAt),
 					EndAt:        minTime(later.at, driveEnd(state.drive, current.Period.EndAt)),
-					FSDDistanceM: roundMeters(change.Delta),
+					FSDDistanceM: roundMeters(step.Delta),
 					Confidence:   ConfidenceEstimated,
 					Approximate:  true,
 				})
 			}
 		default:
 			if len(currentCandidates) == 0 {
-				unattributedDistance += change.Delta
+				unattributedDistance += step.Delta
 				continue
 			}
-			ambiguousDistance += change.Delta
+			ambiguousDistance += step.Delta
 			totalOverlap := totalOverlapDuration(candidates, earlier.at, later.at, current.Period.EndAt)
 			for _, state := range candidates {
 				share := proportionalDistance(
-					change.Delta,
+					step.Delta,
 					overlapDuration(state.drive, earlier.at, later.at, current.Period.EndAt),
 					totalOverlap,
 					len(candidates),
