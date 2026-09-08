@@ -494,8 +494,8 @@ describe('DriveDetailPage', () => {
     expect(screen.getByTestId('ai-coaching')).toHaveAttribute('data-drive-id', '42')
     expect(useFsdInsightsRangeMock).toHaveBeenCalledWith(
       '1',
-      '2025-03-01T09:58:00.000Z',
-      '2025-03-01T10:47:00.001Z',
+      '2025-02-28T10:00:00.000Z',
+      '2025-03-02T10:45:00.001Z',
       expect.any(String),
       true,
     )

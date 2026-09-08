@@ -60,12 +60,18 @@ export default function DriveDetailPage() {
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
       return { start: undefined, end: undefined };
     }
+    // SelfDrivingMilesSinceReset is sparse. A ±2 minute window only served
+    // the two-minute coverage-anchor and dropped the bookend samples that
+    // actually close a drive's delta — drive detail then rendered Unknown
+    // with "No positive counter increase". Look around far enough to load
+    // those bookends and any intervening drives (so overlap stays honest).
+    const lookaroundMs = 24 * 60 * 60 * 1000;
     return {
-      start: new Date(startMs - 2 * 60_000).toISOString(),
+      start: new Date(startMs - lookaroundMs).toISOString(),
       // The endpoint is half-open. One extra millisecond admits an anchor
       // exactly at the backend's two-minute coverage limit; later anchors
       // are still rejected by the attribution guard.
-      end: new Date(endMs + 2 * 60_000 + 1).toISOString(),
+      end: new Date(endMs + lookaroundMs + 1).toISOString(),
     };
   }, [drive]);
   const fsdQuery = useFsdInsightsRange(

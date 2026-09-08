@@ -101,6 +101,46 @@ func TestBuildDriveAnalytics_AttributesSynchronizedEvidenceToOneDrive(t *testing
 	}
 }
 
+func TestBuildDriveAnalytics_DriveDetailLookaroundIncludesSparseBookend(t *testing.T) {
+	// Drive detail queries ±24h so previous.StartAt is before the last FSD
+	// tick. A ±2 minute window left that bookend unattributed and the panel blank.
+	start := at(t, "2026-03-02T12:18:00Z")
+	end := at(t, "2026-03-04T12:30:00Z")
+	driveStart := at(t, "2026-03-03T12:18:00Z")
+	driveEndAt := at(t, "2026-03-03T12:30:00Z")
+	distance := 6300.0
+	samples := []Sample{
+		trustedSample(SignalFSDDistance, at(t, "2026-03-03T09:00:00Z"), 10000),
+		trustedSample(SignalDrivingDistance, at(t, "2026-03-03T09:00:00Z"), 50000),
+		trustedSample(SignalFSDDistance, at(t, "2026-03-03T12:28:00Z"), 14500),
+		trustedSample(SignalDrivingDistance, at(t, "2026-03-03T12:28:00Z"), 56300),
+	}
+	current := responseForRange(7, start, end, samples)
+	previous := responseForRange(7, start.Add(-end.Sub(start)), start, samples)
+
+	analytics := BuildDriveAnalytics(current, previous, AnalyticsInput{
+		CounterSamples: samples,
+		Drives: []DriveRecord{{
+			ID:        350,
+			StartedAt: driveStart,
+			EndedAt:   &driveEndAt,
+			DistanceM: &distance,
+		}},
+	}, time.UTC, true)
+
+	if len(analytics.ContributingDrives) != 1 {
+		t.Fatalf("drives = %d, want 1", len(analytics.ContributingDrives))
+	}
+	drive := analytics.ContributingDrives[0]
+	if drive.Confidence != ConfidenceEstimated {
+		t.Errorf("confidence = %q, want estimated", drive.Confidence)
+	}
+	wantMeasured(t, drive.FSDDistanceM, 4500, "lookaround FSD distance")
+	if len(drive.Evidence) == 0 {
+		t.Fatal("evidence is empty; drive detail would show no positive counter increase")
+	}
+}
+
 func TestBuildDriveAnalytics_SparseIntervalAcrossDrivesIsAmbiguous(t *testing.T) {
 	start := at(t, "2026-03-03T08:00:00Z")
 	end := at(t, "2026-03-03T13:00:00Z")
