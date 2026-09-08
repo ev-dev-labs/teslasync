@@ -112,9 +112,12 @@ export default function ChargingListPage() {
   const {
     start: startDate,
     end: endDate,
+    startInstant,
+    endInstantExclusive,
     setRangeWithUrlUpdates,
   } = useRangeState({
     persistKey: 'charging.list.range',
+    timezone: tz,
   });
   const [search] = useUrlString('q', '');
   const [collection] = useUrlEnum<Collection>('coll', COLLECTIONS, 'all');
@@ -130,8 +133,8 @@ export default function ChargingListPage() {
   const chargingQuery = useChargingSessionsPaginated(vehicleId, {
     limit: 500,                 // Page-side pagination — fetch a wide window so client filters work
     offset: 0,
-    start: startDate,
-    end: endDate,
+    start: startInstant,
+    end: endInstantExclusive,
   });
   const { data: sessions, isLoading, error, refetch } = chargingQuery;
   /* Retained sessions survive a failed background refresh: only an initial
@@ -779,9 +782,10 @@ export default function ChargingListPage() {
           <VehicleSelect />
           <RangePicker
             value={{ start: startDate, end: endDate }}
-            onChange={(r) => {
-              setRangeWithUrlUpdates(r, { page: null });
+            onChange={(r, presetId) => {
+              setRangeWithUrlUpdates(r, { page: null }, presetId);
             }}
+            timezone={tz}
             align="end"
             triggerTestId="charging-list-range"
           />

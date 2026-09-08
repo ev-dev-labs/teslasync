@@ -53,6 +53,37 @@ func TestListChargingPlaceBackfillCandidates(t *testing.T) {
 	}
 }
 
+func TestListMissingChargeLocationCandidates(t *testing.T) {
+	startedAt := time.Date(2026, 9, 1, 14, 31, 0, 0, time.UTC)
+	pool := &fakePool{queryQueue: []queryResult{{rows: newFakeRows([][]any{{
+		int64(54), int64(7), startedAt, nil, nil, nil,
+	}})}}}
+
+	got, err := newRepo(pool).ListMissingChargeLocationCandidates(context.Background(), 10, 25)
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if len(got) != 1 || got[0].SessionID != 54 || got[0].VehicleID != 7 {
+		t.Fatalf("unexpected candidate: %+v", got)
+	}
+	if got[0].StartLat != nil || got[0].StartLng != nil {
+		t.Fatalf("want nil coords, got lat=%v lng=%v", got[0].StartLat, got[0].StartLng)
+	}
+	call := pool.queryCalls[0]
+	for _, sub := range []string{
+		"start_lat IS NULL OR start_lng IS NULL",
+		"start_place IS NULL OR btrim(start_place) = ''",
+		"ORDER BY id",
+	} {
+		if !strings.Contains(call.sql, sub) {
+			t.Errorf("candidate SQL missing %q:\n%s", sub, call.sql)
+		}
+	}
+	if call.args[0] != int64(10) || call.args[1] != 25 {
+		t.Errorf("candidate args = %v, want [10 25]", call.args)
+	}
+}
+
 func TestListChargingPlaceBackfillCandidates_QueryError(t *testing.T) {
 	pool := &fakePool{queryQueue: []queryResult{{err: errBoom}}}
 	_, err := newRepo(pool).ListChargingPlaceBackfillCandidates(context.Background(), 0, 100)
@@ -80,6 +111,7 @@ func TestApplyCurrentRateEstimate(t *testing.T) {
 			"historical.effective_from <= cs.started_at",
 			"cs.cost_source IS NULL AND cs.cost_decimal IS NULL",
 			"cs.rate_id IS NULL OR cs.rate_id = rate.id",
+			"tesla_charging_history",
 		} {
 			if !strings.Contains(call.sql, sub) {
 				t.Errorf("estimate SQL missing %q:\n%s", sub, call.sql)

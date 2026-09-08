@@ -85,6 +85,12 @@ export interface RangePickerProps {
   presetsOnly?: boolean;
   /** Use "local" only when this range is intentionally independent of the shell range. */
   scope?: 'workspace' | 'local';
+  /**
+   * IANA timezone for preset civil dates (Today / 7d / …). Vehicle pages
+   * should pass the vehicle tz so evening local charges are not dropped
+   * when the browser is on UTC.
+   */
+  timezone?: string;
 }
 
 function isoFromDate(d: Date): string {
@@ -136,6 +142,7 @@ export function RangePicker({
   triggerTestId,
   presetsOnly = false,
   scope = 'workspace',
+  timezone,
 }: RangePickerProps) {
   const { t, i18n } = useTranslation();
   const workspaceScope = useWorkspaceScope();
@@ -171,8 +178,8 @@ export function RangePicker({
     if (!preset) return;
     const r =
       preset.id === 'all'
-        ? { start: resolveAllTimeStart(minDate), end: preset.resolve().end }
-        : preset.resolve();
+        ? { start: resolveAllTimeStart(minDate), end: preset.resolve(undefined, timezone).end }
+        : preset.resolve(undefined, timezone);
     onChange(r, preset.id);
     setOpen(false);
   };

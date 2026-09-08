@@ -171,9 +171,10 @@ func TestCreateRate_Success(t *testing.T) {
 	exactCall := tx.execCalls[1]
 	for _, sub := range []string{
 		"cost_source   = 'geofence_tariff'",
-		"started_at >= $5",
-		"cost_source = 'default_estimate'",
-		"cost_source = 'geofence_tariff' AND rate_id = $2",
+		"cs.started_at >= $5",
+		"cs.cost_source = 'default_estimate'",
+		"cs.cost_source = 'geofence_tariff' AND cs.rate_id = $2",
+		"tesla_charging_history",
 	} {
 		if !strings.Contains(exactCall.sql, sub) {
 			t.Errorf("exact-session SQL missing %q:\n%s", sub, exactCall.sql)

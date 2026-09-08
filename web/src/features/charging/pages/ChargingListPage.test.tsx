@@ -397,6 +397,22 @@ describe('formatHour', () => {
 
 /* ─────────────────────────────── Component tests ─────────────────────────── */
 
+describe('ChargingListPage — date window', () => {
+  it('fetches sessions with vehicle-timezone RFC3339 instants, not UTC date-only days', async () => {
+    renderPage();
+    await screen.findByRole('heading', { level: 1, name: 'Charging Sessions' });
+    expect(mockSessions).toHaveBeenCalled();
+    const opts = mockSessions.mock.calls.at(-1)?.[1] as {
+      start?: string;
+      end?: string;
+    };
+    expect(opts.start).toMatch(/T/);
+    expect(opts.end).toMatch(/T/);
+    expect(opts.start).not.toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(opts.end).not.toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+});
+
 describe('ChargingListPage — happy path', () => {
   it('renders the shell, overview KPIs, trend chart, gated insight panels and every session card', async () => {
     renderPage();

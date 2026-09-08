@@ -94,12 +94,30 @@ export function calendarRangeToInstants(range: CalendarRange): InstantRange {
   };
 }
 
-function nextDay(date: string): string {
+/** Civil YYYY-MM-DD of `instant` in `timezone`. */
+export function civilDateInTimeZone(instant: Date, timezone: string): string {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: timezone,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(instant);
+  const get = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? '';
+  return `${get('year')}-${get('month')}-${get('day')}`;
+}
+
+/** Add (or subtract) whole calendar days from a YYYY-MM-DD civil date. */
+export function addCivilDays(date: string, days: number): string {
   const [yStr, mStr, dStr] = date.split('-');
   const d = new Date(Date.UTC(Number(yStr), Number(mStr) - 1, Number(dStr)));
-  d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCDate(d.getUTCDate() + days);
   const y = d.getUTCFullYear();
   const m = String(d.getUTCMonth() + 1).padStart(2, '0');
   const dd = String(d.getUTCDate()).padStart(2, '0');
   return `${y}-${m}-${dd}`;
+}
+
+function nextDay(date: string): string {
+  return addCivilDays(date, 1);
 }

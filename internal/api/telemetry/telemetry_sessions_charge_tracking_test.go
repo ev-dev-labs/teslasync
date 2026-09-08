@@ -71,6 +71,49 @@ func (f *chargeTrackingFakeState) snapshotCalls() []chargeStateCallRecord {
 // Compile-time guarantee.
 var _ signal.StateReader = (*chargeTrackingFakeState)(nil)
 
+func TestRecoverChargeCoords_PrefersKnownPointers(t *testing.T) {
+	tracker := &TelemetrySessionTracker{}
+	lat, lon := 37.4419, -122.1430
+	gotLat, gotLon, ok := tracker.recoverChargeCoords(
+		context.Background(),
+		7,
+		time.Date(2026, 9, 1, 14, 31, 0, 0, time.UTC),
+		&lat,
+		&lon,
+	)
+	if !ok || gotLat != lat || gotLon != lon {
+		t.Fatalf("recoverChargeCoords = (%v,%v,%v), want known pointers", gotLat, gotLon, ok)
+	}
+}
+
+func TestRecoverChargeCoords_FromStateWhenMissing(t *testing.T) {
+	tracker := &TelemetrySessionTracker{}
+	reader := &chargeTrackingFakeState{
+		stateFn: func(_ context.Context, vehicleID int64, _ time.Time) (signal.State, error) {
+			if vehicleID != 7 {
+				t.Fatalf("vehicleID = %d, want 7", vehicleID)
+			}
+			return signal.State{
+				"LocationLatitude":  37.4419,
+				"LocationLongitude": -122.1430,
+			}, nil
+		},
+	}
+	tracker.SetChargeStateReader(reader)
+	t.Cleanup(func() { tracker.SetChargeStateReader(nil) })
+
+	gotLat, gotLon, ok := tracker.recoverChargeCoords(
+		context.Background(),
+		7,
+		time.Date(2026, 9, 1, 14, 31, 0, 0, time.UTC),
+		nil,
+		nil,
+	)
+	if !ok || gotLat != 37.4419 || gotLon != -122.1430 {
+		t.Fatalf("recoverChargeCoords = (%v,%v,%v), want state snapshot", gotLat, gotLon, ok)
+	}
+}
+
 func TestFreshChargeCoordinateValueRequiresObservedTimestamp(t *testing.T) {
 	now := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
 	if freshChargeCoordinateValue(&signal.Value{

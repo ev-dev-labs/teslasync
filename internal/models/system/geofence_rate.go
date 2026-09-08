@@ -119,6 +119,18 @@ type ChargingPlaceBackfillCandidate struct {
 	StartPlace *string   `db:"start_place" json:"start_place,omitempty"`
 }
 
+// ChargingLocationBackfillCandidate is a session missing start coordinates
+// and/or a start_place label. Lat/lng are pointers so NULL GPS is distinct
+// from the (0,0) sentinel already excluded by place discovery.
+type ChargingLocationBackfillCandidate struct {
+	SessionID  int64     `db:"id" json:"session_id"`
+	VehicleID  int64     `db:"vehicle_id" json:"vehicle_id"`
+	StartedAt  time.Time `db:"started_at" json:"started_at"`
+	StartLat   *float64  `db:"start_lat" json:"start_lat,omitempty"`
+	StartLng   *float64  `db:"start_lng" json:"start_lng,omitempty"`
+	StartPlace *string   `db:"start_place" json:"start_place,omitempty"`
+}
+
 // GeofenceChargingSummary aggregates a geofence's priced charging activity
 // for one currency. Different currencies are NEVER summed into one total —
 // callers always receive a slice grouped by currency, even when a place has
