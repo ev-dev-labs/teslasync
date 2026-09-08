@@ -505,6 +505,28 @@ describe('useMotorHistory', () => {
     expect(lastUrl()).toBe('/motor?vehicle_id=3&limit=10');
     expect(result.current.data).toEqual([]);
   });
+
+  it('appends start and end when given a drive window', async () => {
+    requestMock.mockResolvedValueOnce([]);
+    const { result } = renderH(() =>
+      useMotorHistory(3, {
+        limit: 200,
+        start: '2026-09-07T10:00:00.000Z',
+        end: '2026-09-07T11:00:01.000Z',
+      }),
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(lastUrl()).toBe(
+      '/motor?vehicle_id=3&limit=200&start=2026-09-07T10%3A00%3A00.000Z&end=2026-09-07T11%3A00%3A01.000Z',
+    );
+    expect(result.current.data).toEqual([]);
+  });
+
+  it('does not fetch when enabled is false', async () => {
+    renderH(() => useMotorHistory(3, { enabled: false }));
+    await tick();
+    expect(requestMock).not.toHaveBeenCalled();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

@@ -23,7 +23,6 @@ import {
   ResponsiveContainer,
   ReferenceLine,
 } from '@/components/charts';
-import { RangePicker } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 import { formatDateShort } from '@/lib/dateFormat';
 import type { Drive } from '@/types/driving';
@@ -52,12 +51,6 @@ const EMPTY_DRIVES: Drive[] = [];
 
 interface DriveAnalyticsSectionProps {
   filteredDrives: Drive[];
-  startDate: string;
-  endDate: string;
-  onRangeChange: (
-    range: { start: string; end: string },
-    presetId?: string,
-  ) => void;
   toDistanceDisplay: (v: number) => number;
   toSpeedDisplay: (v: number) => number;
   distanceUnit: string;
@@ -66,9 +59,6 @@ interface DriveAnalyticsSectionProps {
 
 export default function DriveAnalyticsSection({
   filteredDrives,
-  startDate,
-  endDate,
-  onRangeChange,
   toDistanceDisplay,
   toSpeedDisplay,
   distanceUnit,
@@ -137,17 +127,12 @@ export default function DriveAnalyticsSection({
 
   return (
     <>
-      {/* Header + date filter */}
       <FadeIn delay={0.45}>
         <div className="mt-2 mb-2">
           <SectionTitle>
             {t('dynamics.driveAnalytics', 'Drive Analytics')}
           </SectionTitle>
         </div>
-        <RangePicker
-          value={{ start: startDate, end: endDate }}
-          onChange={onRangeChange}
-        />
       </FadeIn>
 
       {/* Speed Distribution + Acceleration Patterns */}

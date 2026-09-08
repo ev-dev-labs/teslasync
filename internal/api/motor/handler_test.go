@@ -127,6 +127,55 @@ func TestMotorHandler_History_ChartMode(t *testing.T) {
 	}
 }
 
+func TestEvenSampleMaps(t *testing.T) {
+	mk := func(n int) []map[string]any {
+		rows := make([]map[string]any, n)
+		for i := 0; i < n; i++ {
+			rows[i] = map[string]any{"i": i}
+		}
+		return rows
+	}
+	got := evenSampleMaps(mk(10), 3)
+	if len(got) != 3 {
+		t.Fatalf("len = %d, want 3", len(got))
+	}
+	if got[0]["i"] != 0 || got[len(got)-1]["i"] != 9 {
+		t.Fatalf("first/last = %v/%v, want 0/9", got[0]["i"], got[len(got)-1]["i"])
+	}
+	if len(evenSampleMaps(mk(3), 200)) != 3 {
+		t.Fatalf("short series must stay intact")
+	}
+}
+
+func TestMotorHandler_History_EvenSampleLimit(t *testing.T) {
+	t0 := time.Date(2026, 9, 7, 10, 0, 0, 0, time.UTC)
+	folded := make([]signal.TimelineRow, 10)
+	for i := range folded {
+		folded[i] = signal.TimelineRow{
+			Timestamp: t0.Add(time.Duration(i) * time.Minute),
+			Fields:    map[string]signal.SignalValue{"shift_state": "D"},
+		}
+	}
+	fake := &fakeStateReader{
+		timelineFn: func(_ context.Context, _ int64, _ []signal.FieldMapping, _, _ time.Time, _ signal.TimelineOptions) ([]signal.TimelineRow, error) {
+			return folded, nil
+		},
+	}
+	h := NewMotorHandler(fake, newTestLiveStateReader(fake))
+	rec := httptest.NewRecorder()
+	h.List(rec, newMotorRequest("42", "/motor?vehicle_id=42&limit=3"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+	}
+	var got []map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(got) != 3 {
+		t.Fatalf("row count = %d, want 3 (even sample, not oldest prefix)", len(got))
+	}
+}
+
 // TestMotorHandler_Latest_UsesNow verifies that Latest derives the current
 // motor / powertrain snapshot from StateReader.State(time.Now()) — not
 // from a rolling-window or session-anchored timestamp. Latest projects

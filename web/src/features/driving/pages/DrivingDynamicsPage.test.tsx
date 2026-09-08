@@ -137,6 +137,29 @@ vi.mock('@/hooks/useSignalQueryInvalidation', () => ({
   useSignalQueryInvalidation: vi.fn(),
 }));
 
+vi.mock('@/components/forms', async (importActual) => {
+  const actual = await importActual<typeof import('@/components/forms')>();
+  return {
+    ...actual,
+    RangePicker: (p: {
+      value: { start: string; end: string };
+      onChange: (range: { start: string; end: string }) => void;
+    }) => (
+      <div>
+        <span data-testid="range-start">{p.value.start}</span>
+        <span data-testid="range-end">{p.value.end}</span>
+        <button
+          type="button"
+          data-testid="widen-range"
+          onClick={() => p.onChange({ start: '2000-01-01', end: '2999-12-31' })}
+        >
+          widen
+        </button>
+      </div>
+    ),
+  };
+});
+
 // Replace the child barrel with prop-surfacing doubles. Each double renders the
 // exact page-computed props the assertions care about; DriveAnalyticsSection
 // also exposes the wired date-range callbacks as buttons for interaction tests.
@@ -185,21 +208,10 @@ vi.mock('../components/driving-dynamics', () => ({
   DriveAnalyticsSection: (p: any) => (
     <div data-testid="drive-analytics">
       <span data-testid="da-count">{p.filteredDrives.length}</span>
-      <span data-testid="da-start">{p.startDate}</span>
-      <span data-testid="da-end">{p.endDate}</span>
       <span data-testid="da-dunit">{p.distanceUnit}</span>
       <span data-testid="da-sunit">{p.speedUnit}</span>
       <span data-testid="da-distance">{p.toDistanceDisplay(1000)}</span>
       <span data-testid="da-speed">{p.toSpeedDisplay(10)}</span>
-      <button
-        type="button"
-        data-testid="widen-range"
-        onClick={() => {
-          p.onRangeChange({ start: '2000-01-01', end: '2999-12-31' });
-        }}
-      >
-        widen
-      </button>
     </div>
   ),
   DrivingTips: (p: any) => (
@@ -209,6 +221,14 @@ vi.mock('../components/driving-dynamics', () => ({
   ),
   GrokDynamicsBriefing: (p: any) => (
     <div data-testid="grok-briefing">{String(p.vehicleId)}</div>
+  ),
+  DynamicsTripToolbar: (p: any) => (
+    <div data-testid="trip-toolbar">
+      <span data-testid="tt-count">{p.drives.length}</span>
+      <span data-testid="tt-drive">{p.selectedDriveId}</span>
+      <span data-testid="tt-start">{p.startDate}</span>
+      <span data-testid="tt-end">{p.endDate}</span>
+    </div>
   ),
 }));
 
@@ -348,7 +368,7 @@ afterEach(() => {
 });
 
 describe('DrivingDynamicsPage — structure & a11y', () => {
-  it('renders the title, subtitle, vehicle picker and all nine labelled sections', () => {
+  it('renders the title, subtitle, vehicle picker and all labelled sections', () => {
     renderPage();
 
     expect(
@@ -361,9 +381,10 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     // VehicleSelect renders a labelled combobox (fleet has vehicles).
     expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument();
 
-    // Every <section aria-label> becomes an accessible region — exactly nine.
+    // Every <section aria-label> becomes an accessible region.
     const regions = screen.getAllByRole('region');
-    expect(regions).toHaveLength(9);
+    expect(regions).toHaveLength(10);
+    expect(screen.getByRole('region', { name: 'Trip review' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Live cockpit' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: "Grok's powertrain read" })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Motor efficiency' })).toBeInTheDocument();
@@ -383,9 +404,15 @@ describe('DrivingDynamicsPage — structure & a11y', () => {
     // shared date filter narrows it for two different panels). Everything
     // else is owned by the panel that renders it, at its own cadence.
     expect(mockMotorLatest).toHaveBeenCalledWith(1, 5000);
-    expect(mockDrives).toHaveBeenCalledWith('1', 30000);
-    // The page must NOT re-fetch what the panels now own — a page-level
-    // history/coach fetch is exactly the prop-drilling that froze them.
+    expect(mockDrives).toHaveBeenCalledWith(
+      '1',
+      expect.objectContaining({ limit: 1000, refetchInterval: 30000 }),
+    );
+    expect(mockDrives).toHaveBeenCalledWith(
+      '1',
+      expect.objectContaining({ limit: 5, refetchInterval: 30000 }),
+    );
+    // History stays in the trip panels (shared drive window), not the page.
     expect(mockMotorHistory).not.toHaveBeenCalled();
     expect(mockCoach).not.toHaveBeenCalled();
   });
@@ -443,11 +470,15 @@ describe('DrivingDynamicsPage — drive date filtering', () => {
   it('filters drives to the default 7-day window', () => {
     renderPage();
     // Fixed now = 2025-06-15 → window [2025-06-09, 2025-06-15].
-    expect(screen.getByTestId('da-start')).toHaveTextContent('2025-06-09');
-    expect(screen.getByTestId('da-end')).toHaveTextContent('2025-06-15');
+    expect(screen.getByTestId('range-start')).toHaveTextContent('2025-06-09');
+    expect(screen.getByTestId('range-end')).toHaveTextContent('2025-06-15');
+    expect(screen.getByTestId('tt-start')).toHaveTextContent('2025-06-09');
+    expect(screen.getByTestId('tt-end')).toHaveTextContent('2025-06-15');
     // Only drive #1 (2025-06-12) falls inside; #2 before, #3 after, #4 undated.
     expect(num('da-count')).toBe(1);
     expect(num('sg-count')).toBe(1);
+    expect(num('tt-count')).toBe(1);
+    expect(screen.getByTestId('tt-drive')).toHaveTextContent('1');
   });
 
   it('re-filters when the user widens the date range', async () => {
@@ -460,8 +491,9 @@ describe('DrivingDynamicsPage — drive date filtering', () => {
     // the undated drive (#4) is still excluded by the `?? ''` guard.
     await waitFor(() => expect(num('da-count')).toBe(3));
     expect(num('sg-count')).toBe(3);
-    expect(screen.getByTestId('da-start')).toHaveTextContent('2000-01-01');
-    expect(screen.getByTestId('da-end')).toHaveTextContent('2999-12-31');
+    expect(num('tt-count')).toBe(3);
+    expect(screen.getByTestId('range-start')).toHaveTextContent('2000-01-01');
+    expect(screen.getByTestId('range-end')).toHaveTextContent('2999-12-31');
   });
 
   it('passes an empty filtered list when drives have not loaded', () => {
@@ -524,7 +556,10 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
     // vehicleId ?? 0 → the live hook receives 0 (its `enabled` gate);
     // the drives list receives undefined.
     expect(mockMotorLatest).toHaveBeenCalledWith(0, 5000);
-    expect(mockDrives).toHaveBeenCalledWith(undefined, 30000);
+    expect(mockDrives).toHaveBeenCalledWith(
+      undefined,
+      expect.objectContaining({ refetchInterval: 30000 }),
+    );
 
     // The live sub-panels receive the raw null id (they gate internally).
     expect(screen.getByTestId('gforce')).toHaveTextContent('null');
@@ -534,8 +569,8 @@ describe('DrivingDynamicsPage — no-vehicle state', () => {
 
   it('still renders every section and hides the picker for an empty fleet', () => {
     renderPage();
-    // No blank page: all nine regions remain, filtered list is empty.
-    expect(screen.getAllByRole('region')).toHaveLength(9);
+    // No blank page: all labelled regions remain, filtered list is empty.
+    expect(screen.getAllByRole('region')).toHaveLength(10);
     expect(num('da-count')).toBe(0);
     expect(screen.getByTestId('coach')).toHaveTextContent('undefined');
     // VehicleSelect renders nothing when the fleet is empty.

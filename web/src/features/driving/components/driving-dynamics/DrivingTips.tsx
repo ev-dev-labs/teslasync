@@ -4,6 +4,7 @@ import { AlertTriangle, Lightbulb, ShieldCheck, type LucideIcon } from 'lucide-r
 
 import { GlassPanel, PanelTitle, Text } from '@/components/ui';
 import { cn } from '@/lib/cn';
+import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { useMotorStats } from './useMotorStats';
 
 /**
@@ -21,6 +22,7 @@ interface Tip {
 
 interface DrivingTipsProps {
   vehicleId: number | null | undefined;
+  historyQuery?: MotorHistoryQuery;
 }
 
 const TONE_ICON: Record<TipTone, LucideIcon> = {
@@ -35,9 +37,9 @@ const TONE_ICON_CLASS: Record<TipTone, string> = {
   caution: 'text-amber-300',
 };
 
-export default function DrivingTips({ vehicleId }: DrivingTipsProps) {
+export default function DrivingTips({ vehicleId, historyQuery }: DrivingTipsProps) {
   const { t } = useTranslation();
-  const { motorStats } = useMotorStats(vehicleId);
+  const { motorStats } = useMotorStats(vehicleId, historyQuery);
 
   const tips = useMemo<Tip[]>(() => {
     const list: Tip[] = [];

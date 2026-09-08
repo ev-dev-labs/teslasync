@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 
-import { useMotorHistory } from '@/api/hooks/useVehicles';
+import { useMotorHistory, type MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { INTERVALS } from '@/lib/constants';
 import { computeMotorStats, type MotorStats } from './helpers';
 
@@ -25,16 +25,20 @@ export interface UseMotorStatsResult {
  * single in-flight request and a single cache entry while each one owns its
  * own loading / error state.
  *
- * The window refreshes at FAST cadence. It aggregates a rolling 200-row
- * window, so it genuinely does change as new telemetry lands — the page used
- * to fetch it exactly once and leave every derived panel frozen for the
- * lifetime of the route.
+ * Pass a drive `start`/`end` to scope the pivot to one session. Completed
+ * drives should set refetchInterval false; in-progress drives can poll slowly.
  */
-export function useMotorStats(vehicleId: number | null | undefined): UseMotorStatsResult {
+export function useMotorStats(
+  vehicleId: number | null | undefined,
+  window?: MotorHistoryQuery,
+): UseMotorStatsResult {
   const { data, isLoading, isError, error, refetch } = useMotorHistory(
     vehicleId ?? 0,
-    MOTOR_HISTORY_LIMIT,
-    INTERVALS.FAST,
+    {
+      limit: MOTOR_HISTORY_LIMIT,
+      refetchInterval: INTERVALS.FAST,
+      ...window,
+    },
   );
 
   const motorStats = useMemo(() => computeMotorStats(data), [data]);

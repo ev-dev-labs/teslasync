@@ -9,10 +9,12 @@ import { FadeIn } from '@/components/motion';
 import { fmtNumber } from '@/lib/numberFormat';
 import { getThrottleStyle } from './helpers';
 import { useMotorStats } from './useMotorStats';
+import type { MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import type { TemperatureUnitPref } from '@/lib/unitConversion';
 
 interface MotorEfficiencyInsightsProps {
   vehicleId: number | null | undefined;
+  historyQuery?: MotorHistoryQuery;
   toTemperatureDisplay: (v: number) => number;
   // tempUnit is the user's display preference (e.g. '°C' or '°F'). The
   // value already INCLUDES the degree symbol — never prefix another '°'
@@ -24,11 +26,12 @@ interface MotorEfficiencyInsightsProps {
 
 export default function MotorEfficiencyInsights({
   vehicleId,
+  historyQuery,
   toTemperatureDisplay,
   tempUnit,
 }: MotorEfficiencyInsightsProps) {
   const { t } = useTranslation();
-  const { motorStats } = useMotorStats(vehicleId);
+  const { motorStats } = useMotorStats(vehicleId, historyQuery);
   const throttleStyle = motorStats ? getThrottleStyle(motorStats.avgPower) : null;
 
   const noData = (

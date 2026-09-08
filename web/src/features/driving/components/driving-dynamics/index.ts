@@ -10,3 +10,4 @@ export { default as DrivingCoachSection } from './DrivingCoachSection';
 export { default as DriveAnalyticsSection } from './DriveAnalyticsSection';
 export { default as DrivingTips } from './DrivingTips';
 export { default as GrokDynamicsBriefing } from './GrokDynamicsBriefing';
+export { default as DynamicsTripToolbar } from './DynamicsTripToolbar';
