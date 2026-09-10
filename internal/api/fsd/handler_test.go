@@ -73,6 +73,8 @@ type fakeAnalyticsRepo struct {
 	gotTo        time.Time
 	gotCtx       context.Context
 	gotVehicleID int64
+	drive        DriveRecord
+	driveErr     error
 }
 
 func (f *fakeAnalyticsRepo) LoadAnalyticsInput(
@@ -86,6 +88,16 @@ func (f *fakeAnalyticsRepo) LoadAnalyticsInput(
 	f.gotSplit = split
 	f.gotTo = to
 	return f.input, f.inputErr
+}
+
+func (f *fakeAnalyticsRepo) DriveByID(_ context.Context, _, driveID int64) (DriveRecord, error) {
+	if f.driveErr != nil {
+		return DriveRecord{}, f.driveErr
+	}
+	if f.drive.ID == 0 || f.drive.ID != driveID {
+		return DriveRecord{}, ErrDriveNotFound
+	}
+	return f.drive, nil
 }
 
 var _ driveAnalyticsRepository = (*fakeAnalyticsRepo)(nil)
@@ -732,5 +744,56 @@ func TestHandler_NowFallsBackToWallClock(t *testing.T) {
 	before := time.Now().UTC().Add(-time.Second)
 	if got := h.now(); got.Before(before) {
 		t.Errorf("now() = %v, want a fresh wall-clock reading", got)
+	}
+}
+
+func TestInsights_DriveIDCannotCombineWithRange(t *testing.T) {
+	h := newHandler(&fakeAnalyticsRepo{fakeRepo: &fakeRepo{}}, fixedClock(t, "2026-09-08T00:00:00Z"))
+	rec := doGet(t, h, "/analytics/fsd?vehicle_id=7&drive_id=350&start=2026-09-07T00:00:00Z&end=2026-09-08T00:00:00Z")
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status = %d, want 400 (body=%s)", rec.Code, rec.Body.String())
+	}
+}
+
+func TestInsights_DriveIDSetsLookaroundAndFocus(t *testing.T) {
+	driveStart := at(t, "2026-09-07T00:55:00Z")
+	driveEnd := at(t, "2026-09-07T01:19:00Z")
+	distance := 13260.0
+	drive := DriveRecord{ID: 350, StartedAt: driveStart, EndedAt: &driveEnd, DistanceM: &distance}
+	repo := &fakeAnalyticsRepo{
+		fakeRepo: &fakeRepo{},
+		drive:    drive,
+		input: AnalyticsInput{
+			CounterSamples: []Sample{
+				trustedSample(SignalFSDDistance, at(t, "2026-09-07T00:50:00Z"), 10000),
+				trustedSample(SignalDrivingDistance, at(t, "2026-09-07T00:50:00Z"), 50000),
+				trustedSample(SignalFSDDistance, at(t, "2026-09-07T01:18:00Z"), 22874.752),
+				trustedSample(SignalDrivingDistance, at(t, "2026-09-07T01:18:00Z"), 63260),
+			},
+			Drives: []DriveRecord{drive},
+		},
+	}
+	h := newHandler(repo, fixedClock(t, "2026-09-08T00:00:00Z"))
+	rec := doGet(t, h, "/analytics/fsd?vehicle_id=7&drive_id=350&include_evidence=true")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+	}
+	if !repo.gotSplit.Equal(driveStart) ||
+		!repo.gotFrom.Equal(driveStart.Add(-driveFocusLookaround)) ||
+		!repo.gotTo.Equal(driveEnd.Add(driveFocusLookaround)) {
+		t.Errorf("batch bounds = %v..%v..%v", repo.gotFrom, repo.gotSplit, repo.gotTo)
+	}
+	resp := decode(t, rec)
+	if len(resp.Analytics.ContributingDrives) != 1 || resp.Analytics.ContributingDrives[0].DriveID != 350 {
+		t.Fatalf("contributing = %+v", resp.Analytics.ContributingDrives)
+	}
+	wantMeasured(t, resp.Analytics.ContributingDrives[0].FSDDistanceM, 12874.752, "focused drive FSD")
+}
+
+func TestInsights_UnknownDriveIDIsNotFound(t *testing.T) {
+	h := newHandler(&fakeAnalyticsRepo{fakeRepo: &fakeRepo{}}, fixedClock(t, "2026-09-08T00:00:00Z"))
+	rec := doGet(t, h, "/analytics/fsd?vehicle_id=7&drive_id=350")
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 (body=%s)", rec.Code, rec.Body.String())
 	}
 }

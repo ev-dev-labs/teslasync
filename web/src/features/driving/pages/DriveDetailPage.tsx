@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { ArrowLeft, Play, Share2 } from 'lucide-react';
@@ -13,7 +13,7 @@ import { AISpeedProfileInsights } from '@/components/ai/AISpeedProfileInsights';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useDataState } from '@/hooks/useDataState';
 import { useTimezone } from '@/lib/timezone';
-import { useFsdInsightsRange } from '@/api/hooks/useAnalytics';
+import { useFsdInsightsForDrive } from '@/api/hooks/useAnalytics';
 import {
   useDriveDetailData,
   DriveDetailSkeleton,
@@ -53,31 +53,9 @@ export default function DriveDetailPage() {
    * retained may replace the page. */
   const driveState = useDataState(driveQuery, { provenance: 'historical' });
   const timezone = useTimezone('vehicle');
-  const fsdWindow = useMemo(() => {
-    if (!drive?.endTs) return { start: undefined, end: undefined };
-    const startMs = Date.parse(drive.startTs);
-    const endMs = Date.parse(drive.endTs);
-    if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
-      return { start: undefined, end: undefined };
-    }
-    // SelfDrivingMilesSinceReset is sparse. A ±2 minute window only served
-    // the two-minute coverage-anchor and dropped the bookend samples that
-    // actually close a drive's delta — drive detail then rendered Unknown
-    // with "No positive counter increase". Look around far enough to load
-    // those bookends and any intervening drives (so overlap stays honest).
-    const lookaroundMs = 24 * 60 * 60 * 1000;
-    return {
-      start: new Date(startMs - lookaroundMs).toISOString(),
-      // The endpoint is half-open. One extra millisecond admits an anchor
-      // exactly at the backend's two-minute coverage limit; later anchors
-      // are still rejected by the attribution guard.
-      end: new Date(endMs + lookaroundMs + 1).toISOString(),
-    };
-  }, [drive]);
-  const fsdQuery = useFsdInsightsRange(
-    drive?.endTs ? String(drive.vehicleId) : undefined,
-    fsdWindow.start,
-    fsdWindow.end,
+  const fsdQuery = useFsdInsightsForDrive(
+    drive ? String(drive.vehicleId) : undefined,
+    id,
     timezone,
     true,
   );
@@ -235,7 +213,7 @@ export default function DriveDetailPage() {
           <SectionErrorBoundary name="drive-detail:fsd" fallbackTitle={t('driveDetail.section.fsdFailed', 'Supervised-driving panel failed to load')}>
             <SupervisedDrivingPanel
               insight={fsdInsight}
-              isLoading={drive.endTs != null && fsdState.status === 'initial'}
+              isLoading={fsdState.status === 'initial'}
               error={fsdState.fatalError}
               isOngoing={!drive.endTs}
             />

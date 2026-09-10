@@ -150,7 +150,7 @@ vi.mock('../components/drive-detail', () => {
   }
 })
 
-const useFsdInsightsRangeMock = vi.hoisted(() => vi.fn(() => ({
+const useFsdInsightsForDriveMock = vi.hoisted(() => vi.fn(() => ({
     data: {
       drive_analytics: {
         contributing_drives: [],
@@ -167,7 +167,7 @@ const useFsdInsightsRangeMock = vi.hoisted(() => vi.fn(() => ({
   })))
 
 vi.mock('@/api/hooks/useAnalytics', () => ({
-  useFsdInsightsRange: useFsdInsightsRangeMock,
+  useFsdInsightsForDrive: useFsdInsightsForDriveMock,
 }))
 
 vi.mock('@/components/ai/AIDriveCoaching', () => ({
@@ -360,7 +360,7 @@ function renderPage(path = '/drives/42', routePath = '/drives/:id') {
 
 beforeEach(() => {
   hookState.current = emptyState()
-  useFsdInsightsRangeMock.mockClear()
+  useFsdInsightsForDriveMock.mockClear()
   window.localStorage.clear()
 })
 
@@ -426,7 +426,7 @@ describe('DriveDetailPage', () => {
 
   it('warns when retained FSD evidence could not be refreshed', () => {
     hookState.current = loadedState()
-    useFsdInsightsRangeMock.mockReturnValueOnce({
+    useFsdInsightsForDriveMock.mockReturnValueOnce({
       data: {
         drive_analytics: {
           contributing_drives: [],
@@ -448,15 +448,14 @@ describe('DriveDetailPage', () => {
     expect(screen.getByTestId('fsd-panel')).toBeInTheDocument()
   })
 
-  it('does not query FSD analytics until an ongoing drive ends', () => {
+  it('still loads drive-scoped FSD analytics for an in-progress drive', () => {
     hookState.current = loadedState({ endTs: null })
 
     renderPage()
 
-    expect(useFsdInsightsRangeMock).toHaveBeenCalledWith(
-      undefined,
-      undefined,
-      undefined,
+    expect(useFsdInsightsForDriveMock).toHaveBeenCalledWith(
+      '1',
+      '42',
       'UTC',
       true,
     )
@@ -492,10 +491,9 @@ describe('DriveDetailPage', () => {
     }
     // AI surfaces receive the drive id so they can scope their requests.
     expect(screen.getByTestId('ai-coaching')).toHaveAttribute('data-drive-id', '42')
-    expect(useFsdInsightsRangeMock).toHaveBeenCalledWith(
+    expect(useFsdInsightsForDriveMock).toHaveBeenCalledWith(
       '1',
-      '2025-02-28T10:00:00.000Z',
-      '2025-03-02T10:45:00.001Z',
+      '42',
       expect.any(String),
       true,
     )

@@ -638,7 +638,7 @@ describe('DrivesListPage — FSD evidence', () => {
     renderPage();
 
     expect(within(listRegion()).getByText('FSD 72%')).toBeInTheDocument();
-    expect(within(listRegion()).getByText('FSD data unknown')).toBeInTheDocument();
+    expect(within(listRegion()).queryByText('FSD data unknown')).toBeNull();
 
     const bar = fsdFilterBar();
     expect(within(bar).getByRole('tab', { name: /High confidence/ })).toHaveTextContent('(1)');

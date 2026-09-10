@@ -2,9 +2,13 @@ package fsd
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 )
+
+// ErrDriveNotFound is returned by DriveByID when the vehicle has no such drive.
+var ErrDriveNotFound = errors.New("fsd drive not found")
 
 const analyticsCounterSamplesSQL = `
 WITH baseline AS (
@@ -194,6 +198,20 @@ SELECT id,
    AND COALESCE(ended_at, $3) > $2
  ORDER BY started_at ASC, id ASC`
 
+const analyticsDriveByIDSQL = `
+SELECT id,
+       started_at,
+       ended_at,
+       NULLIF(BTRIM(start_place), ''),
+       NULLIF(BTRIM(end_place), ''),
+       start_geofence_id,
+       end_geofence_id,
+       distance_m,
+       energy_used_wh
+  FROM drives
+ WHERE vehicle_id = $1
+   AND id = $2`
+
 const analyticsVersionSamplesSQL = `
 WITH baseline AS (
     SELECT ts, str_value, normalization_version
@@ -371,4 +389,37 @@ func (r *Repo) LoadAnalyticsInput(
 	versionRows.Close()
 
 	return input, nil
+}
+
+// DriveByID loads one drive for vehicle-scoped FSD focus queries.
+func (r *Repo) DriveByID(ctx context.Context, vehicleID, driveID int64) (DriveRecord, error) {
+	var drive DriveRecord
+	if r == nil || r.pool == nil {
+		return drive, fmt.Errorf("load FSD drive %d: database pool is nil", driveID)
+	}
+	rows, err := r.pool.Query(ctx, analyticsDriveByIDSQL, vehicleID, driveID)
+	if err != nil {
+		return drive, fmt.Errorf("query FSD drive %d: %w", driveID, err)
+	}
+	defer rows.Close()
+	if !rows.Next() {
+		if err := rows.Err(); err != nil {
+			return drive, fmt.Errorf("iterate FSD drive %d: %w", driveID, err)
+		}
+		return drive, fmt.Errorf("load FSD drive %d: %w", driveID, ErrDriveNotFound)
+	}
+	if err := rows.Scan(
+		&drive.ID,
+		&drive.StartedAt,
+		&drive.EndedAt,
+		&drive.StartPlace,
+		&drive.EndPlace,
+		&drive.StartGeofenceID,
+		&drive.EndGeofenceID,
+		&drive.DistanceM,
+		&drive.EnergyUsedWh,
+	); err != nil {
+		return drive, fmt.Errorf("scan FSD drive %d: %w", driveID, err)
+	}
+	return drive, nil
 }

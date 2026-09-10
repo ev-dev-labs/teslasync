@@ -46,6 +46,7 @@ import {
   useTemperatureImpact,
   useFsdInsights,
   useFsdInsightsRange,
+  useFsdInsightsForDrive,
   type LifetimeStats,
   type LifetimeAchievement,
   type PersonalRecord,
@@ -869,6 +870,31 @@ describe('useFsdInsights', () => {
     expect(params.get('timezone')).toBe('America/Los_Angeles');
     expect(params.has('days')).toBe(false);
     expect(params.has('include_evidence')).toBe(false);
+  });
+
+  it('builds a drive-scoped request without days, start, or end', async () => {
+    mockedRequest.mockResolvedValueOnce(fixture);
+    const { result } = renderHook(
+      () => useFsdInsightsForDrive('7', '350', 'America/Los_Angeles', true),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    const [url] = callAt();
+    const params = new URLSearchParams(url.split('?')[1]);
+    expect(params.get('vehicle_id')).toBe('7');
+    expect(params.get('drive_id')).toBe('350');
+    expect(params.get('timezone')).toBe('America/Los_Angeles');
+    expect(params.get('include_evidence')).toBe('true');
+    expect(params.has('days')).toBe(false);
+    expect(params.has('start')).toBe(false);
+    expect(params.has('end')).toBe(false);
+  });
+
+  it('is disabled without a drive id', async () => {
+    renderHook(() => useFsdInsightsForDrive('7', undefined, 'UTC', true), { wrapper });
+    await tick();
+    expect(mockedRequest).not.toHaveBeenCalled();
   });
 
   it('opts into bounded route evidence only when requested', async () => {
