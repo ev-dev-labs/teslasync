@@ -55,6 +55,8 @@ type rawEvent struct {
 	// at this signal will be nil for this row and any subsequent
 	// carry-forward row.
 	Value SignalValue
+	// ReceivedAt is optional ingest-boundary time for this emission.
+	ReceivedAt *time.Time
 }
 
 // forwardFold derives a slice of TimelineRow from a seed state plus a
@@ -117,9 +119,10 @@ type timelineFolder struct {
 	collapseBy []string
 	maxRows    int
 	state      map[string]SignalValue
-	groupTs    time.Time
-	grouping   bool
-	leadingNil bool
+	groupTs       time.Time
+	groupReceived *time.Time
+	grouping      bool
+	leadingNil    bool
 	hasPrev    bool
 	prevKey    string
 	rows       []TimelineRow
@@ -150,10 +153,12 @@ func (f *timelineFolder) Add(ev rawEvent) bool {
 		if !f.flush() {
 			return false
 		}
+		f.groupReceived = nil
 	}
 	f.state[ev.Signal] = ev.Value
 	f.groupTs = ev.Ts
 	f.grouping = true
+	f.groupReceived = laterReceivedAt(f.groupReceived, ev.ReceivedAt)
 	return true
 }
 
@@ -183,7 +188,7 @@ func (f *timelineFolder) flush() bool {
 		return true
 	}
 	f.leadingNil = false
-	row := TimelineRow{Timestamp: f.groupTs, Fields: fields}
+	row := TimelineRow{Timestamp: f.groupTs, ReceivedAt: f.groupReceived, Fields: fields}
 	if len(f.collapseBy) > 0 {
 		key := projectCollapseKey(row, f.collapseBy)
 		if f.hasPrev && key == f.prevKey {
@@ -257,4 +262,19 @@ func projectCollapseKey(r TimelineRow, fields []string) string {
 		parts[i] = fmt.Sprintf("%#v", v)
 	}
 	return strings.Join(parts, "\x00")
+}
+
+// laterReceivedAt keeps the latest ingest boundary when several fields share
+// one event timestamp. Nil stays nil; a stored receipt always wins over nil.
+func laterReceivedAt(a, b *time.Time) *time.Time {
+	if a == nil {
+		return b
+	}
+	if b == nil {
+		return a
+	}
+	if b.After(*a) {
+		return b
+	}
+	return a
 }

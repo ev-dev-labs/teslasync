@@ -39,6 +39,9 @@ const (
 	// pool connection. The pool's per-connection statement_timeout remains
 	// the backstop underneath this.
 	insightsQueryBudget = 5 * time.Second
+	// Bookend SelfDrivingMilesSinceReset samples for one drive. Tesla's
+	// minimum_delta is 1 mile, so a commute's opener may sit hours earlier.
+	driveFocusLookaround = 7 * 24 * time.Hour
 )
 
 type daysLimitError struct {
@@ -61,6 +64,7 @@ type driveAnalyticsRepository interface {
 		vehicleID int64,
 		from, split, to time.Time,
 	) (AnalyticsInput, error)
+	DriveByID(ctx context.Context, vehicleID, driveID int64) (DriveRecord, error)
 }
 
 // clock is injected so handler tests can pin the period boundary;
@@ -98,6 +102,7 @@ type request struct {
 	endAt           *time.Time
 	explicitRange   bool
 	includeEvidence bool
+	driveID         int64
 }
 
 // parseRequest validates every query parameter. Returns ok=false after
@@ -164,8 +169,30 @@ func parseRequest(w http.ResponseWriter, r *http.Request) (request, bool) {
 		includeEvidence = value
 	}
 
+	var driveID int64
+	if raw := q.Get("drive_id"); raw != "" {
+		value, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || value <= 0 {
+			httpx.WriteError(w, http.StatusBadRequest, "drive_id must be a positive integer")
+			return request{}, false
+		}
+		driveID = value
+	}
+
 	startRaw := q.Get("start")
 	endRaw := q.Get("end")
+	if driveID != 0 {
+		if startRaw != "" || endRaw != "" || q.Get("days") != "" {
+			httpx.WriteError(w, http.StatusBadRequest, "drive_id cannot be combined with days, start, or end")
+			return request{}, false
+		}
+		return request{
+			vehicleID:       vehicleID,
+			loc:             loc,
+			includeEvidence: includeEvidence,
+			driveID:         driveID,
+		}, true
+	}
 	if startRaw != "" || endRaw != "" {
 		if startRaw == "" || endRaw == "" {
 			httpx.WriteError(w, http.StatusBadRequest, "start and end must be provided together")
@@ -247,6 +274,7 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 		attribute.Int64("vehicle_id", req.vehicleID),
 		attribute.Int("fsd.days", req.days),
 		attribute.String("fsd.timezone", req.loc.String()),
+		attribute.Int64("drive_id", req.driveID),
 	)
 
 	fields := counterFields()
@@ -262,8 +290,41 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 
 	var resp Response
 	if analyticsRepo, ok := h.repo.(driveAnalyticsRepository); ok {
+		var focusDriveID int64
+		if req.driveID != 0 {
+			drive, err := analyticsRepo.DriveByID(readCtx, req.vehicleID, req.driveID)
+			if err != nil {
+				if errors.Is(err, ErrDriveNotFound) {
+					httpx.WriteError(w, http.StatusNotFound, "drive not found")
+					return
+				}
+				span.RecordError(err)
+				log.Error().Err(err).
+					Int64("vehicle_id", req.vehicleID).
+					Int64("drive_id", req.driveID).
+					Str("trace_id", traceID).
+					Msg("fsd.insights: drive lookup failed")
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
+				return
+			}
+			focusDriveID = drive.ID
+			start = drive.StartedAt
+			if drive.EndedAt != nil && drive.EndedAt.After(drive.StartedAt) {
+				now = drive.EndedAt.Add(driveFocusLookaround)
+			} else {
+				now = h.now()
+				if !now.After(start) {
+					now = start.Add(time.Millisecond)
+				}
+			}
+			req.days = inclusiveCivilDayCount(start, now.Add(-time.Nanosecond), req.loc)
+		}
 		previousEnd := start
 		previousStart := start.Add(-now.Sub(start))
+		if req.driveID != 0 {
+			previousStart = start.Add(-driveFocusLookaround)
+			previousEnd = start
+		}
 		input, err := analyticsRepo.LoadAnalyticsInput(
 			readCtx,
 			req.vehicleID,
@@ -281,6 +342,7 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
 			return
 		}
+		input.FocusDriveID = focusDriveID
 
 		resp = Aggregate(AggregateParams{
 			VehicleID: req.vehicleID,
@@ -304,6 +366,9 @@ func (h *Handler) Insights(w http.ResponseWriter, r *http.Request) {
 			Samples:   input.PreviousCounterSamples,
 		})
 		resp.Analytics = BuildDriveAnalytics(resp, previous, input, req.loc, req.includeEvidence)
+	} else if req.driveID != 0 {
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load FSD insights")
+		return
 	} else {
 		baselines, err := h.repo.BaselineSamples(readCtx, req.vehicleID, fields, start)
 		if err != nil {

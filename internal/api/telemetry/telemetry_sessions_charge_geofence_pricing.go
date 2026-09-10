@@ -34,6 +34,11 @@ import (
 // cost. Calling it at session start creates/attaches the place promptly;
 // calling it again at completion performs the monetary calculation.
 //
+// allowDiscover controls FindOrCreateForCharging. Parked Home/AC charges
+// often carry hours-stale GPS; those coordinates are still persisted and
+// matched against existing geofences (and reverse-geocoded for start_place)
+// but must not mint a new charging place at last-drive coordinates.
+//
 // Sequence:
 //  1. Match an existing geofence (any origin) containing (lat, lon) — see
 //     resolveChargingGeofence. Reuses the exact matching behavior that
@@ -57,14 +62,24 @@ import (
 // idempotent, so re-running this exact sequence for the same session after
 // a transient failure can never create a duplicate geofence or replace a
 // historical tariff with a different rate version.
-func (t *TelemetrySessionTracker) applyGeofencePricingAsync(sessionID, vehicleID int64, lat, lon float64, startedAt time.Time, fields map[string]interface{}) {
+func (t *TelemetrySessionTracker) applyGeofencePricingAsync(sessionID, vehicleID int64, lat, lon float64, startedAt time.Time, fields map[string]interface{}, allowDiscover ...bool) {
+	discover := true
+	if len(allowDiscover) > 0 {
+		discover = allowDiscover[0]
+	}
 	gctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
 	defer cancel()
 	gctx, span := tracing.StartSpan(gctx, "telemetry.charge_geofence_pricing",
 		tracing.ChargeID(sessionID), tracing.VehicleID(vehicleID))
 	defer span.End()
 
-	geofenceID, geofenceName, err := t.resolveChargingGeofence(gctx, sessionID, lat, lon)
+	if fields == nil {
+		fields = map[string]interface{}{}
+	}
+	fields["start_lat"] = lat
+	fields["start_lng"] = lon
+
+	geofenceID, geofenceName, err := t.resolveChargingGeofenceWithName(gctx, sessionID, lat, lon, "", true, discover)
 	if err != nil {
 		log.Warn().Err(err).Int64("session_id", sessionID).Int64("vehicle_id", vehicleID).
 			Msg("telemetry: geofence match/discovery failed for charging session; left unattributed")
@@ -77,11 +92,19 @@ func (t *TelemetrySessionTracker) applyGeofencePricingAsync(sessionID, vehicleID
 		return
 	}
 
-	fields["start_place"] = geofenceName
-	fields["geofence_id"] = geofenceID
+	if geofenceName != "" {
+		fields["start_place"] = geofenceName
+	}
+	if geofenceID > 0 {
+		fields["geofence_id"] = geofenceID
+	}
 	if err := t.chargeRepo.PartialUpdate(gctx, sessionID, fields); err != nil {
 		log.Warn().Err(err).Int64("session_id", sessionID).Int64("geofence_id", geofenceID).
 			Msg("telemetry: failed to attach geofence to charging session")
+	}
+
+	if geofenceID <= 0 {
+		return
 	}
 
 	rate, err := t.geofenceRepo.GetActiveRateAt(gctx, geofenceID, startedAt)
@@ -207,6 +230,8 @@ func (t *TelemetrySessionTracker) BackfillChargingPlaces(ctx context.Context) {
 		attribute.Int("charging_place_backfill.skipped", outcomes["skipped"]),
 		attribute.Int("charging_place_backfill.errors", outcomes["error"]),
 	)
+	t.backfillMissingChargeLocations(ctx)
+
 	if runErr != nil {
 		log.Warn().
 			Int("processed", processed).
@@ -228,6 +253,89 @@ func (t *TelemetrySessionTracker) BackfillChargingPlaces(ctx context.Context) {
 		Msg("charging place history backfill complete")
 }
 
+func (t *TelemetrySessionTracker) backfillMissingChargeLocations(ctx context.Context) {
+	if t == nil || t.geofenceRepo == nil || t.chargeRepo == nil {
+		return
+	}
+	var afterID int64
+	processed := 0
+	for {
+		if ctx.Err() != nil {
+			return
+		}
+		candidates, err := t.geofenceRepo.ListMissingChargeLocationCandidates(
+			ctx,
+			afterID,
+			chargingPlaceHistoryBackfillBatch,
+		)
+		if err != nil {
+			log.Warn().Err(err).Msg("charging location backfill: failed to load candidates")
+			return
+		}
+		if len(candidates) == 0 {
+			break
+		}
+		for _, candidate := range candidates {
+			if ctx.Err() != nil {
+				return
+			}
+			afterID = candidate.SessionID
+			lat, lon, ok := t.recoverChargeCoords(ctx, candidate.VehicleID, candidate.StartedAt, candidate.StartLat, candidate.StartLng)
+			if !ok {
+				continue
+			}
+			t.applyGeofencePricingAsync(
+				candidate.SessionID,
+				candidate.VehicleID,
+				lat,
+				lon,
+				candidate.StartedAt,
+				map[string]interface{}{
+					"start_lat": lat,
+					"start_lng": lon,
+				},
+				false,
+			)
+			processed++
+		}
+		if len(candidates) < chargingPlaceHistoryBackfillBatch {
+			break
+		}
+	}
+	if processed > 0 {
+		log.Info().Int("processed", processed).Msg("charging location backfill: recovered missing start coordinates")
+	}
+}
+
+func (t *TelemetrySessionTracker) recoverChargeCoords(
+	ctx context.Context,
+	vehicleID int64,
+	at time.Time,
+	knownLat, knownLng *float64,
+) (float64, float64, bool) {
+	if knownLat != nil && knownLng != nil && !(*knownLat == 0 && *knownLng == 0) {
+		return *knownLat, *knownLng, true
+	}
+	if reader := t.chargeStateReader(); reader != nil {
+		st, err := reader.State(ctx, vehicleID, at)
+		if err == nil {
+			snap := stateToLegacyMap(st)
+			lat, okLat := snapFloat(snap, "LocationLatitude", "Latitude")
+			lon, okLon := snapFloat(snap, "LocationLongitude", "Longitude")
+			if okLat && okLon && !(lat == 0 && lon == 0) {
+				return lat, lon, true
+			}
+		}
+	}
+	if t.posRepo != nil {
+		pos, err := findNearestPositionFallback(ctx, t.posRepo, vehicleID, at, 24*time.Hour)
+		if err == nil && pos != nil && !(pos.Lat == 0 && pos.Lng == 0) {
+			return pos.Lat, pos.Lng, true
+		}
+	}
+	return 0, 0, false
+}
+
 func (t *TelemetrySessionTracker) backfillChargingPlace(ctx context.Context, candidate *systemmodel.ChargingPlaceBackfillCandidate, now time.Time) (string, error) {
 	if candidate == nil {
 		return "", fmt.Errorf("charging place history backfill: nil candidate")
@@ -243,6 +351,7 @@ func (t *TelemetrySessionTracker) backfillChargingPlace(ctx context.Context, can
 		candidate.StartLng,
 		suggestedName,
 		false,
+		true,
 	)
 	if err != nil {
 		return "", err
@@ -303,7 +412,7 @@ func (t *TelemetrySessionTracker) backfillChargingPlace(ctx context.Context, can
 // charging-place geofence for (lat, lon), returning its id and display
 // name. Counts the outcome via metrics.GeofenceDiscoveryTotal.
 func (t *TelemetrySessionTracker) resolveChargingGeofence(ctx context.Context, sessionID int64, lat, lon float64) (int64, string, error) {
-	return t.resolveChargingGeofenceWithName(ctx, sessionID, lat, lon, "", true)
+	return t.resolveChargingGeofenceWithName(ctx, sessionID, lat, lon, "", true, true)
 }
 
 func (t *TelemetrySessionTracker) resolveChargingGeofenceWithName(
@@ -312,6 +421,7 @@ func (t *TelemetrySessionTracker) resolveChargingGeofenceWithName(
 	lat, lon float64,
 	suggestedName string,
 	allowReverseGeocode bool,
+	allowDiscover bool,
 ) (int64, string, error) {
 	if geofences, err := t.geofenceRepo.FindByCoordinates(ctx, lat, lon); err == nil && len(geofences) > 0 {
 		metrics.GeofenceDiscoveryTotal.WithLabelValues("matched").Inc()
@@ -320,6 +430,10 @@ func (t *TelemetrySessionTracker) resolveChargingGeofenceWithName(
 
 	if strings.TrimSpace(suggestedName) == "" && allowReverseGeocode {
 		suggestedName = t.suggestChargingPlaceName(ctx, lat, lon)
+	}
+	if !allowDiscover {
+		metrics.GeofenceDiscoveryTotal.WithLabelValues("stale_no_create").Inc()
+		return 0, suggestedName, nil
 	}
 	discovered, created, err := t.geofenceRepo.FindOrCreateForCharging(ctx, lat, lon, suggestedName)
 	if err != nil {

@@ -524,3 +524,36 @@ export function useFsdInsightsRange(
       refetchOnMount: true,
   });
 }
+
+/**
+ * Drive-scoped FSD intelligence. The backend loads a 7-day bookend around the
+ * drive and attributes only that drive, so neighboring fidget sessions cannot
+ * blank the panel or steal the commute's counter delta.
+ */
+export function useFsdInsightsForDrive(
+  vehicleId: string | undefined,
+  driveId: string | undefined,
+  timezone: string = browserTimezone(),
+  includeEvidence = false,
+) {
+  const scope: QueryScope = {
+    vehicleId: vehicleId ?? null,
+    timezone,
+    filters: {
+      drive_id: driveId ?? null,
+      ...(includeEvidence ? { include_evidence: true } : {}),
+    },
+  };
+
+  return useQuery({
+    queryKey: analyticsKeys.fsdInsights(scope),
+    queryFn: ({ signal }) =>
+      request<FsdInsights>(
+        scopedPath('/analytics/fsd', scope, { includePresentation: true }),
+        { signal },
+      ),
+    enabled: !!vehicleId && !!driveId,
+    ...queryPolicy('historical'),
+      refetchOnMount: true,
+  });
+}

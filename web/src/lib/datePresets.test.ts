@@ -90,6 +90,18 @@ describe('DATE_PRESETS — resolve()', () => {
   it('all → fixed 2015-01-01 floor through today', () => {
     expect(preset('all').resolve(NOW)).toEqual({ start: '2015-01-01', end: '2026-05-15' });
   });
+
+  it('today in vehicle tz is the vehicle civil day, not UTC', () => {
+    const utcMorning = new Date('2026-09-07T02:00:00.000Z');
+    expect(preset('today').resolve(utcMorning, 'America/Los_Angeles')).toEqual({
+      start: '2026-09-06',
+      end: '2026-09-06',
+    });
+    expect(preset('today').resolve(utcMorning, 'UTC')).toEqual({
+      start: '2026-09-07',
+      end: '2026-09-07',
+    });
+  });
 });
 
 describe('DATE_PRESETS — schema', () => {

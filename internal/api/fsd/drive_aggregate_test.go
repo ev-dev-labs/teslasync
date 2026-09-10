@@ -101,6 +101,121 @@ func TestBuildDriveAnalytics_AttributesSynchronizedEvidenceToOneDrive(t *testing
 	}
 }
 
+func TestBuildDriveAnalytics_DriveDetailLookaroundIncludesSparseBookend(t *testing.T) {
+	// Drive detail queries ±24h so previous.StartAt is before the last FSD
+	// tick. A ±2 minute window left that bookend unattributed and the panel blank.
+	start := at(t, "2026-03-02T12:18:00Z")
+	end := at(t, "2026-03-04T12:30:00Z")
+	driveStart := at(t, "2026-03-03T12:18:00Z")
+	driveEndAt := at(t, "2026-03-03T12:30:00Z")
+	distance := 6300.0
+	samples := []Sample{
+		trustedSample(SignalFSDDistance, at(t, "2026-03-03T09:00:00Z"), 10000),
+		trustedSample(SignalDrivingDistance, at(t, "2026-03-03T09:00:00Z"), 50000),
+		trustedSample(SignalFSDDistance, at(t, "2026-03-03T12:28:00Z"), 14500),
+		trustedSample(SignalDrivingDistance, at(t, "2026-03-03T12:28:00Z"), 56300),
+	}
+	current := responseForRange(7, start, end, samples)
+	previous := responseForRange(7, start.Add(-end.Sub(start)), start, samples)
+
+	analytics := BuildDriveAnalytics(current, previous, AnalyticsInput{
+		CounterSamples: samples,
+		Drives: []DriveRecord{{
+			ID:        350,
+			StartedAt: driveStart,
+			EndedAt:   &driveEndAt,
+			DistanceM: &distance,
+		}},
+	}, time.UTC, true)
+
+	if len(analytics.ContributingDrives) != 1 {
+		t.Fatalf("drives = %d, want 1", len(analytics.ContributingDrives))
+	}
+	drive := analytics.ContributingDrives[0]
+	if drive.Confidence != ConfidenceEstimated {
+		t.Errorf("confidence = %q, want estimated", drive.Confidence)
+	}
+	wantMeasured(t, drive.FSDDistanceM, 4500, "lookaround FSD distance")
+	if len(drive.Evidence) == 0 {
+		t.Fatal("evidence is empty; drive detail would show no positive counter increase")
+	}
+}
+
+func TestBuildDriveAnalytics_FidgetDriveDoesNotStealCommuteDelta(t *testing.T) {
+	start := at(t, "2026-09-07T00:00:00Z")
+	end := at(t, "2026-09-08T00:00:00Z")
+	fidgetStart := at(t, "2026-09-07T00:51:00Z")
+	fidgetEnd := at(t, "2026-09-07T00:52:00Z")
+	driveStart := at(t, "2026-09-07T00:55:00Z")
+	driveEndAt := at(t, "2026-09-07T01:19:00Z")
+	fidgetDistance := 32.0
+	commuteDistance := 13260.0
+	samples := []Sample{
+		trustedSample(SignalFSDDistance, at(t, "2026-09-07T00:50:00Z"), 10000),
+		trustedSample(SignalDrivingDistance, at(t, "2026-09-07T00:50:00Z"), 50000),
+		trustedSample(SignalFSDDistance, at(t, "2026-09-07T01:18:00Z"), 22874.752),
+		trustedSample(SignalDrivingDistance, at(t, "2026-09-07T01:18:00Z"), 63260),
+	}
+	current := responseForRange(7, start, end, samples)
+	previous := responseForRange(7, start.Add(-24*time.Hour), start, samples)
+
+	analytics := BuildDriveAnalytics(current, previous, AnalyticsInput{
+		CounterSamples: samples,
+		Drives: []DriveRecord{
+			{ID: 349, StartedAt: fidgetStart, EndedAt: &fidgetEnd, DistanceM: &fidgetDistance},
+			{ID: 350, StartedAt: driveStart, EndedAt: &driveEndAt, DistanceM: &commuteDistance},
+		},
+	}, time.UTC, true)
+
+	if len(analytics.ContributingDrives) != 1 {
+		t.Fatalf("drives = %d, want 1 commute (fidget excluded)", len(analytics.ContributingDrives))
+	}
+	drive := analytics.ContributingDrives[0]
+	if drive.DriveID != 350 {
+		t.Fatalf("drive id = %d, want 350", drive.DriveID)
+	}
+	if drive.Confidence != ConfidenceEstimated {
+		t.Errorf("confidence = %q, want estimated", drive.Confidence)
+	}
+	wantMeasured(t, drive.FSDDistanceM, 12874.752, "commute FSD after ignoring fidget overlap")
+}
+
+func TestBuildDriveAnalytics_FocusDriveIDReportsOnlyThatDrive(t *testing.T) {
+	start := at(t, "2026-09-07T00:00:00Z")
+	end := at(t, "2026-09-08T00:00:00Z")
+	firstStart := at(t, "2026-09-07T01:00:00Z")
+	firstEnd := at(t, "2026-09-07T01:20:00Z")
+	secondStart := at(t, "2026-09-07T03:00:00Z")
+	secondEnd := at(t, "2026-09-07T03:20:00Z")
+	distance := 8000.0
+	samples := []Sample{
+		trustedSample(SignalFSDDistance, at(t, "2026-09-07T00:59:00Z"), 1000),
+		trustedSample(SignalDrivingDistance, at(t, "2026-09-07T00:59:00Z"), 10000),
+		trustedSample(SignalFSDDistance, at(t, "2026-09-07T01:19:00Z"), 2609.344),
+		trustedSample(SignalDrivingDistance, at(t, "2026-09-07T01:19:00Z"), 18000),
+		trustedSample(SignalFSDDistance, at(t, "2026-09-07T02:59:00Z"), 2609.344),
+		trustedSample(SignalDrivingDistance, at(t, "2026-09-07T02:59:00Z"), 18000),
+		trustedSample(SignalFSDDistance, at(t, "2026-09-07T03:19:00Z"), 4218.688),
+		trustedSample(SignalDrivingDistance, at(t, "2026-09-07T03:19:00Z"), 26000),
+	}
+	current := responseForRange(7, start, end, samples)
+	previous := responseForRange(7, start.Add(-24*time.Hour), start, samples)
+
+	analytics := BuildDriveAnalytics(current, previous, AnalyticsInput{
+		CounterSamples: samples,
+		Drives: []DriveRecord{
+			{ID: 1, StartedAt: firstStart, EndedAt: &firstEnd, DistanceM: &distance},
+			{ID: 2, StartedAt: secondStart, EndedAt: &secondEnd, DistanceM: &distance},
+		},
+		FocusDriveID: 1,
+	}, time.UTC, true)
+
+	if len(analytics.ContributingDrives) != 1 || analytics.ContributingDrives[0].DriveID != 1 {
+		t.Fatalf("drives = %+v, want only drive 1", analytics.ContributingDrives)
+	}
+	wantMeasured(t, analytics.ContributingDrives[0].FSDDistanceM, 1609.344, "focused drive FSD")
+}
+
 func TestBuildDriveAnalytics_SparseIntervalAcrossDrivesIsAmbiguous(t *testing.T) {
 	start := at(t, "2026-03-03T08:00:00Z")
 	end := at(t, "2026-03-03T13:00:00Z")

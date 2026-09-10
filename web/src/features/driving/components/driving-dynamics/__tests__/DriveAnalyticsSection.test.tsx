@@ -26,7 +26,7 @@
  */
 
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { MemoryRouter } from 'react-router-dom'
 import type { ComponentProps, ReactNode } from 'react'
@@ -98,9 +98,6 @@ type Props = ComponentProps<typeof DriveAnalyticsSection>
 function baseProps(overrides: Partial<Props> = {}): Props {
   return {
     filteredDrives: [],
-    startDate: '2026-05-01',
-    endDate: '2026-05-31',
-    onRangeChange: vi.fn(),
     toDistanceDisplay: (m: number) => m / 1000,
     toSpeedDisplay: toMph,
     distanceUnit: 'mi',
@@ -250,36 +247,6 @@ describe('DriveAnalyticsSection — power profile', () => {
       .getAllByRole('columnheader')
       .map((h) => h.textContent)
     expect(headers).toEqual(['Drive', 'Max kW', 'Regen kW'])
-  })
-})
-
-describe('DriveAnalyticsSection — date range filter', () => {
-  it('forwards a preset selection as one atomic range change', () => {
-    const onRangeChange = vi.fn()
-    renderSection({ onRangeChange })
-
-    fireEvent.click(screen.getByRole('button', { name: /date range/i }))
-    const dialog = screen.getByRole('dialog')
-    fireEvent.click(within(dialog).getByRole('option', { name: /last 7 days/i }))
-
-    expect(onRangeChange).toHaveBeenCalledTimes(1)
-    expect(onRangeChange).toHaveBeenCalledWith(
-      {
-        start: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-        end: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
-      },
-      '7d',
-    )
-  })
-
-  it('toggles the range popover open and closed', () => {
-    renderSection()
-    const trigger = screen.getByRole('button', { name: /date range/i })
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-    fireEvent.click(trigger)
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
-    fireEvent.click(trigger)
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
 

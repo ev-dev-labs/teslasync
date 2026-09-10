@@ -634,6 +634,16 @@
       "body": "Battery percentage lost per day while the vehicle is parked and not charging, derived from observed parked windows."
     }
   },
+  "honesty": {
+    "aria": "Telemetry honesty meter",
+    "guessed": "Guessed",
+    "live": "Live",
+    "missing": "Missing",
+    "stale": "Stale",
+    "subtitle": "Live, stale, guessed, or missing — the same words FSD uses when it refuses to invent km.",
+    "title": "Telemetry honesty",
+    "tooltip": "Live {{live}} · Stale {{stale}} · Guessed {{guessed}} · Missing {{missing}} · Stream {{stream}}"
+  },
   "impersonation": {
     "banner": {
       "body": "You are viewing TeslaSync as another subject. End impersonation to restore your session.",

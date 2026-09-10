@@ -2,17 +2,19 @@ import { useMemo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { PageContainer } from '@/components/layout';
-import { VehicleSelect } from '@/components/forms';
+import { RangePicker, VehicleSelect } from '@/components/forms';
 import { FadeIn } from '@/components/motion';
 
 import { useDrives } from '@/api/hooks/useDriving';
-import { useMotorLatest } from '@/api/hooks/useVehicles';
+import { useMotorLatest, type MotorHistoryQuery } from '@/api/hooks/useVehicles';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 import { useSignalQueryInvalidation } from '@/hooks/useSignalQueryInvalidation';
 import { useUnits } from '@/hooks/useUnits';
 import { usePageTitle } from '@/hooks/usePageTitle';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useUrlString } from '@/hooks/useUrlState';
 import { INTERVALS } from '@/lib/constants';
+import { useTimezone } from '@/lib/timezone';
 import { convertDistanceFromSI, convertSpeedFromSI, convertTempFromSI } from '@/lib/unitConversion';
 import {
   LiveMotorStatus,
@@ -26,7 +28,15 @@ import {
   DrivingCoachSection,
   DriveAnalyticsSection,
   DrivingTips,
+  GrokDynamicsBriefing,
+  DynamicsTripToolbar,
 } from '../components/driving-dynamics';
+import {
+  isOpenDrive,
+  mergeOpenDrives,
+  motorWindowForDrive,
+  pickDynamicsDrive,
+} from '../components/driving-dynamics/pickDynamicsDrive';
 
 /**
  * Tesla signal fields that feed each live query on this page, taken from the
@@ -77,16 +87,12 @@ export default function DrivingDynamicsPage() {
   const vehicleIdNum = vehicleId ?? 0;
 
   /* ---- page-owned data ----
-   * Every panel now owns the query it renders, at a cadence matched to how
-   * fast that data actually moves (live motor 5s, aggregate history 10s,
-   * drives 30s, coach 5m). Only two things stay here: the drives list, which
-   * the page-level date filter narrows for two different panels, and the
-   * live-motor query, which PageContainer needs for the header freshness
-   * chip. TanStack dedupes on the query key, so re-declaring the live-motor
-   * subscription here shares the panels' cache entry rather than doubling
-   * the request rate. */
+   * Live cockpit stays on /latest. History panels share one drive-window
+   * /motor query. The drives list is server-scoped to the date filter, plus
+   * a tiny latest page so an in-progress drive is never dropped. */
   const motorLatestQuery = useMotorLatest(vehicleIdNum, INTERVALS.REALTIME);
-  const { data: drives } = useDrives(vehicleIdStr, INTERVALS.STANDARD);
+  const timezone = useTimezone('vehicle');
+  const [driveParam, setDriveParam] = useUrlString('drive');
 
   /* ---- push updates ----
    * Polling bounds staleness at the interval; SSE collapses it to the
@@ -127,19 +133,49 @@ export default function DrivingDynamicsPage() {
   const {
     start: startDate,
     end: endDate,
+    startInstant,
+    endInstantExclusive,
     setRange,
   } = useRangeState({
     persistKey: 'driving-dynamics.range',
+    timezone,
   });
 
-  /* ---- filtered drives ---- */
+  const rangeDrivesQuery = useDrives(vehicleIdStr, {
+    start: startInstant,
+    end: endInstantExclusive,
+    limit: 1000,
+    refetchInterval: INTERVALS.STANDARD,
+  });
+  const latestDrivesQuery = useDrives(vehicleIdStr, {
+    limit: 5,
+    refetchInterval: INTERVALS.STANDARD,
+  });
+
   const filteredDrives = useMemo(() => {
-    if (!drives) return [];
-    return drives.filter((d) => {
+    const inRange = (rangeDrivesQuery.data ?? []).filter((d) => {
       const driveDate = d.startTs?.slice(0, 10) ?? '';
       return driveDate >= startDate && driveDate <= endDate;
     });
-  }, [drives, startDate, endDate]);
+    return mergeOpenDrives(inRange, latestDrivesQuery.data ?? []);
+  }, [rangeDrivesQuery.data, latestDrivesQuery.data, startDate, endDate]);
+
+  const selectedDrive = useMemo(
+    () => pickDynamicsDrive(filteredDrives, driveParam),
+    [filteredDrives, driveParam],
+  );
+  const selectedDriveId = selectedDrive ? String(selectedDrive.id) : '';
+
+  const historyQuery = useMemo<MotorHistoryQuery>(() => {
+    if (!selectedDrive) return { enabled: false };
+    const window = motorWindowForDrive(selectedDrive);
+    if (!window) return { enabled: false };
+    return {
+      ...window,
+      enabled: true,
+      refetchInterval: isOpenDrive(selectedDrive) ? INTERVALS.STANDARD : false,
+    };
+  }, [selectedDrive]);
 
   /* ================================================================ */
   /*  RENDER — full-width responsive bento                             */
@@ -148,17 +184,38 @@ export default function DrivingDynamicsPage() {
   return (
     <PageContainer
       title={t('dynamics.title', 'Driving Dynamics')}
-      subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces & driving analysis')}
-      actions={<VehicleSelect />}
+      subtitle={t('dynamics.subtitle', 'Live motor telemetry, G-forces, and Grok’s powertrain read')}
+      contextActions={
+        <>
+          <VehicleSelect />
+          <RangePicker
+            value={{ start: startDate, end: endDate }}
+            onChange={setRange}
+            align="end"
+            triggerTestId="driving-dynamics-range"
+          />
+        </>
+      }
       query={motorLatestQuery}
     >
       <div className="space-y-6">
+        <section aria-label={t('dynamics.section.trip', 'Trip review')}>
+          <DynamicsTripToolbar
+            startDate={startDate}
+            endDate={endDate}
+            drives={filteredDrives}
+            selectedDriveId={selectedDriveId}
+            onSelectDrive={(id) => setDriveParam(id)}
+          />
+        </section>
+
         {/* 1 — KPI band: full-width motor summary metrics */}
         <section aria-label={t('dynamics.section.summary', 'Motor summary metrics')}>
           <SummaryStats
             vehicleId={vehicleId}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
+            historyQuery={historyQuery}
           />
         </section>
 
@@ -174,6 +231,13 @@ export default function DrivingDynamicsPage() {
               tempUnit={tempUnit}
             />
             <PedalUsage vehicleId={vehicleId} />
+          </section>
+        </FadeIn>
+
+        {/* 2b — Grok: Tesla powertrain briefing from the same live signals */}
+        <FadeIn delay={0.07}>
+          <section aria-label={t('dynamics.grok.section', "Grok's powertrain read")}>
+            <GrokDynamicsBriefing vehicleId={vehicleId} />
           </section>
         </FadeIn>
 
@@ -198,6 +262,7 @@ export default function DrivingDynamicsPage() {
         <section aria-label={t('dynamics.section.efficiency', 'Motor efficiency')}>
           <MotorEfficiencyInsights
             vehicleId={vehicleId}
+            historyQuery={historyQuery}
             toTemperatureDisplay={toTemperatureDisplay}
             tempUnit={tempUnit}
           />
@@ -209,6 +274,7 @@ export default function DrivingDynamicsPage() {
             vehicleId={vehicleId}
             toSpeedDisplay={toSpeedDisplay}
             speedUnit={speedUnit}
+            historyQuery={historyQuery}
           />
         </section>
 
@@ -224,9 +290,6 @@ export default function DrivingDynamicsPage() {
         >
           <DriveAnalyticsSection
             filteredDrives={filteredDrives}
-            startDate={startDate}
-            endDate={endDate}
-            onRangeChange={setRange}
             toDistanceDisplay={toDistanceDisplay}
             toSpeedDisplay={toSpeedDisplay}
             distanceUnit={distanceUnit}
@@ -237,7 +300,7 @@ export default function DrivingDynamicsPage() {
         {/* 8 — Driving style recommendations */}
         <FadeIn delay={0.15}>
           <section aria-label={t('dynamics.recommendations', 'Driving Style Recommendations')}>
-            <DrivingTips vehicleId={vehicleId} />
+            <DrivingTips vehicleId={vehicleId} historyQuery={historyQuery} />
           </section>
         </FadeIn>
       </div>

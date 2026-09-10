@@ -42,6 +42,8 @@ import { BottomTabBar, BOTTOM_TAB_PATHS } from './BottomTabBar'
 import { LinearSidebar } from './sidebar/LinearSidebar'
 import {
   buildCompactNavTree,
+  findMostSpecificNavEntry,
+  isExclusiveActivePath,
   prioritizeCanonicalNavSections,
   prioritizeCompactNavTree,
 } from './sidebar/compactNav'
@@ -695,18 +697,12 @@ function isVisibleNavItem(item: NavItem, vehicleCount: number, isForwardAuth: bo
   return true
 }
 
-function isActiveNavPath(pathname: string, to: string) {
-  return to === '/'
-    ? pathname === '/'
-    : pathname === to || pathname.startsWith(to + '/')
-}
-
 function findNavItemByPath(pathname: string) {
-  for (const section of navSections) {
-    const item = section.items.find(candidate => isActiveNavPath(pathname, candidate.to))
-    if (item) return { section, item }
-  }
-  return null
+  const found = findMostSpecificNavEntry(navSections, pathname)
+  if (!found) return null
+  const section = navSections.find(candidate => candidate.title === found.sectionTitle)
+  if (!section) return null
+  return { section, item: found.item }
 }
 
 function findNavItemByExactPath(to: string) {
@@ -1200,7 +1196,7 @@ export default function Layout() {
       // highlighted in its canonical section below, so duplicating it
       // here just adds visual noise and a confusing two-column "active"
       // indicator. Quick-jump rows for *other* recent pages remain.
-      .filter(item => !isActiveNavPath(location.pathname, item.to)),
+      .filter(item => !isExclusiveActivePath(location.pathname, item.to, NAV_CATALOG_PATHS)),
     [recentNavPaths, vehicleCount, isForwardAuth, location.pathname],
   )
 
@@ -1386,12 +1382,13 @@ export default function Layout() {
   const renderNavLink = (item: NavItem, compact = false, activeScope = 'main') => {
     const { to, icon: Icon, label, ...rest } = item
     const dataTour = 'dataTour' in rest ? (rest as { dataTour?: string }).dataTour : undefined
-    const isActive = isActiveNavPath(location.pathname, to)
+    const isActive = isExclusiveActivePath(location.pathname, to, NAV_CATALOG_PATHS)
     const isInTabBar = BOTTOM_TAB_PATHS.has(to)
     return (
       <PrefetchNavLink
         key={to}
         to={to}
+        end={!isActive}
         onClick={() => setSidebarOpen(false)}
         aria-label={label}
         aria-current={isActive ? 'page' : undefined}

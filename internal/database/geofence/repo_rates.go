@@ -147,22 +147,22 @@ RETURNING id, created_at`
 // default_estimate, preserving the ability to replace it later with explicit
 // historical pricing. Both updates share CreateRate's transaction.
 func applyCreatedCurrentRateToSessions(ctx context.Context, tx pgx.Tx, gr *systemmodel.GeofenceRate) error {
-	const applyExact = `
-UPDATE charging_sessions
-   SET cost_decimal  = ROUND(total_energy_added_wh::numeric * $3::numeric, 6),
+	applyExact := `
+UPDATE charging_sessions AS cs
+   SET cost_decimal  = ROUND((` + billableEnergyExpr() + `)::numeric * $3::numeric, 6),
        cost_currency = $4,
        rate_id       = $2,
        cost_source   = 'geofence_tariff'
- WHERE geofence_id = $1
-   AND ended_at IS NOT NULL
-   AND total_energy_added_wh IS NOT NULL
-   AND started_at >= $5
-   AND ($6::timestamptz IS NULL OR started_at < $6)
+ WHERE cs.geofence_id = $1
+   AND cs.ended_at IS NOT NULL
+   AND ` + billableEnergyExpr() + ` IS NOT NULL
+   AND cs.started_at >= $5
+   AND ($6::timestamptz IS NULL OR cs.started_at < $6)
    AND (
-       cost_source = 'default_estimate'
-       OR (cost_source IS NULL AND cost_decimal IS NULL)
-       OR (cost_source = 'unknown' AND cost_decimal IS NULL)
-       OR (cost_source = 'geofence_tariff' AND rate_id = $2)
+       cs.cost_source = 'default_estimate'
+       OR (cs.cost_source IS NULL AND cs.cost_decimal IS NULL)
+       OR (cs.cost_source = 'unknown' AND cs.cost_decimal IS NULL)
+       OR (cs.cost_source = 'geofence_tariff' AND cs.rate_id = $2)
    )`
 	if _, err := tx.Exec(
 		ctx,
@@ -177,15 +177,15 @@ UPDATE charging_sessions
 		return fmt.Errorf("geofence rates create apply exact sessions: %w", err)
 	}
 
-	const applyUncovered = `
+	applyUncovered := `
 UPDATE charging_sessions AS cs
-   SET cost_decimal  = ROUND(cs.total_energy_added_wh::numeric * $3::numeric, 6),
+   SET cost_decimal  = ROUND((` + billableEnergyExpr() + `)::numeric * $3::numeric, 6),
        cost_currency = $4,
        rate_id       = $2,
        cost_source   = 'default_estimate'
  WHERE cs.geofence_id = $1
    AND cs.ended_at IS NOT NULL
-   AND cs.total_energy_added_wh IS NOT NULL
+   AND ` + billableEnergyExpr() + ` IS NOT NULL
    AND NOT EXISTS (
        SELECT 1
          FROM geofence_rates AS historical

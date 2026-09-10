@@ -88,15 +88,59 @@ LIMIT $2`
 	return out, nil
 }
 
+// ListMissingChargeLocationCandidates returns sessions whose start GPS or
+// start_place is missing so startup can recover last-known coordinates
+// without creating new geofences from stale GPS.
+func (r *GeofenceRepo) ListMissingChargeLocationCandidates(ctx context.Context, afterID int64, limit int) ([]*systemmodel.ChargingLocationBackfillCandidate, error) {
+	if limit <= 0 || limit > 500 {
+		limit = 100
+	}
+	const query = `
+SELECT id, vehicle_id, started_at, start_lat, start_lng, start_place
+FROM charging_sessions
+WHERE id > $1
+  AND (
+    start_lat IS NULL OR start_lng IS NULL
+    OR start_place IS NULL OR btrim(start_place) = ''
+  )
+ORDER BY id
+LIMIT $2`
+	rows, err := r.pool.Query(ctx, query, afterID, limit)
+	if err != nil {
+		return nil, fmt.Errorf("geofence missing charge location candidates query: %w", err)
+	}
+	defer rows.Close()
+
+	var out []*systemmodel.ChargingLocationBackfillCandidate
+	for rows.Next() {
+		candidate := &systemmodel.ChargingLocationBackfillCandidate{}
+		if err := rows.Scan(
+			&candidate.SessionID,
+			&candidate.VehicleID,
+			&candidate.StartedAt,
+			&candidate.StartLat,
+			&candidate.StartLng,
+			&candidate.StartPlace,
+		); err != nil {
+			return nil, fmt.Errorf("geofence missing charge location candidates scan: %w", err)
+		}
+		out = append(out, candidate)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("geofence missing charge location candidates iter: %w", err)
+	}
+	return out, nil
+}
+
 // ApplyCurrentRateEstimate prices one completed legacy session with the rate
 // active at `at` only when no configured rate covers the session's started_at.
 // The provenance is default_estimate rather than geofence_tariff so a later
 // explicit historical-rate apply can replace it. Actual/manual/unknown costs
 // and estimates already pinned to another rate remain untouched.
 func (r *GeofenceRepo) ApplyCurrentRateEstimate(ctx context.Context, sessionID, geofenceID, rateID int64, at time.Time) (bool, error) {
-	const query = `
+	query := `
 UPDATE charging_sessions AS cs
-   SET cost_decimal  = ROUND(cs.total_energy_added_wh::numeric * rate.rate_per_wh, 6),
+   SET cost_decimal  = ROUND((` + billableEnergyExpr() + `)::numeric * rate.rate_per_wh, 6),
        cost_currency = rate.currency,
        rate_id       = rate.id,
        cost_source   = 'default_estimate'
@@ -104,7 +148,7 @@ UPDATE charging_sessions AS cs
  WHERE cs.id = $1
    AND cs.geofence_id = $2
    AND cs.ended_at IS NOT NULL
-   AND cs.total_energy_added_wh IS NOT NULL
+   AND ` + billableEnergyExpr() + ` IS NOT NULL
    AND rate.id = $3
    AND rate.geofence_id = $2
    AND rate.effective_from <= $4

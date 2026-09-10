@@ -353,13 +353,40 @@ export function useMotorLatest(vehicleId: number, refetchInterval?: number) {
   });
 }
 
-export function useMotorHistory(vehicleId: number, limit = 200, refetchInterval?: number) {
+export interface MotorHistoryQuery {
+  limit?: number;
+  start?: string;
+  end?: string;
+  refetchInterval?: number | false;
+  enabled?: boolean;
+}
+
+export function useMotorHistory(
+  vehicleId: number,
+  limitOrQuery: number | MotorHistoryQuery = 200,
+  refetchInterval?: number,
+) {
+  const query: MotorHistoryQuery =
+    typeof limitOrQuery === 'number'
+      ? { limit: limitOrQuery, refetchInterval }
+      : limitOrQuery;
+  const limit = query.limit ?? 200;
+  const start = query.start;
+  const end = query.end;
   return useQuery({
-    queryKey: ['motor-history', vehicleId, limit],
-    queryFn: ({ signal }) => request<import('../types').MotorSnapshot[]>(`/motor?vehicle_id=${vehicleId}&limit=${limit}`, { signal }),
-    enabled: vehicleId > 0,
+    queryKey: ['motor-history', vehicleId, limit, start ?? null, end ?? null],
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({
+        vehicle_id: String(vehicleId),
+        limit: String(limit),
+      });
+      if (start) params.set('start', start);
+      if (end) params.set('end', end);
+      return request<import('../types').MotorSnapshot[]>(`/motor?${params}`, { signal });
+    },
+    enabled: vehicleId > 0 && (query.enabled ?? true),
     select: safeArray,
-    refetchInterval,
+    refetchInterval: query.refetchInterval,
   });
 }
 

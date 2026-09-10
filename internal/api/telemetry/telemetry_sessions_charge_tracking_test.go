@@ -71,6 +71,49 @@ func (f *chargeTrackingFakeState) snapshotCalls() []chargeStateCallRecord {
 // Compile-time guarantee.
 var _ signal.StateReader = (*chargeTrackingFakeState)(nil)
 
+func TestRecoverChargeCoords_PrefersKnownPointers(t *testing.T) {
+	tracker := &TelemetrySessionTracker{}
+	lat, lon := 37.4419, -122.1430
+	gotLat, gotLon, ok := tracker.recoverChargeCoords(
+		context.Background(),
+		7,
+		time.Date(2026, 9, 1, 14, 31, 0, 0, time.UTC),
+		&lat,
+		&lon,
+	)
+	if !ok || gotLat != lat || gotLon != lon {
+		t.Fatalf("recoverChargeCoords = (%v,%v,%v), want known pointers", gotLat, gotLon, ok)
+	}
+}
+
+func TestRecoverChargeCoords_FromStateWhenMissing(t *testing.T) {
+	tracker := &TelemetrySessionTracker{}
+	reader := &chargeTrackingFakeState{
+		stateFn: func(_ context.Context, vehicleID int64, _ time.Time) (signal.State, error) {
+			if vehicleID != 7 {
+				t.Fatalf("vehicleID = %d, want 7", vehicleID)
+			}
+			return signal.State{
+				"LocationLatitude":  37.4419,
+				"LocationLongitude": -122.1430,
+			}, nil
+		},
+	}
+	tracker.SetChargeStateReader(reader)
+	t.Cleanup(func() { tracker.SetChargeStateReader(nil) })
+
+	gotLat, gotLon, ok := tracker.recoverChargeCoords(
+		context.Background(),
+		7,
+		time.Date(2026, 9, 1, 14, 31, 0, 0, time.UTC),
+		nil,
+		nil,
+	)
+	if !ok || gotLat != 37.4419 || gotLon != -122.1430 {
+		t.Fatalf("recoverChargeCoords = (%v,%v,%v), want state snapshot", gotLat, gotLon, ok)
+	}
+}
+
 func TestFreshChargeCoordinateValueRequiresObservedTimestamp(t *testing.T) {
 	now := time.Date(2026, 8, 26, 12, 0, 0, 0, time.UTC)
 	if freshChargeCoordinateValue(&signal.Value{
@@ -534,5 +577,30 @@ func TestTrackCharging_StoppedKeepsSession(t *testing.T) {
 	)
 	if _, ok := tracker.activeCharges[vehicleID]; !ok {
 		t.Fatal("charge session ended on Stopped")
+	}
+}
+
+func TestChargeEnergyBaselineTimeExcludesStartBatch(t *testing.T) {
+	start := time.Date(2026, 9, 5, 18, 0, 0, 0, time.UTC)
+	got := chargeEnergyBaselineTime(start)
+	if !got.Before(start) {
+		t.Fatalf("baseline %v is not before start %v", got, start)
+	}
+	if start.Sub(got) != chargeEnergyBaselineLookback {
+		t.Fatalf("lookback = %v, want %v", start.Sub(got), chargeEnergyBaselineLookback)
+	}
+	startSnap := map[string]interface{}{"DCChargingEnergyIn": 101870.0}
+	baselineSnap := map[string]interface{}{"DCChargingEnergyIn": 100000.0}
+	endSnap := map[string]interface{}{"DCChargingEnergyIn": 142620.0}
+	inclusive, _, _ := snapshotChargeEnergyDelta(startSnap, endSnap, "DCChargingEnergyIn")
+	exclusive, kind, ok := snapshotChargeEnergyDelta(baselineSnap, endSnap, "DCChargingEnergyIn")
+	if !ok || kind != signalcounter.ChangeAdvanced {
+		t.Fatalf("exclusive delta ok=%v kind=%v", ok, kind)
+	}
+	if inclusive != 40750 {
+		t.Fatalf("inclusive delta = %v, want 40750", inclusive)
+	}
+	if exclusive != 42620 {
+		t.Fatalf("exclusive delta = %v, want 42620", exclusive)
 	}
 }

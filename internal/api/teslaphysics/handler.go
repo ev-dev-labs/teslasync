@@ -385,7 +385,7 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 	driveBounds := []SessionBoundary{}
 	chargeBounds := []SessionBoundary{}
 	if h.driveList != nil {
-		drives, err := h.driveList.GetByVehicle(ctx, vehicleID, 200, 0, from, now)
+		drives, err := h.driveList.GetByVehicle(ctx, vehicleID, maxExclusiveSessions, 0, from, now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics drives failed")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")
@@ -405,7 +405,7 @@ func (h *Handler) Exclusive(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if h.chargeList != nil {
-		charges, err := h.chargeList.GetByVehicle(ctx, vehicleID, 200, 0, from, now)
+		charges, err := h.chargeList.GetByVehicle(ctx, vehicleID, maxExclusiveSessions, 0, from, now)
 		if err != nil {
 			log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("exclusive physics charges failed")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to load TeslaSync-only physics")

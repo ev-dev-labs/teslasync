@@ -1,8 +1,9 @@
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import type { ExclusiveReport } from '@/types/teslaPhysics';
+import { formatDateTime } from '@/lib/dateFormat';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -201,6 +202,26 @@ describe('TeslaOnlyPage', () => {
     expect(screen.getAllByText(/Ingest time is unknown/).length).toBeGreaterThan(0);
   });
 
+  it('shows stored ingest time on the clocks page', () => {
+    const originalLatest = report.clocks.latest;
+    const originalSamples = report.clocks.samples;
+    report.clocks.latest = {
+      event_time: '2026-03-01T11:50:00Z',
+      ingest_time: '2026-03-01T11:50:02Z',
+      display_time: '2026-03-01T12:00:00Z',
+      gap_s: 600,
+      unknown: false,
+    };
+    report.clocks.samples = [report.clocks.latest];
+    try {
+      renderAt('/tesla-only/clocks');
+      expect(screen.getAllByText(formatDateTime('2026-03-01T11:50:02Z')).length).toBeGreaterThan(0);
+    } finally {
+      report.clocks.latest = originalLatest;
+      report.clocks.samples = originalSamples;
+    }
+  });
+
   it('keeps Neutral rolling on the life tape', () => {
     renderAt('/tesla-only/life-tape');
     expect(screen.getByText('neutral_rolling')).toBeInTheDocument();
@@ -227,6 +248,49 @@ describe('TeslaOnlyPage', () => {
   it('keeps Transport unknown on mode laws', () => {
     renderAt('/tesla-only/modes');
     expect(screen.getByText(/Transport is unknown without a Tesla field/)).toBeInTheDocument();
+  });
+
+  it('paginates life tape instead of dropping older segments', () => {
+    const original = report.life_tape.segments;
+    report.life_tape.segments = Array.from({ length: 30 }, (_, i) => ({
+      state: `seg-${i}`,
+      started_at: `2026-03-01T10:${String(i).padStart(2, '0')}:00Z`,
+      ended_at: `2026-03-01T10:${String(i).padStart(2, '0')}:30Z`,
+      duration_s: 30,
+    }));
+    try {
+      renderAt('/tesla-only/life-tape');
+      expect(screen.getByText('Showing 1–25 of 30')).toBeInTheDocument();
+      expect(screen.getByText('seg-29')).toBeInTheDocument();
+      expect(screen.queryByText('seg-0')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+      expect(screen.getByText('seg-0')).toBeInTheDocument();
+      expect(screen.getByText('Showing 26–30 of 30')).toBeInTheDocument();
+    } finally {
+      report.life_tape.segments = original;
+    }
+  });
+
+  it('paginates the Tesla-language logbook instead of keeping only the last 40 entries', () => {
+    const original = report.logbook.entries;
+    report.logbook.entries = Array.from({ length: 40 }, (_, i) => ({
+      word: i === 0 ? 'Park' : i === 39 ? 'Drive' : 'Neutral',
+      at: `2026-03-01T11:${String(i).padStart(2, '0')}:00Z`,
+      ended_at: null,
+      kind: 'gear',
+      id: i + 1,
+    }));
+    try {
+      renderAt('/tesla-only/logbook');
+      expect(screen.getByText('Showing 1–25 of 40')).toBeInTheDocument();
+      expect(screen.getByText('Drive')).toBeInTheDocument();
+      expect(screen.queryByText('Park')).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'Next page' }));
+      expect(screen.getByText('Park')).toBeInTheDocument();
+      expect(screen.getByText('Showing 26–40 of 40')).toBeInTheDocument();
+    } finally {
+      report.logbook.entries = original;
+    }
   });
 
   it('does not claim FSD engagement on the range page', () => {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
 
@@ -185,6 +186,55 @@ func TestChargingHistoryRepo_GetBySessionID(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestChargingHistoryRepo_FindBestMatch(t *testing.T) {
+	t.Parallel()
+	e := sampleHistoryEntry()
+	started := e.ChargeStartDatetime
+
+	t.Run("found", func(t *testing.T) {
+		t.Parallel()
+		pool := &fakePool{queryRowQueue: []pgx.Row{fakeRow{vals: chargingHistoryRow(e)}}}
+		repo := &TeslaChargingHistoryRepo{pool: pool}
+		got, err := repo.FindBestMatch(context.Background(), e.VIN, started)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if got == nil || got.SessionID != e.SessionID {
+			t.Fatalf("unexpected row: %+v", got)
+		}
+		if !strings.Contains(pool.queryRowCalls[0].sql, "charge_start_datetime BETWEEN") {
+			t.Errorf("SQL missing match window: %s", pool.queryRowCalls[0].sql)
+		}
+		assertArgsEqual(t, pool.queryRowCalls[0].args, []any{e.VIN, started.Add(-2 * time.Hour), started.Add(2 * time.Hour), started})
+	})
+
+	t.Run("not found maps to nil,nil", func(t *testing.T) {
+		t.Parallel()
+		pool := &fakePool{queryRowQueue: []pgx.Row{noRow()}}
+		repo := &TeslaChargingHistoryRepo{pool: pool}
+		got, err := repo.FindBestMatch(context.Background(), e.VIN, started)
+		if err != nil {
+			t.Fatalf("unexpected err: %v", err)
+		}
+		if got != nil {
+			t.Fatalf("want nil, got %+v", got)
+		}
+	})
+
+	t.Run("empty vin short-circuits", func(t *testing.T) {
+		t.Parallel()
+		pool := &fakePool{}
+		repo := &TeslaChargingHistoryRepo{pool: pool}
+		got, err := repo.FindBestMatch(context.Background(), "", started)
+		if err != nil || got != nil {
+			t.Fatalf("got (%v, %v), want nil,nil", got, err)
+		}
+		if len(pool.queryRowCalls) != 0 {
+			t.Fatalf("expected no query, got %d", len(pool.queryRowCalls))
+		}
+	})
 }
 
 func TestChargingHistoryRepo_GetSummary(t *testing.T) {

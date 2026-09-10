@@ -275,6 +275,25 @@ func TestClassifyRepriceCandidates(t *testing.T) {
 	}
 }
 
+func TestClassifyRepriceCandidatesPrefersBilledEnergy(t *testing.T) {
+	g := testGeofenceAt(1, 37.7749, -122.4194)
+	matched, eligible, protected := classifyRepriceCandidates([]repriceCandidate{
+		// Pack energy unknown, Tesla cabinet bill present → still eligible.
+		{id: 20, geofenceID: int64Ptr(1), billedWh: f64ptr(48_449.1)},
+		// Tesla billed kWh wins over pack for eligibility (both present).
+		{id: 21, geofenceID: int64Ptr(1), energyWh: f64ptr(45_600), billedWh: f64ptr(48_449.1)},
+	}, g)
+	if len(matched) != 2 || len(eligible) != 2 || len(protected) != 0 {
+		t.Fatalf("matched=%d eligible=%d protected=%d, want 2/2/0", len(matched), len(eligible), len(protected))
+	}
+	if got := eligible[0].billableWh(); got == nil || *got != 48_449.1 {
+		t.Fatalf("billed-only billableWh=%v, want 48449.1", got)
+	}
+	if got := eligible[1].billableWh(); got == nil || *got != 48_449.1 {
+		t.Fatalf("billed-over-pack billableWh=%v, want 48449.1 (cabinet, not pack)", got)
+	}
+}
+
 func idsOf(cs []repriceCandidate) []int64 {
 	ids := make([]int64, len(cs))
 	for i, c := range cs {
@@ -299,7 +318,7 @@ func TestLoadRepriceCandidates(t *testing.T) {
 			t.Fatalf("unexpected err: %v", err)
 		}
 		call := pool.queryCalls[0]
-		if strings.Contains(call.sql, "started_at < $3") {
+		if strings.Contains(call.sql, "cs.started_at < $3") {
 			t.Errorf("open window must not bind an upper bound: %s", call.sql)
 		}
 		if len(call.args) != 2 {
@@ -315,7 +334,7 @@ func TestLoadRepriceCandidates(t *testing.T) {
 			t.Fatalf("unexpected err: %v", err)
 		}
 		call := pool.queryCalls[0]
-		if !strings.Contains(call.sql, "started_at < $3") {
+		if !strings.Contains(call.sql, "cs.started_at < $3") {
 			t.Errorf("closed window must bind an upper bound: %s", call.sql)
 		}
 		if len(call.args) != 3 || call.args[2] != to {
@@ -326,8 +345,12 @@ func TestLoadRepriceCandidates(t *testing.T) {
 	t.Run("matches unattributed OR this geofence", func(t *testing.T) {
 		pool := &fakePool{queryQueue: []queryResult{{rows: newFakeRows(nil)}}}
 		_, _ = newRepo(pool).loadRepriceCandidates(context.Background(), 1, from, nil)
-		if !strings.Contains(pool.queryCalls[0].sql, "geofence_id = $1 OR geofence_id IS NULL") {
-			t.Errorf("unexpected SQL: %s", pool.queryCalls[0].sql)
+		sql := pool.queryCalls[0].sql
+		if !strings.Contains(sql, "cs.geofence_id = $1 OR cs.geofence_id IS NULL") {
+			t.Errorf("unexpected SQL: %s", sql)
+		}
+		if !strings.Contains(sql, "tesla_charging_history") {
+			t.Errorf("candidates must join Tesla billed energy: %s", sql)
 		}
 	})
 
@@ -340,7 +363,7 @@ func TestLoadRepriceCandidates(t *testing.T) {
 	})
 
 	t.Run("scan error wrapped", func(t *testing.T) {
-		rows := newFakeRows([][]any{{int64(1), (*int64)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil)}})
+		rows := newFakeRows([][]any{{int64(1), (*int64)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil), (*float64)(nil), (*float64)(nil), (*string)(nil), (*float64)(nil)}})
 		rows.scanErrAt = 0
 		pool := &fakePool{queryQueue: []queryResult{{rows: rows}}}
 		_, err := newRepo(pool).loadRepriceCandidates(context.Background(), 1, from, nil)
@@ -416,8 +439,8 @@ func scenarioCandidatesRows(g *systemmodel.Geofence) [][]any {
 	cLat, cLon := g.Centroid()
 	manual := systemmodel.CostSourceManual
 	return [][]any{
-		{int64(10), (*int64)(nil), &cLat, &cLon, (*string)(nil), f64ptr(10_000), (*float64)(nil), (*string)(nil)},
-		{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual},
+		{int64(10), (*int64)(nil), &cLat, &cLon, (*string)(nil), f64ptr(10_000), (*float64)(nil), (*string)(nil), (*float64)(nil)},
+		{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual, (*float64)(nil)},
 	}
 }
 
@@ -455,17 +478,22 @@ func TestPreviewApplyRate(t *testing.T) {
 			t.Errorf("aggregate mismatch: %+v", preview)
 		}
 		// The aggregate query must scope to exactly the eligible ids (10),
-		// never the protected one (11).
+		// never the protected one (11), and bill Tesla cabinet energy first.
 		aggCall := pool.queryRowCalls[2]
 		ids, ok := aggCall.args[0].([]int64)
 		if !ok || len(ids) != 1 || ids[0] != 10 {
 			t.Errorf("aggregate ids: want [10], got %v", aggCall.args[0])
 		}
+		for _, sub := range []string{"tesla_charging_history", "COALESCE", "billable_wh"} {
+			if !strings.Contains(aggCall.sql, sub) {
+				t.Errorf("preview aggregate missing %q:\n%s", sub, aggCall.sql)
+			}
+		}
 	})
 
 	t.Run("zero eligible sessions skips the aggregate round trip", func(t *testing.T) {
 		manual := systemmodel.CostSourceManual
-		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual}}
+		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual, (*float64)(nil)}}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
 			queryQueue:    []queryResult{{rows: newFakeRows(onlyProtected)}},
@@ -526,8 +554,10 @@ func TestApplyRate(t *testing.T) {
 		updateCall := pool.queryCalls[1]
 		for _, sub := range []string{
 			"UPDATE charging_sessions",
-			"cost_source = CASE WHEN scoped.should_price THEN 'geofence_tariff' ELSE cs.cost_source END",
+			"THEN 'geofence_tariff' ELSE cs.cost_source END",
 			"cost_source IS NULL AND cost_decimal IS NULL",
+			"tesla_charging_history",
+			"billable_wh",
 		} {
 			if !strings.Contains(updateCall.sql, sub) {
 				t.Errorf("UPDATE SQL missing %q:\n%s", sub, updateCall.sql)
@@ -545,7 +575,7 @@ func TestApplyRate(t *testing.T) {
 
 	t.Run("zero eligible sessions skips the UPDATE round trip", func(t *testing.T) {
 		manual := systemmodel.CostSourceManual
-		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual}}
+		onlyProtected := [][]any{{int64(11), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual, (*float64)(nil)}}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
 			queryQueue:    []queryResult{{rows: newFakeRows(onlyProtected)}},
@@ -567,7 +597,7 @@ func TestApplyRate(t *testing.T) {
 		cLat, cLon := g.Centroid()
 		manual := systemmodel.CostSourceManual
 		unattributedProtected := [][]any{
-			{int64(11), (*int64)(nil), &cLat, &cLon, (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual},
+			{int64(11), (*int64)(nil), &cLat, &cLon, (*string)(nil), f64ptr(5_000), f64ptr(4.25), &manual, (*float64)(nil)},
 		}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
@@ -605,7 +635,7 @@ func TestApplyRate(t *testing.T) {
 		// an eligible candidate set that yields an UPDATE returning zero
 		// rows (e.g. concurrent apply already converged it to a manual
 		// cost between classification and the UPDATE).
-		alreadyDone := [][]any{{int64(10), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(10_000), f64ptr(1.005), strptr(systemmodel.CostSourceGeofenceTariff)}}
+		alreadyDone := [][]any{{int64(10), int64Ptr(g.ID), (*float64)(nil), (*float64)(nil), (*string)(nil), f64ptr(10_000), f64ptr(1.005), strptr(systemmodel.CostSourceGeofenceTariff), (*float64)(nil)}}
 		pool := &fakePool{
 			queryRowQueue: []pgx.Row{fakeRow{vals: geofenceRowVals(g)}, fakeRow{vals: geofenceRateRowVals(rt)}},
 			queryQueue: []queryResult{

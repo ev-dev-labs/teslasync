@@ -201,7 +201,7 @@ func (h *MotorHandler) List(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to get motor data")
 		return
 	}
-	rows := timelineRowsToFlat(timelineRows)
+	rows := evenSampleMaps(timelineRowsToFlat(timelineRows), motorHistoryLimit(r))
 	for i, row := range rows {
 		injectDerivedMotorPower(row)
 		if ts, ok := row["ts"]; ok {
@@ -210,6 +210,46 @@ func (h *MotorHandler) List(w http.ResponseWriter, r *http.Request) {
 		row["id"] = i + 1
 	}
 	httpx.WriteJSON(w, http.StatusOK, rows)
+}
+
+const defaultMotorHistoryLimit = 200
+const maxMotorHistoryLimit = 1000
+
+func motorHistoryLimit(r *http.Request) int {
+	limit := defaultMotorHistoryLimit
+	if v := r.URL.Query().Get("limit"); v != "" {
+		if parsed, err := strconv.Atoi(v); err == nil && parsed > 0 {
+			limit = parsed
+		}
+	}
+	if limit > maxMotorHistoryLimit {
+		return maxMotorHistoryLimit
+	}
+	return limit
+}
+
+// evenSampleMaps keeps first and last rows and evenly spaced points in
+// between so a dense inverter window still charts the whole drive instead
+// of the oldest prefix (TimelineOptions.MaxRows) or an unbounded dump.
+func evenSampleMaps(rows []map[string]any, limit int) []map[string]any {
+	n := len(rows)
+	if limit <= 0 || n <= limit {
+		return rows
+	}
+	if limit == 1 {
+		return []map[string]any{rows[n-1]}
+	}
+	out := make([]map[string]any, 0, limit)
+	lastIdx := -1
+	for i := 0; i < limit; i++ {
+		idx := i * (n - 1) / (limit - 1)
+		if idx == lastIdx {
+			continue
+		}
+		out = append(out, rows[idx])
+		lastIdx = idx
+	}
+	return out
 }
 
 // Latest returns the most recent motor / powertrain values, derived from

@@ -51,6 +51,11 @@ type TimelineRow struct {
 	// Timestamp is the change-feed emission time. This is authoritative; if
 	// Fields contains a colliding key "ts" it is dropped during JSON marshaling.
 	Timestamp time.Time
+	// ReceivedAt is signal_log.received_at for this emission (MQTT/HTTP
+	// ingest boundary). Nil when the row predates provenance (000234) or
+	// the writer never stored a receipt time. Not included in MarshalJSON
+	// so chart payloads stay {ts, fields…}.
+	ReceivedAt *time.Time
 	// Fields maps output field name (per FieldMapping.Field) to the value
 	// observed at Timestamp.
 	Fields map[string]SignalValue

@@ -101,6 +101,27 @@ LIMIT $2 OFFSET $3`
 	return out, nil
 }
 
+// teslaBillUsageWhSQL is a scalar subquery that requires charging_sessions
+// aliased as cs. It returns Tesla invoice cabinet energy (Wh) for the closest
+// CHARGING fee within ±2h of session start, or NULL when no invoice is imported.
+// Supercharger bills are meter/cabinet kWh, not pack kWh — pack energy under-
+// reports the invoice (e.g. 45.60 vs 48.45 kWh). Preview/apply must COALESCE
+// this onto total_energy_added_wh so $0.47/kWh × billed kWh matches Tesla.
+const teslaBillUsageWhSQL = `(SELECT t.usage_wh
+FROM tesla_charging_history t
+INNER JOIN vehicles v ON v.id = cs.vehicle_id AND v.vin = t.vin
+WHERE t.charge_start_datetime BETWEEN cs.started_at - INTERVAL '2 hours'
+                                  AND cs.started_at + INTERVAL '2 hours'
+  AND (t.fee_type IS NULL OR t.fee_type = 'CHARGING')
+  AND t.usage_wh IS NOT NULL
+ORDER BY ABS(EXTRACT(EPOCH FROM (t.charge_start_datetime - cs.started_at))) ASC,
+         t.session_id DESC
+LIMIT 1)`
+
+func billableEnergyExpr() string {
+	return `COALESCE(` + teslaBillUsageWhSQL + `, cs.total_energy_added_wh)`
+}
+
 // repriceCandidate is the minimal projection needed to decide whether a
 // charging session is in scope for a geofence rate preview/apply operation.
 type repriceCandidate struct {
@@ -112,6 +133,16 @@ type repriceCandidate struct {
 	energyWh    *float64
 	costDecimal *float64
 	costSource  *string
+	billedWh    *float64
+}
+
+// billableWh prefers Tesla invoice cabinet energy over pack energy so a
+// geofence tariff applied to Supercharger sessions matches the Tesla bill.
+func (c repriceCandidate) billableWh() *float64 {
+	if c.billedWh != nil {
+		return c.billedWh
+	}
+	return c.energyWh
 }
 
 // loadRepriceCandidates loads every charging session started within
@@ -123,13 +154,15 @@ type repriceCandidate struct {
 // has no PostGIS geometry types, only WKT text + Go Haversine math.
 func (r *GeofenceRepo) loadRepriceCandidates(ctx context.Context, geofenceID int64, from time.Time, to *time.Time) ([]repriceCandidate, error) {
 	query := `
-SELECT id, geofence_id, start_lat, start_lng, start_place, total_energy_added_wh, cost_decimal, cost_source
-FROM charging_sessions
-WHERE (geofence_id = $1 OR geofence_id IS NULL)
-  AND started_at >= $2`
+SELECT cs.id, cs.geofence_id, cs.start_lat, cs.start_lng, cs.start_place,
+       cs.total_energy_added_wh, cs.cost_decimal, cs.cost_source,
+       ` + teslaBillUsageWhSQL + ` AS billed_wh
+FROM charging_sessions cs
+WHERE (cs.geofence_id = $1 OR cs.geofence_id IS NULL)
+  AND cs.started_at >= $2`
 	args := []any{geofenceID, from}
 	if to != nil {
-		query += ` AND started_at < $3`
+		query += ` AND cs.started_at < $3`
 		args = append(args, *to)
 	}
 	rows, err := r.pool.Query(ctx, query, args...)
@@ -150,6 +183,7 @@ WHERE (geofence_id = $1 OR geofence_id IS NULL)
 			&c.energyWh,
 			&c.costDecimal,
 			&c.costSource,
+			&c.billedWh,
 		); err != nil {
 			return nil, fmt.Errorf("geofence reprice candidates scan: %w", err)
 		}
@@ -169,7 +203,8 @@ WHERE (geofence_id = $1 OR geofence_id IS NULL)
 //     preview/apply remains the write gate for this conservative fallback.
 //   - eligible (subset of matched): cost_source is geofence_tariff or
 //     default_estimate, or it is empty/unknown with no existing cost, AND
-//     total_energy_added_wh is known. These are the ids ApplyRate may write.
+//     Tesla billed energy or pack total_energy_added_wh is known. These are
+//     the ids ApplyRate may write.
 //   - protected (subset of matched): cost_source is manual/tesla_actual, or
 //     an existing cost has empty/unknown provenance. They are surfaced
 //     separately so the UI can explain a preview total smaller than matched.
@@ -217,7 +252,7 @@ func classifyRepriceCandidates(candidates []repriceCandidate, g *systemmodel.Geo
 			protected = append(protected, c)
 			continue
 		}
-		if repriceEligibleCostSources[source] && c.energyWh != nil {
+		if repriceEligibleCostSources[source] && c.billableWh() != nil {
 			eligible = append(eligible, c)
 		}
 	}
@@ -271,11 +306,14 @@ func (r *GeofenceRepo) PreviewApplyRate(ctx context.Context, scope systemmodel.G
 	}
 
 	ids := candidateIDs(eligible)
-	const q = `
-SELECT COALESCE(SUM(total_energy_added_wh), 0),
-       COALESCE(SUM(ROUND(total_energy_added_wh::numeric * $2::numeric, 6)), 0)
-FROM charging_sessions
-WHERE id = ANY($1)`
+	q := `
+SELECT COALESCE(SUM(billable_wh), 0),
+       COALESCE(SUM(ROUND(billable_wh::numeric * $2::numeric, 6)), 0)
+FROM (
+    SELECT ` + billableEnergyExpr() + ` AS billable_wh
+    FROM charging_sessions cs
+    WHERE cs.id = ANY($1)
+) billed`
 	if err := r.pool.QueryRow(ctx, q, ids, rate.RatePerWh).Scan(&preview.TotalEnergyWh, &preview.EstimatedCostDecimal); err != nil {
 		return nil, fmt.Errorf("geofence rate preview aggregate: %w", err)
 	}
@@ -323,12 +361,11 @@ func (r *GeofenceRepo) ApplyRate(ctx context.Context, scope systemmodel.Geofence
 
 	matchedIDs := candidateIDs(matched)
 	eligibleIDs := candidateIDs(eligible)
-	const q = `
+	billable := billableEnergyExpr()
+	q := `
 WITH scoped AS (
     SELECT id,
-           total_energy_added_wh,
            id = ANY($3)
-               AND total_energy_added_wh IS NOT NULL
                AND (
                    cost_source IN ('geofence_tariff', 'default_estimate')
                    OR (cost_source IS NULL AND cost_decimal IS NULL)
@@ -342,19 +379,20 @@ updated AS (
     UPDATE charging_sessions AS cs
        SET geofence_id = $2,
            cost_decimal = CASE
-               WHEN scoped.should_price THEN ROUND(cs.total_energy_added_wh::numeric * $4::numeric, 6)
+               WHEN scoped.should_price AND ` + billable + ` IS NOT NULL
+               THEN ROUND((` + billable + `)::numeric * $4::numeric, 6)
                ELSE cs.cost_decimal
            END,
-           cost_currency = CASE WHEN scoped.should_price THEN $5 ELSE cs.cost_currency END,
-           rate_id = CASE WHEN scoped.should_price THEN $6 ELSE cs.rate_id END,
-           cost_source = CASE WHEN scoped.should_price THEN 'geofence_tariff' ELSE cs.cost_source END
+           cost_currency = CASE WHEN scoped.should_price AND ` + billable + ` IS NOT NULL THEN $5 ELSE cs.cost_currency END,
+           rate_id = CASE WHEN scoped.should_price AND ` + billable + ` IS NOT NULL THEN $6 ELSE cs.rate_id END,
+           cost_source = CASE WHEN scoped.should_price AND ` + billable + ` IS NOT NULL THEN 'geofence_tariff' ELSE cs.cost_source END
       FROM scoped
      WHERE cs.id = scoped.id
-    RETURNING scoped.should_price, cs.total_energy_added_wh, cs.cost_decimal
+    RETURNING scoped.should_price, ` + billable + ` AS billable_wh, cs.cost_decimal
 )
-SELECT total_energy_added_wh, cost_decimal
+SELECT billable_wh, cost_decimal
   FROM updated
- WHERE should_price`
+ WHERE should_price AND billable_wh IS NOT NULL`
 	rows, err := r.pool.Query(
 		ctx,
 		q,

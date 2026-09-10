@@ -1,10 +1,13 @@
+import { addCivilDays, civilDateInTimeZone } from './dateRange';
+
 /**
  * Quick-select date range presets.
  *
- * `resolve(now?)` returns ISO date strings (YYYY-MM-DD) using the supplied
- * `now`'s LOCAL calendar day (not UTC) so that "Today" matches the user's
- * wall-clock day even at 23:30 local. When timezone-aware date helpers
- * land, swap `new Date()` for an `inTz(now, tz)` helper.
+ * `resolve(now?, timeZone?)` returns ISO date strings (YYYY-MM-DD). Without
+ * `timeZone` it uses the browser's local calendar day. Vehicle-centric
+ * pages pass the vehicle IANA tz so "Today" is that vehicle's civil day
+ * through exclusive tomorrow midnight — a UTC host at 02:00 must not
+ * drop a still-current PDT evening.
  */
 
 export interface DatePresetRange {
@@ -16,17 +19,52 @@ export interface DatePreset {
   id: string;
   i18nKey: string;
   fallback: string;
-  resolve: (now?: Date) => DatePresetRange;
+  resolve: (now?: Date, timeZone?: string) => DatePresetRange;
   /** Rolling scopes must be selected explicitly, not inferred from dates. */
   requiresExplicitSelection?: boolean;
 }
 
 /** Format a Date as YYYY-MM-DD using LOCAL calendar fields. */
-function iso(d: Date): string {
+function isoLocal(d: Date): string {
   const y = d.getFullYear();
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+function iso(d: Date, timeZone?: string): string {
+  if (timeZone) return civilDateInTimeZone(d, timeZone);
+  return isoLocal(d);
+}
+
+function addDays(now: Date, days: number, timeZone?: string): string {
+  if (timeZone) return addCivilDays(civilDateInTimeZone(now, timeZone), days);
+  const s = new Date(now);
+  s.setDate(s.getDate() + days);
+  return isoLocal(s);
+}
+
+function monthStart(now: Date, timeZone?: string): string {
+  const civil = iso(now, timeZone);
+  return `${civil.slice(0, 7)}-01`;
+}
+
+function quarterStart(now: Date, timeZone?: string): string {
+  const civil = iso(now, timeZone);
+  const y = Number(civil.slice(0, 4));
+  const m = Number(civil.slice(5, 7));
+  const q = Math.floor((m - 1) / 3) * 3 + 1;
+  return `${y}-${String(q).padStart(2, '0')}-01`;
+}
+
+function yearStart(now: Date, timeZone?: string): string {
+  return `${iso(now, timeZone).slice(0, 4)}-01-01`;
+}
+
+function lastMonthRange(now: Date, timeZone?: string): DatePresetRange {
+  const firstThis = monthStart(now, timeZone);
+  const lastPrev = addCivilDays(firstThis, -1);
+  return { start: `${lastPrev.slice(0, 7)}-01`, end: lastPrev };
 }
 
 export const DATE_PRESETS: DatePreset[] = [
@@ -34,127 +72,123 @@ export const DATE_PRESETS: DatePreset[] = [
     id: 'today',
     i18nKey: 'date.preset.today',
     fallback: 'Today',
-    resolve: (now = new Date()) => ({ start: iso(now), end: iso(now) }),
+    resolve: (now = new Date(), timeZone?) => ({
+      start: iso(now, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: 'live',
     i18nKey: 'date.preset.live',
     fallback: 'Live',
-    // Calendar-only APIs use today as the compatibility window. Consumers
-    // using useRangeState's instant bounds receive a rolling five-minute
-    // window instead.
     requiresExplicitSelection: true,
-    resolve: (now = new Date()) => ({ start: iso(now), end: iso(now) }),
+    resolve: (now = new Date(), timeZone?) => ({
+      start: iso(now, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: '24h',
     i18nKey: 'date.preset.last24h',
     fallback: 'Last 24 hours',
-    // A rolling 24-hour period can cross two local calendar days. Precise
-    // instant bounds are resolved by useRangeState for APIs that accept them.
     requiresExplicitSelection: true,
-    resolve: (now = new Date()) => {
-      const s = new Date(now);
-      s.setDate(s.getDate() - 1);
-      return { start: iso(s), end: iso(now) };
-    },
+    resolve: (now = new Date(), timeZone?) => ({
+      start: addDays(now, -1, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: 'yesterday',
     i18nKey: 'date.preset.yesterday',
     fallback: 'Yesterday',
-    resolve: (now = new Date()) => {
-      const y = new Date(now);
-      y.setDate(y.getDate() - 1);
-      return { start: iso(y), end: iso(y) };
+    resolve: (now = new Date(), timeZone?) => {
+      const y = addDays(now, -1, timeZone);
+      return { start: y, end: y };
     },
   },
   {
     id: '7d',
     i18nKey: 'date.preset.last7',
     fallback: 'Last 7 days',
-    resolve: (now = new Date()) => {
-      const s = new Date(now);
-      s.setDate(s.getDate() - 6);
-      return { start: iso(s), end: iso(now) };
-    },
+    resolve: (now = new Date(), timeZone?) => ({
+      start: addDays(now, -6, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: '30d',
     i18nKey: 'date.preset.last30',
     fallback: 'Last 30 days',
-    resolve: (now = new Date()) => {
-      const s = new Date(now);
-      s.setDate(s.getDate() - 29);
-      return { start: iso(s), end: iso(now) };
-    },
+    resolve: (now = new Date(), timeZone?) => ({
+      start: addDays(now, -29, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: '90d',
     i18nKey: 'date.preset.last90',
     fallback: 'Last 90 days',
-    resolve: (now = new Date()) => {
-      const s = new Date(now);
-      s.setDate(s.getDate() - 89);
-      return { start: iso(s), end: iso(now) };
-    },
+    resolve: (now = new Date(), timeZone?) => ({
+      start: addDays(now, -89, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: 'mtd',
     i18nKey: 'date.preset.mtd',
     fallback: 'Month to date',
-    resolve: (now = new Date()) => ({
-      start: iso(new Date(now.getFullYear(), now.getMonth(), 1)),
-      end: iso(now),
+    resolve: (now = new Date(), timeZone?) => ({
+      start: monthStart(now, timeZone),
+      end: iso(now, timeZone),
     }),
   },
   {
     id: 'qtd',
     i18nKey: 'date.preset.qtd',
     fallback: 'Quarter to date',
-    resolve: (now = new Date()) => {
-      const q = Math.floor(now.getMonth() / 3) * 3;
-      return {
-        start: iso(new Date(now.getFullYear(), q, 1)),
-        end: iso(now),
-      };
-    },
+    resolve: (now = new Date(), timeZone?) => ({
+      start: quarterStart(now, timeZone),
+      end: iso(now, timeZone),
+    }),
   },
   {
     id: 'ytd',
     i18nKey: 'date.preset.ytd',
     fallback: 'Year to date',
-    resolve: (now = new Date()) => ({
-      start: iso(new Date(now.getFullYear(), 0, 1)),
-      end: iso(now),
+    resolve: (now = new Date(), timeZone?) => ({
+      start: yearStart(now, timeZone),
+      end: iso(now, timeZone),
     }),
   },
   {
     id: 'lastMonth',
     i18nKey: 'date.preset.lastMonth',
     fallback: 'Last month',
-    resolve: (now = new Date()) => {
-      const s = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-      // Day 0 of the current month = last day of the previous month.
-      const e = new Date(now.getFullYear(), now.getMonth(), 0);
-      return { start: iso(s), end: iso(e) };
-    },
+    resolve: (now = new Date(), timeZone?) => lastMonthRange(now, timeZone),
   },
   {
     id: '1y',
     i18nKey: 'date.preset.last1y',
     fallback: 'Last year',
-    resolve: (now = new Date()) => {
-      const s = new Date(now);
-      s.setFullYear(s.getFullYear() - 1);
-      return { start: iso(s), end: iso(now) };
+    resolve: (now = new Date(), timeZone?) => {
+      if (!timeZone) {
+        const s = new Date(now);
+        s.setFullYear(s.getFullYear() - 1);
+        return { start: isoLocal(s), end: isoLocal(now) };
+      }
+      const civil = civilDateInTimeZone(now, timeZone);
+      const y = Number(civil.slice(0, 4)) - 1;
+      return { start: `${y}${civil.slice(4)}`, end: civil };
     },
   },
   {
     id: 'all',
     i18nKey: 'date.preset.all',
     fallback: 'All time',
-    resolve: (now = new Date()) => ({ start: '2015-01-01', end: iso(now) }),
+    resolve: (now = new Date(), timeZone?) => ({
+      start: '2015-01-01',
+      end: iso(now, timeZone),
+    }),
   },
 ];
 

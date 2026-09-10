@@ -40,16 +40,11 @@ import type {
   LinearSidebarSectionInput as NotionSidebarSectionInput,
   LinearSidebarProps as NotionSidebarProps,
 } from './LinearSidebar'
+import { isExclusiveActivePath } from './compactNav'
 
 export type { NotionSidebarSectionInput, NotionSidebarProps }
 
 // ─── Active-path helpers ─────────────────────────────────────────────────
-
-function isActiveNotionPath(pathname: string, to: string) {
-  return to === '/'
-    ? pathname === '/'
-    : pathname === to || pathname.startsWith(to + '/')
-}
 
 // ─── Tiny components ─────────────────────────────────────────────────────
 
@@ -95,6 +90,7 @@ function NotionRow({
       <PrefetchNavLink
         to={to}
         onClick={onSelect}
+        end={!active}
         aria-current={active ? 'page' : false}
         data-tour={dataTour}
         className={cn(
@@ -262,6 +258,12 @@ export function NotionSidebar({
   // instead of throwing on `.map` / `.filter` / `.length`.
   const safeSections = sections ?? []
   const safePinnedItems = pinnedItems ?? []
+  const catalogPaths = useMemo(() => {
+    const paths = safeSections.flatMap(section => section.items.map(item => item.to))
+    for (const item of safePinnedItems) paths.push(item.to)
+    return paths
+  }, [safeSections, safePinnedItems])
+  const itemIsActive = (to: string) => isExclusiveActivePath(effectivePath, to, catalogPaths)
 
   // ── Tree state ─────────────────────────────────────────────────────────
   const [collapsed, setCollapsed] = useState<Set<string>>(() => {
@@ -439,7 +441,7 @@ export function NotionSidebar({
                         label={navLabel(item.label)}
                         icon={item.icon}
                         iconColor={item.color}
-                        active={isActiveNotionPath(effectivePath, item.to)}
+                        active={itemIsActive(item.to)}
                         onSelect={onItemSelect}
                         trailing={trailingFor(item.to)}
                         hoverAction={pinAction(item)}

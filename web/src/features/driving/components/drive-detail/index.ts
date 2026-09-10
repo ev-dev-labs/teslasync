@@ -1,6 +1,7 @@
 export { DriveDetailSkeleton } from './DriveDetailSkeleton';
 export { DriveDetailHeader } from './DriveDetailHeader';
 export { HeroGauges } from './HeroGauges';
+export { DrivePhysicsDebriefPanel } from './DrivePhysicsDebriefPanel';
 export { DriveTimeline } from './DriveTimeline';
 export { DriveStatCards } from './DriveStatCards';
 export { SupervisedDrivingPanel } from './SupervisedDrivingPanel';

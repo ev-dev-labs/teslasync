@@ -45,18 +45,13 @@ import {
 } from '@/components/charts';
 import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
 import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
+import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
 function isDC(session: ChargingSession): boolean {
   const ft = session.charger_type?.toLowerCase() ?? '';
   return ft !== '' && ft !== '<invalid>' && ft !== 'unknown';
-}
-
-function kwhPerHour(session: ChargingSession): number | null {
-  const durationMin = durationMinutes(session.started_at, session.ended_at);
-  if (durationMin <= 0) return null;
-  return (session.total_energy_added_wh / 1000 / durationMin) * 60;
 }
 
 /** Synthesize a plausible charge curve when telemetry is absent. */
@@ -291,19 +286,24 @@ export default function ChargingDetailPage() {
 
   /* ─── derived scalars (session is now guaranteed) ─── */
 
-  const avgRate = kwhPerHour(session);
   const durationMin = durationMinutes(session.started_at, session.ended_at);
   const addedDistanceM = distanceAddedM(session);
+  const billedEnergyWh = session.billed_energy_wh ?? null;
+  const vehicleEnergyWh = session.total_energy_added_wh ?? 0;
+  const displayEnergyWh = billedEnergyWh != null && billedEnergyWh > 0 ? billedEnergyWh : vehicleEnergyWh;
+  const avgRate = durationMin > 0 ? (displayEnergyWh / 1000 / durationMin) * 60 : null;
+  const billedCost = session.billed_cost_decimal ?? null;
+  const displayCost = billedCost ?? session.cost_decimal ?? null;
   const perKwhRate =
-    session.cost_decimal != null && session.total_energy_added_wh > 0
-      ? session.cost_decimal / (session.total_energy_added_wh / 1000)
-      : null;
+    displayCost != null && displayEnergyWh > 0
+      ? displayCost / (displayEnergyWh / 1000)
+      : session.billed_rate_per_kwh ?? null;
 
   const costValue =
-    session.cost_decimal != null
-      ? formatCurrency(session.cost_decimal, 2)
-      : session.total_energy_added_wh > 0
-        ? formatEnergyCost(session.total_energy_added_wh / 1000)
+    displayCost != null
+      ? formatCurrency(displayCost, 2)
+      : displayEnergyWh > 0
+        ? formatEnergyCost(displayEnergyWh / 1000)
         : '—';
 
   const chargerLabel = session.charger_type ?? (dc ? 'DC' : 'AC');
@@ -320,8 +320,8 @@ export default function ChargingDetailPage() {
       key: 'energy',
       color: '#00f0ff',
       glow: 'cyan' as const,
-      value: convertEnergyFromSI(session.total_energy_added_wh ?? 0, unitPrefs.energy),
-      max: Math.max(convertEnergyFromSI(session.total_energy_added_wh ?? 1, unitPrefs.energy), 80),
+      value: convertEnergyFromSI(displayEnergyWh ?? 0, unitPrefs.energy),
+      max: Math.max(convertEnergyFromSI(displayEnergyWh || 1, unitPrefs.energy), 80),
       label: t('charging.detail.energyAdded', 'Energy Added'),
       unit: unitPrefs.energy,
     },
@@ -439,9 +439,26 @@ export default function ChargingDetailPage() {
         >
           <MetricCard
             label={t('charging.detail.energy', 'Energy')}
-            value={`${fmtNumber(convertEnergyFromSI(session.total_energy_added_wh, unitPrefs.energy))} ${unitPrefs.energy}`}
+            value={`${fmtNumber(convertEnergyFromSI(displayEnergyWh, unitPrefs.energy))} ${unitPrefs.energy}`}
             icon={<Zap className="h-5 w-5" aria-hidden="true" />}
             color="cyan"
+            subtitle={
+              billedEnergyWh != null && billedEnergyWh > 0 && vehicleEnergyWh > 0
+                ? t('charging.detail.vehicleMeasured', {
+                    energy: fmtNumber(convertEnergyFromSI(vehicleEnergyWh, unitPrefs.energy)),
+                    unit: unitPrefs.energy,
+                    defaultValue: 'Vehicle measured {{energy}} {{unit}}',
+                  })
+                : undefined
+            }
+            help={
+              billedEnergyWh != null && billedEnergyWh > 0
+                ? {
+                    i18nKey: 'charging.detail.billedEnergyHelp',
+                    defaultValue: 'Tesla Supercharger invoices meter energy at the cabinet. Vehicle telemetry is energy into the pack and is often a few percent lower.',
+                  }
+                : undefined
+            }
           />
           <MetricCard
             label={t('charging.detail.duration', 'Duration')}
@@ -462,19 +479,23 @@ export default function ChargingDetailPage() {
             color="green"
           />
           <MetricCard
-            label={session.cost_decimal != null
+            label={displayCost != null
               ? t('charging.detail.totalCost', 'Total Cost')
               : t('charging.detail.estCost', 'Est. Cost')}
             value={costValue}
             icon={<DollarSign className="h-5 w-5" aria-hidden="true" />}
             color="amber"
-            subtitle={session.cost_decimal == null && session.total_energy_added_wh > 0
-              ? t('charging.detail.atRate', {
-                  currencySymbol,
-                  costPerKwh: settingsCostPerKwh,
-                  defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh',
-                })
-              : undefined}
+            subtitle={
+              billedCost != null
+                ? t('charging.detail.teslaInvoice', 'Tesla invoice')
+                : session.cost_decimal == null && displayEnergyWh > 0
+                  ? t('charging.detail.atRate', {
+                      currencySymbol,
+                      costPerKwh: settingsCostPerKwh,
+                      defaultValue: 'at {{currencySymbol}}{{costPerKwh}}/kWh',
+                    })
+                  : undefined
+            }
           />
           <MetricCard
             label={t('charging.detail.perKwh', 'Per kWh')}
@@ -498,6 +519,10 @@ export default function ChargingDetailPage() {
             color="cyan"
           />
         </section>
+      </FadeIn>
+
+      <FadeIn delay={0.06}>
+        <ChargeBillTruthPanel session={session} />
       </FadeIn>
 
       <FadeIn delay={0.07}>

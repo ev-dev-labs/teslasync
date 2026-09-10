@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import {
+  addCivilDays,
   calendarRangeToInstants,
+  civilDateInTimeZone,
   localMidnightToInstant,
 } from '../dateRange';
 
@@ -99,5 +101,21 @@ describe('calendarRangeToInstants', () => {
     });
     expect(r.startInstant).toBe('2026-05-12T00:00:00.000Z');
     expect(r.endInstantExclusive).toBe('2026-05-13T00:00:00.000Z');
+  });
+});
+
+describe('civilDateInTimeZone', () => {
+  it('keeps the previous PDT civil day at 02:00 UTC', () => {
+    // 2026-09-07 02:00Z is 2026-09-06 19:00 PDT.
+    const instant = new Date('2026-09-07T02:00:00.000Z');
+    expect(civilDateInTimeZone(instant, 'America/Los_Angeles')).toBe('2026-09-06');
+    expect(civilDateInTimeZone(instant, 'UTC')).toBe('2026-09-07');
+  });
+});
+
+describe('addCivilDays', () => {
+  it('adds across month boundaries', () => {
+    expect(addCivilDays('2026-09-01', 1)).toBe('2026-09-02');
+    expect(addCivilDays('2026-09-01', -1)).toBe('2026-08-31');
   });
 });

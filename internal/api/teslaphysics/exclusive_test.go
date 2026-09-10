@@ -21,6 +21,28 @@ func TestBuildThreeClocks_IngestUnknownAndGapsStayGaps(t *testing.T) {
 	}
 }
 
+func TestBuildThreeClocks_UsesStoredIngestTime(t *testing.T) {
+	now := at(t, "2026-03-01T12:00:00Z")
+	ingest := at(t, "2026-03-01T11:50:02Z")
+	event := at(t, "2026-03-01T11:50:00Z")
+	clocks := BuildThreeClocks(7, []PhysicsFrame{
+		{At: event, IngestTime: &ingest, Gear: "P"},
+		{At: now, Live: true, Gear: "P"},
+	}, now)
+	if clocks.Latest == nil || clocks.Latest.Unknown || clocks.Latest.IngestTime == nil {
+		t.Fatalf("stored ingest must surface: %+v", clocks.Latest)
+	}
+	if !clocks.Latest.EventTime.Equal(event) {
+		t.Fatalf("live overlay must not become event time: %s", clocks.Latest.EventTime)
+	}
+	if !clocks.Latest.IngestTime.Equal(ingest) {
+		t.Fatalf("ingest = %s", clocks.Latest.IngestTime)
+	}
+	if len(clocks.Samples) != 1 {
+		t.Fatalf("live overlay must not be a clock sample: %+v", clocks.Samples)
+	}
+}
+
 func TestBuildLifeTape_NeutralNotParkAndUnknownGaps(t *testing.T) {
 	now := at(t, "2026-03-01T12:10:00Z")
 	tape := BuildLifeTape(7, []PhysicsFrame{
@@ -155,5 +177,33 @@ func TestBuildLifeTape_ConfirmedParkAfterDebounce(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("expected confirmed Park after 30s: %+v", tape.Segments)
+	}
+}
+
+func TestBuildThreeClocks_KeepsEverySample(t *testing.T) {
+	now := at(t, "2026-03-01T12:00:00Z")
+	frames := make([]PhysicsFrame, 20)
+	for i := range frames {
+		frames[i] = PhysicsFrame{At: now.Add(time.Duration(i-20) * time.Minute), Gear: "P"}
+	}
+	clocks := BuildThreeClocks(7, frames, now)
+	if len(clocks.Samples) != 20 {
+		t.Fatalf("samples = %d, want all 20 in the window", len(clocks.Samples))
+	}
+}
+
+func TestBuildChargePortCourt_KeepsEveryEvidenceRow(t *testing.T) {
+	start := at(t, "2026-03-01T10:00:00Z")
+	frames := make([]PhysicsFrame, 50)
+	for i := range frames {
+		frames[i] = PhysicsFrame{
+			At:          start.Add(time.Duration(i) * time.Minute),
+			Latch:       "Engaged",
+			ChargeState: enums.ChargeStateComplete,
+		}
+	}
+	court := BuildChargePortCourt(7, frames)
+	if len(court.Evidence) != 50 {
+		t.Fatalf("evidence = %d, want all 50 in the window", len(court.Evidence))
 	}
 }

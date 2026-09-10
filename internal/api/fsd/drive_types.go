@@ -44,6 +44,10 @@ type AnalyticsInput struct {
 	CounterSamples         []Sample
 	VersionSamples         []VersionSample
 	Drives                 []DriveRecord
+	// FocusDriveID, when non-zero, reports only that drive as a current-period
+	// contributor. Neighboring drives still participate in overlap so a
+	// sparse counter interval that spans two real trips stays ambiguous.
+	FocusDriveID int64
 }
 
 // EvidenceInterval identifies the time span in which a cumulative FSD counter
@@ -110,13 +114,13 @@ type CounterResetEvent struct {
 
 // CommuteMonthShare is one calendar month of a commute identity.
 type CommuteMonthShare struct {
-	Month           string                 `json:"month"`
-	DriveCount      int                    `json:"drive_count"`
-	FSDDistanceM    *float64               `json:"fsd_distance_m"`
+	Month            string                `json:"month"`
+	DriveCount       int                   `json:"drive_count"`
+	FSDDistanceM     *float64              `json:"fsd_distance_m"`
 	DrivingDistanceM float64               `json:"driving_distance_m"`
-	FSDSharePct     *float64               `json:"fsd_share_pct"`
-	Confidence      AttributionConfidence  `json:"confidence"`
-	UnknownDays     int                    `json:"unknown_days"`
+	FSDSharePct      *float64              `json:"fsd_share_pct"`
+	Confidence       AttributionConfidence `json:"confidence"`
+	UnknownDays      int                   `json:"unknown_days"`
 }
 
 // CommuteIdentity compares the same route and time-of-day window this month

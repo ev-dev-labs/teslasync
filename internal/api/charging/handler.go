@@ -12,7 +12,11 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
+	tesladb "github.com/ev-dev-labs/teslasync/internal/database/tesla"
+	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	chargingmodel "github.com/ev-dev-labs/teslasync/internal/models/charging"
+	teslamodel "github.com/ev-dev-labs/teslasync/internal/models/tesla"
+	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/rs/zerolog/log"
 	"go.opentelemetry.io/otel"
@@ -33,6 +37,8 @@ type ChargingHandler struct {
 	charging          chargingByIDFetcher
 	state             signal.StateReader
 	live              signal.LiveStateReader
+	vehicles          vehicleVINReader
+	teslaBills        teslaBillFinder
 	forwardAuthHeader string
 	// bulkOverride lets tests substitute the bulk store without standing up a
 	// real *chargingdb.ChargingRepo. Always nil in production.
@@ -47,6 +53,24 @@ type chargingByIDFetcher interface {
 	GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error)
 }
 
+// vehicleVINReader is the narrow VIN lookup used to match Supercharger
+// invoices onto a measured charging session. *vehicledb.VehicleRepo
+// satisfies it; tests leave it nil to skip billed overlay.
+type vehicleVINReader interface {
+	GetByID(ctx context.Context, id int64) (*vehiclemodel.Vehicle, error)
+}
+
+// teslaBillFinder locates the Tesla charging-history invoice that overlaps
+// a measured session. *tesladb.TeslaChargingHistoryRepo satisfies it.
+type teslaBillFinder interface {
+	FindBestMatch(ctx context.Context, vin string, startedAt time.Time) (*teslamodel.TeslaChargingHistoryEntry, error)
+}
+
+var (
+	_ vehicleVINReader = (*vehicledb.VehicleRepo)(nil)
+	_ teslaBillFinder  = (*tesladb.TeslaChargingHistoryRepo)(nil)
+)
+
 func NewChargingHandler(db *database.DB, state signal.StateReader, live signal.LiveStateReader) *ChargingHandler {
 	repo := chargingdb.NewChargingRepo(db)
 	return &ChargingHandler{
@@ -55,6 +79,8 @@ func NewChargingHandler(db *database.DB, state signal.StateReader, live signal.L
 		charging:     repo,
 		state:        state,
 		live:         live,
+		vehicles:     vehicledb.NewVehicleRepo(db),
+		teslaBills:   tesladb.NewTeslaChargingHistoryRepo(db),
 	}
 }
 
@@ -154,14 +180,14 @@ func (h *ChargingHandler) Get(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, chargingSessionResponse(session, live))
+	httpx.WriteJSON(w, http.StatusOK, chargingSessionResponse(session, live, h.lookupTeslaBill(ctx, session)))
 }
 
 // chargingSessionResponse builds the JSON response map for a charging session,
 // including the live indicator. This preserves the original JSON field names
 // from the ChargingSession model while adding the extra "live" field.
-func chargingSessionResponse(s *chargingmodel.ChargingSession, live bool) map[string]interface{} {
-	return map[string]interface{}{
+func chargingSessionResponse(s *chargingmodel.ChargingSession, live bool, bill *teslamodel.TeslaChargingHistoryEntry) map[string]interface{} {
+	resp := map[string]interface{}{
 		"id":                    s.ID,
 		"vehicle_id":            s.VehicleID,
 		"started_at":            s.StartedAt,
@@ -183,6 +209,61 @@ func chargingSessionResponse(s *chargingmodel.ChargingSession, live bool) map[st
 		"cable_type":            s.CableType,
 		"live":                  live,
 	}
+	if bill == nil {
+		return resp
+	}
+	if bill.UsageWh != nil {
+		resp["billed_energy_wh"] = *bill.UsageWh
+	}
+	if bill.TotalDue != nil {
+		resp["billed_cost_decimal"] = *bill.TotalDue
+	}
+	if bill.CurrencyCode != nil && *bill.CurrencyCode != "" {
+		resp["billed_currency"] = *bill.CurrencyCode
+	}
+	if bill.RateBase != nil {
+		resp["billed_rate_per_kwh"] = *bill.RateBase
+	}
+	if bill.SiteLocationName != "" {
+		resp["billed_site"] = bill.SiteLocationName
+	}
+	if bill.FeeType != nil && *bill.FeeType != "" {
+		resp["billed_fee_type"] = *bill.FeeType
+	}
+	resp["billed_source"] = "tesla_charging_history"
+	return resp
+}
+
+// chargeEnergyBaselineLookback excludes the session-start telemetry batch from
+// the cumulative energy baseline. See telemetry.chargeEnergyBaselineLookback.
+const chargeEnergyBaselineLookback = time.Millisecond
+
+func chargeEnergyBaselineTime(start time.Time) time.Time {
+	if start.IsZero() {
+		return start
+	}
+	return start.Add(-chargeEnergyBaselineLookback)
+}
+
+func (h *ChargingHandler) lookupTeslaBill(ctx context.Context, session *chargingmodel.ChargingSession) *teslamodel.TeslaChargingHistoryEntry {
+	if h == nil || h.teslaBills == nil || h.vehicles == nil || session == nil {
+		return nil
+	}
+	vehicle, err := h.vehicles.GetByID(ctx, session.VehicleID)
+	if err != nil || vehicle == nil || vehicle.VIN == "" {
+		if err != nil {
+			log.Warn().Err(err).Int64("vehicle_id", session.VehicleID).
+				Msg("charging: VIN lookup failed for Tesla bill overlay")
+		}
+		return nil
+	}
+	bill, err := h.teslaBills.FindBestMatch(ctx, vehicle.VIN, session.StartedAt)
+	if err != nil {
+		log.Warn().Err(err).Int64("session_id", session.ID).
+			Msg("charging: Tesla bill match failed")
+		return nil
+	}
+	return bill
 }
 
 // enrichLiveCharge computes live values for an in-progress charging session
@@ -198,6 +279,17 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargin
 		return fmt.Errorf("start snapshot at %s: %w", session.StartedAt.Format(time.RFC3339Nano), err)
 	}
 	startSnap := stateToSignalMap(startState)
+
+	energyStartSnap := startSnap
+	if energyStartAt := chargeEnergyBaselineTime(session.StartedAt); !energyStartAt.Equal(session.StartedAt) {
+		energyStartState, energyErr := h.state.State(ctx, session.VehicleID, energyStartAt)
+		if energyErr != nil {
+			log.Warn().Err(energyErr).Int64("session_id", session.ID).
+				Msg("charging: energy baseline snapshot failed; using inclusive start")
+		} else {
+			energyStartSnap = stateToSignalMap(energyStartState)
+		}
+	}
 
 	currentSnap, err := h.currentSignals(ctx, session.VehicleID)
 	if err != nil {
@@ -218,7 +310,7 @@ func (h *ChargingHandler) enrichLiveCharge(ctx context.Context, session *chargin
 	}
 
 	for _, field := range []string{"DCChargingEnergyIn", "ACChargingEnergyIn"} {
-		startEnergy, startOK := signalFloat(startSnap, field)
+		startEnergy, startOK := signalFloat(energyStartSnap, field)
 		currentEnergy, currentOK := signalFloat(currentSnap, field)
 		if startOK && currentOK && currentEnergy > startEnergy {
 			delta := safeFloat(currentEnergy - startEnergy)

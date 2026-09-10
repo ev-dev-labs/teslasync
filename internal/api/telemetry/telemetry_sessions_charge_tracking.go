@@ -159,6 +159,19 @@ func observeChargeEnergyCounter(active *streamingCharge, signals map[string]inte
 	active.EnergyCounterLastWh = floatPtr(value)
 }
 
+// chargeEnergyBaselineLookback excludes the session-start telemetry batch from
+// the cumulative energy baseline. Fleet Telemetry often emits DetailedChargeState
+// and DCChargingEnergyIn at the same timestamp after charging has already added
+// energy; an inclusive State(StartedAt) therefore undercounts the session.
+const chargeEnergyBaselineLookback = time.Millisecond
+
+func chargeEnergyBaselineTime(start time.Time) time.Time {
+	if start.IsZero() {
+		return start
+	}
+	return start.Add(-chargeEnergyBaselineLookback)
+}
+
 func snapshotChargeEnergyDelta(
 	startSnap, endSnap map[string]interface{},
 	preferredField string,
@@ -314,7 +327,11 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 			StartedAt:   startTs,
 			StartSocPct: floatPtr(float64(batteryLevel)),
 		}
-		if locationFresh {
+		// Persist last-known GPS even when the sample is stale. Parked Home/AC
+		// charges often keep the previous drive's coordinates for hours;
+		// omitting them leaves start_place empty and the list shows
+		// "No location data". Freshness still gates NEW geofence discovery.
+		if hasLoc {
 			session.StartLat = floatPtr(lat)
 			session.StartLng = floatPtr(lon)
 		}
@@ -351,8 +368,9 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 		// Surface a newly discovered charging place as soon as a confirmed
 		// charge starts. The same idempotent routine runs again at completion
 		// once energy is known, when it can also calculate the session cost.
-		if sc.LocationFresh && t.geofenceRepo != nil {
+		if hasLoc && t.geofenceRepo != nil {
 			sessionID, startLat, startLon := sc.SessionID, *sc.Latitude, *sc.Longitude
+			discover := sc.LocationFresh
 			safeGo("charge_geofence_discovery", func() {
 				t.applyGeofencePricingAsync(
 					sessionID,
@@ -360,7 +378,11 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 					startLat,
 					startLon,
 					startTs,
-					map[string]interface{}{},
+					map[string]interface{}{
+						"start_lat": startLat,
+						"start_lng": startLon,
+					},
+					discover,
 				)
 			})
 		}
@@ -378,17 +400,22 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 	} else if isCharging && hasCharge {
 		// === UPDATE ACTIVE CHARGE ===
 		active.LastSeen = time.Now().UTC()
-		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok &&
-			t.chargeLocationIsFresh(
+		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok {
+			fresh := t.chargeLocationIsFresh(
 				vehicleID,
 				signals,
 				fieldTs,
 				payloadTs,
 				eventTimeOrNow(payloadTs),
-			) {
-			active.Latitude = floatPtr(lat)
-			active.Longitude = floatPtr(lon)
-			active.LocationFresh = true
+			)
+			if fresh {
+				active.Latitude = floatPtr(lat)
+				active.Longitude = floatPtr(lon)
+				active.LocationFresh = true
+			} else if active.Latitude == nil || active.Longitude == nil {
+				active.Latitude = floatPtr(lat)
+				active.Longitude = floatPtr(lon)
+			}
 		}
 
 		// Track energy
@@ -441,17 +468,22 @@ func (t *TelemetrySessionTracker) trackCharging(ctx context.Context, vehicleID i
 	} else if !isCharging && hasCharge && enums.IsChargeEnded(chargeState) {
 		// === UNPLUGGED ===
 		observeChargeEnergyCounter(active, signals)
-		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok &&
-			t.chargeLocationIsFresh(
+		if lat, lon, ok := t.resolveLatLon(vehicleID, signals, accumulatedSignals); ok {
+			fresh := t.chargeLocationIsFresh(
 				vehicleID,
 				signals,
 				fieldTs,
 				payloadTs,
 				eventTimeOrNow(payloadTs),
-			) {
-			active.Latitude = floatPtr(lat)
-			active.Longitude = floatPtr(lon)
-			active.LocationFresh = true
+			)
+			if fresh {
+				active.Latitude = floatPtr(lat)
+				active.Longitude = floatPtr(lon)
+				active.LocationFresh = true
+			} else if active.Latitude == nil || active.Longitude == nil {
+				active.Latitude = floatPtr(lat)
+				active.Longitude = floatPtr(lon)
+			}
 		}
 		t.completeChargeLocked(ctx, vehicleID, active, signals, payloadTs)
 	} else if !isCharging && hasCharge {
@@ -615,8 +647,20 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 		}
 
 		// Energy added: difference in one consistent cumulative counter.
+		// Baseline is strictly before StartedAt so the first in-session
+		// energy sample is attributed to this session, not subtracted as
+		// the starting lifetime reading.
+		energyStartSnap := startSnap
+		if active.state != nil {
+			if energyStart, energyStartErr := active.state.State(ctx, vehicleID, chargeEnergyBaselineTime(active.StartTime)); energyStartErr != nil {
+				log.Warn().Err(energyStartErr).Int64("vehicle_id", vehicleID).
+					Msg("telemetry: state.State charge energy baseline snapshot failed")
+			} else {
+				energyStartSnap = stateToLegacyMap(energyStart)
+			}
+		}
 		if energyDelta, kind, ok := snapshotChargeEnergyDelta(
-			startSnap,
+			energyStartSnap,
 			endSnap,
 			active.EnergyCounterField,
 		); ok {
@@ -818,14 +862,17 @@ func (t *TelemetrySessionTracker) completeChargeLocked(ctx context.Context, vehi
 	// removing the old blanket cost_currency default made enhancedFields
 	// legitimately empty on many sessions, and we must still attempt place
 	// resolution + geofence pricing whenever coordinates are available).
-	if active.LocationFresh && active.Latitude != nil && active.Longitude != nil {
-		fieldsCopy := make(map[string]interface{}, len(enhancedFields)+1)
+	if active.Latitude != nil && active.Longitude != nil {
+		fieldsCopy := make(map[string]interface{}, len(enhancedFields)+2)
 		for k, v := range enhancedFields {
 			fieldsCopy[k] = v
 		}
+		fieldsCopy["start_lat"] = *active.Latitude
+		fieldsCopy["start_lng"] = *active.Longitude
 		sessionID, lat, lon, startedAt := active.SessionID, *active.Latitude, *active.Longitude, active.StartTime
+		discover := active.LocationFresh
 		safeGo("charge_geofence_pricing", func() {
-			t.applyGeofencePricingAsync(sessionID, vehicleID, lat, lon, startedAt, fieldsCopy)
+			t.applyGeofencePricingAsync(sessionID, vehicleID, lat, lon, startedAt, fieldsCopy, discover)
 		})
 	}
 
@@ -858,6 +905,7 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 	defer cancel()
 
 	const lookupWindow = 10 * time.Minute
+	const locationLookupWindow = 24 * time.Hour
 	backfill := map[string]interface{}{}
 
 	// Backfill start battery from nearest position
@@ -876,11 +924,36 @@ func (t *TelemetrySessionTracker) backfillChargeValues(active *streamingCharge, 
 		}
 	}
 
+	if active.Latitude == nil || active.Longitude == nil {
+		if loc, locErr := findNearestPositionFallback(ctx, t.posRepo, vehicleID, active.StartTime, locationLookupWindow); locErr == nil && loc != nil &&
+			!(loc.Lat == 0 && loc.Lng == 0) {
+			backfill["start_lat"] = loc.Lat
+			backfill["start_lng"] = loc.Lng
+			active.Latitude = floatPtr(loc.Lat)
+			active.Longitude = floatPtr(loc.Lng)
+		}
+	}
+
 	if len(backfill) > 0 {
 		if err := t.chargeRepo.PartialUpdate(ctx, active.SessionID, backfill); err != nil {
 			log.Warn().Err(err).Int64("session_id", active.SessionID).Msg("telemetry: failed to backfill charge values")
 		} else {
 			log.Info().Int64("session_id", active.SessionID).Int("fields", len(backfill)).Msg("telemetry: backfilled charge values from nearest positions")
 		}
+	}
+
+	if t.geofenceRepo != nil && active.Latitude != nil && active.Longitude != nil {
+		t.applyGeofencePricingAsync(
+			active.SessionID,
+			vehicleID,
+			*active.Latitude,
+			*active.Longitude,
+			active.StartTime,
+			map[string]interface{}{
+				"start_lat": *active.Latitude,
+				"start_lng": *active.Longitude,
+			},
+			false,
+		)
 	}
 }

@@ -240,7 +240,8 @@ describe('DriveCard — primary line + status badge', () => {
     renderCard({
       fsdInsight: { ...base, confidence: 'unknown', fsd_distance_m: null, fsd_share_pct: null },
     });
-    expect(screen.getByText('FSD data unknown')).toBeInTheDocument();
+    expect(screen.queryByText('FSD data unknown')).toBeNull();
+    expect(screen.queryByText(/^FSD /)).toBeNull();
   });
 
   it('opens the quick preview without nesting the action in the detail link', () => {

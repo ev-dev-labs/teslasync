@@ -1,4 +1,5 @@
 export { PostureTaxonomy } from './PostureTaxonomy'
+export { FleetHonestyMeter } from './FleetHonestyMeter'
 export { PostureDrillThrough } from './PostureDrillThrough'
 export { PostureWorkflows } from './PostureWorkflows'
 export { PostureActions } from './PostureActions'

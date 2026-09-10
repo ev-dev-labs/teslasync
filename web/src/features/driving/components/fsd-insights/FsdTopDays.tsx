@@ -120,6 +120,7 @@ export function FsdTopDays({ insights, state }: FsdTopDaysProps) {
             data={rows}
             keyExtractor={(row) => row.date}
             mobileColumns={['date', 'fsd_distance_m']}
+            pagination
           />
         ) : (
           <EmptyState /* no-action: this ranking is a read-only view of reported counter movement; the period control in the page header is the only lever */

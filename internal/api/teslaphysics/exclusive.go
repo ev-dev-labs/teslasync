@@ -54,16 +54,16 @@ func BuildExclusiveReport(
 
 func BuildThreeClocks(vehicleID int64, frames []PhysicsFrame, now time.Time) ThreeClocks {
 	out := ThreeClocks{VehicleID: vehicleID, Samples: []ClockReading{}, Honesty: clocksHonesty}
-	if len(frames) == 0 {
-		out.Latest = &ClockReading{DisplayTime: now.UTC(), Unknown: true}
-		return out
-	}
 	var prev time.Time
 	for _, frame := range frames {
+		if frame.Live {
+			continue
+		}
 		reading := ClockReading{
 			EventTime:   frame.At.UTC(),
+			IngestTime:  cloneTime(frame.IngestTime),
 			DisplayTime: now.UTC(),
-			Unknown:     true, // ingest time is not on TimelineRow
+			Unknown:     frame.IngestTime == nil,
 		}
 		if !prev.IsZero() && frame.At.After(prev) {
 			reading.GapS = floatPtr(durationSeconds(prev, frame.At))
@@ -71,8 +71,9 @@ func BuildThreeClocks(vehicleID int64, frames []PhysicsFrame, now time.Time) Thr
 		out.Samples = append(out.Samples, reading)
 		prev = frame.At
 	}
-	if len(out.Samples) > 12 {
-		out.Samples = out.Samples[len(out.Samples)-12:]
+	if len(out.Samples) == 0 {
+		out.Latest = &ClockReading{DisplayTime: now.UTC(), Unknown: true}
+		return out
 	}
 	latest := out.Samples[len(out.Samples)-1]
 	if now.After(latest.EventTime) {
@@ -481,9 +482,6 @@ func BuildChargePortCourt(vehicleID int64, frames []PhysicsFrame) ChargePortCour
 		}
 		out.Evidence = append(out.Evidence, portEvidence(frame))
 	}
-	if len(out.Evidence) > 40 {
-		out.Evidence = out.Evidence[len(out.Evidence)-40:]
-	}
 	return out
 }
 
@@ -726,6 +724,7 @@ func physicsFramesFromTimeline(rows []signal.TimelineRow) []PhysicsFrame {
 	for _, row := range rows {
 		out = append(out, PhysicsFrame{
 			At:                 row.Timestamp.UTC(),
+			IngestTime:         cloneTime(row.ReceivedAt),
 			Gear:               fieldString(row.Fields, "gear", "Gear"),
 			SpeedMps:           fieldFloat(row.Fields, "speed", "VehicleSpeed"),
 			ChargeState:        fieldString(row.Fields, "detailed_charge_state", "charge_state", "DetailedChargeState", "ChargeState"),
@@ -754,6 +753,7 @@ func physicsFramesFromTimeline(rows []signal.TimelineRow) []PhysicsFrame {
 func livePhysicsFrame(state signal.State, now time.Time) PhysicsFrame {
 	return PhysicsFrame{
 		At:                 now.UTC(),
+		Live:               true,
 		Gear:               fieldString(state, "Gear"),
 		SpeedMps:           fieldFloat(state, "VehicleSpeed"),
 		ChargeState:        firstNonEmpty(fieldString(state, "DetailedChargeState"), fieldString(state, "ChargeState")),

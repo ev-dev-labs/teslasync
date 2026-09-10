@@ -7,6 +7,7 @@ import {
 import { useTranslation } from 'react-i18next';
 import { ConnectionSegment } from './status-bar/ConnectionSegment';
 import { LiveTelemetrySegment } from './status-bar/LiveTelemetrySegment';
+import { HonestyMeterSegment } from './status-bar/HonestyMeterSegment';
 import { OperationalModeSegment } from './status-bar/OperationalModeSegment';
 import { AlertsSegment } from './status-bar/AlertsSegment';
 import { BackgroundWorkSegment } from './status-bar/BackgroundWorkSegment';
@@ -127,6 +128,7 @@ function StatusBarContent({
           />
           <Divider />
           <LiveTelemetrySegment iconOnly={iconOnly} />
+          <HonestyMeterSegment iconOnly={iconOnly} />
           <OperationalModeSegment iconOnly={iconOnly} />
           <AlertsSegment iconOnly={iconOnly} />
         </div>

@@ -48,6 +48,13 @@ export interface ChargingSession {
   avg_power_w?: number | null;
   cost_currency?: string | null;
   cable_type?: string | null;
+  billed_energy_wh?: number | null;
+  billed_cost_decimal?: number | null;
+  billed_currency?: string | null;
+  billed_rate_per_kwh?: number | null;
+  billed_source?: string | null;
+  billed_site?: string | null;
+  billed_fee_type?: string | null;
 }
 
 /* ── Cost Forecast ────────────────────────────────────────── */

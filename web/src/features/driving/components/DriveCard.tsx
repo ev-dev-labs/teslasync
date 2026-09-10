@@ -63,14 +63,7 @@ function DriveCardImpl({
   const fsdBadge = (() => {
     if (!fsdInsight) return null;
     if (fsdInsight.confidence === 'unknown' || fsdInsight.fsd_distance_m == null) {
-      return {
-        label: t('drives.fsdUnknown', 'FSD data unknown'),
-        variant: 'neutral' as const,
-        title: t(
-          'drives.fsdUnknownHelp',
-          'The cumulative counters do not provide enough synchronized evidence for this drive.',
-        ),
-      };
+      return null;
     }
     const prefix = fsdInsight.confidence === 'high' ? '' : '~';
     const value = fsdInsight.fsd_share_pct != null

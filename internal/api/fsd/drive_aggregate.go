@@ -19,7 +19,11 @@ const (
 	maxObservatoryTimelineEvents = 200
 	maxObservatoryCommuteStories = 8
 	minObservatoryCommuteDrives  = 2
-	observatoryHonesty           = "Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed."
+	// Tesla will not emit SelfDrivingMilesSinceReset below a 1 mile wire
+	// delta. Sub-0.1 mi "drives" are pull-in / GPS fidget and must not steal
+	// overlap from a real commute sitting one minute later.
+	minFSDAttributionDistanceM = 160.9344
+	observatoryHonesty         = "Every kilometre here is a reset-safe counter change, not an FSD engagement segment. Unknown and ambiguous distance are shown instead of guessed."
 )
 
 type driveAttributionState struct {
@@ -80,11 +84,19 @@ func BuildDriveAnalytics(
 	}
 
 	currentDrives := drivesFullyContained(input.Drives, current.Period.StartAt, current.Period.EndAt)
+	if input.FocusDriveID != 0 {
+		currentDrives = focusedDrive(input.Drives, input.FocusDriveID)
+	} else {
+		currentDrives = significantDrives(currentDrives, 0)
+	}
 	currentDriveIDs := make(map[int64]struct{}, len(currentDrives))
 	for _, drive := range currentDrives {
 		currentDriveIDs[drive.ID] = struct{}{}
 	}
-	allDrives := drivesOverlapping(input.Drives, previous.Period.StartAt, current.Period.EndAt)
+	allDrives := significantDrives(
+		drivesOverlapping(input.Drives, previous.Period.StartAt, current.Period.EndAt),
+		input.FocusDriveID,
+	)
 	states := make(map[int64]*driveAttributionState, len(allDrives))
 	for _, drive := range allDrives {
 		drive.DistanceM = finiteNonNegativePointer(drive.DistanceM)
@@ -130,22 +142,29 @@ func BuildDriveAnalytics(
 	analytics := emptyDriveAnalytics(current, previous)
 	var ambiguousDistance, unattributedDistance float64
 
+	var fsdCursor tripMeterCursor
 	for index := 1; index < len(fsdObservations); index++ {
 		earlier := fsdObservations[index-1]
 		later := fsdObservations[index]
 		if earlier.segment != later.segment {
+			fsdCursor.clear()
 			continue
 		}
+		step := stepTripMeter(
+			earlier.value,
+			later.value,
+			later.at.Sub(earlier.at),
+			"",
+			&fsdCursor,
+		)
 		if later.at.Before(current.Period.StartAt) || !later.at.Before(current.Period.EndAt) {
 			continue
 		}
-
-		change := signalcounter.Compare(earlier.value, later.value)
-		if change.Kind != signalcounter.ChangeAdvanced {
+		if step.Delta <= 0 {
 			continue
 		}
 		if earlier.at.Before(previous.Period.StartAt) {
-			unattributedDistance += change.Delta
+			unattributedDistance += step.Delta
 			continue
 		}
 
@@ -153,14 +172,14 @@ func BuildDriveAnalytics(
 		currentCandidates := currentPeriodStates(candidates, currentDriveIDs)
 		switch len(candidates) {
 		case 0:
-			unattributedDistance += change.Delta
+			unattributedDistance += step.Delta
 		case 1:
 			if len(currentCandidates) == 0 {
-				unattributedDistance += change.Delta
+				unattributedDistance += step.Delta
 				continue
 			}
 			state := currentCandidates[0]
-			state.uniqueDistanceM += change.Delta
+			state.uniqueDistanceM += step.Delta
 			if !intervalIsBoundedByDrive(
 				state.drive,
 				earlier.at,
@@ -173,21 +192,21 @@ func BuildDriveAnalytics(
 				state.summary.Evidence = append(state.summary.Evidence, EvidenceInterval{
 					StartAt:      maxTime(earlier.at, state.drive.StartedAt),
 					EndAt:        minTime(later.at, driveEnd(state.drive, current.Period.EndAt)),
-					FSDDistanceM: roundMeters(change.Delta),
+					FSDDistanceM: roundMeters(step.Delta),
 					Confidence:   ConfidenceEstimated,
 					Approximate:  true,
 				})
 			}
 		default:
 			if len(currentCandidates) == 0 {
-				unattributedDistance += change.Delta
+				unattributedDistance += step.Delta
 				continue
 			}
-			ambiguousDistance += change.Delta
+			ambiguousDistance += step.Delta
 			totalOverlap := totalOverlapDuration(candidates, earlier.at, later.at, current.Period.EndAt)
 			for _, state := range candidates {
 				share := proportionalDistance(
-					change.Delta,
+					step.Delta,
 					overlapDuration(state.drive, earlier.at, later.at, current.Period.EndAt),
 					totalOverlap,
 					len(candidates),
@@ -385,6 +404,43 @@ func drivesFullyContained(drives []DriveRecord, start, end time.Time) []DriveRec
 			!drive.StartedAt.Before(end) ||
 			drive.EndedAt.Before(drive.StartedAt) ||
 			drive.EndedAt.After(end) {
+			continue
+		}
+		filtered = append(filtered, drive)
+	}
+	return filtered
+}
+
+func focusedDrive(drives []DriveRecord, driveID int64) []DriveRecord {
+	for _, drive := range drives {
+		if drive.ID == driveID {
+			return []DriveRecord{drive}
+		}
+	}
+	return nil
+}
+
+func isNegligibleDrive(drive DriveRecord) bool {
+	if drive.DistanceM != nil && *drive.DistanceM >= minFSDAttributionDistanceM {
+		return false
+	}
+	if drive.DistanceM != nil && *drive.DistanceM > 0 {
+		return true
+	}
+	if drive.EndedAt == nil {
+		return false
+	}
+	return drive.EndedAt.Sub(drive.StartedAt) < time.Minute
+}
+
+func significantDrives(drives []DriveRecord, keepID int64) []DriveRecord {
+	filtered := make([]DriveRecord, 0, len(drives))
+	for _, drive := range drives {
+		if keepID != 0 && drive.ID == keepID {
+			filtered = append(filtered, drive)
+			continue
+		}
+		if isNegligibleDrive(drive) {
 			continue
 		}
 		filtered = append(filtered, drive)

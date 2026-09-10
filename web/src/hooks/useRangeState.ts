@@ -304,6 +304,15 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const [params, setParams] = useSearchParams();
   const [rollingNow, setRollingNow] = useState(() => Date.now());
 
+  const resolvedTimezone = useMemo(() => {
+    if (timezone && timezone.trim()) return timezone;
+    try {
+      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+    } catch {
+      return 'UTC';
+    }
+  }, [timezone]);
+
   const urlStart = params.get(fromKey);
   const urlEnd = params.get(toKey);
   const urlCompare = params.get(compareKey);
@@ -311,7 +320,10 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const urlScopedPreset =
     urlScope && urlScope !== 'custom' ? getDatePreset(urlScope) : undefined;
   const urlScopedRange = urlScopedPreset
-    ? clampRange(urlScopedPreset.resolve(new Date(rollingNow)), minDate)
+    ? clampRange(
+        urlScopedPreset.resolve(new Date(rollingNow), resolvedTimezone),
+        minDate,
+      )
     : null;
 
   // Lazily compute the resolved fallback once per render. The default preset's
@@ -320,10 +332,13 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
   const fallback = useMemo<RangeValue>(
     () =>
       clampRange(
-        getFallbackPreset(defaultPresetId).resolve(new Date(rollingNow)),
+        getFallbackPreset(defaultPresetId).resolve(
+          new Date(rollingNow),
+          resolvedTimezone,
+        ),
         minDate,
       ),
-    [defaultPresetId, minDate, rollingNow],
+    [defaultPresetId, minDate, rollingNow, resolvedTimezone],
   );
 
   const sharedPreference = loadFromStorage(SHARED_RANGE_STORAGE_KEY);
@@ -413,10 +428,10 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     (id: string) => {
       const preset = getDatePreset(id);
       if (!preset) return;
-      const r: DatePresetRange = preset.resolve();
+      const r: DatePresetRange = preset.resolve(new Date(), resolvedTimezone);
       setRange(r, id);
     },
-    [setRange],
+    [setRange, resolvedTimezone],
   );
 
   const setCompare = useCallback(
@@ -438,7 +453,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     urlUpdates: Record<string, string | null | undefined>,
   ) => {
     const preset = getFallbackPreset(defaultPresetId);
-    const defaultRange = preset.resolve();
+    const defaultRange = preset.resolve(new Date(), resolvedTimezone);
     const preference = createPreference(defaultRange, preset.id);
     saveToStorage(SHARED_RANGE_STORAGE_KEY, preference);
     saveToStorage(persistKey, preference);
@@ -465,6 +480,7 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     defaultPresetId,
     persistKey,
     sourceId,
+    resolvedTimezone,
   ]);
 
   const reset = useCallback(
@@ -578,15 +594,6 @@ export function useRangeState(opts: UseRangeStateOptions = {}): UseRangeStateRet
     sourceId,
     toKey,
   ]);
-
-  const resolvedTimezone = useMemo(() => {
-    if (timezone && timezone.trim()) return timezone;
-    try {
-      return Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
-    } catch {
-      return 'UTC';
-    }
-  }, [timezone]);
 
   const { startInstant, endInstantExclusive } = useMemo(() => {
     if (presetId === 'live' || presetId === '24h') {
