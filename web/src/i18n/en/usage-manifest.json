@@ -151,7 +151,7 @@
     "driveDetail": "driving",
     "drivetrain": "driving",
     "dynamics": "driving",
-    "share": "driving",
+    "share": "sharing",
     "sharing": "sharing",
     "tripPlanner": "driving",
     "driveScore": "shared",
@@ -588,7 +588,10 @@
     "energyFlow": "battery",
     "media": "vehicle-systems",
     "originConcentration": "driving",
-    "speedSweetSpot": "driving"
+    "speedSweetSpot": "driving",
+    "autopilot": "charging",
+    "chargeQueue": "charging",
+    "ocpp": "charging"
   },
   "bundles": {
     "shell": [
@@ -1060,7 +1063,6 @@
       "rhythm",
       "routeEfficiency",
       "seasonalEfficiency",
-      "share",
       "speedProfile",
       "speedSweetSpot",
       "sweetSpot",
@@ -1083,6 +1085,7 @@
       "yearReview"
     ],
     "sharing": [
+      "share",
       "shareCard",
       "sharing"
     ],
@@ -1109,15 +1112,18 @@
       "webpush"
     ],
     "charging": [
+      "autopilot",
       "chargeDepartureAlignment",
       "chargeInterruption",
       "chargePlanner",
+      "chargeQueue",
       "chargerResilience",
       "chargerTypes",
       "charging",
       "chargingThermalTax",
       "costAnalysis",
       "filter",
+      "ocpp",
       "powershare",
       "tesla_charging",
       "tesla_sessions"
@@ -3242,7 +3248,7 @@
     "driveDetail": "driving",
     "drivetrain": "driving",
     "dynamics": "driving",
-    "share": "driving",
+    "share": "sharing",
     "sharing": "sharing",
     "tripPlanner": "driving",
     "driveScore": "detail-driveScore",
@@ -3679,7 +3685,10 @@
     "energyFlow": "battery",
     "media": "vehicle-systems",
     "originConcentration": "driving",
-    "speedSweetSpot": "driving"
+    "speedSweetSpot": "driving",
+    "autopilot": "charging",
+    "chargeQueue": "charging",
+    "ocpp": "charging"
   },
   "shellCriticalKeys": [
     "a11y.breadcrumb",

@@ -53,6 +53,10 @@ export const OFFLINE_UNSAFE_PATTERNS: readonly RegExp[] = [
   /^\/commands?(\/|$)/i,
   /^\/watch\/[^/]+\/command/i,
   /^\/guard\/(panic|config)/i,
+  // Smart charging actuation: applies schedules to the vehicle via
+  // Tesla commands (charge limits, scheduled charging start).
+  /^\/charge-autopilot\/run(\/|$)/i,
+  /^\/charge-planner\/apply(\/|$)/i,
   // Operator judgement encoded into the data set.
   /^\/data-repair(\/|$)/i,
   /^\/repair-cases?(\/|$)/i,

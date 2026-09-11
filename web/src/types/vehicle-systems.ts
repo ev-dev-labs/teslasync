@@ -101,6 +101,25 @@ export interface ServiceRecord {
   notes: string;
 }
 
+export interface MaintenanceForecastItem {
+  name: string;
+  category: string;
+  description: string;
+  due_date: string | null;
+  km_remaining: number | null;
+  status: 'good' | 'due_soon' | 'overdue';
+  basis: string;
+}
+
+export interface MaintenanceForecast {
+  vehicle_id: number;
+  odometer_km: number;
+  km_per_day: number;
+  items: MaintenanceForecastItem[];
+  due_soon_count: number;
+  overdue_count: number;
+}
+
 export type MaintenanceStatus = 'good' | 'soon' | 'overdue';
 
 export interface SoftwareUpdate {

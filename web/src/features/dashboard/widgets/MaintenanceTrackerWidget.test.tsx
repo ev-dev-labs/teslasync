@@ -70,7 +70,12 @@ vi.mock('react-i18next', () => ({
 vi.mock('@/api/hooks/useVehicleSystems', async (importActual) => {
   const actual =
     await importActual<typeof import('@/api/hooks/useVehicleSystems')>();
-  return { ...actual, useMaintenance: vi.fn(), useServiceRecords: vi.fn() };
+  return {
+    ...actual,
+    useMaintenance: vi.fn(),
+    useServiceRecords: vi.fn(),
+    useMaintenanceForecast: vi.fn(),
+  };
 });
 
 // useUnits stub — flip the display distance unit (km / mi) per test while the
@@ -95,13 +100,14 @@ import MaintenanceTrackerWidget, {
   urgencyBadgeVariant,
   urgencyLabel,
 } from './MaintenanceTrackerWidget';
-import { useMaintenance, useServiceRecords } from '@/api/hooks/useVehicleSystems';
+import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api/hooks/useVehicleSystems';
 import { useUnits } from '@/hooks/useUnits';
 import type { MaintenanceItem, ServiceRecord } from '@/types/vehicle-systems';
 import type { WidgetProps, WidgetSize } from './types';
 
 const mockMaintenance = vi.mocked(useMaintenance);
 const mockRecords = vi.mocked(useServiceRecords);
+const mockForecast = vi.mocked(useMaintenanceForecast);
 const mockUnits = vi.mocked(useUnits);
 
 /** Minimal `UseQueryResult`-shaped stub (incl. the DataFreshness fields). */
@@ -160,6 +166,7 @@ beforeEach(() => {
   mockUnits.mockReturnValue({ unitPrefs: { distance: 'km' } } as never);
   mockMaintenance.mockReturnValue(qr({ data: [] }));
   mockRecords.mockReturnValue(qr({ data: [] }));
+  mockForecast.mockReturnValue(qr({ data: null }));
 });
 
 afterEach(() => {
@@ -444,5 +451,29 @@ describe('MaintenanceTrackerWidget — null-safety & hardening', () => {
     // The history section still renders; the null odometer degrades to "0 km".
     expect(screen.getByText('Recent Service')).toBeInTheDocument();
     expect(container).toHaveTextContent('0 km');
+  });
+});
+
+describe('MaintenanceTrackerWidget — forecast banner', () => {
+  it('renders due counts when the forecast flags items', () => {
+    mockMaintenance.mockReturnValue(qr({ data: [makeItem()] }));
+    mockForecast.mockReturnValue(
+      qr({ data: { overdue_count: 1, due_soon_count: 2, km_per_day: 55.5 } }),
+    );
+    renderWidget(STANDARD);
+
+    expect(
+      screen.getByRole('status', { name: 'Maintenance forecast status' }),
+    ).toHaveTextContent('1 overdue · 2 due soon');
+  });
+
+  it('hides the banner when nothing is due', () => {
+    mockMaintenance.mockReturnValue(qr({ data: [makeItem()] }));
+    mockForecast.mockReturnValue(
+      qr({ data: { overdue_count: 0, due_soon_count: 0, km_per_day: 55.5 } }),
+    );
+    renderWidget(STANDARD);
+
+    expect(screen.queryByRole('status', { name: 'Maintenance forecast status' })).toBeNull();
   });
 });

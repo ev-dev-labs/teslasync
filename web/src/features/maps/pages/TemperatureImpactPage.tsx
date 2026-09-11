@@ -29,6 +29,7 @@ import {
   type TemperatureImpactPoint,
 } from '@/api/hooks/useAnalytics';
 import { AICabinTemperatureImpactNarrative } from '@/components/ai/AICabinTemperatureImpactNarrative';
+import { EfficiencyDetectivePanel } from '../components/EfficiencyDetectivePanel';
 
 /* ----------------------------------------------------------------*/
 /*  Types */
@@ -369,6 +370,13 @@ export default function TemperatureImpactPage() {
           />
         </section>
       </FadeIn>
+
+      {/* ── Detective: month-over-month diagnosis ──────────── */}
+      {!noVehicle && (
+        <FadeIn delay={0.05}>
+          <EfficiencyDetectivePanel vehicleId={vehicleId} />
+        </FadeIn>
+      )}
 
       {/* ── Row A: scatter hero + optimal analysis ───────────── */}
       <FadeIn delay={0.1}>

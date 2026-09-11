@@ -10,3 +10,4 @@ export { CostForecastSection } from './CostForecastSection';
 export { ForecastDetails } from './ForecastDetails';
 export { LifetimeSummary } from './LifetimeSummary';
 export { EnvironmentalImpact } from './EnvironmentalImpact';
+export { BillVarianceCard } from './BillVarianceCard';

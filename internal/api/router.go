@@ -95,6 +95,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/batterypassport"
 	apibenchmark "github.com/ev-dev-labs/teslasync/internal/api/benchmark"
 	apicarbon "github.com/ev-dev-labs/teslasync/internal/api/carbon"
+	apichargeautopilot "github.com/ev-dev-labs/teslasync/internal/api/chargeautopilot"
 	apichargeheatmap "github.com/ev-dev-labs/teslasync/internal/api/chargeheatmap"
 	apichargeopt "github.com/ev-dev-labs/teslasync/internal/api/chargeopt"
 	"github.com/ev-dev-labs/teslasync/internal/api/chargeplanner"
@@ -125,7 +126,6 @@ import (
 	apifleetops "github.com/ev-dev-labs/teslasync/internal/api/fleetops"
 	apifleettelem "github.com/ev-dev-labs/teslasync/internal/api/fleettelemetry"
 	apifsd "github.com/ev-dev-labs/teslasync/internal/api/fsd"
-	apiphysics "github.com/ev-dev-labs/teslasync/internal/api/teslaphysics"
 	apigas "github.com/ev-dev-labs/teslasync/internal/api/gasprice"
 	apigeocode "github.com/ev-dev-labs/teslasync/internal/api/geocode"
 	apigeo "github.com/ev-dev-labs/teslasync/internal/api/geofence"
@@ -140,6 +140,7 @@ import (
 	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
 	apimotor "github.com/ev-dev-labs/teslasync/internal/api/motor"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
+	apiocpp "github.com/ev-dev-labs/teslasync/internal/api/ocpp"
 	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apiperiod "github.com/ev-dev-labs/teslasync/internal/api/periodstats"
@@ -183,6 +184,7 @@ import (
 	apiteslachargesess "github.com/ev-dev-labs/teslasync/internal/api/teslachargesess"
 	apiteslaenergyhist "github.com/ev-dev-labs/teslasync/internal/api/teslaenergyhist"
 	apitels "github.com/ev-dev-labs/teslasync/internal/api/teslaenergylivestatus"
+	apiphysics "github.com/ev-dev-labs/teslasync/internal/api/teslaphysics"
 	apituc "github.com/ev-dev-labs/teslasync/internal/api/teslauserconfig"
 	apituo "github.com/ev-dev-labs/teslasync/internal/api/teslauserorder"
 	apitup "github.com/ev-dev-labs/teslasync/internal/api/teslauserprofile"
@@ -224,6 +226,7 @@ import (
 	geofencedb "github.com/ev-dev-labs/teslasync/internal/database/geofence"
 	dbnotif "github.com/ev-dev-labs/teslasync/internal/database/notification"
 	dbobs "github.com/ev-dev-labs/teslasync/internal/database/observability"
+	dbocpp "github.com/ev-dev-labs/teslasync/internal/database/ocpp"
 	ownershipinteldb "github.com/ev-dev-labs/teslasync/internal/database/ownershipintel"
 	quiethoursdb "github.com/ev-dev-labs/teslasync/internal/database/quiethours"
 	settingsdb "github.com/ev-dev-labs/teslasync/internal/database/settings"
@@ -994,6 +997,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	softwareUpdateHandler := apisoftupd.NewHandler(db)
 	activityHandler := apiactivity.NewHandler(db)
 	tcoHandler := apitco.NewHandler(db)
+	tcoLedgerHandler := apitco.NewLedgerHandler(apitco.NewPGLedgerStore(db))
 	sleepHandler := apisleep.NewSleepHandler(db)
 	//: VampireDrainHandler deleted (vampire_drain_events).
 	visitedLocationHandler := apivisloc.NewHandler(db)
@@ -1006,6 +1010,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	backupRestoreHandler := apibackup.NewRestoreHandler(db)
 	regenHandler := apiregen.NewRegenHandler(db)
 	batteryDegradationHandler := batterydegradation.NewHandler(db, stateReader)
+	// Server-signed resale battery certificate, verified publicly without auth.
+	batteryCertHandler := batterydegradation.NewCertificateHandlerFromBatteryHandler(
+		batteryDegradationHandler,
+		batterydegradation.NewCertSigner(batterydegradation.DeriveCertKey(cfg.Auth.JWTSecret)),
+	)
 	batteryPassportHandler := batterypassport.NewBatteryPassportHandler(db)
 	carbonHandler := apicarbon.NewCarbonHandler(db)
 	rulHandler := apirul.NewRULHandler(db)
@@ -1454,6 +1463,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	)
 	lifetimeHandler := apilifetime.NewHandler(db, eventHub)
 	chargePlannerHandler := chargeplanner.NewHandler(db, teslaClient, cfg, stateReader)
+	chargeAutopilotHandler := apichargeautopilot.NewHandler(
+		apichargeautopilot.NewPGProfileStore(db),
+		apichargeautopilot.NewPGSavingsReader(db),
+	)
+	// One-click autopilot run: persists the preview as a charge plan and
+	// applies it through the charge planner's command path (single path
+	// issuing Tesla commands).
+	chargeAutopilotRunHandler := apichargeautopilot.NewRunHandler(
+		apichargeautopilot.NewPGProfileStore(db),
+		chargingdb.NewChargePlanRepo(db),
+		chargePlannerHandler,
+	)
 	yearReviewHandler := yearreview.NewHandler(db)
 	energyFlowHandler := apienergyflow.NewEnergyFlowHandler(db, stateReader, liveStateReader)
 	weeklyDigestHandler := apiweekly.NewHandler(db)
@@ -2184,9 +2205,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		cfg.Auth.ForwardAuthHeader,
 	)
 	geocodeHandler := apigeocode.NewHandler(geocoding.NewSearcher("TeslaSync/1.0"), geocoding.NewGeocoder(cfg.GoogleMaps.APIKey, cfg.AzureMaps.APIKey))
-	shareHandler := apishare.NewShareHandler(db)
+	shareHandler := apishare.NewShareHandler(db, stateReader)
 	watchHandler := watch.NewHandler(db, teslaClient)
 	onboardingHandler := apionboard.NewHandler(db, opt.Encryptor)
+	ocppHandler := apiocpp.NewHandler(dbocpp.NewStore(db))
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -2319,6 +2341,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	r.With(
 		httprate.LimitByIP(60, 1*time.Minute),
 	).Get("/api/v1/share/{token}", shareHandler.GetPublicShare)
+
+	// Public: Battery certificate verification (no auth — the HMAC
+	// signature IS the auth). Lets a buyer verify a seller-issued battery
+	// health attestation without an account.
+	// NOTE: If using ForwardAuth (Authentik/Authelia), exempt /api/v1/public/ from auth.
+	r.With(
+		httprate.LimitByIP(60, 1*time.Minute),
+	).Post("/api/v1/public/battery-certificate/verify", batteryCertHandler.Verify)
 
 	// Public: Web Vitals ingest. Anonymous browsers
 	// POST batches of LCP/INP/CLS/FCP/TTFB samples here. Mounted outside
@@ -3181,6 +3211,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/states", fleetStateHandler.List)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/sync", vehicleHandler.SyncFromTesla)
 			r.Route("/{vehicleID}", func(r chi.Router) {
+				r.Get("/silence", vehicleHandler.Silence)
 				r.Get("/", vehicleHandler.Get)
 				// destructive: requires sudo.
 				r.With(RequireSudo(sudoStore, sudoCfg)).Delete("/", vehicleHandler.Delete)
@@ -3347,14 +3378,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/maintenance", func(r chi.Router) {
 			r.Get("/", maintenanceHandler.List)
 			r.Get("/records", maintenanceHandler.Records)
+			r.Get("/forecast", maintenanceHandler.Forecast)
 		})
 		r.Route("/charging", func(r chi.Router) {
 			r.Get("/", chargingHandler.ListByVehicle)
+			r.Get("/bill-variance", chargingHandler.BillVariance)
 			// Bulk delete
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/bulk", chargingHandler.BulkDelete)
 			r.Route("/{sessionID}", func(r chi.Router) {
 				r.Get("/", chargingHandler.Get)
 				r.Get("/telemetry", chargingHandler.TelemetryReadings)
+				// Session share link management (mirrors /drives/{driveID})
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/share", shareHandler.CreateSessionShare)
+				r.Get("/shares", shareHandler.ListSessionShares)
 			})
 		})
 		r.Route("/physics", func(r chi.Router) {
@@ -3374,6 +3410,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/tesla/charging", func(r chi.Router) {
 			r.Route("/history", func(r chi.Router) {
 				r.Get("/", teslaChargingHistoryHandler.List)
+				r.Get("/sites", teslaChargingHistoryHandler.Sites)
 				r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/refresh", teslaChargingHistoryHandler.Refresh)
 			})
 			r.Get("/invoice/{contentID}", teslaChargingHistoryHandler.Invoice)
@@ -3404,6 +3441,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			// Live status (power flow snapshots)
 			r.Get("/live-status", teslaEnergyLiveStatusHandler.LiveStatus)
 			r.Get("/live-status/history", teslaEnergyLiveStatusHandler.LiveStatusHistory)
+			r.Get("/charge-advice", teslaEnergyLiveStatusHandler.ChargeAdvice)
 			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/live-status/refresh", teslaEnergyLiveStatusHandler.RefreshLiveStatus)
 
 			// Time-of-Use settings (rate plan / tariff)
@@ -3651,6 +3689,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 				r.Get("/{presetId}", automationHandler.GetPreset)
 			})
 
+			// Geofence routine templates (static routes before {id} param)
+			r.Route("/routine-templates", func(r chi.Router) {
+				r.Get("/", automationHandler.ListRoutineTemplates)
+				r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/{id}/install", automationHandler.InstallRoutine)
+			})
+
 			r.Route("/{id}", func(r chi.Router) {
 				r.Get("/", automationHandler.Get)
 				r.Get("/export", automationHandler.ExportOne)
@@ -3667,6 +3711,9 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Analytics
 		r.Get("/analytics/fleet", analyticsHandler.Fleet)
 		r.Get("/analytics/tco", tcoHandler.GetTCO)
+		r.Get("/analytics/tco/ledger", tcoLedgerHandler.List)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/analytics/tco/ledger", tcoLedgerHandler.Create)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Delete("/analytics/tco/ledger/{id}", tcoLedgerHandler.Delete)
 
 		// Carbon Intelligence — the vehicle-independent diurnal grid
 		// carbon-intensity model (seeded, admin-editable). Mounted as a
@@ -3688,9 +3735,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Get("/analytics/regen", regenHandler.Stats)
 		r.Get("/analytics/battery-degradation", batteryDegradationHandler.Predict)
 		r.Get("/analytics/battery-health", batteryDegradationHandler.Health)
+		r.With(httprate.LimitByIP(20, 1*time.Minute)).Get("/analytics/battery-health/certificate", batteryCertHandler.Issue)
 		r.Get("/analytics/charging-heatmap", chargingHeatmapHandler.Get)
 		r.Get("/analytics/speed-profile", speedProfileHandler.Get)
 		r.Get("/analytics/temperature-impact", tempImpactHandler.Get)
+		r.Get("/analytics/temperature-impact/shift", tempImpactHandler.Shift)
 		// Supervised self-driving distance analytics. Server-side
 		// aggregation keeps the raw counter change feed off the wire; the
 		// response is canonical SI meters plus explicit data-quality
@@ -3752,14 +3801,31 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		// Charge Planner (smart scheduling)
 		r.Route("/charge-planner", func(r chi.Router) {
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/optimize", chargePlannerHandler.Optimize)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/queue", chargePlannerHandler.Queue)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/apply", chargePlannerHandler.Apply)
 			r.Get("/history", chargePlannerHandler.ListPlans)
 			r.Get("/rate-plans", chargePlannerHandler.ListRatePlans)
 		})
 
+		// Charge Autopilot (always-on profile + next-run preview + savings ledger)
+		r.Route("/charge-autopilot", func(r chi.Router) {
+			r.Get("/profile", chargeAutopilotHandler.GetProfile)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/profile", chargeAutopilotHandler.UpsertProfile)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/preview", chargeAutopilotHandler.Preview)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/run", chargeAutopilotRunHandler.Run)
+			r.Get("/savings", chargeAutopilotHandler.Savings)
+		})
+
+		// OCPP (non-Tesla charge points + sessions recorded by cmd/ocpp-server)
+		r.Route("/ocpp", func(r chi.Router) {
+			r.Get("/charge-points", ocppHandler.ListChargePoints)
+			r.Get("/sessions", ocppHandler.ListSessions)
+		})
+
 		// Trip Planner (route planning with charging stop estimation)
 		r.Route("/trip-planner", func(r chi.Router) {
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/plan", tripPlannerHandler.Plan)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/confidence", tripPlannerHandler.Confidence)
 		})
 
 		// Geocoding (forward address search + reverse coordinate lookup)
@@ -3931,6 +3997,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Use(httprate.LimitByIP(60, 1*time.Minute))
 			r.Get("/", vampireDrainHandler.Events)
 			r.Get("/stats", vampireDrainHandler.Stats)
+			r.Get("/watch", vampireDrainHandler.Watch)
 		})
 
 		// Visited Locations

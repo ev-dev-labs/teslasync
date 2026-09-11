@@ -1,9 +1,10 @@
-/** Types for the shareable drive reports feature. */
+/** Types for the shareable drive + charging-session reports feature. */
 
 export interface ShareToken {
   id: number;
   token: string;
-  drive_id: number;
+  drive_id?: number;
+  charging_session_id?: number;
   created_by: string | null;
   title: string | null;
   description: string | null;
@@ -59,6 +60,7 @@ export interface SharedTelemetryPoint {
 
 export interface SharedDriveData {
   payload_version: 'v2' | 'v1';
+  share_type?: 'drive' | 'charging_session';
   title: string;
   description: string;
   drive: SharedDriveInfo;
@@ -67,6 +69,51 @@ export interface SharedDriveData {
   elevation_profile: SharedElevationPoint[] | null;
   speed_profile: SharedSpeedPoint[] | null;
   telemetry: SharedTelemetryPoint[] | null;
+}
+
+export interface SharedCurvePoint {
+  t_s: number;
+  power_kw: number | null;
+  battery_pct: number | null;
+  energy_kwh: number | null;
+}
+
+export interface SharedSessionInfo {
+  date: string;
+  duration_s: number;
+  energy_added_wh: number | null;
+  start_soc_pct: number | null;
+  end_soc_pct: number | null;
+  charger_type: string;
+  place: string;
+  peak_power_w: number | null;
+  avg_power_w: number | null;
+  cost: number | null;
+  cost_currency: string | null;
+  curve: SharedCurvePoint[] | null;
+}
+
+export interface SharedSessionData {
+  payload_version: 'v2';
+  share_type: 'charging_session';
+  title: string;
+  description: string;
+  session: SharedSessionInfo;
+  vehicle: SharedVehicle | null;
+}
+
+/** Any payload the public /share/:token endpoint can return. */
+export type SharedPayload = SharedDriveData | SharedDriveDataV1 | SharedSessionData;
+
+/**
+ * Type guard: `true` when the public payload is a charging-session share.
+ * Discriminates on the `share_type` field the backend always sets for v2
+ * payloads; legacy drive payloads predate it and fall through to drive.
+ */
+export function isSharedSession(
+  data: SharedDriveData | SharedDriveDataV1 | SharedSessionData | null | undefined,
+): data is SharedSessionData {
+  return data != null && (data as SharedSessionData).share_type === 'charging_session';
 }
 
 export interface CreateShareRequest {

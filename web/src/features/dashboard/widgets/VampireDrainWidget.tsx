@@ -5,7 +5,7 @@ import { StatCard } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
 import { Sparkline } from '@/components/charts';
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useVampireDrainStats, useVampireDrainEvents } from '@/api/hooks/useEnergy';
+import { useVampireDrainStats, useVampireDrainEvents, useVampireDrainWatch } from '@/api/hooks/useEnergy';
 import { fmtNumber } from '@/lib/numberFormat';
 import { cn } from '@/lib/cn';
 import { WidgetShell } from './WidgetShell';
@@ -104,11 +104,21 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
       .map((e) => e.drain_pct_per_day ?? 0);
   }, [events]);
 
-  const updatedAt = Math.max(statsUpdatedAt ?? 0, eventsUpdatedAt ?? 0);
+  const {
+    data: watch,
+    isFetching: watchFetching,
+    isStale: watchStale,
+    isError: watchError,
+    dataUpdatedAt: watchUpdatedAt,
+    refetch: refetchWatch,
+  } = useVampireDrainWatch(idStr);
+
+  const updatedAt = Math.max(statsUpdatedAt ?? 0, eventsUpdatedAt ?? 0, watchUpdatedAt ?? 0);
 
   const handleRefresh = () => {
     refetchStats();
     refetchEvents();
+    refetchWatch();
   };
 
   const hasMeasuredAverage = measuredAverage != null;
@@ -130,9 +140,9 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
       }}
       loading={isLoading}
       updatedAt={updatedAt}
-      isFetching={statsFetching || eventsFetching}
-      isStale={statsStale || eventsStale}
-      isError={statsError || eventsError}
+      isFetching={statsFetching || eventsFetching || watchFetching}
+      isStale={statsStale || eventsStale || watchStale}
+      isError={statsError || eventsError || watchError}
       onRefresh={handleRefresh}
     >
       {hasData ? (
@@ -171,6 +181,32 @@ export default function VampireDrainWidget({ vehicleId, size }: WidgetProps) {
                   : undefined
               }
             />
+
+            {/* Watchdog status strip */}
+            {watch && (
+              <div
+                className="flex items-center gap-2 rounded-lg bg-white/[0.03] px-3 py-2"
+                role="status"
+                aria-label={t('widget.vampireDrain.watchStatus', 'Drain watchdog status')}
+              >
+                <span
+                  className="h-2 w-2 flex-shrink-0 rounded-full"
+                  style={{
+                    backgroundColor:
+                      watch.status === 'alert' ? '#ef4444' : watch.status === 'watch' ? '#f59e0b' : '#10b981',
+                  }}
+                  aria-hidden="true"
+                />
+                <p className="text-2xs text-[var(--text-muted)] leading-snug">
+                  {watch.status === 'ok'
+                    ? t('widget.vampireDrain.watchOk', 'Watchdog: drain healthy')
+                    : t('widget.vampireDrain.watchBreach', 'Watchdog: {{streak}} breach streak · {{rec}}', {
+                        streak: watch.breach_streak,
+                        rec: watch.recommendation,
+                      })}
+                </p>
+              </div>
+            )}
 
             {/* Wide: sparkline */}
             {isWide && sparklineData.length > 1 && (

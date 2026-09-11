@@ -11,6 +11,8 @@ type tripPlanPreferences struct {
 	SpeedFactor        float64 `json:"speed_factor"` // 1.0 = normal, >1 faster, <1 slower
 	IncludeWeather     bool    `json:"include_weather"`
 	PreferSupercharger bool    `json:"prefer_superchargers"`
+	GasPricePerGallon  float64 `json:"gas_price_per_gallon"` // optional, default 3.50
+	GasMPG             float64 `json:"gas_mpg"`              // optional, default 30
 }
 
 type tripPlanRequest struct {
@@ -70,11 +72,24 @@ type tripSOCPoint struct {
 }
 
 type tripPlanResponse struct {
-	Route         tripPlanRoute     `json:"route"`
-	Legs          []tripPlanLeg     `json:"legs"`
-	ChargeStops   []tripChargeStop  `json:"charge_stops"`
-	WeatherImpact tripWeatherImpact `json:"weather_impact"`
-	SOCCurve      []tripSOCPoint    `json:"soc_curve"`
+	Route          tripPlanRoute      `json:"route"`
+	Legs           []tripPlanLeg      `json:"legs"`
+	ChargeStops    []tripChargeStop   `json:"charge_stops"`
+	WeatherImpact  tripWeatherImpact  `json:"weather_impact"`
+	SOCCurve       []tripSOCPoint     `json:"soc_curve"`
+	CostComparison tripCostComparison `json:"cost_comparison"`
+}
+
+// tripCostComparison is the door-to-door $ readout: EV charging cost vs the
+// gasoline equivalent for the same distance.
+type tripCostComparison struct {
+	EVCost     float64 `json:"ev_cost"`
+	GasCost    float64 `json:"gas_cost"`
+	GasGallons float64 `json:"gas_gallons"`
+	Savings    float64 `json:"savings"`
+	SavingsPct float64 `json:"savings_pct"`
+	GasPrice   float64 `json:"gas_price_per_gallon"`
+	GasMPG     float64 `json:"gas_mpg"`
 }
 
 // Exported aliases keep the deterministic planner's typed compute surface

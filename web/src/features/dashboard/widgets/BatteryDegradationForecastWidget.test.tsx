@@ -445,3 +445,34 @@ describe('BatteryDegradationForecastWidget — refresh wiring', () => {
     expect(refetch).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('BatteryDegradationForecastWidget — horizon outlook', () => {
+  it('renders the 1/3/5-year points when the outlook is present', () => {
+    mockDegradation.mockReturnValue(qr({
+      data: makeData({
+        horizon_outlook: {
+          points: [
+            { years: 1, health_pct: 90.5, confidence_low: 89, confidence_high: 92 },
+            { years: 3, health_pct: 86.1, confidence_low: 83, confidence_high: 89 },
+            { years: 5, health_pct: 81.7, confidence_low: 77, confidence_high: 86 },
+          ],
+          data_months: 14,
+          slope_per_year: -2.2,
+          has_enough_data: true,
+        },
+      }),
+    }));
+    renderWidget(STANDARD);
+
+    expect(screen.getByText('1 / 3 / 5-Year Outlook')).toBeTruthy();
+    expect(screen.getByText('90.5%')).toBeTruthy();
+    expect(screen.getByText('81.7%')).toBeTruthy();
+  });
+
+  it('hides the outlook when absent', () => {
+    mockDegradation.mockReturnValue(qr({ data: makeData({ horizon_outlook: null }) }));
+    renderWidget(STANDARD);
+
+    expect(screen.queryByText('1 / 3 / 5-Year Outlook')).toBeNull();
+  });
+});

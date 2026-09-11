@@ -14,6 +14,8 @@ import type {
   AutomationPresetsResponse,
   AutomationPreset,
   AutomationTriggerInput,
+  RoutineTemplate,
+  InstallRoutineRequest,
 } from '@/api/types';
 
 export type AutomationStepInput =
@@ -312,5 +314,39 @@ export function useAutomationPreset(id: string | undefined) {
       request<AutomationPreset>(`/automations/presets/${encodeURIComponent(id!)}`, { signal }),
     enabled: !!id,
     staleTime: STALE_TIMES.STATIC,
+  });
+}
+
+// ── Geofence routine templates ─────────────────────────────────────────
+
+export const routineKeys = {
+  all: ['automation-routines'] as const,
+};
+
+/** Fetches the parameterized geofence routine catalogue. */
+export function useRoutineTemplates() {
+  return useQuery({
+    queryKey: routineKeys.all,
+    queryFn: ({ signal }) => request<RoutineTemplate[]>('/automations/routine-templates', { signal }),
+    staleTime: STALE_TIMES.STATIC,
+    select: safeArray,
+  });
+}
+
+/** Mutation to install a routine for a chosen place. */
+export function useInstallRoutine() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ id, ...params }: InstallRoutineRequest & { id: string }) =>
+      request<Automation>(`/automations/routine-templates/${encodeURIComponent(id)}/install`, {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: automationKeys.all });
+      success('toast.automations.routine.success', 'Routine installed');
+    },
+    onError: (err) => error(err, 'toast.automations.routine.error', 'Failed to install routine'),
   });
 }

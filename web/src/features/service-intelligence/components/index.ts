@@ -10,3 +10,4 @@ export { RecallInventoryPanel } from './RecallInventoryPanel';
 export { SourceFreshnessPanel } from './SourceFreshnessPanel';
 export { SymptomMatchesPanel } from './SymptomMatchesPanel';
 export { VehicleMatchPanel } from './VehicleMatchPanel';
+export { WarrantyPanel } from './WarrantyPanel';

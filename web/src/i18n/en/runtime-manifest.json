@@ -533,7 +533,6 @@
       "rhythm",
       "routeEfficiency",
       "seasonalEfficiency",
-      "share",
       "speedProfile",
       "speedSweetSpot",
       "sweetSpot",
@@ -556,6 +555,7 @@
       "yearReview"
     ],
     "sharing": [
+      "share",
       "shareCard",
       "sharing"
     ],
@@ -582,15 +582,18 @@
       "webpush"
     ],
     "charging": [
+      "autopilot",
       "chargeDepartureAlignment",
       "chargeInterruption",
       "chargePlanner",
+      "chargeQueue",
       "chargerResilience",
       "chargerTypes",
       "charging",
       "chargingThermalTax",
       "costAnalysis",
       "filter",
+      "ocpp",
       "powershare",
       "tesla_charging",
       "tesla_sessions"

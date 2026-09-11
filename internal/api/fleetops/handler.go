@@ -93,6 +93,7 @@ func MountRoutes(r chi.Router, h *Handler) {
 			r.With(writeLimit).Delete(path+"/{id}", remove)
 		}
 		mountCRUD("/drivers", h.ListDrivers, h.CreateDriver, h.GetDriver, h.UpdateDriver, h.DeleteDriver)
+		r.Get("/drivers/{id}/evaluate", h.EvaluateDriver)
 		mountCRUD("/cost-centers", h.ListCostCenters, h.CreateCostCenter, h.GetCostCenter, h.UpdateCostCenter, h.DeleteCostCenter)
 		mountCRUD("/assignments", h.ListAssignments, h.CreateAssignment, h.GetAssignment, h.UpdateAssignment, h.DeleteAssignment)
 		mountCRUD("/reservations", h.ListReservations, h.CreateReservation, h.GetReservation, h.UpdateReservation, h.DeleteReservation)

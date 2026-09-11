@@ -2,6 +2,7 @@ package sharing
 
 import (
 	"context"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -120,25 +121,33 @@ func setDest[T any](dest any, v T) error {
 	return nil
 }
 
-// fillShareToken populates the 12 scan destinations produced by getByTokenSQL /
-// listByDriveSQL from src, in the exact column order the repo scans.
+// fillShareToken populates the 13 scan destinations produced by getByTokenSQL /
+// listByDriveSQL / listByChargingSessionSQL from src, in the exact column
+// order the repo scans. The target IDs are nullable in the schema, so the
+// fake produces sql.NullInt64 (invalid when the model holds 0) exactly as
+// pgx would for a NULL column.
 func fillShareToken(dest []any, src drivemodel.ShareToken) error {
-	if len(dest) != 12 {
-		return fmt.Errorf("share token scan: got %d dest, want 12", len(dest))
+	if len(dest) != 13 {
+		return fmt.Errorf("share token scan: got %d dest, want 13", len(dest))
 	}
 	steps := []func() error{
 		func() error { return setDest(dest[0], src.ID) },
 		func() error { return setDest(dest[1], src.Token) },
-		func() error { return setDest(dest[2], src.DriveID) },
-		func() error { return setDest(dest[3], src.CreatedBy) },
-		func() error { return setDest(dest[4], src.Title) },
-		func() error { return setDest(dest[5], src.Description) },
-		func() error { return setDest(dest[6], src.IncludeMap) },
-		func() error { return setDest(dest[7], src.IncludeTelemetry) },
-		func() error { return setDest(dest[8], src.IncludeSpeed) },
-		func() error { return setDest(dest[9], src.Views) },
-		func() error { return setDest(dest[10], src.ExpiresAt) },
-		func() error { return setDest(dest[11], src.CreatedAt) },
+		func() error {
+			return setDest(dest[2], sql.NullInt64{Int64: src.DriveID, Valid: src.DriveID != 0})
+		},
+		func() error {
+			return setDest(dest[3], sql.NullInt64{Int64: src.ChargingSessionID, Valid: src.ChargingSessionID != 0})
+		},
+		func() error { return setDest(dest[4], src.CreatedBy) },
+		func() error { return setDest(dest[5], src.Title) },
+		func() error { return setDest(dest[6], src.Description) },
+		func() error { return setDest(dest[7], src.IncludeMap) },
+		func() error { return setDest(dest[8], src.IncludeTelemetry) },
+		func() error { return setDest(dest[9], src.IncludeSpeed) },
+		func() error { return setDest(dest[10], src.Views) },
+		func() error { return setDest(dest[11], src.ExpiresAt) },
+		func() error { return setDest(dest[12], src.CreatedAt) },
 	}
 	for i, step := range steps {
 		if err := step(); err != nil {
@@ -185,7 +194,7 @@ func TestGenerateToken(t *testing.T) {
 // ── SQL-shape pinning ────────────────────────────────────────────────────────
 
 var shareTokenColumns = []string{
-	"id", "token", "drive_id", "created_by", "title", "description",
+	"id", "token", "drive_id", "charging_session_id", "created_by", "title", "description",
 	"include_map", "include_telemetry", "include_speed", "views",
 	"expires_at", "created_at",
 }
@@ -194,9 +203,9 @@ func TestInsertTokenSQL_Shape(t *testing.T) {
 	t.Parallel()
 	mustContain := []string{
 		"INSERT INTO share_tokens",
-		"token, drive_id, created_by, title, description",
+		"token, drive_id, charging_session_id, created_by, title, description",
 		"include_map, include_telemetry, include_speed, expires_at",
-		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+		"VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
 		"RETURNING id, created_at",
 	}
 	for _, frag := range mustContain {
@@ -208,14 +217,15 @@ func TestInsertTokenSQL_Shape(t *testing.T) {
 
 func TestSelectSQL_ProjectAllColumns(t *testing.T) {
 	t.Parallel()
-	// getByTokenSQL and listByDriveSQL must share the same projection so
-	// scanShareToken (12 dests) stays valid for both paths.
+	// All three SELECTs must share the same projection so scanShareToken
+	// (13 dests) stays valid for every path.
 	for _, sql := range []struct {
 		name string
 		body string
 	}{
 		{"getByTokenSQL", getByTokenSQL},
 		{"listByDriveSQL", listByDriveSQL},
+		{"listByChargingSessionSQL", listByChargingSessionSQL},
 	} {
 		if !strings.Contains(sql.body, selectTokenColumns) {
 			t.Errorf("%s does not embed selectTokenColumns\nfull SQL:\n%s", sql.name, sql.body)
@@ -251,6 +261,19 @@ func TestListByDriveSQL_Shape(t *testing.T) {
 	}
 }
 
+func TestListByChargingSessionSQL_Shape(t *testing.T) {
+	t.Parallel()
+	mustContain := []string{
+		"WHERE charging_session_id = $1",
+		"ORDER BY created_at DESC",
+	}
+	for _, frag := range mustContain {
+		if !strings.Contains(listByChargingSessionSQL, frag) {
+			t.Errorf("listByChargingSessionSQL missing %q\nfull SQL:\n%s", frag, listByChargingSessionSQL)
+		}
+	}
+}
+
 func TestMutationSQL_Shape(t *testing.T) {
 	t.Parallel()
 	cases := []struct {
@@ -279,12 +302,13 @@ func TestMutationSQL_Shape(t *testing.T) {
 func TestSQL_ParameterisedOnly(t *testing.T) {
 	t.Parallel()
 	all := map[string]string{
-		"insertTokenSQL":    insertTokenSQL,
-		"getByTokenSQL":     getByTokenSQL,
-		"listByDriveSQL":    listByDriveSQL,
-		"incrementViewsSQL": incrementViewsSQL,
-		"deleteTokenSQL":    deleteTokenSQL,
-		"deleteExpiredSQL":  deleteExpiredSQL,
+		"insertTokenSQL":           insertTokenSQL,
+		"getByTokenSQL":            getByTokenSQL,
+		"listByDriveSQL":           listByDriveSQL,
+		"listByChargingSessionSQL": listByChargingSessionSQL,
+		"incrementViewsSQL":        incrementViewsSQL,
+		"deleteTokenSQL":           deleteTokenSQL,
+		"deleteExpiredSQL":         deleteExpiredSQL,
 	}
 	for name, sql := range all {
 		if !strings.Contains(sql, "$1") {
@@ -373,7 +397,7 @@ func TestTokenRepo_Create(t *testing.T) {
 		}
 	})
 
-	t.Run("invalid drive id returns error without querying", func(t *testing.T) {
+	t.Run("missing target returns error without querying", func(t *testing.T) {
 		t.Parallel()
 		for _, driveID := range []int64{0, -1} {
 			fp := &fakePool{}
@@ -385,6 +409,19 @@ func TestTokenRepo_Create(t *testing.T) {
 			if fp.rowCalls != 0 {
 				t.Errorf("driveID=%d: QueryRow called, want none", driveID)
 			}
+		}
+	})
+
+	t.Run("both targets set returns error without querying", func(t *testing.T) {
+		t.Parallel()
+		fp := &fakePool{}
+		repo := &TokenRepo{pool: fp}
+		err := repo.Create(context.Background(), &drivemodel.ShareToken{DriveID: 1, ChargingSessionID: 2})
+		if err == nil {
+			t.Fatal("expected error for dual targets")
+		}
+		if fp.rowCalls != 0 {
+			t.Errorf("QueryRow called %d times, want 0 for dual targets", fp.rowCalls)
 		}
 	})
 
@@ -427,14 +464,45 @@ func TestTokenRepo_Create(t *testing.T) {
 		if fp.lastSQL != insertTokenSQL {
 			t.Errorf("Create used unexpected SQL:\n%s", fp.lastSQL)
 		}
-		if len(fp.lastArgs) != 9 {
-			t.Fatalf("Create passed %d args, want 9", len(fp.lastArgs))
+		if len(fp.lastArgs) != 10 {
+			t.Fatalf("Create passed %d args, want 10", len(fp.lastArgs))
 		}
 		if fp.lastArgs[0] != st.Token {
 			t.Errorf("arg[0] = %v, want token %q", fp.lastArgs[0], st.Token)
 		}
 		if fp.lastArgs[1] != int64(42) {
 			t.Errorf("arg[1] = %v, want drive_id 42", fp.lastArgs[1])
+		}
+		if fp.lastArgs[2] != nil {
+			t.Errorf("arg[2] = %v, want NULL charging_session_id", fp.lastArgs[2])
+		}
+	})
+
+	t.Run("session target binds NULL drive_id", func(t *testing.T) {
+		t.Parallel()
+		fp := &fakePool{
+			rowFn: func(_ string, _ []any) pgx.Row {
+				return fakeRow{scan: func(dest ...any) error {
+					if err := setDest(dest[0], int64(78)); err != nil {
+						return err
+					}
+					return setDest(dest[1], scanTime)
+				}}
+			},
+		}
+		repo := &TokenRepo{pool: fp}
+		st := &drivemodel.ShareToken{ChargingSessionID: 7}
+		if err := repo.Create(context.Background(), st); err != nil {
+			t.Fatalf("Create() error = %v", err)
+		}
+		if len(fp.lastArgs) != 10 {
+			t.Fatalf("Create passed %d args, want 10", len(fp.lastArgs))
+		}
+		if fp.lastArgs[1] != nil {
+			t.Errorf("arg[1] = %v, want NULL drive_id", fp.lastArgs[1])
+		}
+		if fp.lastArgs[2] != int64(7) {
+			t.Errorf("arg[2] = %v, want charging_session_id 7", fp.lastArgs[2])
 		}
 	})
 
@@ -667,6 +735,55 @@ func TestTokenRepo_ListByDrive(t *testing.T) {
 	})
 }
 
+// ── ListByChargingSession ──────────────────────────────────────────────────────
+
+// TestTokenRepo_ListByChargingSession covers the session-target list path.
+// The error matrix (query/scan/rows.Err) is identical to ListByDrive by
+// construction, so only the success path plus SQL/args pinning is repeated.
+func TestTokenRepo_ListByChargingSession(t *testing.T) {
+	t.Parallel()
+
+	base := time.Date(2026, 6, 15, 0, 0, 0, 0, time.UTC)
+	rows := []drivemodel.ShareToken{
+		{ID: 3, Token: "s1", ChargingSessionID: 11, IncludeTelemetry: true, Views: 5, CreatedAt: base},
+	}
+
+	t.Run("rows scanned with session target", func(t *testing.T) {
+		t.Parallel()
+		fr := &fakeRows{data: rows}
+		fp := &fakePool{rows: fr}
+		repo := &TokenRepo{pool: fp}
+		got, err := repo.ListByChargingSession(context.Background(), 11)
+		if err != nil {
+			t.Fatalf("ListByChargingSession() error = %v", err)
+		}
+		if len(got) != 1 {
+			t.Fatalf("ListByChargingSession() len = %d, want 1", len(got))
+		}
+		assertShareTokenEqual(t, *got[0], rows[0])
+		if fp.lastSQL != listByChargingSessionSQL {
+			t.Errorf("ListByChargingSession used unexpected SQL:\n%s", fp.lastSQL)
+		}
+		if len(fp.lastArgs) != 1 || fp.lastArgs[0] != int64(11) {
+			t.Errorf("ListByChargingSession args = %v, want [11]", fp.lastArgs)
+		}
+	})
+
+	t.Run("query error is wrapped", func(t *testing.T) {
+		t.Parallel()
+		sentinel := errors.New("query boom")
+		fp := &fakePool{queryErr: sentinel}
+		repo := &TokenRepo{pool: fp}
+		got, err := repo.ListByChargingSession(context.Background(), 11)
+		if got != nil {
+			t.Errorf("ListByChargingSession() = %v, want nil on error", got)
+		}
+		if !errors.Is(err, sentinel) {
+			t.Fatalf("ListByChargingSession() error = %v, want wrapped %v", err, sentinel)
+		}
+	})
+}
+
 // ── IncrementViews ───────────────────────────────────────────────────────────
 
 func TestTokenRepo_IncrementViews(t *testing.T) {
@@ -844,9 +961,11 @@ func TestTokenRepo_DeleteExpired(t *testing.T) {
 
 func assertShareTokenEqual(t *testing.T, got, want drivemodel.ShareToken) {
 	t.Helper()
-	if got.ID != want.ID || got.Token != want.Token || got.DriveID != want.DriveID {
-		t.Errorf("scalar mismatch: got {ID:%d Token:%q DriveID:%d}, want {ID:%d Token:%q DriveID:%d}",
-			got.ID, got.Token, got.DriveID, want.ID, want.Token, want.DriveID)
+	if got.ID != want.ID || got.Token != want.Token || got.DriveID != want.DriveID ||
+		got.ChargingSessionID != want.ChargingSessionID {
+		t.Errorf("scalar mismatch: got {ID:%d Token:%q DriveID:%d SessionID:%d}, want {ID:%d Token:%q DriveID:%d SessionID:%d}",
+			got.ID, got.Token, got.DriveID, got.ChargingSessionID,
+			want.ID, want.Token, want.DriveID, want.ChargingSessionID)
 	}
 	if !strPtrEqual(got.CreatedBy, want.CreatedBy) {
 		t.Errorf("CreatedBy = %v, want %v", derefStr(got.CreatedBy), derefStr(want.CreatedBy))

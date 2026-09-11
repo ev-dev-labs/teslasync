@@ -7,12 +7,14 @@ import type {
   ShareToken,
   SharedDriveData,
   SharedDriveDataV1,
+  SharedSessionData,
   CreateShareRequest,
   CreateShareResponse,
 } from '@/types/sharing';
 
 export const sharingKeys = {
   shares: (driveId: string) => ['shares', driveId] as const,
+  sessionShares: (sessionId: string) => ['session-shares', sessionId] as const,
   shared: (token: string) => ['shared-drive', token] as const,
 };
 
@@ -46,6 +48,49 @@ export function useShareLinks(driveId: string) {
   });
 }
 
+/** Creates a share link for a charging session (authenticated). */
+export function useCreateSessionShareLink(sessionId: string) {
+  const queryClient = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (data: CreateShareRequest) =>
+      request<CreateShareResponse>(`/charging/${sessionId}/share`, {
+        method: 'POST',
+        body: JSON.stringify(data),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sharingKeys.sessionShares(sessionId) });
+      success('share.toast.created', 'Share link created');
+    },
+    onError: (err) => error(err, 'share.toast.createError', 'Failed to create share link'),
+  });
+}
+
+/** Lists all share links for a charging session (authenticated). */
+export function useSessionShareLinks(sessionId: string) {
+  return useQuery({
+    queryKey: sharingKeys.sessionShares(sessionId),
+    queryFn: ({ signal }) => request<ShareToken[]>(`/charging/${sessionId}/shares`, { signal }),
+    enabled: !!sessionId,
+    select: safeArray,
+  });
+}
+
+/** Revokes (deletes) a session share link (authenticated). */
+export function useRevokeSessionShareLink(sessionId: string) {
+  const queryClient = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (token: string) =>
+      request<{ status: string }>(`/shares/${token}`, { method: 'DELETE' }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: sharingKeys.sessionShares(sessionId) });
+      success('share.toast.revoked', 'Share link revoked');
+    },
+    onError: (err) => error(err, 'share.toast.revokeError', 'Failed to revoke share link'),
+  });
+}
+
 /** Revokes (deletes) a share link (authenticated). */
 export function useRevokeShareLink(driveId: string) {
   const queryClient = useQueryClient();
@@ -62,14 +107,16 @@ export function useRevokeShareLink(driveId: string) {
 }
 
 /**
- * Fetches shared drive data via the public endpoint.
+ * Fetches shared drive OR charging-session data via the public endpoint.
  * The share endpoint is mounted before auth middleware on the backend,
- * so no authentication is required.
+ * so no authentication is required. Branch on `isSharedSession()` to tell
+ * the payloads apart.
  */
 export function useSharedDrive(token: string) {
   return useQuery({
     queryKey: sharingKeys.shared(token),
-    queryFn: ({ signal }) => request<SharedDriveData | SharedDriveDataV1>(`/share/${token}`, { signal }),
+    queryFn: ({ signal }) =>
+      request<SharedDriveData | SharedDriveDataV1 | SharedSessionData>(`/share/${token}`, { signal }),
     enabled: !!token,
     retry: false,
     staleTime: STALE_TIMES.SLOW,

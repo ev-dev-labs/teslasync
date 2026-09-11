@@ -14,6 +14,14 @@ import type {
   ApplyScheduleResponse,
   ChargePlan,
   RatePlanInfo,
+  AutopilotProfile,
+  AutopilotPreviewRequest,
+  AutopilotPreview,
+  AutopilotRunResponse,
+  AutopilotSavings,
+  BillVarianceReport,
+  QueueAdviseRequest,
+  QueueAdvice,
 } from '@/types/charging';
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
 
@@ -179,6 +187,20 @@ export interface TeslaChargingHistoryResponse {
   upserted?: number;
 }
 
+export interface ChargingSiteRank {
+  site: string;
+  visits: number;
+  total_wh: number;
+  total_spend: number;
+  avg_per_kwh: number;
+  last_visit: string;
+}
+
+export interface ChargingSiteRanking {
+  sites: ChargingSiteRank[];
+  unpriced_count: number;
+}
+
 export const teslaChargingHistoryKeys = {
   all: ['tesla-charging-history'] as const,
   byVin: (vin: string) => ['tesla-charging-history', vin] as const,
@@ -217,6 +239,18 @@ export function useRefreshTeslaChargingHistory() {
       success('toast.charging.history.success', 'Charging history refreshed');
     },
     onError: (err) => error(err, 'toast.charging.history.error', 'Failed to refresh charging history'),
+  });
+}
+
+/** Fetches visited Supercharger sites ranked by realized $/kWh, cheapest first. */
+export function useChargingSiteRanking(vin?: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: ['tesla-charging-site-ranking', vin],
+    queryFn: ({ signal }) => request<ChargingSiteRanking>(
+      `/tesla/charging/history/sites${vin ? `?vin=${vin}` : ''}`, { signal }
+    ),
+    staleTime: STALE_TIMES.SLOW,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -372,6 +406,112 @@ export function useRatePlans() {
     queryFn: ({ signal }) => request<RatePlanInfo[]>('/charge-planner/rate-plans', { signal }),
     staleTime: STALE_TIMES.STATIC,
     select: safeArray,
+  });
+}
+
+// --- Charge Autopilot ---
+
+export const autopilotKeys = {
+  all: ['charge-autopilot'] as const,
+  profile: (vehicleId: number) => ['charge-autopilot', 'profile', vehicleId] as const,
+  savings: (vehicleId: number) => ['charge-autopilot', 'savings', vehicleId] as const,
+};
+
+/** Fetches the Autopilot profile for a vehicle (defaults when never saved). */
+export function useAutopilotProfile(vehicleId?: number) {
+  return useQuery({
+    queryKey: autopilotKeys.profile(vehicleId!),
+    queryFn: ({ signal }) =>
+      request<AutopilotProfile>(`/charge-autopilot/profile?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/** Mutation to save the Autopilot profile for a vehicle. */
+export function useSaveAutopilotProfile() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: AutopilotProfile) =>
+      request<AutopilotProfile>('/charge-autopilot/profile', {
+        method: 'PUT',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: (profile) => {
+      invalidateAndBroadcast(qc, { queryKey: autopilotKeys.profile(profile.vehicle_id) });
+      success('toast.autopilot.save.success', 'Autopilot settings saved');
+    },
+    onError: (err) => error(err, 'toast.autopilot.save.error', 'Failed to save autopilot settings'),
+  });
+}
+
+/** Mutation to preview the next automatic Autopilot run. */
+export function useAutopilotPreview() {
+  const { error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: AutopilotPreviewRequest) =>
+      request<AutopilotPreview>('/charge-autopilot/preview', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onError: (err) => error(err, 'toast.autopilot.preview.error', 'Failed to preview autopilot run'),
+  });
+}
+
+/**
+ * One-click Autopilot run: computes the optimal window from the stored
+ * profile, persists it as a charge plan, and applies it to the vehicle.
+ * Issues real Tesla commands, so it requires live mode like /apply.
+ */
+export function useAutopilotRun() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: AutopilotPreviewRequest) =>
+      request<AutopilotRunResponse>('/charge-autopilot/run', {
+        method: 'POST',
+        requiresLiveMode: true,
+        body: JSON.stringify(params),
+      }),
+    onSuccess: (res) => {
+      invalidateAndBroadcast(qc, { queryKey: chargePlannerKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: autopilotKeys.all });
+      success('toast.autopilot.run.success', res.message || 'Autopilot run scheduled');
+    },
+    onError: (err) => error(err, 'toast.autopilot.run.error', 'Failed to run autopilot'),
+  });
+}
+
+/** Fetches realized Autopilot savings from applied charge plans. */
+export function useAutopilotSavings(vehicleId?: number) {
+  return useQuery({
+    queryKey: autopilotKeys.savings(vehicleId!),
+    queryFn: ({ signal }) =>
+      request<AutopilotSavings>(`/charge-autopilot/savings?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/** Mutation to order a shared-charger queue across vehicles. */
+export function useAdviseChargeQueue() {
+  const { error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: QueueAdviseRequest) =>
+      request<QueueAdvice>('/charge-planner/queue', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onError: (err) => error(err, 'toast.charge.queue.error', 'Failed to plan charger queue'),
+  });
+}
+
+/** Fetches the measured-vs-invoiced DC reconciliation for a vehicle. */
+export function useBillVariance(vehicleId?: number) {
+  return useQuery({
+    queryKey: ['bill-variance', vehicleId],
+    queryFn: ({ signal }) =>
+      request<BillVarianceReport>(`/charging/bill-variance?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
   });
 }
 

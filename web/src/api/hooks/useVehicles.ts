@@ -36,7 +36,27 @@ export const vehicleKeys = {
   state: (id: number, asOf?: string | null) =>
     asOf ? (['vehicle-state', id, asOf] as const) : (['vehicle-state', id] as const),
   positions: (id: number) => ['vehicle-positions', id] as const,
+  silence: (id: number) => ['vehicle-silence', id] as const,
 };
+
+export interface VehicleSilence {
+  vehicle_id: number;
+  status: 'ok' | 'quiet' | 'silent' | 'never';
+  last_seen_at: string | null;
+  silent_for_s: number | null;
+  checked_at: string;
+  explanation: string;
+}
+
+/** Fetches the telemetry silence watchdog status for a vehicle. */
+export function useVehicleSilence(id?: number) {
+  return useQuery({
+    queryKey: vehicleKeys.silence(id!),
+    queryFn: ({ signal }) => request<VehicleSilence>(`/vehicles/${id}/silence`, { signal }),
+    enabled: !!id,
+    staleTime: STALE_TIMES.STANDARD,
+  });
+}
 
 /**
  * Append `?as_of=` to a path when the time-machine

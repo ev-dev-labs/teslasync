@@ -39,7 +39,10 @@ func (h *ChatbotHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	_ = h.chat.SaveMessage(r.Context(), userMsg)
 
 	// Generate response by interpreting the query
-	response := h.processQuery(r.Context(), body.Message)
+	response, links := h.processQueryWithLinks(r.Context(), body.Message)
+	if links == nil {
+		links = []ChatLink{}
+	}
 
 	// Save assistant message
 	assistantMsg := &chatbotmodel.ChatMessage{SessionID: body.SessionID, Role: "assistant", Content: response}
@@ -48,6 +51,7 @@ func (h *ChatbotHandler) Chat(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"response":   response,
 		"session_id": body.SessionID,
+		"links":      links,
 	})
 }
 
@@ -75,13 +79,13 @@ func (h *ChatbotHandler) processQuery(ctx context.Context, msg string) string {
 	case matchAny(lower, "battery", "charge level", "soc", "state of charge"):
 		return h.queryBatteryStatus(ctx)
 
-	case matchAny(lower, "charging", "how many charge", "charge session", "total energy charged", "energy added"):
-		days := extractDays(lower, 30)
-		return h.queryChargingSummary(ctx, days)
-
 	case matchAny(lower, "charging cost", "total cost", "how much spent", "money spent", "electricity cost"):
 		days := extractDays(lower, 30)
 		return h.queryChargingCost(ctx, days)
+
+	case matchAny(lower, "charging", "how many charge", "charge session", "total energy charged", "energy added"):
+		days := extractDays(lower, 30)
+		return h.queryChargingSummary(ctx, days)
 
 	case matchAny(lower, "longest drive", "farthest drive", "max distance"):
 		return h.queryLongestDrive(ctx)

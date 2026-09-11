@@ -30,7 +30,8 @@ import {
   convertSpeedFromSI,
   type DistanceUnitPref,
 } from '@/lib/unitConversion';
-import { normalizeSharedDriveData } from '@/types/sharing';
+import { normalizeSharedDriveData, isSharedSession } from '@/types/sharing';
+import { SharedSessionReport } from './SharedSessionReport';
 
 /* ------------------------------------------------------------------ */
 /*  Boundary constants                                                */
@@ -150,7 +151,10 @@ export default function SharedDrivePage() {
   const { token } = useParams<{ token: string }>();
   const { t } = useTranslation();
   const { data: rawData, isLoading, error } = useSharedDrive(token ?? '');
-  const data = useMemo(() => normalizeSharedDriveData(rawData), [rawData]);
+  // One /s/:token route serves both link kinds: session payloads branch to
+  // their own report before drive normalization (which would see no drive).
+  const driveRaw = isSharedSession(rawData) ? undefined : rawData;
+  const data = useMemo(() => normalizeSharedDriveData(driveRaw), [driveRaw]);
   const { unitPrefs, formatDistance, formatSpeed } = useUnits();
   const distancePref = unitPrefs.distance;
   const speedPref = unitPrefs.speed;
@@ -207,6 +211,11 @@ export default function SharedDrivePage() {
   /* ---- Loading state ---- */
   if (isLoading) {
     return <SharedDriveLoading />;
+  }
+
+  /* ---- Session share branch ---- */
+  if (isSharedSession(rawData)) {
+    return <SharedSessionReport data={rawData} />;
   }
 
   /* ---- Error / expired ---- */

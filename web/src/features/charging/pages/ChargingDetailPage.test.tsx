@@ -34,7 +34,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 
@@ -154,6 +154,27 @@ vi.mock('@/components/charts', async () => {
 // a streaming endpoint; it is covered by its own suite. Inert here.
 vi.mock('@/components/ai/AIChargingDiagnosis', () => ({
   AIChargingDiagnosis: () => null,
+}));
+
+// The share dialog is covered by its own contract tests; here it only needs
+// to prove the page wires open/close without firing share-list queries.
+vi.mock('../components/ShareSessionDialog', () => ({
+  ShareSessionDialog: ({
+    sessionId,
+    open,
+    onClose,
+  }: {
+    sessionId: string
+    open: boolean
+    onClose: () => void
+  }) =>
+    open ? (
+      <div role="dialog" aria-label="Share session" data-session-id={sessionId}>
+        <button type="button" onClick={onClose}>
+          close share dialog
+        </button>
+      </div>
+    ) : null,
 }));
 
 // ── Data + environment hooks, driven per test. ──
@@ -638,5 +659,33 @@ describe('ChargingDetailPage — ongoing session', () => {
     expect(kvValue('Vehicle')).toBe('ID 7');
     // Placeless session → location empty state.
     expect(screen.getByText('No location recorded for this session.')).toBeInTheDocument();
+  });
+});
+
+describe('ChargingDetailPage — share dialog wiring', () => {
+  function renderWithId() {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <MemoryRouter initialEntries={['/charging/42']}>
+        <QueryClientProvider client={client}>
+          <Routes>
+            <Route path="/charging/:id" element={<ChargingDetailPage />} />
+          </Routes>
+        </QueryClientProvider>
+      </MemoryRouter>,
+    );
+  }
+
+  it('opens and closes the session share dialog from the header action', () => {
+    renderWithId();
+
+    expect(screen.queryByRole('dialog', { name: 'Share session' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Share' }));
+
+    const dialog = screen.getByRole('dialog', { name: 'Share session' });
+    expect(dialog).toHaveAttribute('data-session-id', '42');
+
+    fireEvent.click(within(dialog).getByRole('button', { name: 'close share dialog' }));
+    expect(screen.queryByRole('dialog', { name: 'Share session' })).not.toBeInTheDocument();
   });
 });

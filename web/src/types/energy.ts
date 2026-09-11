@@ -90,8 +90,23 @@ export interface DegradationData {
   degradation_rate_pct_per_month: number;
   projected_80pct_date: string | null;
   projections: PredictiveProjection[];
+  horizon_outlook?: HorizonOutlook | null;
   risk_factors: RiskFactorData[];
   recommendations: string[];
+}
+
+export interface HorizonPoint {
+  years: number;
+  health_pct: number;
+  confidence_low: number;
+  confidence_high: number;
+}
+
+export interface HorizonOutlook {
+  points: HorizonPoint[];
+  data_months: number;
+  slope_per_year: number;
+  has_enough_data: boolean;
 }
 
 export interface DegradationTrend {
@@ -221,6 +236,18 @@ export interface VampireDrainEvent {
 export interface VampireDrainEventsResponse {
   vehicle_id: number;
   events: VampireDrainEvent[];
+}
+
+export interface VampireDrainWatch {
+  status: 'ok' | 'watch' | 'alert';
+  threshold_pct_per_day: number;
+  avg_drain_pct_per_day: number | null;
+  events_evaluated: number;
+  breach_streak: number;
+  breaches_last_7_days: number;
+  worst_event: VampireDrainEvent | null;
+  cold_note?: string | null;
+  recommendation: string;
 }
 
 export interface ProjectedRangeData {
@@ -398,6 +425,17 @@ export interface TeslaEnergyLiveStatus {
   raw_json?: string;
   timestamp: string;
   fetched_at: string;
+}
+
+export interface SolarChargeAdvice {
+  verdict: 'charge_now' | 'charge_soon' | 'wait' | 'no_data';
+  surplus_w: number;
+  solar_w: number;
+  home_w: number;
+  battery_charge_w: number;
+  recommended_amps: number;
+  snapshot_age_s: number;
+  explanation: string;
 }
 
 // Time-of-Use settings payload sent to Tesla API

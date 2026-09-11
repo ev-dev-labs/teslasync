@@ -54,6 +54,7 @@ import { buildContextHref } from '@/lib/contextNavigation';
 import type { ChargingSession } from '@/api/types';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 import { ChargingSessionCard } from '../components/ChargingSessionCard';
+import { ChargeQueuePlanner } from '../components/ChargeQueuePlanner';
 import {
   computeChargingPeriodStats, priorPeriod, detectChargingAnomalies,
   detectNotableSessions, dailyChargingTrend, getChargerCategory,
@@ -1072,6 +1073,11 @@ export default function ChargingListPage() {
             }}
           />
           </section>
+        </FadeIn>
+
+        {/* Shared-charger queue planner */}
+        <FadeIn>
+          <ChargeQueuePlanner />
         </FadeIn>
 
         {/* Overview KPI card */}

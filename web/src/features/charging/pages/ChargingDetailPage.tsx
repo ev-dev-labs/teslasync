@@ -1,9 +1,9 @@
-import { useMemo, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import {
   ArrowLeft, Zap, Battery, BatteryCharging, Clock, Gauge, DollarSign,
-  MapPin, Activity, Thermometer, Waves, TrendingUp,
+  MapPin, Activity, Thermometer, Waves, TrendingUp, Share2,
 } from 'lucide-react';
 
 import type { ChargingSession, ChargeTelemetryReading } from '@/api/types';
@@ -20,7 +20,7 @@ import { chartTokens } from '@/lib/tokens';
 
 import { PageContainer } from '@/components/layout';
 import {
-  GlassPanel, Badge, HelpTooltip, PrintButton,
+  GlassPanel, Badge, HelpTooltip, PrintButton, Button,
   SectionTitle, PanelTitle, Text,
 } from '@/components/ui';
 import {
@@ -46,6 +46,7 @@ import {
 import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
 import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
 import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
+import { ShareSessionDialog } from '../components/ShareSessionDialog';
 
 /* ─── helpers ──────────────────────────────────────────────────── */
 
@@ -153,6 +154,7 @@ export default function ChargingDetailPage() {
   );
   const { id } = useParams<{ id: string }>();
   const sessionId = Number(id);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
   // ChargingSession distance delta comes through the repo adapter as miles.
   // Live charging telemetry is canonical SI and is converted only at the
@@ -372,6 +374,16 @@ export default function ChargingDetailPage() {
       actions={
         <div data-print-hide className="flex flex-wrap items-center gap-2">
           <LiveIndicator variant="compact" />
+          {id && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShareDialogOpen(true)}
+              icon={<Share2 className="h-4 w-4" aria-hidden="true" />}
+            >
+              {t('charging.detail.share', 'Share')}
+            </Button>
+          )}
           <PrintButton />
         </div>
       }
@@ -1228,6 +1240,13 @@ export default function ChargingDetailPage() {
           </div>
         </section>
       </FadeIn>
+      {id && (
+        <ShareSessionDialog
+          sessionId={id}
+          open={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+        />
+      )}
     </PageContainer>
   );
 }

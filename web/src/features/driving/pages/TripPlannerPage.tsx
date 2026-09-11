@@ -29,6 +29,8 @@ import { usePlanTrip } from '@/api/hooks/useDriving';
 import { useVehicleCommand } from '@/api/hooks/useVehicleCommand';
 import { AddressInput } from '../components/AddressInput';
 import { SOCRouteChart } from '../components/SOCRouteChart';
+import { TripCopilotCard } from '../components/TripCopilotCard';
+import { TripCostCard } from '../components/TripCostCard';
 import { TripLegList } from '../components/TripLegList';
 import { TripPlannerMap } from '../components/TripPlannerMap';
 import { TripShareImportBanner } from '../components/TripShareImportBanner';
@@ -430,6 +432,14 @@ export default function TripPlannerPage() {
               </div>
             )}
           </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* Row 4b — Copilot + cost: live arrival verdict and EV-vs-gas readout */}
+      <FadeIn delay={0.22}>
+        <section className="grid grid-cols-1 gap-4 xl:grid-cols-2 xl:gap-5">
+          <TripCopilotCard currentSoc={currentSOC} minArrivalSoc={minArrivalSOC} />
+          <TripCostCard comparison={plan?.cost_comparison} />
         </section>
       </FadeIn>
 

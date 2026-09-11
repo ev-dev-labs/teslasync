@@ -41,7 +41,26 @@ type riskFactor struct {
 type regressionResult struct {
 	Prediction   degradationPrediction
 	Projections  []predictiveProjection
+	Horizon      horizonOutlook
 	RatePerMonth float64
+}
+
+// horizonPoint is the projected pack health at a fixed year horizon with
+// the regression prediction interval.
+type horizonPoint struct {
+	Years          int     `json:"years"`
+	HealthPct      float64 `json:"health_pct"`
+	ConfidenceLow  float64 `json:"confidence_low"`
+	ConfidenceHigh float64 `json:"confidence_high"`
+}
+
+// horizonOutlook pins the 1/3/5-year twin readout. DataMonths reports how
+// many months of history back the fit so consumers can discount young fits.
+type horizonOutlook struct {
+	Points        []horizonPoint `json:"points"`
+	DataMonths    int            `json:"data_months"`
+	SlopePerYear  float64        `json:"slope_per_year"`
+	HasEnoughData bool           `json:"has_enough_data"`
 }
 
 type chargingHabits struct {

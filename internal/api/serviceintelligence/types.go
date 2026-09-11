@@ -35,6 +35,7 @@ type ObservationReader interface {
 
 type IntelligenceService interface {
 	Get(ctx context.Context, vehicleID int64, refresh bool) (*Response, error)
+	Warranty(ctx context.Context, vehicleID int64, odometerKm float64) (*WarrantyOutlook, error)
 }
 
 type Response struct {

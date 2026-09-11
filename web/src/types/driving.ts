@@ -303,6 +303,8 @@ export interface TripPlanPreferences {
   speed_factor?: number;
   include_weather?: boolean;
   prefer_superchargers?: boolean;
+  gas_price_per_gallon?: number;
+  gas_mpg?: number;
 }
 
 export interface TripPlanRequest {
@@ -367,6 +369,36 @@ export interface TripPlan {
   charge_stops: TripChargeStop[];
   weather_impact: TripWeatherImpact;
   soc_curve: TripSOCPoint[];
+  cost_comparison?: TripCostComparison | null;
+}
+
+export interface TripCostComparison {
+  ev_cost: number;
+  gas_cost: number;
+  gas_gallons: number;
+  savings: number;
+  savings_pct: number;
+  gas_price_per_gallon: number;
+  gas_mpg: number;
+}
+
+export interface TripConfidenceRequest {
+  current_soc: number;
+  battery_capacity_kwh?: number;
+  remaining_km: number;
+  efficiency_wh_km?: number;
+  efficiency_factor?: number;
+  min_arrival_soc?: number;
+}
+
+export interface TripConfidence {
+  arrival_soc: number;
+  usable_kwh: number;
+  needed_kwh: number;
+  margin_kwh: number;
+  charge_needed_kwh: number;
+  verdict: 'comfortable' | 'tight' | 'charge_now';
+  explanation: string;
 }
 
 export interface GeocodeResult {

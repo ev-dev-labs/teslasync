@@ -5,6 +5,7 @@ export { TrueCostBreakEven } from './TrueCostBreakEven';
 export { TrueCostCumulativeChart } from './TrueCostCumulativeChart';
 export { TrueCostEnergyCostTrend } from './TrueCostEnergyCostTrend';
 export { TrueCostEvidenceLedger } from './TrueCostEvidenceLedger';
+export { TrueCostFixedLedger } from './TrueCostFixedLedger';
 export { TrueCostMethodology } from './TrueCostMethodology';
 export { TrueCostMonthlyCostChart } from './TrueCostMonthlyCostChart';
 export { TrueCostMonthlyDeltaChart } from './TrueCostMonthlyDeltaChart';

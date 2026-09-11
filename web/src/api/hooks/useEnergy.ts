@@ -15,12 +15,14 @@ import type {
   VampireDrainStats,
   VampireDrainEvent,
   VampireDrainEventsResponse,
+  VampireDrainWatch,
   ProjectedRangeData,
   SleepEfficiencyData,
   TeslaEnergyHistoryEntry,
   TeslaBackupEvent,
   TeslaWCChargingEntry,
   TeslaEnergyLiveStatus,
+  SolarChargeAdvice,
   TeslaEnergySite,
   TeslaEnergySiteInfoResponse,
   TOUSettingsPayload,
@@ -118,6 +120,16 @@ export function useVampireDrainEvents(vehicleId: string | null, limit = 50) {
     enabled: vehicleId !== null,
     staleTime: STALE_TIMES.STANDARD,
     select: (response): VampireDrainEvent[] => safeArray(response?.events),
+  });
+}
+
+/** Fetches the watchdog evaluation: status, breach streak, and diagnosis. */
+export function useVampireDrainWatch(vehicleId: string | null, threshold = 3) {
+  return useQuery({
+    queryKey: ['vampire-drain-watch', vehicleId, threshold],
+    queryFn: ({ signal }) => request<VampireDrainWatch>(`/vampire-drain/watch?vehicle_id=${vehicleId}&threshold_pct_per_day=${threshold}`, { signal }),
+    enabled: vehicleId !== null,
+    staleTime: STALE_TIMES.STANDARD,
   });
 }
 
@@ -386,6 +398,17 @@ export function useTeslaEnergyLiveStatus(siteId?: number) {
     queryKey: ['tesla-live-status', siteId],
     queryFn: ({ signal }) =>
       request<TeslaEnergyLiveStatus>(`/tesla/energy-sites/${siteId}/live-status`, { signal }),
+    enabled: !!siteId,
+    refetchInterval: INTERVALS.STANDARD,
+  });
+}
+
+/** Fetches the solar-surplus car-charging advice for an energy site. */
+export function useSolarChargeAdvice(siteId?: number) {
+  return useQuery({
+    queryKey: ['tesla-charge-advice', siteId],
+    queryFn: ({ signal }) =>
+      request<SolarChargeAdvice>(`/tesla/energy-sites/${siteId}/charge-advice`, { signal }),
     enabled: !!siteId,
     refetchInterval: INTERVALS.STANDARD,
   });

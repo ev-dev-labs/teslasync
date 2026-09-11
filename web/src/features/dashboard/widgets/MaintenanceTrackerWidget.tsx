@@ -4,7 +4,7 @@ import { Wrench, CheckCircle2, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui';
 import { Timeline } from '@/components/data-display';
 import { EmptyState } from '@/components/feedback';
-import { useMaintenance, useServiceRecords } from '@/api/hooks/useVehicleSystems';
+import { useMaintenance, useServiceRecords, useMaintenanceForecast } from '@/api/hooks/useVehicleSystems';
 import { useFormatting } from '@/hooks/useFormatting';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber, fmtInt } from '@/lib/numberFormat';
@@ -69,6 +69,8 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
     isFetching: recordsFetching,
     dataUpdatedAt: recordsUpdatedAt,
   } = useServiceRecords();
+
+  const { data: forecast } = useMaintenanceForecast();
 
   const isLoading = maintLoading || recordsLoading;
   const isCompact = size.cols <= 1;
@@ -205,6 +207,28 @@ export default function MaintenanceTrackerWidget({ size }: WidgetProps) {
                   <span>{formatCurrency(nextItem.estimatedCostUsd)}</span>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Wear forecast banner: mileage/time-aware due counts */}
+          {forecast && (forecast.overdue_count > 0 || forecast.due_soon_count > 0) && (
+            <div
+              className="flex items-center gap-2 rounded-lg bg-white/[0.03] px-3 py-2"
+              role="status"
+              aria-label={t('widget.maintenance.forecastStatus', 'Maintenance forecast status')}
+            >
+              <span
+                className="h-2 w-2 flex-shrink-0 rounded-full"
+                style={{ backgroundColor: forecast.overdue_count > 0 ? '#ef4444' : '#f59e0b' }}
+                aria-hidden="true"
+              />
+              <p className="text-2xs text-[var(--text-muted)] leading-snug tabular-nums">
+                {t('widget.maintenance.forecast', '{{overdue}} overdue · {{soon}} due soon · {{rate}} km/day', {
+                  overdue: fmtInt(forecast.overdue_count),
+                  soon: fmtInt(forecast.due_soon_count),
+                  rate: fmtNumber(forecast.km_per_day ?? 0, 0),
+                })}
+              </p>
             </div>
           )}
 

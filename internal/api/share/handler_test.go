@@ -36,22 +36,25 @@ func TestMain(m *testing.M) {
 // ---------------------------------------------------------------------------
 
 type fakeShareStore struct {
-	createFn func(ctx context.Context, st *drivemodel.ShareToken) error
-	getFn    func(ctx context.Context, token string) (*drivemodel.ShareToken, error)
-	listFn   func(ctx context.Context, driveID int64) ([]*drivemodel.ShareToken, error)
-	incFn    func(ctx context.Context, id int64) error
-	deleteFn func(ctx context.Context, token string) error
+	createFn      func(ctx context.Context, st *drivemodel.ShareToken) error
+	getFn         func(ctx context.Context, token string) (*drivemodel.ShareToken, error)
+	listFn        func(ctx context.Context, driveID int64) ([]*drivemodel.ShareToken, error)
+	listSessionFn func(ctx context.Context, sessionID int64) ([]*drivemodel.ShareToken, error)
+	incFn         func(ctx context.Context, id int64) error
+	deleteFn      func(ctx context.Context, token string) error
 
-	createCalls int
-	created     *drivemodel.ShareToken
-	getCalls    int
-	getToken    string
-	listCalls   int
-	listDriveID int64
-	incCalls    int
-	incID       int64
-	deleteCalls int
-	deleteToken string
+	createCalls   int
+	created       *drivemodel.ShareToken
+	getCalls      int
+	getToken      string
+	listCalls     int
+	listDriveID   int64
+	listSessCalls int
+	listSessionID int64
+	incCalls      int
+	incID         int64
+	deleteCalls   int
+	deleteToken   string
 }
 
 func (f *fakeShareStore) Create(ctx context.Context, st *drivemodel.ShareToken) error {
@@ -82,6 +85,15 @@ func (f *fakeShareStore) ListByDrive(ctx context.Context, driveID int64) ([]*dri
 		return nil, nil
 	}
 	return f.listFn(ctx, driveID)
+}
+
+func (f *fakeShareStore) ListByChargingSession(ctx context.Context, sessionID int64) ([]*drivemodel.ShareToken, error) {
+	f.listSessCalls++
+	f.listSessionID = sessionID
+	if f.listSessionFn == nil {
+		return nil, nil
+	}
+	return f.listSessionFn(ctx, sessionID)
 }
 
 func (f *fakeShareStore) IncrementViews(ctx context.Context, id int64) error {

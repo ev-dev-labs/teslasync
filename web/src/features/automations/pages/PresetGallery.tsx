@@ -15,6 +15,7 @@ import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
+import { RoutineWizard } from '../components/RoutineWizard';
 import {
   Shield, Moon, Sun, ShieldCheck, Lock, UserX, CarFront, Siren,
   Plus, Clock, type LucideIcon,
@@ -167,18 +168,21 @@ export function PresetGallery({
   }
 
   return (
-    <FadeIn>
-      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {presetList.map((preset) => (
-          <StaggerItem key={preset.id}>
-            <PresetCard
-              preset={preset}
-              actionsDisabled={actionsDisabled}
-              actionsDisabledReason={actionsDisabledReason}
-            />
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
-    </FadeIn>
+    <div className="space-y-6">
+      <RoutineWizard actionsDisabled={actionsDisabled} />
+      <FadeIn>
+        <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {presetList.map((preset) => (
+            <StaggerItem key={preset.id}>
+              <PresetCard
+                preset={preset}
+                actionsDisabled={actionsDisabled}
+                actionsDisabledReason={actionsDisabledReason}
+              />
+            </StaggerItem>
+          ))}
+        </StaggerContainer>
+      </FadeIn>
+    </div>
   );
 }

@@ -114,6 +114,35 @@ func (r *ChargingRepo) GetByVehicle(ctx context.Context, vehicleID int64, limit,
 	return sessions, nil
 }
 
+// MeasuredDCTotals is the lifetime measured (pack-side) aggregate over
+// completed DC sessions for one vehicle.
+type MeasuredDCTotals struct {
+	Sessions int
+	EnergyWh float64
+	Cost     float64
+}
+
+// SumMeasuredDC totals measured energy and cost over completed DC
+// (DC/Supercharger) sessions. Scoped to DC so the result reconciles
+// against Tesla cabinet-side invoices, which only exist for DC charging.
+func (r *ChargingRepo) SumMeasuredDC(ctx context.Context, vehicleID int64) (MeasuredDCTotals, error) {
+	var t MeasuredDCTotals
+	err := r.db.Pool.QueryRow(ctx, `
+		SELECT COUNT(*),
+		       COALESCE(SUM(total_energy_added_wh), 0),
+		       COALESCE(SUM(cost_decimal), 0)
+		FROM charging_sessions
+		WHERE vehicle_id = $1
+		  AND ended_at IS NOT NULL
+		  AND charger_type IN ('DC', 'Supercharger')
+		  AND total_energy_added_wh > 0`, vehicleID,
+	).Scan(&t.Sessions, &t.EnergyWh, &t.Cost)
+	if err != nil {
+		return MeasuredDCTotals{}, err
+	}
+	return t, nil
+}
+
 func (r *ChargingRepo) GetByID(ctx context.Context, id int64) (*chargingmodel.ChargingSession, error) {
 	query := `SELECT ` + chargingColumns + ` FROM charging_sessions WHERE id=$1`
 	c, err := scanChargingSession(r.db.Pool.QueryRow(ctx, query, id))

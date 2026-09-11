@@ -7,6 +7,7 @@ import {
   useCommunicationsCatalogStatus,
   useImportCommunicationsCatalog,
   useServiceIntelligence,
+  useWarrantyOutlook,
   SudoCanceledError,
   type OfficialNHTSACommunicationsArtifactURL,
 } from '@/api/hooks/useServiceIntelligence';
@@ -26,6 +27,7 @@ import {
   SourceFreshnessPanel,
   SymptomMatchesPanel,
   VehicleMatchPanel,
+  WarrantyPanel,
 } from '../components';
 
 export default function ServiceIntelligencePage() {
@@ -33,6 +35,7 @@ export default function ServiceIntelligencePage() {
   const navigate = useNavigate();
   const { vehicleId } = useSelectedVehicle();
   const query = useServiceIntelligence(vehicleId);
+  const warrantyQuery = useWarrantyOutlook(vehicleId);
   const catalogQuery = useCommunicationsCatalogStatus();
   const catalogImport = useImportCommunicationsCatalog();
   usePageTitle(t('serviceIntelligence.page.title', 'Recall & Service Intelligence'));
@@ -123,6 +126,16 @@ export default function ServiceIntelligencePage() {
           context={data?.vehicle_context ?? null}
           summary={data?.summary ?? null}
           onRetry={retry}
+        />
+      </FadeIn>
+
+      <FadeIn delay={0.075}>
+        <WarrantyPanel
+          selected={selected}
+          loading={warrantyQuery.isLoading}
+          error={warrantyQuery.error}
+          outlook={warrantyQuery.data ?? null}
+          onRetry={() => void warrantyQuery.refetch()}
         />
       </FadeIn>
 

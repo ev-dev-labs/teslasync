@@ -146,10 +146,33 @@ vi.mock('@/api/hooks/useCharging', () => ({
   useApplySchedule: vi.fn(),
   useChargePlans: vi.fn(),
   useRatePlans: vi.fn(),
+  // Consumed by the embedded AutopilotPanel (rendered for real).
+  useAutopilotProfile: vi.fn(),
+  useSaveAutopilotProfile: vi.fn(),
+  useAutopilotPreview: vi.fn(),
+  useAutopilotRun: vi.fn(),
+  useAutopilotSavings: vi.fn(),
+}));
+
+// Consumed by the embedded ChargePointsPanel (rendered for real).
+vi.mock('@/api/hooks/useOcpp', () => ({
+  useOcppChargePoints: vi.fn(),
+  useOcppSessions: vi.fn(),
 }));
 
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
-import { useOptimizeCharge, useApplySchedule, useChargePlans, useRatePlans } from '@/api/hooks/useCharging';
+import {
+  useOptimizeCharge,
+  useApplySchedule,
+  useChargePlans,
+  useRatePlans,
+  useAutopilotProfile,
+  useSaveAutopilotProfile,
+  useAutopilotPreview,
+  useAutopilotRun,
+  useAutopilotSavings,
+} from '@/api/hooks/useCharging';
+import { useOcppChargePoints, useOcppSessions } from '@/api/hooks/useOcpp';
 import SmartChargePage, { planStatusVariant, defaultDepartBy } from './SmartChargePage';
 
 const mockSelected = useSelectedVehicle as unknown as ReturnType<typeof vi.fn>;
@@ -157,6 +180,13 @@ const mockOptimize = useOptimizeCharge as unknown as ReturnType<typeof vi.fn>;
 const mockApply = useApplySchedule as unknown as ReturnType<typeof vi.fn>;
 const mockPlans = useChargePlans as unknown as ReturnType<typeof vi.fn>;
 const mockRatePlans = useRatePlans as unknown as ReturnType<typeof vi.fn>;
+const mockAutopilotProfile = useAutopilotProfile as unknown as ReturnType<typeof vi.fn>;
+const mockSaveAutopilot = useSaveAutopilotProfile as unknown as ReturnType<typeof vi.fn>;
+const mockAutopilotPreview = useAutopilotPreview as unknown as ReturnType<typeof vi.fn>;
+const mockAutopilotRun = useAutopilotRun as unknown as ReturnType<typeof vi.fn>;
+const mockAutopilotSavings = useAutopilotSavings as unknown as ReturnType<typeof vi.fn>;
+const mockOcppPoints = useOcppChargePoints as unknown as ReturnType<typeof vi.fn>;
+const mockOcppSessions = useOcppSessions as unknown as ReturnType<typeof vi.fn>;
 
  
 function makeQuery(over: Record<string, unknown> = {}): any {
@@ -267,6 +297,15 @@ beforeEach(() => {
   mockApply.mockReturnValue(applyState());
   mockPlans.mockReturnValue(makeQuery({ data: [] }));
   mockRatePlans.mockReturnValue(makeQuery({ data: [] }));
+  // Embedded AutopilotPanel defaults (idle, no stored profile yet).
+  mockAutopilotProfile.mockReturnValue(makeQuery({ data: undefined }));
+  mockSaveAutopilot.mockReturnValue(optimizeState());
+  mockAutopilotPreview.mockReturnValue({ mutate: vi.fn(), data: null, isPending: false, isError: false, error: null });
+  mockAutopilotRun.mockReturnValue({ mutate: vi.fn(), data: null, isPending: false, isError: false, error: null });
+  mockAutopilotSavings.mockReturnValue(makeQuery({ data: undefined }));
+  // Embedded ChargePointsPanel defaults (no charger reporting).
+  mockOcppPoints.mockReturnValue(makeQuery({ data: [] }));
+  mockOcppSessions.mockReturnValue(makeQuery({ data: [] }));
 });
 
 // ───────────────────────────── pure utilities ─────────────────────────────
@@ -438,7 +477,9 @@ describe('SmartChargePage — after a successful optimization', () => {
     expect(within(kpi).getByText('$5.25')).toBeInTheDocument(); // savings
     expect(within(kpi).getByText('42.0 kWh')).toBeInTheDocument(); // energy
     expect(within(kpi).getByText(/62%/)).toBeInTheDocument(); // savings_percent delta
-    expect(screen.queryAllByText('—')).toHaveLength(0);
+    // Scoped to the KPI band: sibling sections (Autopilot preview placeholders)
+    // legitimately render '—' until they have their own data.
+    expect(within(kpi).queryAllByText('—')).toHaveLength(0);
   });
 
   it('renders the rate-timeline legend incl. the highlighted charge window', () => {

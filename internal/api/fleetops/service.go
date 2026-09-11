@@ -80,6 +80,13 @@ func validText(value string, minLen, maxLen int) bool {
 	return n >= minLen && n <= maxLen
 }
 
+// validClock reports whether s is a 24h HH:MM wall-clock time.
+func validClock(s string) bool {
+	var h, m int
+	n, err := fmt.Sscanf(s, "%d:%d", &h, &m)
+	return err == nil && n == 2 && h >= 0 && h <= 23 && m >= 0 && m <= 59 && len(s) == 5
+}
+
 func normalizeOptional(value *string) *string {
 	if value == nil {
 		return nil
@@ -128,6 +135,17 @@ func validateDriver(item *models.FleetDriver) error {
 	}
 	if item.Status != "active" && item.Status != "inactive" {
 		return validation("status must be active or inactive")
+	}
+	if item.MaxChargeSOC != nil && (*item.MaxChargeSOC < 20 || *item.MaxChargeSOC > 100) {
+		return validation("max_charge_soc must be between 20 and 100")
+	}
+	if (item.CurfewStart == nil) != (item.CurfewEnd == nil) {
+		return validation("curfew_start and curfew_end must be set together")
+	}
+	for _, c := range []*string{item.CurfewStart, item.CurfewEnd} {
+		if c != nil && !validClock(*c) {
+			return validation("curfew times must be HH:MM (24h)")
+		}
 	}
 	return nil
 }

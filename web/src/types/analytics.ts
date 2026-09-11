@@ -129,6 +129,48 @@ export interface MonthlyCostEntry {
   energy_wh: number;
 }
 
+export type TcoLedgerCategory =
+  | 'payment'
+  | 'insurance'
+  | 'maintenance'
+  | 'service'
+  | 'tires'
+  | 'accessories'
+  | 'depreciation'
+  | 'other';
+
+export interface TcoLedgerEntry {
+  id: number;
+  vehicle_id: number;
+  category: TcoLedgerCategory;
+  amount: number;
+  currency: string;
+  incurred_on: string;
+  note: string;
+  created_at: string;
+}
+
+export interface TcoLedgerTotals {
+  by_category: Partial<Record<TcoLedgerCategory, number>>;
+  grand_total: number;
+  entries: number;
+}
+
+export interface TcoLedgerResponse {
+  vehicle_id: number;
+  entries: TcoLedgerEntry[];
+  totals: TcoLedgerTotals;
+}
+
+export interface TcoLedgerCreate {
+  vehicle_id: number;
+  category: TcoLedgerCategory;
+  amount: number;
+  currency?: string;
+  incurred_on: string;
+  note?: string;
+}
+
 export interface TimelineEvent {
   id: string;
   state: string;

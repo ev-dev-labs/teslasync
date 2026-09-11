@@ -15,6 +15,7 @@ import {
 import { Skeleton, EmptyState, QueryError } from '@/components/feedback';
 import { SearchInput, FilterBar, ActiveFilterChips, RangePicker, type FilterChipDescriptor } from '@/components/forms';
 import { useFilteredList } from '@/hooks/useFilteredList';
+import { SitePriceRadar } from '../components/SitePriceRadar';
 import { useRangeState } from '@/hooks/useRangeState';
 import { useUrlEnum, useUrlString } from '@/hooks/useUrlState';
 import {
@@ -524,6 +525,15 @@ export default function TeslaChargingHistoryPage() {
               </div>
             )}
           </GlassPanel>
+        </section>
+      </FadeIn>
+
+      {/* 2b — Price radar: cheapest visited sites by realized $/kWh. */}
+      <FadeIn delay={0.12}>
+        <section className="grid grid-cols-1 gap-3 sm:gap-4 xl:grid-cols-3">
+          <div className="xl:col-start-3">
+            <SitePriceRadar vin={queryVin || undefined} enabled={!vehiclesLoading} />
+          </div>
         </section>
       </FadeIn>
 

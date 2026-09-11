@@ -234,6 +234,63 @@ func (h *VampireDrainHandler) Stats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Watch serves GET /vampire-drain/watch?vehicle_id=...&threshold_pct_per_day=....
+//
+// Reuses the Events + Stats repo surface (no new SQL): the watchdog is a
+// threshold evaluation over the same derived parked windows. Threshold
+// defaults to 3%/day and must stay within 0.5..10.
+func (h *VampireDrainHandler) Watch(w http.ResponseWriter, r *http.Request) {
+	q := r.URL.Query()
+	vidStr := q.Get("vehicle_id")
+	if vidStr == "" {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
+		return
+	}
+	vehicleID, err := strconv.ParseInt(vidStr, 10, 64)
+	if err != nil || vehicleID <= 0 {
+		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
+		return
+	}
+	threshold := DefaultWatchThresholdPctPerDay
+	if t := q.Get("threshold_pct_per_day"); t != "" {
+		v, err := strconv.ParseFloat(t, 64)
+		if err != nil || v < 0.5 || v > 10 {
+			httpx.WriteError(w, http.StatusBadRequest, "threshold_pct_per_day must be 0.5..10")
+			return
+		}
+		threshold = v
+	}
+
+	ctx := r.Context()
+	exists, err := h.repo.VehicleExists(ctx, vehicleID)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire_drain.watch: existence probe failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to verify vehicle")
+		return
+	}
+	if !exists {
+		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
+		return
+	}
+
+	now := h.now()
+	windowStart := now.Add(-time.Duration(vampireDrainStatsWindowDays) * 24 * time.Hour)
+	events, err := h.repo.Events(ctx, vehicleID, windowStart, vampireDrainStatsLimit)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire_drain.watch: events query failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load vampire drain events")
+		return
+	}
+	stats, err := h.repo.Stats(ctx, vehicleID, windowStart, vampireDrainStatsWindowDays, vampireDrainStatsLimit)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Msg("vampire_drain.watch: stats query failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load vampire drain stats")
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, EvaluateWatch(events, stats.AvgDrainPctPerDay, threshold, now))
+}
+
 // now returns the injected clock or wall time.
 func (h *VampireDrainHandler) now() time.Time {
 	if h.clock != nil {

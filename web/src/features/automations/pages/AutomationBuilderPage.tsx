@@ -557,11 +557,18 @@ export default function AutomationBuilderPage() {
         : await createMutation.mutateAsync(payload);
       setDirty(false);
       setSavedId(result.id);
-      setConflicts([]);
+      // The save API conflict-checks every create/update: surface its
+      // verdict instead of clearing the slate. With conflicts we stay on
+      // the page so the warnings are seen (the save already succeeded);
+      // otherwise navigate back to the list as before.
+      const resultConflicts = result.conflicts ?? [];
+      setConflicts(resultConflicts);
       // Successful save → drop the autosaved draft so a future visit
       // doesn't restore stale work.
       discardDraft();
-      navigate('/automations');
+      if (resultConflicts.length === 0) {
+        navigate('/automations');
+      }
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : String(error));
     }

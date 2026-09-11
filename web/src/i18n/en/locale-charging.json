@@ -1,4 +1,33 @@
 {
+  "autopilot": {
+    "saveError": "Failed to save autopilot settings",
+    "previewError": "Preview failed",
+    "runError": "Run failed",
+    "title": "Charging Autopilot",
+    "on": "Autopilot on",
+    "off": "Autopilot off",
+    "enable": "Enable autopilot",
+    "readyBy": "Ready by (daily)",
+    "currentSoc": "Current SOC",
+    "targetSoc": "Target SOC",
+    "dailyCap": "Daily health cap",
+    "ratePlan": "Rate plan",
+    "maxAmps": "Max amps",
+    "tripOverride": "Trip override (allow 100%)",
+    "precondition": "Precondition before departure",
+    "save": "Save Autopilot",
+    "preview": "Preview next run",
+    "runHint": "Schedule the optimal window on the vehicle now",
+    "run": "Run now",
+    "selectVehicle": "Select a vehicle to configure autopilot.",
+    "nextWindow": "Next window",
+    "windowEnd": "ends {{end}}",
+    "previewSavings": "Saves vs now",
+    "capped": "Health cap: {{target}}% → {{effective}}%",
+    "energyNeeded": "{{kwh}} kWh · ~{{hours}}h · {{tier}}",
+    "realized": "Realized savings",
+    "realizedValue": "{{total}} across {{runs}} runs"
+  },
   "chargeDepartureAlignment": {
     "title": "Charge → Departure Alignment",
     "subtitle": "How well each charge matched the very next drive — a temporal pairing, never proof of intent",
@@ -118,6 +147,19 @@
     "rateTimelineChart": "24-hour electricity rate timeline",
     "rateBarLabel": "{{hour}}: {{rate}}¢ per kWh, {{tier}}",
     "rateBarLabelInWindow": "{{hour}}: {{rate}}¢ per kWh, {{tier}}, in charge window"
+  },
+  "chargeQueue": {
+    "title": "Shared-Charger Queue",
+    "feasible": "All cars ready on time",
+    "tight": "Queue overruns a ready-by",
+    "singleCar": "Add a second vehicle to plan a shared-charger queue.",
+    "current": "Now %",
+    "target": "Target %",
+    "readyBy": "Ready by",
+    "chargerKw": "Charger (kW)",
+    "plan": "Plan queue",
+    "error": "Queue planning failed",
+    "slot": "{{start}}–{{end}} · {{kwh}} kWh · ready {{ready}}"
   },
   "chargerResilience": {
     "title": "Charger Resilience",
@@ -724,6 +766,14 @@
   },
   "filter": {
     "pending": "Filtering…"
+  },
+  "ocpp": {
+    "title": "OCPP Charge Points",
+    "lastSeen": "last seen {{when}}",
+    "connector": "#{{id}} {{status}}",
+    "activeSessions": "{{count}} active",
+    "recentSessions": "Recent sessions",
+    "inProgress": "in progress"
   },
   "powershare": {
     "title": "Powershare",

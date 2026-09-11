@@ -19,7 +19,6 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
-	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/ev-dev-labs/teslasync/internal/tesla"
 )
@@ -367,70 +366,36 @@ func (h *Handler) Apply(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ctx := r.Context()
-	planRepo := chargingdb.NewChargePlanRepo(h.db)
-
-	plan, err := planRepo.GetByID(ctx, req.PlanID)
+	plan, failedCmd, err := h.ApplyPlanByID(r.Context(), req.PlanID)
 	if err != nil {
-		log.Error().Err(err).Int64("plan_id", req.PlanID).Msg("failed to fetch charge plan")
-		httpx.WriteError(w, http.StatusInternalServerError, "failed to fetch plan")
-		return
-	}
-	if plan == nil {
-		httpx.WriteError(w, http.StatusNotFound, "charge plan not found")
-		return
-	}
-	if plan.Status != "draft" {
-		httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("plan already %s", plan.Status))
-		return
-	}
-
-	vehicleRepo := vehicledb.NewVehicleRepo(h.db)
-	vehicle, err := vehicleRepo.GetByID(ctx, plan.VehicleID)
-	if err != nil || vehicle == nil {
-		httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
-		return
-	}
-
-	// 1+2. Apply the schedule via two Tesla commands, each wrapped in
-	// its own per-call context.WithTimeout (project rule: external
-	// Tesla API calls must wrap with context.WithTimeout — Tesla API:
-	// 30s). Each command runs under a fresh deadline derived from the
-	// parent so a stuck first call cannot starve the second's budget.
-	startMinutes := plan.ScheduledStart.Hour()*60 + plan.ScheduledStart.Minute()
-	if failedCmd, err := h.applyChargeScheduleToVehicle(ctx, vehicle.VIN, plan.TargetSOC, startMinutes); err != nil {
-		log.Error().Err(err).Str("vin", vehicle.VIN).Str("command", failedCmd).Msg("failed to apply charge schedule")
-		// Fleet API daily budget errors are a distinct, structured failure
-		// mode: ErrBudgetExceeded cannot succeed by retrying until the next
-		// UTC reset, and ErrBudgetUnavailable means the budget evidence
-		// store itself could not be read. Surface both as their real HTTP
-		// status instead of the generic 500 below.
-		if failure, matched := httpx.ClassifyTeslaBudgetError(err); matched {
-			httpx.WriteError(w, failure.StatusCode, failure.Message)
-			return
-		}
-		switch failedCmd {
-		case "set_charge_limit":
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to set charge limit")
-		case "set_scheduled_charging":
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to set scheduled charging")
+		switch {
+		case errors.Is(err, ErrPlanNotFound):
+			httpx.WriteError(w, http.StatusNotFound, "charge plan not found")
+		case errors.Is(err, ErrPlanNotDraft):
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, ErrApplyVehicleNotFound):
+			httpx.WriteError(w, http.StatusNotFound, "vehicle not found")
 		default:
-			httpx.WriteError(w, http.StatusInternalServerError, "failed to apply charge schedule")
+			// Fleet API daily budget errors are a distinct, structured failure
+			// mode: ErrBudgetExceeded cannot succeed by retrying until the next
+			// UTC reset, and ErrBudgetUnavailable means the budget evidence
+			// store itself could not be read. Surface both as their real HTTP
+			// status instead of the generic 500 below.
+			if failure, matched := httpx.ClassifyTeslaBudgetError(err); matched {
+				httpx.WriteError(w, failure.StatusCode, failure.Message)
+				return
+			}
+			switch failedCmd {
+			case "set_charge_limit":
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to set charge limit")
+			case "set_scheduled_charging":
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to set scheduled charging")
+			default:
+				httpx.WriteError(w, http.StatusInternalServerError, "failed to apply charge schedule")
+			}
 		}
 		return
 	}
-
-	now := time.Now().UTC()
-	if err := planRepo.UpdateStatus(ctx, plan.ID, "scheduled", &now, nil); err != nil {
-		log.Error().Err(err).Int64("plan_id", plan.ID).Msg("failed to update plan status")
-	}
-
-	log.Info().
-		Int64("plan_id", plan.ID).
-		Str("vin", vehicle.VIN).
-		Int("start_minutes", startMinutes).
-		Int("target_soc", plan.TargetSOC).
-		Msg("charge schedule applied to vehicle")
 
 	httpx.WriteJSON(w, http.StatusOK, map[string]interface{}{
 		"status":  "scheduled",

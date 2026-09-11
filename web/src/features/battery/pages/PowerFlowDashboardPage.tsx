@@ -29,6 +29,7 @@ import type { TeslaEnergyLiveStatus } from '@/types/energy';
 import {
   PowerHistoryChart,
   BatterySocChart,
+  SolarChargeAdviceStrip,
   fmtWatts,
   DEFAULT_SITE_ID,
   PRESET_IDS,
@@ -252,6 +253,9 @@ export default function PowerFlowDashboardPage() {
           )}
         </section>
       </FadeIn>
+
+      {/* 1b — Solar car-charging advice */}
+      <SolarChargeAdviceStrip siteId={siteId} />
 
       {/* 2 — Instantaneous power KPI band */}
       <FadeIn delay={0.05}>

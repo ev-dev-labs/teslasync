@@ -17,6 +17,7 @@ import {
   TrueCostCumulativeChart,
   TrueCostEnergyCostTrend,
   TrueCostEvidenceLedger,
+  TrueCostFixedLedger,
   TrueCostMethodology,
   TrueCostMonthlyCostChart,
   TrueCostMonthlyDeltaChart,
@@ -93,6 +94,13 @@ export default function TrueCostPage() {
       </FadeIn>
       <FadeIn delay={0.04}>
         <TrueCostSavingsEnvelope {...sectionProps} />
+      </FadeIn>
+      <FadeIn delay={0.045}>
+        <TrueCostFixedLedger
+          vehicleId={vehicleId ?? undefined}
+          totalKm={query.data?.total_km ?? 0}
+          totalChargingCost={query.data?.total_charging_cost ?? 0}
+        />
       </FadeIn>
 
       <div className="grid gap-4 xl:grid-cols-2">

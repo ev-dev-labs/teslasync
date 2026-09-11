@@ -205,6 +205,38 @@ export function useServiceIntelligence(vehicleId: number | null, refresh = false
   });
 }
 
+export interface WarrantyCoverage {
+  name: string;
+  expires_at: string;
+  days_remaining: number;
+  km_limit: number | null;
+  km_remaining: number | null;
+  status: 'active' | 'expiring_soon' | 'expired';
+  basis: string;
+}
+
+export interface WarrantyOutlook {
+  vehicle_id: number;
+  model: string;
+  model_year: number;
+  coverages: WarrantyCoverage[];
+  assumption: string;
+}
+
+/** Fetches the warranty coverage countdown for a vehicle. */
+export function useWarrantyOutlook(vehicleId: number | null, odometerKm?: number) {
+  return useQuery({
+    queryKey: [...serviceIntelligenceKeys.vehicles, vehicleId, 'warranty', odometerKm] as const,
+    queryFn: ({ signal }) =>
+      request<WarrantyOutlook>(
+        `/service-intelligence/vehicles/${vehicleId}/warranty${odometerKm != null ? `?odometer_km=${odometerKm}` : ''}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.ANALYTICS,
+  });
+}
+
 export function useCommunicationsCatalogStatus() {
   return useQuery({
     queryKey: serviceIntelligenceKeys.catalog,

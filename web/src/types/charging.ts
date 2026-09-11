@@ -224,3 +224,104 @@ export interface RatePlanInfo {
   name: string;
   utility: string;
 }
+
+/* ── Shared-charger queue ─────────────────────────────── */
+
+export interface QueueVehicle {
+  vehicle_id: number;
+  current_soc: number;
+  target_soc: number;
+  ready_by: string;
+  battery_capacity_kwh?: number;
+}
+
+export interface QueueAdviseRequest {
+  vehicles: QueueVehicle[];
+  charger_kw: number;
+}
+
+export interface QueueSlot {
+  vehicle_id: number;
+  position: number;
+  start_time: string;
+  end_time: string;
+  kwh_needed: number;
+  ready_by: string;
+  slack_hours: number;
+  feasible: boolean;
+}
+
+export interface QueueAdvice {
+  slots: QueueSlot[];
+  all_feasible: boolean;
+  explanation: string;
+}
+
+/* ── Charge Autopilot ───────────────────────────────────── */
+
+export interface AutopilotProfile {
+  vehicle_id: number;
+  enabled: boolean;
+  target_soc: number;
+  /** Daily ready-by time, "HH:MM" 24h. */
+  ready_by: string;
+  rate_plan: string;
+  daily_cap_soc: number;
+  trip_override: boolean;
+  precondition: boolean;
+  max_amps: number;
+  battery_capacity_kwh: number;
+}
+
+export interface AutopilotPreviewRequest {
+  vehicle_id: number;
+  current_soc: number;
+}
+
+export interface AutopilotPreview {
+  effective_target_soc: number;
+  capped_by_health_guardrail: boolean;
+  ready_by: string;
+  kwh_needed: number;
+  estimated_duration_hours: number;
+  window: ChargeWindow;
+  charge_now_cost: number;
+  optimized_cost: number;
+  savings: number;
+  savings_percent: number;
+  hourly_rates: HourlyRate[];
+  explanation: string;
+}
+
+export interface AutopilotSavings {
+  total_savings: number;
+  runs: number;
+}
+
+export interface AutopilotRunResponse {
+  status: string;
+  plan_id: number;
+  start_time: string;
+  target_soc: number;
+  savings: number;
+  message: string;
+}
+
+/* ── Bill Variance (measured vs Tesla invoices) ───────────── */
+
+export interface BillVarianceReport {
+  vehicle_id: number;
+  measured_sessions: number;
+  measured_energy_wh: number;
+  measured_cost: number;
+  invoiced_sessions: number;
+  invoiced_energy_wh: number;
+  invoiced_cost: number;
+  energy_delta_wh: number;
+  energy_delta_pct: number;
+  cost_delta: number;
+  cost_delta_pct: number;
+  cabinet_loss_pct: number;
+  verdict: 'reconciled' | 'review' | 'missing_data';
+  explanation: string;
+}

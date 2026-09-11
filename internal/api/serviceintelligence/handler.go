@@ -38,6 +38,7 @@ func NewServiceIntelligenceHandler(service IntelligenceService) *Handler {
 // group. Authentication remains owned by the parent route group.
 func Mount(r chi.Router, handler *Handler) {
 	r.Get("/service-intelligence/vehicles/{vehicleID}", handler.Get)
+	r.Get("/service-intelligence/vehicles/{vehicleID}/warranty", handler.WarrantyHandler)
 }
 
 // Get serves GET /api/v1/service-intelligence/vehicles/{vehicleID}?refresh=false.

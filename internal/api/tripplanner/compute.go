@@ -72,6 +72,7 @@ func (h *TripPlannerHandler) computePlan(ctx context.Context, req *tripPlanReque
 	socCurve := h.buildSOCCurve(legs, chargeStops, routeDistanceM)
 
 	totalDurationS := drivingDurationS + chargingDurationS
+	evCost := math.Round(chargingCost*100) / 100
 
 	return &tripPlanResponse{
 		Route: tripPlanRoute{
@@ -80,16 +81,52 @@ func (h *TripPlannerHandler) computePlan(ctx context.Context, req *tripPlanReque
 			DrivingDurationS:  math.Round(drivingDurationS*10) / 10,
 			ChargingDurationS: math.Round(chargingDurationS*10) / 10,
 			TotalEnergyWh:     math.Round(totalEnergyWh*10) / 10,
-			EstimatedCost:     math.Round(chargingCost*100) / 100,
+			EstimatedCost:     evCost,
 			ArrivalSOC:        math.Round(arrivalSOC*10) / 10,
 			Feasible:          feasible,
 			IsEstimate:        true,
 		},
-		Legs:          legs,
-		ChargeStops:   chargeStops,
-		WeatherImpact: weatherImpact,
-		SOCCurve:      socCurve,
+		Legs:           legs,
+		ChargeStops:    chargeStops,
+		WeatherImpact:  weatherImpact,
+		SOCCurve:       socCurve,
+		CostComparison: CompareTripCost(routeDistanceM, evCost, req.Preferences.GasPricePerGallon, req.Preferences.GasMPG),
 	}, nil
+}
+
+// Default gasoline assumptions for the cost comparison.
+const (
+	defaultGasPricePerGallon = 3.50
+	defaultGasMPG            = 30.0
+	kmPerMile                = 1.60934
+)
+
+// CompareTripCost contrasts EV charging cost with the gasoline equivalent
+// for the same distance. Non-positive gas inputs fall back to defaults so
+// older clients (which omit the fields) still get a comparison.
+func CompareTripCost(distanceKm, evCost, gasPrice, mpg float64) tripCostComparison {
+	if gasPrice <= 0 {
+		gasPrice = defaultGasPricePerGallon
+	}
+	if mpg <= 0 {
+		mpg = defaultGasMPG
+	}
+	gallons := distanceKm / kmPerMile / mpg
+	gasCost := gallons * gasPrice
+	savings := gasCost - evCost
+	pct := 0.0
+	if gasCost > 0 {
+		pct = savings / gasCost * 100
+	}
+	return tripCostComparison{
+		EVCost:     math.Round(evCost*100) / 100,
+		GasCost:    math.Round(gasCost*100) / 100,
+		GasGallons: math.Round(gallons*100) / 100,
+		Savings:    math.Round(savings*100) / 100,
+		SavingsPct: math.Round(pct*10) / 10,
+		GasPrice:   gasPrice,
+		GasMPG:     mpg,
+	}
 }
 
 // buildStopsAlongRoute simulates driving the route and inserts charging stops
