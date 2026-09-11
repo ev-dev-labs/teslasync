@@ -19,7 +19,7 @@ import {
   convertDurationFromSI, convertEnergyFromSI, SI,
 } from '@/lib/unitConversion';
 import type { ResiliencePlanRequest } from '@/types/advancedIntelligence';
-import { EvidencePanel, InsightPanel, MutationError, SiNumberInput } from '../components';
+import { EvidencePanel, InsightPanel, MutationError, SiNumberInput, StormGuardPanel } from '../components';
 
 type ResilienceForm = Omit<ResiliencePlanRequest, 'vehicle_id' | 'confirmed'>;
 
@@ -71,6 +71,10 @@ export default function EmergencyResiliencePage() {
           'TeslaSync does not shed loads, dispatch storage, export vehicle energy, or execute emergency commands.',
         )}
       </AlertBanner>
+
+      <FadeIn>
+        <StormGuardPanel vehicleId={vehicleId} />
+      </FadeIn>
 
       <FadeIn>
         <InsightPanel title={t('advancedIntelligence.resilience.form.title', 'Outage plan scenario')}>

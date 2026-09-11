@@ -133,13 +133,13 @@ import (
 	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
-	apinextcharge "github.com/ev-dev-labs/teslasync/internal/api/nextcharge"
 	apilocsnap "github.com/ev-dev-labs/teslasync/internal/api/locsnap"
 	"github.com/ev-dev-labs/teslasync/internal/api/maintenance"
 	apimedia "github.com/ev-dev-labs/teslasync/internal/api/media"
 	apimw "github.com/ev-dev-labs/teslasync/internal/api/middleware"
 	apimileage "github.com/ev-dev-labs/teslasync/internal/api/mileage"
 	apimotor "github.com/ev-dev-labs/teslasync/internal/api/motor"
+	apinextcharge "github.com/ev-dev-labs/teslasync/internal/api/nextcharge"
 	apinotif "github.com/ev-dev-labs/teslasync/internal/api/notification"
 	apiocpp "github.com/ev-dev-labs/teslasync/internal/api/ocpp"
 	apionboard "github.com/ev-dev-labs/teslasync/internal/api/onboarding"
@@ -175,6 +175,7 @@ import (
 	apispeedprof "github.com/ev-dev-labs/teslasync/internal/api/speedprofile"
 	"github.com/ev-dev-labs/teslasync/internal/api/sse"
 	apistatus "github.com/ev-dev-labs/teslasync/internal/api/status"
+	apistormguard "github.com/ev-dev-labs/teslasync/internal/api/stormguard"
 	apisynthetic "github.com/ev-dev-labs/teslasync/internal/api/synthetic"
 	apiauthmode "github.com/ev-dev-labs/teslasync/internal/api/sysauthmode"
 	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
@@ -2214,6 +2215,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	watchHandler := watch.NewHandler(db, teslaClient)
 	onboardingHandler := apionboard.NewHandler(db, opt.Encryptor)
 	ocppHandler := apiocpp.NewHandler(dbocpp.NewStore(db))
+	stormguardHandler := apistormguard.NewHandler(
+		apistormguard.NewStore(db),
+		apistormguard.NewClient(),
+		teslaClient,
+		stateReader,
+		vehicledb.NewVehicleRepo(db),
+	)
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3826,6 +3834,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/ocpp", func(r chi.Router) {
 			r.Get("/charge-points", ocppHandler.ListChargePoints)
 			r.Get("/sessions", ocppHandler.ListSessions)
+		})
+
+		// Storm Guardian (severe-weather auto-prep; evaluator runs hourly in app)
+		r.Route("/stormguard", func(r chi.Router) {
+			r.Get("/status", stormguardHandler.Status)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/config", stormguardHandler.UpsertConfig)
+			r.Get("/events", stormguardHandler.Events)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)
