@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { MapPin, Plus } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 
 import { GlassPanel, Button as UiButton, Badge, Text, Select, PanelTitle } from '@/components/ui';
 import { EmptyState, Skeleton, QueryError } from '@/components/feedback';
@@ -26,7 +26,7 @@ function RoutineCard({
     <GlassPanel hover glow="cyan" className="p-5 flex flex-col gap-3">
       <div className="flex items-start gap-3">
         <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-cyan-500/10 border border-cyan-500/20 flex items-center justify-center">
-          <MapPin className="h-5 w-5 text-cyan-400" aria-hidden="true" />
+          <Icons.location className="h-5 w-5 text-cyan-400" aria-hidden="true" />
         </div>
         <div className="flex-1 min-w-0">
           <Text as="h3" size="sm" weight="semibold" color="primary" className="truncate">
@@ -59,7 +59,7 @@ function RoutineCard({
         aria-label={t('automations.routines.installNamed', 'Install {{name}}', { name: routine.name })}
         className="mt-1 w-full"
       >
-        <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+        <Icons.add className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
         {t('automations.routines.install', 'Install')}
       </UiButton>
     </GlassPanel>
@@ -111,7 +111,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <PanelTitle className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.location className="h-4 w-4 text-cyan-300" aria-hidden="true" />
           {t('automations.routines.title', 'Geofence Routines')}
         </PanelTitle>
         <div className="min-w-52 flex-1 sm:max-w-72">
@@ -129,7 +129,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
 
       {places.length === 0 ? (
         <EmptyState
-          icon={<MapPin className="h-8 w-8" />}
+          icon={<Icons.location className="h-8 w-8" />}
           message={t('automations.routines.noPlaces', 'Create a geofence place first to install routines.')}
         />
       ) : (

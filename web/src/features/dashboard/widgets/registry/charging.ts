@@ -1,6 +1,6 @@
 import { lazy } from 'react';
 import {
-  Zap, BarChart3, DollarSign, Calendar, TrendingUp, Sparkles, Plug, Gauge, Clock,
+  Zap, BarChart3, DollarSign, Calendar, TrendingUp, Sparkles, Plug, Gauge, Clock, Compass,
 } from 'lucide-react';
 import type { WidgetDef } from '../types';
 
@@ -136,6 +136,17 @@ export const CHARGING_WIDGETS: WidgetDef[] = [
     minSize: { cols: 1, rows: 2 },
     maxSize: { cols: 4, rows: 40 },
     component: lazy(() => import('../ChargePlansWidget')),
+  },
+  {
+    id: 'next-charge-decision',
+    name: 'Next Charge',
+    description: '12-hour verdict: charge home now, wait for off-peak, Supercharger, or skip DC-fast',
+    icon: Compass,
+    category: 'charging',
+    defaultSize: { cols: 2, rows: 2 },
+    minSize: { cols: 1, rows: 2 },
+    maxSize: { cols: 4, rows: 40 },
+    component: lazy(() => import('../NextChargeDecisionWidget')),
   },
   {
     id: 'charging-session-detail',

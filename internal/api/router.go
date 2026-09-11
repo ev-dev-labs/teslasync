@@ -133,6 +133,7 @@ import (
 	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
+	apinextcharge "github.com/ev-dev-labs/teslasync/internal/api/nextcharge"
 	apilocsnap "github.com/ev-dev-labs/teslasync/internal/api/locsnap"
 	"github.com/ev-dev-labs/teslasync/internal/api/maintenance"
 	apimedia "github.com/ev-dev-labs/teslasync/internal/api/media"
@@ -1474,6 +1475,10 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		apichargeautopilot.NewPGProfileStore(db),
 		chargingdb.NewChargePlanRepo(db),
 		chargePlannerHandler,
+	)
+	nextChargeHandler := apinextcharge.NewHandler(
+		apichargeautopilot.NewPGProfileStore(db),
+		db,
 	)
 	yearReviewHandler := yearreview.NewHandler(db)
 	energyFlowHandler := apienergyflow.NewEnergyFlowHandler(db, stateReader, liveStateReader)
@@ -3814,6 +3819,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/preview", chargeAutopilotHandler.Preview)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/run", chargeAutopilotRunHandler.Run)
 			r.Get("/savings", chargeAutopilotHandler.Savings)
+			r.Get("/decision", nextChargeHandler.Get)
 		})
 
 		// OCPP (non-Tesla charge points + sessions recorded by cmd/ocpp-server)

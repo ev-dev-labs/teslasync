@@ -591,7 +591,8 @@
     "speedSweetSpot": "driving",
     "autopilot": "charging",
     "chargeQueue": "charging",
-    "ocpp": "charging"
+    "ocpp": "charging",
+    "nextCharge": "dashboard"
   },
   "bundles": {
     "shell": [
@@ -1136,6 +1137,7 @@
       "hero",
       "import",
       "layout",
+      "nextCharge",
       "perf",
       "quickStats",
       "templates",
@@ -3688,7 +3690,8 @@
     "speedSweetSpot": "driving",
     "autopilot": "charging",
     "chargeQueue": "charging",
-    "ocpp": "charging"
+    "ocpp": "charging",
+    "nextCharge": "dashboard"
   },
   "shellCriticalKeys": [
     "a11y.breadcrumb",

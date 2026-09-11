@@ -56,6 +56,7 @@ const EXPECTED_IDS = [
   'charging-telemetry',
   'supercharger-history',
   'charge-plans',
+  'next-charge-decision',
   'charging-session-detail',
 ] as const;
 

@@ -181,6 +181,16 @@ vi.mock('../components/VehicleSettingsTab', async () => {
   }
 })
 
+vi.mock('../components/NextChargeDecisionStrip', async () => {
+  const React = await vi.importActual<typeof import('react')>('react')
+  return {
+    NextChargeDecisionStrip: function NextChargeStub(props: Record<string, unknown>) {
+      H.captured.NextChargeDecisionStrip = props
+      return React.createElement('div', { 'data-testid': 'next-charge-decision' })
+    },
+  }
+})
+
 vi.mock('@/components/ai/AIVehiclePaintPreview', async () => {
   const React = await vi.importActual<typeof import('react')>('react')
   return {
@@ -278,6 +288,7 @@ function renderPage(route = '/vehicles/1') {
 }
 
 const ALL_SECTION_IDS = [
+  'next-charge-decision',
   'sec-battery-range-panel',
   'sec-live-state',
   'sec-quick-stats',

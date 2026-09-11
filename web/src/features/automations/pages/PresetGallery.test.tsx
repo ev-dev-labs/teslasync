@@ -41,6 +41,10 @@ import { PresetGallery } from './PresetGallery';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
 import type { AutomationPreset } from '@/api/types';
 
+vi.mock('../components/RoutineWizard', () => ({
+  RoutineWizard: () => null,
+}));
+
 // ── i18n stub — echo the fallback, interpolate {{var}} tokens ────────────────
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
@@ -257,7 +261,7 @@ describe('PresetGallery — card content', () => {
         data: {
           categories: [],
           presets: [
-            makePreset({ id: 'a', name: 'Night', icon: 'Moon' }),
+            makePreset({ id: 'a', name: 'Night', icon: 'moon' }),
             makePreset({ id: 'b', name: 'Mystery', icon: 'DefinitelyNotAnIcon' }),
           ],
         },
@@ -266,8 +270,32 @@ describe('PresetGallery — card content', () => {
     const { container } = renderGallery();
 
     expect(container.querySelector('svg.lucide-moon')).not.toBeNull();
-    // Unknown icon → the `?? Shield` fallback keeps a valid glyph.
+    // Unknown icon → the `?? Icons.security` fallback keeps a valid glyph.
     expect(container.querySelector('svg.lucide-shield')).not.toBeNull();
+  });
+
+  it('filters the grid when a category pill is selected', () => {
+    mockUsePresets.mockReturnValue(
+      hookResult({
+        data: {
+          categories: [
+            { id: 'security', name: 'Security', description: '', icon: 'shield' },
+            { id: 'climate', name: 'Climate', description: '', icon: 'thermometer' },
+          ],
+          presets: [
+            makePreset({ id: 'a', name: 'Night Lock', category: 'security' }),
+            makePreset({ id: 'b', name: 'Morning HVAC', category: 'climate' }),
+          ],
+        },
+      }),
+    );
+    renderGallery();
+
+    expect(screen.getByText('Night Lock')).toBeInTheDocument();
+    expect(screen.getByText('Morning HVAC')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('tab', { name: /Security/ }));
+    expect(screen.getByText('Night Lock')).toBeInTheDocument();
+    expect(screen.queryByText('Morning HVAC')).not.toBeInTheDocument();
   });
 });
 

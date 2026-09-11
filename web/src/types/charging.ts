@@ -307,6 +307,33 @@ export interface AutopilotRunResponse {
   message: string;
 }
 
+export type NextChargeVerdict =
+  | 'enough'
+  | 'wait'
+  | 'charge_home_now'
+  | 'supercharger'
+  | 'skip_dc';
+
+/** GET /charge-autopilot/decision — 12-hour home vs Supercharger verdict. */
+export interface NextChargeDecision {
+  verdict: NextChargeVerdict;
+  reason_key: string;
+  reason: string;
+  current_soc: number;
+  target_soc: number;
+  kwh_needed: number;
+  horizon_hours: number;
+  home_now_cost?: number | null;
+  home_wait_cost?: number | null;
+  home_wait_start?: string | null;
+  home_savings?: number | null;
+  supercharger_site?: string | null;
+  supercharger_per_kwh?: number | null;
+  supercharger_cost?: number | null;
+  ready_by: string;
+  capped_by_health_guardrail: boolean;
+}
+
 /* ── Bill Variance (measured vs Tesla invoices) ───────────── */
 
 export interface BillVarianceReport {

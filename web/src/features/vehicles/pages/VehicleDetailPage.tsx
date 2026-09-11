@@ -45,6 +45,7 @@ import {
 } from '../components/vehicle-detail'
 import VehicleSettingsTab from '../components/VehicleSettingsTab'
 import { SilenceBanner } from '../components/SilenceBanner'
+import { NextChargeDecisionStrip } from '../components/NextChargeDecisionStrip'
 import { useVehicleSettings, findEffectiveSetting } from '@/api/hooks/useVehicleSettings'
 import { AIVehiclePaintPreview } from '@/components/ai/AIVehiclePaintPreview'
 
@@ -213,6 +214,10 @@ export default function VehicleDetailPage() {
     >
       <LiveStaleDataBanner />
       <SilenceBanner vehicleId={vehicleId > 0 ? vehicleId : undefined} />
+      <NextChargeDecisionStrip
+        vehicleId={vehicleId > 0 ? vehicleId : undefined}
+        currentSoc={typeof state?.battery_level === 'number' ? state.battery_level : undefined}
+      />
 
       {/* Hero header — full-width band */}
       <SectionErrorBoundary name="vehicle-detail:header" fallbackTitle={t('vehicles.detail.section.headerFailed', 'Vehicle header failed to load')}>

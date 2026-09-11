@@ -6,6 +6,44 @@ import (
 	"testing"
 )
 
+func TestRegistry_StarterPresetsPreserved(t *testing.T) {
+	r := NewRegistry()
+	starters := []string{
+		"sec_sentry_at_night",
+		"sec_sentry_off_morning",
+		"sec_lock_after_charge",
+		"climate_morning_precondition",
+		"climate_off_after_drive",
+		"climate_set_default_temp",
+		"charge_stop_at_80",
+		"charge_set_limit_80",
+		"charge_overnight_start",
+		"home_lock_on_sleep",
+		"home_close_windows_on_sleep",
+		"drive_sentry_off_on_start",
+		"drive_lock_after_drive",
+		"comfort_steering_heat_morning",
+		"comfort_seat_heat_on_drive",
+		"maint_daily_wake",
+		"maint_flash_on_online",
+		"energy_charge_at_off_peak",
+		"energy_stop_at_90",
+		"energy_low_battery_alert_action",
+	}
+	for _, id := range starters {
+		if r.Get(id) == nil {
+			t.Errorf("missing starter preset %q", id)
+		}
+	}
+}
+
+func TestRegistry_ExtensiveCatalogue(t *testing.T) {
+	got := len(NewRegistry().Presets(""))
+	if got < 80 {
+		t.Fatalf("presets = %d, want at least 80", got)
+	}
+}
+
 // TestRegistry_AllCategoriesPopulated ensures every advertised category has at
 // least one preset so the gallery never renders an empty section.
 func TestRegistry_AllCategoriesPopulated(t *testing.T) {
@@ -200,9 +238,21 @@ func knownTeslaCommand(name string) bool {
 		"set_temps",
 		"charge_start", "charge_stop",
 		"set_charge_limit", "set_charging_amps",
-		"lock", "close_windows",
-		"steering_wheel_heat", "seat_heater",
-		"wake_up", "flash_lights":
+		"charge_max_range", "charge_standard",
+		"open_charge_port", "close_charge_port",
+		"lock", "unlock", "close_windows", "vent_windows",
+		"sunroof_close", "sunroof_vent",
+		"steering_wheel_heat", "seat_heater", "seat_cooler",
+		"auto_seat_climate", "auto_steering_heat",
+		"wake_up", "flash_lights",
+		"trigger_homelink",
+		"preconditioning_max", "preconditioning_reset",
+		"cop_on", "cop_off", "cop_fan_only",
+		"climate_keeper_on", "climate_keeper_off",
+		"dog_mode", "camp_mode",
+		"bioweapon_on", "bioweapon_off",
+		"media_volume_down", "media_next_track", "media_toggle_playback",
+		"guest_mode_off", "speed_limit_off":
 		return true
 	}
 	return false

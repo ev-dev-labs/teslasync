@@ -19,6 +19,7 @@ import type {
   AutopilotPreview,
   AutopilotRunResponse,
   AutopilotSavings,
+  NextChargeDecision,
   BillVarianceReport,
   QueueAdviseRequest,
   QueueAdvice,
@@ -421,6 +422,8 @@ export const autopilotKeys = {
   all: ['charge-autopilot'] as const,
   profile: (vehicleId: number) => ['charge-autopilot', 'profile', vehicleId] as const,
   savings: (vehicleId: number) => ['charge-autopilot', 'savings', vehicleId] as const,
+  decision: (vehicleId: number, soc: number) =>
+    ['charge-autopilot', 'decision', vehicleId, soc] as const,
 };
 
 /** Fetches the Autopilot profile for a vehicle (defaults when never saved). */
@@ -443,8 +446,8 @@ export function useSaveAutopilotProfile() {
         method: 'PUT',
         body: JSON.stringify(params),
       }),
-    onSuccess: (profile) => {
-      invalidateAndBroadcast(qc, { queryKey: autopilotKeys.profile(profile.vehicle_id) });
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: autopilotKeys.all });
       success('toast.autopilot.save.success', 'Autopilot settings saved');
     },
     onError: (err) => error(err, 'toast.autopilot.save.error', 'Failed to save autopilot settings'),
@@ -485,6 +488,21 @@ export function useAutopilotRun() {
       success('toast.autopilot.run.success', res.message || 'Autopilot run scheduled');
     },
     onError: (err) => error(err, 'toast.autopilot.run.error', 'Failed to run autopilot'),
+  });
+}
+
+/** 12-hour next-charge verdict (home TOU vs billed Supercharger). */
+export function useNextChargeDecision(vehicleId?: number, currentSoc?: number) {
+  const socReady = currentSoc != null && Number.isFinite(currentSoc);
+  return useQuery({
+    queryKey: autopilotKeys.decision(vehicleId ?? 0, currentSoc ?? -1),
+    queryFn: ({ signal }) =>
+      request<NextChargeDecision>(
+        `/charge-autopilot/decision?vehicle_id=${vehicleId}&current_soc=${currentSoc}`,
+        { signal },
+      ),
+    enabled: !!vehicleId && socReady,
+    staleTime: STALE_TIMES.FAST,
   });
 }
 
