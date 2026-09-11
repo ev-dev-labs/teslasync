@@ -474,6 +474,24 @@ export interface DriverAttributionReport {
   evidence: Evidence[] | null;
 }
 
+export interface GhostDrive {
+  drive_id: number;
+  started_at: string;
+  distance_m: number;
+  duration_s: number;
+  cluster_id: number;
+  score: number;
+  confidence_pct: number;
+  distance_ratio: number;
+  reason: string;
+}
+
+export interface GhostReport {
+  vehicle_id: number;
+  scanned: number;
+  ghosts: GhostDrive[];
+}
+
 // ---------------------------------------------------------------------------
 // 5. Warranty command
 // ---------------------------------------------------------------------------

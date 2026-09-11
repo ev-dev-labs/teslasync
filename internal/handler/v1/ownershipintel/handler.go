@@ -51,6 +51,7 @@ type service interface {
 	CreateDispute(context.Context, string, int64, domain.CreateDisputeRequest) (*domain.InvoiceDispute, error)
 
 	DriverAttribution(context.Context, string, int64, int, int, int) (*domain.DriverAttributionReport, error)
+	GhostDrives(context.Context, string, int64, int) (*domain.GhostReport, error)
 	ListDriverProfiles(context.Context, string, int64) ([]domain.DriverProfile, error)
 	CreateDriverProfile(context.Context, string, domain.CreateDriverProfileRequest) (*domain.DriverProfile, error)
 	DeleteDriverProfile(context.Context, string, int64) error
@@ -133,6 +134,7 @@ func (h *Handler) MountRoutes(r chi.Router) {
 
 	r.Route("/driver-attribution", func(r chi.Router) {
 		r.Get("/", h.DriverAttribution)
+		r.Get("/ghost-drives", h.GhostDrives)
 		r.Get("/profiles", h.ListDriverProfiles)
 		r.With(writeLimit).Post("/profiles", h.CreateDriverProfile)
 		r.With(writeLimit).Delete("/profiles/{id}", h.DeleteDriverProfile)
@@ -433,6 +435,32 @@ func (h *Handler) DriverAttribution(w http.ResponseWriter, r *http.Request) {
 	response, err := h.service.DriverAttribution(ctx, subject, vehicleID, windowDays, limit, offset)
 	if err != nil {
 		h.handleError(w, span, "build driver attribution", err)
+		return
+	}
+	writeJSON(w, http.StatusOK, response)
+}
+
+func (h *Handler) GhostDrives(w http.ResponseWriter, r *http.Request) {
+	ctx, span := tracer.Start(r.Context(), "ownershipintel.GhostDrives")
+	defer span.End()
+	subject, ok := h.subject(w, r, span)
+	if !ok {
+		return
+	}
+	vehicleID, _, _, err := parseListRequest(r)
+	if err != nil {
+		validationError(w, span, err)
+		return
+	}
+	windowDays, err := parseWindowDays(r)
+	if err != nil {
+		validationError(w, span, err)
+		return
+	}
+	span.SetAttributes(attribute.Int64("vehicle_id", vehicleID), attribute.Int("window_days", windowDays))
+	response, err := h.service.GhostDrives(ctx, subject, vehicleID, windowDays)
+	if err != nil {
+		h.handleError(w, span, "detect ghost drives", err)
 		return
 	}
 	writeJSON(w, http.StatusOK, response)

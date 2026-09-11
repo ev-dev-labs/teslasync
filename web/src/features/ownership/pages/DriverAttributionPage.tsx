@@ -39,6 +39,7 @@ import { fmtNumber } from '@/lib/numberFormat';
 import type { DriveFingerprint, DriverCluster, DriverProfile } from '@/types/ownership';
 import {
   EvidencePanel,
+  GhostDrivesPanel,
   MutationError,
   OwnershipPanel,
   StatGrid,
@@ -436,6 +437,20 @@ export default function DriverAttributionPage() {
           'Clusters are derived only from drive dynamics already stored on this server. No cameras, no seat sensors, no accounts. A cluster stays anonymous until you choose to name it.',
         )}
       </AlertBanner>
+
+      <FadeIn>
+        <GhostDrivesPanel
+          vehicleId={vehicleId}
+          windowDays={windowDays}
+          onLabel={(driveId) => {
+            setAssignDraft({
+              drive_id: driveId,
+              driver_profile_id: profiles[0]?.id ?? 0,
+            });
+            setAssignOpen(true);
+          }}
+        />
+      </FadeIn>
 
       <FadeIn>
         <OwnershipPanel title={t('ownership.driver.summary.title', 'Separation quality')}>

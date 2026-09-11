@@ -22,6 +22,7 @@ import type {
   CreateWarrantyRequest,
   DriverAttributionReport,
   DriverProfile,
+  GhostReport,
   GovernanceOverview,
   GovernanceSimulationRequest,
   GovernanceSimulationResponse,
@@ -83,6 +84,8 @@ export const ownershipKeys = {
     [...ownershipKeys.all, 'driver', vehicleId, windowDays, limit, offset] as const,
   driverProfiles: (vehicleId: number | null) =>
     [...ownershipKeys.all, 'driver-profiles', vehicleId] as const,
+  ghosts: (vehicleId: number | null, windowDays: number) =>
+    [...ownershipKeys.all, 'ghosts', vehicleId, windowDays] as const,
   warranty: (vehicleId: number | null) => [...ownershipKeys.all, 'warranty', vehicleId] as const,
   warranties: (vehicleId: number | null) =>
     [...ownershipKeys.all, 'warranties', vehicleId] as const,
@@ -340,6 +343,17 @@ export function useDriverProfiles(vehicleId: number | null) {
   return useVehicleQuery<OwnershipList<DriverProfile>>(
     ownershipKeys.driverProfiles(vehicleId),
     `${DRIVER}/profiles${query({ vehicle_id: vehicleId ?? undefined })}`,
+    vehicleId,
+  );
+}
+
+export function useGhostDrives(vehicleId: number | null, windowDays = 90) {
+  return useVehicleQuery<GhostReport>(
+    ownershipKeys.ghosts(vehicleId, windowDays),
+    `${DRIVER}/ghost-drives${query({
+      vehicle_id: vehicleId ?? undefined,
+      window_days: windowDays,
+    })}`,
     vehicleId,
   );
 }
