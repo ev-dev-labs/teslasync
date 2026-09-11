@@ -104,6 +104,7 @@ import (
 	apiannot "github.com/ev-dev-labs/teslasync/internal/api/chartannotation"
 	apichatbot "github.com/ev-dev-labs/teslasync/internal/api/chatbot"
 	apiclimate "github.com/ev-dev-labs/teslasync/internal/api/climate"
+	apicomfort "github.com/ev-dev-labs/teslasync/internal/api/comfort"
 	apicommand "github.com/ev-dev-labs/teslasync/internal/api/command"
 	"github.com/ev-dev-labs/teslasync/internal/api/costforecast"
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
@@ -2222,6 +2223,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		stateReader,
 		vehicledb.NewVehicleRepo(db),
 	)
+	comfortHandler := apicomfort.NewHandler(
+		apicomfort.NewStore(db),
+		apicomfort.NewFetcher(),
+		teslaClient,
+		vehicledb.NewVehicleRepo(db),
+	)
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3841,6 +3848,14 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/status", stormguardHandler.Status)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/config", stormguardHandler.UpsertConfig)
 			r.Get("/events", stormguardHandler.Events)
+		})
+
+		// Cabin Comfort (calendar-aware preconditioning; evaluator runs every 5m in app)
+		r.Route("/comfort", func(r chi.Router) {
+			r.Get("/next", comfortHandler.Next)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/config", comfortHandler.UpsertConfig)
+			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/now", comfortHandler.PreconditionNow)
+			r.Get("/runs", comfortHandler.Runs)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)

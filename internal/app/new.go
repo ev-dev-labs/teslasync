@@ -17,6 +17,7 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apicomfort "github.com/ev-dev-labs/teslasync/internal/api/comfort"
 	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
 	apistormguard "github.com/ev-dev-labs/teslasync/internal/api/stormguard"
@@ -153,6 +154,7 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initDataRepairScanner(ctx)
 	a.initHealthWatchdog(ctx)
 	a.initStormguard(ctx)
+	a.initComfort(ctx)
 	a.loadOpenAPISpec()
 
 	return a, nil
@@ -1492,6 +1494,27 @@ func (a *App) initStormguard(ctx context.Context) {
 		h.Run(loopCtx, apistormguard.DefaultEvaluateInterval)
 	})
 	log.Info().Msg("stormguard evaluator started")
+}
+
+// initComfort starts the 5-minute calendar event watch: enabled vehicles
+// get their ICS feed polled and, when an offsite event falls inside the
+// lead window, a one-shot precondition. Skipped when core dependencies
+// are missing; the read-only next-event endpoint still serves.
+func (a *App) initComfort(ctx context.Context) {
+	if a.DB == nil || a.TeslaClient == nil {
+		log.Warn().Msg("comfort: missing DB/Tesla dependency — evaluator disabled")
+		return
+	}
+	h := apicomfort.NewHandler(
+		apicomfort.NewStore(a.DB),
+		apicomfort.NewFetcher(),
+		a.TeslaClient,
+		vehicledb.NewVehicleRepo(a.DB),
+	)
+	resilience.SafeGoLoop(ctx, "comfort", func(loopCtx context.Context) {
+		h.Run(loopCtx, apicomfort.DefaultEvaluateInterval)
+	})
+	log.Info().Msg("comfort evaluator started")
 }
 
 // workerDegradedThreshold mirrors resilience.HealthMonitor's own

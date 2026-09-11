@@ -57,6 +57,7 @@ export const OFFLINE_UNSAFE_PATTERNS: readonly RegExp[] = [
   // Tesla commands (charge limits, scheduled charging start).
   /^\/charge-autopilot\/run(\/|$)/i,
   /^\/charge-planner\/apply(\/|$)/i,
+  /^\/comfort\/now(\/|$)/i,
   // Operator judgement encoded into the data set.
   /^\/data-repair(\/|$)/i,
   /^\/repair-cases?(\/|$)/i,

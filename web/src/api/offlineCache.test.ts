@@ -49,6 +49,7 @@ describe('isOfflineUnsafeWrite', () => {
     ['DELETE', '/vehicles/12/drivers/3'],
     ['POST', '/charge-autopilot/run'],
     ['POST', '/charge-planner/apply'],
+    ['POST', '/comfort/now'],
   ]
 
   it.each(destructive)('classifies %s %s as never-queueable', (method, path) => {
