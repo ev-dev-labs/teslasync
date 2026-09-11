@@ -206,6 +206,11 @@ export const teslaChargingHistoryKeys = {
   byVin: (vin: string) => ['tesla-charging-history', vin] as const,
 };
 
+export const teslaChargingSiteKeys = {
+  all: ['tesla-charging-site-ranking'] as const,
+  byVin: (vin?: string) => ['tesla-charging-site-ranking', vin] as const,
+};
+
 /** Fetches Tesla Supercharger/DC charging history from the local DB. */
 export function useTeslaChargingHistory(vin?: string, options?: { enabled?: boolean }) {
   return useQuery({
@@ -236,6 +241,7 @@ export function useRefreshTeslaChargingHistory() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: teslaChargingHistoryKeys.all });
+      qc.invalidateQueries({ queryKey: teslaChargingSiteKeys.all });
       success('toast.charging.history.success', 'Charging history refreshed');
     },
     onError: (err) => error(err, 'toast.charging.history.error', 'Failed to refresh charging history'),
@@ -245,7 +251,7 @@ export function useRefreshTeslaChargingHistory() {
 /** Fetches visited Supercharger sites ranked by realized $/kWh, cheapest first. */
 export function useChargingSiteRanking(vin?: string, options?: { enabled?: boolean }) {
   return useQuery({
-    queryKey: ['tesla-charging-site-ranking', vin],
+    queryKey: teslaChargingSiteKeys.byVin(vin),
     queryFn: ({ signal }) => request<ChargingSiteRanking>(
       `/tesla/charging/history/sites${vin ? `?vin=${vin}` : ''}`, { signal }
     ),
