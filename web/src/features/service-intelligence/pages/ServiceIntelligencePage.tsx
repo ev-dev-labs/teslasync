@@ -20,6 +20,7 @@ import { usePageTitle } from '@/hooks/usePageTitle';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
 
 import {
+  ClaimDraftPanel,
   CommunicationsPanel,
   CommunicationsCatalogPanel,
   EvidenceLimitationsPanel,
@@ -137,6 +138,10 @@ export default function ServiceIntelligencePage() {
           outlook={warrantyQuery.data ?? null}
           onRetry={() => void warrantyQuery.refetch()}
         />
+      </FadeIn>
+
+      <FadeIn delay={0.085}>
+        <ClaimDraftPanel vehicleId={vehicleId} />
       </FadeIn>
 
       <FadeIn delay={0.1}>

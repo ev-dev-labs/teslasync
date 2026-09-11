@@ -223,6 +223,44 @@ export interface WarrantyOutlook {
   assumption: string;
 }
 
+export interface ClaimCoverage {
+  name: string;
+  status: string;
+  days_remaining: number;
+}
+
+export interface ClaimDraft {
+  subject: string;
+  issue: string;
+  vehicle: string;
+  coverages: ClaimCoverage[];
+  communications: string[];
+  symptoms: string[];
+  evidence: string[];
+  ask: string;
+  body: string;
+  disclaimer: string;
+}
+
+/** Fetches an auto-drafted service ticket for an owner-described issue. */
+export function useClaimDraft(vehicleId: number | null, issue: string | null, odometerKm?: number) {
+  return useQuery({
+    queryKey: [...serviceIntelligenceKeys.vehicles, vehicleId, 'claim-draft', issue, odometerKm] as const,
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (issue) params.set('issue', issue);
+      if (odometerKm != null) params.set('odometer_km', String(odometerKm));
+      const qs = params.toString();
+      return request<ClaimDraft>(
+        `/service-intelligence/vehicles/${vehicleId}/claim-draft${qs ? `?${qs}` : ''}`,
+        { signal },
+      );
+    },
+    enabled: !!vehicleId && issue != null,
+    staleTime: STALE_TIMES.ANALYTICS,
+  });
+}
+
 /** Fetches the warranty coverage countdown for a vehicle. */
 export function useWarrantyOutlook(vehicleId: number | null, odometerKm?: number) {
   return useQuery({

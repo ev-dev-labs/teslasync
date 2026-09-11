@@ -1,3 +1,4 @@
+export { ClaimDraftPanel } from './ClaimDraftPanel';
 export { CommunicationsPanel } from './CommunicationsPanel';
 export {
   CommunicationsCatalogPanel,
