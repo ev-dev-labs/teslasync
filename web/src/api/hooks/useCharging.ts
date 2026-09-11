@@ -329,6 +329,75 @@ export function useTeslaChargingSessions(vin?: string, options?: { enabled?: boo
   });
 }
 
+// --- Supercharger Wait Oracle ---
+
+export interface WaitOracleSite {
+  name: string;
+  sessions: number;
+  lat: number;
+  lng: number;
+  last_session: string;
+}
+
+export interface WaitOracleHour {
+  hour: number;
+  expected_wait_min: number;
+  busyness: number;
+}
+
+export interface WaitOracleForecast {
+  site: string;
+  arrive_at: string;
+  expected_wait_min: number;
+  wait_probability_pct: number;
+  busyness: number;
+  verdict: 'quiet' | 'steady' | 'busy' | 'packed';
+  confidence: 'high' | 'medium' | 'low';
+  stalls_estimated: number;
+  best_hour_utc: number;
+  best_wait_min: number;
+  save_min: number;
+  hours: WaitOracleHour[];
+  evidence: string[];
+}
+
+export const waitOracleKeys = {
+  all: ['wait-oracle'] as const,
+  sites: (q: string) => ['wait-oracle', 'sites', q] as const,
+  forecast: (site: string, arriveAt: string | null) =>
+    ['wait-oracle', 'forecast', site, arriveAt] as const,
+};
+
+/** Lists named charging sites from fleet history, most-visited first. */
+export function useWaitOracleSites(q = '', options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: waitOracleKeys.sites(q),
+    queryFn: ({ signal }) => request<WaitOracleSite[]>(
+      `/waitoracle/sites${q ? `?q=${encodeURIComponent(q)}` : ''}`, { signal },
+    ),
+    staleTime: STALE_TIMES.SLOW,
+    enabled: options?.enabled ?? true,
+  });
+}
+
+/** Forecasts the queue wait for arriving at a site at an instant (RFC3339; null = now). */
+export function useWaitOracleForecast(
+  site: string | null,
+  arriveAt: string | null,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: waitOracleKeys.forecast(site ?? '', arriveAt),
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams({ site: site ?? '' });
+      if (arriveAt) params.set('arrive_at', arriveAt);
+      return request<WaitOracleForecast>(`/waitoracle/forecast?${params}`, { signal });
+    },
+    staleTime: STALE_TIMES.SLOW,
+    enabled: (options?.enabled ?? true) && site != null && site !== '',
+  });
+}
+
 /** Mutation to refresh Tesla fleet charging sessionsfrom the Tesla API. */
 export function useRefreshTeslaChargingSessions() {
   const qc = useQueryClient();

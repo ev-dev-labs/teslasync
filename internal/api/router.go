@@ -207,6 +207,7 @@ import (
 	apivehsettings "github.com/ev-dev-labs/teslasync/internal/api/vehiclesettings"
 	apivehstates "github.com/ev-dev-labs/teslasync/internal/api/vehiclestates"
 	apivisloc "github.com/ev-dev-labs/teslasync/internal/api/visitedlocation"
+	apiwaitoracle "github.com/ev-dev-labs/teslasync/internal/api/waitoracle"
 	"github.com/ev-dev-labs/teslasync/internal/api/watch"
 	apiwerr "github.com/ev-dev-labs/teslasync/internal/api/weberrors"
 	apiwhrx "github.com/ev-dev-labs/teslasync/internal/api/webhookreceiver"
@@ -2229,6 +2230,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		teslaClient,
 		vehicledb.NewVehicleRepo(db),
 	)
+	waitoracleHandler := apiwaitoracle.NewHandler(apiwaitoracle.NewStore(db))
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3856,6 +3858,12 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Put("/config", comfortHandler.UpsertConfig)
 			r.With(httprate.LimitByIP(5, 1*time.Minute)).Post("/now", comfortHandler.PreconditionNow)
 			r.Get("/runs", comfortHandler.Runs)
+		})
+
+		// Wait Oracle (Supercharger wait forecast from fleet history; read-only)
+		r.Route("/waitoracle", func(r chi.Router) {
+			r.Get("/sites", waitoracleHandler.Sites)
+			r.Get("/forecast", waitoracleHandler.Forecast)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)
