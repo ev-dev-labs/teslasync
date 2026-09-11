@@ -64,7 +64,7 @@ describe('alertRuleTemplates', () => {
   });
 
   it('expands well beyond the original catalogue', () => {
-    expect(ruleTemplates.length).toBeGreaterThanOrEqual(100);
+    expect(ruleTemplates.length).toBeGreaterThanOrEqual(240);
   });
 
   it('has unique names', () => {

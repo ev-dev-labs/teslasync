@@ -12,8 +12,8 @@ import (
 
 func TestRoutineTemplatesCatalogue(t *testing.T) {
 	all := RoutineTemplates()
-	if len(all) < 20 {
-		t.Fatalf("templates = %d, want at least 20", len(all))
+	if len(all) < 35 {
+		t.Fatalf("templates = %d, want at least 35", len(all))
 	}
 	seen := map[string]bool{}
 	for _, tmpl := range all {
@@ -45,8 +45,8 @@ func TestListRoutineTemplates(t *testing.T) {
 	if err := json.NewDecoder(rec.Body).Decode(&out); err != nil {
 		t.Fatal(err)
 	}
-	if len(out) < 20 {
-		t.Fatalf("templates = %d, want at least 20", len(out))
+	if len(out) < 35 {
+		t.Fatalf("templates = %d, want at least 35", len(out))
 	}
 }
 

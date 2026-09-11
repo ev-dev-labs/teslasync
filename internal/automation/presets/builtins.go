@@ -250,6 +250,7 @@ func (r *Registry) registerBuiltins() {
 	})
 
 	r.registerExtended()
+	r.registerEcosystem()
 }
 
 // --- builders -------------------------------------------------------------

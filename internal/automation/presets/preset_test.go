@@ -39,8 +39,8 @@ func TestRegistry_StarterPresetsPreserved(t *testing.T) {
 
 func TestRegistry_ExtensiveCatalogue(t *testing.T) {
 	got := len(NewRegistry().Presets(""))
-	if got < 80 {
-		t.Fatalf("presets = %d, want at least 80", got)
+	if got < 140 {
+		t.Fatalf("presets = %d, want at least 140", got)
 	}
 }
 
@@ -252,7 +252,11 @@ func knownTeslaCommand(name string) bool {
 		"dog_mode", "camp_mode",
 		"bioweapon_on", "bioweapon_off",
 		"media_volume_down", "media_next_track", "media_toggle_playback",
-		"guest_mode_off", "speed_limit_off":
+		"media_prev_track", "media_next_fav", "media_prev_fav",
+		"guest_mode_off", "guest_mode_on", "speed_limit_off",
+		"honk_horn", "honk", "boombox_ping",
+		"steering_wheel_level", "set_cop_temp", "sunroof_stop",
+		"wake", "flash":
 		return true
 	}
 	return false

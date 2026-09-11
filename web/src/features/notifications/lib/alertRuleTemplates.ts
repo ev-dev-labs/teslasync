@@ -236,4 +236,120 @@ export const ruleTemplates: RuleTemplate[] = [
   { name: 'Powershare Stop Reason', icon: Icons.charging, category: 'Powershare', severity: 'info', message: 'Powershare stopped: {{PowershareStopReason}}', cooldown_min: 30, signal_name: 'PowershareStopReason', op: 'changed' },
   { name: 'Powershare High Power', icon: Icons.charging, category: 'Powershare', severity: 'info', message: 'Powershare {{PowershareInstantaneousPowerKW}} kW', cooldown_min: 30, signal_name: 'PowershareInstantaneousPowerKW', op: '>', value_num: 5 },
   { name: 'Powershare Type Changed', icon: Icons.charging, category: 'Powershare', severity: 'info', message: 'Powershare type {{PowershareType}}', cooldown_min: 60, signal_name: 'PowershareType', op: 'changed' },
+
+  // ── Energy (ecosystem) ──────────────────────────────────────────
+  { name: 'AC Energy In High', icon: Icons.bolt, category: 'Energy', severity: 'info', message: 'AC energy in {{ACChargingEnergyIn}}', cooldown_min: 60, signal_name: 'ACChargingEnergyIn', op: '>', value_num: 10 },
+  { name: 'DC Energy In High', icon: Icons.bolt, category: 'Energy', severity: 'info', message: 'DC energy in {{DCChargingEnergyIn}}', cooldown_min: 30, signal_name: 'DCChargingEnergyIn', op: '>', value_num: 20 },
+  { name: 'Lifetime Energy Used Changed', icon: Icons.bolt, category: 'Energy', severity: 'info', message: 'Lifetime energy {{LifetimeEnergyUsed}}', cooldown_min: 1440, signal_name: 'LifetimeEnergyUsed', op: 'changed' },
+  { name: 'Arrival Energy Below 20%', icon: Icons.navigation, category: 'Energy', severity: 'warn', message: 'Expected energy at arrival {{ExpectedEnergyPercentAtTripArrival}}%', cooldown_min: 20, signal_name: 'ExpectedEnergyPercentAtTripArrival', op: '<', value_num: 20 },
+  { name: 'Arrival Energy Below 10%', icon: Icons.navigation, category: 'Energy', severity: 'critical', message: 'Arrival SoC only {{ExpectedEnergyPercentAtTripArrival}}%', cooldown_min: 10, signal_name: 'ExpectedEnergyPercentAtTripArrival', op: '<', value_num: 10 },
+  { name: 'High Range-Add Rate', icon: Icons.charging, category: 'Energy', severity: 'info', message: 'Range-add rate {{ChargeRateMilePerHour}}', cooldown_min: 30, signal_name: 'ChargeRateMilePerHour', op: '>', value_num: 150 },
+  { name: 'DC-DC Converter On', icon: Icons.bolt, category: 'Energy', severity: 'info', message: 'DC-DC converter enabled', cooldown_min: 30, signal_name: 'DCDCEnable', op: '=', value_bool: true },
+  { name: 'BMS State Changed', icon: Icons.battery, category: 'Energy', severity: 'info', message: 'BMS state {{BMSState}}', cooldown_min: 30, signal_name: 'BMSState', op: 'changed' },
+  { name: 'Brick Voltage High', icon: Icons.battery, category: 'Energy', severity: 'warn', message: 'Max brick {{BrickVoltageMax}} V', cooldown_min: 20, signal_name: 'BrickVoltageMax', op: '>', value_num: 4.2 },
+  { name: 'Brick Voltage Low', icon: Icons.battery, category: 'Energy', severity: 'critical', message: 'Min brick {{BrickVoltageMin}} V', cooldown_min: 10, signal_name: 'BrickVoltageMin', op: '<', value_num: 3.2 },
+  { name: 'Brick Voltage Spread', icon: Icons.battery, category: 'Energy', severity: 'warn', message: 'Brick max {{BrickVoltageMax}} / min {{BrickVoltageMin}}', cooldown_min: 30, signal_name: 'NumBrickVoltageMax', op: 'changed' },
+  { name: 'Module Temp Cell Index Changed', icon: Icons.climate, category: 'Energy', severity: 'info', message: 'Hottest module index {{NumModuleTempMax}}', cooldown_min: 60, signal_name: 'NumModuleTempMax', op: 'changed' },
+
+  // ── Charging extras (ecosystem) ─────────────────────────────────
+  { name: 'Charge Port State Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Charge port {{ChargePort}}', cooldown_min: 15, signal_name: 'ChargePort', op: 'changed' },
+  { name: 'Max Charge Current Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Max request {{ChargeCurrentRequestMax}}A', cooldown_min: 60, signal_name: 'ChargeCurrentRequestMax', op: 'changed' },
+  { name: 'Fast Charger Type Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Fast charger type {{FastChargerType}}', cooldown_min: 30, signal_name: 'FastChargerType', op: 'changed' },
+  { name: 'Scheduled Charge Start Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Scheduled start {{ScheduledChargingStartTime}}', cooldown_min: 60, signal_name: 'ScheduledChargingStartTime', op: 'changed' },
+  { name: 'Scheduled Departure Changed', icon: Icons.charging, category: 'Charging', severity: 'info', message: 'Departure {{ScheduledDepartureTime}}', cooldown_min: 60, signal_name: 'ScheduledDepartureTime', op: 'changed' },
+
+  // ── Climate extras (ecosystem) ──────────────────────────────────
+  { name: 'Auto Seat Climate Left On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Driver auto seat climate on', cooldown_min: 30, signal_name: 'AutoSeatClimateLeft', op: '=', value_bool: true },
+  { name: 'Auto Seat Climate Right On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Passenger auto seat climate on', cooldown_min: 30, signal_name: 'AutoSeatClimateRight', op: '=', value_bool: true },
+  { name: 'Driver Seat Cooling On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Driver seat cooling {{ClimateSeatCoolingFrontLeft}}', cooldown_min: 30, signal_name: 'ClimateSeatCoolingFrontLeft', op: '>', value_num: 0 },
+  { name: 'Passenger Seat Cooling On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Passenger seat cooling {{ClimateSeatCoolingFrontRight}}', cooldown_min: 30, signal_name: 'ClimateSeatCoolingFrontRight', op: '>', value_num: 0 },
+  { name: 'Cabin Overheat Temp Limit Changed', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'COP limit {{CabinOverheatProtectionTemperatureLimit}}', cooldown_min: 120, signal_name: 'CabinOverheatProtectionTemperatureLimit', op: 'changed' },
+  { name: 'HVAC Auto Mode Changed', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'HVAC auto {{HvacAutoMode}}', cooldown_min: 30, signal_name: 'HvacAutoMode', op: 'changed' },
+  { name: 'HVAC Fan Status Changed', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Fan status {{HvacFanStatus}}', cooldown_min: 30, signal_name: 'HvacFanStatus', op: 'changed' },
+  { name: 'Driver Temp Request High', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Left temp request {{HvacLeftTemperatureRequest}}', cooldown_min: 30, signal_name: 'HvacLeftTemperatureRequest', op: '>', value_num: 24 },
+  { name: 'Passenger Temp Request Low', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Right temp request {{HvacRightTemperatureRequest}}', cooldown_min: 30, signal_name: 'HvacRightTemperatureRequest', op: '<', value_num: 18 },
+  { name: 'Steering Heat Auto On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Steering wheel auto-heat on', cooldown_min: 30, signal_name: 'HvacSteeringWheelHeatAuto', op: '=', value_bool: true },
+  { name: 'Rear Display HVAC On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Rear display HVAC enabled', cooldown_min: 30, signal_name: 'RearDisplayHvacEnabled', op: '=', value_bool: true },
+  { name: 'Rear Seat Heaters On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Rear seat heaters {{RearSeatHeaters}}', cooldown_min: 30, signal_name: 'RearSeatHeaters', op: '>', value_num: 0 },
+  { name: 'Rear Center Seat Heat On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Rear center heater {{SeatHeaterRearCenter}}', cooldown_min: 30, signal_name: 'SeatHeaterRearCenter', op: '>', value_num: 0 },
+  { name: 'Rear Left Seat Heat On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Rear left heater {{SeatHeaterRearLeft}}', cooldown_min: 30, signal_name: 'SeatHeaterRearLeft', op: '>', value_num: 0 },
+  { name: 'Rear Right Seat Heat On', icon: Icons.climate, category: 'Climate', severity: 'info', message: 'Rear right heater {{SeatHeaterRearRight}}', cooldown_min: 30, signal_name: 'SeatHeaterRearRight', op: '>', value_num: 0 },
+
+  // ── Occupancy (ecosystem) ───────────────────────────────────────
+  { name: 'Driver Seat Occupied', icon: Icons.vehicle, category: 'Occupancy', severity: 'info', message: 'Driver seat is occupied', cooldown_min: 15, signal_name: 'DriverSeatOccupied', op: '=', value_bool: true },
+  { name: 'Driver Seat Empty', icon: Icons.vehicle, category: 'Occupancy', severity: 'info', message: 'Driver seat is empty', cooldown_min: 15, signal_name: 'DriverSeatOccupied', op: '=', value_bool: false },
+  { name: 'Driver Door Open', icon: Icons.locked, category: 'Occupancy', severity: 'info', message: 'Driver door {{DoorStateDriverFront}}', cooldown_min: 10, signal_name: 'DoorStateDriverFront', op: '!=', value_text: 'Closed' },
+
+  // ── Driving extras (ecosystem) ──────────────────────────────────
+  { name: 'Front Axle Speed High', icon: Icons.speed, category: 'Driving', severity: 'info', message: 'Front axle {{DiAxleSpeedF}}', cooldown_min: 15, signal_name: 'DiAxleSpeedF', op: '>', value_num: 100 },
+  { name: 'Rear Axle Speed High', icon: Icons.speed, category: 'Driving', severity: 'info', message: 'Rear axle {{DiAxleSpeedR}}', cooldown_min: 15, signal_name: 'DiAxleSpeedR', op: '>', value_num: 100 },
+  { name: 'Front Motor Current High', icon: Icons.bolt, category: 'Motor', severity: 'info', message: 'Front motor current {{DiMotorCurrentF}} A', cooldown_min: 15, signal_name: 'DiMotorCurrentF', op: '>', value_num: 250 },
+  { name: 'Rear Motor Current High', icon: Icons.bolt, category: 'Motor', severity: 'info', message: 'Rear motor current {{DiMotorCurrentR}} A', cooldown_min: 15, signal_name: 'DiMotorCurrentR', op: '>', value_num: 250 },
+  { name: 'Front Torque High', icon: Icons.speed, category: 'Motor', severity: 'info', message: 'Front torque {{DiTorqueActualF}}', cooldown_min: 15, signal_name: 'DiTorqueActualF', op: '>', value_num: 200 },
+  { name: 'Rear Torque High', icon: Icons.speed, category: 'Motor', severity: 'info', message: 'Rear torque {{DiTorqueActualR}}', cooldown_min: 15, signal_name: 'DiTorqueActualR', op: '>', value_num: 200 },
+  { name: 'Torque Command High', icon: Icons.speed, category: 'Motor', severity: 'info', message: 'Torque command {{DiSlaveTorqueCmd}}', cooldown_min: 15, signal_name: 'DiSlaveTorqueCmd', op: '>', value_num: 200 },
+  { name: 'Motor Torque High', icon: Icons.speed, category: 'Motor', severity: 'info', message: 'Motor torque {{DiTorquemotor}}', cooldown_min: 15, signal_name: 'DiTorquemotor', op: '>', value_num: 250 },
+  { name: 'REL Stator Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'REL stator {{DiStatorTempREL}}C', cooldown_min: 15, signal_name: 'DiStatorTempREL', op: '>', value_num: 80 },
+  { name: 'RER Stator Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'RER stator {{DiStatorTempRER}}C', cooldown_min: 15, signal_name: 'DiStatorTempRER', op: '>', value_num: 80 },
+  { name: 'Rear Heatsink Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'Rear heatsink {{DiHeatsinkTR}}C', cooldown_min: 15, signal_name: 'DiHeatsinkTR', op: '>', value_num: 75 },
+  { name: 'REL Heatsink Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'REL heatsink {{DiHeatsinkTREL}}C', cooldown_min: 15, signal_name: 'DiHeatsinkTREL', op: '>', value_num: 75 },
+  { name: 'RER Heatsink Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'RER heatsink {{DiHeatsinkTRER}}C', cooldown_min: 15, signal_name: 'DiHeatsinkTRER', op: '>', value_num: 75 },
+  { name: 'Rear Inverter Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'Rear inverter {{DiInverterTR}}C', cooldown_min: 15, signal_name: 'DiInverterTR', op: '>', value_num: 80 },
+  { name: 'REL Inverter Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'REL inverter {{DiInverterTREL}}C', cooldown_min: 15, signal_name: 'DiInverterTREL', op: '>', value_num: 80 },
+  { name: 'RER Inverter Temp High', icon: Icons.climate, category: 'Motor', severity: 'warn', message: 'RER inverter {{DiInverterTRER}}C', cooldown_min: 15, signal_name: 'DiInverterTRER', op: '>', value_num: 80 },
+  { name: 'Front Drive Unit State Changed', icon: Icons.bolt, category: 'Motor', severity: 'info', message: 'Front DU {{DiStateF}}', cooldown_min: 30, signal_name: 'DiStateF', op: 'changed' },
+  { name: 'Rear Drive Unit State Changed', icon: Icons.bolt, category: 'Motor', severity: 'info', message: 'Rear DU {{DiStateR}}', cooldown_min: 30, signal_name: 'DiStateR', op: 'changed' },
+  { name: 'Front Pack Voltage Low', icon: Icons.battery, category: 'Motor', severity: 'warn', message: 'Front Vbat {{DiVBatF}} V', cooldown_min: 20, signal_name: 'DiVBatF', op: '<', value_num: 300 },
+  { name: 'Rear Pack Voltage Low', icon: Icons.battery, category: 'Motor', severity: 'warn', message: 'Rear Vbat {{DiVBatR}} V', cooldown_min: 20, signal_name: 'DiVBatR', op: '<', value_num: 300 },
+  { name: 'REL Motor Current High', icon: Icons.bolt, category: 'Motor', severity: 'info', message: 'REL current {{DiMotorCurrentREL}} A', cooldown_min: 15, signal_name: 'DiMotorCurrentREL', op: '>', value_num: 250 },
+  { name: 'RER Motor Current High', icon: Icons.bolt, category: 'Motor', severity: 'info', message: 'RER current {{DiMotorCurrentRER}} A', cooldown_min: 15, signal_name: 'DiMotorCurrentRER', op: '>', value_num: 250 },
+
+  // ── Location extras (ecosystem) ─────────────────────────────────
+  { name: 'GPS Heading Changed', icon: Icons.navigation, category: 'Location', severity: 'info', message: 'Heading {{GpsHeading}}', cooldown_min: 30, signal_name: 'GpsHeading', op: 'changed' },
+  { name: 'Route Recalculated', icon: Icons.navigation, category: 'Location', severity: 'info', message: 'Route last updated {{RouteLastUpdated}}', cooldown_min: 10, signal_name: 'RouteLastUpdated', op: 'changed' },
+  { name: 'Route Line Updated', icon: Icons.navigation, category: 'Location', severity: 'info', message: 'Nav route geometry updated', cooldown_min: 15, signal_name: 'RouteLine', op: 'changed' },
+  { name: 'Destination Latitude Changed', icon: Icons.navigation, category: 'Location', severity: 'info', message: 'New destination lat {{DestinationLocationLatitude}}', cooldown_min: 10, signal_name: 'DestinationLocationLatitude', op: 'changed' },
+  { name: 'Origin Changed', icon: Icons.location, category: 'Location', severity: 'info', message: 'Trip origin updated', cooldown_min: 30, signal_name: 'OriginLocationLatitude', op: 'changed' },
+
+  // ── Tires extras (ecosystem) ────────────────────────────────────
+  { name: 'TPMS Soft Warning FR', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Soft TPMS warning — front right', cooldown_min: 120, signal_name: 'TpmsSoftWarningsFrontRight', op: '=', value_bool: true },
+  { name: 'TPMS Soft Warning RL', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Soft TPMS warning — rear left', cooldown_min: 120, signal_name: 'TpmsSoftWarningsRearLeft', op: '=', value_bool: true },
+  { name: 'TPMS Soft Warning RR', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'Soft TPMS warning — rear right', cooldown_min: 120, signal_name: 'TpmsSoftWarningsRearRight', op: '=', value_bool: true },
+  { name: 'FL Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'FL last seen {{TpmsLastSeenPressureTimeFl}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeFl', op: 'changed' },
+  { name: 'FR Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'FR last seen {{TpmsLastSeenPressureTimeFr}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeFr', op: 'changed' },
+  { name: 'RL Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'RL last seen {{TpmsLastSeenPressureTimeRl}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeRl', op: 'changed' },
+  { name: 'RR Pressure Stale', icon: Icons.droplets, category: 'Tire Pressure', severity: 'info', message: 'RR last seen {{TpmsLastSeenPressureTimeRr}}', cooldown_min: 180, signal_name: 'TpmsLastSeenPressureTimeRr', op: 'changed' },
+
+  // ── Media extras (ecosystem) ────────────────────────────────────
+  { name: 'Now Playing Artist Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Artist {{MediaNowPlayingArtist}}', cooldown_min: 15, signal_name: 'MediaNowPlayingArtist', op: 'changed' },
+  { name: 'Now Playing Album Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Album {{MediaNowPlayingAlbum}}', cooldown_min: 15, signal_name: 'MediaNowPlayingAlbum', op: 'changed' },
+  { name: 'Radio Station Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Station {{MediaNowPlayingStation}}', cooldown_min: 15, signal_name: 'MediaNowPlayingStation', op: 'changed' },
+  { name: 'Volume Max Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Volume max {{MediaAudioVolumeMax}}', cooldown_min: 120, signal_name: 'MediaAudioVolumeMax', op: 'changed' },
+  { name: 'Volume Increment Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Volume step {{MediaAudioVolumeIncrement}}', cooldown_min: 120, signal_name: 'MediaAudioVolumeIncrement', op: 'changed' },
+  { name: 'Track Duration Changed', icon: Icons.vehicle, category: 'Media', severity: 'info', message: 'Track duration {{MediaNowPlayingDuration}}', cooldown_min: 15, signal_name: 'MediaNowPlayingDuration', op: 'changed' },
+
+  // ── Display / settings (ecosystem) ──────────────────────────────
+  { name: 'Center Display Changed', icon: Icons.vehicle, category: 'Display', severity: 'info', message: 'Center display {{CenterDisplay}}', cooldown_min: 30, signal_name: 'CenterDisplay', op: 'changed' },
+  { name: '24-Hour Time Setting Changed', icon: Icons.vehicle, category: 'Display', severity: 'info', message: '24-hour time {{Setting24HourTime}}', cooldown_min: 1440, signal_name: 'Setting24HourTime', op: 'changed' },
+  { name: 'Distance Unit Changed', icon: Icons.vehicle, category: 'Display', severity: 'info', message: 'Distance unit {{SettingDistanceUnit}}', cooldown_min: 1440, signal_name: 'SettingDistanceUnit', op: 'changed' },
+  { name: 'Temperature Unit Changed', icon: Icons.climate, category: 'Display', severity: 'info', message: 'Temp unit {{SettingTemperatureUnit}}', cooldown_min: 1440, signal_name: 'SettingTemperatureUnit', op: 'changed' },
+  { name: 'Charge Unit Changed', icon: Icons.charging, category: 'Display', severity: 'info', message: 'Charge unit {{SettingChargeUnit}}', cooldown_min: 1440, signal_name: 'SettingChargeUnit', op: 'changed' },
+  { name: 'Tire Pressure Unit Changed', icon: Icons.droplets, category: 'Display', severity: 'info', message: 'TP unit {{SettingTirePressureUnit}}', cooldown_min: 1440, signal_name: 'SettingTirePressureUnit', op: 'changed' },
+
+  // ── Identity / software extras ──────────────────────────────────
+  { name: 'Vehicle Name Changed', icon: Icons.vehicle, category: 'Software', severity: 'info', message: 'Vehicle renamed to {{VehicleName}}', cooldown_min: 1440, signal_name: 'VehicleName', op: 'changed' },
+  { name: 'Trim Changed', icon: Icons.vehicle, category: 'Software', severity: 'info', message: 'Trim {{Trim}}', cooldown_min: 1440, signal_name: 'Trim', op: 'changed' },
+  { name: 'Wheel Type Changed', icon: Icons.vehicle, category: 'Software', severity: 'info', message: 'Wheels {{WheelType}}', cooldown_min: 1440, signal_name: 'WheelType', op: 'changed' },
+  { name: 'Efficiency Package Changed', icon: Icons.bolt, category: 'Software', severity: 'info', message: 'Efficiency package {{EfficiencyPackage}}', cooldown_min: 1440, signal_name: 'EfficiencyPackage', op: 'changed' },
+  { name: 'Exterior Color Changed', icon: Icons.vehicle, category: 'Software', severity: 'info', message: 'Color {{ExteriorColor}}', cooldown_min: 1440, signal_name: 'ExteriorColor', op: 'changed' },
+  { name: 'Roof Color Changed', icon: Icons.vehicle, category: 'Software', severity: 'info', message: 'Roof {{RoofColor}}', cooldown_min: 1440, signal_name: 'RoofColor', op: 'changed' },
+  { name: 'Car Type Changed', icon: Icons.vehicle, category: 'Software', severity: 'info', message: 'Car type {{CarType}}', cooldown_min: 1440, signal_name: 'CarType', op: 'changed' },
+
+  // ── Truck / Cybertruck (ecosystem) ──────────────────────────────
+  { name: 'Tonneau Mostly Open', icon: Icons.vehicle, category: 'Truck', severity: 'info', message: 'Tonneau open {{TonneauOpenPercent}}%', cooldown_min: 30, signal_name: 'TonneauOpenPercent', op: '>', value_num: 50 },
+  { name: 'Tonneau Position Changed', icon: Icons.vehicle, category: 'Truck', severity: 'info', message: 'Tonneau {{TonneauPosition}}', cooldown_min: 15, signal_name: 'TonneauPosition', op: 'changed' },
+  { name: 'Tonneau Tent Mode', icon: Icons.vehicle, category: 'Truck', severity: 'info', message: 'Tonneau tent mode is on', cooldown_min: 30, signal_name: 'TonneauTentMode', op: '=', value_bool: true },
+  { name: 'Sunroof Installed Changed', icon: Icons.vehicle, category: 'Truck', severity: 'info', message: 'Sunroof installed {{SunroofInstalled}}', cooldown_min: 1440, signal_name: 'SunroofInstalled', op: 'changed' },
+  { name: 'Offroad Lightbar Present', icon: Icons.warning, category: 'Truck', severity: 'info', message: 'Off-road lightbar present', cooldown_min: 1440, signal_name: 'OffroadLightbarPresent', op: '=', value_bool: true },
+  { name: 'Homelink Device Count Changed', icon: Icons.location, category: 'Security', severity: 'info', message: 'Homelink devices {{HomelinkDeviceCount}}', cooldown_min: 1440, signal_name: 'HomelinkDeviceCount', op: 'changed' },
 ]
