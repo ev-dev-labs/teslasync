@@ -484,6 +484,22 @@
     "disconnectFailed": "Disconnect failed",
     "tokenRefreshed": "Token refreshed",
     "tokenRefreshFailed": "Token refresh failed",
-    "syncFailed": "Vehicle sync failed"
+    "syncFailed": "Vehicle sync failed",
+    "stormguard": {
+      "save": {
+        "success": "Storm guard saved",
+        "error": "Failed to save storm guard"
+      }
+    },
+    "comfort": {
+      "save": {
+        "success": "Comfort autopilot saved",
+        "error": "Failed to save comfort autopilot"
+      },
+      "now": {
+        "success": "Preconditioning started",
+        "error": "Failed to start preconditioning"
+      }
+    }
   }
 }

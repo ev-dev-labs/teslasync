@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Clock3, MapPin, Sparkles } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 import {
   useWaitOracleForecast,
   useWaitOracleSites,
   type WaitOracleForecast,
 } from '@/api/hooks/useCharging';
+import { useDataState } from '@/hooks/useDataState';
 import {
   Bar,
   BarChart,
@@ -65,6 +66,7 @@ export function WaitOraclePanel() {
   const [custom, setCustom] = useState('');
 
   const sitesQuery = useWaitOracleSites();
+  const sitesState = useDataState(sitesQuery);
   const sites = useMemo(() => sitesQuery.data ?? [], [sitesQuery.data]);
   const activeSite = site ?? sites[0]?.name ?? null;
 
@@ -75,6 +77,7 @@ export function WaitOraclePanel() {
   }, [custom, preset]);
 
   const forecastQuery = useWaitOracleForecast(activeSite, arriveAt);
+  const forecastState = useDataState(forecastQuery);
   const forecast = forecastQuery.data ?? null;
 
   const chartData = useMemo(
@@ -82,7 +85,7 @@ export function WaitOraclePanel() {
       (forecast?.hours ?? []).map((h) => ({
         hour: h.hour,
         label: `${String(h.hour).padStart(2, '0')}:00`,
-        wait: h.expected_wait_min,
+        wait: (h.expected_wait_s ?? 0) / 60,
         busyness: h.busyness,
       })),
     [forecast?.hours],
@@ -91,7 +94,7 @@ export function WaitOraclePanel() {
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-1 flex items-center gap-2">
-        <Clock3 className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.clock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('wait_oracle.title', 'Supercharger Wait Oracle')}
       </PanelTitle>
       <Text as="p" size="sm" color="secondary" className="mb-4">
@@ -145,11 +148,11 @@ export function WaitOraclePanel() {
           className="h-[220px]"
           label={t('wait_oracle.loadingSites', 'Loading sites…')}
         />
-      ) : sitesQuery.error ? (
-        <QueryError error={sitesQuery.error} onRetry={() => sitesQuery.refetch()} />
+      ) : sitesState.fatalError ? (
+        <QueryError error={sitesState.fatalError} onRetry={() => sitesState.retry?.()} />
       ) : sites.length === 0 ? (
         <EmptyState
-          icon={<MapPin className="h-10 w-10" />}
+          icon={<Icons.location className="h-10 w-10" />}
           message={t(
             'wait_oracle.noSites',
             'No named sites yet. Sync fleet charging sessions to build wait forecasts.',
@@ -160,15 +163,15 @@ export function WaitOraclePanel() {
           className="h-[220px]"
           label={t('wait_oracle.loadingForecast', 'Forecasting wait…')}
         />
-      ) : forecastQuery.error ? (
-        <QueryError error={forecastQuery.error} onRetry={() => forecastQuery.refetch()} />
+      ) : forecastState.fatalError ? (
+        <QueryError error={forecastState.fatalError} onRetry={() => forecastState.retry?.()} />
       ) : forecast ? (
         <div className="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <Text as="span" size="xl" className="font-semibold tabular-nums">
                 {t('wait_oracle.expectedWait', '{{min}} min expected wait', {
-                  min: fmtNumber(forecast.expected_wait_min, 0),
+                  min: fmtNumber((forecast.expected_wait_s ?? 0) / 60, 0),
                 })}
               </Text>
               <Badge variant={verdictVariant(forecast.verdict)}>{forecast.verdict}</Badge>
@@ -184,16 +187,16 @@ export function WaitOraclePanel() {
                 stalls: forecast.stalls_estimated,
               })}
             </Text>
-            {forecast.save_min >= 1 ? (
+            {(forecast.save_s ?? 0) >= 60 ? (
               <div className="mt-3 flex items-start gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
-                <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
+                <Icons.sparkles className="mt-0.5 h-4 w-4 shrink-0 text-emerald-300" aria-hidden="true" />
                 <Text as="p" size="sm">
                   {t(
                     'wait_oracle.bestHour',
                     'Arrive {{hour}}:00 UTC instead to save ~{{min}} min.',
                     {
                       hour: String(forecast.best_hour_utc).padStart(2, '0'),
-                      min: fmtNumber(forecast.save_min, 0),
+                      min: fmtNumber((forecast.save_s ?? 0) / 60, 0),
                     },
                   )}
                 </Text>

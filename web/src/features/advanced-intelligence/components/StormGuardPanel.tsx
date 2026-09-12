@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { CloudLightning, ShieldCheck, TriangleAlert } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 
 import {
   GlassPanel,
@@ -20,8 +20,9 @@ import {
   Caption,
   ErrorText,
 } from '@/components/ui';
-import { Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDataState } from '@/hooks/useDataState';
 import {
   useStormguardStatus,
   useStormguardEvents,
@@ -56,6 +57,7 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
   const { formatDateTime } = useDateFormat();
 
   const statusQuery = useStormguardStatus(vehicleId);
+  const statusState = useDataState(statusQuery);
   const eventsQuery = useStormguardEvents(vehicleId);
   const saveMutation = useSaveStormguardConfig();
 
@@ -101,15 +103,15 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <CloudLightning className="h-4 w-4 text-amber-300" aria-hidden="true" />
+          <Icons.cloudLightning className="h-4 w-4 text-amber-300" aria-hidden="true" />
           {t('stormguard.title', 'Storm Guardian')}
         </PanelTitle>
         {assessment && (
           <Badge variant={levelVariant(assessment.level)} size="sm" className="gap-1">
             {assessment.level === 'none' ? (
-              <ShieldCheck className="h-3.5 w-3.5" aria-hidden="true" />
+              <Icons.securityCheck className="h-3.5 w-3.5" aria-hidden="true" />
             ) : (
-              <TriangleAlert className="h-3.5 w-3.5" aria-hidden="true" />
+              <Icons.warning className="h-3.5 w-3.5" aria-hidden="true" />
             )}
             {levelLabel(t, assessment.level)}
           </Badge>
@@ -117,13 +119,17 @@ export function StormGuardPanel({ vehicleId }: { vehicleId?: number | null }) {
       </div>
 
       {!vehicleId ? (
-        <Text variant="bodySm" tone="muted">
+        <Text variant="bodySm" color="secondary">
           {t('stormguard.noVehicle', 'Select a vehicle to configure storm protection.')}
         </Text>
       ) : statusQuery.isLoading ? (
         <Skeleton height={180} />
-      ) : statusQuery.isError || !assessment ? (
-        <ErrorText>{t('stormguard.statusError', 'Weather assessment unavailable.')}</ErrorText>
+      ) : statusState.fatalError || !assessment ? (
+        statusState.fatalError ? (
+          <QueryError error={statusState.fatalError} onRetry={() => statusState.retry?.()} />
+        ) : (
+          <ErrorText>{t('stormguard.statusError', 'Weather assessment unavailable.')}</ErrorText>
+        )
       ) : (
         <>
           <Text variant="bodySm">{assessment.reason}</Text>

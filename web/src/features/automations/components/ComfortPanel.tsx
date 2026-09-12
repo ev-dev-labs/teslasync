@@ -6,7 +6,7 @@
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ThermometerSun, CalendarClock, Zap } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 
 import {
   GlassPanel,
@@ -20,9 +20,11 @@ import {
   Caption,
   ErrorText,
 } from '@/components/ui';
-import { Skeleton } from '@/components/feedback';
+import { QueryError, Skeleton } from '@/components/feedback';
 import { useDateFormat } from '@/hooks/useDateFormat';
+import { useDataState } from '@/hooks/useDataState';
 import { useSelectedVehicle } from '@/hooks/useSelectedVehicle';
+import { useUnits } from '@/hooks/useUnits';
 import {
   useComfortNext,
   useComfortRuns,
@@ -33,9 +35,11 @@ import {
 export function ComfortPanel() {
   const { t } = useTranslation();
   const { formatDateTime } = useDateFormat();
+  const { formatTemperature } = useUnits();
   const { vehicleId } = useSelectedVehicle();
 
   const nextQuery = useComfortNext(vehicleId);
+  const nextState = useDataState(nextQuery);
   const runsQuery = useComfortRuns(vehicleId);
   const saveMutation = useSaveComfortConfig();
   const nowMutation = usePreconditionNow();
@@ -89,7 +93,7 @@ export function ComfortPanel() {
     <GlassPanel padding="lg" className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <PanelTitle className="flex items-center gap-2">
-          <ThermometerSun className="h-4 w-4 text-orange-300" aria-hidden="true" />
+          <Icons.climateHot className="h-4 w-4 text-orange-300" aria-hidden="true" />
           {t('comfort.title', 'Cabin Comfort Autopilot')}
         </PanelTitle>
         {stored && (
@@ -102,18 +106,18 @@ export function ComfortPanel() {
       </div>
 
       {vehicleId == null ? (
-        <Text variant="bodySm" tone="muted">
+        <Text variant="bodySm" color="secondary">
           {t('comfort.noVehicle', 'Select a vehicle to configure cabin comfort.')}
         </Text>
       ) : nextQuery.isLoading ? (
         <Skeleton height={180} />
-      ) : nextQuery.isError ? (
-        <ErrorText>{t('comfort.statusError', 'Comfort status unavailable.')}</ErrorText>
+      ) : nextState.fatalError ? (
+        <QueryError error={nextState.fatalError} onRetry={() => nextState.retry?.()} />
       ) : (
         <>
           {nextEvent ? (
             <div className="flex items-center gap-2 text-sm">
-              <CalendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+              <Icons.calendarClock className="h-4 w-4 text-cyan-300" aria-hidden="true" />
               <Text variant="bodySm" className="truncate">
                 {t('comfort.nextEvent', '{{title}} at {{when}} — {{where}}', {
                   title: nextEvent.title || t('comfort.untitled', 'Untitled event'),
@@ -149,7 +153,7 @@ export function ComfortPanel() {
               min={15}
               max={28}
               onChange={setTargetTemp}
-              formatValue={(v) => `${v}°C`}
+              formatValue={(v) => formatTemperature(v)}
             />
             <Slider
               label={t('comfort.lead', 'Precondition lead time')}
@@ -173,7 +177,7 @@ export function ComfortPanel() {
                 onClick={() => vehicleId != null && nowMutation.mutate(vehicleId)}
                 disabled={nowMutation.isPending}
                 loading={nowMutation.isPending}
-                icon={<Zap className="h-4 w-4" aria-hidden="true" />}
+                icon={<Icons.charging className="h-4 w-4" aria-hidden="true" />}
                 className="gap-2"
               >
                 {t('comfort.now', 'Precondition now')}

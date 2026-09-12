@@ -9,6 +9,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import type { ReactNode } from 'react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
 
 // ── i18n stub ──
 vi.mock('react-i18next', () => {
@@ -56,18 +58,18 @@ const sites = [
 const forecast = {
   site: 'Kettleman City',
   arrive_at: '2026-09-11T18:00:00Z',
-  expected_wait_min: 44.1,
+  expected_wait_s: 2646,
   wait_probability_pct: 73.8,
   busyness: 100,
   verdict: 'packed',
   confidence: 'high',
   stalls_estimated: 4,
   best_hour_utc: 15,
-  best_wait_min: 0,
-  save_min: 44.1,
+  best_wait_s: 0,
+  save_s: 2646,
   hours: [
-    { hour: 15, expected_wait_min: 0, busyness: 14.3 },
-    { hour: 18, expected_wait_min: 44.1, busyness: 100 },
+    { hour: 15, expected_wait_s: 0, busyness: 14.3 },
+    { hour: 18, expected_wait_s: 2646, busyness: 100 },
   ],
   evidence: ['1740 sessions over 10.0 weeks', 'median session 30 min'],
 };
@@ -75,6 +77,7 @@ const forecast = {
 function idle(extra = {}) {
   return {
     data: undefined, isLoading: false, isFetching: false, error: null,
+    isError: false, isPending: false, fetchStatus: 'idle', dataUpdatedAt: Date.now(),
     refetch: vi.fn(), ...extra,
   };
 }
@@ -85,14 +88,25 @@ beforeEach(() => {
   mockForecast.mockReturnValue(idle({ data: forecast }));
 });
 
+function renderPanel() {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter>
+        <WaitOraclePanel />
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
 describe('WaitOraclePanel', () => {
   it('defaults to the most-visited site with a live arrival', () => {
-    render(<WaitOraclePanel />);
+    renderPanel();
     expect(mockForecast).toHaveBeenCalledWith('Kettleman City', null);
   });
 
   it('renders the forecast with verdict, best hour, and evidence', () => {
-    render(<WaitOraclePanel />);
+    renderPanel();
     expect(screen.getByText('Supercharger Wait Oracle')).toBeInTheDocument();
     expect(screen.getByText('44 min expected wait')).toBeInTheDocument();
     expect(screen.getByText('packed')).toBeInTheDocument();
@@ -101,7 +115,7 @@ describe('WaitOraclePanel', () => {
   });
 
   it('reforecasts when the site changes', () => {
-    render(<WaitOraclePanel />);
+    renderPanel();
     fireEvent.change(screen.getByDisplayValue(/Kettleman City/), {
       target: { value: 'Barstow' },
     });
@@ -109,7 +123,7 @@ describe('WaitOraclePanel', () => {
   });
 
   it('passes an explicit arrival instant for offset presets', () => {
-    render(<WaitOraclePanel />);
+    renderPanel();
     fireEvent.click(screen.getByText('+2h'));
     const [, arriveAt] = mockForecast.mock.lastCall as [string, string | null];
     expect(arriveAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/);
@@ -118,22 +132,22 @@ describe('WaitOraclePanel', () => {
   it('shows a skeleton while sites load', () => {
     mockSites.mockReturnValue(idle({ data: undefined, isLoading: true }));
     mockForecast.mockReturnValue(idle());
-    render(<WaitOraclePanel />);
-    expect(screen.getByText('Loading sites…')).toBeInTheDocument();
+    renderPanel();
+    expect(screen.getByRole('status', { name: 'Loading sites…' })).toBeInTheDocument();
   });
 
   it('asks for data when no sites exist', () => {
     mockSites.mockReturnValue(idle({ data: [] }));
     mockForecast.mockReturnValue(idle());
-    render(<WaitOraclePanel />);
+    renderPanel();
     expect(screen.getByText(/No named sites yet/)).toBeInTheDocument();
     expect(mockForecast).toHaveBeenCalledWith(null, null);
   });
 
   it('surfaces forecast failures with a retry path', () => {
     const refetch = vi.fn();
-    mockForecast.mockReturnValue(idle({ error: new Error('oracle down'), refetch }));
-    render(<WaitOraclePanel />);
+    mockForecast.mockReturnValue(idle({ error: new Error('oracle down'), isError: true, refetch }));
+    renderPanel();
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
   });

@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
 import { useMutationToast } from './_toastHelpers';
 import type {
   AssignDriveRequest,
@@ -348,14 +349,23 @@ export function useDriverProfiles(vehicleId: number | null) {
 }
 
 export function useGhostDrives(vehicleId: number | null, windowDays = 90) {
-  return useVehicleQuery<GhostReport>(
-    ownershipKeys.ghosts(vehicleId, windowDays),
-    `${DRIVER}/ghost-drives${query({
-      vehicle_id: vehicleId ?? undefined,
-      window_days: windowDays,
-    })}`,
-    vehicleId,
-  );
+  return useQuery({
+    queryKey: ownershipKeys.ghosts(vehicleId, windowDays),
+    queryFn: ({ signal }) => {
+      if (!isValidVehicle(vehicleId)) {
+        throw new Error('vehicle_id must be a positive integer');
+      }
+      return request<GhostReport>(
+        `${DRIVER}/ghost-drives${query({
+          vehicle_id: vehicleId,
+          window_days: windowDays,
+        })}`,
+        { signal },
+      );
+    },
+    enabled: isValidVehicle(vehicleId),
+    ...queryPolicy('operational'),
+  });
 }
 
 export function useCreateDriverProfile() {

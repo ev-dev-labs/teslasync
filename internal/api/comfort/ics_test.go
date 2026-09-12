@@ -1,9 +1,39 @@
 package comfort
 
 import (
+	"net"
 	"testing"
 	"time"
 )
+
+func TestValidateICSURL(t *testing.T) {
+	lookupICSHost = func(host string) ([]net.IP, error) {
+		return []net.IP{net.ParseIP("203.0.113.10")}, nil
+	}
+	t.Cleanup(func() { lookupICSHost = net.LookupIP })
+
+	if err := validateICSURL("https://calendar.example.com/feed.ics"); err != nil {
+		t.Fatalf("public https: %v", err)
+	}
+	if err := validateICSURL("http://10.0.0.5/calendar.ics"); err != nil {
+		t.Fatalf("homelab RFC1918: %v", err)
+	}
+	if err := validateICSURL("file:///etc/passwd"); err == nil {
+		t.Fatal("file scheme should be rejected")
+	}
+	if err := validateICSURL("http://127.0.0.1/feed.ics"); err == nil {
+		t.Fatal("loopback should be rejected")
+	}
+	if err := validateICSURL("http://169.254.169.254/latest/meta-data"); err == nil {
+		t.Fatal("link-local metadata should be rejected")
+	}
+	lookupICSHost = func(host string) ([]net.IP, error) {
+		return []net.IP{net.ParseIP("127.0.0.1")}, nil
+	}
+	if err := validateICSURL("https://evil.example/feed.ics"); err == nil {
+		t.Fatal("hostname resolving to loopback should be rejected")
+	}
+}
 
 const icsFixture = `BEGIN:VCALENDAR
 VERSION:2.0

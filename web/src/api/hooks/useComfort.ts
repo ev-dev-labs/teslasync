@@ -1,9 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
-import { STALE_TIMES } from '@/lib/constants';
-import { useMutationToast } from '@/hooks/useMutationToast';
-import { invalidateAndBroadcast } from '@/lib/querySync';
+import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { useUnits } from '@/hooks/useUnits';
 
 /**
  * Cabin Comfort: calendar-aware preconditioning per vehicle. Reads the
@@ -69,9 +71,9 @@ export function useComfortNext(vehicleId?: number | null) {
   return useQuery({
     queryKey: comfortKeys.next(vehicleId!),
     queryFn: ({ signal }) =>
-      request<ComfortNext>(`/comfort/next?vehicle_id=${vehicleId}`, { signal }),
+      request<ComfortNext>(scopedPath('/comfort/next', { vehicleId }), { signal }),
     enabled: vehicleId != null,
-    staleTime: STALE_TIMES.FAST,
+    ...queryPolicy('operational'),
   });
 }
 
@@ -80,9 +82,12 @@ export function useComfortRuns(vehicleId?: number | null) {
   return useQuery({
     queryKey: comfortKeys.runs(vehicleId!),
     queryFn: ({ signal }) =>
-      request<ComfortRun[]>(`/comfort/runs?vehicle_id=${vehicleId}&limit=10`, { signal }),
+      request<ComfortRun[]>(
+        scopedPath('/comfort/runs', { vehicleId, filters: { limit: 10 } }),
+        { signal },
+      ),
     enabled: vehicleId != null,
-    staleTime: STALE_TIMES.FAST,
+    ...queryPolicy('operational'),
     select: safeArray,
   });
 }
@@ -110,6 +115,7 @@ export function useSaveComfortConfig() {
 export function usePreconditionNow() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
+  const { formatTemperature } = useUnits();
   return useMutation({
     mutationFn: (vehicleId: number) =>
       request<{ status: string; target_temp_c: number }>('/comfort/now', {
@@ -119,7 +125,10 @@ export function usePreconditionNow() {
       }),
     onSuccess: (res, vehicleId) => {
       invalidateAndBroadcast(qc, { queryKey: comfortKeys.runs(vehicleId) });
-      success('toast.comfort.now.success', `Preconditioning to ${res.target_temp_c}°C`);
+      success(
+        'toast.comfort.now.success',
+        `Preconditioning to ${formatTemperature(res.target_temp_c)}`,
+      );
     },
     onError: (err) => error(err, 'toast.comfort.now.error', 'Failed to start preconditioning'),
   });

@@ -919,5 +919,31 @@
     "noChargerData": "No charger breakdown yet.",
     "topLocations": "Top Locations by Cost",
     "noLocationData": "No location breakdown yet."
+  },
+  "wait_oracle": {
+    "title": "Supercharger Wait Oracle",
+    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.",
+    "site": "Site",
+    "sessions": "{{count}} sessions",
+    "pickSite": "Select a site",
+    "arrival": "Arrival",
+    "now": "Now",
+    "plusHours": "+{{hours}}h",
+    "customArrival": "Custom arrival",
+    "loadingSites": "Loading sites…",
+    "loadingForecast": "Forecasting wait…",
+    "noSites": "No named sites yet. Sync fleet charging sessions to build wait forecasts.",
+    "expectedWait": "{{min}} min expected wait",
+    "confidence": "{{level}} confidence",
+    "waitProb": "{{pct}}% chance of any wait · ~{{stalls}} stalls",
+    "bestHour": "Arrive {{hour}}:00 UTC instead to save ~{{min}} min.",
+    "chart": {
+      "title": "Wait across the arrival day (UTC)",
+      "aria": "Expected wait minutes by hour of day",
+      "col": {
+        "hour": "Hour (UTC)",
+        "wait": "Expected wait (min)"
+      }
+    }
   }
 }

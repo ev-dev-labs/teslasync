@@ -1,7 +1,8 @@
-import { Ghost } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 import { useTranslation } from 'react-i18next';
 import { useGhostDrives } from '@/api/hooks/useOwnership';
-import { AlertBanner } from '@/components/feedback';
+import { useDataState } from '@/hooks/useDataState';
+import { AlertBanner, QueryError } from '@/components/feedback';
 import { Badge, Button, DataTable, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
@@ -30,6 +31,7 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
   const { t } = useTranslation();
   const units = useUnits();
   const ghostsQuery = useGhostDrives(vehicleId, windowDays);
+  const ghostsState = useDataState(ghostsQuery);
 
   const ghosts = ghostsQuery.data?.ghosts ?? [];
   const scanned = ghostsQuery.data?.scanned ?? 0;
@@ -126,12 +128,12 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
       actions={
         ghosts.length > 0 ? (
           <Badge variant="warning">
-            <Ghost className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            <Icons.ghost className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
             {t('ownership.ghost.count', '{{count}} flagged', { count: ghosts.length })}
           </Badge>
         ) : undefined
       }
-      empty={!ghostsQuery.error && (ghostsQuery.isLoading || ghosts.length === 0)}
+      empty={!ghostsState.fatalError && (ghostsQuery.isLoading || ghosts.length === 0)}
       emptyMessage={
         ghostsQuery.isLoading
           ? t('ownership.ghost.scanning', 'Scanning recent drives…')
@@ -141,13 +143,8 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
             )
       }
     >
-      {ghostsQuery.error ? (
-        <AlertBanner
-          variant="danger"
-          title={t('ownership.ghost.error.title', 'Ghost scan failed')}
-        >
-          {(ghostsQuery.error as Error).message}
-        </AlertBanner>
+      {ghostsState.fatalError ? (
+        <QueryError error={ghostsState.fatalError} onRetry={() => ghostsState.retry?.()} />
       ) : null}
       {ghosts.length > 0 ? (
         <div className="mb-4">

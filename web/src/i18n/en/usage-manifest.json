@@ -592,7 +592,10 @@
     "autopilot": "charging",
     "chargeQueue": "charging",
     "ocpp": "charging",
-    "nextCharge": "dashboard"
+    "nextCharge": "dashboard",
+    "wait_oracle": "charging",
+    "stormguard": "advanced-intelligence",
+    "comfort": "automations"
   },
   "bundles": {
     "shell": [
@@ -1127,7 +1130,8 @@
       "ocpp",
       "powershare",
       "tesla_charging",
-      "tesla_sessions"
+      "tesla_sessions",
+      "wait_oracle"
     ],
     "dashboard": [
       "auth",
@@ -1187,7 +1191,8 @@
     ],
     "automations": [
       "automationList",
-      "automations"
+      "automations",
+      "comfort"
     ],
     "diagnostics": [
       "anomaly",
@@ -1242,7 +1247,8 @@
       "actionCenter"
     ],
     "advanced-intelligence": [
-      "advancedIntelligence"
+      "advancedIntelligence",
+      "stormguard"
     ],
     "service-intelligence": [
       "serviceIntelligence"
@@ -3691,7 +3697,10 @@
     "autopilot": "charging",
     "chargeQueue": "charging",
     "ocpp": "charging",
-    "nextCharge": "dashboard"
+    "nextCharge": "dashboard",
+    "wait_oracle": "charging",
+    "stormguard": "advanced-intelligence",
+    "comfort": "automations"
   },
   "shellCriticalKeys": [
     "a11y.breadcrumb",

@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
-import { STALE_TIMES } from '@/lib/constants';
-import { useMutationToast } from '@/hooks/useMutationToast';
-import { invalidateAndBroadcast } from '@/lib/querySync';
+import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
 
 /**
  * Storm Guardian: severe-weather auto-prep per vehicle. Reads the backend
@@ -70,9 +71,9 @@ export function useStormguardStatus(vehicleId?: number | null) {
   return useQuery({
     queryKey: stormguardKeys.status(vehicleId!),
     queryFn: ({ signal }) =>
-      request<StormguardStatus>(`/stormguard/status?vehicle_id=${vehicleId}`, { signal }),
+      request<StormguardStatus>(scopedPath('/stormguard/status', { vehicleId }), { signal }),
     enabled: vehicleId != null,
-    staleTime: STALE_TIMES.FAST,
+    ...queryPolicy('operational'),
   });
 }
 
@@ -81,9 +82,12 @@ export function useStormguardEvents(vehicleId?: number | null) {
   return useQuery({
     queryKey: stormguardKeys.events(vehicleId!),
     queryFn: ({ signal }) =>
-      request<StormguardEvent[]>(`/stormguard/events?vehicle_id=${vehicleId}&limit=10`, { signal }),
+      request<StormguardEvent[]>(
+        scopedPath('/stormguard/events', { vehicleId, filters: { limit: 10 } }),
+        { signal },
+      ),
     enabled: vehicleId != null,
-    staleTime: STALE_TIMES.FAST,
+    ...queryPolicy('operational'),
     select: safeArray,
   });
 }

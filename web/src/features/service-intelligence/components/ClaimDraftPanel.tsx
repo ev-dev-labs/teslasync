@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FileText, Copy } from 'lucide-react';
+import { Icons } from '@/lib/icons';
 import {
   GlassPanel, PanelTitle, Badge, Text, Caption, Button, Input, CopyButton,
 } from '@/components/ui';
 import { useClaimDraft, type ClaimDraft } from '@/api/hooks/useServiceIntelligence';
+import { useDataState } from '@/hooks/useDataState';
 import { PanelState } from './PanelState';
 
 export interface ClaimDraftPanelProps {
@@ -63,11 +64,12 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
   const [issue, setIssue] = useState('');
   const [submitted, setSubmitted] = useState<string | null>(null);
   const query = useClaimDraft(vehicleId, submitted);
+  const draftState = useDataState(query);
 
   return (
     <GlassPanel className="p-4 sm:p-5">
       <PanelTitle className="mb-3 flex items-center gap-2">
-        <FileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+        <Icons.fileText className="h-4 w-4 text-cyan-300" aria-hidden="true" />
         {t('serviceIntelligence.claim.title', 'Warranty claim draft')}
       </PanelTitle>
       <div className="mb-3 flex flex-col gap-2 sm:flex-row">
@@ -82,7 +84,7 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
           onClick={() => setSubmitted(issue)}
           disabled={vehicleId == null || query.isFetching}
           loading={query.isFetching}
-          icon={<Copy className="h-4 w-4" aria-hidden="true" />}
+          icon={<Icons.fileText className="h-4 w-4" aria-hidden="true" />}
           className="gap-2"
         >
           {t('serviceIntelligence.claim.generate', 'Draft ticket')}
@@ -91,9 +93,9 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
       <PanelState
         selected={vehicleId != null}
         loading={query.isLoading || query.isFetching}
-        error={query.error}
+        error={draftState.fatalError}
         empty={submitted == null || query.data == null}
-        icon={<FileText className="h-9 w-9" />}
+        icon={<Icons.fileText className="h-9 w-9" />}
         selectTitle={t('serviceIntelligence.common.selectTitle', 'Select a vehicle')}
         selectMessage={t(
           'serviceIntelligence.claim.selectMessage',

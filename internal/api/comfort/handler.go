@@ -131,6 +131,12 @@ func (h *Handler) UpsertConfig(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "ics_url too long")
 		return
 	}
+	if req.ICSURL != "" {
+		if err := validateICSURL(req.ICSURL); err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, err.Error())
+			return
+		}
+	}
 	cfg := &Config{VehicleID: req.VehicleID, Enabled: req.Enabled, TargetTempC: req.TargetTempC, LeadMinutes: req.LeadMinutes, ICSURL: req.ICSURL}
 	if err := h.store.UpsertConfig(r.Context(), cfg); err != nil {
 		log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Msg("comfort: config write failed")

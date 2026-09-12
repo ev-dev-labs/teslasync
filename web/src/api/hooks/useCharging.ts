@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
@@ -341,22 +343,22 @@ export interface WaitOracleSite {
 
 export interface WaitOracleHour {
   hour: number;
-  expected_wait_min: number;
+  expected_wait_s: number;
   busyness: number;
 }
 
 export interface WaitOracleForecast {
   site: string;
   arrive_at: string;
-  expected_wait_min: number;
+  expected_wait_s: number;
   wait_probability_pct: number;
   busyness: number;
   verdict: 'quiet' | 'steady' | 'busy' | 'packed';
   confidence: 'high' | 'medium' | 'low';
   stalls_estimated: number;
   best_hour_utc: number;
-  best_wait_min: number;
-  save_min: number;
+  best_wait_s: number;
+  save_s: number;
   hours: WaitOracleHour[];
   evidence: string[];
 }
@@ -372,11 +374,13 @@ export const waitOracleKeys = {
 export function useWaitOracleSites(q = '', options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: waitOracleKeys.sites(q),
-    queryFn: ({ signal }) => request<WaitOracleSite[]>(
-      `/waitoracle/sites${q ? `?q=${encodeURIComponent(q)}` : ''}`, { signal },
-    ),
-    staleTime: STALE_TIMES.SLOW,
+    queryFn: ({ signal }) =>
+      request<WaitOracleSite[]>(
+        scopedPath('/waitoracle/sites', { filters: { q: q || null } }),
+        { signal },
+      ),
     enabled: options?.enabled ?? true,
+    ...queryPolicy('historical'),
   });
 }
 
@@ -388,13 +392,15 @@ export function useWaitOracleForecast(
 ) {
   return useQuery({
     queryKey: waitOracleKeys.forecast(site ?? '', arriveAt),
-    queryFn: ({ signal }) => {
-      const params = new URLSearchParams({ site: site ?? '' });
-      if (arriveAt) params.set('arrive_at', arriveAt);
-      return request<WaitOracleForecast>(`/waitoracle/forecast?${params}`, { signal });
-    },
-    staleTime: STALE_TIMES.SLOW,
+    queryFn: ({ signal }) =>
+      request<WaitOracleForecast>(
+        scopedPath('/waitoracle/forecast', {
+          filters: { site: site ?? '', arrive_at: arriveAt },
+        }),
+        { signal },
+      ),
     enabled: (options?.enabled ?? true) && site != null && site !== '',
+    ...queryPolicy('historical'),
   });
 }
 

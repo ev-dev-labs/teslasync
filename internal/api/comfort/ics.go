@@ -10,7 +10,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -37,13 +39,79 @@ type Fetcher struct {
 	HTTPClient *http.Client
 }
 
-// NewFetcher wires a production fetcher.
-func NewFetcher() *Fetcher { return &Fetcher{HTTPClient: http.DefaultClient} }
+// lookupICSHost resolves feed hosts. Overridable in tests so validation
+// never needs live DNS.
+var lookupICSHost = net.LookupIP
+
+// NewFetcher wires a production fetcher that refuses loopback / link-local
+// / metadata redirects (homelab RFC1918 calendars remain allowed).
+func NewFetcher() *Fetcher {
+	return &Fetcher{HTTPClient: &http.Client{
+		Timeout: fetchTimeout,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= 3 {
+				return fmt.Errorf("comfort: too many ICS redirects")
+			}
+			if req.URL == nil {
+				return fmt.Errorf("comfort: ICS redirect missing url")
+			}
+			return validateICSURL(req.URL.String())
+		},
+	}}
+}
+
+// validateICSURL rejects non-http(s) schemes, loopback, link-local, and
+// cloud-metadata addresses. Empty URLs are handled by the caller.
+func validateICSURL(raw string) error {
+	u, err := url.Parse(raw)
+	if err != nil || u.Host == "" {
+		return fmt.Errorf("comfort: invalid ICS url")
+	}
+	if u.Scheme != "https" && u.Scheme != "http" {
+		return fmt.Errorf("comfort: ICS url must be http or https")
+	}
+	host := strings.ToLower(u.Hostname())
+	if host == "" || host == "localhost" || strings.HasSuffix(host, ".localhost") {
+		return fmt.Errorf("comfort: ICS url host not allowed")
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		if forbiddenICSIP(ip) {
+			return fmt.Errorf("comfort: ICS url host not allowed")
+		}
+		return nil
+	}
+	ips, err := lookupICSHost(host)
+	if err != nil {
+		return fmt.Errorf("comfort: ICS url host lookup failed: %w", err)
+	}
+	if len(ips) == 0 {
+		return fmt.Errorf("comfort: ICS url host not allowed")
+	}
+	for _, ip := range ips {
+		if forbiddenICSIP(ip) {
+			return fmt.Errorf("comfort: ICS url host not allowed")
+		}
+	}
+	return nil
+}
+
+func forbiddenICSIP(ip net.IP) bool {
+	if ip == nil {
+		return true
+	}
+	if ip.IsLoopback() || ip.IsUnspecified() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsMulticast() {
+		return true
+	}
+	return ip.Equal(net.ParseIP("169.254.169.254"))
+}
 
 // Fetch downloads and parses the ICS feed at feedURL.
 func (f *Fetcher) Fetch(ctx context.Context, feedURL string) ([]Event, error) {
 	if feedURL == "" {
 		return nil, fmt.Errorf("comfort: empty ICS url")
+	}
+	if err := validateICSURL(feedURL); err != nil {
+		return nil, err
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, feedURL, nil)
 	if err != nil {

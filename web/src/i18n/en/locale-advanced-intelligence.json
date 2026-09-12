@@ -478,5 +478,23 @@
     "vehicle": {
       "empty": "Select a vehicle to load intelligence."
     }
+  },
+  "stormguard": {
+    "title": "Storm Guardian",
+    "warning": "Storm warning",
+    "watch": "Storm watch",
+    "clear": "Clear",
+    "noVehicle": "Select a vehicle to configure storm protection.",
+    "statusError": "Weather assessment unavailable.",
+    "peakGust": "Peak gust {{gust}} m/s",
+    "currentSoc": "Battery {{soc}}%",
+    "arm": "Auto pre-charge before storms",
+    "lat": "Home latitude",
+    "lng": "Home longitude",
+    "target": "Pre-storm charge target",
+    "save": "Save Guard",
+    "saveError": "Save failed",
+    "recent": "Recent activity",
+    "acted": "acted"
   }
 }

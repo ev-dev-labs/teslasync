@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request, SudoCanceledError } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopedPath } from '../scope';
 import { STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 
@@ -246,18 +248,15 @@ export interface ClaimDraft {
 export function useClaimDraft(vehicleId: number | null, issue: string | null, odometerKm?: number) {
   return useQuery({
     queryKey: [...serviceIntelligenceKeys.vehicles, vehicleId, 'claim-draft', issue, odometerKm] as const,
-    queryFn: ({ signal }) => {
-      const params = new URLSearchParams();
-      if (issue) params.set('issue', issue);
-      if (odometerKm != null) params.set('odometer_km', String(odometerKm));
-      const qs = params.toString();
-      return request<ClaimDraft>(
-        `/service-intelligence/vehicles/${vehicleId}/claim-draft${qs ? `?${qs}` : ''}`,
+    queryFn: ({ signal }) =>
+      request<ClaimDraft>(
+        scopedPath(`/service-intelligence/vehicles/${vehicleId}/claim-draft`, {
+          filters: { issue, odometer_km: odometerKm ?? null },
+        }),
         { signal },
-      );
-    },
+      ),
     enabled: !!vehicleId && issue != null,
-    staleTime: STALE_TIMES.ANALYTICS,
+    ...queryPolicy('historical'),
   });
 }
 

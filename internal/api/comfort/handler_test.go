@@ -107,7 +107,7 @@ func testHandler(store *fakeStore, feeds *fakeFeeds, cmd *fakeCommander) *Handle
 
 func TestNext(t *testing.T) {
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
-	store := &fakeStore{cfg: &Config{VehicleID: 7, Enabled: true, LeadMinutes: 20, ICSURL: "https://x/y.ics"}}
+	store := &fakeStore{cfg: &Config{VehicleID: 7, Enabled: true, LeadMinutes: 20, ICSURL: "http://10.0.0.5/y.ics"}}
 	feeds := &fakeFeeds{events: []Event{
 		{UID: "a", Title: "Dentist", Location: "123 Main", StartsAt: now.Add(15 * time.Minute)},
 	}}
@@ -142,7 +142,7 @@ func TestNextNoFeed(t *testing.T) {
 func TestUpsertConfig(t *testing.T) {
 	store := &fakeStore{}
 	h := testHandler(store, &fakeFeeds{}, &fakeCommander{})
-	body := `{"vehicle_id":7,"enabled":true,"target_temp_c":22.5,"lead_minutes":30,"ics_url":"https://x/y.ics"}`
+	body := `{"vehicle_id":7,"enabled":true,"target_temp_c":22.5,"lead_minutes":30,"ics_url":"http://10.0.0.5/y.ics"}`
 	req := httptest.NewRequest(http.MethodPut, "/config", strings.NewReader(body))
 	rec := httptest.NewRecorder()
 	h.UpsertConfig(rec, req)
@@ -184,7 +184,7 @@ func TestPreconditionNow(t *testing.T) {
 func TestEvaluateEnabled(t *testing.T) {
 	now := time.Date(2026, 4, 1, 12, 0, 0, 0, time.UTC)
 	newCase := func() (*fakeStore, *fakeFeeds, *fakeCommander) {
-		store := &fakeStore{cfg: &Config{VehicleID: 7, Enabled: true, TargetTempC: 22, LeadMinutes: 20, ICSURL: "https://x/y.ics"}}
+		store := &fakeStore{cfg: &Config{VehicleID: 7, Enabled: true, TargetTempC: 22, LeadMinutes: 20, ICSURL: "http://10.0.0.5/y.ics"}}
 		feeds := &fakeFeeds{events: []Event{
 			{UID: "a", Title: "Dentist", Location: "123 Main", StartsAt: now.Add(15 * time.Minute)},
 		}}

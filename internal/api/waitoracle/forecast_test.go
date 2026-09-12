@@ -71,8 +71,8 @@ func TestForecastPeakVerdict(t *testing.T) {
 	if f.Verdict != VerdictPacked {
 		t.Fatalf("verdict = %q, want packed", f.Verdict)
 	}
-	if f.ExpectedMin <= 0 {
-		t.Fatalf("expected wait = %v, want positive", f.ExpectedMin)
+	if f.ExpectedS <= 0 {
+		t.Fatalf("expected wait = %v, want positive", f.ExpectedS)
 	}
 	if f.WaitProbPct <= 0 || f.WaitProbPct > 100 {
 		t.Fatalf("wait prob = %v, want (0, 100]", f.WaitProbPct)
@@ -106,8 +106,8 @@ func TestForecastQuietBucket(t *testing.T) {
 	if f.Verdict != VerdictQuiet {
 		t.Fatalf("verdict = %q, want quiet", f.Verdict)
 	}
-	if f.ExpectedMin != 0 {
-		t.Fatalf("expected wait = %v, want 0", f.ExpectedMin)
+	if f.ExpectedS >= 60 {
+		t.Fatalf("expected wait = %v s, want under 1 min in a quiet bucket", f.ExpectedS)
 	}
 }
 
@@ -133,11 +133,11 @@ func TestForecastBestHour(t *testing.T) {
 	if f.BestHour != 15 {
 		t.Fatalf("best hour = %d, want 15", f.BestHour)
 	}
-	if f.SaveMin <= 0 {
-		t.Fatalf("save = %v, want positive", f.SaveMin)
+	if f.SaveS <= 0 {
+		t.Fatalf("save = %v, want positive", f.SaveS)
 	}
-	if !close(f.SaveMin, f.ExpectedMin-f.BestWaitMin) {
-		t.Fatalf("save %v != expected-best %v", f.SaveMin, f.ExpectedMin-f.BestWaitMin)
+	if !close(f.SaveS, f.ExpectedS-f.BestWaitS) {
+		t.Fatalf("save %v != expected-best %v", f.SaveS, f.ExpectedS-f.BestWaitS)
 	}
 }
 
@@ -185,7 +185,7 @@ func TestForecastDeterministic(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if a.ExpectedMin != b.ExpectedMin || a.BestHour != b.BestHour || a.Verdict != b.Verdict {
+	if a.ExpectedS != b.ExpectedS || a.BestHour != b.BestHour || a.Verdict != b.Verdict {
 		t.Fatalf("nondeterministic:\n%+v\n%+v", a, b)
 	}
 }

@@ -78,24 +78,25 @@ type SiteHistory struct {
 
 // HourPoint is one hour of the arrival day for the chart.
 type HourPoint struct {
-	Hour        int     `json:"hour"`
-	ExpectedMin float64 `json:"expected_wait_min"`
-	Busyness    float64 `json:"busyness"`
+	Hour      int     `json:"hour"`
+	ExpectedS float64 `json:"expected_wait_s"`
+	Busyness  float64 `json:"busyness"`
 }
 
 // Forecast is the wait prediction for one arrival instant.
+// Duration fields are SI seconds (Phase-48); the SPA converts at render.
 type Forecast struct {
 	Site           string      `json:"site"`
 	ArriveAt       time.Time   `json:"arrive_at"`
-	ExpectedMin    float64     `json:"expected_wait_min"`
+	ExpectedS      float64     `json:"expected_wait_s"`
 	WaitProbPct    float64     `json:"wait_probability_pct"`
 	Busyness       float64     `json:"busyness"`
 	Verdict        string      `json:"verdict"`
 	Confidence     string      `json:"confidence"`
 	StallsEstimate int         `json:"stalls_estimated"`
 	BestHour       int         `json:"best_hour_utc"`
-	BestWaitMin    float64     `json:"best_wait_min"`
-	SaveMin        float64     `json:"save_min"`
+	BestWaitS      float64     `json:"best_wait_s"`
+	SaveS          float64     `json:"save_s"`
 	Hours          []HourPoint `json:"hours"`
 	Evidence       []string    `json:"evidence"`
 }
@@ -184,24 +185,28 @@ func Predict(h SiteHistory, arrival time.Time) (*Forecast, error) {
 		if peak > 0 {
 			b = starts[day+hr] / peak * 100
 		}
-		hours = append(hours, HourPoint{Hour: hr, ExpectedMin: round1(w), Busyness: round1(b)})
+		hours = append(hours, HourPoint{Hour: hr, ExpectedS: minutesToSeconds(w), Busyness: round1(b)})
 	}
 
 	return &Forecast{
 		Site:           h.Site,
 		ArriveAt:       arrUTC,
-		ExpectedMin:    round1(waitMin),
+		ExpectedS:      minutesToSeconds(waitMin),
 		WaitProbPct:    round1(waitProb * 100),
 		Busyness:       round1(busyness),
 		Verdict:        verdict,
 		Confidence:     confidence,
 		StallsEstimate: stalls,
 		BestHour:       bestHour,
-		BestWaitMin:    round1(bestWait),
-		SaveMin:        round1(math.Max(0, waitMin-bestWait)),
+		BestWaitS:      minutesToSeconds(bestWait),
+		SaveS:          minutesToSeconds(math.Max(0, waitMin-bestWait)),
 		Hours:          hours,
 		Evidence:       evidence(h, medianMin, stalls),
 	}, nil
+}
+
+func minutesToSeconds(min float64) float64 {
+	return round1(min * 60)
 }
 
 // erlangCWait returns (expected queue wait minutes, P(wait > 0)) for
