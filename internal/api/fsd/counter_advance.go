@@ -11,6 +11,13 @@ import (
 // (include_fields zero, unit mix, trip-meter restore), not distance driven.
 const maxAttributableSpeedMps = 120.0
 
+// teslaFSDWireQuantumM is Tesla's minimum_delta for
+// SelfDrivingMilesSinceReset (1 international mile). Fleet Telemetry will
+// not emit a smaller FSD tick. MilesSinceReset include_fields samples that
+// counter every 10s, so a real 1-mile engagement appears as a 1609 m jump
+// against a 10-second prior snapshot — ~161 m/s, which is not vehicle speed.
+const teslaFSDWireQuantumM = 1609.344
+
 // minAdvanceInterval floors the speed check so a 0.01 mile tick on a
 // sub-second change-feed row remains attributable.
 const minAdvanceInterval = time.Second
@@ -97,5 +104,10 @@ func plausibleCounterAdvance(delta float64, dt time.Duration) bool {
 	if dt < minAdvanceInterval {
 		dt = minAdvanceInterval
 	}
-	return delta <= maxAttributableSpeedMps*dt.Seconds()
+	// Allow one FSD wire quantum on top of physically possible travel.
+	// Without this, every 1-mile SelfDrivingMilesSinceReset tick on the
+	// 10s include_fields cadence is discarded and drives collapse to a
+	// leftover fraction of a mile (the Aug 31 → Sep 7 regression).
+	maxDelta := maxAttributableSpeedMps*dt.Seconds() + teslaFSDWireQuantumM
+	return delta <= maxDelta
 }

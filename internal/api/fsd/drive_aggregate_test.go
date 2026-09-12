@@ -141,6 +141,65 @@ func TestBuildDriveAnalytics_DriveDetailLookaroundIncludesSparseBookend(t *testi
 	}
 }
 
+func TestBuildDriveAnalytics_OneMileTicksOnIncludeFieldsCadence(t *testing.T) {
+	// MilesSinceReset include_fields re-emits SelfDrivingMilesSinceReset every
+	// 10s. Tesla still only *changes* that counter in 1-mile steps, so a real
+	// FSD commute looks like 1609 m jumps on a 10s snapshot — previously
+	// discarded as 161 m/s.
+	start := at(t, "2026-09-11T17:50:00Z")
+	end := at(t, "2026-09-11T18:30:00Z")
+	driveStart := at(t, "2026-09-11T17:59:00Z")
+	driveEndAt := at(t, "2026-09-11T18:25:00Z")
+	distance := 14.2 * teslaFSDWireQuantumM
+	const ticks = 12
+	samples := make([]Sample, 0, 2*(26*6+4))
+	fsdValue := 10_000.0
+	drivingValue := 50_000.0
+	tick := 0
+	for ts := driveStart.Add(-10 * time.Second); !ts.After(driveEndAt); ts = ts.Add(10 * time.Second) {
+		if !ts.Before(driveStart) && ts.Before(driveEndAt) {
+			drivingValue += teslaFSDWireQuantumM / 36
+			elapsed := ts.Sub(driveStart)
+			if elapsed >= 50*time.Second && elapsed%(50*time.Second) == 0 && tick < ticks {
+				fsdValue += teslaFSDWireQuantumM
+				tick++
+			}
+		}
+		samples = append(
+			samples,
+			trustedSample(SignalFSDDistance, ts, fsdValue),
+			trustedSample(SignalDrivingDistance, ts, drivingValue),
+		)
+	}
+	if tick != ticks {
+		t.Fatalf("emitted %d FSD ticks, want %d", tick, ticks)
+	}
+
+	current := responseForRange(7, start, end, samples)
+	previous := responseForRange(7, start.Add(-end.Sub(start)), start, samples)
+	analytics := BuildDriveAnalytics(current, previous, AnalyticsInput{
+		CounterSamples: samples,
+		Drives: []DriveRecord{{
+			ID:        365,
+			StartedAt: driveStart,
+			EndedAt:   &driveEndAt,
+			DistanceM: &distance,
+		}},
+	}, time.UTC, true)
+
+	if len(analytics.ContributingDrives) != 1 {
+		t.Fatalf("drives = %d, want 1", len(analytics.ContributingDrives))
+	}
+	drive := analytics.ContributingDrives[0]
+	if drive.FSDDistanceM == nil {
+		t.Fatal("FSD distance unmeasured; 1-mile include_fields ticks were dropped")
+	}
+	wantMeasured(t, drive.FSDDistanceM, float64(ticks)*teslaFSDWireQuantumM, "quantized FSD distance")
+	if drive.FSDSharePct == nil || *drive.FSDSharePct < 80 {
+		t.Fatalf("share = %v, want >= 80 (was collapsing to ~7%%)", drive.FSDSharePct)
+	}
+}
+
 func TestBuildDriveAnalytics_FidgetDriveDoesNotStealCommuteDelta(t *testing.T) {
 	start := at(t, "2026-09-07T00:00:00Z")
 	end := at(t, "2026-09-08T00:00:00Z")
