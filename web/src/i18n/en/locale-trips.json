@@ -108,5 +108,59 @@
       "energy": "Energy",
       "cost": "Cost"
     }
+  },
+  "journey": {
+    "page": {
+      "navTitle": "Journeys",
+      "title": "Journeys",
+      "subtitle": "Door-to-door trip companion: plan the drive, ride it live with replans, then debrief."
+    },
+    "col": {
+      "journey": "Journey",
+      "status": "Status",
+      "plan": "Plan",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "noRoute": "Route not set yet",
+    "planVersion": "v{{version}}",
+    "open": "Open",
+    "list": {
+      "title": "Planned journeys",
+      "subtitle": "One session per trip, from planning through the live drive to the debrief.",
+      "loading": "Loading journeys…",
+      "empty": "No journeys yet. Plan one above and it will live here from planning to debrief."
+    },
+    "filter": {
+      "status": "Filter by status",
+      "all": "All"
+    },
+    "action": {
+      "cancel": "Cancel",
+      "plan": "Plan journey"
+    },
+    "form": {
+      "name": "Journey name",
+      "namePlaceholder": "Tahoe ski trip",
+      "origin": "Origin",
+      "destination": "Destination",
+      "submit": "Create journey"
+    },
+    "detail": {
+      "title": "Journey detail",
+      "loading": "Loading journey…",
+      "empty": "Select a journey to manage its lifecycle and plans."
+    },
+    "transition": {
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "complete": "Complete",
+      "abort": "Abort"
+    },
+    "plans": {
+      "title": "Plan versions",
+      "empty": "No plans saved yet — the stop optimizer lands here."
+    }
   }
 }

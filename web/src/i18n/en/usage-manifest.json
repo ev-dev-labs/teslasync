@@ -595,7 +595,8 @@
     "nextCharge": "dashboard",
     "wait_oracle": "charging",
     "stormguard": "advanced-intelligence",
-    "comfort": "automations"
+    "comfort": "automations",
+    "journey": "trips"
   },
   "bundles": {
     "shell": [
@@ -1209,7 +1210,8 @@
       "tempImpact"
     ],
     "trips": [
-      "trips"
+      "trips",
+      "journey"
     ],
     "vehicle-systems": [
       "cabinThermal",
@@ -2342,6 +2344,7 @@
     "routes.intelligencePackMarketplace",
     "routes.journeyAssurance",
     "routes.journeyFragmentation",
+    "routes.journeys",
     "routes.jurisdictionCompliance",
     "routes.legacyAlertRulesRedirect",
     "routes.legacyAlertStudioRedirect",
@@ -3700,7 +3703,8 @@
     "nextCharge": "dashboard",
     "wait_oracle": "charging",
     "stormguard": "advanced-intelligence",
-    "comfort": "automations"
+    "comfort": "automations",
+    "journey": "trips"
   },
   "shellCriticalKeys": [
     "a11y.breadcrumb",
@@ -4599,6 +4603,7 @@
     "routes.intelligencePackMarketplace",
     "routes.journeyAssurance",
     "routes.journeyFragmentation",
+    "routes.journeys",
     "routes.jurisdictionCompliance",
     "routes.legacyAlertRulesRedirect",
     "routes.legacyAlertStudioRedirect",

@@ -50,6 +50,7 @@ const Powershare = lazy(() => import('./features/charging/pages/PowersharePage')
 // Trips
 const Trips = lazy(() => import('./features/trips/pages/TripListPage'))
 const TripDetail = lazy(() => import('./features/trips/pages/TripDetailPage'))
+const Journeys = lazy(() => import('./features/trips/pages/JourneysPage'))
 
 // Battery & Energy
 const Energy = lazy(() => import('./features/battery/pages/EnergyPage'))
@@ -635,6 +636,7 @@ export default function App() {
         <Route path="efficiency" element={<SafeRoute name="Efficiency"><Efficiency /></SafeRoute>} />
         <Route path="trips" element={<SafeRoute name="Trips"><Trips /></SafeRoute>} />
         <Route path="trips/:id" element={<SafeRoute name="TripDetail"><TripDetail /></SafeRoute>} />
+        <Route path="journeys" element={<SafeRoute name="Journeys"><Journeys /></SafeRoute>} />
         {/* Phase-50 / 0060 — GEN1 trip-postcard-share-card-image-generation
             registers frontend route `/sharing/trips`. The page renders the
             deterministic recent-trips list + static-share-card hints

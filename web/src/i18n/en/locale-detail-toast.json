@@ -500,6 +500,16 @@
         "success": "Preconditioning started",
         "error": "Failed to start preconditioning"
       }
+    },
+    "journey": {
+      "create": {
+        "success": "Journey planned",
+        "error": "Failed to plan journey"
+      },
+      "transition": {
+        "success": "Journey {{status}}",
+        "error": "Failed to update journey"
+      }
     }
   }
 }

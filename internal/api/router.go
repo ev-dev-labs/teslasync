@@ -133,6 +133,7 @@ import (
 	apiguard "github.com/ev-dev-labs/teslasync/internal/api/guard"
 	apiimpers "github.com/ev-dev-labs/teslasync/internal/api/impersonate"
 	apixray "github.com/ev-dev-labs/teslasync/internal/api/ingestxray"
+	apijourney "github.com/ev-dev-labs/teslasync/internal/api/journey"
 	apilifetime "github.com/ev-dev-labs/teslasync/internal/api/lifetime"
 	apilocsnap "github.com/ev-dev-labs/teslasync/internal/api/locsnap"
 	"github.com/ev-dev-labs/teslasync/internal/api/maintenance"
@@ -2231,6 +2232,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		vehicledb.NewVehicleRepo(db),
 	)
 	waitoracleHandler := apiwaitoracle.NewHandler(apiwaitoracle.NewStore(db))
+	journeyHandler := apijourney.NewHandler(apijourney.NewStore(db))
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3864,6 +3866,19 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		r.Route("/waitoracle", func(r chi.Router) {
 			r.Get("/sites", waitoracleHandler.Sites)
 			r.Get("/forecast", waitoracleHandler.Forecast)
+		})
+
+		// Journey Autopilot (trip sessions + versioned plans)
+		r.Route("/journey", func(r chi.Router) {
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/sessions", journeyHandler.Create)
+			r.Get("/sessions", journeyHandler.List)
+			r.Get("/sessions/{id}", journeyHandler.Get)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/start", journeyHandler.Start)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/pause", journeyHandler.Pause)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/resume", journeyHandler.Resume)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/complete", journeyHandler.Complete)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/abort", journeyHandler.Abort)
+			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/sessions/{id}/plans", journeyHandler.SavePlan)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)

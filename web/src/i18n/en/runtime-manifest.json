@@ -675,7 +675,8 @@
       "tempImpact"
     ],
     "trips": [
-      "trips"
+      "trips",
+      "journey"
     ],
     "vehicle-systems": [
       "cabinThermal",
