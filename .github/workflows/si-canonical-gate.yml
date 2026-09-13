@@ -25,21 +25,7 @@ name: si-canonical-gate
 
 on:
   push:
-    paths:
-      - 'internal/**/*.go'
-      - 'cmd/**/*.go'
-      - 'web/src/**/*.ts'
-      - 'web/src/**/*.tsx'
-      - 'migrations/**/*.sql'
-      - '.github/workflows/si-canonical-gate.yml'
   pull_request:
-    paths:
-      - 'internal/**/*.go'
-      - 'cmd/**/*.go'
-      - 'web/src/**/*.ts'
-      - 'web/src/**/*.tsx'
-      - 'migrations/**/*.sql'
-      - '.github/workflows/si-canonical-gate.yml'
   workflow_dispatch:
     inputs:
       runner:
@@ -60,7 +46,7 @@ permissions:
 jobs:
   check:
     name: Block new legacy unit-suffixed identifiers
-    runs-on: ${{ github.event_name == 'workflow_dispatch' && github.event.inputs.runner || 'ubuntu-latest' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
