@@ -24,6 +24,14 @@ name: si-canonical-gate
 # themselves).
 
 on:
+  push:
+    paths:
+      - 'internal/**/*.go'
+      - 'cmd/**/*.go'
+      - 'web/src/**/*.ts'
+      - 'web/src/**/*.tsx'
+      - 'migrations/**/*.sql'
+      - '.github/workflows/si-canonical-gate.yml'
   pull_request:
     paths:
       - 'internal/**/*.go'
