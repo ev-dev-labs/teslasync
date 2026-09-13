@@ -1,35 +1,36 @@
 /* ============================================
-   TeslaSync Docs — Tesla-Inspired Dark Theme
+   TeslaSync Docs — professional dark theme
    ============================================ */
 
-/* ── Global Dark Override ── */
 :root {
-  --vp-c-bg: #0a0a1a;
-  --vp-c-bg-alt: #0f0f2a;
-  --vp-c-bg-soft: #141430;
-  --vp-c-bg-elv: #1a1a3e;
-  --vp-c-text-1: #e4e4ef;
-  --vp-c-text-2: #a0a0c0;
-  --vp-c-text-3: #6b6b8d;
-  --vp-c-brand-1: #00f0ff;
-  --vp-c-brand-2: #10b981;
-  --vp-c-brand-3: #00c8d6;
-  --vp-c-brand-soft: rgba(0, 240, 255, 0.12);
-  --vp-c-border: rgba(100, 100, 180, 0.15);
-  --vp-c-divider: rgba(100, 100, 180, 0.1);
-  --vp-c-gutter: rgba(0, 0, 0, 0.4);
-  --vp-nav-bg-color: rgba(10, 10, 26, 0.85);
-  --vp-sidebar-bg-color: #0a0a1a;
-  --vp-code-bg: rgba(0, 240, 255, 0.06);
-  --vp-code-color: #00f0ff;
-  --vp-c-tip-1: #00f0ff;
+  --vp-c-bg: #0b0d12;
+  --vp-c-bg-alt: #11141c;
+  --vp-c-bg-soft: #161b26;
+  --vp-c-bg-elv: #1b2130;
+  --vp-c-text-1: #f1f5f9;
+  --vp-c-text-2: #94a3b8;
+  --vp-c-text-3: #64748b;
+  --vp-c-brand-1: #38bdf8;
+  --vp-c-brand-2: #22c55e;
+  --vp-c-brand-3: #0ea5e9;
+  --vp-c-brand-soft: rgba(56, 189, 248, 0.12);
+  --vp-c-border: rgba(148, 163, 184, 0.14);
+  --vp-c-divider: rgba(148, 163, 184, 0.1);
+  --vp-c-gutter: rgba(0, 0, 0, 0.35);
+  --vp-nav-bg-color: rgba(11, 13, 18, 0.88);
+  --vp-sidebar-bg-color: #0b0d12;
+  --vp-code-bg: rgba(15, 23, 42, 0.85);
+  --vp-code-color: #7dd3fc;
+  --vp-c-tip-1: #38bdf8;
   --vp-c-warning-1: #f59e0b;
-  --vp-c-danger-1: #ef4444;
-  --vp-button-brand-bg: linear-gradient(135deg, #00f0ff, #10b981);
+  --vp-c-danger-1: #f43f5e;
+  --vp-button-brand-bg: #0ea5e9;
+  --vp-button-brand-hover-bg: #38bdf8;
   --vp-home-hero-name-color: transparent;
-  --vp-home-hero-name-background: linear-gradient(135deg, #00f0ff 0%, #10b981 50%, #a855f7 100%);
-  --vp-home-hero-image-background-image: radial-gradient(circle, rgba(0, 240, 255, 0.15) 0%, transparent 70%);
+  --vp-home-hero-name-background: linear-gradient(135deg, #38bdf8 0%, #22c55e 100%);
+  --vp-home-hero-image-background-image: radial-gradient(circle, rgba(56, 189, 248, 0.12) 0%, transparent 70%);
   --vp-home-hero-image-filter: blur(68px);
+  --vp-font-family-base: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
 }
 
 /* ── Light Theme Support ── */
@@ -175,9 +176,10 @@ html:not(.dark) .VPFeature .details {
 }
 
 html:not(.dark) .vp-doc h1 {
-  background: linear-gradient(135deg, #0077b6, #059669) !important;
-  -webkit-background-clip: text !important;
-  -webkit-text-fill-color: transparent !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+  color: #0a2540 !important;
 }
 
 html:not(.dark) .vp-doc h2 {
@@ -1827,4 +1829,73 @@ body:has(.ts-home)::before {
     filter: none !important;
   }
   .ts-home .ts-hero-cursor { display: none; }
+}
+
+/* Professional doc body: readable tables, quieter headings */
+.vp-doc table {
+  display: table;
+  width: 100%;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.vp-doc th {
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.vp-doc td code {
+  white-space: nowrap;
+}
+.vp-doc h1 {
+  letter-spacing: -0.03em;
+}
+.VPSidebarItem.level-0 .text {
+  font-weight: 600;
+}
+
+.docs-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+  margin: 1.25rem 0 2rem;
+}
+.docs-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px 18px;
+  border: 1px solid var(--vp-c-border);
+  border-radius: 8px;
+  background: var(--vp-c-bg-elv);
+  text-decoration: none !important;
+  color: inherit !important;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.docs-card:hover {
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 4px 16px rgba(10, 37, 64, 0.08);
+}
+.docs-card strong {
+  font-size: 0.95rem;
+  color: var(--vp-c-text-1);
+}
+.docs-card span {
+  font-size: 0.85rem;
+  line-height: 1.45;
+  color: var(--vp-c-text-2);
+  font-weight: 400;
+}
+html:not(.dark) {
+  --vp-c-bg: #ffffff;
+  --vp-c-bg-alt: #f6f9fc;
+  --vp-c-bg-soft: #f6f9fc;
+  --vp-c-bg-elv: #ffffff;
+  --vp-c-text-1: #0a2540;
+  --vp-c-text-2: #425466;
+  --vp-c-text-3: #6b7c93;
+  --vp-c-brand-1: #0a5cff;
+  --vp-c-brand-2: #0a2540;
+  --vp-c-brand-soft: rgba(10, 92, 255, 0.08);
+  --vp-c-border: #e3e8ee;
+  --vp-nav-bg-color: rgba(255, 255, 255, 0.92);
+  --vp-sidebar-bg-color: #ffffff;
 }
