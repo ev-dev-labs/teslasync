@@ -40,9 +40,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
     if (issued && !verifyMutation.isPending && verifyMutation.data === undefined && !verifyMutation.isError) {
       verifyMutation.mutate({ certificate: issued.certificate, signature: issued.signature });
     }
-    // verifyMutation is stable across renders (TanStack); issued carries the dep.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [issued]);
+  }, [issued, verifyMutation]);
 
   const verified = verifyMutation.data?.valid === true;
 

@@ -5,21 +5,21 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/api/fsd"
+	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/fsddigest"
 )
 
 type fakeFsdLoader struct {
-	input fsd.AnalyticsInput
+	input fsdweekly.AnalyticsInput
 	err   error
 	calls int
 }
 
 func (f *fakeFsdLoader) LoadAnalyticsInput(
 	context.Context, int64, time.Time, time.Time, time.Time,
-) (fsd.AnalyticsInput, error) {
+) (fsdweekly.AnalyticsInput, error) {
 	f.calls++
 	return f.input, f.err
 }
@@ -40,25 +40,25 @@ func (f *fakeDeduper) Remember(title string) {
 	f.exists = true
 }
 
-func measuredFSDInput(now time.Time) fsd.AnalyticsInput {
+func measuredFSDInput(now time.Time) fsdweekly.AnalyticsInput {
 	version := int16(1)
 	value := 16000.0
 	drive := 40000.0
-	sample := func(field string, at time.Time, meters float64) fsd.Sample {
+	sample := func(field string, at time.Time, meters float64) fsdweekly.Sample {
 		v := meters
-		return fsd.Sample{
+		return fsdweekly.Sample{
 			Field:                field,
 			TS:                   at,
 			Value:                &v,
 			NormalizationVersion: &version,
 		}
 	}
-	return fsd.AnalyticsInput{
-		CounterSamples: []fsd.Sample{
-			sample(fsd.SignalFSDDistance, now.Add(-2*time.Hour), 0),
-			sample(fsd.SignalFSDDistance, now.Add(-time.Hour), value),
-			sample(fsd.SignalDrivingDistance, now.Add(-2*time.Hour), 0),
-			sample(fsd.SignalDrivingDistance, now.Add(-time.Hour), drive),
+	return fsdweekly.AnalyticsInput{
+		CounterSamples: []fsdweekly.Sample{
+			sample(fsdweekly.SignalFSDDistance, now.Add(-2*time.Hour), 0),
+			sample(fsdweekly.SignalFSDDistance, now.Add(-time.Hour), value),
+			sample(fsdweekly.SignalDrivingDistance, now.Add(-2*time.Hour), 0),
+			sample(fsdweekly.SignalDrivingDistance, now.Add(-time.Hour), drive),
 		},
 	}
 }

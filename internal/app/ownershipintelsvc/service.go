@@ -181,15 +181,6 @@ func pageSlice[T any](items []T, limit, offset int) ([]T, int) {
 	return append([]T(nil), items[offset:end]...), total
 }
 
-func percentileOf(sorted []float64, value float64) *float64 {
-	if len(sorted) == 0 {
-		return nil
-	}
-	index := sort.SearchFloat64s(sorted, value)
-	pct := float64(index) / float64(len(sorted)) * 100
-	return &pct
-}
-
 func median(values []float64) *float64 {
 	if len(values) == 0 {
 		return nil
@@ -215,18 +206,6 @@ func mean(values []float64) *float64 {
 	return safeDiv(total, float64(len(values)))
 }
 
-func stddev(values []float64) float64 {
-	if len(values) < 2 {
-		return 0
-	}
-	average := deref(mean(values))
-	sum := 0.0
-	for _, value := range values {
-		delta := value - average
-		sum += delta * delta
-	}
-	return math.Sqrt(sum / float64(len(values)-1))
-}
 
 // validCurrency enforces the ISO-4217 alpha-3 shape used by every money column.
 func validCurrency(code string) (string, bool) {

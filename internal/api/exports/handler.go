@@ -678,6 +678,3 @@ func pagination(r *http.Request) (limit, offset int) {
 	return apiparams.Pagination(r)
 }
 
-func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
-	return apiparams.ParseDateRange(r)
-}

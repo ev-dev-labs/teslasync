@@ -408,13 +408,6 @@ func (t *TelemetrySessionTracker) backfillChargingPlace(ctx context.Context, can
 	return "skipped", nil
 }
 
-// resolveChargingGeofence matches (or, failing that, discovers) the
-// charging-place geofence for (lat, lon), returning its id and display
-// name. Counts the outcome via metrics.GeofenceDiscoveryTotal.
-func (t *TelemetrySessionTracker) resolveChargingGeofence(ctx context.Context, sessionID int64, lat, lon float64) (int64, string, error) {
-	return t.resolveChargingGeofenceWithName(ctx, sessionID, lat, lon, "", true, true)
-}
-
 func (t *TelemetrySessionTracker) resolveChargingGeofenceWithName(
 	ctx context.Context,
 	sessionID int64,

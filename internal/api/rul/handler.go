@@ -85,11 +85,6 @@ var specByComponent = func() map[string]componentSpec {
 // Windowing constants. The SQL below hard-codes these same intervals (pgx
 // interval literals cannot be a bound $-param cleanly); keep the two in sync.
 const (
-	// sohWindowDays bounds the SoH reconstruction lookback — long enough to see
-	// a degradation trend without scanning the whole hypertable.
-	sohWindowDays = 400
-	// recentWindowDays bounds the odometer accumulation window used for km/day.
-	recentWindowDays = 90
 	// defaultCapacityWh mirrors batterydegradation's fallback pack size.
 	defaultCapacityWh = 75000.0
 )

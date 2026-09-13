@@ -590,7 +590,7 @@ func candidateValid(candidate domain.Candidate) bool {
 		candidate.Severity.Valid() &&
 		len(candidate.Evidence) > 0 &&
 		candidate.BaseConfidence > 0 &&
-		candidate.ExpiresAt.IsZero() == false &&
+		!candidate.ExpiresAt.IsZero() &&
 		projectedImpactValid(candidate.ProjectedImpact)
 }
 

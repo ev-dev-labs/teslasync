@@ -86,8 +86,7 @@ func TestCommunicationsBulkClientNormalizesOfficialRowsAndConditionalHeaders(t *
 		"ENGINE",
 		"Not a Tesla communication.",
 	)
-	var server *httptest.Server
-	server = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("If-None-Match"); got != `"prior"` {
 			t.Errorf("If-None-Match = %q", got)
 		}

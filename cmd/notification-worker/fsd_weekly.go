@@ -11,7 +11,7 @@ import (
 	"go.opentelemetry.io/otel/codes"
 	oteltrace "go.opentelemetry.io/otel/trace"
 
-	"github.com/ev-dev-labs/teslasync/internal/api/fsd"
+	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
 	"github.com/ev-dev-labs/teslasync/internal/notification"
 	"github.com/ev-dev-labs/teslasync/internal/notification/fsddigest"
@@ -19,10 +19,8 @@ import (
 
 const fsdWeeklyDigestInterval = time.Hour
 
-// fsdWeeklyLoader is the slice of fsd.Repo the digest tick needs.
-type fsdWeeklyLoader interface {
-	LoadAnalyticsInput(ctx context.Context, vehicleID int64, from, split, to time.Time) (fsd.AnalyticsInput, error)
-}
+// fsdWeeklyLoader is the slice of fsdweekly.Loader the digest tick needs.
+type fsdWeeklyLoader = fsdweekly.Loader
 
 // titleDeduper skips a vehicle/week that already has a non-failed log row.
 type titleDeduper interface {
@@ -121,8 +119,8 @@ func sendFsdWeeklyDigest(
 	vehicle *vehiclemodel.Vehicle,
 	now time.Time,
 ) string {
-	loc := fsd.LoadLocationOrUTC(vehicle.Timezone)
-	weekStart, weekEnd := fsd.CurrentWeekBounds(now, loc)
+	loc := fsdweekly.LoadLocationOrUTC(vehicle.Timezone)
+	weekStart, weekEnd := fsdweekly.CurrentWeekBounds(now, loc)
 	title := fsddigest.Title(vehicle.ID, weekStart, loc)
 
 	already, err := deduper.ExistsTitleSince(ctx, title, weekStart)
@@ -134,7 +132,7 @@ func sendFsdWeeklyDigest(
 		return "already_sent"
 	}
 
-	snapshot, err := loadFsdWeeklySnapshot(ctx, loader, vehicle.ID, loc, weekStart, weekEnd)
+	snapshot, err := fsdweekly.Snapshot(ctx, loader, vehicle.ID, loc, weekStart, weekEnd)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", vehicle.ID).Msg("fsd-weekly: insights load failed")
 		return "error"
@@ -166,41 +164,3 @@ func sendFsdWeeklyDigest(
 	return "sent"
 }
 
-func loadFsdWeeklySnapshot(
-	ctx context.Context,
-	loader fsdWeeklyLoader,
-	vehicleID int64,
-	loc *time.Location,
-	weekStart, weekEnd time.Time,
-) (fsddigest.Snapshot, error) {
-	prevStart := fsd.PreviousWeekStart(weekStart, loc)
-	input, err := loader.LoadAnalyticsInput(ctx, vehicleID, prevStart, weekStart, weekEnd)
-	if err != nil {
-		return fsddigest.Snapshot{}, err
-	}
-	current := fsd.Aggregate(fsd.AggregateParams{
-		VehicleID: vehicleID,
-		Days:      7,
-		Loc:       loc,
-		Start:     weekStart,
-		End:       weekEnd,
-		Samples:   input.CounterSamples,
-	})
-	previous := fsd.Aggregate(fsd.AggregateParams{
-		VehicleID: vehicleID,
-		Days:      7,
-		Loc:       loc,
-		Start:     prevStart,
-		End:       weekStart,
-		Samples:   input.PreviousCounterSamples,
-	})
-	current.Analytics = fsd.BuildDriveAnalytics(current, previous, input, loc, false)
-	return fsddigest.Snapshot{
-		VehicleID:      vehicleID,
-		WeekStart:      weekStart,
-		Location:       loc,
-		FSDDistanceM:   current.Totals.FSDDistanceM,
-		SharePct:       current.Totals.FSDSharePct,
-		ShareChangePts: current.Analytics.Comparison.FSDShareChangePctPoints,
-	}, nil
-}

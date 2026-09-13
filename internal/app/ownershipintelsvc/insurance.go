@@ -523,12 +523,11 @@ func riskLevers(
 		}
 		spec := specByCode[factor.Code]
 		const targetReduction = 25.0
-		improvedRate := factor.ObservedRate
+		mult := 1 + targetReduction/100
 		if spec.direction == domain.DirectionHigherIsWorse {
-			improvedRate = factor.ObservedRate * (1 - targetReduction/100)
-		} else {
-			improvedRate = factor.ObservedRate * (1 + targetReduction/100)
+			mult = 1 - targetReduction/100
 		}
+		improvedRate := factor.ObservedRate * mult
 		improvedDeviation := factorDeviation(spec, improvedRate)
 		scoreDelta := (improvedDeviation - factor.Score) * spec.weight * 50
 		rank++

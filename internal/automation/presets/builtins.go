@@ -318,15 +318,6 @@ func conditionSignalNum(signal, op string, value float64) json.RawMessage {
 	})
 }
 
-func conditionSignalBool(signal, op string, value bool) json.RawMessage {
-	return mustMarshal(map[string]any{
-		"kind":       "condition_signal",
-		"signal":     signal,
-		"op":         op,
-		"value_bool": value,
-	})
-}
-
 func mustMarshal(v any) json.RawMessage {
 	b, err := json.Marshal(v)
 	if err != nil {
