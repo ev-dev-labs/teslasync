@@ -1,3 +1,4 @@
+// virtualize-audit:skip paginated FSD observatory journal is a short client-paged card list, not a DataTable
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { AlertTriangle, BookOpen, History, Route } from 'lucide-react';
