@@ -88,7 +88,7 @@ jobs:
 
       - name: Capture API logs on failure
         if: failure()
-        run: docker compose logs api > api.log
+        run: docker compose logs teslasync-api > api.log
         continue-on-error: true
 
       - name: Upload API logs
