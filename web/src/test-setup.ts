@@ -2,6 +2,36 @@ import '@testing-library/jest-dom'
 import { beforeEach, vi } from 'vitest'
 import * as resilience from '@/lib/resilience'
 
+vi.mock('react-i18next', () => {
+  const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
+    if (!vars) return str
+    let s = str
+    for (const [k, v] of Object.entries(vars)) {
+      s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
+    }
+    return s
+  }
+  const t = (key: string, second?: unknown, third?: unknown): string => {
+    if (typeof second === 'string') {
+      return interpolate(
+        second,
+        third && typeof third === 'object' ? (third as Record<string, unknown>) : undefined,
+      )
+    }
+    if (second && typeof second === 'object') {
+      const bag = second as Record<string, unknown>
+      const tpl = typeof bag.defaultValue === 'string' ? bag.defaultValue : key
+      return interpolate(tpl, bag)
+    }
+    return key
+  }
+  return {
+    useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+    Trans: ({ children }: { children?: unknown }) => children,
+    initReactI18next: { type: '3rdParty', init: () => undefined },
+  }
+})
+
 // Global default mock for useSettings. Many components reach for it
 // transitively via useDateFormat / useUnits / useFormatting; without a
 // stub these components fail with "No QueryClient set" inside jsdom
@@ -78,6 +108,19 @@ vi.mock('@/lib/timezone', async () => {
     useTimezone: () => 'UTC',
   }
 })
+
+// ChartContainer always mounts annotation query/mutations. Bare page
+// tests have no QueryClient — stub the hooks so they don't throw.
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotationsAsData: () => ({
+    annotations: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+}))
 
 // Reset the module-scoped auth-expired latch in resilience.ts between
 // every test. vitest's per-file isolation is not enough on its own —

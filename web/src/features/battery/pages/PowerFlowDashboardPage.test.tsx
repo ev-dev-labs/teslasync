@@ -110,6 +110,15 @@ vi.mock('@/api/hooks/useEnergy', () => ({
   useRefreshTeslaEnergyLiveStatus: vi.fn(),
 }));
 vi.mock('@/hooks/useRangeState', () => ({ useRangeState: vi.fn() }));
+vi.mock('../components/power-flow', async () => {
+  const actual = await vi.importActual<typeof import('../components/power-flow')>(
+    '../components/power-flow',
+  );
+  return {
+    ...actual,
+    SolarChargeAdviceStrip: () => null,
+  };
+});
 
 // ChartContainer unconditionally reaches for the annotation hooks (network +
 // ToastProvider). Neither is relevant here — stub them to inert no-ops.

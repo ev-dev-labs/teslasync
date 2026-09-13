@@ -109,8 +109,14 @@ vi.mock('@/components/charts', async () => {
     ReferenceLine: Null,
     ComposedChart: Null,
     Bar: Null,
+    ChartLegend: Null,
+    EmbeddedChart: ({ children }: { children?: ReactNode }) => <>{children}</>,
   };
 });
+
+vi.mock('../components/EfficiencyDetectivePanel', () => ({
+  EfficiencyDetectivePanel: () => null,
+}));
 
 // ── forms row: VehicleSelect is a bare marker. ──
 vi.mock('@/components/forms', () => ({
