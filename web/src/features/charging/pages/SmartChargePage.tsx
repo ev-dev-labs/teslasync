@@ -356,6 +356,7 @@ export default function SmartChargePage() {
 
               <div className="space-y-4">
                 <Select
+                  id="smart-charge-rate-plan"
                   label={t('chargePlanner.ratePlan', 'Rate Plan')}
                   options={ratePlanSelectOptions}
                   value={ratePlanId}
@@ -381,6 +382,7 @@ export default function SmartChargePage() {
                 />
 
                 <Input
+                  id="smart-charge-max-amps"
                   label={t('chargePlanner.maxAmps', 'Max Amps')}
                   type="number"
                   min={8}

@@ -172,8 +172,8 @@ describe('numberFormat — fmtNumber', () => {
 
   it('clamps an out-of-range precision instead of throwing (regression)', () => {
     expect(() => fmtNumber(5, 150)).not.toThrow()
-    // Clamped to Intl's max of 100 fraction digits.
-    expect(fmtNumber(5, 150).split('.')[1]).toHaveLength(100)
+    // Clamped to Intl's max of 20 fraction digits.
+    expect(fmtNumber(5, 150).split('.')[1]).toHaveLength(20)
     // Negative precision clamps to 0 rather than throwing.
     expect(fmtNumber(5.4, -3)).toBe('5')
   })

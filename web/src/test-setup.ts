@@ -115,6 +115,30 @@ vi.mock('@/api/hooks/useAnnotations', () => ({
   useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
 }))
 
+vi.mock('@/components/feedback/Toast', async () => {
+  const actual = await vi.importActual<typeof import('@/components/feedback/Toast')>(
+    '@/components/feedback/Toast',
+  )
+  const toastApi = {
+    toast: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
+  }
+  return {
+    ...actual,
+    useToast: () => {
+      try {
+        return actual.useToast()
+      } catch {
+        return toastApi
+      }
+    },
+  }
+})
+
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>(
     '@/lib/timezone',

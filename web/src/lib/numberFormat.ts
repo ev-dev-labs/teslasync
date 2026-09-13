@@ -55,7 +55,8 @@ export function isFiniteNumber(v: unknown): v is number {
  */
 function toFractionDigits(value: number): number {
   if (!Number.isFinite(value)) return _globalPrecision
-  return Math.min(100, Math.max(0, value))
+  // ECMA-402 / ICU: fraction digits must be in [0, 20].
+  return Math.min(20, Math.max(0, value))
 }
 
 /**

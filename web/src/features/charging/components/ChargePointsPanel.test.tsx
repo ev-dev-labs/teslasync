@@ -7,6 +7,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { ReactElement } from 'react';
+
+function renderPanel(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 vi.mock('@/api/hooks/useOcpp', () => ({
   useOcppChargePoints: vi.fn(),
@@ -55,7 +61,7 @@ beforeEach(() => {
 
 describe('ChargePointsPanel', () => {
   it('renders charger identity with per-connector status badges', () => {
-    render(<ChargePointsPanel />);
+    renderPanel(<ChargePointsPanel />);
     expect(screen.getByText('OCPP Charge Points')).toBeInTheDocument();
     expect(screen.getByText('Wallbox Pulsar Plus')).toBeInTheDocument();
     expect(screen.getByText('#1 Charging')).toBeInTheDocument();
@@ -64,7 +70,7 @@ describe('ChargePointsPanel', () => {
   });
 
   it('renders recent sessions with delivered energy', () => {
-    render(<ChargePointsPanel />);
+    renderPanel(<ChargePointsPanel />);
     expect(screen.getByText('Recent sessions')).toBeInTheDocument();
     expect(screen.getByText(/wallbox-1 · #42/)).toBeInTheDocument();
   });
@@ -72,7 +78,7 @@ describe('ChargePointsPanel', () => {
   it('renders an empty state when no charger has reported', () => {
     mockPoints.mockReturnValue({ data: [], isLoading: false, isError: false, error: null, refetch: vi.fn() });
     mockSessions.mockReturnValue({ data: [], isLoading: false, isError: false, error: null, refetch: vi.fn() });
-    render(<ChargePointsPanel />);
+    renderPanel(<ChargePointsPanel />);
     expect(screen.getByText(/No OCPP chargers reporting yet/)).toBeInTheDocument();
     expect(screen.queryByText('Recent sessions')).not.toBeInTheDocument();
   });
@@ -85,7 +91,7 @@ describe('ChargePointsPanel', () => {
       error: new Error('db down'),
       refetch: vi.fn(),
     });
-    render(<ChargePointsPanel />);
+    renderPanel(<ChargePointsPanel />);
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

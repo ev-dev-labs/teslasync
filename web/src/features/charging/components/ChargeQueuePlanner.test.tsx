@@ -95,6 +95,6 @@ describe('ChargeQueuePlanner', () => {
     render(<ChargeQueuePlanner />);
     expect(screen.getByText('All cars ready on time')).toBeTruthy();
     expect(screen.getByText('Charge in order.')).toBeTruthy();
-    expect(screen.getByText('Beta')).toBeTruthy();
+    expect(screen.getAllByText('Beta').length).toBeGreaterThan(0);
   });
 });

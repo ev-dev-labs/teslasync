@@ -3,6 +3,7 @@
  * invalid guardrails block submit.
  */
 import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,8 +23,17 @@ vi.mock('@/api/hooks/useFleetOps', () => {
 });
 
 import { DriverDialog } from './DriverDialog';
+import type { ComponentProps } from 'react';
 
 const callbacks = { onClose: vi.fn(), onSaved: vi.fn(), onDelete: vi.fn(), onRefresh: vi.fn() };
+
+function renderDialog(props: ComponentProps<typeof DriverDialog>) {
+  return render(
+    <MemoryRouter>
+      <DriverDialog {...props} />
+    </MemoryRouter>,
+  );
+}
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,10 +42,10 @@ beforeEach(() => {
 
 describe('DriverDialog guardrails', () => {
   it('submits charge cap + curfew in the create payload', () => {
-    render(<DriverDialog item={null} {...callbacks} />);
-    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Teen' } });
-    fireEvent.change(screen.getByLabelText('Non-sensitive reference code'), { target: { value: 'T1' } });
-    fireEvent.change(screen.getByLabelText('Charge cap (%)'), { target: { value: '80' } });
+    renderDialog({ item: null, ...callbacks });
+    fireEvent.change(screen.getByLabelText(/Display name/), { target: { value: 'Teen' } });
+    fireEvent.change(screen.getByLabelText(/Non-sensitive reference code/), { target: { value: 'T1' } });
+    fireEvent.change(screen.getByLabelText(/Charge cap \(%\)/), { target: { value: '80' } });
     fireEvent.change(screen.getByLabelText('Curfew start'), { target: { value: '22:00' } });
     fireEvent.change(screen.getByLabelText('Curfew end'), { target: { value: '06:00' } });
     fireEvent.click(screen.getByText('Save'));
@@ -50,9 +60,9 @@ describe('DriverDialog guardrails', () => {
   });
 
   it('blocks submit on a half-set curfew', () => {
-    render(<DriverDialog item={null} {...callbacks} />);
-    fireEvent.change(screen.getByLabelText('Display name'), { target: { value: 'Teen' } });
-    fireEvent.change(screen.getByLabelText('Non-sensitive reference code'), { target: { value: 'T1' } });
+    renderDialog({ item: null, ...callbacks });
+    fireEvent.change(screen.getByLabelText(/Display name/), { target: { value: 'Teen' } });
+    fireEvent.change(screen.getByLabelText(/Non-sensitive reference code/), { target: { value: 'T1' } });
     fireEvent.change(screen.getByLabelText('Curfew start'), { target: { value: '22:00' } });
     fireEvent.click(screen.getByText('Save'));
 
@@ -61,16 +71,14 @@ describe('DriverDialog guardrails', () => {
   });
 
   it('seeds guardrails when editing an existing driver', () => {
-    render(
-      <DriverDialog
-        item={{
+    renderDialog({
+        item: {
           id: 1, display_name: 'Teen', reference_code: 'T1', status: 'active',
           max_charge_soc: 80, curfew_start: '22:00', curfew_end: '06:00',
           version: 2, created_at: '', updated_at: '',
-        }}
-        {...callbacks}
-      />,
-    );
+        },
+        ...callbacks,
+      });
     expect(screen.getByLabelText('Charge cap (%)')).toHaveProperty('value', '80');
     expect(screen.getByLabelText('Curfew start')).toHaveProperty('value', '22:00');
   });
