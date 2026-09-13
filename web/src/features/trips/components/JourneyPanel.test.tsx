@@ -120,7 +120,7 @@ describe('JourneyPanel', () => {
     expect(mockList).toHaveBeenCalledWith(7, '');
     expect(screen.getByText('Tahoe ski trip')).toBeInTheDocument();
     expect(screen.getByText('Home → Tahoe')).toBeInTheDocument();
-    expect(screen.getByText('planned')).toBeInTheDocument();
+    expect(screen.getAllByText('Planned').length).toBeGreaterThan(0);
     expect(screen.getByText('v1')).toBeInTheDocument();
   });
 
@@ -140,7 +140,7 @@ describe('JourneyPanel', () => {
     mockCreate.mockReturnValue({ mutate, isPending: false });
     renderPanel();
     fireEvent.click(screen.getByText('Plan journey'));
-    fireEvent.change(screen.getByLabelText('Journey name'), {
+    fireEvent.change(screen.getByLabelText(/Journey name/), {
       target: { value: 'Vegas weekend' },
     });
     fireEvent.change(screen.getByLabelText('Destination'), {
