@@ -71,7 +71,7 @@ export function TripCopilotCard({ currentSoc, minArrivalSoc }: TripCopilotCardPr
         ) : check.isError ? (
           <ErrorText>{(check.error as Error)?.message || t('tripPlanner.copilot.error', 'Confidence check failed')}</ErrorText>
         ) : !result ? (
-          <EmptyState
+          <EmptyState /* no-action: informational empty — no CTA */
             icon={<Gauge className="h-8 w-8" />}
             message={t('tripPlanner.copilot.empty', 'Enter remaining distance for a live arrival verdict.')}
           />

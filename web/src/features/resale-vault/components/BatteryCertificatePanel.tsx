@@ -69,7 +69,7 @@ export function BatteryCertificatePanel({ vehicleId }: BatteryCertificatePanelPr
       {certQuery.isLoading ? (
         <Skeleton height={160} />
       ) : certQuery.isError || !issued ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           message={t('resaleVault.certificate.empty', 'No certificate available for this vehicle.')}
         />
       ) : (

@@ -157,7 +157,7 @@ export function FsdObservatoryPanel({ insights, state }: FsdObservatoryPanelProp
                 />
               </>
             ) : (
-              <EmptyState
+              <EmptyState /* no-action: informational empty — no CTA */
                 icon={<History className="h-8 w-8" aria-hidden="true" />}
                 message={t(
                   'fsd.observatory.timelineEmpty',

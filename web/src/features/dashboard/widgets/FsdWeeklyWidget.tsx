@@ -74,7 +74,7 @@ export default function FsdWeeklyWidget({ vehicleId, size }: WidgetProps) {
       }}
     >
       {id <= 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Gauge className="h-5 w-5" />}
           message={t('widget.fsdWeekly.noVehicle', 'Select a vehicle')}
           className="py-4"

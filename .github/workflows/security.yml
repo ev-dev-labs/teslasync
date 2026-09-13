@@ -136,7 +136,11 @@ jobs:
       - name: Verify Gitleaks policy catches secrets
         shell: bash
         run: |
-          fixture="$(mktemp -d)"
+          # Keep fixtures under the workspace so Docker bind-mounts work on
+          # self-hosted runners where host /tmp is not visible inside Docker.
+          fixture="$(pwd)/.gitleaks-policy-fixture"
+          rm -rf "$fixture"
+          mkdir -p "$fixture"
           trap 'rm -rf "$fixture"' EXIT
           write_private_key() {
             printf '%s %s\n%s\n%s %s\n' \
@@ -144,14 +148,21 @@ jobs:
               'MIIEpgIBAAKCAQEA7Q0qj5WmCqvTNSiP1w3M9yKf9c2V8zR4' \
               '-----END' 'PRIVATE KEY-----' > "$1"
           }
-          for fixture_path in production.go internal/negative_test.go web/src/negative.test.ts; do
-            mkdir -p "$(dirname "$fixture/$fixture_path")"
-            write_private_key "$fixture/$fixture_path"
-            if docker run --rm \
+          run_detect() {
+            local source_dir="$1"
+            docker run --rm \
               -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
               -v "$fixture:/fixture:ro" \
               "${GITLEAKS_IMAGE}" \
-              detect --source="/fixture/$fixture_path" --config=/config.toml --no-git --redact --no-banner; then
+              detect --source="/fixture/${source_dir}" --config=/config.toml --no-git --redact --no-banner
+          }
+          n=0
+          for fixture_path in production.go internal/negative_test.go web/src/negative.test.ts; do
+            n=$((n + 1))
+            case_dir="pk-${n}"
+            mkdir -p "$fixture/$case_dir/$(dirname "$fixture_path")"
+            write_private_key "$fixture/$case_dir/$fixture_path"
+            if run_detect "$case_dir"; then
               echo "Gitleaks failed to detect generated $fixture_path" >&2
               exit 1
             fi
@@ -160,26 +171,24 @@ jobs:
           write_stopword_fixture() {
             printf 'const %s = "%s%s"\n' "$1" "$2" "$3" > "$4"
           }
+          n=0
           for fixture_path in source-stopword.go web/src/stopword.test.ts; do
-            mkdir -p "$(dirname "$fixture/$fixture_path")"
-            write_stopword_fixture token 'sk_live_' 'abcdef1234' "$fixture/$fixture_path"
-            if docker run --rm \
-              -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
-              -v "$fixture:/fixture:ro" \
-              "${GITLEAKS_IMAGE}" \
-              detect --source="/fixture/$fixture_path" --config=/config.toml --no-git --redact --no-banner; then
+            n=$((n + 1))
+            case_dir="stripe-${n}"
+            mkdir -p "$fixture/$case_dir/$(dirname "$fixture_path")"
+            write_stopword_fixture token 'sk_live_' 'abcdef1234' "$fixture/$case_dir/$fixture_path"
+            if run_detect "$case_dir"; then
               echo "Gitleaks failed to detect generated Stripe-like $fixture_path" >&2
               exit 1
             fi
           done
+          n=0
           for fixture_path in source-refresh.go web/src/refresh.test.ts; do
-            mkdir -p "$(dirname "$fixture/$fixture_path")"
-            write_stopword_fixture refresh_token 'rt_fake_refresh_token_for_seed_data_only_' 'abc123def456' "$fixture/$fixture_path"
-            if docker run --rm \
-              -v "$(pwd)/.gitleaks.toml:/config.toml:ro" \
-              -v "$fixture:/fixture:ro" \
-              "${GITLEAKS_IMAGE}" \
-              detect --source="/fixture/$fixture_path" --config=/config.toml --no-git --redact --no-banner; then
+            n=$((n + 1))
+            case_dir="refresh-${n}"
+            mkdir -p "$fixture/$case_dir/$(dirname "$fixture_path")"
+            write_stopword_fixture refresh_token 'rt_fake_refresh_token_for_seed_data_only_' 'abc123def456' "$fixture/$case_dir/$fixture_path"
+            if run_detect "$case_dir"; then
               echo "Gitleaks failed to detect generated refresh-token $fixture_path" >&2
               exit 1
             fi

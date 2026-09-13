@@ -114,7 +114,7 @@ export function FsdCommuteExperimentPanel({
             pagination
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: informational empty — no CTA */
             icon={<FlaskConical className="h-8 w-8" aria-hidden="true" />}
             message={t(
               'fsd.experiment.empty',

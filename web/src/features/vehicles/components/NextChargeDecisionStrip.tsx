@@ -56,7 +56,7 @@ export function NextChargeDecisionStrip({ vehicleId, currentSoc }: NextChargeDec
           resourceName={t('nextCharge.resource', 'Next charge decision')}
         />
       ) : currentSoc == null || !Number.isFinite(currentSoc) ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Zap className="h-5 w-5" />}
           message={t('nextCharge.waitingSoc', 'Waiting for live battery level')}
           className="py-8"

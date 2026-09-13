@@ -35,7 +35,7 @@ export function SitePriceRadar({ vin, enabled }: SitePriceRadarProps) {
       ) : isError ? (
         <QueryError error={error} onRetry={() => refetch()} />
       ) : sites.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<BadgePercent className="h-10 w-10" aria-hidden="true" />}
           message={t('tesla_charging.noPriceData', 'No priced Supercharger visits yet.')}
         />

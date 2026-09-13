@@ -225,7 +225,7 @@ export function PresetGallery({
         />
       )}
       {filteredPresets.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.clock className="h-8 w-8" />}
           message={t('automations.presets.emptyCategory', 'No presets in this category')}
         />

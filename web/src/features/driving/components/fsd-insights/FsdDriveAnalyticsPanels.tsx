@@ -608,7 +608,7 @@ function FirmwareSpotlightPanel({ insights, state }: FsdDriveAnalyticsPanelsProp
             pagination
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: informational empty — no CTA */
             icon={<Cpu className="h-8 w-8" aria-hidden="true" />}
             message={hasFirmwarePair
               ? t(
@@ -767,7 +767,7 @@ function CommuteIdentityPanel({ insights, state }: FsdDriveAnalyticsPanelsProps)
             pagination
           />
         ) : (
-          <EmptyState
+          <EmptyState /* no-action: informational empty — no CTA */
             icon={<Route className="h-8 w-8" aria-hidden="true" />}
             message={t(
               'fsd.commute.empty',
