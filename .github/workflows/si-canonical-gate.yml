@@ -52,7 +52,7 @@ permissions:
 jobs:
   check:
     name: Block new legacy unit-suffixed identifiers
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ${{ inputs.runner || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
         with:
