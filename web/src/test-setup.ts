@@ -28,6 +28,7 @@ vi.mock('react-i18next', () => {
   return {
     useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
     Trans: ({ children }: { children?: unknown }) => children,
+    I18nextProvider: ({ children }: { children?: unknown }) => children,
     initReactI18next: { type: '3rdParty', init: () => undefined },
   }
 })
@@ -99,6 +100,21 @@ vi.mock('@/hooks/useSettings', async () => {
 // (react-query) AND useMatch / useSearchParams (Router context). Both
 // crash in bare jsdom renders. Stub it to return UTC by default;
 // tests that need vehicle/local-time can still mock it per-file.
+// ChartContainer always mounts annotation query/mutations. Bare page
+// tests have no QueryClient — stub the hooks so they don't throw.
+// useAnnotations.test.tsx calls vi.unmock to exercise the real module.
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotationsAsData: () => ({
+    annotations: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>(
     '@/lib/timezone',
@@ -109,18 +125,6 @@ vi.mock('@/lib/timezone', async () => {
   }
 })
 
-// ChartContainer always mounts annotation query/mutations. Bare page
-// tests have no QueryClient — stub the hooks so they don't throw.
-vi.mock('@/api/hooks/useAnnotations', () => ({
-  useChartAnnotationsAsData: () => ({
-    annotations: [],
-    isLoading: false,
-    isError: false,
-    error: null,
-  }),
-  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
-  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
-}))
 
 // Reset the module-scoped auth-expired latch in resilience.ts between
 // every test. vitest's per-file isolation is not enough on its own —
