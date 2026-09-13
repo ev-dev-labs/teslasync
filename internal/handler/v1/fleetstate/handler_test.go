@@ -1,4 +1,4 @@
-package v1
+package fleetstate
 
 // Wire-contract + input-validation coverage for GET /api/v1/vehicles/states.
 //

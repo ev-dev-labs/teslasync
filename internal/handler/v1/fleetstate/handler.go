@@ -1,4 +1,4 @@
-package v1
+package fleetstate
 
 // Fleet batch current-state handler (ADR-009 canonical home).
 //

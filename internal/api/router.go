@@ -402,6 +402,7 @@ import (
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
+	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -631,7 +632,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// CacheTTL enables coalescing + a 1s successful-result micro-cache: the
 	// SPA's multi-tab / SSE-burst thundering herd collapses into ONE storage
 	// read. Failures are never cached and every caller gets its own copy.
-	fleetStateHandler := v1handlers.NewFleetStateHandler(fleetstatesvc.New(fleetstatesvc.Options{
+	fleetStateHandler := fleetstatehandler.NewFleetStateHandler(fleetstatesvc.New(fleetstatesvc.Options{
 		Vehicles: vehicledb.NewVehicleRepo(db),
 		Resolver: vehicleSvc,
 		Live:     liveSignalStore,
