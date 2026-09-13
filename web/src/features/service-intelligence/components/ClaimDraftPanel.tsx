@@ -94,7 +94,7 @@ export function ClaimDraftPanel({ vehicleId }: ClaimDraftPanelProps) {
         selected={vehicleId != null}
         loading={query.isLoading || query.isFetching}
         error={draftState.fatalError}
-        empty={submitted == null || query.data == null}
+        empty={query.data == null}
         icon={<Icons.fileText className="h-9 w-9" />}
         selectTitle={t('serviceIntelligence.common.selectTitle', 'Select a vehicle')}
         selectMessage={t(
