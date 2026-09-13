@@ -37,6 +37,7 @@ import {
   DisclosureProfileBuilder,
   EvidenceInventoryPanel,
   BatterySummaryPanel,
+  BatteryCertificatePanel,
   MaintenanceSummaryPanel,
   SoftwareUpdateSummaryPanel,
   WarrantySummaryPanel,
@@ -130,6 +131,7 @@ export default function WarrantyResaleVaultPage() {
                 hasPartialErrors={hasPartialErrors}
               />
               <BatterySummaryPanel battery={evidence.battery} />
+              <BatteryCertificatePanel vehicleId={vehicleId} />
               <MaintenanceSummaryPanel maintenance={evidence.maintenance} />
               <SoftwareUpdateSummaryPanel softwareUpdates={evidence.software_updates} />
               <WarrantySummaryPanel warranty={evidence.warranty} />

@@ -21,6 +21,8 @@ import type {
   DrivingCoachData,
   TripPlan,
   TripPlanRequest,
+  TripConfidence,
+  TripConfidenceRequest,
   GeocodeResult,
 } from '@/types/driving';
 import type {
@@ -293,6 +295,19 @@ export function usePlanTrip() {
       }),
     onSuccess: () => success('toast.trip.plan.success', 'Trip planned'),
     onError: (err) => error(err, 'toast.trip.plan.error', 'Failed to plan trip'),
+  });
+}
+
+/** Mutation to check en-route arrival confidence for remaining distance. */
+export function useTripConfidence() {
+  const { error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: TripConfidenceRequest) =>
+      request<TripConfidence>('/trip-planner/confidence', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onError: (err) => error(err, 'toast.trip.confidence.error', 'Failed to check arrival confidence'),
   });
 }
 

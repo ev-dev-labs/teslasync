@@ -215,6 +215,7 @@ export default function ChatbotPage() {
         created_at: created,
         isStreaming: true,
         streamedText: '',
+        links: data.links ?? [],
       };
       setMessages((prev) => [...prev, assistantMsg]);
       stream.start(assistantId, data.response);

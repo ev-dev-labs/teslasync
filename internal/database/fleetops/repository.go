@@ -150,12 +150,13 @@ func advisoryLocks(ctx context.Context, tx pgx.Tx, keys ...string) error {
 func vehicleLockKey(id int64) string { return fmt.Sprintf("fleetops:vehicle:%d", id) }
 func driverLockKey(id int64) string  { return fmt.Sprintf("fleetops:driver:%d", id) }
 
-const driverColumns = `id, display_name, reference_code, status, version, created_at, updated_at`
+const driverColumns = `id, display_name, reference_code, status, max_charge_soc, curfew_start, curfew_end, version, created_at, updated_at`
 
 func scanDriver(row pgx.Row) (*models.FleetDriver, error) {
 	item := &models.FleetDriver{}
 	err := row.Scan(
 		&item.ID, &item.DisplayName, &item.ReferenceCode, &item.Status,
+		&item.MaxChargeSOC, &item.CurfewStart, &item.CurfewEnd,
 		&item.Version, &item.CreatedAt, &item.UpdatedAt,
 	)
 	return item, err
@@ -214,10 +215,11 @@ func (r *Repository) GetDriver(ctx context.Context, id int64) (*models.FleetDriv
 
 func (r *Repository) CreateDriver(ctx context.Context, item *models.FleetDriver) error {
 	got, err := scanDriver(r.db.Pool.QueryRow(ctx, `
-		INSERT INTO fleet_drivers (display_name, reference_code, status)
-		VALUES ($1, $2, $3)
+		INSERT INTO fleet_drivers (display_name, reference_code, status, max_charge_soc, curfew_start, curfew_end)
+		VALUES ($1, $2, $3, $4, $5, $6)
 		RETURNING `+driverColumns,
 		item.DisplayName, item.ReferenceCode, item.Status,
+		item.MaxChargeSOC, item.CurfewStart, item.CurfewEnd,
 	))
 	if err != nil {
 		return fmt.Errorf("create fleet driver: %w", classifyPGError(err))
@@ -229,10 +231,13 @@ func (r *Repository) CreateDriver(ctx context.Context, item *models.FleetDriver)
 func (r *Repository) UpdateDriver(ctx context.Context, item *models.FleetDriver) error {
 	got, err := scanDriver(r.db.Pool.QueryRow(ctx, `
 		UPDATE fleet_drivers
-		SET display_name = $2, reference_code = $3, status = $4, version = version + 1
-		WHERE id = $1 AND version = $5
+		SET display_name = $2, reference_code = $3, status = $4,
+		    max_charge_soc = $5, curfew_start = $6, curfew_end = $7,
+		    version = version + 1
+		WHERE id = $1 AND version = $8
 		RETURNING `+driverColumns,
-		item.ID, item.DisplayName, item.ReferenceCode, item.Status, item.Version,
+		item.ID, item.DisplayName, item.ReferenceCode, item.Status,
+		item.MaxChargeSOC, item.CurfewStart, item.CurfewEnd, item.Version,
 	))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return classifyMutationMiss(ctx, r.db.Pool,

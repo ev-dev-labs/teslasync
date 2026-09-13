@@ -40,6 +40,7 @@ import { usePinned } from '@/api/hooks/usePinned';
 import { AutomationCard } from './AutomationCard';
 import { AutomationActivityFeed } from './AutomationActivityFeed';
 import { PresetGallery } from './PresetGallery';
+import { ComfortPanel } from '../components/ComfortPanel';
 import {
   Zap, Plus, Upload, ListFilter, AlertTriangle,
   Pause, Power, ShieldOff, Sparkles, ChevronRight,
@@ -435,6 +436,11 @@ export default function AutomationsListPage() {
             </div>
           </details>
         </GlassPanel>
+      </FadeIn>
+
+      {/* 4b — Cabin comfort autopilot (calendar-aware preconditioning) */}
+      <FadeIn delay={0.08}>
+        <ComfortPanel />
       </FadeIn>
 
       {/* 5 — Hero split: automations workspace + live activity sidebar */}

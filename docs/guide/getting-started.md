@@ -4,6 +4,9 @@ Your first milestone is a connected Tesla account, fresh data from a selected
 vehicle, and a recorded drive or charging session you can inspect. This guide
 separates installing TeslaSync from enabling Tesla connectivity.
 
+To find a screen in the app after you are running, use the
+[feature catalogue](/features/catalogue) (same groups as the sidebar).
+
 ## Before you begin
 
 - Git and Docker with Compose v2. Container installation does not require Go or Node.js.

@@ -1,5 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES, INTERVALS } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
@@ -14,6 +16,15 @@ import type {
   ApplyScheduleResponse,
   ChargePlan,
   RatePlanInfo,
+  AutopilotProfile,
+  AutopilotPreviewRequest,
+  AutopilotPreview,
+  AutopilotRunResponse,
+  AutopilotSavings,
+  NextChargeDecision,
+  BillVarianceReport,
+  QueueAdviseRequest,
+  QueueAdvice,
 } from '@/types/charging';
 import type { ChargingSession as ApiChargingSession, ChargeTelemetryReading } from '../types';
 
@@ -179,9 +190,28 @@ export interface TeslaChargingHistoryResponse {
   upserted?: number;
 }
 
+export interface ChargingSiteRank {
+  site: string;
+  visits: number;
+  total_wh: number;
+  total_spend: number;
+  avg_per_kwh: number;
+  last_visit: string;
+}
+
+export interface ChargingSiteRanking {
+  sites: ChargingSiteRank[];
+  unpriced_count: number;
+}
+
 export const teslaChargingHistoryKeys = {
   all: ['tesla-charging-history'] as const,
   byVin: (vin: string) => ['tesla-charging-history', vin] as const,
+};
+
+export const teslaChargingSiteKeys = {
+  all: ['tesla-charging-site-ranking'] as const,
+  byVin: (vin?: string) => ['tesla-charging-site-ranking', vin] as const,
 };
 
 /** Fetches Tesla Supercharger/DC charging history from the local DB. */
@@ -214,9 +244,22 @@ export function useRefreshTeslaChargingHistory() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: teslaChargingHistoryKeys.all });
+      qc.invalidateQueries({ queryKey: teslaChargingSiteKeys.all });
       success('toast.charging.history.success', 'Charging history refreshed');
     },
     onError: (err) => error(err, 'toast.charging.history.error', 'Failed to refresh charging history'),
+  });
+}
+
+/** Fetches visited Supercharger sites ranked by realized $/kWh, cheapest first. */
+export function useChargingSiteRanking(vin?: string, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: teslaChargingSiteKeys.byVin(vin),
+    queryFn: ({ signal }) => request<ChargingSiteRanking>(
+      `/tesla/charging/history/sites${vin ? `?vin=${vin}` : ''}`, { signal }
+    ),
+    staleTime: STALE_TIMES.SLOW,
+    enabled: options?.enabled ?? true,
   });
 }
 
@@ -285,6 +328,79 @@ export function useTeslaChargingSessions(vin?: string, options?: { enabled?: boo
     ),
     staleTime: STALE_TIMES.SLOW,
     enabled: options?.enabled ?? true,
+  });
+}
+
+// --- Supercharger Wait Oracle ---
+
+export interface WaitOracleSite {
+  name: string;
+  sessions: number;
+  lat: number;
+  lng: number;
+  last_session: string;
+}
+
+export interface WaitOracleHour {
+  hour: number;
+  expected_wait_s: number;
+  busyness: number;
+}
+
+export interface WaitOracleForecast {
+  site: string;
+  arrive_at: string;
+  expected_wait_s: number;
+  wait_probability_pct: number;
+  busyness: number;
+  verdict: 'quiet' | 'steady' | 'busy' | 'packed';
+  confidence: 'high' | 'medium' | 'low';
+  stalls_estimated: number;
+  best_hour_utc: number;
+  best_wait_s: number;
+  save_s: number;
+  hours: WaitOracleHour[];
+  evidence: string[];
+}
+
+export const waitOracleKeys = {
+  all: ['wait-oracle'] as const,
+  sites: (q: string) => ['wait-oracle', 'sites', q] as const,
+  forecast: (site: string, arriveAt: string | null) =>
+    ['wait-oracle', 'forecast', site, arriveAt] as const,
+};
+
+/** Lists named charging sites from fleet history, most-visited first. */
+export function useWaitOracleSites(q = '', options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: waitOracleKeys.sites(q),
+    queryFn: ({ signal }) =>
+      request<WaitOracleSite[]>(
+        scopedPath('/waitoracle/sites', { filters: { q: q || null } }),
+        { signal },
+      ),
+    enabled: options?.enabled ?? true,
+    ...queryPolicy('historical'),
+  });
+}
+
+/** Forecasts the queue wait for arriving at a site at an instant (RFC3339; null = now). */
+export function useWaitOracleForecast(
+  site: string | null,
+  arriveAt: string | null,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: waitOracleKeys.forecast(site ?? '', arriveAt),
+    queryFn: ({ signal }) =>
+      request<WaitOracleForecast>(
+        scopedPath('/waitoracle/forecast', {
+          filters: { site: site ?? '', arrive_at: arriveAt },
+        }),
+        { signal },
+      ),
+    enabled: (options?.enabled ?? true) && site != null && site !== '',
+    ...queryPolicy('historical'),
   });
 }
 
@@ -372,6 +488,129 @@ export function useRatePlans() {
     queryFn: ({ signal }) => request<RatePlanInfo[]>('/charge-planner/rate-plans', { signal }),
     staleTime: STALE_TIMES.STATIC,
     select: safeArray,
+  });
+}
+
+// --- Charge Autopilot ---
+
+export const autopilotKeys = {
+  all: ['charge-autopilot'] as const,
+  profile: (vehicleId: number) => ['charge-autopilot', 'profile', vehicleId] as const,
+  savings: (vehicleId: number) => ['charge-autopilot', 'savings', vehicleId] as const,
+  decision: (vehicleId: number, soc: number) =>
+    ['charge-autopilot', 'decision', vehicleId, soc] as const,
+};
+
+/** Fetches the Autopilot profile for a vehicle (defaults when never saved). */
+export function useAutopilotProfile(vehicleId?: number) {
+  return useQuery({
+    queryKey: autopilotKeys.profile(vehicleId!),
+    queryFn: ({ signal }) =>
+      request<AutopilotProfile>(`/charge-autopilot/profile?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/** Mutation to save the Autopilot profile for a vehicle. */
+export function useSaveAutopilotProfile() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: AutopilotProfile) =>
+      request<AutopilotProfile>('/charge-autopilot/profile', {
+        method: 'PUT',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: () => {
+      invalidateAndBroadcast(qc, { queryKey: autopilotKeys.all });
+      success('toast.autopilot.save.success', 'Autopilot settings saved');
+    },
+    onError: (err) => error(err, 'toast.autopilot.save.error', 'Failed to save autopilot settings'),
+  });
+}
+
+/** Mutation to preview the next automatic Autopilot run. */
+export function useAutopilotPreview() {
+  const { error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: AutopilotPreviewRequest) =>
+      request<AutopilotPreview>('/charge-autopilot/preview', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onError: (err) => error(err, 'toast.autopilot.preview.error', 'Failed to preview autopilot run'),
+  });
+}
+
+/**
+ * One-click Autopilot run: computes the optimal window from the stored
+ * profile, persists it as a charge plan, and applies it to the vehicle.
+ * Issues real Tesla commands, so it requires live mode like /apply.
+ */
+export function useAutopilotRun() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: AutopilotPreviewRequest) =>
+      request<AutopilotRunResponse>('/charge-autopilot/run', {
+        method: 'POST',
+        requiresLiveMode: true,
+        body: JSON.stringify(params),
+      }),
+    onSuccess: (res) => {
+      invalidateAndBroadcast(qc, { queryKey: chargePlannerKeys.all });
+      invalidateAndBroadcast(qc, { queryKey: autopilotKeys.all });
+      success('toast.autopilot.run.success', res.message || 'Autopilot run scheduled');
+    },
+    onError: (err) => error(err, 'toast.autopilot.run.error', 'Failed to run autopilot'),
+  });
+}
+
+/** 12-hour next-charge verdict (home TOU vs billed Supercharger). */
+export function useNextChargeDecision(vehicleId?: number, currentSoc?: number) {
+  const socReady = currentSoc != null && Number.isFinite(currentSoc);
+  return useQuery({
+    queryKey: autopilotKeys.decision(vehicleId ?? 0, currentSoc ?? -1),
+    queryFn: ({ signal }) =>
+      request<NextChargeDecision>(
+        `/charge-autopilot/decision?vehicle_id=${vehicleId}&current_soc=${currentSoc}`,
+        { signal },
+      ),
+    enabled: !!vehicleId && socReady,
+    staleTime: STALE_TIMES.FAST,
+  });
+}
+
+/** Fetches realized Autopilot savings from applied charge plans. */
+export function useAutopilotSavings(vehicleId?: number) {
+  return useQuery({
+    queryKey: autopilotKeys.savings(vehicleId!),
+    queryFn: ({ signal }) =>
+      request<AutopilotSavings>(`/charge-autopilot/savings?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/** Mutation to order a shared-charger queue across vehicles. */
+export function useAdviseChargeQueue() {
+  const { error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: QueueAdviseRequest) =>
+      request<QueueAdvice>('/charge-planner/queue', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onError: (err) => error(err, 'toast.charge.queue.error', 'Failed to plan charger queue'),
+  });
+}
+
+/** Fetches the measured-vs-invoiced DC reconciliation for a vehicle. */
+export function useBillVariance(vehicleId?: number) {
+  return useQuery({
+    queryKey: ['bill-variance', vehicleId],
+    queryFn: ({ signal }) =>
+      request<BillVarianceReport>(`/charging/bill-variance?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
   });
 }
 

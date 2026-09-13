@@ -140,6 +140,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/navigation': ['route', 'directions', 'map', 'nav'],
   '/drives': ['drive history', 'sessions', 'trips'],
   '/trips': ['trip history', 'journeys', 'routes'],
+  '/journeys': ['journey autopilot', 'plan trip', 'live trip', 'replan'],
   '/trip-planner': ['plan trip', 'route planner', 'range planning'],
   '/arrival-reliability': ['arrival reliability', 'travel time', 'route uncertainty', 'on time'],
   '/destination-transitions': ['destination transitions', 'mobility graph', 'next destination'],
@@ -415,6 +416,7 @@ export const navSections = [
     items: [
       { to: '/drives', icon: Icons.drive, label: 'Drives', color: 'text-violet-400' },
       { to: '/trips', icon: Icons.trip, label: 'Trips', color: 'text-teal-400' },
+      { to: '/journeys', icon: Icons.compass, label: 'Journeys', color: 'text-sky-400' },
       { to: '/trip-planner', icon: Icons.mapPinned, label: 'Trip Planner', color: 'text-emerald-400' },
       { to: '/navigation', icon: Icons.signpost, label: 'Navigation', color: 'text-teal-400' },
       { to: '/geofences', icon: Icons.fence, label: 'Geofences', color: 'text-lime-400' },

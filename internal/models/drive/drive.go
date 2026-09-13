@@ -106,18 +106,21 @@ type DriveTelemetryReading struct {
 	CreatedAt       time.Time `json:"created_at" db:"created_at"`
 }
 
-// ShareToken represents a public share link for a drive.
+// ShareToken represents a public share link for a drive or a charging
+// session — exactly one of DriveID / ChargingSessionID is set (0 = none),
+// enforced by the share_tokens_exactly_one_target CHECK.
 type ShareToken struct {
-	ID               int64      `json:"id" db:"id"`
-	Token            string     `json:"token" db:"token"`
-	DriveID          int64      `json:"drive_id" db:"drive_id"`
-	CreatedBy        *string    `json:"created_by,omitempty" db:"created_by"`
-	Title            *string    `json:"title,omitempty" db:"title"`
-	Description      *string    `json:"description,omitempty" db:"description"`
-	IncludeMap       bool       `json:"include_map" db:"include_map"`
-	IncludeTelemetry bool       `json:"include_telemetry" db:"include_telemetry"`
-	IncludeSpeed     bool       `json:"include_speed" db:"include_speed"`
-	Views            int        `json:"views" db:"views"`
-	ExpiresAt        *time.Time `json:"expires_at,omitempty" db:"expires_at"`
-	CreatedAt        time.Time  `json:"created_at" db:"created_at"`
+	ID                int64      `json:"id" db:"id"`
+	Token             string     `json:"token" db:"token"`
+	DriveID           int64      `json:"drive_id,omitempty" db:"drive_id"`
+	ChargingSessionID int64      `json:"charging_session_id,omitempty" db:"charging_session_id"`
+	CreatedBy         *string    `json:"created_by,omitempty" db:"created_by"`
+	Title             *string    `json:"title,omitempty" db:"title"`
+	Description       *string    `json:"description,omitempty" db:"description"`
+	IncludeMap        bool       `json:"include_map" db:"include_map"`
+	IncludeTelemetry  bool       `json:"include_telemetry" db:"include_telemetry"`
+	IncludeSpeed      bool       `json:"include_speed" db:"include_speed"`
+	Views             int        `json:"views" db:"views"`
+	ExpiresAt         *time.Time `json:"expires_at,omitempty" db:"expires_at"`
+	CreatedAt         time.Time  `json:"created_at" db:"created_at"`
 }

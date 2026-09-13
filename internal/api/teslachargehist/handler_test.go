@@ -156,6 +156,16 @@ func historyPageBytes(hasMore bool) []byte {
 	return b
 }
 
+func unwrappedHistoryPage(t *testing.T, items ...teslaChargingHistoryItem) []byte {
+	t.Helper()
+	page := teslaChargingHistoryPage{Data: items, TotalResults: len(items)}
+	b, err := json.Marshal(page)
+	if err != nil {
+		t.Fatalf("marshal unwrapped history page: %v", err)
+	}
+	return b
+}
+
 func validItem(sessionID int64) teslaChargingHistoryItem {
 	return teslaChargingHistoryItem{
 		SessionID:           sessionID,
@@ -398,6 +408,17 @@ func TestParseTeslaChargingEntries_Table(t *testing.T) {
 			},
 		},
 		{
+			name: "countryCode fills country when country is omitted",
+			items: []teslaChargingHistoryItem{{
+				SessionID:           1,
+				ChargeStartDateTime: "2026-01-02T15:04:05Z",
+				CountryCode:         "US",
+			}},
+			verify: func(t *testing.T, got []*teslamodel.TeslaChargingHistoryEntry) {
+				wantStrPtr(t, "Country", got[0].Country, "US")
+			},
+		},
+		{
 			name: "empty optional location strings stay nil",
 			items: []teslaChargingHistoryItem{{
 				SessionID:           1,
@@ -627,6 +648,49 @@ func TestRefresh(t *testing.T) {
 		}
 		if len(resp.Entries) != 2 {
 			t.Fatalf("entries = %d, want 2", len(resp.Entries))
+		}
+	})
+
+	t.Run("unwrapped Tesla DX envelope still upserts sessions", func(t *testing.T) {
+		api := &fakeChargeHistoryAPI{
+			historyFn: func(_ context.Context, _, _, _ string, _, _ int) ([]byte, int, error) {
+				item := validItem(758665885)
+				item.Country = ""
+				item.CountryCode = "US"
+				item.SiteLocationName = "Everett, WA"
+				return unwrappedHistoryPage(t, item), http.StatusOK, nil
+			},
+		}
+		store := &fakeChargeHistoryStore{
+			getAllFn: func(_ context.Context, _ string, _, _ int) ([]*teslamodel.TeslaChargingHistoryEntry, error) {
+				return []*teslamodel.TeslaChargingHistoryEntry{{SessionID: 758665885, SiteLocationName: "Everett, WA"}}, nil
+			},
+		}
+		h := newHandler(api, store)
+
+		rec := httptest.NewRecorder()
+		h.Refresh(rec, httptest.NewRequest(http.MethodGet, "/tesla/charging/history/refresh?vin=5YJ", nil))
+
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status = %d, want 200; body=%s", rec.Code, rec.Body.String())
+		}
+		if len(store.upsertBatches) != 1 || len(store.upsertBatches[0]) != 1 {
+			t.Fatalf("upsert batch = %+v, want one session from unwrapped envelope", store.upsertBatches)
+		}
+		got := store.upsertBatches[0][0]
+		if got.SessionID != 758665885 {
+			t.Fatalf("SessionID = %d, want 758665885", got.SessionID)
+		}
+		if got.SiteLocationName != "Everett, WA" {
+			t.Fatalf("SiteLocationName = %q", got.SiteLocationName)
+		}
+		wantStrPtr(t, "Country", got.Country, "US")
+		var resp listResponse
+		if err := json.Unmarshal(rec.Body.Bytes(), &resp); err != nil {
+			t.Fatalf("decode: %v", err)
+		}
+		if resp.Upserted == nil || *resp.Upserted != 1 {
+			t.Fatalf("upserted = %v, want 1", resp.Upserted)
 		}
 	})
 

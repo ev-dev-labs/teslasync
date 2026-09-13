@@ -27,6 +27,7 @@ import {
   CostForecastSection,
   LifetimeSummary,
   EnvironmentalImpact,
+  BillVarianceCard,
 } from '../components/cost-analysis';
 
 export default function CostAnalysisPage() {
@@ -123,6 +124,11 @@ export default function CostAnalysisPage() {
             onResetRange={resetRange}
           />
         </section>
+      </FadeIn>
+
+      {/* 1b — Bill truth: measured vs Tesla invoices */}
+      <FadeIn delay={0.02}>
+        <BillVarianceCard vehicleId={vehicleId} />
       </FadeIn>
 
       {/* 2 — Cost trends: hero area chart + rate line */}

@@ -4404,7 +4404,8 @@
     "federatedLearningStudio": "Federated Learning Studio",
     "emergencyResilience": "Emergency Resilience",
     "causalExperimentLab": "Causal Experiment Lab",
-    "tCOOptimizer": "TCO Optimizer"
+    "tCOOptimizer": "TCO Optimizer",
+    "journeys": "Journeys"
   },
   "vehiclePicker": {
     "aria": "Select vehicle",
@@ -6269,7 +6270,33 @@
     "disconnectFailed": "Disconnect failed",
     "tokenRefreshed": "Token refreshed",
     "tokenRefreshFailed": "Token refresh failed",
-    "syncFailed": "Vehicle sync failed"
+    "syncFailed": "Vehicle sync failed",
+    "stormguard": {
+      "save": {
+        "success": "Storm guard saved",
+        "error": "Failed to save storm guard"
+      }
+    },
+    "comfort": {
+      "save": {
+        "success": "Comfort autopilot saved",
+        "error": "Failed to save comfort autopilot"
+      },
+      "now": {
+        "success": "Preconditioning started",
+        "error": "Failed to start preconditioning"
+      }
+    },
+    "journey": {
+      "create": {
+        "success": "Journey planned",
+        "error": "Failed to plan journey"
+      },
+      "transition": {
+        "success": "Journey {{status}}",
+        "error": "Failed to update journey"
+      }
+    }
   },
   "checklist": {
     "title": "Get started",
@@ -24471,6 +24498,17 @@
       "importPeriodLabel": "Import official NHTSA artifact for {{period}}",
       "refreshPeriod": "Refresh",
       "importPeriod": "Import"
+    },
+    "claim": {
+      "title": "Warranty claim draft",
+      "coverage": "{{name}} · {{days}}d left",
+      "copy": "Copy ticket text",
+      "placeholder": "Describe the issue (e.g. charge rate drops after 60%)",
+      "issueLabel": "Issue description",
+      "generate": "Draft ticket",
+      "selectMessage": "Choose a vehicle to draft a warranty service ticket.",
+      "emptyTitle": "No ticket yet",
+      "empty": "Describe an issue and generate a ready-to-paste service ticket."
     }
   },
   "ownership": {
@@ -25504,6 +25542,29 @@
     "window": {
       "days": "{{count}} days",
       "label": "Analysis window"
+    },
+    "ghost": {
+      "title": "Ghost-driver alerts",
+      "subtitle": "Recent drives that match no named driver and behave unlike the rest. Confirm who was driving — or investigate.",
+      "count": "{{count}} flagged",
+      "scanning": "Scanning recent drives…",
+      "clear": "No unknown-driver activity in this window — every scanned drive fits a known profile.",
+      "col": {
+        "drive": "Drive",
+        "score": "Ghost score",
+        "trip": "Trip",
+        "deviation": "Deviation",
+        "reason": "Why flagged"
+      },
+      "ratio": "{{ratio}}× typical",
+      "confidence": "{{pct}} confidence",
+      "error": {
+        "title": "Ghost scan failed"
+      },
+      "alert": {
+        "title": "{{count}} of {{scanned}} drives look like someone else",
+        "body": "Valet, teen, thief — or just an unusual trip. Label the drive if you recognise it; the cluster learns from every label."
+      }
     }
   },
   "chargingPlaces": {
@@ -25685,5 +25746,207 @@
     "consumptionTitle": "Consumption vs Speed",
     "evidenceAria": "Individual drive evidence scatter plot across speed and energy consumption",
     "evidenceTitle": "Drive Evidence"
+  },
+  "autopilot": {
+    "saveError": "Failed to save autopilot settings",
+    "previewError": "Preview failed",
+    "runError": "Run failed",
+    "title": "Charging Autopilot",
+    "on": "Autopilot on",
+    "off": "Autopilot off",
+    "enable": "Enable autopilot",
+    "readyBy": "Ready by (daily)",
+    "currentSoc": "Current SOC",
+    "targetSoc": "Target SOC",
+    "dailyCap": "Daily health cap",
+    "ratePlan": "Rate plan",
+    "maxAmps": "Max amps",
+    "tripOverride": "Trip override (allow 100%)",
+    "precondition": "Precondition before departure",
+    "save": "Save Autopilot",
+    "preview": "Preview next run",
+    "runHint": "Schedule the optimal window on the vehicle now",
+    "run": "Run now",
+    "selectVehicle": "Select a vehicle to configure autopilot.",
+    "nextWindow": "Next window",
+    "windowEnd": "ends {{end}}",
+    "previewSavings": "Saves vs now",
+    "capped": "Health cap: {{target}}% → {{effective}}%",
+    "energyNeeded": "{{kwh}} kWh · ~{{hours}}h · {{tier}}",
+    "realized": "Realized savings",
+    "realizedValue": "{{total}} across {{runs}} runs"
+  },
+  "chargeQueue": {
+    "title": "Shared-Charger Queue",
+    "feasible": "All cars ready on time",
+    "tight": "Queue overruns a ready-by",
+    "singleCar": "Add a second vehicle to plan a shared-charger queue.",
+    "current": "Now %",
+    "target": "Target %",
+    "readyBy": "Ready by",
+    "chargerKw": "Charger (kW)",
+    "plan": "Plan queue",
+    "error": "Queue planning failed",
+    "slot": "{{start}}–{{end}} · {{kwh}} kWh · ready {{ready}}"
+  },
+  "ocpp": {
+    "title": "OCPP Charge Points",
+    "lastSeen": "last seen {{when}}",
+    "connector": "#{{id}} {{status}}",
+    "activeSessions": "{{count}} active",
+    "recentSessions": "Recent sessions",
+    "inProgress": "in progress"
+  },
+  "nextCharge": {
+    "title": "Next Charge",
+    "help": "12-hour verdict: charge home now, wait for off-peak, Supercharger, or skip DC-fast.",
+    "resource": "Next charge decision",
+    "waitingSoc": "Waiting for live battery level",
+    "noData": "No charge decision yet",
+    "openAutopilot": "Open Autopilot",
+    "homeNow": "Home now",
+    "waitWindow": "Wait window",
+    "supercharger": "Supercharger",
+    "socLine": "{{soc}}% → {{target}}% · {{kwh}} kWh needed",
+    "verdict": {
+      "enough": "Enough energy",
+      "wait": "Wait for off-peak",
+      "charge_home_now": "Charge home now",
+      "supercharger": "Use Supercharger",
+      "skip_dc": "Skip DC-fast"
+    },
+    "reason": {
+      "enough": "Battery is at {{soc}}%, already at the {{target}}% target.",
+      "wait_offpeak": "Wait for off-peak at {{time}} — save {{save}} versus charging now.",
+      "supercharger_faster": "Home charging cannot finish before ready-by; {{site}} is the cheapest billed Supercharger.",
+      "supercharger_cheaper": "{{site}} is cheaper ({{sc}} vs {{home}} at home) for the energy you still need.",
+      "skip_dc": "Skip {{site}} ({{sc}}) — home now is {{home}} for the same energy.",
+      "charge_home_now": "Charge at home now — the cheapest window is already open (or too far out to wait)."
+    }
+  },
+  "wait_oracle": {
+    "title": "Supercharger Wait Oracle",
+    "subtitle": "Expected queue wait per site and arrival time, predicted from your fleet charging history. All hours UTC.",
+    "site": "Site",
+    "sessions": "{{count}} sessions",
+    "pickSite": "Select a site",
+    "arrival": "Arrival",
+    "now": "Now",
+    "plusHours": "+{{hours}}h",
+    "customArrival": "Custom arrival",
+    "loadingSites": "Loading sites…",
+    "loadingForecast": "Forecasting wait…",
+    "noSites": "No named sites yet. Sync fleet charging sessions to build wait forecasts.",
+    "expectedWait": "{{min}} min expected wait",
+    "confidence": "{{level}} confidence",
+    "waitProb": "{{pct}}% chance of any wait · ~{{stalls}} stalls",
+    "bestHour": "Arrive {{hour}}:00 UTC instead to save ~{{min}} min.",
+    "chart": {
+      "title": "Wait across the arrival day (UTC)",
+      "aria": "Expected wait minutes by hour of day",
+      "col": {
+        "hour": "Hour (UTC)",
+        "wait": "Expected wait (min)"
+      }
+    }
+  },
+  "stormguard": {
+    "title": "Storm Guardian",
+    "warning": "Storm warning",
+    "watch": "Storm watch",
+    "clear": "Clear",
+    "noVehicle": "Select a vehicle to configure storm protection.",
+    "statusError": "Weather assessment unavailable.",
+    "peakGust": "Peak gust {{gust}} m/s",
+    "currentSoc": "Battery {{soc}}%",
+    "arm": "Auto pre-charge before storms",
+    "lat": "Home latitude",
+    "lng": "Home longitude",
+    "target": "Pre-storm charge target",
+    "save": "Save Guard",
+    "saveError": "Save failed",
+    "recent": "Recent activity",
+    "acted": "acted"
+  },
+  "comfort": {
+    "title": "Cabin Comfort Autopilot",
+    "armed": "Armed",
+    "disarmed": "Off",
+    "noVehicle": "Select a vehicle to configure cabin comfort.",
+    "statusError": "Comfort status unavailable.",
+    "saveError": "Save failed",
+    "nowError": "Precondition failed",
+    "nextEvent": "{{title}} at {{when}} — {{where}}",
+    "untitled": "Untitled event",
+    "noUpcoming": "No offsite events inside the lead window.",
+    "noFeed": "Add a calendar subscription to watch for events.",
+    "arm": "Precondition before calendar events",
+    "icsUrl": "Calendar subscription URL (ICS)",
+    "targetTemp": "Cabin target temperature",
+    "lead": "Precondition lead time",
+    "save": "Save Autopilot",
+    "now": "Precondition now",
+    "recent": "Recent runs"
+  },
+  "journey": {
+    "page": {
+      "navTitle": "Journeys",
+      "title": "Journeys",
+      "subtitle": "Door-to-door trip companion: plan the drive, ride it live with replans, then debrief."
+    },
+    "col": {
+      "journey": "Journey",
+      "status": "Status",
+      "plan": "Plan",
+      "updated": "Updated",
+      "actions": "Actions"
+    },
+    "noRoute": "Route not set yet",
+    "planVersion": "v{{version}}",
+    "open": "Open",
+    "list": {
+      "title": "Planned journeys",
+      "subtitle": "One session per trip, from planning through the live drive to the debrief.",
+      "loading": "Loading journeys…",
+      "empty": "No journeys yet. Plan one above and it will live here from planning to debrief."
+    },
+    "status": {
+      "planned": "Planned",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed",
+      "aborted": "Aborted"
+    },
+    "filter": {
+      "status": "Filter by status",
+      "all": "All"
+    },
+    "action": {
+      "cancel": "Cancel",
+      "plan": "Plan journey"
+    },
+    "form": {
+      "name": "Journey name",
+      "namePlaceholder": "Tahoe ski trip",
+      "origin": "Origin",
+      "destination": "Destination",
+      "submit": "Create journey"
+    },
+    "detail": {
+      "title": "Journey detail",
+      "loading": "Loading journey…",
+      "empty": "Select a journey to manage its lifecycle and plans."
+    },
+    "transition": {
+      "start": "Start",
+      "pause": "Pause",
+      "resume": "Resume",
+      "complete": "Complete",
+      "abort": "Abort"
+    },
+    "plans": {
+      "title": "Plan versions",
+      "empty": "No plans saved yet — the stop optimizer lands here."
+    }
   }
 }

@@ -66,6 +66,7 @@ import {
   CircleStop,
   Clock,
   Cloud,
+  CloudLightning,
   CloudRain,
   Copy,
   Cpu,
@@ -94,6 +95,7 @@ import {
   Fuel,
   Gamepad2,
   Gauge,
+  Ghost,
   GaugeCircle,
   GitCompare,
   Globe,
@@ -308,6 +310,7 @@ export const Icons = {
   weather: CloudRain,
   cabin: Armchair,
   cloud: Cloud,
+  cloudLightning: CloudLightning,
   wind: Wind,
   flame: Flame,
   droplets: Droplets,
@@ -470,6 +473,7 @@ export const Icons = {
   dog: Dog,
   tent: Tent,
   gitCompare: GitCompare,
+  ghost: Ghost,
 } satisfies Record<string, LucideIcon>;
 
 /** Concept key in the registry. */

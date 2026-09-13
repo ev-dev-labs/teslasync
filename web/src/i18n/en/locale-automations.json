@@ -202,5 +202,25 @@
     },
     "empty": "No automations yet. Create a typed automation to get started!",
     "noMatch": "No automations match your filters"
+  },
+  "comfort": {
+    "title": "Cabin Comfort Autopilot",
+    "armed": "Armed",
+    "disarmed": "Off",
+    "noVehicle": "Select a vehicle to configure cabin comfort.",
+    "statusError": "Comfort status unavailable.",
+    "saveError": "Save failed",
+    "nowError": "Precondition failed",
+    "nextEvent": "{{title}} at {{when}} — {{where}}",
+    "untitled": "Untitled event",
+    "noUpcoming": "No offsite events inside the lead window.",
+    "noFeed": "Add a calendar subscription to watch for events.",
+    "arm": "Precondition before calendar events",
+    "icsUrl": "Calendar subscription URL (ICS)",
+    "targetTemp": "Cabin target temperature",
+    "lead": "Precondition lead time",
+    "save": "Save Autopilot",
+    "now": "Precondition now",
+    "recent": "Recent runs"
   }
 }

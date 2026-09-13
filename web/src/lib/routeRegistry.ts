@@ -149,6 +149,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/intelligence/tco-optimizer', name: 'TCOOptimizer', label: 'TCO Optimizer', i18nKey: 'routes.tCOOptimizer' },
   { path: '/intelligence/twin-lab', name: 'TwinLab', label: 'Twin Lab', i18nKey: 'routes.twinLab' },
   { path: '/journey-fragmentation', name: 'JourneyFragmentation', label: 'Journey Fragmentation', i18nKey: 'routes.journeyFragmentation' },
+  { path: '/journeys', name: 'Journeys', label: 'Journeys', i18nKey: 'routes.journeys' },
   { path: '/lifetime-stats', name: 'LifetimeStats', label: 'Lifetime Stats', i18nKey: 'routes.lifetimeStats' },
   { path: '/live', name: 'LiveMap', label: 'Live Map', i18nKey: 'routes.liveMap' },
   { path: '/live-monitor', name: 'LiveSignalMonitor', label: 'Live Signal Monitor', i18nKey: 'routes.liveSignalMonitor' },

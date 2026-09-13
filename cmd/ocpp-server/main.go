@@ -16,10 +16,18 @@
 //	OCPP_LISTEN_ADDR           (default :9090)
 //	OCPP_HEARTBEAT_INTERVAL    (default 300s) — interval returned in BootNotification
 //	OCPP_READ_DEADLINE         (default 900s) — closes the WS if no message within this window
+//	OCPP_DB_HOST               (default "") — empty selects the zero-config
+//	                           in-memory session store; set it to persist via
+//	                           Postgres (internal/database/ocpp.Store).
+//	OCPP_DB_PORT               (default 5432)
+//	OCPP_DB_USER               (default teslasync)
+//	OCPP_DB_PASSWORD           (default teslasync)
+//	OCPP_DB_NAME               (default teslasync)
+//	OCPP_DB_SSLMODE            (default disable)
 //
-// Persistence: the foundation PR uses the in-memory session store
-// (internal/ocpp.MemorySessionStore). A Postgres-backed store can be
-// wired here in a follow-up without touching the protocol layer.
+// Persistence: Postgres when OCPP_DB_HOST is set, otherwise the
+// in-memory session store. The dispatcher only sees the
+// ocpp.SessionStore port, so the protocol layer is untouched either way.
 package main
 
 import (
@@ -30,12 +38,16 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 	"time"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	appconfig "github.com/ev-dev-labs/teslasync/internal/config"
+	"github.com/ev-dev-labs/teslasync/internal/database"
+	dbocpp "github.com/ev-dev-labs/teslasync/internal/database/ocpp"
 	"github.com/ev-dev-labs/teslasync/internal/ocpp"
 )
 
@@ -59,16 +71,51 @@ type config struct {
 	listenAddr        string
 	heartbeatInterval time.Duration
 	readDeadline      time.Duration
+	dbHost            string
+	dbPort            int
+	dbUser            string
+	dbPassword        string
+	dbName            string
+	dbSSLMode         string
 }
 
 // loadConfig resolves the CSMS configuration from the environment,
 // falling back to spec-sensible defaults for anything unset or blank.
+// An empty OCPP_DB_HOST selects the in-memory session store.
 func loadConfig() config {
 	return config{
 		listenAddr:        envOr("OCPP_LISTEN_ADDR", defaultListenAddr),
 		heartbeatInterval: envDurationOr("OCPP_HEARTBEAT_INTERVAL", defaultHeartbeatInterval),
 		readDeadline:      envDurationOr("OCPP_READ_DEADLINE", defaultReadDeadline),
+		dbHost:            os.Getenv("OCPP_DB_HOST"),
+		dbPort:            envIntOr("OCPP_DB_PORT", 5432),
+		dbUser:            envOr("OCPP_DB_USER", "teslasync"),
+		dbPassword:        envOr("OCPP_DB_PASSWORD", "teslasync"),
+		dbName:            envOr("OCPP_DB_NAME", "teslasync"),
+		dbSSLMode:         envOr("OCPP_DB_SSLMODE", "disable"),
 	}
+}
+
+// openSessionStore resolves the persistence backend: Postgres when
+// OCPP_DB_HOST is set, otherwise the zero-config in-memory store. It
+// returns a close func the caller must defer (a no-op for memory).
+func openSessionStore(ctx context.Context, cfg config) (ocpp.SessionStore, func(), error) {
+	if cfg.dbHost == "" {
+		return ocpp.NewMemorySessionStore(), func() {}, nil
+	}
+	db, err := database.New(ctx, appconfig.DatabaseConfig{
+		Host:     cfg.dbHost,
+		Port:     cfg.dbPort,
+		User:     cfg.dbUser,
+		Password: cfg.dbPassword,
+		Name:     cfg.dbName,
+		SSLMode:  cfg.dbSSLMode,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("connect database: %w", err)
+	}
+	log.Info().Str("host", cfg.dbHost).Str("db", cfg.dbName).Msg("OCPP CSMS using Postgres session store")
+	return dbocpp.NewStore(db), db.Close, nil
 }
 
 func main() {
@@ -93,18 +140,22 @@ func main() {
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
 
-	if err := run(ctx, newServer(cfg), ln, shutdownTimeout); err != nil {
+	store, closeStore, err := openSessionStore(ctx, cfg)
+	if err != nil {
+		log.Fatal().Err(err).Msg("OCPP server failed to open session store")
+	}
+	defer closeStore()
+
+	if err := run(ctx, newServer(cfg, store), ln, shutdownTimeout); err != nil {
 		log.Fatal().Err(err).Msg("OCPP server failed")
 	}
 }
 
 // newServer builds the HTTP server that fronts the OCPP CSMS: a
 // /healthz liveness probe plus the WebSocket transport mounted at
-// /ocpp/. Persistence uses the zero-config in-memory session store;
-// a Postgres-backed store can be swapped in without changing this
-// wiring or the protocol layer.
-func newServer(cfg config) *http.Server {
-	store := ocpp.NewMemorySessionStore()
+// /ocpp/. The session store is injected so main can select the
+// Postgres or in-memory backend without touching this wiring.
+func newServer(cfg config, store ocpp.SessionStore) *http.Server {
 	dispatcher := ocpp.NewDispatcher(store, cfg.heartbeatInterval)
 	ocppServer := ocpp.NewServer(dispatcher, cfg.readDeadline)
 	return &http.Server{
@@ -169,6 +220,19 @@ func envOr(key, def string) string {
 		return v
 	}
 	return def
+}
+
+func envIntOr(key string, def int) int {
+	raw := os.Getenv(key)
+	if raw == "" {
+		return def
+	}
+	n, err := strconv.Atoi(raw)
+	if err != nil {
+		log.Warn().Err(err).Str("key", key).Str("raw", raw).Msg("invalid integer, using default")
+		return def
+	}
+	return n
 }
 
 func envDurationOr(key string, def time.Duration) time.Duration {

@@ -19,9 +19,21 @@ export interface FleetDriver {
   display_name: string;
   reference_code: string;
   status: DriverStatus;
+  max_charge_soc?: number | null;
+  curfew_start?: string | null;
+  curfew_end?: string | null;
   version: number;
   created_at: string;
   updated_at: string;
+}
+
+export interface DriverEvaluation {
+  driver_id: number;
+  allowed: boolean;
+  reasons: string[];
+  charge_cap: number | null;
+  in_curfew: boolean;
+  evaluated_at: string;
 }
 
 export interface FleetCostCenter {
@@ -181,7 +193,7 @@ export interface WorkOrderFilter extends ListFilter {
   severity?: WorkOrderSeverity;
 }
 
-export type FleetDriverInput = Pick<FleetDriver, 'display_name' | 'reference_code' | 'status'>;
+export type FleetDriverInput = Pick<FleetDriver, 'display_name' | 'reference_code' | 'status' | 'max_charge_soc' | 'curfew_start' | 'curfew_end'>;
 export type FleetCostCenterInput = Pick<FleetCostCenter, 'code' | 'name' | 'active'>;
 export type FleetAssignmentInput = Pick<
   FleetAssignment,
@@ -319,6 +331,21 @@ export function useFleetDrivers(filter: DriverFilter = {}) {
   return useListQuery<FleetDriver, DriverFilter>('drivers', fleetOpsKeys.drivers(filter), filter);
 }
 export function useFleetDriver(id?: number) { return useDetailQuery<FleetDriver>('drivers', id); }
+
+/** Evaluates a driver's guardrails (charge cap + curfew) at an instant. */
+export function useEvaluateFleetDriver(id?: number, chargeSoc?: number, at?: string) {
+  return useQuery({
+    queryKey: ['fleet-ops', 'drivers', id, 'evaluate', chargeSoc, at],
+    queryFn: ({ signal }) => {
+      const params = new URLSearchParams();
+      if (chargeSoc != null) params.set('charge_soc', String(chargeSoc));
+      if (at) params.set('at', at);
+      const qs = params.toString();
+      return request<DriverEvaluation>(`/fleet-ops/drivers/${id}/evaluate${qs ? `?${qs}` : ''}`, { signal });
+    },
+    enabled: !!id,
+  });
+}
 export function useCreateFleetDriver() { return useCreateMutation<FleetDriver, FleetDriverInput>('drivers'); }
 export function useUpdateFleetDriver() { return useUpdateMutation<FleetDriver, FleetDriverInput>('drivers'); }
 export function useDeleteFleetDriver() { return useDeleteMutation('drivers'); }

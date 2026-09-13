@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
+
+	"github.com/ev-dev-labs/teslasync/internal/ocpp"
 )
 
 // ── config helpers ─────────────────────────────────────────────────────────
@@ -196,7 +198,7 @@ func TestNewServer_Shape(t *testing.T) {
 		listenAddr:        "127.0.0.1:0",
 		heartbeatInterval: 30 * time.Second,
 		readDeadline:      0,
-	})
+	}, ocpp.NewMemorySessionStore())
 	if srv == nil {
 		t.Fatal("newServer returned nil")
 	}
@@ -221,7 +223,7 @@ func TestRun_GracefulShutdown(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	srv := newServer(config{heartbeatInterval: time.Minute})
+	srv := newServer(config{heartbeatInterval: time.Minute}, ocpp.NewMemorySessionStore())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
@@ -269,7 +271,7 @@ func TestRun_ContextAlreadyCancelled(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	srv := newServer(config{heartbeatInterval: time.Minute})
+	srv := newServer(config{heartbeatInterval: time.Minute}, ocpp.NewMemorySessionStore())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // already cancelled before run starts
@@ -284,7 +286,7 @@ func TestRun_ServerClosedExternallyReturnsNil(t *testing.T) {
 	if err != nil {
 		t.Fatalf("listen: %v", err)
 	}
-	srv := newServer(config{heartbeatInterval: time.Minute})
+	srv := newServer(config{heartbeatInterval: time.Minute}, ocpp.NewMemorySessionStore())
 
 	// Context never cancels; the serve loop ends only because the server
 	// is closed out from under it — Serve then reports ErrServerClosed,
@@ -329,7 +331,7 @@ func TestRun_ServeErrorIsWrapped(t *testing.T) {
 	if err := ln.Close(); err != nil {
 		t.Fatalf("close listener: %v", err)
 	}
-	srv := newServer(config{heartbeatInterval: time.Minute})
+	srv := newServer(config{heartbeatInterval: time.Minute}, ocpp.NewMemorySessionStore())
 
 	rerr := run(context.Background(), srv, ln, 2*time.Second)
 	if rerr == nil {
@@ -400,7 +402,7 @@ func TestRun_ShutdownTimeoutIsWrapped(t *testing.T) {
 // ── end-to-end OCPP WebSocket wiring ───────────────────────────────────────
 
 func TestOCPPServer_WebSocketBootNotification(t *testing.T) {
-	srv := newServer(config{heartbeatInterval: 42 * time.Second, readDeadline: 0})
+	srv := newServer(config{heartbeatInterval: 42 * time.Second, readDeadline: 0}, ocpp.NewMemorySessionStore())
 	ts := httptest.NewServer(srv.Handler)
 	defer ts.Close()
 
@@ -473,7 +475,7 @@ func TestOCPPServer_WebSocketBootNotification(t *testing.T) {
 }
 
 func TestOCPPServer_WebSocketRejectsWrongSubprotocol(t *testing.T) {
-	srv := newServer(config{heartbeatInterval: time.Minute})
+	srv := newServer(config{heartbeatInterval: time.Minute}, ocpp.NewMemorySessionStore())
 	ts := httptest.NewServer(srv.Handler)
 	defer ts.Close()
 
@@ -499,4 +501,43 @@ func TestOCPPServer_WebSocketRejectsWrongSubprotocol(t *testing.T) {
 
 func dialer(_ *testing.T) *websocket.Dialer {
 	return &websocket.Dialer{} // no subprotocols
+}
+
+// ── session store selection ────────────────────────────────────────────────
+
+func TestOpenSessionStore_MemoryByDefault(t *testing.T) {
+	store, closeFn, err := openSessionStore(context.Background(), config{})
+	if err != nil {
+		t.Fatalf("openSessionStore: %v", err)
+	}
+	defer closeFn()
+	if _, ok := store.(*ocpp.MemorySessionStore); !ok {
+		t.Fatalf("store = %T, want *ocpp.MemorySessionStore", store)
+	}
+}
+
+func TestEnvIntOr(t *testing.T) {
+	const key = "OCPP_TEST_ENV_INT_OR"
+	tests := []struct {
+		name  string
+		set   bool
+		value string
+		def   int
+		want  int
+	}{
+		{"unset returns default", false, "", 5432, 5432},
+		{"empty value returns default", true, "", 5432, 5432},
+		{"set value overrides default", true, "5433", 5432, 5433},
+		{"invalid value returns default", true, "not-a-port", 5432, 5432},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.set {
+				t.Setenv(key, tt.value)
+			}
+			if got := envIntOr(key, tt.def); got != tt.want {
+				t.Errorf("envIntOr = %d, want %d", got, tt.want)
+			}
+		})
+	}
 }

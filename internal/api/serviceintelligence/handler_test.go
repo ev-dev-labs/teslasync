@@ -20,6 +20,11 @@ type fakeIntelligenceService struct {
 	calls     int
 	vehicleID int64
 	refresh   bool
+
+	warranty     *WarrantyOutlook
+	warrantyErr  error
+	warrantyOdo  float64
+	warrantySeen bool
 }
 
 func (f *fakeIntelligenceService) Get(_ context.Context, vehicleID int64, refresh bool) (*Response, error) {
@@ -27,6 +32,13 @@ func (f *fakeIntelligenceService) Get(_ context.Context, vehicleID int64, refres
 	f.vehicleID = vehicleID
 	f.refresh = refresh
 	return f.response, f.err
+}
+
+func (f *fakeIntelligenceService) Warranty(_ context.Context, vehicleID int64, odometerKm float64) (*WarrantyOutlook, error) {
+	f.warrantySeen = true
+	f.vehicleID = vehicleID
+	f.warrantyOdo = odometerKm
+	return f.warranty, f.warrantyErr
 }
 
 func handlerResponse() *Response {

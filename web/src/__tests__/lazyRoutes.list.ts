@@ -47,6 +47,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   // Trips
   { name: 'Trips', load: () => import('../features/trips/pages/TripListPage') },
   { name: 'TripDetail', load: () => import('../features/trips/pages/TripDetailPage') },
+  { name: 'Journeys', load: () => import('../features/trips/pages/JourneysPage') },
 
   // Battery & Energy
   { name: 'Energy', load: () => import('../features/battery/pages/EnergyPage') },

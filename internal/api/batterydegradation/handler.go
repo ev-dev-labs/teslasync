@@ -300,6 +300,7 @@ func (h *Handler) Predict(w http.ResponseWriter, r *http.Request) {
 		"degradation_rate_pct_per_month": math.Round(result.RatePerMonth*1000) / 1000,
 		"projected_80pct_date":           result.Prediction.PredictedDate,
 		"projections":                    result.Projections,
+		"horizon_outlook":                result.Horizon,
 		"risk_factors":                   riskFactors,
 		"recommendations":                recommendations,
 		"battery_capacity_wh":            capacityWh,

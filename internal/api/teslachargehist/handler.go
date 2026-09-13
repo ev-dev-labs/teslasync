@@ -125,26 +125,36 @@ func (h *TeslaChargingHistoryHandler) Refresh(w http.ResponseWriter, r *http.Req
 			return
 		}
 
-		var resp teslaChargingHistoryResponse
-		if err := json.Unmarshal(body, &resp); err != nil {
+		page, err := decodeTeslaChargingHistoryPage(body)
+		if err != nil {
 			log.Error().Err(err).Msg("failed to parse tesla charging history response")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to parse Tesla response")
 			return
 		}
 
-		entries := parseTeslaChargingEntries(resp.Response.Data)
+		entries := parseTeslaChargingEntries(page.Data)
 		allEntries = append(allEntries, entries...)
 
-		if !resp.Response.HasMoreData || len(resp.Response.Data) == 0 {
+		if len(page.Data) == 0 {
 			break
 		}
-		pageNo++
-
-		// Safety limit to prevent infinite loops
-		if pageNo > 100 {
-			log.Warn().Msg("tesla charging history: hit 100-page safety limit")
-			break
+		if page.HasMoreData {
+			pageNo++
+			if pageNo > 100 {
+				log.Warn().Msg("tesla charging history: hit 100-page safety limit")
+				break
+			}
+			continue
 		}
+		if page.TotalResults > 0 && len(allEntries) < page.TotalResults && len(page.Data) == pageSize {
+			pageNo++
+			if pageNo > 100 {
+				log.Warn().Msg("tesla charging history: hit 100-page safety limit")
+				break
+			}
+			continue
+		}
+		break
 	}
 
 	upserted, err := h.repo.UpsertBatch(r.Context(), allEntries)
@@ -216,12 +226,30 @@ func (h *TeslaChargingHistoryHandler) Invoice(w http.ResponseWriter, r *http.Req
 
 // --- Tesla API response types ---
 
+// teslaChargingHistoryPage is one charging-history page. Tesla's DX endpoint
+// has shipped both `{response:{data,totalResults,hasMoreData}}` and a
+// top-level `{data,totalResults}` envelope; decodeTeslaChargingHistoryPage
+// accepts either so a successful Tesla fetch is not discarded as empty.
+type teslaChargingHistoryPage struct {
+	Data         []teslaChargingHistoryItem `json:"data"`
+	TotalResults int                        `json:"totalResults"`
+	HasMoreData  bool                       `json:"hasMoreData"`
+}
+
 type teslaChargingHistoryResponse struct {
-	Response struct {
-		Data         []teslaChargingHistoryItem `json:"data"`
-		TotalResults int                        `json:"totalResults"`
-		HasMoreData  bool                       `json:"hasMoreData"`
-	} `json:"response"`
+	Response teslaChargingHistoryPage `json:"response"`
+	teslaChargingHistoryPage
+}
+
+func decodeTeslaChargingHistoryPage(body []byte) (teslaChargingHistoryPage, error) {
+	var wrapped teslaChargingHistoryResponse
+	if err := json.Unmarshal(body, &wrapped); err != nil {
+		return teslaChargingHistoryPage{}, err
+	}
+	if len(wrapped.Response.Data) > 0 || wrapped.Response.HasMoreData || wrapped.Response.TotalResults > 0 {
+		return wrapped.Response, nil
+	}
+	return wrapped.teslaChargingHistoryPage, nil
 }
 
 type teslaChargingHistoryItem struct {
@@ -231,6 +259,7 @@ type teslaChargingHistoryItem struct {
 	ChargeStartDateTime string                 `json:"chargeStartDateTime"`
 	ChargeStopDateTime  string                 `json:"chargeStopDateTime"`
 	Country             string                 `json:"country"`
+	CountryCode         string                 `json:"countryCode"`
 	State               string                 `json:"state"`
 	County              string                 `json:"county"`
 	PostalCode          string                 `json:"postalCode"`
@@ -279,9 +308,13 @@ func parseTeslaChargingEntries(items []teslaChargingHistoryItem) []*teslamodel.T
 			}
 		}
 
-		// Location fields
-		if item.Country != "" {
-			e.Country = &item.Country
+		// Location fields. Tesla DX sessions expose ISO country as countryCode.
+		country := item.Country
+		if country == "" {
+			country = item.CountryCode
+		}
+		if country != "" {
+			e.Country = &country
 		}
 		if item.State != "" {
 			e.State = &item.State

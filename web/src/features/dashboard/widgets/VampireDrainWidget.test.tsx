@@ -63,15 +63,17 @@ vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: vi.fn() }));
 vi.mock('@/api/hooks/useEnergy', () => ({
   useVampireDrainStats: vi.fn(),
   useVampireDrainEvents: vi.fn(),
+  useVampireDrainWatch: vi.fn(),
 }));
 
 import { useVehicles } from '@/api/hooks/useVehicles';
-import { useVampireDrainStats, useVampireDrainEvents } from '@/api/hooks/useEnergy';
+import { useVampireDrainStats, useVampireDrainEvents, useVampireDrainWatch } from '@/api/hooks/useEnergy';
 import VampireDrainWidget, { drainColor, formatDuration } from './VampireDrainWidget';
 
 const mockVehicles = useVehicles as unknown as ReturnType<typeof vi.fn>;
 const mockStats = useVampireDrainStats as unknown as ReturnType<typeof vi.fn>;
 const mockEvents = useVampireDrainEvents as unknown as ReturnType<typeof vi.fn>;
+const mockWatch = useVampireDrainWatch as unknown as ReturnType<typeof vi.fn>;
 
 // A minimal fallback-echoing translator for the pure-utility tests.
 const echo = (_k: string, d: string) => d;
@@ -152,9 +154,11 @@ beforeEach(() => {
   mockVehicles.mockReset();
   mockStats.mockReset();
   mockEvents.mockReset();
+  mockWatch.mockReset();
   mockVehicles.mockReturnValue({ data: [{ id: 1 }] });
   mockStats.mockReturnValue(makeQuery({ data: makeStats() }));
   mockEvents.mockReturnValue(makeQuery({ data: [criticalEvent(), lowEvent()] }));
+  mockWatch.mockReturnValue(makeQuery({ data: null }));
 });
 
 describe('drainColor (utility)', () => {
@@ -363,5 +367,44 @@ describe('VampireDrainWidget — refresh + vehicle resolution', () => {
     renderWidget();
     expect(mockStats).toHaveBeenCalledWith(null);
     expect(mockEvents).toHaveBeenCalledWith(null, 30);
+  });
+});
+
+describe('VampireDrainWidget — watchdog strip', () => {
+  it('hides the strip while the watch query has no data', () => {
+    renderWidget({ size: { cols: 2, rows: 2 } });
+    expect(screen.queryByRole('status', { name: 'Drain watchdog status' })).toBeNull();
+  });
+
+  it('shows the healthy copy when status is ok', () => {
+    mockWatch.mockReturnValue(
+      makeQuery({
+        data: {
+          status: 'ok',
+          threshold_pct_per_day: 3,
+          breach_streak: 0,
+          recommendation: 'Parked drain looks healthy. No action needed.',
+        },
+      }),
+    );
+    renderWidget({ size: { cols: 2, rows: 2 } });
+    expect(screen.getByText('Watchdog: drain healthy')).toBeTruthy();
+  });
+
+  it('shows the streak and recommendation on breach', () => {
+    mockWatch.mockReturnValue(
+      makeQuery({
+        data: {
+          status: 'alert',
+          threshold_pct_per_day: 3,
+          breach_streak: 3,
+          recommendation: 'Check Sentry Mode.',
+        },
+      }),
+    );
+    renderWidget({ size: { cols: 2, rows: 2 } });
+    const strip = screen.getByRole('status', { name: 'Drain watchdog status' });
+    expect(strip.textContent).toContain('3');
+    expect(strip.textContent).toContain('Check Sentry Mode.');
   });
 });

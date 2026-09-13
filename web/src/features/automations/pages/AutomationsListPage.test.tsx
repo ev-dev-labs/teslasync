@@ -122,6 +122,15 @@ vi.mock('@/api/hooks/useVehicles', () => ({ useVehicles: m.useVehicles }));
 vi.mock('@/api/hooks/usePinned', () => ({ usePinned: m.usePinned }));
 vi.mock('@/hooks/useAutomationEvents', () => ({ useAutomationEvents: m.useAutomationEvents }));
 
+// ComfortPanel (embedded section) stays idle: its own contract tests cover
+// behaviour; here it must only not fire live queries.
+vi.mock('@/api/hooks/useComfort', () => ({
+  useComfortNext: () => ({ data: undefined, isLoading: true, isError: false }),
+  useComfortRuns: () => ({ data: [], isLoading: false, isError: false }),
+  useSaveComfortConfig: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
+  usePreconditionNow: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
+}));
+
 // ─── Heavy child components → lightweight probes. ────────────────────────────
 
 interface CardProbeProps {

@@ -12,6 +12,7 @@ import (
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	"github.com/ev-dev-labs/teslasync/internal/database"
+	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	positiondb "github.com/ev-dev-labs/teslasync/internal/database/position"
 	"github.com/ev-dev-labs/teslasync/internal/database/sharing"
@@ -19,11 +20,12 @@ import (
 	drivemodel "github.com/ev-dev-labs/teslasync/internal/models/drive"
 	telemetrymodel "github.com/ev-dev-labs/teslasync/internal/models/telemetry"
 	vehiclemodel "github.com/ev-dev-labs/teslasync/internal/models/vehicle"
+	"github.com/ev-dev-labs/teslasync/internal/signal"
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 )
 
-// The handler depends on four narrow persistence ports rather than concrete
+// The handler depends on six narrow persistence ports rather than concrete
 // repos so every path can be exercised end-to-end with in-memory fakes and no
 // pgx pool. In production each port is satisfied by its repository:
 //
@@ -31,12 +33,15 @@ import (
 //	driveByIDFetcher   <- *drivedb.DriveRepo
 //	positionLister     <- *positiondb.PositionRepo
 //	vehicleByIDFetcher <- *vehicledb.VehicleRepo
+//	sessionByIDFetcher <- *chargingdb.ChargingRepo
+//	chargeCurveLister  <- *SignalCurveLister (signal change feed)
 
 // shareTokenStore is the persistence port for share tokens.
 type shareTokenStore interface {
 	Create(ctx context.Context, st *drivemodel.ShareToken) error
 	GetByToken(ctx context.Context, token string) (*drivemodel.ShareToken, error)
 	ListByDrive(ctx context.Context, driveID int64) ([]*drivemodel.ShareToken, error)
+	ListByChargingSession(ctx context.Context, sessionID int64) ([]*drivemodel.ShareToken, error)
 	IncrementViews(ctx context.Context, id int64) error
 	Delete(ctx context.Context, token string) error
 }
@@ -62,14 +67,18 @@ type ShareHandler struct {
 	driveRepo   driveByIDFetcher
 	posRepo     positionLister
 	vehicleRepo vehicleByIDFetcher
+	sessionRepo sessionByIDFetcher
+	curveLister chargeCurveLister
 }
 
-func NewShareHandler(db *database.DB) *ShareHandler {
+func NewShareHandler(db *database.DB, state signal.StateReader) *ShareHandler {
 	return &ShareHandler{
 		shareRepo:   sharing.NewTokenRepo(db),
 		driveRepo:   drivedb.NewDriveRepo(db),
 		posRepo:     positiondb.NewPositionRepo(db),
 		vehicleRepo: vehicledb.NewVehicleRepo(db),
+		sessionRepo: chargingdb.NewChargingRepo(db),
+		curveLister: NewSignalCurveLister(state),
 	}
 }
 
@@ -117,9 +126,11 @@ type publicTelemetryPoint struct {
 
 type publicShareResponse struct {
 	PayloadVersion   string                 `json:"payload_version"`
+	ShareType        string                 `json:"share_type"`
 	Title            string                 `json:"title"`
 	Description      string                 `json:"description"`
-	Drive            publicDriveInfo        `json:"drive"`
+	Drive            *publicDriveInfo       `json:"drive,omitempty"`
+	Session          *publicSessionInfo     `json:"session,omitempty"`
 	Vehicle          *publicVehicle         `json:"vehicle,omitempty"`
 	MapPoints        []publicMapPoint       `json:"map_points,omitempty"`
 	ElevationProfile []publicElevationPoint `json:"elevation_profile,omitempty"`
@@ -184,17 +195,7 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 	if req.Description != "" {
 		st.Description = &req.Description
 	}
-	if req.ExpiresInDays > 0 {
-		// Clamp before the duration multiply: an unbounded day count overflows
-		// int64 nanoseconds and would wrap to a past instant, silently creating
-		// an already-expired ("410 Gone") share.
-		days := req.ExpiresInDays
-		if days > maxExpiryDays {
-			days = maxExpiryDays
-		}
-		exp := time.Now().UTC().Add(time.Duration(days) * 24 * time.Hour)
-		st.ExpiresAt = &exp
-	}
+	st.ExpiresAt = expiryFromDays(req.ExpiresInDays)
 
 	if err := h.shareRepo.Create(ctx, st); err != nil {
 		log.Error().Err(err).Int64("driveID", driveID).Msg("share: failed to create")
@@ -212,6 +213,108 @@ func (h *ShareHandler) Create(w http.ResponseWriter, r *http.Request) {
 		"url":   "/s/" + st.Token,
 		"id":    st.ID,
 	})
+}
+
+// expiryFromDays converts an optional day count to an absolute expiry,
+// clamped to maxExpiryDays. The clamp runs before the duration multiply:
+// an unbounded day count overflows int64 nanoseconds and would wrap to a
+// past instant, silently creating an already-expired ("410 Gone") share.
+func expiryFromDays(days int) *time.Time {
+	if days <= 0 {
+		return nil
+	}
+	if days > maxExpiryDays {
+		days = maxExpiryDays
+	}
+	exp := time.Now().UTC().Add(time.Duration(days) * 24 * time.Hour)
+	return &exp
+}
+
+// CreateSessionShare handles POST /charging/{sessionID}/share: mint a
+// public link for a charging session. include_telemetry opts into the
+// charge curve + cost; include_map/include_speed are drive-only and
+// stored false for sessions.
+func (h *ShareHandler) CreateSessionShare(w http.ResponseWriter, r *http.Request) {
+	sessionID, err := apiparams.URLParamInt64(r, "sessionID")
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid session ID")
+		return
+	}
+
+	ctx := r.Context()
+
+	session, err := h.sessionRepo.GetByID(ctx, sessionID)
+	if err != nil {
+		log.Error().Err(err).Int64("sessionID", sessionID).Msg("share: failed to get charging session")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to get charging session")
+		return
+	}
+	if session == nil {
+		httpx.WriteError(w, http.StatusNotFound, "charging session not found")
+		return
+	}
+
+	var req createShareRequest
+	// All fields are optional, so an empty body is valid and yields defaults;
+	// only a malformed (non-empty, non-JSON) body is a 400.
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+
+	includeTelemetry := false
+	if req.IncludeTelemetry != nil {
+		includeTelemetry = *req.IncludeTelemetry
+	}
+
+	st := &drivemodel.ShareToken{
+		ChargingSessionID: sessionID,
+		IncludeTelemetry:  includeTelemetry,
+	}
+	if req.Title != "" {
+		st.Title = &req.Title
+	}
+	if req.Description != "" {
+		st.Description = &req.Description
+	}
+	st.ExpiresAt = expiryFromDays(req.ExpiresInDays)
+
+	if err := h.shareRepo.Create(ctx, st); err != nil {
+		log.Error().Err(err).Int64("sessionID", sessionID).Msg("share: failed to create session share")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to create share link")
+		return
+	}
+
+	log.Info().
+		Str("token", truncateToken(st.Token)).
+		Int64("charging_session_id", sessionID).
+		Msg("session share link created")
+
+	httpx.WriteJSON(w, http.StatusCreated, map[string]interface{}{
+		"token": st.Token,
+		"url":   "/s/" + st.Token,
+		"id":    st.ID,
+	})
+}
+
+// ListSessionShares handles GET /charging/{sessionID}/shares.
+func (h *ShareHandler) ListSessionShares(w http.ResponseWriter, r *http.Request) {
+	sessionID, err := apiparams.URLParamInt64(r, "sessionID")
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid session ID")
+		return
+	}
+
+	tokens, err := h.shareRepo.ListByChargingSession(r.Context(), sessionID)
+	if err != nil {
+		log.Error().Err(err).Int64("sessionID", sessionID).Msg("share: failed to list session shares")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to list shares")
+		return
+	}
+	if tokens == nil {
+		tokens = make([]*drivemodel.ShareToken, 0)
+	}
+	httpx.WriteJSON(w, http.StatusOK, tokens)
 }
 
 func (h *ShareHandler) List(w http.ResponseWriter, r *http.Request) {
@@ -280,6 +383,17 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 		log.Warn().Err(err).Int64("shareID", share.ID).Msg("share: failed to increment views")
 	}
 
+	if share.ChargingSessionID > 0 {
+		h.serveSessionShare(w, r, share)
+		return
+	}
+	// Unreachable while the exactly-one-target CHECK holds; a defensive
+	// 404 rather than a drive lookup with a zero ID.
+	if share.DriveID <= 0 {
+		httpx.WriteError(w, http.StatusNotFound, "share target missing")
+		return
+	}
+
 	drive, err := h.driveRepo.GetByID(ctx, share.DriveID)
 	if err != nil || drive == nil {
 		log.Error().Err(err).Int64("driveID", share.DriveID).Msg("share: drive not found")
@@ -320,9 +434,10 @@ func (h *ShareHandler) GetPublicShare(w http.ResponseWriter, r *http.Request) {
 
 	resp := publicShareResponse{
 		PayloadVersion: "v2",
+		ShareType:      shareTypeDrive,
 		Title:          safeDeref(share.Title, "Shared Drive"),
 		Description:    safeDeref(share.Description, ""),
-		Drive:          info,
+		Drive:          &info,
 	}
 
 	// Vehicle info is limited to model and color: no VIN or IDs.

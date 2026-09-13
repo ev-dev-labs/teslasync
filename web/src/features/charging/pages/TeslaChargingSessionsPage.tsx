@@ -58,6 +58,8 @@ import { convertEnergyFromSI } from '@/lib/unitConversion';
 import { formatCurrencyValue, currencyCodeFromSymbol } from '@/lib/currencyFormat';
 import type { OperationalNarrative } from '@/types/operationalNarrative';
 
+import { WaitOraclePanel } from '../components/WaitOraclePanel';
+
 const LazyMap = lazy(() => import('./TeslaChargingSessionsMap'));
 
 /**
@@ -779,6 +781,13 @@ export default function TeslaChargingSessionsPage() {
             icon={<Clock className="h-5 w-5 text-orange-300" aria-hidden="true" />}
             loading={isLoading}
           />
+        </section>
+      </FadeIn>
+
+      {/* Wait oracle — forward-looking queue forecast per site */}
+      <FadeIn delay={0.09}>
+        <section aria-label={t('tesla_sessions.oracleSection', 'Wait forecast')}>
+          <WaitOraclePanel />
         </section>
       </FadeIn>
 

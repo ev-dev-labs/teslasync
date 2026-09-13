@@ -1030,6 +1030,29 @@
     "window": {
       "days": "{{count}} days",
       "label": "Analysis window"
+    },
+    "ghost": {
+      "title": "Ghost-driver alerts",
+      "subtitle": "Recent drives that match no named driver and behave unlike the rest. Confirm who was driving — or investigate.",
+      "count": "{{count}} flagged",
+      "scanning": "Scanning recent drives…",
+      "clear": "No unknown-driver activity in this window — every scanned drive fits a known profile.",
+      "col": {
+        "drive": "Drive",
+        "score": "Ghost score",
+        "trip": "Trip",
+        "deviation": "Deviation",
+        "reason": "Why flagged"
+      },
+      "ratio": "{{ratio}}× typical",
+      "confidence": "{{pct}} confidence",
+      "error": {
+        "title": "Ghost scan failed"
+      },
+      "alert": {
+        "title": "{{count}} of {{scanned}} drives look like someone else",
+        "body": "Valet, teen, thief — or just an unusual trip. Label the drive if you recognise it; the cluster learns from every label."
+      }
     }
   }
 }

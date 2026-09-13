@@ -45,6 +45,8 @@ import {
   useRatePlans,
 } from '@/api/hooks/useCharging';
 import { RateTimeline } from '../components/RateTimeline';
+import { AutopilotPanel } from '../components/AutopilotPanel';
+import { ChargePointsPanel } from '../components/ChargePointsPanel';
 import { AISmartChargeScheduleSuggestion } from '@/components/ai/AISmartChargeScheduleSuggestion';
 import type { ChargePlan, OptimizeChargeResponse } from '@/types/charging';
 
@@ -337,7 +339,12 @@ export default function SmartChargePage() {
           </section>
         </FadeIn>
 
-        {/* ── 2 · Primary bento — settings control rail + rate-timeline hero ── */}
+        {/* ── 2 · Autopilot — always-on profile, next-run preview, realized savings ── */}
+        <FadeIn delay={0.08}>
+          <AutopilotPanel vehicleId={vehicleIdNum} />
+        </FadeIn>
+
+        {/* ── 3 · Primary bento — settings control rail + rate-timeline hero ── */}
         <FadeIn delay={0.1}>
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {/* Charge settings (control rail) */}
@@ -444,7 +451,7 @@ export default function SmartChargePage() {
           </section>
         </FadeIn>
 
-        {/* ── 3 · Schedule bento — recommended schedule + alternatives ── */}
+        {/* ── 4 · Schedule bento — recommended schedule + alternatives ── */}
         <FadeIn delay={0.15}>
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-3">
             {/* Recommended schedule + apply */}
@@ -557,7 +564,7 @@ export default function SmartChargePage() {
           </section>
         </FadeIn>
 
-        {/* ── 4 · Detail band — plan history ── */}
+        {/* ── 5 · Detail band — plan history ── */}
         <FadeIn delay={0.2}>
           <GlassPanel className="p-4 sm:p-5">
             <PanelTitle className="mb-3 flex items-center gap-2">
@@ -583,6 +590,11 @@ export default function SmartChargePage() {
               />
             )}
           </GlassPanel>
+        </FadeIn>
+
+        {/* ── 6 · OCPP band — non-Tesla charge points ── */}
+        <FadeIn delay={0.25}>
+          <ChargePointsPanel />
         </FadeIn>
       </div>
     </PageContainer>

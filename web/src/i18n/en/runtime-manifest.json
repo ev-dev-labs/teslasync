@@ -533,7 +533,6 @@
       "rhythm",
       "routeEfficiency",
       "seasonalEfficiency",
-      "share",
       "speedProfile",
       "speedSweetSpot",
       "sweetSpot",
@@ -556,6 +555,7 @@
       "yearReview"
     ],
     "sharing": [
+      "share",
       "shareCard",
       "sharing"
     ],
@@ -582,18 +582,22 @@
       "webpush"
     ],
     "charging": [
+      "autopilot",
       "chargeDepartureAlignment",
       "chargeInterruption",
       "chargePlanner",
+      "chargeQueue",
       "chargerResilience",
       "chargerTypes",
       "charging",
       "chargingThermalTax",
       "costAnalysis",
       "filter",
+      "ocpp",
       "powershare",
       "tesla_charging",
-      "tesla_sessions"
+      "tesla_sessions",
+      "wait_oracle"
     ],
     "dashboard": [
       "auth",
@@ -603,6 +607,7 @@
       "hero",
       "import",
       "layout",
+      "nextCharge",
       "perf",
       "quickStats",
       "templates",
@@ -652,7 +657,8 @@
     ],
     "automations": [
       "automationList",
-      "automations"
+      "automations",
+      "comfort"
     ],
     "diagnostics": [
       "anomaly",
@@ -669,7 +675,8 @@
       "tempImpact"
     ],
     "trips": [
-      "trips"
+      "trips",
+      "journey"
     ],
     "vehicle-systems": [
       "cabinThermal",
@@ -707,7 +714,8 @@
       "actionCenter"
     ],
     "advanced-intelligence": [
-      "advancedIntelligence"
+      "advancedIntelligence",
+      "stormguard"
     ],
     "service-intelligence": [
       "serviceIntelligence"

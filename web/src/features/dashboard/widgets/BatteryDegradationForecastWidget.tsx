@@ -164,6 +164,33 @@ export default function BatteryDegradationForecastWidget({ vehicleId, size }: Wi
               />
             )}
 
+            {/* Horizon outlook: 1/3/5-year twin readout */}
+            {(data?.horizon_outlook?.points?.length ?? 0) > 0 && (
+              <div className="flex flex-col gap-1.5">
+                <p className="text-2xs uppercase tracking-wider text-[var(--text-muted)]">
+                  {t('widget.forecast.horizon', '1 / 3 / 5-Year Outlook')}
+                </p>
+                <ul className="grid grid-cols-3 gap-1.5">
+                  {(data?.horizon_outlook?.points ?? []).map((p) => (
+                    <li
+                      key={p.years}
+                      className="rounded-lg bg-white/[0.03] border border-white/[0.06] px-2 py-2 text-center"
+                    >
+                      <p className="text-2xs text-[var(--text-muted)]">
+                        {t('widget.forecast.years', '{{n}} yr', { n: p.years })}
+                      </p>
+                      <p className="text-sm font-bold tabular-nums text-[var(--text-primary)]">
+                        {fmtNumber(p.health_pct, 1)}%
+                      </p>
+                      <p className="text-2xs tabular-nums text-[var(--text-muted)]">
+                        {fmtNumber(p.confidence_low, 0)}–{fmtNumber(p.confidence_high, 0)}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
             {/* Risk factors list */}
             {riskFactors.length > 0 && (
               <div className="flex flex-col gap-1.5">

@@ -5,7 +5,7 @@ import { Button, CopyButton, Text, Textarea } from '@/components/ui';
 import { Avatar } from '@/components/data-display';
 import { cn } from '@/lib/cn';
 import { formatTime } from '@/lib/dateFormat';
-import type { ChatMessage } from '@/api/types';
+import type { ChatLink, ChatMessage } from '@/api/types';
 import { HelixEvidenceTrail } from '@/components/ai/HelixEvidenceTrail';
 import type { AiToolActivity, AiUsage } from '@/hooks/useAiStream';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -18,6 +18,8 @@ import { MarkdownRenderer } from './MarkdownRenderer';
  */
 export interface UIChatMessage extends ChatMessage {
   isStreaming?: boolean;
+  /** Deep-link citations from the send response (fresh turns only). */
+  links?: ChatLink[] | null;
   /** Partial reveal during the typewriter animation. Falls back to content. */
   streamedText?: string;
   /** Privacy-safe tool provenance retained for this assistant turn. */
@@ -190,6 +192,19 @@ export function ChatMessageItem({
               state={message.isStreaming ? 'streaming' : 'done'}
               usage={message.aiUsage}
             />
+            {(message.links?.length ?? 0) > 0 && !message.isStreaming && (
+              <div className="mt-2 flex flex-wrap gap-1.5" aria-label={t('chatbot.citations', 'Sources')}>
+                {(message.links ?? []).map((link) => (
+                  <a
+                    key={link.path}
+                    href={link.path}
+                    className="inline-flex items-center rounded-full border border-cyan-500/25 bg-cyan-500/10 px-2.5 py-0.5 text-2xs font-medium text-cyan-300 transition-colors hover:bg-cyan-500/20"
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
         )}
 

@@ -4,7 +4,7 @@
  * Each card shows preset name, description, trigger type, and an "Install" button
  * that navigates to the builder with the preset pre-filled.
  */
-import { useMemo } from 'react';
+import { useMemo, useState, type ElementType } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { GlassPanel, Button as UiButton, Badge, Text } from '@/components/ui';
@@ -14,23 +14,41 @@ import { QueryError } from '@/components/feedback/QueryError';
 import { FadeIn } from '@/components/motion/FadeIn';
 import { StaggerContainer } from '@/components/motion/StaggerContainer';
 import { StaggerItem } from '@/components/motion/StaggerItem';
+import { PillFilterBar, type PillItem } from '@/components/forms';
 import { useAutomationPresets } from '@/api/hooks/useAutomations';
-import {
-  Shield, Moon, Sun, ShieldCheck, Lock, UserX, CarFront, Siren,
-  Plus, Clock, type LucideIcon,
-} from 'lucide-react';
+import { RoutineWizard } from '../components/RoutineWizard';
+import { Icons } from '@/lib/icons';
 import type { AutomationPreset } from '@/api/types';
 import type { AutomationTriggerKind } from '@/types/automations';
 
-const iconMap: Record<string, LucideIcon> = {
-  Shield,
-  Moon,
-  Sun,
-  ShieldCheck,
-  Lock,
-  UserX,
-  CarFront,
-  Siren,
+const iconMap: Record<string, ElementType> = {
+  shield: Icons.security,
+  'shield-off': Icons.securityOff,
+  'shield-check': Icons.securityCheck,
+  lock: Icons.locked,
+  unlock: Icons.unlocked,
+  'thermometer-sun': Icons.climateHot,
+  'thermometer-snowflake': Icons.cooling,
+  thermometer: Icons.climate,
+  battery: Icons.battery,
+  'battery-charging': Icons.batteryCharging,
+  clock: Icons.clock,
+  'alarm-clock': Icons.clock,
+  'x-square': Icons.close,
+  wheel: Icons.vehicle,
+  user: Icons.user,
+  lightbulb: Icons.lightbulb,
+  zap: Icons.bolt,
+  gauge: Icons.speed,
+  home: Icons.home,
+  sparkles: Icons.sparkles,
+  wrench: Icons.maintenance,
+  moon: Icons.moon,
+  sun: Icons.sun,
+  car: Icons.vehicle,
+  volume: Icons.volume,
+  Moon: Icons.moon,
+  Shield: Icons.security,
 };
 
 const triggerLabels: Record<AutomationTriggerKind, { key: string; fallback: string }> = {
@@ -51,7 +69,7 @@ function PresetCard({
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const Icon = iconMap[preset.icon] ?? Shield;
+  const Icon = iconMap[preset.icon] ?? Icons.security;
   const firstTrigger = preset.triggers?.[0];
   const triggerLabel = firstTrigger ? triggerLabels[firstTrigger.kind] : null;
   const actionCount = preset.actions?.length ?? 0;
@@ -98,7 +116,7 @@ function PresetCard({
         })}
         className="mt-1 w-full"
       >
-        <Plus className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
+        <Icons.add className="h-3.5 w-3.5 mr-1.5" aria-hidden="true" />
         {t('automations.presets.install', 'Install')}
       </UiButton>
     </GlassPanel>
@@ -134,8 +152,37 @@ export function PresetGallery({
 }: PresetGalleryProps) {
   const { t } = useTranslation();
   const { data, isLoading, isError, error, refetch } = useAutomationPresets(category);
+  const [activeCategory, setActiveCategory] = useState(category ?? 'all');
 
   const presetList = useMemo(() => data?.presets ?? [], [data]);
+  const categories = useMemo(() => data?.categories ?? [], [data]);
+  const filteredPresets = useMemo(() => {
+    if (category) {
+      return presetList;
+    }
+    if (activeCategory === 'all') {
+      return presetList;
+    }
+    return presetList.filter((p) => p.category === activeCategory);
+  }, [presetList, activeCategory, category]);
+
+  const pills: PillItem[] = useMemo(() => {
+    const items: PillItem[] = [
+      {
+        key: 'all',
+        label: t('automations.presets.allCategory', 'All'),
+        count: presetList.length,
+      },
+    ];
+    for (const cat of [...categories].sort((a, b) => a.name.localeCompare(b.name))) {
+      items.push({
+        key: cat.id,
+        label: cat.name,
+        count: presetList.filter((p) => p.category === cat.id).length,
+      });
+    }
+    return items;
+  }, [categories, presetList, t]);
 
   if (isLoading) {
     return (
@@ -160,25 +207,43 @@ export function PresetGallery({
   if (presetList.length === 0) {
     return (
       <EmptyState /* no-action: transient empty state — surfaces when source data is missing; no specific recovery action available */
-        icon={<Clock className="h-8 w-8" />}
+        icon={<Icons.clock className="h-8 w-8" />}
         message={t('automations.presets.empty', 'No preset templates available')}
       />
     );
   }
 
   return (
-    <FadeIn>
-      <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {presetList.map((preset) => (
-          <StaggerItem key={preset.id}>
-            <PresetCard
-              preset={preset}
-              actionsDisabled={actionsDisabled}
-              actionsDisabledReason={actionsDisabledReason}
-            />
-          </StaggerItem>
-        ))}
-      </StaggerContainer>
-    </FadeIn>
+    <div className="space-y-6">
+      <RoutineWizard actionsDisabled={actionsDisabled} />
+      {!category && pills.length > 1 && (
+        <PillFilterBar
+          items={pills}
+          activeKey={activeCategory}
+          onChange={setActiveCategory}
+          ariaLabel={t('automations.presets.filterAria', 'Filter presets by category')}
+        />
+      )}
+      {filteredPresets.length === 0 ? (
+        <EmptyState
+          icon={<Icons.clock className="h-8 w-8" />}
+          message={t('automations.presets.emptyCategory', 'No presets in this category')}
+        />
+      ) : (
+        <FadeIn>
+          <StaggerContainer className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            {filteredPresets.map((preset) => (
+              <StaggerItem key={preset.id}>
+                <PresetCard
+                  preset={preset}
+                  actionsDisabled={actionsDisabled}
+                  actionsDisabledReason={actionsDisabledReason}
+                />
+              </StaggerItem>
+            ))}
+          </StaggerContainer>
+        </FadeIn>
+      )}
+    </div>
   );
 }

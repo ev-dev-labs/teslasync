@@ -1157,9 +1157,15 @@ export interface ChatMessage {
   created_at: string
 }
 
+export interface ChatLink {
+  label: string
+  path: string
+}
+
 export interface ChatResponse {
   response: string
   session_id: string
+  links?: ChatLink[] | null
 }
 
 /**
@@ -2484,6 +2490,25 @@ export interface AutomationPreset {
 export interface AutomationPresetsResponse {
   categories: AutomationPresetCategory[]
   presets: AutomationPreset[]
+}
+
+export interface RoutineTemplateAction {
+  command: string
+  params?: Record<string, unknown> | null
+}
+
+export interface RoutineTemplate {
+  id: string
+  name: string
+  description: string
+  event: 'enter' | 'exit'
+  actions: RoutineTemplateAction[]
+}
+
+export interface InstallRoutineRequest {
+  place_id: number
+  vehicle_id?: number | null
+  name?: string
 }
 
 export type AutomationHistoryStatus = 'running' | 'success' | 'partial' | 'failed' | 'skipped' | 'cancelled' | 'test' | 'undo'

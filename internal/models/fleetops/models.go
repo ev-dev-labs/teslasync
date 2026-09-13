@@ -3,13 +3,18 @@ package fleetops
 import "time"
 
 type FleetDriver struct {
-	ID            int64     `db:"id"             json:"id"`
-	DisplayName   string    `db:"display_name"   json:"display_name"`
-	ReferenceCode string    `db:"reference_code" json:"reference_code"`
-	Status        string    `db:"status"          json:"status"`
-	Version       int       `db:"version"         json:"version"`
-	CreatedAt     time.Time `db:"created_at"      json:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at"      json:"updated_at"`
+	ID            int64  `db:"id"             json:"id"`
+	DisplayName   string `db:"display_name"   json:"display_name"`
+	ReferenceCode string `db:"reference_code" json:"reference_code"`
+	Status        string `db:"status"          json:"status"`
+	// Guardrails (all optional): per-driver charge-target cap and a daily
+	// curfew window (HH:MM, overnight wrap allowed) evaluated by /evaluate.
+	MaxChargeSOC *int16    `db:"max_charge_soc"  json:"max_charge_soc"`
+	CurfewStart  *string   `db:"curfew_start"    json:"curfew_start"`
+	CurfewEnd    *string   `db:"curfew_end"      json:"curfew_end"`
+	Version      int       `db:"version"         json:"version"`
+	CreatedAt    time.Time `db:"created_at"      json:"created_at"`
+	UpdatedAt    time.Time `db:"updated_at"      json:"updated_at"`
 }
 
 type FleetCostCenter struct {

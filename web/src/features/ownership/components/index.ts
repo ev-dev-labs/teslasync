@@ -1,4 +1,5 @@
 export { EvidencePanel } from './EvidencePanel';
+export { GhostDrivesPanel } from './GhostDrivesPanel';
 export { MoneyInput } from './MoneyInput';
 export { MutationError } from './MutationError';
 export { OwnershipPanel } from './OwnershipPanel';

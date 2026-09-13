@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
+import { queryPolicy } from '../queryPolicy';
 import { useMutationToast } from './_toastHelpers';
 import type {
   AssignDriveRequest,
@@ -22,6 +23,7 @@ import type {
   CreateWarrantyRequest,
   DriverAttributionReport,
   DriverProfile,
+  GhostReport,
   GovernanceOverview,
   GovernanceSimulationRequest,
   GovernanceSimulationResponse,
@@ -83,6 +85,8 @@ export const ownershipKeys = {
     [...ownershipKeys.all, 'driver', vehicleId, windowDays, limit, offset] as const,
   driverProfiles: (vehicleId: number | null) =>
     [...ownershipKeys.all, 'driver-profiles', vehicleId] as const,
+  ghosts: (vehicleId: number | null, windowDays: number) =>
+    [...ownershipKeys.all, 'ghosts', vehicleId, windowDays] as const,
   warranty: (vehicleId: number | null) => [...ownershipKeys.all, 'warranty', vehicleId] as const,
   warranties: (vehicleId: number | null) =>
     [...ownershipKeys.all, 'warranties', vehicleId] as const,
@@ -342,6 +346,26 @@ export function useDriverProfiles(vehicleId: number | null) {
     `${DRIVER}/profiles${query({ vehicle_id: vehicleId ?? undefined })}`,
     vehicleId,
   );
+}
+
+export function useGhostDrives(vehicleId: number | null, windowDays = 90) {
+  return useQuery({
+    queryKey: ownershipKeys.ghosts(vehicleId, windowDays),
+    queryFn: ({ signal }) => {
+      if (!isValidVehicle(vehicleId)) {
+        throw new Error('vehicle_id must be a positive integer');
+      }
+      return request<GhostReport>(
+        `${DRIVER}/ghost-drives${query({
+          vehicle_id: vehicleId,
+          window_days: windowDays,
+        })}`,
+        { signal },
+      );
+    },
+    enabled: isValidVehicle(vehicleId),
+    ...queryPolicy('operational'),
+  });
 }
 
 export function useCreateDriverProfile() {

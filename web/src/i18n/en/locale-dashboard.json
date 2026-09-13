@@ -437,6 +437,33 @@
     "resetMessage": "This removes all customizations and restores the shipped default dashboard. Your other saved layouts are not affected.",
     "editTitle": "Edit dashboard (E)"
   },
+  "nextCharge": {
+    "title": "Next Charge",
+    "help": "12-hour verdict: charge home now, wait for off-peak, Supercharger, or skip DC-fast.",
+    "resource": "Next charge decision",
+    "waitingSoc": "Waiting for live battery level",
+    "noData": "No charge decision yet",
+    "openAutopilot": "Open Autopilot",
+    "homeNow": "Home now",
+    "waitWindow": "Wait window",
+    "supercharger": "Supercharger",
+    "socLine": "{{soc}}% → {{target}}% · {{kwh}} kWh needed",
+    "verdict": {
+      "enough": "Enough energy",
+      "wait": "Wait for off-peak",
+      "charge_home_now": "Charge home now",
+      "supercharger": "Use Supercharger",
+      "skip_dc": "Skip DC-fast"
+    },
+    "reason": {
+      "enough": "Battery is at {{soc}}%, already at the {{target}}% target.",
+      "wait_offpeak": "Wait for off-peak at {{time}} — save {{save}} versus charging now.",
+      "supercharger_faster": "Home charging cannot finish before ready-by; {{site}} is the cheapest billed Supercharger.",
+      "supercharger_cheaper": "{{site}} is cheaper ({{sc}} vs {{home}} at home) for the energy you still need.",
+      "skip_dc": "Skip {{site}} ({{sc}}) — home now is {{home}} for the same energy.",
+      "charge_home_now": "Charge at home now — the cheapest window is already open (or too far out to wait)."
+    }
+  },
   "perf": {
     "title": "Fleet Performance",
     "drives": "Total Drives (30d)",

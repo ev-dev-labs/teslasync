@@ -3,6 +3,7 @@ package sharing
 import (
 	"context"
 	"crypto/rand"
+	"database/sql"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -51,12 +52,12 @@ func NewTokenRepo(db *database.DB) *TokenRepo {
 // tests can assert column names, filters, and RETURNING clauses without a live
 // database — a mistyped column would otherwise only surface at runtime.
 const insertTokenSQL = `
-		INSERT INTO share_tokens (token, drive_id, created_by, title, description,
+		INSERT INTO share_tokens (token, drive_id, charging_session_id, created_by, title, description,
 			include_map, include_telemetry, include_speed, expires_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at`
 
-const selectTokenColumns = `id, token, drive_id, created_by, title, description,
+const selectTokenColumns = `id, token, drive_id, charging_session_id, created_by, title, description,
 			include_map, include_telemetry, include_speed, views, expires_at, created_at`
 
 const getByTokenSQL = `
@@ -66,6 +67,11 @@ const getByTokenSQL = `
 const listByDriveSQL = `
 		SELECT ` + selectTokenColumns + `
 		FROM share_tokens WHERE drive_id = $1
+		ORDER BY created_at DESC`
+
+const listByChargingSessionSQL = `
+		SELECT ` + selectTokenColumns + `
+		FROM share_tokens WHERE charging_session_id = $1
 		ORDER BY created_at DESC`
 
 const incrementViewsSQL = `UPDATE share_tokens SET views = views + 1 WHERE id = $1`
@@ -83,14 +89,49 @@ func generateToken() (string, error) {
 	return hex.EncodeToString(b), nil
 }
 
-// Create inserts a new share token for a drive, generating a unique token and
-// populating st.Token/st.ID/st.CreatedAt in place.
+// scanShareToken scans one share_tokens row into st. The target IDs are
+// nullable in the schema (exactly one is set per the CHECK); NULL scans
+// to 0, matching the model's "0 = none" convention.
+func scanShareToken(scan func(dest ...any) error, st *drivemodel.ShareToken) error {
+	var driveID, sessionID sql.NullInt64
+	err := scan(
+		&st.ID, &st.Token, &driveID, &sessionID, &st.CreatedBy, &st.Title, &st.Description,
+		&st.IncludeMap, &st.IncludeTelemetry, &st.IncludeSpeed, &st.Views,
+		&st.ExpiresAt, &st.CreatedAt,
+	)
+	if err != nil {
+		return err
+	}
+	st.DriveID = driveID.Int64
+	st.ChargingSessionID = sessionID.Int64
+	return nil
+}
+
+// nullTargetID converts a model target ID to its bind value: NULL when
+// unset so the exactly-one-target CHECK sees the real shape.
+func nullTargetID(id int64) any {
+	if id <= 0 {
+		return nil
+	}
+	return id
+}
+
+// Create inserts a new share token for a drive or a charging session,
+// generating a unique token and populating st.Token/st.ID/st.CreatedAt
+// in place. Exactly one target must be set.
 func (r *TokenRepo) Create(ctx context.Context, st *drivemodel.ShareToken) error {
 	if st == nil {
 		return fmt.Errorf("create share token: nil token")
 	}
-	if st.DriveID <= 0 {
-		return fmt.Errorf("create share token: invalid drive id %d", st.DriveID)
+	targets := 0
+	if st.DriveID > 0 {
+		targets++
+	}
+	if st.ChargingSessionID > 0 {
+		targets++
+	}
+	if targets != 1 {
+		return fmt.Errorf("create share token: exactly one of drive_id, charging_session_id must be set")
 	}
 
 	token, err := generateToken()
@@ -100,7 +141,8 @@ func (r *TokenRepo) Create(ctx context.Context, st *drivemodel.ShareToken) error
 	st.Token = token
 
 	if err := r.pool.QueryRow(ctx, insertTokenSQL,
-		st.Token, st.DriveID, st.CreatedBy, st.Title, st.Description,
+		st.Token, nullTargetID(st.DriveID), nullTargetID(st.ChargingSessionID),
+		st.CreatedBy, st.Title, st.Description,
 		st.IncludeMap, st.IncludeTelemetry, st.IncludeSpeed, st.ExpiresAt,
 	).Scan(&st.ID, &st.CreatedAt); err != nil {
 		return fmt.Errorf("create share token: %w", err)
@@ -117,11 +159,7 @@ func (r *TokenRepo) GetByToken(ctx context.Context, token string) (*drivemodel.S
 	}
 
 	st := &drivemodel.ShareToken{}
-	err := r.pool.QueryRow(ctx, getByTokenSQL, token).Scan(
-		&st.ID, &st.Token, &st.DriveID, &st.CreatedBy, &st.Title, &st.Description,
-		&st.IncludeMap, &st.IncludeTelemetry, &st.IncludeSpeed, &st.Views,
-		&st.ExpiresAt, &st.CreatedAt,
-	)
+	err := scanShareToken(r.pool.QueryRow(ctx, getByTokenSQL, token).Scan, st)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return nil, nil
 	}
@@ -142,11 +180,30 @@ func (r *TokenRepo) ListByDrive(ctx context.Context, driveID int64) ([]*drivemod
 	var tokens []*drivemodel.ShareToken
 	for rows.Next() {
 		st := &drivemodel.ShareToken{}
-		if err := rows.Scan(
-			&st.ID, &st.Token, &st.DriveID, &st.CreatedBy, &st.Title, &st.Description,
-			&st.IncludeMap, &st.IncludeTelemetry, &st.IncludeSpeed, &st.Views,
-			&st.ExpiresAt, &st.CreatedAt,
-		); err != nil {
+		if err := scanShareToken(rows.Scan, st); err != nil {
+			return nil, fmt.Errorf("scan share token: %w", err)
+		}
+		tokens = append(tokens, st)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list share tokens: rows iteration: %w", err)
+	}
+	return tokens, nil
+}
+
+// ListByChargingSession returns all share tokens for a charging session,
+// newest first.
+func (r *TokenRepo) ListByChargingSession(ctx context.Context, sessionID int64) ([]*drivemodel.ShareToken, error) {
+	rows, err := r.pool.Query(ctx, listByChargingSessionSQL, sessionID)
+	if err != nil {
+		return nil, fmt.Errorf("list share tokens: %w", err)
+	}
+	defer rows.Close()
+
+	var tokens []*drivemodel.ShareToken
+	for rows.Next() {
+		st := &drivemodel.ShareToken{}
+		if err := scanShareToken(rows.Scan, st); err != nil {
 			return nil, fmt.Errorf("scan share token: %w", err)
 		}
 		tokens = append(tokens, st)

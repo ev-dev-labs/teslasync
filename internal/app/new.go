@@ -17,8 +17,10 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api"
+	apicomfort "github.com/ev-dev-labs/teslasync/internal/api/comfort"
 	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
 	apiopenapi "github.com/ev-dev-labs/teslasync/internal/api/openapi"
+	apistormguard "github.com/ev-dev-labs/teslasync/internal/api/stormguard"
 	apisystem "github.com/ev-dev-labs/teslasync/internal/api/system"
 	apitelem "github.com/ev-dev-labs/teslasync/internal/api/telemetry"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
@@ -151,6 +153,8 @@ func New(ctx context.Context, cfg *config.Config, build BuildInfo) (*App, error)
 	a.initAIBackgroundJobs(ctx)
 	a.initDataRepairScanner(ctx)
 	a.initHealthWatchdog(ctx)
+	a.initStormguard(ctx)
+	a.initComfort(ctx)
 	a.loadOpenAPISpec()
 
 	return a, nil
@@ -1467,6 +1471,50 @@ func (a *App) initHealthWatchdog(ctx context.Context) {
 			}
 		}
 	})
+}
+
+// initStormguard starts the hourly severe-weather guard pass: armed
+// vehicles get their home forecast assessed and, on a fresh warning with
+// the battery below target, a pre-charge limit bump. Skipped when core
+// dependencies are missing (dev without Tesla credentials); the
+// read-only status endpoint still serves.
+func (a *App) initStormguard(ctx context.Context) {
+	if a.DB == nil || a.TeslaClient == nil || a.StateReader == nil {
+		log.Warn().Msg("stormguard: missing DB/Tesla/state dependency — evaluator disabled")
+		return
+	}
+	h := apistormguard.NewHandler(
+		apistormguard.NewStore(a.DB),
+		apistormguard.NewClient(),
+		a.TeslaClient,
+		a.StateReader,
+		vehicledb.NewVehicleRepo(a.DB),
+	)
+	resilience.SafeGoLoop(ctx, "stormguard", func(loopCtx context.Context) {
+		h.Run(loopCtx, apistormguard.DefaultEvaluateInterval)
+	})
+	log.Info().Msg("stormguard evaluator started")
+}
+
+// initComfort starts the 5-minute calendar event watch: enabled vehicles
+// get their ICS feed polled and, when an offsite event falls inside the
+// lead window, a one-shot precondition. Skipped when core dependencies
+// are missing; the read-only next-event endpoint still serves.
+func (a *App) initComfort(ctx context.Context) {
+	if a.DB == nil || a.TeslaClient == nil {
+		log.Warn().Msg("comfort: missing DB/Tesla dependency — evaluator disabled")
+		return
+	}
+	h := apicomfort.NewHandler(
+		apicomfort.NewStore(a.DB),
+		apicomfort.NewFetcher(),
+		a.TeslaClient,
+		vehicledb.NewVehicleRepo(a.DB),
+	)
+	resilience.SafeGoLoop(ctx, "comfort", func(loopCtx context.Context) {
+		h.Run(loopCtx, apicomfort.DefaultEvaluateInterval)
+	})
+	log.Info().Msg("comfort evaluator started")
 }
 
 // workerDegradedThreshold mirrors resilience.HealthMonitor's own

@@ -542,6 +542,24 @@ describe('AutomationBuilderPage — create mode', () => {
     expect(await screen.findByText('AUTOMATIONS_LIST')).toBeInTheDocument();
   });
 
+  it('stays on the page and surfaces save-time conflicts instead of navigating', async () => {
+    H.createMutateAsync.mockResolvedValue({
+      id: 124,
+      conflicts: [{ type: 'overlap', message: 'overlaps Night Sentry' }],
+    });
+    const { container } = renderPage('/automations/new');
+
+    fireEvent.change(screen.getByLabelText(/name/i), { target: { value: 'My Automation' } });
+    fireEvent.change(screen.getByLabelText(/trigger type/i), {
+      target: { value: 'trigger_signal' },
+    });
+    fireEvent.submit(container.querySelector('form')!);
+
+    await waitFor(() => expect(H.createMutateAsync).toHaveBeenCalledTimes(1));
+    expect(await screen.findByTestId('conflict-warnings')).toHaveTextContent('conflicts:1');
+    expect(screen.queryByText('AUTOMATIONS_LIST')).not.toBeInTheDocument();
+  });
+
   it('toggling the Enabled switch updates its state and the status KPI', () => {
     renderPage('/automations/new');
     expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'true');

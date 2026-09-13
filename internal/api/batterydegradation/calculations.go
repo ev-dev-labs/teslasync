@@ -9,6 +9,7 @@ import (
 func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regressionResult {
 	res := regressionResult{}
 	pred := &res.Prediction
+	res.Horizon.Points = []horizonPoint{}
 
 	if len(snapshots) < 3 {
 		res.Projections = []predictiveProjection{}
@@ -81,7 +82,7 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 	var oldProjections []projPoint
 	var enhancedProjections []predictiveProjection
 
-	for i := 0; i <= 36; i++ {
+	for i := 0; i <= 60; i++ {
 		futureYears := currentYears + float64(i)/12.0
 		health := intercept + slope*futureYears
 		if health < 0 {
@@ -123,7 +124,36 @@ func (h *Handler) predictDegradation(snapshots []batterySnapshotData) regression
 	}
 
 	res.Projections = enhancedProjections
+	res.Horizon = horizonOutlook{
+		Points:        horizonPoints(currentYears, xBar, intercept, slope, se, ssx, n, tValue),
+		DataMonths:    int(math.Round((snapshots[len(snapshots)-1].CreatedAt.Sub(firstTime).Hours() / 24 / 30.44))),
+		SlopePerYear:  math.Round(slope*100) / 100,
+		HasEnoughData: true,
+	}
 	return res
+}
+
+// horizonPoints evaluates the fitted line at the 1/3/5-year horizons with
+// the same prediction-interval math as the monthly projections.
+func horizonPoints(currentYears, xBar, intercept, slope, se, ssx, n, tValue float64) []horizonPoint {
+	out := make([]horizonPoint, 0, 3)
+	for _, years := range []int{1, 3, 5} {
+		fy := currentYears + float64(years)
+		health := intercept + slope*fy
+		health = math.Min(100, math.Max(0, health))
+		xDev := fy - xBar
+		piWidth := 0.0
+		if ssx > 1e-10 && n > 2 {
+			piWidth = tValue * se * math.Sqrt(1+1/n+(xDev*xDev)/ssx)
+		}
+		out = append(out, horizonPoint{
+			Years:          years,
+			HealthPct:      math.Round(health*10) / 10,
+			ConfidenceLow:  math.Round(math.Max(0, health-piWidth)*10) / 10,
+			ConfidenceHigh: math.Round(math.Min(100, health+piWidth)*10) / 10,
+		})
+	}
+	return out
 }
 
 // computeRiskFactors scores 5 battery risk categories (0-100, higher = more risk).

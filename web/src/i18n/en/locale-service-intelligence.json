@@ -135,6 +135,17 @@
       "importPeriodLabel": "Import official NHTSA artifact for {{period}}",
       "refreshPeriod": "Refresh",
       "importPeriod": "Import"
+    },
+    "claim": {
+      "title": "Warranty claim draft",
+      "coverage": "{{name}} · {{days}}d left",
+      "copy": "Copy ticket text",
+      "placeholder": "Describe the issue (e.g. charge rate drops after 60%)",
+      "issueLabel": "Issue description",
+      "generate": "Draft ticket",
+      "selectMessage": "Choose a vehicle to draft a warranty service ticket.",
+      "emptyTitle": "No ticket yet",
+      "empty": "Describe an issue and generate a ready-to-paste service ticket."
     }
   }
 }

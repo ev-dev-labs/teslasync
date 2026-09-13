@@ -61,6 +61,16 @@ export function DriverRoster({
       ),
     },
     {
+      key: 'guardrails',
+      header: t('fleetOps.drivers.guardrails', 'Guardrails'),
+      render: (item) => {
+        const parts: string[] = [];
+        if (item.max_charge_soc != null) parts.push(`${item.max_charge_soc}%`);
+        if (item.curfew_start && item.curfew_end) parts.push(`${item.curfew_start}–${item.curfew_end}`);
+        return parts.length > 0 ? parts.join(' · ') : '—';
+      },
+    },
+    {
       key: 'actions',
       header: t('common.actions', 'Actions'),
       render: (item) => (

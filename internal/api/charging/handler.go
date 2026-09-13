@@ -43,6 +43,16 @@ type ChargingHandler struct {
 	// bulkOverride lets tests substitute the bulk store without standing up a
 	// real *chargingdb.ChargingRepo. Always nil in production.
 	bulkOverride chargingBulkStore
+	// varianceOverride lets tests substitute the measured-DC aggregate and
+	// invoice summary. Always nil in production.
+	varianceOverride *varianceTestSeam
+}
+
+// varianceTestSeam bundles the BillVariance data sources for tests.
+type varianceTestSeam struct {
+	measured measuredDCSummer
+	invoiced invoicedTotalsReader
+	vin      string
 }
 
 // chargingByIDFetcher is the narrow interface needed by the migrated handlers

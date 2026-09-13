@@ -49,6 +49,9 @@ func NewRegistry() *Registry {
 		{ID: "comfort", Name: "Comfort", Description: "Cabin comfort automation templates", Icon: "sparkles"},
 		{ID: "maintenance", Name: "Maintenance", Description: "Maintenance reminder automation templates", Icon: "wrench"},
 		{ID: "energy", Name: "Energy", Description: "Energy monitoring automation templates", Icon: "zap"},
+		{ID: "windows", Name: "Windows", Description: "Window and sunroof automation templates", Icon: "x-square"},
+		{ID: "media", Name: "Media", Description: "Cabin media automation templates", Icon: "volume"},
+		{ID: "safety", Name: "Safety", Description: "Guest mode and cabin-protection templates", Icon: "shield-check"},
 	} {
 		r.registerCategory(category)
 	}

@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { request } from '../client';
 import { safeArray } from '@/lib/safeArray';
 import { INTERVALS, STALE_TIMES } from '@/lib/constants';
-import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot } from '@/types/vehicle-systems';
+import type { ClimateState, TirePressureReading, MaintenanceItem, ServiceRecord, SoftwareUpdate, SafetySnapshot, MaintenanceForecast } from '@/types/vehicle-systems';
 // MediaSnapshot must be the canonical snake_case shape that matches the Go
 // media handler JSON tags (now_playing_title, playback_source, audio_volume,
 // created_at, …). The camelCase MediaSnapshot in @/types/vehicle-systems does
@@ -98,6 +98,20 @@ export function useServiceRecords() {
     retry: false,
     staleTime: STALE_TIMES.STATIC,
     select: safeArray,
+  });
+}
+
+/** Fetches the wear-based maintenance forecast (defaults to first vehicle). */
+export function useMaintenanceForecast(vehicleId?: number) {
+  return useQuery({
+    queryKey: [...vehicleSystemsKeys.maintenance, 'forecast', vehicleId] as const,
+    queryFn: ({ signal }) =>
+      request<MaintenanceForecast>(
+        `/maintenance/forecast${vehicleId ? `?vehicle_id=${vehicleId}` : ''}`,
+        { signal },
+      ),
+    retry: false,
+    staleTime: STALE_TIMES.STATIC,
   });
 }
 

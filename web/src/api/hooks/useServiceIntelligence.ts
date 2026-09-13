@@ -1,5 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request, SudoCanceledError } from '../client';
+import { queryPolicy } from '../queryPolicy';
+import { scopedPath } from '../scope';
 import { STALE_TIMES } from '@/lib/constants';
 import { useMutationToast } from './_toastHelpers';
 
@@ -198,6 +200,73 @@ export function useServiceIntelligence(vehicleId: number | null, refresh = false
     queryFn: ({ signal }) =>
       request<ServiceIntelligenceResponse>(
         `/service-intelligence/vehicles/${vehicleId}?refresh=${refresh}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+    staleTime: STALE_TIMES.ANALYTICS,
+  });
+}
+
+export interface WarrantyCoverage {
+  name: string;
+  expires_at: string;
+  days_remaining: number;
+  km_limit: number | null;
+  km_remaining: number | null;
+  status: 'active' | 'expiring_soon' | 'expired';
+  basis: string;
+}
+
+export interface WarrantyOutlook {
+  vehicle_id: number;
+  model: string;
+  model_year: number;
+  coverages: WarrantyCoverage[];
+  assumption: string;
+}
+
+export interface ClaimCoverage {
+  name: string;
+  status: string;
+  days_remaining: number;
+}
+
+export interface ClaimDraft {
+  subject: string;
+  issue: string;
+  vehicle: string;
+  coverages: ClaimCoverage[];
+  communications: string[];
+  symptoms: string[];
+  evidence: string[];
+  ask: string;
+  body: string;
+  disclaimer: string;
+}
+
+/** Fetches an auto-drafted service ticket for an owner-described issue. */
+export function useClaimDraft(vehicleId: number | null, issue: string | null, odometerKm?: number) {
+  return useQuery({
+    queryKey: [...serviceIntelligenceKeys.vehicles, vehicleId, 'claim-draft', issue, odometerKm] as const,
+    queryFn: ({ signal }) =>
+      request<ClaimDraft>(
+        scopedPath(`/service-intelligence/vehicles/${vehicleId}/claim-draft`, {
+          filters: { issue, odometer_km: odometerKm ?? null },
+        }),
+        { signal },
+      ),
+    enabled: !!vehicleId && issue != null,
+    ...queryPolicy('historical'),
+  });
+}
+
+/** Fetches the warranty coverage countdown for a vehicle. */
+export function useWarrantyOutlook(vehicleId: number | null, odometerKm?: number) {
+  return useQuery({
+    queryKey: [...serviceIntelligenceKeys.vehicles, vehicleId, 'warranty', odometerKm] as const,
+    queryFn: ({ signal }) =>
+      request<WarrantyOutlook>(
+        `/service-intelligence/vehicles/${vehicleId}/warranty${odometerKm != null ? `?odometer_km=${odometerKm}` : ''}`,
         { signal },
       ),
     enabled: !!vehicleId,

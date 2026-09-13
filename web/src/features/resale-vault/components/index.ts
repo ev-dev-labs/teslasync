@@ -9,6 +9,8 @@ export { EvidenceInventoryPanel } from './EvidenceInventoryPanel';
 export type { EvidenceInventoryPanelProps } from './EvidenceInventoryPanel';
 export { BatterySummaryPanel } from './BatterySummaryPanel';
 export type { BatterySummaryPanelProps } from './BatterySummaryPanel';
+export { BatteryCertificatePanel } from './BatteryCertificatePanel';
+export type { BatteryCertificatePanelProps } from './BatteryCertificatePanel';
 export { MaintenanceSummaryPanel } from './MaintenanceSummaryPanel';
 export type { MaintenanceSummaryPanelProps } from './MaintenanceSummaryPanel';
 export { SoftwareUpdateSummaryPanel } from './SoftwareUpdateSummaryPanel';

@@ -38,7 +38,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import type { SharedDriveData, SharedDriveDataV1 } from '@/types/sharing'
+import type { SharedDriveData, SharedDriveDataV1, SharedSessionData } from '@/types/sharing'
 
 /* ── Hoisted mutable state shared with the (hoisted) vi.mock factories ────── */
 const h = vi.hoisted(() => ({
@@ -201,6 +201,9 @@ vi.mock('@/components/charts', () => ({
     h.charts.lineData = data
     return <div data-testid="line-chart" data-count={data.length} />
   },
+  ComposedChart: ({ data }: { data: Array<Record<string, number>> }) => (
+    <div data-testid="composed-chart" data-count={data.length} />
+  ),
   Area: () => null,
   Line: () => null,
   XAxis: () => null,
@@ -299,7 +302,7 @@ function makeLegacy(overrides: Partial<SharedDriveDataV1> = {}): SharedDriveData
 }
 
 function setData(
-  data: SharedDriveData | SharedDriveDataV1 | undefined,
+  data: SharedDriveData | SharedDriveDataV1 | SharedSessionData | undefined,
   opts: { isLoading?: boolean; error?: Error | null } = {},
 ) {
   h.query.current = {
@@ -566,5 +569,44 @@ describe('SharedDrivePage — optional cards + empty states', () => {
       screen.getByText('Route data is not available for this shared drive.'),
     ).toBeInTheDocument()
     expect(screen.queryByTestId('map-container')).toBeNull()
+  })
+})
+
+describe('SharedDrivePage — session share branch', () => {
+  function sessionPayload(): SharedSessionData {
+    return {
+      payload_version: 'v2',
+      share_type: 'charging_session',
+      title: 'Baker Supercharger Stop',
+      description: '',
+      session: {
+        date: '2026-03-15',
+        duration_s: 2400,
+        energy_added_wh: 45000,
+        start_soc_pct: 20,
+        end_soc_pct: 80,
+        charger_type: 'supercharger',
+        place: 'Baker, CA',
+        peak_power_w: 250000,
+        avg_power_w: 67500,
+        cost: null,
+        cost_currency: null,
+        curve: [{ t_s: 0, power_kw: 250, battery_pct: 20, energy_kwh: 0 }],
+      },
+      vehicle: { model: 'Model 3', color: 'White' },
+    }
+  }
+
+  it('renders the session report instead of the drive report', () => {
+    setData(sessionPayload())
+    renderPage()
+
+    expect(screen.getByText('Baker Supercharger Stop')).toBeInTheDocument()
+    expect(screen.getByText('Shared Charging Report')).toBeInTheDocument()
+    expect(screen.getByText('20% → 80%')).toBeInTheDocument()
+    expect(screen.getByTestId('composed-chart')).toHaveAttribute('data-count', '1')
+    // Drive chrome stays out: no map, no drive header.
+    expect(screen.queryByTestId('map-container')).toBeNull()
+    expect(screen.queryByText('Shared Drive Report')).toBeNull()
   })
 })

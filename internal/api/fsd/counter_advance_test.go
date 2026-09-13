@@ -35,6 +35,16 @@ func TestPlausibleCounterAdvance(t *testing.T) {
 	if !plausibleCounterAdvance(16, time.Millisecond) {
 		t.Fatal("a sub-second 0.01 mile tick must still pass the floor")
 	}
+	mile := teslaFSDWireQuantumM
+	if !plausibleCounterAdvance(mile, 10*time.Second) {
+		t.Fatal("Tesla 1-mile FSD tick on 10s include_fields must be attributable")
+	}
+	if !plausibleCounterAdvance(mile, time.Second) {
+		t.Fatal("1-mile quantum against the 1s floor must still pass")
+	}
+	if plausibleCounterAdvance(4_913*mile, 10*time.Second) {
+		t.Fatal("thousands of miles on include_fields cadence must still be rejected")
+	}
 }
 
 func TestStepTripMeterSpuriousZero(t *testing.T) {

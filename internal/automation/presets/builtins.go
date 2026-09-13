@@ -248,6 +248,9 @@ func (r *Registry) registerBuiltins() {
 		},
 		Tags: []string{"energy", "amperage"},
 	})
+
+	r.registerExtended()
+	r.registerEcosystem()
 }
 
 // --- builders -------------------------------------------------------------
@@ -292,6 +295,36 @@ func actionCommand(name string, params map[string]any) json.RawMessage {
 		step["command_params"] = params
 	}
 	return mustMarshal(step)
+}
+
+func conditionTimeWindow(start, end, tz string) json.RawMessage {
+	if tz == "" {
+		tz = "UTC"
+	}
+	return mustMarshal(map[string]any{
+		"kind":       "condition_time_window",
+		"start_time": start,
+		"end_time":   end,
+		"timezone":   tz,
+	})
+}
+
+func conditionSignalNum(signal, op string, value float64) json.RawMessage {
+	return mustMarshal(map[string]any{
+		"kind":      "condition_signal",
+		"signal":    signal,
+		"op":        op,
+		"value_num": value,
+	})
+}
+
+func conditionSignalBool(signal, op string, value bool) json.RawMessage {
+	return mustMarshal(map[string]any{
+		"kind":       "condition_signal",
+		"signal":     signal,
+		"op":         op,
+		"value_bool": value,
+	})
 }
 
 func mustMarshal(v any) json.RawMessage {

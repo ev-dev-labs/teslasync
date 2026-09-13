@@ -345,4 +345,31 @@ describe('ChatMessageItem', () => {
     expect(box.value).toBe('');
     expect(screen.getByRole('button', { name: 'Save & resend' })).toBeDisabled();
   });
+
+  it('renders deep-link citations on a completed assistant message', () => {
+    const message = makeMessage({
+      links: [
+        { label: 'Cost analysis', path: '/cost-analysis' },
+        { label: 'Charging', path: '/charging' },
+      ],
+    });
+    renderItem(message);
+
+    const citations = screen.getByLabelText('Sources');
+    expect(citations).toBeInTheDocument();
+    const cost = screen.getByRole('link', { name: 'Cost analysis' });
+    expect(cost).toHaveAttribute('href', '/cost-analysis');
+    expect(screen.getByRole('link', { name: 'Charging' })).toHaveAttribute('href', '/charging');
+  });
+
+  it('hides citations while streaming and on user messages', () => {
+    renderItem(makeMessage({ isStreaming: true, links: [{ label: 'Cost analysis', path: '/cost-analysis' }] }));
+    expect(screen.queryByLabelText('Sources')).toBeNull();
+
+    renderItem(
+      makeMessage({ role: 'user', content: 'hi', links: [{ label: 'Cost analysis', path: '/cost-analysis' }] }),
+      { isLastAssistant: false, isLastUser: true },
+    );
+    expect(screen.queryByLabelText('Sources')).toBeNull();
+  });
 });

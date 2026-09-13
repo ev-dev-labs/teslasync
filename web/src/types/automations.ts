@@ -225,4 +225,10 @@ export interface AutomationFull extends Automation {
   triggers: AutomationTriggerStep[];
   conditions: AutomationConditionStep[];
   actions: AutomationActionStep[];
+  conflicts?: Array<{
+    automation_id: number;
+    automation_name: string;
+    reason: string;
+    severity: 'warning' | 'info';
+  }>;
 }

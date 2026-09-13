@@ -66,6 +66,14 @@ vi.mock('@/hooks/useSelectedVehicle', () => ({
   }),
 }));
 
+// StormGuardPanel (embedded in EmergencyResiliencePage) stays idle: its own
+// contract tests cover behaviour; here it must only not fire live queries.
+vi.mock('@/api/hooks/useStormguard', () => ({
+  useStormguardStatus: () => ({ data: undefined, isLoading: true, isError: false }),
+  useStormguardEvents: () => ({ data: [], isLoading: false, isError: false }),
+  useSaveStormguardConfig: () => ({ mutate: vi.fn(), isPending: false, isError: false, error: null }),
+}));
+
 vi.mock('@/hooks/useUnits', () => ({
   useUnits: () => ({
     unitPrefs: {

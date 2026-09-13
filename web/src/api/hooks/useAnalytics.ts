@@ -1,11 +1,13 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { queryPolicy } from '../queryPolicy';
 import { scopeKey, scopedPath, type QueryScope } from '../scope';
 import { safeArray } from '@/lib/safeArray';
 import { STALE_TIMES } from '@/lib/constants';
 import { browserTimezone } from '@/lib/timezone';
-import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse } from '@/types/analytics';
+import { useMutationToast } from './_toastHelpers';
+import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import type { AnalyticsSummary, MileageStats, CostBreakdown, TimelineEvent, StateSummary, WeeklyDigestData, MonthlyMileageBucket, MonthlyMileageResponse, DailyMileageBucket, DailyMileageResponse, TcoLedgerResponse, TcoLedgerCreate, TcoLedgerEntry } from '@/types/analytics';
 import { FSD_DEFAULT_PERIOD_DAYS, type FsdInsights } from '@/types/fsd';
 import type { FleetAnalytics } from '@/api/types';
 
@@ -107,6 +109,54 @@ export function useCostBreakdown(vehicleId: string) {
     queryKey: analyticsKeys.cost(vehicleId),
     queryFn: ({ signal }) => request<CostBreakdown>(`/analytics/tco?vehicle_id=${encodeURIComponent(vehicleId)}`, { signal }),
     enabled: !!vehicleId,
+  });
+}
+
+export const tcoLedgerKeys = {
+  all: ['tco-ledger'] as const,
+  byVehicle: (vehicleId: number) => ['tco-ledger', vehicleId] as const,
+};
+
+/** Fetches fixed-cost ledger entries + totals for a vehicle. */
+export function useTcoLedger(vehicleId?: number) {
+  return useQuery({
+    queryKey: tcoLedgerKeys.byVehicle(vehicleId!),
+    queryFn: ({ signal }) =>
+      request<TcoLedgerResponse>(`/analytics/tco/ledger?vehicle_id=${vehicleId}`, { signal }),
+    enabled: !!vehicleId,
+  });
+}
+
+/** Mutation to record a fixed-cost ledger entry. */
+export function useAddTcoLedgerEntry() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (params: TcoLedgerCreate) =>
+      request<TcoLedgerEntry>('/analytics/tco/ledger', {
+        method: 'POST',
+        body: JSON.stringify(params),
+      }),
+    onSuccess: (entry) => {
+      invalidateAndBroadcast(qc, { queryKey: tcoLedgerKeys.byVehicle(entry.vehicle_id) });
+      success('toast.tco.ledger.add.success', 'Cost recorded');
+    },
+    onError: (err) => error(err, 'toast.tco.ledger.add.error', 'Failed to record cost'),
+  });
+}
+
+/** Mutation to delete a fixed-cost ledger entry. */
+export function useDeleteTcoLedgerEntry() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ vehicleId, id }: { vehicleId: number; id: number }) =>
+      request<void>(`/analytics/tco/ledger/${id}?vehicle_id=${vehicleId}`, { method: 'DELETE' }),
+    onSuccess: (_, { vehicleId }) => {
+      invalidateAndBroadcast(qc, { queryKey: tcoLedgerKeys.byVehicle(vehicleId) });
+      success('toast.tco.ledger.delete.success', 'Entry deleted');
+    },
+    onError: (err) => error(err, 'toast.tco.ledger.delete.error', 'Failed to delete entry'),
   });
 }
 
@@ -440,6 +490,39 @@ export function useTemperatureImpact(vehicleId: string) {
     queryFn: ({ signal }) =>
       request<TemperatureImpactResponse>(
         `/analytics/temperature-impact?vehicle_id=${encodeURIComponent(vehicleId)}`,
+        { signal },
+      ),
+    enabled: !!vehicleId,
+  });
+}
+
+/** GET /analytics/temperature-impact/shift — month-over-month diagnosis. */
+export interface EfficiencyShift {
+  latest_month: string;
+  prior_month: string;
+  latest_efficiency: number;
+  prior_efficiency: number;
+  efficiency_delta_pct: number;
+  latest_temp_c: number;
+  prior_temp_c: number;
+  temp_delta_c: number;
+  temp_sensitivity_per_c: number;
+  temp_attributed_pct: number;
+  residual_pct: number;
+  verdict: 'stable' | 'colder_weather' | 'warmer_driving' | 'driving_pattern' | 'insufficient_data';
+  explanation: string;
+}
+
+/**
+ * GET /analytics/temperature-impact/shift?vehicle_id=X — the efficiency
+ * detective: latest vs prior month with temperature attribution.
+ */
+export function useEfficiencyShift(vehicleId: string) {
+  return useQuery({
+    queryKey: [...analyticsKeys.temperatureImpact(vehicleId), 'shift'] as const,
+    queryFn: ({ signal }) =>
+      request<EfficiencyShift>(
+        `/analytics/temperature-impact/shift?vehicle_id=${encodeURIComponent(vehicleId)}`,
         { signal },
       ),
     enabled: !!vehicleId,
