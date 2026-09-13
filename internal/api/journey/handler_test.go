@@ -197,6 +197,26 @@ func TestListFiltersByVehicleAndStatus(t *testing.T) {
 	}
 }
 
+func TestClampListLimit(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		in, want int
+	}{
+		{0, 20},
+		{-5, 20},
+		{1, 1},
+		{20, 20},
+		{100, 100},
+		{101, 100},
+		{10_000, 100},
+	}
+	for _, tc := range cases {
+		if got := clampListLimit(tc.in); got != tc.want {
+			t.Fatalf("clampListLimit(%d) = %d, want %d", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestListValidation(t *testing.T) {
 	h := NewHandler(newFakeStore())
 	for _, url := range []string{

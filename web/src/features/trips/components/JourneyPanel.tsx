@@ -18,6 +18,22 @@ import { formatDateTime } from '@/lib/dateFormat';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
+const STATUS_LABEL_KEYS: Record<Exclude<(typeof STATUS_FILTERS)[number], ''>, string> = {
+  planned: 'journey.status.planned',
+  active: 'journey.status.active',
+  paused: 'journey.status.paused',
+  completed: 'journey.status.completed',
+  aborted: 'journey.status.aborted',
+};
+
+const STATUS_LABEL_DEFAULTS: Record<Exclude<(typeof STATUS_FILTERS)[number], ''>, string> = {
+  planned: 'Planned',
+  active: 'Active',
+  paused: 'Paused',
+  completed: 'Completed',
+  aborted: 'Aborted',
+};
+
 function statusVariant(status: JourneyStatus) {
   switch (status) {
     case 'active':
@@ -94,6 +110,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
   const create = useCreateJourney();
   const transition = useTransitionJourney();
 
+  const statusLabel = (status: JourneyStatus) =>
+    t(STATUS_LABEL_KEYS[status], STATUS_LABEL_DEFAULTS[status]);
+
   const submitCreate = (event: FormEvent) => {
     event.preventDefault();
     if (vehicleId == null || !draft.name.trim()) return;
@@ -134,7 +153,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
     {
       key: 'status',
       header: t('journey.col.status', 'Status'),
-      render: (row) => <Badge variant={statusVariant(row.status)}>{row.status}</Badge>,
+      render: (row) => (
+        <Badge variant={statusVariant(row.status)}>{statusLabel(row.status)}</Badge>
+      ),
     },
     {
       key: 'plan',
@@ -184,7 +205,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               value={statusFilter}
               options={STATUS_FILTERS.map((s) => ({
                 value: s,
-                label: s === '' ? t('journey.filter.all', 'All') : s,
+                label: s === '' ? t('journey.filter.all', 'All') : statusLabel(s),
               }))}
               onChange={(event) => setStatusFilter(event.target.value)}
             />
@@ -259,7 +280,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
 
       <GlassPanel className="p-4 sm:p-5">
         <PanelTitle className="mb-1 flex items-center gap-2">
-          <Icons.flag className="h-4 w-4 text-cyan-300" aria-hidden="true" />
+          <Icons.flag className="h-4 w-4" aria-hidden="true" />
           {detail ? detail.session.name : t('journey.detail.title', 'Journey detail')}
         </PanelTitle>
         {detailQuery.isLoading || detail == null ? (
@@ -276,7 +297,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-2">
-              <Badge variant={statusVariant(detail.session.status)}>{detail.session.status}</Badge>
+              <Badge variant={statusVariant(detail.session.status)}>
+                {statusLabel(detail.session.status)}
+              </Badge>
               {detail.next_statuses.map((next) => {
                 const action = transitionAction(next, detail.session.status);
                 return (
@@ -295,7 +318,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
             </div>
             <div>
               <Text as="p" variant="label" className="mb-2 flex items-center gap-2">
-                <Icons.package className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
+                <Icons.package className="h-4 w-4" aria-hidden="true" />
                 {t('journey.plans.title', 'Plan versions')}
               </Text>
               {detail.plans.length === 0 ? (

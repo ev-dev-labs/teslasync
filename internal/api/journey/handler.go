@@ -111,7 +111,7 @@ func (h *Handler) List(w http.ResponseWriter, r *http.Request) {
 	limit := 20
 	if s := r.URL.Query().Get("limit"); s != "" {
 		if n, err := strconv.Atoi(s); err == nil {
-			limit = n
+			limit = clampListLimit(n)
 		}
 	}
 	sessions, err := h.store.List(r.Context(), vehicleID, status, limit)
@@ -263,6 +263,16 @@ func (h *Handler) SavePlan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	httpx.WriteJSON(w, http.StatusCreated, pv)
+}
+
+func clampListLimit(n int) int {
+	if n <= 0 {
+		return 20
+	}
+	if n > 100 {
+		return 100
+	}
+	return n
 }
 
 func sessionIDParam(r *http.Request) (int64, error) {

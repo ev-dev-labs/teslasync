@@ -131,6 +131,13 @@
       "loading": "Loading journeys…",
       "empty": "No journeys yet. Plan one above and it will live here from planning to debrief."
     },
+    "status": {
+      "planned": "Planned",
+      "active": "Active",
+      "paused": "Paused",
+      "completed": "Completed",
+      "aborted": "Aborted"
+    },
     "filter": {
       "status": "Filter by status",
       "all": "All"
