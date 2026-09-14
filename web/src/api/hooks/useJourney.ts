@@ -5,6 +5,7 @@ import { scopedPath } from '../scope';
 import { safeArray } from '@/lib/safeArray';
 import { useMutationToast } from './_toastHelpers';
 import { invalidateAndBroadcast } from '@/lib/queryBroadcast';
+import { isApiError } from '@/lib/resilience';
 
 /**
  * Journey Autopilot: trip sessions + versioned plans. Reads the backend
@@ -386,15 +387,22 @@ export function useJourneyLive(id: number | null | undefined, options?: { enable
   });
 }
 
-/** Snapshots one trail point; the server backfills missing fields from live telemetry. */
+/**
+ * Snapshots one trail point; the server backfills missing fields from
+ * live telemetry. `recorded_at` replays an outbox entry under its
+ * original instant (the server dedupes idempotently).
+ *
+ * Network failures stay silent here BY CONTRACT: the check-in outbox
+ * hook queues them instead of toasting, so only ApiErrors toast.
+ */
 export function useCheckIn() {
   const qc = useQueryClient();
   const { success, error } = useMutationToast();
   return useMutation({
-    mutationFn: (id: number) =>
+    mutationFn: ({ id, recorded_at }: { id: number; recorded_at?: string }) =>
       request<JourneyCheckpoint>(`/journey/sessions/${id}/checkpoints`, {
         method: 'POST',
-        body: JSON.stringify({}),
+        body: JSON.stringify(recorded_at == null ? {} : { recorded_at }),
       }),
     onSuccess: (checkpoint) => {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(checkpoint.session_id) });
@@ -403,7 +411,10 @@ export function useCheckIn() {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.report(checkpoint.session_id) });
       success('toast.journey.checkin.success', 'Checked in');
     },
-    onError: (err) => error(err, 'toast.journey.checkin.error', 'Check-in failed'),
+    onError: (err) => {
+      if (!isApiError(err)) return;
+      error(err, 'toast.journey.checkin.error', 'Check-in failed');
+    },
   });
 }
 

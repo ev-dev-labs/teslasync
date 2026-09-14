@@ -1,8 +1,8 @@
 /**
  * LiveTripPanel — behaviour coverage.
  *
- * Data hooks (`useJourneyLive` / `useCheckIn`) and `useUnits` are mocked
- * and driven per test; shared UI (Badge, Button, EmptyState,
+ * Data hooks (`useJourneyLive` / `useQueuedCheckIn`) and `useUnits` are
+ * mocked and driven per test; shared UI (Badge, Button, EmptyState,
  * ListSkeleton, QueryError) is REAL so the render-boundary wiring is
  * genuinely exercised.
  */
@@ -41,7 +41,10 @@ vi.mock('react-i18next', () => {
 // ── data hooks, driven per test ──
 vi.mock('@/api/hooks/useJourney', () => ({
   useJourneyLive: vi.fn(),
-  useCheckIn: vi.fn(),
+}));
+
+vi.mock('../hooks/useQueuedCheckIn', () => ({
+  useQueuedCheckIn: vi.fn(),
 }));
 
 vi.mock('@/hooks/useUnits', () => ({
@@ -52,11 +55,12 @@ vi.mock('@/hooks/useUnits', () => ({
   }),
 }));
 
-import { useJourneyLive, useCheckIn, type JourneySession } from '@/api/hooks/useJourney';
+import { useJourneyLive, type JourneySession } from '@/api/hooks/useJourney';
+import { useQueuedCheckIn } from '../hooks/useQueuedCheckIn';
 import { LiveTripPanel } from './LiveTripPanel';
 
 const mockLive = useJourneyLive as unknown as ReturnType<typeof vi.fn>;
-const mockCheckIn = useCheckIn as unknown as ReturnType<typeof vi.fn>;
+const mockQueuedCheckIn = useQueuedCheckIn as unknown as ReturnType<typeof vi.fn>;
 
 const session: JourneySession = {
   id: 1, vehicle_id: 7, name: 'Denver run',
@@ -111,7 +115,7 @@ function renderPanel() {
 beforeEach(() => {
   vi.clearAllMocks();
   mockLive.mockReturnValue(idle({ data: view }));
-  mockCheckIn.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  mockQueuedCheckIn.mockReturnValue({ checkIn: vi.fn(), queued: 0, flushing: false, isPending: false });
 });
 
 describe('LiveTripPanel', () => {
@@ -125,21 +129,32 @@ describe('LiveTripPanel', () => {
   });
 
   it('checks in for the session', () => {
-    const mutate = vi.fn();
-    mockCheckIn.mockReturnValue({ mutate, isPending: false });
+    const checkIn = vi.fn();
+    mockQueuedCheckIn.mockReturnValue({ checkIn, queued: 0, flushing: false, isPending: false });
     renderPanel();
     fireEvent.click(screen.getByText('Check in'));
-    expect(mutate).toHaveBeenCalledWith(1);
+    expect(checkIn).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows the queued count while offline entries wait', () => {
+    mockQueuedCheckIn.mockReturnValue({
+      checkIn: vi.fn(),
+      queued: 2,
+      flushing: false,
+      isPending: false,
+    });
+    renderPanel();
+    expect(screen.getByText('2 queued')).toBeInTheDocument();
   });
 
   it('treats no-fixes as an empty state with a check-in action', () => {
     mockLive.mockReturnValue(idle({ data: { ...view, latest: null, trail: [] } }));
-    const mutate = vi.fn();
-    mockCheckIn.mockReturnValue({ mutate, isPending: false });
+    const checkIn = vi.fn();
+    mockQueuedCheckIn.mockReturnValue({ checkIn, queued: 0, flushing: false, isPending: false });
     renderPanel();
     expect(screen.getByText(/No fixes yet/)).toBeInTheDocument();
     fireEvent.click(screen.getByText('Check in'));
-    expect(mutate).toHaveBeenCalledWith(1);
+    expect(checkIn).toHaveBeenCalledTimes(1);
   });
 
   it('omits progress and range numbers when the snapshot degrades', () => {

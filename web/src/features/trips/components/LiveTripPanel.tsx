@@ -1,11 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 import {
-  useCheckIn,
   useJourneyLive,
   type JourneyRangeVerdict,
   type JourneySession,
 } from '@/api/hooks/useJourney';
+import { useQueuedCheckIn } from '../hooks/useQueuedCheckIn';
 import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { Badge, Button, Text } from '@/components/ui';
@@ -42,7 +42,8 @@ function verdictVariant(verdict: JourneyRangeVerdict) {
 /**
  * Live trip session: glanceable progress, range verdict, next stop,
  * and the trail behind. The backend polls vehicle state on a 15 s
- * ambient tick; "Check in" drops an explicit trail point on demand.
+ * ambient tick; "Check in" drops an explicit trail point on demand —
+ * queued offline and replayed on reconnect.
  */
 export function LiveTripPanel({ session }: { session: JourneySession }) {
   const { t } = useTranslation();
@@ -52,8 +53,8 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
   const liveState = useDataState(liveQuery);
   const view = liveQuery.data ?? null;
 
-  const checkIn = useCheckIn();
-  const busy = liveQuery.isLoading || checkIn.isPending;
+  const { checkIn, queued, isPending: checkInPending } = useQueuedCheckIn(session.id);
+  const busy = liveQuery.isLoading || checkInPending;
 
   const pct =
     view?.progress != null && view.progress.total_m > 0
@@ -67,14 +68,21 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
           <Icons.satellite className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t('journey.live.title', 'Live trip')}
         </Text>
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={checkIn.isPending}
-          onClick={() => checkIn.mutate(session.id)}
-        >
-          {t('journey.live.checkIn', 'Check in')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {queued > 0 ? (
+            <Text as="p" variant="caption" className="tabular-nums">
+              {t('journey.live.queued', '{{count}} queued', { count: queued })}
+            </Text>
+          ) : null}
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={checkInPending}
+            onClick={checkIn}
+          >
+            {t('journey.live.checkIn', 'Check in')}
+          </Button>
+        </div>
       </div>
 
       {busy ? (

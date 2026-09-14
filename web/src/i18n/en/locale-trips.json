@@ -136,7 +136,8 @@
         "attention": "Tight",
         "action": "Charge soon",
         "unknown": "Unknown"
-      }
+      },
+      "queued": "{{count}} queued"
     },
     "replan": {
       "title": "Replan",

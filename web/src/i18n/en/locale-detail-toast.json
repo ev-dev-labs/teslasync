@@ -521,7 +521,8 @@
       },
       "checkin": {
         "success": "Checked in",
-        "error": "Check-in failed"
+        "error": "Check-in failed",
+        "queued": "Offline — check-in queued"
       },
       "replan": {
         "success": "Replanned — {{winner}} wins",
