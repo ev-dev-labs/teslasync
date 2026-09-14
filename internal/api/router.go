@@ -2251,6 +2251,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		apistormguard.NewStore(db),
 		systemdb.NewSoftwareUpdateRepo(db),
 	)
+	journeyLive := apijourney.NewLiveHandler(
+		journeyStore,
+		journeyStore,
+		liveStateReader,
+	)
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3901,6 +3906,8 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/sessions/{id}/departure", journeyDeparture.Advise)
 			r.Get("/sessions/{id}/checklist", journeyChecklist.Latest)
 			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/checklist/runs", journeyChecklist.Refresh)
+			r.Get("/sessions/{id}/live", journeyLive.View)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/checkpoints", journeyLive.Append)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)

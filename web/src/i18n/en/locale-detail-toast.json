@@ -518,6 +518,10 @@
         "clear": "Ready to roll",
         "attention": "{{count}} items need attention",
         "error": "Checklist failed"
+      },
+      "checkin": {
+        "success": "Checked in",
+        "error": "Check-in failed"
       }
     }
   }

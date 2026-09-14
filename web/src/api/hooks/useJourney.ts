@@ -127,6 +127,46 @@ export interface ChecklistRun {
   items: ChecklistItem[];
 }
 
+export interface JourneyCheckpoint {
+  id: number;
+  session_id: number;
+  recorded_at: string;
+  lat: number;
+  lng: number;
+  soc_pct: number | null;
+  odometer_m: number | null;
+}
+
+export interface JourneyProgress {
+  total_m: number;
+  done_m: number;
+  left_m: number;
+}
+
+export type JourneyRangeVerdict = 'ok' | 'attention' | 'action' | 'unknown';
+
+export interface JourneyRange {
+  have_wh: number | null;
+  need_wh: number | null;
+  eff_wh_km: number | null;
+  verdict: JourneyRangeVerdict;
+}
+
+export interface JourneyNextStop {
+  site: string;
+  wait_s: number | null;
+}
+
+export interface JourneyLiveView {
+  session: JourneySession;
+  latest: JourneyCheckpoint | null;
+  trail: JourneyCheckpoint[];
+  progress: JourneyProgress | null;
+  range: JourneyRange;
+  next: JourneyNextStop | null;
+  evidence: string[];
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
@@ -135,6 +175,7 @@ export const journeyKeys = {
   departure: (id: number | null, from: string | null, to: string | null) =>
     ['journey', 'departure', id, from, to] as const,
   checklist: (id: number | null) => ['journey', 'checklist', id] as const,
+  live: (id: number | null) => ['journey', 'live', id] as const,
 };
 
 function isValidVehicle(vehicleId: number | null | undefined): vehicleId is number {
@@ -271,6 +312,35 @@ export function useRefreshChecklist() {
       );
     },
     onError: (err) => error(err, 'toast.journey.checklist.error', 'Checklist failed'),
+  });
+}
+
+/** Reads the glanceable live snapshot for a session (progress, range, trail). */
+export function useJourneyLive(id: number | null | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: journeyKeys.live(id ?? null),
+    queryFn: ({ signal }) =>
+      request<JourneyLiveView>(`/journey/sessions/${id}/live`, { signal }),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('live'),
+  });
+}
+
+/** Snapshots one trail point; the server backfills missing fields from live telemetry. */
+export function useCheckIn() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (id: number) =>
+      request<JourneyCheckpoint>(`/journey/sessions/${id}/checkpoints`, {
+        method: 'POST',
+        body: JSON.stringify({}),
+      }),
+    onSuccess: (checkpoint) => {
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(checkpoint.session_id) });
+      success('toast.journey.checkin.success', 'Checked in');
+    },
+    onError: (err) => error(err, 'toast.journey.checkin.error', 'Check-in failed'),
   });
 }
 

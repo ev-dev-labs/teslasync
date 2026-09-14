@@ -113,6 +113,30 @@
         "action": "Fix now",
         "unknown": "Unknown"
       }
+    },
+    "live": {
+      "title": "Live trip",
+      "checkIn": "Check in",
+      "loading": "Loading live trip…",
+      "empty": "No fixes yet. Check in to drop the first trail point.",
+      "progress": "Progress",
+      "remaining": "remaining",
+      "range": "Range",
+      "have": "have",
+      "need": "need",
+      "nextStop": "Next stop",
+      "wait": "{{time}} wait",
+      "noNextStop": "No scored stop yet",
+      "lastFix": "Last fix {{time}}",
+      "noFix": "No fix yet",
+      "fixes": "{{count}} fixes",
+      "evidence": "Why",
+      "verdict": {
+        "ok": "On energy",
+        "attention": "Tight",
+        "action": "Charge soon",
+        "unknown": "Unknown"
+      }
     }
   },
   "trips": {
