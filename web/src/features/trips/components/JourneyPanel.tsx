@@ -18,6 +18,7 @@ import { formatDateTime } from '@/lib/dateFormat';
 import { StopScorePanel } from './StopScorePanel';
 import { DeparturePanel } from './DeparturePanel';
 import { ChecklistPanel } from './ChecklistPanel';
+import { NudgePanel } from './NudgePanel';
 import { LiveTripPanel } from './LiveTripPanel';
 import { ReplanPanel } from './ReplanPanel';
 import { ArrivalPanel } from './ArrivalPanel';
@@ -352,6 +353,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               )}
             </div>
             <StopScorePanel session={detail.session} />
+            {detail.session.status === 'planned' ? (
+              <NudgePanel session={detail.session} />
+            ) : null}
             {detail.session.status === 'active' || detail.session.status === 'paused' ? (
               <>
                 <LiveTripPanel session={detail.session} />

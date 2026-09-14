@@ -208,6 +208,16 @@ export interface JourneyReport {
   evidence: string[];
 }
 
+export type JourneyNudgeVerdict = 'leave_now' | 'wait' | 'delay' | 'unknown';
+
+export interface JourneyNudge {
+  session_id: number;
+  verdict: JourneyNudgeVerdict;
+  slot_at: string | null;
+  blockers: ChecklistItem[];
+  evidence: string[];
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
@@ -220,6 +230,7 @@ export const journeyKeys = {
   replan: (id: number | null) => ['journey', 'replan', id] as const,
   arrival: (id: number | null) => ['journey', 'arrival', id] as const,
   report: (id: number | null) => ['journey', 'report', id] as const,
+  nudge: (id: number | null) => ['journey', 'nudge', id] as const,
 };
 
 function isValidVehicle(vehicleId: number | null | undefined): vehicleId is number {
@@ -346,6 +357,7 @@ export function useRefreshChecklist() {
       request<ChecklistRun>(`/journey/sessions/${id}/checklist/runs`, { method: 'POST' }),
     onSuccess: (run) => {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.checklist(run.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.nudge(run.session_id) });
       const blocking = run.items.filter((i) => i.status === 'action').length;
       success(
         blocking === 0
@@ -442,6 +454,17 @@ export function useReport(id: number | null | undefined, options?: { enabled?: b
     queryKey: journeyKeys.report(id ?? null),
     queryFn: ({ signal }) =>
       request<JourneyReport>(`/journey/sessions/${id}/report`, { signal }),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('operational'),
+  });
+}
+
+/** Reads the leave-now nudge for a planned session. */
+export function useNudge(id: number | null | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: journeyKeys.nudge(id ?? null),
+    queryFn: ({ signal }) =>
+      request<JourneyNudge>(`/journey/sessions/${id}/nudge`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
   });
