@@ -188,6 +188,26 @@ export interface JourneyArrival {
   evidence: string[];
 }
 
+export interface JourneyChecklistRecap {
+  ready: number;
+  total: number;
+}
+
+export interface JourneyReport {
+  session_id: number;
+  status: JourneyStatus;
+  started_at: string | null;
+  ended_at: string | null;
+  duration_s: number | null;
+  distance_m: number | null;
+  fixes: number;
+  plans: number;
+  replans: number;
+  detour: number | null;
+  checklist: JourneyChecklistRecap | null;
+  evidence: string[];
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
@@ -199,6 +219,7 @@ export const journeyKeys = {
   live: (id: number | null) => ['journey', 'live', id] as const,
   replan: (id: number | null) => ['journey', 'replan', id] as const,
   arrival: (id: number | null) => ['journey', 'arrival', id] as const,
+  report: (id: number | null) => ['journey', 'report', id] as const,
 };
 
 function isValidVehicle(vehicleId: number | null | undefined): vehicleId is number {
@@ -363,6 +384,7 @@ export function useCheckIn() {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(checkpoint.session_id) });
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.replan(checkpoint.session_id) });
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.arrival(checkpoint.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.report(checkpoint.session_id) });
       success('toast.journey.checkin.success', 'Checked in');
     },
     onError: (err) => error(err, 'toast.journey.checkin.error', 'Check-in failed'),
@@ -394,6 +416,7 @@ export function useRequestReplan() {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.detail(scores.session_id) });
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(scores.session_id) });
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.replan(scores.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.report(scores.session_id) });
       success('toast.journey.replan.success', 'Replanned — {{winner}} wins', {
         winner: scores.winner,
       });
@@ -410,6 +433,17 @@ export function useArrival(id: number | null | undefined, options?: { enabled?: 
       request<JourneyArrival>(`/journey/sessions/${id}/arrival`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('live'),
+  });
+}
+
+/** Reads the debrief card for a session (a "so far" card while live). */
+export function useReport(id: number | null | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: journeyKeys.report(id ?? null),
+    queryFn: ({ signal }) =>
+      request<JourneyReport>(`/journey/sessions/${id}/report`, { signal }),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('operational'),
   });
 }
 

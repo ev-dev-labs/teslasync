@@ -21,6 +21,7 @@ import { ChecklistPanel } from './ChecklistPanel';
 import { LiveTripPanel } from './LiveTripPanel';
 import { ReplanPanel } from './ReplanPanel';
 import { ArrivalPanel } from './ArrivalPanel';
+import { ReportPanel } from './ReportPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -357,6 +358,9 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 <ReplanPanel session={detail.session} />
                 <ArrivalPanel session={detail.session} />
               </>
+            ) : null}
+            {detail.session.status === 'completed' || detail.session.status === 'aborted' ? (
+              <ReportPanel session={detail.session} />
             ) : null}
           </div>
         )}

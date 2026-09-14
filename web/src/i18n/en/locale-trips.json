@@ -166,6 +166,20 @@
         "action": "Top up en route",
         "unknown": "Unknown"
       }
+    },
+    "report": {
+      "title": "Trip report",
+      "loading": "Loading trip report…",
+      "empty": "No report yet.",
+      "distance": "Distance",
+      "duration": "Trip time",
+      "detour": "Detour",
+      "times": "{{ratio}}×",
+      "fixes": "Fixes",
+      "replans": "Replans",
+      "replanCount": "{{replans}} of {{plans}} plans",
+      "checklist": "Ready at check",
+      "readyCount": "{{ready}} of {{total}}"
     }
   },
   "trips": {
