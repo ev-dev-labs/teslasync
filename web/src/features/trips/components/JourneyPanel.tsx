@@ -15,6 +15,7 @@ import { Badge, Button, DataTable, GlassPanel, Input, PanelTitle, Select, Text }
 import type { Column } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { StopScorePanel } from './StopScorePanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -344,6 +345,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 </ul>
               )}
             </div>
+            <StopScorePanel session={detail.session} />
           </div>
         )}
       </GlassPanel>

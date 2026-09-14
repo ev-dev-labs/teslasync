@@ -6295,6 +6295,10 @@
       "transition": {
         "success": "Journey {{status}}",
         "error": "Failed to update journey"
+      },
+      "score": {
+        "success": "Stops scored — {{winner}} wins",
+        "error": "Failed to score stops"
       }
     }
   },
@@ -25947,6 +25951,28 @@
     "plans": {
       "title": "Plan versions",
       "empty": "No plans saved yet — the stop optimizer lands here."
+    },
+    "scoring": {
+      "title": "Score stops",
+      "noCoords": "Add origin and destination coordinates to score stops along the corridor.",
+      "loadingSites": "Loading candidate sites…",
+      "noSites": "No fleet-known sites yet. Sync charging history to nominate stops.",
+      "candidates": "Candidate stops",
+      "visits": "{{count}} visits",
+      "arrival": "Arrival",
+      "energy": "Charge needed",
+      "submit": "Score {{count}} stops",
+      "scoring": "Scoring stops…",
+      "winner": "{{site}} wins",
+      "min": "{{min}} min",
+      "col": {
+        "stop": "Stop",
+        "score": "Score",
+        "wait": "Wait",
+        "price": "$/kWh",
+        "health": "Health",
+        "corridor": "Off route"
+      }
     }
   }
 }

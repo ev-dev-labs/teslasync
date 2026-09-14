@@ -44,6 +44,13 @@ vi.mock('@/api/hooks/useJourney', () => ({
   useJourney: vi.fn(),
   useCreateJourney: vi.fn(),
   useTransitionJourney: vi.fn(),
+  useScoreStops: vi.fn(),
+}));
+
+// StopScorePanel mounts inside the detail view; its site directory stays
+// inert here so these tests keep asserting only JourneyPanel behaviour.
+vi.mock('@/api/hooks/useCharging', () => ({
+  useWaitOracleSites: vi.fn(),
 }));
 
 import {
@@ -51,13 +58,17 @@ import {
   useJourney,
   useCreateJourney,
   useTransitionJourney,
+  useScoreStops,
 } from '@/api/hooks/useJourney';
+import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { JourneyPanel } from './JourneyPanel';
 
 const mockList = useJourneys as unknown as ReturnType<typeof vi.fn>;
 const mockDetail = useJourney as unknown as ReturnType<typeof vi.fn>;
 const mockCreate = useCreateJourney as unknown as ReturnType<typeof vi.fn>;
 const mockTransition = useTransitionJourney as unknown as ReturnType<typeof vi.fn>;
+const mockScore = useScoreStops as unknown as ReturnType<typeof vi.fn>;
+const mockSites = useWaitOracleSites as unknown as ReturnType<typeof vi.fn>;
 
 const sessions = [
   {
@@ -111,6 +122,8 @@ beforeEach(() => {
   mockDetail.mockReturnValue(idle());
   mockCreate.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mockTransition.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  mockScore.mockReturnValue({ mutate: vi.fn(), isPending: false, data: undefined });
+  mockSites.mockReturnValue(idle({ data: [] }));
 });
 
 describe('JourneyPanel', () => {

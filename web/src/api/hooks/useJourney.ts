@@ -67,6 +67,37 @@ export interface CreateJourneyRequest {
   dest_lng?: number | null;
 }
 
+export interface ScoreCandidate {
+  site: string;
+  lat: number;
+  lng: number;
+  arrive_at: string;
+}
+
+export interface ScoredStop {
+  site: string;
+  score: number;
+  wait_s: number | null;
+  per_kwh: number | null;
+  health: number | null;
+  corridor_m: number;
+  evidence: string[];
+}
+
+export interface StopScores {
+  session_id: number;
+  energy_wh: number;
+  stops: ScoredStop[];
+  winner: string;
+  plan_version: number;
+}
+
+export interface ScoreStopsRequest {
+  id: number;
+  candidates: ScoreCandidate[];
+  energy_wh: number;
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
@@ -136,6 +167,26 @@ export function useCreateJourney() {
 }
 
 export type JourneyTransition = 'start' | 'pause' | 'resume' | 'complete' | 'abort';
+
+/** Ranks candidate stops on wait, price, health, and corridor deviation. */
+export function useScoreStops() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ id, candidates, energy_wh }: ScoreStopsRequest) =>
+      request<StopScores>(`/journey/sessions/${id}/score-stops`, {
+        method: 'POST',
+        body: JSON.stringify({ candidates, energy_wh }),
+      }),
+    onSuccess: (scores) => {
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.detail(scores.session_id) });
+      success('toast.journey.score.success', 'Stops scored — {{winner}} wins', {
+        winner: scores.winner,
+      });
+    },
+    onError: (err) => error(err, 'toast.journey.score.error', 'Failed to score stops'),
+  });
+}
 
 /** Moves a session along its status machine. */
 export function useTransitionJourney() {
