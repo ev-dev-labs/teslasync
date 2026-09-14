@@ -212,3 +212,134 @@ migrations:
     reversible: true
     reviewed_by: "@atulmgupta"
     reviewed_on: "2026-08-29"
+
+  - version: 235
+    name: charge_autopilot_profiles
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Purely additive CREATE TABLE for per-vehicle charge autopilot profiles.
+      Previous application revisions never read or write the table.
+    rollback_notes: >-
+      Leave the table applied on application rollback. Drop only if the
+      feature is permanently removed; doing so deletes operator profiles.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE on a new relation; no lock on live traffic tables.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 236
+    name: tco_ledger_entries
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Additive ledger table plus indexes on the new relation only.
+    rollback_notes: >-
+      Prefer leaving applied. Down drops operator-entered TCO ledger rows.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE and indexes on a brand-new relation.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 237
+    name: fleet_driver_guardrails
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds nullable columns and a CHECK on fleet_drivers. Old writers omit
+      the columns; new CHECKs allow NULL so previous pods coexist.
+    rollback_notes: >-
+      Leave applied on rollback. Down drops guardrail columns and the CHECK.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: medium
+    lock_details: >-
+      ALTER TABLE ADD COLUMN (nullable) plus ADD CONSTRAINT CHECK without
+      NOT VALID. Brief ACCESS EXCLUSIVE / validation scan on fleet_drivers.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 238
+    name: ocpp_integration
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      New OCPP CSMS tables only. Previous revisions do not touch them.
+    rollback_notes: >-
+      Leave applied unless OCPP support is abandoned; down drops charge-point
+      history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE / INDEX on new relations only.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 239
+    name: session_share_tokens
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      Adds nullable charging_session_id, drops drive_id NOT NULL, and adds a
+      CHECK that exactly one target is set. Existing drive-only rows remain
+      valid. Old writers that always set drive_id still satisfy the CHECK.
+    rollback_notes: >-
+      Leave applied if share links for charging sessions may exist. Down
+      restores drive_id NOT NULL and drops charging_session_id.
+    expected_duration: seconds
+    duration_basis: estimate
+    lock_risk: high
+    lock_details: >-
+      ALTER TABLE plus CREATE INDEX on existing share_tokens without
+      CONCURRENTLY (SHARE lock). ADD CONSTRAINT CHECK validates existing rows.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 240
+    name: stormguard
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      New stormguard_config and stormguard_events tables only.
+    rollback_notes: >-
+      Leave applied on rollback. Down drops config and event history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE / INDEX on new relations.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 241
+    name: comfort
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      New comfort_config and comfort_runs tables only.
+    rollback_notes: >-
+      Leave applied on rollback. Down drops preconditioning config and runs.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE / INDEX on new relations.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"
+
+  - version: 242
+    name: journey
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      New journey_sessions and journey_plan_versions tables only.
+    rollback_notes: >-
+      Leave applied on rollback. Down drops planned journeys and plan history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE / INDEX on new relations.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-13"

@@ -134,6 +134,23 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/settings/fleet-setup': '/settings',
   '/integrations/helix': '/settings',
   '/vehicle-systems/software': '/software-updates',
+
+  // ── Tesla Physics nested pages ─────────────────────────────────────────
+  '/tesla-only/black-box': '/tesla-only',
+  '/tesla-only/car-kept-living': '/tesla-only',
+  '/tesla-only/charge-port': '/tesla-only',
+  '/tesla-only/clocks': '/tesla-only',
+  '/tesla-only/contradictions': '/tesla-only',
+  '/tesla-only/dictionary': '/tesla-only',
+  '/tesla-only/firmware-epochs': '/tesla-only',
+  '/tesla-only/life-tape': '/tesla-only',
+  '/tesla-only/logbook': '/tesla-only',
+  '/tesla-only/meters': '/tesla-only',
+  '/tesla-only/modes': '/tesla-only',
+  '/tesla-only/nervous-system': '/tesla-only',
+  '/tesla-only/range': '/tesla-only',
+  '/tesla-only/unknown': '/tesla-only',
+  '/tesla-only/vault': '/tesla-only',
 };
 
 /**

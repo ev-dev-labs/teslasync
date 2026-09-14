@@ -255,7 +255,14 @@ describe('FleetOperationsPage', () => {
     fireEvent.change(within(createDialog).getByLabelText(/Non-sensitive reference code/), { target: { value: 'DRV-B' } });
     fireEvent.click(within(createDialog).getByRole('button', { name: 'Save' }));
     expect(mutate).toHaveBeenLastCalledWith(
-      { display_name: 'Driver B', reference_code: 'DRV-B', status: 'active' },
+      {
+        display_name: 'Driver B',
+        reference_code: 'DRV-B',
+        status: 'active',
+        max_charge_soc: null,
+        curfew_start: null,
+        curfew_end: null,
+      },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );
 
@@ -269,7 +276,14 @@ describe('FleetOperationsPage', () => {
       {
         id: 2,
         version: 3,
-        input: { display_name: 'Driver A2', reference_code: 'DRV-A', status: 'active' },
+        input: {
+          display_name: 'Driver A2',
+          reference_code: 'DRV-A',
+          status: 'active',
+          max_charge_soc: null,
+          curfew_start: null,
+          curfew_end: null,
+        },
       },
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     );

@@ -1,19 +1,12 @@
 package api
 
 import (
-	"context"
-	"encoding/json"
 	"net/http"
 	"strings"
 	"time"
 
-	"github.com/ev-dev-labs/teslasync/internal/ai/dispatch"
-	"github.com/ev-dev-labs/teslasync/internal/ai/provider"
-	"github.com/ev-dev-labs/teslasync/internal/ai/stream"
 	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
-	"github.com/ev-dev-labs/teslasync/internal/database"
-	chatbotmodel "github.com/ev-dev-labs/teslasync/internal/models/chatbot"
 )
 
 // writeJSON is a transitional wrapper around httpx.WriteJSON kept for
@@ -44,84 +37,6 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 func writeErrorCode(w http.ResponseWriter, status int, msg, code string) {
 	httpx.WriteErrorCode(w, status, msg, code)
 }
-
-func denyAllConfirm(_ context.Context, _ dispatch.ConfirmRequest) (dispatch.ConfirmDecision, error) {
-	return dispatch.ConfirmDenied, nil
-}
-
-func bytesTrim(b []byte) []byte {
-	for len(b) > 0 && (b[0] == ' ' || b[0] == '\t' || b[0] == '\r' || b[0] == '\n') {
-		b = b[1:]
-	}
-	for len(b) > 0 && (b[len(b)-1] == ' ' || b[len(b)-1] == '\t' || b[len(b)-1] == '\r' || b[len(b)-1] == '\n') {
-		b = b[:len(b)-1]
-	}
-	return b
-}
-
-func historyToProviderMessages(rows []*chatbotmodel.ChatMessage, currentUserMessage string) []provider.Message {
-	if len(rows) == 0 {
-		return nil
-	}
-	out := make([]provider.Message, 0, len(rows))
-	for i, m := range rows {
-		if i == len(rows)-1 && m.Role == "user" && m.Content == currentUserMessage {
-			continue
-		}
-		out = append(out, provider.Message{
-			Role:    m.Role,
-			Content: m.Content,
-		})
-	}
-	if len(out) == 0 {
-		return nil
-	}
-	return out
-}
-
-type recordingStreamWriter struct {
-	inner *stream.Writer
-	buf   strings.Builder
-}
-
-func (r *recordingStreamWriter) WriteDelta(s string) error {
-	r.buf.WriteString(s)
-	return r.inner.WriteDelta(s)
-}
-
-func (r *recordingStreamWriter) WriteToolCall(call provider.ToolCall) error {
-	return r.inner.WriteToolCall(call)
-}
-
-func (r *recordingStreamWriter) WriteToolResult(name string, result json.RawMessage) error {
-	return r.inner.WriteToolResult(name, result)
-}
-
-func (r *recordingStreamWriter) WriteToolError(name string, err error) error {
-	return r.inner.WriteToolError(name, err)
-}
-
-func (r *recordingStreamWriter) WriteDone() error {
-	return r.inner.WriteDone()
-}
-
-func (r *recordingStreamWriter) EmitLimitError(message, reason string, retryAfterS int, bannerLevel string, baselineAvailable bool) error {
-	return r.inner.WriteLimitError(message, stream.LimitDecisionPayload{
-		Reason:            reason,
-		RetryAfterS:       retryAfterS,
-		BannerLevel:       bannerLevel,
-		BaselineAvailable: baselineAvailable,
-	})
-}
-
-func (r *recordingStreamWriter) text() string {
-	return r.buf.String()
-}
-
-var (
-	_ dispatch.StreamWriter      = (*recordingStreamWriter)(nil)
-	_ dispatch.LimitErrorEmitter = (*recordingStreamWriter)(nil)
-)
 
 // writeTeslaTokenExpired drained to zero callers by R2d batch 8 (carves
 // drained all token-issuing handlers into resource subpackages, which call
@@ -161,15 +76,6 @@ func parseDateRange(r *http.Request) (startTime, endTime time.Time) {
 // (carved into resource subpackages) call apiparams.NullableTime
 // directly. Wrapper deleted per the carve playbook.
 
-func firstNonEmpty(values ...string) string {
-	for _, v := range values {
-		if strings.TrimSpace(v) != "" {
-			return v
-		}
-	}
-	return ""
-}
-
 // EstimateBatteryCapacityWh returns the best-effort battery capacity in Wh
 // and a source string indicating how the estimate was derived.
 // Uses VIN position 8 decode first, falls back to model name, then 75000 Wh default.
@@ -197,22 +103,4 @@ func EstimateBatteryCapacityWh(vin string, model string) (float64, string) {
 		return 100000.0, "model_estimate"
 	}
 	return 75000.0, "default"
-}
-
-// lookupVehicleCapacityWh fetches VIN and model for a vehicle ID and estimates
-// battery capacity. Falls back to 75000 Wh / "default" on any lookup error.
-func lookupVehicleCapacityWh(ctx context.Context, db *database.DB, vehicleID int64) (float64, string) {
-	var vin string
-	var model *string
-	err := db.Pool.QueryRow(ctx,
-		`SELECT vin, model FROM vehicles WHERE id = $1`, vehicleID,
-	).Scan(&vin, &model)
-	if err != nil {
-		return 75000.0, "default"
-	}
-	m := ""
-	if model != nil {
-		m = *model
-	}
-	return EstimateBatteryCapacityWh(vin, m)
 }

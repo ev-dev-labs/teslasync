@@ -405,10 +405,3 @@ func latestLiveSignalObservation(values map[string]*signal.Value) *time.Time {
 	return service.LatestLiveSignalObservation(values)
 }
 
-func isVerifiedLiveSignal(value *signal.Value) bool {
-	return service.IsObservedLiveSignal(value)
-}
-
-func sortedVerifiedFields(verified map[string]bool) []string {
-	return service.SortedVerifiedFields(verified)
-}

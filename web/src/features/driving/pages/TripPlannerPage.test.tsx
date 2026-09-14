@@ -73,7 +73,17 @@ vi.mock('@/hooks/useSelectedVehicle', async (importActual) => {
 });
 vi.mock('@/api/hooks/useDriving', async (importActual) => {
   const actual = await importActual<typeof import('@/api/hooks/useDriving')>();
-  return { ...actual, usePlanTrip: vi.fn() };
+  return {
+    ...actual,
+    usePlanTrip: vi.fn(),
+    useTripConfidence: () => ({
+      mutate: vi.fn(),
+      data: undefined,
+      isPending: false,
+      isError: false,
+      error: null,
+    }),
+  };
 });
 vi.mock('@/api/hooks/useVehicleCommand', () => ({
   useVehicleCommand: vi.fn(),

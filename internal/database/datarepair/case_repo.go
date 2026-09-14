@@ -146,18 +146,6 @@ func scanQuarantine(row interface{ Scan(dest ...any) error }) (*systemmodel.Repa
 	return q, err
 }
 
-// scanQuarantineFromRows scans one row from an open Rows into a RepairQuarantine value.
-func scanQuarantineFromRows(rows pgx.Rows) (systemmodel.RepairQuarantine, error) {
-	var q systemmodel.RepairQuarantine
-	err := rows.Scan(
-		&q.ID, &q.CaseID, &q.Kind, &q.SessionID, &q.VehicleID,
-		&q.OriginalRow, &q.SchemaVersion, &q.Checksum,
-		&q.Reason, &q.QuarantinedBy, &q.QuarantinedAt,
-		&q.RestoredBy, &q.RestoredAt,
-	)
-	return q, err
-}
-
 func scanQuarantineMetadata(row interface{ Scan(dest ...any) error }) (*systemmodel.RepairQuarantine, error) {
 	q := &systemmodel.RepairQuarantine{}
 	err := row.Scan(

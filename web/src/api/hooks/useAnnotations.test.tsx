@@ -17,6 +17,8 @@
 // cross-tab invalidation helper are mocked so the mutation side effects
 // can be asserted precisely without a real Toast/BroadcastChannel.
 
+vi.unmock('@/api/hooks/useAnnotations');
+
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import type { ReactNode } from 'react';
 import { renderHook, waitFor, act } from '@testing-library/react';

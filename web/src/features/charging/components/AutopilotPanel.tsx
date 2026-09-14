@@ -294,7 +294,7 @@ export function AutopilotPanel({ vehicleId }: AutopilotPanelProps) {
             ) : previewError ? (
               <ErrorText>{previewError}</ErrorText>
             ) : !preview ? (
-              <EmptyState
+              <EmptyState /* no-action: informational empty — no CTA */
                 icon={<Bot className="h-8 w-8" />}
                 message={t(
                   'autopilot.runToPreview',

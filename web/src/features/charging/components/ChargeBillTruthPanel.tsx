@@ -124,7 +124,7 @@ export function ChargeBillTruthPanel({ session }: { session: ChargingSession }) 
         />
       </Grid>
       {truth.reasons.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Receipt className="h-8 w-8" aria-hidden="true" />}
           message={t('charging.billTruth.empty', 'Invoice and pack already agree.')}
         />

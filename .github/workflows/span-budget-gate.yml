@@ -45,7 +45,7 @@ permissions:
 jobs:
   span-budget:
     name: TestSpanBudget (≤ 25 spans per ingest)
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
@@ -54,12 +54,16 @@ jobs:
           go-version: '1.25'
 
       - name: TestSpanBudget
+        env:
+          CGO_ENABLED: 1
         run: go test -race -timeout 60s -count=1 ./internal/tesla_pipeline/ -run TestSpanBudget -v
 
       - name: Phase-10 contract tests (parent linkage + per-flow shape)
         # The runtime contract tests prove the trace tree shape — they
         # complement the budget by ensuring removing a required span
         # to fit the budget still fails. Run both.
+        env:
+          CGO_ENABLED: 1
         run: go test -race -timeout 120s -count=1 ./internal/tesla_pipeline/ -run 'TestPhase10|TestSpanBudget' -v
 
       - name: trace-coverage-audit (static guard)

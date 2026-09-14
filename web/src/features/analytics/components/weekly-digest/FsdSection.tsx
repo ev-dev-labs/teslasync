@@ -47,7 +47,7 @@ export function FsdSection({
       ) : isError ? (
         <QueryError error={error} onRetry={onRetry} />
       ) : fsdDistanceM == null ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Gauge className="h-8 w-8" aria-hidden="true" />}
           message={t(
             'analytics.weeklyDigest.fsdNotMeasured',

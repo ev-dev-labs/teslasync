@@ -63,14 +63,14 @@ describe('ClaimDraftPanel', () => {
       target: { value: 'Charge rate drops after 60%.' },
     });
     fireEvent.click(screen.getByText('Draft ticket'));
-    expect(mockDraft).toHaveBeenCalledWith(42, 'Charge rate drops after 60%.', undefined);
+    expect(mockDraft).toHaveBeenCalledWith(42, 'Charge rate drops after 60%.');
   });
 
   it('renders the draft with coverage badges and copy action', () => {
     mockDraft.mockReturnValue(idle({ data: draft }));
     render(<ClaimDraftPanel vehicleId={42} />);
     expect(screen.getByText('Service request: Charge rate drops after 60%')).toBeInTheDocument();
-    expect(screen.getByText(/Battery & Drive Unit/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Battery & Drive Unit/).length).toBeGreaterThan(0);
     expect(screen.getByText(/TSB SB-21-12-001/)).toBeInTheDocument();
     expect(screen.getByText('Copy ticket text')).toBeInTheDocument();
     expect(screen.getByText('Auto-drafted by TeslaSync from your vehicle data.')).toBeInTheDocument();

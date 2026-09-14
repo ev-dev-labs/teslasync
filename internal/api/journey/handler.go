@@ -73,11 +73,7 @@ func (h *Handler) Create(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusBadRequest, "lat must be -90..90 and lng -180..180")
 		return
 	}
-	session, err := h.store.Create(r.Context(), NewSession{
-		VehicleID: req.VehicleID, Name: req.Name,
-		OriginName: req.OriginName, OriginLat: req.OriginLat, OriginLng: req.OriginLng,
-		DestName: req.DestName, DestLat: req.DestLat, DestLng: req.DestLng,
-	})
+	session, err := h.store.Create(r.Context(), NewSession(req))
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", req.VehicleID).Msg("journey: create failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to create journey")

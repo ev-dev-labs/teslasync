@@ -73,7 +73,7 @@ export function ChargeQueuePlanner() {
       </div>
 
       {cars.length < 2 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<ListOrdered className="h-8 w-8" />}
           message={t('chargeQueue.singleCar', 'Add a second vehicle to plan a shared-charger queue.')}
         />

@@ -19,6 +19,8 @@
  * The component only depends on `useTranslation`, so a bare render() against the
  * shared i18n instance is enough — no QueryClient / Router / network scaffolding.
  */
+vi.unmock('react-i18next');
+
 import { describe, expect, it, afterEach } from 'vitest';
 import { render, screen, cleanup, within } from '@testing-library/react';
 import '../../../i18n';

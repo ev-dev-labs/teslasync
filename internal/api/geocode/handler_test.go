@@ -508,7 +508,6 @@ func TestReverse_PropagatesRequestCancellation(t *testing.T) {
 	// abort promptly.
 	var providerSawCancel bool
 	g := &fakeGeocoder{result: &geocoding.GeoResult{City: "Seattle"}}
-	h := NewHandler(&fakeSearcher{}, g)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before dispatch
@@ -516,7 +515,7 @@ func TestReverse_PropagatesRequestCancellation(t *testing.T) {
 
 	// Wrap the geocoder to observe the derived context's Done channel.
 	observing := &observingGeocoder{inner: g, saw: &providerSawCancel}
-	h = NewHandler(&fakeSearcher{}, observing)
+	h := NewHandler(&fakeSearcher{}, observing)
 
 	rec := httptest.NewRecorder()
 	h.Reverse(rec, req)

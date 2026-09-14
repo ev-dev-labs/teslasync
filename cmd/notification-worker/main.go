@@ -23,8 +23,8 @@ import (
 	oteltrace "go.opentelemetry.io/otel/trace"
 
 	"github.com/ev-dev-labs/teslasync/internal/alertmsg"
-	"github.com/ev-dev-labs/teslasync/internal/api/fsd"
 	"github.com/ev-dev-labs/teslasync/internal/apilog"
+	"github.com/ev-dev-labs/teslasync/internal/fsdweekly"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	dbalert "github.com/ev-dev-labs/teslasync/internal/database/alert"
@@ -83,7 +83,6 @@ var (
 	_ fleetVehicleLister      = (*vehicledb.VehicleRepo)(nil)
 	_ channelLister           = (*dbnotif.NotificationRepo)(nil)
 	_ computedMetricEvaluator = (*computed.Evaluator)(nil)
-	_ fsdWeeklyLoader         = (*fsd.Repo)(nil)
 	_ titleDeduper            = (*dbnotif.NotificationRepo)(nil)
 )
 
@@ -350,7 +349,7 @@ func main() {
 		}
 	}()
 
-	fsdRepo := fsd.NewRepo(db)
+	fsdRepo := fsdweekly.NewLoader(db)
 	fsdDigestDeduper := newFsdDigestDeduper(notifRepoForCM)
 	go func() {
 		first := time.NewTimer(30 * time.Second)

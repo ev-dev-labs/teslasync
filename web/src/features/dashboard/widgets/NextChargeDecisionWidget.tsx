@@ -50,13 +50,13 @@ export default function NextChargeDecisionWidget({ vehicleId }: WidgetProps) {
       }}
     >
       {soc == null || !Number.isFinite(soc) ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Zap className="h-5 w-5" />}
           message={t('nextCharge.waitingSoc', 'Waiting for live battery level')}
           className="py-6"
         />
       ) : !data ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Zap className="h-5 w-5" />}
           message={t('nextCharge.noData', 'No charge decision yet')}
           className="py-6"

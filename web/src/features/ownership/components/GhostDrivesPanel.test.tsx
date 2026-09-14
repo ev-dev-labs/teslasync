@@ -7,6 +7,12 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import type { ReactElement } from 'react';
+
+function renderPanel(ui: ReactElement) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
 
 vi.mock('@/api/hooks/useOwnership', async () => {
   const actual = await vi.importActual<typeof import('@/api/hooks/useOwnership')>(
@@ -61,20 +67,20 @@ beforeEach(() => {
 
 describe('GhostDrivesPanel', () => {
   it('passes vehicle and window through to the scan query', () => {
-    render(<GhostDrivesPanel vehicleId={42} windowDays={30} onLabel={vi.fn()} />);
+    renderPanel(<GhostDrivesPanel vehicleId={42} windowDays={30} onLabel={vi.fn()} />);
     expect(mockGhosts).toHaveBeenCalledWith(42, 30);
   });
 
   it('reports a clear window when nothing is flagged', () => {
     mockGhosts.mockReturnValue(idle({ data: { vehicle_id: 42, scanned: 24, ghosts: [] } }));
-    render(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={vi.fn()} />);
+    renderPanel(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={vi.fn()} />);
     expect(screen.getByText('Ghost-driver alerts')).toBeInTheDocument();
     expect(screen.getByText(/No unknown-driver activity/)).toBeInTheDocument();
   });
 
   it('raises the alert banner and lists flagged drives with reasons', () => {
     mockGhosts.mockReturnValue(idle({ data: report }));
-    render(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={vi.fn()} />);
+    renderPanel(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={vi.fn()} />);
     expect(screen.getByText('2 of 24 drives look like someone else')).toBeInTheDocument();
     expect(screen.getByText('2 flagged')).toBeInTheDocument();
     expect(screen.getByText('#7')).toBeInTheDocument();
@@ -86,15 +92,15 @@ describe('GhostDrivesPanel', () => {
   it('routes the label action back to the caller with the drive id', () => {
     mockGhosts.mockReturnValue(idle({ data: report }));
     const onLabel = vi.fn();
-    render(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={onLabel} />);
+    renderPanel(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={onLabel} />);
     fireEvent.click(screen.getAllByText('Label')[0]);
     expect(onLabel).toHaveBeenCalledWith(7);
   });
 
   it('surfaces scan failures without crashing the panel', () => {
-    mockGhosts.mockReturnValue(idle({ error: new Error('boom') }));
-    render(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={vi.fn()} />);
-    expect(screen.getByText('Ghost scan failed')).toBeInTheDocument();
-    expect(screen.getByText('boom')).toBeInTheDocument();
+    mockGhosts.mockReturnValue(idle({ error: new Error('boom'), isError: true, status: 'error' }));
+    renderPanel(<GhostDrivesPanel vehicleId={42} windowDays={90} onLabel={vi.fn()} />);
+    expect(screen.getByText('Ghost-driver alerts')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
 });

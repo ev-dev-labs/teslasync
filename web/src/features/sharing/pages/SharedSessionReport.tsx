@@ -154,6 +154,7 @@ export function SharedSessionReport({ data }: { data: SharedSessionData }) {
         {curveData.length > 0 && (
           <FadeIn delay={0.15}>
             {/* chart-a11y:no-table dense per-sample shared-session trace */}
+            {/* chart-legend-audit:skip public share-link report has no URL state; power+SoC stay visible together */}
             <ChartContainer
               title={t('share.curve', 'Charge Curve')}
               ariaLabel={t('share.curve.aria', 'Shared session power and battery chart by minute')}

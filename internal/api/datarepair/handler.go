@@ -184,14 +184,6 @@ func repairPatchDetail(fields map[string]interface{}) string {
 	return "fields=" + strings.Join(keys, ",")
 }
 
-func deleteAuditDetail(startedAt time.Time, endedAt *time.Time) string {
-	ended := "open"
-	if endedAt != nil {
-		ended = endedAt.UTC().Format(time.RFC3339)
-	}
-	return "started_at=" + startedAt.UTC().Format(time.RFC3339) + " ended_at=" + ended
-}
-
 func validateRepairPatch(fields map[string]interface{}, allowed map[string]string) error {
 	if len(fields) == 0 {
 		return errors.New("at least one repair field is required")

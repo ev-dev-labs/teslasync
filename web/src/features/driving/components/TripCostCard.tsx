@@ -24,7 +24,7 @@ export function TripCostCard({ comparison }: TripCostCardProps) {
       </PanelTitle>
 
       {!comparison ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<PiggyBank className="h-8 w-8" />}
           message={t('tripPlanner.cost.empty', 'Plan a trip to compare EV charging cost against gasoline.')}
         />

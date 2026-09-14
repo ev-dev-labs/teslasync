@@ -64,7 +64,7 @@ export function VampireCulpritPanel({ vehicleId }: { vehicleId: string | undefin
         )}
       </Text>
       {!vehicleId ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<ShieldAlert className="h-8 w-8" aria-hidden="true" />}
           message={t('vampireDrain.selectVehicle', 'Select a vehicle to view its vampire drain.')}
         />

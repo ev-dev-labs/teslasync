@@ -133,7 +133,11 @@ export function GhostDrivesPanel({ vehicleId, windowDays, onLabel }: GhostDrives
           </Badge>
         ) : undefined
       }
-      empty={!ghostsState.fatalError && (ghostsQuery.isLoading || ghosts.length === 0)}
+      empty={
+        !ghostsState.fatalError &&
+        !ghostsQuery.isError &&
+        (ghostsQuery.isLoading || ghosts.length === 0)
+      }
       emptyMessage={
         ghostsQuery.isLoading
           ? t('ownership.ghost.scanning', 'Scanning recent drives…')

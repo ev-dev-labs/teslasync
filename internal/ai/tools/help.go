@@ -263,11 +263,7 @@ func (t *retrieveDocs) Validate(raw json.RawMessage) (any, error) {
 			return nil, fmt.Errorf("%s: query is %d chars (max %d)", t.Name(),
 				len(input.Query), ragHelpMaxQueryChars)
 		}
-		return retrieveDocsInput{
-			Query:       input.Query,
-			SourceTypes: input.SourceTypes,
-			K:           input.K,
-		}, nil
+		return retrieveDocsInput(input), nil
 	}
 
 	v, err := ValidateStruct[retrieveDocsInput](raw)

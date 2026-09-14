@@ -220,11 +220,7 @@ func summarizeStates(states []stateCount) (distribution []stateEntry, efficiency
 	distribution = make([]stateEntry, 0, len(states))
 	var totalMinutesAll, sleepMinutes float64
 	for _, s := range states {
-		distribution = append(distribution, stateEntry{
-			State:        s.State,
-			Count:        s.Count,
-			TotalMinutes: s.TotalMinutes,
-		})
+		distribution = append(distribution, stateEntry(s))
 		totalMinutesAll += s.TotalMinutes
 		if s.State == enums.StateAsleep {
 			sleepMinutes = s.TotalMinutes

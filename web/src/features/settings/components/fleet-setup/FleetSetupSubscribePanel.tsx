@@ -134,7 +134,7 @@ export function FleetSetupSubscribePanel() {
       </div>
 
       {!connected ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Radio className="h-8 w-8" aria-hidden="true" />}
           message={t(
             'fleetSetup.subscribe.needAuth',
@@ -142,7 +142,7 @@ export function FleetSetupSubscribePanel() {
           )}
         />
       ) : options.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Radio className="h-8 w-8" aria-hidden="true" />}
           message={t(
             'fleetSetup.subscribe.needVehicle',

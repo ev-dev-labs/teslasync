@@ -2,6 +2,37 @@ import '@testing-library/jest-dom'
 import { beforeEach, vi } from 'vitest'
 import * as resilience from '@/lib/resilience'
 
+vi.mock('react-i18next', () => {
+  const interpolate = (str: string, vars?: Record<string, unknown> | null): string => {
+    if (!vars) return str
+    let s = str
+    for (const [k, v] of Object.entries(vars)) {
+      s = s.replace(new RegExp(`{{\\s*${k}\\s*}}`, 'g'), String(v))
+    }
+    return s
+  }
+  const t = (key: string, second?: unknown, third?: unknown): string => {
+    if (typeof second === 'string') {
+      return interpolate(
+        second,
+        third && typeof third === 'object' ? (third as Record<string, unknown>) : undefined,
+      )
+    }
+    if (second && typeof second === 'object') {
+      const bag = second as Record<string, unknown>
+      const tpl = typeof bag.defaultValue === 'string' ? bag.defaultValue : key
+      return interpolate(tpl, bag)
+    }
+    return key
+  }
+  return {
+    useTranslation: () => ({ t, i18n: { language: 'en', changeLanguage: vi.fn() } }),
+    Trans: ({ children }: { children?: unknown }) => children,
+    I18nextProvider: ({ children }: { children?: unknown }) => children,
+    initReactI18next: { type: '3rdParty', init: () => undefined },
+  }
+})
+
 // Global default mock for useSettings. Many components reach for it
 // transitively via useDateFormat / useUnits / useFormatting; without a
 // stub these components fail with "No QueryClient set" inside jsdom
@@ -69,6 +100,45 @@ vi.mock('@/hooks/useSettings', async () => {
 // (react-query) AND useMatch / useSearchParams (Router context). Both
 // crash in bare jsdom renders. Stub it to return UTC by default;
 // tests that need vehicle/local-time can still mock it per-file.
+// ChartContainer always mounts annotation query/mutations. Bare page
+// tests have no QueryClient — stub the hooks so they don't throw.
+// useAnnotations.test.tsx calls vi.unmock to exercise the real module.
+vi.mock('@/api/hooks/useAnnotations', () => ({
+  useChartAnnotationsAsData: () => ({
+    annotations: [],
+    isLoading: false,
+    isError: false,
+    error: null,
+  }),
+  useCreateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useUpdateAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+  useDeleteAnnotation: () => ({ mutate: vi.fn(), isPending: false }),
+}))
+
+vi.mock('@/components/feedback/Toast', async () => {
+  const actual = await vi.importActual<typeof import('@/components/feedback/Toast')>(
+    '@/components/feedback/Toast',
+  )
+  const toastApi = {
+    toast: vi.fn(),
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+    warning: vi.fn(),
+    dismiss: vi.fn(),
+  }
+  return {
+    ...actual,
+    useToast: () => {
+      try {
+        return actual.useToast()
+      } catch {
+        return toastApi
+      }
+    },
+  }
+})
+
 vi.mock('@/lib/timezone', async () => {
   const actual = await vi.importActual<typeof import('@/lib/timezone')>(
     '@/lib/timezone',
@@ -78,6 +148,7 @@ vi.mock('@/lib/timezone', async () => {
     useTimezone: () => 'UTC',
   }
 })
+
 
 // Reset the module-scoped auth-expired latch in resilience.ts between
 // every test. vitest's per-file isolation is not enough on its own —

@@ -128,7 +128,7 @@ export function RoutineWizard({ actionsDisabled }: { actionsDisabled?: boolean }
       </div>
 
       {places.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.location className="h-8 w-8" />}
           message={t('automations.routines.noPlaces', 'Create a geofence place first to install routines.')}
         />

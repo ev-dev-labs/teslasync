@@ -21,6 +21,11 @@ const LIVE_ONLY_MUTATIONS = {
     'useUpdateMaintenance',
   ],
   'hooks/useAdvancedIntelligence.ts': ['useStartFederatedRound'],
+  'hooks/useComfort.ts': ['usePreconditionNow'],
+  'hooks/useFleetSetup.ts': [
+    'useUnsubscribeFleetTelemetry',
+    'useSubscribeFleetTelemetry',
+  ],
   'hooks/useAutomations.ts': [
     'useImportAutomations',
     'useToggleAutomation',
@@ -31,7 +36,7 @@ const LIVE_ONLY_MUTATIONS = {
     'useCreateAutomationFull',
     'useUpdateAutomationFull',
   ],
-  'hooks/useCharging.ts': ['useApplySchedule', 'useBulkDeleteCharging'],
+  'hooks/useCharging.ts': ['useApplySchedule', 'useBulkDeleteCharging', 'useAutopilotRun'],
   'hooks/useDataRepair.ts': [
     'useApplyDriveRepair',
     'useApplyChargingRepair',
@@ -118,6 +123,9 @@ const MODE_INDEPENDENT_MUTATIONS = {
     'useRefreshTeslaChargingHistory',
     'useRefreshTeslaChargingSessions',
     'useOptimizeCharge',
+    'useSaveAutopilotProfile',
+    'useAutopilotPreview',
+    'useAdviseChargeQueue',
   ],
   'hooks/useChat.ts': [
     'useRenameChatSession',
@@ -130,7 +138,13 @@ const MODE_INDEPENDENT_MUTATIONS = {
     'useDeleteDashboardLayout',
     'useApplyDashboardLayout',
   ],
-  'hooks/useDriving.ts': ['usePlanTrip'],
+  'hooks/useDriving.ts': ['usePlanTrip', 'useTripConfidence'],
+  'hooks/useAnalytics.ts': ['useAddTcoLedgerEntry', 'useDeleteTcoLedgerEntry'],
+  'hooks/useAutomations.ts': ['useInstallRoutine'],
+  'hooks/useBatteryCertificate.ts': ['useVerifyBatteryCertificate'],
+  'hooks/useComfort.ts': ['useSaveComfortConfig'],
+  'hooks/useJourney.ts': ['useCreateJourney', 'useTransitionJourney'],
+  'hooks/useStormguard.ts': ['useSaveStormguardConfig'],
   'hooks/useEnergy.ts': [
     'useRefreshTeslaEnergySites',
     'useRefreshTeslaEnergySiteInfo',
@@ -241,7 +255,12 @@ const MODE_INDEPENDENT_MUTATIONS = {
     'useSaveDashboardLayouts',
   ],
   'hooks/useSettingsBackup.ts': ['useExportSettings', 'useDryRunImport'],
-  'hooks/useSharing.ts': ['useCreateShareLink', 'useRevokeShareLink'],
+  'hooks/useSharing.ts': [
+    'useCreateShareLink',
+    'useRevokeShareLink',
+    'useCreateSessionShareLink',
+    'useRevokeSessionShareLink',
+  ],
   // A problem report must be submittable precisely when things are broken —
   // vehicle asleep, telemetry stalled, an endpoint failing. Gating it on live
   // mode would silence the reports most worth receiving. The payload is

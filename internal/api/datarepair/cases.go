@@ -766,7 +766,7 @@ func (h *DataRepairHandler) AddCaseComment(w http.ResponseWriter, r *http.Reques
 }
 
 func validateBulkTransitionRequest(req bulkTransitionCaseRequest) ([]int64, *string, error) {
-	if req.CaseIDs == nil || len(req.CaseIDs) == 0 {
+	if len(req.CaseIDs) == 0 {
 		return nil, nil, errors.New("case_ids must contain at least one id")
 	}
 	if req.Status == nil {

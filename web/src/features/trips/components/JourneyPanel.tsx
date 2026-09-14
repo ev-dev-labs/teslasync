@@ -261,7 +261,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
         ) : listState.fatalError ? (
           <QueryError error={listState.fatalError} onRetry={() => listState.retry?.()} />
         ) : sessions.length === 0 ? (
-          <EmptyState
+          <EmptyState /* no-action: informational empty — no CTA */
             icon={<Icons.trip className="h-10 w-10" aria-hidden="true" />}
             message={t(
               'journey.list.empty',
@@ -287,7 +287,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
           detailQuery.isLoading ? (
             <ListSkeleton label={t('journey.detail.loading', 'Loading journey…')} />
           ) : (
-            <EmptyState
+            <EmptyState /* no-action: informational empty — no CTA */
               icon={<Icons.mapPinned className="h-10 w-10" aria-hidden="true" />}
               message={t('journey.detail.empty', 'Select a journey to manage its lifecycle and plans.')}
             />

@@ -106,7 +106,7 @@ export default function GrokDynamicsBriefing({ vehicleId }: GrokDynamicsBriefing
           onRetry={handleRetry}
         />
       ) : !read.hasSignal ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Sparkles className="h-8 w-8" aria-hidden="true" />}
           message={t(
             'dynamics.grok.empty',
