@@ -45,6 +45,9 @@ vi.mock('@/api/hooks/useJourney', () => ({
   useCreateJourney: vi.fn(),
   useTransitionJourney: vi.fn(),
   useScoreStops: vi.fn(),
+  useDeparture: vi.fn(),
+  useChecklist: vi.fn(),
+  useRefreshChecklist: vi.fn(),
 }));
 
 // StopScorePanel mounts inside the detail view; its site directory stays
@@ -59,6 +62,9 @@ import {
   useCreateJourney,
   useTransitionJourney,
   useScoreStops,
+  useDeparture,
+  useChecklist,
+  useRefreshChecklist,
 } from '@/api/hooks/useJourney';
 import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { JourneyPanel } from './JourneyPanel';
@@ -69,6 +75,9 @@ const mockCreate = useCreateJourney as unknown as ReturnType<typeof vi.fn>;
 const mockTransition = useTransitionJourney as unknown as ReturnType<typeof vi.fn>;
 const mockScore = useScoreStops as unknown as ReturnType<typeof vi.fn>;
 const mockSites = useWaitOracleSites as unknown as ReturnType<typeof vi.fn>;
+const mockDeparture = useDeparture as unknown as ReturnType<typeof vi.fn>;
+const mockChecklist = useChecklist as unknown as ReturnType<typeof vi.fn>;
+const mockRefreshChecklist = useRefreshChecklist as unknown as ReturnType<typeof vi.fn>;
 
 const sessions = [
   {
@@ -124,6 +133,9 @@ beforeEach(() => {
   mockTransition.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mockScore.mockReturnValue({ mutate: vi.fn(), isPending: false, data: undefined });
   mockSites.mockReturnValue(idle({ data: [] }));
+  mockDeparture.mockReturnValue(idle());
+  mockChecklist.mockReturnValue(idle());
+  mockRefreshChecklist.mockReturnValue({ mutate: vi.fn(), isPending: false });
 });
 
 describe('JourneyPanel', () => {

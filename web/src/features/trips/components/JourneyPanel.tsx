@@ -16,6 +16,8 @@ import type { Column } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
 import { StopScorePanel } from './StopScorePanel';
+import { DeparturePanel } from './DeparturePanel';
+import { ChecklistPanel } from './ChecklistPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -349,6 +351,15 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
           </div>
         )}
       </GlassPanel>
+
+      {detail != null ? (
+        <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <DeparturePanel session={detail.session} />
+            <ChecklistPanel session={detail.session} />
+          </div>
+        </GlassPanel>
+      ) : null}
     </div>
   );
 }

@@ -65,3 +65,27 @@ func TestAssessPeakGust(t *testing.T) {
 		t.Fatalf("peak = %v, want 22 (beyond-horizon gust excluded)", got.PeakGustMS)
 	}
 }
+
+func TestHourLevel(t *testing.T) {
+	cases := []struct {
+		name string
+		code int
+		gust float64
+		want string
+	}{
+		{"thunder", 95, 5, LevelWarning},
+		{"destructive gust", 1, 25, LevelWarning},
+		{"heavy snow", 75, 5, LevelWatch},
+		{"violent shower", 82, 5, LevelWatch},
+		{"strong gust", 1, 17, LevelWatch},
+		{"calm", 1, 9, LevelNone},
+		{"drizzle", 51, 9, LevelNone},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := HourLevel(c.code, c.gust); got != c.want {
+				t.Fatalf("HourLevel(%d, %v) = %q, want %q", c.code, c.gust, got, c.want)
+			}
+		})
+	}
+}

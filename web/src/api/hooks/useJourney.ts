@@ -98,11 +98,43 @@ export interface ScoreStopsRequest {
   energy_wh: number;
 }
 
+export interface DepartureSlot {
+  depart_at: string;
+  level: 'none' | 'watch' | 'warning';
+  score: number;
+}
+
+export interface DepartureAdvice {
+  session_id: number;
+  slots: DepartureSlot[];
+  recommended_at: string | null;
+  charge: { soc_pct: number | null; limit_pct: number | null } | null;
+  evidence: string[];
+}
+
+export type ChecklistStatus = 'ok' | 'attention' | 'action' | 'unknown';
+
+export interface ChecklistItem {
+  key: string;
+  status: ChecklistStatus;
+  detail: string;
+}
+
+export interface ChecklistRun {
+  id: number;
+  session_id: number;
+  run_at: string;
+  items: ChecklistItem[];
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
     ['journey', 'sessions', vehicleId, status] as const,
   detail: (id: number | null) => ['journey', 'session', id] as const,
+  departure: (id: number | null, from: string | null, to: string | null) =>
+    ['journey', 'departure', id, from, to] as const,
+  checklist: (id: number | null) => ['journey', 'checklist', id] as const,
 };
 
 function isValidVehicle(vehicleId: number | null | undefined): vehicleId is number {
@@ -185,6 +217,60 @@ export function useScoreStops() {
       });
     },
     onError: (err) => error(err, 'toast.journey.score.error', 'Failed to score stops'),
+  });
+}
+
+/** Ranks departure slots for a session. from/to are RFC3339; null = server default. */
+export function useDeparture(
+  id: number | null | undefined,
+  from: string | null,
+  to: string | null,
+  options?: { enabled?: boolean },
+) {
+  return useQuery({
+    queryKey: journeyKeys.departure(id ?? null, from, to),
+    queryFn: ({ signal }) =>
+      request<DepartureAdvice>(
+        scopedPath(`/journey/sessions/${id}/departure`, {
+          filters: { from, to },
+        }),
+        { signal },
+      ),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('operational'),
+  });
+}
+
+/** Reads the latest checklist run for a session. */
+export function useChecklist(id: number | null | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: journeyKeys.checklist(id ?? null),
+    queryFn: ({ signal }) =>
+      request<ChecklistRun>(`/journey/sessions/${id}/checklist`, { signal }),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('operational'),
+  });
+}
+
+/** Evaluates readiness live and persists the run. */
+export function useRefreshChecklist() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: (id: number) =>
+      request<ChecklistRun>(`/journey/sessions/${id}/checklist/runs`, { method: 'POST' }),
+    onSuccess: (run) => {
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.checklist(run.session_id) });
+      const blocking = run.items.filter((i) => i.status === 'action').length;
+      success(
+        blocking === 0
+          ? 'toast.journey.checklist.clear'
+          : 'toast.journey.checklist.attention',
+        blocking === 0 ? 'Ready to roll' : '{{count}} items need attention',
+        { count: blocking },
+      );
+    },
+    onError: (err) => error(err, 'toast.journey.checklist.error', 'Checklist failed'),
   });
 }
 

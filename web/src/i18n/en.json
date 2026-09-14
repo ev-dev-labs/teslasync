@@ -6299,6 +6299,11 @@
       "score": {
         "success": "Stops scored — {{winner}} wins",
         "error": "Failed to score stops"
+      },
+      "checklist": {
+        "clear": "Ready to roll",
+        "attention": "{{count}} items need attention",
+        "error": "Checklist failed"
       }
     }
   },
@@ -25972,6 +25977,39 @@
         "price": "$/kWh",
         "health": "Health",
         "corridor": "Off route"
+      }
+    },
+    "departure": {
+      "title": "When to leave",
+      "window": "Window",
+      "hours": "{{h}}h",
+      "loading": "Scoring departure hours…",
+      "uncovered": "The forecast covers none of this window.",
+      "noOrigin": "Add an origin to advise departure hours for this journey.",
+      "leaveAt": "Leave {{time}}",
+      "socNow": "Battery {{pct}}% now",
+      "allWarn": "Every hour warns — delay if you can",
+      "slots": "Departure hours"
+    },
+    "checklist": {
+      "title": "Ready to roll",
+      "run": "Run checklist",
+      "refresh": "Re-check",
+      "loading": "Checking readiness…",
+      "empty": "No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.",
+      "runAt": "Checked {{time}}",
+      "item": {
+        "charge_level": "Charge level",
+        "charge_limit": "Charge limit",
+        "tire_pressure": "Tire pressure",
+        "storm": "Storm",
+        "software_update": "Software update"
+      },
+      "status": {
+        "ok": "Ready",
+        "attention": "Check",
+        "action": "Fix now",
+        "unknown": "Unknown"
       }
     }
   }

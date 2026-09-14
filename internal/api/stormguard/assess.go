@@ -31,6 +31,22 @@ type Assessment struct {
 	PeakGustMS float64    `json:"peak_gust_ms"`
 }
 
+// HourLevel grades one forecast hour with the same thresholds Assess
+// uses over a window: warning for thunder or destructive gusts, watch
+// for heavy precip or strong gusts, else none. Pure: no I/O,
+// deterministic. Journey Autopilot's departure advisor ranks slots
+// through it so both surfaces agree on what "severe" means.
+func HourLevel(code int, gustMS float64) string {
+	switch {
+	case isThunder(code) || gustMS >= warnGustMS:
+		return LevelWarning
+	case isHeavyPrecip(code) || gustMS >= watchGustMS:
+		return LevelWatch
+	default:
+		return LevelNone
+	}
+}
+
 // Assess grades the forecast from now. Pure: no I/O, deterministic.
 // Only the first 72 hourly rows (3 days) are examined; the verdict
 // horizons are 24h (warning) and 48h (watch).
