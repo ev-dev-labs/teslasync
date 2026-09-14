@@ -82,11 +82,11 @@ const scores = {
   plan_version: 1,
   stops: [
     {
-      site: 'Kettleman City', score: 92.5, wait_s: 300, per_kwh: 0.32,
+      site: 'Kettleman City', score: 92.5, wait_s: 300, unit_price: 0.32,
       health: 88, corridor_m: 1200, evidence: ['expected wait 5 min'],
     },
     {
-      site: 'Barstow', score: 41.0, wait_s: null, per_kwh: null,
+      site: 'Barstow', score: 41.0, wait_s: null, unit_price: null,
       health: null, corridor_m: 95000, evidence: ['no fleet data — ranked on corridor only'],
     },
   ],

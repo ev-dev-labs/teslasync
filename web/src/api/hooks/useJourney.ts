@@ -79,7 +79,7 @@ export interface ScoredStop {
   site: string;
   score: number;
   wait_s: number | null;
-  per_kwh: number | null;
+  unit_price: number | null;
   health: number | null;
   corridor_m: number;
   evidence: string[];

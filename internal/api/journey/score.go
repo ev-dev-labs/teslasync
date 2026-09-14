@@ -40,7 +40,7 @@ type ScoredStop struct {
 	Site      string   `json:"site"`
 	Score     float64  `json:"score"`
 	WaitS     *float64 `json:"wait_s"`
-	PerKWh    *float64 `json:"per_kwh"`
+	UnitPrice *float64 `json:"unit_price"`
 	Health    *float64 `json:"health"`
 	CorridorM float64  `json:"corridor_m"`
 	Evidence  []string `json:"evidence"`
@@ -60,7 +60,7 @@ func RankStops(originLat, originLng, destLat, destLng, energyWh float64, cands [
 		out = append(out, ScoredStop{
 			Site:      c.Site,
 			WaitS:     sig.WaitS,
-			PerKWh:    scaledPrice(sig.PerKWh, energyWh),
+			UnitPrice: scaledPrice(sig.PerKWh, energyWh),
 			Health:    health,
 			CorridorM: corridorDeviationM(originLat, originLng, destLat, destLng, c.Lat, c.Lng),
 			Evidence:  evidenceFor(sig, energyWh),
@@ -105,7 +105,7 @@ func RankStops(originLat, originLng, destLat, destLng, energyWh float64, cands [
 		return scores
 	}
 	waitN := norm(func(s *ScoredStop) *float64 { return s.WaitS }, true)
-	priceN := norm(func(s *ScoredStop) *float64 { return s.PerKWh }, true)
+	priceN := norm(func(s *ScoredStop) *float64 { return s.UnitPrice }, true)
 	healthN := norm(func(s *ScoredStop) *float64 { return s.Health }, false)
 	corrVals := map[int]float64{}
 	for i := range out {

@@ -516,10 +516,10 @@ func TestScoreStops(t *testing.T) {
 	if len(got.Stops) != 2 || got.Stops[0].Score < got.Stops[1].Score {
 		t.Fatalf("stops not ranked: %+v", got.Stops)
 	}
-	if got.Stops[0].WaitS == nil || got.Stops[0].PerKWh == nil || got.Stops[0].Health == nil {
+	if got.Stops[0].WaitS == nil || got.Stops[0].UnitPrice == nil || got.Stops[0].Health == nil {
 		t.Fatalf("winner missing signals: %+v", got.Stops[0])
 	}
-	if got.Stops[1].WaitS != nil || got.Stops[1].PerKWh != nil {
+	if got.Stops[1].WaitS != nil || got.Stops[1].UnitPrice != nil {
 		t.Fatalf("thin site should degrade: %+v", got.Stops[1])
 	}
 	if got.PlanVersion != 1 || s.PlanVersion != 1 || len(f.plans[s.ID]) != 1 {

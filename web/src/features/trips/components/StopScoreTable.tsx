@@ -66,7 +66,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       header: t('journey.scoring.col.price', '$/kWh'),
       render: (row) => (
         <Text as="span" className="tabular-nums">
-          {row.per_kwh == null ? '—' : formatCurrency(row.per_kwh, 2)}
+          {row.unit_price == null ? '—' : formatCurrency(row.unit_price, 2)}
         </Text>
       ),
     },

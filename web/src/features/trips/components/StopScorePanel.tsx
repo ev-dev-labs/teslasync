@@ -32,7 +32,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
   const { t } = useTranslation();
   const [selected, setSelected] = useState<string[]>([]);
   const [arrival, setArrival] = useState(() => toLocalInput(new Date(Date.now() + 2 * 3600_000)));
-  const [energyKwh, setEnergyKwh] = useState(40);
+  const [chargeNeed, setChargeNeed] = useState(40);
 
   const sitesQuery = useWaitOracleSites();
   const sitesState = useDataState(sitesQuery);
@@ -57,11 +57,11 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
 
   const submit = () => {
     const arriveAt = toIsoOrNull(arrival);
-    if (arriveAt == null || selected.length === 0 || energyKwh <= 0) return;
+    if (arriveAt == null || selected.length === 0 || chargeNeed <= 0) return;
     const byName = new Map(sites.map((s) => [s.name, s]));
     score.mutate({
       id: session.id,
-      energy_wh: energyKwh * 1000,
+      energy_wh: chargeNeed * 1000,
       candidates: selected.flatMap((name) => {
         const site = byName.get(name);
         if (!site) return [];
@@ -127,13 +127,13 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
             <UnitInput
               label={t('journey.scoring.energy', 'Charge needed')}
               unit="energy"
-              value={energyKwh}
-              onChange={(v) => setEnergyKwh(v ?? 0)}
+              value={chargeNeed}
+              onChange={(v) => setChargeNeed(v ?? 0)}
             />
             <Button
               onClick={submit}
               loading={score.isPending}
-              disabled={selected.length === 0 || toIsoOrNull(arrival) == null || energyKwh <= 0}
+              disabled={selected.length === 0 || toIsoOrNull(arrival) == null || chargeNeed <= 0}
             >
               {t('journey.scoring.submit', 'Score {{count}} stops', { count: selected.length })}
             </Button>
