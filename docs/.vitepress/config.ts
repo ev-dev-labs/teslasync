@@ -4,7 +4,7 @@ import { withMermaid } from 'vitepress-plugin-mermaid'
 export default withMermaid(defineConfig({
   title: 'TeslaSync Docs',
   description: 'Open-source Tesla intelligence on your infrastructure. Installation, Tesla connectivity, operations, and contributing.',
-  base: '/teslasync/',
+  base: '/',
 
   ignoreDeadLinks: true,
 
