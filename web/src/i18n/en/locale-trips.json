@@ -151,6 +151,21 @@
         "off_route": "Off route",
         "unknown": "Unknown"
       }
+    },
+    "arrival": {
+      "title": "Arrival",
+      "loading": "Preparing arrival…",
+      "empty": "No arrival reading yet.",
+      "eta": "ETA",
+      "moving": "moving",
+      "parked": "parked",
+      "shortfall": "top up ≈ {{energy}} en route",
+      "verdict": {
+        "ok": "Arrive with buffer",
+        "attention": "Arrive tight",
+        "action": "Top up en route",
+        "unknown": "Unknown"
+      }
     }
   },
   "trips": {

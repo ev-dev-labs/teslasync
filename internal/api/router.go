@@ -2262,6 +2262,11 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		journeyStore,
 		apiwaitoracle.NewStore(db),
 	)
+	journeyArrival := apijourney.NewArrivalHandler(
+		journeyStore,
+		journeyStore,
+		liveStateReader,
+	)
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3916,6 +3921,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/checkpoints", journeyLive.Append)
 			r.Get("/sessions/{id}/replan", journeyReplan.Assess)
 			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/replan", journeyReplan.Rescore)
+			r.Get("/sessions/{id}/arrival", journeyArrival.Prep)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)

@@ -176,6 +176,18 @@ export interface JourneyReplanAssessment {
   evidence: string[];
 }
 
+export interface JourneyArrival {
+  session_id: number;
+  dest_name: string;
+  left_m: number | null;
+  pace_ms: number | null;
+  eta_at: string | null;
+  moving: boolean;
+  verdict: ChecklistStatus;
+  shortfall_wh: number | null;
+  evidence: string[];
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
@@ -186,6 +198,7 @@ export const journeyKeys = {
   checklist: (id: number | null) => ['journey', 'checklist', id] as const,
   live: (id: number | null) => ['journey', 'live', id] as const,
   replan: (id: number | null) => ['journey', 'replan', id] as const,
+  arrival: (id: number | null) => ['journey', 'arrival', id] as const,
 };
 
 function isValidVehicle(vehicleId: number | null | undefined): vehicleId is number {
@@ -349,6 +362,7 @@ export function useCheckIn() {
     onSuccess: (checkpoint) => {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(checkpoint.session_id) });
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.replan(checkpoint.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.arrival(checkpoint.session_id) });
       success('toast.journey.checkin.success', 'Checked in');
     },
     onError: (err) => error(err, 'toast.journey.checkin.error', 'Check-in failed'),
@@ -385,6 +399,17 @@ export function useRequestReplan() {
       });
     },
     onError: (err) => error(err, 'toast.journey.replan.error', 'Replan failed'),
+  });
+}
+
+/** Reads the arrival prep snapshot (ETA from recent pace plus charge advice). */
+export function useArrival(id: number | null | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: journeyKeys.arrival(id ?? null),
+    queryFn: ({ signal }) =>
+      request<JourneyArrival>(`/journey/sessions/${id}/arrival`, { signal }),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('live'),
   });
 }
 

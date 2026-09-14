@@ -52,6 +52,7 @@ vi.mock('@/api/hooks/useJourney', () => ({
   useCheckIn: vi.fn(),
   useReplanAssessment: vi.fn(),
   useRequestReplan: vi.fn(),
+  useArrival: vi.fn(),
 }));
 
 // StopScorePanel mounts inside the detail view; its site directory stays
@@ -73,6 +74,7 @@ import {
   useCheckIn,
   useReplanAssessment,
   useRequestReplan,
+  useArrival,
 } from '@/api/hooks/useJourney';
 import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { JourneyPanel } from './JourneyPanel';
@@ -90,6 +92,7 @@ const mockLive = useJourneyLive as unknown as ReturnType<typeof vi.fn>;
 const mockCheckIn = useCheckIn as unknown as ReturnType<typeof vi.fn>;
 const mockReplanAssess = useReplanAssessment as unknown as ReturnType<typeof vi.fn>;
 const mockReplan = useRequestReplan as unknown as ReturnType<typeof vi.fn>;
+const mockArrival = useArrival as unknown as ReturnType<typeof vi.fn>;
 
 const sessions = [
   {
@@ -152,6 +155,7 @@ beforeEach(() => {
   mockCheckIn.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mockReplanAssess.mockReturnValue(idle());
   mockReplan.mockReturnValue({ mutate: vi.fn(), isPending: false, data: undefined });
+  mockArrival.mockReturnValue(idle());
 });
 
 describe('JourneyPanel', () => {

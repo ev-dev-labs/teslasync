@@ -20,6 +20,7 @@ import { DeparturePanel } from './DeparturePanel';
 import { ChecklistPanel } from './ChecklistPanel';
 import { LiveTripPanel } from './LiveTripPanel';
 import { ReplanPanel } from './ReplanPanel';
+import { ArrivalPanel } from './ArrivalPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -354,6 +355,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               <>
                 <LiveTripPanel session={detail.session} />
                 <ReplanPanel session={detail.session} />
+                <ArrivalPanel session={detail.session} />
               </>
             ) : null}
           </div>
