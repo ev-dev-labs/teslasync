@@ -6295,6 +6295,15 @@
       "transition": {
         "success": "Journey {{status}}",
         "error": "Failed to update journey"
+      },
+      "score": {
+        "success": "Stops scored — {{winner}} wins",
+        "error": "Failed to score stops"
+      },
+      "checklist": {
+        "clear": "Ready to roll",
+        "attention": "{{count}} items need attention",
+        "error": "Checklist failed"
       }
     }
   },
@@ -25947,6 +25956,61 @@
     "plans": {
       "title": "Plan versions",
       "empty": "No plans saved yet — the stop optimizer lands here."
+    },
+    "scoring": {
+      "title": "Score stops",
+      "noCoords": "Add origin and destination coordinates to score stops along the corridor.",
+      "loadingSites": "Loading candidate sites…",
+      "noSites": "No fleet-known sites yet. Sync charging history to nominate stops.",
+      "candidates": "Candidate stops",
+      "visits": "{{count}} visits",
+      "arrival": "Arrival",
+      "energy": "Charge needed",
+      "submit": "Score {{count}} stops",
+      "scoring": "Scoring stops…",
+      "winner": "{{site}} wins",
+      "min": "{{min}} min",
+      "col": {
+        "stop": "Stop",
+        "score": "Score",
+        "wait": "Wait",
+        "price": "$/kWh",
+        "health": "Health",
+        "corridor": "Off route"
+      }
+    },
+    "departure": {
+      "title": "When to leave",
+      "window": "Window",
+      "hours": "{{h}}h",
+      "loading": "Scoring departure hours…",
+      "uncovered": "The forecast covers none of this window.",
+      "noOrigin": "Add an origin to advise departure hours for this journey.",
+      "leaveAt": "Leave {{time}}",
+      "socNow": "Battery {{pct}}% now",
+      "allWarn": "Every hour warns — delay if you can",
+      "slots": "Departure hours"
+    },
+    "checklist": {
+      "title": "Ready to roll",
+      "run": "Run checklist",
+      "refresh": "Re-check",
+      "loading": "Checking readiness…",
+      "empty": "No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.",
+      "runAt": "Checked {{time}}",
+      "item": {
+        "charge_level": "Charge level",
+        "charge_limit": "Charge limit",
+        "tire_pressure": "Tire pressure",
+        "storm": "Storm",
+        "software_update": "Software update"
+      },
+      "status": {
+        "ok": "Ready",
+        "attention": "Check",
+        "action": "Fix now",
+        "unknown": "Unknown"
+      }
     }
   }
 }

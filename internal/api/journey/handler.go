@@ -4,13 +4,16 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/rs/zerolog/log"
 
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
+	"github.com/ev-dev-labs/teslasync/internal/api/waitoracle"
 )
 
 // SessionStore is the session/plan port. *Store satisfies it.
@@ -24,19 +27,33 @@ type SessionStore interface {
 	ListPlans(ctx context.Context, sessionID int64) ([]*PlanVersion, error)
 }
 
+// SignalStore is the price/health port. *Store satisfies it.
+type SignalStore interface {
+	SitePeaks(ctx context.Context, site string) ([]float64, error)
+	SitePrice(ctx context.Context, site string) (perKWh float64, samples int, ok bool, err error)
+}
+
+// WaitStore is the demand-history port. *waitoracle.Store satisfies it.
+type WaitStore interface {
+	History(ctx context.Context, site string) (waitoracle.SiteHistory, error)
+}
+
 // Handler serves journey sessions + plan versions. Stateless beyond
 // constructor inputs; safe for concurrent use.
 type Handler struct {
-	store SessionStore
+	store   SessionStore
+	signals SignalStore
+	waits   WaitStore
+	now     func() time.Time
 }
 
-// NewHandler wires the handler. Panics on nil input (fail-fast wiring
+// NewHandler wires the handler. Panics on nil inputs (fail-fast wiring
 // contract, matching sibling handlers).
-func NewHandler(store SessionStore) *Handler {
-	if store == nil {
+func NewHandler(store SessionStore, signals SignalStore, waits WaitStore) *Handler {
+	if store == nil || signals == nil || waits == nil {
 		panic("journey: nil dependency")
 	}
-	return &Handler{store: store}
+	return &Handler{store: store, signals: signals, waits: waits, now: time.Now}
 }
 
 type createRequest struct {
@@ -271,6 +288,159 @@ func clampListLimit(n int) int {
 	return n
 }
 
+// maxCandidates bounds the score request: each candidate costs up to
+// three history reads, gathered sequentially.
+const maxCandidates = 10
+
+type scoreCandidateRequest struct {
+	Site   string  `json:"site"`
+	Lat    float64 `json:"lat"`
+	Lng    float64 `json:"lng"`
+	Arrive string  `json:"arrive_at"`
+}
+
+type scoreRequest struct {
+	Candidates []scoreCandidateRequest `json:"candidates"`
+	EnergyWh   float64                 `json:"energy_wh"`
+}
+
+type scoreResponse struct {
+	SessionID   int64        `json:"session_id"`
+	EnergyWh    float64      `json:"energy_wh"`
+	Stops       []ScoredStop `json:"stops"`
+	Winner      string       `json:"winner"`
+	PlanVersion int          `json:"plan_version"`
+}
+
+// ScoreStops serves POST /journey/sessions/{id}/score-stops: rank
+// caller-nominated candidate stops on predicted wait, realized price,
+// stall health, and corridor deviation — then persist the ranking as a
+// plan version. Per-candidate gaps degrade (the signal drops out);
+// infrastructure failures fail the request.
+func (h *Handler) ScoreStops(w http.ResponseWriter, r *http.Request) {
+	id, err := sessionIDParam(r)
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	var req scoreRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if len(req.Candidates) == 0 || len(req.Candidates) > maxCandidates {
+		httpx.WriteError(w, http.StatusBadRequest, "candidates must hold 1..10 stops")
+		return
+	}
+	if req.EnergyWh <= 0 || req.EnergyWh > 200000 {
+		httpx.WriteError(w, http.StatusBadRequest, "energy_wh must be within 0..200000")
+		return
+	}
+	arrivals := make([]time.Time, len(req.Candidates))
+	for i, c := range req.Candidates {
+		if c.Site == "" {
+			httpx.WriteError(w, http.StatusBadRequest, "candidate site must be non-empty")
+			return
+		}
+		if c.Lat < -90 || c.Lat > 90 || c.Lng < -180 || c.Lng > 180 {
+			httpx.WriteError(w, http.StatusBadRequest, "candidate lat/lng out of range")
+			return
+		}
+		t, err := time.Parse(time.RFC3339, c.Arrive)
+		if err != nil {
+			httpx.WriteError(w, http.StatusBadRequest, "candidate arrive_at must be RFC3339")
+			return
+		}
+		arrivals[i] = t
+	}
+	ctx := r.Context()
+	session, err := h.store.Get(ctx, id)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("journey: get failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read journey")
+		return
+	}
+	if session == nil {
+		httpx.WriteError(w, http.StatusNotFound, "journey not found")
+		return
+	}
+	if session.OriginLat == nil || session.OriginLng == nil || session.DestLat == nil || session.DestLng == nil {
+		httpx.WriteError(w, http.StatusBadRequest, "journey needs origin and destination coordinates to score stops")
+		return
+	}
+	cands := make([]Candidate, len(req.Candidates))
+	sigs := make([]Signals, len(req.Candidates))
+	for i, c := range req.Candidates {
+		cands[i] = Candidate{Site: c.Site, Lat: c.Lat, Lng: c.Lng, ArriveS: arrivals[i].Unix()}
+		sig, err := gatherSiteSignals(ctx, h.signals, h.waits, c.Site, arrivals[i])
+		if err != nil {
+			log.Error().Err(err).Str("site", c.Site).Msg("journey: signals failed")
+			httpx.WriteError(w, http.StatusInternalServerError, "failed to read stop signals")
+			return
+		}
+		sigs[i] = sig
+	}
+	stops := RankStops(*session.OriginLat, *session.OriginLng, *session.DestLat, *session.DestLng, req.EnergyWh, cands, sigs)
+	plan, err := json.Marshal(map[string]any{
+		"kind": "stop_scores", "energy_wh": req.EnergyWh, "stops": stops,
+		"candidates": candidateEcho(cands),
+	})
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("journey: plan encode failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save plan")
+		return
+	}
+	pv, err := h.store.SavePlan(ctx, id, plan, fmt.Sprintf("stop scores (%d candidates)", len(cands)))
+	if err != nil {
+		if errors.Is(err, ErrNoSession) {
+			httpx.WriteError(w, http.StatusNotFound, "journey not found")
+			return
+		}
+		log.Error().Err(err).Int64("id", id).Msg("journey: save plan failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to save plan")
+		return
+	}
+	winner := ""
+	if len(stops) > 0 {
+		winner = stops[0].Site
+	}
+	httpx.WriteJSON(w, http.StatusOK, scoreResponse{
+		SessionID: id, EnergyWh: req.EnergyWh, Stops: stops,
+		Winner: winner, PlanVersion: pv.Version,
+	})
+}
+
+// gatherSiteSignals reads wait, price, and peak samples for one site.
+// Thin history (ErrNoHistory, unpriced, unmetered) yields nils; anything
+// else is an infrastructure failure. Shared by initial scoring and
+// replans so both rank on identical inputs.
+func gatherSiteSignals(ctx context.Context, signals SignalStore, waits WaitStore, site string, arrival time.Time) (Signals, error) {
+	var sig Signals
+	history, err := waits.History(ctx, site)
+	if err != nil && !errors.Is(err, waitoracle.ErrNoHistory) {
+		return sig, err
+	}
+	if err == nil {
+		if f, err := waitoracle.Predict(history, arrival); err == nil {
+			sig.WaitS = &f.ExpectedS
+		} else if !errors.Is(err, waitoracle.ErrNoHistory) {
+			return sig, err
+		}
+	}
+	peaks, err := signals.SitePeaks(ctx, site)
+	if err != nil {
+		return sig, err
+	}
+	sig.PeakKW = peaks
+	if perKWh, _, ok, err := signals.SitePrice(ctx, site); err != nil {
+		return sig, err
+	} else if ok {
+		sig.PerKWh = &perKWh
+	}
+	sig.Available = sig.WaitS != nil || sig.PerKWh != nil || len(sig.PeakKW) >= 3
+	return sig, nil
+}
+
 func sessionIDParam(r *http.Request) (int64, error) {
 	id, err := strconv.ParseInt(chi.URLParam(r, "id"), 10, 64)
 	if err != nil || id <= 0 {
@@ -296,5 +466,9 @@ const (
 	errBadVehicleID = paramError("vehicle_id must be a positive integer")
 )
 
-// Compile-time port assertion.
-var _ SessionStore = (*Store)(nil)
+// Compile-time port assertions.
+var (
+	_ SessionStore = (*Store)(nil)
+	_ SignalStore  = (*Store)(nil)
+	_ WaitStore    = (*waitoracle.Store)(nil)
+)

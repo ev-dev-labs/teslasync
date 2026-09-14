@@ -44,6 +44,23 @@ vi.mock('@/api/hooks/useJourney', () => ({
   useJourney: vi.fn(),
   useCreateJourney: vi.fn(),
   useTransitionJourney: vi.fn(),
+  useScoreStops: vi.fn(),
+  useDeparture: vi.fn(),
+  useChecklist: vi.fn(),
+  useRefreshChecklist: vi.fn(),
+  useJourneyLive: vi.fn(),
+  useCheckIn: vi.fn(),
+  useReplanAssessment: vi.fn(),
+  useRequestReplan: vi.fn(),
+  useArrival: vi.fn(),
+  useReport: vi.fn(),
+  useNudge: vi.fn(),
+}));
+
+// StopScorePanel mounts inside the detail view; its site directory stays
+// inert here so these tests keep asserting only JourneyPanel behaviour.
+vi.mock('@/api/hooks/useCharging', () => ({
+  useWaitOracleSites: vi.fn(),
 }));
 
 import {
@@ -51,13 +68,37 @@ import {
   useJourney,
   useCreateJourney,
   useTransitionJourney,
+  useScoreStops,
+  useDeparture,
+  useChecklist,
+  useRefreshChecklist,
+  useJourneyLive,
+  useCheckIn,
+  useReplanAssessment,
+  useRequestReplan,
+  useArrival,
+  useReport,
+  useNudge,
 } from '@/api/hooks/useJourney';
+import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { JourneyPanel } from './JourneyPanel';
 
 const mockList = useJourneys as unknown as ReturnType<typeof vi.fn>;
 const mockDetail = useJourney as unknown as ReturnType<typeof vi.fn>;
 const mockCreate = useCreateJourney as unknown as ReturnType<typeof vi.fn>;
 const mockTransition = useTransitionJourney as unknown as ReturnType<typeof vi.fn>;
+const mockScore = useScoreStops as unknown as ReturnType<typeof vi.fn>;
+const mockSites = useWaitOracleSites as unknown as ReturnType<typeof vi.fn>;
+const mockDeparture = useDeparture as unknown as ReturnType<typeof vi.fn>;
+const mockChecklist = useChecklist as unknown as ReturnType<typeof vi.fn>;
+const mockRefreshChecklist = useRefreshChecklist as unknown as ReturnType<typeof vi.fn>;
+const mockLive = useJourneyLive as unknown as ReturnType<typeof vi.fn>;
+const mockCheckIn = useCheckIn as unknown as ReturnType<typeof vi.fn>;
+const mockReplanAssess = useReplanAssessment as unknown as ReturnType<typeof vi.fn>;
+const mockReplan = useRequestReplan as unknown as ReturnType<typeof vi.fn>;
+const mockArrival = useArrival as unknown as ReturnType<typeof vi.fn>;
+const mockReport = useReport as unknown as ReturnType<typeof vi.fn>;
+const mockNudge = useNudge as unknown as ReturnType<typeof vi.fn>;
 
 const sessions = [
   {
@@ -111,6 +152,18 @@ beforeEach(() => {
   mockDetail.mockReturnValue(idle());
   mockCreate.mockReturnValue({ mutate: vi.fn(), isPending: false });
   mockTransition.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  mockScore.mockReturnValue({ mutate: vi.fn(), isPending: false, data: undefined });
+  mockSites.mockReturnValue(idle({ data: [] }));
+  mockDeparture.mockReturnValue(idle());
+  mockChecklist.mockReturnValue(idle());
+  mockRefreshChecklist.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  mockLive.mockReturnValue(idle());
+  mockCheckIn.mockReturnValue({ mutate: vi.fn(), isPending: false });
+  mockReplanAssess.mockReturnValue(idle());
+  mockReplan.mockReturnValue({ mutate: vi.fn(), isPending: false, data: undefined });
+  mockArrival.mockReturnValue(idle());
+  mockReport.mockReturnValue(idle());
+  mockNudge.mockReturnValue(idle());
 });
 
 describe('JourneyPanel', () => {

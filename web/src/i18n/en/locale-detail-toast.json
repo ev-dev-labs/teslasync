@@ -509,6 +509,15 @@
       "transition": {
         "success": "Journey {{status}}",
         "error": "Failed to update journey"
+      },
+      "score": {
+        "success": "Stops scored — {{winner}} wins",
+        "error": "Failed to score stops"
+      },
+      "checklist": {
+        "clear": "Ready to roll",
+        "attention": "{{count}} items need attention",
+        "error": "Checklist failed"
       }
     }
   }

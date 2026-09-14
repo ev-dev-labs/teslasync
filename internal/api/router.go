@@ -402,8 +402,8 @@ import (
 	handlermw "github.com/ev-dev-labs/teslasync/internal/handler/middleware"
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
-	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
+	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
 )
@@ -2233,7 +2233,50 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 		vehicledb.NewVehicleRepo(db),
 	)
 	waitoracleHandler := apiwaitoracle.NewHandler(apiwaitoracle.NewStore(db))
-	journeyHandler := apijourney.NewHandler(apijourney.NewStore(db))
+	journeyStore := apijourney.NewStore(db)
+	journeyHandler := apijourney.NewHandler(
+		journeyStore,
+		journeyStore,
+		apiwaitoracle.NewStore(db),
+	)
+	journeyDeparture := apijourney.NewDepartureHandler(
+		journeyStore,
+		apistormguard.NewClient(),
+		liveStateReader,
+	)
+	journeyChecklist := apijourney.NewChecklistHandler(
+		journeyStore,
+		journeyStore,
+		liveStateReader,
+		apistormguard.NewStore(db),
+		systemdb.NewSoftwareUpdateRepo(db),
+	)
+	journeyLive := apijourney.NewLiveHandler(
+		journeyStore,
+		journeyStore,
+		liveStateReader,
+	)
+	journeyReplan := apijourney.NewReplanHandler(
+		journeyStore,
+		journeyStore,
+		journeyStore,
+		apiwaitoracle.NewStore(db),
+	)
+	journeyArrival := apijourney.NewArrivalHandler(
+		journeyStore,
+		journeyStore,
+		liveStateReader,
+	)
+	journeyReport := apijourney.NewReportHandler(
+		journeyStore,
+		journeyStore,
+		journeyStore,
+	)
+	journeyNudge := apijourney.NewNudgeHandler(
+		journeyStore,
+		apistormguard.NewClient(),
+		journeyStore,
+	)
 	searchHandler := apisearch.NewHandler(db)
 
 	// Wire Redis signal cache to handlers that read live vehicle state.
@@ -3880,6 +3923,17 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/complete", journeyHandler.Complete)
 			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/abort", journeyHandler.Abort)
 			r.With(httprate.LimitByIP(20, 1*time.Minute)).Post("/sessions/{id}/plans", journeyHandler.SavePlan)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/score-stops", journeyHandler.ScoreStops)
+			r.Get("/sessions/{id}/departure", journeyDeparture.Advise)
+			r.Get("/sessions/{id}/checklist", journeyChecklist.Latest)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/checklist/runs", journeyChecklist.Refresh)
+			r.Get("/sessions/{id}/live", journeyLive.View)
+			r.With(httprate.LimitByIP(30, 1*time.Minute)).Post("/sessions/{id}/checkpoints", journeyLive.Append)
+			r.Get("/sessions/{id}/replan", journeyReplan.Assess)
+			r.With(httprate.LimitByIP(10, 1*time.Minute)).Post("/sessions/{id}/replan", journeyReplan.Rescore)
+			r.Get("/sessions/{id}/arrival", journeyArrival.Prep)
+			r.Get("/sessions/{id}/report", journeyReport.Card)
+			r.Get("/sessions/{id}/nudge", journeyNudge.Monitor)
 		})
 
 		// Trip Planner (route planning with charging stop estimation)

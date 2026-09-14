@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from 'react';
+import { type FormEvent, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
 import {
@@ -15,6 +15,14 @@ import { Badge, Button, DataTable, GlassPanel, Input, PanelTitle, Select, Text }
 import type { Column } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { StopScorePanel } from './StopScorePanel';
+import { DeparturePanel } from './DeparturePanel';
+import { ChecklistPanel } from './ChecklistPanel';
+import { NudgePanel } from './NudgePanel';
+import { LiveTripPanel } from './LiveTripPanel';
+import { ReplanPanel } from './ReplanPanel';
+import { ArrivalPanel } from './ArrivalPanel';
+import { ReportPanel } from './ReportPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -109,6 +117,11 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
 
   const create = useCreateJourney();
   const transition = useTransitionJourney();
+
+  useEffect(() => {
+    if (selectedId != null && sessions.some((s) => s.id === selectedId)) return;
+    setSelectedId(sessions[0]?.id ?? null);
+  }, [sessions, selectedId]);
 
   const statusLabel = (status: JourneyStatus) =>
     t(STATUS_LABEL_KEYS[status], STATUS_LABEL_DEFAULTS[status]);
@@ -209,16 +222,18 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               }))}
               onChange={(event) => setStatusFilter(event.target.value)}
             />
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
-              onClick={() => setFormOpen((open) => !open)}
-            >
-              {formOpen
-                ? t('journey.action.cancel', 'Cancel')
-                : t('journey.action.plan', 'Plan journey')}
-            </Button>
+            {sessions.length > 0 || formOpen ? (
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<Icons.add className="h-4 w-4" aria-hidden="true" />}
+                onClick={() => setFormOpen((open) => !open)}
+              >
+                {formOpen
+                  ? t('journey.action.cancel', 'Cancel')
+                  : t('journey.action.plan', 'Plan journey')}
+              </Button>
+            ) : null}
           </div>
         </div>
 
@@ -261,12 +276,16 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
         ) : listState.fatalError ? (
           <QueryError error={listState.fatalError} onRetry={() => listState.retry?.()} />
         ) : sessions.length === 0 ? (
-          <EmptyState /* no-action: informational empty — no CTA */
+          <EmptyState
             icon={<Icons.trip className="h-10 w-10" aria-hidden="true" />}
             message={t(
               'journey.list.empty',
               'No journeys yet. Plan one above and it will live here from planning to debrief.',
             )}
+            action={{
+              label: t('journey.action.plan', 'Plan journey'),
+              onClick: () => setFormOpen(true),
+            }}
           />
         ) : (
           <DataTable
@@ -283,15 +302,17 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
           <Icons.flag className="h-4 w-4" aria-hidden="true" />
           {detail ? detail.session.name : t('journey.detail.title', 'Journey detail')}
         </PanelTitle>
-        {detailQuery.isLoading || detail == null ? (
-          detailQuery.isLoading ? (
-            <ListSkeleton label={t('journey.detail.loading', 'Loading journey…')} />
-          ) : (
-            <EmptyState /* no-action: informational empty — no CTA */
-              icon={<Icons.mapPinned className="h-10 w-10" aria-hidden="true" />}
-              message={t('journey.detail.empty', 'Select a journey to manage its lifecycle and plans.')}
-            />
-          )
+        {detailQuery.isLoading || (selectedId != null && detail == null && !detailState.fatalError) ? (
+          <ListSkeleton label={t('journey.detail.loading', 'Loading journey…')} />
+        ) : selectedId == null || detail == null ? (
+          <EmptyState
+            icon={<Icons.mapPinned className="h-10 w-10" aria-hidden="true" />}
+            message={t('journey.detail.empty', 'Select a journey to manage its lifecycle and plans.')}
+            action={{
+              label: t('journey.action.plan', 'Plan journey'),
+              onClick: () => setFormOpen(true),
+            }}
+          />
         ) : detailState.fatalError ? (
           <QueryError error={detailState.fatalError} onRetry={() => detailState.retry?.()} />
         ) : (
@@ -344,9 +365,32 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 </ul>
               )}
             </div>
+            <StopScorePanel session={detail.session} />
+            {detail.session.status === 'planned' ? (
+              <NudgePanel session={detail.session} />
+            ) : null}
+            {detail.session.status === 'active' || detail.session.status === 'paused' ? (
+              <>
+                <LiveTripPanel session={detail.session} />
+                <ReplanPanel session={detail.session} />
+                <ArrivalPanel session={detail.session} />
+              </>
+            ) : null}
+            {detail.session.status === 'completed' || detail.session.status === 'aborted' ? (
+              <ReportPanel session={detail.session} />
+            ) : null}
           </div>
         )}
       </GlassPanel>
+
+      {detail != null ? (
+        <GlassPanel className="p-4 sm:p-5 xl:col-span-2">
+          <div className="grid gap-6 lg:grid-cols-2">
+            <DeparturePanel session={detail.session} />
+            <ChecklistPanel session={detail.session} />
+          </div>
+        </GlassPanel>
+      ) : null}
     </div>
   );
 }

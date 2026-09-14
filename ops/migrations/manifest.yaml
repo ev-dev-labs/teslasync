@@ -343,3 +343,33 @@ migrations:
     reversible: true
     reviewed_by: "@atulmgupta"
     reviewed_on: "2026-09-13"
+
+  - version: 243
+    name: journey_checklist
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      New journey_checklist_runs table only.
+    rollback_notes: >-
+      Leave applied on rollback. Down drops checklist run history.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE / INDEX on new relations.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-14"
+
+  - version: 244
+    name: journey_checkpoints
+    forward_compatible: true
+    forward_compatibility_notes: >-
+      New journey_checkpoints table only.
+    rollback_notes: >-
+      Leave applied on rollback. Down drops live trail checkpoints.
+    expected_duration: <1s
+    duration_basis: estimate
+    lock_risk: none
+    lock_details: CREATE TABLE / INDEX on new relations.
+    reversible: true
+    reviewed_by: "@atulmgupta"
+    reviewed_on: "2026-09-14"
