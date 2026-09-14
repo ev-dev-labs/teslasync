@@ -110,6 +110,18 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
         />
       ) : runState.fatalError ? (
         <QueryError error={runState.fatalError} onRetry={() => runState.retry?.()} />
+      ) : run == null ? (
+        <EmptyState
+          icon={<Icons.checklist className="h-10 w-10" aria-hidden="true" />}
+          message={t(
+            'journey.checklist.empty',
+            'No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.',
+          )}
+          action={{
+            label: t('journey.checklist.run', 'Run checklist'),
+            onClick: () => refresh.mutate(session.id),
+          }}
+        />
       ) : (
         <div className="space-y-2">
           <Text as="p" variant="caption">
