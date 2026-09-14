@@ -73,6 +73,8 @@ const arrival = {
   moving: true,
   verdict: 'action',
   shortfall_wh: 15700,
+  route_factor: 1.05,
+  route_trips: 2,
   evidence: ['450 km to KC', 'moving at pace', 'top up ≈ 15.7 kWh en route to hold the buffer'],
 };
 
@@ -110,6 +112,7 @@ describe('ArrivalPanel', () => {
     expect(screen.getByText(/450000 m/)).toBeInTheDocument();
     expect(screen.getByText('Top up en route')).toBeInTheDocument();
     expect(screen.getByText(/top up ≈ 15700 Wh en route/)).toBeInTheDocument();
+    expect(screen.getByText('adjusted 1.05× from 2 trips')).toBeInTheDocument();
     expect(screen.getByText(/hold the buffer/)).toBeInTheDocument();
   });
 

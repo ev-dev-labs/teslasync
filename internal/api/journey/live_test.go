@@ -19,6 +19,7 @@ type fakeTrail struct {
 	points []*Checkpoint
 	eff    float64
 	hasEff bool
+	legs   []RouteLeg
 	err    error
 }
 
@@ -58,6 +59,13 @@ func (f *fakeTrail) Trail(_ context.Context, _ int64, limit int) ([]*Checkpoint,
 
 func (f *fakeTrail) VehicleEfficiency(_ context.Context, _ int64) (float64, bool, error) {
 	return f.eff, f.hasEff, f.err
+}
+
+func (f *fakeTrail) RouteLegs(_ context.Context, _ int64, _, _ string, _ int) ([]RouteLeg, error) {
+	if f.err != nil {
+		return nil, f.err
+	}
+	return f.legs, nil
 }
 
 var _ TrailStore = (*fakeTrail)(nil)

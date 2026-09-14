@@ -185,6 +185,8 @@ export interface JourneyArrival {
   moving: boolean;
   verdict: ChecklistStatus;
   shortfall_wh: number | null;
+  route_factor: number | null;
+  route_trips: number;
   evidence: string[];
 }
 
@@ -204,6 +206,8 @@ export interface JourneyReport {
   plans: number;
   replans: number;
   detour: number | null;
+  route_factor: number | null;
+  route_trips: number;
   checklist: JourneyChecklistRecap | null;
   evidence: string[];
 }

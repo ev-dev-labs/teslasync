@@ -20,7 +20,9 @@ const (
 )
 
 // Arrival is the GET response: ETA from recent pace plus the charge
-// advice for making the destination with buffer.
+// advice for making the destination with buffer. LeftM stays the
+// straight-line remainder; ETA and advice apply the learned route
+// factor when history exists.
 type Arrival struct {
 	SessionID   int64      `json:"session_id"`
 	DestName    string     `json:"dest_name"`
@@ -30,6 +32,8 @@ type Arrival struct {
 	Moving      bool       `json:"moving"`
 	Verdict     string     `json:"verdict"` // ok, attention, action, unknown
 	ShortfallWh *float64   `json:"shortfall_wh"`
+	RouteFactor *float64   `json:"route_factor"`
+	RouteTrips  int        `json:"route_trips"`
 	Evidence    []string   `json:"evidence"`
 }
 
@@ -142,14 +146,25 @@ func (h *ArrivalHandler) Prep(w http.ResponseWriter, r *http.Request) {
 	if progress != nil {
 		left = &progress.LeftM
 	}
+	factor, trips, err := routeFactorFor(ctx, h.trail, session)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("journey: route history failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read route history")
+		return
+	}
+	effLeft := left
+	if left != nil && factor != nil {
+		adjusted := *left * *factor
+		effLeft = &adjusted
+	}
 	var eta *time.Time
 	moving := false
-	if left != nil && paceOK {
-		eta, moving = ArrivalETA(*left, pace, now)
+	if effLeft != nil && paceOK {
+		eta, moving = ArrivalETA(*effLeft, pace, now)
 	} else if paceOK {
 		_, moving = ArrivalETA(1, pace, now)
 	}
-	verdict, shortfall, err := h.advice(ctx, session, left)
+	verdict, shortfall, err := h.advice(ctx, session, effLeft)
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("journey: arrival advice failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to read vehicle state")
@@ -158,11 +173,12 @@ func (h *ArrivalHandler) Prep(w http.ResponseWriter, r *http.Request) {
 	out := Arrival{
 		SessionID: id, DestName: session.DestName, LeftM: left,
 		EtaAt: eta, Moving: moving, Verdict: verdict, ShortfallWh: shortfall,
+		RouteFactor: factor, RouteTrips: trips,
 	}
 	if paceOK {
 		out.PaceMS = &pace
 	}
-	out.Evidence = arrivalEvidence(session, left, out.PaceMS, eta, moving, verdict, shortfall)
+	out.Evidence = arrivalEvidence(session, left, out.PaceMS, eta, moving, verdict, shortfall, factor, trips)
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
 
@@ -209,7 +225,7 @@ func (h *ArrivalHandler) advice(ctx context.Context, session *Session, left *flo
 	return verdict, shortfall, nil
 }
 
-func arrivalEvidence(session *Session, left, pace *float64, eta *time.Time, moving bool, verdict string, shortfall *float64) []string {
+func arrivalEvidence(session *Session, left, pace *float64, eta *time.Time, moving bool, verdict string, shortfall *float64, factor *float64, trips int) []string {
 	out := []string{}
 	dest := session.DestName
 	if dest == "" {
@@ -219,6 +235,9 @@ func arrivalEvidence(session *Session, left, pace *float64, eta *time.Time, movi
 		out = append(out, "route coordinates missing — distance to "+dest+" unavailable")
 	} else {
 		out = append(out, formatKm("", *left/1000)+" to "+dest)
+	}
+	if factor != nil {
+		out = append(out, "adjusted by your "+strconv.FormatFloat(*factor, 'f', 2, 64)+"× history on this route ("+strconv.Itoa(trips)+" trips)")
 	}
 	switch {
 	case pace == nil:

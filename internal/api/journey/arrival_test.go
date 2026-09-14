@@ -130,6 +130,42 @@ func TestPrep(t *testing.T) {
 	}
 }
 
+func TestPrepRouteFactor(t *testing.T) {
+	f, tr := arrivalSetup()
+	s := f.sessions[1]
+	s.OriginName, s.DestName = "Denver", "KC"
+	tr.legs = []RouteLeg{
+		{DistanceM: 990000, StraightM: 900000},
+		{DistanceM: 900000, StraightM: 900000},
+	}
+	h := NewArrivalHandler(f, tr, &fakeLive{values: map[string]signal.SignalValue{"EnergyRemaining": 200.0}})
+	now := time.Date(2026, 9, 14, 10, 5, 0, 0, time.UTC)
+	h.now = func() time.Time { return now }
+	rec := httptest.NewRecorder()
+	h.Prep(rec, liveRequest(http.MethodGet, "/journey/sessions/1/arrival", "1", ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("code = %d, body = %s", rec.Code, rec.Body.String())
+	}
+	var got Arrival
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.RouteFactor == nil || *got.RouteFactor < 1.049 || *got.RouteFactor > 1.051 {
+		t.Fatalf("factor = %v, want 1.05", got.RouteFactor)
+	}
+	if got.RouteTrips != 2 {
+		t.Fatalf("trips = %d, want 2", got.RouteTrips)
+	}
+	// ETA runs on the adjusted remainder: left×1.05 at 25 m/s.
+	wantETA := now.Add(time.Duration(*got.LeftM * 1.05 / 25 * float64(time.Second)))
+	if got.EtaAt.Sub(wantETA) > time.Minute || wantETA.Sub(*got.EtaAt) > time.Minute {
+		t.Fatalf("eta = %v, want ~%v", got.EtaAt, wantETA)
+	}
+	if len(got.Evidence) != 4 {
+		t.Fatalf("evidence = %v, want 4 lines", got.Evidence)
+	}
+}
+
 func TestPrepParked(t *testing.T) {
 	f, tr := arrivalSetup()
 	tr.points[1].OdometerM = fptr(100000) // same odometer: pace 0.

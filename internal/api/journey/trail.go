@@ -109,6 +109,67 @@ func (s *Store) Trail(ctx context.Context, sessionID int64, limit int) ([]*Check
 	return out, nil
 }
 
+// RouteLeg is one completed trip's driven distance over its straight
+// leg, for route learning.
+type RouteLeg struct {
+	DistanceM float64
+	StraightM float64
+}
+
+// RouteLegs returns recent completed trips on a route (both
+// directions — the drive back teaches the drive out), newest first.
+// Distance is the odometer span, so trips without odometer fixes do
+// not contribute. Empty names match nothing: unnamed routes have no
+// identity to learn on.
+func (s *Store) RouteLegs(ctx context.Context, vehicleID int64, origin, dest string, limit int) ([]RouteLeg, error) {
+	if origin == "" || dest == "" {
+		return []RouteLeg{}, nil
+	}
+	if limit <= 0 {
+		limit = 10
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	rows, err := s.db.Pool.Query(ctx, `
+		SELECT
+			(SELECT MAX(c.odometer_m) - MIN(c.odometer_m)
+			 FROM journey_checkpoints c WHERE c.session_id = s.id) AS dist,
+			6371000 * 2 * ASIN(SQRT(
+				POWER(SIN(RADIANS(s.dest_lat - s.origin_lat) / 2), 2) +
+				COS(RADIANS(s.origin_lat)) * COS(RADIANS(s.dest_lat)) *
+				POWER(SIN(RADIANS(s.dest_lng - s.origin_lng) / 2), 2)
+			)) AS straight
+		FROM journey_sessions s
+		WHERE s.vehicle_id = $1 AND s.status = 'completed'
+		  AND s.origin_lat IS NOT NULL AND s.origin_lng IS NOT NULL
+		  AND s.dest_lat IS NOT NULL AND s.dest_lng IS NOT NULL
+		  AND ((s.origin_name = $2 AND s.dest_name = $3)
+		    OR (s.origin_name = $3 AND s.dest_name = $2))
+		ORDER BY s.ended_at DESC NULLS LAST LIMIT $4`,
+		vehicleID, origin, dest, limit)
+	if err != nil {
+		return nil, fmt.Errorf("journey: route legs: %w", err)
+	}
+	defer rows.Close()
+	out := []RouteLeg{}
+	for rows.Next() {
+		var dist *float64
+		var straight float64
+		if err := rows.Scan(&dist, &straight); err != nil {
+			return nil, fmt.Errorf("journey: scan route leg: %w", err)
+		}
+		if dist == nil || *dist <= 0 || straight <= 0 {
+			continue
+		}
+		out = append(out, RouteLeg{DistanceM: *dist, StraightM: straight})
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("journey: route legs: %w", err)
+	}
+	return out, nil
+}
+
 // VehicleEfficiency returns the 90-day Wh/km mean for trip-capable
 // drives. Kept in parity with tripplanner.vehicleEfficiency (same
 // predicates and 50..500 guard) so both surfaces plan from the same

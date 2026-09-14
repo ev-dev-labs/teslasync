@@ -123,12 +123,14 @@ func ParseNextStop(raw json.RawMessage) *NextStop {
 	return &NextStop{Site: plan.Stops[0].Site, WaitS: plan.Stops[0].WaitS}
 }
 
-// TrailStore is the checkpoint/efficiency port. *Store satisfies it.
+// TrailStore is the checkpoint/efficiency/route-history port. *Store
+// satisfies it.
 type TrailStore interface {
 	AppendCheckpoint(ctx context.Context, sessionID int64, in NewCheckpoint) (*Checkpoint, error)
 	LatestCheckpoint(ctx context.Context, sessionID int64) (*Checkpoint, error)
 	Trail(ctx context.Context, sessionID int64, limit int) ([]*Checkpoint, error)
 	VehicleEfficiency(ctx context.Context, vehicleID int64) (float64, bool, error)
+	RouteLegs(ctx context.Context, vehicleID int64, origin, dest string, limit int) ([]RouteLeg, error)
 }
 
 // LiveHandler serves the live trip session. Stateless beyond

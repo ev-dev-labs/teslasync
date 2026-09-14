@@ -165,7 +165,8 @@
         "attention": "Arrive tight",
         "action": "Top up en route",
         "unknown": "Unknown"
-      }
+      },
+      "adjusted": "adjusted {{ratio}}× from {{count}} trips"
     },
     "report": {
       "title": "Trip report",
@@ -179,7 +180,9 @@
       "replans": "Replans",
       "replanCount": "{{replans}} of {{plans}} plans",
       "checklist": "Ready at check",
-      "readyCount": "{{ready}} of {{total}}"
+      "readyCount": "{{ready}} of {{total}}",
+      "usually": "Usually",
+      "usuallyTimes": "{{ratio}}× over {{count}} trips"
     },
     "nudge": {
       "title": "Leave now?",

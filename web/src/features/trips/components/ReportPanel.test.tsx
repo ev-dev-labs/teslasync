@@ -74,6 +74,8 @@ const report = {
   plans: 2,
   replans: 1,
   detour: 1.13,
+  route_factor: 1.05,
+  route_trips: 3,
   checklist: { ready: 4, total: 5 },
   evidence: ['trip time 150 min', 'drove 900 km', '1 replan en route'],
 };
@@ -107,7 +109,8 @@ describe('ReportPanel', () => {
     renderPanel();
     expect(screen.getByText('900000 m')).toBeInTheDocument();
     expect(screen.getByText('9000 s')).toBeInTheDocument();
-    expect(screen.getByText(/×/)).toBeInTheDocument();
+    expect(screen.getByText('1.13×')).toBeInTheDocument();
+    expect(screen.getByText('1.05× over 3 trips')).toBeInTheDocument();
     expect(screen.getByText(/1 of 2 plans/)).toBeInTheDocument();
     expect(screen.getByText(/4 of 5/)).toBeInTheDocument();
     expect(screen.getByText(/1 replan en route/)).toBeInTheDocument();

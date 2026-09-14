@@ -153,6 +153,43 @@ func TestCard(t *testing.T) {
 	}
 }
 
+func TestCardRouteFactor(t *testing.T) {
+	f := newFakeStore()
+	s := reportSession()
+	s.OriginName, s.DestName = "Denver", "KC"
+	f.sessions[1] = s
+	tr := &fakeTrail{points: []*Checkpoint{
+		{ID: 1, SessionID: 1, RecordedAt: time.Date(2026, 9, 14, 9, 0, 0, 0, time.UTC),
+			Lat: 39.7392, Lng: -104.9903, OdometerM: fptr(100000)},
+		{ID: 2, SessionID: 1, RecordedAt: time.Date(2026, 9, 14, 11, 30, 0, 0, time.UTC),
+			Lat: 39.0997, Lng: -94.5786, OdometerM: fptr(1000000)},
+	}, legs: []RouteLeg{
+		{DistanceM: 990000, StraightM: 900000},
+		{DistanceM: 900000, StraightM: 900000},
+		{DistanceM: 945000, StraightM: 900000},
+	}}
+	h := NewReportHandler(f, tr, &fakeRuns{runs: map[int64][]*Run{}})
+	rec := httptest.NewRecorder()
+	h.Card(rec, liveRequest(http.MethodGet, "/journey/sessions/1/report", "1", ""))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("code = %d", rec.Code)
+	}
+	var got Report
+	if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.RouteFactor == nil || *got.RouteFactor < 1.049 || *got.RouteFactor > 1.051 {
+		t.Fatalf("factor = %v, want 1.05", got.RouteFactor)
+	}
+	if got.RouteTrips != 3 {
+		t.Fatalf("trips = %d, want 3", got.RouteTrips)
+	}
+	// duration, distance, detour, route, replans, checklist.
+	if len(got.Evidence) != 6 {
+		t.Fatalf("evidence = %v, want 6 lines", got.Evidence)
+	}
+}
+
 func TestCardLive(t *testing.T) {
 	f := newFakeStore()
 	s := liveSession()

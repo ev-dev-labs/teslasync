@@ -6,6 +6,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { Badge, Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
+import { fmtNumber } from '@/lib/numberFormat';
 
 const VERDICT_LABEL_KEYS: Record<ChecklistStatus, string> = {
   ok: 'journey.arrival.verdict.ok',
@@ -93,6 +94,14 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
               <Text as="p" variant="caption" className="tabular-nums">
                 {t('journey.arrival.shortfall', 'top up ≈ {{energy}} en route', {
                   energy: units.formatEnergy(arrival.shortfall_wh),
+                })}
+              </Text>
+            ) : null}
+            {arrival.route_factor != null ? (
+              <Text as="p" variant="caption" className="tabular-nums">
+                {t('journey.arrival.adjusted', 'adjusted {{ratio}}× from {{count}} trips', {
+                  ratio: fmtNumber(arrival.route_factor, 2),
+                  count: fmtNumber(arrival.route_trips, 0),
                 })}
               </Text>
             ) : null}

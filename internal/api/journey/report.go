@@ -24,18 +24,20 @@ type ChecklistRecap struct {
 // was. Computed live from the trail — for an unfinished trip it reads
 // as a "so far" card, flagged in evidence.
 type Report struct {
-	SessionID int64           `json:"session_id"`
-	Status    string          `json:"status"`
-	StartedAt *time.Time      `json:"started_at"`
-	EndedAt   *time.Time      `json:"ended_at"`
-	DurationS *float64        `json:"duration_s"`
-	DistanceM *float64        `json:"distance_m"`
-	Fixes     int             `json:"fixes"`
-	Plans     int             `json:"plans"`
-	Replans   int             `json:"replans"`
-	Detour    *float64        `json:"detour"`
-	Checklist *ChecklistRecap `json:"checklist"`
-	Evidence  []string        `json:"evidence"`
+	SessionID   int64           `json:"session_id"`
+	Status      string          `json:"status"`
+	StartedAt   *time.Time      `json:"started_at"`
+	EndedAt     *time.Time      `json:"ended_at"`
+	DurationS   *float64        `json:"duration_s"`
+	DistanceM   *float64        `json:"distance_m"`
+	Fixes       int             `json:"fixes"`
+	Plans       int             `json:"plans"`
+	Replans     int             `json:"replans"`
+	Detour      *float64        `json:"detour"`
+	RouteFactor *float64        `json:"route_factor"`
+	RouteTrips  int             `json:"route_trips"`
+	Checklist   *ChecklistRecap `json:"checklist"`
+	Evidence    []string        `json:"evidence"`
 }
 
 // TrailDistanceM measures the driven path. Odometer span wins when
@@ -207,6 +209,13 @@ func (h *ReportHandler) Card(w http.ResponseWriter, r *http.Request) {
 		straight := straightM(session)
 		out.Detour = DetourRatio(*out.DistanceM, straight)
 	}
+	factor, trips, err := routeFactorFor(ctx, h.trail, session)
+	if err != nil {
+		log.Error().Err(err).Int64("id", id).Msg("journey: route history failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to read route history")
+		return
+	}
+	out.RouteFactor, out.RouteTrips = factor, trips
 	out.Evidence = reportEvidence(session, &out, straightM(session))
 	httpx.WriteJSON(w, http.StatusOK, out)
 }
@@ -234,6 +243,9 @@ func reportEvidence(session *Session, rep *Report, straight float64) []string {
 		out = append(out, strconv.FormatFloat(*rep.Detour, 'f', 2, 64)+"× the straight line")
 	} else if straight <= 0 {
 		out = append(out, "route coordinates missing — detour unavailable")
+	}
+	if rep.RouteFactor != nil {
+		out = append(out, "usually "+strconv.FormatFloat(*rep.RouteFactor, 'f', 2, 64)+"× on this route ("+strconv.Itoa(rep.RouteTrips)+" trips)")
 	}
 	switch rep.Replans {
 	case 0:

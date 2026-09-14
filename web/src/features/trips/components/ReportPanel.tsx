@@ -85,6 +85,19 @@ export function ReportPanel({ session }: { session: JourneySession }) {
             </div>
             <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2">
               <Text as="dt" variant="caption">
+                {t('journey.report.usually', 'Usually')}
+              </Text>
+              <Text as="dd" variant="label" className="tabular-nums">
+                {report.route_factor != null
+                  ? t('journey.report.usuallyTimes', '{{ratio}}× over {{count}} trips', {
+                      ratio: fmtNumber(report.route_factor, 2),
+                      count: fmtNumber(report.route_trips, 0),
+                    })
+                  : '—'}
+              </Text>
+            </div>
+            <div className="rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2">
+              <Text as="dt" variant="caption">
                 {t('journey.report.checklist', 'Ready at check')}
               </Text>
               <Text as="dd" variant="label" className="tabular-nums">
