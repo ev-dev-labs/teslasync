@@ -74,14 +74,16 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
               {t('journey.live.queued', '{{count}} queued', { count: queued })}
             </Text>
           ) : null}
-          <Button
-            variant="secondary"
-            size="sm"
-            loading={checkInPending}
-            onClick={checkIn}
-          >
-            {t('journey.live.checkIn', 'Check in')}
-          </Button>
+          {view?.latest != null ? (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={checkInPending}
+              onClick={checkIn}
+            >
+              {t('journey.live.checkIn', 'Check in')}
+            </Button>
+          ) : null}
         </div>
       </div>
 
@@ -90,12 +92,16 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
       ) : liveState.fatalError ? (
         <QueryError error={liveState.fatalError} onRetry={() => liveState.retry?.()} />
       ) : view == null || view.latest == null ? (
-        <EmptyState /* no-action: check-in control is the button above */
+        <EmptyState
           icon={<Icons.navigation className="h-10 w-10" aria-hidden="true" />}
           message={t(
             'journey.live.empty',
             'No fixes yet. Check in to drop the first trail point.',
           )}
+          action={{
+            label: t('journey.live.checkIn', 'Check in'),
+            onClick: checkIn,
+          }}
         />
       ) : (
         <div className="space-y-3">

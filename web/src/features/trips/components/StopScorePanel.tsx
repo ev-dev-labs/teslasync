@@ -93,12 +93,16 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
       ) : sitesState.fatalError ? (
         <QueryError error={sitesState.fatalError} onRetry={() => sitesState.retry?.()} />
       ) : sites.length === 0 ? (
-        <EmptyState /* no-action: informational empty — no CTA */
+        <EmptyState
           icon={<Icons.location className="h-10 w-10" aria-hidden="true" />}
           message={t(
             'journey.scoring.noSites',
             'No fleet-known sites yet. Sync charging history to nominate stops.',
           )}
+          actionTo={{
+            label: t('journey.scoring.openHistory', 'Open charging history'),
+            to: '/tesla-charging-history',
+          }}
         />
       ) : (
         <div className="grid gap-3">

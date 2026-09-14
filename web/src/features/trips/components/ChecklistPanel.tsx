@@ -82,27 +82,31 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
           <Icons.checklist className="h-4 w-4 text-[var(--text-muted)]" aria-hidden="true" />
           {t('journey.checklist.title', 'Ready to roll')}
         </Text>
-        <Button
-          variant="secondary"
-          size="sm"
-          loading={refresh.isPending}
-          onClick={() => refresh.mutate(session.id)}
-        >
-          {run == null
-            ? t('journey.checklist.run', 'Run checklist')
-            : t('journey.checklist.refresh', 'Re-check')}
-        </Button>
+        {run != null ? (
+          <Button
+            variant="secondary"
+            size="sm"
+            loading={refresh.isPending}
+            onClick={() => refresh.mutate(session.id)}
+          >
+            {t('journey.checklist.refresh', 'Re-check')}
+          </Button>
+        ) : null}
       </div>
 
       {runQuery.isLoading || refresh.isPending ? (
         <ListSkeleton label={t('journey.checklist.loading', 'Checking readiness…')} />
-      ) : neverRan || run == null ? (
-        <EmptyState /* no-action: run control is the button above */
+      ) : neverRan || (run == null && !runState.fatalError) ? (
+        <EmptyState
           icon={<Icons.checklist className="h-10 w-10" aria-hidden="true" />}
           message={t(
             'journey.checklist.empty',
             'No checks yet. Run the checklist to snapshot charge, tires, storm, and update state.',
           )}
+          action={{
+            label: t('journey.checklist.run', 'Run checklist'),
+            onClick: () => refresh.mutate(session.id),
+          }}
         />
       ) : runState.fatalError ? (
         <QueryError error={runState.fatalError} onRetry={() => runState.retry?.()} />

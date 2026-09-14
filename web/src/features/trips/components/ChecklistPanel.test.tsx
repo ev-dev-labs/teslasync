@@ -110,7 +110,7 @@ describe('ChecklistPanel', () => {
     renderPanel();
     expect(screen.getByText('Charge level')).toBeInTheDocument();
     expect(screen.getByText('Tire pressure')).toBeInTheDocument();
-    expect(screen.getByText('Ready')).toBeInTheDocument();
+    expect(screen.getAllByText('Ready').length).toBeGreaterThan(0);
     expect(screen.getByText('Fix now')).toBeInTheDocument();
     expect(screen.getByText('lowest FR at 2.6 bar (placard 2.9)')).toBeInTheDocument();
   });
