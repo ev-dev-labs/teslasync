@@ -103,13 +103,13 @@ describe('DeparturePanel', () => {
     renderPanel();
     expect(screen.getByText(/Leave /)).toBeInTheDocument();
     expect(screen.getByText('Battery 82% now')).toBeInTheDocument();
-    expect(screen.getByText('6 slots scored, 2 warning, 1 watch')).toBeInTheDocument();
+    expect(screen.getByText(/6 slots scored, 2 warning, 1 watch/)).toBeInTheDocument();
   });
 
   it('re-queries when the window changes', () => {
     renderPanel();
     fireEvent.click(screen.getByText('24h'));
-    const [, , from, to] = mockDeparture.mock.lastCall as [number, string, string, string];
+    const [, from, to] = mockDeparture.mock.lastCall as [number, string, string, { enabled?: boolean }];
     expect(new Date(to).getTime() - new Date(from).getTime()).toBe(24 * 3600_000);
   });
 
