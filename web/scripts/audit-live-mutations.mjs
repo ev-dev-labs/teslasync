@@ -143,7 +143,14 @@ const MODE_INDEPENDENT_MUTATIONS = {
   'hooks/useAutomations.ts': ['useInstallRoutine'],
   'hooks/useBatteryCertificate.ts': ['useVerifyBatteryCertificate'],
   'hooks/useComfort.ts': ['useSaveComfortConfig'],
-  'hooks/useJourney.ts': ['useCreateJourney', 'useTransitionJourney'],
+  'hooks/useJourney.ts': [
+    'useCreateJourney',
+    'useTransitionJourney',
+    'useScoreStops',
+    'useRefreshChecklist',
+    'useCheckIn',
+    'useRequestReplan',
+  ],
   'hooks/useStormguard.ts': ['useSaveStormguardConfig'],
   'hooks/useEnergy.ts': [
     'useRefreshTeslaEnergySites',
