@@ -78,7 +78,8 @@ jobs:
           docker run --rm --network host \
             -e BASE_URL=http://localhost:8080 \
             -e SCENARIO="${SCENARIO}" \
-            -v "${GITHUB_WORKSPACE}/tests/k6:/scripts:ro" \
+            -v "${GITHUB_WORKSPACE}/tests/k6:/scripts" \
+            -w /scripts \
             grafana/k6:0.54.0 run /scripts/api_smoke.js
         env:
           SCENARIO: ${{ github.event.inputs.scenario || 'smoke' }}

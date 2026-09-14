@@ -104,7 +104,7 @@ export default function () {
     // 401 is acceptable in a no-auth smoke run; we only fail on 5xx
     // or on 2xx-with-malformed-body.
     const ok = check(r, {
-      'vehicles status acceptable': (rsp) => rsp.status === 200 || rsp.status === 401,
+      'vehicles status acceptable': (rsp) => rsp.status > 0 && rsp.status < 500,
       'vehicles json on 200': (rsp) => rsp.status !== 200 || rsp.headers['Content-Type'] === undefined || rsp.headers['Content-Type'].includes('json'),
     });
     apiErrorRate.add(!ok);
@@ -117,7 +117,7 @@ export default function () {
     });
     drivesLatency.add(r.timings.duration);
     const ok = check(r, {
-      'drives status acceptable': (rsp) => rsp.status === 200 || rsp.status === 401,
+      'drives status acceptable': (rsp) => rsp.status > 0 && rsp.status < 500,
     });
     apiErrorRate.add(!ok);
   });
@@ -129,7 +129,7 @@ export default function () {
     });
     chargingLatency.add(r.timings.duration);
     const ok = check(r, {
-      'charging status acceptable': (rsp) => rsp.status === 200 || rsp.status === 401,
+      'charging status acceptable': (rsp) => rsp.status > 0 && rsp.status < 500,
     });
     apiErrorRate.add(!ok);
   });
@@ -141,7 +141,7 @@ export default function () {
     });
     analyticsLatency.add(r.timings.duration);
     const ok = check(r, {
-      'analytics status acceptable': (rsp) => rsp.status === 200 || rsp.status === 401,
+      'analytics status acceptable': (rsp) => rsp.status > 0 && rsp.status < 500,
     });
     apiErrorRate.add(!ok);
   });
@@ -168,6 +168,6 @@ export function handleSummary(data) {
   }
   return {
     'stdout': JSON.stringify(out, null, 2),
-    'tests/k6/summary.json': JSON.stringify(out, null, 2),
+    'summary.json': JSON.stringify(out, null, 2),
   };
 }
