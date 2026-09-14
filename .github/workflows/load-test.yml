@@ -75,12 +75,17 @@ jobs:
         # is not the compose-published API. Use host networking on
         # ubuntu-latest so BASE_URL=http://localhost:8080 reaches the stack.
         run: |
+          # k6 image is non-root; make the bind-mount writable so
+          # handleSummary / --summary-export can persist summary.json.
+          chmod a+w tests/k6
           docker run --rm --network host \
             -e BASE_URL=http://localhost:8080 \
             -e SCENARIO="${SCENARIO}" \
             -v "${GITHUB_WORKSPACE}/tests/k6:/scripts" \
             -w /scripts \
+            --user "$(id -u):$(id -g)" \
             grafana/k6:0.54.0 run /scripts/api_smoke.js
+          test -f tests/k6/summary.json
         env:
           SCENARIO: ${{ github.event.inputs.scenario || 'smoke' }}
 
