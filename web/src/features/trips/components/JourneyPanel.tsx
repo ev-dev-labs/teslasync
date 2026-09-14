@@ -19,6 +19,7 @@ import { StopScorePanel } from './StopScorePanel';
 import { DeparturePanel } from './DeparturePanel';
 import { ChecklistPanel } from './ChecklistPanel';
 import { LiveTripPanel } from './LiveTripPanel';
+import { ReplanPanel } from './ReplanPanel';
 
 const STATUS_FILTERS = ['', 'planned', 'active', 'paused', 'completed', 'aborted'] as const;
 
@@ -350,7 +351,10 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
             </div>
             <StopScorePanel session={detail.session} />
             {detail.session.status === 'active' || detail.session.status === 'paused' ? (
-              <LiveTripPanel session={detail.session} />
+              <>
+                <LiveTripPanel session={detail.session} />
+                <ReplanPanel session={detail.session} />
+              </>
             ) : null}
           </div>
         )}

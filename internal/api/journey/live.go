@@ -101,8 +101,8 @@ func ComputeRange(haveWh *float64, leftM float64, effWhKm *float64) *Range {
 }
 
 // ParseNextStop reads the head stop from a saved plan payload. Only
-// stop_scores plans carry ranked stops; anything else yields nil.
-// Pure: never errors, never panics on malformed JSON.
+// stop_scores and replan plans carry ranked stops; anything else
+// yields nil. Pure: never errors, never panics on malformed JSON.
 func ParseNextStop(raw json.RawMessage) *NextStop {
 	var plan struct {
 		Kind  string `json:"kind"`
@@ -114,7 +114,10 @@ func ParseNextStop(raw json.RawMessage) *NextStop {
 	if err := json.Unmarshal(raw, &plan); err != nil {
 		return nil
 	}
-	if plan.Kind != "stop_scores" || len(plan.Stops) == 0 || plan.Stops[0].Site == "" {
+	if plan.Kind != "stop_scores" && plan.Kind != "replan" {
+		return nil
+	}
+	if len(plan.Stops) == 0 || plan.Stops[0].Site == "" {
 		return nil
 	}
 	return &NextStop{Site: plan.Stops[0].Site, WaitS: plan.Stops[0].WaitS}
@@ -327,12 +330,21 @@ func (h *LiveHandler) nextStop(ctx context.Context, sessionID int64) (*NextStop,
 	if err != nil {
 		return nil, err
 	}
+	// Newest ranked plan wins, by version — not slice order, which
+	// stores are free to choose.
+	var best *PlanVersion
 	for _, p := range plans {
-		if next := ParseNextStop(p.Plan); next != nil {
-			return next, nil
+		if ParseNextStop(p.Plan) == nil {
+			continue
+		}
+		if best == nil || p.Version > best.Version {
+			best = p
 		}
 	}
-	return nil, nil
+	if best == nil {
+		return nil, nil
+	}
+	return ParseNextStop(best.Plan), nil
 }
 
 func liveEvidence(latest *Checkpoint, progress *Progress, rng *Range, next *NextStop) []string {

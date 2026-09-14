@@ -167,6 +167,15 @@ export interface JourneyLiveView {
   evidence: string[];
 }
 
+export type JourneyDeviationVerdict = 'on_track' | 'drifted' | 'off_route' | 'unknown';
+
+export interface JourneyReplanAssessment {
+  session_id: number;
+  deviation: { deviation_m: number | null; verdict: JourneyDeviationVerdict };
+  latest: JourneyCheckpoint | null;
+  evidence: string[];
+}
+
 export const journeyKeys = {
   all: ['journey'] as const,
   list: (vehicleId: number | null, status: string) =>
@@ -176,6 +185,7 @@ export const journeyKeys = {
     ['journey', 'departure', id, from, to] as const,
   checklist: (id: number | null) => ['journey', 'checklist', id] as const,
   live: (id: number | null) => ['journey', 'live', id] as const,
+  replan: (id: number | null) => ['journey', 'replan', id] as const,
 };
 
 function isValidVehicle(vehicleId: number | null | undefined): vehicleId is number {
@@ -338,9 +348,43 @@ export function useCheckIn() {
       }),
     onSuccess: (checkpoint) => {
       invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(checkpoint.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.replan(checkpoint.session_id) });
       success('toast.journey.checkin.success', 'Checked in');
     },
     onError: (err) => error(err, 'toast.journey.checkin.error', 'Check-in failed'),
+  });
+}
+
+/** Reads the corridor-deviation assessment for a session. */
+export function useReplanAssessment(id: number | null | undefined, options?: { enabled?: boolean }) {
+  return useQuery({
+    queryKey: journeyKeys.replan(id ?? null),
+    queryFn: ({ signal }) =>
+      request<JourneyReplanAssessment>(`/journey/sessions/${id}/replan`, { signal }),
+    enabled: (options?.enabled ?? true) && id != null && id > 0,
+    ...queryPolicy('operational'),
+  });
+}
+
+/** Re-ranks the saved candidates from the latest fix; persists a replan version. */
+export function useRequestReplan() {
+  const qc = useQueryClient();
+  const { success, error } = useMutationToast();
+  return useMutation({
+    mutationFn: ({ id, energy_wh }: { id: number; energy_wh?: number }) =>
+      request<StopScores>(`/journey/sessions/${id}/replan`, {
+        method: 'POST',
+        body: JSON.stringify(energy_wh == null ? {} : { energy_wh }),
+      }),
+    onSuccess: (scores) => {
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.detail(scores.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.live(scores.session_id) });
+      invalidateAndBroadcast(qc, { queryKey: journeyKeys.replan(scores.session_id) });
+      success('toast.journey.replan.success', 'Replanned — {{winner}} wins', {
+        winner: scores.winner,
+      });
+    },
+    onError: (err) => error(err, 'toast.journey.replan.error', 'Replan failed'),
   });
 }
 

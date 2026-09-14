@@ -137,6 +137,20 @@
         "action": "Charge soon",
         "unknown": "Unknown"
       }
+    },
+    "replan": {
+      "title": "Replan",
+      "rescore": "Rescore from here",
+      "loading": "Measuring deviation…",
+      "empty": "No deviation reading yet.",
+      "scoring": "Rescoring stops…",
+      "offBy": "{{distance}} off corridor",
+      "verdict": {
+        "on_track": "On track",
+        "drifted": "Drifting",
+        "off_route": "Off route",
+        "unknown": "Unknown"
+      }
     }
   },
   "trips": {

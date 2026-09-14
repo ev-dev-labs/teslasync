@@ -372,7 +372,7 @@ func (h *Handler) ScoreStops(w http.ResponseWriter, r *http.Request) {
 	sigs := make([]Signals, len(req.Candidates))
 	for i, c := range req.Candidates {
 		cands[i] = Candidate{Site: c.Site, Lat: c.Lat, Lng: c.Lng, ArriveS: arrivals[i].Unix()}
-		sig, err := h.gatherSignals(ctx, c.Site, arrivals[i])
+		sig, err := gatherSiteSignals(ctx, h.signals, h.waits, c.Site, arrivals[i])
 		if err != nil {
 			log.Error().Err(err).Str("site", c.Site).Msg("journey: signals failed")
 			httpx.WriteError(w, http.StatusInternalServerError, "failed to read stop signals")
@@ -383,6 +383,7 @@ func (h *Handler) ScoreStops(w http.ResponseWriter, r *http.Request) {
 	stops := RankStops(*session.OriginLat, *session.OriginLng, *session.DestLat, *session.DestLng, req.EnergyWh, cands, sigs)
 	plan, err := json.Marshal(map[string]any{
 		"kind": "stop_scores", "energy_wh": req.EnergyWh, "stops": stops,
+		"candidates": candidateEcho(cands),
 	})
 	if err != nil {
 		log.Error().Err(err).Int64("id", id).Msg("journey: plan encode failed")
@@ -409,12 +410,13 @@ func (h *Handler) ScoreStops(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// gatherSignals reads wait, price, and peak samples for one site. Thin
-// history (ErrNoHistory, unpriced, unmetered) yields nils; anything else
-// is an infrastructure failure.
-func (h *Handler) gatherSignals(ctx context.Context, site string, arrival time.Time) (Signals, error) {
+// gatherSiteSignals reads wait, price, and peak samples for one site.
+// Thin history (ErrNoHistory, unpriced, unmetered) yields nils; anything
+// else is an infrastructure failure. Shared by initial scoring and
+// replans so both rank on identical inputs.
+func gatherSiteSignals(ctx context.Context, signals SignalStore, waits WaitStore, site string, arrival time.Time) (Signals, error) {
 	var sig Signals
-	history, err := h.waits.History(ctx, site)
+	history, err := waits.History(ctx, site)
 	if err != nil && !errors.Is(err, waitoracle.ErrNoHistory) {
 		return sig, err
 	}
@@ -425,12 +427,12 @@ func (h *Handler) gatherSignals(ctx context.Context, site string, arrival time.T
 			return sig, err
 		}
 	}
-	peaks, err := h.signals.SitePeaks(ctx, site)
+	peaks, err := signals.SitePeaks(ctx, site)
 	if err != nil {
 		return sig, err
 	}
 	sig.PeakKW = peaks
-	if perKWh, _, ok, err := h.signals.SitePrice(ctx, site); err != nil {
+	if perKWh, _, ok, err := signals.SitePrice(ctx, site); err != nil {
 		return sig, err
 	} else if ok {
 		sig.PerKWh = &perKWh

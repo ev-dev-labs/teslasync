@@ -1,16 +1,13 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Icons } from '@/lib/icons';
-import { useScoreStops, type JourneySession, type ScoredStop } from '@/api/hooks/useJourney';
+import { useScoreStops, type JourneySession } from '@/api/hooks/useJourney';
 import { useWaitOracleSites } from '@/api/hooks/useCharging';
 import { useDataState } from '@/hooks/useDataState';
-import { useUnits } from '@/hooks/useUnits';
-import { useFormatting } from '@/hooks/useFormatting';
-import { Badge, Button, Checkbox, DataTable, Input, Text } from '@/components/ui';
-import type { Column } from '@/components/ui';
+import { Badge, Button, Checkbox, Input, Text } from '@/components/ui';
 import { UnitInput } from '@/components/forms';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
-import { fmtNumber } from '@/lib/numberFormat';
+import { StopScoreTable } from './StopScoreTable';
 
 const MAX_CANDIDATES = 10;
 
@@ -33,8 +30,6 @@ function toIsoOrNull(local: string): string | null {
  */
 export function StopScorePanel({ session }: { session: JourneySession }) {
   const { t } = useTranslation();
-  const units = useUnits();
-  const { formatCurrency } = useFormatting();
   const [selected, setSelected] = useState<string[]>([]);
   const [arrival, setArrival] = useState(() => toLocalInput(new Date(Date.now() + 2 * 3600_000)));
   const [energyKwh, setEnergyKwh] = useState(40);
@@ -74,76 +69,6 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
       }),
     });
   };
-
-  const columns: Column<ScoredStop>[] = [
-    {
-      key: 'stop',
-      header: t('journey.scoring.col.stop', 'Stop'),
-      render: (row) => (
-        <div>
-          <Text as="p" variant="label">
-            {row.site}
-          </Text>
-          {row.evidence.map((line) => (
-            <Text as="p" key={line} variant="caption">
-              {line}
-            </Text>
-          ))}
-        </div>
-      ),
-    },
-    {
-      key: 'score',
-      header: t('journey.scoring.col.score', 'Score'),
-      render: (row) => (
-        <div className="flex min-w-[6rem] items-center gap-2">
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--surface-2)]">
-            <div
-              className="h-full rounded-full bg-emerald-400/70"
-              style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
-            />
-          </div>
-          <span className="tabular-nums text-xs">{fmtNumber(row.score, 0)}</span>
-        </div>
-      ),
-    },
-    {
-      key: 'wait',
-      header: t('journey.scoring.col.wait', 'Wait'),
-      render: (row) => (
-        <span className="tabular-nums">
-          {row.wait_s == null
-            ? '—'
-            : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60, 0) })}
-        </span>
-      ),
-    },
-    {
-      key: 'price',
-      header: t('journey.scoring.col.price', '$/kWh'),
-      render: (row) => (
-        <span className="tabular-nums">
-          {row.per_kwh == null ? '—' : formatCurrency(row.per_kwh, 2)}
-        </span>
-      ),
-    },
-    {
-      key: 'health',
-      header: t('journey.scoring.col.health', 'Health'),
-      render: (row) => (
-        <span className="tabular-nums">
-          {row.health == null ? '—' : fmtNumber(row.health, 0)}
-        </span>
-      ),
-    },
-    {
-      key: 'corridor',
-      header: t('journey.scoring.col.corridor', 'Off route'),
-      render: (row) => (
-        <span className="tabular-nums">{units.formatDistance(row.corridor_m)}</span>
-      ),
-    },
-  ];
 
   if (!hasCoords) {
     return (
@@ -228,12 +153,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
               {t('journey.planVersion', 'v{{version}}', { version: result.plan_version })}
             </Text>
           </div>
-          <DataTable
-            columns={columns}
-            data={result.stops}
-            keyExtractor={(row) => row.site}
-            tableId="journey-stop-scores"
-          />
+          <StopScoreTable stops={result.stops} tableId="journey-stop-scores" />
         </div>
       ) : null}
     </div>

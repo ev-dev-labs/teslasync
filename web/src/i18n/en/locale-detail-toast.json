@@ -522,6 +522,10 @@
       "checkin": {
         "success": "Checked in",
         "error": "Check-in failed"
+      },
+      "replan": {
+        "success": "Replanned — {{winner}} wins",
+        "error": "Replan failed"
       }
     }
   }
