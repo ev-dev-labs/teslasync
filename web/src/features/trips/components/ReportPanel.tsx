@@ -91,7 +91,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
                 {report.route_factor != null
                   ? t('journey.report.usuallyTimes', '{{ratio}}× over {{count}} trips', {
                       ratio: fmtNumber(report.route_factor, 2),
-                      count: fmtNumber(report.route_trips, 0),
+                      count: report.route_trips,
                     })
                   : '—'}
               </Text>

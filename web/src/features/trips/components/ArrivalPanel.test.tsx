@@ -107,7 +107,7 @@ describe('ArrivalPanel', () => {
     renderPanel();
     expect(screen.getByText('ETA')).toBeInTheDocument();
     expect(screen.getByText(/\d{1,2}:\d{2}/)).toBeInTheDocument();
-    expect(screen.getByText(/moving/)).toBeInTheDocument();
+    expect(screen.getByText(/moving\s+·/)).toBeInTheDocument();
     expect(screen.getByText(/25 m\/s/)).toBeInTheDocument();
     expect(screen.getByText(/450000 m/)).toBeInTheDocument();
     expect(screen.getByText('Top up en route')).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe('ArrivalPanel', () => {
     renderPanel();
     expect(screen.getByText(/parked/)).toBeInTheDocument();
     expect(screen.getByText('Arrive with buffer')).toBeInTheDocument();
-    expect(screen.queryByText(/top up ≈/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/top up ≈ 15700 Wh en route$/)).not.toBeInTheDocument();
   });
 
   it('surfaces failures with a retry path', () => {

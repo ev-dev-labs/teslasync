@@ -101,7 +101,7 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
               <Text as="p" variant="caption" className="tabular-nums">
                 {t('journey.arrival.adjusted', 'adjusted {{ratio}}× from {{count}} trips', {
                   ratio: fmtNumber(arrival.route_factor, 2),
-                  count: fmtNumber(arrival.route_trips, 0),
+                  count: arrival.route_trips,
                 })}
               </Text>
             ) : null}

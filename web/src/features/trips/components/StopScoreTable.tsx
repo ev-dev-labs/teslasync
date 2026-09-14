@@ -44,7 +44,9 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
               style={{ width: `${Math.min(100, Math.max(0, row.score))}%` }}
             />
           </div>
-          <span className="tabular-nums text-xs">{fmtNumber(row.score, 0)}</span>
+          <Text as="span" variant="caption" className="tabular-nums">
+            {fmtNumber(row.score, 0)}
+          </Text>
         </div>
       ),
     },
@@ -52,36 +54,38 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
       key: 'wait',
       header: t('journey.scoring.col.wait', 'Wait'),
       render: (row) => (
-        <span className="tabular-nums">
+        <Text as="span" className="tabular-nums">
           {row.wait_s == null
             ? '—'
             : t('journey.scoring.min', '{{min}} min', { min: fmtNumber(row.wait_s / 60, 0) })}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'price',
       header: t('journey.scoring.col.price', '$/kWh'),
       render: (row) => (
-        <span className="tabular-nums">
+        <Text as="span" className="tabular-nums">
           {row.per_kwh == null ? '—' : formatCurrency(row.per_kwh, 2)}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'health',
       header: t('journey.scoring.col.health', 'Health'),
       render: (row) => (
-        <span className="tabular-nums">
+        <Text as="span" className="tabular-nums">
           {row.health == null ? '—' : fmtNumber(row.health, 0)}
-        </span>
+        </Text>
       ),
     },
     {
       key: 'corridor',
       header: t('journey.scoring.col.corridor', 'Off route'),
       render: (row) => (
-        <span className="tabular-nums">{units.formatDistance(row.corridor_m)}</span>
+        <Text as="span" className="tabular-nums">
+          {units.formatDistance(row.corridor_m)}
+        </Text>
       ),
     },
   ];
