@@ -97,7 +97,7 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
       {runQuery.isLoading || refresh.isPending ? (
         <ListSkeleton label={t('journey.checklist.loading', 'Checking readiness…')} />
       ) : neverRan || run == null ? (
-        <EmptyState
+        <EmptyState /* no-action: run control is the button above */
           icon={<Icons.checklist className="h-10 w-10" aria-hidden="true" />}
           message={t(
             'journey.checklist.empty',

@@ -90,7 +90,7 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
       ) : liveState.fatalError ? (
         <QueryError error={liveState.fatalError} onRetry={() => liveState.retry?.()} />
       ) : view == null || view.latest == null ? (
-        <EmptyState
+        <EmptyState /* no-action: check-in control is the button above */
           icon={<Icons.navigation className="h-10 w-10" aria-hidden="true" />}
           message={t(
             'journey.live.empty',

@@ -93,7 +93,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
       ) : sitesState.fatalError ? (
         <QueryError error={sitesState.fatalError} onRetry={() => sitesState.retry?.()} />
       ) : sites.length === 0 ? (
-        <EmptyState
+        <EmptyState /* no-action: informational empty — no CTA */
           icon={<Icons.location className="h-10 w-10" aria-hidden="true" />}
           message={t(
             'journey.scoring.noSites',
