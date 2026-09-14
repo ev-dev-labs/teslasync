@@ -71,11 +71,16 @@ jobs:
           exit 1
 
       - name: Run k6
-        uses: grafana/k6-action@v0.3.1
-        with:
-          filename: tests/k6/api_smoke.js
+        # grafana/k6-action runs k6 in a sibling container, so localhost
+        # is not the compose-published API. Use host networking on
+        # ubuntu-latest so BASE_URL=http://localhost:8080 reaches the stack.
+        run: |
+          docker run --rm --network host \
+            -e BASE_URL=http://localhost:8080 \
+            -e SCENARIO="${SCENARIO}" \
+            -v "${GITHUB_WORKSPACE}/tests/k6:/scripts:ro" \
+            grafana/k6:0.54.0 run /scripts/api_smoke.js
         env:
-          BASE_URL: http://localhost:8080
           SCENARIO: ${{ github.event.inputs.scenario || 'smoke' }}
 
       - name: Upload k6 summary
