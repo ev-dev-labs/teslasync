@@ -110,6 +110,7 @@ import (
 	apidash "github.com/ev-dev-labs/teslasync/internal/api/dashboardlayout"
 	apidq "github.com/ev-dev-labs/teslasync/internal/api/dataquality"
 	apidatarepair "github.com/ev-dev-labs/teslasync/internal/api/datarepair"
+	apidaylog "github.com/ev-dev-labs/teslasync/internal/api/daylog"
 	apidevtools "github.com/ev-dev-labs/teslasync/internal/api/devtools"
 	apidiag "github.com/ev-dev-labs/teslasync/internal/api/diagnostic"
 	apidlq "github.com/ev-dev-labs/teslasync/internal/api/dlq"
@@ -225,6 +226,7 @@ import (
 	dbauth "github.com/ev-dev-labs/teslasync/internal/database/auth"
 	chargingdb "github.com/ev-dev-labs/teslasync/internal/database/charging"
 	datarepairdb "github.com/ev-dev-labs/teslasync/internal/database/datarepair"
+	daylogdb "github.com/ev-dev-labs/teslasync/internal/database/daylog"
 	drivedb "github.com/ev-dev-labs/teslasync/internal/database/drive"
 	energydb "github.com/ev-dev-labs/teslasync/internal/database/energy"
 	exportdb "github.com/ev-dev-labs/teslasync/internal/database/export"
@@ -4158,6 +4160,13 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/timeline", vehicleStatesHandler.Timeline)
 			r.Get("/summary", vehicleStatesHandler.Summary)
 		})
+
+		// /day-log reassembles one vehicle's local-calendar-day event
+		// timeline from session rows, the vehicle FSM log,
+		// security_events, software_updates, and signal_log edges. Same
+		// admin-style rate limit as /vehicle-states.
+		dayLogHandler := apidaylog.NewHandler(daylogdb.NewDayLogRepo(db.Pool))
+		r.With(httprate.LimitByIP(60, 1*time.Minute)).Get("/day-log", dayLogHandler.Get)
 
 		// FSM shadow mode stats + transition log
 		r.Route("/fsm", func(r chi.Router) {

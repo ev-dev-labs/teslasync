@@ -198,6 +198,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/lifetime-stats': ['lifetime', 'all time', 'totals'],
   '/vehicle-comparison': ['compare vehicles', 'fleet comparison', 'side by side', 'two vehicles'],
   '/timeline': ['timeline', 'events', 'history'],
+  '/day-log': ['day log', 'what happened today', 'daily events', 'drive start', 'charge start'],
   '/activity': ['activity', 'drives', 'charging', 'alerts', 'software updates', 'annotations', 'operations timeline'],
   '/locations': ['places', 'locations', 'visited'],
   '/commands': ['commands', 'control', 'remote'],
@@ -380,6 +381,7 @@ export const navSections = [
       { to: '/vehicles', icon: Icons.vehicle, label: 'My Vehicles', color: 'text-sky-400', dataTour: 'vehicle-section' },
       { to: '/vehicle-management', icon: Icons.database, label: 'Vehicle Management', color: 'text-violet-400' },
       { to: '/digital-twin', icon: Icons.monitor, label: 'Vehicle Live View', color: 'text-cyan-400' },
+      { to: '/day-log', icon: Icons.activity, label: 'Day Log', color: 'text-teal-400' },
       { to: '/vehicle-comparison', icon: Icons.arrowLeftRight, label: 'Compare Vehicles', color: 'text-orange-400', minVehicles: 2 },
       { to: '/locations', icon: Icons.location, label: 'Saved Locations', color: 'text-emerald-400' },
       { to: '/parking', icon: Icons.parking, label: 'Parking Analytics', color: 'text-cyan-400' },
@@ -988,6 +990,17 @@ export default function Layout() {
   // bar the main content reclaims the space — track the prefs reactively
   // so the layout reflows on toggle.
   const statusBarPrefs = useStatusBarPrefs()
+
+  useEffect(() => {
+    const root = document.documentElement
+    const standard = presentation.mode === 'standard'
+    root.dataset.tabBar = standard ? 'on' : 'off'
+    root.dataset.statusBar = standard && statusBarPrefs.enabled ? 'on' : 'off'
+    return () => {
+      delete root.dataset.tabBar
+      delete root.dataset.statusBar
+    }
+  }, [presentation.mode, statusBarPrefs.enabled])
 
   // The CommandPalette's "Show keyboard shortcuts" command (and any other
   // caller) toggles the cheat sheet by dispatching this custom event so the
@@ -1857,15 +1870,10 @@ export default function Layout() {
           role="main"
           tabIndex={-1}
           className={cn(
-            'flex-1 overflow-y-auto outline-none pb-16 xl:pb-0',
-            // Reserve space for the footer status bar
-            // so it never overlaps page content. On mobile it stacks ABOVE
-            // the BottomTabBar (which already adds 56px via pb-16), so we
-            // bump pb-16 → pb-20 (24px footer + tab bar). On desktop a
-            // single 28px reservation is enough.
-            presentation.mode === 'standard' &&
-              statusBarPrefs.enabled &&
-              'xl:pb-7 pb-20',
+            'flex-1 overflow-y-auto outline-none',
+            // Same token Drawers/Modals use so list pages and overlays
+            // clear the tab bar + status bar together.
+            presentation.mode === 'standard' && 'pb-[var(--shell-chrome-bottom)]',
           )}
         >
           <div

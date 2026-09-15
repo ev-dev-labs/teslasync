@@ -106,7 +106,7 @@ export default function InstallPrompt() {
           animate={{ opacity: 1, y: 0 }}
           exit={reduce ? { opacity: 0 } : { opacity: 0, y: 60 }}
           transition={reduce ? { duration: 0 } : { type: 'spring', stiffness: 400, damping: 30 }}
-          className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9998] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[28rem]"
+          className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9998] mx-auto max-w-md xl:inset-x-auto xl:right-4 xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] xl:w-[28rem]"
         >
           <div
             role="status"

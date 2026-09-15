@@ -3583,3 +3583,80 @@ export interface AuthModeResponse {
   provider_hint?: string
   capabilities: AuthModeCapabilities
 }
+
+/**
+ * One entry in the day-log timeline (`GET /api/v1/day-log`).
+ *
+ * Keep in lock-step with `internal/api/daylog.Event` — snake_case keys,
+ * SI measures in payload, `ts` in UTC RFC3339.
+ */
+export interface DayLogEvent {
+  id: string
+  /** Event time, UTC RFC3339. */
+  ts: string
+  /** Taxonomy type, e.g. `drive_start`, `locked`, `hazards_on`. */
+  type: string
+  /** `default` or an optional layer id (`lights`, `gear`, …). */
+  layer: string
+  vehicle_id: number
+  /** Deep-link target kind (`drive` | `charge`), absent when not linkable. */
+  ref_kind?: string | null
+  /** Deep-link target id, absent when not linkable. */
+  ref_id?: number | null
+  /** SI measures + labels with snake_case keys; `{}` when empty. */
+  payload: Record<string, unknown>
+}
+
+/**
+ * Day-log summary aggregates. Sums skip NULL measures server-side; a sum
+ * with zero contributors is `null` (unknown), never a fabricated 0.
+ */
+export interface DayLogSummary {
+  drive_count: number
+  charge_count: number
+  /** Total drive time in seconds (SI), null when unknown. */
+  drive_duration_s: number | null
+  /** Total distance in meters (SI), null when unknown. */
+  drive_distance_m: number | null
+  /** Energy added in watt-hours (SI), null when unknown. */
+  energy_added_wh: number | null
+  /** Energy used in watt-hours (SI), null when unknown. */
+  energy_used_wh: number | null
+}
+
+/** Source-honesty row: which stream was read and what it contributed. */
+export interface DayLogSource {
+  source: string
+  status: 'ok' | 'empty' | 'unavailable'
+  count: number
+  reason?: string | null
+}
+
+/** Optional day-log layer id (`?layers=` allowlist, off by default). */
+export type DayLogLayer =
+  | 'turn_signals'
+  | 'lights'
+  | 'doors_windows'
+  | 'hvac'
+  | 'gear'
+  | 'homelink'
+
+/** Envelope returned by `GET /api/v1/day-log`. */
+export interface DayLogResponse {
+  vehicle_id: number
+  /** Local calendar day queried, `YYYY-MM-DD`. */
+  date: string
+  /** IANA timezone the day boundaries were computed in. */
+  timezone: string
+  /** Day start, UTC RFC3339. */
+  day_start: string
+  /** Day end (exclusive), UTC RFC3339. */
+  day_end: string
+  /** True when the event list hit the server cap or an input cap. */
+  truncated: boolean
+  /** Requested optional layers (echo). */
+  layers: string[]
+  summary: DayLogSummary
+  sources: DayLogSource[]
+  events: DayLogEvent[]
+}

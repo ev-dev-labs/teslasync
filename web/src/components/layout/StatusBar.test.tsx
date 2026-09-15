@@ -231,6 +231,12 @@ describe('StatusBar :: visibility & accessibility', () => {
     // Print + layout hooks the surrounding shell / stylesheet depend on.
     expect(bar).toHaveAttribute('data-role', 'status-bar');
     expect(bar).toHaveAttribute('data-print-hide');
+    // Stack above BottomTabBar (`xl:hidden`) on every width the tabs show.
+    // `lg:bottom-0` used to overlap the tabs at 1024–1279px.
+    expect(bar.className).toContain('bottom-14');
+    expect(bar.className).toContain('xl:bottom-0');
+    expect(bar.className).not.toContain('lg:bottom-0');
+    expect(bar.className).toContain('xl:h-7');
   });
 
   it('renders all wide-screen status segments without More', () => {

@@ -189,12 +189,12 @@ function install(opts: InstallOptions = {}) {
   })
 }
 
-function renderPage() {
+function renderPage(path = '/timeline') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false, retryDelay: 0 } },
   })
   return render(
-    <MemoryRouter initialEntries={['/timeline']}>
+    <MemoryRouter initialEntries={[path]}>
       <QueryClientProvider client={client}>
         <SelectedVehicleProvider>
           <TimelinePage />
@@ -381,5 +381,28 @@ describe('TimelinePage', () => {
 
     fireEvent.click(within(drawer).getByText('Close'))
     expect(screen.queryByRole('dialog', { name: 'asleep → driving' })).toBeNull()
+  })
+
+  it('clamps All time / wide ranges to 90 days instead of failing the API', async () => {
+    renderPage('/timeline?from=2015-01-01&to=2026-09-15')
+
+    expect(
+      await screen.findByText(
+        'State history is limited to the last 90 days. All time and year-to-date still load that window instead of failing.',
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/days exceeds maximum/i)).toBeNull()
+
+    await waitFor(() => {
+      const timelineCalls = mockedRequest.mock.calls
+        .map((c) => String(c[0]))
+        .filter((p) => p.startsWith('/vehicle-states/timeline'))
+      const summaryCalls = mockedRequest.mock.calls
+        .map((c) => String(c[0]))
+        .filter((p) => p.startsWith('/vehicle-states/summary'))
+      expect(timelineCalls.some((p) => p.includes('days=90'))).toBe(true)
+      expect(summaryCalls.some((p) => p.includes('days=90'))).toBe(true)
+      expect(timelineCalls.every((p) => !/days=\d{3,}/.test(p))).toBe(true)
+    })
   })
 })

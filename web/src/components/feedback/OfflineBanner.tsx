@@ -109,7 +109,7 @@ export function OfflineBanner({ presentation }: OfflineBannerProps = {}) {
     <div
       data-testid="offline-banner"
       data-presentation-mode={mode}
-      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 z-[9997] max-w-sm lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]"
+      className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-4 z-[9997] max-w-sm xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))]"
     >
       <AlertBanner
         variant="warning"

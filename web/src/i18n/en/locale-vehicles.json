@@ -5,6 +5,143 @@
     "viewDetails": "View details",
     "removeVehicle": "Remove vehicle"
   },
+  "dayLog": {
+    "title": "Day log",
+    "subtitle": "What happened to this vehicle today",
+    "controls": {
+      "title": "Day",
+      "timezoneNote": "Day boundaries in {{tz}}",
+      "dateLabel": "Day",
+      "prevDay": "Previous day",
+      "nextDay": "Next day",
+      "today": "Today",
+      "layersTitle": "Optional layers",
+      "layersHint": "Off by default — too noisy for the everyday view."
+    },
+    "layers": {
+      "turn_signals": "Turn signals",
+      "lights": "Lights / hazards",
+      "doors_windows": "Doors / windows",
+      "hvac": "HVAC on/off",
+      "gear": "Gear changes",
+      "homelink": "Homelink / home/work"
+    },
+    "summary": {
+      "title": "Day summary",
+      "drives": "Drives",
+      "charges": "Charges",
+      "driveTime": "Drive time",
+      "distance": "Distance",
+      "energyAdded": "Energy added",
+      "energyUsed": "Energy used",
+      "empty": "No drives or charging sessions this day.",
+      "emptyHint": "Locks, sentry, and state changes below still tell the story when the car stayed put.",
+      "drivesCta": "Open drives"
+    },
+    "timeline": {
+      "title": "Timeline",
+      "count": "{{count}} events",
+      "loading": "Loading timeline",
+      "empty": "Nothing recorded this day.",
+      "emptyHint": "The car was quiet — or telemetry never arrived. Live signals show what the car reports right now.",
+      "liveCta": "Open live telemetry",
+      "truncated": "Showing the first 500 events — narrow the day or disable layers to see more."
+    },
+    "sources": {
+      "title": "Sources",
+      "loading": "Loading sources",
+      "empty": "No source information for this day.",
+      "chargingCta": "Open charging",
+      "rows": "{{count}} rows",
+      "noReason": "Not available",
+      "names": {
+        "drives": "Drives",
+        "charging_sessions": "Charging sessions",
+        "fsm_transitions": "Vehicle state machine",
+        "security_events": "Security events",
+        "software_updates": "Software updates",
+        "signal_log": "Signal change feed",
+        "drive_telemetry": "Drive telemetry",
+        "user_presence": "Occupant presence"
+      },
+      "status": {
+        "ok": "Have data",
+        "empty": "No rows",
+        "unavailable": "Unavailable"
+      },
+      "reasons": {
+        "user_presence": "No signal or table records occupant presence"
+      }
+    },
+    "events": {
+      "drive_start": "Drive started",
+      "drive_end": "Drive ended",
+      "charge_start": "Charge started",
+      "charge_end": "Charge ended",
+      "parked": "Parked",
+      "online": "Online",
+      "asleep": "Asleep",
+      "offline": "Offline",
+      "state_change": "State change",
+      "locked": "Locked",
+      "unlocked": "Unlocked",
+      "lock_unknown": "Lock state unknown",
+      "sentry_on": "Sentry on",
+      "sentry_off": "Sentry off",
+      "sentry_unknown": "Sentry state unknown",
+      "remote_start_on": "Remote start active",
+      "remote_start_off": "Remote start ended",
+      "sw_update": "Software update",
+      "sw_update_installed": "Software update installed",
+      "turn_signal": "Turn signal",
+      "hazards_on": "Hazards on",
+      "hazards_off": "Hazards off",
+      "high_beams_on": "High beams on",
+      "high_beams_off": "High beams off",
+      "door_open": "Door opened",
+      "door_closed": "Door closed",
+      "window": "Window moved",
+      "hvac_on": "HVAC on",
+      "hvac_off": "HVAC off",
+      "gear": "Gear change",
+      "homelink_nearby_on": "Homelink nearby",
+      "homelink_nearby_off": "Homelink away",
+      "arrived_home": "Arrived home",
+      "left_home": "Left home",
+      "arrived_work": "Arrived at work",
+      "left_work": "Left work",
+      "arrived_favorite": "Arrived at favorite",
+      "left_favorite": "Left favorite"
+    },
+    "details": {
+      "fromState": "from {{state}}",
+      "signalValue": "signal {{value}}",
+      "sentryOff": "disarmed",
+      "sentryOn": "armed ({{state}})"
+    },
+    "doors": {
+      "driver_front": "Driver front",
+      "driver_rear": "Driver rear",
+      "front_trunk": "Front trunk",
+      "passenger_front": "Passenger front",
+      "passenger_rear": "Passenger rear",
+      "rear_trunk": "Rear trunk"
+    },
+    "windows": {
+      "fd": "Front driver",
+      "fp": "Front passenger",
+      "rd": "Rear driver",
+      "rp": "Rear passenger"
+    },
+    "states": {
+      "parked": "parked",
+      "online": "online",
+      "asleep": "asleep",
+      "offline": "offline",
+      "driving": "driving",
+      "charging": "charging"
+    }
+  },
   "digitalTwin": {
     "title": "Digital Twin",
     "doorDriverFront": "Driver Front",

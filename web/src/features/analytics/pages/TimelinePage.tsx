@@ -74,6 +74,9 @@ interface SummaryResponse {
 
 /* ─── Constants ──────────────────────────────────────────── */
 
+/** Backend `vehicle-states` trailing window cap (handler Decision #4). */
+const TIMELINE_MAX_DAYS = 90;
+
 const STATE_COLORS: Record<string, string> = {
   driving: '#10b981',
   charging: '#00f0ff',
@@ -143,18 +146,17 @@ export default function TimelinePage() {
   const [previewTransition, setPreviewTransition] = useState<TransitionRow | null>(null);
   const previewDay = localDayKey(previewTransition?.ts);
 
-  // Backend accepts `?days=N` (trailing window). Compute inclusive day
-  // count from the picker's range. Custom historical windows that don't
-  // end today still degrade to a trailing window — `presetsOnly` mode
-  // hides the calendar to keep the UX honest.
-  const days = useMemo(() => {
+  // Backend accepts `?days=N` (trailing window, max 90). Inclusive day
+  // count from the picker (workspace "All time" / YTD can be far larger)
+  // is clamped so we never 400 with "days exceeds maximum".
+  const requestedDays = useMemo(() => {
     const startMs = new Date(`${start}T00:00:00`).getTime();
     const endMs = new Date(`${end}T00:00:00`).getTime();
-    // useRangeState always yields valid ISO dates, but guard anyway so a
-    // malformed range never sends `days=NaN` to the API.
     if (Number.isNaN(startMs) || Number.isNaN(endMs)) return 7;
     return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
   }, [start, end]);
+  const days = Math.min(requestedDays, TIMELINE_MAX_DAYS);
+  const rangeClamped = requestedDays > TIMELINE_MAX_DAYS;
 
   const { error: vehiclesError } = useVehicles();
 
@@ -390,6 +392,15 @@ export default function TimelinePage() {
       {anyError && (
         <AlertBanner variant="danger" icon={<AlertCircle className="h-5 w-5" />}>
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
+        </AlertBanner>
+      )}
+      {rangeClamped && !anyError && (
+        <AlertBanner variant="info" icon={<Clock className="h-5 w-5" />}>
+          {t(
+            'timeline.rangeClamped',
+            'State history is limited to the last {{max}} days. All time and year-to-date still load that window instead of failing.',
+            { max: TIMELINE_MAX_DAYS },
+          )}
         </AlertBanner>
       )}
 

@@ -93,10 +93,12 @@ export function Drawer({
 
   if (!open) return null
   if (typeof document === 'undefined') return null
+  // z-[60] matches <Modal>: above StatusBar (z-[55]) and BottomTabBar (z-50)
+  // so drive/charge preview footers are never covered by chrome.
   return createPortal(
     <div
       ref={drawerRef}
-      className="fixed inset-0 z-50"
+      className="fixed inset-0 z-[60]"
       role="dialog"
       aria-modal="true"
       aria-labelledby={title ? titleId : undefined}
@@ -121,7 +123,7 @@ export function Drawer({
         data-drawer-panel
         data-drawer-size={size}
         className={cn(
-          'absolute top-0 bottom-0 flex w-full max-w-none flex-col glass-panel rounded-none border-0',
+          'absolute top-0 bottom-[var(--shell-chrome-bottom)] flex w-full max-w-none flex-col glass-panel rounded-none border-0',
           DRAWER_WIDTHS[size],
           side === 'right' ? 'right-0 border-l border-white/[0.06]' : 'left-0 border-r border-white/[0.06]',
           className,

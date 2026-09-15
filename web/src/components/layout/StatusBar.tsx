@@ -39,8 +39,11 @@ import { cn } from '@/lib/cn';
  * dedicated hook so subscribers don't pay for the whole bar.
  *
  * Visibility & sizing:
- *   - On screens < `lg` (Tailwind 1024px) the bar collapses to icon-only,
- *     stacks ABOVE the `<BottomTabBar>`, and is shorter (24px vs 28px).
+ *   - On screens < `lg` (Tailwind 1024px) the bar collapses to icon-only.
+ *   - It stacks ABOVE `<BottomTabBar>` for every width the tab bar is
+ *     visible (`xl:hidden`, i.e. < 1280px). Using `lg` here used to pin
+ *     both bars to `bottom-0` on tablet widths (1024–1279) and overlap.
+ *   - Shorter (24px) under `xl`; 28px on desktop once the tab bar hides.
  *   - The `compact` prop forces icon-only at any width.
  *   - User preference (`useStatusBarPrefs`) can hide the bar entirely or
  *     force icon-only at all widths.
@@ -115,8 +118,8 @@ function StatusBarContent({
           'fixed left-0 right-0 z-[55] flex items-center justify-between gap-2',
           'border-t border-[var(--glass-border)] bg-[var(--surface-1)]/95 backdrop-blur-xl',
           'px-3 text-xs text-[var(--text-secondary)] lg:px-4',
-          'bottom-14 lg:bottom-0',
-          'h-6 lg:h-7',
+          'bottom-14 xl:bottom-0',
+          'h-6 xl:h-7',
           className,
         )}
         aria-label={t('statusBar.aria', 'Application status')}
