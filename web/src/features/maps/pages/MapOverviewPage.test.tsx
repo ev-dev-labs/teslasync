@@ -498,7 +498,9 @@ describe('MapOverviewPage — per-section errors', () => {
 
     await screen.findByText('Recent Route Playback')
     // Two independent surfaces read the same history query.
-    expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2)
+    await waitFor(() => {
+      expect(screen.getAllByText("Can't reach server").length).toBeGreaterThanOrEqual(2)
+    })
     expect(screen.queryByTestId('route-playback')).toBeNull()
   })
 })
