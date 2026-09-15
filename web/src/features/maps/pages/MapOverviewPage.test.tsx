@@ -560,7 +560,7 @@ describe('MapOverviewPage — accessibility', () => {
     const status = await screen.findByRole('region', { name: 'Vehicle status' })
     expect(status).toBeInTheDocument()
     const map = screen.getByRole('region', { name: 'Live location map' })
-    expect(within(map).getByTestId('map-container')).toBeInTheDocument()
+    expect(await within(map).findByTestId('map-container')).toBeInTheDocument()
 
     // The vehicle scope picker is a labelled combobox.
     expect(screen.getByRole('combobox', { name: 'Select vehicle' })).toBeInTheDocument()
