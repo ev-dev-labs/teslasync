@@ -108,7 +108,7 @@ FROM drives
 WHERE vehicle_id = $1
   AND started_at <= $2
   AND (ended_at IS NULL OR ended_at >= $3)
-ORDER BY started_at ASC`
+ORDER BY started_at ASC, id ASC`
 
 	dayLogChargesSQL = `
 SELECT id, vehicle_id, started_at, ended_at, start_place,
@@ -117,7 +117,7 @@ FROM charging_sessions
 WHERE vehicle_id = $1
   AND started_at <= $2
   AND (ended_at IS NULL OR ended_at >= $3)
-ORDER BY started_at ASC`
+ORDER BY started_at ASC, id ASC`
 
 	dayLogFSMSQL = `
 SELECT id, ts, from_state, to_state, trigger
@@ -126,16 +126,19 @@ WHERE vehicle_id = $1
   AND fsm_name = 'vehicle'
   AND ts >= $2
   AND ts <= $3
-ORDER BY ts ASC`
+ORDER BY ts ASC, id ASC`
 
+	// No event_type filter: every recorded security transition for
+	// the day is returned, including types the timeline taxonomy
+	// does not name yet. Unrecognized types surface as generic
+	// security events rather than disappearing.
 	dayLogSecuritySQL = `
 SELECT id, ts, event_type, from_state, to_state
 FROM security_events
 WHERE vehicle_id = $1
   AND ts >= $2
   AND ts <= $3
-  AND event_type = ANY($4)
-ORDER BY ts ASC`
+ORDER BY ts ASC, id ASC`
 
 	dayLogSignalSQL = `
 SELECT ts, field, str_value, bool_value, int_value, float_value
@@ -144,7 +147,7 @@ WHERE vehicle_id = $1
   AND field = ANY($2)
   AND ts >= $3
   AND ts <= $4
-ORDER BY ts ASC
+ORDER BY ts ASC, field ASC
 LIMIT $5`
 
 	dayLogGearSQL = `
@@ -163,7 +166,20 @@ FROM software_updates
 WHERE vehicle_id = $1
   AND (created_at BETWEEN $2 AND $3
        OR (installed_at IS NOT NULL AND installed_at BETWEEN $2 AND $3))
-ORDER BY created_at ASC`
+ORDER BY created_at ASC, id ASC`
+
+	// Latest to_state per event type strictly before the window, so
+	// the first in-window transition can still report its previous
+	// state instead of guessing. The security writer never populates
+	// from_state, so this pre-window baseline is the only honest
+	// source for it.
+	dayLogSecurityPrevSQL = `
+SELECT DISTINCT ON (event_type) event_type, to_state
+FROM security_events
+WHERE vehicle_id = $1
+  AND ts < $2
+  AND event_type = ANY($3)
+ORDER BY event_type, ts DESC`
 )
 
 // dayLogPool is the minimal pgxpool subset this repo needs, so tests
@@ -272,10 +288,11 @@ func (r *DayLogRepo) FSMTransitions(ctx context.Context, vehicleID int64, window
 	return out, nil
 }
 
-// SecurityEvents returns security_events rows for the given event types
-// inside the window, chronological.
-func (r *DayLogRepo) SecurityEvents(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time, eventTypes []string) ([]DaySecurityEvent, error) {
-	rows, err := r.pool.Query(ctx, dayLogSecuritySQL, vehicleID, windowStart, windowEnd, eventTypes)
+// SecurityEvents returns all security_events rows inside the window,
+// chronological. No type filter: unrecognized types must still reach
+// the timeline as generic events.
+func (r *DayLogRepo) SecurityEvents(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]DaySecurityEvent, error) {
+	rows, err := r.pool.Query(ctx, dayLogSecuritySQL, vehicleID, windowStart, windowEnd)
 	if err != nil {
 		return nil, fmt.Errorf("daylog: security query: %w", err)
 	}
@@ -291,6 +308,31 @@ func (r *DayLogRepo) SecurityEvents(ctx context.Context, vehicleID int64, window
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("daylog: security rows iter: %w", err)
+	}
+	return out, nil
+}
+
+// SecurityPrevStates returns the latest to_state per event type strictly
+// before the window, so first-in-window transitions can report their
+// previous state. Types with no earlier row are absent from the map.
+func (r *DayLogRepo) SecurityPrevStates(ctx context.Context, vehicleID int64, windowStart time.Time) (map[string]*string, error) {
+	rows, err := r.pool.Query(ctx, dayLogSecurityPrevSQL, vehicleID, windowStart, []string{"locked", "sentry_mode", "valet_mode_enabled"})
+	if err != nil {
+		return nil, fmt.Errorf("daylog: security prev query: %w", err)
+	}
+	defer rows.Close()
+
+	out := map[string]*string{}
+	for rows.Next() {
+		var typ string
+		var to *string
+		if err := rows.Scan(&typ, &to); err != nil {
+			return nil, fmt.Errorf("daylog: security prev row scan: %w", err)
+		}
+		out[typ] = to
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("daylog: security prev rows iter: %w", err)
 	}
 	return out, nil
 }

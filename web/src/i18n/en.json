@@ -26022,17 +26022,7 @@
       "dateLabel": "Day",
       "prevDay": "Previous day",
       "nextDay": "Next day",
-      "today": "Today",
-      "layersTitle": "Optional layers",
-      "layersHint": "Off by default — too noisy for the everyday view."
-    },
-    "layers": {
-      "turn_signals": "Turn signals",
-      "lights": "Lights / hazards",
-      "doors_windows": "Doors / windows",
-      "hvac": "HVAC on/off",
-      "gear": "Gear changes",
-      "homelink": "Homelink / home/work"
+      "today": "Today"
     },
     "summary": {
       "title": "Day summary",
@@ -26053,7 +26043,8 @@
       "empty": "Nothing recorded this day.",
       "emptyHint": "The car was quiet — or telemetry never arrived. Live signals show what the car reports right now.",
       "liveCta": "Open live telemetry",
-      "truncated": "Showing the first 500 events — narrow the day or disable layers to see more."
+      "truncated": "Some records may be missing — the day exceeded the signal read cap. What loaded is shown in full.",
+      "showing": "Showing {{shown}} of {{total}} events"
     },
     "sources": {
       "title": "Sources",
@@ -26079,7 +26070,8 @@
       },
       "reasons": {
         "user_presence": "No signal or table records occupant presence"
-      }
+      },
+      "feedNote": "Signal feeds record transitions only — states between samples were never captured and cannot be reconstructed."
     },
     "events": {
       "drive_start": "Drive started",
@@ -26119,13 +26111,12 @@
       "arrived_work": "Arrived at work",
       "left_work": "Left work",
       "arrived_favorite": "Arrived at favorite",
-      "left_favorite": "Left favorite"
-    },
-    "details": {
-      "fromState": "from {{state}}",
-      "signalValue": "signal {{value}}",
-      "sentryOff": "disarmed",
-      "sentryOn": "armed ({{state}})"
+      "left_favorite": "Left favorite",
+      "valet_on": "Valet on",
+      "valet_off": "Valet off",
+      "valet_unknown": "Valet state unknown",
+      "security": "Security event",
+      "signal": "Signal change"
     },
     "doors": {
       "driver_front": "Driver front",
@@ -26148,6 +26139,96 @@
       "offline": "offline",
       "driving": "driving",
       "charging": "charging"
+    },
+    "list": {
+      "searchLabel": "Search events",
+      "searchPlaceholder": "Search time, category, component, state…",
+      "filterLabel": "Filter by category",
+      "showAll": "Show all",
+      "noMatch": "No events match these filters.",
+      "noMatchHint": "The complete day is still loaded — widen the search or re-enable categories.",
+      "expand": "Show details",
+      "collapse": "Hide details",
+      "detailCategory": "Category",
+      "detailSource": "Source",
+      "detailId": "Event",
+      "detailLayer": "Layer",
+      "detailTime": "Timestamp",
+      "detailPayload": "Recorded details"
+    },
+    "categories": {
+      "driving": "Driving",
+      "charging": "Charging",
+      "state": "State",
+      "lock": "Locks",
+      "sentry": "Sentry",
+      "valet": "Valet",
+      "software": "Software",
+      "remote": "Remote start",
+      "turn": "Turn signals",
+      "lights": "Lights",
+      "doors": "Doors",
+      "windows": "Windows",
+      "hvac": "HVAC",
+      "gear": "Gear",
+      "homelink": "Homelink / location",
+      "security": "Security",
+      "other": "Other"
+    },
+    "state": {
+      "on": "On",
+      "off": "Off",
+      "open": "Open",
+      "closed": "Closed"
+    },
+    "lockState": {
+      "locked": "Locked",
+      "unlocked": "Unlocked"
+    },
+    "turnSignal": {
+      "unknown": "Unknown",
+      "off": "Off",
+      "left": "Left",
+      "right": "Right",
+      "both": "Both"
+    },
+    "turnSignalTitle": {
+      "unknown": "Turn signal",
+      "off": "Turn signal",
+      "left": "Left turn signal",
+      "right": "Right turn signal",
+      "both": "Both turn signals"
+    },
+    "windowStates": {
+      "unknown": "Unknown",
+      "closed": "Closed",
+      "partial": "Partially open",
+      "open": "Open"
+    },
+    "hvacStates": {
+      "unknown": "Unknown",
+      "off": "Off",
+      "on": "On",
+      "precondition": "Preconditioning",
+      "overheat_protect": "Overheat protection"
+    },
+    "gears": {
+      "P": "Park",
+      "R": "Reverse",
+      "N": "Neutral",
+      "D": "Drive",
+      "unknown": "Unknown",
+      "invalid": "Invalid",
+      "sna": "Signal not available"
+    },
+    "sentryStates": {
+      "SentryModeStateUnknown": "Unknown",
+      "SentryModeStateOff": "Off",
+      "SentryModeStateIdle": "Idle",
+      "SentryModeStateArmed": "Armed",
+      "SentryModeStateAware": "Aware",
+      "SentryModeStatePanic": "Panic",
+      "SentryModeStateQuiet": "Quiet"
     }
   }
 }

@@ -16,10 +16,10 @@ import (
 // Input caps. signal_log rows feed edge detection, so the cap applies
 // to raw rows, not events; hitting it sets truncated=true because
 // later edges may be lost. Gear ticks arrive at ~1 Hz while driving,
-// hence the larger allowance.
+// hence the larger allowance (a full day of driving stays under it).
 const (
-	dayLogSignalRowCap = 2000
-	dayLogGearTickCap  = 5000
+	dayLogSignalRowCap = 10000
+	dayLogGearTickCap  = 50000
 	// dayLogMaxSpan bounds explicit ?start=&end= windows. Local days
 	// across DST are 23–25h; 48h admits any single day plus skew while
 	// refusing week-long dumps through a day endpoint.
@@ -37,15 +37,12 @@ type dayLogRepository interface {
 	DrivesOverlapping(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]daylogdb.DayDrive, error)
 	ChargesOverlapping(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]daylogdb.DayCharge, error)
 	FSMTransitions(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]daylogdb.DayFSMTransition, error)
-	SecurityEvents(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time, eventTypes []string) ([]daylogdb.DaySecurityEvent, error)
+	SecurityEvents(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]daylogdb.DaySecurityEvent, error)
+	SecurityPrevStates(ctx context.Context, vehicleID int64, windowStart time.Time) (map[string]*string, error)
 	SignalRows(ctx context.Context, vehicleID int64, fields []string, windowStart, windowEnd time.Time, limit int) ([]daylogdb.DaySignalRow, error)
 	GearTicks(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time, limit int) ([]daylogdb.DayGearTick, error)
 	SoftwareUpdates(ctx context.Context, vehicleID int64, windowStart, windowEnd time.Time) ([]daylogdb.DaySoftwareUpdate, error)
 }
-
-// defaultSecurityTypes are the security_events rows the default layer
-// maps. Valet transitions exist but are out of v1 scope.
-var defaultSecurityTypes = []string{"locked", "sentry_mode"}
 
 // Handler serves GET /api/v1/day-log.
 type Handler struct {
@@ -65,6 +62,8 @@ type dayLogParams struct {
 	start     time.Time
 	end       time.Time
 	layers    []string
+	limit     int
+	offset    int
 }
 
 // parseDayLogParams extracts vehicle_id, date/timezone (or explicit
@@ -138,7 +137,11 @@ func parseDayLogParams(w http.ResponseWriter, r *http.Request) (dayLogParams, bo
 		p.end = time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, loc).AddDate(0, 0, 1).UTC()
 	}
 
-	if raw := q.Get("layers"); raw != "" {
+	// Omitted or blank layers means the complete history: every
+	// optional layer on. An explicit CSV narrows to that subset.
+	if raw := strings.TrimSpace(q.Get("layers")); raw == "" {
+		p.layers = append([]string{}, AllLayers...)
+	} else {
 		for _, l := range strings.Split(raw, ",") {
 			l = strings.TrimSpace(l)
 			if l == "" {
@@ -150,19 +153,43 @@ func parseDayLogParams(w http.ResponseWriter, r *http.Request) (dayLogParams, bo
 			}
 			p.layers = append(p.layers, l)
 		}
+		if len(p.layers) == 0 {
+			p.layers = append([]string{}, AllLayers...)
+		}
 	}
-	if p.layers == nil {
-		p.layers = []string{}
+
+	p.limit = dayLogDefaultLimit
+	if raw := q.Get("limit"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 {
+			httpx.WriteError(w, http.StatusBadRequest, "limit must be a positive integer")
+			return p, false
+		}
+		if v > dayLogMaxLimit {
+			httpx.WriteError(w, http.StatusBadRequest, fmt.Sprintf("limit exceeds maximum %d", dayLogMaxLimit))
+			return p, false
+		}
+		p.limit = v
+	}
+	if raw := q.Get("offset"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 0 {
+			httpx.WriteError(w, http.StatusBadRequest, "offset must be a non-negative integer")
+			return p, false
+		}
+		p.offset = v
 	}
 	return p, true
 }
 
-// Get serves GET /api/v1/day-log?vehicle_id=…&date=…&timezone=…&layers=….
+// Get serves GET /api/v1/day-log?vehicle_id=…&date=…&timezone=…&layers=…&limit=…&offset=….
 //
 // Day boundaries are computed server-side from date+timezone so every
 // client agrees on what "today" means; explicit ?start=&end= (RFC3339)
-// override for callers that already resolved the day. Returns 200 with
-// an empty events array for a quiet day, 404 for an unknown vehicle.
+// override for callers that already resolved the day. Omitted layers
+// means every layer: the default view is the complete history.
+// Returns 200 with an empty events array for a quiet day, 404 for an
+// unknown vehicle.
 func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 	p, ok := parseDayLogParams(w, r)
 	if !ok {
@@ -209,10 +236,16 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load state transitions")
 		return
 	}
-	security, err := h.repo.SecurityEvents(ctx, p.vehicleID, p.start, p.end, defaultSecurityTypes)
+	security, err := h.repo.SecurityEvents(ctx, p.vehicleID, p.start, p.end)
 	if err != nil {
 		log.Error().Err(err).Int64("vehicle_id", p.vehicleID).Msg("daylog: security query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load security events")
+		return
+	}
+	prevSecurity, err := h.repo.SecurityPrevStates(ctx, p.vehicleID, p.start)
+	if err != nil {
+		log.Error().Err(err).Int64("vehicle_id", p.vehicleID).Msg("daylog: security prev query failed")
+		httpx.WriteError(w, http.StatusInternalServerError, "failed to load security baseline")
 		return
 	}
 	signalRows, err := h.repo.SignalRows(ctx, p.vehicleID, SignalFieldsForLayers(p.layers), p.start, p.end, dayLogSignalRowCap+1)
@@ -251,6 +284,8 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		WindowStart:    p.start,
 		WindowEnd:      p.end,
 		Layers:         p.layers,
+		FieldLayers:    FieldLayersForLayers(p.layers),
+		PrevSecurity:   prevSecurity,
 		Drives:         drives,
 		Charges:        charges,
 		FSM:            fsm,
@@ -260,25 +295,31 @@ func (h *Handler) Get(w http.ResponseWriter, r *http.Request) {
 		Gears:          gears,
 		GearOverflow:   gearOverflow,
 		Software:       software,
+		Limit:          p.limit,
+		Offset:         p.offset,
 	})
 
 	log.Info().
 		Str("handler", "daylog.Get").
 		Int64("vehicle_id", p.vehicleID).
 		Int("events", len(out.Events)).
+		Int("total", out.Total).
 		Bool("truncated", out.Truncated).
 		Msg("day timeline loaded")
 
 	httpx.WriteJSON(w, http.StatusOK, DayLogResponse{
-		VehicleID: p.vehicleID,
-		Date:      p.date,
-		Timezone:  p.timezone,
-		DayStart:  p.start,
-		DayEnd:    p.end,
-		Truncated: out.Truncated,
-		Layers:    p.layers,
-		Summary:   out.Summary,
-		Sources:   out.Sources,
-		Events:    out.Events,
+		VehicleID:   p.vehicleID,
+		Date:        p.date,
+		Timezone:    p.timezone,
+		DayStart:    p.start,
+		DayEnd:      p.end,
+		Truncated:   out.Truncated,
+		TotalEvents: out.Total,
+		Limit:       p.limit,
+		Offset:      p.offset,
+		Layers:      p.layers,
+		Summary:     out.Summary,
+		Sources:     out.Sources,
+		Events:      out.Events,
 	})
 }

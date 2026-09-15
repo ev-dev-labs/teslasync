@@ -48,6 +48,13 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
             }}
           />
         ) : (
+          <>
+          <Text variant="caption" className="mb-2">
+            {t(
+              'dayLog.sources.feedNote',
+              'Signal feeds record transitions only — states between samples were never captured and cannot be reconstructed.',
+            )}
+          </Text>
           <ul className="divide-y divide-white/[0.06]">
             {rows.map((row) => (
               <li key={row.source} className="flex flex-wrap items-center justify-between gap-2 py-2.5">
@@ -69,6 +76,7 @@ export function DayLogSources({ sources, isLoading, error, onRetry }: DayLogSour
               </li>
             ))}
           </ul>
+          </>
         )}
       </div>
     </GlassPanel>
