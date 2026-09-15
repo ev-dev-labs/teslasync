@@ -1,6 +1,8 @@
 // Package daylog serves GET /api/v1/day-log — one vehicle's
 // local-calendar-day event timeline.
 //
+// Layer: handler
+//
 // # Taxonomy
 //
 // Every event carries {id, ts, type, layer, vehicle_id, ref_kind,

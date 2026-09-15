@@ -96,9 +96,9 @@ export function Drawer({
   // Drawer is a slide-in panel primitive, not a centered dialog.
   // Phase-45 / Prompt 04: NOT migrated to <Modal>.
   return createPortal(
-    // eslint-disable-next-line no-restricted-syntax -- overlay primitive; z-[60] matches Modal above StatusBar/tab bar
     <div
       ref={drawerRef}
+      // eslint-disable-next-line no-restricted-syntax -- overlay primitive; z-[60] matches Modal above StatusBar/tab bar
       className="fixed inset-0 z-[60]"
       role="dialog"
       aria-modal="true"
