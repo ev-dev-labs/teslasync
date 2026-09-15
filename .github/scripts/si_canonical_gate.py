@@ -50,6 +50,16 @@ ALLOWLIST_PATHS = {
     "web/src/hooks/useSettings.test.ts",
 }
 
+# Tesla Fleet Telemetry Field enum identifiers are upstream-owned (ADR-004 R2).
+# Wire names may contain Kwh/Mph even though TeslaSync stores SI (Wh, m/s).
+TESLA_PROTO_FIELD_ALLOWLIST = (
+    "NominalFullPackEnergyKwh",
+    "LifetimeEnergyChargedKwh",
+    "MaxSpeedToReachDestinationMph",
+    "SemiCruiseSpeedLimitMph",
+    "ChargeRateMilePerHour",
+)
+
 
 def iter_added_lines(diff_text: str):
     current_file = None
@@ -76,6 +86,8 @@ def check_go(diff_text: str) -> list[str]:
             continue
         s = added.lstrip()
         if s.startswith("//") or s.startswith("#") or s.startswith("--"):
+            continue
+        if any(name in added for name in TESLA_PROTO_FIELD_ALLOWLIST):
             continue
         for pat in BANNED:
             if pat.search(added):
