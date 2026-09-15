@@ -178,6 +178,7 @@ describe('SecurityPanel — user presence tri-state', () => {
       <SecurityPanel
         securityData={makeSecurity({ user_present: null })}
         remoteStartEnabled={true}
+        remoteStartActive={true}
       />,
     )
 
@@ -217,10 +218,22 @@ describe('SecurityPanel — remote start', () => {
   })
 
   it('shows an em-dash when remoteStartEnabled is null', () => {
-    render(<SecurityPanel securityData={makeSecurity()} remoteStartEnabled={null} />)
+    render(
+      <SecurityPanel
+        securityData={makeSecurity()}
+        remoteStartEnabled={null}
+        remoteStartActive={false}
+      />,
+    )
 
-    // makeSecurity() defaults leave only the remote-start value as an em-dash.
     expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  it('shows Active when remoteStartActive is true', () => {
+    render(<SecurityPanel securityData={makeSecurity()} remoteStartActive={true} />)
+
+    expect(screen.getByText('Remote Start Active')).toBeInTheDocument()
+    expect(screen.getByText('Active')).toBeInTheDocument()
   })
 })
 

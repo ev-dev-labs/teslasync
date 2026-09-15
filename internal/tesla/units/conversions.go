@@ -184,14 +184,30 @@ func IsFixedMileDistanceField(field string) bool {
 // AC/DCChargingEnergyIn in kWh and AC/DCChargingPower in kW:
 // https://developer.tesla.com/docs/fleet-api/fleet-telemetry/available-data
 var fixedKiloToBaseFields = map[string]bool{
-	"ACChargingEnergyIn": true,
-	"DCChargingEnergyIn": true,
-	"ACChargingPower":    true,
-	"DCChargingPower":    true,
+	"ACChargingEnergyIn":         true,
+	"DCChargingEnergyIn":         true,
+	"ACChargingPower":            true,
+	"DCChargingPower":            true,
+	"LifetimeEnergyChargedKwh":   true,
+	"NominalFullPackEnergyKwh":   true,
 }
 
 // IsFixedKiloToBaseField reports whether a Tesla field has a fixed kWh/kW
 // wire unit that must be converted to Wh/W without consulting unit history.
 func IsFixedKiloToBaseField(field string) bool {
 	return fixedKiloToBaseFields[field]
+}
+
+// fixedMphSpeedFields lists linear-velocity proto fields whose wire
+// value is ALWAYS miles per hour (name-encoded), independent of
+// SettingDistanceUnit. Canonical SI is metres per second.
+var fixedMphSpeedFields = map[string]bool{
+	"MaxSpeedToReachDestinationMph": true,
+	"SemiCruiseSpeedLimitMph":       true,
+}
+
+// IsFixedMphSpeedField reports whether a Tesla speed field is always
+// mph on the wire and must convert to m/s without unit history.
+func IsFixedMphSpeedField(field string) bool {
+	return fixedMphSpeedFields[field]
 }

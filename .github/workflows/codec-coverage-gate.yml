@@ -46,7 +46,9 @@ permissions:
 jobs:
   routing-coverage:
     name: TestRoutingCoverage (every proto field is routed)
-    runs-on: ${{ inputs.runner || 'arc-runner' }}
+    # ubuntu-latest: `go test -race` needs CGO/gcc. arc-runner does not ship gcc
+    # (same pin as CI "Backend (lint + test + build)").
+    runs-on: ${{ github.event_name == 'workflow_dispatch' && inputs.runner || 'ubuntu-latest' }}
     steps:
       - uses: actions/checkout@v4
 

@@ -174,6 +174,48 @@ export function VehicleStatePanel({ live, sseConnected }: VehicleStatePanelProps
           label={t('telemetry.homelinkDevices', 'HomeLink Devices')}
           value={formatCount(live.homelinkDeviceCount)}
         />
+
+        <div className="border-t border-[var(--border-subtle)]" />
+
+        <StateRow
+          icon={Settings}
+          label={t('telemetry.softwareUpdateAvailable', 'Software Update')}
+          value={
+            live.swUpdateInProgress
+              ? t('telemetry.updateInstalling', 'Installing')
+              : live.swUpdateAvailable
+                ? t('telemetry.updateAvailable', 'Available')
+                : t('telemetry.updateCurrent', 'Current')
+          }
+          active={Boolean(live.swUpdateAvailable || live.swUpdateInProgress)}
+          activeClass="text-cyan-300"
+        />
+        <StateRow
+          icon={Key}
+          label={t('telemetry.remoteStartActive', 'Remote Start Active')}
+          value={live.remoteStartActive ? t('common.active', 'Active') : offLabel}
+          active={Boolean(live.remoteStartActive)}
+          activeClass="text-amber-400"
+        />
+        <StateRow
+          icon={MapPin}
+          label={t('telemetry.gpsAccuracy', 'GPS Accuracy')}
+          value={typeof live.gpsAccuracyM === 'number' && Number.isFinite(live.gpsAccuracyM) ? `${live.gpsAccuracyM} m` : '—'}
+        />
+        <StateRow
+          icon={Gauge}
+          label={t('telemetry.gradeEstimate', 'Grade')}
+          value={typeof live.gradeEstimatePct === 'number' && Number.isFinite(live.gradeEstimatePct) ? `${live.gradeEstimatePct}%` : '—'}
+        />
+        <StateRow
+          icon={Gauge}
+          label={t('telemetry.maxSpeedToDestination', 'Max speed to destination')}
+          value={
+            typeof live.maxSpeedToDestinationMps === 'number'
+              ? formatSpeed(live.maxSpeedToDestinationMps)
+              : '—'
+          }
+        />
       </div>
     </GlassPanel>
   )

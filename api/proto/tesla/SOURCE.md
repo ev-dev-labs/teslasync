@@ -17,14 +17,14 @@ rationale.
 |---|---|
 | Upstream repository | `github.com/teslamotors/fleet-telemetry` |
 | Upstream path | `protos/vehicle_data.proto` |
-| Upstream tag | **v0.8.0** |
-| Upstream commit | `031553a7d3d6952c1552ed13dc71aaf4fd4a882b` |
-| Upstream commit date | 2025-12-12 |
-| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/031553a7d3d6952c1552ed13dc71aaf4fd4a882b/protos/vehicle_data.proto> |
-| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/v0.8.0/protos/vehicle_data.proto> |
-| File size | 21,291 bytes |
-| SHA256 | `4596EBA1D26B72EB69BBF747831BF0EB2EEC106A54048D9BC7D6DE765446697C` |
-| Fetched on | 2026-05-01 |
+| Upstream tag | untagged (`Add new streamable fields 260-269`, #546) |
+| Upstream commit | `8fbaa100bd365936dab6ecbf0e2d7070c4d765cb` |
+| Upstream commit date | 2026-09-14 |
+| Upstream raw URL | <https://raw.githubusercontent.com/teslamotors/fleet-telemetry/8fbaa100bd365936dab6ecbf0e2d7070c4d765cb/protos/vehicle_data.proto> |
+| Upstream tree URL | <https://github.com/teslamotors/fleet-telemetry/blob/8fbaa100bd365936dab6ecbf0e2d7070c4d765cb/protos/vehicle_data.proto> |
+| File size | 21,729 bytes |
+| SHA256 | `E8BE013478FC24DADE3B40DF10A269E6477D27FABB95C641A575A5214A101618` |
+| Fetched on | 2026-09-14 |
 | Vendored by | phase-42 prompt 0010 |
 | Reviewed by | Staff Engineer + Principal Engineer + Principal Architect (per ADR-004) |
 

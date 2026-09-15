@@ -8,12 +8,13 @@ import type { SecurityEvent } from '@/api/types'
 interface SecurityPanelProps {
   securityData: SecurityEvent | null | undefined
   remoteStartEnabled?: boolean | null
+  remoteStartActive?: boolean | null
 }
 
-export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPanelProps) {
+export function SecurityPanel({ securityData, remoteStartEnabled, remoteStartActive }: SecurityPanelProps) {
   const { t } = useTranslation()
 
-  const hasData = securityData != null || remoteStartEnabled != null
+  const hasData = securityData != null || remoteStartEnabled != null || remoteStartActive != null
 
   return (
     <GlassPanel className="p-6 h-full">
@@ -163,6 +164,27 @@ export function SecurityPanel({ securityData, remoteStartEnabled }: SecurityPane
                 : remoteStartEnabled
                   ? t('common.enabled', 'Enabled')
                   : t('common.disabled', 'Disabled')}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-[var(--text-muted)] flex items-center gap-1">
+              <KeyRound className="h-3 w-3" aria-hidden="true" /> {t('telemetry.remoteStartActive', 'Remote Start Active')}
+            </span>
+            <span
+              className={cn(
+                'text-xs font-medium',
+                remoteStartActive == null
+                  ? 'text-[var(--text-muted)]'
+                  : remoteStartActive
+                    ? 'text-amber-400'
+                    : 'text-[var(--text-muted)]',
+              )}
+            >
+              {remoteStartActive == null
+                ? '—'
+                : remoteStartActive
+                  ? t('common.active', 'Active')
+                  : t('common.off', 'Off')}
             </span>
           </div>
         </div>

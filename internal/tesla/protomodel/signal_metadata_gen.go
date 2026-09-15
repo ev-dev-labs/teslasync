@@ -270,6 +270,16 @@ const (
 	Field_Deprecated_3                              Field = 257
 	Field_MilesSinceReset                           Field = 258
 	Field_SelfDrivingMilesSinceReset                Field = 259
+	Field_GpsAccuracyMeters                         Field = 260
+	Field_LifetimeEnergyChargedKwh                  Field = 261
+	Field_BrickSocMinPercent                        Field = 262
+	Field_NominalFullPackEnergyKwh                  Field = 263
+	Field_GradeEstimatePercent                      Field = 264
+	Field_MaxSpeedToReachDestinationMph             Field = 265
+	Field_SoftwareUpdateAvailable                   Field = 266
+	Field_SoftwareUpdateInProgress                  Field = 267
+	Field_RemoteStartActive                         Field = 268
+	Field_SemiCruiseSpeedLimitMph                   Field = 269
 )
 
 // Name returns the protobuf field name for this Field. Returns the empty
@@ -796,6 +806,26 @@ func (f Field) Name() string {
 		return "MilesSinceReset"
 	case Field_SelfDrivingMilesSinceReset:
 		return "SelfDrivingMilesSinceReset"
+	case Field_GpsAccuracyMeters:
+		return "GpsAccuracyMeters"
+	case Field_LifetimeEnergyChargedKwh:
+		return "LifetimeEnergyChargedKwh"
+	case Field_BrickSocMinPercent:
+		return "BrickSocMinPercent"
+	case Field_NominalFullPackEnergyKwh:
+		return "NominalFullPackEnergyKwh"
+	case Field_GradeEstimatePercent:
+		return "GradeEstimatePercent"
+	case Field_MaxSpeedToReachDestinationMph:
+		return "MaxSpeedToReachDestinationMph"
+	case Field_SoftwareUpdateAvailable:
+		return "SoftwareUpdateAvailable"
+	case Field_SoftwareUpdateInProgress:
+		return "SoftwareUpdateInProgress"
+	case Field_RemoteStartActive:
+		return "RemoteStartActive"
+	case Field_SemiCruiseSpeedLimitMph:
+		return "SemiCruiseSpeedLimitMph"
 	}
 	return ""
 }
@@ -1334,6 +1364,26 @@ func ParseField(s string) (Field, error) {
 		return Field_MilesSinceReset, nil
 	case "SelfDrivingMilesSinceReset":
 		return Field_SelfDrivingMilesSinceReset, nil
+	case "GpsAccuracyMeters":
+		return Field_GpsAccuracyMeters, nil
+	case "LifetimeEnergyChargedKwh":
+		return Field_LifetimeEnergyChargedKwh, nil
+	case "BrickSocMinPercent":
+		return Field_BrickSocMinPercent, nil
+	case "NominalFullPackEnergyKwh":
+		return Field_NominalFullPackEnergyKwh, nil
+	case "GradeEstimatePercent":
+		return Field_GradeEstimatePercent, nil
+	case "MaxSpeedToReachDestinationMph":
+		return Field_MaxSpeedToReachDestinationMph, nil
+	case "SoftwareUpdateAvailable":
+		return Field_SoftwareUpdateAvailable, nil
+	case "SoftwareUpdateInProgress":
+		return Field_SoftwareUpdateInProgress, nil
+	case "RemoteStartActive":
+		return Field_RemoteStartActive, nil
+	case "SemiCruiseSpeedLimitMph":
+		return Field_SemiCruiseSpeedLimitMph, nil
 	}
 	return Field(0), fmt.Errorf("protomodel: unknown Field name %q", s)
 }
@@ -1605,6 +1655,16 @@ var Signals = []SignalMeta{
 	{Field: "Deprecated_3", ProtoEnumNum: 257, Category: "metadata", ValueKind: ValueKindString, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 	{Field: "MilesSinceReset", ProtoEnumNum: 258, Category: "safety_security", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindDistance, IsSettingUnit: false},
 	{Field: "SelfDrivingMilesSinceReset", ProtoEnumNum: 259, Category: "safety_security", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindDistance, IsSettingUnit: false},
+	{Field: "GpsAccuracyMeters", ProtoEnumNum: 260, Category: "location", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "LifetimeEnergyChargedKwh", ProtoEnumNum: 261, Category: "charging", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "BrickSocMinPercent", ProtoEnumNum: 262, Category: "charging", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindCharge, IsSettingUnit: false},
+	{Field: "NominalFullPackEnergyKwh", ProtoEnumNum: 263, Category: "charging", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "GradeEstimatePercent", ProtoEnumNum: 264, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "MaxSpeedToReachDestinationMph", ProtoEnumNum: 265, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "SoftwareUpdateAvailable", ProtoEnumNum: 266, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "SoftwareUpdateInProgress", ProtoEnumNum: 267, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "RemoteStartActive", ProtoEnumNum: 268, Category: "vehicle_state", ValueKind: ValueKindBool, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
+	{Field: "SemiCruiseSpeedLimitMph", ProtoEnumNum: 269, Category: "driving", ValueKind: ValueKindFloat, EnumTypeName: "", EnumStringPrefix: "", IsCompound: false, CompoundKind: CompoundKindNone, UnitKind: UnitKindNone, IsSettingUnit: false},
 }
 
 // SignalsByName indexes Signals by canonical proto field name. The pointer

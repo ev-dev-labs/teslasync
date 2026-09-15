@@ -74,6 +74,10 @@ func TestToSI(t *testing.T) {
 		{name: "DCChargingEnergyIn/kWh_to_Wh", field: "DCChargingEnergyIn", raw: 42.5, active: ActiveUnitMiles, want: 42500, eps: epsTight},
 		{name: "ACChargingPower/kW_to_W", field: "ACChargingPower", raw: 7.2, active: "", want: 7200, eps: epsTight},
 		{name: "DCChargingPower/kW_to_W", field: "DCChargingPower", raw: 250, active: ActiveUnitPSI, want: 250000, eps: epsTight},
+		{name: "LifetimeEnergyChargedKwh/kWh_to_Wh", field: "LifetimeEnergyChargedKwh", raw: 12.5, active: "", want: 12500, eps: epsTight},
+		{name: "NominalFullPackEnergyKwh/kWh_to_Wh", field: "NominalFullPackEnergyKwh", raw: 100, active: ActiveUnitMiles, want: 100000, eps: epsTight},
+		{name: "MaxSpeedToReachDestinationMph/mph_to_mps", field: "MaxSpeedToReachDestinationMph", raw: 65, active: "", want: 29.0576, eps: epsLoose},
+		{name: "SemiCruiseSpeedLimitMph/mph_to_mps", field: "SemiCruiseSpeedLimitMph", raw: 55, active: "", want: 24.5872, eps: epsLoose},
 
 		// Temperature fields.
 		{name: "DiHeatsinkTR/F", field: "DiHeatsinkTR", raw: 32, active: ActiveUnitFahrenheit, want: 0, eps: epsTight},

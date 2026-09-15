@@ -135,6 +135,7 @@ export interface VehicleLiveState {
   europeVehicle: boolean
   rightHandDrive: boolean
   remoteStartEnabled: boolean
+  remoteStartActive: boolean
   offroadLightbar: boolean
 
   // Navigation
@@ -148,8 +149,15 @@ export interface VehicleLiveState {
   locatedAtWork: boolean
   locatedAtFavorite: boolean
   gpsState: string
+  gpsAccuracyM: number
   originLatitude: number
   originLongitude: number
+  gradeEstimatePct: number
+  maxSpeedToDestinationMps: number
+  semiCruiseSpeedLimitMps: number
+  lifetimeEnergyChargedWh: number
+  brickSocMinPct: number
+  nominalFullPackEnergyWh: number
 
   // Software Update (live progress)
   swUpdateVersion: string
@@ -157,6 +165,8 @@ export interface VehicleLiveState {
   swUpdateInstallPct: number
   swUpdateExpectedMin: number
   swUpdateScheduledStart: string
+  swUpdateAvailable: boolean
+  swUpdateInProgress: boolean
 
   // User Preferences (from car)
   setting24HourTime: boolean
@@ -201,13 +211,16 @@ const EMPTY_STATE: VehicleLiveState = {
   isolationResistance: 0,
   vehicleName: '', carType: '', version: '', wheelType: '', exteriorColor: '',
   trim: '', roofColor: '', efficiencyPackage: '', rearSeatHeaters: '', sunroofInstalled: '',
-  europeVehicle: false, rightHandDrive: false, remoteStartEnabled: false, offroadLightbar: false,
+  europeVehicle: false, rightHandDrive: false, remoteStartEnabled: false, remoteStartActive: false, offroadLightbar: false,
   destinationName: '', destinationLatitude: 0, destinationLongitude: 0,
   distanceToArrival: 0, minutesToArrival: 0, routeLine: '',
   locatedAtHome: false, locatedAtWork: false, locatedAtFavorite: false,
-  gpsState: '', originLatitude: 0, originLongitude: 0,
+  gpsState: '', gpsAccuracyM: 0, originLatitude: 0, originLongitude: 0,
+  gradeEstimatePct: 0, maxSpeedToDestinationMps: 0, semiCruiseSpeedLimitMps: 0,
+  lifetimeEnergyChargedWh: 0, brickSocMinPct: 0, nominalFullPackEnergyWh: 0,
   swUpdateVersion: '', swUpdateDownloadPct: 0, swUpdateInstallPct: 0,
   swUpdateExpectedMin: 0, swUpdateScheduledStart: '',
+  swUpdateAvailable: false, swUpdateInProgress: false,
   setting24HourTime: false, settingChargeUnit: '', settingDistanceUnit: '',
   settingTemperatureUnit: '', settingTirePressureUnit: '',
   lastUpdated: null, signalCount: 0,
@@ -372,6 +385,7 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['EuropeVehicle'] != null) s.europeVehicle = bool('EuropeVehicle')
   if (raw['RightHandDrive'] != null) s.rightHandDrive = bool('RightHandDrive')
   if (raw['RemoteStartEnabled'] != null) s.remoteStartEnabled = bool('RemoteStartEnabled')
+  if (raw['RemoteStartActive'] != null) s.remoteStartActive = bool('RemoteStartActive')
   if (raw['OffroadLightbarPresent'] != null) s.offroadLightbar = bool('OffroadLightbarPresent')
 
   // Navigation
@@ -388,6 +402,13 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['LocatedAtWork'] != null) s.locatedAtWork = bool('LocatedAtWork')
   if (raw['LocatedAtFavorite'] != null) s.locatedAtFavorite = bool('LocatedAtFavorite')
   if (raw['GpsState'] != null) s.gpsState = str('GpsState')
+  if (raw['GpsAccuracyMeters'] != null) s.gpsAccuracyM = n('GpsAccuracyMeters')
+  if (raw['GradeEstimatePercent'] != null) s.gradeEstimatePct = n('GradeEstimatePercent')
+  if (raw['MaxSpeedToReachDestinationMph'] != null) s.maxSpeedToDestinationMps = n('MaxSpeedToReachDestinationMph')
+  if (raw['SemiCruiseSpeedLimitMph'] != null) s.semiCruiseSpeedLimitMps = n('SemiCruiseSpeedLimitMph')
+  if (raw['LifetimeEnergyChargedKwh'] != null) s.lifetimeEnergyChargedWh = n('LifetimeEnergyChargedKwh')
+  if (raw['BrickSocMinPercent'] != null) s.brickSocMinPct = n('BrickSocMinPercent')
+  if (raw['NominalFullPackEnergyKwh'] != null) s.nominalFullPackEnergyWh = n('NominalFullPackEnergyKwh')
   if (raw['OriginLocation'] != null && typeof raw['OriginLocation'] === 'object') {
     const orig = raw['OriginLocation'] as Record<string, unknown>
     if (orig['latitude'] != null) s.originLatitude = orig['latitude'] as number
@@ -400,6 +421,8 @@ function parseSignals(raw: Record<string, unknown>): Partial<VehicleLiveState> {
   if (raw['SoftwareUpdateInstallationPercentComplete'] != null) s.swUpdateInstallPct = n('SoftwareUpdateInstallationPercentComplete')
   if (raw['SoftwareUpdateExpectedDurationMinutes'] != null) s.swUpdateExpectedMin = n('SoftwareUpdateExpectedDurationMinutes')
   if (raw['SoftwareUpdateScheduledStartTime'] != null) s.swUpdateScheduledStart = str('SoftwareUpdateScheduledStartTime')
+  if (raw['SoftwareUpdateAvailable'] != null) s.swUpdateAvailable = bool('SoftwareUpdateAvailable')
+  if (raw['SoftwareUpdateInProgress'] != null) s.swUpdateInProgress = bool('SoftwareUpdateInProgress')
 
   // User Preferences
   if (raw['Setting24HourTime'] != null) s.setting24HourTime = bool('Setting24HourTime')

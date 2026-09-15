@@ -163,6 +163,39 @@ func TestCoverage_SettingUnitInvariants(t *testing.T) {
 // (e.g. a temperature reading) gets misclassified into a non-measurement
 // bucket and then gets silently dropped by the unit-history /
 // unit-conversion layer, which only iterates measurement-bucket fields.
+// TestCoverage_FleetTelemetryFields260to269 pins the firmware-2026.32 Field
+// enum values (teslamotors/fleet-telemetry@8fbaa100) on the vendored generator
+// output. The teslamotors Go module is still v0.9.0 (Go 1.25), so
+// TestCoverage_EveryProtoFieldHasSignalMeta cannot see these names via
+// ftproto.Field_name until that module pin moves.
+func TestCoverage_FleetTelemetryFields260to269(t *testing.T) {
+	want := []struct {
+		num  int32
+		name string
+	}{
+		{260, "GpsAccuracyMeters"},
+		{261, "LifetimeEnergyChargedKwh"},
+		{262, "BrickSocMinPercent"},
+		{263, "NominalFullPackEnergyKwh"},
+		{264, "GradeEstimatePercent"},
+		{265, "MaxSpeedToReachDestinationMph"},
+		{266, "SoftwareUpdateAvailable"},
+		{267, "SoftwareUpdateInProgress"},
+		{268, "RemoteStartActive"},
+		{269, "SemiCruiseSpeedLimitMph"},
+	}
+	for _, w := range want {
+		meta, ok := SignalsByEnum[w.num]
+		if !ok {
+			t.Errorf("SignalsByEnum missing enum=%d (%s); re-vendor proto and run go generate", w.num, w.name)
+			continue
+		}
+		if meta.Field != w.name {
+			t.Errorf("SignalsByEnum[%d].Field=%q want %q", w.num, meta.Field, w.name)
+		}
+	}
+}
+
 func TestCoverage_UnitBearingFieldsAreMeasurements(t *testing.T) {
 	denied := sortedKeys(nonMeasurementCategories)
 

@@ -77,6 +77,8 @@ routes:
     dest: signal_log
   - field: BrickVoltageMin
     dest: signal_log
+  - field: BrickSocMinPercent
+    dest: signal_log
   - field: CabinOverheatProtectionMode
     dest: climate_snapshot
     column: cabin_overheat_protection_mode
@@ -435,6 +437,8 @@ routes:
   - field: Gear
     dest: drive_telemetry
     column: gear
+  - field: GpsAccuracyMeters
+    dest: signal_log
   - field: GpsHeading
     dest: positions
     column: heading_deg
@@ -506,6 +510,10 @@ routes:
   - field: LateralAcceleration
     dest: drive_telemetry
     column: lateral_acceleration_mps2
+  - field: GradeEstimatePercent
+    dest: signal_log
+  - field: LifetimeEnergyChargedKwh
+    dest: signal_log
   - field: LifetimeEnergyGainedRegen
     dest: drive_telemetry
     column: lifetime_energy_gained_regen_wh
@@ -602,6 +610,8 @@ routes:
   # to meters before the SI value lands in signal_log.
   - field: MilesSinceReset
     dest: signal_log
+  - field: MaxSpeedToReachDestinationMph
+    dest: signal_log
   - field: MilesToArrival
     dest: signal_log
   - field: MinutesToArrival
@@ -609,6 +619,8 @@ routes:
   - field: ModuleTempMax
     dest: signal_log
   - field: ModuleTempMin
+    dest: signal_log
+  - field: NominalFullPackEnergyKwh
     dest: signal_log
   - field: NotEnoughPowerToHeat
     dest: signal_log
@@ -706,6 +718,8 @@ routes:
   # per-vehicle feature flag, and RoofColor is paint trim. Each
   # carries the change feed in signal_log; downstream readers fetch
   # the most recent value back from there. No hot column exists.
+  - field: RemoteStartActive
+    dest: signal_log
   - field: RemoteStartEnabled
     dest: signal_log
   - field: RightHandDrive
@@ -754,6 +768,8 @@ routes:
   # UnitKindDistance). Same routing rationale as MilesSinceReset —
   # the wire value is fixed in miles, normalize.toSI bypasses
   # vehicle_unit_history, and the SI value lands in signal_log.
+  - field: SemiCruiseSpeedLimitMph
+    dest: signal_log
   - field: SelfDrivingMilesSinceReset
     dest: signal_log
   - field: SemitruckPassengerSeatFoldPosition
@@ -840,9 +856,13 @@ routes:
     dest: signal_log
   # SoftwareUpdate* atomics (vehicle_state). Update-progress UI feeds
   # off the signal_log change stream; no hot column exists.
+  - field: SoftwareUpdateAvailable
+    dest: signal_log
   - field: SoftwareUpdateDownloadPercentComplete
     dest: signal_log
   - field: SoftwareUpdateExpectedDurationMinutes
+    dest: signal_log
+  - field: SoftwareUpdateInProgress
     dest: signal_log
   - field: SoftwareUpdateInstallationPercentComplete
     dest: signal_log
