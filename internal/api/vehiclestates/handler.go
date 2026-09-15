@@ -19,6 +19,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/ev-dev-labs/teslasync/internal/api/apiparams"
 	"github.com/ev-dev-labs/teslasync/internal/api/httpx"
 	vehicledb "github.com/ev-dev-labs/teslasync/internal/database/vehicle"
 
@@ -57,53 +58,75 @@ const (
 	// useStateTimeline in useAdmin.ts passes days=7 explicitly when
 	// callers don't override.
 	vehicleStatesDefaultDays = 7
-	// vehicleStatesMaxDays caps the window per Decision #4. A 90-day
-	// window over fsm_transitions is bounded by the table's per-vehicle
-	// row count (~1000s/year per the table doc on mig 000187 line 17),
-	// so this cap keeps the SELECT cheap.
-	vehicleStatesMaxDays = 90
 )
 
-// parseVehicleStatesParams extracts and validates vehicle_id + days.
-// Returns ok=false after writing the appropriate 4xx response so the
-// caller can early-return.
-func (h *Handler) parseVehicleStatesParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, days int, ok bool) {
+type vehicleStatesWindow struct {
+	start time.Time
+	end   time.Time
+	days  int
+}
+
+func (h *Handler) nowUTC() time.Time {
+	if h.clock != nil {
+		return h.clock()
+	}
+	return time.Now().UTC()
+}
+
+// parseVehicleStatesParams extracts vehicle_id plus the query window.
+// start/end (RFC3339 or YYYY-MM-DD) take precedence over days, matching
+// /analytics/fleet. There is no max-days cap — fsm_transitions is
+// indexed and sparse (~thousands of rows/year). days still defaults to 7
+// when no range is given (widgets).
+func (h *Handler) parseVehicleStatesParams(w http.ResponseWriter, r *http.Request) (vehicleID int64, win vehicleStatesWindow, ok bool) {
 	q := r.URL.Query()
 
 	vidStr := q.Get("vehicle_id")
 	if vidStr == "" {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id is required")
-		return 0, 0, false
+		return 0, vehicleStatesWindow{}, false
 	}
 	vid, err := strconv.ParseInt(vidStr, 10, 64)
 	if err != nil || vid <= 0 {
 		httpx.WriteError(w, http.StatusBadRequest, "vehicle_id must be a positive integer")
-		return 0, 0, false
+		return 0, vehicleStatesWindow{}, false
 	}
 
-	days = vehicleStatesDefaultDays
+	now := h.nowUTC()
+	start, end, err := apiparams.ParseDateRangeValues(q.Get("start"), q.Get("end"))
+	if err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, err.Error())
+		return 0, vehicleStatesWindow{}, false
+	}
+	if !start.IsZero() || !end.IsZero() {
+		if start.IsZero() {
+			start = time.Unix(0, 0).UTC()
+		}
+		if end.IsZero() {
+			end = now
+		}
+		days := int(end.Sub(start) / (24 * time.Hour))
+		if days < 1 {
+			days = 1
+		}
+		return vid, vehicleStatesWindow{start: start, end: end, days: days}, true
+	}
+
+	days := vehicleStatesDefaultDays
 	if d := q.Get("days"); d != "" {
 		v, err := strconv.Atoi(d)
 		if err != nil {
 			httpx.WriteError(w, http.StatusBadRequest, "days must be an integer")
-			return 0, 0, false
+			return 0, vehicleStatesWindow{}, false
 		}
 		if v < 1 {
 			httpx.WriteError(w, http.StatusBadRequest, "days must be >= 1")
-			return 0, 0, false
-		}
-		if v > vehicleStatesMaxDays {
-			// Hand-write JSON to include the Decision #4 max field.
-			httpx.WriteJSON(w, http.StatusBadRequest, map[string]any{
-				"error": "days exceeds maximum",
-				"max":   vehicleStatesMaxDays,
-				"code":  httpx.HTTPStatusCode(http.StatusBadRequest),
-			})
-			return 0, 0, false
+			return 0, vehicleStatesWindow{}, false
 		}
 		days = v
 	}
-	return vid, days, true
+	winEnd, winStart := h.windowFor(days)
+	return vid, vehicleStatesWindow{start: winStart, end: winEnd, days: days}, true
 }
 
 // VehicleStatesTimelineResponse is the envelope returned by Timeline.
@@ -112,6 +135,8 @@ func (h *Handler) parseVehicleStatesParams(w http.ResponseWriter, r *http.Reques
 type VehicleStatesTimelineResponse struct {
 	VehicleID   int64                              `json:"vehicle_id"`
 	Days        int                                `json:"days"`
+	Start       time.Time                          `json:"start"`
+	End         time.Time                          `json:"end"`
 	Transitions []vehicledb.VehicleStateTransition `json:"transitions"`
 }
 
@@ -119,6 +144,8 @@ type VehicleStatesTimelineResponse struct {
 type VehicleStatesSummaryResponse struct {
 	VehicleID    int64                              `json:"vehicle_id"`
 	Days         int                                `json:"days"`
+	Start        time.Time                          `json:"start"`
+	End          time.Time                          `json:"end"`
 	TotalSeconds float64                            `json:"total_seconds"`
 	ByState      []vehicledb.VehicleStateSummaryRow `json:"by_state"`
 }
@@ -132,7 +159,7 @@ type VehicleStatesSummaryResponse struct {
 // an FK on fsm_transitions.vehicle_id (would-be dangling rows must not
 // resurrect a deleted vehicle).
 func (h *Handler) Timeline(w http.ResponseWriter, r *http.Request) {
-	vehicleID, days, ok := h.parseVehicleStatesParams(w, r)
+	vehicleID, win, ok := h.parseVehicleStatesParams(w, r)
 	if !ok {
 		return
 	}
@@ -149,10 +176,9 @@ func (h *Handler) Timeline(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	end, start := h.windowFor(days)
-	transitions, err := h.repo.Timeline(ctx, vehicleID, start, end)
+	transitions, err := h.repo.Timeline(ctx, vehicleID, win.start, win.end)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("vehicle_states.timeline: query failed")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", win.days).Msg("vehicle_states.timeline: query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load timeline")
 		return
 	}
@@ -162,7 +188,9 @@ func (h *Handler) Timeline(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, VehicleStatesTimelineResponse{
 		VehicleID:   vehicleID,
-		Days:        days,
+		Days:        win.days,
+		Start:       win.start,
+		End:         win.end,
 		Transitions: transitions,
 	})
 }
@@ -173,7 +201,7 @@ func (h *Handler) Timeline(w http.ResponseWriter, r *http.Request) {
 // lives in database.computeStateSummary (purely Go, well-tested in the
 // repo unit tests).
 func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
-	vehicleID, days, ok := h.parseVehicleStatesParams(w, r)
+	vehicleID, win, ok := h.parseVehicleStatesParams(w, r)
 	if !ok {
 		return
 	}
@@ -190,10 +218,9 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	end, start := h.windowFor(days)
-	rows, total, err := h.repo.Summary(ctx, vehicleID, start, end)
+	rows, total, err := h.repo.Summary(ctx, vehicleID, win.start, win.end)
 	if err != nil {
-		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", days).Msg("vehicle_states.summary: query failed")
+		log.Error().Err(err).Int64("vehicle_id", vehicleID).Int("days", win.days).Msg("vehicle_states.summary: query failed")
 		httpx.WriteError(w, http.StatusInternalServerError, "failed to load summary")
 		return
 	}
@@ -203,7 +230,9 @@ func (h *Handler) Summary(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, VehicleStatesSummaryResponse{
 		VehicleID:    vehicleID,
-		Days:         days,
+		Days:         win.days,
+		Start:        win.start,
+		End:          win.end,
 		TotalSeconds: total,
 		ByState:      rows,
 	})
