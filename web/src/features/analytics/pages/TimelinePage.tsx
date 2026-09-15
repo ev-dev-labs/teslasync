@@ -10,6 +10,7 @@ import { PageContainer } from '@/components/layout';
 import { GlassPanel, Badge, Button, DataTable, PanelTitle, Text, Caption, type Column } from '@/components/ui';
 import { RangePicker, VehicleSelect } from '@/components/forms';
 import { useRangeState } from '@/hooks/useRangeState';
+import { useTimezone } from '@/lib/timezone';
 import {
   DataFreshnessAuto,
   EntityPreviewDrawer,
@@ -74,12 +75,9 @@ interface SummaryResponse {
 
 /* ─── Constants ──────────────────────────────────────────── */
 
-/** Backend `vehicle-states` trailing window cap (handler Decision #4). */
-const TIMELINE_MAX_DAYS = 90;
-
 const STATE_COLORS: Record<string, string> = {
   driving: '#10b981',
-  charging: '#00f0ff',
+  charging: '#0891b2',
   idle: '#f59e0b',
   sleeping: '#64748b',
   online: '#3b82f6',
@@ -139,42 +137,34 @@ export default function TimelinePage() {
   const activeId = vehicleId != null ? String(vehicleId) : '';
   const enabled = activeId !== '';
 
-  const { start, end, setRange } = useRangeState({
+  const timezone = useTimezone('vehicle');
+  const { start, end, setRange, startInstant, endInstantExclusive } = useRangeState({
     persistKey: 'timeline.range',
     defaultPresetId: '7d',
+    timezone,
   });
   const [previewTransition, setPreviewTransition] = useState<TransitionRow | null>(null);
   const previewDay = localDayKey(previewTransition?.ts);
 
-  // Backend accepts `?days=N` (trailing window, max 90). Inclusive day
-  // count from the picker (workspace "All time" / YTD can be far larger)
-  // is clamped so we never 400 with "days exceeds maximum".
-  const requestedDays = useMemo(() => {
-    const startMs = new Date(`${start}T00:00:00`).getTime();
-    const endMs = new Date(`${end}T00:00:00`).getTime();
-    if (Number.isNaN(startMs) || Number.isNaN(endMs)) return 7;
-    return Math.max(1, Math.round((endMs - startMs) / 86_400_000) + 1);
-  }, [start, end]);
-  const days = Math.min(requestedDays, TIMELINE_MAX_DAYS);
-  const rangeClamped = requestedDays > TIMELINE_MAX_DAYS;
+  const rangeQuery = `vehicle_id=${activeId}&start=${encodeURIComponent(startInstant)}&end=${encodeURIComponent(endInstantExclusive)}`;
 
   const { error: vehiclesError } = useVehicles();
 
   const timelineQuery = useQuery({
-    queryKey: ['vehicle-timeline', activeId, days],
+    queryKey: ['vehicle-timeline', activeId, startInstant, endInstantExclusive],
     queryFn: () =>
       request<{ transitions: TransitionRecord[] }>(
-        `/vehicle-states/timeline?vehicle_id=${activeId}&days=${days}`,
+        `/vehicle-states/timeline?${rangeQuery}`,
       ),
     enabled,
   });
   const { data: timelineData, isLoading: tlLoading, error: timelineError, refetch } = timelineQuery;
 
   const { data: summaryData, isLoading: sumLoading, error: summaryError } = useQuery({
-    queryKey: ['vehicle-summary', activeId, days],
+    queryKey: ['vehicle-summary', activeId, startInstant, endInstantExclusive],
     queryFn: () =>
       request<SummaryResponse>(
-        `/vehicle-states/summary?vehicle_id=${activeId}&days=${days}`,
+        `/vehicle-states/summary?${rangeQuery}`,
       ),
     enabled,
   });
@@ -366,7 +356,7 @@ export default function TimelinePage() {
       <RangePicker
         value={{ start, end }}
         onChange={(r) => setRange(r)}
-        presetIds={['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd']}
+        presetIds={['today', 'yesterday', '7d', '30d', '90d', 'mtd', 'ytd', 'all']}
         presetsOnly
         align="end"
         triggerTestId="timeline-range"
@@ -394,16 +384,6 @@ export default function TimelinePage() {
           {t('error.loadFailed', 'Failed to load data')}: {getErrorMessage(anyError)}
         </AlertBanner>
       )}
-      {rangeClamped && !anyError && (
-        <AlertBanner variant="info" icon={<Clock className="h-5 w-5" />}>
-          {t(
-            'timeline.rangeClamped',
-            'State history is limited to the last {{max}} days. All time and year-to-date still load that window instead of failing.',
-            { max: TIMELINE_MAX_DAYS },
-          )}
-        </AlertBanner>
-      )}
-
       {/* Summary metric cards — full-width KPI band */}
       <FadeIn>
         <section aria-label={t('timeline.kpis', 'Summary metrics')} className="mb-4 grid grid-cols-2 gap-4 sm:mb-6 lg:grid-cols-4">

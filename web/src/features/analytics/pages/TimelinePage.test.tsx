@@ -383,15 +383,13 @@ describe('TimelinePage', () => {
     expect(screen.queryByRole('dialog', { name: 'asleep → driving' })).toBeNull()
   })
 
-  it('clamps All time / wide ranges to 90 days instead of failing the API', async () => {
+  it('loads All time / wide ranges via start/end instead of a days cap', async () => {
     renderPage('/timeline?from=2015-01-01&to=2026-09-15')
 
-    expect(
-      await screen.findByText(
-        'State history is limited to the last 90 days. All time and year-to-date still load that window instead of failing.',
-      ),
-    ).toBeInTheDocument()
     expect(screen.queryByText(/days exceeds maximum/i)).toBeNull()
+    expect(
+      screen.queryByText(/State history is limited to the last 90 days/i),
+    ).toBeNull()
 
     await waitFor(() => {
       const timelineCalls = mockedRequest.mock.calls
@@ -400,9 +398,12 @@ describe('TimelinePage', () => {
       const summaryCalls = mockedRequest.mock.calls
         .map((c) => String(c[0]))
         .filter((p) => p.startsWith('/vehicle-states/summary'))
-      expect(timelineCalls.some((p) => p.includes('days=90'))).toBe(true)
-      expect(summaryCalls.some((p) => p.includes('days=90'))).toBe(true)
-      expect(timelineCalls.every((p) => !/days=\d{3,}/.test(p))).toBe(true)
+      expect(timelineCalls.length).toBeGreaterThan(0)
+      expect(summaryCalls.length).toBeGreaterThan(0)
+      expect(timelineCalls.every((p) => p.includes('start=') && p.includes('end='))).toBe(true)
+      expect(summaryCalls.every((p) => p.includes('start=') && p.includes('end='))).toBe(true)
+      expect(timelineCalls.every((p) => !p.includes('days='))).toBe(true)
+      expect(timelineCalls.some((p) => decodeURIComponent(p).includes('2015-01-01'))).toBe(true)
     })
   })
 })

@@ -447,7 +447,7 @@ export default function DrivesListPage() {
   [dateFilteredDrives, tz]);
 
   const trendMetricsConfig: MetricSwitcherMetric<{ date: string; value: number }>[] = useMemo(() => [
-    { key: 'drives',     label: t('drives.metric.drives', 'Drives'),         chart: 'bar',  color: '#00f0ff', accent: 'cyan',
+    { key: 'drives',     label: t('drives.metric.drives', 'Drives'),         chart: 'bar',  color: '#0891b2', accent: 'cyan',
       formatValue: (v) => fmtInt(v),
       formatTick: (v) => fmtInt(v) },
     { key: 'distance',   label: t('drives.metric.distance', 'Distance'),     chart: 'bar',  color: '#10b981', accent: 'green',

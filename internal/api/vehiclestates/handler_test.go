@@ -17,7 +17,7 @@ import (
 //
 // Coverage map:
 //   (a) Timeline ordering ASC          -> TestVehicleStates_Timeline_OrderingASC
-//   (b) Days clamp 7/30/90/91 -> 400   -> TestVehicleStates_Timeline_DaysClamp
+//   (b) Days window 7/30/90/91 OK; start/end unbounded -> TestVehicleStates_Timeline_DaysClamp
 //   (c) Summary % sum 100 ± 0.01       -> TestVehicleStates_Summary_PercentageSumsTo100
 //   (d) Empty vehicle -> 200           -> TestVehicleStates_Timeline_EmptyVehicle_200
 //                                          / TestVehicleStates_Summary_EmptyVehicle_200
@@ -114,16 +114,15 @@ func TestVehicleStates_Timeline_DaysClamp(t *testing.T) {
 		wantStatus int
 		wantDays   int
 		wantErrTxt string // substring match in body
-		wantMax    bool   // requires max:90 payload
 	}{
-		{"default_when_absent", "vehicle_id=42", http.StatusOK, 7, "", false},
-		{"days_7", "vehicle_id=42&days=7", http.StatusOK, 7, "", false},
-		{"days_30", "vehicle_id=42&days=30", http.StatusOK, 30, "", false},
-		{"days_90_max_inclusive", "vehicle_id=42&days=90", http.StatusOK, 90, "", false},
-		{"days_91_exceeds_max", "vehicle_id=42&days=91", http.StatusBadRequest, 0, "days exceeds maximum", true},
-		{"days_zero", "vehicle_id=42&days=0", http.StatusBadRequest, 0, "days must be", false},
-		{"days_negative", "vehicle_id=42&days=-1", http.StatusBadRequest, 0, "days must be", false},
-		{"days_non_integer", "vehicle_id=42&days=abc", http.StatusBadRequest, 0, "days must be an integer", false},
+		{"default_when_absent", "vehicle_id=42", http.StatusOK, 7, ""},
+		{"days_7", "vehicle_id=42&days=7", http.StatusOK, 7, ""},
+		{"days_30", "vehicle_id=42&days=30", http.StatusOK, 30, ""},
+		{"days_90", "vehicle_id=42&days=90", http.StatusOK, 90, ""},
+		{"days_91_unbounded", "vehicle_id=42&days=91", http.StatusOK, 91, ""},
+		{"days_zero", "vehicle_id=42&days=0", http.StatusBadRequest, 0, "days must be"},
+		{"days_negative", "vehicle_id=42&days=-1", http.StatusBadRequest, 0, "days must be"},
+		{"days_non_integer", "vehicle_id=42&days=abc", http.StatusBadRequest, 0, "days must be an integer"},
 	}
 
 	for _, c := range cases {
@@ -143,16 +142,6 @@ func TestVehicleStates_Timeline_DaysClamp(t *testing.T) {
 			}
 			if c.wantErrTxt != "" && !strings.Contains(rec.Body.String(), c.wantErrTxt) {
 				t.Errorf("body missing %q\nbody=%s", c.wantErrTxt, rec.Body.String())
-			}
-			if c.wantMax {
-				var body map[string]any
-				if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
-					t.Fatalf("decode: %v", err)
-				}
-				maxV, ok := body["max"].(float64)
-				if !ok || int(maxV) != 90 {
-					t.Errorf("body.max = %v, want 90 (Decision #4 envelope)", body["max"])
-				}
 			}
 			if c.wantStatus == http.StatusOK {
 				var body VehicleStatesTimelineResponse
@@ -179,6 +168,40 @@ func TestVehicleStates_Timeline_DaysClamp(t *testing.T) {
 	}
 }
 
+func TestVehicleStates_Timeline_ExplicitRange(t *testing.T) {
+	t.Parallel()
+	now := time.Date(2026, 5, 6, 12, 0, 0, 0, time.UTC)
+	repo := &fakeVehicleStatesRepo{
+		exists:   map[int64]bool{42: true},
+		timeline: []vehicledb.VehicleStateTransition{},
+	}
+	h := newHandlerForTest(repo, now)
+	rec := httptest.NewRecorder()
+	h.Timeline(rec, vsRequest("/vehicle-states/timeline?vehicle_id=42&start=2015-01-01T00:00:00Z&end=2026-09-15T00:00:00Z&days=7"))
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body=%s)", rec.Code, rec.Body.String())
+	}
+	if len(repo.gotTimelineCalls) != 1 {
+		t.Fatalf("got %d timeline calls, want 1", len(repo.gotTimelineCalls))
+	}
+	call := repo.gotTimelineCalls[0]
+	wantStart := time.Date(2015, 1, 1, 0, 0, 0, 0, time.UTC)
+	wantEnd := time.Date(2026, 9, 15, 0, 0, 0, 0, time.UTC).Add(-time.Microsecond)
+	if !call.start.Equal(wantStart) {
+		t.Errorf("repo.start = %v, want %v", call.start, wantStart)
+	}
+	if !call.end.Equal(wantEnd) {
+		t.Errorf("repo.end = %v, want %v", call.end, wantEnd)
+	}
+	var body VehicleStatesTimelineResponse
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if body.Days < 4000 {
+		t.Errorf("body.days = %d, want full-history span (>=4000)", body.Days)
+	}
+}
+
 // Same clamp behavior must apply to /summary — re-run the boundary
 // cases via a focused sub-test rather than duplicating the full table.
 func TestVehicleStates_Summary_DaysClamp(t *testing.T) {
@@ -191,8 +214,8 @@ func TestVehicleStates_Summary_DaysClamp(t *testing.T) {
 		wantStatus int
 	}{
 		{"default", "vehicle_id=42", http.StatusOK},
-		{"max_inclusive", "vehicle_id=42&days=90", http.StatusOK},
-		{"exceeds_max", "vehicle_id=42&days=91", http.StatusBadRequest},
+		{"days_90", "vehicle_id=42&days=90", http.StatusOK},
+		{"days_91_unbounded", "vehicle_id=42&days=91", http.StatusOK},
 		{"zero", "vehicle_id=42&days=0", http.StatusBadRequest},
 	}
 	for _, c := range cases {
