@@ -98,7 +98,7 @@ export const Modal = forwardRef<HTMLDivElement, ModalProps>(
           onClick={onClose}
           aria-hidden="true"
         />
-        <div className="relative flex min-h-full items-end justify-center sm:items-center sm:p-4">
+        <div className="relative flex min-h-full items-end justify-center pb-[var(--shell-chrome-bottom)] sm:items-center sm:p-4 sm:pb-4">
           <div
             ref={dialogRef}
             role="dialog"

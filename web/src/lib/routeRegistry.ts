@@ -94,6 +94,7 @@ export const ROUTE_REGISTRY: readonly RouteEntry[] = [
   { path: '/dashcam', name: 'DashcamIntelligence', label: 'Dashcam Intelligence', i18nKey: 'routes.dashcamIntelligence' },
   { path: '/data-export', name: 'DataExport', label: 'Data Export', i18nKey: 'routes.dataExport' },
   { path: '/data-repair', name: 'DataRepair', label: 'Data Repair', i18nKey: 'routes.dataRepair' },
+  { path: '/day-log', name: 'DayLog', label: 'Day Log', i18nKey: 'routes.dayLog' },
   { path: '/db-health', name: 'DBHealthDashboard', label: 'DB Health Dashboard', i18nKey: 'routes.dBHealthDashboard' },
   { path: '/departure-forecast', name: 'DepartureForecast', label: 'Departure Forecast', i18nKey: 'routes.departureForecast' },
   { path: '/destination-transitions', name: 'DestinationTransitions', label: 'Destination Transitions', i18nKey: 'routes.destinationTransitions' },

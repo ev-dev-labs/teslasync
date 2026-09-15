@@ -61,7 +61,7 @@ export function UpdatePrompt({ state: update }: UpdatePromptProps) {
       {...liveRegionProps}
       data-testid="update-prompt"
       data-update-required={required ? 'true' : 'false'}
-      className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9999] mx-auto max-w-md lg:inset-x-auto lg:right-4 lg:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:w-[28rem]"
+      className="fixed inset-x-3 bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] z-[9999] mx-auto max-w-md xl:inset-x-auto xl:right-4 xl:bottom-[calc(1rem+env(safe-area-inset-bottom,0px))] xl:w-[28rem]"
     >
       <GlassPanel
         className={`!p-4 flex items-start gap-3 shadow-lg max-w-full ${

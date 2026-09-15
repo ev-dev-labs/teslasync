@@ -92,6 +92,12 @@
   /* Fixed desktop shell geometry shared by the sidebar and overlays that
      center within the post-sidebar workspace. */
   --shell-sidebar-width: 17rem;
+  /* Bottom chrome: mobile tab bar (h-14) + status bar (h-6). At `xl` the
+     tab bar hides and the status bar grows to h-7. Overlays (Drawer, Modal
+     sheets) pin above this so footers never sit under the bars. */
+  --shell-tab-bar-height: 3.5rem;
+  --shell-status-bar-height: 1.5rem;
+  --shell-chrome-bottom: calc(var(--shell-tab-bar-height) + var(--shell-status-bar-height));
   /*
    * Motion duration tokens (Phase-45 / Prompt 21).
    *
@@ -380,6 +386,21 @@ select option:checked {
     @apply text-2xs font-medium uppercase tracking-wider;
     color: var(--text-muted);
   }
+}
+
+@media (min-width: 1280px) {
+  :root {
+    --shell-tab-bar-height: 0px;
+    --shell-status-bar-height: 1.75rem;
+  }
+}
+
+html[data-tab-bar='off'] {
+  --shell-tab-bar-height: 0px;
+}
+
+html[data-status-bar='off'] {
+  --shell-status-bar-height: 0px;
 }
 
 /* === LEAFLET OVERRIDES === */

@@ -67,6 +67,18 @@ function getPanel(): HTMLElement {
 }
 
 describe('<Drawer>', () => {
+  it('stacks above the status bar and mobile tab bar', () => {
+    render(
+      <Drawer open onClose={vi.fn()} title="Drive preview">
+        <p>Body</p>
+      </Drawer>,
+    );
+    const dialog = screen.getByRole('dialog', { name: 'Drive preview' });
+    expect(dialog.className).toContain('z-[60]');
+    expect(dialog.className).not.toContain('z-50');
+    expect(getPanel().className).toContain('bottom-[var(--shell-chrome-bottom)]');
+  });
+
   it('renders nothing while closed', () => {
     const { container } = render(
       <Drawer open={false} onClose={vi.fn()} title="Filters">

@@ -64,6 +64,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/vehicles': 'Manage every Tesla on your account — VIN, options, status.',
   '/vehicle-management': 'Fleet API options, specs, warranty, pricing, and payer roles per vehicle.',
   '/digital-twin': 'A live 3D model of your car mirroring doors, lights, and motion.',
+  '/day-log': 'What happened today — drives, charges, lock, sentry, and signal events.',
   '/vehicle-comparison': 'Side-by-side stats for two or more of your vehicles.',
   '/locations': 'Frequent destinations — home, work, favorite Superchargers.',
   '/parking': 'Parking patterns, dwell time, location mix, and recurring occupancy.',

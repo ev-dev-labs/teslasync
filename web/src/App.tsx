@@ -136,6 +136,7 @@ const Milestones = lazy(() => import('./features/analytics/pages/MilestonesPage'
 const ColdStart = lazy(() => import('./features/driving/pages/ColdStartPage'))
 const ShareCard = lazy(() => import('./features/sharing/pages/ShareCardPage'))
 const Utilization = lazy(() => import('./features/vehicles/pages/UtilizationPage'))
+const DayLog = lazy(() => import('./features/vehicles/pages/DayLogPage'))
 const Segments = lazy(() => import('./features/driving/pages/SegmentsPage'))
 
 // Analytics & Statistics
@@ -809,6 +810,7 @@ export default function App() {
                 <Route path="cold-start" element={<SafeRoute name="ColdStart"><ColdStart /></SafeRoute>} />
                 <Route path="share-card" element={<SafeRoute name="ShareCard"><ShareCard /></SafeRoute>} />
                 <Route path="utilization" element={<SafeRoute name="Utilization"><Utilization /></SafeRoute>} />
+                <Route path="day-log" element={<SafeRoute name="DayLog"><DayLog /></SafeRoute>} />
                 <Route path="segments" element={<SafeRoute name="Segments"><Segments /></SafeRoute>} />
         <Route path="battery-degradation" element={<SafeRoute name="BatteryDegradation"><BatteryDegradation /></SafeRoute>} />
         <Route path="battery-passport" element={<SafeRoute name="BatteryPassport"><BatteryPassport /></SafeRoute>} />

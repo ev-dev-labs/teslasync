@@ -561,6 +561,7 @@
     ],
     "vehicles": [
       "card",
+      "dayLog",
       "digitalTwin",
       "fleet",
       "parking",

@@ -119,6 +119,7 @@ export const COMPACT_NAV_BLUEPRINT: readonly CompactBlueprintGroup[] = [
     paths: [
       '/vehicles',
       '/digital-twin',
+      '/day-log',
       '/vehicle-management',
       '/commands',
       '/locations',
