@@ -149,7 +149,8 @@ func (p *Pipeline) toSI(ctx context.Context, atomic codec.Atomic, vehicleIntID i
 	// kWh/kW. Neither family may be dropped because a vehicle has no
 	// unit_history row.
 	if units.IsFixedMileDistanceField(atomic.Field) ||
-		units.IsFixedKiloToBaseField(atomic.Field) {
+		units.IsFixedKiloToBaseField(atomic.Field) ||
+		units.IsFixedMphSpeedField(atomic.Field) {
 		raw, ok := coerceFloat(atomic.Value)
 		if !ok {
 			return codec.Atomic{}, fmt.Errorf("%w: %s value of type %T not coercible to float64", units.ErrUnsupportedField, atomic.Field, atomic.Value)
@@ -218,7 +219,7 @@ func (p *Pipeline) toSI(ctx context.Context, atomic codec.Atomic, vehicleIntID i
 // them. The SettingChargeUnit signal is recorded for UI display
 // preference only.
 func needsConversion(field string, meta *protomodel.SignalMeta) bool {
-	if isSpeedField(field) || units.IsFixedKiloToBaseField(field) {
+	if isSpeedField(field) || units.IsFixedKiloToBaseField(field) || units.IsFixedMphSpeedField(field) {
 		return true
 	}
 	if meta == nil {

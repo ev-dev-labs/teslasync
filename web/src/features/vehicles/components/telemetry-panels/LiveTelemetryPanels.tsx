@@ -28,6 +28,7 @@ interface LiveTelemetryProps {
   live: Record<string, unknown>
   sseConnected: boolean
   remoteStartEnabled?: boolean | null
+  remoteStartActive?: boolean | null
 }
 
 // Stable empty-object fallback for the `live` signal map. VehicleStatePanel
@@ -47,6 +48,7 @@ export function LiveTelemetryPanels({
   live,
   sseConnected,
   remoteStartEnabled,
+  remoteStartActive,
 }: LiveTelemetryProps) {
   const { t } = useTranslation()
 
@@ -75,7 +77,11 @@ export function LiveTelemetryPanels({
         </FadeIn>
 
         <FadeIn delay={0.18}>
-          <SecurityPanel securityData={securityData} remoteStartEnabled={remoteStartEnabled} />
+          <SecurityPanel
+            securityData={securityData}
+            remoteStartEnabled={remoteStartEnabled}
+            remoteStartActive={remoteStartActive}
+          />
         </FadeIn>
 
         <FadeIn delay={0.19}>

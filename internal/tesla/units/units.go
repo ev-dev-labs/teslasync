@@ -85,6 +85,10 @@ func ToSI(field string, raw float64, active ActiveUnit) (float64, error) {
 		return raw * 1000.0, nil
 	}
 
+	if IsFixedMphSpeedField(field) {
+		return raw * 0.44704, nil
+	}
+
 	if meta.UnitKind == protomodel.UnitKindNone {
 		return 0, fmt.Errorf("%w: %q", ErrUnsupportedField, field)
 	}

@@ -74,6 +74,11 @@ const ALL_LABELS = [
   'Speed Limit',
   'Center Display',
   'HomeLink Devices',
+  'Software Update',
+  'Remote Start Active',
+  'GPS Accuracy',
+  'Grade',
+  'Max speed to destination',
 ];
 
 beforeEach(() => {

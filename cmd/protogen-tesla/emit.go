@@ -569,6 +569,29 @@ func classifyExplicit(name string) fieldClass {
 		return fieldClass{cat: "safety_security", kind: "float", unit: "distance", isSettingUnit: false}
 	case "SelfDrivingMilesSinceReset":
 		return fieldClass{cat: "safety_security", kind: "float", unit: "distance", isSettingUnit: false}
+	case "GpsAccuracyMeters":
+		// Wire unit is already metres (name-encoded). Do not treat as
+		// SettingDistanceUnit-following distance — ToSI would re-scale.
+		return fieldClass{cat: "location", kind: "float", unit: "none", isSettingUnit: false}
+	case "LifetimeEnergyChargedKwh":
+		return fieldClass{cat: "charging", kind: "float", unit: "none", isSettingUnit: false}
+	case "BrickSocMinPercent":
+		return fieldClass{cat: "charging", kind: "float", unit: "charge", isSettingUnit: false}
+	case "NominalFullPackEnergyKwh":
+		return fieldClass{cat: "charging", kind: "float", unit: "none", isSettingUnit: false}
+	case "GradeEstimatePercent":
+		return fieldClass{cat: "driving", kind: "float", unit: "none", isSettingUnit: false}
+	case "MaxSpeedToReachDestinationMph":
+		// Name-encoded mph; converted to m/s via fixedMphSpeedFields.
+		return fieldClass{cat: "driving", kind: "float", unit: "none", isSettingUnit: false}
+	case "SoftwareUpdateAvailable":
+		return fieldClass{cat: "vehicle_state", kind: "bool", unit: "none", isSettingUnit: false}
+	case "SoftwareUpdateInProgress":
+		return fieldClass{cat: "vehicle_state", kind: "bool", unit: "none", isSettingUnit: false}
+	case "RemoteStartActive":
+		return fieldClass{cat: "vehicle_state", kind: "bool", unit: "none", isSettingUnit: false}
+	case "SemiCruiseSpeedLimitMph":
+		return fieldClass{cat: "driving", kind: "float", unit: "none", isSettingUnit: false}
 	}
 	return fieldClass{}
 }
