@@ -93,9 +93,10 @@ export function Drawer({
 
   if (!open) return null
   if (typeof document === 'undefined') return null
-  // z-[60] matches <Modal>: above StatusBar (z-[55]) and BottomTabBar (z-50)
-  // so drive/charge preview footers are never covered by chrome.
+  // Drawer is a slide-in panel primitive, not a centered dialog.
+  // Phase-45 / Prompt 04: NOT migrated to <Modal>.
   return createPortal(
+    // eslint-disable-next-line no-restricted-syntax -- overlay primitive; z-[60] matches Modal above StatusBar/tab bar
     <div
       ref={drawerRef}
       className="fixed inset-0 z-[60]"

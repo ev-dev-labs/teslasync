@@ -304,9 +304,7 @@ func BuildTimeline(in TimelineInput) TimelineOutput {
 	}
 
 	for _, edge := range signalEdges(in.Signals) {
-		for _, e := range signalEdgeEvents(vid, edge) {
-			events = append(events, e)
-		}
+		events = append(events, signalEdgeEvents(vid, edge)...)
 	}
 
 	for _, g := range gearEdges(in.Gears) {
