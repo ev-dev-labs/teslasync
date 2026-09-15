@@ -1,6 +1,6 @@
 // Package daylog is the read-model repo behind GET /api/v1/day-log.
 //
-// Layer: repository
+// Layer: adapter
 //
 // It reassembles one vehicle's local-calendar-day event timeline from
 // existing durable sources — no new tables, no write-path changes:
