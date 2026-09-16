@@ -1,0 +1,516 @@
+{
+  "uid": "teslasync-pack-capacity-proxy",
+  "title": "TeslaSync 🔋 Pack Capacity Proxy",
+  "tags": [
+    "teslasync"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Open in app",
+      "tooltip": "Open /science in TeslaSync",
+      "type": "link",
+      "url": "http://localhost:3000/science"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "mode": "markdown",
+        "content": "## Pack capacity proxy\nProxy = `EnergyRemaining` Wh ÷ (Soc ÷ 100) sampled while parked (`Gear=P`). This is a **proxy with sample count**, never a bare health percent. Aging slopes with CI live in the Science Lab; here are the raw inputs."
+      },
+      "targets": [],
+      "title": "Honesty — proxy with n",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH e AS (\n  SELECT ts, float_value AS wh FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n  ORDER BY ts DESC LIMIT 1\n), s AS (\n  SELECT ts, float_value AS soc FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'Soc' AND $__timeFilter(ts)\n  ORDER BY ts DESC LIMIT 1\n)\nSELECT ROUND((e.wh / NULLIF(s.soc / 100.0, 0))::numeric, 0) AS \"Proxy Wh\"\nFROM e, s",
+          "refId": "A"
+        }
+      ],
+      "title": "Latest proxy Wh",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"n\" FROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'Gear' AND str_value = 'P'\n  AND $__timeFilter(ts)",
+          "refId": "A"
+        }
+      ],
+      "title": "Rest samples (n)",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 3
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(total_energy_added_wh)::numeric, 0) AS \"Wh\"\nFROM charging_sessions\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Charge throughput Wh",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 3
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(energy_used_wh)::numeric, 0) AS \"Wh\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Drive throughput Wh",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH ev AS (\n  SELECT ts, float_value AS wh FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), sv AS (\n  SELECT ts, float_value AS soc FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'Soc' AND $__timeFilter(ts)\n)\nSELECT ev.ts AS \"time\", ev.wh / NULLIF(sv.soc / 100.0, 0) AS \"Proxy Wh\"\nFROM ev JOIN sv USING (ts)\nWHERE EXISTS (SELECT 1 FROM signal_log g\n  WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear'\n    AND g.ts <= ev.ts AND g.str_value = 'P'\n  ORDER BY g.ts DESC LIMIT 1)\nORDER BY ev.ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Proxy Wh while parked",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH ev AS (\n  SELECT ts, float_value AS wh FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), sv AS (\n  SELECT ts, float_value AS soc FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'Soc' AND $__timeFilter(ts)\n)\nSELECT $__timeGroup(ev.ts, '1w') AS \"time\",\n  PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY ev.wh / NULLIF(sv.soc / 100.0, 0))\n    AS \"Median proxy Wh\"\nFROM ev JOIN sv USING (ts)\nGROUP BY 1 ORDER BY 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Weekly median proxy",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT e.ts AS \"time\",\n  ROUND((e.float_value / NULLIF(s.float_value / 100.0, 0))::numeric, 0) AS \"Proxy Wh\",\n  ROUND(s.float_value::numeric, 1) AS \"Soc %\",\n  t.float_value AS \"Pack C\"\nFROM signal_log e\nJOIN signal_log s ON s.vehicle_id = e.vehicle_id AND s.ts = e.ts AND s.field = 'Soc'\nLEFT JOIN signal_log t ON t.vehicle_id = e.vehicle_id AND t.ts = e.ts\n  AND t.field = 'ModuleTempMax'\nWHERE e.vehicle_id = ${vehicle_id} AND e.field = 'EnergyRemaining'\n  AND $__timeFilter(e.ts)\nORDER BY e.ts DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "Rest samples (latest 200)",
+      "transparent": true,
+      "type": "table"
+    }
+  ]
+}

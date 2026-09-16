@@ -29,8 +29,9 @@ Usage:
     python scripts/sync_grafana_dashboards.py --only vehicle-overview tire-pressure
 
 Folder mapping mirrors local provisioning (grafana/provisioning/dashboards/dashboards.yml):
-    grafana/dashboards/system/*.json -> Grafana folder "TeslaSync - System"
-    grafana/dashboards/infra/*.json  -> Grafana folder "TeslaSync - Infra"
+    grafana/dashboards/system/*.json  -> Grafana folder "TeslaSync - System"
+    grafana/dashboards/infra/*.json   -> Grafana folder "TeslaSync - Infra"
+    grafana/dashboards/science/*.json -> Grafana folder "TeslaSync - Science"
 """
 from __future__ import annotations
 
@@ -45,8 +46,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DASH_ROOTS = {
-    "TeslaSync - System": REPO_ROOT / "grafana" / "dashboards" / "system",
-    "TeslaSync - Infra":  REPO_ROOT / "grafana" / "dashboards" / "infra",
+    "TeslaSync - System":  REPO_ROOT / "grafana" / "dashboards" / "system",
+    "TeslaSync - Infra":   REPO_ROOT / "grafana" / "dashboards" / "infra",
+    "TeslaSync - Science": REPO_ROOT / "grafana" / "dashboards" / "science",
 }
 
 DEFAULT_URL = "http://localhost:3001"

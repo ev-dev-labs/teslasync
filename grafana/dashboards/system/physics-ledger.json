@@ -1,0 +1,516 @@
+{
+  "uid": "teslasync-physics-ledger",
+  "title": "TeslaSync ⚖️ Physics Ledger",
+  "tags": [
+    "teslasync"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Open in app",
+      "tooltip": "Open /tesla-only/ledger in TeslaSync",
+      "type": "link",
+      "url": "http://localhost:3000/tesla-only/ledger"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "mode": "markdown",
+        "content": "## Physics ledger (from signal_log)\nMeasured Wh integrates pack V×I over drive samples (trapezoid in spirit: per-sample power × median dt). Aero Wh assumes the **labeled default** CdA 0.575 m², ρ 1.225 kg/m³. **Rolling and grade are unknown here** — mass lives in operator config, elevation is never sent — so Residual = Measured − Aero absorbs them. For the full solver with mass, see the app ledger. Pack current is charge-positive; discharge is negative on that axis."
+      },
+      "targets": [],
+      "title": "Honesty — ledger residuals",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH p AS (\n  SELECT ts, float_value AS v FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'PackVoltage' AND $__timeFilter(ts)\n), i AS (\n  SELECT ts, float_value AS a FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'PackCurrent' AND $__timeFilter(ts)\n)\nSELECT ROUND(SUM(-(p.v * i.a) * 5 / 3600.0)::numeric, 1) AS \"Measured Wh\"\nFROM p JOIN i USING (ts)\nWHERE EXISTS (SELECT 1 FROM signal_log s\n  WHERE s.vehicle_id = ${vehicle_id} AND s.field = 'Gear'\n    AND s.ts <= p.ts AND s.str_value = 'D'\n  ORDER BY s.ts DESC LIMIT 1)",
+          "refId": "A"
+        }
+      ],
+      "title": "Measured drive Wh",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(0.5 * 1.225 * 0.575\n    * POWER(float_value, 3) * 5 / 3600.0)::numeric, 1) AS \"Aero Wh\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed'\n  AND float_value > 1 AND $__timeFilter(ts)",
+          "refId": "A"
+        }
+      ],
+      "title": "Aero Wh (default CdA)",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 3
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT ROUND(SUM(energy_used_wh)::numeric, 1) AS \"Session Wh\"\nFROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)",
+          "refId": "A"
+        }
+      ],
+      "title": "Session drive Wh",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 3
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT COUNT(*) AS \"Drives\" FROM drives\nWHERE vehicle_id = ${vehicle_id} AND $__timeFilter(started_at)\n  AND energy_used_wh IS NOT NULL",
+          "refId": "A"
+        }
+      ],
+      "title": "Drives reconciled",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT p.ts AS \"time\",\n  p.float_value * i.float_value AS \"Pack VI W\"\nFROM signal_log p JOIN signal_log i\n  ON i.vehicle_id = p.vehicle_id AND i.ts = p.ts AND i.field = 'PackCurrent'\nWHERE p.vehicle_id = ${vehicle_id} AND p.field = 'PackVoltage'\n  AND $__timeFilter(p.ts)\nORDER BY p.ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Pack VI power (charge+)",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\",\n  0.5 * 1.225 * 0.575 * POWER(float_value, 3) AS \"Aero W\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed'\n  AND float_value > 1 AND $__timeFilter(ts)\nORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Aero power (default CdA)",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT d.started_at AS \"time\",\n  d.id AS \"Drive\",\n  ROUND(d.energy_used_wh::numeric, 1) AS \"Session Wh\",\n  ROUND((d.avg_power_w * d.duration_s / 3600.0)::numeric, 1) AS \"Avg-power Wh\",\n  ROUND((d.energy_used_wh - d.avg_power_w * d.duration_s / 3600.0)::numeric, 1) AS \"Delta Wh\"\nFROM drives d\nWHERE d.vehicle_id = ${vehicle_id} AND $__timeFilter(d.started_at)\n  AND d.energy_used_wh IS NOT NULL\nORDER BY d.started_at DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "Per-drive measured vs session (reconcile)",
+      "transparent": true,
+      "type": "table"
+    }
+  ]
+}

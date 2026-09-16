@@ -1,0 +1,516 @@
+{
+  "uid": "teslasync-vampire-watts",
+  "title": "TeslaSync 🧛 Vampire Watts",
+  "tags": [
+    "teslasync"
+  ],
+  "timezone": "browser",
+  "schemaVersion": 39,
+  "version": 1,
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "editable": true,
+  "graphTooltip": 1,
+  "links": [
+    {
+      "asDropdown": false,
+      "icon": "external link",
+      "includeVars": true,
+      "keepTime": true,
+      "tags": [],
+      "targetBlank": true,
+      "title": "Open in app",
+      "tooltip": "Open /tesla-only/vampire in TeslaSync",
+      "type": "link",
+      "url": "http://localhost:3000/tesla-only/vampire"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "current": {},
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "DS_TESLASYNC_POSTGRESQL"
+        },
+        "definition": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
+        "hide": 0,
+        "includeAll": false,
+        "multi": false,
+        "name": "vehicle_id",
+        "options": [],
+        "query": "SELECT id AS __value, display_name AS __text FROM vehicles UNION ALL SELECT 0 AS __value, 'No vehicles' AS __text WHERE NOT EXISTS (SELECT 1 FROM vehicles) ORDER BY __text",
+        "refresh": 1,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "id": 1,
+      "options": {
+        "mode": "markdown",
+        "content": "## Vampire watts\nDrain while `Gear=P` **only** — Neutral is rolling, not parked, and is excluded. Watts come from `EnergyRemaining` Wh deltas over parked hours. Companion to Vampire Drain (which reports %/hr from BatteryLevel)."
+      },
+      "targets": [],
+      "title": "Honesty — watts",
+      "transparent": true,
+      "type": "text"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 3
+      },
+      "id": 2,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT ROUND(AVG((e_max - e_min))::numeric, 1) AS \"Avg W\"\nFROM hours WHERE p_n > 0 AND other_n = 0 AND e_max IS NOT NULL",
+          "refId": "A"
+        }
+      ],
+      "title": "Avg parked watts",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 3
+      },
+      "id": 3,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT ROUND(SUM(e_max - e_min)::numeric, 0) AS \"Parked Wh\"\nFROM hours WHERE p_n > 0 AND other_n = 0 AND e_max IS NOT NULL",
+          "refId": "A"
+        }
+      ],
+      "title": "Parked Wh lost",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 3
+      },
+      "id": 4,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts) AND field = 'Gear'\n  GROUP BY 1\n)\nSELECT COUNT(*) AS \"Parked h\" FROM hours WHERE p_n > 0 AND other_n = 0",
+          "refId": "A"
+        }
+      ],
+      "title": "Parked hours",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 3
+      },
+      "id": 5,
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "auto"
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    MAX(CASE WHEN field = 'SentryMode' AND str_value IS DISTINCT FROM 'Off'\n      THEN 1 ELSE 0 END) AS sentry\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('Gear', 'SentryMode')\n  GROUP BY 1\n)\nSELECT COUNT(*) AS \"Sentry h\" FROM hours WHERE p_n > 0 AND sentry = 1",
+          "refId": "A"
+        }
+      ],
+      "title": "Sentry-on parked h",
+      "transparent": true,
+      "type": "stat"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "kwatth"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 7
+      },
+      "id": 6,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT ts AS \"time\", float_value AS \"Energy Wh\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\nORDER BY ts",
+          "refId": "A"
+        }
+      ],
+      "title": "Energy remaining Wh",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "watt"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 7
+      },
+      "id": 7,
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "none"
+        }
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT h AS \"time\", (e_max - e_min) AS \"Parked W\"\nFROM hours WHERE p_n > 0 AND other_n = 0 AND e_max IS NOT NULL\nORDER BY h",
+          "refId": "A"
+        }
+      ],
+      "title": "Hourly parked drain watts",
+      "transparent": true,
+      "type": "timeseries"
+    },
+    {
+      "datasource": {
+        "type": "postgres",
+        "uid": "DS_TESLASYNC_POSTGRESQL"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "fixedColor": "blue",
+            "mode": "fixed"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          },
+          "unit": "none"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 15
+      },
+      "id": 8,
+      "options": {
+        "cellHeight": "sm",
+        "footer": {
+          "show": false
+        },
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "datasource": {
+            "type": "postgres",
+            "uid": "DS_TESLASYNC_POSTGRESQL"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "WITH days AS (\n  SELECT date_trunc('day', ts) AS d,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT d AS \"time\", ROUND((e_max - e_min)::numeric, 0) AS \"Parked Wh\",\n  p_n AS \"Park samples\"\nFROM days WHERE p_n > 0 AND e_max IS NOT NULL\nORDER BY d DESC LIMIT 200",
+          "refId": "A"
+        }
+      ],
+      "title": "Parked days",
+      "transparent": true,
+      "type": "table"
+    }
+  ]
+}
