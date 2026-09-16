@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /tesla-only/vampire in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/tesla-only/vampire"
+      "url": "${app_url}/vampire-drain"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },
@@ -85,7 +97,7 @@
       "id": 1,
       "options": {
         "mode": "markdown",
-        "content": "## Vampire watts\nDrain while `Gear=P` **only** — Neutral is rolling, not parked, and is excluded. Watts come from `EnergyRemaining` Wh deltas over parked hours. Companion to Vampire Drain (which reports %/hr from BatteryLevel)."
+        "content": "## Observed parked energy-estimate changes\nNet signed BMS EnergyRemaining change divided by actual observed duration, not max-minus-min over an assumed hour. Only intervals up to 120 seconds with Gear=P and explicit Disconnected charge state qualify; state changes or observed motion reject an interval. Partial coverage is not total parked time. EnergyRemaining is a BMS estimate, not a calibrated drain meter; negative values mean an estimated energy increase. Sentry association is not causation."
       },
       "targets": [],
       "title": "Honesty — watts",
@@ -145,7 +157,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT ROUND(AVG((e_max - e_min))::numeric, 1) AS \"Avg W\"\nFROM hours WHERE p_n > 0 AND other_n = 0 AND e_max IS NOT NULL",
+          "rawSql": "WITH energy AS (\n  SELECT ts, float_value AS wh, LEAD(ts) OVER (ORDER BY ts) AS next_ts,\n    LEAD(float_value) OVER (ORDER BY ts) AS next_wh\n  FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), parked AS (\n  SELECT ts, wh-next_wh AS loss_wh, EXTRACT(EPOCH FROM (next_ts-ts)) AS seconds,\n    (SELECT se.str_value FROM signal_log se WHERE se.vehicle_id = ${vehicle_id} AND se.field = 'SentryMode' AND se.ts <= energy.ts ORDER BY se.ts DESC LIMIT 1) AS sentry\n  FROM energy\n  WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\n    AND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= energy.ts ORDER BY g.ts DESC LIMIT 1) = 'P'\n    AND (SELECT c.str_value FROM signal_log c WHERE c.vehicle_id = ${vehicle_id} AND c.field = 'DetailedChargeState' AND c.ts <= energy.ts ORDER BY c.ts DESC LIMIT 1) = 'Disconnected'\n    AND NOT EXISTS (SELECT 1 FROM signal_log x WHERE x.vehicle_id = ${vehicle_id}\n      AND x.ts > energy.ts AND x.ts <= energy.next_ts\n      AND ((x.field = 'Gear' AND x.str_value IS DISTINCT FROM 'P')\n        OR (x.field = 'DetailedChargeState' AND x.str_value IS DISTINCT FROM 'Disconnected')\n        OR (x.field = 'VehicleSpeed' AND ABS(x.float_value) > 1)))\n) SELECT SUM(loss_wh)*3600/NULLIF(SUM(seconds),0) AS \"Estimated W\" FROM parked",
           "refId": "A"
         }
       ],
@@ -174,7 +186,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -206,7 +218,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT ROUND(SUM(e_max - e_min)::numeric, 0) AS \"Parked Wh\"\nFROM hours WHERE p_n > 0 AND other_n = 0 AND e_max IS NOT NULL",
+          "rawSql": "WITH energy AS (\n  SELECT ts, float_value AS wh, LEAD(ts) OVER (ORDER BY ts) AS next_ts,\n    LEAD(float_value) OVER (ORDER BY ts) AS next_wh\n  FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), parked AS (\n  SELECT ts, wh-next_wh AS loss_wh, EXTRACT(EPOCH FROM (next_ts-ts)) AS seconds,\n    (SELECT se.str_value FROM signal_log se WHERE se.vehicle_id = ${vehicle_id} AND se.field = 'SentryMode' AND se.ts <= energy.ts ORDER BY se.ts DESC LIMIT 1) AS sentry\n  FROM energy\n  WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\n    AND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= energy.ts ORDER BY g.ts DESC LIMIT 1) = 'P'\n    AND (SELECT c.str_value FROM signal_log c WHERE c.vehicle_id = ${vehicle_id} AND c.field = 'DetailedChargeState' AND c.ts <= energy.ts ORDER BY c.ts DESC LIMIT 1) = 'Disconnected'\n    AND NOT EXISTS (SELECT 1 FROM signal_log x WHERE x.vehicle_id = ${vehicle_id}\n      AND x.ts > energy.ts AND x.ts <= energy.next_ts\n      AND ((x.field = 'Gear' AND x.str_value IS DISTINCT FROM 'P')\n        OR (x.field = 'DetailedChargeState' AND x.str_value IS DISTINCT FROM 'Disconnected')\n        OR (x.field = 'VehicleSpeed' AND ABS(x.float_value) > 1)))\n) SELECT SUM(loss_wh) AS \"Net estimated Wh decrease\" FROM parked",
           "refId": "A"
         }
       ],
@@ -267,7 +279,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts) AND field = 'Gear'\n  GROUP BY 1\n)\nSELECT COUNT(*) AS \"Parked h\" FROM hours WHERE p_n > 0 AND other_n = 0",
+          "rawSql": "WITH energy AS (\n  SELECT ts, float_value AS wh, LEAD(ts) OVER (ORDER BY ts) AS next_ts,\n    LEAD(float_value) OVER (ORDER BY ts) AS next_wh\n  FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), parked AS (\n  SELECT ts, wh-next_wh AS loss_wh, EXTRACT(EPOCH FROM (next_ts-ts)) AS seconds,\n    (SELECT se.str_value FROM signal_log se WHERE se.vehicle_id = ${vehicle_id} AND se.field = 'SentryMode' AND se.ts <= energy.ts ORDER BY se.ts DESC LIMIT 1) AS sentry\n  FROM energy\n  WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\n    AND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= energy.ts ORDER BY g.ts DESC LIMIT 1) = 'P'\n    AND (SELECT c.str_value FROM signal_log c WHERE c.vehicle_id = ${vehicle_id} AND c.field = 'DetailedChargeState' AND c.ts <= energy.ts ORDER BY c.ts DESC LIMIT 1) = 'Disconnected'\n    AND NOT EXISTS (SELECT 1 FROM signal_log x WHERE x.vehicle_id = ${vehicle_id}\n      AND x.ts > energy.ts AND x.ts <= energy.next_ts\n      AND ((x.field = 'Gear' AND x.str_value IS DISTINCT FROM 'P')\n        OR (x.field = 'DetailedChargeState' AND x.str_value IS DISTINCT FROM 'Disconnected')\n        OR (x.field = 'VehicleSpeed' AND ABS(x.float_value) > 1)))\n) SELECT SUM(seconds)/3600 AS \"Observed h\" FROM parked",
           "refId": "A"
         }
       ],
@@ -328,7 +340,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    MAX(CASE WHEN field = 'SentryMode' AND str_value IS DISTINCT FROM 'Off'\n      THEN 1 ELSE 0 END) AS sentry\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('Gear', 'SentryMode')\n  GROUP BY 1\n)\nSELECT COUNT(*) AS \"Sentry h\" FROM hours WHERE p_n > 0 AND sentry = 1",
+          "rawSql": "WITH energy AS (\n  SELECT ts, float_value AS wh, LEAD(ts) OVER (ORDER BY ts) AS next_ts,\n    LEAD(float_value) OVER (ORDER BY ts) AS next_wh\n  FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), parked AS (\n  SELECT ts, wh-next_wh AS loss_wh, EXTRACT(EPOCH FROM (next_ts-ts)) AS seconds,\n    (SELECT se.str_value FROM signal_log se WHERE se.vehicle_id = ${vehicle_id} AND se.field = 'SentryMode' AND se.ts <= energy.ts ORDER BY se.ts DESC LIMIT 1) AS sentry\n  FROM energy\n  WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\n    AND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= energy.ts ORDER BY g.ts DESC LIMIT 1) = 'P'\n    AND (SELECT c.str_value FROM signal_log c WHERE c.vehicle_id = ${vehicle_id} AND c.field = 'DetailedChargeState' AND c.ts <= energy.ts ORDER BY c.ts DESC LIMIT 1) = 'Disconnected'\n    AND NOT EXISTS (SELECT 1 FROM signal_log x WHERE x.vehicle_id = ${vehicle_id}\n      AND x.ts > energy.ts AND x.ts <= energy.next_ts\n      AND ((x.field = 'Gear' AND x.str_value IS DISTINCT FROM 'P')\n        OR (x.field = 'DetailedChargeState' AND x.str_value IS DISTINCT FROM 'Disconnected')\n        OR (x.field = 'VehicleSpeed' AND ABS(x.float_value) > 1)))\n) SELECT SUM(seconds)/3600 AS \"Observed sentry h\" FROM parked WHERE sentry IN ('On','Armed','Aware','Panic')",
           "refId": "A"
         }
       ],
@@ -357,7 +369,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -448,7 +460,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "WITH hours AS (\n  SELECT date_trunc('hour', ts) AS h,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value IS DISTINCT FROM 'P') AS other_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT h AS \"time\", (e_max - e_min) AS \"Parked W\"\nFROM hours WHERE p_n > 0 AND other_n = 0 AND e_max IS NOT NULL\nORDER BY h",
+          "rawSql": "WITH energy AS (\n  SELECT ts, float_value AS wh, LEAD(ts) OVER (ORDER BY ts) AS next_ts,\n    LEAD(float_value) OVER (ORDER BY ts) AS next_wh\n  FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), parked AS (\n  SELECT ts, wh-next_wh AS loss_wh, EXTRACT(EPOCH FROM (next_ts-ts)) AS seconds,\n    (SELECT se.str_value FROM signal_log se WHERE se.vehicle_id = ${vehicle_id} AND se.field = 'SentryMode' AND se.ts <= energy.ts ORDER BY se.ts DESC LIMIT 1) AS sentry\n  FROM energy\n  WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\n    AND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= energy.ts ORDER BY g.ts DESC LIMIT 1) = 'P'\n    AND (SELECT c.str_value FROM signal_log c WHERE c.vehicle_id = ${vehicle_id} AND c.field = 'DetailedChargeState' AND c.ts <= energy.ts ORDER BY c.ts DESC LIMIT 1) = 'Disconnected'\n    AND NOT EXISTS (SELECT 1 FROM signal_log x WHERE x.vehicle_id = ${vehicle_id}\n      AND x.ts > energy.ts AND x.ts <= energy.next_ts\n      AND ((x.field = 'Gear' AND x.str_value IS DISTINCT FROM 'P')\n        OR (x.field = 'DetailedChargeState' AND x.str_value IS DISTINCT FROM 'Disconnected')\n        OR (x.field = 'VehicleSpeed' AND ABS(x.float_value) > 1)))\n) SELECT date_trunc('hour',ts) AS \"time\", SUM(loss_wh)*3600/NULLIF(SUM(seconds),0) AS \"Estimated W\" FROM parked GROUP BY 1 ORDER BY 1",
           "refId": "A"
         }
       ],
@@ -504,7 +516,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH days AS (\n  SELECT date_trunc('day', ts) AS d,\n    MAX(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_max,\n    MIN(float_value) FILTER (WHERE field = 'EnergyRemaining') AS e_min,\n    COUNT(*) FILTER (WHERE field = 'Gear' AND str_value = 'P') AS p_n\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND $__timeFilter(ts)\n    AND field IN ('EnergyRemaining', 'Gear')\n  GROUP BY 1\n)\nSELECT d AS \"time\", ROUND((e_max - e_min)::numeric, 0) AS \"Parked Wh\",\n  p_n AS \"Park samples\"\nFROM days WHERE p_n > 0 AND e_max IS NOT NULL\nORDER BY d DESC LIMIT 200",
+          "rawSql": "WITH energy AS (\n  SELECT ts, float_value AS wh, LEAD(ts) OVER (ORDER BY ts) AS next_ts,\n    LEAD(float_value) OVER (ORDER BY ts) AS next_wh\n  FROM signal_log WHERE vehicle_id = ${vehicle_id} AND field = 'EnergyRemaining' AND $__timeFilter(ts)\n), parked AS (\n  SELECT ts, wh-next_wh AS loss_wh, EXTRACT(EPOCH FROM (next_ts-ts)) AS seconds,\n    (SELECT se.str_value FROM signal_log se WHERE se.vehicle_id = ${vehicle_id} AND se.field = 'SentryMode' AND se.ts <= energy.ts ORDER BY se.ts DESC LIMIT 1) AS sentry\n  FROM energy\n  WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\n    AND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= energy.ts ORDER BY g.ts DESC LIMIT 1) = 'P'\n    AND (SELECT c.str_value FROM signal_log c WHERE c.vehicle_id = ${vehicle_id} AND c.field = 'DetailedChargeState' AND c.ts <= energy.ts ORDER BY c.ts DESC LIMIT 1) = 'Disconnected'\n    AND NOT EXISTS (SELECT 1 FROM signal_log x WHERE x.vehicle_id = ${vehicle_id}\n      AND x.ts > energy.ts AND x.ts <= energy.next_ts\n      AND ((x.field = 'Gear' AND x.str_value IS DISTINCT FROM 'P')\n        OR (x.field = 'DetailedChargeState' AND x.str_value IS DISTINCT FROM 'Disconnected')\n        OR (x.field = 'VehicleSpeed' AND ABS(x.float_value) > 1)))\n) SELECT date_trunc('day',ts) AS \"time\", SUM(loss_wh) AS \"Net estimated Wh decrease\", SUM(seconds)/3600 AS \"Observed h\" FROM parked GROUP BY 1 ORDER BY 1 DESC LIMIT 200",
           "refId": "A"
         }
       ],

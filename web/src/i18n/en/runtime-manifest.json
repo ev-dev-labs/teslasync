@@ -565,6 +565,7 @@
       "digitalTwin",
       "fleet",
       "parking",
+      "physicsLedger",
       "telemetry",
       "teslaOnly",
       "utilization",
@@ -723,6 +724,9 @@
     ],
     "ownership": [
       "ownership"
+    ],
+    "science": [
+      "science"
     ]
   }
 }

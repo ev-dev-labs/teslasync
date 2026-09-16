@@ -64,6 +64,7 @@ type Config struct {
 	WebPush              WebPushConfig
 	System               SystemConfig
 	GitHub               GitHubConfig
+	Physics              PhysicsConfig
 
 	// Operator-toggled behaviors that should not require a code change.
 	Features FeaturesConfig
@@ -345,6 +346,24 @@ func (d DatabaseConfig) MigrationDSN() string {
 	)
 }
 
+// PhysicsConfig holds the VIN's physical constants for the energy/force
+// solver (internal/physics). All fields are optional: nil means unknown
+// and the solver leaves mass-dependent terms unknown rather than assuming
+// kilograms. CdA/Crr fall back to labelled defaults inside the solver.
+type PhysicsConfig struct {
+	// MassKg is curb + typical occupants in kilograms.
+	MassKg *float64
+	// CdAM2 is drag area in square meters.
+	CdAM2 *float64
+	// Crr is the rolling-resistance coefficient (dimensionless).
+	Crr *float64
+	// TireRecommendedKpa is the door-placard cold pressure. Nil means
+	// unknown and the science lab leaves underinflation uncomputed.
+	TireRecommendedKpa *float64
+	// WeatherEnabled permits sending drive-start coordinates to Open-Meteo.
+	WeatherEnabled bool
+}
+
 type TeslaConfig struct {
 	ClientID        string
 	ClientSecret    string
@@ -616,6 +635,14 @@ func Load() (*Config, error) {
 			Token: envStr("TESLASYNC_GITHUB_TOKEN", ""),
 		},
 
+		Physics: PhysicsConfig{
+			MassKg:             envOptionalFloat64("TESLASYNC_VEHICLE_MASS_KG"),
+			CdAM2:              envOptionalFloat64("TESLASYNC_VEHICLE_CDA_M2"),
+			Crr:                envOptionalFloat64("TESLASYNC_VEHICLE_CRR"),
+			TireRecommendedKpa: envOptionalFloat64("TESLASYNC_TIRE_RECOMMENDED_KPA"),
+			WeatherEnabled:     envBool("TESLASYNC_SCIENCE_WEATHER_ENABLED", false),
+		},
+
 		Features: FeaturesConfig{
 			DLQReplayEnabled: envBool("DLQ_REPLAY_ENABLED", false),
 			DLQRingCapacity:  envInt("DLQ_RING_CAPACITY", 200),
@@ -648,6 +675,15 @@ func envFloat64(key string, fallback float64) float64 {
 		}
 	}
 	return fallback
+}
+
+func envOptionalFloat64(key string) *float64 {
+	if v := os.Getenv(key); v != "" {
+		if f, err := strconv.ParseFloat(v, 64); err == nil && f > 0 && !math.IsInf(f, 0) && !math.IsNaN(f) {
+			return &f
+		}
+	}
+	return nil
 }
 
 func envBool(key string, fallback bool) bool {

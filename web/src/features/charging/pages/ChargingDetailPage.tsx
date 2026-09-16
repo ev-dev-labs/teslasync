@@ -45,6 +45,7 @@ import {
 } from '@/components/charts';
 import { distanceAddedM, durationMinutes } from '../components/charging-curve/helpers';
 import { ChargePhysicsPanel } from '../components/ChargePhysicsPanel';
+import { ChargeLedgerCompactPanel } from '../components/ChargeLedgerCompactPanel';
 import { ChargeBillTruthPanel } from '../components/ChargeBillTruthPanel';
 import { ShareSessionDialog } from '../components/ShareSessionDialog';
 
@@ -539,6 +540,7 @@ export default function ChargingDetailPage() {
 
       <FadeIn delay={0.07}>
         <ChargePhysicsPanel sessionId={id} />
+        <ChargeLedgerCompactPanel sessionId={id} />
       </FadeIn>
 
       {/* ── 2. Battery & Power ──────────────────────────────────── */}

@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /tesla-only/range in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/tesla-only/range"
+      "url": "${app_url}/tesla-only/range"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },
@@ -328,7 +340,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH latest AS (\n  SELECT field, float_value AS v FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('RatedRange', 'EstBatteryRange', 'IdealBatteryRange')\n    AND $__timeFilter(ts)\n  ORDER BY ts DESC LIMIT 3\n)\nSELECT convert_distance_m(MAX(v) - MIN(v)) AS \"Spread\" FROM latest",
+          "rawSql": "WITH latest AS (\nSELECT DISTINCT ON (field) field, ts, float_value AS v FROM signal_log\nWHERE vehicle_id=${vehicle_id} AND field IN ('RatedRange','EstBatteryRange','IdealBatteryRange')\nAND $__timeFilter(ts) ORDER BY field, ts DESC\n)\nSELECT CASE WHEN COUNT(v) >= 2 AND MAX(ts)-MIN(ts) <= INTERVAL '120 seconds'\nTHEN convert_distance_m(MAX(v)-MIN(v)) END AS \"Spread\" FROM latest",
           "refId": "A"
         }
       ],
@@ -417,7 +429,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -504,7 +516,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH days AS (\n  SELECT date_trunc('day', ts) AS d, field,\n    AVG(float_value) AS v\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('RatedRange', 'EstBatteryRange', 'IdealBatteryRange')\n    AND $__timeFilter(ts)\n  GROUP BY 1, 2\n)\nSELECT d AS \"time\",\n  convert_distance_m(MAX(v) - MIN(v)) AS \"Spread\",\n  COUNT(DISTINCT field) AS \"Estimators\"\nFROM days GROUP BY d ORDER BY d DESC LIMIT 200",
+          "rawSql": "WITH days AS (\n  SELECT date_trunc('day', ts) AS d, field,\n    AVG(float_value) AS v\n  FROM signal_log\n  WHERE vehicle_id = ${vehicle_id}\n    AND field IN ('RatedRange', 'EstBatteryRange', 'IdealBatteryRange')\n    AND $__timeFilter(ts)\n  GROUP BY 1, 2\n)\nSELECT d AS \"time\",\n  convert_distance_m(MAX(v) - MIN(v)) AS \"Spread\",\n  COUNT(DISTINCT field) AS \"Estimators\"\nFROM days GROUP BY d HAVING COUNT(DISTINCT field) >= 2 ORDER BY d DESC LIMIT 200",
           "refId": "A"
         }
       ],

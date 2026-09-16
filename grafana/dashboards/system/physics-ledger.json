@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /tesla-only/ledger in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/tesla-only/ledger"
+      "url": "${app_url}/tesla-only/ledger"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },
@@ -85,7 +97,7 @@
       "id": 1,
       "options": {
         "mode": "markdown",
-        "content": "## Physics ledger (from signal_log)\nMeasured Wh integrates pack V×I over drive samples (trapezoid in spirit: per-sample power × median dt). Aero Wh assumes the **labeled default** CdA 0.575 m², ρ 1.225 kg/m³. **Rolling and grade are unknown here** — mass lives in operator config, elevation is never sent — so Residual = Measured − Aero absorbs them. For the full solver with mass, see the app ledger. Pack current is charge-positive; discharge is negative on that axis."
+        "content": "## Physics observations, not the app solver\nObserved electrical Wh uses timestamp-aligned voltage/current pairs and actual elapsed time, refusing gaps over 120 seconds and non-Drive transitions. Coverage may be partial; do not compare it with full session totals. Aero is a separate illustrative model (CdA 0.575 m², air density 1.225 kg/m³), not the configured app solver. Rolling, grade and the full unexplained residual are available only in the app. Session average-power products are not independent measurements."
       },
       "targets": [],
       "title": "Honesty — ledger residuals",
@@ -113,7 +125,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -145,11 +157,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH p AS (\n  SELECT ts, float_value AS v FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'PackVoltage' AND $__timeFilter(ts)\n), i AS (\n  SELECT ts, float_value AS a FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'PackCurrent' AND $__timeFilter(ts)\n)\nSELECT ROUND(SUM(-(p.v * i.a) * 5 / 3600.0)::numeric, 1) AS \"Measured Wh\"\nFROM p JOIN i USING (ts)\nWHERE EXISTS (SELECT 1 FROM signal_log s\n  WHERE s.vehicle_id = ${vehicle_id} AND s.field = 'Gear'\n    AND s.ts <= p.ts AND s.str_value = 'D'\n  ORDER BY s.ts DESC LIMIT 1)",
+          "rawSql": "WITH points AS (SELECT p.ts, -(p.float_value*i.float_value) AS w\nFROM signal_log p JOIN signal_log i ON i.vehicle_id=p.vehicle_id AND i.ts=p.ts AND i.field='PackCurrent'\nWHERE p.vehicle_id=${vehicle_id} AND p.field='PackVoltage' AND $__timeFilter(p.ts)), intervals AS (\n  SELECT ts, w, LEAD(w) OVER (ORDER BY ts) AS next_w,\n    LEAD(ts) OVER (ORDER BY ts) AS next_ts FROM points\n)\nSELECT ROUND(SUM((w + next_w) / 2 * EXTRACT(EPOCH FROM (next_ts-ts)) / 3600.0)::numeric, 1) AS \"Observed drive Wh\"\nFROM intervals WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\nAND (SELECT g.str_value FROM signal_log g WHERE g.vehicle_id = ${vehicle_id} AND g.field = 'Gear' AND g.ts <= intervals.ts ORDER BY g.ts DESC LIMIT 1) = 'D'\nAND NOT EXISTS (SELECT 1 FROM signal_log g WHERE g.vehicle_id=${vehicle_id} AND g.field='Gear'\n  AND g.ts > intervals.ts AND g.ts <= intervals.next_ts AND g.str_value IS DISTINCT FROM 'D')",
           "refId": "A"
         }
       ],
-      "title": "Measured drive Wh",
+      "title": "Observed drive Wh (partial aligned coverage)",
       "transparent": true,
       "type": "stat"
     },
@@ -174,7 +186,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -206,7 +218,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT ROUND(SUM(0.5 * 1.225 * 0.575\n    * POWER(float_value, 3) * 5 / 3600.0)::numeric, 1) AS \"Aero Wh\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed'\n  AND float_value > 1 AND $__timeFilter(ts)",
+          "rawSql": "WITH points AS (SELECT ts, 0.5*1.225*0.575*POWER(ABS(float_value),3) AS w FROM signal_log\nWHERE vehicle_id=${vehicle_id} AND field='VehicleSpeed' AND $__timeFilter(ts)), intervals AS (\n  SELECT ts, w, LEAD(w) OVER (ORDER BY ts) AS next_w,\n    LEAD(ts) OVER (ORDER BY ts) AS next_ts FROM points\n)\nSELECT ROUND(SUM((w + next_w) / 2 * EXTRACT(EPOCH FROM (next_ts-ts)) / 3600.0)::numeric, 1) AS \"Aero model Wh\"\nFROM intervals WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'",
           "refId": "A"
         }
       ],
@@ -235,7 +247,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -332,7 +344,7 @@
           "refId": "A"
         }
       ],
-      "title": "Drives reconciled",
+      "title": "Drives with session energy",
       "transparent": true,
       "type": "stat"
     },
@@ -448,7 +460,7 @@
           "editorMode": "code",
           "format": "time_series",
           "rawQuery": true,
-          "rawSql": "SELECT ts AS \"time\",\n  0.5 * 1.225 * 0.575 * POWER(float_value, 3) AS \"Aero W\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed'\n  AND float_value > 1 AND $__timeFilter(ts)\nORDER BY ts",
+          "rawSql": "SELECT ts AS \"time\",\n  0.5 * 1.225 * 0.575 * POWER(ABS(float_value), 3) AS \"Aero W\"\nFROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'VehicleSpeed'\n  AND float_value > 1 AND $__timeFilter(ts)\nORDER BY ts",
           "refId": "A"
         }
       ],
@@ -508,7 +520,7 @@
           "refId": "A"
         }
       ],
-      "title": "Per-drive measured vs session (reconcile)",
+      "title": "Session aggregates (not independent reconciliation)",
       "transparent": true,
       "type": "table"
     }

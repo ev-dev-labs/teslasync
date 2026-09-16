@@ -1101,6 +1101,25 @@ tesla:
   commandReserveUsd: 0.05
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Physics solver constants (VIN physical parameters, all optional)
+#
+# Unset (empty) means unknown: the solver leaves mass-dependent terms
+# unknown rather than assuming kilograms. CdA/Crr fall back to labelled
+# defaults inside the solver when empty.
+# ─────────────────────────────────────────────────────────────────────────────
+physics:
+  # -- Curb + typical occupants in kilograms (env: TESLASYNC_VEHICLE_MASS_KG).
+  massKg: ""
+  # -- Drag area in square meters (env: TESLASYNC_VEHICLE_CDA_M2).
+  cdaM2: ""
+  # -- Rolling-resistance coefficient, dimensionless (env: TESLASYNC_VEHICLE_CRR).
+  crr: ""
+  # -- Door-placard cold tire pressure in kPa (env: TESLASYNC_TIRE_RECOMMENDED_KPA).
+  tireRecommendedKpa: ""
+  # -- Opt in to sending drive-start coordinates to Open-Meteo for science weather joins.
+  weatherEnabled: false
+
+# ─────────────────────────────────────────────────────────────────────────────
 # PostgreSQL
 #
 # Set enabled: true  → an embedded PostgreSQL 17 pod is deployed.

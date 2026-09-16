@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /tesla-only/charge-port in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/tesla-only/charge-port"
+      "url": "${app_url}/tesla-only/charge-port"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },
@@ -85,7 +97,7 @@
       "id": 1,
       "options": {
         "mode": "markdown",
-        "content": "## Charge honesty\nPhases: Plugged → Starting → Charging → Stopped/Complete → Disconnected. `Stopped` is a pause. `Complete` is at limit, still plugged. **Only `Disconnected`/latch release is unplug.** Complete→Disconnected dwell is etiquette time at DC, not a Tesla penalty score."
+        "content": "## Charge honesty\nPhases: Plugged → Starting → Charging → Stopped/Complete → Disconnected. `Stopped` is a pause. `Complete` is at limit, still plugged. **Only `Disconnected`/explicit Disconnected state is unplug.** Complete→Disconnected dwell is etiquette time at DC, not a Tesla penalty score."
       },
       "targets": [],
       "title": "Honesty — charge phases",
@@ -174,7 +186,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -267,11 +279,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT COUNT(*) AS \"Unplugs\" FROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'ChargePortLatch'\n  AND str_value LIKE '%Disengaged%' AND $__timeFilter(ts)",
+          "rawSql": "SELECT COUNT(*) AS \"Unplugs\" FROM signal_log\nWHERE vehicle_id = ${vehicle_id} AND field = 'DetailedChargeState'\n  AND str_value = 'Disconnected' AND $__timeFilter(ts)",
           "refId": "A"
         }
       ],
-      "title": "Unplugs (latch)",
+      "title": "Disconnected observations",
       "transparent": true,
       "type": "stat"
     },
@@ -417,7 +429,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },

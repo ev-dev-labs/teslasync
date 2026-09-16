@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /tesla-only/firmware-epochs in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/tesla-only/firmware-epochs"
+      "url": "${app_url}/tesla-only/firmware-epochs"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },

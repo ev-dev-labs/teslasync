@@ -216,6 +216,8 @@ import (
 	apivitals "github.com/ev-dev-labs/teslasync/internal/api/webvitals"
 	apiweekly "github.com/ev-dev-labs/teslasync/internal/api/weeklydigest"
 	"github.com/ev-dev-labs/teslasync/internal/api/yearreview"
+	"github.com/ev-dev-labs/teslasync/internal/app/physicssvc"
+	"github.com/ev-dev-labs/teslasync/internal/app/sciencesvc"
 	"github.com/ev-dev-labs/teslasync/internal/config"
 	"github.com/ev-dev-labs/teslasync/internal/database"
 	actioncenterdb "github.com/ev-dev-labs/teslasync/internal/database/actioncenter"
@@ -1061,6 +1063,23 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// server-side, so the browser never downloads a raw counter history.
 	fsdInsightsHandler := apifsd.NewHandler(db)
 	physicsHandler := apiphysics.NewHandler(db, stateReader, liveStateReader)
+	physicsLedgerHandler := v1handlers.NewPhysicsLedgerHandler(physicssvc.New(db, stateReader, cfg))
+	var scienceWeather sciencesvc.HistoryFetcher
+	if cfg.Physics.WeatherEnabled {
+		client := apistormguard.NewClient()
+		scienceWeather = func(ctx context.Context, lat, lng float64, start, end time.Time) ([]sciencesvc.HistoryHour, error) {
+			hours, err := client.FetchHistory(ctx, lat, lng, start, end)
+			if err != nil {
+				return nil, err
+			}
+			out := make([]sciencesvc.HistoryHour, 0, len(hours))
+			for _, h := range hours {
+				out = append(out, sciencesvc.HistoryHour{At: h.At, TempC: h.TempC, PressureHpa: h.PressureHpa, WindMps: h.WindMps, PrecipMm: h.PrecipMm})
+			}
+			return out, nil
+		}
+	}
+	scienceHandler := v1handlers.NewScienceHandler(sciencesvc.New(db, stateReader, cfg, scienceWeather))
 	if mqttClient != nil {
 		physicsHandler.WithMQTTConnected(func() *bool {
 			connected := mqttClient.IsConnected()
@@ -3474,6 +3493,18 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			r.Get("/charging/{sessionID}", physicsHandler.ChargePhysics)
 			r.Get("/drives/{driveID}/theater", physicsHandler.Theater)
 			r.Get("/drives/{driveID}/silent", physicsHandler.Silent)
+			r.Get("/ledger", physicsLedgerHandler.Ledger)
+			r.Get("/charging/{sessionID}/ledger", physicsLedgerHandler.ChargeLedger)
+			r.Get("/drives/{driveID}/ledger", physicsLedgerHandler.DriveLedger)
+			r.Get("/park/ledger", physicsLedgerHandler.ParkLedger)
+		})
+		r.Route("/science", func(r chi.Router) {
+			r.Get("/electrochem", scienceHandler.Electrochem)
+			r.Get("/thermal", scienceHandler.Thermal)
+			r.Get("/weather", scienceHandler.Weather)
+			r.Get("/tires", scienceHandler.Tires)
+			r.Get("/notebook", scienceHandler.Notebook)
+			r.Get("/charging/{sessionID}/ir", scienceHandler.ChargeIR)
 		})
 
 		// Tesla Charging History (Supercharger/DC billing records)

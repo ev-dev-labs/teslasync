@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /tesla-only/clocks in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/tesla-only/clocks"
+      "url": "${app_url}/tesla-only/clocks"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },
@@ -85,7 +97,7 @@
       "id": 1,
       "options": {
         "mode": "markdown",
-        "content": "## Physics cockpit\nEnums are shown as recorded text, never 0/1. Park is confirmed `Gear=P`; Neutral is rolling. Charge `Stopped` is a pause, `Complete` is at limit and still plugged — only `Disconnected`/latch release is unplug. Values follow Settings → Units via the SI converters. Empty = no data, never zero-filled."
+        "content": "## Physics cockpit\nEnums are shown as recorded text, never 0/1. Park is confirmed `Gear=P`; Neutral is rolling. Charge `Stopped` is a pause, `Complete` is at limit and still plugged — only `Disconnected`/explicit Disconnected state is unplug. Values follow Settings → Units via the SI converters. Empty = no data, never zero-filled."
       },
       "targets": [],
       "title": "Honesty — cockpit",

@@ -24,7 +24,7 @@
       "title": "Open in app",
       "tooltip": "Open /climate in TeslaSync",
       "type": "link",
-      "url": "http://localhost:3000/climate"
+      "url": "${app_url}/climate"
     }
   ],
   "templating": {
@@ -47,6 +47,18 @@
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
+      },
+      {
+        "name": "app_url",
+        "label": "TeslaSync app URL",
+        "type": "textbox",
+        "query": "",
+        "current": {
+          "text": "",
+          "value": ""
+        },
+        "options": [],
+        "description": "Set the externally reachable app origin (for example https://teslasync.example.com)."
       }
     ]
   },
@@ -113,7 +125,7 @@
               }
             ]
           },
-          "unit": "kwatth"
+          "unit": "watth"
         },
         "overrides": []
       },
@@ -145,11 +157,11 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "WITH h AS (\n  SELECT ts, float_value AS w FROM signal_log\n  WHERE vehicle_id = ${vehicle_id} AND field = 'HvacPower' AND $__timeFilter(ts)\n)\nSELECT ROUND(SUM(h.w * 5 / 3600.0)::numeric, 0) AS \"Precon Wh\"\nFROM h WHERE EXISTS (SELECT 1 FROM signal_log p\n  WHERE p.vehicle_id = ${vehicle_id} AND p.field = 'PreconditioningEnabled'\n    AND p.ts <= h.ts AND (p.bool_value OR p.str_value ILIKE '%on%' OR p.str_value ILIKE '%true%')\n  ORDER BY p.ts DESC LIMIT 1)",
+          "rawSql": "WITH points AS (SELECT ts, float_value AS w FROM signal_log WHERE vehicle_id=${vehicle_id}\nAND field='HvacPower' AND $__timeFilter(ts)), intervals AS (\n  SELECT ts, w, LEAD(w) OVER (ORDER BY ts) AS next_w,\n    LEAD(ts) OVER (ORDER BY ts) AS next_ts FROM points\n)\nSELECT ROUND(SUM((w + next_w) / 2 * EXTRACT(EPOCH FROM (next_ts-ts)) / 3600.0)::numeric, 1) AS \"Observed preconditioning Wh\"\nFROM intervals WHERE next_ts > ts AND next_ts-ts <= INTERVAL '120 seconds'\nAND (SELECT p.bool_value FROM signal_log p WHERE p.vehicle_id = ${vehicle_id} AND p.field = 'PreconditioningEnabled' AND p.ts <= intervals.ts ORDER BY p.ts DESC LIMIT 1) IS TRUE\nAND NOT EXISTS (SELECT 1 FROM signal_log p WHERE p.vehicle_id=${vehicle_id}\nAND p.field='PreconditioningEnabled' AND p.ts > intervals.ts AND p.ts <= intervals.next_ts AND p.bool_value IS DISTINCT FROM TRUE)",
           "refId": "A"
         }
       ],
-      "title": "Precondition Wh",
+      "title": "Observed preconditioning Wh (partial coverage)",
       "transparent": true,
       "type": "stat"
     },

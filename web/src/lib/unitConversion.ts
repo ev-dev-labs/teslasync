@@ -380,6 +380,30 @@ export function formatTemperature(
   return `${formatNumber(value, pref.locale, digits)}${pref.temperature}`
 }
 
+/** Temperature differences scale without the absolute Fahrenheit offset. */
+export function formatTemperatureDelta(
+  celsius: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(celsius)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, DEFAULT_PRECISION.temperature)
+  const value = convertTempFromSI(celsius, pref.temperature) - convertTempFromSI(0, pref.temperature)
+  return `${formatNumber(value, pref.locale, digits)}${pref.temperature}`
+}
+
+/** Consumption stays in Wh per preferred distance unit, accepting Wh/m. */
+export function formatEnergyPerDistance(
+  whPerM: number | null | undefined,
+  pref: UnitPref,
+  options?: FormatOptions,
+): string {
+  if (!isFiniteNumber(whPerM)) return resolveEmpty(pref)
+  const digits = resolvePrecision(pref, options?.precision, 0)
+  const value = whPerM * convertDistanceToSI(1, pref.distance)
+  return `${formatNumber(value, pref.locale, digits)} Wh/${pref.distance}`
+}
+
 /**
  * Format an SI kilopascal pressure for display in the user's unit.
  * @param kpa - pressure in kilopascals (SI). Null/undefined/NaN → fallback.

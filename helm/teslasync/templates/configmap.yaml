@@ -39,6 +39,11 @@ data:
   TESLA_TIMEOUT: {{ .Values.tesla.timeout | default "30s" | quote }}
   TESLA_API_DAILY_BUDGET_USD: {{ .Values.tesla.dailyBudgetUsd | quote }}
   TESLA_API_COMMAND_RESERVE_USD: {{ .Values.tesla.commandReserveUsd | quote }}
+  TESLASYNC_VEHICLE_MASS_KG: {{ .Values.physics.massKg | default "" | quote }}
+  TESLASYNC_VEHICLE_CDA_M2: {{ .Values.physics.cdaM2 | default "" | quote }}
+  TESLASYNC_VEHICLE_CRR: {{ .Values.physics.crr | default "" | quote }}
+  TESLASYNC_TIRE_RECOMMENDED_KPA: {{ .Values.physics.tireRecommendedKpa | default "" | quote }}
+  TESLASYNC_SCIENCE_WEATHER_ENABLED: {{ .Values.physics.weatherEnabled | default false | quote }}
   WORKER_POLL_INTERVAL: {{ .Values.config.pollInterval | quote }}
   WORKER_SLEEP_POLL_MULT: {{ .Values.config.sleepPollMultiplier | default 4 | quote }}
   TESLASYNC_LOG_LEVEL: {{ .Values.config.logLevel | quote }}

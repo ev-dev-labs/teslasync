@@ -23,6 +23,11 @@ const meteoTimeout = 10 * time.Second
 // defaultMeteoBase is the keyless Open-Meteo forecast endpoint.
 const defaultMeteoBase = "https://api.open-meteo.com/v1/forecast"
 
+// defaultArchiveBase is the keyless Open-Meteo ERA5 archive endpoint used
+// for historical science joins (same provider, same client — not a second
+// weather client).
+const defaultArchiveBase = "https://archive-api.open-meteo.com/v1/archive"
+
 // Forecast is the hourly severe-weather signal subset we assess.
 type Forecast struct {
 	Times      []time.Time
@@ -45,6 +50,29 @@ type meteoResponse struct {
 type Client struct {
 	BaseURL    string
 	HTTPClient *http.Client
+	// ArchiveBase overrides the history endpoint for tests.
+	ArchiveBase string
+}
+
+// HistoryHour is one archive hour: temp, pressure, wind, precipitation.
+type HistoryHour struct {
+	At          time.Time
+	TempC       float64
+	PressureHpa float64
+	WindMps     float64
+	PrecipMm    float64
+}
+
+type historyHourly struct {
+	Time     []string   `json:"time"`
+	Temp     []*float64 `json:"temperature_2m"`
+	Pressure []*float64 `json:"surface_pressure"`
+	Wind     []*float64 `json:"wind_speed_10m"`
+	Precip   []*float64 `json:"precipitation"`
+}
+
+type historyResponse struct {
+	Hourly historyHourly `json:"hourly"`
 }
 
 // NewClient wires a production client.
@@ -113,4 +141,70 @@ func (c *Client) Fetch(ctx context.Context, lat, lng float64) (*Forecast, error)
 		f.WindGustMS = append(f.WindGustMS, mr.Hourly.WindGusts[i])
 	}
 	return f, nil
+}
+
+// FetchHistory returns archive hours for lat/lng over [start, end] in UTC.
+// Open-Meteo serves wind in km/h by default; wind_speed_unit=ms keeps SI.
+func (c *Client) FetchHistory(ctx context.Context, lat, lng float64, start, end time.Time) ([]HistoryHour, error) {
+	base := c.ArchiveBase
+	if base == "" {
+		base = defaultArchiveBase
+	}
+	q := url.Values{
+		"latitude":        {strconv.FormatFloat(lat, 'f', 5, 64)},
+		"longitude":       {strconv.FormatFloat(lng, 'f', 5, 64)},
+		"start_date":      {start.UTC().Format("2006-01-02")},
+		"end_date":        {end.UTC().Format("2006-01-02")},
+		"hourly":          {"temperature_2m,surface_pressure,wind_speed_10m,precipitation"},
+		"wind_speed_unit": {"ms"},
+		"timezone":        {"UTC"},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, base+"?"+q.Encode(), nil)
+	if err != nil {
+		return nil, fmt.Errorf("stormguard: build archive request: %w", err)
+	}
+	req.Header.Set("User-Agent", "TeslaSync/1.0")
+
+	client := c.HTTPClient
+	if client == nil {
+		client = http.DefaultClient
+	}
+	callCtx, cancel := context.WithTimeout(ctx, meteoTimeout)
+	defer cancel()
+	resp, err := client.Do(req.WithContext(callCtx))
+	if err != nil {
+		return nil, fmt.Errorf("stormguard: archive fetch: %w", err)
+	}
+	defer resp.Body.Close()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return nil, fmt.Errorf("stormguard: archive read: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("stormguard: archive status %d", resp.StatusCode)
+	}
+
+	var hr historyResponse
+	if err := json.Unmarshal(raw, &hr); err != nil {
+		return nil, fmt.Errorf("stormguard: archive decode: %w", err)
+	}
+	n := len(hr.Hourly.Time)
+	if len(hr.Hourly.Temp) < n || len(hr.Hourly.Pressure) < n || len(hr.Hourly.Wind) < n || len(hr.Hourly.Precip) < n {
+		return nil, fmt.Errorf("stormguard: archive ragged series (n=%d)", n)
+	}
+	out := make([]HistoryHour, 0, n)
+	for i := 0; i < n; i++ {
+		if hr.Hourly.Temp[i] == nil || hr.Hourly.Pressure[i] == nil || hr.Hourly.Wind[i] == nil || hr.Hourly.Precip[i] == nil {
+			return nil, fmt.Errorf("stormguard: archive missing measurement at hour %d", i)
+		}
+		ts, err := time.Parse("2006-01-02T15:04", hr.Hourly.Time[i])
+		if err != nil {
+			return nil, fmt.Errorf("stormguard: archive time %q: %w", hr.Hourly.Time[i], err)
+		}
+		out = append(out, HistoryHour{
+			At: ts.UTC(), TempC: *hr.Hourly.Temp[i], PressureHpa: *hr.Hourly.Pressure[i],
+			WindMps: *hr.Hourly.Wind[i], PrecipMm: *hr.Hourly.Precip[i],
+		})
+	}
+	return out, nil
 }

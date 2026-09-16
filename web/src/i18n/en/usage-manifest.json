@@ -597,7 +597,9 @@
     "stormguard": "advanced-intelligence",
     "comfort": "automations",
     "journey": "trips",
-    "dayLog": "vehicles"
+    "dayLog": "vehicles",
+    "physicsLedger": "vehicles",
+    "science": "science"
   },
   "bundles": {
     "shell": [
@@ -1101,6 +1103,7 @@
       "digitalTwin",
       "fleet",
       "parking",
+      "physicsLedger",
       "telemetry",
       "teslaOnly",
       "utilization",
@@ -1259,6 +1262,9 @@
     ],
     "ownership": [
       "ownership"
+    ],
+    "science": [
+      "science"
     ]
   },
   "detailNamespaces": [
@@ -2385,6 +2391,7 @@
     "routes.parkingAnalytics",
     "routes.periodCompare",
     "routes.physicsCockpit",
+    "routes.physicsLedger",
     "routes.powerDashboards",
     "routes.powerFlowDashboard",
     "routes.powerGrafanaPanel",
@@ -2406,6 +2413,7 @@
     "routes.safetySettings",
     "routes.safetySettingsPage",
     "routes.schemaDrift",
+    "routes.scienceLab",
     "routes.search",
     "routes.seasonalEfficiency",
     "routes.secretRotation",
@@ -3708,7 +3716,9 @@
     "stormguard": "advanced-intelligence",
     "comfort": "automations",
     "journey": "trips",
-    "dayLog": "vehicles"
+    "dayLog": "vehicles",
+    "physicsLedger": "vehicles",
+    "science": "science"
   },
   "shellCriticalKeys": [
     "a11y.breadcrumb",
@@ -4646,6 +4656,7 @@
     "routes.parkingAnalytics",
     "routes.periodCompare",
     "routes.physicsCockpit",
+    "routes.physicsLedger",
     "routes.powerDashboards",
     "routes.powerFlowDashboard",
     "routes.powerGrafanaPanel",
@@ -4667,6 +4678,7 @@
     "routes.safetySettings",
     "routes.safetySettingsPage",
     "routes.schemaDrift",
+    "routes.scienceLab",
     "routes.search",
     "routes.seasonalEfficiency",
     "routes.secretRotation",

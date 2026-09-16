@@ -59,6 +59,10 @@ type TimelineRow struct {
 	// Fields maps output field name (per FieldMapping.Field) to the value
 	// observed at Timestamp.
 	Fields map[string]SignalValue
+	// ObservedAt records per-field emissions seen within this timeline.
+	// Seed-only fields have no entry: their freshness is unknown. This is
+	// internal provenance and is deliberately omitted from MarshalJSON.
+	ObservedAt map[string]time.Time
 }
 
 // MarshalJSON flattens TimelineRow to the legacy JSON shape:

@@ -1027,7 +1027,8 @@
       "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load",
       "theaterFailed": "Gear theater failed to load",
       "silentFailed": "Counter-silent panel failed to load",
-      "fsdFailed": "Supervised-driving panel failed to load"
+      "fsdFailed": "Supervised-driving panel failed to load",
+      "ledgerFailed": "Energy ledger failed to load"
     },
     "theater": {
       "title": "Gear theater",
@@ -1087,7 +1088,13 @@
       "min": "Min"
     },
     "loading": "Loading drive detail",
-    "max": "Max"
+    "max": "Max",
+    "ledger": {
+      "title": "Energy ledger",
+      "regen": "Regen",
+      "friction": "Friction brake",
+      "openFull": "Open the full physics ledger"
+    }
   },
   "driveDna": {
     "title": "Drive DNA",

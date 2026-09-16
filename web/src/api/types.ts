@@ -3643,6 +3643,399 @@ export type DayLogLayer =
   | 'gear'
   | 'homelink'
 
+/** One ledger line: value plus provenance. Mirrors Go physics.Term. */
+export interface PhysicsTerm {
+  value_wh: number | null
+  method: string
+  unknown: boolean
+  missing_signals?: string[]
+}
+
+export interface PhysicsDynamicsPoint {
+  at: string
+  speed_mps: number | null
+  accel_mps2: number | null
+  force_long_n: number | null
+  power_mech_w: number | null
+  power_pack_w: number | null
+  friction_brake_w: number | null
+  unknown: boolean
+}
+
+export interface PhysicsLongitudinalDynamics {
+  points: PhysicsDynamicsPoint[]
+  mass_kg: number | null
+  mass_source: string
+  regen_wh: number | null
+  friction_brake_wh: number | null
+  unknown: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsDriveLedger {
+  measured_wh: PhysicsTerm
+  session_wh: number | null
+  reconcile_wh: number | null
+  aero_wh: PhysicsTerm
+  rolling_wh: PhysicsTerm
+  grade_wh: PhysicsTerm
+  inertial_wh: PhysicsTerm
+  accessory_wh: PhysicsTerm
+  drivetrain_loss_wh: PhysicsTerm
+  predicted_wh: number | null
+  unexplained_wh: number | null
+  unexplained_known: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsChargeLedger {
+  energy_added_wh: number | null
+  session_wh: number | null
+  wall_wh: PhysicsTerm
+  efficiency_pct: number | null
+  efficiency_known: boolean
+  precondition_wh: PhysicsTerm
+  dwell_complete_s: number | null
+  unplugged: boolean
+  unknown: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsParkLedger {
+  duration_s: number
+  avg_watts_w: number | null
+  energy_wh: number | null
+  sentry_wh: PhysicsTerm
+  cabin_overheat_wh: PhysicsTerm
+  precondition_wh: PhysicsTerm
+  quiet_pack_wh: PhysicsTerm
+  plugged_at_limit: boolean
+  trusted: boolean
+  unknown: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsThermalLedger {
+  pack_min_c: number | null
+  pack_max_c: number | null
+  pack_start_c: number | null
+  pack_end_c: number | null
+  inside_c: number | null
+  outside_c: number | null
+  heat_vs_power_r: number | null
+  unknown: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsRangeLedger {
+  rated_m: number | null
+  est_m: number | null
+  ideal_m: number | null
+  energy_wh: number | null
+  implied_wh_per_m: number | null
+  spread_m: number | null
+  disagree: boolean
+  unknown: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsTireLedger {
+  fl_kpa: number | null
+  fr_kpa: number | null
+  rl_kpa: number | null
+  rr_kpa: number | null
+  imbalance_kpa: number | null
+  unknown: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface PhysicsEpochResidual {
+  firmware: string
+  measured_wh: number | null
+  predicted_wh: number | null
+  unexplained_wh: number | null
+  sample_count: number
+  honesty: string
+}
+
+export interface PhysicsUnknownInterval {
+  started_at: string
+  ended_at: string
+  duration_s: number
+  reason: string
+}
+
+export interface PhysicsBlackBoxPoint {
+  at: string
+  speed_mps: number | null
+  power_pack_w: number | null
+  force_long_n: number | null
+  latch?: string
+}
+
+export interface PhysicsMarker {
+  at: string
+  kind: string
+  id: number
+  edge: string
+}
+
+/** Envelope returned by `GET /api/v1/physics/ledger` and siblings. */
+export interface PhysicsLedger {
+  vehicle_id: number
+  kind: string
+  start: string
+  end: string
+  dynamics: PhysicsLongitudinalDynamics
+  drive: PhysicsDriveLedger
+  charge: PhysicsChargeLedger
+  park: PhysicsParkLedger
+  thermal: PhysicsThermalLedger
+  range: PhysicsRangeLedger
+  tires: PhysicsTireLedger
+  epochs: PhysicsEpochResidual[]
+  unknown_intervals: PhysicsUnknownInterval[]
+  unknown_hours: number
+  black_box: PhysicsBlackBoxPoint[]
+  contradictions?: string[]
+  markers?: PhysicsMarker[]
+  truncated: boolean
+  missing_signals?: string[]
+  honesty: string
+}
+
+/** One OCV rest observation. Mirrors Go science.OCVPoint. */
+export interface ScienceOCVPoint {
+  at: string
+  ocv_pack_v: number
+  soc_pct: number
+  temp_c: number | null
+  direction: string
+  dwell_s: number
+  energy_wh: number | null
+  brick_spread_mv: number | null
+}
+
+export interface ScienceOCVBin {
+  soc_lo_pct: number
+  soc_hi_pct: number
+  temp_lo_c: number
+  temp_hi_c: number
+  n: number
+  mean_ocv_v: number
+  slope_v_per_pct: number | null
+  unknown: boolean
+}
+
+export interface ScienceHysteresisBin {
+  temp_lo_c: number
+  temp_hi_c: number
+  soc_lo_pct: number
+  soc_hi_pct: number
+  n_charge: number
+  n_discharge: number
+  delta_v: number | null
+  unknown: boolean
+}
+
+export interface ScienceIRPoint {
+  at: string
+  ir_pack_ohm: number
+  temp_c: number | null
+  soc_pct: number | null
+  delta_i_a: number
+  delta_v_v: number
+  dt_s: number
+  context: string
+}
+
+export interface ScienceArrheniusFit {
+  n: number
+  slope: number
+  intercept: number
+  r2: number
+  se_slope: number
+  ci95_low: number
+  ci95_high: number
+  ci_method: string
+  ea_j_per_mol: number | null
+  ea_ci95_low: number | null
+  ea_ci95_high: number | null
+  temp_bins: number
+  temp_span_c: number
+  unknown: boolean
+  honesty: string
+}
+
+export interface ScienceAgingSplit {
+  nominal_pack_wh: number
+  nominal_pack_source: string
+  throughput_wh: number | null
+  equiv_full_cycles: number | null
+  rest_hours: number
+  high_soc_rest_hours: number
+  proxy_slope_wh_per_day: number | null
+  proxy_ci95_low: number | null
+  proxy_ci95_high: number | null
+  proxy_n: number
+  holdout_rmse_wh: number | null
+  unknown: boolean
+  honesty: string
+}
+
+/** Envelope returned by `GET /api/v1/science/electrochem`. */
+export interface ScienceElectrochem {
+  vehicle_id: number
+  vin?: string
+  start: string
+  end: string
+  ocv_points: ScienceOCVPoint[]
+  ocv_bins: ScienceOCVBin[]
+  hysteresis: ScienceHysteresisBin[]
+  ir_points: ScienceIRPoint[]
+  arrhenius: ScienceArrheniusFit
+  pulse_ir: ScienceIRPoint[]
+  aging: ScienceAgingSplit
+  capacity_proxy_wh: number | null
+  capacity_proxy_unknown: boolean
+  firmware_epoch: string
+  pooled_epochs: boolean
+  signals_used: string[]
+  missing_signals?: string[]
+  truncated: boolean
+  honesty: string
+}
+
+export interface ScienceThermalFit {
+  start: string
+  end: string
+  kind: string
+  tau_s: number | null
+  tau_ci95_low: number | null
+  tau_ci95_high: number | null
+  t_inf_c: number | null
+  n: number
+  r2: number | null
+  residual_rmse_c: number | null
+  solar_unknown: boolean
+  unknown: boolean
+}
+
+/** Envelope returned by `GET /api/v1/science/thermal`. */
+export interface ScienceThermal {
+  vehicle_id: number
+  start: string
+  end: string
+  fits: ScienceThermalFit[]
+  signals_used: string[]
+  missing_signals?: string[]
+  truncated: boolean
+  honesty: string
+}
+
+export interface ScienceWeatherPoint {
+  drive_id: number
+  at: string
+  lat: number
+  lon: number
+  temp_c: number | null
+  pressure_hpa: number | null
+  wind_mps: number | null
+  precip_mm: number | null
+  density_kg_m3: number | null
+  residual_wh_per_m: number | null
+  session_wh_per_m: number | null
+}
+
+/** Envelope returned by `GET /api/v1/science/weather`. */
+export interface ScienceWeather {
+  vehicle_id: number
+  start: string
+  end: string
+  points: ScienceWeatherPoint[]
+  density_r: number | null
+  wind_r: number | null
+  rain_n: number
+  dry_n: number
+  weather_unknown: boolean
+  signals_used: string[]
+  missing_signals?: string[]
+  honesty: string
+}
+
+/** Envelope returned by `GET /api/v1/science/tires`. */
+export interface ScienceTires {
+  vehicle_id: number
+  start: string
+  end: string
+  fl_kpa: number | null
+  fr_kpa: number | null
+  rl_kpa: number | null
+  rr_kpa: number | null
+  imbalance_kpa: number | null
+  recommended_kpa: number | null
+  underinflation_frac: number | null
+  extra_wh: number | null
+  extra_model_low: number | null
+  extra_model_high: number | null
+  distance_m: number | null
+  unknown: boolean
+  signals_used: string[]
+  missing_signals?: string[]
+  honesty: string
+}
+
+/** Envelope returned by `GET /api/v1/science/charging/{id}/ir`. */
+export interface ScienceChargeIR {
+  session_id: number
+  vehicle_id: number
+  points: ScienceIRPoint[]
+  signals_used: string[]
+  missing_signals?: string[]
+  honesty: string
+}
+
+export interface ScienceNotebookEntry {
+  id: string
+  domain: string
+  hypothesis: string
+  vehicle_id: number
+  vin?: string
+  start: string
+  end: string
+  firmware_epoch: string
+  n: number
+  method: string
+  parameters?: Record<string, unknown>
+  ci?: Record<string, unknown>
+  ci_method: string
+  holdout_frac: number | null
+  holdout_rmse: number | null
+  residual_mean: number | null
+  residual_rmse: number | null
+  signals_used: string[]
+  missing_signals?: string[]
+  unknown: boolean
+  honesty: string
+}
+
+/** Envelope returned by `GET /api/v1/science/notebook`. */
+export interface ScienceNotebook {
+  vehicle_id: number
+  vin?: string
+  start: string
+  end: string
+  entries: ScienceNotebookEntry[]
+  honesty: string
+}
+
 /** Envelope returned by `GET /api/v1/day-log`. */
 export interface DayLogResponse {
   vehicle_id: number

@@ -10,9 +10,12 @@ Display conversion happens in panel units or the settings-backed SQL converters
 (`convert_distance_m`, `convert_speed_mps`, `convert_pressure_pa`, `convert_temp`).
 No `_mi/_mph/_kwh` columns in new SQL.
 
-## Existing inventory (57 dashboards — do not clone or duplicate UIDs)
+## Current inventory (77 dashboards — do not clone or duplicate UIDs)
 
-### System (`TeslaSync - System`, 41 files)
+The base inventory below contains 61 dashboards; the coverage table records
+the 16 additions (14 system, one infra, one science).
+
+### System (`TeslaSync - System`, 59 files; 45 base files below)
 
 | File | UID | Title |
 | ---- | --- | ----- |
@@ -62,7 +65,7 @@ No `_mi/_mph/_kwh` columns in new SQL.
 | vehicle-overview.json | teslasync-vehicle-overview | Vehicle Overview |
 | weekly-digest.json | teslasync-weekly-digest | Weekly Digest |
 
-### Infra (`TeslaSync - Infra`, 16 files)
+### Infra (`TeslaSync - Infra`, 17 files; 16 base files below)
 
 | File | UID | Title |
 | ---- | --- | ----- |
@@ -94,7 +97,7 @@ SLO per-endpoint boards (`slo-*.json`), `frontend-rum-overview.json`,
 | ----------------- | --------------------- | ------------ |
 | `/day-log` day log / FSM spine | `timeline.json` (state timeline only) | **NEW** `system/day-log.json`: event counts by field/day, gap hours, caps |
 | Tesla Physics cockpit (`/tesla-only/clocks`, gear) | — | **NEW** `system/physics-cockpit.json`: Gear/ChargeState/latch enums from `signal_log` |
-| Physics ledger (`/tesla-only/ledger`) | — | **NEW** `system/physics-ledger.json`: Power×dt measured + aero/rolling from `signal_log`, unexplained residual, honesty text (no ledger table on branch) |
+| Physics ledger (`/tesla-only/ledger`) | — | **NEW** `system/physics-ledger.json`: timestamp-aligned electrical observations with actual elapsed integration and a separate labeled aero illustration. This is **not** the configured app solver or its full unexplained residual. |
 | Charge honesty (`/tesla-only/charge-port`) | `charging-curve.json` (curve only) | **NEW** `system/charge-honesty.json`: phase durations, Complete→Disconnected dwell |
 | Vampire watts | `vampire-drain.json` (%/hr only) | **NEW** `system/vampire-watts.json`: watts from EnergyRemaining Wh deltas (existing file is %-based, left untouched) |
 | Firmware epochs (`/tesla-only/firmware-epochs`) | `software-updates.json` (update events) | **NEW** `system/firmware-epochs.json`: efficiency/residual by Version (correlation honesty) |
@@ -107,11 +110,11 @@ SLO per-endpoint boards (`slo-*.json`), `frontend-rum-overview.json`,
 | Ownership tariffs/invoices | `true-cost.json`, `cost-analysis.json` | **EXTEND in place only if needed**; new `system/ownership-cost.json` skipped — tariff tables feed cost honesty note in `site-energy`/true-cost scope (see below) |
 | Charging thermal tax / interruptions | `charging-stats.json` (analytics) | **NEW** `system/charging-thermal.json`: pack temp vs power, interruption counts |
 | Cabin thermal / preconditioning | `climate-hvac.json` (HVAC state) | **NEW** `system/cabin-thermal.json`: soak/cooldown τ inputs, precondition Wh |
-| Science Lab (`/science`) | — | **NEW** `science/lab-inputs.json` (single board, 3 sections): electrochem brick-spread + VI sample counts, thermal/TPMS rows + Wh/km-vs-ambient, latest-session IR inputs + VI coverage. Fits/CIs stay in `GET /science/*` (code exists: `internal/api/science/`); weather + notebook are per-request (not stored) so the board states that with `SELECT 0` honesty stats instead of fake series |
-| Phase-42 pipeline (infra) | `telemetry-pipeline.json`, `fleet-telemetry.json` | **NEW** `infra/phase-42-pipeline.json`: writer failures vs codec, normalize throughput, L1/L2 lag, FSM ticks |
+| Science Lab (`/science`) | — | **NEW** `science/lab-inputs.json`: electrochem brick-spread and aligned VI observations, thermal/TPMS rows and consumption-vs-ambient inputs. Fits remain in `GET /science/*` (`internal/app/sciencesvc`); weather and notebook reports are generated per request, not stored. Input counts are not counts of qualified experiments. |
+| Phase-42 pipeline (infra) | `telemetry-pipeline.json`, `fleet-telemetry.json` | **NEW** `infra/phase42-pipeline.json`: writer failures vs codec, normalize throughput, L1/L2 lag, FSM ticks |
 | Frontend RUM | helm `frontend-rum-*.json` | Link only, no clone |
 | Time machine / twin-lab | — | **Deferred**: no counterfactual tables on branch; no stub |
-| SLOs for new APIs | helm `slo-*.json` (generated) | **NEW** `slo/catalog.yaml` entries: `physics_ledger_availability`, `science_lab_availability` (ADR-008 #6; generation stays with CI) |
+| SLOs for new APIs | helm `slo-*.json` (generated) | `physics_ledger_availability` and `science_lab_availability` include generated recording rules, burn alerts, and dashboards. Regenerate with `cmd/slogen` when the catalog changes. |
 | Ops home | `system/home.json` | **EXTEND**: links to new UIDs |
 
 ## Ownership-cost decision

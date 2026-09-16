@@ -1,6 +1,10 @@
 package teslaphysics
 
-import "time"
+import (
+	"time"
+
+	"github.com/ev-dev-labs/teslasync/internal/physics"
+)
 
 const (
 	chargeHonesty        = "Plugged → Starting → Charging → Stopped/Complete → Disconnected. Stopped is a pause. Complete is at limit, still plugged. Only Disconnected is unplug."
@@ -39,7 +43,7 @@ const (
 	maxExclusiveLookback = 14 * 24 * time.Hour
 	unknownGap           = 2 * time.Minute
 	blackBoxWindow       = 90 * time.Second
-	packCurrentQuietA    = 2.0
+	packCurrentQuietA    = physics.PackCurrentQuietA
 
 	maxExclusiveRows     = 2048
 	maxExclusiveSessions = 1000

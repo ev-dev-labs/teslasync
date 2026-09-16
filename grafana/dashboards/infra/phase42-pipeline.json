@@ -169,7 +169,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum(rate(teslasync_codec_decode_errors_total[5m])) + sum(rate(teslasync_codec_flatten_errors_total[5m]))",
+          "expr": "sum(rate(teslasync_codec_json_decode_errors_total[5m])) + sum(rate(teslasync_codec_json_flatten_errors_total[5m]))",
           "refId": "A"
         }
       ],
@@ -399,7 +399,7 @@
             "type": "prometheus",
             "uid": "DS_TESLASYNC_PROMETHEUS"
           },
-          "expr": "sum(rate(teslasync_codec_decode_errors_total[5m])) + sum(rate(teslasync_codec_flatten_errors_total[5m]))",
+          "expr": "sum(rate(teslasync_codec_json_decode_errors_total[5m])) + sum(rate(teslasync_codec_json_flatten_errors_total[5m]))",
           "refId": "A"
         }
       ],

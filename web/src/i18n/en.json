@@ -5713,6 +5713,10 @@
         "feeType": "Tesla marked this line as idle, congestion, or tax.",
         "ac": "AC sessions rarely have a Supercharger invoice. Home/work energy is pack truth only."
       }
+    },
+    "ledger": {
+      "title": "Charge energy ledger",
+      "openFull": "Open the full physics ledger"
     }
   },
   "compare": {
@@ -13572,7 +13576,8 @@
       "aiSpeedProfileInsightsFailed": "Helix speed-profile insights failed to load",
       "theaterFailed": "Gear theater failed to load",
       "silentFailed": "Counter-silent panel failed to load",
-      "fsdFailed": "Supervised-driving panel failed to load"
+      "fsdFailed": "Supervised-driving panel failed to load",
+      "ledgerFailed": "Energy ledger failed to load"
     },
     "theater": {
       "title": "Gear theater",
@@ -13632,7 +13637,13 @@
       "min": "Min"
     },
     "loading": "Loading drive detail",
-    "max": "Max"
+    "max": "Max",
+    "ledger": {
+      "title": "Energy ledger",
+      "regen": "Regen",
+      "friction": "Friction brake",
+      "openFull": "Open the full physics ledger"
+    }
   },
   "drivetrain": {
     "temperatures": "Temperature Details",
@@ -26229,6 +26240,195 @@
       "SentryModeStateAware": "Aware",
       "SentryModeStatePanic": "Panic",
       "SentryModeStateQuiet": "Quiet"
+    }
+  },
+  "physicsLedger": {
+    "title": "Physics Ledger",
+    "subtitle": "Predicted vs measured energy and force. Residual is unexplained, never zero-filled.",
+    "unknown": {
+      "title": "Unknown budget",
+      "hours": "Unknown hours",
+      "start": "Start",
+      "end": "End",
+      "duration": "Duration",
+      "reason": "Reason",
+      "empty": "Full coverage: no gaps in this window."
+    },
+    "missing": "missing",
+    "kind": "Window",
+    "truncated": "Sample cap hit — oldest prefix solved",
+    "contradiction": "Contradiction",
+    "missingSignals": "Missing signals",
+    "massSource": "mass",
+    "empty": "No ledger samples in this window. Drive, charge, or park with telemetry flowing.",
+    "window": {
+      "label": "Window",
+      "hours": "Last {{hours}}h"
+    },
+    "dynamics": {
+      "title": "Longitudinal dynamics",
+      "regen": "Regen",
+      "friction": "Friction brake",
+      "packKw": "Pack power",
+      "speed": "Speed",
+      "empty": "No motion samples were recorded in this window.",
+      "speedNote": "Speed shown in display units",
+      "chartLabel": "Pack power and speed over the window"
+    },
+    "drive": {
+      "title": "Drive energy ledger",
+      "measured": "Measured pack energy",
+      "aero": "Aero",
+      "rolling": "Rolling",
+      "grade": "Grade",
+      "inertial": "Inertial",
+      "accessory": "Accessory / HVAC",
+      "drivetrainLoss": "Drivetrain loss (model)",
+      "unexplained": "Unexplained residual",
+      "predicted": "Predicted (known terms)",
+      "session": "Session",
+      "reconcile": "reconcile"
+    },
+    "charge": {
+      "title": "Charge physics",
+      "unplugged": "Unplugged",
+      "stillPlugged": "Still plugged / unknown",
+      "dwell": "Complete dwell",
+      "added": "Energy added",
+      "wall": "Wall energy",
+      "precondition": "Preconditioning",
+      "efficiency": "Efficiency"
+    },
+    "park": {
+      "title": "Park / vampire physics",
+      "trusted": "Park trusted",
+      "untrusted": "Park untrusted",
+      "avgWatts": "Average drain",
+      "energy": "Park energy",
+      "sentry": "Sentry",
+      "cabin": "Cabin overheat",
+      "precondition": "Preconditioning",
+      "quiet": "Quiet pack",
+      "pluggedAtLimit": "Plugged at limit"
+    },
+    "thermal": {
+      "title": "Thermal",
+      "empty": "No pack temperature sensors reported in this window.",
+      "packMin": "Pack min",
+      "packMax": "Pack max",
+      "inside": "Cabin",
+      "outside": "Ambient",
+      "heatVsPower": "Heat vs power correlation"
+    },
+    "range": {
+      "title": "Range disagreement",
+      "rated": "Rated",
+      "est": "Typical",
+      "ideal": "Ideal",
+      "energy": "Energy remaining",
+      "spread": "Spread",
+      "implied": "Implied",
+      "whPerKm": "Wh/km"
+    },
+    "tires": {
+      "title": "Tires",
+      "empty": "No TPMS corners reported in this window.",
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right",
+      "imbalance": "Imbalance (max − min)"
+    },
+    "epochs": {
+      "title": "Firmware epochs",
+      "firmware": "Firmware",
+      "measured": "Measured",
+      "predicted": "Predicted",
+      "unexplained": "Unexplained",
+      "samples": "Samples",
+      "empty": "No firmware-labelled samples in this window.",
+      "honesty": "Each software version is a physics baseline for this VIN. Residual changes are correlation, not proof of a fix."
+    },
+    "blackBox": {
+      "title": "Black box: last 90 s",
+      "honesty": "Force, pack power, and speed before the window end, from signal_log only.",
+      "force": "Force (N)",
+      "empty": "Fewer than two samples in the last 90 seconds.",
+      "chartLabel": "Force, power, and speed in the last 90 seconds"
+    },
+    "markers": {
+      "title": "Chapter markers",
+      "empty": "No drive or charge boundaries in this window."
+    }
+  },
+  "science": {
+    "title": "Science Lab",
+    "subtitle": "Every claim is a fit: n, uncertainty, firmware epoch, holdout.",
+    "unknown": "unknown",
+    "empty": "No fit inputs in this window.",
+    "truncated": "Sample cap hit",
+    "firmware": "Firmware",
+    "missingSignals": "Missing signals",
+    "holdout": "holdout",
+    "holdoutRmse": "holdout RMSE",
+    "window": {
+      "label": "Window",
+      "days": "Last {{days}}d"
+    },
+    "electrochem": {
+      "title": "Battery electrochemistry (pack-equivalent)",
+      "socBin": "SOC bin",
+      "tempBin": "Temp bin",
+      "meanOcv": "Mean OCV (V)",
+      "slope": "Slope V/%",
+      "nCharge": "n charge",
+      "nDischarge": "n discharge",
+      "deltaV": "ΔV (V)",
+      "restPoints": "rest points",
+      "irMilliohm": "Pack IR (mΩ)",
+      "irChart": "Pack resistance over the window",
+      "irEmpty": "No current steps qualified for DCIR in this window.",
+      "tempBins": "Temp bins",
+      "aging": "Aging exposure and capacity-proxy trend",
+      "assumedReference": "Assumed reference capacity",
+      "throughput": "Throughput",
+      "restHours": "Rest",
+      "proxySlope": "Proxy slope",
+      "capacityProxy": "Capacity proxy"
+    },
+    "thermal": {
+      "title": "Thermal science (τ, residual)",
+      "empty": "No Park cooldown transients with ambient reference in this window.",
+      "solarUnknown": "solar unknown"
+    },
+    "weather": {
+      "title": "Weather coupling (correlation)",
+      "drive": "Drive",
+      "at": "Start",
+      "temp": "Temperature",
+      "wind": "Wind",
+      "residual": "Residual",
+      "weatherUnknown": "weather unknown",
+      "joined": "joined {{n}} drives",
+      "rainDry": "rain/dry",
+      "empty": "No drives joined archive weather in this window."
+    },
+    "tires": {
+      "title": "Tire / contact mechanics",
+      "empty": "No TPMS corners reported in this window. Yaw, steer, and slip are not available from Tesla signals.",
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right",
+      "imbalance": "Imbalance",
+      "underinflation": "Underinflation",
+      "extra": "Extra rolling",
+      "modelBand": "Model sensitivity, not a confidence interval",
+      "placard": "placard"
+    },
+    "notebook": {
+      "title": "Lab notebook (method)",
+      "empty": "No notebook rows in this window."
     }
   }
 }
