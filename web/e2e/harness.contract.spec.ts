@@ -44,6 +44,16 @@ test('browser globals are not monkeypatched by state seeding', () => {
   expect(source).not.toContain('HarnessEventSource');
 });
 
+test('visual date labels use a fixed clock without changing shared browser seeding', () => {
+  const visual = readFileSync(resolve(process.cwd(), 'e2e', 'visual.spec.ts'), 'utf8');
+  const seed = readFileSync(resolve(process.cwd(), 'e2e', 'mockApi.ts'), 'utf8');
+  const clock = "page.clock.setFixedTime(new Date('2026-09-13T12:00:00Z'))";
+  expect(visual).toContain(clock);
+  expect(visual.indexOf(clock)).toBeLessThan(visual.indexOf('page.goto'));
+  expect(seed).not.toContain('clock.setFixedTime');
+  expect(visual).not.toContain('clock.pauseAt');
+});
+
 test('Date semantics contract uses the standard hermetic API lifecycle', () => {
   const source = readFileSync(
     resolve(process.cwd(), 'e2e', 'date.contract.smoke.spec.ts'),

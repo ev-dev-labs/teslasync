@@ -93,6 +93,9 @@ for (const route of VISUAL_ROUTES) {
       : profile === 'large-fleet'
         ? 'large-fleet'
         : 'populated';
+    // Pin rolling date labels to the committed baseline day, without freezing timers.
+    // This clock is visual-only; the native Date contract uses the shared seed unchanged.
+    await page.clock.setFixedTime(new Date('2026-09-13T12:00:00Z'));
     await seedBrowserState(page, theme, route.path, { density });
     const mockApi = await installApiMocks(page, scenario, theme, density);
     await page.goto(route.path, { waitUntil: 'domcontentloaded' });
