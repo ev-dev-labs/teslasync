@@ -1,5 +1,5 @@
 /**
- * DayLogPage — day-timeline contract tests.
+ * DayLogPage — complete-history contract tests.
  *
  * Strategy:
  *   - `useDayLog` is mocked at the hook boundary with full query state
@@ -8,9 +8,9 @@
  *   - `useSelectedVehicle` is stubbed to a one-car fleet; `useSettings`
  *     renders for real through the file-level mock so `useUnits`
  *     converts SI through the real `unitConversion` boundary.
- *   - URL scope (`date`, `layers`) is asserted through a real
- *     `<LocationProbe>` reading `useLocation()`, not by spying on the
- *     router, so search-param wiring is verified end to end.
+ *   - URL scope (`date`) is asserted through a real `<LocationProbe>`
+ *     reading `useLocation()`. Category search/filter state is local
+ *     UI state over the already-complete dataset.
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
@@ -82,6 +82,21 @@ vi.mock('@/hooks/usePageTitle', () => ({
   usePageTitle: vi.fn(),
 }));
 
+vi.mock('@tanstack/react-virtual', () => ({
+  useVirtualizer: ({ count }: { count: number }) => ({
+    getTotalSize: () => count * 64,
+    getVirtualItems: () =>
+      Array.from({ length: count }, (_, index) => ({
+        index,
+        key: index,
+        start: index * 64,
+        size: 64,
+        end: (index + 1) * 64,
+      })),
+    measureElement: () => undefined,
+  }),
+}));
+
 if (typeof window.matchMedia !== 'function') {
   window.matchMedia = ((query: string) => ({
     matches: false,
@@ -96,7 +111,7 @@ if (typeof window.matchMedia !== 'function') {
 }
 
 import DayLogPage from './DayLogPage';
-import type { DayLogResponse } from '@/api/types';
+import type { DayLogEvent, DayLogResponse } from '@/api/types';
 
 function queryState(over: Record<string, unknown> = {}) {
   return {
@@ -115,7 +130,7 @@ function queryState(over: Record<string, unknown> = {}) {
   };
 }
 
-function dayLogResponse(over: Partial<DayLogResponse> = {}): DayLogResponse {
+function dayLogResponse(events: DayLogEvent[] = [], over: Partial<DayLogResponse> = {}): DayLogResponse {
   return {
     vehicle_id: 1,
     date: '2026-09-14',
@@ -123,7 +138,10 @@ function dayLogResponse(over: Partial<DayLogResponse> = {}): DayLogResponse {
     day_start: '2026-09-14T00:00:00Z',
     day_end: '2026-09-15T00:00:00Z',
     truncated: false,
-    layers: [],
+    total_events: events.length,
+    limit: 2000,
+    offset: 0,
+    layers: ['turn_signals', 'lights', 'doors_windows', 'hvac', 'gear', 'homelink'],
     summary: {
       drive_count: 0,
       charge_count: 0,
@@ -133,7 +151,7 @@ function dayLogResponse(over: Partial<DayLogResponse> = {}): DayLogResponse {
       energy_used_wh: null,
     },
     sources: [],
-    events: [],
+    events,
     ...over,
   };
 }
@@ -163,6 +181,14 @@ const oneCarFleet = {
   setVehicleId: vi.fn(),
 };
 
+const mixedEvents: DayLogEvent[] = [
+  { id: 'drive:7:start', ts: '2026-09-14T15:04:05Z', type: 'drive_start', layer: 'default', source: 'drives', vehicle_id: 1, ref_kind: 'drive', ref_id: 7, payload: { start_place: 'Home' } },
+  { id: 'drive:7:end', ts: '2026-09-14T16:04:05Z', type: 'drive_end', layer: 'default', source: 'drives', vehicle_id: 1, ref_kind: 'drive', ref_id: 7, payload: { distance_m: 25000 } },
+  { id: 'sec:3', ts: '2026-09-14T17:00:00Z', type: 'locked', layer: 'default', source: 'security_events', vehicle_id: 1, payload: { from: false, to: true } },
+  { id: 'sig:LightsTurnSignal:1', ts: '2026-09-14T17:01:00Z', type: 'turn_signal', layer: 'turn_signals', source: 'signal_log', vehicle_id: 1, payload: { component: 'left', from: 'off', to: 'left', from_value: 1, to_value: 2 } },
+  { id: 'gear:1', ts: '2026-09-14T17:02:00Z', type: 'gear', layer: 'gear', source: 'drive_telemetry', vehicle_id: 1, payload: { from: 'P', to: 'D', from_raw: 'ShiftStateP', to_raw: 'ShiftStateD' } },
+];
+
 beforeEach(() => {
   vi.clearAllMocks();
   useSelectedVehicleMock.mockReturnValue(oneCarFleet);
@@ -185,7 +211,7 @@ describe('DayLogPage', () => {
   it('renders an honest empty day with a live-telemetry CTA', () => {
     useDayLogMock.mockReturnValue(
       queryState({
-        data: dayLogResponse({
+        data: dayLogResponse([], {
           sources: [
             { source: 'drives', status: 'empty', count: 0 },
             { source: 'user_presence', status: 'unavailable', count: 0, reason: 'no signal' },
@@ -204,37 +230,89 @@ describe('DayLogPage', () => {
     expect(screen.getByText('Unavailable')).toBeInTheDocument();
   });
 
-  it('renders populated events with deep links and SI summaries', () => {
+  it('shows every category by default with deep links and SI summaries', () => {
     useDayLogMock.mockReturnValue(
       queryState({
-        data: dayLogResponse({
+        data: dayLogResponse(mixedEvents, {
           summary: {
             drive_count: 1,
-            charge_count: 1,
+            charge_count: 0,
             drive_duration_s: 3600,
             drive_distance_m: 25000,
-            energy_added_wh: 12000,
+            energy_added_wh: null,
             energy_used_wh: 5200,
           },
-          sources: [{ source: 'drives', status: 'ok', count: 1 }],
-          events: [
-            { id: 'drive:7:start', ts: '2026-09-14T15:04:05Z', type: 'drive_start', layer: 'default', vehicle_id: 1, ref_kind: 'drive', ref_id: 7, payload: { start_place: 'Home' } },
-            { id: 'drive:7:end', ts: '2026-09-14T16:04:05Z', type: 'drive_end', layer: 'default', vehicle_id: 1, ref_kind: 'drive', ref_id: 7, payload: { distance_m: 25000 } },
-            { id: 'sec:3', ts: '2026-09-14T17:00:00Z', type: 'locked', layer: 'default', vehicle_id: 1, payload: {} },
-          ],
         }),
       }),
     );
     renderPage();
 
+    // Default + optional-layer events all visible, nothing hidden.
     expect(screen.getByText('Drive started')).toBeInTheDocument();
     expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.getByText('Turn signal')).toBeInTheDocument();
+    expect(screen.getByText('Gear change')).toBeInTheDocument();
+    expect(screen.getByText('5 events')).toBeInTheDocument();
     // Deep links to existing detail routes.
     const driveLinks = screen.getAllByRole('link', { name: 'Drive started' });
     expect(driveLinks[0].getAttribute('href')).toBe('/drives/7');
     // SI: 25000 m renders as km through useUnits, not raw meters.
-    expect(screen.getAllByText('25.0 km').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getByText('3 events')).toBeInTheDocument();
+    expect(screen.getAllByText('25.0 km').length).toBeGreaterThan(0);
+  });
+
+  it('renders previous → new state lines from payloads', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
+    renderPage();
+
+    // Lock bools render as Unlocked → Locked; gear shorts pass through raw in tests.
+    expect(screen.getByText('Unlocked → Locked')).toBeInTheDocument();
+    expect(screen.getByText('P → D')).toBeInTheDocument();
+  });
+
+  it('expands a row to raw recorded details without losing list identity', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
+    renderPage();
+
+    const expanders = screen.getAllByRole('button', { name: 'Show details' });
+    fireEvent.click(expanders[0]);
+
+    // Raw payload JSON + provenance visible; the row title stays put.
+    expect(screen.getByText('Drive started')).toBeInTheDocument();
+    expect(screen.getByText(/"start_place": "Home"/)).toBeInTheDocument();
+    expect(screen.getByText('drives')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Hide details' })).toBeInTheDocument();
+  });
+
+  it('filters by search text and declares the subset', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
+    renderPage();
+
+    fireEvent.change(screen.getByTestId('daylog-search'), { target: { value: 'locked' } });
+    expect(screen.getByText('Locked')).toBeInTheDocument();
+    expect(screen.queryByText('Drive started')).not.toBeInTheDocument();
+    expect(screen.getByText('Showing 1 of 5 events')).toBeInTheDocument();
+
+    // Show all restores the complete list.
+    fireEvent.click(screen.getByTestId('daylog-show-all'));
+    expect(screen.getByText('Drive started')).toBeInTheDocument();
+    expect(screen.getByText('5 events')).toBeInTheDocument();
+  });
+
+  it('toggles categories and offers show-all on empty matches', () => {
+    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse(mixedEvents) }));
+    renderPage();
+
+    fireEvent.click(screen.getByTestId('daylog-filter-driving'));
+    expect(screen.queryByText('Drive started')).not.toBeInTheDocument();
+    expect(screen.getByText('Showing 3 of 5 events')).toBeInTheDocument();
+
+    // Toggling every visible category leaves an explicit no-match state.
+    fireEvent.click(screen.getByTestId('daylog-filter-lock'));
+    fireEvent.click(screen.getByTestId('daylog-filter-turn'));
+    fireEvent.click(screen.getByTestId('daylog-filter-gear'));
+    expect(screen.getByText('No events match these filters.')).toBeInTheDocument();
+    fireEvent.click(screen.getByTestId('daylog-show-all'));
+    expect(screen.getByText('5 events')).toBeInTheDocument();
   });
 
   it('shows per-section query errors with retry', () => {
@@ -245,20 +323,6 @@ describe('DayLogPage', () => {
 
     // Summary, timeline, and sources each surface their own retry.
     expect(screen.getAllByRole('button', { name: 'Retry' })).toHaveLength(3);
-  });
-
-  it('toggles optional layers through the URL', () => {
-    useDayLogMock.mockReturnValue(queryState({ data: dayLogResponse() }));
-    let search = '';
-    renderPage('?date=2026-09-14', (s) => {
-      search = s;
-    });
-
-    fireEvent.click(screen.getByRole('switch', { name: 'Lights / hazards' }));
-    expect(search).toContain('layers=lights');
-
-    fireEvent.click(screen.getByRole('switch', { name: 'Lights / hazards' }));
-    expect(search).not.toContain('layers=');
   });
 
   it('steps the day through the URL without UTC drift', () => {

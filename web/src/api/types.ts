@@ -3598,6 +3598,8 @@ export interface DayLogEvent {
   type: string
   /** `default` or an optional layer id (`lights`, `gear`, …). */
   layer: string
+  /** Backing table, e.g. `signal_log`, `drives`. */
+  source: string
   vehicle_id: number
   /** Deep-link target kind (`drive` | `charge`), absent when not linkable. */
   ref_kind?: string | null
@@ -3652,9 +3654,13 @@ export interface DayLogResponse {
   day_start: string
   /** Day end (exclusive), UTC RFC3339. */
   day_end: string
-  /** True when the event list hit the server cap or an input cap. */
+  /** True when a signal/gear input cap was hit (data may be lost). Never set by paging. */
   truncated: boolean
-  /** Requested optional layers (echo). */
+  /** Every assembled event before paging; page until offset+len(events) reaches it. */
+  total_events: number
+  limit: number
+  offset: number
+  /** Requested optional layers (echo). Omitted upstream means all layers. */
   layers: string[]
   summary: DayLogSummary
   sources: DayLogSource[]

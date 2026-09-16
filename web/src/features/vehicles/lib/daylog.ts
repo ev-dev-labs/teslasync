@@ -3,16 +3,6 @@ import { Icons } from '@/lib/icons';
 import { ymdInTz } from '@/lib/dateFormat';
 import type { DayLogEvent, DayLogLayer } from '@/api/types';
 
-/** Optional layers in stable display order (all off by default). */
-export const DAY_LOG_LAYERS: readonly DayLogLayer[] = [
-  'turn_signals',
-  'lights',
-  'doors_windows',
-  'hvac',
-  'gear',
-  'homelink',
-] as const;
-
 /** English fallbacks so tests and missing catalogs still read as labels. */
 export const DAY_LOG_LAYER_LABEL: Record<DayLogLayer, string> = {
   turn_signals: 'Turn signals',
@@ -39,6 +29,10 @@ export const DAY_LOG_EVENT_TITLE: Record<string, string> = {
   sentry_on: 'Sentry on',
   sentry_off: 'Sentry off',
   sentry_unknown: 'Sentry state unknown',
+  valet_on: 'Valet on',
+  valet_off: 'Valet off',
+  valet_unknown: 'Valet state unknown',
+  security: 'Security event',
   remote_start_on: 'Remote start active',
   remote_start_off: 'Remote start ended',
   sw_update: 'Software update',
@@ -62,6 +56,7 @@ export const DAY_LOG_EVENT_TITLE: Record<string, string> = {
   left_work: 'Left work',
   arrived_favorite: 'Arrived at favorite',
   left_favorite: 'Left favorite',
+  signal: 'Signal change',
 };
 
 export const DAY_LOG_SOURCE_STATUS: Record<string, string> = {
@@ -105,6 +100,149 @@ export function todayYmd(tz?: string): string {
   return ymdInTz(new Date(), tz) ?? '1970-01-01';
 }
 
+/** Event category id. `other` catches unrecognized future types. */
+export type DayLogCategory =
+  | 'driving'
+  | 'charging'
+  | 'state'
+  | 'lock'
+  | 'sentry'
+  | 'valet'
+  | 'software'
+  | 'remote'
+  | 'turn'
+  | 'lights'
+  | 'doors'
+  | 'windows'
+  | 'hvac'
+  | 'gear'
+  | 'homelink'
+  | 'security'
+  | 'other';
+
+const DAY_LOG_CATEGORY_BY_TYPE: Record<string, DayLogCategory> = {
+  drive_start: 'driving',
+  drive_end: 'driving',
+  charge_start: 'charging',
+  charge_end: 'charging',
+  parked: 'state',
+  online: 'state',
+  asleep: 'state',
+  offline: 'state',
+  state_change: 'state',
+  locked: 'lock',
+  unlocked: 'lock',
+  lock_unknown: 'lock',
+  sentry_on: 'sentry',
+  sentry_off: 'sentry',
+  sentry_unknown: 'sentry',
+  valet_on: 'valet',
+  valet_off: 'valet',
+  valet_unknown: 'valet',
+  security: 'security',
+  remote_start_on: 'remote',
+  remote_start_off: 'remote',
+  sw_update: 'software',
+  sw_update_installed: 'software',
+  turn_signal: 'turn',
+  hazards_on: 'lights',
+  hazards_off: 'lights',
+  high_beams_on: 'lights',
+  high_beams_off: 'lights',
+  door_open: 'doors',
+  door_closed: 'doors',
+  window: 'windows',
+  hvac_on: 'hvac',
+  hvac_off: 'hvac',
+  gear: 'gear',
+  homelink_nearby_on: 'homelink',
+  homelink_nearby_off: 'homelink',
+  arrived_home: 'homelink',
+  left_home: 'homelink',
+  arrived_work: 'homelink',
+  left_work: 'homelink',
+  arrived_favorite: 'homelink',
+  left_favorite: 'homelink',
+  signal: 'other',
+};
+
+/** Stable category order for filter chips. */
+export const DAY_LOG_CATEGORIES: readonly DayLogCategory[] = [
+  'driving',
+  'charging',
+  'state',
+  'lock',
+  'sentry',
+  'valet',
+  'software',
+  'remote',
+  'turn',
+  'lights',
+  'doors',
+  'windows',
+  'hvac',
+  'gear',
+  'homelink',
+  'security',
+  'other',
+] as const;
+
+/** Category for an event type; unrecognized types land in `other`. */
+export function categoryOf(type: string): DayLogCategory {
+  return DAY_LOG_CATEGORY_BY_TYPE[type] ?? 'other';
+}
+
+/**
+ * `HH:MM:SS` in the given IANA timezone. Falls back to the UTC clock
+ * face when the zone is invalid so a bad setting never blanks the row.
+ */
+export function formatTimeSeconds(iso: string, tz?: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hourCycle: 'h23',
+      timeZone: tz || undefined,
+    }).format(d);
+  } catch {
+    return d.toISOString().slice(11, 19);
+  }
+}
+
+/** Hour bucket key (`HH`) in the given timezone for time separators. */
+export function hourKeyInTz(iso: string, tz?: string): string {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  try {
+    return new Intl.DateTimeFormat('en-GB', {
+      hour: '2-digit',
+      hourCycle: 'h23',
+      timeZone: tz || undefined,
+    }).format(d);
+  } catch {
+    return String(d.getUTCHours()).padStart(2, '0');
+  }
+}
+
+/**
+ * Raw searchable text for an event: type, source, layer, component
+ * names, state tokens, and payload scalars. The caller adds the
+ * localized title; matching stays a case-insensitive substring.
+ */
+export function eventKeywords(event: DayLogEvent): string {
+  const parts: string[] = [event.type, event.source, event.layer, categoryOf(event.type)];
+  const payload = event.payload ?? {};
+  for (const key of ['door', 'window', 'component', 'field', 'event_type', 'from', 'to', 'gear', 'version', 'status', 'start_place', 'end_place']) {
+    const v = payload[key];
+    if (typeof v === 'string' && v !== '') parts.push(v);
+    else if (typeof v === 'number' || typeof v === 'boolean') parts.push(String(v));
+  }
+  return parts.join(' ').toLowerCase();
+}
+
 /** Timeline-dot icon per event type. Unknown types get the fallback. */
 export const DAY_LOG_ICON: Record<string, ComponentType<{ className?: string }>> = {
   drive_start: Icons.drive,
@@ -122,6 +260,11 @@ export const DAY_LOG_ICON: Record<string, ComponentType<{ className?: string }>>
   sentry_on: Icons.securityAlert,
   sentry_off: Icons.securityOff,
   sentry_unknown: Icons.security,
+  valet_on: Icons.key,
+  valet_off: Icons.key,
+  valet_unknown: Icons.key,
+  security: Icons.securityAlert,
+  signal: Icons.activity,
   remote_start_on: Icons.power,
   remote_start_off: Icons.power,
   sw_update: Icons.download,
@@ -153,8 +296,8 @@ export function eventIcon(type: string): ComponentType<{ className?: string }> {
 
 /** Timeline-dot accent per event type (solid dot hues, no gradients). */
 export const DAY_LOG_ACCENT: Record<string, string> = {
-  drive_start: '#22d3ee',
-  drive_end: '#22d3ee',
+  drive_start: '#0891b2',
+  drive_end: '#0891b2',
   charge_start: '#34d399',
   charge_end: '#34d399',
   parked: '#94a3b8',
@@ -168,6 +311,11 @@ export const DAY_LOG_ACCENT: Record<string, string> = {
   sentry_on: '#f87171',
   sentry_off: '#34d399',
   sentry_unknown: '#78716c',
+  valet_on: '#fbbf24',
+  valet_off: '#34d399',
+  valet_unknown: '#78716c',
+  security: '#f87171',
+  signal: '#94a3b8',
   remote_start_on: '#38bdf8',
   remote_start_off: '#64748b',
   sw_update: '#38bdf8',

@@ -40,8 +40,11 @@ func (f *fakeDayLogRepo) ChargesOverlapping(_ context.Context, _ int64, _, _ tim
 func (f *fakeDayLogRepo) FSMTransitions(_ context.Context, _ int64, _, _ time.Time) ([]daylogdb.DayFSMTransition, error) {
 	return f.fsm, f.err
 }
-func (f *fakeDayLogRepo) SecurityEvents(_ context.Context, _ int64, _, _ time.Time, _ []string) ([]daylogdb.DaySecurityEvent, error) {
+func (f *fakeDayLogRepo) SecurityEvents(_ context.Context, _ int64, _, _ time.Time) ([]daylogdb.DaySecurityEvent, error) {
 	return f.security, f.err
+}
+func (f *fakeDayLogRepo) SecurityPrevStates(_ context.Context, _ int64, _ time.Time) (map[string]*string, error) {
+	return map[string]*string{}, f.err
 }
 func (f *fakeDayLogRepo) SignalRows(_ context.Context, _ int64, fields []string, _, _ time.Time, _ int) ([]daylogdb.DaySignalRow, error) {
 	f.gotFields = fields
@@ -74,6 +77,11 @@ func TestGet_ParamValidation(t *testing.T) {
 		{"bad start", "vehicle_id=1&start=yesterday&end=2026-09-15T07:00:00Z", http.StatusBadRequest},
 		{"end before start", "vehicle_id=1&start=2026-09-15T07:00:00Z&end=2026-09-14T07:00:00Z", http.StatusBadRequest},
 		{"span over 48h", "vehicle_id=1&start=2026-09-10T07:00:00Z&end=2026-09-15T07:00:00Z", http.StatusBadRequest},
+		{"limit zero", "vehicle_id=1&date=2026-09-14&limit=0", http.StatusBadRequest},
+		{"limit text", "vehicle_id=1&date=2026-09-14&limit=many", http.StatusBadRequest},
+		{"limit over max", "vehicle_id=1&date=2026-09-14&limit=5000", http.StatusBadRequest},
+		{"offset negative", "vehicle_id=1&date=2026-09-14&offset=-1", http.StatusBadRequest},
+		{"offset text", "vehicle_id=1&date=2026-09-14&offset=far", http.StatusBadRequest},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -158,11 +166,67 @@ func TestGet_HappyPath(t *testing.T) {
 	if resp.Summary.DriveCount != 1 {
 		t.Errorf("drive_count = %d, want 1", resp.Summary.DriveCount)
 	}
-	if repo.gearCalls != 0 {
-		t.Errorf("gear must not be queried unless requested")
+	// Omitted layers means the complete history: every layer echoed,
+	// gear queried, all layer fields in the signal query.
+	if len(resp.Layers) != len(AllLayers) {
+		t.Errorf("layers echo = %v, want all %d layers", resp.Layers, len(AllLayers))
 	}
-	if len(repo.gotFields) != 1 || repo.gotFields[0] != "RemoteStartActive" {
-		t.Errorf("signal fields = %v, want default only", repo.gotFields)
+	if resp.TotalEvents != 3 || resp.Limit != dayLogDefaultLimit || resp.Offset != 0 {
+		t.Errorf("total/limit/offset = %d/%d/%d", resp.TotalEvents, resp.Limit, resp.Offset)
+	}
+	if repo.gearCalls != 1 {
+		t.Errorf("gear calls = %d, want 1 (all-on default)", repo.gearCalls)
+	}
+	fields := map[string]bool{}
+	for _, f := range repo.gotFields {
+		fields[f] = true
+	}
+	for _, want := range []string{"RemoteStartActive", "LightsTurnSignal", "LightsHazardsActive", "HvacPower", "HomelinkNearby"} {
+		if !fields[want] {
+			t.Errorf("signal fields %v missing %q", repo.gotFields, want)
+		}
+	}
+}
+
+func TestGet_BlankLayersMeansAll(t *testing.T) {
+	t.Parallel()
+	for _, q := range []string{"vehicle_id=1&date=2026-09-14&layers=", "vehicle_id=1&date=2026-09-14&layers=,,"} {
+		h := &Handler{repo: &fakeDayLogRepo{exists: true}}
+		req := httptest.NewRequest(http.MethodGet, "/api/v1/day-log?"+q, nil)
+		rec := httptest.NewRecorder()
+		h.Get(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("%s: status = %d, want 200", q, rec.Code)
+		}
+		var resp DayLogResponse
+		if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+			t.Fatalf("%s: decode: %v", q, err)
+		}
+		if len(resp.Layers) != len(AllLayers) {
+			t.Errorf("%s: layers = %v, want all", q, resp.Layers)
+		}
+	}
+}
+
+func TestGet_ExplicitLayersNarrow(t *testing.T) {
+	t.Parallel()
+	repo := &fakeDayLogRepo{exists: true}
+	h := &Handler{repo: repo}
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/day-log?vehicle_id=1&date=2026-09-14&layers=lights", nil)
+	rec := httptest.NewRecorder()
+	h.Get(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 (body %s)", rec.Code, rec.Body.String())
+	}
+	var resp DayLogResponse
+	if err := json.NewDecoder(rec.Body).Decode(&resp); err != nil {
+		t.Fatalf("decode: %v", err)
+	}
+	if len(resp.Layers) != 1 || resp.Layers[0] != "lights" {
+		t.Errorf("layers echo = %v, want [lights]", resp.Layers)
+	}
+	if repo.gearCalls != 0 {
+		t.Errorf("gear must not be queried for layers=lights")
 	}
 }
 
