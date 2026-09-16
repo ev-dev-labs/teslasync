@@ -591,6 +591,10 @@
         "feeType": "Tesla marked this line as idle, congestion, or tax.",
         "ac": "AC sessions rarely have a Supercharger invoice. Home/work energy is pack truth only."
       }
+    },
+    "ledger": {
+      "title": "Charge energy ledger",
+      "openFull": "Open the full physics ledger"
     }
   },
   "chargingThermalTax": {

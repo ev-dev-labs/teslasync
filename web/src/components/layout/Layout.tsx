@@ -239,6 +239,7 @@ export const navSearchKeywords: Record<string, string[]> = {
   '/tesla-only/modes': ['valet', 'service', 'transport', 'unknown mode'],
   '/tesla-only/nervous-system': ['bms', 'gear', 'latch', 'silent'],
   '/tesla-only/range': ['rated range', 'typical range', 'no true range'],
+  '/science': ['science lab', 'electrochemistry', 'arrhenius', 'lab notebook'],
   '/outage': ['outage', 'mqtt', 'replay', 'carbon', 'queue', 'unknown gap'],
   '/api-logs': ['api logs', 'requests', 'debug'],
   '/fleet-api': ['fleet api', 'tesla api'],
@@ -411,6 +412,7 @@ export const navSections = [
       { to: '/tesla-only/modes', icon: Icons.radar, label: 'Mode Laws', color: 'text-orange-400' },
       { to: '/tesla-only/nervous-system', icon: Icons.activity, label: 'Nervous System', color: 'text-cyan-400' },
       { to: '/tesla-only/range', icon: Icons.bolt, label: 'Range Disagreement', color: 'text-lime-400' },
+      { to: '/science', icon: Icons.analytics, label: 'Science Lab', color: 'text-cyan-400' },
     ],
   },
   {

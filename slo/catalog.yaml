@@ -462,3 +462,23 @@ slos:
     window: 30d
     owner: analytics
     tags: [http, analytics, fsd, latency]
+
+  - name: physics_ledger_availability
+    description: "Physics ledger reads (GET /api/v1/physics/{ledger,charging/{id}/ledger,drives/{id}/ledger,park/ledger}) must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/physics/(.*/)?ledger\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/physics/(.*/)?ledger\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: physics
+    tags: [http, physics, ledger]
+
+  - name: science_lab_availability
+    description: "Science lab reads (GET /api/v1/science/*: electrochem, thermal, weather, tires, notebook, charge-IR) must avoid server errors."
+    sli:
+      good_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/science/.*\",status_class!=\"5xx\"}[5m]))"
+      valid_events: "sum(rate(teslasync_red_http_requests_total{method=\"GET\",route=~\"/api/v1/science/.*\"}[5m]))"
+    objective: 99.5
+    window: 30d
+    owner: science
+    tags: [http, science]

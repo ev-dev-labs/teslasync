@@ -29,14 +29,16 @@ Usage:
     python scripts/sync_grafana_dashboards.py --only vehicle-overview tire-pressure
 
 Folder mapping mirrors local provisioning (grafana/provisioning/dashboards/dashboards.yml):
-    grafana/dashboards/system/*.json -> Grafana folder "TeslaSync - System"
-    grafana/dashboards/infra/*.json  -> Grafana folder "TeslaSync - Infra"
+    grafana/dashboards/system/*.json  -> Grafana folder "TeslaSync - System"
+    grafana/dashboards/infra/*.json   -> Grafana folder "TeslaSync - Infra"
+    grafana/dashboards/science/*.json -> Grafana folder "TeslaSync - Science"
 """
 from __future__ import annotations
 
 import argparse
 import base64
 import json
+import http.client
 import os
 import sys
 import urllib.error
@@ -45,8 +47,9 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DASH_ROOTS = {
-    "TeslaSync - System": REPO_ROOT / "grafana" / "dashboards" / "system",
-    "TeslaSync - Infra":  REPO_ROOT / "grafana" / "dashboards" / "infra",
+    "TeslaSync - System":  REPO_ROOT / "grafana" / "dashboards" / "system",
+    "TeslaSync - Infra":   REPO_ROOT / "grafana" / "dashboards" / "infra",
+    "TeslaSync - Science": REPO_ROOT / "grafana" / "dashboards" / "science",
 }
 
 DEFAULT_URL = "http://localhost:3001"
@@ -76,6 +79,8 @@ def _request(method: str, url: str, headers: dict[str, str] | None = None,
     except urllib.error.HTTPError as e:
         return e.code, e.read()
     except urllib.error.URLError as e:
+        return 0, str(e).encode()
+    except (OSError, http.client.HTTPException) as e:
         return 0, str(e).encode()
 
 
@@ -121,12 +126,14 @@ def push_dashboard(base_url: str, headers: dict[str, str], folder_uid: str | Non
     body = json.dumps(payload).encode()
     h = {**headers, "Content-Type": "application/json"}
     status, raw = _request("POST", f"{base_url}/api/dashboards/db", headers=h, body=body)
-    if status in (200, 412):
+    if status == 200:
         try:
             data = json.loads(raw)
+            if not isinstance(data, dict) or data.get("status") != "success" or not data.get("uid"):
+                return False, "invalid Grafana success response"
             return True, f"version={data.get('version', '?')} uid={data.get('uid', '?')}"
         except json.JSONDecodeError:
-            return True, "ok"
+            return False, "invalid JSON in Grafana response"
     return False, f"HTTP {status}: {raw[:200].decode(errors='replace')}"
 
 
@@ -142,13 +149,14 @@ def main() -> int:
     base_url = args.url.rstrip("/")
     headers = _auth_header()
 
-    # Health check
-    status, raw = _request("GET", f"{base_url}/api/health", headers=headers)
-    if status != 200:
-        print(f"FAILED: {base_url}/api/health returned {status}", file=sys.stderr)
-        if raw:
-            print(raw[:300].decode(errors="replace"), file=sys.stderr)
-        return 1
+    # Offline planning must not contact or mutate a Grafana instance.
+    if not args.dry_run:
+        status, raw = _request("GET", f"{base_url}/api/health", headers=headers)
+        if status != 200:
+            print(f"FAILED: {base_url}/api/health returned {status}", file=sys.stderr)
+            if raw:
+                print(raw[:300].decode(errors="replace"), file=sys.stderr)
+            return 1
     print(f"Target: {base_url}  (auth: {'token' if 'GRAFANA_TOKEN' in os.environ else 'basic'})")
     if args.dry_run:
         print("DRY RUN — nothing will be modified")
@@ -180,6 +188,9 @@ def main() -> int:
     folder_uids: dict[str, str | None] = {}
     for folder_title in {ft for ft, _ in plan}:
         folder_uids[folder_title] = ensure_folder(base_url, headers, folder_title)
+        if not folder_uids[folder_title]:
+            print(f"FAILED: cannot resolve folder '{folder_title}'", file=sys.stderr)
+            return 1
         print(f"  folder '{folder_title}' -> uid={folder_uids[folder_title] or '(General)'}")
 
     # Push

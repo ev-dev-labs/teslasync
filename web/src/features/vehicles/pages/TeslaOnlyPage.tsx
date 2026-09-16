@@ -31,6 +31,7 @@ import type { ExclusiveReport } from '@/types/teslaPhysics';
 type Translate = (key: string, fallback: string, options?: Record<string, unknown>) => string;
 
 export const TESLA_ONLY_FEATURES = [
+  { slug: 'ledger', title: 'Physics Ledger', icon: Icons.analytics, color: 'text-cyan-400', description: 'Predicted vs measured energy and force. Residual is unexplained, never zero-filled.' },
   { slug: 'clocks', title: 'Three Clocks', icon: Icons.clock, color: 'text-cyan-400', description: 'Event, ingest, and display time. Ingest stays unknown if not stored.' },
   { slug: 'life-tape', title: 'Life Tape', icon: Icons.activity, color: 'text-violet-400', description: 'Every second is Park, Neutral, Drive, Charge, or Unknown — not GPS.' },
   { slug: 'contradictions', title: 'Contradiction Court', icon: Icons.fingerprint, color: 'text-amber-400', description: 'Gear=P with speed is a contradiction. Complete still latched is not.' },

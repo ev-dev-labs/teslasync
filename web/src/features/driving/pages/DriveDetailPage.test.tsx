@@ -134,6 +134,7 @@ vi.mock('../components/drive-detail', () => {
     SupervisedDrivingPanel: stub('fsd-panel'),
     GearTheaterPanel: stub('gear-theater'),
     SilentCounterPanel: stub('silent-counter'),
+    DriveLedgerCompactPanel: stub('drive-ledger-compact'),
     MoreDetailsPanel: stub('more-details'),
     EnergySummaryPanel: stub('energy-summary'),
     CostSavingsPanel: stub('cost-savings'),

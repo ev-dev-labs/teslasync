@@ -830,6 +830,58 @@
       "title": "Charging Timeline",
       "type": "timeseries",
       "transparent": false
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 28
+      },
+      "id": 17,
+      "panels": [],
+      "title": "Physics Honesty & New Boards",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "datasource",
+        "uid": "grafana"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "thresholds"
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              }
+            ]
+          }
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 24,
+        "x": 0,
+        "y": 29
+      },
+      "id": 18,
+      "options": {
+        "mode": "markdown",
+        "content": "## Physics honesty & new boards\n\n| Board | UID link |\n| ----- | -------- |\n| \ud83d\udcd3 Day Log Spine | [teslasync-day-log](/d/teslasync-day-log) |\n| \ud83e\udded Physics Cockpit | [teslasync-physics-cockpit](/d/teslasync-physics-cockpit) |\n| \u2696\ufe0f Physics Ledger | [teslasync-physics-ledger](/d/teslasync-physics-ledger) |\n| \ud83d\udd0c Charge Honesty | [teslasync-charge-honesty](/d/teslasync-charge-honesty) |\n| \ud83e\udddb Vampire Watts | [teslasync-vampire-watts](/d/teslasync-vampire-watts) |\n| \ud83d\udce6 Firmware Epochs | [teslasync-firmware-epochs](/d/teslasync-firmware-epochs) |\n| \u23fa Black Box 90s | [teslasync-black-box-90s](/d/teslasync-black-box-90s) |\n| \ud83c\udfaf Range Disagreement | [teslasync-range-disagreement](/d/teslasync-range-disagreement) |\n| \ud83d\ude9a Fleet Ops | [teslasync-fleet-ops](/d/teslasync-fleet-ops) |\n| \ud83d\udcfb Outage Autobiography | [teslasync-outage-autobiography](/d/teslasync-outage-autobiography) |\n| \ud83d\udd0b Pack Capacity Proxy | [teslasync-pack-capacity-proxy](/d/teslasync-pack-capacity-proxy) |\n| \ud83c\udfe0 Site Energy | [teslasync-site-energy](/d/teslasync-site-energy) |\n| \ud83c\udf21\ufe0f Charging Thermal | [teslasync-charging-thermal](/d/teslasync-charging-thermal) |\n| \ud83c\udf21\ufe0f Cabin Thermal | [teslasync-cabin-thermal](/d/teslasync-cabin-thermal) |\n| \ud83d\udd2c Science Lab Inputs | [teslasync-science-lab](/d/teslasync-science-lab) |\n| Phase-42 Pipeline (infra) | [teslasync-infra-phase42](/d/teslasync-infra-phase42) |\n\nConventions: SI queries, Settings-backed converters, honesty panel per board.\nEmpty = no data, never zero-filled. See `grafana/DASHBOARD-COVERAGE.md`."
+      },
+      "targets": [],
+      "title": "Physics honesty & new boards",
+      "transparent": true,
+      "type": "text"
     }
   ],
   "schemaVersion": 39,

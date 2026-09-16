@@ -1,0 +1,72 @@
+{
+  "science": {
+    "title": "Science Lab",
+    "subtitle": "Every claim is a fit: n, uncertainty, firmware epoch, holdout.",
+    "unknown": "unknown",
+    "empty": "No fit inputs in this window.",
+    "truncated": "Sample cap hit",
+    "firmware": "Firmware",
+    "missingSignals": "Missing signals",
+    "holdout": "holdout",
+    "holdoutRmse": "holdout RMSE",
+    "window": {
+      "label": "Window",
+      "days": "Last {{days}}d"
+    },
+    "electrochem": {
+      "title": "Battery electrochemistry (pack-equivalent)",
+      "socBin": "SOC bin",
+      "tempBin": "Temp bin",
+      "meanOcv": "Mean OCV (V)",
+      "slope": "Slope V/%",
+      "nCharge": "n charge",
+      "nDischarge": "n discharge",
+      "deltaV": "ΔV (V)",
+      "restPoints": "rest points",
+      "irMilliohm": "Pack IR (mΩ)",
+      "irChart": "Pack resistance over the window",
+      "irEmpty": "No current steps qualified for DCIR in this window.",
+      "tempBins": "Temp bins",
+      "aging": "Aging exposure and capacity-proxy trend",
+      "assumedReference": "Assumed reference capacity",
+      "throughput": "Throughput",
+      "restHours": "Rest",
+      "proxySlope": "Proxy slope",
+      "capacityProxy": "Capacity proxy"
+    },
+    "thermal": {
+      "title": "Thermal science (τ, residual)",
+      "empty": "No Park cooldown transients with ambient reference in this window.",
+      "solarUnknown": "solar unknown"
+    },
+    "weather": {
+      "title": "Weather coupling (correlation)",
+      "drive": "Drive",
+      "at": "Start",
+      "temp": "Temperature",
+      "wind": "Wind",
+      "residual": "Residual",
+      "weatherUnknown": "weather unknown",
+      "joined": "joined {{n}} drives",
+      "rainDry": "rain/dry",
+      "empty": "No drives joined archive weather in this window."
+    },
+    "tires": {
+      "title": "Tire / contact mechanics",
+      "empty": "No TPMS corners reported in this window. Yaw, steer, and slip are not available from Tesla signals.",
+      "fl": "Front left",
+      "fr": "Front right",
+      "rl": "Rear left",
+      "rr": "Rear right",
+      "imbalance": "Imbalance",
+      "underinflation": "Underinflation",
+      "extra": "Extra rolling",
+      "modelBand": "Model sensitivity, not a confidence interval",
+      "placard": "placard"
+    },
+    "notebook": {
+      "title": "Lab notebook (method)",
+      "empty": "No notebook rows in this window."
+    }
+  }
+}

@@ -35,6 +35,8 @@ const DigitalTwin = lazy(() => import('./features/vehicles/pages/DigitalTwinPage
 const TimeMachine = lazy(() => import('./features/vehicles/pages/TimeMachinePage'))
 const PhysicsCockpit = lazy(() => import('./features/vehicles/pages/PhysicsCockpitPage'))
 const TeslaOnly = lazy(() => import('./features/vehicles/pages/TeslaOnlyPage'))
+const PhysicsLedger = lazy(() => import('./features/vehicles/pages/PhysicsLedgerPage'))
+const ScienceLab = lazy(() => import('./features/science/pages/ScienceLabPage'))
 
 // Charging
 const Charging = lazy(() => import('./features/charging/pages/ChargingListPage'))
@@ -566,6 +568,8 @@ export default function App() {
         <Route path="tesla-only/modes" element={<SafeRoute name="TeslaOnlyModes"><TeslaOnly /></SafeRoute>} />
         <Route path="tesla-only/nervous-system" element={<SafeRoute name="TeslaOnlyNervousSystem"><TeslaOnly /></SafeRoute>} />
         <Route path="tesla-only/range" element={<SafeRoute name="TeslaOnlyRange"><TeslaOnly /></SafeRoute>} />
+        <Route path="tesla-only/ledger" element={<SafeRoute name="PhysicsLedger"><PhysicsLedger /></SafeRoute>} />
+        <Route path="science" element={<SafeRoute name="ScienceLab"><ScienceLab /></SafeRoute>} />
         <Route path="energy" element={<SafeRoute name="Energy"><Energy /></SafeRoute>} />
         <Route path="battery" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />
         <Route path="battery/health" element={<SafeRoute name="BatteryHealth"><BatteryHealth /></SafeRoute>} />

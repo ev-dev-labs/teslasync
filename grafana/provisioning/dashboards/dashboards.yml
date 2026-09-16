@@ -17,3 +17,11 @@ providers:
     editable: true
     options:
       path: /var/lib/grafana/dashboards/infra
+  - name: TeslaSync Science
+    orgId: 1
+    folder: TeslaSync - Science
+    type: file
+    disableDeletion: false
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards/science

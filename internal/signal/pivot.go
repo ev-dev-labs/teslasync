@@ -115,19 +115,20 @@ func forwardFold(seed map[string]SignalValue, events []rawEvent, mappings []Fiel
 // timelineFolder forward-folds one event at a time and optionally collapses
 // consecutive list-mode keys. Callers must not buffer the whole window.
 type timelineFolder struct {
-	mappings   []FieldMapping
-	collapseBy []string
-	maxRows    int
-	state      map[string]SignalValue
+	mappings      []FieldMapping
+	collapseBy    []string
+	maxRows       int
+	state         map[string]SignalValue
+	observedAt    map[string]time.Time
 	groupTs       time.Time
 	groupReceived *time.Time
 	grouping      bool
 	leadingNil    bool
-	hasPrev    bool
-	prevKey    string
-	rows       []TimelineRow
-	truncated  bool
-	events     int
+	hasPrev       bool
+	prevKey       string
+	rows          []TimelineRow
+	truncated     bool
+	events        int
 }
 
 func newTimelineFolder(seed map[string]SignalValue, mappings []FieldMapping, collapseBy []string, maxRows int) *timelineFolder {
@@ -140,6 +141,7 @@ func newTimelineFolder(seed map[string]SignalValue, mappings []FieldMapping, col
 		collapseBy: collapseBy,
 		maxRows:    maxRows,
 		state:      state,
+		observedAt: make(map[string]time.Time),
 		leadingNil: true,
 	}
 }
@@ -156,6 +158,7 @@ func (f *timelineFolder) Add(ev rawEvent) bool {
 		f.groupReceived = nil
 	}
 	f.state[ev.Signal] = ev.Value
+	f.observedAt[ev.Signal] = ev.Ts
 	f.groupTs = ev.Ts
 	f.grouping = true
 	f.groupReceived = laterReceivedAt(f.groupReceived, ev.ReceivedAt)
@@ -174,8 +177,12 @@ func (f *timelineFolder) Finish() []TimelineRow {
 
 func (f *timelineFolder) flush() bool {
 	fields := make(map[string]SignalValue, len(f.mappings))
+	observedAt := make(map[string]time.Time, len(f.mappings))
 	anyNonNil := false
 	for _, m := range f.mappings {
+		if at, ok := f.observedAt[m.Signal]; ok {
+			observedAt[m.Field] = at
+		}
 		v, ok := f.state[m.Signal]
 		if ok && v != nil {
 			fields[m.Field] = v
@@ -188,7 +195,7 @@ func (f *timelineFolder) flush() bool {
 		return true
 	}
 	f.leadingNil = false
-	row := TimelineRow{Timestamp: f.groupTs, ReceivedAt: f.groupReceived, Fields: fields}
+	row := TimelineRow{Timestamp: f.groupTs, ReceivedAt: f.groupReceived, Fields: fields, ObservedAt: observedAt}
 	if len(f.collapseBy) > 0 {
 		key := projectCollapseKey(row, f.collapseBy)
 		if f.hasPrev && key == f.prevKey {

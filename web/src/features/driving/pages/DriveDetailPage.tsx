@@ -24,6 +24,7 @@ import {
   SupervisedDrivingPanel,
   GearTheaterPanel,
   SilentCounterPanel,
+  DriveLedgerCompactPanel,
   MoreDetailsPanel,
   EnergySummaryPanel,
   CostSavingsPanel,
@@ -221,6 +222,10 @@ export default function DriveDetailPage() {
 
           <SectionErrorBoundary name="drive-detail:silent-counter" fallbackTitle={t('driveDetail.section.silentFailed', 'Counter-silent panel failed to load')}>
             <SilentCounterPanel driveId={id} />
+          </SectionErrorBoundary>
+
+          <SectionErrorBoundary name="drive-detail:energy-ledger" fallbackTitle={t('driveDetail.section.ledgerFailed', 'Energy ledger failed to load')}>
+            <DriveLedgerCompactPanel driveId={id} />
           </SectionErrorBoundary>
 
           {/*
