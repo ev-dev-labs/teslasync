@@ -25,7 +25,7 @@ Sidebar group **Tesla Physics**. In the app, expand this section in the left nav
 
 ## Analysis boundaries
 
-New HTTP routes use `internal/handler/v1` and the `physicssvc` / `sciencesvc`
+New HTTP routes use `internal/handler/v1/analysis` and the `physicssvc` / `sciencesvc`
 application services. The ledger uses recorded intervals, exposes gaps and row
 caps, and does not reconcile partial telemetry against a complete session.
 Explicit `Disconnected` state, not latch release, denotes unplugging.

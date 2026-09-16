@@ -108,6 +108,16 @@ func TestExtractGoEnvVars(t *testing.T) {
 	if strings.Join(got, ",") != strings.Join(want, ",") {
 		t.Fatalf("got %v, want %v", got, want)
 	}
+
+}
+
+func TestExtractOptionalFloatBindings(t *testing.T) {
+	source := `var mass = envOptionalFloat64("TESLASYNC_VEHICLE_MASS_KG")
+var dynamic = envOptionalFloat64(variableName)`
+	got := ExtractGoEnvVars(source)
+	if len(got) != 1 || got[0] != "TESLASYNC_VEHICLE_MASS_KG" {
+		t.Fatalf("optional float binding not recognized: %v", got)
+	}
 }
 
 // TestExtractComposeEnvVars_BothFormsAndServiceScoping pins the two

@@ -407,6 +407,7 @@ import (
 	v1handlers "github.com/ev-dev-labs/teslasync/internal/handler/v1"
 	actioncenterhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/actioncenter"
 	advancedintelligencehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/advancedintelligence"
+	analysishandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/analysis"
 	fleetstatehandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/fleetstate"
 	ownershipintelhandler "github.com/ev-dev-labs/teslasync/internal/handler/v1/ownershipintel"
 	"github.com/ev-dev-labs/teslasync/internal/tracing"
@@ -1063,7 +1064,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 	// server-side, so the browser never downloads a raw counter history.
 	fsdInsightsHandler := apifsd.NewHandler(db)
 	physicsHandler := apiphysics.NewHandler(db, stateReader, liveStateReader)
-	physicsLedgerHandler := v1handlers.NewPhysicsLedgerHandler(physicssvc.New(db, stateReader, cfg))
+	physicsLedgerHandler := analysishandler.NewPhysicsLedgerHandler(physicssvc.New(db, stateReader, cfg))
 	var scienceWeather sciencesvc.HistoryFetcher
 	if cfg.Physics.WeatherEnabled {
 		client := apistormguard.NewClient()
@@ -1079,7 +1080,7 @@ func NewRouter(db *database.DB, teslaClient *tesla.Client, mqttClient *mqtt.Clie
 			return out, nil
 		}
 	}
-	scienceHandler := v1handlers.NewScienceHandler(sciencesvc.New(db, stateReader, cfg, scienceWeather))
+	scienceHandler := analysishandler.NewScienceHandler(sciencesvc.New(db, stateReader, cfg, scienceWeather))
 	if mqttClient != nil {
 		physicsHandler.WithMQTTConnected(func() *bool {
 			connected := mqttClient.IsConnected()
