@@ -33,6 +33,7 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const scrollTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
   const listboxId = useId();
 
   const index = useMemo(() => getSettingsIndex(t), [t]);
@@ -61,6 +62,14 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
     return () => document.removeEventListener('mousedown', handlePointerDown);
   }, [open]);
 
+  useEffect(() => {
+    return () => {
+      if (scrollTimerRef.current !== null) {
+        window.clearTimeout(scrollTimerRef.current);
+      }
+    };
+  }, []);
+
   function commit(entry: SettingsEntry) {
     setQuery('');
     setOpen(false);
@@ -72,7 +81,12 @@ export function SettingsSearch({ className }: SettingsSearchProps) {
     // resolver and our smooth-scroll behave consistently.
     const id = entry.href.split('#')[1];
     if (!id) return;
-    window.setTimeout(() => {
+    if (scrollTimerRef.current !== null) {
+      window.clearTimeout(scrollTimerRef.current);
+    }
+    scrollTimerRef.current = window.setTimeout(() => {
+      scrollTimerRef.current = null;
+      if (typeof document === 'undefined') return;
       const el = document.getElementById(id);
       if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }, SCROLL_FALLBACK_DELAY_MS);

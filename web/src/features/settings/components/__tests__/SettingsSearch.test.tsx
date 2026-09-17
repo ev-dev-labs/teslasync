@@ -192,4 +192,27 @@ describe('SettingsSearch', () => {
     // the user-visible promise we care about.
     expect(screen.getByTestId('location').textContent).toBe('/settings#appearance');
   });
+
+  it('clears the hash-scroll fallback timer on unmount', () => {
+    vi.useFakeTimers();
+    try {
+      const { unmount } = renderSearch();
+      const input = screen.getByPlaceholderText('Search settings…');
+
+      act(() => {
+        fireEvent.focus(input);
+        fireEvent.change(input, { target: { value: 'theme' } });
+        fireEvent.keyDown(input, { key: 'Enter' });
+      });
+
+      unmount();
+      expect(() => {
+        act(() => {
+          vi.runAllTimers();
+        });
+      }).not.toThrow();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
