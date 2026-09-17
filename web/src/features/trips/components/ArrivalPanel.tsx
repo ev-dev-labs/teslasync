@@ -7,6 +7,7 @@ import { Badge, Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { safeArray } from '@/lib/safeArray';
 
 const VERDICT_LABEL_KEYS: Record<ChecklistStatus, string> = {
   ok: 'journey.arrival.verdict.ok',
@@ -47,6 +48,7 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
   const arrivalQuery = useArrival(session.id);
   const arrivalState = useDataState(arrivalQuery);
   const arrival = arrivalQuery.data ?? null;
+  const arrivalEvidence = safeArray(arrival?.evidence);
 
   return (
     <div className="space-y-4">
@@ -107,9 +109,9 @@ export function ArrivalPanel({ session }: { session: JourneySession }) {
             ) : null}
           </div>
 
-          {arrival.evidence.length > 0 ? (
+          {arrivalEvidence.length > 0 ? (
             <ul className="space-y-1">
-              {arrival.evidence.map((line) => (
+              {arrivalEvidence.map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}
                 </Text>

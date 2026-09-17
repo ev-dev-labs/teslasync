@@ -54,14 +54,15 @@ func NudgeVerdict(now time.Time, recommended *time.Time, blockers []Item) string
 	return NudgeLeaveNow
 }
 
-// Blockers filters a run to action-level items. Nil run yields nil —
-// no run is not a blocker, it is flagged separately in evidence so a
+// Blockers filters a run to action-level items. Nil run yields an
+// empty slice (JSON []), not nil — the UI reads blockers.length.
+// No run is not a blocker; it is flagged separately in evidence so a
 // fresh trip does not read as broken. Pure.
 func Blockers(run *Run) []Item {
-	if run == nil {
-		return nil
-	}
 	out := []Item{}
+	if run == nil {
+		return out
+	}
 	for _, item := range run.Items {
 		if item.Status == ItemAction {
 			out = append(out, item)

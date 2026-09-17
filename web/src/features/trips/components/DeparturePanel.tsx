@@ -7,6 +7,7 @@ import { Badge, Button, Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
+import { safeArray } from '@/lib/safeArray';
 
 const HORIZONS = [12, 24, 48] as const;
 
@@ -42,6 +43,7 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
   });
   const adviceState = useDataState(adviceQuery);
   const advice = adviceQuery.data ?? null;
+  const slots = safeArray(advice?.slots);
 
   if (!hasOrigin) {
     return (
@@ -79,7 +81,7 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
         <ListSkeleton label={t('journey.departure.loading', 'Scoring departure hours…')} />
       ) : adviceState.fatalError ? (
         <QueryError error={adviceState.fatalError} onRetry={() => adviceState.retry?.()} />
-      ) : advice == null || advice.slots.length === 0 ? (
+      ) : advice == null || slots.length === 0 ? (
         <Text as="p" size="sm" color="secondary">
           {t('journey.departure.uncovered', 'The forecast covers none of this window.')}
         </Text>
@@ -106,7 +108,7 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
             </Badge>
           )}
           <div className="flex flex-wrap gap-1.5" role="list" aria-label={t('journey.departure.slots', 'Departure hours')}>
-            {advice.slots.map((slot) => (
+            {slots.map((slot) => (
               <span
                 key={slot.depart_at}
                 role="listitem"
@@ -122,7 +124,7 @@ export function DeparturePanel({ session }: { session: JourneySession }) {
             ))}
           </div>
           <ul className="space-y-1">
-            {advice.evidence.map((line) => (
+            {safeArray(advice.evidence).map((line) => (
               <Text as="li" key={line} size="xs" color="muted">
                 · {line}
               </Text>

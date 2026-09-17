@@ -11,6 +11,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { Badge, Button, Text } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { formatTime } from '@/lib/dateFormat';
+import { safeArray } from '@/lib/safeArray';
 
 const VERDICT_LABEL_KEYS: Record<JourneyRangeVerdict, string> = {
   ok: 'journey.live.verdict.ok',
@@ -52,6 +53,8 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
   const liveQuery = useJourneyLive(session.id);
   const liveState = useDataState(liveQuery);
   const view = liveQuery.data ?? null;
+  const trail = safeArray(view?.trail);
+  const liveEvidence = safeArray(view?.evidence);
 
   const { checkIn, queued, isPending: checkInPending } = useQueuedCheckIn(session.id);
   const busy = liveQuery.isLoading || checkInPending;
@@ -177,12 +180,12 @@ export function LiveTripPanel({ session }: { session: JourneySession }) {
             {t('journey.live.lastFix', 'Last fix {{time}}', {
               time: formatTime(view.latest.recorded_at),
             })}{' '}
-            · {t('journey.live.fixes', '{{count}} fixes', { count: view.trail.length })}
+            · {t('journey.live.fixes', '{{count}} fixes', { count: trail.length })}
           </Text>
 
-          {view.evidence.length > 0 ? (
+          {liveEvidence.length > 0 ? (
             <ul className="space-y-1">
-              {view.evidence.map((line) => (
+              {liveEvidence.map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}
                 </Text>

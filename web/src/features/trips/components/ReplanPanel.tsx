@@ -11,6 +11,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { Badge, Button, Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { StopScoreTable } from './StopScoreTable';
+import { safeArray } from '@/lib/safeArray';
 
 const VERDICT_LABEL_KEYS: Record<JourneyDeviationVerdict, string> = {
   on_track: 'journey.replan.verdict.on_track',
@@ -52,6 +53,7 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
   const assessQuery = useReplanAssessment(session.id);
   const assessState = useDataState(assessQuery);
   const assessment = assessQuery.data ?? null;
+  const replanEvidence = safeArray(assessment?.evidence);
 
   const replan = useRequestReplan();
   const result = replan.data ?? null;
@@ -99,9 +101,9 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
               </Text>
             ) : null}
           </div>
-          {assessment.evidence.length > 0 ? (
+          {replanEvidence.length > 0 ? (
             <ul className="space-y-1">
-              {assessment.evidence.map((line) => (
+              {replanEvidence.map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}
                 </Text>
@@ -123,7 +125,7 @@ export function ReplanPanel({ session }: { session: JourneySession }) {
               {t('journey.planVersion', 'v{{version}}', { version: result.plan_version })}
             </Text>
           </div>
-          <StopScoreTable stops={result.stops} tableId="journey-replan-scores" />
+          <StopScoreTable stops={safeArray(result.stops)} tableId="journey-replan-scores" />
         </div>
       ) : null}
     </div>

@@ -10,7 +10,7 @@
 // losing the most recent run. On error we emit a toast so the failure
 // is visible even if the page is unmounted before the catch resolves.
 
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { request } from '../client';
 import { useMutationToast } from './_toastHelpers';
 import type { DiagnosticReport } from '../types';
@@ -53,10 +53,24 @@ export function useRunDiagnostic(options: UseRunDiagnosticOptions = {}) {
  * Convenience hook to read the most recent report without re-running
  * the diagnostic. Returns `undefined` until the user fires at least
  * one successful run in this session.
+ *
+ * Must subscribe via useQuery — getQueryData() is a one-shot read and
+ * does not notify React when onSuccess writes diagnosticKeys.last.
+ * Tests also use gcTime: 0, so an unobserved cache entry can be GC'd
+ * before the next render (CI flake: last stays undefined).
  */
 export function useLastDiagnostic(): DiagnosticReport | undefined {
-  const qc = useQueryClient();
-  return qc.getQueryData<DiagnosticReport>(diagnosticKeys.last);
+  const { data } = useQuery<DiagnosticReport>({
+    queryKey: diagnosticKeys.last,
+    queryFn: ({ signal }) => {
+      void signal;
+      throw new Error('diagnosticKeys.last is cache-only');
+    },
+    enabled: false,
+    staleTime: Infinity,
+    retry: false,
+  });
+  return data;
 }
 
 /**
