@@ -10,7 +10,17 @@ export function ThermalPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatTemperature } = useUnits();
   const th = ledger.thermal;
-  const temp = (v: number | null) => (v != null ? formatTemperature(v) : unknownLabel(t));
+  const temp = (v: number | null | undefined) => (v != null ? formatTemperature(v) : unknownLabel(t));
+  if (!th) {
+    return (
+      <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-thermal">
+        <PanelTitle>{t('physicsLedger.thermal.title', 'Thermal')}</PanelTitle>
+        <Text as="p" size="sm" color="secondary">
+          {t('physicsLedger.thermal.empty', 'No pack temperature sensors reported in this window.')}
+        </Text>
+      </GlassPanel>
+    );
+  }
   return (
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-thermal">
       <PanelTitle>{t('physicsLedger.thermal.title', 'Thermal')}</PanelTitle>

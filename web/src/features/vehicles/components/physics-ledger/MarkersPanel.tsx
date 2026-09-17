@@ -7,7 +7,7 @@ import { useT } from './helpers';
 
 export function MarkersPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
-  const markers = ledger.markers ?? [];
+  const markers = Array.isArray(ledger.markers) ? ledger.markers : [];
   return (
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-markers">
       <PanelTitle>{t('physicsLedger.markers.title', 'Chapter markers')}</PanelTitle>

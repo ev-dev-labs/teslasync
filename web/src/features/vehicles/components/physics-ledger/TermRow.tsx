@@ -11,7 +11,7 @@ export function TermRow({
   highlight,
 }: {
   label: string;
-  term: PhysicsTerm;
+  term?: PhysicsTerm | null;
   format: (wh: number) => string;
   highlight?: boolean;
 }) {
@@ -23,8 +23,8 @@ export function TermRow({
           {label}
         </Text>{' '}
         <Caption>
-          {term.method}
-          {term.missing_signals?.length ? ` · ${t('physicsLedger.missing', 'missing')}: ${term.missing_signals.join(', ')}` : ''}
+          {term?.method ?? unknownLabel(t)}
+          {term?.missing_signals?.length ? ` · ${t('physicsLedger.missing', 'missing')}: ${term.missing_signals.join(', ')}` : ''}
         </Caption>
       </div>
       <Text
@@ -32,7 +32,7 @@ export function TermRow({
         size="sm"
         className={highlight ? 'font-semibold text-[var(--text-primary)]' : 'text-[var(--text-primary)] tabular-nums'}
       >
-        {term.unknown || term.value_wh == null ? unknownLabel(t) : format(term.value_wh)}
+        {!term || term.unknown || term.value_wh == null ? unknownLabel(t) : format(term.value_wh)}
       </Text>
     </div>
   );

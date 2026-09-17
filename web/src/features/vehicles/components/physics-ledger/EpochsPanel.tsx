@@ -4,12 +4,13 @@ import type {
 import { DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/components/ui';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
-import { unknownLabel, useT } from './helpers';
+import { asList, unknownLabel, useT } from './helpers';
 
 export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatEnergy } = useUnits();
-  const columns: Column<(typeof ledger.epochs)[number]>[] = [
+  const epochs = asList(ledger.epochs);
+  const columns: Column<(typeof epochs)[number]>[] = [
     { key: 'firmware', header: t('physicsLedger.epochs.firmware', 'Firmware'), render: (row) => row.firmware },
     {
       key: 'measured',
@@ -36,9 +37,9 @@ export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-epochs">
       <PanelTitle>{t('physicsLedger.epochs.title', 'Firmware epochs')}</PanelTitle>
       <Text as="p" size="sm" color="secondary">
-        {ledger.epochs[0]?.honesty ?? t('physicsLedger.epochs.honesty', 'Each software version is a physics baseline for this VIN. Residual changes are correlation, not proof of a fix.')}
+        {epochs[0]?.honesty ?? t('physicsLedger.epochs.honesty', 'Each software version is a physics baseline for this VIN. Residual changes are correlation, not proof of a fix.')}
       </Text>
-      {ledger.epochs.length === 0 ? (
+      {epochs.length === 0 ? (
         <Text as="p" size="sm" color="secondary">
           {t('physicsLedger.epochs.empty', 'No firmware-labelled samples in this window.')}
         </Text>
@@ -46,7 +47,7 @@ export function EpochsPanel({ ledger }: { ledger: PhysicsLedger }) {
         <DataTable
           tableId="physics-ledger:epochs"
           columns={columns}
-          data={ledger.epochs}
+          data={epochs}
           keyExtractor={(row) => row.firmware}
           emptyMessage={t('physicsLedger.epochs.empty', 'No firmware-labelled samples in this window.')}
         />

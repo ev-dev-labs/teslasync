@@ -19,7 +19,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatEnergyPerDistance } from '@/lib/unitConversion';
-import { unknown, useT } from './helpers';
+import { asList, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
 
 export function WeatherPanel({ window }: { window: ScienceWindow }) {
@@ -57,7 +57,7 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
             <Badge variant={data.weather_unknown ? 'warning' : 'success'} size="sm">
               {data.weather_unknown
                 ? t('science.weather.weatherUnknown', 'weather unknown')
-                : t('science.weather.joined', 'joined {{n}} drives', { n: data.points.length })}
+                : t('science.weather.joined', 'joined {{n}} drives', { n: asList(data.points).length })}
             </Badge>
             <Badge variant="neutral" size="sm">
               ρ(density, residual): {data.density_r != null ? fmtNumber(data.density_r, 2) : unknown(t)}
@@ -69,11 +69,11 @@ export function WeatherPanel({ window }: { window: ScienceWindow }) {
               {t('science.weather.rainDry', 'rain/dry')}: {fmtNumber(data.rain_n, 0)}/{fmtNumber(data.dry_n, 0)}
             </Badge>
           </div>
-          {data.points.length > 0 ? (
+          {asList(data.points).length > 0 ? (
             <DataTable
               tableId="science:weather"
               columns={columns}
-              data={data.points}
+              data={asList(data.points)}
               keyExtractor={(r) => `${r.drive_id}`}
               emptyMessage={t('science.empty', 'No fit inputs in this window.')}
             />

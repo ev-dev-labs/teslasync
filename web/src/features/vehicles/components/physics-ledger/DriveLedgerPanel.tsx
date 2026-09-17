@@ -6,10 +6,20 @@ import { useUnits } from '@/hooks/useUnits';
 import { unknownLabel, useT } from './helpers';
 import { TermRow } from './TermRow';
 
-export function DriveLedgerPanel({ ledger }: { ledger: PhysicsDriveLedger }) {
+export function DriveLedgerPanel({ ledger }: { ledger?: PhysicsDriveLedger | null }) {
   const t = useT();
   const { formatEnergy } = useUnits();
   const energy = (wh: number) => formatEnergy(wh);
+  if (!ledger) {
+    return (
+      <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-drive">
+        <PanelTitle>{t('physicsLedger.drive.title', 'Drive energy ledger')}</PanelTitle>
+        <Text as="p" size="sm" color="secondary">
+          {t('physicsLedger.drive.empty', 'No drive interval in this window.')}
+        </Text>
+      </GlassPanel>
+    );
+  }
   return (
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-drive">
       <PanelTitle>{t('physicsLedger.drive.title', 'Drive energy ledger')}</PanelTitle>

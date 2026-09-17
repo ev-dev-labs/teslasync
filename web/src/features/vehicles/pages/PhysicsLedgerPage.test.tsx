@@ -318,6 +318,30 @@ describe('PhysicsLedgerPage', () => {
     expect(screen.getByTestId('ledger-range').textContent).toMatch(/mi/);
   });
 
+  it('does not crash when Go encodes empty slices and missing nested ledgers as null', () => {
+    usePhysicsLedgerMock.mockReturnValue(queryState({
+      data: ledgerResponse({
+        dynamics: null as unknown as PhysicsLedger['dynamics'],
+        drive: null as unknown as PhysicsLedger['drive'],
+        charge: null as unknown as PhysicsLedger['charge'],
+        park: null as unknown as PhysicsLedger['park'],
+        thermal: null as unknown as PhysicsLedger['thermal'],
+        range: null as unknown as PhysicsLedger['range'],
+        tires: null as unknown as PhysicsLedger['tires'],
+        epochs: null as unknown as PhysicsLedger['epochs'],
+        unknown_intervals: null as unknown as PhysicsLedger['unknown_intervals'],
+        black_box: null as unknown as PhysicsLedger['black_box'],
+        markers: null as unknown as PhysicsLedger['markers'],
+      }),
+    }));
+    renderPage();
+    expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('ledger-dynamics')).toBeInTheDocument();
+    expect(screen.getByTestId('ledger-drive').textContent).toMatch(/No drive interval/);
+    expect(screen.getByTestId('ledger-unknown').textContent).toMatch(/Full coverage/);
+    expect(screen.getByTestId('ledger-blackbox').textContent).toMatch(/Fewer than two samples/);
+  });
+
   it('renders charts for dynamics and black box', () => {
     const { container } = renderPage();
     expect(screen.getByLabelText('Pack power and speed over the window')).toBeInTheDocument();
