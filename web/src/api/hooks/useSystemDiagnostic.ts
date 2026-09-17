@@ -62,7 +62,8 @@ export function useRunDiagnostic(options: UseRunDiagnosticOptions = {}) {
 export function useLastDiagnostic(): DiagnosticReport | undefined {
   const { data } = useQuery<DiagnosticReport>({
     queryKey: diagnosticKeys.last,
-    queryFn: () => {
+    queryFn: ({ signal }) => {
+      void signal;
       throw new Error('diagnosticKeys.last is cache-only');
     },
     enabled: false,
