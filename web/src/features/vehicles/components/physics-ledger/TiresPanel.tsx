@@ -9,6 +9,16 @@ export function TiresPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatPressure } = useUnits();
   const tr = ledger.tires;
+  if (!tr) {
+    return (
+      <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-tires">
+        <PanelTitle>{t('physicsLedger.tires.title', 'Tires')}</PanelTitle>
+        <Text as="p" size="sm" color="secondary">
+          {t('physicsLedger.tires.empty', 'No TPMS corners reported in this window.')}
+        </Text>
+      </GlassPanel>
+    );
+  }
   const corners: Array<[string, number | null]> = [
     [t('physicsLedger.tires.fl', 'Front left'), tr.fl_kpa],
     [t('physicsLedger.tires.fr', 'Front right'), tr.fr_kpa],

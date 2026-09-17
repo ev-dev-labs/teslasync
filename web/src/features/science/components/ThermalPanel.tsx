@@ -17,7 +17,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { useUnits } from '@/hooks/useUnits';
 import { fmtNumber } from '@/lib/numberFormat';
 import { formatTemperatureDelta } from '@/lib/unitConversion';
-import { unknown, useT } from './helpers';
+import { asList, unknown, useT } from './helpers';
 import { MissingBadges } from './MissingBadges';
 
 export function ThermalPanel({ window }: { window: ScienceWindow }) {
@@ -40,11 +40,11 @@ export function ThermalPanel({ window }: { window: ScienceWindow }) {
       ) : (
         <>
           <Text as="p" size="sm" color="secondary">{data.honesty}</Text>
-          {data.fits.length === 0 ? (
+          {asList(data.fits).length === 0 ? (
             <Text as="p" size="sm" color="secondary">{t('science.thermal.empty', 'No Park cooldown transients with ambient reference in this window.')}</Text>
           ) : (
             <div className="space-y-2">
-              {data.fits.map((f) => (
+              {asList(data.fits).map((f) => (
                 <div key={`${f.kind}-${f.start}`} className="flex flex-wrap items-center gap-2">
                   <Badge variant={f.unknown ? 'warning' : 'success'} size="sm">{f.kind}</Badge>
                   <Text as="span" size="sm" className="tabular-nums">

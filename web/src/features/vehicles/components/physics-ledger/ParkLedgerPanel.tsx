@@ -10,6 +10,16 @@ export function ParkLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatEnergy, formatPower, formatDuration } = useUnits();
   const p = ledger.park;
+  if (!p) {
+    return (
+      <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-park">
+        <PanelTitle>{t('physicsLedger.park.title', 'Park / vampire physics')}</PanelTitle>
+        <Text as="p" size="sm" color="secondary">
+          {t('physicsLedger.park.empty', 'No Park interval in this window.')}
+        </Text>
+      </GlassPanel>
+    );
+  }
   return (
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-park">
       <PanelTitle>{t('physicsLedger.park.title', 'Park / vampire physics')}</PanelTitle>

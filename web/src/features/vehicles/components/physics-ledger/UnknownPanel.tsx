@@ -5,12 +5,13 @@ import { Badge, DataTable, GlassPanel, PanelTitle, Text, type Column } from '@/c
 import { useUnits } from '@/hooks/useUnits';
 import { formatDateTime } from '@/lib/dateFormat';
 import { fmtNumber } from '@/lib/numberFormat';
-import { useT } from './helpers';
+import { asList, useT } from './helpers';
 
 export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatDuration } = useUnits();
-  const columns: Column<(typeof ledger.unknown_intervals)[number]>[] = [
+  const intervals = asList(ledger.unknown_intervals);
+  const columns: Column<(typeof intervals)[number]>[] = [
     { key: 'start', header: t('physicsLedger.unknown.start', 'Start'), render: (row) => formatDateTime(row.started_at) },
     { key: 'end', header: t('physicsLedger.unknown.end', 'End'), render: (row) => formatDateTime(row.ended_at) },
     {
@@ -33,7 +34,7 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
           </Badge>
         ) : null}
       </div>
-      {ledger.unknown_intervals.length === 0 ? (
+      {intervals.length === 0 ? (
         <Text as="p" size="sm" color="secondary">
           {t('physicsLedger.unknown.empty', 'Full coverage: no gaps in this window.')}
         </Text>
@@ -41,7 +42,7 @@ export function UnknownPanel({ ledger }: { ledger: PhysicsLedger }) {
         <DataTable
           tableId="physics-ledger:unknown"
           columns={columns}
-          data={ledger.unknown_intervals}
+          data={intervals}
           keyExtractor={(row) => `${row.started_at}-${row.ended_at}`}
           emptyMessage={t('physicsLedger.unknown.empty', 'Full coverage: no gaps in this window.')}
           pagination={{ defaultPageSize: 10, pageSizeOptions: [10, 25, 50] }}

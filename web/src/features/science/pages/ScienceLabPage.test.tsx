@@ -319,6 +319,31 @@ describe('ScienceLabPage', () => {
     expect(screen.getByTestId('science-weather').textContent).toMatch(/Correlation/);
   });
 
+  it('does not crash when Go encodes empty slices as null', () => {
+    scienceMocks.electrochem.mockReturnValue(queryState({
+      data: electrochem({
+        ocv_points: null as unknown as ScienceElectrochem['ocv_points'],
+        ocv_bins: null as unknown as ScienceElectrochem['ocv_bins'],
+        hysteresis: null as unknown as ScienceElectrochem['hysteresis'],
+        ir_points: null as unknown as ScienceElectrochem['ir_points'],
+      }),
+    }));
+    scienceMocks.thermal.mockReturnValue(queryState({
+      data: thermal({ fits: null as unknown as ScienceThermal['fits'] }),
+    }));
+    scienceMocks.weather.mockReturnValue(queryState({
+      data: weather({ points: null as unknown as ScienceWeather['points'] }),
+    }));
+    scienceMocks.notebook.mockReturnValue(queryState({
+      data: notebook({ entries: null as unknown as ScienceNotebook['entries'] }),
+    }));
+    renderPage();
+    expect(screen.queryByText(/Something went wrong/i)).not.toBeInTheDocument();
+    expect(screen.getByTestId('science-electrochem').textContent).toMatch(/n=0/);
+    expect(screen.getByTestId('science-thermal').textContent).toMatch(/No Park cooldown/);
+    expect(screen.getByTestId('science-notebook').textContent).toMatch(/No notebook rows/);
+  });
+
   it('renders the pack-IR chart as real SVG', () => {
     const { container } = renderPage();
     expect(screen.getByLabelText('Pack resistance over the window')).toBeInTheDocument();

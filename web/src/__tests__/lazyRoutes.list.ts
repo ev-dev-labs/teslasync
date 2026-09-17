@@ -305,5 +305,7 @@ export const LAZY_ROUTE_IMPORTS: Array<{
   { name: 'SubscriptionROI', load: () => import('../features/ownership/pages/SubscriptionROIPage') },
   { name: 'PhysicsCockpit', load: () => import('../features/vehicles/pages/PhysicsCockpitPage') },
   { name: 'TeslaOnly', load: () => import('../features/vehicles/pages/TeslaOnlyPage') },
+  { name: 'PhysicsLedger', load: () => import('../features/vehicles/pages/PhysicsLedgerPage') },
+  { name: 'ScienceLab', load: () => import('../features/science/pages/ScienceLabPage') },
   { name: 'OutageAutobiography', load: () => import('../features/system/pages/OutageAutobiographyPage') },
 ]

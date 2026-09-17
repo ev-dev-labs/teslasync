@@ -13,7 +13,7 @@ import {
 import { useDataState } from '@/hooks/useDataState';
 import { fmtNumber } from '@/lib/numberFormat';
 import { EntryDetail } from './EntryDetail';
-import { useT } from './helpers';
+import { asList, useT } from './helpers';
 
 export function NotebookPanel({ window }: { window: ScienceWindow }) {
   const t = useT();
@@ -34,11 +34,11 @@ export function NotebookPanel({ window }: { window: ScienceWindow }) {
       ) : (
         <>
           <Text as="p" size="sm" color="secondary">{data.honesty}</Text>
-          {data.entries.length === 0 ? (
+          {asList(data.entries).length === 0 ? (
             <Text as="p" size="sm" color="secondary">{t('science.notebook.empty', 'No notebook rows in this window.')}</Text>
           ) : (
             <div className="space-y-2">
-              {data.entries.map((entry) => (
+              {asList(data.entries).map((entry) => (
                 <Accordion
                   key={entry.id}
                   title={`${entry.domain} · ${entry.id}`}

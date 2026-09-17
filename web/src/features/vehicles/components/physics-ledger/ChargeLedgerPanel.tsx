@@ -11,6 +11,16 @@ export function ChargeLedgerPanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatEnergy, formatDuration } = useUnits();
   const c = ledger.charge;
+  if (!c) {
+    return (
+      <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-charge">
+        <PanelTitle>{t('physicsLedger.charge.title', 'Charge physics')}</PanelTitle>
+        <Text as="p" size="sm" color="secondary">
+          {t('physicsLedger.charge.empty', 'No charge interval in this window.')}
+        </Text>
+      </GlassPanel>
+    );
+  }
   return (
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-charge">
       <PanelTitle>{t('physicsLedger.charge.title', 'Charge physics')}</PanelTitle>

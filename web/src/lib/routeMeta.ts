@@ -149,6 +149,7 @@ const PARENT_OVERRIDES: Record<string, string> = {
   '/tesla-only/modes': '/tesla-only',
   '/tesla-only/nervous-system': '/tesla-only',
   '/tesla-only/range': '/tesla-only',
+  '/tesla-only/ledger': '/tesla-only',
   '/tesla-only/unknown': '/tesla-only',
   '/tesla-only/vault': '/tesla-only',
 };

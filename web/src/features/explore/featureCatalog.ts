@@ -87,6 +87,7 @@ const DESCRIPTIONS: Record<string, string> = {
   '/tesla-only/modes': 'Valet, Service, Transport laws. Unknown mode stays unknown.',
   '/tesla-only/nervous-system': 'BMS, Gear, latch, and trip meters: alive, silent, or contradicting.',
   '/tesla-only/range': 'Rated, typical, ideal, and energy remaining. Never a true range.',
+  '/science': 'OCV, DCIR, thermal, weather, and tire claims with n, CI, and residuals.',
   '/fleet-operations': 'Coordinate drivers, bookings, policies, work orders, and utilization.',
   '/resale-vault': 'Create verifiable, selectively disclosed vehicle-history reports.',
 

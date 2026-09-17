@@ -10,7 +10,17 @@ export function RangePanel({ ledger }: { ledger: PhysicsLedger }) {
   const t = useT();
   const { formatDistance, formatEnergy, unitPrefs } = useUnits();
   const r = ledger.range;
-  const dist = (v: number | null) => (v != null ? formatDistance(v) : unknownLabel(t));
+  const dist = (v: number | null | undefined) => (v != null ? formatDistance(v) : unknownLabel(t));
+  if (!r) {
+    return (
+      <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-range">
+        <PanelTitle>{t('physicsLedger.range.title', 'Range disagreement')}</PanelTitle>
+        <Text as="p" size="sm" color="secondary">
+          {t('physicsLedger.range.empty', 'No range estimators were recorded in this window.')}
+        </Text>
+      </GlassPanel>
+    );
+  }
   return (
     <GlassPanel padding="auto" className="space-y-4" data-testid="ledger-range">
       <PanelTitle>{t('physicsLedger.range.title', 'Range disagreement')}</PanelTitle>

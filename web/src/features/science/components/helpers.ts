@@ -13,11 +13,16 @@ export function unknown(t: Translate) {
   return t('science.unknown', 'unknown');
 }
 
-export function downsample<T>(rows: readonly T[], budget: number): T[] {
-  if (rows.length <= budget) return [...rows];
-  const step = rows.length / budget;
+export function asList<T>(rows: readonly T[] | null | undefined): T[] {
+  return Array.isArray(rows) ? [...rows] : [];
+}
+
+export function downsample<T>(rows: readonly T[] | null | undefined, budget: number): T[] {
+  const list = asList(rows);
+  if (list.length <= budget) return list;
+  const step = list.length / budget;
   const out: T[] = [];
-  for (let i = 0;i < budget;i += 1) out.push(rows[Math.floor(i * step)]);
+  for (let i = 0; i < budget; i += 1) out.push(list[Math.floor(i * step)]);
   return out;
 }
 
