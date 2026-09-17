@@ -40,8 +40,8 @@ func TestNudgeVerdict(t *testing.T) {
 }
 
 func TestBlockers(t *testing.T) {
-	if b := Blockers(nil); b != nil {
-		t.Fatalf("nil = %+v, want nil", b)
+	if b := Blockers(nil); b == nil || len(b) != 0 {
+		t.Fatalf("nil run = %+v, want empty slice", b)
 	}
 	run := &Run{Items: []Item{
 		{Key: "a", Status: ItemOK},

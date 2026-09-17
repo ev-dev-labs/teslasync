@@ -276,6 +276,11 @@ export function useJourney(id: number | null | undefined, options?: { enabled?: 
       request<JourneyDetail>(`/journey/sessions/${id}`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
+    select: (data) => ({
+      ...data,
+      plans: safeArray(data?.plans),
+      next_statuses: safeArray(data?.next_statuses),
+    }),
   });
 }
 
@@ -339,6 +344,11 @@ export function useDeparture(
       ),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
+    select: (data) => ({
+      ...data,
+      slots: safeArray(data?.slots),
+      evidence: safeArray(data?.evidence),
+    }),
   });
 }
 
@@ -350,6 +360,7 @@ export function useChecklist(id: number | null | undefined, options?: { enabled?
       request<ChecklistRun>(`/journey/sessions/${id}/checklist`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
+    select: (data) => ({ ...data, items: safeArray(data?.items) }),
   });
 }
 
@@ -384,6 +395,11 @@ export function useJourneyLive(id: number | null | undefined, options?: { enable
       request<JourneyLiveView>(`/journey/sessions/${id}/live`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('live'),
+    select: (data) => ({
+      ...data,
+      trail: safeArray(data?.trail),
+      evidence: safeArray(data?.evidence),
+    }),
   });
 }
 
@@ -426,6 +442,7 @@ export function useReplanAssessment(id: number | null | undefined, options?: { e
       request<JourneyReplanAssessment>(`/journey/sessions/${id}/replan`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
+    select: (data) => ({ ...data, evidence: safeArray(data?.evidence) }),
   });
 }
 
@@ -460,6 +477,7 @@ export function useArrival(id: number | null | undefined, options?: { enabled?: 
       request<JourneyArrival>(`/journey/sessions/${id}/arrival`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('live'),
+    select: (data) => ({ ...data, evidence: safeArray(data?.evidence) }),
   });
 }
 
@@ -471,6 +489,7 @@ export function useReport(id: number | null | undefined, options?: { enabled?: b
       request<JourneyReport>(`/journey/sessions/${id}/report`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
+    select: (data) => ({ ...data, evidence: safeArray(data?.evidence) }),
   });
 }
 
@@ -482,6 +501,11 @@ export function useNudge(id: number | null | undefined, options?: { enabled?: bo
       request<JourneyNudge>(`/journey/sessions/${id}/nudge`, { signal }),
     enabled: (options?.enabled ?? true) && id != null && id > 0,
     ...queryPolicy('operational'),
+    select: (data) => ({
+      ...data,
+      blockers: safeArray(data?.blockers),
+      evidence: safeArray(data?.evidence),
+    }),
   });
 }
 

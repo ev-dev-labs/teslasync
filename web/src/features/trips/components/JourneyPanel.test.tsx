@@ -233,4 +233,44 @@ describe('JourneyPanel', () => {
     fireEvent.click(screen.getByText('Retry'));
     expect(refetch).toHaveBeenCalled();
   });
+
+  it('renders when Go sends null slices on a planned journey', () => {
+    mockDetail.mockReturnValue(
+      idle({
+        data: { session: sessions[0], plans: null, next_statuses: null },
+      }),
+    );
+    mockNudge.mockReturnValue(
+      idle({
+        data: {
+          session_id: 1,
+          verdict: 'unknown',
+          slot_at: null,
+          blockers: null,
+          evidence: null,
+        },
+      }),
+    );
+    mockChecklist.mockReturnValue(
+      idle({
+        data: {
+          id: 1,
+          session_id: 1,
+          run_at: '2026-09-10T10:00:00Z',
+          items: null,
+        },
+      }),
+    );
+    mockList.mockReturnValue(idle({ data: null }));
+    const { unmount } = renderPanel();
+    expect(screen.getByText(/No journeys yet/)).toBeInTheDocument();
+    unmount();
+
+    mockList.mockReturnValue(idle({ data: sessions }));
+    renderPanel();
+    fireEvent.click(screen.getAllByText('Open')[0]);
+    expect(screen.getAllByText('Tahoe ski trip').length).toBeGreaterThan(0);
+    expect(screen.getByText(/No plans saved yet/)).toBeInTheDocument();
+    expect(screen.getByText('Leave now?')).toBeInTheDocument();
+  });
 });

@@ -6,6 +6,7 @@ import { useUnits } from '@/hooks/useUnits';
 import { Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { fmtNumber } from '@/lib/numberFormat';
+import { safeArray } from '@/lib/safeArray';
 
 /**
  * Trip report card: distance, duration, detour factor, plan/replan
@@ -19,6 +20,7 @@ export function ReportPanel({ session }: { session: JourneySession }) {
   const reportQuery = useReport(session.id);
   const reportState = useDataState(reportQuery);
   const report = reportQuery.data ?? null;
+  const reportEvidence = safeArray(report?.evidence);
 
   return (
     <div className="space-y-4">
@@ -111,9 +113,9 @@ export function ReportPanel({ session }: { session: JourneySession }) {
             </div>
           </dl>
 
-          {report.evidence.length > 0 ? (
+          {reportEvidence.length > 0 ? (
             <ul className="space-y-1">
-              {report.evidence.map((line) => (
+              {reportEvidence.map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}
                 </Text>

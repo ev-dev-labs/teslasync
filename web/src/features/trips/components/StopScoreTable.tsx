@@ -5,6 +5,7 @@ import { DataTable, Text } from '@/components/ui';
 import type { Column } from '@/components/ui';
 import { fmtNumber } from '@/lib/numberFormat';
 import type { ScoredStop } from '@/api/hooks/useJourney';
+import { safeArray } from '@/lib/safeArray';
 
 /**
  * Ranked stop table shared by initial scoring and replans: identical
@@ -25,7 +26,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
           <Text as="p" variant="label">
             {row.site}
           </Text>
-          {row.evidence.map((line) => (
+          {safeArray(row.evidence).map((line) => (
             <Text as="p" key={line} variant="caption">
               {line}
             </Text>
@@ -93,7 +94,7 @@ export function StopScoreTable({ stops, tableId }: { stops: ScoredStop[]; tableI
   return (
     <DataTable
       columns={columns}
-      data={stops}
+      data={safeArray(stops)}
       keyExtractor={(row) => row.site}
       tableId={tableId}
     />

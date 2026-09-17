@@ -11,6 +11,7 @@ import { Badge, Button, Text } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { isApiError } from '@/lib/resilience';
 import { formatDateTime } from '@/lib/dateFormat';
+import { safeArray } from '@/lib/safeArray';
 
 const ITEM_LABEL_KEYS = {
   charge_level: 'journey.checklist.item.charge_level',
@@ -67,6 +68,7 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
   const runQuery = useChecklist(session.id);
   const runState = useDataState(runQuery);
   const run = runQuery.data ?? null;
+  const items = safeArray(run?.items);
 
   const refresh = useRefreshChecklist();
 
@@ -130,7 +132,7 @@ export function ChecklistPanel({ session }: { session: JourneySession }) {
             })}
           </Text>
           <ul className="space-y-2">
-            {run.items.map((item) => (
+            {items.map((item) => (
               <li
                 key={item.key}
                 className="flex items-start justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"

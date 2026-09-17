@@ -8,6 +8,7 @@ import { Badge, Button, Checkbox, Input, Text } from '@/components/ui';
 import { UnitInput } from '@/components/forms';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { StopScoreTable } from './StopScoreTable';
+import { safeArray } from '@/lib/safeArray';
 
 const MAX_CANDIDATES = 10;
 
@@ -36,7 +37,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
 
   const sitesQuery = useWaitOracleSites();
   const sitesState = useDataState(sitesQuery);
-  const sites = useMemo(() => sitesQuery.data ?? [], [sitesQuery.data]);
+  const sites = useMemo(() => safeArray(sitesQuery.data), [sitesQuery.data]);
 
   const score = useScoreStops();
   const result = score.data ?? null;
@@ -157,7 +158,7 @@ export function StopScorePanel({ session }: { session: JourneySession }) {
               {t('journey.planVersion', 'v{{version}}', { version: result.plan_version })}
             </Text>
           </div>
-          <StopScoreTable stops={result.stops} tableId="journey-stop-scores" />
+          <StopScoreTable stops={safeArray(result.stops)} tableId="journey-stop-scores" />
         </div>
       ) : null}
     </div>

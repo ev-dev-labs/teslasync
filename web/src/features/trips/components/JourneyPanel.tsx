@@ -15,6 +15,7 @@ import { Badge, Button, DataTable, GlassPanel, Input, PanelTitle, Select, Text }
 import type { Column } from '@/components/ui';
 import { EmptyState, ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { safeArray } from '@/lib/safeArray';
 import { StopScorePanel } from './StopScorePanel';
 import { DeparturePanel } from './DeparturePanel';
 import { ChecklistPanel } from './ChecklistPanel';
@@ -109,7 +110,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
 
   const listQuery = useJourneys(vehicleId, statusFilter);
   const listState = useDataState(listQuery);
-  const sessions = listQuery.data ?? [];
+  const sessions = safeArray(listQuery.data);
 
   const detailQuery = useJourney(selectedId);
   const detailState = useDataState(detailQuery);
@@ -321,7 +322,7 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
               <Badge variant={statusVariant(detail.session.status)}>
                 {statusLabel(detail.session.status)}
               </Badge>
-              {detail.next_statuses.map((next) => {
+              {safeArray(detail.next_statuses).map((next) => {
                 const action = transitionAction(next, detail.session.status);
                 return (
                   <Button
@@ -342,13 +343,13 @@ export function JourneyPanel({ vehicleId }: { vehicleId: number | null }) {
                 <Icons.package className="h-4 w-4" aria-hidden="true" />
                 {t('journey.plans.title', 'Plan versions')}
               </Text>
-              {detail.plans.length === 0 ? (
+              {safeArray(detail.plans).length === 0 ? (
                 <Text as="p" size="sm" color="secondary">
                   {t('journey.plans.empty', 'No plans saved yet — the stop optimizer lands here.')}
                 </Text>
               ) : (
                 <ul className="space-y-2">
-                  {detail.plans.map((plan) => (
+                  {safeArray(detail.plans).map((plan) => (
                     <li
                       key={plan.id}
                       className="flex items-center justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"

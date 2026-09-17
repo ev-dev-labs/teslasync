@@ -5,6 +5,7 @@ import { useDataState } from '@/hooks/useDataState';
 import { Badge, Text } from '@/components/ui';
 import { ListSkeleton, QueryError } from '@/components/feedback';
 import { formatDateTime } from '@/lib/dateFormat';
+import { safeArray } from '@/lib/safeArray';
 
 const VERDICT_LABEL_KEYS: Record<JourneyNudgeVerdict, string> = {
   leave_now: 'journey.nudge.verdict.leave_now',
@@ -44,6 +45,8 @@ export function NudgePanel({ session }: { session: JourneySession }) {
   const nudgeQuery = useNudge(session.id);
   const nudgeState = useDataState(nudgeQuery);
   const nudge = nudgeQuery.data ?? null;
+  const blockers = safeArray(nudge?.blockers);
+  const evidence = safeArray(nudge?.evidence);
 
   return (
     <div className="space-y-4">
@@ -75,9 +78,9 @@ export function NudgePanel({ session }: { session: JourneySession }) {
             ) : null}
           </div>
 
-          {nudge.blockers.length > 0 ? (
+          {blockers.length > 0 ? (
             <ul className="space-y-2">
-              {nudge.blockers.map((item) => (
+              {blockers.map((item) => (
                 <li
                   key={item.key}
                   className="flex items-start justify-between gap-3 rounded-lg border border-white/[0.07] bg-white/[0.02] px-3 py-2"
@@ -91,9 +94,9 @@ export function NudgePanel({ session }: { session: JourneySession }) {
             </ul>
           ) : null}
 
-          {nudge.evidence.length > 0 ? (
+          {evidence.length > 0 ? (
             <ul className="space-y-1">
-              {nudge.evidence.map((line) => (
+              {evidence.map((line) => (
                 <Text as="li" key={line} size="xs" color="muted">
                   · {line}
                 </Text>
